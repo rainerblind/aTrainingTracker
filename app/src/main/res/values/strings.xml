@@ -1669,6 +1669,7 @@
     <string name="permission_rationale_open_settings">Open Settings</string>
     <string name="permission_rationale_settings_explanation">Location permission was denied. Without location access, GPS trackpoints and route recording are unavailable. You can grant permission in App Settings.</string>
     <string name="permission_rationale_precise_location_explanation">Precise Location (GPS) is required for workout tracking. Approximate location cannot record distance, speed, route coordinates, or elevation. Please allow Precise Location in permissions.</string>
+    <string name="action_view_workout">View</string>
     <string name="permission_warning_badge_desc">Location permission missing</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->

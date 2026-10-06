@@ -1476,6 +1476,7 @@
     <string name="permission_rationale_open_settings">Abrir configurações</string>
     <string name="permission_rationale_settings_explanation">A permissão de localização foi negada. Sem acesso à localização, a gravação de rotas e pontos GPS não fica disponível. Você pode conceder a permissão nas configurações do app.</string>
     <string name="permission_rationale_precise_location_explanation">A localização precisa (GPS) é necessária para registrar o treino. A localização aproximada não registra distância, velocidade, rota ou altitude. Selecione \'Precisa\' nas permissões.</string>
+    <string name="action_view_workout">Visualizar</string>
     <string name="permission_warning_badge_desc">Permissão de localização ausente</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->

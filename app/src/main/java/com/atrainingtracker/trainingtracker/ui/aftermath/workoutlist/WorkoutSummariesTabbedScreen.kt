@@ -137,6 +137,45 @@ fun WorkoutSummariesTabbedScreen(
         }
     }
 
+    LaunchedEffect(workouts) {
+        WorkoutNavigationEvents.navigateToWorkout.collect { targetWorkoutId ->
+            if (targetWorkoutId != null && workouts.isNotEmpty()) {
+                val workout = workouts.find { it.id == targetWorkoutId }
+                if (workout != null) {
+                    val pageIndex = when (workout.bSportType) {
+                        BSportType.BIKE -> 1
+                        BSportType.RUN -> 2
+                        BSportType.UNKNOWN -> 3
+                        else -> 0
+                    }
+
+                    val listState = when (pageIndex) {
+                        1 -> bikeListState
+                        2 -> runListState
+                        3 -> otherListState
+                        else -> allListState
+                    }
+
+                    val filteredWorkouts = when (pageIndex) {
+                        1 -> workouts.filter { it.bSportType == BSportType.BIKE }
+                        2 -> workouts.filter { it.bSportType == BSportType.RUN }
+                        3 -> workouts.filter { it.bSportType == BSportType.UNKNOWN }
+                        else -> workouts
+                    }
+                    val itemIndex = filteredWorkouts.indexOfFirst { it.id == workout.id }
+
+                    if (itemIndex != -1) {
+                        scope.launch {
+                            pagerState.animateScrollToPage(pageIndex)
+                            listState.animateScrollToItem(itemIndex)
+                        }
+                    }
+                    WorkoutNavigationEvents.resetNavigateToWorkout()
+                }
+            }
+        }
+    }
+
     val sortOrder by viewModel.sortOrder.collectAsState()
     val isCompactView by viewModel.isCompactView.collectAsState()
     val workoutCardPreferences by viewModel.workoutCardPreferences.collectAsStateWithLifecycle()

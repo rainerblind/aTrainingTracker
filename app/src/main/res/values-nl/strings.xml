@@ -1476,6 +1476,7 @@
     <string name="permission_rationale_open_settings">Instellingen openen</string>
     <string name="permission_rationale_settings_explanation">Locatietoestemming is geweigerd. Zonder locatietoegang kunnen er geen GPS-routegegevens worden vastgelegd. Je kunt toestemming geven in de app-instellingen.</string>
     <string name="permission_rationale_precise_location_explanation">Precieze locatie (gps) is vereist voor het vastleggen van de training. Geschatte locatie kan geen afstand, snelheid, route of hoogte registreren. Selecteer \'Precies\' bij machtigingen.</string>
+    <string name="action_view_workout">Bekijken</string>
     <string name="permission_warning_badge_desc">Locatietoestemming ontbreekt</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->

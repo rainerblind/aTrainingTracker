@@ -100,6 +100,17 @@ object LegacyImportEngine {
         FAILED
     }
 
+    /**
+     * Enriched result of an activity file import operation (REQ-MIG-032).
+     *
+     * @property status The execution status of the import attempt.
+     * @property workoutId The primary key ID of the created workout in [WorkoutSummaries.TABLE] if successful.
+     */
+    data class ImportResult(
+        val status: ImportStatus,
+        val workoutId: Long? = null
+    )
+
     interface ProgressListener {
         fun onProgress(current: Int, total: Int, name: String)
         fun onStatus(message: String)
@@ -287,23 +298,14 @@ object LegacyImportEngine {
     }
 
     /**
-     * Recreates a workout from a TCX file.
+     * Recreates a workout from a TCX file returning an enriched [ImportResult] (REQ-MIG-032).
      */
-    suspend fun importFromTcx(
+    suspend fun importFromTcxResult(
         context: Context,
         tcxFile: File,
         listener: ProgressListener? = null,
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
-    ): Boolean {
-        return importFromTcxInternal(context, tcxFile, listener, uploadToStrava) == ImportStatus.SUCCESS
-    }
-
-    internal suspend fun importFromTcxInternal(
-        context: Context,
-        tcxFile: File,
-        listener: ProgressListener? = null,
-        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
-    ): ImportStatus {
+    ): ImportResult {
         try {
             var baseFileName = tcxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
             val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
@@ -311,7 +313,7 @@ object LegacyImportEngine {
             // ATT-314: Early exit if workout already exists to prevent redundant processing
             if (!baseFileName.startsWith("legacy_import", ignoreCase = true) && isWorkoutExisting(summaryDb, baseFileName)) {
                 if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
-                return ImportStatus.DUPLICATE_SKIPPED
+                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
             }
             
             val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
@@ -724,7 +726,7 @@ object LegacyImportEngine {
             }
 
             if (isDuplicate) {
-                return ImportStatus.DUPLICATE_SKIPPED
+                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
             }
 
             if (firstTime != null) {
@@ -754,33 +756,45 @@ object LegacyImportEngine {
                 // ATT-602 (REQ-EXT-008): Automatically schedule background upload to Strava and online communities
                 schedulePostImportCommunityUpload(context, workoutId, baseFileName)
 
-                return ImportStatus.SUCCESS
+                return ImportResult(ImportStatus.SUCCESS, workoutId)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import TCX: ${tcxFile.name}", e)
         }
-        return ImportStatus.FAILED
+        return ImportResult(ImportStatus.FAILED)
     }
 
     /**
-     * Recreates a workout from a GPX file (GPX 1.0 or 1.1).
-     * (REQ-MIG-030)
+     * Recreates a workout from a TCX file.
      */
-    suspend fun importFromGpx(
+    suspend fun importFromTcx(
         context: Context,
-        gpxFile: File,
+        tcxFile: File,
         listener: ProgressListener? = null,
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
     ): Boolean {
-        return importFromGpxInternal(context, gpxFile, listener, uploadToStrava) == ImportStatus.SUCCESS
+        return importFromTcxResult(context, tcxFile, listener, uploadToStrava).status == ImportStatus.SUCCESS
     }
 
-    internal suspend fun importFromGpxInternal(
+    internal suspend fun importFromTcxInternal(
+        context: Context,
+        tcxFile: File,
+        listener: ProgressListener? = null,
+        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
+    ): ImportStatus {
+        return importFromTcxResult(context, tcxFile, listener, uploadToStrava).status
+    }
+
+    /**
+     * Recreates a workout from a GPX file (GPX 1.0 or 1.1) returning an enriched [ImportResult] (REQ-MIG-032).
+     * (REQ-MIG-030)
+     */
+    suspend fun importFromGpxResult(
         context: Context,
         gpxFile: File,
         listener: ProgressListener? = null,
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
-    ): ImportStatus {
+    ): ImportResult {
         try {
             var baseFileName = gpxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
             val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
@@ -788,7 +802,7 @@ object LegacyImportEngine {
             // Early exit if workout already exists to prevent redundant processing
             if (!baseFileName.startsWith("legacy_import", ignoreCase = true) && isWorkoutExisting(summaryDb, baseFileName)) {
                 if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
-                return ImportStatus.DUPLICATE_SKIPPED
+                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
             }
 
             val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
@@ -1134,7 +1148,7 @@ object LegacyImportEngine {
             }
 
             if (isDuplicate) {
-                return ImportStatus.DUPLICATE_SKIPPED
+                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
             }
 
             if (firstTime != null) {
@@ -1186,32 +1200,46 @@ object LegacyImportEngine {
 
                 schedulePostImportCommunityUpload(context, workoutId, baseFileName)
 
-                return ImportStatus.SUCCESS
+                return ImportResult(ImportStatus.SUCCESS, workoutId)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import GPX: ${gpxFile.name}", e)
         }
-        return ImportStatus.FAILED
+        return ImportResult(ImportStatus.FAILED)
     }
 
     /**
-     * Recreates a workout from an external Garmin FIT binary file (REQ-DAT-019).
+     * Recreates a workout from a GPX file (GPX 1.0 or 1.1).
+     * (REQ-MIG-030)
      */
-    suspend fun importFromFit(
+    suspend fun importFromGpx(
         context: Context,
-        fitFile: File,
+        gpxFile: File,
         listener: ProgressListener? = null,
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
     ): Boolean {
-        return importFromFitInternal(context, fitFile, listener, uploadToStrava) == ImportStatus.SUCCESS
+        return importFromGpxResult(context, gpxFile, listener, uploadToStrava).status == ImportStatus.SUCCESS
     }
 
-    internal suspend fun importFromFitInternal(
+    internal suspend fun importFromGpxInternal(
+        context: Context,
+        gpxFile: File,
+        listener: ProgressListener? = null,
+        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
+    ): ImportStatus {
+        return importFromGpxResult(context, gpxFile, listener, uploadToStrava).status
+    }
+
+    /**
+     * Recreates a workout from an external Garmin FIT binary file returning an enriched [ImportResult] (REQ-MIG-032).
+     * (REQ-DAT-019)
+     */
+    suspend fun importFromFitResult(
         context: Context,
         fitFile: File,
         listener: ProgressListener? = null,
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
-    ): ImportStatus {
+    ): ImportResult {
         try {
             var baseFileName = fitFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
             val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
@@ -1219,7 +1247,7 @@ object LegacyImportEngine {
             // Early exit if workout already exists to prevent redundant processing
             if (!baseFileName.startsWith("legacy_import", ignoreCase = true) && isWorkoutExisting(summaryDb, baseFileName)) {
                 if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
-                return ImportStatus.DUPLICATE_SKIPPED
+                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
             }
 
             // Verify file integrity
@@ -1234,7 +1262,7 @@ object LegacyImportEngine {
             }
             if (!isIntegrityValid) {
                 Log.e(TAG, "FIT file integrity check failed for ${fitFile.name}")
-                return ImportStatus.FAILED
+                return ImportResult(ImportStatus.FAILED)
             }
 
             val rawFileIds = mutableListOf<FileIdMesg>()
@@ -1259,7 +1287,7 @@ object LegacyImportEngine {
 
             if (!readSuccess || rawRecords.isEmpty()) {
                 Log.e(TAG, "Decoding failed or no record trackpoints found in ${fitFile.name}")
-                return ImportStatus.FAILED
+                return ImportResult(ImportStatus.FAILED)
             }
 
             val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
@@ -1484,7 +1512,7 @@ object LegacyImportEngine {
             }
 
             if (isDuplicate) {
-                return ImportStatus.DUPLICATE_SKIPPED
+                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
             }
 
             if (firstTime != null) {
@@ -1509,12 +1537,33 @@ object LegacyImportEngine {
 
                 schedulePostImportCommunityUpload(context, workoutId, baseFileName)
 
-                return ImportStatus.SUCCESS
+                return ImportResult(ImportStatus.SUCCESS, workoutId)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import FIT: ${fitFile.name}", e)
         }
-        return ImportStatus.FAILED
+        return ImportResult(ImportStatus.FAILED)
+    }
+
+    /**
+     * Recreates a workout from an external Garmin FIT binary file (REQ-DAT-019).
+     */
+    suspend fun importFromFit(
+        context: Context,
+        fitFile: File,
+        listener: ProgressListener? = null,
+        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
+    ): Boolean {
+        return importFromFitResult(context, fitFile, listener, uploadToStrava).status == ImportStatus.SUCCESS
+    }
+
+    internal suspend fun importFromFitInternal(
+        context: Context,
+        fitFile: File,
+        listener: ProgressListener? = null,
+        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
+    ): ImportStatus {
+        return importFromFitResult(context, fitFile, listener, uploadToStrava).status
     }
 
     private fun getWorkoutId(db: WorkoutSummariesDatabaseManager, fileBaseName: String): Long {

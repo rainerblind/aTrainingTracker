@@ -83,7 +83,10 @@ data class MappingData(val uri: Uri, val analysis: ImportEngine.AnalysisResult)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImportBackupTabsScreen(
-    viewModel: BackupRestoreViewModel
+    viewModel: BackupRestoreViewModel,
+    onNavigateToWorkout: ((Long) -> Unit)? = { workoutId ->
+        com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents.triggerNavigateToWorkout(workoutId)
+    }
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -199,7 +202,7 @@ fun ImportBackupTabsScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             // --- State Overlays (Shown at the very top of content) ---
-            StateOverlaySection(uiState, onClearState = { viewModel.clearState() })
+            StateOverlaySection(uiState, onClearState = { viewModel.clearState() }, onNavigateToWorkout = onNavigateToWorkout)
 
             HorizontalPager(
                 state = pagerState,
@@ -856,7 +859,11 @@ fun ImportMappingDialog(
 }
 
 @Composable
-private fun StateOverlaySection(uiState: BackupRestoreViewModel.UiState, onClearState: () -> Unit) {
+private fun StateOverlaySection(
+    uiState: BackupRestoreViewModel.UiState,
+    onClearState: () -> Unit,
+    onNavigateToWorkout: ((Long) -> Unit)? = null
+) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         when (val state = uiState) {
             is BackupRestoreViewModel.UiState.Loading -> {
@@ -890,6 +897,16 @@ private fun StateOverlaySection(uiState: BackupRestoreViewModel.UiState, onClear
                 ) {
                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(text = state.message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        if (state.importedWorkoutId != null) {
+                            TextButton(onClick = {
+                                val workoutId = state.importedWorkoutId
+                                onClearState()
+                                onNavigateToWorkout?.invoke(workoutId)
+                            }) {
+                                Text(stringResource(R.string.action_view_workout))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                         TextButton(onClick = onClearState) { Text(stringResource(R.string.OK)) }
                     }
                 }
