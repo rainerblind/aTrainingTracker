@@ -1627,21 +1627,6 @@
     <string name="nav_stop_return">Detener regreso</string>
     <string name="nav_route_reverse">Volver por la ruta</string>
 
-    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
-    <string name="gateway_all">Todos</string>
-    <string name="gateway_north">Norte</string>
-    <string name="gateway_northeast">Noreste</string>
-    <string name="gateway_east">Este</string>
-    <string name="gateway_southeast">Sureste</string>
-    <string name="gateway_south">Sur</string>
-    <string name="gateway_southwest">Suroeste</string>
-    <string name="gateway_west">Oeste</string>
-    <string name="gateway_northwest">Noroeste</string>
-    <string name="gateway_unknown">Otros</string>
-    <string name="pref_corridor_grouping_title">Agrupación de rutas por corredor</string>
-    <string name="pref_corridor_grouping_desc">Agrupa rutas en la lista según su dirección de salida y corredor</string>
-    <string name="pref_focused_thumbnail_title">Zoom de miniatura enfocado</string>
-    <string name="pref_focused_thumbnail_desc">Amplía las miniaturas de las rutas al bucle central característico en lugar de los corredores de entrada/salida comunes</string>
     <string name="fork_alert_title">Bifurcación más adelante</string>
     <string name="fork_approaching_in_m">en %1$d m</string>
     <string name="fork_direction_left">Izquierda</string>

@@ -1625,21 +1625,6 @@
     <string name="nav_stop_return">Terugweg stoppen</string>
     <string name="nav_route_reverse">Terugkeren langs route</string>
 
-    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
-    <string name="gateway_all">Alle</string>
-    <string name="gateway_north">Noord</string>
-    <string name="gateway_northeast">Noordoost</string>
-    <string name="gateway_east">Oost</string>
-    <string name="gateway_southeast">Zuidoost</string>
-    <string name="gateway_south">Zuid</string>
-    <string name="gateway_southwest">Zuidwest</string>
-    <string name="gateway_west">West</string>
-    <string name="gateway_northwest">Noordwest</string>
-    <string name="gateway_unknown">Overig</string>
-    <string name="pref_corridor_grouping_title">Corridor-gebaseerde routegroepering</string>
-    <string name="pref_corridor_grouping_desc">Groepeer routes in de lijst op basis van hun vertrekrichting en corridor</string>
-    <string name="pref_focused_thumbnail_title">Gefocuste miniatuurzoom</string>
-    <string name="pref_focused_thumbnail_desc">Zoomt routeminiaturen in op de kenmerkende middelste lus in plaats van gemeenschappelijke in-/uitvalscorridors</string>
     <string name="fork_alert_title">Splitsing vooruit</string>
     <string name="fork_approaching_in_m">over %1$d m</string>
     <string name="fork_direction_left">Links</string>

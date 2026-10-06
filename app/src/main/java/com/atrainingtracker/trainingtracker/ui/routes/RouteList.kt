@@ -54,8 +54,7 @@ fun RouteList(
     onDuplicateAsLocal: (Long) -> Unit = {},
     appBarOffsetPx: Int,
     headerHeightPx: Float,
-    isFilterActive: Boolean = false,
-    focusedThumbnailZoomEnabled: Boolean = true
+    isFilterActive: Boolean = false
 ) {
     val density = LocalDensity.current
     // val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
@@ -111,7 +110,6 @@ fun RouteList(
                         onDeleteConfirmed = onDeleteConfirmed,
                         onDuplicateAsLocal = onDuplicateAsLocal,
                         waypoints = route.waypoints,
-                        focusedThumbnailZoomEnabled = focusedThumbnailZoomEnabled,
                         modifier = Modifier
                     )
                 }
