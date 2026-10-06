@@ -1311,7 +1311,7 @@ object LegacyImportEngine {
                 val lapStartTime = lapMesg.startTime?.date?.let { timeFormat.format(it) }
                 val lapTotalTime = (lapMesg.totalTimerTime ?: lapMesg.totalElapsedTime ?: 0f).toDouble()
                 val lapDist = (lapMesg.totalDistance ?: 0f).toDouble()
-                val lapMaxSpeed = lapMesg.maxSpeed?.toDouble()
+                val lapMaxSpeed = (lapMesg.enhancedMaxSpeed ?: lapMesg.maxSpeed)?.toDouble()
                 val lapCalories = lapMesg.totalCalories
                 val lapAvgHr = lapMesg.avgHeartRate?.toInt()
                 val lapMaxHr = lapMesg.maxHeartRate?.toInt()
@@ -1344,6 +1344,8 @@ object LegacyImportEngine {
 
                 val latSemi = record.positionLat
                 val lngSemi = record.positionLong
+                val altVal = (record.enhancedAltitude ?: record.altitude)?.toDouble()?.takeIf { it in -500.0..10000.0 }
+
                 if (latSemi != null && lngSemi != null && latSemi != 0x7FFFFFFF && lngSemi != 0x7FFFFFFF) {
                     val latDeg = latSemi * (180.0 / 2147483648.0)
                     val lngDeg = lngSemi * (180.0 / 2147483648.0)
@@ -1353,7 +1355,7 @@ object LegacyImportEngine {
                     val pos = LatLng(latDeg, lngDeg)
                     points.add(pos)
 
-                    record.altitude?.toDouble()?.let { alt ->
+                    altVal?.let { alt ->
                         if (alt < minAltVal) {
                             minAltVal = alt
                             minAltPos = pos
@@ -1365,7 +1367,7 @@ object LegacyImportEngine {
                     }
                 }
 
-                record.altitude?.toDouble()?.let { alt ->
+                altVal?.let { alt ->
                     values.put(SensorType.ALTITUDE.name, alt)
                     altitudes.add(alt)
                 }
@@ -1375,8 +1377,9 @@ object LegacyImportEngine {
                     distances.add(dist)
                 }
 
-                record.speed?.toDouble()?.let { spd ->
-                    values.put(SensorType.SPEED_mps.name, spd)
+                val spdVal = (record.enhancedSpeed ?: record.speed)?.toDouble()
+                if (spdVal != null && spdVal in 0.0..100.0) {
+                    values.put(SensorType.SPEED_mps.name, spdVal)
                 }
 
                 record.heartRate?.toInt()?.let { hr ->
