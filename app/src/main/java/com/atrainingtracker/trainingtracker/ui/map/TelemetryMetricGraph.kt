@@ -91,6 +91,7 @@ fun TelemetryMetricGraph(
     currentDistance: Double?,
     onDistanceSelected: (Double?) -> Unit,
     modifier: Modifier = Modifier,
+    onPointSelected: (PathPoint?) -> Unit = {},
     xAxisDomain: ProfileXAxisDomain = ProfileXAxisDomain.DISTANCE,
     bSportType: BSportType = BSportType.UNKNOWN,
     zoomScale: Float = 1.0f,
@@ -238,6 +239,7 @@ fun TelemetryMetricGraph(
     val currentZoomScaleState by rememberUpdatedState(zoomScale)
     val currentOnZoomChangedState by rememberUpdatedState(onZoomChanged)
     val currentOnDistanceSelectedState by rememberUpdatedState(onDistanceSelected)
+    val currentOnPointSelectedState by rememberUpdatedState(onPointSelected)
 
     Box(modifier = modifier.fillMaxWidth()) {
         val baseCanvasModifier = Modifier
@@ -301,12 +303,13 @@ fun TelemetryMetricGraph(
                                         canvasWidth = chartWidthPx,
                                         totalDist = totalSpan
                                     )
+                                    val nearest = TelemetryMetricUtils.findNearestPoint(
+                                        points = pathPoints,
+                                        targetValue = selectedVal,
+                                        isTimeDomain = isTimeDomain
+                                    )
+                                    currentOnPointSelectedState(nearest)
                                     if (isTimeDomain) {
-                                        val nearest = TelemetryMetricUtils.findNearestPoint(
-                                            points = pathPoints,
-                                            targetValue = selectedVal,
-                                            isTimeDomain = true
-                                        )
                                         if (isTrackless) {
                                             currentOnDistanceSelectedState(nearest?.timeSec?.toDouble())
                                         } else {
@@ -329,6 +332,7 @@ fun TelemetryMetricGraph(
                     if (isDragging) {
                         if (!isPanMode) {
                             currentOnDistanceSelectedState(null)
+                            currentOnPointSelectedState(null)
                         }
                     } else if (!isVerticalScrolling) {
                         if (!isPanMode) {
@@ -342,12 +346,13 @@ fun TelemetryMetricGraph(
                                 canvasWidth = chartWidthPx,
                                 totalDist = totalSpan
                             )
+                            val nearest = TelemetryMetricUtils.findNearestPoint(
+                                points = pathPoints,
+                                targetValue = selectedVal,
+                                isTimeDomain = isTimeDomain
+                            )
+                            currentOnPointSelectedState(nearest)
                             if (isTimeDomain) {
-                                val nearest = TelemetryMetricUtils.findNearestPoint(
-                                    points = pathPoints,
-                                    targetValue = selectedVal,
-                                    isTimeDomain = true
-                                )
                                 if (isTrackless) {
                                     currentOnDistanceSelectedState(nearest?.timeSec?.toDouble())
                                 } else {

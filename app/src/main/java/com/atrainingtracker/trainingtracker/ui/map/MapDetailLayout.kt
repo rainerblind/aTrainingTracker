@@ -158,6 +158,7 @@ fun MapDetailLayout(
     val activeScrubPoint = remember(selectedDistance, activeScrubPath, isTrackless) {
         if (selectedDistance != null && !activeScrubPath.isNullOrEmpty()) {
             TelemetryMetricUtils.findNearestPoint(activeScrubPath, selectedDistance!!, isTimeDomain = isTrackless)
+                ?: TelemetryMetricUtils.findNearestPoint(activeScrubPath, selectedDistance!!, isTimeDomain = true)
         } else null
     }
 
@@ -217,6 +218,7 @@ fun MapDetailLayout(
                 currentLocationFlow = noLocation,
                 selectedDistance = selectedDistance,
                 activeScrubPath = activeScrubPath,
+                activeScrubPoint = activeScrubPoint,
                 modifier = Modifier.fillMaxSize(),
                 shouldTakeSnapshot = isSharing,
                 onMapClick = onMapClick,

@@ -235,18 +235,23 @@ fun followMeController(
 
 /**
  * Manages auto-centering the map on the distance scrubber with a safety margin.
+ * Supports direct [activeScrubPoint] propagation as well as fallback to [selectedDistance] (REQ-MAP-032 / ATT-2340).
  */
 @Composable
 fun ScrubberController(
     selectedDistance: Double?,
     activePath: List<PathPoint>,
-    cameraPositionState: CameraPositionState
+    cameraPositionState: CameraPositionState,
+    activeScrubPoint: PathPoint? = null
 ) {
-    LaunchedEffect(selectedDistance, activePath) {
-        selectedDistance?.let { targetDist ->
-            val scrubPoint = activePath.find { it.distance >= targetDist }
+    LaunchedEffect(selectedDistance, activeScrubPoint, activePath) {
+        val scrubPoint = activeScrubPoint ?: selectedDistance?.let { targetDist ->
+            TelemetryMetricUtils.findNearestPoint(activePath, targetDist, isTimeDomain = false)
+                ?: activePath.find { it.distance >= targetDist }
+        }
 
-            scrubPoint?.let { point ->
+        scrubPoint?.let { point ->
+            if (point.latLng.latitude != 0.0 || point.latLng.longitude != 0.0) {
                 val projection = cameraPositionState.projection
                 val bounds = projection?.visibleRegion?.latLngBounds
 
