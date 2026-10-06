@@ -1,7 +1,7 @@
 # Stage 5: Walkthrough & Verification - ATT-2457: Style live preview in settings to resemble actual cockpit tiles
 
 **Ticket**: [ATT-2457](https://atrainingtracker.atlassian.net/browse/ATT-2457)  
-**Sub-task**: [ATT-2533](https://atrainingtracker.atlassian.net/browse/ATT-2533) (`[Test]`)  
+**Sub-task**: [ATT-2554](https://atrainingtracker.atlassian.net/browse/ATT-2554) (`[Test]`)  
 **Parent Epic**: [ATT-1191](https://atrainingtracker.atlassian.net/browse/ATT-1191) (*[Epic] Tracking Tabs Enhancement*)  
 **Active Sprint**: `Sprint 2026-41.1`  
 **Requirement Mapping**: `REQ-UI-277` (*Settings Live Preview Cockpit Tile Styling & Comprehensive Section Naming*)  
@@ -91,5 +91,5 @@ BUILD SUCCESSFUL in 8m 42s
    - `docs/requirements.md` (`REQ-UI-277`) updated to `Verified`.
    - `docs/tests.md` (`TST-UI-237`) updated to `Verified`.
 4. **Governance Script Passed**: `python3 tools/verify_requirement_governance.py --base-ref sprint/2026-41.1` cleanly verified.
-5. **Subtask Transition**: Stage 5 subtask `ATT-2533` transitioned to `In Überprüfung` for independent Gate 5 audit.
+5. **Subtask Transition**: Stage 5 subtask `ATT-2554` transitioned to `In Überprüfung` for independent Gate 5 audit.
 6. **Parent Ticket Final Review**: Parent ticket `ATT-2457` will be updated to `fixVersion = V4.9.39`, merged into `sprint/2026-41.1`, transitioned to `Final Review (Human)`, and assigned to `human`.
