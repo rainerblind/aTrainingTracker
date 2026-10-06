@@ -445,7 +445,7 @@ fun RouteWaypointsLayer(
     waypoints.forEach { waypoint ->
         val iconDescriptor = remember(waypoint.type, context) {
             context?.let { ctx ->
-                bitmapDescriptorFromVectorInternal(ctx, waypoint.type.iconResId, 32, null)
+                createWaypointBadgeMarker(ctx, waypoint.type, 32)
             }
         }
 

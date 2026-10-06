@@ -1749,6 +1749,7 @@
     <string name="gpx_elevation_enriched">Elevation data successfully added</string>
     <string name="gpx_elevation_enrichment_failed">Elevation lookup failed, imported 2D route</string>
     <string name="waypoint_type_bench">Bench / Rest Spot</string>
+    <string name="waypoint_type_shelter">Shelter</string>
     <string name="waypoint_type_water">Water Source</string>
     <string name="waypoint_type_summit">Summit / Pass</string>
     <string name="waypoint_type_food">Food / Cafe</string>

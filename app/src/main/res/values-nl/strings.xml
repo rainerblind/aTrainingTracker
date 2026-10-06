@@ -1556,6 +1556,7 @@
     <string name="gpx_elevation_enriched">Hoogtegegevens succesvol toegevoegd</string>
     <string name="gpx_elevation_enrichment_failed">Hoogte ophalen mislukt, 2D-route geïmporteerd</string>
     <string name="waypoint_type_bench">Bank / Rustpunt</string>
+    <string name="waypoint_type_shelter">Schuilplaats</string>
     <string name="waypoint_type_water">Waterpunt</string>
     <string name="waypoint_type_summit">Top / Pas</string>
     <string name="waypoint_type_food">Eten / Café</string>

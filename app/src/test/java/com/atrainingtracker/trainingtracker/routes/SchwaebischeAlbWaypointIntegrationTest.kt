@@ -144,7 +144,7 @@ class SchwaebischeAlbWaypointIntegrationTest {
                     val shelter = waypoints[0]
                     assertEquals("Start Tour 13", shelter.name)
                     assertEquals("Unterstand", shelter.description)
-                    assertEquals(WaypointType.POI_BENCH, shelter.type)
+                    assertEquals(WaypointType.POI_SHELTER, shelter.type)
                 }
                 file.name.contains("Uracher") -> {
                     assertEquals(1, waypoints.size)

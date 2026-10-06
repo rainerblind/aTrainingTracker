@@ -1536,6 +1536,7 @@
     <string name="gpx_elevation_enriched">標高データを正常に追加しました</string>
     <string name="gpx_elevation_enrichment_failed">標高の取得に失敗しました。2Dルートをインポートしました</string>
     <string name="waypoint_type_bench">ベンチ / 休憩所</string>
+    <string name="waypoint_type_shelter">避難小屋</string>
     <string name="waypoint_type_water">給水所 / 水場</string>
     <string name="waypoint_type_summit">山頂 / 峠</string>
     <string name="waypoint_type_food">補給所 / カフェ</string>

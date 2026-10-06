@@ -1643,6 +1643,7 @@
     <string name="gpx_elevation_enriched">Höhendaten erfolgreich hinzugefügt</string>
     <string name="gpx_elevation_enrichment_failed">Höhendaten konnten nicht abgerufen werden, 2D-Route importiert</string>
     <string name="waypoint_type_bench">Bank / Rastplatz</string>
+    <string name="waypoint_type_shelter">Unterstand / Hütte</string>
     <string name="waypoint_type_water">Trinkwasser</string>
     <string name="waypoint_type_summit">Gipfel / Pass</string>
     <string name="waypoint_type_food">Einkehr / Café</string>
