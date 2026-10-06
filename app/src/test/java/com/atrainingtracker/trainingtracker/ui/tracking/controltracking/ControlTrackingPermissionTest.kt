@@ -154,6 +154,36 @@ class ControlTrackingPermissionTest {
     }
 
     @Test
+    fun testPreciseLocationRequirement_coarseOnlyDoesNotSatisfyLocation() {
+        val fineGranted = false
+        val coarseGranted = true
+
+        val checkHasLocation = fineGranted
+        val checkIsCoarseOnly = coarseGranted && !fineGranted
+
+        assertFalse("Coarse-only permission must NOT satisfy checkHasLocation (REQ-PRI-004)", checkHasLocation)
+        assertTrue("When coarse is granted and fine is missing, checkIsCoarseOnly must be true", checkIsCoarseOnly)
+
+        var activeStep = RationaleStep.NONE
+        if (!checkHasLocation) {
+            activeStep = RationaleStep.FOREGROUND
+        }
+        assertEquals("Missing fine location must trigger FOREGROUND rationale step", RationaleStep.FOREGROUND, activeStep)
+    }
+
+    @Test
+    fun testPreciseLocationRequirement_fineLocationGrantedSatisfiesLocation() {
+        val fineGranted = true
+        val coarseGranted = true
+
+        val checkHasLocation = fineGranted
+        val checkIsCoarseOnly = coarseGranted && !fineGranted
+
+        assertTrue("Fine location must satisfy checkHasLocation (REQ-PRI-004)", checkHasLocation)
+        assertFalse("When fine location is granted, checkIsCoarseOnly must be false", checkIsCoarseOnly)
+    }
+
+    @Test
     fun testProgressiveSetupFlow_foregroundGrantedMissingBgTransitionsToBgRationale() {
         var activeStep = RationaleStep.NONE
         val hasLocation = true

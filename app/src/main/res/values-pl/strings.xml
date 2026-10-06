@@ -1477,6 +1477,7 @@
     <string name="permission_rationale_not_now">Nie teraz</string>
     <string name="permission_rationale_open_settings">Otwórz ustawienia</string>
     <string name="permission_rationale_settings_explanation">Uprawnienie do lokalizacji zostało odrzucone. Bez dostępu do lokalizacji rejestrowanie trasy GPS jest niedostępne. Możesz przyznać uprawnienie w ustawieniach aplikacji.</string>
+    <string name="permission_rationale_precise_location_explanation">Dokładna lokalizacja (GPS) jest wymagana do rejestrowania treningu. Przybliżona lokalizacja nie pozwala na zapisywanie dystansu, prędkości, trasy ani przewyższenia. Wybierz \'Dokładna\' w uprawnieniach.</string>
     <string name="permission_warning_badge_desc">Brak uprawnienia do lokalizacji</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->

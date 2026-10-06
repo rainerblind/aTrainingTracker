@@ -1455,6 +1455,7 @@
     <string name="permission_rationale_not_now">後で</string>
     <string name="permission_rationale_open_settings">設定を開く</string>
     <string name="permission_rationale_settings_explanation">位置情報の権限が拒否されました。位置情報へのアクセスがない場合、GPSルートの記録は利用できません。アプリの設定で権限を付与できます。</string>
+    <string name="permission_rationale_precise_location_explanation">ワークアウトの記録には正確な位置情報 (GPS) が必要です。おおよその位置情報では、距離、速度、ルート、高度を記録できません。権限で「正確」を選択してください。</string>
     <string name="permission_warning_badge_desc">位置情報の権限がありません</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->

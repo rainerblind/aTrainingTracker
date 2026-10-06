@@ -1476,6 +1476,7 @@
     <string name="permission_rationale_not_now">Pas maintenant</string>
     <string name="permission_rationale_open_settings">Ouvrir les paramètres</string>
     <string name="permission_rationale_settings_explanation">L\'autorisation de localisation a été refusée. Sans accès à la localisation, l\'enregistrement de l\'itinéraire GPS est indisponible. Vous pouvez activer l\'autorisation dans les paramètres de l\'application.</string>
+    <string name="permission_rationale_precise_location_explanation">La position exacte (GPS) est requise pour l\'enregistrement de l\'entraînement. La position approximative ne permet pas d\'enregistrer la distance, la vitesse, le parcours ou l\'altitude. Veuillez sélectionner \'Précise\' dans les autorisations.</string>
     <string name="permission_warning_badge_desc">Autorisation de localisation manquante</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->

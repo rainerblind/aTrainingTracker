@@ -1562,6 +1562,7 @@
     <string name="permission_rationale_not_now">Nicht jetzt</string>
     <string name="permission_rationale_open_settings">Einstellungen öffnen</string>
     <string name="permission_rationale_settings_explanation">Die Standortberechtigung wurde verweigert. Ohne Standortzugriff können keine GPS-Streckendaten aufgezeichnet werden. Du kannst die Berechtigung in den App-Einstellungen aktivieren.</string>
+    <string name="permission_rationale_precise_location_explanation">Der genaue Standort (GPS) ist für die Trainingsaufzeichnung erforderlich. Der ungefähre Standort kann Distanz, Geschwindigkeit, Route und Höhenmeter nicht erfassen. Bitte wähle \'Genau\' in den Berechtigungen.</string>
     <string name="permission_warning_badge_desc">Standortberechtigung fehlt</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
