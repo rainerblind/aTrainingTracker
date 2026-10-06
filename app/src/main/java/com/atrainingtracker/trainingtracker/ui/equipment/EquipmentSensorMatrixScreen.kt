@@ -484,3 +484,92 @@ private fun MatrixEquipmentRow(
         }
     }
 }
+
+/**
+ * Interactive equipment-to-sensor mapping matrix table for a single sport category (REQ-UI-284).
+ *
+ * Features:
+ * - Sticky left column showing equipment icon, name, and retirement status during horizontal scroll.
+ * - Horizontally scrollable columns showing sport-compatible sensors ordered by domain priority.
+ * - Independent horizontal and vertical scroll states.
+ * - Responsive 1-tap Material 3 Checkbox persistence.
+ * - Clean layout without redundant section header banners.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun EquipmentSportSensorMatrix(
+    items: List<EquipmentItem>,
+    sensors: List<SimpleSensorInfo>,
+    isBike: Boolean,
+    onToggleLink: (equipmentId: Long, sensorId: Long, isLinked: Boolean) -> Unit,
+    appBarOffsetPx: Int,
+    headerHeightPx: Float,
+    modifier: Modifier = Modifier,
+    scrollState: LazyListState = rememberLazyListState(),
+    horizontalScrollState: androidx.compose.foundation.ScrollState = rememberScrollState(),
+    emptyEquipmentMessage: String = stringResource(if (isBike) R.string.equipment_no_bikes else R.string.equipment_no_shoes),
+    emptySensorsMessage: String = stringResource(if (isBike) R.string.equipment_matrix_no_bike_sensors else R.string.equipment_matrix_no_shoe_sensors)
+) {
+    val density = LocalDensity.current
+    val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
+    val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+
+    if (items.isEmpty()) {
+        EmptyStatePlaceholder(
+            modifier = modifier.padding(top = topPadding + 16.dp),
+            iconRes = if (isBike) R.drawable.ic_equipment_bike else R.drawable.ic_equipment_shoe,
+            message = emptyEquipmentMessage
+        )
+        return
+    }
+
+    if (sensors.isEmpty()) {
+        EmptyStatePlaceholder(
+            modifier = modifier.padding(top = topPadding + 16.dp),
+            iconRes = if (isBike) R.drawable.ic_equipment_bike else R.drawable.ic_equipment_shoe,
+            message = emptySensorsMessage
+        )
+        return
+    }
+
+    FastScrollableBox(
+        state = scrollState,
+        modifier = modifier.fillMaxSize(),
+        topPadding = topPadding,
+        bottomPadding = bottomPadding
+    ) {
+        LazyColumn(
+            state = scrollState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = topPadding + 8.dp,
+                bottom = bottomPadding + 16.dp,
+                start = 0.dp,
+                end = 0.dp
+            )
+        ) {
+            stickyHeader(key = "table_header_${if (isBike) "bikes" else "shoes"}") {
+                MatrixTableHeaderRow(
+                    title = stringResource(R.string.Equipment),
+                    sensors = sensors,
+                    horizontalScrollState = horizontalScrollState,
+                    emptySensorsMessage = emptySensorsMessage
+                )
+            }
+
+            items(items, key = { "${if (isBike) "bike" else "shoe"}_${it.id}" }) { item ->
+                MatrixEquipmentRow(
+                    item = item,
+                    isBike = isBike,
+                    sensors = sensors,
+                    horizontalScrollState = horizontalScrollState,
+                    onToggleLink = onToggleLink
+                )
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                    thickness = 0.5.dp
+                )
+            }
+        }
+    }
+}
