@@ -12,6 +12,7 @@ This skill guides the agent through **Stage 1 (Analysis)** of the engineering li
 1. **Forensic Root Cause Analysis (RCA)**:
    - For defects: Investigate stack traces, system logs, SQLite table constraints, thread concurrency, and Android framework lifecycles.
    - For features: Perform gap analysis against current architectural components.
+   - **Avoid Redundant Diagnostic Builds (Rule 24)**: Before invoking heavy Gradle tasks (e.g. `./gradlew signingReport`, dependency trees), check ticket comments, previous sprint retro documents, git logs, and local configuration.
 2. **Chesterton's Fence Archaeology (`REQ-PRO-022`)**:
    - Inspect git history (`git log -S <REQ-ID> docs/requirements.md`) before proposing modifications to existing requirements.
    - If modifying an existing requirement, populate the 4 mandatory fields:

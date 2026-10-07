@@ -126,3 +126,14 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * **Stage 5 (Verification)**: The walkthrough MUST include on-device screenshots (Pixel 10) of the new/changed UI placed next to a screenshot of the reference screen, in Light and Dark/AMOLED theme where relevant. Visible mismatches must be fixed before `Final Review (Human)`.
 * Origin: Sprint 2026-40.16 — ATT-1835, ATT-1953, ATT-2058 were functionally OK but did not look/feel like the rest of the app (follow-ups ATT-2456 … ATT-2462).
 
+## 24. Avoid Redundant Diagnostic Builds ("Check Prior Knowledge & Ticket History First")
+* **Rule**: Before invoking heavy, time-consuming Gradle tasks or diagnostic utilities (such as `./gradlew signingReport`, dependency trees, clean builds, or environment queries) during Stage 1 Analysis or Stage 2 Test Spec, agents **MUST** inspect the Jira ticket history, previous Sprint Retrospective deliverables, git commit logs, and existing documentation.
+* Diagnostic information (e.g. SHA-1 signing certificate fingerprints, OAuth configuration, package structures, schema versions) is frequently already documented in previous sprint retrospectives or comments.
+* Origin: Sprint 2026-41.1, ATT-1306 — Stage 1 analysis executed `./gradlew signingReport` unnecessarily when the keystore SHA-1 fingerprint was already recorded in previous retro comments.
+
+## 25. Lean Defect Recording Protocol with Immediate Evidence Capture
+* **Rule**: During Ceremony 2 (Sprint-End Joint Review), when the human tester or developer spots a defect, unexpected behavior, or UI inconsistency, the agent **MUST** capture on-device evidence immediately (via `adb exec-out screencap -p > <FILE>.png` or `adb logcat -d`) and upload it as a Jira attachment to the newly created follow-up ticket.
+* Preserving exact visual or log evidence at the moment of human observation prevents ambiguity and enables rapid forensic investigation in Stage 1 Analysis of the subsequent sprint, while strictly honoring Rule 10 (Zero Code Changes During Review).
+* Origin: Sprint 2026-41.1 — Direct screen capture on Pixel 10 provided immediate clarity for follow-ups ATT-2620, ATT-2624, and ATT-2631.
+
+
