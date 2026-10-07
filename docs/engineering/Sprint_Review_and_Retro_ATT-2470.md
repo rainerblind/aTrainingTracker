@@ -73,29 +73,33 @@ In strict compliance with **Rule 10 (Zero Code Changes During Review)** and **Ru
 
 ## 2. Retrospective: Observations, Root Causes & Process Hardening
 
-### 2.1 Autonomous Full-Sprint Execution Adherence (Rule 14 & Rule 15)
-* **Observation**: In the prior sprint (2026-40.16), agents stopped prematurely midway through the sprint and asked if they should proceed (*"Agents did not finish the entire sprint. => Rule # 1: Obey the rules. Before starting a new ticket, the rules and protocols must be reread."*).
-* **Sprint 2026-41.1 Evaluation**: In this sprint, the autonomous pipeline strictly complied with **Rule 14 (Autonomous Full-Sprint Execution Mandate)** and **Rule 15 ("Obey the Rules")**. All 20 tickets were autonomously developed, tested, and integrated into `sprint/2026-41.1` without stopping the console or asking for approval between tickets.
-* **Confirmation**: The autonomous execution model with Strategy A integration branch has proven highly robust and capable of sustained high-velocity execution.
+### 2.1 Elevating "Obey the Rules" to Rule #1 & Full-Sprint Execution Adherence
+* **Observation**: In Sprint 2026-40.16, agents stopped prematurely midway through the sprint. During this sprint's retro, the Product Owner (Rainer Blind) reiterated:
+  > *"Agents did not finish the entire sprint. => Rule # 1: Obey the rules. Before starting a new ticket, the rules and protocols must be reread. I want this to become the rule number one. :)"*
+* **Process Hardening (Rule 1)**: Elevated **Rule 1: Obey the Rules (Mandatory Rules, Protocols & Skills Refresh at Every Ticket Start)** to the supreme position in `.agents/rules/aspice_governance.md` and `docs/project_protocol.md`.
+  * Whenever starting any new ticket or stage transition, agents MUST explicitly reread `.agents/rules/aspice_governance.md`, `docs/project_protocol.md`, and the active stage skill using `view_file`.
+  * This refresh permanently prevents context loss across compactions and guarantees that agents execute the entire sprint backlog autonomously to 100% completion without halting (Rule 15).
+* **Sprint 2026-41.1 Evaluation**: In this sprint, the autonomous pipeline strictly honored the mandate: all 20 committed tickets were autonomously driven to Stage 5 verification and integrated into `sprint/2026-41.1` without stopping the console.
 
 ### 2.2 Unnecessary Diagnostic Build Invocations (ATT-1306 Comment 1)
 * **Observation**: During Stage 1 Analysis for ATT-1306, the agent ran `./gradlew signingReport` to extract the keystore SHA-1 fingerprint, which took unnecessary time and build cache overhead. The exact SHA-1 fingerprint had already been documented in the previous Sprint Retrospective comment and ticket history.
 * **Root Cause**: Stage 1 agents reflexively invoke Gradle diagnostic tasks rather than querying existing project knowledge, git history, or Jira comments.
 * **Process Hardening (Rule 24)**: Added **Rule 24: Avoid Redundant Diagnostic Builds ("Check Prior Knowledge & Ticket History First")** to `.agents/rules/aspice_governance.md` and updated `stage1-analysis/SKILL.md`. Before running expensive Gradle diagnostics, agents must inspect ticket history and documented project configuration.
 
-### 2.3 Lean Defect Recording with On-Device Evidence (Rules 10, 17, and New Rule 25)
+### 2.3 Lean Defect Recording with On-Device Evidence (Rules 11, 17, and New Rule 25)
 * **Observation**: During Ceremony 2 on Pixel 10, the user observed several UI inconsistencies and edge cases (e.g. Google Drive folder error, tracking configuration scroll bounds, tile grid spacing).
-* **Success**: The agent strictly preserved the code freeze (Rule 10) and captured defects immediately into Jira.
+* **Success**: The agent strictly preserved the code freeze (Rule 11) and captured defects immediately into Jira.
 * **Enhancement (Rule 25)**: Taking direct on-device screenshots via `adb exec-out screencap -p` and uploading them as Jira attachments (as demonstrated in ATT-2620, ATT-2624, and ATT-2631) provides invaluable visual ground truth for subsequent Stage 1 analysis. Added **Rule 25: Lean Defect Recording Protocol with Immediate Evidence Capture** to formalize this practice.
 
 ---
 
 ## 3. Governance Updates
 
-1. **Rule 24 Added to `.agents/rules/aspice_governance.md`**: Avoid Redundant Diagnostic Builds.
-2. **Rule 25 Added to `.agents/rules/aspice_governance.md`**: Lean Defect Recording Protocol with Immediate Evidence Capture.
-3. **`docs/project_protocol.md` Synchronized**: Sections 2 and 5 updated with Rules 24 and 25.
-4. **`stage1-analysis/SKILL.md` Synchronized**: Mandatory preliminary check of ticket history and git logs before executing Gradle diagnostic tasks.
+1. **Rule 1 Promoted in `.agents/rules/aspice_governance.md`**: "Obey the Rules: Mandatory Rules, Protocols & Skills Refresh at Every Ticket Start" is now Rule #1. Subsequent rules 2–15 renumbered cleanly.
+2. **Rule 24 Added to `.agents/rules/aspice_governance.md`**: Avoid Redundant Diagnostic Builds.
+3. **Rule 25 Added to `.agents/rules/aspice_governance.md`**: Lean Defect Recording Protocol with Immediate Evidence Capture.
+4. **`docs/project_protocol.md` Synchronized**: Updated Section 2 with Rule 1 ("Obey the Rules"), Rule 24, and Rule 25.
+5. **`stage1-analysis/SKILL.md` Synchronized**: Mandatory preliminary check of ticket history and git logs before executing Gradle diagnostic tasks.
 
 ---
 
