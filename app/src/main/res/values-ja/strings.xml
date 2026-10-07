@@ -582,6 +582,10 @@
     <string name="config_tracking__show_map">マップ表示</string>
     <string name="config_tracking__showLiveSegments">ライブセグメント</string>
     <string name="config_tracking__showLapButton">ラップボタン</string>
+    <string name="config_tracking__show_navigation_hints">ターンバイターン案内</string>
+    <string name="config_tracking__show_live_climbs">ライブクライム</string>
+    <string name="config_tracking__wysiwyg_active">有効</string>
+    <string name="config_tracking__wysiwyg_hidden">非表示</string>
     <string name="add_view_before">前に表示を追加</string>
     <string name="delete_view">表示を削除</string>
     <string name="add_view_after">後に表示を追加</string>
@@ -1317,6 +1321,10 @@
     <string name="cluster_start_location">開始: %s</string>
     <string name="known_location_routes_header">ここからのルート (%d):</string>
     <string name="filter_by_start_location">開始地点で絞り込む</string>
+    <string name="known_locations_home_base">ホーム拠点</string>
+    <string name="known_locations_home_badge">ホーム拠点</string>
+    <string name="known_locations_set_home">ホーム拠点に設定</string>
+    <string name="known_locations_remove_home">ホーム拠点を解除</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">エキスパート設定</string>
@@ -1356,7 +1364,7 @@
     <string name="tuning_pace_ceiling_desc">ペースグラフのGPS異常値を抑制します。この上限を超える速度はクランプされます。</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
-    <string name="tuning_cat_cockpit_typography">コックピットのフォント</string>
+    <string name="tuning_cat_cockpit_typography">コックピットとタイル</string>
     <string name="tuning_cockpit_font_family_title">フォントファミリー</string>
     <string name="tuning_font_system_default">システムデフォルト</string>
     <string name="tuning_font_seven_segment">7セグメントデジタル</string>
@@ -1382,11 +1390,24 @@
     <string name="sensor_field_variant_v1">モダン・アウトラインスポーツタイル</string>
     <string name="sensor_field_variant_v2">立体スポーツカード</string>
     <string name="sensor_field_variant_v3">ソフトアクセント・カプセル</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">角の半径</string>
+    <string name="tuning_sensor_field_corner_radius_desc">コックピットタイルの角の丸み</string>
+    <string name="tuning_sensor_field_corner_radius_default">デフォルト: 0 dp (クラシックシームレス)</string>
+    <string name="tuning_sensor_field_border_thickness_title">枠線の太さ</string>
+    <string name="tuning_sensor_field_border_thickness_desc">タイルの枠線の太さ (0 dp = 枠線なし)</string>
+    <string name="tuning_sensor_field_border_thickness_default">デフォルト: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">枠線のコントラスト</string>
+    <string name="tuning_sensor_field_border_contrast_desc">枠線のカラーコントラスト (控えめから最大白/黒まで)</string>
+    <string name="tuning_sensor_field_border_contrast_default">デフォルト: 控えめ (0%)</string>
     <string name="tuning_default_format">デフォルト: %1$s</string>
     <string name="reset_to_defaults">デフォルトに戻す</string>
     <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>
     <string name="tuning_cat_sensors_gps">センサー、GPS、フィルター</string>
     <string name="tuning_cat_workout_masks_cards">ワークアウトカードと詳細</string>
+    <string name="tuning_cat_navigation">ナビゲーション</string>
+    <string name="tuning_route_selection_radius_title">ルート選択半径</string>
+    <string name="tuning_route_selection_radius_desc">近くのルート選択のためのルート開始地点までの最大距離</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 カード</string>
     <string name="tuning_matrix_col_list">一覧</string>
     <string name="tuning_matrix_col_details">詳細</string>
@@ -1451,6 +1472,8 @@
     <string name="permission_rationale_not_now">後で</string>
     <string name="permission_rationale_open_settings">設定を開く</string>
     <string name="permission_rationale_settings_explanation">位置情報の権限が拒否されました。位置情報へのアクセスがない場合、GPSルートの記録は利用できません。アプリの設定で権限を付与できます。</string>
+    <string name="permission_rationale_precise_location_explanation">ワークアウトの記録には正確な位置情報 (GPS) が必要です。おおよその位置情報では、距離、速度、ルート、高度を記録できません。権限で「正確」を選択してください。</string>
+    <string name="action_view_workout">表示</string>
     <string name="permission_warning_badge_desc">位置情報の権限がありません</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
@@ -1478,7 +1501,10 @@
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">ルートを選択</string>
     <string name="route_action_select">ルートを選択</string>
+    <string name="route_action_select_desc">ファイルまたは履歴から選択</string>
     <string name="route_action_stop">ルートを終了</string>
+    <string name="route_action_clear">ルートをクリア</string>
+    <string name="route_metrics_format">%1$s • %2$s</string>
     <string name="route_auto_detect_title">ルート検出</string>
     <string name="route_auto_detect_prompt">「%1$s」を走行中ですか？</string>
     <string name="route_auto_detect_activate">有効化</string>
@@ -1504,10 +1530,17 @@
     <string name="google_drive_never_synced">まだ同期されていません</string>
     <string name="restore_from_google_drive">Google ドライブから復元</string>
     <string name="upload_to_google_drive">Google ドライブにバックアップ</string>
+    <string name="google_drive_error_developer_config">Google サインイン設定エラー (ステータス 10): Google Cloud Console で OAuth クライアント登録 (パッケージ名 com.atrainingtracker.debug および SHA-1 フィンガープリント) を確認してください。</string>
+    <string name="google_drive_error_network">Google サインイン中にインターネット接続がないか、ネットワークエラーが発生しました。</string>
+    <string name="google_drive_error_generic">Google サインインに失敗しました。もう一度お試しください。</string>
+    <string name="google_drive_connect_prompt">Google アカウントを接続して、ワークアウトのエクスポートとデータベースのバックアップを Google ドライブに自動同期します。</string>
+    <string name="scan_google_drive">Google ドライブをスキャン</string>
+    <string name="legacy_import__downloading_google_drive">Google ドライブから %1$s をダウンロード中…</string>
     <string name="gpx_enriching_elevation">標高データを取得中…</string>
     <string name="gpx_elevation_enriched">標高データを正常に追加しました</string>
     <string name="gpx_elevation_enrichment_failed">標高の取得に失敗しました。2Dルートをインポートしました</string>
     <string name="waypoint_type_bench">ベンチ / 休憩所</string>
+    <string name="waypoint_type_shelter">避難小屋</string>
     <string name="waypoint_type_water">給水所 / 水場</string>
     <string name="waypoint_type_summit">山頂 / 峠</string>
     <string name="waypoint_type_food">補給所 / カフェ</string>
@@ -1535,6 +1568,10 @@
     <string name="climb_category_cat3">カテゴリー 3</string>
     <string name="climb_category_cat4">カテゴリー 4</string>
     <string name="climb_category_uc">UC</string>
+    <string name="routes_climb_count">%d 登坂</string>
+    <string name="routes_climbs_section_title">登坂 (%d)</string>
+    <string name="routes_climb_start_at">%s 地点から開始</string>
+    <string name="routes_climb_avg_grade">平均 %1$.1f%%</string>
     <string name="tuning_show_live_climbs_title">ライブクライム (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">ルートおよびフリー走行中にリアルタイム登坂コックピットを表示</string>
 
@@ -1568,21 +1605,6 @@
     <string name="nav_stop_return">帰り道終了</string>
     <string name="nav_route_reverse">ルートを逆走して戻る</string>
 
-    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
-    <string name="gateway_all">すべて</string>
-    <string name="gateway_north">北</string>
-    <string name="gateway_northeast">北東</string>
-    <string name="gateway_east">東</string>
-    <string name="gateway_southeast">南東</string>
-    <string name="gateway_south">南</string>
-    <string name="gateway_southwest">南西</string>
-    <string name="gateway_west">西</string>
-    <string name="gateway_northwest">北西</string>
-    <string name="gateway_unknown">その他</string>
-    <string name="pref_corridor_grouping_title">回廊ベースのルートグループ化</string>
-    <string name="pref_corridor_grouping_desc">リスト内のルートを出発方向と回廊ごとにグループ化します</string>
-    <string name="pref_focused_thumbnail_title">フォーカスされたサムネイルズーム</string>
-    <string name="pref_focused_thumbnail_desc">ルートサムネイルを共通の出入り回廊ではなく、特徴的な中央ループにズームします</string>
     <string name="fork_alert_title">分岐接近</string>
     <string name="fork_approaching_in_m">%1$d m先</string>
     <string name="fork_direction_left">左</string>
@@ -1599,4 +1621,10 @@
     <string name="sensor_battery_snackbar_single">⚠️ %1$s: バッテリー残量低下 (%2$d%%)</string>
     <string name="sensor_battery_snackbar_many">⚠️ %1$d 個のセンサー: バッテリー残量低下 (%2$s)</string>
     <string name="sensor_battery_action_view_sensors">センサーを見る</string>
+
+    <!-- Sensor Pairing Relocation (ATT-2189) -->
+    <string name="devices_pair_sensor">センサーをペアリング</string>
+    <string name="devices_pair_protocol_title">プロトコルを選択</string>
+    <string name="devices_pair_protocol_ant">ANT+ センサー</string>
+    <string name="devices_pair_protocol_ble">Bluetooth LE センサー</string>
 </resources>

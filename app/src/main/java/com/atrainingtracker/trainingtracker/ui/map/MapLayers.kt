@@ -336,45 +336,51 @@ fun MarkerLayer(
 }
 
 /**
- * Renders the specialized marker that follows the distance scrubber.
+ * Renders a specialized marker on the map indicating the athlete's position during profile scrubbing.
+ * Supports direct [activeScrubPoint] propagation as well as fallback to [selectedDistance] (REQ-MAP-032 / ATT-2340).
  */
 @Composable
 fun ScrubMarkerLayer(
     selectedDistance: Double?,
     activePath: List<PathPoint>,
     scrubIconLeft: BitmapDescriptor?,
-    scrubIconRight: BitmapDescriptor?
+    scrubIconRight: BitmapDescriptor?,
+    activeScrubPoint: PathPoint? = null
 ) {
-    selectedDistance?.let { targetDist ->
-        val index = activePath.indexOfFirst { it.distance >= targetDist }
+    val point = activeScrubPoint ?: selectedDistance?.let { targetDist ->
+        TelemetryMetricUtils.findNearestPoint(activePath, targetDist, isTimeDomain = false)
+            ?: activePath.find { it.distance >= targetDist }
+    }
 
-        if (index != -1) {
-            val point = activePath[index]
-            val isWestbound = run {
-                val nextSignificantPoint = activePath.drop(index + 1).firstOrNull {
+    if (point != null && (point.latLng.latitude != 0.0 || point.latLng.longitude != 0.0)) {
+        val index = activePath.indexOf(point).let { idx ->
+            if (idx != -1) idx else activePath.indexOfFirst { it.distance >= point.distance }
+        }
+
+        val isWestbound = if (index != -1) {
+            val nextSignificantPoint = activePath.drop(index + 1).firstOrNull {
+                it.latLng.longitude != point.latLng.longitude
+            }
+            if (nextSignificantPoint != null) {
+                nextSignificantPoint.latLng.longitude < point.latLng.longitude
+            } else {
+                val prevSignificantPoint = activePath.take(index).lastOrNull {
                     it.latLng.longitude != point.latLng.longitude
                 }
-                if (nextSignificantPoint != null) {
-                    nextSignificantPoint.latLng.longitude < point.latLng.longitude
+                if (prevSignificantPoint != null) {
+                    point.latLng.longitude < prevSignificantPoint.latLng.longitude
                 } else {
-                    val prevSignificantPoint = activePath.take(index).lastOrNull {
-                        it.latLng.longitude != point.latLng.longitude
-                    }
-                    if (prevSignificantPoint != null) {
-                        point.latLng.longitude < prevSignificantPoint.latLng.longitude
-                    } else {
-                        false
-                    }
+                    false
                 }
             }
+        } else false
 
-            Marker(
-                state = remember(point.latLng) { MarkerState(position = point.latLng) },
-                icon = if (isWestbound) scrubIconLeft else scrubIconRight,
-                zIndex = 5.0f,
-                flat = true
-            )
-        }
+        Marker(
+            state = remember(point.latLng) { MarkerState(position = point.latLng) },
+            icon = if (isWestbound) scrubIconLeft else scrubIconRight,
+            zIndex = 5.0f,
+            flat = true
+        )
     }
 }
 
@@ -439,7 +445,7 @@ fun RouteWaypointsLayer(
     waypoints.forEach { waypoint ->
         val iconDescriptor = remember(waypoint.type, context) {
             context?.let { ctx ->
-                bitmapDescriptorFromVectorInternal(ctx, waypoint.type.iconResId, 32, null)
+                createWaypointBadgeMarker(ctx, waypoint.type, 32)
             }
         }
 

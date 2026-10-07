@@ -57,4 +57,45 @@ class TuningPreferencesDataStoreSensorFieldVariantTest {
             TuningPreferencesDataStore.ALL_KEYS.contains(TuningPreferencesDataStore.KEY_SENSOR_FIELD_VARIANT)
         )
     }
+
+    @Test
+    fun defaultConstants_granularStylingBaseline() {
+        assertEquals(0.0f, TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS, 0.001f)
+        assertEquals(1.0f, TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS, 0.001f)
+        assertEquals(0.0f, TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST, 0.001f)
+    }
+
+    @Test
+    fun tuningConfig_granularStylingDefaults() {
+        val config = TuningConfig()
+        assertEquals(0.0f, config.sensorFieldCornerRadius, 0.001f)
+        assertEquals(1.0f, config.sensorFieldBorderThickness, 0.001f)
+        assertEquals(0.0f, config.sensorFieldBorderContrast, 0.001f)
+    }
+
+    @Test
+    fun tuningConfig_granularStylingCustomValuesRetained() {
+        val config = TuningConfig(
+            sensorFieldCornerRadius = 12.0f,
+            sensorFieldBorderThickness = 2.5f,
+            sensorFieldBorderContrast = 0.8f
+        )
+        assertEquals(12.0f, config.sensorFieldCornerRadius, 0.001f)
+        assertEquals(2.5f, config.sensorFieldBorderThickness, 0.001f)
+        assertEquals(0.8f, config.sensorFieldBorderContrast, 0.001f)
+    }
+
+    @Test
+    fun dataStoreKeys_granularStylingNames() {
+        assertEquals("tuning_sensor_field_corner_radius", TuningPreferencesDataStore.KEY_SENSOR_FIELD_CORNER_RADIUS.name)
+        assertEquals("tuning_sensor_field_border_thickness", TuningPreferencesDataStore.KEY_SENSOR_FIELD_BORDER_THICKNESS.name)
+        assertEquals("tuning_sensor_field_border_contrast", TuningPreferencesDataStore.KEY_SENSOR_FIELD_BORDER_CONTRAST.name)
+    }
+
+    @Test
+    fun allKeys_includesGranularStylingKeys() {
+        assertTrue(TuningPreferencesDataStore.ALL_KEYS.contains(TuningPreferencesDataStore.KEY_SENSOR_FIELD_CORNER_RADIUS))
+        assertTrue(TuningPreferencesDataStore.ALL_KEYS.contains(TuningPreferencesDataStore.KEY_SENSOR_FIELD_BORDER_THICKNESS))
+        assertTrue(TuningPreferencesDataStore.ALL_KEYS.contains(TuningPreferencesDataStore.KEY_SENSOR_FIELD_BORDER_CONTRAST))
+    }
 }

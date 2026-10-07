@@ -241,6 +241,7 @@ class WorkoutDataMapper(
         val commute: Boolean,
         val trainer: Boolean,
         val race: Boolean,
+        val source: WorkoutSource = WorkoutSource.TRACKED,
         val uploadToStrava: Int,
         val minLat: Double?,
         val minLng: Double?,
@@ -276,6 +277,9 @@ class WorkoutDataMapper(
         val commute = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COMMUTE)) == 1
         val trainer = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.TRAINER)) == 1
         val race = cursor.getColumnIndex(WorkoutSummaries.RACE).takeIf { it >= 0 }?.let { cursor.getInt(it) == 1 } ?: false
+        val source = cursor.getColumnIndex(WorkoutSummaries.SOURCE).takeIf { it >= 0 }?.let {
+            WorkoutSource.fromString(cursor.getString(it))
+        } ?: WorkoutSource.TRACKED
         val uploadToStrava = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.UPLOAD_TO_STRAVA))
         val minLat = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT))
         val minLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG))
@@ -309,6 +313,7 @@ class WorkoutDataMapper(
             commute = commute,
             trainer = trainer,
             race = race,
+            source = source,
             uploadToStrava = uploadToStrava,
             minLat = minLat,
             minLng = minLng,
@@ -376,6 +381,7 @@ class WorkoutDataMapper(
             commute = snapshot.commute,
             trainer = snapshot.trainer,
             race = snapshot.race,
+            source = snapshot.source,
             uploadToStrava = snapshot.uploadToStrava,
             mapPolyline = snapshot.mapPolyline,
             encodedAltitudes = snapshot.encodedAltitudes,

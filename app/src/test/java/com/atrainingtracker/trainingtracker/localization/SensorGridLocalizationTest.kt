@@ -84,13 +84,29 @@ class SensorGridLocalizationTest {
         for (suffix in locales) {
             val dirName = if (suffix.isEmpty()) "values" else "values$suffix"
             val stringsFile = File(resDir, "$dirName/strings.xml")
-            assertTrue("Expected strings.xml to exist in $dirName", stringsFile.exists())
-
             val cancel = parseStringResource(stringsFile, "move_tile_cancel")
             assertNotNull("Missing move_tile_cancel in $dirName", cancel)
             assertTrue(
                 "move_tile_cancel in $dirName must not be blank",
                 cancel!!.isNotBlank()
+            )
+        }
+    }
+
+    @Test
+    fun testRouteActionSelectDescParityAcrossAllLocales() {
+        val resDir = findResDir()
+
+        for (suffix in locales) {
+            val dirName = if (suffix.isEmpty()) "values" else "values$suffix"
+            val stringsFile = File(resDir, "$dirName/strings.xml")
+            assertTrue("Expected strings.xml to exist in $dirName", stringsFile.exists())
+
+            val desc = parseStringResource(stringsFile, "route_action_select_desc")
+            assertNotNull("Missing route_action_select_desc in $dirName", desc)
+            assertTrue(
+                "route_action_select_desc in $dirName must not be blank",
+                desc!!.isNotBlank()
             )
         }
     }

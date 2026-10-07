@@ -83,7 +83,10 @@ data class MappingData(val uri: Uri, val analysis: ImportEngine.AnalysisResult)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImportBackupTabsScreen(
-    viewModel: BackupRestoreViewModel
+    viewModel: BackupRestoreViewModel,
+    onNavigateToWorkout: ((Long) -> Unit)? = { workoutId ->
+        com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents.triggerNavigateToWorkout(workoutId)
+    }
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -106,10 +109,15 @@ fun ImportBackupTabsScreen(
     
     // ATT-315: Pre-import Tuning state
     var showTuningDialogForBulk by remember { mutableStateOf(false) }
+    var showTuningDialogForGoogleDrive by remember { mutableStateOf(false) }
     var pendingSingleLegacyUri by remember { mutableStateOf<Uri?>(null) }
     var showDropboxDisconnectedDialog by remember { mutableStateOf(false) }
+    var showGoogleDriveDisconnectedDialog by remember { mutableStateOf(false) }
     val isDropboxConnected = remember(uiState) {
         TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
+    }
+    val isGoogleDriveConnected = remember(uiState) {
+        TrainingApplication.uploadToGoogleDrive() && !TrainingApplication.getGoogleDriveAuthToken().isNullOrBlank()
     }
     
     val isBusy = uiState is BackupRestoreViewModel.UiState.Loading || uiState is BackupRestoreViewModel.UiState.Progress
@@ -199,7 +207,7 @@ fun ImportBackupTabsScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             // --- State Overlays (Shown at the very top of content) ---
-            StateOverlaySection(uiState, onClearState = { viewModel.clearState() })
+            StateOverlaySection(uiState, onClearState = { viewModel.clearState() }, onNavigateToWorkout = onNavigateToWorkout)
 
             HorizontalPager(
                 state = pagerState,
@@ -211,11 +219,19 @@ fun ImportBackupTabsScreen(
                     0 -> ImportTabContent(
                         isBusy = isBusy,
                         isDropboxConnected = isDropboxConnected,
+                        isGoogleDriveConnected = isGoogleDriveConnected,
                         onBulkRecoverClick = {
                             if (isDropboxConnected) {
                                 showTuningDialogForBulk = true
                             } else {
                                 showDropboxDisconnectedDialog = true
+                            }
+                        },
+                        onGoogleDriveRecoverClick = {
+                            if (isGoogleDriveConnected) {
+                                showTuningDialogForGoogleDrive = true
+                            } else {
+                                showGoogleDriveDisconnectedDialog = true
                             }
                         },
                         onSingleLegacyImportClick = { pickLegacyFileLauncher.launch(arrayOf("*/*")) },
@@ -362,6 +378,32 @@ fun ImportBackupTabsScreen(
                 viewModel.bulkRecoverLegacyData(context, "all")
             },
             onDismiss = { showTuningDialogForBulk = false }
+        )
+    }
+
+    if (showTuningDialogForGoogleDrive) {
+        PreImportTuningBottomSheet(
+            viewModel = viewModel,
+            onConfirm = {
+                showTuningDialogForGoogleDrive = false
+                viewModel.bulkRecoverGoogleDriveData(context, "all")
+            },
+            onDismiss = { showTuningDialogForGoogleDrive = false }
+        )
+    }
+
+    if (showGoogleDriveDisconnectedDialog) {
+        AlertDialog(
+            onDismissRequest = { showGoogleDriveDisconnectedDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+            title = { Text(stringResource(R.string.upload_to_google_drive)) },
+            text = { Text(stringResource(R.string.google_drive_disconnected_status)) },
+            confirmButton = {
+                TextButton(onClick = { showGoogleDriveDisconnectedDialog = false }) {
+                    Text(stringResource(R.string.OK))
+                }
+            }
         )
     }
 
@@ -856,7 +898,11 @@ fun ImportMappingDialog(
 }
 
 @Composable
-private fun StateOverlaySection(uiState: BackupRestoreViewModel.UiState, onClearState: () -> Unit) {
+private fun StateOverlaySection(
+    uiState: BackupRestoreViewModel.UiState,
+    onClearState: () -> Unit,
+    onNavigateToWorkout: ((Long) -> Unit)? = null
+) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         when (val state = uiState) {
             is BackupRestoreViewModel.UiState.Loading -> {
@@ -890,6 +936,16 @@ private fun StateOverlaySection(uiState: BackupRestoreViewModel.UiState, onClear
                 ) {
                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(text = state.message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        if (state.importedWorkoutId != null) {
+                            TextButton(onClick = {
+                                val workoutId = state.importedWorkoutId
+                                onClearState()
+                                onNavigateToWorkout?.invoke(workoutId)
+                            }) {
+                                Text(stringResource(R.string.action_view_workout))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                         TextButton(onClick = onClearState) { Text(stringResource(R.string.OK)) }
                     }
                 }
@@ -914,7 +970,9 @@ private fun StateOverlaySection(uiState: BackupRestoreViewModel.UiState, onClear
 private fun ImportTabContent(
     isBusy: Boolean,
     isDropboxConnected: Boolean,
+    isGoogleDriveConnected: Boolean,
     onBulkRecoverClick: () -> Unit,
+    onGoogleDriveRecoverClick: () -> Unit,
     onSingleLegacyImportClick: () -> Unit,
     onFitImportClick: () -> Unit
 ) {
@@ -926,6 +984,19 @@ private fun ImportTabContent(
         )
     }
     val scanBorder = if (isDropboxConnected) {
+        ButtonDefaults.outlinedButtonBorder(enabled = !isBusy)
+    } else {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+    }
+
+    val googleDriveButtonColors = if (isGoogleDriveConnected) {
+        ButtonDefaults.outlinedButtonColors()
+    } else {
+        ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        )
+    }
+    val googleDriveBorder = if (isGoogleDriveConnected) {
         ButtonDefaults.outlinedButtonBorder(enabled = !isBusy)
     } else {
         BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
@@ -985,6 +1056,16 @@ private fun ImportTabContent(
                     border = scanBorder
                 ) {
                     Text(stringResource(R.string.scan_tcx))
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onGoogleDriveRecoverClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isBusy,
+                    colors = googleDriveButtonColors,
+                    border = googleDriveBorder
+                ) {
+                    Text(stringResource(R.string.scan_google_drive))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(onClick = onSingleLegacyImportClick, modifier = Modifier.fillMaxWidth(), enabled = !isBusy) {

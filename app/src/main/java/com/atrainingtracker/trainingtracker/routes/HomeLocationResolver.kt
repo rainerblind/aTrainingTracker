@@ -33,15 +33,14 @@ data class HomeDestination(
 )
 
 /**
- * Resolves the athlete's primary Home destination from KnownLocationsDatabaseManager.
+ * Resolves the athlete's primary Home destination from KnownLocationsDatabaseManager (REQ-MAP-034).
  *
  * Evaluation Strategy:
- * 1. Explicit name match: Any location whose name contains "haus", "home", or "zuhause" (case-insensitive).
- * 2. Start Frequency: In the absence of an explicitly named location, the location with the highest hit count.
+ * 1. Explicit user designation: Location where isHome == true.
+ * 2. Start Frequency: In the absence of an explicitly designated location, the location with the highest hit count (> 0).
+ * 3. Fallback: First location if any exists.
  */
 object HomeLocationResolver {
-
-    private val HOME_KEYWORDS = listOf("haus", "home", "zuhause")
 
     @JvmStatic
     fun resolveHomeLocation(knownLocationsManager: KnownLocationsDatabaseManager): HomeDestination? {
@@ -55,22 +54,19 @@ object HomeLocationResolver {
             return null
         }
 
-        // 1. Explicit keyword match in name
-        val namedMatch = allLocations.firstOrNull { loc ->
-            val name = loc.name?.trim()?.lowercase() ?: ""
-            HOME_KEYWORDS.any { keyword -> name.contains(keyword) }
-        }
-        if (namedMatch != null) {
-            return toHomeDestination(namedMatch)
+        // 1. Explicit user designation in database
+        val designatedHome = allLocations.firstOrNull { it.isHome }
+        if (designatedHome != null) {
+            return toHomeDestination(designatedHome)
         }
 
-        // 2. Highest hitCount among all locations (primary start base)
-        val highestHitLoc = allLocations.maxByOrNull { it.hitCount }
-        if (highestHitLoc != null && highestHitLoc.hitCount > 0) {
+        // 2. Highest hitCount among all locations (primary start base fallback)
+        val highestHitLoc = allLocations.filter { it.hitCount > 0 }.maxByOrNull { it.hitCount }
+        if (highestHitLoc != null) {
             return toHomeDestination(highestHitLoc)
         }
 
-        // Fallback to the first location if any exists
+        // 3. Fallback to the first location if any exists
         return toHomeDestination(allLocations.first())
     }
 

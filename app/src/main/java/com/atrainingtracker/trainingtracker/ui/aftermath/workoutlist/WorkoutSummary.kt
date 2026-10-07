@@ -409,13 +409,16 @@ fun WorkoutSummary(
                         }
                     }
                 }
+                WorkoutSectionType.EXPORT_STATUS -> {
+                    // 10. Export Status Section
+                    if (preferences.showExportStatus) {
+                        ExportStatus(
+                            exportStatuses = workoutData.exportStatuses
+                        )
+                    }
+                }
             }
         }
-
-        // 10. Export Status Section
-        ExportStatus(
-            exportStatuses = workoutData.exportStatuses
-        )
 
         // Final spacing at the bottom of the summary
         Spacer(modifier = Modifier.height(12.dp))

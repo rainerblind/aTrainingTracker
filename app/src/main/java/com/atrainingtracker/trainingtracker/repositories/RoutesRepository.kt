@@ -37,6 +37,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaStrea
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -61,14 +62,28 @@ import okhttp3.Request
  */
 class RoutesRepository internal constructor(
     private val context: Context,
-    private val routesDb: RoutesDatabaseManager
+    private val routesDb: RoutesDatabaseManager,
+    private val climbsDb: ClimbsDatabaseManager,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
-    private constructor(context: Context) : this(
-        context.applicationContext,
-        RoutesDatabaseManager.getInstance(context.applicationContext)
+    internal constructor(
+        context: Context,
+        routesDb: RoutesDatabaseManager
+    ) : this(
+        context,
+        routesDb,
+        ClimbsDatabaseManager.getInstance(context.applicationContext),
+        Dispatchers.IO
     )
 
-    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private constructor(context: Context) : this(
+        context.applicationContext,
+        RoutesDatabaseManager.getInstance(context.applicationContext),
+        ClimbsDatabaseManager.getInstance(context.applicationContext),
+        Dispatchers.IO
+    )
+
+    private val repositoryScope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val syncMutex = Mutex()
 
     // StateFlow for the UI to observe the list of routes
@@ -109,13 +124,31 @@ class RoutesRepository internal constructor(
     }
 
     /**
+     * Enriches a route with its climbs from ClimbsDatabaseManager, falling back
+     * to on-the-fly detection via ClimbDetector if no climbs are stored (REQ-UI-274).
+     */
+    private suspend fun enrichRouteWithClimbs(route: RouteWithPath): RouteWithPath {
+        var climbs = climbsDb.getClimbsForRoute(route.summary.id)
+        if (climbs.isEmpty() && route.path.size >= 2) {
+            val detected = ClimbDetector.detectClimbs(route.path, routeId = route.summary.id)
+            if (detected.isNotEmpty()) {
+                climbsDb.insertClimbsWithDeduplicationBatch(detected)
+                climbs = detected
+            }
+        }
+        return route.copy(climbs = climbs)
+    }
+
+    /**
      * Refreshes both flows from the database.
      * This is called automatically after any DB modification.
      */
     fun refreshRoutes() {
         repositoryScope.launch {
-            // Fetch summaries for the list view
-            _allRoutes.value = routesDb.getAllRoutes()
+            // Fetch summaries for the list view and enrich with climbs (REQ-UI-274)
+            val routes = routesDb.getAllRoutes()
+            val enriched = routes.map { enrichRouteWithClimbs(it) }
+            _allRoutes.value = enriched
         }
     }
 
@@ -130,7 +163,14 @@ class RoutesRepository internal constructor(
      * Fetches a route by its linked cluster ID.
      */
     suspend fun getRouteByClusterId(clusterId: Long): RouteWithPath? = withContext(Dispatchers.IO) {
-        routesDb.getRouteByClusterId(clusterId)
+        routesDb.getRouteByClusterId(clusterId)?.let { enrichRouteWithClimbs(it) }
+    }
+
+    /**
+     * Fetches a route by its database ID.
+     */
+    suspend fun getRouteById(routeId: Long): RouteWithPath? = withContext(Dispatchers.IO) {
+        routesDb.getRouteById(routeId)?.let { enrichRouteWithClimbs(it) }
     }
 
     /**
@@ -197,10 +237,21 @@ class RoutesRepository internal constructor(
     }
 
     /**
-     * Retrieves all climbs for a specific route ID (REQ-MAP-027).
+     * Retrieves all climbs for a specific route ID (REQ-MAP-027, REQ-UI-274).
      */
     suspend fun getClimbsForRoute(routeId: Long): List<Climb> = withContext(Dispatchers.IO) {
-        ClimbsDatabaseManager.getInstance(context).getClimbsForRoute(routeId)
+        var climbs = climbsDb.getClimbsForRoute(routeId)
+        if (climbs.isEmpty()) {
+            val path = routesDb.getRoutePath(routeId)
+            if (path.size >= 2) {
+                val detected = ClimbDetector.detectClimbs(path, routeId = routeId)
+                if (detected.isNotEmpty()) {
+                    climbsDb.insertClimbsWithDeduplicationBatch(detected)
+                    climbs = detected
+                }
+            }
+        }
+        climbs
     }
 
     /**

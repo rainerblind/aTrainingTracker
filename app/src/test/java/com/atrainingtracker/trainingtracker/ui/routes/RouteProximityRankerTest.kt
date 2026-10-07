@@ -210,4 +210,77 @@ class RouteProximityRankerTest {
         assertEquals(2L, result[0].summary.id)
         assertEquals(1L, result[1].summary.id)
     }
+
+    @Test
+    fun testFilterAndRankRoutes_filtersStrictlyWithinRadius() {
+        val userLocation = LatLng(48.137, 11.576)
+
+        // Route A starts ~400m away (lat + 0.0036 is ~400m)
+        val routeNear = createRoute(1L, "Route Near", syncedAt = 1000L, startLat = 48.1406, startLng = 11.576)
+        // Route B starts ~800m away
+        val routeMid = createRoute(2L, "Route Mid", syncedAt = 2000L, startLat = 48.1442, startLng = 11.576)
+        // Route C starts ~1500m away (> 1000m)
+        val routeFar = createRoute(3L, "Route Far", syncedAt = 3000L, startLat = 48.1505, startLng = 11.576)
+
+        val result = RouteProximityRanker.filterAndRankRoutes(
+            routes = listOf(routeFar, routeMid, routeNear),
+            currentLocation = userLocation,
+            radiusMeters = 1000.0f
+        )
+
+        assertEquals("Should only include routes within 1000m radius", 2, result.size)
+        assertTrue(result.none { it.summary.id == 3L })
+    }
+
+    @Test
+    fun testFilterAndRankRoutes_sortsByRecencyDescending() {
+        val userLocation = LatLng(48.137, 11.576)
+
+        // Route A is closer (~300m) but older syncedAt (1000L)
+        val routeOlder = createRoute(1L, "Older Route", syncedAt = 1000L, startLat = 48.1397, startLng = 11.576)
+        // Route B is farther (~800m) but newer syncedAt (5000L)
+        val routeNewer = createRoute(2L, "Newer Route", syncedAt = 5000L, startLat = 48.1442, startLng = 11.576)
+
+        val result = RouteProximityRanker.filterAndRankRoutes(
+            routes = listOf(routeOlder, routeNewer),
+            currentLocation = userLocation,
+            radiusMeters = 1000.0f
+        )
+
+        assertEquals(2, result.size)
+        assertEquals("Most recently ridden route must be first (Zuletzt gefahren)", 2L, result[0].summary.id)
+        assertEquals(1L, result[1].summary.id)
+    }
+
+    @Test
+    fun testFilterAndRankRoutes_nullLocation_returnsEmptyList() {
+        val route = createRoute(1L, "Any Route", syncedAt = 5000L)
+        val result = RouteProximityRanker.filterAndRankRoutes(
+            routes = listOf(route),
+            currentLocation = null,
+            radiusMeters = 1000.0f
+        )
+        assertTrue("Null location must return empty list as distance cannot be determined", result.isEmpty())
+    }
+
+    @Test
+    fun testFilterAndRankRoutes_customRadius() {
+        val userLocation = LatLng(48.137, 11.576)
+        // Route at ~700m
+        val route = createRoute(1L, "Route 700m", startLat = 48.1433, startLng = 11.576)
+
+        val resultSmallRadius = RouteProximityRanker.filterAndRankRoutes(
+            routes = listOf(route),
+            currentLocation = userLocation,
+            radiusMeters = 500.0f
+        )
+        assertTrue("Route at 700m should be excluded for 500m radius", resultSmallRadius.isEmpty())
+
+        val resultLargeRadius = RouteProximityRanker.filterAndRankRoutes(
+            routes = listOf(route),
+            currentLocation = userLocation,
+            radiusMeters = 1000.0f
+        )
+        assertEquals(1, resultLargeRadius.size)
+    }
 }

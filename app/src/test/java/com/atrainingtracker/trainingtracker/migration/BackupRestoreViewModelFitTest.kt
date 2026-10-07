@@ -33,6 +33,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -123,12 +124,12 @@ class BackupRestoreViewModelFitTest {
 
         mockkObject(LegacyImportEngine)
         coEvery {
-            LegacyImportEngine.importFromFitInternal(mockContext, match { it.name.contains("_0.fit") }, any(), any())
-        } returns LegacyImportEngine.ImportStatus.SUCCESS
+            LegacyImportEngine.importFromFitResult(mockContext, match { it.name.contains("_0.fit") }, any(), any())
+        } returns LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.SUCCESS, 101L)
 
         coEvery {
-            LegacyImportEngine.importFromFitInternal(mockContext, match { it.name.contains("_1.fit") }, any(), any())
-        } returns LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED
+            LegacyImportEngine.importFromFitResult(mockContext, match { it.name.contains("_1.fit") }, any(), any())
+        } returns LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED)
 
         val viewModel = BackupRestoreViewModel(mockApp)
         val job = viewModel.importFitFiles(mockContext, uris, testDispatcher)
@@ -136,9 +137,11 @@ class BackupRestoreViewModelFitTest {
 
         val state = viewModel.uiState.value
         assertTrue("State should be Success but was $state", state is BackupRestoreViewModel.UiState.Success)
-        val msg = (state as BackupRestoreViewModel.UiState.Success).message
+        val successState = state as BackupRestoreViewModel.UiState.Success
+        val msg = successState.message
         assertTrue(msg.contains("1 workouts"))
         assertTrue(msg.contains("1 duplicates skipped"))
+        assertEquals(101L, successState.importedWorkoutId)
     }
 
     @Test
@@ -151,8 +154,8 @@ class BackupRestoreViewModelFitTest {
 
         mockkObject(LegacyImportEngine)
         coEvery {
-            LegacyImportEngine.importFromFitInternal(mockContext, any(), any(), any())
-        } returns LegacyImportEngine.ImportStatus.FAILED
+            LegacyImportEngine.importFromFitResult(mockContext, any(), any(), any())
+        } returns LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.FAILED)
 
         val viewModel = BackupRestoreViewModel(mockApp)
         val job = viewModel.importFitFiles(mockContext, uris, testDispatcher)

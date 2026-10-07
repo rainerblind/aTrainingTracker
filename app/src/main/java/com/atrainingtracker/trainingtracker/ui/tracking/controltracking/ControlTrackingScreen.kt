@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,8 +60,8 @@ fun ControlTrackingScreen(
     searchingFor: String?,
     devices: List<RemoteDeviceUIData>,
     currentSport: BSportType,
-    isAntSupported: Boolean,
-    isBluetoothSupported: Boolean,
+    isAntSupported: Boolean = false,
+    isBluetoothSupported: Boolean = false,
     onSearch: () -> Unit,
     onDeviceClick: (RemoteDeviceUIData) -> Unit,
     onSportSelected: (BSportType) -> Unit,
@@ -68,13 +69,14 @@ fun ControlTrackingScreen(
     onPause: () -> Unit,
     onResume: () -> Unit,
     onStop: () -> Unit,
-    onPairingClicked: (Protocol) -> Unit,
-    selectingProtocol: Protocol?,
-    onDeviceTypeSelected: (DeviceType) -> Unit,
-    onCancelDeviceTypeSelection: () -> Unit,
+    onPairingClicked: (Protocol) -> Unit = {},
+    selectingProtocol: Protocol? = null,
+    onDeviceTypeSelected: (DeviceType) -> Unit = {},
+    onCancelDeviceTypeSelection: () -> Unit = {},
     showResearchButton: Boolean = true,
     locationCalibrationStatus: com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bottomContent: @Composable ColumnScope.() -> Unit = {}
 ) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -83,11 +85,18 @@ fun ControlTrackingScreen(
         androidx.core.content.ContextCompat.checkSelfPermission(
             context,
             android.Manifest.permission.ACCESS_FINE_LOCATION
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    val checkIsCoarseOnly = {
         androidx.core.content.ContextCompat.checkSelfPermission(
             context,
             android.Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED &&
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) != android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
     val checkHasBackgroundLocation = {
@@ -112,6 +121,9 @@ fun ControlTrackingScreen(
 
     var hasLocationPermission by remember {
         mutableStateOf(checkHasLocation())
+    }
+    var isCoarseOnly by remember {
+        mutableStateOf(checkIsCoarseOnly())
     }
 
     var rationaleStep by androidx.compose.runtime.saveable.rememberSaveable {
@@ -150,11 +162,11 @@ fun ControlTrackingScreen(
         val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
         prefs.edit().putBoolean("pref_has_requested_foreground_perms", true).apply()
         val fineGranted = results[android.Manifest.permission.ACCESS_FINE_LOCATION] == true
-        val coarseGranted = results[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        val granted = fineGranted || coarseGranted
-        hasLocationPermission = granted
-        if (granted) {
+        hasLocationPermission = fineGranted
+        isCoarseOnly = checkIsCoarseOnly()
+        if (fineGranted) {
             isPermanentlyDenied = false
+            com.atrainingtracker.banalservice.BANALService.checkOrInitializeLocationDevices()
             proceedAfterPermissions()
         } else {
             val activity = context as? android.app.Activity
@@ -199,6 +211,10 @@ fun ControlTrackingScreen(
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 val permitted = checkHasLocation()
                 hasLocationPermission = permitted
+                isCoarseOnly = checkIsCoarseOnly()
+                if (permitted) {
+                    com.atrainingtracker.banalservice.BANALService.checkOrInitializeLocationDevices()
+                }
                 if (permitted && rationaleStep == RationaleStep.FOREGROUND) {
                     isPermanentlyDenied = false
                     proceedAfterPermissions()
@@ -222,6 +238,7 @@ fun ControlTrackingScreen(
             val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
             val hasRequestedForeground = prefs.getBoolean("pref_has_requested_foreground_perms", false)
             val activity = context as? android.app.Activity
+            isCoarseOnly = checkIsCoarseOnly()
             if (activity != null && hasRequestedForeground) {
                 val showRationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
                     activity,
@@ -305,12 +322,8 @@ fun ControlTrackingScreen(
         // Pushes the main control buttons to the center
         Spacer(modifier = Modifier.weight(1f))
 
-        // Pairing Buttons
-        PairingButtons(
-            isAntSupported = isAntSupported,
-            isBluetoothSupported = isBluetoothSupported,
-            onPairingClicked = onPairingClicked
-        )
+        // Flexible bottom content slot (e.g. Route Selection in ATT-2458)
+        bottomContent()
     }
 
     // Material 3 Permission Rationale Sheet (REQ-PRI-003, ATT-2075)
@@ -348,6 +361,7 @@ fun ControlTrackingScreen(
         PermissionRationaleSheet(
             rationaleType = rationaleType,
             isPermanentlyDenied = isPermanentlyDenied,
+            isCoarseOnly = isCoarseOnly,
             onContinue = {
                 when (rationaleStep) {
                     RationaleStep.FOREGROUND -> {

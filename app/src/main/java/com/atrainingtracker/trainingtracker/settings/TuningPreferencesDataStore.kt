@@ -97,8 +97,22 @@ object TuningPreferencesDefaults {
     const val MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 20.0f
     const val MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 200.0f
 
-    const val CORRIDOR_GROUPING_ENABLED = true
-    const val FOCUSED_THUMBNAIL_ZOOM_ENABLED = true
+
+    const val SENSOR_FIELD_CORNER_RADIUS = 0.0f
+    const val MIN_SENSOR_FIELD_CORNER_RADIUS = 0.0f
+    const val MAX_SENSOR_FIELD_CORNER_RADIUS = 20.0f
+
+    const val SENSOR_FIELD_BORDER_THICKNESS = 1.0f
+    const val MIN_SENSOR_FIELD_BORDER_THICKNESS = 0.0f
+    const val MAX_SENSOR_FIELD_BORDER_THICKNESS = 4.0f
+
+    const val SENSOR_FIELD_BORDER_CONTRAST = 0.0f
+    const val MIN_SENSOR_FIELD_BORDER_CONTRAST = 0.0f
+    const val MAX_SENSOR_FIELD_BORDER_CONTRAST = 1.0f
+
+    const val DEFAULT_ROUTE_SELECTION_RADIUS_KM = 1.0f
+    const val MIN_ROUTE_SELECTION_RADIUS_KM = 0.5f
+    const val MAX_ROUTE_SELECTION_RADIUS_KM = 10.0f
 }
 
 /**
@@ -127,8 +141,10 @@ data class TuningConfig(
     val turnAudioAlertsEnabled: Boolean = TuningPreferencesDefaults.TURN_AUDIO_ALERTS_ENABLED,
     val turnCueCountdownDistanceMeters: Float = TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS,
     val offRouteCorridorThresholdMeters: Float = TuningPreferencesDefaults.OFF_ROUTE_CORRIDOR_THRESHOLD_METERS,
-    val corridorGroupingEnabled: Boolean = TuningPreferencesDefaults.CORRIDOR_GROUPING_ENABLED,
-    val focusedThumbnailZoomEnabled: Boolean = TuningPreferencesDefaults.FOCUSED_THUMBNAIL_ZOOM_ENABLED
+    val sensorFieldCornerRadius: Float = TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS,
+    val sensorFieldBorderThickness: Float = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS,
+    val sensorFieldBorderContrast: Float = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST,
+    val routeSelectionRadiusKm: Float = TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM
 ) {
     @Deprecated("Use elevationXAxisDomain or telemetryXAxisDomain", ReplaceWith("elevationXAxisDomain"))
     val profileXAxisDomain: ProfileXAxisDomain
@@ -198,8 +214,11 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_TURN_AUDIO_ALERTS_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_turn_audio_alerts_enabled")
         val KEY_TURN_CUE_COUNTDOWN_DISTANCE: Preferences.Key<Float> = floatPreferencesKey("tuning_turn_cue_countdown_distance")
         val KEY_OFF_ROUTE_CORRIDOR_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_off_route_corridor_threshold")
-        val KEY_CORRIDOR_GROUPING_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_corridor_grouping_enabled")
-        val KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_focused_thumbnail_zoom_enabled")
+
+        val KEY_SENSOR_FIELD_CORNER_RADIUS: Preferences.Key<Float> = floatPreferencesKey("tuning_sensor_field_corner_radius")
+        val KEY_SENSOR_FIELD_BORDER_THICKNESS: Preferences.Key<Float> = floatPreferencesKey("tuning_sensor_field_border_thickness")
+        val KEY_SENSOR_FIELD_BORDER_CONTRAST: Preferences.Key<Float> = floatPreferencesKey("tuning_sensor_field_border_contrast")
+        val KEY_ROUTE_SELECTION_RADIUS_KM: Preferences.Key<Float> = floatPreferencesKey("tuning_route_selection_radius_km")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -225,8 +244,10 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_TURN_AUDIO_ALERTS_ENABLED,
             KEY_TURN_CUE_COUNTDOWN_DISTANCE,
             KEY_OFF_ROUTE_CORRIDOR_THRESHOLD,
-            KEY_CORRIDOR_GROUPING_ENABLED,
-            KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED
+            KEY_SENSOR_FIELD_CORNER_RADIUS,
+            KEY_SENSOR_FIELD_BORDER_THICKNESS,
+            KEY_SENSOR_FIELD_BORDER_CONTRAST,
+            KEY_ROUTE_SELECTION_RADIUS_KM
         )
     }
 
@@ -336,8 +357,27 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
         )
 
-        val corridorGroupingEnabled = prefs[KEY_CORRIDOR_GROUPING_ENABLED] ?: TuningPreferencesDefaults.CORRIDOR_GROUPING_ENABLED
-        val focusedThumbnailZoomEnabled = prefs[KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED] ?: TuningPreferencesDefaults.FOCUSED_THUMBNAIL_ZOOM_ENABLED
+        val rawCornerRadius = prefs[KEY_SENSOR_FIELD_CORNER_RADIUS] ?: TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS
+        val clampedCornerRadius = rawCornerRadius.coerceIn(
+            TuningPreferencesDefaults.MIN_SENSOR_FIELD_CORNER_RADIUS,
+            TuningPreferencesDefaults.MAX_SENSOR_FIELD_CORNER_RADIUS
+        )
+        val rawBorderThickness = prefs[KEY_SENSOR_FIELD_BORDER_THICKNESS] ?: TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS
+        val clampedBorderThickness = rawBorderThickness.coerceIn(
+            TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_THICKNESS,
+            TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_THICKNESS
+        )
+        val rawBorderContrast = prefs[KEY_SENSOR_FIELD_BORDER_CONTRAST] ?: TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST
+        val clampedBorderContrast = rawBorderContrast.coerceIn(
+            TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_CONTRAST,
+            TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_CONTRAST
+        )
+
+        val rawRadiusKm = prefs[KEY_ROUTE_SELECTION_RADIUS_KM] ?: TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM
+        val clampedRadiusKm = rawRadiusKm.coerceIn(
+            TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
+            TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
+        )
 
         TuningConfig(
             elevationXAxisDomain = elevationDomain,
@@ -362,8 +402,10 @@ class TuningPreferencesDataStore(private val context: Context) {
             turnAudioAlertsEnabled = turnAudioAlertsEnabled,
             turnCueCountdownDistanceMeters = clampedTurnCountdown,
             offRouteCorridorThresholdMeters = clampedOffRoute,
-            corridorGroupingEnabled = corridorGroupingEnabled,
-            focusedThumbnailZoomEnabled = focusedThumbnailZoomEnabled
+            sensorFieldCornerRadius = clampedCornerRadius,
+            sensorFieldBorderThickness = clampedBorderThickness,
+            sensorFieldBorderContrast = clampedBorderContrast,
+            routeSelectionRadiusKm = clampedRadiusKm
         )
     }
 
@@ -408,6 +450,22 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MIN_PACE_CEILING_MIN_KM,
             TuningPreferencesDefaults.MAX_PACE_CEILING_MIN_KM
         )
+        val clampedCornerRadius = config.sensorFieldCornerRadius.coerceIn(
+            TuningPreferencesDefaults.MIN_SENSOR_FIELD_CORNER_RADIUS,
+            TuningPreferencesDefaults.MAX_SENSOR_FIELD_CORNER_RADIUS
+        )
+        val clampedBorderThickness = config.sensorFieldBorderThickness.coerceIn(
+            TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_THICKNESS,
+            TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_THICKNESS
+        )
+        val clampedBorderContrast = config.sensorFieldBorderContrast.coerceIn(
+            TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_CONTRAST,
+            TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_CONTRAST
+        )
+        val clampedRadiusKm = config.routeSelectionRadiusKm.coerceIn(
+            TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
+            TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
+        )
 
         context.dataStore.edit { prefs ->
             prefs[KEY_ELEVATION_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
@@ -439,22 +497,13 @@ class TuningPreferencesDataStore(private val context: Context) {
                 TuningPreferencesDefaults.MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS,
                 TuningPreferencesDefaults.MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
             )
-            prefs[KEY_CORRIDOR_GROUPING_ENABLED] = config.corridorGroupingEnabled
-            prefs[KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED] = config.focusedThumbnailZoomEnabled
+            prefs[KEY_SENSOR_FIELD_CORNER_RADIUS] = clampedCornerRadius
+            prefs[KEY_SENSOR_FIELD_BORDER_THICKNESS] = clampedBorderThickness
+            prefs[KEY_SENSOR_FIELD_BORDER_CONTRAST] = clampedBorderContrast
+            prefs[KEY_ROUTE_SELECTION_RADIUS_KM] = clampedRadiusKm
         }
     }
 
-    suspend fun updateCorridorGroupingEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_CORRIDOR_GROUPING_ENABLED] = enabled
-        }
-    }
-
-    suspend fun updateFocusedThumbnailZoomEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_FOCUSED_THUMBNAIL_ZOOM_ENABLED] = enabled
-        }
-    }
 
     suspend fun updateShowLiveClimbs(show: Boolean) {
         context.dataStore.edit { prefs ->
@@ -465,6 +514,16 @@ class TuningPreferencesDataStore(private val context: Context) {
     suspend fun updateSensorFieldVariant(variant: SensorFieldVariant) {
         context.dataStore.edit { prefs ->
             prefs[KEY_SENSOR_FIELD_VARIANT] = variant.name
+        }
+    }
+
+    suspend fun updateRouteSelectionRadiusKm(radiusKm: Float) {
+        val clamped = radiusKm.coerceIn(
+            TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
+            TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ROUTE_SELECTION_RADIUS_KM] = clamped
         }
     }
 

@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -92,6 +93,29 @@ fun TrackingTabGridContent(
         }
     }
 
+    val tabToggleActions = remember(viewModel) {
+        object : TabToggleActions {
+            override fun onToggleMap(enabled: Boolean) {
+                viewModel.onUpdateShowMap(enabled)
+            }
+            override fun onToggleElevationProfile(enabled: Boolean) {
+                viewModel.onUpdateShowElevationProfile(enabled)
+            }
+            override fun onToggleLiveSegments(enabled: Boolean) {
+                viewModel.onUpdateShowLiveSegments(enabled)
+            }
+            override fun onToggleLiveClimbs(enabled: Boolean) {
+                viewModel.onUpdateShowLiveClimbs(enabled)
+            }
+            override fun onToggleNavigationHints(enabled: Boolean) {
+                viewModel.onUpdateShowNavigationHints(enabled)
+            }
+            override fun onToggleLapButton(enabled: Boolean) {
+                viewModel.onUpdateShowLapButton(enabled)
+            }
+        }
+    }
+
     // Map the UI state and interactions to the SensorGridScreen
     SensorGridScreen(
         state = uiState,
@@ -100,6 +124,7 @@ fun TrackingTabGridContent(
         currentLocationFlow = viewModel.banalServiceRepository.currentLocation,
         liveSegments = viewModel.activeLiveSegments,
         selectedFieldForMove = selectedFieldForMove,
+        tabToggleActions = tabToggleActions
     )
 
     val currentActivityType by viewModel.activityType.collectAsState()

@@ -73,6 +73,7 @@ fun PermissionRationaleSheet(
     modifier: Modifier = Modifier,
     rationaleType: RationaleType = RationaleType.FOREGROUND,
     isPermanentlyDenied: Boolean = false,
+    isCoarseOnly: Boolean = false,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     onContinue: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -88,6 +89,7 @@ fun PermissionRationaleSheet(
         PermissionRationaleContent(
             rationaleType = rationaleType,
             isPermanentlyDenied = isPermanentlyDenied,
+            isCoarseOnly = isCoarseOnly,
             onContinue = onContinue,
             onOpenSettings = onOpenSettings,
             onDismissRequest = onDismissRequest
@@ -100,6 +102,7 @@ fun PermissionRationaleContent(
     modifier: Modifier = Modifier,
     rationaleType: RationaleType = RationaleType.FOREGROUND,
     isPermanentlyDenied: Boolean = false,
+    isCoarseOnly: Boolean = false,
     onContinue: () -> Unit,
     onOpenSettings: () -> Unit,
     onDismissRequest: () -> Unit
@@ -146,6 +149,8 @@ fun PermissionRationaleContent(
             RationaleType.FOREGROUND -> {
                 if (isPermanentlyDenied) {
                     stringResource(id = R.string.permission_rationale_settings_explanation)
+                } else if (isCoarseOnly) {
+                    stringResource(id = R.string.permission_rationale_precise_location_explanation)
                 } else {
                     stringResource(id = R.string.permission_rationale_subtitle)
                 }

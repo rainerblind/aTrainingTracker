@@ -390,8 +390,10 @@ fun ATrainingTrackerApp(
 
                 composable(NavRoutes.SENSORS) {
                     val tabViewModel: DevicesTabbedViewModel = viewModel(activity)
+                    val equipmentViewModel: EquipmentViewModel = viewModel(activity)
                     DevicesTabbedScreen(
                         tabViewModel = tabViewModel,
+                        equipmentViewModel = equipmentViewModel,
                         initialTab = 2,
                         onCheckAntInstallation = {
                             InstallANTShitDialog().show(activity.supportFragmentManager, InstallANTShitDialog.TAG)

@@ -461,6 +461,16 @@ class MainActivityWithNavigation :
 
             WorkoutNavigationEvents.resetCluster()
         }
+
+        WorkoutNavigationEvents.navigateToWorkoutLiveData.observe(this) { workoutId: Long? ->
+            if (workoutId == null || workoutId <= 0) return@observe
+
+            if (mSelectedFragmentId != R.id.drawer_workouts) {
+                mSelectedFragmentId = R.id.drawer_workouts
+                mDrawerController.selectedItemId = mSelectedFragmentId
+                navigateToDrawerItem(R.id.drawer_workouts)
+            }
+        }
     }
 
     private fun getPermissions(): List<String> {
@@ -489,16 +499,17 @@ class MainActivityWithNavigation :
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION) {
-            var foregroundLocationGranted = false
+            var fineLocationGranted = false
             for (i in permissions.indices) {
-                if ((permissions[i] == Manifest.permission.ACCESS_FINE_LOCATION || permissions[i] == Manifest.permission.ACCESS_COARSE_LOCATION) &&
+                if (permissions[i] == Manifest.permission.ACCESS_FINE_LOCATION &&
                     grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                    foregroundLocationGranted = true
+                    fineLocationGranted = true
                     break
                 }
             }
 
-            if (foregroundLocationGranted) {
+            if (fineLocationGranted) {
+                BANALService.checkOrInitializeLocationDevices()
                 checkGpsEnabledIfPermitted()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -608,6 +619,10 @@ class MainActivityWithNavigation :
 
         if (com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper.isIgnoringBatteryOptimizations(this)) {
             com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper.resetBatteryKillCount(this)
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            BANALService.checkOrInitializeLocationDevices()
         }
 
         checkUnfinishedWorkout()

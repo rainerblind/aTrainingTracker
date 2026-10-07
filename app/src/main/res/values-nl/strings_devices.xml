@@ -30,6 +30,8 @@
     <string name="devices_tab_available">Verbonden</string>
     <string name="devices_tab_paired">Gekoppeld</string>
     <string name="devices_tab_known">Bekend</string>
+    <string name="devices_tab_bikes">Fietsen</string>
+    <string name="devices_tab_shoes">Schoenen</string>
     <string name="devices_sensors_title">Sensoren</string>
     <string name="devices_available">verbonden</string>
     <string name="devices_not_connected">niet verbonden</string>

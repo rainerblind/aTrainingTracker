@@ -59,25 +59,17 @@ class SensorGridScreenRouteIntegrationTest {
     }
 
     @Test
-    fun testSensorGridScreen_integratesRouteActionChipRow() {
+    fun testSensorGridScreen_doesNotIntegrateRouteActionChipRow() {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        assertTrue(
-            "SensorGridScreen must render RouteActionChipRow in tracking mode",
+        org.junit.Assert.assertFalse(
+            "SensorGridScreen must not render RouteActionChipRow in tracking mode (REQ-UI-279.1 / ATT-2458)",
             content.contains("RouteActionChipRow(")
         )
-        assertTrue(
-            "SensorGridScreen must define RouteActionChipRow composable",
+        org.junit.Assert.assertFalse(
+            "SensorGridScreen must not define RouteActionChipRow composable",
             content.contains("fun RouteActionChipRow(")
-        )
-        assertTrue(
-            "RouteActionChipRow must use R.drawable.ic_route",
-            content.contains("R.drawable.ic_route")
-        )
-        assertTrue(
-            "RouteActionChipRow must use R.string.route_action_select",
-            content.contains("R.string.route_action_select")
         )
     }
 
@@ -101,17 +93,19 @@ class SensorGridScreenRouteIntegrationTest {
     }
 
     @Test
-    fun testSensorGridScreen_integratesRouteSelectorModalBottomSheet() {
+    fun testSensorGridScreen_doesNotHostRedundantRouteSelectorModalBottomSheet() {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        assertTrue(
-            "SensorGridScreen must invoke RouteSelectorModalBottomSheet",
+        org.junit.Assert.assertFalse(
+            "SensorGridScreen must not host redundant RouteSelectorModalBottomSheet (REQ-UI-279.1)",
             content.contains("RouteSelectorModalBottomSheet(")
         )
+
+        val tabsFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsScreen.kt")
         assertTrue(
-            "RouteSelectorModalBottomSheet must be toggled by showRouteSelectorSheet",
-            content.contains("if (showRouteSelectorSheet)")
+            "TrackingTabsScreen must host RouteSelectorModalBottomSheet (REQ-UI-279.2)",
+            tabsFile.readText().contains("RouteSelectorModalBottomSheet(")
         )
     }
 
@@ -123,6 +117,21 @@ class SensorGridScreenRouteIntegrationTest {
         assertTrue(
             "SensorGridScreen must observe currentLocationFlow and dispatch to onLocationChanged",
             content.contains("onLocationChanged(location)")
+        )
+    }
+
+    @Test
+    fun testRouteSelectionButton_integratesClearRouteAction() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/RouteSelectionButton.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "RouteSelectionButton must declare onClearRoute parameter",
+            content.contains("onClearRoute: (() -> Unit)? = null")
+        )
+        assertTrue(
+            "RouteSelectionButton must use route_action_clear string resource",
+            content.contains("R.string.route_action_clear")
         )
     }
 }

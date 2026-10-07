@@ -33,6 +33,16 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 /**
+ * Metadata entry for a Google Drive file returned by recursive directory scans.
+ */
+data class DriveFileEntry(
+    val id: String,
+    val name: String,
+    val size: Long? = null,
+    val mimeType: String? = null
+)
+
+/**
  * Lightweight, robust REST client for Google Drive API v3.
  *
  * Communicates directly via HTTPS using OkHttp, strictly restricted to the least-privilege
@@ -254,15 +264,114 @@ class GoogleDriveClient(
     }
 
     /**
-     * Downloads a file from Google Drive directly into the destination file.
+     * Resolves the Google Drive folder hierarchy without creating missing directories.
+     *
+     * @param folderNames Sequential folder segments (e.g. ["aTrainingTracker", "Workouts"])
+     * @return The Drive folder ID of the terminal segment, or null if any segment does not exist.
      */
-    fun downloadFile(folderId: String, fileName: String, destinationFile: File): Boolean {
-        val fileId = findFileIdByName(folderId, fileName)
-        if (fileId == null) {
-            Log.e(TAG, "Cannot download: file $fileName not found in folder $folderId")
-            return false
+    fun resolveFolderHierarchy(folderNames: List<String>): String? {
+        val cacheKey = folderNames.joinToString("/")
+        folderIdCache[cacheKey]?.let { return it }
+
+        var currentParentId = "root"
+        for (folderName in folderNames) {
+            val existingId = findFolderIdByName(folderName, currentParentId) ?: return null
+            currentParentId = existingId
         }
 
+        folderIdCache[cacheKey] = currentParentId
+        return currentParentId
+    }
+
+    /**
+     * Traverses the specified folder hierarchy recursively and returns all files matching
+     * the requested file extensions.
+     *
+     * @param folderId The root folder ID to start the scan from.
+     * @param extensions Optional list of file extensions to filter on (e.g. [".fit", ".tcx", ".gpx"]).
+     *                   If empty, all non-folder files are returned.
+     * @return List of matching [DriveFileEntry] objects.
+     */
+    fun listFilesRecursively(
+        folderId: String,
+        extensions: List<String> = listOf(".fit", ".tcx", ".gpx")
+    ): List<DriveFileEntry> {
+        val results = mutableListOf<DriveFileEntry>()
+        val folderQueue = ArrayDeque<String>()
+        val visitedFolderIds = mutableSetOf<String>()
+        folderQueue.add(folderId)
+        visitedFolderIds.add(folderId)
+
+        val lowerExts = extensions.map { it.lowercase() }
+
+        while (folderQueue.isNotEmpty()) {
+            val currentFolderId = folderQueue.removeFirst()
+            var pageToken: String? = null
+
+            do {
+                val query = "'$currentFolderId' in parents and trashed = false"
+                val encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.name())
+                var url = "$baseUrl/drive/v3/files?q=$encodedQuery&fields=nextPageToken,files(id,name,size,mimeType)&pageSize=1000&spaces=drive"
+                if (!pageToken.isNullOrBlank()) {
+                    val encodedToken = URLEncoder.encode(pageToken, StandardCharsets.UTF_8.name())
+                    url += "&pageToken=$encodedToken"
+                }
+
+                val request = Request.Builder()
+                    .url(url)
+                    .apply { addAuthHeader(this) }
+                    .get()
+                    .build()
+
+                try {
+                    client.newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) {
+                            Log.e(TAG, "listFilesRecursively failed for folder $currentFolderId with code: ${response.code}")
+                            pageToken = null
+                            return@use
+                        }
+                        val bodyString = response.body?.string() ?: run {
+                            pageToken = null
+                            return@use
+                        }
+                        val json = JSONObject(bodyString)
+                        pageToken = json.optString("nextPageToken").takeIf { it.isNotBlank() }
+                        val filesArray = json.optJSONArray("files")
+                        if (filesArray != null) {
+                            for (i in 0 until filesArray.length()) {
+                                val fileObj = filesArray.getJSONObject(i)
+                                val id = fileObj.getString("id")
+                                val name = fileObj.getString("name")
+                                val mimeType = fileObj.optString("mimeType")
+                                val size = if (fileObj.has("size")) fileObj.optLong("size") else null
+
+                                if (mimeType == FOLDER_MIME_TYPE) {
+                                    if (visitedFolderIds.add(id)) {
+                                        folderQueue.add(id)
+                                    }
+                                } else {
+                                    val nameLower = name.lowercase()
+                                    if (lowerExts.isEmpty() || lowerExts.any { nameLower.endsWith(it) }) {
+                                        results.add(DriveFileEntry(id, name, size, mimeType))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error listing files in folder $currentFolderId: ${e.message}", e)
+                    pageToken = null
+                }
+            } while (pageToken != null)
+        }
+
+        return results
+    }
+
+    /**
+     * Downloads a file by its Google Drive file ID directly into the destination file.
+     */
+    fun downloadFileById(fileId: String, destinationFile: File): Boolean {
         val url = "$baseUrl/drive/v3/files/$fileId?alt=media"
         val request = Request.Builder()
             .url(url)
@@ -273,7 +382,7 @@ class GoogleDriveClient(
         try {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    Log.e(TAG, "downloadFile failed with code: ${response.code}")
+                    Log.e(TAG, "downloadFileById failed for file $fileId with code: ${response.code}")
                     return false
                 }
                 val body = response.body ?: return false
@@ -285,9 +394,21 @@ class GoogleDriveClient(
                 return true
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error downloading file $fileName: ${e.message}", e)
+            Log.e(TAG, "Error downloading file $fileId: ${e.message}", e)
             return false
         }
+    }
+
+    /**
+     * Downloads a file from Google Drive directly into the destination file.
+     */
+    fun downloadFile(folderId: String, fileName: String, destinationFile: File): Boolean {
+        val fileId = findFileIdByName(folderId, fileName)
+        if (fileId == null) {
+            Log.e(TAG, "Cannot download: file $fileName not found in folder $folderId")
+            return false
+        }
+        return downloadFileById(fileId, destinationFile)
     }
 
     private fun addAuthHeader(builder: Request.Builder) {

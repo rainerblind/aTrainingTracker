@@ -132,6 +132,7 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 ### 5.4 Color
 * Surfaces, text and accents come from `MaterialTheme.colorScheme` so that Light, Dark and **AMOLED** themes all render correctly. Verify new UI in all three.
 * Domain semantics come from `TTColor` (zones, routes, start/end points, branding). Add a new `TTColor` entry instead of an inline `Color(0x…)`.
+* **Route & Navigation Domain Tints**: Route geometry and trajectories on the map use green tones (`TTColor.RouteSelected`, `TTColor.RouteActiveNavigation`). Consequently, interactive UI elements, cards, and buttons specifically associated with route selection or navigation (e.g. the Route Selection button on the Control Tracking screen in ATT-2458) should incorporate a subtle green touch (e.g. subtle green border accent, tinted icon, or gentle container tint) to establish an intuitive semantic connection with the map's green route visualization, while keeping the effect minimal and harmonious with the theme.
 * Never hardcode `Color.White` / `Color.Black` for text or backgrounds in normal app UI (cockpit tiles follow `CockpitThemeMode`).
 
 ### 5.5 Typography & Icons
@@ -140,3 +141,10 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 
 ### 5.6 Placement & Entry Points
 * New features are entered from the screen where the athlete expects them (e.g. route selection on the Control Tracking screen, ATT-2458) using the same button/chip style as neighbouring actions — not via new floating or branded elements.
+
+### 5.7 In-Ride Navigation Cues & HUD Overlays
+* **Top-Level Spatial Overlay**: In-ride navigation hints, turn-by-turn cues (e.g. ATT-1450), and fork-in-the-road decision prompts (e.g. ATT-1955) must float directly on top of the active tracking screen elements (cockpit tiles, map view) rather than displacing or squeezing the cockpit tile layout.
+* **Semi-Transparency for Glanceability**: Overlays must use a semi-transparent surface background (e.g. `surface` / `surfaceContainer` at ~80–85% opacity, `TTAlpha`) paired with a subtle green border accent (`TTColor.RouteActiveNavigation`), so that athletes can immediately register the direction cue while still discerning underlying telemetry values and metrics behind the banner.
+* **Transient Auto-Dismiss (3–5 Seconds)**: Navigation cues are time-sensitive and ephemeral. Upon being triggered (or once a maneuver instruction is issued), the cue must automatically vanish after a brief, configurable interval (3–5 seconds) via a smooth animation (fade or slide), promptly returning the screen to full telemetry focus without requiring manual dismissal while riding.
+* **Expert Settings Customization**: Both overlay transparency (e.g. 50%–100%, default 80%) and auto-dismiss duration (e.g. 2–10 seconds or persistent until passed, default 4 seconds) must be exposed as configurable parameters in the Expert Settings (*Experteneinstellungen*), allowing athletes to tailor cue presentation to their ambient lighting conditions, cockpit layout, and riding speed.
+

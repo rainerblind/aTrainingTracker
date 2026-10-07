@@ -40,15 +40,11 @@ class EquipmentSensorMatrixContractTest {
     }
 
     @Test
-    fun testEquipmentTabsScreen_threeTabsAndFabGatingContract() {
+    fun testEquipmentTabsScreen_twoTabsAndUnconditionalFabContract() {
         val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/EquipmentTabsScreen.kt")
         val content = file.readText()
 
-        // 1. Must define 3 tabs including sensor matrix
-        assertTrue(
-            "EquipmentTabsScreen must reference R.string.equipment_tab_sensor_matrix",
-            content.contains("R.string.equipment_tab_sensor_matrix")
-        )
+        // 1. Must define exactly 2 tabs (Bikes and Shoes); must NOT contain sensor matrix tab
         assertTrue(
             "EquipmentTabsScreen must reference R.string.equipment_type_bike",
             content.contains("R.string.equipment_type_bike")
@@ -57,23 +53,21 @@ class EquipmentSensorMatrixContractTest {
             "EquipmentTabsScreen must reference R.string.equipment_type_shoe",
             content.contains("R.string.equipment_type_shoe")
         )
-
-        // 2. Must collect allRemoteSensors
         assertTrue(
-            "EquipmentTabsScreen must collect allRemoteSensors state",
-            content.contains("viewModel.allRemoteSensors.collectAsState()")
+            "EquipmentTabsScreen must NOT reference R.string.equipment_tab_sensor_matrix",
+            !content.contains("R.string.equipment_tab_sensor_matrix")
         )
 
-        // 3. Must render EquipmentSensorMatrixScreen on page 2
+        // 2. Must NOT invoke EquipmentSensorMatrixScreen
         assertTrue(
-            "EquipmentTabsScreen must invoke EquipmentSensorMatrixScreen",
-            content.contains("EquipmentSensorMatrixScreen(")
+            "EquipmentTabsScreen must NOT invoke EquipmentSensorMatrixScreen",
+            !content.contains("EquipmentSensorMatrixScreen(")
         )
 
-        // 4. Must gate FAB on page 2
+        // 3. Must NOT gate FAB on page 2 (FAB active on all tabs)
         assertTrue(
-            "EquipmentTabsScreen must suppress FAB on tab 2",
-            content.contains("pagerState.currentPage != 2")
+            "EquipmentTabsScreen must NOT suppress FAB on any tab",
+            !content.contains("pagerState.currentPage != 2")
         )
     }
 
@@ -166,5 +160,63 @@ class EquipmentSensorMatrixContractTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun testEquipmentSensorOrderingContract_screenAndDialogMustApplyPrioritizedOrdering() {
+        val matrixFile = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/EquipmentSensorMatrixScreen.kt")
+        val matrixContent = matrixFile.readText()
+        assertTrue(
+            "EquipmentSensorMatrixScreen must apply EquipmentSensorOrdering.sortSensors in fallback path",
+            matrixContent.contains("EquipmentSensorOrdering.sortSensors")
+        )
+
+        val dialogFile = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/EditEquipmentDialog.kt")
+        val dialogContent = dialogFile.readText()
+        assertTrue(
+            "EditEquipmentDialog must apply EquipmentSensorOrdering.sortSensors for compatible sensors",
+            dialogContent.contains("EquipmentSensorOrdering.sortSensors")
+        )
+    }
+
+    @Test
+    fun testEquipmentSportSensorMatrix_structuralContract() {
+        val matrixFile = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/EquipmentSensorMatrixScreen.kt")
+        val matrixContent = matrixFile.readText()
+
+        // 1. Signature components of EquipmentSportSensorMatrix
+        assertTrue(
+            "EquipmentSensorMatrixScreen must define EquipmentSportSensorMatrix composable",
+            matrixContent.contains("fun EquipmentSportSensorMatrix(")
+        )
+        assertTrue(
+            "EquipmentSportSensorMatrix must accept items, sensors, isBike, onToggleLink",
+            matrixContent.contains("items: List<EquipmentItem>") &&
+            matrixContent.contains("sensors: List<SimpleSensorInfo>") &&
+            matrixContent.contains("isBike: Boolean") &&
+            matrixContent.contains("onToggleLink: (equipmentId: Long, sensorId: Long, isLinked: Boolean) -> Unit")
+        )
+
+        // 2. Uses stickyHeader and STICKY_COLUMN_WIDTH
+        assertTrue(
+            "EquipmentSportSensorMatrix must use stickyHeader",
+            matrixContent.contains("stickyHeader(key = \"table_header_\")") || matrixContent.contains("stickyHeader(")
+        )
+        assertTrue(
+            "EquipmentSportSensorMatrix must use STICKY_COLUMN_WIDTH",
+            matrixContent.contains("STICKY_COLUMN_WIDTH")
+        )
+
+        // 3. FastScrollableBox integration
+        assertTrue(
+            "EquipmentSportSensorMatrix must wrap in FastScrollableBox",
+            matrixContent.contains("FastScrollableBox(")
+        )
+
+        // 4. Material 3 Checkbox with toggle trigger
+        assertTrue(
+            "EquipmentSportSensorMatrix must render Checkbox with onToggleLink",
+            matrixContent.contains("Checkbox(") && matrixContent.contains("onToggleLink(")
+        )
     }
 }

@@ -88,6 +88,12 @@ import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlT
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatus
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabGridContent
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepository
+import com.atrainingtracker.trainingtracker.ui.components.RouteSelectionButton
+import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModel
+import android.location.Location
 import kotlinx.coroutines.launch
 
 private const val TAG = "TrackingTabsScreen"
@@ -174,6 +180,33 @@ fun TrackingTabsScreen(
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
         initial = com.atrainingtracker.trainingtracker.settings.TuningConfig()
     )
+
+    // Route Selection and Navigation state for Control Tracking screen (REQ-UI-279 / ATT-2458, REQ-UI-281 / ATT-2460)
+    val routesRepo = remember { RoutesRepository.getInstance(context) }
+    val routeSelectorViewModel: RouteSelectorViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return RouteSelectorViewModel(routesRepo, tuningPreferencesDataStore = tuningDataStore) as T
+            }
+        }
+    )
+    val routeSelectorUiState by routeSelectorViewModel.uiState.collectAsState()
+    var showRouteSelectorSheet by remember { mutableStateOf(false) }
+
+    val returnNavRepo = remember { ReturnNavigationRepository.getInstance(context) }
+    val returnNavState by returnNavRepo.navigationState.collectAsState()
+
+    val currentLatLng by controlViewModel.banalServiceRepository.currentLocation.collectAsState()
+    LaunchedEffect(currentLatLng) {
+        currentLatLng?.let { latLng ->
+            val location = Location("GPS").apply {
+                latitude = latLng.latitude
+                longitude = latLng.longitude
+            }
+            routeSelectorViewModel.onLocationChanged(location)
+        }
+    }
 
     LaunchedEffect(tuningConfig) {
         batterySaverController.updateTuningConfig(
@@ -502,10 +535,6 @@ fun TrackingTabsScreen(
                                         onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
                                         onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
                                         onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
-                                        onUpdateShowMap = { id, show -> trackingTabsViewModel.onUpdateShowMap(id, show) },
-                                        onUpdateShowLiveSegments = { id, show -> trackingTabsViewModel.onUpdateShowLiveSegments(id, show)},
-                                        onUpdateShowElevationProfile = { id, show -> trackingTabsViewModel.onUpdateShowElevationProfile(id, show) },
-                                        onUpdateShowLapButton = { id, show -> trackingTabsViewModel.onUpdateShowLapButton(id, show) },
                                         onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
                                     )
                                 }
@@ -628,7 +657,16 @@ fun TrackingTabsScreen(
                             onDeviceTypeSelected = { controlViewModel.onDeviceTypeSelected(it) },
                             onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() },
                             showResearchButton = hasPairedRemoteDevices,
-                            locationCalibrationStatus = locationCalibrationStatus
+                            locationCalibrationStatus = locationCalibrationStatus,
+                            bottomContent = {
+                                RouteSelectionButton(
+                                    activeRoute = routeSelectorUiState.activeRoute,
+                                    isDimmed = routeSelectorUiState.activeRoute == null && routeSelectorUiState.routes.isEmpty(),
+                                    returnNavState = returnNavState,
+                                    onClick = { showRouteSelectorSheet = true },
+                                    onClearRoute = { routeSelectorViewModel.clearRoute() }
+                                )
+                            }
                         )
                     } else {
                         val viewIndex =
@@ -668,6 +706,20 @@ fun TrackingTabsScreen(
                         onClick = { trackingTabsViewModel.onLapButtonClick() }
                     )
                 }
+            }
+
+            // Modal Bottom Sheet for Route Selector (REQ-UI-279, REQ-UI-280, REQ-UI-282 / ATT-2459, ATT-2462)
+            if (showRouteSelectorSheet) {
+                val isMidRide = trackingMode == TrackingMode.TRACKING || trackingMode == TrackingMode.PAUSED
+                RouteSelectorModalBottomSheet(
+                    viewModel = routeSelectorViewModel,
+                    onDismiss = { showRouteSelectorSheet = false },
+                    isMidRide = isMidRide,
+                    onTakeMeHome = {
+                        returnNavRepo.startTakeMeHome()
+                        showRouteSelectorSheet = false
+                    }
+                )
             }
         }
     }

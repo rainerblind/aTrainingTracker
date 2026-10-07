@@ -96,6 +96,7 @@ object ElevationProfileZoomMath {
 
     /**
      * Determines an adaptive distance tick interval based on the visible distance span.
+     * (REQ-UI-192 / REQ-UI-272)
      */
     fun calculateAdaptiveDistanceStep(visibleDist: Double, unit: MyUnits): Float {
         return if (unit == MyUnits.METRIC) {
@@ -104,9 +105,11 @@ object ElevationProfileZoomMath {
                 visibleDist > 20_000 -> 5_000f
                 visibleDist > 10_000 -> 2_000f
                 visibleDist > 5_000 -> 1_000f
-                visibleDist > 1_500 -> 500f
-                visibleDist > 500 -> 100f
-                else -> 50f
+                visibleDist > 2_000 -> 500f
+                visibleDist > 800 -> 250f
+                visibleDist > 300 -> 100f
+                visibleDist > 150 -> 50f
+                else -> 25f
             }
         } else {
             val visibleMiles = visibleDist / BANALService.METER_PER_MILE
@@ -115,11 +118,31 @@ object ElevationProfileZoomMath {
                 visibleMiles > 10 -> 2f
                 visibleMiles > 3 -> 1f
                 visibleMiles > 1 -> 0.5f
-                visibleMiles > 0.3 -> 0.1f
+                visibleMiles > 0.5 -> 0.25f
+                visibleMiles > 0.2 -> 0.1f
                 else -> 0.05f
             }
             (mileStep * BANALService.METER_PER_MILE).toFloat()
         }
+    }
+
+    /**
+     * Determines whether an intermediate X-axis tick label satisfies boundary clearance
+     * and minimum spacing from the previously rendered label to prevent overlapping text.
+     * (REQ-UI-272 / ATT-2385)
+     */
+    fun shouldRenderTickLabel(
+        labelLeft: Float,
+        labelRight: Float,
+        lastDrawnRightX: Float,
+        startClearanceThreshold: Float,
+        endClearanceThreshold: Float,
+        minSpacing: Float = 24f
+    ): Boolean {
+        val startClearance = labelLeft >= startClearanceThreshold
+        val endClearance = labelRight <= endClearanceThreshold
+        val spacingClearance = lastDrawnRightX < 0f || (labelLeft >= lastDrawnRightX + minSpacing)
+        return startClearance && endClearance && spacingClearance
     }
 
     /**

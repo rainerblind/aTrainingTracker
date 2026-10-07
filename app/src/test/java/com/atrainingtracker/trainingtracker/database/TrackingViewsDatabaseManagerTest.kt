@@ -352,4 +352,56 @@ class TrackingViewsDatabaseManagerTest {
         assertEquals(com.atrainingtracker.banalservice.sensor.SensorType.TIME_ACTIVE, filterList[1].sensorType)
         assertEquals(com.atrainingtracker.banalservice.filters.FilterType.INSTANTANEOUS, filterList[1].filterType)
     }
+
+    @Test
+    fun testDatabaseVersionIs12() {
+        assertEquals(12, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    }
+
+    @Test
+    fun testOnUpgrade_from11To12_addsColumnsAndExecutesRepairSql() {
+        val dbHelper = TrackingViewsDatabaseManager.TrackingViewsDbHelper(mockContext)
+        dbHelper.onUpgrade(mockDb, 11, 12)
+
+        verify(atLeast = 1) {
+            mockDb.execSQL(match { it.contains("ALTER TABLE ViewsTable ADD COLUMN ShowLiveClimbs int DEFAULT 1;") })
+            mockDb.execSQL(match { it.contains("ALTER TABLE ViewsTable ADD COLUMN ShowNavigationHints int DEFAULT 1;") })
+            mockDb.execSQL(match { it.contains("UPDATE ViewsTable SET ShowLiveClimbs = 1 WHERE ShowLiveClimbs IS NULL;") })
+            mockDb.execSQL(match { it.contains("UPDATE ViewsTable SET ShowNavigationHints = 1 WHERE ShowNavigationHints IS NULL;") })
+        }
+    }
+
+    @Test
+    fun testUpdateShowLiveClimbs_updatesViewsTable() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        manager.updateShowLiveClimbs(42L, false)
+
+        verify(exactly = 1) {
+            mockDb.update(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
+                arrayOf("42")
+            )
+        }
+    }
+
+    @Test
+    fun testUpdateShowNavigationHints_updatesViewsTable() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        manager.updateShowNavigationHints(42L, false)
+
+        verify(exactly = 1) {
+            mockDb.update(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
+                arrayOf("42")
+            )
+        }
+    }
 }

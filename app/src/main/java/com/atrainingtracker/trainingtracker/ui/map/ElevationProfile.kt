@@ -42,6 +42,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
@@ -52,9 +53,10 @@ import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
-import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
 import com.atrainingtracker.trainingtracker.ui.theme.*
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
@@ -218,6 +220,7 @@ fun ElevationProfile(
     onZoomChanged: ((zoomScale: Float, startDist: Double) -> Unit)? = null,
     isPanMode: Boolean = false,
     showScrubbingBadge: Boolean = true,
+    climbs: List<Climb> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -243,6 +246,7 @@ fun ElevationProfile(
         onZoomChanged = onZoomChanged,
         isPanMode = isPanMode,
         showScrubbingBadge = showScrubbingBadge,
+        climbs = climbs,
         modifier = modifier
     )
 }
@@ -265,10 +269,12 @@ fun ElevationProfile(
     showScrubbingBadge: Boolean = true,
     modifier: Modifier = Modifier,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
-    powerZoneThresholds: PowerZoneThresholds? = null
+    powerZoneThresholds: PowerZoneThresholds? = null,
+    climbs: List<Climb> = emptyList()
 ) {
     if (pathPoints.isEmpty()) return
 
+    val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val unit = TrainingApplication.getUnit()
     var showLegend by remember { mutableStateOf(false) }
@@ -593,14 +599,22 @@ fun ElevationProfile(
                 val endLabelWidth = highlightPaint.measureText(endLabel)
                 canvas.nativeCanvas.drawText(endLabel, width - endLabelWidth, height + 45f, highlightPaint)
 
-                if (currentZoomScale > 1.01f) {
+                val minSpacingPx = 24.dp.toPx()
+                val startLabelWidth = if (currentZoomScale > 1.01f) {
                     val startLabel = if (isTimeDomain) {
                         ElevationProfileZoomMath.formatTimeTick(currentStartDist.toLong())
                     } else {
                         distanceFormatter.format_with_units(currentStartDist)
                     }
                     canvas.nativeCanvas.drawText(startLabel, 0f, height + 45f, highlightPaint)
+                    highlightPaint.measureText(startLabel)
+                } else {
+                    0f
                 }
+
+                val startClearanceThreshold = if (currentZoomScale > 1.01f) startLabelWidth + minSpacingPx else minSpacingPx
+                val endClearanceThreshold = width - endLabelWidth - minSpacingPx
+                var lastDrawnRightX = if (currentZoomScale > 1.01f) startLabelWidth else -1f
 
                 if (isTimeDomain) {
                     val adaptiveTimeStep = ElevationProfileZoomMath.calculateAdaptiveTimeStep(visibleSpan).toDouble()
@@ -610,11 +624,22 @@ fun ElevationProfile(
                     }
                     while (currentT < currentStartDist + visibleSpan) {
                         val x = ElevationProfileZoomMath.distanceToCanvasX(currentT, currentStartDist, visibleSpan, width)
-                        if (x > 60f && (width - x) > (endLabelWidth + 50f)) {
+                        val label = ElevationProfileZoomMath.formatTimeTick(currentT.toLong())
+                        val lWidth = textPaint.measureText(label)
+                        val labelLeft = x - (lWidth / 2f)
+                        val labelRight = x + (lWidth / 2f)
+                        if (ElevationProfileZoomMath.shouldRenderTickLabel(
+                                labelLeft = labelLeft,
+                                labelRight = labelRight,
+                                lastDrawnRightX = lastDrawnRightX,
+                                startClearanceThreshold = startClearanceThreshold,
+                                endClearanceThreshold = endClearanceThreshold,
+                                minSpacing = minSpacingPx
+                            )
+                        ) {
                             canvas.nativeCanvas.drawLine(x, height, x, height - 10f, textPaint)
-                            val label = ElevationProfileZoomMath.formatTimeTick(currentT.toLong())
-                            val lWidth = textPaint.measureText(label)
-                            canvas.nativeCanvas.drawText(label, x - (lWidth / 2), height + 45f, textPaint)
+                            canvas.nativeCanvas.drawText(label, labelLeft, height + 45f, textPaint)
+                            lastDrawnRightX = labelRight
                         }
                         currentT += adaptiveTimeStep
                     }
@@ -626,19 +651,30 @@ fun ElevationProfile(
                     }
                     while (currentD < currentStartDist + visibleSpan) {
                         val x = ElevationProfileZoomMath.distanceToCanvasX(currentD, currentStartDist, visibleSpan, width)
-                        if (x > 60f && (width - x) > (endLabelWidth + 50f)) {
+                        val label = if (unit == MyUnits.METRIC) {
+                            if (visibleSpan < 1500) "${currentD.toInt()}m"
+                            else if (currentD % 1000.0 != 0.0) String.format(Locale.getDefault(), "%.1f", currentD / 1000.0)
+                            else "${(currentD / 1000.0).toInt()}"
+                        } else {
+                            val miles = currentD / BANALService.METER_PER_MILE
+                            if (miles % 1.0 != 0.0) String.format(Locale.getDefault(), "%.1f", miles)
+                            else "${miles.toInt()}"
+                        }
+                        val lWidth = textPaint.measureText(label)
+                        val labelLeft = x - (lWidth / 2f)
+                        val labelRight = x + (lWidth / 2f)
+                        if (ElevationProfileZoomMath.shouldRenderTickLabel(
+                                labelLeft = labelLeft,
+                                labelRight = labelRight,
+                                lastDrawnRightX = lastDrawnRightX,
+                                startClearanceThreshold = startClearanceThreshold,
+                                endClearanceThreshold = endClearanceThreshold,
+                                minSpacing = minSpacingPx
+                            )
+                        ) {
                             canvas.nativeCanvas.drawLine(x, height, x, height - 10f, textPaint)
-                            val label = if (unit == MyUnits.METRIC) {
-                                if (visibleSpan < 1500) "${currentD.toInt()}m"
-                                else if (currentD % 1000.0 != 0.0) String.format(Locale.getDefault(), "%.1f", currentD / 1000.0)
-                                else "${(currentD / 1000.0).toInt()}"
-                            } else {
-                                val miles = currentD / BANALService.METER_PER_MILE
-                                if (miles % 1.0 != 0.0) String.format(Locale.getDefault(), "%.1f", miles)
-                                else "${miles.toInt()}"
-                            }
-                            val lWidth = textPaint.measureText(label)
-                            canvas.nativeCanvas.drawText(label, x - (lWidth / 2), height + 45f, textPaint)
+                            canvas.nativeCanvas.drawText(label, labelLeft, height + 45f, textPaint)
+                            lastDrawnRightX = labelRight
                         }
                         currentD += adaptiveDistStep
                     }
@@ -655,6 +691,66 @@ fun ElevationProfile(
                         lastY = y
                     }
                     currentA += cachedData.altStep
+                }
+
+                // Render Summit Category Badges (REQ-UI-274)
+                if (!isTimeDomain && climbs.isNotEmpty()) {
+                    climbs.forEach { climb ->
+                        val summitPt = climb.pathPoints.maxByOrNull { it.altitude } ?: climb.pathPoints.lastOrNull()
+                        if (summitPt != null && summitPt.distance in currentStartDist..(currentStartDist + visibleSpan)) {
+                            val summitX = ElevationProfileZoomMath.distanceToCanvasX(summitPt.distance, currentStartDist, visibleSpan, width)
+                            val summitY = height - (((summitPt.altitude - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
+
+                            val (bgColor, textColor, labelRes) = getClimbCategoryColors(climb.category)
+                            val badgeText = context.getString(labelRes)
+
+                            val badgePaint = Paint().apply {
+                                color = textColor.toArgb()
+                                textSize = 10.sp.toPx()
+                                isAntiAlias = true
+                                isFakeBoldText = true
+                                textAlign = Paint.Align.CENTER
+                            }
+                            val bgPaint = Paint().apply {
+                                color = bgColor.toArgb()
+                                isAntiAlias = true
+                                style = Paint.Style.FILL
+                            }
+
+                            val textWidth = badgePaint.measureText(badgeText)
+                            val pillPaddingH = 6.dp.toPx()
+                            val pillPaddingV = 2.dp.toPx()
+                            val pillHeight = badgePaint.textSize + pillPaddingV * 2
+                            val pillWidth = textWidth + pillPaddingH * 2
+                            val pillBottom = summitY - 8.dp.toPx()
+                            val pillTop = pillBottom - pillHeight
+                            val pillLeft = (summitX - pillWidth / 2f).coerceIn(0f, width - pillWidth)
+                            val pillRight = pillLeft + pillWidth
+
+                            // Pin stem to the summit
+                            val stemPaint = Paint().apply {
+                                color = bgColor.toArgb()
+                                strokeWidth = 1.5.dp.toPx()
+                                isAntiAlias = true
+                            }
+                            canvas.nativeCanvas.drawLine(summitX, summitY, summitX, pillBottom, stemPaint)
+
+                            // Category pill background
+                            canvas.nativeCanvas.drawRoundRect(
+                                pillLeft,
+                                pillTop,
+                                pillRight,
+                                pillBottom,
+                                4.dp.toPx(),
+                                4.dp.toPx(),
+                                bgPaint
+                            )
+
+                            // Category text
+                            val textY = pillBottom - pillPaddingV - badgePaint.descent()
+                            canvas.nativeCanvas.drawText(badgeText, (pillLeft + pillRight) / 2f, textY, badgePaint)
+                        }
+                    }
                 }
             }
 
@@ -680,6 +776,32 @@ fun ElevationProfile(
                         seg.color.copy(alpha = TTAlpha.Disabled)
                     )
                     drawLine(seg.color, Offset(x1, y1), Offset(x2, y2), 2.dp.toPx())
+                }
+
+                // Render accented ridge stroke for recognized climbs (REQ-UI-274)
+                if (!isTimeDomain && climbs.isNotEmpty()) {
+                    climbs.forEach { climb ->
+                        val (bgColor, _, _) = getClimbCategoryColors(climb.category)
+                        val cPoints = climb.pathPoints
+                        if (cPoints.size >= 2) {
+                            for (idx in 0 until cPoints.size - 1) {
+                                val pt1 = cPoints[idx]
+                                val pt2 = cPoints[idx + 1]
+                                if (pt2.distance < currentStartDist || pt1.distance > currentStartDist + visibleSpan) continue
+                                val px1 = ElevationProfileZoomMath.distanceToCanvasX(pt1.distance, currentStartDist, visibleSpan, width)
+                                val py1 = height - (((pt1.altitude - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
+                                val px2 = ElevationProfileZoomMath.distanceToCanvasX(pt2.distance, currentStartDist, visibleSpan, width)
+                                val py2 = height - (((pt2.altitude - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
+                                drawLine(
+                                    color = bgColor,
+                                    start = Offset(px1, py1),
+                                    end = Offset(px2, py2),
+                                    strokeWidth = 3.5.dp.toPx(),
+                                    cap = StrokeCap.Round
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

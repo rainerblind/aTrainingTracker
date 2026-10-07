@@ -102,6 +102,7 @@ fun ATrainingTrackerMap(
     // Scrutiny
     selectedDistance: Double? = null,
     activeScrubPath: List<PathPoint>? = null,
+    activeScrubPoint: PathPoint? = null,
 
     // Visualization Context
     style: MapStyle = MapStyle(),
@@ -221,8 +222,8 @@ fun ATrainingTrackerMap(
 
             // Render Shared Overlays (Scrubber, User Location)
             val scrubPath = activeScrubPath ?: emptyList()
-            ScrubberController(selectedDistance, scrubPath, cameraPositionState)
-            ScrubMarkerLayer(selectedDistance, scrubPath, scrubIcons.second, scrubIcons.first)
+            ScrubberController(selectedDistance, scrubPath, cameraPositionState, activeScrubPoint = activeScrubPoint)
+            ScrubMarkerLayer(selectedDistance, scrubPath, scrubIcons.second, scrubIcons.first, activeScrubPoint = activeScrubPoint)
 
             val filteredBearing = followMeController(zoomFocus, userBearing, userSpeed, currentLocation, cameraPositionState)
 

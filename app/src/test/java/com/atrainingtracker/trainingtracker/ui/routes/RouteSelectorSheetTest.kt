@@ -18,13 +18,14 @@
 
 package com.atrainingtracker.trainingtracker.ui.routes
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 /**
  * Contract tests verifying structural integrity, token consumption, and component boundaries
- * of [RouteSelectorSheetKt] (REQ-MAP-024 / TST-MAP-026 / ATT-1835).
+ * of [RouteSelectorSheetKt] (REQ-MAP-024, REQ-UI-280 / TST-UI-240 / ATT-2459).
  */
 class RouteSelectorSheetTest {
 
@@ -89,13 +90,34 @@ class RouteSelectorSheetTest {
     }
 
     @Test
-    fun testRouteSelectorContent_implementsAdaptiveFilterChipsCondition() {
+    fun testRouteSelectorContent_doesNotRenderFilterTabsOrTabRow() {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteSelectorSheet.kt")
         val content = file.readText()
 
+        assertFalse(
+            "RouteSelectorSheet must NOT contain TabRow (REQ-UI-280 / ATT-2459)",
+            content.contains("TabRow")
+        )
+        assertFalse(
+            "RouteSelectorSheet must NOT reference showFilterTabs (REQ-UI-280 / ATT-2459)",
+            content.contains("showFilterTabs")
+        )
+        assertFalse(
+            "RouteSelectorSheet must NOT reference RouteFilterTab (REQ-UI-280 / ATT-2459)",
+            content.contains("RouteFilterTab")
+        )
+    }
+
+    @Test
+    fun testRouteSelectorContent_doesNotRenderTakeMeHomeCardUnconditionally() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteSelectorSheet.kt")
+        val content = file.readText()
+
+        // Unconditional Take Me Home card is prohibited at workout start (REQ-UI-280 / ATT-2459)
+        // Mid-ride entry point is conditionally gated by isMidRide (REQ-UI-282 / ATT-2462)
         assertTrue(
-            "RouteSelectorContent must conditionally check showFilterTabs",
-            content.contains("if (uiState.showFilterTabs)")
+            "RouteSelectorSheet must guard Take Me Home card with isMidRide (REQ-UI-282 / ATT-2462)",
+            content.contains("if (isMidRide && onTakeMeHome != null)")
         )
     }
 }

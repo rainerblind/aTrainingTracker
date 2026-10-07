@@ -75,6 +75,31 @@ object WorkoutNavigationEvents {
         _navigateToCluster.tryEmit(null)
     }
 
+    private val _navigateToWorkout = MutableSharedFlow<Long?>(
+        replay = 1, // Sticky event
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val navigateToWorkout = _navigateToWorkout.asSharedFlow()
+
+    @get:JvmStatic
+    val navigateToWorkoutLiveData: LiveData<Long?> by lazy { _navigateToWorkout.asLiveData() }
+
+    /**
+     * Triggers navigation and focus to the workout item with [workoutId] in the workouts list (ATT-2337 / REQ-MIG-032).
+     */
+    @JvmStatic
+    fun triggerNavigateToWorkout(workoutId: Long) {
+        _navigateToWorkout.tryEmit(workoutId)
+    }
+
+    /**
+     * Clears the active workout navigation event after consumption (REQ-MIG-032).
+     */
+    @JvmStatic
+    fun resetNavigateToWorkout() {
+        _navigateToWorkout.tryEmit(null)
+    }
+
     /**
      * Encapsulates low peripheral sensor battery warning data (ATT-2192).
      */

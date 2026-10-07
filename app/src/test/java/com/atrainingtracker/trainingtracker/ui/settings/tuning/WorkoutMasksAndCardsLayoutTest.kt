@@ -107,6 +107,46 @@ class WorkoutMasksAndCardsLayoutTest {
     }
 
     @Test
+    fun testHeaderTypographyAndDefensiveTruncationContract() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt")
+        val content = file.readText()
+
+        // Verify tuning_matrix_col_list text composable enforces defensive single-line typography (REQ-UI-271)
+        val listHeaderIndex = content.indexOf("R.string.tuning_matrix_col_list")
+        assertTrue("Header must reference tuning_matrix_col_list", listHeaderIndex >= 0)
+        val listHeaderBlock = content.substring(listHeaderIndex, listHeaderIndex + 450)
+        assertTrue(
+            "List column header must enforce textAlign = TextAlign.Center",
+            listHeaderBlock.contains("textAlign = TextAlign.Center")
+        )
+        assertTrue(
+            "List column header must enforce maxLines = 1",
+            listHeaderBlock.contains("maxLines = 1")
+        )
+        assertTrue(
+            "List column header must enforce overflow = TextOverflow.Ellipsis",
+            listHeaderBlock.contains("overflow = TextOverflow.Ellipsis")
+        )
+
+        // Verify tuning_matrix_col_details text composable enforces defensive single-line typography (REQ-UI-271)
+        val detailsHeaderIndex = content.indexOf("R.string.tuning_matrix_col_details")
+        assertTrue("Header must reference tuning_matrix_col_details", detailsHeaderIndex >= 0)
+        val detailsHeaderBlock = content.substring(detailsHeaderIndex, detailsHeaderIndex + 450)
+        assertTrue(
+            "Details column header must enforce textAlign = TextAlign.Center",
+            detailsHeaderBlock.contains("textAlign = TextAlign.Center")
+        )
+        assertTrue(
+            "Details column header must enforce maxLines = 1",
+            detailsHeaderBlock.contains("maxLines = 1")
+        )
+        assertTrue(
+            "Details column header must enforce overflow = TextOverflow.Ellipsis",
+            detailsHeaderBlock.contains("overflow = TextOverflow.Ellipsis")
+        )
+    }
+
+    @Test
     fun testFileSizeConstraint_strictlyUnder400Lines() {
         val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt")
         val lineCount = file.readLines().size

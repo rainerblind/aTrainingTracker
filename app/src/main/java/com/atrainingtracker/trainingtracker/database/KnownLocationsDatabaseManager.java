@@ -170,6 +170,9 @@ public class KnownLocationsDatabaseManager {
         int sourceIndex = cursor.getColumnIndex(KnownLocationsDbHelper.SOURCE);
         ElevationSource source = sourceIndex != -1 ? ElevationSource.fromString(cursor.getString(sourceIndex)) : ElevationSource.LEGACY_RAW;
 
+        int isHomeIndex = cursor.getColumnIndex(KnownLocationsDbHelper.IS_HOME);
+        boolean isHome = isHomeIndex != -1 && cursor.getInt(isHomeIndex) == 1;
+
         return new MyLocation(
                 cursor.getLong(cursor.getColumnIndex(KnownLocationsDbHelper.C_ID)),
                 cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LATITUDE)),
@@ -179,7 +182,8 @@ public class KnownLocationsDatabaseManager {
                 cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS)),
                 cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.HIT_COUNT)),
                 isLocked,
-                source);
+                source,
+                isHome);
     }
 
     // public static Integer getStartAltitude(Context context, double latitude, double longitude)
@@ -246,8 +250,61 @@ public class KnownLocationsDatabaseManager {
         contentValues.put(KnownLocationsDbHelper.HIT_COUNT, myLocation.hitCount);
         contentValues.put(KnownLocationsDbHelper.IS_LOCKED, myLocation.isLocked ? 1 : 0);
         contentValues.put(KnownLocationsDbHelper.SOURCE, myLocation.source.name());
+        contentValues.put(KnownLocationsDbHelper.IS_HOME, myLocation.isHome ? 1 : 0);
 
         updateId(id, contentValues);
+    }
+
+    /**
+     * Atomically sets the designated home location for return navigation (REQ-MAP-034).
+     * Enforces single-home exclusivity across StartLocation2Altitude.db.
+     * If id <= 0, clears home designation on all rows.
+     */
+    public void setHomeLocation(long id) {
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            ContentValues clearValues = new ContentValues();
+            clearValues.put(KnownLocationsDbHelper.IS_HOME, 0);
+            db.update(KnownLocationsDbHelper.TABLE, clearValues, null, null);
+
+            if (id > 0) {
+                ContentValues setValues = new ContentValues();
+                setValues.put(KnownLocationsDbHelper.IS_HOME, 1);
+                db.update(KnownLocationsDbHelper.TABLE, setValues,
+                        KnownLocationsDbHelper.C_ID + "=?",
+                        new String[]{String.valueOf(id)});
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * Clears home designation from all locations.
+     */
+    public void clearHomeLocation() {
+        setHomeLocation(0);
+    }
+
+    /**
+     * Queries and returns the currently designated home location, or null if none is set.
+     */
+    @Nullable
+    public MyLocation getHomeLocation() {
+        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
+                null,
+                KnownLocationsDbHelper.IS_HOME + "=1",
+                null, null, null, null, "1");
+        MyLocation loc = null;
+        if (cursor != null) {
+            if (cursor.moveToFirst()) {
+                loc = cursorToMyLocation(cursor);
+            }
+            cursor.close();
+        }
+        return loc;
     }
 
     public void updateLocation(long id, @NonNull String name, double altitude, @NonNull ElevationSource source, boolean isLocked) {
@@ -661,12 +718,17 @@ public class KnownLocationsDatabaseManager {
         public final boolean isLocked;
         @NonNull
         public final ElevationSource source;
+        public final boolean isHome;
 
         public MyLocation(long id, double lat, double lng, String name, double altitude, int radius, int hitCount) {
-            this(id, lat, lng, name, altitude, radius, hitCount, false, ElevationSource.LEGACY_RAW);
+            this(id, lat, lng, name, altitude, radius, hitCount, false, ElevationSource.LEGACY_RAW, false);
         }
 
         public MyLocation(long id, double lat, double lng, String name, double altitude, int radius, int hitCount, boolean isLocked, @NonNull ElevationSource source) {
+            this(id, lat, lng, name, altitude, radius, hitCount, isLocked, source, false);
+        }
+
+        public MyLocation(long id, double lat, double lng, String name, double altitude, int radius, int hitCount, boolean isLocked, @NonNull ElevationSource source, boolean isHome) {
             this.id = id;
             latLng = new LatLng(lat, lng);
             this.name = name;
@@ -675,6 +737,7 @@ public class KnownLocationsDatabaseManager {
             this.hitCount = hitCount;
             this.isLocked = isLocked;
             this.source = source != null ? source : ElevationSource.LEGACY_RAW;
+            this.isHome = isHome;
         }
     }
 
@@ -688,7 +751,7 @@ public class KnownLocationsDatabaseManager {
 
     public static class KnownLocationsDbHelper extends SQLiteOpenHelper {
         public static final String DB_NAME = "StartLocation2Altitude.db";
-        public static final int DB_VERSION = 5;
+        public static final int DB_VERSION = 6;
         public static final String TABLE = "StartLocation2Altitude";
         public static final String C_ID = BaseColumns._ID;
         public static final String NAME = "name";
@@ -700,6 +763,7 @@ public class KnownLocationsDatabaseManager {
         public static final String HIT_COUNT = "hitCount";
         public static final String IS_LOCKED = "is_locked";
         public static final String SOURCE = "source";
+        public static final String IS_HOME = "is_home";
         protected static final String TAG = KnownLocationsDbHelper.class.getName();
         protected static final boolean DEBUG = BANALService.getDebug(false);
         protected static final String CREATE_TABLE_V4 = "create table " + TABLE + " ("
@@ -722,6 +786,18 @@ public class KnownLocationsDatabaseManager {
                 + HIT_COUNT + " int,"
                 + IS_LOCKED + " integer default 0,"
                 + SOURCE + " text default 'LEGACY_RAW')";
+        protected static final String CREATE_TABLE_V6 = "create table " + TABLE + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + NAME + " text,"
+                + EXTREMA_TYPE + " text,"
+                + ALTITUDE + " real,"
+                + LONGITUDE + " real,"
+                + LATITUDE + " real,"
+                + RADIUS + " int,"
+                + HIT_COUNT + " int,"
+                + IS_LOCKED + " integer default 0,"
+                + SOURCE + " text default 'LEGACY_RAW',"
+                + IS_HOME + " integer default 0)";
 
         // Constructor
         public KnownLocationsDbHelper(Context context) {
@@ -731,8 +807,8 @@ public class KnownLocationsDatabaseManager {
         // Called only once, first time the DB is created
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
-            db.execSQL(CREATE_TABLE_V5);
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_TABLE_V5);
+            db.execSQL(CREATE_TABLE_V6);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_TABLE_V6);
         }
 
         private void addColumn(@NonNull SQLiteDatabase db, String column, String type) {
@@ -771,6 +847,10 @@ public class KnownLocationsDatabaseManager {
             if (oldVersion < 5) {
                 addColumn(db, IS_LOCKED, "integer default 0");
                 addColumn(db, SOURCE, "text default 'LEGACY_RAW'");
+            }
+
+            if (oldVersion < 6) {
+                addColumn(db, IS_HOME, "integer default 0");
             }
         }
     }

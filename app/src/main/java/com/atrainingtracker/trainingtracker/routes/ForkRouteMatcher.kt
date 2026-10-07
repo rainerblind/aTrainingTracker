@@ -52,7 +52,7 @@ object ForkRouteMatcher {
             return PolylineProjection(0.0, Double.MAX_VALUE, 0, point)
         }
         if (path.size == 1) {
-            val d = RouteCorridorClassifier.haversineDistanceMeters(
+            val d = GeoUtils.haversineDistanceMeters(
                 point.latitude, point.longitude,
                 path[0].latLng.latitude, path[0].latLng.longitude
             )
@@ -81,7 +81,7 @@ object ForkRouteMatcher {
             val projLat = p1.latitude + t * (p2.latitude - p1.latitude)
             val projLng = p1.longitude + t * (p2.longitude - p1.longitude)
 
-            val dist = RouteCorridorClassifier.haversineDistanceMeters(
+            val dist = GeoUtils.haversineDistanceMeters(
                 point.latitude, point.longitude,
                 projLat, projLng
             )

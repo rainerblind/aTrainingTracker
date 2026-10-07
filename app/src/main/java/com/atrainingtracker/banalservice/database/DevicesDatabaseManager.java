@@ -804,6 +804,8 @@ public class DevicesDatabaseManager {
             cursor.close();
         }
 
+        sensors.sort(com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrdering.getComparator(sportType));
+
         return sensors;
     }
 

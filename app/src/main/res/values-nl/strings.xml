@@ -584,6 +584,10 @@
     <string name="config_tracking__show_map">Kaart</string>
     <string name="config_tracking__showLiveSegments">Live Segmenten</string>
     <string name="config_tracking__showLapButton">Ronde-knop</string>
+    <string name="config_tracking__show_navigation_hints">Aanwijzingen</string>
+    <string name="config_tracking__show_live_climbs">Live beklimmingen</string>
+    <string name="config_tracking__wysiwyg_active">Actief</string>
+    <string name="config_tracking__wysiwyg_hidden">Verborgen</string>
     <string name="add_view_before">weergave ervoor</string>
     <string name="delete_view">weergave verwijderen</string>
     <string name="add_view_after">weergave erna</string>
@@ -1337,6 +1341,10 @@
     <string name="cluster_start_location">Start: %s</string>
     <string name="known_location_routes_header">Routes vanaf hier (%d):</string>
     <string name="filter_by_start_location">Filteren op startlocatie</string>
+    <string name="known_locations_home_base">Thuisbasis</string>
+    <string name="known_locations_home_badge">Thuisbasis</string>
+    <string name="known_locations_set_home">Instellen als thuisbasis</string>
+    <string name="known_locations_remove_home">Thuisbasis verwijderen</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">Expertinstellingen</string>
@@ -1376,7 +1384,7 @@
     <string name="tuning_pace_ceiling_desc">Filtert GPS-uitschieters in de tempografiek. Waarden sneller dan deze grens worden afgekapt.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
-    <string name="tuning_cat_cockpit_typography">Cockpit-typografie</string>
+    <string name="tuning_cat_cockpit_typography">Cockpit en tegels</string>
     <string name="tuning_cockpit_font_family_title">Lettertype</string>
     <string name="tuning_font_system_default">Systeemstandaard</string>
     <string name="tuning_font_seven_segment">7-segment digitaal</string>
@@ -1402,14 +1410,27 @@
     <string name="sensor_field_variant_v1">Moderne sporttegels met rand</string>
     <string name="sensor_field_variant_v2">Verheven sportkaarten</string>
     <string name="sensor_field_variant_v3">Zachte accentcapsules</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">Hoekradius</string>
+    <string name="tuning_sensor_field_corner_radius_desc">Afronding van de tegelhoeken voor de cockpit</string>
+    <string name="tuning_sensor_field_corner_radius_default">Standaard: 0 dp (Klassiek naadloos)</string>
+    <string name="tuning_sensor_field_border_thickness_title">Randdikte</string>
+    <string name="tuning_sensor_field_border_thickness_desc">Lijndikte van de tegelrand (0 dp = randloos)</string>
+    <string name="tuning_sensor_field_border_thickness_default">Standaard: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">Randcontrast</string>
+    <string name="tuning_sensor_field_border_contrast_desc">Kleurcontrast van de rand (subtiel tot maximaal wit/zwart)</string>
+    <string name="tuning_sensor_field_border_contrast_default">Standaard: Subtiel (0%)</string>
     <string name="tuning_default_format">Standaard: %1$s</string>
     <string name="reset_to_defaults">Fabrieksinstellingen herstellen</string>
     <string name="reset_to_defaults_success">Afstemmingsinstellingen hersteld naar fabrieksinstellingen.</string>
     <string name="tuning_cat_sensors_gps">Sensoren, gps en filtering</string>
     <string name="tuning_cat_workout_masks_cards">Workout-kaarten en details</string>
+    <string name="tuning_cat_navigation">Navigatie</string>
+    <string name="tuning_route_selection_radius_title">Straal voor routeselectie</string>
+    <string name="tuning_route_selection_radius_desc">Maximale afstand tot het startpunt voor selectie van routes in de buurt</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 kaarten</string>
-    <string name="tuning_matrix_col_list">In lijst</string>
-    <string name="tuning_matrix_col_details">In details</string>
+    <string name="tuning_matrix_col_list">Lijst</string>
+    <string name="tuning_matrix_col_details">Details</string>
     <string name="tuning_matrix_feature">Onderdeel</string>
     <string name="tuning_summary_matrix_format">%1$d/8 in lijst, %2$d/8 in details</string>
     <string name="map_splitter_content_description">Verdeellijn voor kaart en telemetrie. Sleep verticaal om het formaat te wijzigen, dubbeltik om te herstellen.</string>
@@ -1471,6 +1492,8 @@
     <string name="permission_rationale_not_now">Niet nu</string>
     <string name="permission_rationale_open_settings">Instellingen openen</string>
     <string name="permission_rationale_settings_explanation">Locatietoestemming is geweigerd. Zonder locatietoegang kunnen er geen GPS-routegegevens worden vastgelegd. Je kunt toestemming geven in de app-instellingen.</string>
+    <string name="permission_rationale_precise_location_explanation">Precieze locatie (gps) is vereist voor het vastleggen van de training. Geschatte locatie kan geen afstand, snelheid, route of hoogte registreren. Selecteer \'Precies\' bij machtigingen.</string>
+    <string name="action_view_workout">Bekijken</string>
     <string name="permission_warning_badge_desc">Locatietoestemming ontbreekt</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
@@ -1498,7 +1521,10 @@
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">Route selecteren</string>
     <string name="route_action_select">Route selecteren</string>
+    <string name="route_action_select_desc">Kiezen uit bestand of geschiedenis</string>
     <string name="route_action_stop">Route beëindigen</string>
+    <string name="route_action_clear">Route wissen</string>
+    <string name="route_metrics_format">%1$s • %2$s</string>
     <string name="route_auto_detect_title">Routedetectie</string>
     <string name="route_auto_detect_prompt">Volg je \'%1$s\'?</string>
     <string name="route_auto_detect_activate">Activeren</string>
@@ -1524,10 +1550,17 @@
     <string name="google_drive_never_synced">Nog niet gesynchroniseerd</string>
     <string name="restore_from_google_drive">Herstellen vanaf Google Drive</string>
     <string name="upload_to_google_drive">Back-up maken naar Google Drive</string>
+    <string name="google_drive_error_developer_config">Configuratiefout voor Google Sign-In (status 10): Controleer de OAuth-clientregistratie (pakketnaam com.atrainingtracker.debug en SHA-1-vingerafdruk) in Google Cloud Console.</string>
+    <string name="google_drive_error_network">Geen internetverbinding of netwerkfout tijdens Google Sign-In.</string>
+    <string name="google_drive_error_generic">Inloggen met Google mislukt. Probeer het opnieuw.</string>
+    <string name="google_drive_connect_prompt">Verbind uw Google-account om trainingen en databaseback-ups automatisch te synchroniseren met Google Drive.</string>
+    <string name="scan_google_drive">Google Drive scannen</string>
+    <string name="legacy_import__downloading_google_drive">%1$s downloaden van Google Drive…</string>
     <string name="gpx_enriching_elevation">Hoogtegegevens ophalen…</string>
     <string name="gpx_elevation_enriched">Hoogtegegevens succesvol toegevoegd</string>
     <string name="gpx_elevation_enrichment_failed">Hoogte ophalen mislukt, 2D-route geïmporteerd</string>
     <string name="waypoint_type_bench">Bank / Rustpunt</string>
+    <string name="waypoint_type_shelter">Schuilplaats</string>
     <string name="waypoint_type_water">Waterpunt</string>
     <string name="waypoint_type_summit">Top / Pas</string>
     <string name="waypoint_type_food">Eten / Café</string>
@@ -1555,6 +1588,10 @@
     <string name="climb_category_cat3">Cat 3</string>
     <string name="climb_category_cat4">Cat 4</string>
     <string name="climb_category_uc">UC</string>
+    <string name="routes_climb_count">%d Beklimmingen</string>
+    <string name="routes_climbs_section_title">Beklimmingen (%d)</string>
+    <string name="routes_climb_start_at">Start bij %s</string>
+    <string name="routes_climb_avg_grade">Gem. %1$.1f%%</string>
     <string name="tuning_show_live_climbs_title">Live beklimmingen (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Toon realtime klimcockpit tijdens routes en vrij rijden</string>
 
@@ -1588,21 +1625,6 @@
     <string name="nav_stop_return">Terugweg stoppen</string>
     <string name="nav_route_reverse">Terugkeren langs route</string>
 
-    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
-    <string name="gateway_all">Alle</string>
-    <string name="gateway_north">Noord</string>
-    <string name="gateway_northeast">Noordoost</string>
-    <string name="gateway_east">Oost</string>
-    <string name="gateway_southeast">Zuidoost</string>
-    <string name="gateway_south">Zuid</string>
-    <string name="gateway_southwest">Zuidwest</string>
-    <string name="gateway_west">West</string>
-    <string name="gateway_northwest">Noordwest</string>
-    <string name="gateway_unknown">Overig</string>
-    <string name="pref_corridor_grouping_title">Corridor-gebaseerde routegroepering</string>
-    <string name="pref_corridor_grouping_desc">Groepeer routes in de lijst op basis van hun vertrekrichting en corridor</string>
-    <string name="pref_focused_thumbnail_title">Gefocuste miniatuurzoom</string>
-    <string name="pref_focused_thumbnail_desc">Zoomt routeminiaturen in op de kenmerkende middelste lus in plaats van gemeenschappelijke in-/uitvalscorridors</string>
     <string name="fork_alert_title">Splitsing vooruit</string>
     <string name="fork_approaching_in_m">over %1$d m</string>
     <string name="fork_direction_left">Links</string>
@@ -1619,4 +1641,10 @@
     <string name="sensor_battery_snackbar_single">⚠️ %1$s: Batterij bijna leeg (%2$d%%)</string>
     <string name="sensor_battery_snackbar_many">⚠️ %1$d sensoren: Batterij bijna leeg (%2$s)</string>
     <string name="sensor_battery_action_view_sensors">Sensoren bekijken</string>
+
+    <!-- Sensor Pairing Relocation (ATT-2189) -->
+    <string name="devices_pair_sensor">Sensor koppelen</string>
+    <string name="devices_pair_protocol_title">Selecteer protocol</string>
+    <string name="devices_pair_protocol_ant">ANT+-sensor</string>
+    <string name="devices_pair_protocol_ble">Bluetooth LE-sensor</string>
 </resources>

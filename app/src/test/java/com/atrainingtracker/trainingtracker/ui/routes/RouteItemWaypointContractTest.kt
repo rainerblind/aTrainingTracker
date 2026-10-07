@@ -72,4 +72,20 @@ class RouteItemWaypointContractTest {
         val hasListParam = paramTypes.any { it == java.util.List::class.java }
         assertTrue("RouteItem must accept List parameter (pathPoints / waypoints)", hasListParam)
     }
+
+    @Test
+    fun testPathPreviewMap_rendersRouteWaypointsLayer_whenWaypointsPresent() {
+        var dir = java.io.File(".").canonicalFile
+        while (dir.parentFile != null) {
+            if (java.io.File(dir, "gradlew").exists() && java.io.File(dir, "app").exists()) {
+                break
+            }
+            dir = dir.parentFile!!
+        }
+        val pathPreviewFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/PathPreviewMap.kt")
+        assertTrue("PathPreviewMap.kt must exist", pathPreviewFile.exists())
+        val content = pathPreviewFile.readText()
+        assertTrue("PathPreviewMap must check path is MapRoute and path.waypoints.isNotEmpty()", content.contains("path is MapRoute && path.waypoints.isNotEmpty()"))
+        assertTrue("PathPreviewMap must invoke RouteWaypointsLayer", content.contains("RouteWaypointsLayer("))
+    }
 }

@@ -23,6 +23,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -38,9 +39,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.routes.ReturnNavigationState
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 /**
- * Glanceable Return Navigation HUD banner rendered in Cockpit (REQ-MAP-029 / ATT-1953).
+ * Glanceable Return Navigation HUD banner rendered in Cockpit (REQ-MAP-029, REQ-UI-282 / ATT-1953, ATT-2462).
  *
  * Displays destination name, remaining distance in km, remaining vertical gain in meters,
  * and elevation-adjusted dynamic arrival time (ETA).
@@ -59,10 +61,11 @@ fun ReturnNavigationHud(
     ) {
         Card(
             shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, TTColor.RouteSelected.copy(alpha = 0.35f)),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -81,7 +84,7 @@ fun ReturnNavigationHud(
                         painterResource(id = R.drawable.ic_navigation_arrow)
                     },
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = if (navigationState.isHomeDestination) TTColor.RouteSelected else MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
                 )
 
@@ -90,11 +93,7 @@ fun ReturnNavigationHud(
                 // Destination & Remaining metrics
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (navigationState.isHomeDestination) {
-                            "🏠 ${navigationState.destinationName}"
-                        } else {
-                            navigationState.destinationName
-                        },
+                        text = navigationState.destinationName,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,

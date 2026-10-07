@@ -129,4 +129,39 @@ object RouteProximityRanker {
         val angleDiff = RouteAutoDetector.computeAngleDifference(currentBearing, departureBearing)
         return angleDiff <= HEADING_ALIGNMENT_TOLERANCE_DEG
     }
+
+    /**
+     * Filters routes strictly within the configurable radius (in meters) from the current GPS position,
+     * and sorts qualifying routes strictly by recency (syncedAt descending - "Zuletzt gefahren"),
+     * breaking ties by distance to start point ascending, then name (REQ-UI-281).
+     *
+     * If currentLocation is null or routes is empty, returns emptyList() since distance cannot be evaluated.
+     */
+    fun filterAndRankRoutes(
+        routes: List<RouteWithPath>,
+        currentLocation: LatLng?,
+        radiusMeters: Float = 1000.0f
+    ): List<RouteWithPath> {
+        if (routes.isEmpty() || currentLocation == null) return emptyList()
+
+        val qualifyingRoutes = mutableListOf<Pair<RouteWithPath, Float>>()
+        for (route in routes) {
+            val startPoint = route.path.firstOrNull()?.latLng ?: continue
+            val dist = RouteAutoDetector.computeDistanceMeters(
+                currentLocation.latitude, currentLocation.longitude,
+                startPoint.latitude, startPoint.longitude
+            )
+            if (dist <= radiusMeters) {
+                qualifyingRoutes.add(Pair(route, dist))
+            }
+        }
+
+        return qualifyingRoutes
+            .sortedWith(
+                compareByDescending<Pair<RouteWithPath, Float>> { it.first.summary.syncedAt }
+                    .thenBy { it.second }
+                    .thenBy { it.first.summary.name }
+            )
+            .map { it.first }
+    }
 }

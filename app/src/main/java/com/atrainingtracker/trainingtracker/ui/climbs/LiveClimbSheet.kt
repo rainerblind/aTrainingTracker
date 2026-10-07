@@ -170,12 +170,8 @@ fun LiveClimbSheet(
     }
 }
 
-@Composable
-private fun ClimbCategoryChip(
-    category: ClimbCategory,
-    modifier: Modifier = Modifier
-) {
-    val (bgColor, textColor, labelRes) = when (category) {
+fun getClimbCategoryColors(category: ClimbCategory): Triple<Color, Color, Int> {
+    return when (category) {
         ClimbCategory.HC -> Triple(Color(0xFF880E4F), Color.White, R.string.climb_category_hc)
         ClimbCategory.CAT_1 -> Triple(Color(0xFFC62828), Color.White, R.string.climb_category_cat1)
         ClimbCategory.CAT_2 -> Triple(Color(0xFFEF6C00), Color.White, R.string.climb_category_cat2)
@@ -183,6 +179,14 @@ private fun ClimbCategoryChip(
         ClimbCategory.CAT_4 -> Triple(Color(0xFF2E7D32), Color.White, R.string.climb_category_cat4)
         ClimbCategory.UNCATEGORIZED -> Triple(Color(0xFF757575), Color.White, R.string.climb_category_uc)
     }
+}
+
+@Composable
+fun ClimbCategoryChip(
+    category: ClimbCategory,
+    modifier: Modifier = Modifier
+) {
+    val (bgColor, textColor, labelRes) = getClimbCategoryColors(category)
 
     Surface(
         color = bgColor,

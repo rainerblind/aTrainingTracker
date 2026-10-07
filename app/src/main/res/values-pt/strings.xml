@@ -584,6 +584,10 @@
     <string name="config_tracking__show_map">Mapa</string>
     <string name="config_tracking__showLiveSegments">Live Segments</string>
     <string name="config_tracking__showLapButton">Botão Volta</string>
+    <string name="config_tracking__show_navigation_hints">Instruções de navegação</string>
+    <string name="config_tracking__show_live_climbs">Subidas ao vivo</string>
+    <string name="config_tracking__wysiwyg_active">Ativo</string>
+    <string name="config_tracking__wysiwyg_hidden">Oculto</string>
     <string name="add_view_before">adicionar vista antes</string>
     <string name="delete_view">excluir vista</string>
     <string name="add_view_after">adicionar vista depois</string>
@@ -1332,6 +1336,10 @@
     <string name="cluster_start_location">Início: %s</string>
     <string name="known_location_routes_header">Rotas a partir daqui (%d):</string>
     <string name="filter_by_start_location">Filtrar por local de início</string>
+    <string name="known_locations_home_base">Base principal</string>
+    <string name="known_locations_home_badge">Base principal</string>
+    <string name="known_locations_set_home">Definir como base principal</string>
+    <string name="known_locations_remove_home">Remover base principal</string>
     <plurals name="known_locations_routes">
         <item quantity="one">%1$d rota</item>
         <item quantity="other">%1$d rotas</item>
@@ -1376,7 +1384,7 @@
     <string name="tuning_pace_ceiling_desc">Filtra anomalias de GPS no gráfico de ritmo. Valores mais rápidos que este limite são limitados.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
-    <string name="tuning_cat_cockpit_typography">Tipografia do cockpit</string>
+    <string name="tuning_cat_cockpit_typography">Cockpit e blocos</string>
     <string name="tuning_cockpit_font_family_title">Família da fonte</string>
     <string name="tuning_font_system_default">Padrão do sistema</string>
     <string name="tuning_font_seven_segment">Digital de 7 segmentos</string>
@@ -1402,14 +1410,27 @@
     <string name="sensor_field_variant_v1">Blocos desportivos com contorno</string>
     <string name="sensor_field_variant_v2">Cartões desportivos em relevo</string>
     <string name="sensor_field_variant_v3">Cápsulas de realce suave</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">Raio dos cantos</string>
+    <string name="tuning_sensor_field_corner_radius_desc">Arredondamento dos cantos dos blocos do painel</string>
+    <string name="tuning_sensor_field_corner_radius_default">Padrão: 0 dp (Clássico sem emendas)</string>
+    <string name="tuning_sensor_field_border_thickness_title">Espessura da borda</string>
+    <string name="tuning_sensor_field_border_thickness_desc">Espessura do traço da borda dos blocos (0 dp = sem borda)</string>
+    <string name="tuning_sensor_field_border_thickness_default">Padrão: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">Contraste da borda</string>
+    <string name="tuning_sensor_field_border_contrast_desc">Contraste de cor da borda (sutil a branco/preto máximo)</string>
+    <string name="tuning_sensor_field_border_contrast_default">Padrão: Sutil (0%)</string>
     <string name="tuning_default_format">Padrão: %1$s</string>
     <string name="reset_to_defaults">Restaurar padrões</string>
     <string name="reset_to_defaults_success">Configurações de ajuste restauradas para os padrões de fábrica.</string>
     <string name="tuning_cat_sensors_gps">Sensores, GPS e filtragem</string>
     <string name="tuning_cat_workout_masks_cards">Cartões e detalhes de treino</string>
+    <string name="tuning_cat_navigation">Navegação</string>
+    <string name="tuning_route_selection_radius_title">Raio de seleção de rota</string>
+    <string name="tuning_route_selection_radius_desc">Distância máxima até o ponto de partida para seleção de rotas próximas</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 cartões</string>
-    <string name="tuning_matrix_col_list">Na lista</string>
-    <string name="tuning_matrix_col_details">Nos detalhes</string>
+    <string name="tuning_matrix_col_list">Lista</string>
+    <string name="tuning_matrix_col_details">Detalhes</string>
     <string name="tuning_matrix_feature">Elemento</string>
     <string name="tuning_summary_matrix_format">%1$d/8 na lista, %2$d/8 nos detalhes</string>
     <string name="map_splitter_content_description">Barra divisora do mapa e telemetria. Arraste verticalmente para redimensionar, toque duas vezes para redefinir.</string>
@@ -1471,6 +1492,8 @@
     <string name="permission_rationale_not_now">Agora não</string>
     <string name="permission_rationale_open_settings">Abrir configurações</string>
     <string name="permission_rationale_settings_explanation">A permissão de localização foi negada. Sem acesso à localização, a gravação de rotas e pontos GPS não fica disponível. Você pode conceder a permissão nas configurações do app.</string>
+    <string name="permission_rationale_precise_location_explanation">A localização precisa (GPS) é necessária para registrar o treino. A localização aproximada não registra distância, velocidade, rota ou altitude. Selecione \'Precisa\' nas permissões.</string>
+    <string name="action_view_workout">Visualizar</string>
     <string name="permission_warning_badge_desc">Permissão de localização ausente</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
@@ -1498,7 +1521,10 @@
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">Selecionar rota</string>
     <string name="route_action_select">Selecionar rota</string>
+    <string name="route_action_select_desc">Escolher a partir de ficheiro ou histórico</string>
     <string name="route_action_stop">Parar rota</string>
+    <string name="route_action_clear">Limpar rota</string>
+    <string name="route_metrics_format">%1$s • %2$s</string>
     <string name="route_auto_detect_title">Deteção de rota</string>
     <string name="route_auto_detect_prompt">Está a seguir \'%1$s\'?</string>
     <string name="route_auto_detect_activate">Ativar</string>
@@ -1524,10 +1550,17 @@
     <string name="google_drive_never_synced">Ainda não sincronizado</string>
     <string name="restore_from_google_drive">Restaurar do Google Drive</string>
     <string name="upload_to_google_drive">Fazer backup no Google Drive</string>
+    <string name="google_drive_error_developer_config">Erro de configuração do Google Sign-In (status 10): Verifique o registro do cliente OAuth (nome do pacote com.atrainingtracker.debug e impressão digital SHA-1) no Google Cloud Console.</string>
+    <string name="google_drive_error_network">Sem conexão com a Internet ou erro de rede durante o login com o Google.</string>
+    <string name="google_drive_error_generic">Falha no login com o Google. Tente novamente.</string>
+    <string name="google_drive_connect_prompt">Conecte sua conta do Google para exportar treinos e sincronizar backups do banco de dados automaticamente no Google Drive.</string>
+    <string name="scan_google_drive">Escanear Google Drive</string>
+    <string name="legacy_import__downloading_google_drive">Baixando %1$s do Google Drive…</string>
     <string name="gpx_enriching_elevation">A obter dados de elevação…</string>
     <string name="gpx_elevation_enriched">Dados de elevação adicionados com sucesso</string>
     <string name="gpx_elevation_enrichment_failed">Falha ao obter altitude, rota 2D importada</string>
     <string name="waypoint_type_bench">Banco / Descanso</string>
+    <string name="waypoint_type_shelter">Abrigo</string>
     <string name="waypoint_type_water">Ponto de água</string>
     <string name="waypoint_type_summit">Cume / Passo</string>
     <string name="waypoint_type_food">Comida / Café</string>
@@ -1555,6 +1588,10 @@
     <string name="climb_category_cat3">Cat 3</string>
     <string name="climb_category_cat4">Cat 4</string>
     <string name="climb_category_uc">UC</string>
+    <string name="routes_climb_count">%d Subidas</string>
+    <string name="routes_climbs_section_title">Subidas (%d)</string>
+    <string name="routes_climb_start_at">Início em %s</string>
+    <string name="routes_climb_avg_grade">Média %1$.1f%%</string>
     <string name="tuning_show_live_climbs_title">Subidas ao vivo (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Mostrar painel de subida em tempo real durante rotas e pedalada livre</string>
 
@@ -1588,21 +1625,6 @@
     <string name="nav_stop_return">Parar regresso</string>
     <string name="nav_route_reverse">Regressar pela rota</string>
 
-    <!-- Corridor Grouping & Differentiating Thumbnail Zoom (ATT-1954) -->
-    <string name="gateway_all">Todos</string>
-    <string name="gateway_north">Norte</string>
-    <string name="gateway_northeast">Nordeste</string>
-    <string name="gateway_east">Leste</string>
-    <string name="gateway_southeast">Sudeste</string>
-    <string name="gateway_south">Sul</string>
-    <string name="gateway_southwest">Sudoeste</string>
-    <string name="gateway_west">Oeste</string>
-    <string name="gateway_northwest">Noroeste</string>
-    <string name="gateway_unknown">Outros</string>
-    <string name="pref_corridor_grouping_title">Agrupamento de rotas por corredor</string>
-    <string name="pref_corridor_grouping_desc">Agrupa rotas na lista por sua direção de partida e corredor</string>
-    <string name="pref_focused_thumbnail_title">Zoom de miniatura focado</string>
-    <string name="pref_focused_thumbnail_desc">Aplica zoom às miniaturas de rotas no loop central característico em vez de corredores comuns de entrada/saída</string>
     <string name="fork_alert_title">Bifurcação à frente</string>
     <string name="fork_approaching_in_m">a %1$d m</string>
     <string name="fork_direction_left">Esquerda</string>
@@ -1619,4 +1641,10 @@
     <string name="sensor_battery_snackbar_single">⚠️ %1$s: Bateria fraca (%2$d%%)</string>
     <string name="sensor_battery_snackbar_many">⚠️ %1$d sensores: Bateria fraca (%2$s)</string>
     <string name="sensor_battery_action_view_sensors">Ver sensores</string>
+
+    <!-- Sensor Pairing Relocation (ATT-2189) -->
+    <string name="devices_pair_sensor">Emparelhar sensor</string>
+    <string name="devices_pair_protocol_title">Selecionar protocolo</string>
+    <string name="devices_pair_protocol_ant">Sensor ANT+</string>
+    <string name="devices_pair_protocol_ble">Sensor Bluetooth LE</string>
 </resources>

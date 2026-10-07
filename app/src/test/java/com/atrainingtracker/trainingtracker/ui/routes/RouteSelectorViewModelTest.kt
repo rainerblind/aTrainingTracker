@@ -26,6 +26,8 @@ import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.routes.RouteAutoDetector
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import io.mockk.every
@@ -57,8 +59,10 @@ class RouteSelectorViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var mockRepository: RoutesRepository
     private lateinit var autoDetector: RouteAutoDetector
+    private lateinit var mockTuningDataStore: TuningPreferencesDataStore
     private val allRoutesFlow = MutableStateFlow<List<RouteWithPath>>(emptyList())
     private val activeNavigatedRouteIdFlow = MutableStateFlow<Long?>(null)
+    private val tuningConfigFlow = MutableStateFlow(TuningConfig())
 
     @Before
     fun setUp() {
@@ -72,6 +76,9 @@ class RouteSelectorViewModelTest {
         mockRepository = mockk(relaxed = true)
         every { mockRepository.allRoutes } returns allRoutesFlow
         every { mockRepository.activeNavigatedRouteId } returns activeNavigatedRouteIdFlow
+
+        mockTuningDataStore = mockk(relaxed = true)
+        every { mockTuningDataStore.tuningConfigFlow } returns tuningConfigFlow
 
         autoDetector = RouteAutoDetector()
     }
@@ -125,11 +132,12 @@ class RouteSelectorViewModelTest {
     @Test
     fun testInitialStateLoadsRoutesAndObservesActiveRoute() = runTest {
         allRoutesFlow.value = sampleRoutes()
-        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(2, state.routes.size)
+        assertEquals("Initial routes should be empty when location is null", 0, state.routes.size)
+        assertEquals("Total route count should reflect all imported routes", 2, state.totalRouteCount)
         assertNull(state.activeRoute)
         assertNull(state.autoDetectedCandidate)
     }
@@ -137,7 +145,7 @@ class RouteSelectorViewModelTest {
     @Test
     fun testSelectRouteDelegatesToRepository() = runTest {
         allRoutesFlow.value = sampleRoutes()
-        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
         advanceUntilIdle()
 
         viewModel.selectRoute(1L)
@@ -147,7 +155,7 @@ class RouteSelectorViewModelTest {
     @Test
     fun testStopRouteClearsActiveNavigation() = runTest {
         allRoutesFlow.value = sampleRoutes()
-        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
         advanceUntilIdle()
 
         viewModel.stopRoute()
@@ -155,39 +163,115 @@ class RouteSelectorViewModelTest {
     }
 
     @Test
-    fun testFilterTabLengthSortsByDistance() = runTest {
+    fun testClearRouteClearsActiveNavigation() = runTest {
         allRoutesFlow.value = sampleRoutes()
-        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
         advanceUntilIdle()
 
-        viewModel.setFilterTab(RouteFilterTab.LENGTH)
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertEquals(RouteFilterTab.LENGTH, state.selectedTab)
-        assertEquals(2, state.routes.size)
-        assertEquals(1L, state.routes[0].summary.id) // 2000m < 25000m
+        viewModel.clearRoute()
+        verify { mockRepository.setActiveNavigatedRoute(null) }
     }
 
     @Test
-    fun testFilterTabRecentSortsBySyncedAtDescending() = runTest {
+    fun testInitialStateHasEmptyFilteredRoutesWhenLocationIsNull() = runTest {
         allRoutesFlow.value = sampleRoutes()
-        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
-        advanceUntilIdle()
-
-        viewModel.setFilterTab(RouteFilterTab.RECENT)
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(RouteFilterTab.RECENT, state.selectedTab)
-        assertEquals(2L, state.routes[0].summary.id) // 5000L > 1000L
+        assertEquals(0, state.routes.size)
+        assertEquals(2, state.totalRouteCount)
+    }
+
+    @Test
+    fun testLocationChangeTriggersProximityFiltering() = runTest {
+        allRoutesFlow.value = sampleRoutes()
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
+        advanceUntilIdle()
+
+        // Athlete near Route 1 start point (48.137, 11.576)
+        val loc = mockk<Location>(relaxed = true)
+        every { loc.latitude } returns 48.13705
+        every { loc.longitude } returns 11.57605
+        every { loc.bearing } returns 38f
+        every { loc.hasBearing() } returns true
+        every { loc.speed } returns 4f
+
+        viewModel.onLocationChanged(loc)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        // Route 1 is ~7m away (<= default 1.0 km radius). Route 2 is ~7.2 km away (> 1.0 km radius).
+        assertEquals(1, state.routes.size)
+        assertEquals(1L, state.routes[0].summary.id)
+    }
+
+    @Test
+    fun testMultipleRoutesInRadiusSortedByRecencyDescending() = runTest {
+        val routeOlder = RouteWithPath(
+            summary = RouteSummary(
+                id = 10L, externalId = "ext_10", name = "Older", description = "", isSelected = false,
+                distance = 5000.0, elevationGain = 50.0, bSportType = BSportType.BIKE,
+                source = RouteSource.LOCAL_GPX, syncedAt = 1000L
+            ),
+            path = listOf(PathPoint(0.0, LatLng(48.1372, 11.5762), 500.0))
+        )
+        val routeNewer = RouteWithPath(
+            summary = RouteSummary(
+                id = 20L, externalId = "ext_20", name = "Newer", description = "", isSelected = false,
+                distance = 6000.0, elevationGain = 60.0, bSportType = BSportType.BIKE,
+                source = RouteSource.LOCAL_GPX, syncedAt = 9000L
+            ),
+            path = listOf(PathPoint(0.0, LatLng(48.1375, 11.5765), 500.0))
+        )
+        allRoutesFlow.value = listOf(routeOlder, routeNewer)
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
+        advanceUntilIdle()
+
+        val loc = mockk<Location>(relaxed = true)
+        every { loc.latitude } returns 48.137
+        every { loc.longitude } returns 11.576
+        viewModel.onLocationChanged(loc)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(2, state.routes.size)
+        assertEquals("Most recently ridden route (syncedAt 9000L) must rank first", 20L, state.routes[0].summary.id)
+        assertEquals(10L, state.routes[1].summary.id)
+    }
+
+    @Test
+    fun testDynamicRadiusPreferenceChangeReFiltersRoutes() = runTest {
+        allRoutesFlow.value = sampleRoutes()
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
+        advanceUntilIdle()
+
+        val loc = mockk<Location>(relaxed = true)
+        every { loc.latitude } returns 48.13705
+        every { loc.longitude } returns 11.57605
+        viewModel.onLocationChanged(loc)
+        advanceUntilIdle()
+
+        // Default radius 1.0 km -> only Route 1
+        assertEquals(1, viewModel.uiState.value.routes.size)
+
+        // Expand radius to 10.0 km
+        tuningConfigFlow.value = TuningConfig(routeSelectionRadiusKm = 10.0f)
+        advanceUntilIdle()
+
+        // Now both Route 1 and Route 2 (~7.2 km away) qualify!
+        val expandedState = viewModel.uiState.value
+        assertEquals(2, expandedState.routes.size)
+        // Sorted by recency: Route 2 (5000L) > Route 1 (1000L)
+        assertEquals(2L, expandedState.routes[0].summary.id)
+        assertEquals(1L, expandedState.routes[1].summary.id)
     }
 
     @Test
     fun testLocationUpdateTriggersAutoDetection() = runTest {
         val routes = sampleRoutes()
         allRoutesFlow.value = routes
-        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
         advanceUntilIdle()
 
         val loc = mockk<Location>(relaxed = true)
@@ -209,7 +293,7 @@ class RouteSelectorViewModelTest {
     fun testDismissAutoDetectedCandidateClearsState() = runTest {
         val routes = sampleRoutes()
         allRoutesFlow.value = routes
-        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
         advanceUntilIdle()
 
         val loc = mockk<Location>(relaxed = true)
@@ -232,7 +316,7 @@ class RouteSelectorViewModelTest {
     fun testActivateAutoDetectedCandidateSetsRoute() = runTest {
         val routes = sampleRoutes()
         allRoutesFlow.value = routes
-        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
         advanceUntilIdle()
 
         val loc = mockk<Location>(relaxed = true)
@@ -253,20 +337,7 @@ class RouteSelectorViewModelTest {
     }
 
     @Test
-    fun testAdaptiveFilterChips_whenFewerThan5Routes_hidesFilterChips() = runTest {
-        // Given 2 routes (< 5)
-        allRoutesFlow.value = sampleRoutes()
-        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertEquals(2, state.totalRouteCount)
-        assertEquals(false, state.showFilterTabs)
-    }
-
-    @Test
-    fun testAdaptiveFilterChips_when5OrMoreRoutes_displaysFilterChips() = runTest {
-        // Given 5 routes (>= 5)
+    fun testUiStateExposesTotalRouteCountWithoutFilterTabs() = runTest {
         val fiveRoutes = (1..5).map { id ->
             RouteWithPath(
                 summary = RouteSummary(
@@ -284,11 +355,11 @@ class RouteSelectorViewModelTest {
             )
         }
         allRoutesFlow.value = fiveRoutes
-        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, SharingStarted.Eagerly)
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals(5, state.totalRouteCount)
-        assertEquals(true, state.showFilterTabs)
+        assertEquals(0, state.routes.size)
     }
 }

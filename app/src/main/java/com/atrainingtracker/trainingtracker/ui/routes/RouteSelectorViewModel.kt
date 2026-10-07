@@ -25,83 +25,72 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.routes.RouteAutoDetector
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 /**
- * Filter tabs for the Quick Route Selector (REQ-MAP-024 / ATT-1835).
- */
-enum class RouteFilterTab(val labelResId: Int) {
-    NEARBY(R.string.route_filter_near),
-    RECENT(R.string.route_filter_recent),
-    LENGTH(R.string.route_filter_length)
-}
-
-/**
- * UI State for Quick Route Selector sheet.
+ * UI State for Quick Route Selector sheet (REQ-MAP-024, REQ-UI-280 / ATT-2459, REQ-UI-281 / ATT-2460).
  */
 data class RouteSelectorUiState(
     val routes: List<RouteWithPath> = emptyList(),
     val totalRouteCount: Int = 0,
-    val showFilterTabs: Boolean = false,
     val activeRoute: RouteWithPath? = null,
-    val selectedTab: RouteFilterTab = RouteFilterTab.NEARBY,
     val autoDetectedCandidate: RouteWithPath? = null,
     val isAutoPromptVisible: Boolean = false
 )
 
 /**
- * ViewModel managing state and user actions for Quick Route Selector & Route Auto Detection.
+ * ViewModel managing state and user actions for Quick Route Selector & Route Auto Detection (REQ-UI-280, REQ-UI-281).
  */
 class RouteSelectorViewModel(
     private val routesRepository: RoutesRepository,
     private val autoDetector: RouteAutoDetector = RouteAutoDetector(),
+    private val tuningPreferencesDataStore: TuningPreferencesDataStore? = null,
     sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
 ) : ViewModel() {
 
-    private val _selectedTab = MutableStateFlow(RouteFilterTab.NEARBY)
+    constructor(
+        routesRepository: RoutesRepository,
+        autoDetector: RouteAutoDetector,
+        sharingStarted: SharingStarted
+    ) : this(routesRepository, autoDetector, null, sharingStarted)
+
     private val _lastLocation = MutableStateFlow<Location?>(null)
     private val _autoDetectedCandidate = MutableStateFlow<RouteWithPath?>(null)
+
+    private val radiusFlow: Flow<Float> = tuningPreferencesDataStore?.tuningConfigFlow
+        ?.map { it.routeSelectionRadiusKm * 1000.0f }
+        ?: flowOf(TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM * 1000.0f)
 
     val uiState: StateFlow<RouteSelectorUiState> = combine(
         routesRepository.allRoutes,
         routesRepository.activeNavigatedRouteId,
-        _selectedTab,
         _lastLocation,
-        _autoDetectedCandidate
-    ) { allRoutes, activeRouteId, tab, location, candidate ->
+        _autoDetectedCandidate,
+        radiusFlow
+    ) { allRoutes, activeRouteId, location, candidate, radiusMeters ->
         val activeRoute = allRoutes.find { it.summary.id == activeRouteId }
 
-        val filteredAndSortedRoutes = when (tab) {
-            RouteFilterTab.NEARBY -> {
-                val currentLatLng = location?.let { LatLng(it.latitude, it.longitude) }
-                val currentBearing = if (location != null && location.hasBearing()) location.bearing else null
-                RouteProximityRanker.rankRoutes(
-                    routes = allRoutes,
-                    currentLocation = currentLatLng,
-                    currentBearing = currentBearing,
-                    activeSport = null
-                )
-            }
-            RouteFilterTab.RECENT -> {
-                allRoutes.sortedByDescending { it.summary.syncedAt }
-            }
-            RouteFilterTab.LENGTH -> {
-                allRoutes.sortedBy { it.summary.distance }
-            }
-        }
+        val currentLatLng = location?.let { LatLng(it.latitude, it.longitude) }
+        val rankedRoutes = RouteProximityRanker.filterAndRankRoutes(
+            routes = allRoutes,
+            currentLocation = currentLatLng,
+            radiusMeters = radiusMeters
+        )
 
         RouteSelectorUiState(
-            routes = filteredAndSortedRoutes,
+            routes = rankedRoutes,
             totalRouteCount = allRoutes.size,
-            showFilterTabs = allRoutes.size >= 5,
             activeRoute = activeRoute,
-            selectedTab = tab,
             autoDetectedCandidate = candidate,
             isAutoPromptVisible = candidate != null
         )
@@ -110,10 +99,6 @@ class RouteSelectorViewModel(
         started = sharingStarted,
         initialValue = RouteSelectorUiState()
     )
-
-    fun setFilterTab(tab: RouteFilterTab) {
-        _selectedTab.value = tab
-    }
 
     fun selectRoute(routeId: Long) {
         routesRepository.setActiveNavigatedRoute(routeId)
@@ -124,6 +109,10 @@ class RouteSelectorViewModel(
 
     fun stopRoute() {
         routesRepository.setActiveNavigatedRoute(null)
+    }
+
+    fun clearRoute() {
+        stopRoute()
     }
 
     fun onLocationChanged(location: Location) {
