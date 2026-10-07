@@ -141,3 +141,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 
 ### 5.6 Placement & Entry Points
 * New features are entered from the screen where the athlete expects them (e.g. route selection on the Control Tracking screen, ATT-2458) using the same button/chip style as neighbouring actions — not via new floating or branded elements.
+
+### 5.7 In-Ride Navigation Cues & HUD Overlays
+* **Top-Level Spatial Overlay**: In-ride navigation hints, turn-by-turn cues (e.g. ATT-1450), and fork-in-the-road decision prompts (e.g. ATT-1955) must float directly on top of the active tracking screen elements (cockpit tiles, map view) rather than displacing or squeezing the cockpit tile layout.
+* **Semi-Transparency for Glanceability**: Overlays must use a semi-transparent surface background (e.g. `surface` / `surfaceContainer` at ~80–85% opacity, `TTAlpha`) paired with a subtle green border accent (`TTColor.RouteActiveNavigation`), so that athletes can immediately register the direction cue while still discerning underlying telemetry values and metrics behind the banner.
+* **Transient Auto-Dismiss (3–5 Seconds)**: Navigation cues are time-sensitive and ephemeral. Upon being triggered (or once a maneuver instruction is issued), the cue must automatically vanish after a brief, configurable interval (3–5 seconds) via a smooth animation (fade or slide), promptly returning the screen to full telemetry focus without requiring manual dismissal while riding.
+
