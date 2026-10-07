@@ -100,6 +100,7 @@ In strict compliance with **Rule 10 (Zero Code Changes During Review)** and **Ru
 3. **Rule 25 Added to `.agents/rules/aspice_governance.md`**: Lean Defect Recording Protocol with Immediate Evidence Capture.
 4. **`docs/project_protocol.md` Synchronized**: Updated Section 2 with Rule 1 ("Obey the Rules"), Rule 24, and Rule 25.
 5. **`stage1-analysis/SKILL.md` Synchronized**: Mandatory preliminary check of ticket history and git logs before executing Gradle diagnostic tasks.
+6. **`docs/design_guidelines.md` Extended**: Added Section 5.7 *In-Ride Navigation Cues & HUD Overlays* specifying top-level spatial placement, semi-transparency for telemetry glanceability, green domain border accents, and transient 3–5 second auto-dismissal.
 
 ---
 
