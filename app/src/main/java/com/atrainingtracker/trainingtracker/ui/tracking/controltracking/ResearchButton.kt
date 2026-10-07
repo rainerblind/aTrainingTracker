@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,11 +29,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 
+/**
+ * Action button anchored on the tracking control screen to trigger re-scanning of sensors (REQ-UI-286).
+ *
+ * Uses Compose [Icons.Default.Refresh] vector to guarantee complete immunity against runtime
+ * [android.content.res.Resources.NotFoundException] crashes across all device display densities and APK splits.
+ *
+ * @param isEnabled Whether the button is interactive (disabled while active search is in progress).
+ * @param onClick Callback invoked when the user taps the button.
+ * @param modifier Optional [Modifier] for positioning and layout.
+ */
 @Composable
 fun ResearchButton(
     isEnabled: Boolean,
@@ -45,8 +56,8 @@ fun ResearchButton(
             .padding(8.dp)
     ) {
         Icon(
-            painter = painterResource(id = R.drawable.research_icon),
-            contentDescription = null,
+            imageVector = Icons.Default.Refresh,
+            contentDescription = stringResource(id = R.string.research),
             modifier = Modifier.size(48.dp),
             // Use primary color for the active state to make it stand out
             tint = if (isEnabled) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.4f)
