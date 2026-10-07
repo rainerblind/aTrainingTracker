@@ -5,8 +5,8 @@
 **Parent Epic**: [ATT-1157](https://atrainingtracker.atlassian.net/browse/ATT-1157) (*Android Modernization & Production Stability*)  
 **Target Release**: `V4.9.38.3`  
 **Active Sprint**: Hotfix Release  
-**Requirement Mapping**: `REQ-UI-254` (*ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback*)  
-**Test Mapping**: `TST-UI-213`  
+**Requirement Mapping**: `REQ-UI-286` (*ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback*)  
+**Test Mapping**: `TST-UI-246`  
 **Branch**: `hotfix/V4.9.38.3__266`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-07  
@@ -24,8 +24,8 @@ The crash occurred because `ResearchButton` loaded `R.drawable.research_icon` th
 
 ## 2. Traceability & Requirements Mapping
 
-* **Requirement**: `REQ-UI-254` (*ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback*)
-* **Test Mapping**: `TST-UI-213` (*ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback Verification*)
+* **Requirement**: `REQ-UI-286` (*ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback*)
+* **Test Mapping**: `TST-UI-246` (*ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback Verification*)
 
 ---
 

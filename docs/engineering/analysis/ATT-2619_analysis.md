@@ -80,9 +80,9 @@ The crash occurred immediately upon launching the tracking screen (`TrackingTabs
 
 ### Requirement Archaeology & Chesterton's Fence Audit
 
-Net-new requirement only (`REQ-UI-254`). No existing requirements modified.
+Net-new requirement only (`REQ-UI-286`). No existing requirements modified.
 
-* **Original Requirement ID & Target**: Net-new `REQ-UI-254` (*ResearchButton Vector Resilience & Resource Fallback*), targeting `ResearchButton.kt` and `res/drawable/research_icon.xml`.
+* **Original Requirement ID & Target**: Net-new `REQ-UI-286` (*ResearchButton Vector Resilience & Resource Fallback*), targeting `ResearchButton.kt` and `res/drawable/research_icon.xml`.
 * **Historical Origin & Commit Trace**: N/A (new requirement created to eliminate production crash ATT-2619).
 * **Root Reason for Existing Formulation**: Previously, `ResearchButton.kt` used legacy raster asset `R.drawable.research_icon` with `painterResource()`. In Jetpack Compose, vector assets (`ImageVector`) eliminate runtime Android resource lookup failures completely.
 * **Preservation of Core Invariants**: Sizing (48dp), primary color active tint, gray disabled tint, click dispatching, and string resource `@string/research` remain 100% preserved.

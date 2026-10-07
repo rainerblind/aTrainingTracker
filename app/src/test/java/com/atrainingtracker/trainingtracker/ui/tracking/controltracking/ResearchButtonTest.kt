@@ -28,12 +28,12 @@ import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * Verification unit test suite for [ResearchButton] and universal vector fallback (REQ-UI-254 / TST-UI-213).
+ * Verification unit test suite for [ResearchButton] and universal vector fallback (REQ-UI-286 / TST-UI-246).
  *
  * Validates:
- * 1. TST-UI-213.1: Compose modernization using [Icons.Default.Refresh], removing [painterResource] fragility.
- * 2. TST-UI-213.2: Universal vector drawable fallback `res/drawable/research_icon.xml` validity.
- * 3. TST-UI-213.3: 100% localization parity across all 9 application locales for `@string/research`.
+ * 1. TST-UI-246.1: Compose modernization using [Icons.Default.Refresh], removing [painterResource] fragility.
+ * 2. TST-UI-246.2: Universal vector drawable fallback `res/drawable/research_icon.xml` validity.
+ * 3. TST-UI-246.3: 100% localization parity across all 9 application locales for `@string/research`.
  */
 class ResearchButtonTest {
 
@@ -74,7 +74,7 @@ class ResearchButtonTest {
     }
 
     /**
-     * TST-UI-213.1: Verify ResearchButton uses Compose vector Icons.Default.Refresh
+     * TST-UI-246.1: Verify ResearchButton uses Compose vector Icons.Default.Refresh
      * and does NOT use painterResource(R.drawable.research_icon), eliminating Resources$NotFoundException.
      */
     @Test
@@ -114,7 +114,7 @@ class ResearchButtonTest {
     }
 
     /**
-     * TST-UI-213.2: Verify universal vector fallback drawable res/drawable/research_icon.xml exists and is valid.
+     * TST-UI-246.2: Verify universal vector fallback drawable res/drawable/research_icon.xml exists and is valid.
      */
     @Test
     fun testResearchIconVectorDrawable_existsAndValid() {
@@ -139,7 +139,7 @@ class ResearchButtonTest {
     }
 
     /**
-     * TST-UI-213.3: Verify 9-language localization parity for @string/research.
+     * TST-UI-246.3: Verify 9-language localization parity for @string/research.
      */
     @Test
     fun testResearchString_parityAcrossAll9Locales() {

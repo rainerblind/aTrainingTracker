@@ -5,8 +5,8 @@
 **Parent Epic**: [ATT-1157](https://atrainingtracker.atlassian.net/browse/ATT-1157) (*Android Modernization & Production Stability*)  
 **Target Release**: `V4.9.38.3`  
 **Active Sprint**: Hotfix Release  
-**Requirement Mapping**: `REQ-UI-254` (*ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback*)  
-**Test Mapping**: `TST-UI-213`  
+**Requirement Mapping**: `REQ-UI-286` (*ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback*)  
+**Test Mapping**: `TST-UI-246`  
 **Branch**: `hotfix/V4.9.38.3__266`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-07  
@@ -30,10 +30,10 @@ The root cause was that `ResearchButton.kt` loaded `R.drawable.research_icon` th
 
 | Requirement | Test Spec | Verification Method | Result | Status in Living Docs |
 | :--- | :--- | :--- | :--- | :--- |
-| `REQ-UI-254` | `TST-UI-213.1` | Automated Unit Test (`testResearchButton_usesVectorRefreshAndNoPainterResource`) | **PASSED** | `Verified` |
-| `REQ-UI-254` | `TST-UI-213.2` | Automated Unit Test (`testResearchIconVectorDrawable_existsAndValid`) | **PASSED** | `Verified` |
-| `REQ-UI-254`, `REQ-UI-106` | `TST-UI-213.3` | Automated Unit Test (`testResearchString_parityAcrossAll9Locales`) | **PASSED** | `Verified` |
-| `REQ-PRO-001` | `TST-UI-213.4` | Clean-Room Full Suite (`./gradlew testDebugUnitTest`) | **PASSED** (100%) | `Verified` |
+| `REQ-UI-286` | `TST-UI-246.1` | Automated Unit Test (`testResearchButton_usesVectorRefreshAndNoPainterResource`) | **PASSED** | `Verified` |
+| `REQ-UI-286` | `TST-UI-246.2` | Automated Unit Test (`testResearchIconVectorDrawable_existsAndValid`) | **PASSED** | `Verified` |
+| `REQ-UI-286`, `REQ-UI-106` | `TST-UI-246.3` | Automated Unit Test (`testResearchString_parityAcrossAll9Locales`) | **PASSED** | `Verified` |
+| `REQ-PRO-001` | `TST-UI-246.4` | Clean-Room Full Suite (`./gradlew testDebugUnitTest`) | **PASSED** (100%) | `Verified` |
 
 ---
 
@@ -79,6 +79,6 @@ The change modernizes a Compose icon from raster `painterResource` to native `Ic
 ## 5. Invariant & Governance Verification
 
 1. **Zero Production Regressions**: Full clean-room test suite passed with 100% success (0 failures, 0 regressions).
-2. **Living Documentation Synchronized**: `REQ-UI-254` in `docs/requirements.md` and `TST-UI-213` in `docs/tests.md` updated to `Verified`.
+2. **Living Documentation Synchronized**: `REQ-UI-286` in `docs/requirements.md` and `TST-UI-246` in `docs/tests.md` updated to `Verified`.
 3. **Subtask Completion**: Stage 5 subtask `ATT-2644` updated with walkthrough and submitted for Gate 5 audit.
 4. **Parent Ticket Final Review**: Parent ticket `ATT-2619` transitioned to `Final Review (Human)`.

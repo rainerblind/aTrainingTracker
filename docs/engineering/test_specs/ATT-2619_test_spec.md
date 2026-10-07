@@ -5,15 +5,15 @@
 **Parent Epic**: [ATT-1157](https://atrainingtracker.atlassian.net/browse/ATT-1157) (*Android Modernization & Production Stability*)  
 **Target Release**: `V4.9.38.3`  
 **Active Sprint**: Hotfix Release  
-**Requirement Mapping**: `REQ-UI-254` (*ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback*)  
-**Test Spec ID**: `TST-UI-213`  
+**Requirement Mapping**: `REQ-UI-286` (*ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback*)  
+**Test Spec ID**: `TST-UI-246`  
 **Branch**: `hotfix/V4.9.38.3__266`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-07  
 
 ---
 
-## 1. Requirement Specification (REQ-UI-254)
+## 1. Requirement Specification (REQ-UI-286)
 
 ### 1.1 Problem Statement & Rationale
 In production release `4.9.38.2 (265)`, Crashlytics captured a fatal `Resources$NotFoundException: Resource ID #0x7f08017c` when composing `ResearchButton` on `ControlTrackingScreen`. The root cause was that `ResearchButton.kt` loaded `R.drawable.research_icon` through `painterResource()`, while `research_icon.png` existed solely in density-specific folders without a universal vector or default fallback in `res/drawable/`. On devices running split APK configurations or non-standard display densities, resource resolution failed at runtime, crashing the application upon screen launch.
@@ -57,16 +57,16 @@ The system SHALL guarantee runtime immunity against `Resources$NotFoundException
 3. Parent ticket Human Decision Gate remains strictly enforced.
 
 ### Requirement Archaeology & Chesterton's Fence Audit
-* **Original Requirement ID & Target**: Net-new requirement (`REQ-UI-254`), targeting `ResearchButton.kt` and `res/drawable/research_icon.xml`.
+* **Original Requirement ID & Target**: Net-new requirement (`REQ-UI-286`), targeting `ResearchButton.kt` and `res/drawable/research_icon.xml`.
 * **Historical Origin & Commit Trace**: Hotfix release `V4.9.38.3` addressing production crash `ATT-2619` (`Issue 355c60b8489f67ef630dc85e12708945`).
 * **Root Reason for Existing Formulation**: `ResearchButton.kt` previously loaded `R.drawable.research_icon` through `painterResource()`. Because `research_icon.png` was only present in density-specific folders without a default `res/drawable/` fallback, runtime resolution threw `Resources$NotFoundException` on certain device density configurations.
 * **Preservation of Core Invariants**: 48dp sizing, primary/disabled tinting, click handling, and 9-language translation parity are 100% preserved.
 
 ---
 
-## 2. Test Specification (TST-UI-213)
+## 2. Test Specification (TST-UI-246)
 
-### Test Case 1: `testResearchButton_rendersWithoutResourceNotFoundException` (`TST-UI-213.1`)
+### Test Case 1: `testResearchButton_rendersWithoutResourceNotFoundException` (`TST-UI-246.1`)
 * **Scope**: Unit / Compose Rendering Test
 * **Target File**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ResearchButtonTest.kt`
 * **Preconditions**: Robolectric Compose test environment initialized.
@@ -77,20 +77,20 @@ The system SHALL guarantee runtime immunity against `Resources$NotFoundException
   - Zero `Resources$NotFoundException` thrown.
   - Component renders successfully with appropriate text label and content description.
 
-### Test Case 2: `testResearchIconDrawable_resolvesFromResources` (`TST-UI-213.2`)
+### Test Case 2: `testResearchIconDrawable_resolvesFromResources` (`TST-UI-246.2`)
 * **Scope**: Unit Test / Resource Fallback
 * **Target File**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ResearchButtonTest.kt`
 * **Preconditions**: Android application Context available.
 * **Action**: Invoke `ContextCompat.getDrawable(context, R.drawable.research_icon)`.
 * **Expected Result**: Returns a non-null `Drawable` without throwing `Resources.NotFoundException`.
 
-### Test Case 3: 9-Language Localization & Specifier Audit (`TST-UI-213.3`)
+### Test Case 3: 9-Language Localization & Specifier Audit (`TST-UI-246.3`)
 * **Scope**: Localization Parity Test
 * **Goal**: Verify string `research` exists and is non-empty across all 9 locales:
   * EN, DE, ES, FR, IT, JA, NL, PL, PT
 * **Expected Result**: 100% parity, zero missing entries.
 
-### Test Case 4: Clean-Room Regression Suite (`TST-UI-213.4`)
+### Test Case 4: Clean-Room Regression Suite (`TST-UI-246.4`)
 * **Command**: `./gradlew testDebugUnitTest`
 * **Goal**: Verify 100% pass rate across all modules with zero regressions.
 
@@ -100,7 +100,7 @@ The system SHALL guarantee runtime immunity against `Resources$NotFoundException
 
 | Test Case | Scope | Method Under Test | Requirement | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| `TST-UI-213.1` | Unit (Compose) | `ResearchButton` | `REQ-UI-254` | Specified |
-| `TST-UI-213.2` | Unit (Resources) | `R.drawable.research_icon` | `REQ-UI-254` | Specified |
-| `TST-UI-213.3` | Localization | `research` (all 9 locales) | `REQ-UI-254`, `REQ-UI-106` | Specified |
-| `TST-UI-213.4` | Regression | `./gradlew testDebugUnitTest` | `REQ-PRO-001` | Specified |
+| `TST-UI-246.1` | Unit (Compose) | `ResearchButton` | `REQ-UI-286` | Specified |
+| `TST-UI-246.2` | Unit (Resources) | `R.drawable.research_icon` | `REQ-UI-286` | Specified |
+| `TST-UI-246.3` | Localization | `research` (all 9 locales) | `REQ-UI-286`, `REQ-UI-106` | Specified |
+| `TST-UI-246.4` | Regression | `./gradlew testDebugUnitTest` | `REQ-PRO-001` | Specified |

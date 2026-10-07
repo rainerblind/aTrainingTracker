@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 
 /**
- * Action button anchored on the tracking control screen to trigger re-scanning of sensors (REQ-UI-254).
+ * Action button anchored on the tracking control screen to trigger re-scanning of sensors (REQ-UI-286).
  *
  * Uses Compose [Icons.Default.Refresh] vector to guarantee complete immunity against runtime
  * [android.content.res.Resources.NotFoundException] crashes across all device display densities and APK splits.
