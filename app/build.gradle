@@ -47,7 +47,7 @@ android {
         targetSdkVersion 37
         multiDexEnabled = true
         versionName = "4.9.39-dev"
-        versionCode = 266
+        versionCode = 267
     }
 
     signingConfigs {
