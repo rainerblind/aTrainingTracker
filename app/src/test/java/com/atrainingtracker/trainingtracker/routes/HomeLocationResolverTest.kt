@@ -110,4 +110,42 @@ class HomeLocationResolverTest {
         val resolved = HomeLocationResolver.resolveHomeLocation(manager)
         assertNull(resolved)
     }
+
+    /**
+     * TST-MAP-038.1: Unit tests for resolveHomeLocationId hierarchy.
+     */
+    @Test
+    fun resolveHomeLocationId_withExplicitHome_returnsExplicitId() {
+        val loc1 = MyLocation(10L, 48.5, 9.2, "Spot A", 300.0, 200, 100, false, ElevationSource.LEGACY_RAW, false)
+        val loc2 = MyLocation(20L, 48.6, 9.3, "Spot B (Home)", 400.0, 200, 2, true, ElevationSource.MANUAL_USER, true)
+        val loc3 = MyLocation(30L, 48.7, 9.4, "Spot C", 500.0, 200, 50, false, ElevationSource.LEGACY_RAW, false)
+
+        val resolvedId = HomeLocationResolver.resolveHomeLocationId(listOf(loc1, loc2, loc3))
+        assertEquals(20L, resolvedId)
+    }
+
+    @Test
+    fun resolveHomeLocationId_withoutExplicitHome_returnsHighestHitCountId() {
+        val loc1 = MyLocation(10L, 48.5, 9.2, "Spot A", 300.0, 200, 15)
+        val loc2 = MyLocation(20L, 48.6, 9.3, "Spot B", 400.0, 200, 85)
+        val loc3 = MyLocation(30L, 48.7, 9.4, "Spot C", 500.0, 200, 40)
+
+        val resolvedId = HomeLocationResolver.resolveHomeLocationId(listOf(loc1, loc2, loc3))
+        assertEquals(20L, resolvedId)
+    }
+
+    @Test
+    fun resolveHomeLocationId_withoutExplicitHome_whenAllHitCountsZero_returnsFirstId() {
+        val loc1 = MyLocation(101L, 48.5, 9.2, "Spot First", 300.0, 200, 0)
+        val loc2 = MyLocation(102L, 48.6, 9.3, "Spot Second", 400.0, 200, 0)
+
+        val resolvedId = HomeLocationResolver.resolveHomeLocationId(listOf(loc1, loc2))
+        assertEquals(101L, resolvedId)
+    }
+
+    @Test
+    fun resolveHomeLocationId_withEmptyList_returnsNull() {
+        val resolvedId = HomeLocationResolver.resolveHomeLocationId(emptyList())
+        assertNull(resolvedId)
+    }
 }

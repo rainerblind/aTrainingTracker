@@ -548,36 +548,6 @@ private fun KnownLocationCard(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            // Dedicated Home Base Badge (REQ-MAP-034)
-                            if (item.isHome) {
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
-                                    modifier = Modifier.testTag("location_home_badge_${item.id}")
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Home,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(13.dp),
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.known_locations_home_badge),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    }
-                                }
-                            }
-
                             // Number of Starts (Interactive Drill-Down Touch Target)
                             Surface(
                                 onClick = onShowWorkouts,

@@ -33,7 +33,7 @@ data class HomeDestination(
 )
 
 /**
- * Resolves the athlete's primary Home destination from KnownLocationsDatabaseManager (REQ-MAP-034).
+ * Resolves the athlete's primary Home destination from KnownLocationsDatabaseManager (REQ-MAP-034, REQ-MAP-036).
  *
  * Evaluation Strategy:
  * 1. Explicit user designation: Location where isHome == true.
@@ -41,6 +41,31 @@ data class HomeDestination(
  * 3. Fallback: First location if any exists.
  */
 object HomeLocationResolver {
+
+    /**
+     * Resolves the effective home location ID from a list of known locations (REQ-MAP-036).
+     *
+     * Evaluation order:
+     * 1. Explicit user designation: first location where [MyLocation.isHome] is true.
+     * 2. Highest start frequency: location with maximum [MyLocation.hitCount] where hitCount > 0.
+     * 3. Fallback: first location if any exists.
+     * Returns null if [locations] is empty.
+     */
+    @JvmStatic
+    fun resolveHomeLocationId(locations: List<MyLocation>): Long? {
+        if (locations.isEmpty()) {
+            return null
+        }
+        val designatedHome = locations.firstOrNull { it.isHome }
+        if (designatedHome != null) {
+            return designatedHome.id
+        }
+        val highestHitLoc = locations.filter { it.hitCount > 0 }.maxByOrNull { it.hitCount }
+        if (highestHitLoc != null) {
+            return highestHitLoc.id
+        }
+        return locations.first().id
+    }
 
     @JvmStatic
     fun resolveHomeLocation(knownLocationsManager: KnownLocationsDatabaseManager): HomeDestination? {
@@ -54,20 +79,9 @@ object HomeLocationResolver {
             return null
         }
 
-        // 1. Explicit user designation in database
-        val designatedHome = allLocations.firstOrNull { it.isHome }
-        if (designatedHome != null) {
-            return toHomeDestination(designatedHome)
-        }
-
-        // 2. Highest hitCount among all locations (primary start base fallback)
-        val highestHitLoc = allLocations.filter { it.hitCount > 0 }.maxByOrNull { it.hitCount }
-        if (highestHitLoc != null) {
-            return toHomeDestination(highestHitLoc)
-        }
-
-        // 3. Fallback to the first location if any exists
-        return toHomeDestination(allLocations.first())
+        val effectiveHomeId = resolveHomeLocationId(allLocations) ?: return null
+        val resolvedLoc = allLocations.firstOrNull { it.id == effectiveHomeId } ?: return null
+        return toHomeDestination(resolvedLoc)
     }
 
     private fun toHomeDestination(loc: MyLocation): HomeDestination {

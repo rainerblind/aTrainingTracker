@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.knownlocations
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -27,7 +28,8 @@ import java.io.File
  *
  * Traceability:
  * - REQ-MAP-034: Designated Home-Base Selection for Return Navigation & Substring Disambiguation.
- * - TST-MAP-036.4: UI & Dialog Contract Tests.
+ * - REQ-MAP-036: Known Locations: Heim-Basis Redundant Badge Excision & Start-Count Home Resolution Alignment.
+ * - TST-MAP-036.4, TST-MAP-038.3: UI & Dialog Contract Tests.
  */
 class KnownLocationHomeContractTest {
 
@@ -43,23 +45,23 @@ class KnownLocationHomeContractTest {
     }
 
     @Test
-    fun testKnownLocationsScreen_containsHomeIndicatorAndBadge() {
+    fun testKnownLocationsScreen_containsHomeTitleIconAndNoRedundantBadge() {
         val content = loadFileSource("ui/knownlocations/KnownLocationsScreen.kt")
 
-        // Verifies Home icon is rendered for home location
+        // Verifies Home icon is rendered for home location (REQ-MAP-034, REQ-MAP-036)
         assertTrue(
             "KnownLocationsScreen must render Icons.Default.Home next to title",
             content.contains("Icons.Default.Home")
         )
-
-        // Verifies dedicated home badge is rendered
         assertTrue(
-            "KnownLocationsScreen must render home badge with test tag",
-            content.contains("location_home_badge_\${item.id}")
+            "KnownLocationsScreen must render title Home icon with test tag",
+            content.contains("location_home_icon_\${item.id}")
         )
-        assertTrue(
-            "KnownLocationsScreen must use known_locations_home_badge string",
-            content.contains("R.string.known_locations_home_badge")
+
+        // Verifies redundant home badge is cleanly excised (REQ-MAP-036, ATT-2629)
+        assertFalse(
+            "KnownLocationsScreen must NOT render redundant home badge with test tag",
+            content.contains("location_home_badge_\${item.id}")
         )
 
         // Verifies context menu contains set and remove home actions
