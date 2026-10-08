@@ -1679,4 +1679,18 @@
     <string name="battery_optimization_warning_banner_desc">Android peut interrompre l\'enregistrement de l\'entraînement lorsque l\'écran s\'éteint. Veuillez désactiver l\'optimisation de la batterie.</string>
     <string name="battery_optimization_action_fix">Autoriser</string>
     <string name="battery_optimization_dismiss_banner">Ignorer</string>
+
+    <!-- Contextual ANT+ Service Guidance (ATT-2513) -->
+    <string name="ant_status_sheet_title">Services système ANT+</string>
+    <string name="ant_status_card_title">Matériel et services ANT+</string>
+    <string name="ant_status_card_desc">Les capteurs ANT+ sur les smartphones modernes nécessitent un adaptateur USB-OTG avec une clé USB ANT+ et les services système ANT+.</string>
+    <string name="ant_status_card_action">Vérifier l\'état</string>
+    <string name="ant_status_usb_dongle_note">Les smartphones modernes ne possèdent pas de puces ANT+ intégrées. Un adaptateur USB-OTG externe avec une clé USB ANT+ est nécessaire.</string>
+    <string name="ant_status_ble_alternative_note">Astuce : Les capteurs Bluetooth LE fonctionnent directement sans matériel ni service supplémentaire.</string>
+    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
+    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
+    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
+    <string name="ant_service_installed">Installé</string>
+    <string name="ant_service_not_installed">Non installé</string>
+    <string name="ant_service_install_button">Installer</string>
 </resources>

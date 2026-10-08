@@ -1678,4 +1678,18 @@
     <string name="battery_optimization_warning_banner_desc">Android kan de workout-opname stoppen wanneer het scherm wordt uitgeschakeld. Schakel batterijoptimalisatie uit.</string>
     <string name="battery_optimization_action_fix">Vrijstellen</string>
     <string name="battery_optimization_dismiss_banner">Sluiten</string>
+
+    <!-- Contextual ANT+ Service Guidance (ATT-2513) -->
+    <string name="ant_status_sheet_title">ANT+ systeemdiensten</string>
+    <string name="ant_status_card_title">ANT+ hardware en diensten</string>
+    <string name="ant_status_card_desc">ANT+ sensoren op moderne smartphones vereisen een USB-OTG-adapter met ANT+ USB-stick en ANT+ systeemdiensten.</string>
+    <string name="ant_status_card_action">Status controleren</string>
+    <string name="ant_status_usb_dongle_note">Moderne smartphones hebben geen ingebouwde ANT+-chips. Een externe USB-OTG-adapter met ANT+ USB-stick is vereist voor ontvangst.</string>
+    <string name="ant_status_ble_alternative_note">Tip: Bluetooth LE sensoren werken direct zonder extra hardware of systeemdiensten.</string>
+    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
+    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
+    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
+    <string name="ant_service_installed">Geïnstalleerd</string>
+    <string name="ant_service_not_installed">Niet geïnstalleerd</string>
+    <string name="ant_service_install_button">Installeren</string>
 </resources>

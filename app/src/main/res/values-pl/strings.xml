@@ -1680,4 +1680,18 @@
     <string name="battery_optimization_warning_banner_desc">System Android może zatrzymać rejestrowanie treningu po wyłączeniu ekranu. Wyłącz optymalizację baterii.</string>
     <string name="battery_optimization_action_fix">Zezwól</string>
     <string name="battery_optimization_dismiss_banner">Zamknij</string>
+
+    <!-- Contextual ANT+ Service Guidance (ATT-2513) -->
+    <string name="ant_status_sheet_title">Usługi systemowe ANT+</string>
+    <string name="ant_status_card_title">Sprzęt i usługi ANT+</string>
+    <string name="ant_status_card_desc">Czujniki ANT+ na nowoczesnych smartfonach wymagają adaptera USB-OTG z odbiornikiem ANT+ USB i usług systemowych ANT+.</string>
+    <string name="ant_status_card_action">Sprawdź status</string>
+    <string name="ant_status_usb_dongle_note">Nowoczesne smartfony nie posiadają wbudowanych chipów ANT+. Do odbioru wymagany jest zewnętrzny adapter USB-OTG z odbiornikiem ANT+ USB.</string>
+    <string name="ant_status_ble_alternative_note">Wskazówka: Czujniki Bluetooth LE działają bezpośrednio bez dodatkowego sprzętu i usług systemowych.</string>
+    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
+    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
+    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
+    <string name="ant_service_installed">Zainstalowano</string>
+    <string name="ant_service_not_installed">Nie zainstalowano</string>
+    <string name="ant_service_install_button">Zainstaluj</string>
 </resources>
