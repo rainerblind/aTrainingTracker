@@ -2,7 +2,7 @@
 
 **Ticket**: [ATT-2770](https://atrainingtracker.atlassian.net/browse/ATT-2770)  
 **Parent Epic**: [ATT-232](https://atrainingtracker.atlassian.net/browse/ATT-232) (*Process & Engineering Workflow*)  
-**Requirement Mapping**: `REQ-PRO-002`  
+**Requirement Mapping**: `REQ-PRO-025`  
 **Sprint**: `2026-41.4`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-08  
@@ -144,8 +144,8 @@ Before enabling parallel test execution, we must evaluate the historical assumpt
 ## 6. Living Requirement Mapping
 
 This optimization will be formalized in Stage 2 as:
-- **`REQ-PRO-002`**: *Automated Test Execution Acceleration, Worker Parallelism, and Resource-Safe Caching*.
-- **`TST-PRO-002`**: *Parallel Unit Test Forking, Worker Recycling, and Performance Benchmarking*.
+- **`REQ-PRO-025`**: *Automated Test Execution Acceleration, Worker Parallelism, and Resource-Safe Caching*.
+- **`TST-PRO-018`**: *Parallel Unit Test Forking, Worker Recycling, and Performance Benchmarking*.
 
 ---
 
