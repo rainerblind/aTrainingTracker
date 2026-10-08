@@ -1559,6 +1559,8 @@
     <string name="google_drive_error_network">Nessuna connessione Internet o errore di rete durante l\'accesso con Google.</string>
     <string name="google_drive_error_generic">Accesso con Google non riuscito. Riprova.</string>
     <string name="google_drive_error_auth_expired">Sessione di Google Drive scaduta o non autorizzata. Esegui nuovamente l\'accesso nelle Impostazioni.</string>
+    <string name="google_drive_error_api_disabled">L\'API di Google Drive è disabilitata in Google Cloud Console. Abilitala nel progetto Google Cloud.</string>
+    <string name="google_drive_error_folder_hierarchy">Risoluzione della gerarchia delle cartelle di Google Drive non riuscita</string>
     <string name="google_drive_connect_prompt">Collega il tuo account Google per esportare automaticamente gli allenamenti e sincronizzare i backup del database su Google Drive.</string>
     <string name="scan_google_drive">Scansiona Google Drive</string>
     <string name="legacy_import__downloading_google_drive">Download di %1$s da Google Drive in corso…</string>

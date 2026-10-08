@@ -44,6 +44,7 @@ class GoogleDriveClientTest {
 
     @Before
     fun setUp() {
+        GoogleDriveClient.clearFolderCache()
         mockkStatic(Log::class)
         every { Log.v(any<String>(), any<String>()) } returns 0
         every { Log.d(any<String>(), any<String>()) } returns 0
@@ -55,6 +56,7 @@ class GoogleDriveClientTest {
 
     @After
     fun tearDown() {
+        GoogleDriveClient.clearFolderCache()
         unmockkStatic(Log::class)
     }
 
@@ -424,4 +426,44 @@ class GoogleDriveClientTest {
         assertNotNull(client.lastErrorMessage)
         assertTrue(client.lastErrorMessage!!.contains("Storage quota exceeded"))
     }
+
+    @Test
+    fun testEnsureFolderHierarchy_concurrentCalls_sharesGlobalCacheWithoutDuplicateCreations() {
+        var createCount = 0
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                if (request.method == "POST") {
+                    createCount++
+                    Response.Builder()
+                        .request(request)
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body("""{"id":"created_folder_id","name":"test"}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                        .build()
+                } else {
+                    // Not found on search
+                    Response.Builder()
+                        .request(request)
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body("""{"files":[]}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                        .build()
+                }
+            }
+            .build()
+
+        val client1 = GoogleDriveClient(tokenProvider = { "token" }, client = okHttpClient)
+        val client2 = GoogleDriveClient(tokenProvider = { "token" }, client = okHttpClient)
+
+        val id1 = client1.ensureFolderHierarchy(listOf("test"))
+        val id2 = client2.ensureFolderHierarchy(listOf("test"))
+
+        assertEquals("created_folder_id", id1)
+        assertEquals("created_folder_id", id2)
+        assertEquals("Should create folder only once across separate client instances", 1, createCount)
+    }
 }
+

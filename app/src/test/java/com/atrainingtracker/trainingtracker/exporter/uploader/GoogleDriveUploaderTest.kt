@@ -135,11 +135,34 @@ class GoogleDriveUploaderTest {
         every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
 
         every { mockClient.ensureFolderHierarchy(any()) } returns null
+        every { mockClient.lastHttpCode } returns null
+        every { mockContext.getString(com.atrainingtracker.R.string.google_drive_error_folder_hierarchy) } returns "Failed to resolve Google Drive folder hierarchy"
 
         val uploader = createTestUploader(tempFolder.root)
         val result = uploader.doExport(exportInfo)
         assertFalse(result.success())
         assertTrue(result.answer().contains("Failed to resolve Google Drive folder hierarchy"))
+    }
+
+    @Test
+    fun testDoExport_folderResolutionFailsWith403ApiDisabled_returnsLocalizedApiDisabledMessage() {
+        val fitDir = File(tempFolder.root, "FIT").apply { mkdirs() }
+        File(fitDir, "workout.fit").apply { writeText("data") }
+        val exportInfo = ExportInfo("workout", FileFormat.FIT, ExportType.GOOGLE_DRIVE)
+
+        every { mockPrefs.getString(TrainingApplication.SP_GOOGLE_DRIVE_AUTH_TOKEN, null) } returns "valid_token"
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
+
+        every { mockClient.ensureFolderHierarchy(any()) } returns null
+        every { mockClient.lastHttpCode } returns 403
+        every { mockClient.lastErrorMessage } returns """{"error":{"code":403,"message":"Google Drive API has not been used...","status":"PERMISSION_DENIED","details":[{"reason":"SERVICE_DISABLED"}]}}"""
+        every { mockContext.getString(com.atrainingtracker.R.string.google_drive_error_api_disabled) } returns "Google Drive API is disabled in Google Cloud Console. Please enable it in the Google Cloud project."
+
+        val uploader = createTestUploader(tempFolder.root)
+        val result = uploader.doExport(exportInfo)
+
+        assertFalse(result.success())
+        assertEquals("Google Drive API is disabled in Google Cloud Console. Please enable it in the Google Cloud project.", result.answer())
     }
 
     @Test

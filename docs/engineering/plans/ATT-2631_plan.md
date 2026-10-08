@@ -4,7 +4,7 @@
 **Sub-task**: [ATT-2652](https://atrainingtracker.atlassian.net/browse/ATT-2652) (`[Impl-Plan]`)  
 **Parent Epic**: [ATT-162](https://atrainingtracker.atlassian.net/browse/ATT-162) (*Cloud integration*)  
 **Target Release**: `V4.9.39`  
-**Active Sprint**: `2026-41.2`  
+**Active Sprint**: `2026-41.3`  
 **Requirement Mapping**: `REQ-DAT-022` (*Resilient Google Drive Folder Hierarchy Resolution, 401 Auto-Refresh & Actionable Diagnostic Feedback*)  
 **Test Mapping**: `TST-DAT-017` (*Google Drive Folder Hierarchy Resolution, 401 Auto-Refresh & Actionable Feedback Verification*)  
 **Branch**: `feature/ATT-2631`  
@@ -25,6 +25,9 @@ When athletes export recorded workouts (FIT, TCX, GPX, CSV) to Google Drive, the
 3. **Silent Failure & Missing Diagnostic State**: `GoogleDriveClient.findFolderIdByName()` and `createFolder()` caught non-200 responses and returned `null` without recording HTTP response codes or error messages.
 4. **Non-Canonical Root Folder Creation Payload**: `createFolder()` unconditionally included `"parents": [parentId]`. In Google Drive API v3, passing `"parents": ["root"]` is non-standard and rejected with HTTP 400 in certain account/drive configurations; canonical Drive v3 requires omitting the `parents` field when creating files or folders directly in the root directory.
 5. **Misleading User Feedback**: `GoogleDriveUploader` received `null` and displayed the generic message `"Failed to resolve Google Drive folder hierarchy"`, obscuring the fact that authentication expired and that the athlete needs to re-authenticate or that automatic token refresh was required.
+6. **Parallel Export Race Condition (Duplicate Folders)**: WorkManager exports TCX and FIT files in parallel workers. Each worker instantiated its own `GoogleDriveClient` with an instance-scoped cache. Both queried Drive for `aTrainingTracker` simultaneously before either had completed folder creation, resulting in two duplicate `aTrainingTracker` folders in Google Drive. Process-wide synchronization via `hierarchyLock` and `globalFolderIdCache` is required.
+7. **Google Cloud Console Drive API Disabled (HTTP 403)**: If the Google Drive API is disabled in the Google Cloud Console project, Drive returns HTTP 403 `SERVICE_DISABLED` / `accessNotConfigured`. The app previously caught this as a generic failure without indicating that the API must be enabled.
+8. **Missing Token Refresher in Backup Manager**: `GoogleDriveBackupManager` also instantiated `GoogleDriveClient` without passing `tokenRefresher`, leaving automated database backup migrations vulnerable to 401 expiry.
 
 ---
 
@@ -37,6 +40,9 @@ When athletes export recorded workouts (FIT, TCX, GPX, CSV) to Google Drive, the
   * `TST-DAT-017.3`: Actionable localized error message on unrecoverable 401 (`GoogleDriveUploaderTest.kt`)
   * `TST-DAT-017.4`: 9-language localization parity audit (`TranslationParityTest.kt`)
   * `TST-DAT-017.5`: Full clean-room regression test suite (`./gradlew testDebugUnitTest`)
+  * `TST-DAT-017.6`: Concurrent hierarchy creation synchronization (`GoogleDriveClientTest.kt`)
+  * `TST-DAT-017.7`: 403 API disabled error message (`GoogleDriveUploaderTest.kt`)
+  * `TST-DAT-017.8`: Backup manager token refresh integration (`GoogleDriveBackupManagerTest.kt`)
 
 ---
 
@@ -137,6 +143,9 @@ When athletes export recorded workouts (FIT, TCX, GPX, CSV) to Google Drive, the
     * Do NOT include `"parents"` array in payload.
   * If `parentId != "root"` and `parentId.isNotBlank()`:
     * Include `"parents": [parentId]`.
+* In `ensureFolderHierarchy(folderPath: String)`:
+  * Synchronize folder resolution and creation using `synchronized(hierarchyLock)` and double-checked caching against `globalFolderIdCache`.
+  * Warn if Google Drive returns multiple folders for the same query to detect legacy duplicate folders.
 
 ### Component 3: `GoogleDriveUploader.kt`
 * In `createClient()`:
@@ -145,20 +154,18 @@ When athletes export recorded workouts (FIT, TCX, GPX, CSV) to Google Drive, the
   * If `client.ensureFolderHierarchy()` returns `null`:
     * If `client.lastHttpCode == 401`:
       * Return `ExportResult(false, false, mContext.getString(R.string.google_drive_error_auth_expired))`.
+    * If `client.lastHttpCode == 403` and error message indicates `SERVICE_DISABLED` or `accessNotConfigured`:
+      * Return `ExportResult(false, false, mContext.getString(R.string.google_drive_error_api_disabled))`.
     * Else:
-      * Return `ExportResult(false, false, "Failed to resolve Google Drive folder hierarchy (${client.lastHttpCode ?: "unknown"})")`.
+      * Return `ExportResult(false, false, mContext.getString(R.string.google_drive_error_folder_hierarchy, client.lastHttpCode?.toString() ?: "unknown"))`.
 
-### Component 4: String Resources (9-Language Parity)
-* Add `google_drive_error_auth_expired` to:
-  * `app/src/main/res/values/strings.xml`: `"Google Drive session expired or unauthorized. Please re-authenticate in Settings."`
-  * `app/src/main/res/values-de/strings.xml`: `"Google Drive-Sitzung abgelaufen oder nicht autorisiert. Bitte in den Einstellungen neu anmelden."`
-  * `app/src/main/res/values-es/strings.xml`: `"La sesión de Google Drive caducó o no está autorizada. Vuelva a autenticarse en Ajustes."`
-  * `app/src/main/res/values-fr/strings.xml`: `"Session Google Drive expirée ou non autorisée. Veuillez vous reconnecter dans les paramètres."`
-  * `app/src/main/res/values-it/strings.xml`: `"Sessione di Google Drive scaduta o non autorizzata. Esegui nuovamente l'accesso nelle Impostazioni."`
-  * `app/src/main/res/values-ja/strings.xml`: `"Google ドライブのセッションの有効期限が切れたか、認証されていません。設定で再認証してください。"`
-  * `app/src/main/res/values-nl/strings.xml`: `"Google Drive-sessie verlopen of niet geautoriseerd. Meld u opnieuw aan in Instellingen."`
-  * `app/src/main/res/values-pl/strings.xml`: `"Sesja Google Drive wygasła lub brak autoryzacji. Zaloguj się ponownie w Ustawieniach."`
-  * `app/src/main/res/values-pt/strings.xml`: `"Sessão do Google Drive expirada ou não autorizada. Faça login novamente nas Configurações."`
+### Component 4: `GoogleDriveBackupManager.kt`
+* Update `clientProvider: (Context) -> GoogleDriveClient`:
+  * Pass `tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(context).getOrNull() }`.
+
+### Component 5: String Resources (9-Language Parity)
+* Add `google_drive_error_auth_expired`, `google_drive_error_api_disabled`, and `google_drive_error_folder_hierarchy` to all 9 `strings.xml` resource directories:
+  * `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
 
 ### UI Consistency (Rule 23)
 * **Reference screen / component**: No visual UI screens are modified. This change affects background cloud export and error reporting.
@@ -171,7 +178,7 @@ When athletes export recorded workouts (FIT, TCX, GPX, CSV) to Google Drive, the
 ## 5. Step-by-Step Implementation Sequence (Stage 4 Construction)
 
 ### Step 1: 9-Language Localization Resources
-* Add `google_drive_error_auth_expired` to all 9 `strings.xml` files.
+* Add `google_drive_error_auth_expired`, `google_drive_error_api_disabled`, and `google_drive_error_folder_hierarchy` to all 9 `strings.xml` files.
 * Verify format specifier and presence parity with `TranslationParityTest`.
 
 ### Step 2: Synchronous Token Refresh in `GoogleDriveAuthManager.kt`
@@ -183,20 +190,24 @@ When athletes export recorded workouts (FIT, TCX, GPX, CSV) to Google Drive, the
 * Add `lastHttpCode` and `lastErrorMessage` state fields.
 * Implement 401 retry interceptor/wrapper logic in `executeCallWithRetry`.
 * Update `createFolder()` to omit `parents` when `parentId == "root"` or blank.
+* Add static `hierarchyLock` and `globalFolderIdCache` with double-checked locking in `ensureFolderHierarchy`.
 
-### Step 4: Token Refresher Injection & Actionable Error in `GoogleDriveUploader.kt`
-* Inject `tokenRefresher` in `createClient()`.
-* Inspect `client.lastHttpCode == 401` on folder resolution failure and return localized `R.string.google_drive_error_auth_expired`.
+### Step 4: Token Refresher Injection & Actionable Errors in `GoogleDriveUploader.kt` & `GoogleDriveBackupManager.kt`
+* Inject `tokenRefresher` in `GoogleDriveUploader.createClient()` and `GoogleDriveBackupManager.clientProvider(context)`.
+* Inspect `client.lastHttpCode == 401` -> `google_drive_error_auth_expired`.
+* Inspect `client.lastHttpCode == 403` -> `google_drive_error_api_disabled`.
+* Default hierarchy failure -> `google_drive_error_folder_hierarchy` with HTTP status code.
 
 ### Step 5: Unit Tests
-* Update `GoogleDriveClientTest.kt` with tests for 401 refresh retry and canonical root folder payload.
-* Update `GoogleDriveUploaderTest.kt` with test for 401 auth expired localized error result.
+* Update `GoogleDriveClientTest.kt` with tests for 401 refresh retry, canonical root folder payload, and concurrent hierarchy synchronization.
+* Update `GoogleDriveUploaderTest.kt` with tests for 401 auth expired and 403 API disabled error results.
+* Update `GoogleDriveBackupManagerTest.kt` with mock client provider.
 * Run targeted unit tests:
-  `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.cloud.googledrive.*" --tests "com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" --tests "com.atrainingtracker.trainingtracker.translations.TranslationParityTest"`
+  `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.cloud.googledrive.*" --tests "com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" --tests "com.atrainingtracker.trainingtracker.migration.GoogleDriveBackupManagerTest" --tests "com.atrainingtracker.trainingtracker.translations.TranslationParityTest"`
 
 ---
 
 ## 6. Verification & Rollback Plan
 
-* **Verification**: Execute targeted unit tests during Stage 4 construction, followed by full clean-room `./gradlew testDebugUnitTest` in Stage 5.
-* **Rollback**: Work is isolated on `feature/ATT-2631`. Any regression can be reverted cleanly by discarding commits on `feature/ATT-2631` before merging into `sprint/2026-41.2`.
+* **Verification**: Execute targeted unit tests during Stage 4 construction, followed by full clean-room `./gradlew testDebugUnitTest` and on-device export test on Pixel 10.
+* **Rollback**: Work is isolated on `feature/ATT-2631`. Any regression can be reverted cleanly by discarding commits on `feature/ATT-2631` before merging into `sprint/2026-41.3`.

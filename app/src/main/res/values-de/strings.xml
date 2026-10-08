@@ -1646,6 +1646,8 @@
     <string name="google_drive_error_network">Keine Internetverbindung oder Netzwerkfehler beim Google Sign-In.</string>
     <string name="google_drive_error_generic">Google Sign-In fehlgeschlagen. Bitte versuchen Sie es erneut.</string>
     <string name="google_drive_error_auth_expired">Google Drive-Sitzung abgelaufen oder nicht autorisiert. Bitte in den Einstellungen neu anmelden.</string>
+    <string name="google_drive_error_api_disabled">Google Drive API ist in der Google Cloud Console deaktiviert. Bitte im Google Cloud-Projekt aktivieren.</string>
+    <string name="google_drive_error_folder_hierarchy">Auflösen der Google Drive-Ordnerhierarchie fehlgeschlagen</string>
     <string name="google_drive_connect_prompt">Verbinden Sie Ihr Google-Konto, um abgeschlossene Workouts und Datenbank-Backups automatisch in Google Drive zu sichern.</string>
     <string name="scan_google_drive">Google Drive durchsuchen</string>
     <string name="legacy_import__downloading_google_drive">%1$s von Google Drive herunterladen…</string>
