@@ -50,21 +50,24 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 fun DeviceTypeSelectionDialog(
     protocol: Protocol,
     onSelected: (DeviceType) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    showAllOption: Boolean = false
 ) {
     val deviceTypeList = remember(protocol) { DeviceType.getRemoteDeviceTypes(protocol).toList() }
     
     AppModalBottomSheet(
         title = stringResource(R.string.select_device_type),
         onDismissRequest = onDismiss,
-        actions = {
-            TextButton(
-                onClick = { onSelected(DeviceType.ALL) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.devices_all))
+        actions = if (showAllOption) {
+            {
+                TextButton(
+                    onClick = { onSelected(DeviceType.ALL) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.devices_all))
+                }
             }
-        }
+        } else null
     ) {
         deviceTypeList.forEach { type ->
             ListItem(
