@@ -1624,6 +1624,7 @@
     <string name="routes_segments_tab_title">Segmentos (%d)</string>
     <string name="routes_segment_start_at">Inicio en %s</string>
     <string name="routes_segment_pr">PR %s</string>
+    <string name="routes_segment_counter">Segmento %1$d de %2$d</string>
     <string name="tuning_show_live_climbs_title">Subidas en vivo (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Mostrar panel de subida en tiempo real durante rutas y recorrido libre</string>
 
