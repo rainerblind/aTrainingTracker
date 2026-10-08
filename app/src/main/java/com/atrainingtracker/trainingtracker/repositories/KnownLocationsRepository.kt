@@ -26,6 +26,7 @@ import com.atrainingtracker.trainingtracker.elevation.ElevationResult
 import com.atrainingtracker.trainingtracker.elevation.ElevationService
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.location.LocationNameResolver
+import com.atrainingtracker.trainingtracker.routes.HomeLocationResolver
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -126,6 +127,7 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
      */
     open suspend fun loadLocations(): List<KnownLocationItem> = withContext(dbDispatcher) {
         val rawLocations = databaseManager.allLocations
+        val effectiveHomeId = HomeLocationResolver.resolveHomeLocationId(rawLocations)
         val items = rawLocations.map { loc ->
             KnownLocationItem(
                 id = loc.id,
@@ -136,7 +138,7 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
                 hitCount = loc.hitCount,
                 isLocked = loc.isLocked,
                 source = loc.source,
-                isHome = loc.isHome
+                isHome = (loc.id == effectiveHomeId)
             )
         }
         _locations.value = items
