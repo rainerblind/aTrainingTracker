@@ -99,4 +99,54 @@ class RemoteDevicesContractTest {
             content.contains("if (devices.isEmpty()) return")
         )
     }
+
+    /**
+     * REQ-UI-304, TST-UI-264.1 (ATT-2772):
+     * Verify RemoteDeviceItem root Column applies widthIn(max = 72.dp) to eliminate excessive whitespace voids.
+     */
+    @Test
+    fun testRemoteDeviceItemWidthBoundedTo72Dp() {
+        val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/RemoteDevices.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "RemoteDeviceItem Column must specify widthIn(max = 72.dp) to prevent long names from expanding the tile",
+            content.contains(".widthIn(max = 72.dp)")
+        )
+    }
+
+    /**
+     * REQ-UI-304, TST-UI-264.2 (ATT-2772):
+     * Verify RemoteDeviceItem Text configures maxLines = 2 and overflow = TextOverflow.Ellipsis.
+     */
+    @Test
+    fun testRemoteDeviceItemTextWrappingAndEllipsis() {
+        val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/RemoteDevices.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "RemoteDeviceItem Text must set maxLines = 2 to allow clean wrapping onto a second line",
+            content.contains("maxLines = 2")
+        )
+        assertTrue(
+            "RemoteDeviceItem Text must set overflow = TextOverflow.Ellipsis to truncate long names cleanly",
+            content.contains("overflow = TextOverflow.Ellipsis")
+        )
+    }
+
+    /**
+     * REQ-UI-304, TST-UI-264.3 (ATT-2772):
+     * Verify RemoteDeviceItem Text configures textAlign = TextAlign.Center.
+     */
+    @Test
+    fun testRemoteDeviceItemTextCentered() {
+        val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/RemoteDevices.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "RemoteDeviceItem Text must set textAlign = TextAlign.Center to center wrapped lines under the 48.dp icon",
+            content.contains("textAlign = TextAlign.Center")
+        )
+    }
 }
+

@@ -35,6 +35,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -64,6 +66,11 @@ fun RemoteDevices(
     }
 }
 
+/**
+ * Individual sensor tile within the RemoteDevices row (REQ-UI-301, REQ-UI-304, ATT-2772).
+ * Applies a bounded maximum width of 72 dp and enables 2-line centered text wrapping with ellipsis
+ * to prevent long device names from causing excessive whitespace voids or pushing adjacent tiles off-screen.
+ */
 @Composable
 private fun RemoteDeviceItem(
     device: RemoteDeviceUIData,
@@ -72,6 +79,7 @@ private fun RemoteDeviceItem(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
+            .widthIn(max = 72.dp)
             .clickable(onClick = onClick)
             .padding(4.dp)
     ) {
@@ -87,11 +95,15 @@ private fun RemoteDeviceItem(
         Text(
             text = device.name,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
         )
         // TODO: Add Battery State :)
     }
 }
+
 
 // --- Previews ---
 
