@@ -1818,6 +1818,12 @@
     <string name="routes_segment_start_at">Start at %s</string>
     <string name="routes_segment_pr">PR %s</string>
     <string name="routes_segment_counter">Segment %1$d of %2$d</string>
+    <string name="route_layers">Route Layers</string>
+    <string name="route_layer_climbs">Climbs</string>
+    <string name="route_layer_segments">Segments</string>
+    <string name="route_layer_waypoints">Waypoints</string>
+    <string name="route_item_hide">Hide</string>
+    <string name="route_item_show">Show</string>
     <string name="segment_routes_containing_title">Routes with this segment (%d)</string>
     <string name="tuning_show_live_climbs_title">Live Climbs (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Show real-time climb cockpit sheet during routes and free riding</string>

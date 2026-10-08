@@ -1605,6 +1605,12 @@
     <string name="routes_segment_start_at">%s 地点から開始</string>
     <string name="routes_segment_pr">PR %s</string>
     <string name="routes_segment_counter">セグメント %1$d / %2$d</string>
+    <string name="route_layers">ルートレイヤー</string>
+    <string name="route_layer_climbs">登坂</string>
+    <string name="route_layer_segments">セグメント</string>
+    <string name="route_layer_waypoints">ウェイポイント</string>
+    <string name="route_item_hide">非表示</string>
+    <string name="route_item_show">表示</string>
     <string name="segment_routes_containing_title">このセグメントを含むルート (%d)</string>
     <string name="tuning_show_live_climbs_title">ライブクライム (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">ルートおよびフリー走行中にリアルタイム登坂コックピットを表示</string>
