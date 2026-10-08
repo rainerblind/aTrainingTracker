@@ -82,33 +82,43 @@ object GoogleDriveAuthManager {
     }
 
     /**
+     * Refreshes the Bearer token synchronously on the calling thread using the last signed in account.
+     * Clears the cached token and fetches a fresh one from GoogleAuthUtil.
+     * Safe to invoke from background threads, workers, or synchronous uploaders.
+     */
+    fun refreshTokenSync(context: Context): Result<String> {
+        return try {
+            val account = GoogleSignIn.getLastSignedInAccount(context)
+                ?: return Result.failure(IllegalStateException("No signed-in Google account found"))
+            val accountObj = account.account
+                ?: return Result.failure(IllegalStateException("Google account object is null"))
+            val oldToken = TrainingApplication.getGoogleDriveAuthToken()
+            if (!oldToken.isNullOrBlank()) {
+                try {
+                    GoogleAuthUtil.clearToken(context, oldToken)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to clear expired token", e)
+                }
+            }
+            val scope = "$OAUTH2_SCOPE_PREFIX$DRIVE_FILE_SCOPE"
+            val newToken = GoogleAuthUtil.getToken(context, accountObj, scope)
+            val email = account.email ?: accountObj.name ?: "Google Drive User"
+            TrainingApplication.storeGoogleDriveCredential(email, newToken)
+            Log.i(TAG, "Successfully refreshed Google Drive Bearer token for $email")
+            Result.success(newToken)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to refresh Google Drive Bearer token", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Refreshes the Bearer token using the last signed in account.
      * Clears the cached token and fetches a fresh one from GoogleAuthUtil.
      */
     suspend fun refreshToken(context: Context): Result<String> {
         return withContext(Dispatchers.IO) {
-            try {
-                val account = GoogleSignIn.getLastSignedInAccount(context)
-                    ?: return@withContext Result.failure(IllegalStateException("No signed-in Google account found"))
-                val accountObj = account.account
-                    ?: return@withContext Result.failure(IllegalStateException("Google account object is null"))
-                val oldToken = TrainingApplication.getGoogleDriveAuthToken()
-                if (!oldToken.isNullOrBlank()) {
-                    try {
-                        GoogleAuthUtil.clearToken(context, oldToken)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Failed to clear expired token", e)
-                    }
-                }
-                val scope = "$OAUTH2_SCOPE_PREFIX$DRIVE_FILE_SCOPE"
-                val newToken = GoogleAuthUtil.getToken(context, accountObj, scope)
-                val email = account.email ?: accountObj.name ?: "Google Drive User"
-                TrainingApplication.storeGoogleDriveCredential(email, newToken)
-                Result.success(newToken)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to refresh Google Drive Bearer token", e)
-                Result.failure(e)
-            }
+            refreshTokenSync(context)
         }
     }
 

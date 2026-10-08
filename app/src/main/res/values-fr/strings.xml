@@ -1559,6 +1559,7 @@
     <string name="google_drive_error_developer_config">Erreur de configuration Google Sign-In (état 10) : Veuillez vérifier l\'enregistrement du client OAuth (nom de package com.atrainingtracker.debug et empreinte SHA-1) dans Google Cloud Console.</string>
     <string name="google_drive_error_network">Aucune connexion Internet ou erreur réseau lors de la connexion Google.</string>
     <string name="google_drive_error_generic">Échec de la connexion Google. Veuillez réessayer.</string>
+    <string name="google_drive_error_auth_expired">Session Google Drive expirée ou non autorisée. Veuillez vous reconnecter dans les paramètres.</string>
     <string name="google_drive_connect_prompt">Connectez votre compte Google pour exporter automatiquement vos entraînements et synchroniser vos sauvegardes vers Google Drive.</string>
     <string name="scan_google_drive">Scanner Google Drive</string>
     <string name="legacy_import__downloading_google_drive">Téléchargement de %1$s depuis Google Drive…</string>
