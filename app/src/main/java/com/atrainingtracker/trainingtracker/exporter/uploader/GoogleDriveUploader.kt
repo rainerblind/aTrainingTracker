@@ -67,10 +67,14 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
             val folderId = client.ensureFolderHierarchy(listOf("aTrainingTracker", "Workouts"))
             if (folderId == null) {
                 Log.e(TAG, "Failed to resolve folder hierarchy aTrainingTracker/Workouts (HTTP ${client.lastHttpCode}: ${client.lastErrorMessage})")
-                val errorMsg = if (client.lastHttpCode == 401) {
-                    mContext.getString(R.string.google_drive_error_auth_expired)
-                } else {
-                    "Failed to resolve Google Drive folder hierarchy"
+                val errorMsg = when {
+                    client.lastHttpCode == 401 -> mContext.getString(R.string.google_drive_error_auth_expired)
+                    client.lastHttpCode == 403 && (client.lastErrorMessage?.contains("SERVICE_DISABLED") == true || client.lastErrorMessage?.contains("accessNotConfigured") == true) ->
+                        mContext.getString(R.string.google_drive_error_api_disabled)
+                    else -> {
+                        val httpSuffix = client.lastHttpCode?.let { " (HTTP $it)" } ?: ""
+                        mContext.getString(R.string.google_drive_error_folder_hierarchy) + httpSuffix
+                    }
                 }
                 return ExportResult(false, false, errorMsg)
             }
@@ -85,8 +89,9 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
                 ExportResult(true, false, "successfully uploaded $driveFileName to Google Drive")
             } else {
                 TrainingApplication.setGoogleDriveLastSyncStatus("FAILED")
-                Log.e(TAG, "Failed to upload $driveFileName to Google Drive")
-                ExportResult(false, false, "Failed to upload $driveFileName to Google Drive")
+                Log.e(TAG, "Failed to upload $driveFileName to Google Drive (HTTP ${client.lastHttpCode}: ${client.lastErrorMessage})")
+                val httpSuffix = client.lastHttpCode?.let { " (HTTP $it)" } ?: ""
+                ExportResult(false, false, "Failed to upload $driveFileName to Google Drive$httpSuffix")
             }
         } catch (e: IOException) {
             Log.e(TAG, "IOException uploading to Google Drive: ${e.message}", e)

@@ -64,6 +64,14 @@ class GoogleDriveClient(
         private const val TAG = "GoogleDriveClient"
         private const val FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
         private const val JSON_MIME_TYPE = "application/json; charset=UTF-8"
+
+        private val hierarchyLock = Any()
+        private val globalFolderIdCache = ConcurrentHashMap<String, String>()
+
+        @androidx.annotation.VisibleForTesting
+        fun clearFolderCache() {
+            globalFolderIdCache.clear()
+        }
     }
 
     /** HTTP status code of the most recent network call, or null if no call has been made. */
@@ -78,9 +86,6 @@ class GoogleDriveClient(
 
     @Volatile
     private var activeToken: String? = null
-
-    // In-memory cache for resolved folder hierarchy paths (e.g. "aTrainingTracker/Workouts" -> folderId)
-    private val folderIdCache = ConcurrentHashMap<String, String>()
 
     private fun getAuthToken(): String? {
         return activeToken ?: tokenProvider().also { activeToken = it }
@@ -126,16 +131,20 @@ class GoogleDriveClient(
      */
     fun ensureFolderHierarchy(folderNames: List<String>): String? {
         val cacheKey = folderNames.joinToString("/")
-        folderIdCache[cacheKey]?.let { return it }
+        globalFolderIdCache[cacheKey]?.let { return it }
 
-        var currentParentId = "root"
-        for (folderName in folderNames) {
-            val existingId = findFolderIdByName(folderName, currentParentId)
-            currentParentId = existingId ?: createFolder(folderName, currentParentId) ?: return null
+        synchronized(hierarchyLock) {
+            globalFolderIdCache[cacheKey]?.let { return it }
+
+            var currentParentId = "root"
+            for (folderName in folderNames) {
+                val existingId = findFolderIdByName(folderName, currentParentId)
+                currentParentId = existingId ?: createFolder(folderName, currentParentId) ?: return null
+            }
+
+            globalFolderIdCache[cacheKey] = currentParentId
+            return currentParentId
         }
-
-        folderIdCache[cacheKey] = currentParentId
-        return currentParentId
     }
 
     /**
@@ -162,6 +171,9 @@ class GoogleDriveClient(
                 val json = JSONObject(bodyString)
                 val files = json.optJSONArray("files") ?: return null
                 if (files.length() > 0) {
+                    if (files.length() > 1) {
+                        Log.w(TAG, "Multiple folders found with name '$folderName' under '$parentId' (count: ${files.length()}). Reusing first folder ID: ${files.getJSONObject(0).getString("id")}")
+                    }
                     return files.getJSONObject(0).getString("id")
                 }
             }
@@ -201,7 +213,11 @@ class GoogleDriveClient(
                 }
                 val bodyString = response.body?.string() ?: return null
                 val json = JSONObject(bodyString)
-                return json.optString("id").takeIf { it.isNotBlank() }
+                val newFolderId = json.optString("id").takeIf { it.isNotBlank() }
+                if (newFolderId != null) {
+                    Log.i(TAG, "Created folder '$folderName' under parent '$parentId' (id: $newFolderId)")
+                }
+                return newFolderId
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error creating folder $folderName: ${e.message}", e)
@@ -326,7 +342,7 @@ class GoogleDriveClient(
      */
     fun resolveFolderHierarchy(folderNames: List<String>): String? {
         val cacheKey = folderNames.joinToString("/")
-        folderIdCache[cacheKey]?.let { return it }
+        globalFolderIdCache[cacheKey]?.let { return it }
 
         var currentParentId = "root"
         for (folderName in folderNames) {
@@ -334,7 +350,7 @@ class GoogleDriveClient(
             currentParentId = existingId
         }
 
-        folderIdCache[cacheKey] = currentParentId
+        globalFolderIdCache[cacheKey] = currentParentId
         return currentParentId
     }
 

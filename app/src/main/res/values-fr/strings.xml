@@ -1560,6 +1560,8 @@
     <string name="google_drive_error_network">Aucune connexion Internet ou erreur réseau lors de la connexion Google.</string>
     <string name="google_drive_error_generic">Échec de la connexion Google. Veuillez réessayer.</string>
     <string name="google_drive_error_auth_expired">Session Google Drive expirée ou non autorisée. Veuillez vous reconnecter dans les paramètres.</string>
+    <string name="google_drive_error_api_disabled">L\'API Google Drive est désactivée dans Google Cloud Console. Veuillez l\'activer dans le projet Google Cloud.</string>
+    <string name="google_drive_error_folder_hierarchy">Échec de la résolution de la hiérarchie des dossiers Google Drive</string>
     <string name="google_drive_connect_prompt">Connectez votre compte Google pour exporter automatiquement vos entraînements et synchroniser vos sauvegardes vers Google Drive.</string>
     <string name="scan_google_drive">Scanner Google Drive</string>
     <string name="legacy_import__downloading_google_drive">Téléchargement de %1$s depuis Google Drive…</string>
