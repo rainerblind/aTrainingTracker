@@ -1,0 +1,137 @@
+# Stage 1: Problem Domain & Root Cause Analysis - ATT-2770: Accelerate Test Suite Execution via Parallel Test Forks, Gradle Caching, and Worker Recycling
+
+**Ticket**: [ATT-2770](https://atrainingtracker.atlassian.net/browse/ATT-2770)  
+**Parent Epic**: [ATT-232](https://atrainingtracker.atlassian.net/browse/ATT-232) (*Process & Engineering Workflow*)  
+**Sprint**: `2026-41.4`  
+**Author**: AI Agent 1 (Implementer)  
+**Date**: 2026-10-08  
+**Status**: Completed  
+
+---
+
+## 1. Problem Statement & User Impact
+
+The automated test suite in `aTrainingTracker` has expanded into an extensive ASPICE quality firewall comprising **436 test classes** and **over 2,130 individual unit tests**.
+
+During autonomous in-sprint development (ASPICE Stage 4 construction and Stage 5 clean-room verification), running the full regression test suite via `./gradlew testDebugUnitTest` currently takes **7 to 9 minutes** on an 8-core CPU workstation.
+
+This execution latency creates severe developer and agent feedback loop friction:
+- **Long Idle Waiting**: Each ticket in the autonomous pipeline must execute full regression verification. A 7–9 minute test run per ticket significantly slows down throughput.
+- **CPU Underutilization**: While the host machine has 8 logical CPU cores and 30 GiB RAM (with >16 GiB free memory), 7 out of 8 CPU cores remain completely idle during test runs because Gradle defaults to a single worker process (`maxParallelForks = 1`).
+- **Memory Bloat & GC Thrashing**: Over 150 test suites utilize `io.mockk:mockk`, which relies on dynamic ByteBuddy bytecode transformation. Running hundreds of MockK test suites inside a single, un-recycled JVM process causes classloader accumulation, heap fragmentation, and escalating Garbage Collection (GC) pauses toward the end of the test suite.
+
+Accelerating test execution will dramatically shorten developer and agent feedback loops without compromising test determinism or isolation.
+
+---
+
+## 2. Forensic Archaeology & Root Cause Analysis
+
+### 2.1 Missing `testOptions` in `app/build.gradle`
+Examination of `app/build.gradle` reveals that the `testOptions` block is completely absent from the `android { ... }` configuration:
+- In the Android Gradle Plugin (AGP), if `testOptions.unitTests.all` is not declared:
+  - `maxParallelForks` defaults to `1` (strict sequential execution across all test classes).
+  - `forkEvery` defaults to `0` (meaning "never fork a new JVM"; a single JVM executes all 436 test classes from start to finish).
+- Consequently, all 436 test classes are executed one by one on a single OS thread.
+
+### 2.2 Disabled Gradle Parallelism & Caching in `gradle.properties`
+Inspection of `gradle.properties` shows:
+```properties
+# When configured, Gradle will run in incubating parallel mode.
+# This option should only be used with decoupled projects. For more details, visit
+# https://developer.android.com/r/tools/gradle-multi-project-decoupled-projects
+# org.gradle.parallel=true
+```
+- `# org.gradle.parallel=true` is commented out.
+- `org.gradle.caching=true` is completely missing.
+- As a result, Gradle runs tasks sequentially and lacks local task artifact caching for unit test executions when inputs have not changed.
+
+### 2.3 MockK Classloader Accumulation & GC Thrashing
+- MockK generates dynamic mock classes at runtime via ByteBuddy. In a long-lived single JVM process, these generated classes remain in the Metaspace and their internal references accumulate in the heap.
+- After ~200 test classes, heap utilization spikes, triggering frequent stop-the-world Full GC cycles.
+- Periodic recycling of the test worker JVM (via Gradle's `forkEvery` setting) completely flushes the Metaspace and heap, eliminating memory leaks and GC overhead.
+
+---
+
+## 3. Chesterton's Fence & Invariant Analysis
+
+Before enabling parallel test execution, we must evaluate the historical assumptions and potential side effects:
+
+### 3.1 Test Isolation Across Separate JVM Processes
+- **Mechanism**: Gradle's `maxParallelForks` does **not** run tests in multiple threads inside the same JVM; instead, it spawns separate, independent OS worker processes (`GradleWorkerMain`), each with its own JVM heap, classloader, and static state.
+- **Invariant**: Because each worker process is an isolated JVM, static singletons, global mocks (`mockkStatic`), and thread-local variables in one worker cannot leak into or mutate state in another worker.
+- **Within a single worker process**: Tests are assigned by class and run sequentially, preserving the exact same behavior as the current single-threaded execution.
+
+### 3.2 In-Memory Databases & Temporary Files
+- Unit tests that instantiate Room databases via `Room.inMemoryDatabaseBuilder()` or mock SQLite helpers use worker-local memory.
+- Tests creating temporary files use unique temporary file paths (`File.createTempFile`) or distinct directories, preventing parallel file access collisions.
+
+### 3.3 Hardware-Adaptive Parallelism
+- Hardcoding a fixed number of forks could overwhelm smaller CI environments (e.g., 2-core runners) or underutilize high-core workstations (e.g., 16/32 cores).
+- Formulation:
+  ```groovy
+  maxParallelForks = (Runtime.runtime.availableProcessors() / 2).coerceAtLeast(1)
+  ```
+  On our 8-core workstation, this allocates 4 parallel test workers, leaving ample CPU capacity for system processes and Gradle daemon communication without CPU starvation or thread thrashing.
+
+---
+
+## 4. Scope Bounding & Proposed Solutions
+
+### 4.1 Changes to `gradle.properties`
+1. Enable parallel project task execution: `org.gradle.parallel=true`.
+2. Enable Gradle local build cache: `org.gradle.caching=true`.
+
+### 4.2 Changes to `app/build.gradle`
+1. Introduce `testOptions` block:
+   ```groovy
+   testOptions {
+       unitTests.all {
+           maxParallelForks = (Runtime.runtime.availableProcessors() / 2).coerceAtLeast(1)
+           forkEvery = 80 // Periodically recycle worker JVM to prevent MockK classloader bloat
+           minHeapSize = "512m"
+           maxHeapSize = "1536m"
+           jvmArgs += [
+               "-XX:+TieredCompilation",
+               "-XX:TieredStopAtLevel=1", // Fast C1 JIT compilation optimal for short-lived unit test forks
+               "-Dfile.encoding=UTF-8"
+           ]
+       }
+   }
+   ```
+
+---
+
+## 5. Acceptance Criteria (Given-When-Then)
+
+- **AC-1 (Parallel Worker Forking)**:
+  - *Given* an 8-core CPU workstation,
+  - *When* `./gradlew testDebugUnitTest` is executed,
+  - *Then* Gradle SHALL spawn multiple test worker processes (`maxParallelForks = 4`).
+
+- **AC-2 (Execution Time Reduction)**:
+  - *Given* the complete 436-class test suite,
+  - *When* running `./gradlew testDebugUnitTest`,
+  - *Then* execution duration SHALL decrease by at least 40% compared to baseline single-worker execution.
+
+- **AC-3 (Test Suite Integrity & Determinism)**:
+  - *Given* parallel test worker execution,
+  - *When* running the complete test suite,
+  - *Then* 100% of tests SHALL pass with zero flakiness, zero race conditions, and zero static state contamination across workers.
+
+- **AC-4 (Gradle Cache Active)**:
+  - *Given* an unchanged codebase after a successful test run,
+  - *When* executing `./gradlew testDebugUnitTest`,
+  - *Then* tasks SHALL resolve `UP-TO-DATE` or `FROM-CACHE`.
+
+---
+
+## 6. Traceability Matrix
+
+| Artifact | Purpose | Status |
+| :--- | :--- | :--- |
+| `docs/engineering/analysis/ATT-2770_analysis.md` | Problem Domain & Root Cause Analysis | Completed |
+| `docs/engineering/test_specs/ATT-2770_test_spec.md` | Formal Test Specification & Verification Plan | Scheduled (Stage 2) |
+| `docs/engineering/plans/ATT-2770_plan.md` | Atomic Implementation Plan | Scheduled (Stage 3) |
+| `app/build.gradle` | `testOptions.unitTests.all` configuration | Scheduled (Stage 4) |
+| `gradle.properties` | `org.gradle.parallel=true`, `org.gradle.caching=true` | Scheduled (Stage 4) |
+| `docs/engineering/walkthroughs/ATT-2770_walkthrough.md` | Verification Walkthrough & Performance Benchmark | Scheduled (Stage 5) |
