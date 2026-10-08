@@ -1522,9 +1522,22 @@
     <string name="import_fit_title">Importuj pliki FIT</string>
     <string name="import_fit_description">Importuj treningi z urządzeń Garmin, Wahoo, Hammerhead lub smartwatchy (.fit).</string>
     <string name="import_fit_button">Wybierz pliki FIT</string>
+    <string name="import_fit_dropbox_button">Skanuj Dropbox (FIT)</string>
+    <string name="import_fit_gdrive_button">Skanuj Dysk Google (FIT)</string>
     <string name="import_fit_progress">Importowanie plików FIT (%1$d z %2$d)…</string>
     <string name="import_fit_summary_success">Pomyślnie zaimportowano %1$d treningów (pominięto %2$d duplikatów).</string>
     <string name="import_fit_summary_with_errors">Zaimportowano %1$d treningów, pominięto %2$d duplikatów, %3$d nie powiodło się.</string>
+    <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
+    <string name="import_tcx_title">Importuj pliki TCX</string>
+    <string name="import_tcx_description">Importuj treningi z plików Training Center XML (.tcx).</string>
+    <string name="import_tcx_button">Wybierz lokalny plik TCX</string>
+    <string name="import_tcx_dropbox_button">Skanuj Dropbox (TCX)</string>
+    <string name="import_tcx_gdrive_button">Skanuj Dysk Google (TCX)</string>
+    <string name="import_gpx_title">Importuj pliki GPX</string>
+    <string name="import_gpx_description">Importuj trasy i aktywności z plików GPS Exchange Format (.gpx).</string>
+    <string name="import_gpx_button">Wybierz lokalny plik GPX</string>
+    <string name="import_gpx_dropbox_button">Skanuj Dropbox (GPX)</string>
+    <string name="import_gpx_gdrive_button">Skanuj Dysk Google (GPX)</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">Wybierz trasę</string>
     <string name="route_action_select">Wybierz trasę</string>

@@ -504,9 +504,13 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    fun bulkRecoverLegacyData(context: Context, format: String) {
+    fun bulkRecoverLegacyData(
+        context: Context,
+        format: String = "all",
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): kotlinx.coroutines.Job {
         saveClusteringTolerances()
-        viewModelScope.launch(Dispatchers.IO) {
+        return viewModelScope.launch(dispatcher) {
             val credential = TrainingApplication.readDropboxCredential()
             if (credential == null || !TrainingApplication.uploadToDropbox()) {
                 _uiState.value = UiState.Error(context.getString(R.string.dropbox_disconnected_status))
