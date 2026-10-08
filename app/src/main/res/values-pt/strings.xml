@@ -1428,6 +1428,11 @@
     <string name="tuning_cat_navigation">Navegação</string>
     <string name="tuning_route_selection_radius_title">Raio de seleção de rota</string>
     <string name="tuning_route_selection_radius_desc">Distância máxima até o ponto de partida para seleção de rotas próximas</string>
+    <string name="tuning_nav_cue_transparency_title">Transparência das indicações de navegação</string>
+    <string name="tuning_nav_cue_transparency_desc">Opacidade dos avisos de mudança de direção e sobreposições</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">Duração de exibição das indicações</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">Tempo de ocultação automática dos avisos de mudança de direção</string>
+    <string name="tuning_nav_cue_dismiss_persistent">Persistente</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 cartões</string>
     <string name="tuning_matrix_col_list">Lista</string>
     <string name="tuning_matrix_col_details">Detalhes</string>
@@ -1553,6 +1558,7 @@
     <string name="google_drive_error_developer_config">Erro de configuração do Google Sign-In (status 10): Verifique o registro do cliente OAuth (nome do pacote com.atrainingtracker.debug e impressão digital SHA-1) no Google Cloud Console.</string>
     <string name="google_drive_error_network">Sem conexão com a Internet ou erro de rede durante o login com o Google.</string>
     <string name="google_drive_error_generic">Falha no login com o Google. Tente novamente.</string>
+    <string name="google_drive_error_auth_expired">Sessão do Google Drive expirada ou não autorizada. Faça login novamente nas Configurações.</string>
     <string name="google_drive_connect_prompt">Conecte sua conta do Google para exportar treinos e sincronizar backups do banco de dados automaticamente no Google Drive.</string>
     <string name="scan_google_drive">Escanear Google Drive</string>
     <string name="legacy_import__downloading_google_drive">Baixando %1$s do Google Drive…</string>

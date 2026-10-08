@@ -96,6 +96,8 @@ fun AdvancedTuningDialog(
     var sensorFieldBorderThickness by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS) }
     var sensorFieldBorderContrast by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST) }
     var routeSelectionRadiusKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM) }
+    var navigationCueTransparency by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY) }
+    var navigationCueDismissDurationSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
     var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -152,6 +154,8 @@ fun AdvancedTuningDialog(
         slopeMinSpeed = persistedConfig.slopeMinSpeedMps
         paceCeilingMinKm = persistedConfig.paceCeilingMinKm
         routeSelectionRadiusKm = persistedConfig.routeSelectionRadiusKm
+        navigationCueTransparency = persistedConfig.navigationCueTransparency
+        navigationCueDismissDurationSec = persistedConfig.navigationCueDismissDurationSec
     }
 
     AppBottomSheetContent(
@@ -180,7 +184,9 @@ fun AdvancedTuningDialog(
                         altitudeFilterWindowSec = altitudeWindowSec,
                         slopeMinSpeedMps = slopeMinSpeed,
                         paceCeilingMinKm = paceCeilingMinKm,
-                        routeSelectionRadiusKm = routeSelectionRadiusKm
+                        routeSelectionRadiusKm = routeSelectionRadiusKm,
+                        navigationCueTransparency = navigationCueTransparency,
+                        navigationCueDismissDurationSec = navigationCueDismissDurationSec
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
@@ -317,13 +323,22 @@ fun AdvancedTuningDialog(
             TuningAccordionSection(
                 icon = Icons.Default.Navigation,
                 title = stringResource(R.string.tuning_cat_navigation),
-                subtitle = TuningSubtitleFormatter.formatNavigationSubtitle(routeSelectionRadiusKm),
+                subtitle = TuningSubtitleFormatter.formatNavigationSubtitle(
+                    radiusKm = routeSelectionRadiusKm,
+                    transparency = navigationCueTransparency,
+                    dismissSec = navigationCueDismissDurationSec,
+                    context = context
+                ),
                 isExpanded = isSectionExpanded(TuningSection.NAVIGATION),
                 onToggle = { toggleSection(TuningSection.NAVIGATION) }
             ) {
                 NavigationSection(
                     routeSelectionRadiusKm = routeSelectionRadiusKm,
-                    onRadiusChange = { routeSelectionRadiusKm = it }
+                    onRadiusChange = { routeSelectionRadiusKm = it },
+                    navigationCueTransparency = navigationCueTransparency,
+                    onTransparencyChange = { navigationCueTransparency = it },
+                    navigationCueDismissDurationSec = navigationCueDismissDurationSec,
+                    onDismissDurationChange = { navigationCueDismissDurationSec = it }
                 )
             }
 
@@ -356,6 +371,8 @@ fun AdvancedTuningDialog(
                         slopeMinSpeed = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS
                         paceCeilingMinKm = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
                         routeSelectionRadiusKm = TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM
+                        navigationCueTransparency = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY
+                        navigationCueDismissDurationSec = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
                         onSettingsChanged?.invoke()
                         Toast.makeText(context, context.getString(R.string.reset_to_defaults_success), Toast.LENGTH_SHORT).show()
                     }

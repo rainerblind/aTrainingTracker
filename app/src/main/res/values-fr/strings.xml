@@ -1429,6 +1429,11 @@
     <string name="tuning_cat_navigation">Navigation</string>
     <string name="tuning_route_selection_radius_title">Rayon de sélection d\'itinéraire</string>
     <string name="tuning_route_selection_radius_desc">Distance maximale au point de départ pour la sélection d\'itinéraires proches</string>
+    <string name="tuning_nav_cue_transparency_title">Transparence des indications</string>
+    <string name="tuning_nav_cue_transparency_desc">Opacité des invites de virage et des superpositions de navigation</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">Durée d\'affichage des indications</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">Durée de masquage automatique pour les invites de virage</string>
+    <string name="tuning_nav_cue_dismiss_persistent">Persistant</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 cartes</string>
     <string name="tuning_matrix_col_list">Liste</string>
     <string name="tuning_matrix_col_details">Détails</string>
@@ -1554,6 +1559,7 @@
     <string name="google_drive_error_developer_config">Erreur de configuration Google Sign-In (état 10) : Veuillez vérifier l\'enregistrement du client OAuth (nom de package com.atrainingtracker.debug et empreinte SHA-1) dans Google Cloud Console.</string>
     <string name="google_drive_error_network">Aucune connexion Internet ou erreur réseau lors de la connexion Google.</string>
     <string name="google_drive_error_generic">Échec de la connexion Google. Veuillez réessayer.</string>
+    <string name="google_drive_error_auth_expired">Session Google Drive expirée ou non autorisée. Veuillez vous reconnecter dans les paramètres.</string>
     <string name="google_drive_connect_prompt">Connectez votre compte Google pour exporter automatiquement vos entraînements et synchroniser vos sauvegardes vers Google Drive.</string>
     <string name="scan_google_drive">Scanner Google Drive</string>
     <string name="legacy_import__downloading_google_drive">Téléchargement de %1$s depuis Google Drive…</string>

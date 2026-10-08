@@ -30,9 +30,9 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
 
 ### Step-by-Step Procedure
 1. **Query Active Sprint Backlog**:
-   Find all tickets in the active sprint currently in status `Zu erledigen`:
+   Find all tickets in the active sprint currently in status `Zu erledigen` using the exact active sprint ID or name (do not use generic `openSprints()` which can match multiple concurrently active sprints):
    ```bash
-   python3 tools/jira_util.py search "project = ATT AND sprint in openSprints() AND status = 'Zu erledigen' ORDER BY rank ASC"
+   python3 tools/jira_util.py search "project = ATT AND sprint = <SPRINT_ID> AND status = 'Zu erledigen' ORDER BY rank ASC"
    ```
    *Strict Invariant*: AI agents MUST NEVER move tickets into active sprints or pull backlog items autonomously (`"Agents must not move tickets to sprints!"`). Only the human user assigns tickets to sprints.
 2. **Establish Sprint Integration Branch**:
@@ -91,9 +91,9 @@ Jointly review all completed sprint tickets with the human user against expectat
    Confirm successful installation before proceeding to ticket walkthroughs.
 
 2. **Query Tickets Ready for Review in Rank Order**:
-   Find all sprint tickets in status `Final Review (Human)` sorted strictly by backlog rank:
+   Find all sprint tickets in status `Final Review (Human)` sorted strictly by backlog rank for the exact active sprint ID or name:
    ```bash
-   python3 tools/jira_util.py search "project = ATT AND sprint in openSprints() AND status = 'Final Review (Human)' ORDER BY rank ASC"
+   python3 tools/jira_util.py search "project = ATT AND sprint = <SPRINT_ID> AND status = 'Final Review (Human)' ORDER BY rank ASC"
    ```
 
 3. **Collaborative Ticket Inspection**:

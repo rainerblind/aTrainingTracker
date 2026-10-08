@@ -141,4 +141,13 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * Preserving exact visual or log evidence at the moment of human observation prevents ambiguity and enables rapid forensic investigation in Stage 1 Analysis of the subsequent sprint, while strictly honoring Rule 11 (Zero Code Changes During Review).
 * Origin: Sprint 2026-41.1 — Direct screen capture on Pixel 10 provided immediate clarity for follow-ups ATT-2620, ATT-2624, and ATT-2631.
 
+## 26. Formalized GitFlow Hotfix Workflow & Active Sprint Rebase Protocol
+* **Rule**: When an emergency production regression or fatal crash occurs in a deployed release (e.g. ATT-2584, ATT-2619):
+  1. **Hotfix Branching**: The hotfix branch MUST branch directly from `master` (or the affected release tag): `hotfix/V<VERSION>__<BUILD>`.
+  2. **Streamlined ASPICE Governance**: Hotfixes strictly execute Stages 1 through 5 (Analysis, Test-Spec, Impl-Plan, Implementation, Verification), producing targeted engineering deliverables in `docs/engineering/`.
+  3. **Dual GitFlow Integration**: Upon Gate 5 sign-off and production APK release, the hotfix is merged back into `master` (with a version tag) and back-merged into `develop`.
+  4. **Active Sprint Rebase / Merge**: If an active sprint branch (`sprint/<ID>`) is in flight during the hotfix, the hotfix changes MUST be immediately merged into `sprint/<ID>`. This ensures that in-flight sprint feature branches build upon the hotfix baseline, preventing merge conflicts and regressions.
+* Origin: Sprint 2026-41.2, ATT-2634 — Rainer Blind mandate: *"Define Workflow / Skill for Hotfixes."*
+
+
 

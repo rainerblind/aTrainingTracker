@@ -1408,6 +1408,11 @@
     <string name="tuning_cat_navigation">ナビゲーション</string>
     <string name="tuning_route_selection_radius_title">ルート選択半径</string>
     <string name="tuning_route_selection_radius_desc">近くのルート選択のためのルート開始地点までの最大距離</string>
+    <string name="tuning_nav_cue_transparency_title">ナビゲーション案内の透明度</string>
+    <string name="tuning_nav_cue_transparency_desc">進行方向案内とナビゲーションオーバーレイの不透明度</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">ナビゲーション案内の表示時間</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">進行方向案内の自動非表示時間</string>
+    <string name="tuning_nav_cue_dismiss_persistent">常時表示</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 カード</string>
     <string name="tuning_matrix_col_list">一覧</string>
     <string name="tuning_matrix_col_details">詳細</string>
@@ -1533,6 +1538,7 @@
     <string name="google_drive_error_developer_config">Google サインイン設定エラー (ステータス 10): Google Cloud Console で OAuth クライアント登録 (パッケージ名 com.atrainingtracker.debug および SHA-1 フィンガープリント) を確認してください。</string>
     <string name="google_drive_error_network">Google サインイン中にインターネット接続がないか、ネットワークエラーが発生しました。</string>
     <string name="google_drive_error_generic">Google サインインに失敗しました。もう一度お試しください。</string>
+    <string name="google_drive_error_auth_expired">Google ドライブのセッションの有効期限が切れたか、認証されていません。設定で再認証してください。</string>
     <string name="google_drive_connect_prompt">Google アカウントを接続して、ワークアウトのエクスポートとデータベースのバックアップを Google ドライブに自動同期します。</string>
     <string name="scan_google_drive">Google ドライブをスキャン</string>
     <string name="legacy_import__downloading_google_drive">Google ドライブから %1$s をダウンロード中…</string>

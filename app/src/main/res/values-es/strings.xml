@@ -1430,6 +1430,11 @@
     <string name="tuning_cat_navigation">Navegación</string>
     <string name="tuning_route_selection_radius_title">Radio de selección de rutas</string>
     <string name="tuning_route_selection_radius_desc">Distancia máxima al punto de inicio para la selección de rutas cercanas</string>
+    <string name="tuning_nav_cue_transparency_title">Transparencia de indicaciones</string>
+    <string name="tuning_nav_cue_transparency_desc">Opacidad de avisos de giro y paneles de navegación</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">Duración de avisos de navegación</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">Duración de desaparición automática para avisos de giro</string>
+    <string name="tuning_nav_cue_dismiss_persistent">Persistente</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 tarjetas</string>
     <string name="tuning_matrix_col_list">Lista</string>
     <string name="tuning_matrix_col_details">Detalles</string>
@@ -1555,6 +1560,7 @@
     <string name="google_drive_error_developer_config">Error de configuración de Google Sign-In (estado 10): Compruebe el registro del cliente OAuth (nombre de paquete com.atrainingtracker.debug y huella SHA-1) en Google Cloud Console.</string>
     <string name="google_drive_error_network">Sin conexión a Internet o error de red durante el inicio de sesión de Google.</string>
     <string name="google_drive_error_generic">Error al iniciar sesión con Google. Inténtelo de nuevo.</string>
+    <string name="google_drive_error_auth_expired">La sesión de Google Drive caducó o no está autorizada. Vuelva a autenticarse en Ajustes.</string>
     <string name="google_drive_connect_prompt">Conecte su cuenta de Google para exportar entrenamientos y sincronizar copias de seguridad de la base de datos automáticamente en Google Drive.</string>
     <string name="scan_google_drive">Escanear Google Drive</string>
     <string name="legacy_import__downloading_google_drive">Descargando %1$s de Google Drive…</string>

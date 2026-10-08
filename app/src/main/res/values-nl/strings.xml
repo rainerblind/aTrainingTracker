@@ -1428,6 +1428,11 @@
     <string name="tuning_cat_navigation">Navigatie</string>
     <string name="tuning_route_selection_radius_title">Straal voor routeselectie</string>
     <string name="tuning_route_selection_radius_desc">Maximale afstand tot het startpunt voor selectie van routes in de buurt</string>
+    <string name="tuning_nav_cue_transparency_title">Transparantie navigatieaanwijzingen</string>
+    <string name="tuning_nav_cue_transparency_desc">Dekking van afslaginstructies en navigatie-overlays</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">Weergaveduur navigatieaanwijzingen</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">Automatische sluitingsduur voor afslaginstructies</string>
+    <string name="tuning_nav_cue_dismiss_persistent">Blijvend</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 kaarten</string>
     <string name="tuning_matrix_col_list">Lijst</string>
     <string name="tuning_matrix_col_details">Details</string>
@@ -1553,6 +1558,7 @@
     <string name="google_drive_error_developer_config">Configuratiefout voor Google Sign-In (status 10): Controleer de OAuth-clientregistratie (pakketnaam com.atrainingtracker.debug en SHA-1-vingerafdruk) in Google Cloud Console.</string>
     <string name="google_drive_error_network">Geen internetverbinding of netwerkfout tijdens Google Sign-In.</string>
     <string name="google_drive_error_generic">Inloggen met Google mislukt. Probeer het opnieuw.</string>
+    <string name="google_drive_error_auth_expired">Google Drive-sessie verlopen of niet geautoriseerd. Meld u opnieuw aan in Instellingen.</string>
     <string name="google_drive_connect_prompt">Verbind uw Google-account om trainingen en databaseback-ups automatisch te synchroniseren met Google Drive.</string>
     <string name="scan_google_drive">Google Drive scannen</string>
     <string name="legacy_import__downloading_google_drive">%1$s downloaden van Google Drive…</string>

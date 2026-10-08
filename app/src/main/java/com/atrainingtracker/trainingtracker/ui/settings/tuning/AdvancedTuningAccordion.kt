@@ -43,6 +43,7 @@ import com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
@@ -103,8 +104,20 @@ object TuningSubtitleFormatter {
         return "$fullPercent% / $mediumPercent%, Flat: $flatStr, Steep: $steepStr"
     }
 
-    fun formatNavigationSubtitle(radiusKm: Float): String {
-        return String.format(Locale.getDefault(), "%.1f km", radiusKm)
+    fun formatNavigationSubtitle(
+        radiusKm: Float,
+        transparency: Float = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY,
+        dismissSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+        context: Context? = null
+    ): String {
+        val transPercent = (transparency * 100f).roundToInt()
+        val dismissStr = if (dismissSec == 0) {
+            context?.getString(R.string.tuning_nav_cue_dismiss_persistent) ?: "Persistent"
+        } else {
+            "${dismissSec}s"
+        }
+        val radiusStr = String.format(Locale.getDefault(), "%.1f km", radiusKm)
+        return "$transPercent%, $dismissStr, $radiusStr"
     }
 
     fun formatSensorsGpsSubtitle(
