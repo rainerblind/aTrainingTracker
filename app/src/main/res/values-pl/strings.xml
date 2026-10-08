@@ -1430,6 +1430,11 @@
     <string name="tuning_cat_navigation">Nawigacja</string>
     <string name="tuning_route_selection_radius_title">Promień wyboru trasy</string>
     <string name="tuning_route_selection_radius_desc">Maksymalna odległość do punktu początkowego trasy przy wyborze tras w pobliżu</string>
+    <string name="tuning_nav_cue_transparency_title">Przezroczystość wskazówek nawigacji</string>
+    <string name="tuning_nav_cue_transparency_desc">Przezroczystość komunikatów manewrów i nakładek nawigacji</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">Czas wyświetlania wskazówek</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">Czas automatycznego ukrywania wskazówek manewrów</string>
+    <string name="tuning_nav_cue_dismiss_persistent">Trwały</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 kart</string>
     <string name="tuning_matrix_col_list">Lista</string>
     <string name="tuning_matrix_col_details">Szczegóły</string>

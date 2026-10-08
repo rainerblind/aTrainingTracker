@@ -113,6 +113,14 @@ object TuningPreferencesDefaults {
     const val DEFAULT_ROUTE_SELECTION_RADIUS_KM = 1.0f
     const val MIN_ROUTE_SELECTION_RADIUS_KM = 0.5f
     const val MAX_ROUTE_SELECTION_RADIUS_KM = 10.0f
+
+    const val DEFAULT_NAVIGATION_CUE_TRANSPARENCY = 0.80f
+    const val MIN_NAVIGATION_CUE_TRANSPARENCY = 0.20f
+    const val MAX_NAVIGATION_CUE_TRANSPARENCY = 1.00f
+    const val STEP_NAVIGATION_CUE_TRANSPARENCY = 0.05f
+
+    const val DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC = 4
+    val NAVIGATION_CUE_DISMISS_OPTIONS = listOf(2, 3, 4, 5, 8, 0)
 }
 
 /**
@@ -144,7 +152,9 @@ data class TuningConfig(
     val sensorFieldCornerRadius: Float = TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS,
     val sensorFieldBorderThickness: Float = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS,
     val sensorFieldBorderContrast: Float = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST,
-    val routeSelectionRadiusKm: Float = TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM
+    val routeSelectionRadiusKm: Float = TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM,
+    val navigationCueTransparency: Float = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY,
+    val navigationCueDismissDurationSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
 ) {
     @Deprecated("Use elevationXAxisDomain or telemetryXAxisDomain", ReplaceWith("elevationXAxisDomain"))
     val profileXAxisDomain: ProfileXAxisDomain
@@ -219,6 +229,8 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SENSOR_FIELD_BORDER_THICKNESS: Preferences.Key<Float> = floatPreferencesKey("tuning_sensor_field_border_thickness")
         val KEY_SENSOR_FIELD_BORDER_CONTRAST: Preferences.Key<Float> = floatPreferencesKey("tuning_sensor_field_border_contrast")
         val KEY_ROUTE_SELECTION_RADIUS_KM: Preferences.Key<Float> = floatPreferencesKey("tuning_route_selection_radius_km")
+        val KEY_NAVIGATION_CUE_TRANSPARENCY: Preferences.Key<Float> = floatPreferencesKey("tuning_navigation_cue_transparency")
+        val KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_navigation_cue_dismiss_duration_sec")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -247,7 +259,9 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_SENSOR_FIELD_CORNER_RADIUS,
             KEY_SENSOR_FIELD_BORDER_THICKNESS,
             KEY_SENSOR_FIELD_BORDER_CONTRAST,
-            KEY_ROUTE_SELECTION_RADIUS_KM
+            KEY_ROUTE_SELECTION_RADIUS_KM,
+            KEY_NAVIGATION_CUE_TRANSPARENCY,
+            KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC
         )
     }
 
@@ -405,7 +419,14 @@ class TuningPreferencesDataStore(private val context: Context) {
             sensorFieldCornerRadius = clampedCornerRadius,
             sensorFieldBorderThickness = clampedBorderThickness,
             sensorFieldBorderContrast = clampedBorderContrast,
-            routeSelectionRadiusKm = clampedRadiusKm
+            routeSelectionRadiusKm = clampedRadiusKm,
+            navigationCueTransparency = (prefs[KEY_NAVIGATION_CUE_TRANSPARENCY] ?: TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY).coerceIn(
+                TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY,
+                TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY
+            ),
+            navigationCueDismissDurationSec = (prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] ?: TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC).let {
+                if (it in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) it else TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+            }
         )
     }
 
@@ -501,6 +522,15 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_SENSOR_FIELD_BORDER_THICKNESS] = clampedBorderThickness
             prefs[KEY_SENSOR_FIELD_BORDER_CONTRAST] = clampedBorderContrast
             prefs[KEY_ROUTE_SELECTION_RADIUS_KM] = clampedRadiusKm
+            prefs[KEY_NAVIGATION_CUE_TRANSPARENCY] = config.navigationCueTransparency.coerceIn(
+                TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY,
+                TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY
+            )
+            prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] = if (config.navigationCueDismissDurationSec in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) {
+                config.navigationCueDismissDurationSec
+            } else {
+                TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+            }
         }
     }
 
@@ -524,6 +554,27 @@ class TuningPreferencesDataStore(private val context: Context) {
         )
         context.dataStore.edit { prefs ->
             prefs[KEY_ROUTE_SELECTION_RADIUS_KM] = clamped
+        }
+    }
+
+    suspend fun updateNavigationCueTransparency(transparency: Float) {
+        val clamped = transparency.coerceIn(
+            TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY,
+            TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_NAVIGATION_CUE_TRANSPARENCY] = clamped
+        }
+    }
+
+    suspend fun updateNavigationCueDismissDurationSec(durationSec: Int) {
+        val valid = if (durationSec in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) {
+            durationSec
+        } else {
+            TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+        }
+        context.dataStore.edit { prefs ->
+            prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] = valid
         }
     }
 

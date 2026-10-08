@@ -1408,6 +1408,11 @@
     <string name="tuning_cat_navigation">ナビゲーション</string>
     <string name="tuning_route_selection_radius_title">ルート選択半径</string>
     <string name="tuning_route_selection_radius_desc">近くのルート選択のためのルート開始地点までの最大距離</string>
+    <string name="tuning_nav_cue_transparency_title">ナビゲーション案内の透明度</string>
+    <string name="tuning_nav_cue_transparency_desc">進行方向案内とナビゲーションオーバーレイの不透明度</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">ナビゲーション案内の表示時間</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">進行方向案内の自動非表示時間</string>
+    <string name="tuning_nav_cue_dismiss_persistent">常時表示</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 カード</string>
     <string name="tuning_matrix_col_list">一覧</string>
     <string name="tuning_matrix_col_details">詳細</string>

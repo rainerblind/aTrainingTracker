@@ -677,7 +677,22 @@ def create_subtask(parent_key, summary, description, role="coordinator", add_to_
     print(f"Sub-task {new_key} created for parent {parent_key}.")
 
     if add_to_sprint:
-        add_to_active_sprint(new_key, role=role)
+        parent_sprint_id = None
+        try:
+            parent_agile = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/issue/{parent_key}", role=role)
+            parent_sprint = parent_agile.get("fields", {}).get("sprint")
+            if parent_sprint and parent_sprint.get("id"):
+                parent_sprint_id = parent_sprint["id"]
+        except Exception:
+            pass
+
+        if parent_sprint_id:
+            url_sprint = f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{parent_sprint_id}/issue"
+            payload_sprint = {"issues": [new_key]}
+            jira_request(url_sprint, method="POST", payload=payload_sprint, role=role)
+            print(f"Added {new_key} to parent's sprint (id {parent_sprint_id}).")
+        else:
+            add_to_active_sprint(new_key, role=role)
 
     # Initial assignment: default subtasks to agent1
     assign_issue(new_key, "agent1", role=role)
