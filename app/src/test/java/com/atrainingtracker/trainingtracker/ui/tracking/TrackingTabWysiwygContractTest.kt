@@ -129,4 +129,45 @@ class TrackingTabWysiwygContractTest {
             content.contains("screenMode == ScreenMode.TRACKING && showLiveClimbs")
         )
     }
+
+    @Test
+    fun testSensorGridScreen_configurationMode_fullWidthTogglesEliminatesTwoColumnRows() {
+        val screenFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        assertTrue("SensorGridScreen.kt must exist", screenFile.exists())
+        val content = screenFile.readText()
+
+        val configIndex = content.indexOf("if (screenMode == ScreenMode.CONFIGURATION)")
+        val elseIndex = content.indexOf("// TRACKING & PREVIEW MODES", configIndex)
+        val configContent = content.substring(configIndex, elseIndex)
+
+        val togglesIndex = content.indexOf("Spatial WYSIWYG Toggles for Map, Elevation, Segments, Climbs & Lap Button")
+        assertTrue("Toggles section must exist", togglesIndex != -1)
+        val togglesContent = content.substring(togglesIndex, elseIndex)
+
+        // Verify that toggles are rendered full width in a unified Column
+        assertTrue("Must declare unified Column for spatial toggles", togglesContent.contains("Column("))
+        assertFalse("Must eliminate 2-column side-by-side Row constructs for spatial toggles in configuration mode",
+            togglesContent.contains("Modifier.weight(1f)")
+        )
+        assertFalse("Must eliminate arbitrary nested grey dock Surface container",
+            togglesContent.contains("Spatial WYSIWYG Dock for Live Segments")
+        )
+        assertTrue("Map toggle must be full width", togglesContent.contains("show_map") && togglesContent.contains("fillMaxWidth()"))
+        assertTrue("Elevation toggle must be full width", togglesContent.contains("showElevationProfile") && togglesContent.contains("fillMaxWidth()"))
+        assertTrue("Live Segments toggle must be full width", togglesContent.contains("showLiveSegments") && togglesContent.contains("fillMaxWidth()"))
+        assertTrue("Live Climbs toggle must be full width", togglesContent.contains("show_live_climbs") && togglesContent.contains("fillMaxWidth()"))
+        assertTrue("Lap Button toggle must be full width", togglesContent.contains("showLapButton") && togglesContent.contains("fillMaxWidth()"))
+    }
+
+    @Test
+    fun testTrackingTabsScreen_suppressesLapButtonInConfigurationMode() {
+        val screenFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsScreen.kt")
+        assertTrue("TrackingTabsScreen.kt must exist", screenFile.exists())
+        val content = screenFile.readText()
+
+        assertTrue(
+            "shouldShowLapButton must suppress lap button in CONFIGURATION mode",
+            content.contains("shouldShowLapButton = currentViewInfo?.showLapButton == true && screenMode != ScreenMode.CONFIGURATION")
+        )
+    }
 }

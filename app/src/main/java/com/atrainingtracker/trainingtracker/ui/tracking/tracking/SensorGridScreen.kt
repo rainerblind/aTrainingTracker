@@ -434,71 +434,48 @@ fun SensorGridScreen(
                     })
                 }
 
-                // Spatial WYSIWYG Toggles for Map & Elevation Profile (REQ-UI-275 / REQ-UI-295)
-                Row(
+                // Spatial WYSIWYG Toggles for Map, Elevation, Segments, Climbs & Lap Button (REQ-UI-275 / REQ-UI-295)
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     SpatialCockpitToggleCard(
                         title = stringResource(R.string.config_tracking__show_map),
                         isActive = state.showMap,
                         onToggle = { tabToggleActions.onToggleMap(it) },
                         icon = Icons.Default.Map,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
                     SpatialCockpitToggleCard(
                         title = stringResource(R.string.config_tracking__showElevationProfile),
                         isActive = state.showElevationProfile,
                         onToggle = { tabToggleActions.onToggleElevationProfile(it) },
                         icon = Icons.Default.ShowChart,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
-                }
-
-                // Spatial WYSIWYG Dock for Live Segments, Climbs & Lap Button (REQ-UI-275 / REQ-UI-295)
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 2.dp,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            SpatialCockpitToggleCard(
-                                title = stringResource(R.string.config_tracking__showLiveSegments),
-                                isActive = state.showLiveSegments,
-                                onToggle = { tabToggleActions.onToggleLiveSegments(it) },
-                                icon = Icons.Default.DirectionsRun,
-                                modifier = Modifier.weight(1f)
-                            )
-                            SpatialCockpitToggleCard(
-                                title = stringResource(R.string.config_tracking__show_live_climbs),
-                                isActive = state.showLiveClimbs,
-                                onToggle = { tabToggleActions.onToggleLiveClimbs(it) },
-                                icon = Icons.Default.Terrain,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        SpatialCockpitToggleCard(
-                            title = stringResource(R.string.config_tracking__showLapButton),
-                            isActive = state.showLapButton,
-                            onToggle = { tabToggleActions.onToggleLapButton(it) },
-                            icon = Icons.Default.Timer,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                    SpatialCockpitToggleCard(
+                        title = stringResource(R.string.config_tracking__showLiveSegments),
+                        isActive = state.showLiveSegments,
+                        onToggle = { tabToggleActions.onToggleLiveSegments(it) },
+                        icon = Icons.Default.DirectionsRun,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    SpatialCockpitToggleCard(
+                        title = stringResource(R.string.config_tracking__show_live_climbs),
+                        isActive = state.showLiveClimbs,
+                        onToggle = { tabToggleActions.onToggleLiveClimbs(it) },
+                        icon = Icons.Default.Terrain,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    SpatialCockpitToggleCard(
+                        title = stringResource(R.string.config_tracking__showLapButton),
+                        isActive = state.showLapButton,
+                        onToggle = { tabToggleActions.onToggleLapButton(it) },
+                        icon = Icons.Default.Timer,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         } else {
