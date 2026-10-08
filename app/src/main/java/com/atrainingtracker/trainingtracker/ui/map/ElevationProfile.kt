@@ -313,24 +313,8 @@ fun ElevationProfile(
 
         val totalDist = pathPointsDownsampled.last().distance
         val totalTimeSec = pathPointsDownsampled.last().timeSec
-        val pointCount = pathPointsDownsampled.size
-        val avgPointSpacing = if (pointCount > 0) totalDist / pointCount else 1.0
-        val targetWindowMeters = 75f
-        val calculatedWindow = (targetWindowMeters / avgPointSpacing).toInt().coerceIn(3, 21)
-        val windowSize = if (calculatedWindow % 2 == 0) calculatedWindow + 1 else calculatedWindow
-        val halfWindow = windowSize / 2
 
-        val smoothedAltitudes = pathPointsDownsampled.indices.map { i ->
-            val start = (i - halfWindow).coerceAtLeast(0)
-            val end = (i + halfWindow).coerceAtMost(pathPointsDownsampled.size - 1)
-            var sum = 0.0
-            var count = 0
-            for (j in start..end) {
-                sum += pathPointsDownsampled[j].altitude
-                count++
-            }
-            sum / count
-        }
+        val smoothedAltitudes = ElevationSmoothingMath.smoothAltitudes(pathPointsDownsampled)
 
         val bounds = calculateElevationBounds(
             pathPoints = pathPointsDownsampled,
@@ -372,8 +356,7 @@ fun ElevationProfile(
             val sAlt2 = smoothedAltitudes[i + 1]
             val a1 = ((sAlt1 - min) / range).toFloat()
             val a2 = ((sAlt2 - min) / range).toFloat()
-            val distDiff = p2.distance - p1.distance
-            val grade = if (distDiff > 1.0) ((sAlt2 - sAlt1) / distDiff) * 100 else 0.0
+            val grade = ElevationSmoothingMath.calculateGrade(p1.distance, sAlt1, p2.distance, sAlt2)
 
             val color = when {
                 grade < 2.0 -> TTColor.Zone1
