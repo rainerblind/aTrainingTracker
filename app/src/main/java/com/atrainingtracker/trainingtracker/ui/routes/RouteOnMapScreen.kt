@@ -134,6 +134,7 @@ fun RouteOnMapScreen(
         mapContent = {
             if (route != null) {
                 routes(listOf(route))
+                climbs(climbs)
                 
                 // Add unified Start and End markers (SCRUM-185)
                 val allMarkers = mutableListOf<LocationMarker>()
