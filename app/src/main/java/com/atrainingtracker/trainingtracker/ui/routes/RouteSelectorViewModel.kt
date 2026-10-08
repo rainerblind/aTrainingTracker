@@ -38,18 +38,20 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * UI State for Quick Route Selector sheet (REQ-MAP-024, REQ-UI-280 / ATT-2459, REQ-UI-281 / ATT-2460).
+ * UI State for Quick Route Selector sheet (REQ-MAP-024, REQ-UI-280 / ATT-2459, REQ-UI-281 / ATT-2460, REQ-UI-289 / ATT-2627).
  */
 data class RouteSelectorUiState(
     val routes: List<RouteWithPath> = emptyList(),
     val totalRouteCount: Int = 0,
     val activeRoute: RouteWithPath? = null,
     val autoDetectedCandidate: RouteWithPath? = null,
-    val isAutoPromptVisible: Boolean = false
+    val isAutoPromptVisible: Boolean = false,
+    val isTrackingActive: Boolean = false,
+    val contextEmptyHintRes: Int = R.string.route_no_routes_nearby
 )
 
 /**
- * ViewModel managing state and user actions for Quick Route Selector & Route Auto Detection (REQ-UI-280, REQ-UI-281).
+ * ViewModel managing state and user actions for Quick Route Selector & Route Auto Detection (REQ-UI-280, REQ-UI-281, REQ-UI-289).
  */
 class RouteSelectorViewModel(
     private val routesRepository: RoutesRepository,
@@ -66,39 +68,73 @@ class RouteSelectorViewModel(
 
     private val _lastLocation = MutableStateFlow<Location?>(null)
     private val _autoDetectedCandidate = MutableStateFlow<RouteWithPath?>(null)
+    private val _isTrackingActive = MutableStateFlow(false)
 
     private val radiusFlow: Flow<Float> = tuningPreferencesDataStore?.tuningConfigFlow
         ?.map { it.routeSelectionRadiusKm * 1000.0f }
         ?: flowOf(TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM * 1000.0f)
 
+    private data class RouteContext(
+        val location: Location?,
+        val isTracking: Boolean,
+        val radiusMeters: Float
+    )
+
+    private val routeContextFlow: Flow<RouteContext> = combine(
+        _lastLocation,
+        _isTrackingActive,
+        radiusFlow
+    ) { location, isTracking, radiusMeters ->
+        RouteContext(location, isTracking, radiusMeters)
+    }
+
     val uiState: StateFlow<RouteSelectorUiState> = combine(
         routesRepository.allRoutes,
         routesRepository.activeNavigatedRouteId,
-        _lastLocation,
         _autoDetectedCandidate,
-        radiusFlow
-    ) { allRoutes, activeRouteId, location, candidate, radiusMeters ->
+        routeContextFlow
+    ) { allRoutes, activeRouteId, candidate, context ->
         val activeRoute = allRoutes.find { it.summary.id == activeRouteId }
+        val currentLatLng = context.location?.let { LatLng(it.latitude, it.longitude) }
 
-        val currentLatLng = location?.let { LatLng(it.latitude, it.longitude) }
-        val rankedRoutes = RouteProximityRanker.filterAndRankRoutes(
-            routes = allRoutes,
-            currentLocation = currentLatLng,
-            radiusMeters = radiusMeters
-        )
+        val (candidateRoutes, emptyHintRes) = if (!context.isTracking) {
+            val ranked = RouteProximityRanker.filterAndRankRoutes(
+                routes = allRoutes,
+                currentLocation = currentLatLng,
+                radiusMeters = context.radiusMeters
+            )
+            Pair(ranked, R.string.route_no_routes_nearby)
+        } else {
+            val matched = if (context.location != null) {
+                autoDetector.evaluateMatchingRoutes(
+                    location = context.location,
+                    routes = allRoutes,
+                    currentlyActiveRouteId = activeRouteId
+                )
+            } else {
+                emptyList()
+            }
+            Pair(matched, R.string.route_no_matching_route_detected)
+        }
 
         RouteSelectorUiState(
-            routes = rankedRoutes,
+            routes = candidateRoutes,
             totalRouteCount = allRoutes.size,
             activeRoute = activeRoute,
             autoDetectedCandidate = candidate,
-            isAutoPromptVisible = candidate != null
+            isAutoPromptVisible = candidate != null,
+            isTrackingActive = context.isTracking,
+            contextEmptyHintRes = emptyHintRes
         )
     }.stateIn(
         scope = viewModelScope,
         started = sharingStarted,
         initialValue = RouteSelectorUiState()
     )
+
+    fun setTrackingActive(isActive: Boolean) {
+        _isTrackingActive.value = isActive
+    }
 
     fun selectRoute(routeId: Long) {
         routesRepository.setActiveNavigatedRoute(routeId)

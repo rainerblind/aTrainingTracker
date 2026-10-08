@@ -1539,6 +1539,8 @@
     <string name="route_filter_length">Lengte</string>
     <string name="route_empty_title">Geen routes beschikbaar</string>
     <string name="route_empty_desc">Importeer GPX-bestanden of synchroniseer met Strava.</string>
+    <string name="route_no_routes_nearby">Geen routes in de buurt</string>
+    <string name="route_no_matching_route_detected">Geen overeenkomende route gedetecteerd</string>
     <string name="google_drive">Google Drive</string>
     <string name="google_drive_connect">Verbinden met Google Drive</string>
     <string name="google_drive_disconnect">Verbinding met Google Drive verbreken</string>

@@ -1541,6 +1541,8 @@
     <string name="route_filter_length">Długość</string>
     <string name="route_empty_title">Brak dostępnych tras</string>
     <string name="route_empty_desc">Zaimportuj pliki GPX lub zsynchronizuj ze Strava.</string>
+    <string name="route_no_routes_nearby">Brak tras w pobliżu</string>
+    <string name="route_no_matching_route_detected">Nie wykryto pasującej trasy</string>
     <string name="google_drive">Google Drive</string>
     <string name="google_drive_connect">Połącz z Dyskiem Google</string>
     <string name="google_drive_disconnect">Odłącz od Dysku Google</string>

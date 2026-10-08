@@ -1519,6 +1519,8 @@
     <string name="route_filter_length">長さ</string>
     <string name="route_empty_title">利用可能なルートがありません</string>
     <string name="route_empty_desc">GPXファイルをインポートするかStravaと同期してください。</string>
+    <string name="route_no_routes_nearby">近くにルートがありません</string>
+    <string name="route_no_matching_route_detected">一致するルートが検出されませんでした</string>
     <string name="google_drive">Google Drive</string>
     <string name="google_drive_connect">Google ドライブに接続</string>
     <string name="google_drive_disconnect">Google ドライブから切断</string>

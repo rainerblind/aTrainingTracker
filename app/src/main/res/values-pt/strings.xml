@@ -1539,6 +1539,8 @@
     <string name="route_filter_length">Comprimento</string>
     <string name="route_empty_title">Nenhuma rota disponível</string>
     <string name="route_empty_desc">Importe ficheiros GPX ou sincronize com o Strava.</string>
+    <string name="route_no_routes_nearby">Nenhuma rota próxima</string>
+    <string name="route_no_matching_route_detected">Nenhuma rota correspondente detetada</string>
     <string name="google_drive">Google Drive</string>
     <string name="google_drive_connect">Conectar ao Google Drive</string>
     <string name="google_drive_disconnect">Desconectar do Google Drive</string>

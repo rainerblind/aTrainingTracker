@@ -1626,6 +1626,8 @@
     <string name="route_filter_length">Länge</string>
     <string name="route_empty_title">Keine Routen vorhanden</string>
     <string name="route_empty_desc">Importiere GPX-Dateien oder synchronisiere mit Strava.</string>
+    <string name="route_no_routes_nearby">Keine Strecken in der Nähe</string>
+    <string name="route_no_matching_route_detected">Keine passende Strecke erkannt</string>
     <string name="google_drive">Google Drive</string>
     <string name="google_drive_connect">Mit Google Drive verbinden</string>
     <string name="google_drive_disconnect">Von Google Drive trennen</string>
