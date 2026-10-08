@@ -770,10 +770,10 @@ fun ElevationProfile(
                     drawLine(seg.color, Offset(x1, y1), Offset(x2, y2), 2.dp.toPx())
                 }
 
-                // Render horizontal climb span indicators along the X-axis baseline (REQ-UI-299)
+                // Render horizontal climb span indicators along the X-axis baseline (REQ-UI-299, REQ-UI-307)
                 if (!isTimeDomain && climbs.isNotEmpty()) {
                     val baselineY = height - 2.dp.toPx()
-                    climbs.filter { it.category != ClimbCategory.UNCATEGORIZED }.forEach { climb ->
+                    climbs.forEach { climb ->
                         val cPoints = climb.pathPoints
                         val startDist = cPoints.firstOrNull()?.distance ?: return@forEach
                         val endDist = cPoints.lastOrNull()?.distance ?: return@forEach

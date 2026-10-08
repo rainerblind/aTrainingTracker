@@ -100,7 +100,7 @@ class ClimbPolylineContractTest {
     }
 
     @Test
-    fun testUncategorizedClimbs_areOmittedFromHighlightLayer() {
+    fun testUncategorizedClimbs_renderHighlightPolylineWithNeutralGrey() {
         val uncategorizedClimb = Climb(
             id = 99L,
             name = "Gentle Rise",
@@ -123,7 +123,15 @@ class ClimbPolylineContractTest {
             climbs(listOf(uncategorizedClimb))
         }
 
-        assertTrue("Uncategorized climb should not generate a highlight polyline", mapScope.climbHighlights.isEmpty())
+        // REQ-UI-307: Uncategorized climbs are highlighted using neutral category grey
+        assertEquals("Uncategorized climb must generate 1 highlight polyline", 1, mapScope.climbHighlights.size)
+        val highlight = mapScope.climbHighlights[0]
+        assertEquals("Uncategorized climb color must be neutral grey (0xFF757575)", Color(0xFF757575), highlight.color)
+        assertEquals("zIndex should be 25f", 25f, highlight.zIndex, 0.001f)
+        assertEquals("width should be 10f", 10f, highlight.width, 0.001f)
+        assertEquals(2, highlight.path.size)
+        assertEquals(LatLng(48.0, 9.0), highlight.path[0])
+        assertEquals(LatLng(48.01, 9.01), highlight.path[1])
     }
 
     @Test

@@ -63,7 +63,6 @@ import com.atrainingtracker.trainingtracker.routes.MatchedRouteSegment
 import com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcher
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.ui.climbs.ClimbCategoryChip
-import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import kotlin.math.roundToInt
@@ -100,13 +99,6 @@ fun RouteOnMapScreen(
     }
 
     val climbs = route?.climbs ?: emptyList()
-
-    val climbMarkers = remember(climbs) {
-        climbs.map { climb ->
-            val (bgColor, _, _) = getClimbCategoryColors(climb.category)
-            createSensorMarker(context, R.drawable.ic_ascent, bgColor)
-        }
-    }
 
     val routeBounds = remember(routeSummary) {
         if (routeSummary?.minLat != null && routeSummary.maxLat != null && routeSummary.minLng != null && routeSummary.maxLng != null) {
@@ -264,21 +256,6 @@ fun RouteOnMapScreen(
                             iconDescriptor = endMarker
                         )
                     )
-                }
-
-                // Add climb start markers (REQ-UI-274)
-                climbs.forEachIndexed { idx, climb ->
-                    val descriptor = climbMarkers.getOrNull(idx)
-                    if (descriptor != null) {
-                        allMarkers.add(
-                            LocationMarker(
-                                position = climb.startLatLng,
-                                iconResId = R.drawable.ic_ascent,
-                                title = climb.name,
-                                iconDescriptor = descriptor
-                            )
-                        )
-                    }
                 }
 
                 if (allMarkers.isNotEmpty()) {
