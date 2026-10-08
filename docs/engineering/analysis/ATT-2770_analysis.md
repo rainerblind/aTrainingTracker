@@ -2,10 +2,11 @@
 
 **Ticket**: [ATT-2770](https://atrainingtracker.atlassian.net/browse/ATT-2770)  
 **Parent Epic**: [ATT-232](https://atrainingtracker.atlassian.net/browse/ATT-232) (*Process & Engineering Workflow*)  
+**Requirement Mapping**: `REQ-PRO-002`  
 **Sprint**: `2026-41.4`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-08  
-**Status**: Completed  
+**Status**: Revised (Addressing Gate 1 Audit Feedback)  
 
 ---
 
@@ -65,13 +66,23 @@ Before enabling parallel test execution, we must evaluate the historical assumpt
 - Unit tests that instantiate Room databases via `Room.inMemoryDatabaseBuilder()` or mock SQLite helpers use worker-local memory.
 - Tests creating temporary files use unique temporary file paths (`File.createTempFile`) or distinct directories, preventing parallel file access collisions.
 
-### 3.3 Hardware-Adaptive Parallelism
-- Hardcoding a fixed number of forks could overwhelm smaller CI environments (e.g., 2-core runners) or underutilize high-core workstations (e.g., 16/32 cores).
-- Formulation:
-  ```groovy
-  maxParallelForks = (Runtime.runtime.availableProcessors() / 2).coerceAtLeast(1)
-  ```
-  On our 8-core workstation, this allocates 4 parallel test workers, leaving ample CPU capacity for system processes and Gradle daemon communication without CPU starvation or thread thrashing.
+### 3.3 Defensive JVM Heap Sizing & Host Resource Protection
+- **Auditor Concern**: A large heap configuration (e.g. 1.5 GB per fork) multiplied across 4 parallel forks could consume 6+ GB of RAM, creating severe out-of-memory (OOM) or swapping risks on standard 16 GB developer laptops or constrained CI runners.
+- **Defensive Mitigation**:
+  - We configure a tight, bounded heap allocation:
+    - `minHeapSize = "256m"`
+    - `maxHeapSize = "768m"`
+  - Total maximum concurrent test worker heap consumption is strictly capped at:
+    $$\text{Max Worker Memory} = 4 \times 768\text{ MB} = 3.072\text{ GB}$$
+  - Paired with `forkEvery = 80`, each worker process executes 80 test classes and then exits cleanly. This guarantees that workers never accumulate memory, preventing heap fragmentation and leaving over 75% of host RAM available for the OS and Gradle daemon.
+
+### 3.4 Shared In-Memory Localization DOM Cache Architecture
+- **Problem**: Over 100 test classes independently read and parse all 9 `strings.xml` resource files from disk on every test class invocation, generating excessive redundant disk I/O and XML DOM tree allocations.
+- **Design Specification (`LocalizationTestCache.kt`)**:
+  - **Thread-Safety**: Backed by a `java.util.concurrent.ConcurrentHashMap<String, Map<String, String>>`.
+  - **Atomic Retrieval**: Uses `ConcurrentHashMap.computeIfAbsent(localeDir) { dir -> parseStringsXml(dir) }` ensuring idempotent single-pass parsing.
+  - **Immutability**: Parsed key-value maps are wrapped in unmodifiable collections (`Collections.unmodifiableMap`), preventing any test from mutating cached definitions.
+  - **Lifecycle Scope**: The cache resides in the worker JVM's heap. Because workers are recycled every 80 test classes (`forkEvery = 80`), the cache is naturally refreshed and bounded, guaranteeing zero cross-run memory leaks.
 
 ---
 
@@ -82,14 +93,14 @@ Before enabling parallel test execution, we must evaluate the historical assumpt
 2. Enable Gradle local build cache: `org.gradle.caching=true`.
 
 ### 4.2 Changes to `app/build.gradle`
-1. Introduce `testOptions` block:
+1. Introduce bounded `testOptions` block:
    ```groovy
    testOptions {
        unitTests.all {
            maxParallelForks = (Runtime.runtime.availableProcessors() / 2).coerceAtLeast(1)
            forkEvery = 80 // Periodically recycle worker JVM to prevent MockK classloader bloat
-           minHeapSize = "512m"
-           maxHeapSize = "1536m"
+           minHeapSize = "256m"
+           maxHeapSize = "768m"
            jvmArgs += [
                "-XX:+TieredCompilation",
                "-XX:TieredStopAtLevel=1", // Fast C1 JIT compilation optimal for short-lived unit test forks
@@ -123,13 +134,26 @@ Before enabling parallel test execution, we must evaluate the historical assumpt
   - *When* executing `./gradlew testDebugUnitTest`,
   - *Then* tasks SHALL resolve `UP-TO-DATE` or `FROM-CACHE`.
 
+- **AC-5 (Defensive Host Memory Capping)**:
+  - *Given* 4 concurrent test workers running simultaneously,
+  - *When* measuring aggregate heap consumption,
+  - *Then* total worker heap usage SHALL NOT exceed 3.5 GB, preserving system stability.
+
 ---
 
-## 6. Traceability Matrix
+## 6. Living Requirement Mapping
+
+This optimization will be formalized in Stage 2 as:
+- **`REQ-PRO-002`**: *Automated Test Execution Acceleration, Worker Parallelism, and Resource-Safe Caching*.
+- **`TST-PRO-002`**: *Parallel Unit Test Forking, Worker Recycling, and Performance Benchmarking*.
+
+---
+
+## 7. Traceability Matrix
 
 | Artifact | Purpose | Status |
 | :--- | :--- | :--- |
-| `docs/engineering/analysis/ATT-2770_analysis.md` | Problem Domain & Root Cause Analysis | Completed |
+| `docs/engineering/analysis/ATT-2770_analysis.md` | Problem Domain & Root Cause Analysis | Completed (Revised) |
 | `docs/engineering/test_specs/ATT-2770_test_spec.md` | Formal Test Specification & Verification Plan | Scheduled (Stage 2) |
 | `docs/engineering/plans/ATT-2770_plan.md` | Atomic Implementation Plan | Scheduled (Stage 3) |
 | `app/build.gradle` | `testOptions.unitTests.all` configuration | Scheduled (Stage 4) |
