@@ -125,6 +125,15 @@ fun ControlTrackingScreen(
     var isCoarseOnly by remember {
         mutableStateOf(checkIsCoarseOnly())
     }
+    var isIgnoringBatteryOptimizations by remember {
+        mutableStateOf(checkIsIgnoringBatteryOptimizations())
+    }
+    var isBatteryBannerDismissed by androidx.compose.runtime.saveable.rememberSaveable {
+        mutableStateOf(false)
+    }
+    var pendingStartAfterBatteryExemption by androidx.compose.runtime.saveable.rememberSaveable {
+        mutableStateOf(false)
+    }
 
     var rationaleStep by androidx.compose.runtime.saveable.rememberSaveable {
         mutableStateOf(RationaleStep.NONE)
@@ -212,6 +221,8 @@ fun ControlTrackingScreen(
                 val permitted = checkHasLocation()
                 hasLocationPermission = permitted
                 isCoarseOnly = checkIsCoarseOnly()
+                val batteryExempt = checkIsIgnoringBatteryOptimizations()
+                isIgnoringBatteryOptimizations = batteryExempt
                 if (permitted) {
                     com.atrainingtracker.banalservice.BANALService.checkOrInitializeLocationDevices()
                 }
@@ -221,7 +232,8 @@ fun ControlTrackingScreen(
                 } else if (checkHasBackgroundLocation() && rationaleStep == RationaleStep.BACKGROUND_LOCATION) {
                     isPermanentlyDenied = false
                     proceedAfterPermissions()
-                } else if (checkIsIgnoringBatteryOptimizations() && rationaleStep == RationaleStep.BATTERY_OPTIMIZATION) {
+                } else if (batteryExempt && (rationaleStep == RationaleStep.BATTERY_OPTIMIZATION || pendingStartAfterBatteryExemption)) {
+                    pendingStartAfterBatteryExemption = false
                     rationaleStep = RationaleStep.NONE
                     onStart()
                 }
@@ -265,6 +277,13 @@ fun ControlTrackingScreen(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
+        BatteryOptimizationWarningBanner(
+            visible = !isIgnoringBatteryOptimizations && !isBatteryBannerDismissed,
+            onFixClick = { launchBatteryOptimizationIntent(context) },
+            onDismissClick = { isBatteryBannerDismissed = true },
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
         Box(modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)
@@ -304,7 +323,7 @@ fun ControlTrackingScreen(
             modifier = Modifier.fillMaxWidth(),
             mode = trackingMode,
             enabled = true,
-            hasPermissionWarning = !hasLocationPermission,
+            hasPermissionWarning = !hasLocationPermission || !isIgnoringBatteryOptimizations,
             onStart = handleStartClick,
             onPause = onPause,
             onResume = onResume,
@@ -383,6 +402,7 @@ fun ControlTrackingScreen(
                         }
                     }
                     RationaleStep.BATTERY_OPTIMIZATION -> {
+                        pendingStartAfterBatteryExemption = true
                         launchBatteryOptimizationIntent(context)
                         rationaleStep = RationaleStep.NONE
                     }
@@ -406,6 +426,7 @@ fun ControlTrackingScreen(
                     }
                     RationaleStep.BATTERY_OPTIMIZATION -> {
                         // User chose "Not now" for battery optimization; start tracking
+                        pendingStartAfterBatteryExemption = false
                         rationaleStep = RationaleStep.NONE
                         onStart()
                     }

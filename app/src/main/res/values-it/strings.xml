@@ -1672,4 +1672,10 @@
     <string name="devices_pair_protocol_title">Seleziona protocollo</string>
     <string name="devices_pair_protocol_ant">Sensore ANT+</string>
     <string name="devices_pair_protocol_ble">Sensore Bluetooth LE</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">Energia in background limitata</string>
+    <string name="battery_optimization_warning_banner_desc">Android potrebbe interrompere la registrazione dell\'allenamento a schermo spento. Disattiva l\'ottimizzazione della batteria.</string>
+    <string name="battery_optimization_action_fix">Consenti</string>
+    <string name="battery_optimization_dismiss_banner">Chiudi</string>
 </resources>

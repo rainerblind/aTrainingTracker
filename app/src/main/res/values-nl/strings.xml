@@ -1672,4 +1672,10 @@
     <string name="devices_pair_protocol_title">Selecteer protocol</string>
     <string name="devices_pair_protocol_ant">ANT+-sensor</string>
     <string name="devices_pair_protocol_ble">Bluetooth LE-sensor</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">Achtergrondenergie beperkt</string>
+    <string name="battery_optimization_warning_banner_desc">Android kan de workout-opname stoppen wanneer het scherm wordt uitgeschakeld. Schakel batterijoptimalisatie uit.</string>
+    <string name="battery_optimization_action_fix">Vrijstellen</string>
+    <string name="battery_optimization_dismiss_banner">Sluiten</string>
 </resources>

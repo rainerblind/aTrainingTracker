@@ -1865,6 +1865,12 @@
     <string name="devices_pair_protocol_title">Select protocol</string>
     <string name="devices_pair_protocol_ant">ANT+ Sensor</string>
     <string name="devices_pair_protocol_ble">Bluetooth LE Sensor</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">Background Energy Restricted</string>
+    <string name="battery_optimization_warning_banner_desc">Android may stop workout recording when the screen turns off. Please disable battery optimization.</string>
+    <string name="battery_optimization_action_fix">Exempt</string>
+    <string name="battery_optimization_dismiss_banner">Dismiss</string>
 </resources>
 
 
