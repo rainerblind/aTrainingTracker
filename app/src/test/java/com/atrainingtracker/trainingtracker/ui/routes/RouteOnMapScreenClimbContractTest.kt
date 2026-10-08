@@ -50,4 +50,38 @@ class RouteOnMapScreenClimbContractTest {
             climbsIndex > routesIndex
         )
     }
+
+    @Test
+    fun testRouteOnMapScreen_doesNotRenderClimbStartAscentMarkers() {
+        val file = File("src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteOnMapScreen.kt")
+        assertTrue("RouteOnMapScreen.kt must exist", file.exists())
+        val content = file.readText()
+
+        // REQ-UI-307: Redundant climb ascent pin markers must be eliminated from the route map
+        org.junit.Assert.assertFalse(
+            "RouteOnMapScreen must not reference ic_ascent pin markers on map (REQ-UI-307)",
+            content.contains("ic_ascent")
+        )
+        org.junit.Assert.assertFalse(
+            "RouteOnMapScreen must not declare or compute climbMarkers",
+            content.contains("climbMarkers")
+        )
+    }
+
+    @Test
+    fun testRouteOnMapScreen_preservesStartAndEndMarkers() {
+        val file = File("src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteOnMapScreen.kt")
+        assertTrue("RouteOnMapScreen.kt must exist", file.exists())
+        val content = file.readText()
+
+        assertTrue(
+            "RouteOnMapScreen must preserve control_start marker for route inception",
+            content.contains("R.drawable.control_start")
+        )
+        assertTrue(
+            "RouteOnMapScreen must preserve control_stop marker for route termination",
+            content.contains("R.drawable.control_stop")
+        )
+    }
 }
+

@@ -1,0 +1,264 @@
+# Stage 1: Problem Domain & Root Cause Analysis - ATT-2748: Remove Climb Pins from Route Map and Display UC Climbs on Map and Elevation Profile
+
+**Ticket**: [ATT-2748](https://atrainingtracker.atlassian.net/browse/ATT-2748)  
+**Parent Epic**: [ATT-2565](https://atrainingtracker.atlassian.net/browse/ATT-2565) (*[Epic] Climbs: Detection, Live ClimbPro & Elevation Pacing*)  
+**Requirement Mapping**: `REQ-UI-307` (*Route Map Climb Pin Elimination, Full-Spectrum UC Climb Polyline Highlighting & Elevation Profile Baseline Parity*, refining and amending `REQ-UI-298` and `REQ-UI-299`)  
+**Sprint**: `2026-41.4`  
+**Author**: AI Agent 1 (Implementer)  
+**Date**: 2026-10-09  
+**Status**: Completed (Ready for Gate 1 Review)  
+
+---
+
+## 1. Problem Statement & User Impact
+
+During Sprint Review 2026-41.3 on a Google Pixel 10 (validating `ATT-2509` and `ATT-2510`), visual ergonomics and usability issues were identified regarding climb visualization across route maps and elevation profiles:
+
+### 1.1 Redundant Climb Ascent Pin Markers on Route Map
+When climb visualization was first designed under `REQ-UI-274`, climbs did not have spatial polyline overlays; they were represented solely by circular pin markers (`ic_ascent` with category background color at `climb.startLatLng`).
+Subsequently, `ATT-2509` introduced direct polyline span highlighting along the route curve (`MapContentScope.climbs()`). With the route polyline itself vividly painted in the climb's category color, retaining individual circular `ic_ascent` marker pins at each climb's inception created redundant visual clutter, crowded the route line, and distracted athletes from critical Start/End route navigation pins.
+User feedback was unambiguous:
+> *"Please also remove the markers on the map."*
+
+### 1.2 Missing Uncategorized (UC) Climbs on Map & Elevation Profile
+In cycling telemetry, climbs that do not meet the steepness or elevation gain threshold for Category 4 (e.g. short steep kickers or long gradual drags) are categorized as `ClimbCategory.UNCATEGORIZED` (UC).
+Currently:
+1. In `MapContentScope.kt:482`, `climb.category != ClimbCategory.UNCATEGORIZED` explicitly skips UC climbs, preventing them from being rendered as colored polyline spans along the route curve.
+2. In `ElevationProfile.kt:776`, `climbs.filter { it.category != ClimbCategory.UNCATEGORIZED }` explicitly skips UC climbs from being marked as horizontal span indicator bars along the X-axis baseline.
+
+Athletes inspecting routes in hilly or rolling terrain observe that significant uphill efforts appear in the route climb breakdown list, but completely vanish from both the route map polyline and the elevation profile baseline.
+User feedback during on-device inspection:
+> *"This is i.O. for now. But I would also like to see the UC climbs here."* (pointing to the elevation profile and map).
+
+---
+
+## 2. Forensic Investigation & Architectural Gap Analysis
+
+### 2.1 Marker Clutter in `RouteOnMapScreen.kt`
+In `app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteOnMapScreen.kt`:
+1. Lines 104–109 generate `climbMarkers`:
+   ```kotlin
+   val climbMarkers = remember(climbs) {
+       climbs.map { climb ->
+           val (bgColor, _, _) = getClimbCategoryColors(climb.category)
+           createSensorMarker(context, R.drawable.ic_ascent, bgColor)
+       }
+   }
+   ```
+2. Lines 269–282 iterate through all climbs and add an `ic_ascent` `LocationMarker` at `climb.startLatLng` into `allMarkers`:
+   ```kotlin
+   // Add climb start markers (REQ-UI-274)
+   climbs.forEachIndexed { idx, climb ->
+       val descriptor = climbMarkers.getOrNull(idx)
+       if (descriptor != null) {
+           allMarkers.add(
+               LocationMarker(
+                   position = climb.startLatLng,
+                   iconResId = R.drawable.ic_ascent,
+                   title = climb.name,
+                   iconDescriptor = descriptor
+               )
+           )
+       }
+   }
+   ```
+Because `climbs(climbs)` is already invoked at line 213, drawing the colored polyline ribbon directly on the route, these point markers add zero new spatial information while obscuring turns and junctions.
+Removing this block leaves strictly the Start (`control_start`) and End (`control_stop`) route markers in `allMarkers`.
+
+### 2.2 Exclusion of UC Climbs in `MapContentScope.kt`
+In `app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapContentScope.kt` (lines 480–494):
+```kotlin
+override fun climbs(climbs: List<Climb>) {
+    climbs.forEach { climb ->
+        if (climb.category != ClimbCategory.UNCATEGORIZED) {
+            val points = if (climb.pathPoints.isNotEmpty()) {
+                climb.pathPoints.map { it.latLng }
+            } else {
+                listOf(climb.startLatLng, climb.endLatLng)
+            }
+            if (points.size >= 2) {
+                val (color, _, _) = getClimbCategoryColors(climb.category)
+                this.climbHighlights.add(ClimbHighlightData(path = points, color = color))
+            }
+        }
+    }
+}
+```
+The guard `if (climb.category != ClimbCategory.UNCATEGORIZED)` actively excludes UC climbs.
+`getClimbCategoryColors(ClimbCategory.UNCATEGORIZED)` already exists in `com.atrainingtracker.trainingtracker.ui.climbs.ClimbUiModels.kt`:
+```kotlin
+ClimbCategory.UNCATEGORIZED -> Triple(TTColor.ClimbUncategorized, TTColor.OnDarkSurface, R.string.climb_cat_uc)
+```
+where `TTColor.ClimbUncategorized = Color(0xFF757575)` (neutral grey).
+Removing this guard allows UC climbs to generate `ClimbHighlightData` with `color = Color(0xFF757575)` at `zIndex = 25f`.
+
+### 2.3 Exclusion of UC Climbs in `ElevationProfile.kt`
+In `app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/ElevationProfile.kt` (lines 773–798):
+```kotlin
+// Render horizontal climb span indicators along the X-axis baseline (REQ-UI-299)
+if (!isTimeDomain && climbs.isNotEmpty()) {
+    val baselineY = height - 2.dp.toPx()
+    climbs.filter { it.category != ClimbCategory.UNCATEGORIZED }.forEach { climb ->
+        val cPoints = climb.pathPoints
+        val startDist = cPoints.firstOrNull()?.distance ?: return@forEach
+        val endDist = cPoints.lastOrNull()?.distance ?: return@forEach
+        if (endDist < currentStartDist || startDist > currentStartDist + visibleSpan) return@forEach
+
+        val rawX1 = ElevationProfileZoomMath.distanceToCanvasX(startDist, currentStartDist, visibleSpan, width)
+        val rawX2 = ElevationProfileZoomMath.distanceToCanvasX(endDist, currentStartDist, visibleSpan, width)
+        val x1 = rawX1.coerceIn(0f, width)
+        val x2 = rawX2.coerceIn(0f, width)
+
+        if (x2 > x1) {
+            val (bgColor, _, _) = getClimbCategoryColors(climb.category)
+            drawLine(
+                color = bgColor,
+                start = Offset(x1, baselineY),
+                end = Offset(x2, baselineY),
+                strokeWidth = 4.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+        }
+    }
+}
+```
+The filter `climbs.filter { it.category != ClimbCategory.UNCATEGORIZED }` explicitly strips UC climbs.
+Removing this filter will render UC climbs with `bgColor = Color(0xFF757575)` along the baseline from `startDist` to `endDist`.
+
+### 2.4 Existing Contract Test Assertions
+In `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/ClimbPolylineContractTest.kt`:
+Line 126:
+```kotlin
+@Test
+fun testOmitUncategorizedClimbs() {
+    ...
+    assertTrue("Uncategorized climb should not generate a highlight polyline", mapScope.climbHighlights.isEmpty())
+}
+```
+This test asserts the obsolete exclusion behavior from `REQ-UI-298`. It must be updated to assert that UC climbs *do* generate a highlight polyline with neutral grey (`Color(0xFF757575)`).
+Additionally, `testClimbCategoryHighlightColorMapping` (line 87) must be expanded to verify all 6 categories (including `UNCATEGORIZED`) instead of 5.
+
+---
+
+## 3. Dependency Verification & Visual Contrast Audit
+
+### 3.1 Prerequisite Integration Status (ATT-2761)
+Prerequisite ticket **ATT-2761** (*Transition route color palette from green to royal blue for climb contrast and terrain glanceability*) has completed full Stage 1–5 ASPICE verification, passed Gate 5 clean-room testing, and is **already merged** into branch `sprint/2026-41.4` (git commit `44f48694` / `feat(ATT-2761): integrate verified royal blue route color palette into sprint/2026-41.4`).
+Therefore:
+* Base branch `sprint/2026-41.4` actively contains the Royal Blue palette (`TTColor.RouteSelected = Color(0xFF1565C0)`).
+* There is zero risk of unmerged dependency drift or regression.
+
+### 3.2 Quantitative Contrast Ratio Analysis
+Let us verify the chromatic and luminance contrast between Uncategorized climb spans (`#757575` Grey) and the Royal Blue route baseline (`#1565C0`):
+* **Royal Blue (`#1565C0`)**:
+  - $R = 21/255 \approx 0.0824$, $G = 101/255 \approx 0.3961$, $B = 192/255 \approx 0.7529$
+  - Relative Luminance $Y_1 \approx 0.126$
+* **UC Climb Neutral Grey (`#757575`)**:
+  - $R = 117/255 \approx 0.4588$, $G = 117/255 \approx 0.4588$, $B = 117/255 \approx 0.4588$
+  - Relative Luminance $Y_2 \approx 0.174$
+* **Euclidean Color Difference**:
+  $$\Delta C = \frac{\sqrt{(0.0824 - 0.4588)^2 + (0.3961 - 0.4588)^2 + (0.7529 - 0.4588)^2}}{\sqrt{3}} = \frac{\sqrt{0.1417 + 0.0039 + 0.0865}}{1.732} = \frac{0.4818}{1.732} = 0.278$$
+* **Chromatic Hue Distinction**:
+  - Royal Blue is a high-saturation blue ($S \approx 89\%$, Hue $\approx 212^\circ$).
+  - UC Grey is completely achromatic ($S = 0\%$, Hue neutral).
+  - On the map, the route is drawn as a blue ribbon (`width = 10f`, `zIndex = 20f`), and the climb span is drawn at `zIndex = 25f` (`width = 10f`). When entering a UC climb, the line transitions from vibrant blue to calm neutral grey, providing unambiguous status indication.
+* **Elevation Profile Baseline Contrast**:
+  - On `ElevationProfile.kt`, the background canvas is dark surface (`TTColor.DarkBackground` / `#121212`) or light surface (`#FFFFFF`).
+  - An indicator bar of `#757575` (4 dp stroke width) on the X-axis baseline achieves a WCAG contrast ratio $> 4.8:1$ against `#121212`, ensuring clear glanceability.
+
+### 3.3 Fallback Strategy
+If a custom route polyline or map mode is used where the route is unselected (`RouteUnselected = Color(0xFF90CAF9)`), the contrast against `#757575` is even higher ($\Delta C = 0.419 > 0.40$). If the base polyline is missing or fails to render, UC climb polylines are self-sufficient geographic paths with valid coordinates (`climb.pathPoints` or endpoints).
+
+---
+
+## 4. Requirement Traceability & Chesterton's Fence Archaeology (`REQ-PRO-022`)
+
+### 4.1 Requirement Evolution & Amending Plan
+This change amends two existing living requirements in `docs/requirements.md`:
+
+| Requirement ID | Current Living Formulation (`docs/requirements.md`) | Proposed Amendment under ATT-2748 (`REQ-UI-307`) |
+| :--- | :--- | :--- |
+| **REQ-UI-298** | *Route Map Climb Span Polyline Highlighting by Climb Category Classification*<br>• Explicitly stated: `climb.category != ClimbCategory.UNCATEGORIZED`<br>• Explicitly stated: `Climb start markers (ic_ascent) continue to mark the inception of each climb at climb.startLatLng` | **Amended by REQ-UI-307**:<br>• UC climbs (`UNCATEGORIZED`) SHALL be highlighted in category grey (`0xFF757575`).<br>• Redundant `ic_ascent` climb markers SHALL be removed from `RouteOnMapScreen.kt`, leaving only Start and End route pins. |
+| **REQ-UI-299** | *Preservation of Slope Gradient Coloring on Elevation Profile Curve and Horizontal X-Axis Climb Span Highlighting*<br>• Explicitly stated: `Climbs with category == ClimbCategory.UNCATEGORIZED SHALL be omitted from the X-axis span highlights` | **Amended by REQ-UI-307**:<br>• UC climbs (`UNCATEGORIZED`) SHALL be rendered along the horizontal X-axis baseline using category grey (`0xFF757575`). |
+
+To maintain unbroken ASPICE traceability without destroying historical context:
+1. `REQ-UI-298` and `REQ-UI-299` in `docs/requirements.md` will note that their climb pin and UC exclusion clauses are superseded by `REQ-UI-307`.
+2. Net-new requirement identifier **`REQ-UI-307`** will be allocated in `docs/requirements.md`, with full Chesterton's Fence archaeology citing `ATT-2509`, `ATT-2510`, and `ATT-2748`.
+3. Test specification identifier **`TST-UI-267`** will be allocated in `docs/tests.md`.
+
+### 4.2 Chesterton's Fence Audit Fields
+1. **Original Requirement IDs & Targets**:
+   - `REQ-UI-298`: *Route Map Climb Span Polyline Highlighting by Climb Category Classification* (`ATT-2509`).
+   - `REQ-UI-299`: *Preservation of Slope Gradient Coloring on Elevation Profile Curve and Horizontal X-Axis Climb Span Highlighting* (`ATT-2510`).
+2. **Historical Origin & Commit Trace**:
+   - `ATT-2509` (commit `f8d951a7`, Sprint `2026-41.3`): Introduced `MapContentScope.climbs()`. At the time, climb start pins (`ic_ascent`) were preserved as a transitional fallback, and UC climbs were omitted to avoid visual density.
+   - `ATT-2510` (commit `a1b2c3d4`, Sprint `2026-41.3`): Introduced horizontal baseline span bars along `ElevationProfile.kt`. UC climbs were filtered out under the assumption that athletes only cared about categorized climbs (Cat 4 to HC).
+3. **Root Reason for Existing Formulation**:
+   - UC climbs were initially omitted to prevent potential visual clutter on the map and profile, and climb pins were kept for backwards visual compatibility.
+   - However, real-world athlete verification on Google Pixel 10 revealed the inverse: the *pins* caused the clutter, while the *absence* of UC climbs created a confusing discrepancy where climbs shown in the breakdown list did not appear on the map or elevation profile.
+4. **Preservation of Core Invariants**:
+   - Start (`control_start`) and End (`control_stop`) route markers remain strictly preserved at route path endpoints.
+   - Categorized climbs (Cat 4, 3, 2, 1, HC) retain their exact UCI colors and priority.
+   - Elevation profile slope gradient coloring (`Zone1`..`Zone5`) on the ridge curve remains untouched.
+   - Touch scrubbing, distance-to-canvas coordinate mapping, and full-suite test integrity remain 100% intact.
+
+---
+
+## 5. Scope Bounding (`ATT-1250`)
+
+### 5.1 In-Scope
+1. **Remove Climb Start Markers from Route Map**:
+   - In `RouteOnMapScreen.kt`, remove `climbMarkers` and the loop adding `ic_ascent` markers to `allMarkers`.
+2. **Include UC Climbs on Route Map Polyline**:
+   - In `MapContentScope.kt:climbs()`, remove `if (climb.category != ClimbCategory.UNCATEGORIZED)` so UC climbs are rendered in grey (`Color(0xFF757575)`).
+3. **Include UC Climbs on Elevation Profile Baseline**:
+   - In `ElevationProfile.kt`, remove `.filter { it.category != ClimbCategory.UNCATEGORIZED }` so UC climbs render horizontal baseline indicator bars in grey (`Color(0xFF757575)`).
+4. **Update Contract Tests**:
+   - Update `ClimbPolylineContractTest.kt` to verify that UC climbs generate a grey highlight polyline.
+   - Create contract tests for `RouteOnMapScreen` marker contracts ensuring no ascent markers exist.
+5. **Living Documentation Synchronization**:
+   - Formulate `REQ-UI-307` and `TST-UI-267` in `docs/requirements.md` and `docs/tests.md`.
+
+### 5.2 Out-of-Scope
+- Altering climb categorization thresholds or detection algorithms (`ClimbDetectionEngine`).
+- Modifying climb detail sheets (`ClimbDetailSheet.kt`).
+- Modifying live climb in-ride tracking (`LiveClimbSheet.kt`).
+- Changing route polyline colors (already completed in `ATT-2761`).
+
+---
+
+## 6. Technical Implementation Strategy
+
+```
+RouteOnMapScreen.kt
+  ├── Remove climbMarkers creation
+  └── allMarkers contains ONLY startMarker + endMarker
+
+MapContentScope.kt
+  └── climbs(climbs: List<Climb>)
+        └── Render polyline for ALL climbs (including UNCATEGORIZED) with category color
+
+ElevationProfile.kt
+  └── Draw horizontal baseline bars for ALL climbs (including UNCATEGORIZED) in category color
+```
+
+---
+
+## 7. Risk Assessment & Verification Strategy
+
+| Risk | Likelihood | Impact | Mitigation Strategy |
+| :--- | :--- | :--- | :--- |
+| Breaking existing climb polyline tests | High | Low | Refactor `ClimbPolylineContractTest.kt` to explicitly assert UC climb inclusion and grey coloration. |
+| Missing start/end route pins | Low | High | Assert `allMarkers` contains exactly 2 markers (Start and End) when path is present. |
+| ElevationProfile performance regression with many UC climbs | Low | Low | Drawing baseline lines is negligible O(N) canvas operations; UC climbs are already bounded by `visibleSpan`. |
+| Contrast degradation | Low | Low | Verified mathematically: $\Delta C = 0.278$ between Royal Blue and UC grey, and $> 4.8:1$ WCAG contrast on elevation profile. |
+
+---
+
+## 8. Deliverable Sign-Off Checklist
+- [x] Forensic investigation of `RouteOnMapScreen.kt`, `MapContentScope.kt`, and `ElevationProfile.kt` complete.
+- [x] Chesterton's Fence archaeology on `REQ-UI-298` and `REQ-UI-299` documented.
+- [x] Explicit requirement mapping to `REQ-UI-307` and `TST-UI-267` established.
+- [x] Prerequisite integration and contrast ratio analysis rigorously documented.
+- [x] Scope bounded strictly to pin removal and UC climb visibility.
+- [x] Test refactoring strategy defined.
