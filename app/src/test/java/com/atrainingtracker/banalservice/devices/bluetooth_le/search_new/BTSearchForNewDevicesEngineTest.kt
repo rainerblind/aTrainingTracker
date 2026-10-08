@@ -20,10 +20,17 @@ package com.atrainingtracker.banalservice.devices.bluetooth_le.search_new
 
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
+import android.bluetooth.le.BluetoothLeScanner
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
+import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Handler
@@ -37,6 +44,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
+import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
 import org.junit.After
@@ -52,16 +60,18 @@ import java.util.UUID
 
 /**
  * Unit test suite verifying robust GATT characteristic queue progression,
- * null-safe enqueueing, and state resetting in BTSearchForNewDevicesEngine
- * (REQ-CON-018, TST-CON-009, ATT-2224).
+ * null-safe enqueueing, state resetting, and direct LE transport connection / aggressive
+ * BLE scanning in BTSearchForNewDevicesEngine (REQ-CON-018, REQ-CON-019, TST-CON-009, TST-CON-011, ATT-2224, ATT-2773).
  */
 class BTSearchForNewDevicesEngineTest {
 
     private lateinit var mockContext: Context
     private lateinit var mockCallback: BTSearchForNewDevicesEngine.IBTSearchForNewDevicesEngineInterface
+    private lateinit var mockBluetoothAdapter: BluetoothAdapter
+    private lateinit var mockScanner: BluetoothLeScanner
     private val postedRunnables = mutableListOf<Runnable>()
 
-    // Test harness exposing protected members for test verification
+    // Test harness exposing protected and package-private members for test verification
     private class TestSearchEngine(
         context: Context,
         deviceType: DeviceType,
@@ -74,6 +84,8 @@ class BTSearchForNewDevicesEngineTest {
         fun getManufacturerMap(): MutableMap<String, String> = mManufacturerMap
         fun getBatteryMap(): MutableMap<String, Int> = mBatteryPercentage
         fun getQueueMap(): MutableMap<String, Queue<BluetoothGattCharacteristic>> = mReadCharacteristicQueue
+        fun getScanCallback(): ScanCallback = mScanCallback
+        fun isScanning(): Boolean = scanning
 
         public override fun enqueueCharacteristicIfPresent(
             address: String,
@@ -108,12 +120,12 @@ class BTSearchForNewDevicesEngineTest {
 
         mockkStatic(ContextCompat::class)
         every {
-            ContextCompat.checkSelfPermission(any(), Manifest.permission.BLUETOOTH_CONNECT)
+            ContextCompat.checkSelfPermission(any(), any())
         } returns PackageManager.PERMISSION_GRANTED
 
         mockkStatic(ActivityCompat::class)
         every {
-            ActivityCompat.checkSelfPermission(any(), Manifest.permission.BLUETOOTH_CONNECT)
+            ActivityCompat.checkSelfPermission(any(), any())
         } returns PackageManager.PERMISSION_GRANTED
 
         mockkStatic(DevicesDatabaseManager::class)
@@ -126,12 +138,25 @@ class BTSearchForNewDevicesEngineTest {
             true
         }
 
+        mockkConstructor(ScanFilter.Builder::class)
+        every { anyConstructed<ScanFilter.Builder>().setServiceUuid(any()) } answers { self as ScanFilter.Builder }
+        every { anyConstructed<ScanFilter.Builder>().build() } returns mockk(relaxed = true)
+
+        mockkConstructor(ScanSettings.Builder::class)
+        every { anyConstructed<ScanSettings.Builder>().setScanMode(any()) } answers { self as ScanSettings.Builder }
+        every { anyConstructed<ScanSettings.Builder>().setCallbackType(any()) } answers { self as ScanSettings.Builder }
+        every { anyConstructed<ScanSettings.Builder>().setMatchMode(any()) } answers { self as ScanSettings.Builder }
+        every { anyConstructed<ScanSettings.Builder>().setNumOfMatches(any()) } answers { self as ScanSettings.Builder }
+        every { anyConstructed<ScanSettings.Builder>().build() } returns mockk(relaxed = true)
+
         mockContext = mockk(relaxed = true)
         val mockLooper = mockk<Looper>(relaxed = true)
         every { mockContext.mainLooper } returns mockLooper
 
         val mockBluetoothManager = mockk<BluetoothManager>(relaxed = true)
-        val mockBluetoothAdapter = mockk<BluetoothAdapter>(relaxed = true)
+        mockBluetoothAdapter = mockk(relaxed = true)
+        mockScanner = mockk(relaxed = true)
+        every { mockBluetoothAdapter.bluetoothLeScanner } returns mockScanner
         every { mockContext.getSystemService(Context.BLUETOOTH_SERVICE) } returns mockBluetoothManager
         every { mockBluetoothManager.adapter } returns mockBluetoothAdapter
 
@@ -286,4 +311,77 @@ class BTSearchForNewDevicesEngineTest {
             mockCallback.onNewDeviceFound(DeviceType.BIKE_POWER, testAddress, any(), any(), -1)
         }
     }
+
+    /**
+     * REQ-CON-019 / TST-CON-011.1: Direct LE transport connection must be explicitly
+     * specified when discovering new BLE peripherals on API 23+.
+     */
+    @Test
+    fun testScanResult_onApi23Plus_connectsGattWithTransportLe() {
+        val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+        val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+        val testAddress = "11:22:33:44:55:66"
+        every { mockDevice.address } returns testAddress
+        every { mockDevice.name } returns "Heart Rate Sensor"
+
+        val mockScanResult = mockk<ScanResult>(relaxed = true)
+        every { mockScanResult.device } returns mockDevice
+
+        // Trigger onScanResult callback
+        engine.getScanCallback().onScanResult(ScanSettings.CALLBACK_TYPE_ALL_MATCHES, mockScanResult)
+        drainPostedRunnables()
+
+        // Verify connectGatt was invoked with TRANSPORT_LE (API 23+)
+        verify(exactly = 1) {
+            mockDevice.connectGatt(mockContext, false, any<BluetoothGattCallback>(), BluetoothDevice.TRANSPORT_LE)
+        }
+        assertTrue("mBTGatts must contain the discovered device address", engine.getGattsMap().containsKey(testAddress))
+    }
+
+    /**
+     * REQ-CON-019 / TST-CON-011.2: Scan must abort gracefully without throwing SecurityException
+     * if BLUETOOTH_SCAN (API 31+) or ACCESS_FINE_LOCATION (API <31) is not granted.
+     */
+    @Test
+    fun testStartAsyncSearch_missingBluetoothScanPermission_abortsGracefully() {
+        every {
+            ContextCompat.checkSelfPermission(mockContext, Manifest.permission.BLUETOOTH_SCAN)
+        } returns PackageManager.PERMISSION_DENIED
+        every {
+            ContextCompat.checkSelfPermission(mockContext, Manifest.permission.ACCESS_FINE_LOCATION)
+        } returns PackageManager.PERMISSION_DENIED
+
+        val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+        engine.startAsyncSearch()
+
+        assertFalse("Scanning flag must not be true when scan permission is denied", engine.isScanning())
+        verify(exactly = 0) { mockScanner.startScan(any<List<ScanFilter>>(), any<ScanSettings>(), any<ScanCallback>()) }
+    }
+
+    /**
+     * REQ-CON-019 / TST-CON-011.3: Scan must configure aggressive low-latency scan settings
+     * when permissions are granted.
+     */
+    @Test
+    fun testStartAsyncSearch_grantedBluetoothScanPermission_configuresAggressiveSettings() {
+        val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+        val settingsSlot = slot<ScanSettings>()
+
+        every {
+            mockScanner.startScan(any<List<ScanFilter>>(), capture(settingsSlot), any<ScanCallback>())
+        } returns Unit
+
+        engine.startAsyncSearch()
+
+        assertTrue("Scanning flag must be true when scan starts", engine.isScanning())
+        verify(exactly = 1) {
+            mockScanner.startScan(any<List<ScanFilter>>(), any<ScanSettings>(), any<ScanCallback>())
+        }
+
+        verify(exactly = 1) { anyConstructed<ScanSettings.Builder>().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY) }
+        verify(exactly = 1) { anyConstructed<ScanSettings.Builder>().setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES) }
+        verify(exactly = 1) { anyConstructed<ScanSettings.Builder>().setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE) }
+        verify(exactly = 1) { anyConstructed<ScanSettings.Builder>().setNumOfMatches(ScanSettings.MATCH_NUM_ONE_ADVERTISEMENT) }
+    }
 }
+

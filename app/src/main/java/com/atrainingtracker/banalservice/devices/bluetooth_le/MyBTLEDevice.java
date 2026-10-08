@@ -29,6 +29,7 @@ import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
 
@@ -198,7 +199,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                     return;
                 }
                 synchronized (mGattLock) {
-                    mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback);
+                    mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE);
                 }
             }
         });
