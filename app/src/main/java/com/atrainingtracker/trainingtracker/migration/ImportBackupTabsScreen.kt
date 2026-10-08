@@ -72,6 +72,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.*
+import android.widget.Toast
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.Dispatchers
@@ -79,6 +80,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 data class MappingData(val uri: Uri, val analysis: ImportEngine.AnalysisResult)
+
+// Format-specific MIME type definitions (ATT-2622 / REQ-UI-294)
+val FIT_MIME_TYPES = arrayOf("application/vnd.ant.fit", "application/fit", "application/octet-stream")
+val TCX_MIME_TYPES = arrayOf("application/vnd.garmin.tcx+xml", "application/xml", "text/xml", "application/octet-stream")
+val GPX_MIME_TYPES = arrayOf("application/gpx+xml", "application/xml", "text/xml", "application/octet-stream")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,7 +154,16 @@ fun ImportBackupTabsScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            pendingSingleLegacyUri = it
+            val fileName = ImportFileValidator.resolveDisplayName(context, it)
+            if (ImportFileValidator.isMatchingFormat(fileName, pendingSingleLegacyFormat)) {
+                pendingSingleLegacyUri = it
+            } else {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.invalid_workout_file_format, pendingSingleLegacyFormat.uppercase()),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 
@@ -156,7 +171,20 @@ fun ImportBackupTabsScreen(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
         if (uris.isNotEmpty()) {
-            viewModel.importFitFiles(context, uris)
+            val validUris = uris.filter { uri ->
+                val fileName = ImportFileValidator.resolveDisplayName(context, uri)
+                ImportFileValidator.isMatchingFormat(fileName, "fit")
+            }
+            if (validUris.size < uris.size) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.invalid_workout_file_format, "FIT"),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            if (validUris.isNotEmpty()) {
+                viewModel.importFitFiles(context, validUris)
+            }
         }
     }
 
@@ -225,7 +253,15 @@ fun ImportBackupTabsScreen(
                         isGoogleDriveConnected = isGoogleDriveConnected,
                         onLocalImportClick = { format ->
                             when (format) {
-                                "fit" -> pickFitFilesLauncher.launch(arrayOf("*/*"))
+                                "fit" -> pickFitFilesLauncher.launch(FIT_MIME_TYPES)
+                                "tcx" -> {
+                                    pendingSingleLegacyFormat = "tcx"
+                                    pickLegacyFileLauncher.launch(TCX_MIME_TYPES)
+                                }
+                                "gpx" -> {
+                                    pendingSingleLegacyFormat = "gpx"
+                                    pickLegacyFileLauncher.launch(GPX_MIME_TYPES)
+                                }
                                 else -> {
                                     pendingSingleLegacyFormat = format
                                     pickLegacyFileLauncher.launch(arrayOf("*/*"))
