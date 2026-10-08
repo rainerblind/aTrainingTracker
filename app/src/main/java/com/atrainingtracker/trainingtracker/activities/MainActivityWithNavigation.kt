@@ -399,11 +399,6 @@ class MainActivityWithNavigation :
             }
         }
 
-        // check ANT+ installation
-        if (TrainingApplication.checkANTInstallation() && !BANALService.areAllANTServicesInstalled(this)) {
-            showInstallANTShitDialog()
-        }
-
         handleIntent(intent)
 
         checkGpsEnabledIfPermitted()

@@ -60,7 +60,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreen
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModel
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModel
@@ -394,10 +393,7 @@ fun ATrainingTrackerApp(
                     DevicesTabbedScreen(
                         tabViewModel = tabViewModel,
                         equipmentViewModel = equipmentViewModel,
-                        initialTab = 2,
-                        onCheckAntInstallation = {
-                            InstallANTShitDialog().show(activity.supportFragmentManager, InstallANTShitDialog.TAG)
-                        }
+                        initialTab = 2
                     )
                 }
 
