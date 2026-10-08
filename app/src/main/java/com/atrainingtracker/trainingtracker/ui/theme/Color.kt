@@ -129,10 +129,10 @@ object TTColor {
     val ConnectionStatusGreen = Color(0xFF4CAF50)
 
     // Route Visualization
-    val RouteSelected = Color(0xFF228B22) // ForestGreen
-    val RouteUnselected = Color(0xFF90EE90) // LightGreen
-    val RouteActiveNavigation = Color(0xFF00E676) // Vibrant Electric Emerald for actively navigated routes
-    val RouteActiveNavigationOverlay = Color(0xFF004D20) // Deep Emerald for active route dashed overlay
+    val RouteSelected = Color(0xFF1565C0) // Material Blue 800 (Royal Blue)
+    val RouteUnselected = Color(0xFF90CAF9) // Material Blue 200 (Soft Steel Blue)
+    val RouteActiveNavigation = Color(0xFF1E88E5) // Material Blue 600 (Vibrant Sapphire Blue for actively navigated routes)
+    val RouteActiveNavigationOverlay = Color(0xFF0D47A1) // Material Blue 900 (Deep Midnight Navy for active route dashed overlay)
 
     // Spatial Signature Points
     val StartPoint = Color(0xFF2E7D32) // Material Green 800
