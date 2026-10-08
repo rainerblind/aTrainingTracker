@@ -54,6 +54,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
@@ -761,28 +762,29 @@ fun ElevationProfile(
                     drawLine(seg.color, Offset(x1, y1), Offset(x2, y2), 2.dp.toPx())
                 }
 
-                // Render accented ridge stroke for recognized climbs (REQ-UI-274)
+                // Render horizontal climb span indicators along the X-axis baseline (REQ-UI-299)
                 if (!isTimeDomain && climbs.isNotEmpty()) {
-                    climbs.forEach { climb ->
-                        val (bgColor, _, _) = getClimbCategoryColors(climb.category)
+                    val baselineY = height - 2.dp.toPx()
+                    climbs.filter { it.category != ClimbCategory.UNCATEGORIZED }.forEach { climb ->
                         val cPoints = climb.pathPoints
-                        if (cPoints.size >= 2) {
-                            for (idx in 0 until cPoints.size - 1) {
-                                val pt1 = cPoints[idx]
-                                val pt2 = cPoints[idx + 1]
-                                if (pt2.distance < currentStartDist || pt1.distance > currentStartDist + visibleSpan) continue
-                                val px1 = ElevationProfileZoomMath.distanceToCanvasX(pt1.distance, currentStartDist, visibleSpan, width)
-                                val py1 = height - (((pt1.altitude - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
-                                val px2 = ElevationProfileZoomMath.distanceToCanvasX(pt2.distance, currentStartDist, visibleSpan, width)
-                                val py2 = height - (((pt2.altitude - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
-                                drawLine(
-                                    color = bgColor,
-                                    start = Offset(px1, py1),
-                                    end = Offset(px2, py2),
-                                    strokeWidth = 3.5.dp.toPx(),
-                                    cap = StrokeCap.Round
-                                )
-                            }
+                        val startDist = cPoints.firstOrNull()?.distance ?: return@forEach
+                        val endDist = cPoints.lastOrNull()?.distance ?: return@forEach
+                        if (endDist < currentStartDist || startDist > currentStartDist + visibleSpan) return@forEach
+
+                        val rawX1 = ElevationProfileZoomMath.distanceToCanvasX(startDist, currentStartDist, visibleSpan, width)
+                        val rawX2 = ElevationProfileZoomMath.distanceToCanvasX(endDist, currentStartDist, visibleSpan, width)
+                        val x1 = rawX1.coerceIn(0f, width)
+                        val x2 = rawX2.coerceIn(0f, width)
+
+                        if (x2 > x1) {
+                            val (bgColor, _, _) = getClimbCategoryColors(climb.category)
+                            drawLine(
+                                color = bgColor,
+                                start = Offset(x1, baselineY),
+                                end = Offset(x2, baselineY),
+                                strokeWidth = 4.dp.toPx(),
+                                cap = StrokeCap.Round
+                            )
                         }
                     }
                 }
