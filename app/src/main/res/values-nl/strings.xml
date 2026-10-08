@@ -1382,6 +1382,8 @@
     <string name="tuning_telemetry_x_axis_desc">Selecteer het horizontale asdomein voor telemetriegrafieken (hartslag, tempo/snelheid, vermogen).</string>
     <string name="tuning_pace_ceiling_title">Maximale tempogrens</string>
     <string name="tuning_pace_ceiling_desc">Filtert GPS-uitschieters in de tempografiek. Waarden sneller dan deze grens worden afgekapt.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Hoogteprofiel afvlakking (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Ruimtelijke Gaussiaanse filterstraal in meters. Lagere waarden (bijv. 15–21 m) reageren scherper op korte hellingen; hogere waarden verwijderen sensor-traptreden.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit en tegels</string>

@@ -1575,6 +1575,8 @@
     <string name="tuning_telemetry_x_axis_desc">Select horizontal axis domain for telemetry graphs (Heart Rate, Speed/Pace, Power).</string>
     <string name="tuning_pace_ceiling_title">Minimum Pace Ceiling</string>
     <string name="tuning_pace_ceiling_desc">Filters GPS noise spikes in the pace chart. Speeds faster than this ceiling are clamped.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Elevation Profile Smoothing (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Spatial Gaussian filter radius in meters. Lower values (e.g. 15–21 m) yield crisper response on short ramps; higher values eliminate sensor quantization staircasing.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit &amp; Tiles</string>

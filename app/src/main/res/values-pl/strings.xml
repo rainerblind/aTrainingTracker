@@ -1384,6 +1384,8 @@
     <string name="tuning_telemetry_x_axis_desc">Wybierz domenę osi poziomej dla wykresów telemetrycznych (tętno, tempo/prędkość, moc).</string>
     <string name="tuning_pace_ceiling_title">Górny limit tempa</string>
     <string name="tuning_pace_ceiling_desc">Filtruje anomalie GPS na wykresie tempa. Wartości szybsze niż ten limit są obcinane.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Wygładzanie profilu wysokości (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Przestrzenny promień filtra Gaussa w metrach. Niższe wartości (np. 15–21 m) dają ostrzejszą reakcję na krótkich podjazdach; wyższe eliminują schodkowanie czujnika.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Kokpit i kafelki</string>
