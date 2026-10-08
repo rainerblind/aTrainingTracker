@@ -43,24 +43,23 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 @Composable
 fun RemoteDevices(
     devices: List<RemoteDeviceUIData>,
-    onDeviceClick: (RemoteDeviceUIData) -> Unit
+    onDeviceClick: (RemoteDeviceUIData) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     // If no devices, don't show the row at all
     if (devices.isEmpty()) return
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        // Center items when there are few, scroll with distinct spacing when there are many
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            // Center items when there are few, scroll when there are many
-            horizontalArrangement = Arrangement.Center,
-            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
-        ) {
-            items(devices) { device ->
-                RemoteDeviceItem(device = device, onClick = { onDeviceClick(device) })
-            }
+        items(
+            items = devices,
+            key = { it.id }
+        ) { device ->
+            RemoteDeviceItem(device = device, onClick = { onDeviceClick(device) })
         }
     }
 }
