@@ -5,8 +5,9 @@
   * [ATT-1347](https://github.com/rainerblind/aTrainingTracker) (`[Bug] AccessibilityEventCompat$Api34Impl.setAccessibilityDataSensitive`)
   * [ATT-2302](https://github.com/rainerblind/aTrainingTracker) (`[Bug] AccessibilityNodeInfoCompat$Api34Impl.setAccessibilityDataSensitive`)
   * [ATT-2584](https://github.com/rainerblind/aTrainingTracker) (`[Bug] AccessibilityManagerCompat$Api34Impl.isRequestFromAccessibilityTool`)
-* **Requirement**: `REQ-UI-164` (Accessibility Event Dispatch Compatibility & Defective Platform Resilience) in `docs/requirements.md`
-* **Upstream Bug**: OEM platform framework omission on specific Android 14 (API 34) builds where `Build.VERSION.SDK_INT == 34` but `AccessibilityEvent.setAccessibilityDataSensitive(boolean)`, `AccessibilityNodeInfo.setAccessibilityDataSensitive(boolean)`, or `AccessibilityManager.isRequestFromAccessibilityTool()` is missing from `framework.jar`.
+  * [ATT-2767](https://github.com/rainerblind/aTrainingTracker) (`[Bug] AccessibilityNodeInfoCompat$Api34Impl.getActionScrollInDirection`)
+* **Requirement**: `REQ-UI-164` (Accessibility Event, NodeInfo & Manager Compatibility & Defective Platform Resilience) in `docs/requirements.md`
+* **Upstream Bug**: OEM platform framework omission on specific Android 14 (API 34) builds where `Build.VERSION.SDK_INT == 34` but `AccessibilityEvent.setAccessibilityDataSensitive(boolean)`, `AccessibilityNodeInfo.setAccessibilityDataSensitive(boolean)`, `AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_IN_DIRECTION`, or `AccessibilityManager.isRequestFromAccessibilityTool()` is missing from `framework.jar`.
 * **Re-Upgrade Milestone**: Tracked in `ATT-1091` to remove this patch once upstream Google AndroidX Core safely catches or guards this method.
 
 ## Modification Details
@@ -14,9 +15,11 @@ This AAR is identical to the official `androidx.core:core:1.15.0.aar` published 
 1. **Class**: `androidx/core/view/accessibility/AccessibilityEventCompat$Api34Impl.class` (ATT-1347)
    * Methods: `setAccessibilityDataSensitive` and `isAccessibilityDataSensitive`
    * Modification: Platform invocations are wrapped in defensive `try ... catch (LinkageError e)` blocks to absorb `NoSuchMethodError` on broken OEM ROMs without swallowing critical non-linkage JVM errors (like `OutOfMemoryError`).
-2. **Class**: `androidx/core/view/accessibility/AccessibilityNodeInfoCompat$Api34Impl.class` (ATT-2302)
-   * Methods: `setAccessibilityDataSensitive` and `isAccessibilityDataSensitive`
-   * Modification: Platform invocations are wrapped in defensive `try ... catch (LinkageError e)` blocks to absorb `NoSuchMethodError` on broken OEM ROMs without swallowing critical non-linkage JVM errors (like `OutOfMemoryError`).
+2. **Class**: `androidx/core/view/accessibility/AccessibilityNodeInfoCompat$Api34Impl.class` (ATT-2302, ATT-2767)
+   * Methods:
+     * `getActionScrollInDirection` (ATT-2767): Wrapped in defensive `try ... catch (LinkageError e)` returning safe `null` fallback and logging diagnostic warning.
+     * `setAccessibilityDataSensitive` and `isAccessibilityDataSensitive` (ATT-2302): Wrapped in defensive `try ... catch (LinkageError e)` blocks.
+     * Proactive blanket shield (ATT-2767): `getContainerTitle`, `setContainerTitle`, `getBoundsInWindow`, `setBoundsInWindow`, `hasRequestInitialAccessibilityFocus`, `setRequestInitialAccessibilityFocus`, `getMinDurationBetweenContentChangeMillis`, `setMinDurationBetweenContentChangeMillis`, `setQueryFromAppProcessEnabled` wrapped in `try ... catch (LinkageError e)`.
 3. **Class**: `androidx/core/view/accessibility/AccessibilityManagerCompat$Api34Impl.class` (ATT-2584)
    * Method: `isRequestFromAccessibilityTool`
    * Modification: Platform invocation wrapped in defensive `try ... catch (LinkageError e)` returning safe `false` fallback and logging diagnostic warning.
