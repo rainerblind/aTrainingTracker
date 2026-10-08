@@ -54,17 +54,17 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.atrainingtracker.trainingtracker.ui.climbs.ClimbDetailSheet
+import com.atrainingtracker.trainingtracker.ui.segments.SegmentDetailSheet
+import com.atrainingtracker.trainingtracker.routes.MatchedRouteSegment
+import com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcher
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.ui.climbs.ClimbCategoryChip
-import com.atrainingtracker.trainingtracker.ui.climbs.ClimbDetailSheet
 import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
 import androidx.compose.runtime.saveable.rememberSaveable
-import com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcher
-import com.atrainingtracker.trainingtracker.routes.MatchedRouteSegment
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import kotlin.math.roundToInt
 
@@ -119,6 +119,7 @@ fun RouteOnMapScreen(
 
     var selectedBreakdownTab by rememberSaveable { mutableStateOf(RouteBreakdownTab.CLIMBS) }
     var selectedClimbForDetail by remember { mutableStateOf<Climb?>(null) }
+    var selectedSegmentForDetail by remember { mutableStateOf<MatchedRouteSegment?>(null) }
     var highlightedSegmentId by remember { mutableStateOf<Long?>(null) }
     var externalScrubDistance by remember { mutableStateOf<Double?>(null) }
 
@@ -198,8 +199,8 @@ fun RouteOnMapScreen(
                     RouteSegmentsBreakdownSection(
                         segments = matchedSegments,
                         onSegmentClick = { matched ->
-                            val segId = matched.segment.summary.stravaId
-                            highlightedSegmentId = if (highlightedSegmentId == segId) null else segId
+                            selectedSegmentForDetail = matched
+                            highlightedSegmentId = matched.segment.summary.stravaId
                             externalScrubDistance = matched.startDistanceMeters
                         }
                     )
@@ -297,6 +298,17 @@ fun RouteOnMapScreen(
             totalRouteClimbs = climbs.size,
             bSportType = bSportType,
             onDismiss = { selectedClimbForDetail = null }
+        )
+    }
+
+    selectedSegmentForDetail?.let { matched ->
+        val segIndex = matchedSegments.indexOf(matched).takeIf { it >= 0 }?.let { it + 1 }
+        SegmentDetailSheet(
+            matchedSegment = matched,
+            routeIndex = segIndex,
+            totalRouteSegments = matchedSegments.size,
+            bSportType = bSportType,
+            onDismiss = { selectedSegmentForDetail = null }
         )
     }
 }

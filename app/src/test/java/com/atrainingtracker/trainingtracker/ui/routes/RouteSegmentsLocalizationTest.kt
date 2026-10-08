@@ -37,7 +37,8 @@ class RouteSegmentsLocalizationTest {
         "routes_segments_section_title",
         "routes_segments_tab_title",
         "routes_segment_start_at",
-        "routes_segment_pr"
+        "routes_segment_pr",
+        "routes_segment_counter"
     )
 
     @Test
@@ -73,6 +74,10 @@ class RouteSegmentsLocalizationTest {
 
             val pr = stringMap["routes_segment_pr"]!!
             assertTrue("routes_segment_pr in $dirName must contain %s", pr.contains("%s"))
+
+            val counter = stringMap["routes_segment_counter"]!!
+            assertTrue("routes_segment_counter in $dirName must contain %1\$d", counter.contains("%1\$d"))
+            assertTrue("routes_segment_counter in $dirName must contain %2\$d", counter.contains("%2\$d"))
         }
     }
 
