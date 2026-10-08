@@ -1469,6 +1469,8 @@
     <string name="tuning_telemetry_x_axis_desc">Horizontale Achsendomäne für Telemetriegraphen (Herzfrequenz, Tempo/Geschwindigkeit, Leistung) wählen.</string>
     <string name="tuning_pace_ceiling_title">Schnellste Tempo-Grenze</string>
     <string name="tuning_pace_ceiling_desc">Filtert GPS-Ausreißer im Tempo-Diagramm. Werte schneller als diese Grenze werden abgeschnitten.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Höhenprofil-Glättung (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Räumlicher Gauß-Filterradius in Metern. Niedrigere Werte (z. B. 15–21 m) reagieren direkter auf kurze Rampen; höhere Werte glätten Sensor-Stufenartefakte.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit &amp; Kacheln</string>

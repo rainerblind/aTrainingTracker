@@ -47,13 +47,23 @@ class ElevationProfileSmoothingContractTest {
         assertTrue("ElevationProfile.kt must exist", elevationProfileFile.exists())
         val content = elevationProfileFile.readText()
 
-        // 1. Must invoke ElevationSmoothingMath.smoothAltitudes
+        // 1. Must invoke ElevationSmoothingMath.smoothAltitudes with sigma = effectiveSigma
         assertTrue(
-            "ElevationProfile must invoke ElevationSmoothingMath.smoothAltitudes",
-            content.contains("ElevationSmoothingMath.smoothAltitudes(pathPointsDownsampled)")
+            "ElevationProfile must invoke ElevationSmoothingMath.smoothAltitudes with sigma",
+            content.contains("ElevationSmoothingMath.smoothAltitudes(pathPointsDownsampled, sigma = effectiveSigma)")
         )
 
-        // 2. Must invoke ElevationSmoothingMath.calculateGrade
+        // 2. Must wire TuningPreferencesDataStore and allow smoothingSigma override
+        assertTrue(
+            "ElevationProfile must observe TuningPreferencesDataStore tuningConfigFlow",
+            content.contains("tuningDataStore.tuningConfigFlow")
+        )
+        assertTrue(
+            "ElevationProfile must resolve effectiveSigma with fallback to elevationSmoothingSigmaMeters",
+            content.contains("val effectiveSigma = smoothingSigma ?: tuningConfig.elevationSmoothingSigmaMeters.toDouble()")
+        )
+
+        // 3. Must invoke ElevationSmoothingMath.calculateGrade
         assertTrue(
             "ElevationProfile must invoke ElevationSmoothingMath.calculateGrade",
             content.contains("ElevationSmoothingMath.calculateGrade")

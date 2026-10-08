@@ -133,7 +133,8 @@ object TuningSubtitleFormatter {
     fun formatAftermathSubtitle(
         elevationDomain: ProfileXAxisDomain,
         telemetryDomain: ProfileXAxisDomain,
-        context: Context
+        context: Context,
+        smoothingSigma: Float = TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS
     ): String {
         val elevStr = if (elevationDomain == ProfileXAxisDomain.DISTANCE) {
             context.getString(R.string.tuning_profile_x_axis_distance)
@@ -147,7 +148,7 @@ object TuningSubtitleFormatter {
         }
         val elevPrefix = context.getString(R.string.tuning_profile_x_axis_title)
         val telemPrefix = context.getString(R.string.tuning_telemetry_x_axis_title)
-        return "$elevPrefix: $elevStr | $telemPrefix: $telemStr"
+        return "$elevPrefix: $elevStr | $telemPrefix: $telemStr | \u03c3: ${smoothingSigma.roundToInt()}m"
     }
 
     @Deprecated("Use formatAftermathSubtitle(elevationDomain, telemetryDomain, context)")

@@ -98,6 +98,7 @@ fun AdvancedTuningDialog(
     var routeSelectionRadiusKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM) }
     var navigationCueTransparency by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY) }
     var navigationCueDismissDurationSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC) }
+    var elevationSmoothingSigmaMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
     var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -156,6 +157,7 @@ fun AdvancedTuningDialog(
         routeSelectionRadiusKm = persistedConfig.routeSelectionRadiusKm
         navigationCueTransparency = persistedConfig.navigationCueTransparency
         navigationCueDismissDurationSec = persistedConfig.navigationCueDismissDurationSec
+        elevationSmoothingSigmaMeters = persistedConfig.elevationSmoothingSigmaMeters
     }
 
     AppBottomSheetContent(
@@ -186,7 +188,8 @@ fun AdvancedTuningDialog(
                         paceCeilingMinKm = paceCeilingMinKm,
                         routeSelectionRadiusKm = routeSelectionRadiusKm,
                         navigationCueTransparency = navigationCueTransparency,
-                        navigationCueDismissDurationSec = navigationCueDismissDurationSec
+                        navigationCueDismissDurationSec = navigationCueDismissDurationSec,
+                        elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
@@ -293,14 +296,21 @@ fun AdvancedTuningDialog(
             TuningAccordionSection(
                 icon = Icons.AutoMirrored.Filled.ShowChart,
                 title = stringResource(R.string.tuning_cat_aftermath),
-                subtitle = TuningSubtitleFormatter.formatAftermathSubtitle(elevationXAxisDomain, telemetryXAxisDomain, context),
+                subtitle = TuningSubtitleFormatter.formatAftermathSubtitle(
+                    elevationXAxisDomain,
+                    telemetryXAxisDomain,
+                    context,
+                    elevationSmoothingSigmaMeters
+                ),
                 isExpanded = isSectionExpanded(TuningSection.AFTERMATH_ANALYSIS),
                 onToggle = { toggleSection(TuningSection.AFTERMATH_ANALYSIS) }
             ) {
                 AftermathAnalysisSection(
                     elevationXAxisDomain = elevationXAxisDomain, onElevationDomainChange = { elevationXAxisDomain = it },
                     telemetryXAxisDomain = telemetryXAxisDomain, onTelemetryDomainChange = { telemetryXAxisDomain = it },
-                    paceCeilingMinKm = paceCeilingMinKm, onPaceCeilingChange = { paceCeilingMinKm = it }
+                    paceCeilingMinKm = paceCeilingMinKm, onPaceCeilingChange = { paceCeilingMinKm = it },
+                    elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
+                    onElevationSmoothingSigmaChange = { elevationSmoothingSigmaMeters = it }
                 )
             }
 
@@ -373,6 +383,7 @@ fun AdvancedTuningDialog(
                         routeSelectionRadiusKm = TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM
                         navigationCueTransparency = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY
                         navigationCueDismissDurationSec = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+                        elevationSmoothingSigmaMeters = TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS
                         onSettingsChanged?.invoke()
                         Toast.makeText(context, context.getString(R.string.reset_to_defaults_success), Toast.LENGTH_SHORT).show()
                     }

@@ -183,7 +183,15 @@ class AdvancedTuningAccordionTest {
             ProfileXAxisDomain.TIME,
             mockContext
         )
-        assertEquals("Elevation: Distance | Telemetry: Time", subtitle)
+        assertEquals("Elevation: Distance | Telemetry: Time | \u03c3: 21m", subtitle)
+
+        val customSubtitle = TuningSubtitleFormatter.formatAftermathSubtitle(
+            ProfileXAxisDomain.DISTANCE,
+            ProfileXAxisDomain.TIME,
+            mockContext,
+            smoothingSigma = 35.0f
+        )
+        assertEquals("Elevation: Distance | Telemetry: Time | \u03c3: 35m", customSubtitle)
     }
 
     @Test

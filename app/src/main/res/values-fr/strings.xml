@@ -1383,6 +1383,8 @@
     <string name="tuning_telemetry_x_axis_desc">Sélectionnez le domaine de l\'axe horizontal pour les graphiques de télémétrie (fréquence cardiaque, allure/vitesse, puissance).</string>
     <string name="tuning_pace_ceiling_title">Allure maximale du graphique</string>
     <string name="tuning_pace_ceiling_desc">Filtre les anomalies GPS sur le graphique d\'allure. Les allures plus rapides que ce seuil sont écrêtées.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Lissage du profil d\'élévation (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Rayon spatial du filtre gaussien en mètres. Des valeurs plus basses (ex. 15–21 m) offrent une réponse plus vive sur les côtes courtes ; des valeurs plus élevées éliminent l\'effet d\'escalier.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit et tuiles</string>

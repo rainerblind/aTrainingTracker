@@ -1382,6 +1382,8 @@
     <string name="tuning_telemetry_x_axis_desc">Seleziona il dominio dell\'asse orizzontale per i grafici di telemetria (frequenza cardiaca, passo/velocità, potenza).</string>
     <string name="tuning_pace_ceiling_title">Limite massimo di passo</string>
     <string name="tuning_pace_ceiling_desc">Filtra i picchi GPS nel grafico del passo. Le andature più veloci di questo limite vengono tagliate.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Smussamento del profilo altimetrico (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Raggio spaziale del filtro gaussiano in metri. Valori più bassi (es. 15–21 m) offrono una risposta più nitida sulle rampe corte; valori più alti eliminano i gradini del sensore.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit e riquadri</string>

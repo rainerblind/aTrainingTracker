@@ -121,6 +121,11 @@ object TuningPreferencesDefaults {
 
     const val DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC = 4
     val NAVIGATION_CUE_DISMISS_OPTIONS = listOf(2, 3, 4, 5, 8, 0)
+
+    const val DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS = 21.0f
+    const val MIN_ELEVATION_SMOOTHING_SIGMA_METERS = 10.0f
+    const val MAX_ELEVATION_SMOOTHING_SIGMA_METERS = 50.0f
+    const val STEP_ELEVATION_SMOOTHING_SIGMA_METERS = 1.0f
 }
 
 /**
@@ -154,7 +159,8 @@ data class TuningConfig(
     val sensorFieldBorderContrast: Float = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST,
     val routeSelectionRadiusKm: Float = TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM,
     val navigationCueTransparency: Float = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY,
-    val navigationCueDismissDurationSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+    val navigationCueDismissDurationSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+    val elevationSmoothingSigmaMeters: Float = TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS
 ) {
     @Deprecated("Use elevationXAxisDomain or telemetryXAxisDomain", ReplaceWith("elevationXAxisDomain"))
     val profileXAxisDomain: ProfileXAxisDomain
@@ -231,6 +237,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_ROUTE_SELECTION_RADIUS_KM: Preferences.Key<Float> = floatPreferencesKey("tuning_route_selection_radius_km")
         val KEY_NAVIGATION_CUE_TRANSPARENCY: Preferences.Key<Float> = floatPreferencesKey("tuning_navigation_cue_transparency")
         val KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_navigation_cue_dismiss_duration_sec")
+        val KEY_ELEVATION_SMOOTHING_SIGMA_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_elevation_smoothing_sigma_meters")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -261,7 +268,8 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_SENSOR_FIELD_BORDER_CONTRAST,
             KEY_ROUTE_SELECTION_RADIUS_KM,
             KEY_NAVIGATION_CUE_TRANSPARENCY,
-            KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC
+            KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+            KEY_ELEVATION_SMOOTHING_SIGMA_METERS
         )
     }
 
@@ -426,7 +434,11 @@ class TuningPreferencesDataStore(private val context: Context) {
             ),
             navigationCueDismissDurationSec = (prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] ?: TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC).let {
                 if (it in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) it else TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
-            }
+            },
+            elevationSmoothingSigmaMeters = (prefs[KEY_ELEVATION_SMOOTHING_SIGMA_METERS] ?: TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS).coerceIn(
+                TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
+                TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
+            )
         )
     }
 
@@ -531,6 +543,10 @@ class TuningPreferencesDataStore(private val context: Context) {
             } else {
                 TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
             }
+            prefs[KEY_ELEVATION_SMOOTHING_SIGMA_METERS] = config.elevationSmoothingSigmaMeters.coerceIn(
+                TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
+                TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
+            )
         }
     }
 
@@ -575,6 +591,16 @@ class TuningPreferencesDataStore(private val context: Context) {
         }
         context.dataStore.edit { prefs ->
             prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] = valid
+        }
+    }
+
+    suspend fun updateElevationSmoothingSigmaMeters(sigma: Float) {
+        val clamped = sigma.coerceIn(
+            TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
+            TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ELEVATION_SMOOTHING_SIGMA_METERS] = clamped
         }
     }
 

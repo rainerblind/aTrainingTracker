@@ -1382,6 +1382,8 @@
     <string name="tuning_telemetry_x_axis_desc">Selecione o domínio do eixo horizontal para os gráficos de telemetria (frequência cardíaca, ritmo/velocidade, potência).</string>
     <string name="tuning_pace_ceiling_title">Limite de ritmo mais rápido</string>
     <string name="tuning_pace_ceiling_desc">Filtra anomalias de GPS no gráfico de ritmo. Valores mais rápidos que este limite são limitados.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Suavização do perfil de elevação (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Raio espacial do filtro gaussiano em metros. Valores mais baixos (ex.: 15–21 m) oferecem uma resposta mais nítida em rampas curtas; valores mais altos eliminam degraus do sensor.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit e blocos</string>
