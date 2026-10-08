@@ -1500,9 +1500,22 @@
     <string name="import_fit_title">FITファイルをインポート</string>
     <string name="import_fit_description">Garmin、Wahoo、Hammerhead、スマートウォッチからワークアウトをインポート (.fit)。</string>
     <string name="import_fit_button">FITファイルを選択</string>
+    <string name="import_fit_dropbox_button">Dropboxをスキャン (FIT)</string>
+    <string name="import_fit_gdrive_button">Google ドライブをスキャン (FIT)</string>
     <string name="import_fit_progress">FITファイルをインポート中 (%1$d / %2$d)…</string>
     <string name="import_fit_summary_success">%1$d 件のワークアウトを正常にインポートしました (%2$d 件の重複をスキップ)。</string>
     <string name="import_fit_summary_with_errors">%1$d 件のワークアウトをインポート、%2$d 件の重複をスキップ、%3$d 件失敗。</string>
+    <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
+    <string name="import_tcx_title">TCXファイルをインポート</string>
+    <string name="import_tcx_description">Training Center XMLファイル（.tcx）からワークアウトをインポートします。</string>
+    <string name="import_tcx_button">ローカルTCXファイルを選択</string>
+    <string name="import_tcx_dropbox_button">Dropboxをスキャン (TCX)</string>
+    <string name="import_tcx_gdrive_button">Google ドライブをスキャン (TCX)</string>
+    <string name="import_gpx_title">GPXファイルをインポート</string>
+    <string name="import_gpx_description">GPS Exchange Formatファイル（.gpx）からルートとアクティビティをインポートします。</string>
+    <string name="import_gpx_button">ローカルGPXファイルを選択</string>
+    <string name="import_gpx_dropbox_button">Dropboxをスキャン (GPX)</string>
+    <string name="import_gpx_gdrive_button">Google ドライブをスキャン (GPX)</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">ルートを選択</string>
     <string name="route_action_select">ルートを選択</string>
