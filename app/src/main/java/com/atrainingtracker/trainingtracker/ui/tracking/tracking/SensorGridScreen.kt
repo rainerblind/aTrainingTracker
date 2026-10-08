@@ -173,7 +173,13 @@ fun SensorGridScreen(
         SensorFieldStyle.forVariant(tuningConfig.sensorFieldVariant)
     }
     val isDefaultStyling = gridSpacing == 0.dp && fieldShape == RectangleShape
-    val effectiveSpacing = if (isDefaultStyling) activeVariantStyle.gridSpacing else gridSpacing
+    val effectiveSpacing = if (isDefaultStyling) {
+        SensorFieldStyle.resolveGridSpacing(
+            variant = tuningConfig.sensorFieldVariant,
+            cornerRadius = tuningConfig.sensorFieldCornerRadius.dp,
+            borderThickness = tuningConfig.sensorFieldBorderThickness.dp
+        )
+    } else gridSpacing
     val effectiveShape = if (isDefaultStyling) {
         if (tuningConfig.sensorFieldCornerRadius > 0f) {
             SensorFieldStyle.resolveShape(tuningConfig.sensorFieldCornerRadius.dp)
