@@ -1810,6 +1810,7 @@
     <string name="routes_climbs_section_title">Climbs (%d)</string>
     <string name="routes_climb_start_at">Start at %s</string>
     <string name="routes_climb_avg_grade">Avg. %1$.1f%%</string>
+    <string name="routes_climb_max_grade">Max. %1$.1f%%</string>
     <string name="tuning_show_live_climbs_title">Live Climbs (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Show real-time climb cockpit sheet during routes and free riding</string>
 

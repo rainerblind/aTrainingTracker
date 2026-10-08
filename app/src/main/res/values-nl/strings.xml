@@ -1617,6 +1617,7 @@
     <string name="routes_climbs_section_title">Beklimmingen (%d)</string>
     <string name="routes_climb_start_at">Start bij %s</string>
     <string name="routes_climb_avg_grade">Gem. %1$.1f%%</string>
+    <string name="routes_climb_max_grade">Max. %1$.1f%%</string>
     <string name="tuning_show_live_climbs_title">Live beklimmingen (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Toon realtime klimcockpit tijdens routes en vrij rijden</string>
 

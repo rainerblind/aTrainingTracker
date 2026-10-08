@@ -1704,6 +1704,7 @@
     <string name="routes_climbs_section_title">Anstiege (%d)</string>
     <string name="routes_climb_start_at">Start bei %s</string>
     <string name="routes_climb_avg_grade">Ø %1$.1f%%</string>
+    <string name="routes_climb_max_grade">Max. %1$.1f%%</string>
     <string name="tuning_show_live_climbs_title">Live-Anstiege (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Echtzeit-Anstiegs-Cockpit bei Strecken und freier Fahrt einblenden</string>
 

@@ -1617,6 +1617,7 @@
     <string name="routes_climbs_section_title">Subidas (%d)</string>
     <string name="routes_climb_start_at">Início em %s</string>
     <string name="routes_climb_avg_grade">Média %1$.1f%%</string>
+    <string name="routes_climb_max_grade">Máx. %1$.1f%%</string>
     <string name="tuning_show_live_climbs_title">Subidas ao vivo (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Mostrar painel de subida em tempo real durante rotas e pedalada livre</string>
 

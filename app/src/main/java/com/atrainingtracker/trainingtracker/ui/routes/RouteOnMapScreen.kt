@@ -60,6 +60,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.ui.climbs.ClimbCategoryChip
+import com.atrainingtracker.trainingtracker.ui.climbs.ClimbDetailSheet
 import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
 import kotlin.math.roundToInt
 
@@ -106,6 +107,8 @@ fun RouteOnMapScreen(
         } else null
     }
 
+    var selectedClimbForDetail by remember { mutableStateOf<Climb?>(null) }
+
     MapDetailLayout(
         bSportType = bSportType,
         zoomFocus = if (routeBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
@@ -128,7 +131,10 @@ fun RouteOnMapScreen(
         },
         analyticsContent = if (climbs.isNotEmpty()) {
             {
-                RouteClimbsBreakdownSection(climbs = climbs)
+                RouteClimbsBreakdownSection(
+                    climbs = climbs,
+                    onClimbClick = { climb -> selectedClimbForDetail = climb }
+                )
             }
         } else null,
         mapContent = {
@@ -180,12 +186,24 @@ fun RouteOnMapScreen(
         },
         modifier = modifier
     )
+
+    selectedClimbForDetail?.let { climb ->
+        val climbIndex = climbs.indexOf(climb).takeIf { it >= 0 }?.let { it + 1 }
+        ClimbDetailSheet(
+            climb = climb,
+            routeIndex = climbIndex,
+            totalRouteClimbs = climbs.size,
+            bSportType = bSportType,
+            onDismiss = { selectedClimbForDetail = null }
+        )
+    }
 }
 
 @Composable
 fun RouteClimbsBreakdownSection(
     climbs: List<Climb>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClimbClick: ((Climb) -> Unit)? = null
 ) {
     val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
 
@@ -204,6 +222,8 @@ fun RouteClimbsBreakdownSection(
 
         climbs.forEachIndexed { index, climb ->
             ElevatedCard(
+                onClick = { onClimbClick?.invoke(climb) },
+                enabled = onClimbClick != null,
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
