@@ -1537,6 +1537,8 @@
     <string name="import_gpx_button">Sélectionner un fichier GPX local</string>
     <string name="import_gpx_dropbox_button">Scanner Dropbox (GPX)</string>
     <string name="import_gpx_gdrive_button">Scanner Google Drive (GPX)</string>
+    <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
+    <string name="invalid_workout_file_format">Format de fichier non valide. Veuillez sélectionner un fichier %1$s.</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">Sélectionner un itinéraire</string>
     <string name="route_action_select">Sélectionner un itinéraire</string>

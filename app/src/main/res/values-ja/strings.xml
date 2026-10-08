@@ -1516,6 +1516,8 @@
     <string name="import_gpx_button">ローカルGPXファイルを選択</string>
     <string name="import_gpx_dropbox_button">Dropboxをスキャン (GPX)</string>
     <string name="import_gpx_gdrive_button">Google ドライブをスキャン (GPX)</string>
+    <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
+    <string name="invalid_workout_file_format">無効なファイル形式です。%1$s ファイルを選択してください。</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">ルートを選択</string>
     <string name="route_action_select">ルートを選択</string>
