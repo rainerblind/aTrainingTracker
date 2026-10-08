@@ -17,7 +17,9 @@ package com.atrainingtracker.trainingtracker.exporter.uploader
 
 import android.content.Context
 import android.util.Log
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClient
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
@@ -38,7 +40,10 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
 
     // Extensible for unit test mocking
     open fun createClient(): GoogleDriveClient {
-        return GoogleDriveClient(tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() })
+        return GoogleDriveClient(
+            tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() },
+            tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(mContext).getOrNull() }
+        )
     }
 
     open fun getBaseFile(filename: String): File {
@@ -61,8 +66,13 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
             val client = createClient()
             val folderId = client.ensureFolderHierarchy(listOf("aTrainingTracker", "Workouts"))
             if (folderId == null) {
-                Log.e(TAG, "Failed to resolve folder hierarchy aTrainingTracker/Workouts")
-                return ExportResult(false, false, "Failed to resolve Google Drive folder hierarchy")
+                Log.e(TAG, "Failed to resolve folder hierarchy aTrainingTracker/Workouts (HTTP ${client.lastHttpCode}: ${client.lastErrorMessage})")
+                val errorMsg = if (client.lastHttpCode == 401) {
+                    mContext.getString(R.string.google_drive_error_auth_expired)
+                } else {
+                    "Failed to resolve Google Drive folder hierarchy"
+                }
+                return ExportResult(false, false, errorMsg)
             }
 
             val driveFileName = exportInfo.fileName

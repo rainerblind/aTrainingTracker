@@ -22,6 +22,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -55,7 +56,8 @@ class GoogleDriveClient(
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .build(),
-    private val baseUrl: String = "https://www.googleapis.com"
+    private val baseUrl: String = "https://www.googleapis.com",
+    private val tokenRefresher: (() -> String?)? = null
 ) {
 
     companion object {
@@ -64,8 +66,56 @@ class GoogleDriveClient(
         private const val JSON_MIME_TYPE = "application/json; charset=UTF-8"
     }
 
+    /** HTTP status code of the most recent network call, or null if no call has been made. */
+    @Volatile
+    var lastHttpCode: Int? = null
+        private set
+
+    /** Error body snippet extracted from the most recent non-successful response, or null. */
+    @Volatile
+    var lastErrorMessage: String? = null
+        private set
+
+    @Volatile
+    private var activeToken: String? = null
+
     // In-memory cache for resolved folder hierarchy paths (e.g. "aTrainingTracker/Workouts" -> folderId)
     private val folderIdCache = ConcurrentHashMap<String, String>()
+
+    private fun getAuthToken(): String? {
+        return activeToken ?: tokenProvider().also { activeToken = it }
+    }
+
+    private fun executeCallWithRetry(buildRequest: (token: String?) -> Request): Response {
+        var token = getAuthToken()
+        var request = buildRequest(token)
+        var response = client.newCall(request).execute()
+        lastHttpCode = response.code
+
+        if (response.code == 401 && tokenRefresher != null) {
+            Log.w(TAG, "Encountered HTTP 401 Unauthorized; invoking tokenRefresher...")
+            val refreshedToken = tokenRefresher.invoke()
+            if (!refreshedToken.isNullOrBlank()) {
+                activeToken = refreshedToken
+                response.close()
+                request = buildRequest(refreshedToken)
+                response = client.newCall(request).execute()
+                lastHttpCode = response.code
+            }
+        }
+
+        if (!response.isSuccessful) {
+            lastErrorMessage = try {
+                response.peekBody(2048L).string()
+            } catch (e: Exception) {
+                null
+            }
+        } else {
+            lastErrorMessage = null
+        }
+
+        return response
+    }
 
     /**
      * Resolves the Google Drive folder hierarchy idempotently.
@@ -96,14 +146,14 @@ class GoogleDriveClient(
         val encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.name())
         val url = "$baseUrl/drive/v3/files?q=$encodedQuery&fields=files(id,name)&spaces=drive"
 
-        val request = Request.Builder()
-            .url(url)
-            .apply { addAuthHeader(this) }
-            .get()
-            .build()
-
         try {
-            client.newCall(request).execute().use { response ->
+            executeCallWithRetry { token ->
+                Request.Builder()
+                    .url(url)
+                    .apply { addAuthHeader(this, token) }
+                    .get()
+                    .build()
+            }.use { response ->
                 if (!response.isSuccessful) {
                     Log.e(TAG, "findFolderIdByName failed with code: ${response.code}")
                     return null
@@ -123,24 +173,28 @@ class GoogleDriveClient(
 
     /**
      * Creates a folder with the given name under parentId.
+     * Omits parents when parentId == "root" or blank for canonical Drive v3 compatibility.
      */
     fun createFolder(folderName: String, parentId: String): String? {
         val url = "$baseUrl/drive/v3/files"
         val payload = JSONObject().apply {
             put("name", folderName)
             put("mimeType", FOLDER_MIME_TYPE)
-            put("parents", JSONArray().put(parentId))
+            if (parentId.isNotBlank() && parentId != "root") {
+                put("parents", JSONArray().put(parentId))
+            }
         }
 
         val requestBody = payload.toString().toRequestBody(JSON_MIME_TYPE.toMediaTypeOrNull())
-        val request = Request.Builder()
-            .url(url)
-            .apply { addAuthHeader(this) }
-            .post(requestBody)
-            .build()
 
         try {
-            client.newCall(request).execute().use { response ->
+            executeCallWithRetry { token ->
+                Request.Builder()
+                    .url(url)
+                    .apply { addAuthHeader(this, token) }
+                    .post(requestBody)
+                    .build()
+            }.use { response ->
                 if (!response.isSuccessful) {
                     Log.e(TAG, "createFolder failed with code: ${response.code}")
                     return null
@@ -163,14 +217,14 @@ class GoogleDriveClient(
         val encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.name())
         val url = "$baseUrl/drive/v3/files?q=$encodedQuery&fields=files(id,name)&spaces=drive"
 
-        val request = Request.Builder()
-            .url(url)
-            .apply { addAuthHeader(this) }
-            .get()
-            .build()
-
         try {
-            client.newCall(request).execute().use { response ->
+            executeCallWithRetry { token ->
+                Request.Builder()
+                    .url(url)
+                    .apply { addAuthHeader(this, token) }
+                    .get()
+                    .build()
+            }.use { response ->
                 if (!response.isSuccessful) {
                     Log.e(TAG, "findFileIdByName failed with code: ${response.code}")
                     return null
@@ -213,20 +267,20 @@ class GoogleDriveClient(
             put("parents", JSONArray().put(folderId))
         }
 
-        val multipartBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addPart(metadataJson.toString().toRequestBody(JSON_MIME_TYPE.toMediaTypeOrNull()))
-            .addPart(file.asRequestBody(mimeType.toMediaTypeOrNull()))
-            .build()
-
-        val request = Request.Builder()
-            .url(url)
-            .apply { addAuthHeader(this) }
-            .post(multipartBody)
-            .build()
-
         try {
-            client.newCall(request).execute().use { response ->
+            executeCallWithRetry { token ->
+                val multipartBody = MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addPart(metadataJson.toString().toRequestBody(JSON_MIME_TYPE.toMediaTypeOrNull()))
+                    .addPart(file.asRequestBody(mimeType.toMediaTypeOrNull()))
+                    .build()
+
+                Request.Builder()
+                    .url(url)
+                    .apply { addAuthHeader(this, token) }
+                    .post(multipartBody)
+                    .build()
+            }.use { response ->
                 if (!response.isSuccessful) {
                     Log.e(TAG, "createMultipartFile failed with code: ${response.code}")
                     return false
@@ -243,14 +297,15 @@ class GoogleDriveClient(
         val url = "$baseUrl/upload/drive/v3/files/$fileId?uploadType=media"
 
         val requestBody = file.asRequestBody(mimeType.toMediaTypeOrNull())
-        val request = Request.Builder()
-            .url(url)
-            .apply { addAuthHeader(this) }
-            .patch(requestBody)
-            .build()
 
         try {
-            client.newCall(request).execute().use { response ->
+            executeCallWithRetry { token ->
+                Request.Builder()
+                    .url(url)
+                    .apply { addAuthHeader(this, token) }
+                    .patch(requestBody)
+                    .build()
+            }.use { response ->
                 if (!response.isSuccessful) {
                     Log.e(TAG, "updateExistingFile failed with code: ${response.code}")
                     return false
@@ -317,14 +372,14 @@ class GoogleDriveClient(
                     url += "&pageToken=$encodedToken"
                 }
 
-                val request = Request.Builder()
-                    .url(url)
-                    .apply { addAuthHeader(this) }
-                    .get()
-                    .build()
-
                 try {
-                    client.newCall(request).execute().use { response ->
+                    executeCallWithRetry { token ->
+                        Request.Builder()
+                            .url(url)
+                            .apply { addAuthHeader(this, token) }
+                            .get()
+                            .build()
+                    }.use { response ->
                         if (!response.isSuccessful) {
                             Log.e(TAG, "listFilesRecursively failed for folder $currentFolderId with code: ${response.code}")
                             pageToken = null
@@ -373,14 +428,15 @@ class GoogleDriveClient(
      */
     fun downloadFileById(fileId: String, destinationFile: File): Boolean {
         val url = "$baseUrl/drive/v3/files/$fileId?alt=media"
-        val request = Request.Builder()
-            .url(url)
-            .apply { addAuthHeader(this) }
-            .get()
-            .build()
 
         try {
-            client.newCall(request).execute().use { response ->
+            executeCallWithRetry { token ->
+                Request.Builder()
+                    .url(url)
+                    .apply { addAuthHeader(this, token) }
+                    .get()
+                    .build()
+            }.use { response ->
                 if (!response.isSuccessful) {
                     Log.e(TAG, "downloadFileById failed for file $fileId with code: ${response.code}")
                     return false
@@ -411,8 +467,7 @@ class GoogleDriveClient(
         return downloadFileById(fileId, destinationFile)
     }
 
-    private fun addAuthHeader(builder: Request.Builder) {
-        val token = tokenProvider()
+    private fun addAuthHeader(builder: Request.Builder, token: String? = getAuthToken()) {
         if (!token.isNullOrBlank()) {
             builder.header("Authorization", "Bearer $token")
         }

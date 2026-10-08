@@ -1558,6 +1558,7 @@
     <string name="google_drive_error_developer_config">Configuratiefout voor Google Sign-In (status 10): Controleer de OAuth-clientregistratie (pakketnaam com.atrainingtracker.debug en SHA-1-vingerafdruk) in Google Cloud Console.</string>
     <string name="google_drive_error_network">Geen internetverbinding of netwerkfout tijdens Google Sign-In.</string>
     <string name="google_drive_error_generic">Inloggen met Google mislukt. Probeer het opnieuw.</string>
+    <string name="google_drive_error_auth_expired">Google Drive-sessie verlopen of niet geautoriseerd. Meld u opnieuw aan in Instellingen.</string>
     <string name="google_drive_connect_prompt">Verbind uw Google-account om trainingen en databaseback-ups automatisch te synchroniseren met Google Drive.</string>
     <string name="scan_google_drive">Google Drive scannen</string>
     <string name="legacy_import__downloading_google_drive">%1$s downloaden van Google Drive…</string>

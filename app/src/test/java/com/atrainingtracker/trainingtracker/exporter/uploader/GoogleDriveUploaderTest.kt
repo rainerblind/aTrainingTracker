@@ -161,4 +161,24 @@ class GoogleDriveUploaderTest {
         verify { mockEditor.putString(TrainingApplication.SP_GOOGLE_DRIVE_LAST_SYNC_STATUS, "SUCCESS") }
         verify { mockEditor.putLong(TrainingApplication.SP_GOOGLE_DRIVE_LAST_SYNC, any()) }
     }
+
+    @Test
+    fun testDoExport_folderResolutionFailsWith401_returnsLocalizedAuthExpiredMessage() {
+        val fitDir = File(tempFolder.root, "FIT").apply { mkdirs() }
+        File(fitDir, "workout.fit").apply { writeText("data") }
+        val exportInfo = ExportInfo("workout", FileFormat.FIT, ExportType.GOOGLE_DRIVE)
+
+        every { mockPrefs.getString(TrainingApplication.SP_GOOGLE_DRIVE_AUTH_TOKEN, null) } returns "expired_token"
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
+
+        every { mockClient.ensureFolderHierarchy(any()) } returns null
+        every { mockClient.lastHttpCode } returns 401
+        every { mockContext.getString(com.atrainingtracker.R.string.google_drive_error_auth_expired) } returns "Google Drive session expired or unauthorized. Please re-authenticate in Settings."
+
+        val uploader = createTestUploader(tempFolder.root)
+        val result = uploader.doExport(exportInfo)
+
+        assertFalse(result.success())
+        assertEquals("Google Drive session expired or unauthorized. Please re-authenticate in Settings.", result.answer())
+    }
 }

@@ -1560,6 +1560,7 @@
     <string name="google_drive_error_developer_config">Błąd konfiguracji logowania Google (status 10): Sprawdź rejestrację klienta OAuth (nazwa pakietu com.atrainingtracker.debug i odcisk palca SHA-1) w Google Cloud Console.</string>
     <string name="google_drive_error_network">Brak połączenia z Internetem lub błąd sieci podczas logowania Google.</string>
     <string name="google_drive_error_generic">Logowanie Google nie powiodło się. Spróbuj ponownie.</string>
+    <string name="google_drive_error_auth_expired">Sesja Google Drive wygasła lub brak autoryzacji. Zaloguj się ponownie w Ustawieniach.</string>
     <string name="google_drive_connect_prompt">Połącz konto Google, aby automatycznie eksportować treningi i synchronizować kopie zapasowe bazy danych z Google Drive.</string>
     <string name="scan_google_drive">Skanuj Dysk Google</string>
     <string name="legacy_import__downloading_google_drive">Pobieranie %1$s z Dysku Google…</string>

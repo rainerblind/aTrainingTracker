@@ -18,10 +18,16 @@
 
 package com.atrainingtracker.trainingtracker.cloud.googledrive
 
+import android.util.Log
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.After
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -35,6 +41,22 @@ class GoogleDriveClientTest {
 
     @get:Rule
     val tempFolder = TemporaryFolder()
+
+    @Before
+    fun setUp() {
+        mockkStatic(Log::class)
+        every { Log.v(any<String>(), any<String>()) } returns 0
+        every { Log.d(any<String>(), any<String>()) } returns 0
+        every { Log.i(any<String>(), any<String>()) } returns 0
+        every { Log.w(any<String>(), any<String>()) } returns 0
+        every { Log.e(any<String>(), any<String>()) } returns 0
+        every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
+    }
+
+    @After
+    fun tearDown() {
+        unmockkStatic(Log::class)
+    }
 
     @Test
     fun testAuthHeaderInjection_addsBearerToken() {
@@ -262,5 +284,144 @@ class GoogleDriveClientTest {
         assertTrue(result)
         assertTrue(destinationFile.exists())
         assertEquals("google drive downloaded backup content", destinationFile.readText())
+    }
+
+    @Test
+    fun test401Unauthorized_invokesTokenRefresherAndRetriesSuccessfully() {
+        var callCount = 0
+        var tokenRefresherCalled = false
+        val capturedAuthHeaders = mutableListOf<String?>()
+
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                callCount++
+                capturedAuthHeaders.add(chain.request().header("Authorization"))
+
+                if (callCount == 1) {
+                    // Initial call with expired token returns 401 Unauthorized
+                    Response.Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(401)
+                        .message("Unauthorized")
+                        .body("""{"error":{"message":"Invalid Credentials","code":401}}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                        .build()
+                } else {
+                    // Retry with refreshed token returns 200 OK
+                    Response.Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body("""{"files":[{"id":"recovered_folder_id","name":"Workouts"}]}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                        .build()
+                }
+            }
+            .build()
+
+        val client = GoogleDriveClient(
+            tokenProvider = { "expired_token_123" },
+            client = okHttpClient,
+            tokenRefresher = {
+                tokenRefresherCalled = true
+                "fresh_token_456"
+            }
+        )
+
+        val folderId = client.findFolderIdByName("Workouts", "root")
+
+        assertTrue("Expected tokenRefresher to be invoked", tokenRefresherCalled)
+        assertEquals(2, callCount)
+        assertEquals("Bearer expired_token_123", capturedAuthHeaders[0])
+        assertEquals("Bearer fresh_token_456", capturedAuthHeaders[1])
+        assertEquals("recovered_folder_id", folderId)
+        assertEquals(200, client.lastHttpCode)
+        assertNull(client.lastErrorMessage)
+    }
+
+    @Test
+    fun testCreateFolder_whenParentIsRoot_omitsParentsField() {
+        var capturedPayload: String? = null
+
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                val buffer = okio.Buffer()
+                request.body?.writeTo(buffer)
+                capturedPayload = buffer.readUtf8()
+
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body("""{"id":"new_root_folder_id","name":"aTrainingTracker"}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                    .build()
+            }
+            .build()
+
+        val client = GoogleDriveClient(tokenProvider = { "token" }, client = okHttpClient)
+        val folderId = client.createFolder("aTrainingTracker", "root")
+
+        assertEquals("new_root_folder_id", folderId)
+        assertNotNull(capturedPayload)
+        val json = org.json.JSONObject(capturedPayload!!)
+        assertEquals("aTrainingTracker", json.getString("name"))
+        assertFalse("Root folder payload MUST NOT contain 'parents' field", json.has("parents"))
+    }
+
+    @Test
+    fun testCreateFolder_whenParentIsNotRoot_includesParentsField() {
+        var capturedPayload: String? = null
+
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                val buffer = okio.Buffer()
+                request.body?.writeTo(buffer)
+                capturedPayload = buffer.readUtf8()
+
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body("""{"id":"child_folder_id","name":"Workouts"}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                    .build()
+            }
+            .build()
+
+        val client = GoogleDriveClient(tokenProvider = { "token" }, client = okHttpClient)
+        val folderId = client.createFolder("Workouts", "parent_att_123")
+
+        assertEquals("child_folder_id", folderId)
+        assertNotNull(capturedPayload)
+        val json = org.json.JSONObject(capturedPayload!!)
+        assertEquals("Workouts", json.getString("name"))
+        assertTrue("Subfolder payload MUST contain 'parents' field", json.has("parents"))
+        assertEquals("parent_att_123", json.getJSONArray("parents").getString(0))
+    }
+
+    @Test
+    fun testCaptureDiagnostics_onFailureStoresCodeAndErrorMessage() {
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(403)
+                    .message("Forbidden")
+                    .body("""{"error":{"message":"Storage quota exceeded","code":403}}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                    .build()
+            }
+            .build()
+
+        val client = GoogleDriveClient(tokenProvider = { "token" }, client = okHttpClient)
+        val result = client.findFolderIdByName("Workouts", "root")
+
+        assertNull(result)
+        assertEquals(403, client.lastHttpCode)
+        assertNotNull(client.lastErrorMessage)
+        assertTrue(client.lastErrorMessage!!.contains("Storage quota exceeded"))
     }
 }
