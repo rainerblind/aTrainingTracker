@@ -60,6 +60,11 @@ class WaypointBadgeMarkerTest {
     }
 
     @Test
+    fun testMapUtils_defaultMarkerSizeConstant_is22Dp() {
+        assertEquals("DEFAULT_WAYPOINT_MARKER_SIZE_DP must be 22", 22, DEFAULT_WAYPOINT_MARKER_SIZE_DP)
+    }
+
+    @Test
     fun testMapUtils_createWaypointBadgeMarkerContract() {
         val rootDir = findProjectRoot()
         val mapUtilsFile = File(rootDir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapUtils.kt")
@@ -67,8 +72,10 @@ class WaypointBadgeMarkerTest {
         val content = mapUtilsFile.readText()
 
         assertTrue("Must declare createWaypointBadgeMarker", content.contains("fun createWaypointBadgeMarker("))
-        assertTrue("Must include outer dark contrast stroke (0x33000000)", content.contains("0x33000000"))
-        assertTrue("Must include crisp white halo ring", content.contains("whiteHaloPaint"))
+        assertTrue("Must default to DEFAULT_WAYPOINT_MARKER_SIZE_DP", content.contains("sizeDp: Int = DEFAULT_WAYPOINT_MARKER_SIZE_DP"))
+        assertTrue("Must scale strokes proportionally (scale = sizeDp / 32f)", content.contains("val scale = sizeDp / 32f"))
+        assertTrue("Must include outer dark contrast stroke with min 0.75dp clamping", content.contains("0.75f * density"))
+        assertTrue("Must include crisp white halo ring with min 1.25dp clamping", content.contains("1.25f * density"))
         assertTrue("Must include category vibrant disc", content.contains("resolveWaypointCategoryColor(type)"))
         assertTrue("Must tint Maki glyph to white", content.contains("setTint(android.graphics.Color.WHITE)"))
     }
