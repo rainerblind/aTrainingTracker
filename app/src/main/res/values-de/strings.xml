@@ -1710,6 +1710,7 @@
     <string name="routes_segment_start_at">Start bei %s</string>
     <string name="routes_segment_pr">PR %s</string>
     <string name="routes_segment_counter">Segment %1$d von %2$d</string>
+    <string name="segment_routes_containing_title">Routen mit diesem Segment (%d)</string>
     <string name="tuning_show_live_climbs_title">Live-Anstiege (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Echtzeit-Anstiegs-Cockpit bei Strecken und freier Fahrt einblenden</string>
 
