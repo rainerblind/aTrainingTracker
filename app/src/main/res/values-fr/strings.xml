@@ -1673,4 +1673,10 @@
     <string name="devices_pair_protocol_title">Sélectionner le protocole</string>
     <string name="devices_pair_protocol_ant">Capteur ANT+</string>
     <string name="devices_pair_protocol_ble">Capteur Bluetooth LE</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">Énergie en arrière-plan restreinte</string>
+    <string name="battery_optimization_warning_banner_desc">Android peut interrompre l\'enregistrement de l\'entraînement lorsque l\'écran s\'éteint. Veuillez désactiver l\'optimisation de la batterie.</string>
+    <string name="battery_optimization_action_fix">Autoriser</string>
+    <string name="battery_optimization_dismiss_banner">Ignorer</string>
 </resources>

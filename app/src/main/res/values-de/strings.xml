@@ -1759,4 +1759,10 @@
     <string name="devices_pair_protocol_title">Übertragungsprotokoll wählen</string>
     <string name="devices_pair_protocol_ant">ANT+ Sensor</string>
     <string name="devices_pair_protocol_ble">Bluetooth LE Sensor</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">Hintergrund-Energieverwaltung eingeschränkt</string>
+    <string name="battery_optimization_warning_banner_desc">Android kann das Tracking bei ausgeschaltetem Bildschirm beenden. Bitte Akku-Optimierung deaktivieren.</string>
+    <string name="battery_optimization_action_fix">Aktivieren</string>
+    <string name="battery_optimization_dismiss_banner">Schließen</string>
 </resources>

@@ -1652,4 +1652,10 @@
     <string name="devices_pair_protocol_title">プロトコルを選択</string>
     <string name="devices_pair_protocol_ant">ANT+ センサー</string>
     <string name="devices_pair_protocol_ble">Bluetooth LE センサー</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">バックグラウンド消費電力の制限</string>
+    <string name="battery_optimization_warning_banner_desc">画面オフ時にAndroidによってワークアウト記録が停止される場合があります。バッテリーの最適化を無効にしてください。</string>
+    <string name="battery_optimization_action_fix">許可</string>
+    <string name="battery_optimization_dismiss_banner">閉じる</string>
 </resources>
