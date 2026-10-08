@@ -98,6 +98,20 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+
+    testOptions {
+        unitTests.all {
+            maxParallelForks = Math.max(1, (int) (Runtime.runtime.availableProcessors() / 2))
+            forkEvery = 80
+            minHeapSize = "256m"
+            maxHeapSize = "768m"
+            jvmArgs "-XX:+TieredCompilation", "-XX:TieredStopAtLevel=1", "-Dfile.encoding=UTF-8"
+            testLogging {
+                events "failed"
+                exceptionFormat "full"
+            }
+        }
+    }
 }
 
 configurations.all {

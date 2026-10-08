@@ -18,11 +18,10 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.util.regex.Pattern
 
 /**
  * Localization parity tests verifying all 9 locales contain required battery optimization
@@ -30,17 +29,7 @@ import java.util.regex.Pattern
  */
 class BatteryOptimizationBannerLocalizationTest {
 
-    private val locales = listOf(
-        "values",
-        "values-de",
-        "values-es",
-        "values-fr",
-        "values-it",
-        "values-ja",
-        "values-nl",
-        "values-pl",
-        "values-pt"
-    )
+    private val locales = LocalizationTestCache.LOCALES
 
     private val requiredKeys = listOf(
         "battery_optimization_warning_banner_title",
@@ -52,16 +41,11 @@ class BatteryOptimizationBannerLocalizationTest {
     @Test
     fun testBatteryOptimizationWarningBannerStrings_haveCompleteParityAcrossAll9Locales() {
         for (locale in locales) {
-            val file = File("src/main/res/$locale/strings.xml")
-            assertTrue("Locale file $file must exist", file.exists())
-            val content = file.readText()
+            val strings = LocalizationTestCache.getStrings(locale)
 
             for (key in requiredKeys) {
-                val pattern = Pattern.compile("<string name=\"$key\">(.*?)</string>")
-                val matcher = pattern.matcher(content)
-                assertTrue("String key '$key' must exist in locale $locale", matcher.find())
-
-                val value = matcher.group(1)
+                assertTrue("String key '$key' must exist in locale $locale", strings.containsKey(key))
+                val value = strings[key]
                 assertNotNull("String value for '$key' in $locale must not be null", value)
                 assertTrue("String value for '$key' in $locale must not be blank", value!!.isNotBlank())
             }
