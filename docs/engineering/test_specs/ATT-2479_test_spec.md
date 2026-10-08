@@ -1,8 +1,8 @@
 # Stage 2 Requirement & Test Specification: ATT-2479 - Sensor-related items in the header part of the tracking control screen overlapping each other
 
 **Ticket**: [ATT-2479](https://atrainingtracker.atlassian.net/browse/ATT-2479)  
-**Sub-task**: [ATT-2736](https://atrainingtracker.atlassian.net/browse/ATT-2736) (`[Req & Test Spec]`)  
-**Parent Epic**: [ATT-278](https://atrainingtracker.atlassian.net/browse/ATT-278) (*Cockpit & Live Telemetry Modernization*)  
+**Sub-task**: [ATT-2751](https://atrainingtracker.atlassian.net/browse/ATT-2751) (`[Req & Test Spec]`)  
+**Parent Epic**: [ATT-355](https://atrainingtracker.atlassian.net/browse/ATT-355) (*Good and consistent UI*)  
 **Target Release**: `V4.9.39`  
 **Active Sprint**: `2026-41.3`  
 **Branch**: `feature/ATT-2479`  
