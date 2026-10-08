@@ -35,6 +35,10 @@ class TuningConfigTest {
         assertEquals(0.5f, config.slopeMinSpeedMps, 0.001f)
         assertEquals(1.0f, config.routeSelectionRadiusKm, 0.001f)
         assertEquals(1.0f, TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM, 0.001f)
+        assertEquals(0.80f, config.navigationCueTransparency, 0.001f)
+        assertEquals(0.80f, TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY, 0.001f)
+        assertEquals(4, config.navigationCueDismissDurationSec)
+        assertEquals(4, TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC)
     }
 
     @Test
@@ -46,6 +50,10 @@ class TuningConfigTest {
 
         assertEquals(0.5f, TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM, 0.001f)
         assertEquals(10.0f, TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM, 0.001f)
+
+        assertEquals(0.20f, TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY, 0.001f)
+        assertEquals(1.00f, TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY, 0.001f)
+        assertEquals(listOf(2, 3, 4, 5, 8, 0), TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS)
 
         assertEquals(0.0f, TuningPreferencesDefaults.MIN_SLOPE_FLAT, 0.001f)
         assertEquals(5.0f, TuningPreferencesDefaults.MAX_SLOPE_FLAT, 0.001f)

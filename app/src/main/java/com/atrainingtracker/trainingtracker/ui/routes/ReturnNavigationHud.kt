@@ -50,6 +50,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 @Composable
 fun ReturnNavigationHud(
     navigationState: ReturnNavigationState,
+    overlayAlpha: Float = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY,
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit = {}
 ) {
@@ -63,7 +64,7 @@ fun ReturnNavigationHud(
             shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, TTColor.RouteSelected.copy(alpha = 0.35f)),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = overlayAlpha)
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             modifier = Modifier

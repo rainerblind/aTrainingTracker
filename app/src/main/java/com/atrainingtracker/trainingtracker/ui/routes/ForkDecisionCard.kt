@@ -55,6 +55,7 @@ import kotlin.math.roundToInt
 @Composable
 fun ForkDecisionCard(
     decisionState: ForkDecisionState?,
+    overlayAlpha: Float = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY,
     modifier: Modifier = Modifier,
     onRouteSelected: (Long) -> Unit = {},
     onDismiss: () -> Unit = {}
@@ -70,7 +71,7 @@ fun ForkDecisionCard(
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = overlayAlpha)
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
             modifier = Modifier

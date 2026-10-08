@@ -1429,6 +1429,11 @@
     <string name="tuning_cat_navigation">Navigation</string>
     <string name="tuning_route_selection_radius_title">Rayon de sélection d\'itinéraire</string>
     <string name="tuning_route_selection_radius_desc">Distance maximale au point de départ pour la sélection d\'itinéraires proches</string>
+    <string name="tuning_nav_cue_transparency_title">Transparence des indications</string>
+    <string name="tuning_nav_cue_transparency_desc">Opacité des invites de virage et des superpositions de navigation</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">Durée d\'affichage des indications</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">Durée de masquage automatique pour les invites de virage</string>
+    <string name="tuning_nav_cue_dismiss_persistent">Persistant</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 cartes</string>
     <string name="tuning_matrix_col_list">Liste</string>
     <string name="tuning_matrix_col_details">Détails</string>

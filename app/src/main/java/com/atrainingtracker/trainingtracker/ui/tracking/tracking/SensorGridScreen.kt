@@ -346,19 +346,23 @@ fun SensorGridScreen(
             } else {
                 TurnPromptBanner(
                     navigationState = navState,
-                    promptsEnabled = state.showNavigationHints && tuningConfig.turnPromptsEnabled
+                    promptsEnabled = state.showNavigationHints && tuningConfig.turnPromptsEnabled,
+                    overlayAlpha = tuningConfig.navigationCueTransparency,
+                    dismissDurationSec = tuningConfig.navigationCueDismissDurationSec
                 )
             }
 
             // Return Navigation & Dynamic Elevation-Aware ETA HUD Banner (REQ-MAP-029 / ATT-1953)
             ReturnNavigationHud(
                 navigationState = returnNavState,
+                overlayAlpha = tuningConfig.navigationCueTransparency,
                 onDismiss = { returnNavRepo.dismissHud() }
             )
 
             // In-Ride Fork-in-the-Road Route Selection & Decision Alerts (REQ-MAP-031 / ATT-1955)
             ForkDecisionCard(
                 decisionState = forkDecisionState,
+                overlayAlpha = tuningConfig.navigationCueTransparency,
                 onRouteSelected = { routeId ->
                     forkNavRepo.selectRouteManually(routeId)
                 },

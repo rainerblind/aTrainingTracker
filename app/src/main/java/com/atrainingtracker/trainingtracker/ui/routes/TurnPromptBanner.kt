@@ -23,10 +23,16 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -36,22 +42,42 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.routes.TurnNavigationState
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 /**
- * High-visibility turn-by-turn navigation HUD prompt and off-route warning banner (REQ-MAP-028 / ATT-1450).
+ * High-visibility turn-by-turn navigation HUD prompt and off-route warning banner (REQ-MAP-028, REQ-UI-287 / ATT-1450, ATT-2632).
  *
  * Appears dynamically when approaching upcoming turn decision points, when executing turns,
  * or when the athlete leaves the defined route corridor.
+ * Applies configurable transparency alpha and auto-dismiss countdown timer from Expert Settings.
  */
 @Composable
 fun TurnPromptBanner(
     navigationState: TurnNavigationState,
     promptsEnabled: Boolean = true,
+    overlayAlpha: Float = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY,
+    dismissDurationSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
     modifier: Modifier = Modifier,
     onDismiss: (() -> Unit)? = null
 ) {
-    val isVisible = promptsEnabled && (navigationState.isApproaching || navigationState.isOffRoute)
+    var isDismissed by remember { mutableStateOf(false) }
+
+    val cueKey = navigationState.upcomingCue?.let { "${it.direction}_${it.wayName}" }
+    val triggerKey = "$cueKey#${navigationState.isTurnNow}#${navigationState.isOffRoute}"
+
+    LaunchedEffect(triggerKey) {
+        isDismissed = false
+        if (dismissDurationSec > 0 && (navigationState.isApproaching || navigationState.isOffRoute)) {
+            delay(dismissDurationSec * 1000L)
+            isDismissed = true
+            onDismiss?.invoke()
+        }
+    }
+
+    val isVisible = promptsEnabled && !isDismissed && (navigationState.isApproaching || navigationState.isOffRoute)
 
     AnimatedVisibility(
         visible = isVisible,
@@ -60,24 +86,30 @@ fun TurnPromptBanner(
         modifier = modifier
     ) {
         if (navigationState.isOffRoute) {
-            OffRouteCard(navigationState = navigationState)
+            OffRouteCard(navigationState = navigationState, overlayAlpha = overlayAlpha)
         } else if (navigationState.isApproaching && navigationState.upcomingCue != null) {
-            TurnCueCard(navigationState = navigationState)
+            TurnCueCard(navigationState = navigationState, overlayAlpha = overlayAlpha)
         }
     }
 }
 
 @Composable
-private fun TurnCueCard(navigationState: TurnNavigationState) {
+private fun TurnCueCard(
+    navigationState: TurnNavigationState,
+    overlayAlpha: Float
+) {
     val cue = navigationState.upcomingCue ?: return
     val isTurnNow = navigationState.isTurnNow
     val distanceRemaining = navigationState.distanceToNextCueMeters.roundToInt()
 
+    val containerColor = (if (isTurnNow) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+        .copy(alpha = overlayAlpha)
+    val borderColor = TTColor.RouteActiveNavigation.copy(alpha = overlayAlpha.coerceAtLeast(0.4f))
+
     Card(
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isTurnNow) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-        ),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = BorderStroke(1.dp, borderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -124,14 +156,19 @@ private fun TurnCueCard(navigationState: TurnNavigationState) {
 }
 
 @Composable
-private fun OffRouteCard(navigationState: TurnNavigationState) {
+private fun OffRouteCard(
+    navigationState: TurnNavigationState,
+    overlayAlpha: Float
+) {
     val deviation = navigationState.crossTrackDistanceMeters.roundToInt()
+
+    val containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = overlayAlpha)
+    val borderColor = MaterialTheme.colorScheme.error.copy(alpha = overlayAlpha.coerceAtLeast(0.4f))
 
     Card(
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
-        ),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = BorderStroke(1.dp, borderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         modifier = Modifier
             .fillMaxWidth()

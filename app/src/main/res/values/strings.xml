@@ -1621,6 +1621,11 @@
     <string name="tuning_cat_navigation">Navigation</string>
     <string name="tuning_route_selection_radius_title">Route Selection Radius</string>
     <string name="tuning_route_selection_radius_desc">Maximum distance to route start point for nearby route selection</string>
+    <string name="tuning_nav_cue_transparency_title">Navigation Cue Transparency</string>
+    <string name="tuning_nav_cue_transparency_desc">Opacity of turn prompts and navigation overlays</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">Navigation Cue Dismiss Duration</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">Auto-dismiss duration for turn maneuver prompts</string>
+    <string name="tuning_nav_cue_dismiss_persistent">Persistent</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 Cards</string>
     <string name="tuning_matrix_col_list">List</string>
     <string name="tuning_matrix_col_details">Details</string>

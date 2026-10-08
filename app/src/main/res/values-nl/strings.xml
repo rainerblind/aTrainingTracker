@@ -1428,6 +1428,11 @@
     <string name="tuning_cat_navigation">Navigatie</string>
     <string name="tuning_route_selection_radius_title">Straal voor routeselectie</string>
     <string name="tuning_route_selection_radius_desc">Maximale afstand tot het startpunt voor selectie van routes in de buurt</string>
+    <string name="tuning_nav_cue_transparency_title">Transparantie navigatieaanwijzingen</string>
+    <string name="tuning_nav_cue_transparency_desc">Dekking van afslaginstructies en navigatie-overlays</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">Weergaveduur navigatieaanwijzingen</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">Automatische sluitingsduur voor afslaginstructies</string>
+    <string name="tuning_nav_cue_dismiss_persistent">Blijvend</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 kaarten</string>
     <string name="tuning_matrix_col_list">Lijst</string>
     <string name="tuning_matrix_col_details">Details</string>

@@ -1428,6 +1428,11 @@
     <string name="tuning_cat_navigation">Navigazione</string>
     <string name="tuning_route_selection_radius_title">Raggio di selezione percorso</string>
     <string name="tuning_route_selection_radius_desc">Distanza massima dal punto di partenza per la selezione dei percorsi vicini</string>
+    <string name="tuning_nav_cue_transparency_title">Trasparenza indicazioni di navigazione</string>
+    <string name="tuning_nav_cue_transparency_desc">Opacità delle istruzioni di svolta e degli overlay di navigazione</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">Durata visualizzazione indicazioni</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">Durata di chiusura automatica per le istruzioni di svolta</string>
+    <string name="tuning_nav_cue_dismiss_persistent">Persistente</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 schede</string>
     <string name="tuning_matrix_col_list">Elenco</string>
     <string name="tuning_matrix_col_details">Dettagli</string>
