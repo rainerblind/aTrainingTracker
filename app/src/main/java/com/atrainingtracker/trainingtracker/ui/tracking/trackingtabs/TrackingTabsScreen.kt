@@ -697,8 +697,8 @@ fun TrackingTabsScreen(
                 }
             }
 
-            // --- Conditionally show the Lap Button
-            val shouldShowLapButton = currentViewInfo?.showLapButton == true
+            // --- Conditionally show the Lap Button (suppressed in CONFIGURATION mode per REQ-UI-295)
+            val shouldShowLapButton = currentViewInfo?.showLapButton == true && screenMode != ScreenMode.CONFIGURATION
             if (shouldShowLapButton) {
                 Box(
                     modifier = Modifier
