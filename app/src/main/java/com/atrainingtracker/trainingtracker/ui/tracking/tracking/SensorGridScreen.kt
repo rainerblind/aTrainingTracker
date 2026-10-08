@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -264,9 +265,9 @@ fun SensorGridScreen(
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
         sheetDragHandle = null,
         sheetPeekHeight = if ((showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
-        sheetSwipeEnabled = showLiveSegments || showLiveClimbs,
+        sheetSwipeEnabled = (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING,
         sheetContent = {
-            if (showLiveSegments && activeSegment != null) {
+            if (screenMode == ScreenMode.TRACKING && showLiveSegments && activeSegment != null) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -278,7 +279,7 @@ fun SensorGridScreen(
                         liveSegment = activeSegment
                     )
                 }
-            } else if (showLiveClimbs && activeLiveClimb != null) {
+            } else if (screenMode == ScreenMode.TRACKING && showLiveClimbs && activeLiveClimb != null) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -296,49 +297,49 @@ fun SensorGridScreen(
             }
         }
     ) { paddingValues ->
-        // Use a Column as the main container for the content
-        // We do NOT apply the full paddingValues.bottom here because we want the
-        // Map to draw UNDER the bottom sheet for a modern look.
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = paddingValues.calculateTopPadding()) // Only pad the top
-        ) {
-            // Pick & Place Guidance Banner (REQ-UI-200)
-            if (screenMode == ScreenMode.CONFIGURATION && selectedFieldForMove != null) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(8.dp),
-                    tonalElevation = 2.dp
-                ) {
-                    Row(
+        if (screenMode == ScreenMode.CONFIGURATION) {
+            // UNIFIED SCROLLABLE CONFIGURATION CONTAINER (REQ-UI-295 / ATT-2620)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .padding(top = paddingValues.calculateTopPadding(), bottom = 16.dp)
+            ) {
+                // Pick & Place Guidance Banner (REQ-UI-200)
+                if (selectedFieldForMove != null) {
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(8.dp),
+                        tonalElevation = 2.dp
                     ) {
-                        Text(
-                            text = stringResource(R.string.move_tile_banner_instruction),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TextButton(onClick = { gridActions.onCancelMove() }) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
                             Text(
-                                text = stringResource(R.string.move_tile_cancel),
-                                color = MaterialTheme.colorScheme.primary
+                                text = stringResource(R.string.move_tile_banner_instruction),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.weight(1f)
                             )
+                            TextButton(onClick = { gridActions.onCancelMove() }) {
+                                Text(
+                                    text = stringResource(R.string.move_tile_cancel),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // Turn-by-Turn Navigation Prompt HUD Banner / WYSIWYG Spatial Toggle (REQ-MAP-028 / REQ-UI-275)
-            if (screenMode == ScreenMode.CONFIGURATION) {
+                // Turn-by-Turn Navigation Prompt HUD Banner / WYSIWYG Spatial Toggle (REQ-MAP-028 / REQ-UI-275)
                 SpatialCockpitToggleCard(
                     title = stringResource(R.string.config_tracking__show_navigation_hints),
                     isActive = state.showNavigationHints,
@@ -349,65 +350,19 @@ fun SensorGridScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
                 )
-            } else {
-                TurnPromptBanner(
-                    navigationState = navState,
-                    promptsEnabled = state.showNavigationHints && tuningConfig.turnPromptsEnabled,
-                    overlayAlpha = tuningConfig.navigationCueTransparency,
-                    dismissDurationSec = tuningConfig.navigationCueDismissDurationSec
-                )
-            }
 
-            // Return Navigation & Dynamic Elevation-Aware ETA HUD Banner (REQ-MAP-029 / ATT-1953)
-            ReturnNavigationHud(
-                navigationState = returnNavState,
-                overlayAlpha = tuningConfig.navigationCueTransparency,
-                onDismiss = { returnNavRepo.dismissHud() }
-            )
+                // 1. The Sensor Grid in Configuration Mode (Unscrollable to lay out naturally inside parent scroll)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
+                ) {
+                    val fieldsByRow = state.fields.groupBy { it.rowNr }
+                    val sortedRows = fieldsByRow.keys.sorted()
+                    var maxRowNr = 0
 
-            // In-Ride Fork-in-the-Road Route Selection & Decision Alerts (REQ-MAP-031 / ATT-1955)
-            ForkDecisionCard(
-                decisionState = forkDecisionState,
-                overlayAlpha = tuningConfig.navigationCueTransparency,
-                onRouteSelected = { routeId ->
-                    forkNavRepo.selectRouteManually(routeId)
-                },
-                onDismiss = {
-                    forkNavRepo.dismissPrompt()
-                }
-            )
-
-            // Auto-Detected Route Banner (REQ-MAP-024 / ATT-1835)
-            if (screenMode == ScreenMode.TRACKING && routeSelectorUiState.isAutoPromptVisible && routeSelectorUiState.autoDetectedCandidate != null) {
-                routeSelectorUiState.autoDetectedCandidate?.let { candidate ->
-                    AutoDetectedRouteBanner(
-                        route = candidate,
-                        onActivate = {
-                            actualRouteSelectorViewModel.activateCandidate(candidate.summary.id)
-                        },
-                        onDismiss = {
-                            actualRouteSelectorViewModel.dismissCandidate(candidate.summary.id)
-                        }
-                    )
-                }
-            }
-
-            // 1. The Sensor Grid (Scrollable)
-            // This Column will only take as much space as the sensors need.
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
-            ) {
-                val fieldsByRow = state.fields.groupBy { it.rowNr }
-                val sortedRows = fieldsByRow.keys.sorted()
-                var maxRowNr = 0
-
-                sortedRows.forEach { rowNr ->
-                    maxRowNr = rowNr
-                    if (screenMode == ScreenMode.CONFIGURATION) {
+                    sortedRows.forEach { rowNr ->
+                        maxRowNr = rowNr
                         RowAdder(onClick = {
                             if (selectedFieldForMove != null) {
                                 gridActions.onMoveField(selectedFieldForMove.sensorFieldId, rowNr, -1)
@@ -415,17 +370,15 @@ fun SensorGridScreen(
                                 gridActions.onAddRow(rowNr)
                             }
                         })
-                    }
 
-                    val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.height(IntrinsicSize.Min),
-                        horizontalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Start
-                    ) {
-                        var maxColNr = 0
-                        fieldsInThisRow.forEach { fieldState ->
-                            if (screenMode == ScreenMode.CONFIGURATION) {
+                        val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.height(IntrinsicSize.Min),
+                            horizontalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Start
+                        ) {
+                            var maxColNr = 0
+                            fieldsInThisRow.forEach { fieldState ->
                                 ColAdder(onClick = {
                                     if (selectedFieldForMove != null) {
                                         gridActions.onMoveField(selectedFieldForMove.sensorFieldId, rowNr, fieldState.colNr)
@@ -433,38 +386,36 @@ fun SensorGridScreen(
                                         gridActions.onAddCol(rowNr, fieldState.colNr)
                                     }
                                 })
-                            }
-                            maxColNr = fieldState.colNr
-                            Box(modifier = Modifier.weight(1f)) {
-                                val isSelected = selectedFieldForMove?.sensorFieldId == fieldState.sensorFieldId
-                                SensorFieldView(
-                                    fieldState = fieldState,
-                                    screenMode = screenMode,
-                                    isSelectedForMove = isSelected,
-                                    shape = effectiveShape,
-                                    cardElevation = effectiveElevation,
-                                    border = if (isSelected) {
-                                        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                                    } else {
-                                        effectiveBorder
-                                    },
-                                    onStartMove = { gridActions.onSelectFieldForMove(fieldState) },
-                                    onEdit = {
-                                        if (screenMode == ScreenMode.CONFIGURATION && selectedFieldForMove != null) {
-                                            if (isSelected) {
-                                                gridActions.onCancelMove()
-                                            } else {
-                                                gridActions.onSwapFields(selectedFieldForMove.sensorFieldId, fieldState.sensorFieldId)
-                                            }
+                                maxColNr = fieldState.colNr
+                                Box(modifier = Modifier.weight(1f)) {
+                                    val isSelected = selectedFieldForMove?.sensorFieldId == fieldState.sensorFieldId
+                                    SensorFieldView(
+                                        fieldState = fieldState,
+                                        screenMode = screenMode,
+                                        isSelectedForMove = isSelected,
+                                        shape = effectiveShape,
+                                        cardElevation = effectiveElevation,
+                                        border = if (isSelected) {
+                                            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
                                         } else {
-                                            gridActions.onEditField(fieldState)
-                                        }
-                                    },
-                                    onDelete = { gridActions.onDeleteField(fieldState) }
-                                )
+                                            effectiveBorder
+                                        },
+                                        onStartMove = { gridActions.onSelectFieldForMove(fieldState) },
+                                        onEdit = {
+                                            if (selectedFieldForMove != null) {
+                                                if (isSelected) {
+                                                    gridActions.onCancelMove()
+                                                } else {
+                                                    gridActions.onSwapFields(selectedFieldForMove.sensorFieldId, fieldState.sensorFieldId)
+                                                }
+                                            } else {
+                                                gridActions.onEditField(fieldState)
+                                            }
+                                        },
+                                        onDelete = { gridActions.onDeleteField(fieldState) }
+                                    )
+                                }
                             }
-                        }
-                        if (screenMode == ScreenMode.CONFIGURATION) {
                             ColAdder(onClick = {
                                 if (selectedFieldForMove != null) {
                                     gridActions.onMoveField(selectedFieldForMove.sensorFieldId, rowNr, maxColNr + 1)
@@ -474,8 +425,6 @@ fun SensorGridScreen(
                             })
                         }
                     }
-                }
-                if (screenMode == ScreenMode.CONFIGURATION) {
                     RowAdder(onClick = {
                         if (selectedFieldForMove != null) {
                             gridActions.onMoveField(selectedFieldForMove.sensorFieldId, maxRowNr + 1, -1)
@@ -484,10 +433,8 @@ fun SensorGridScreen(
                         }
                     })
                 }
-            }
 
-            // Spatial WYSIWYG Toggles for Map & Elevation Profile (REQ-UI-275)
-            if (screenMode == ScreenMode.CONFIGURATION) {
+                // Spatial WYSIWYG Toggles for Map & Elevation Profile (REQ-UI-275 / REQ-UI-295)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -509,45 +456,8 @@ fun SensorGridScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
-            }
 
-            // 2. The Map (Expanded)
-            // By using weight(1f) here, the Map will fill every pixel between
-            // the bottom of the sensors and the bottom of the screen.
-            if (state.showMap) {
-                ATrainingTrackerMap(
-                    zoomFocus = state.zoomFocus,
-                    userBearing = state.userBearing,
-                    userSpeed = state.userSpeed,
-                    bSportType = state.bSportType,
-                    currentLocationFlow = currentLocationFlow,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f) // Fills remaining space
-                ) {
-                    tracks(state.mapTracks)
-                    segments(state.mapSegments, state.activeLiveSegmentIds)
-                    routes(state.mapRoutes)
-                    markers(state.mapMarkers)
-                    liveTrack(state.currentTrack)
-                }
-            }
-
-            // 3. The Elevation Profile (Below the Map)
-            if (state.showElevationProfile && state.pathPoints.isNotEmpty()) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                ) {
-                    ElevationProfile(
-                        pathPoints = state.pathPoints,
-                        currentDistance = state.pathPoints.lastOrNull()?.distance,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-
-            // Spatial WYSIWYG Dock for Live Segments, Climbs & Lap Button (REQ-UI-275)
-            if (screenMode == ScreenMode.CONFIGURATION) {
+                // Spatial WYSIWYG Dock for Live Segments, Climbs & Lap Button (REQ-UI-275 / REQ-UI-295)
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -586,6 +496,127 @@ fun SensorGridScreen(
                             isActive = state.showLapButton,
                             onToggle = { tabToggleActions.onToggleLapButton(it) },
                             icon = Icons.Default.Timer,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+        } else {
+            // TRACKING & PREVIEW MODES (Unscrollable root Column, independent inner sensor scroll, weighted map)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = paddingValues.calculateTopPadding()) // Only pad the top
+            ) {
+                TurnPromptBanner(
+                    navigationState = navState,
+                    promptsEnabled = state.showNavigationHints && tuningConfig.turnPromptsEnabled,
+                    overlayAlpha = tuningConfig.navigationCueTransparency,
+                    dismissDurationSec = tuningConfig.navigationCueDismissDurationSec
+                )
+
+                // Return Navigation & Dynamic Elevation-Aware ETA HUD Banner (REQ-MAP-029 / ATT-1953)
+                ReturnNavigationHud(
+                    navigationState = returnNavState,
+                    overlayAlpha = tuningConfig.navigationCueTransparency,
+                    onDismiss = { returnNavRepo.dismissHud() }
+                )
+
+                // In-Ride Fork-in-the-Road Route Selection & Decision Alerts (REQ-MAP-031 / ATT-1955)
+                ForkDecisionCard(
+                    decisionState = forkDecisionState,
+                    overlayAlpha = tuningConfig.navigationCueTransparency,
+                    onRouteSelected = { routeId ->
+                        forkNavRepo.selectRouteManually(routeId)
+                    },
+                    onDismiss = {
+                        forkNavRepo.dismissPrompt()
+                    }
+                )
+
+                // Auto-Detected Route Banner (REQ-MAP-024 / ATT-1835)
+                if (screenMode == ScreenMode.TRACKING && routeSelectorUiState.isAutoPromptVisible && routeSelectorUiState.autoDetectedCandidate != null) {
+                    routeSelectorUiState.autoDetectedCandidate?.let { candidate ->
+                        AutoDetectedRouteBanner(
+                            route = candidate,
+                            onActivate = {
+                                actualRouteSelectorViewModel.activateCandidate(candidate.summary.id)
+                            },
+                            onDismiss = {
+                                actualRouteSelectorViewModel.dismissCandidate(candidate.summary.id)
+                            }
+                        )
+                    }
+                }
+
+                // 1. The Sensor Grid (Scrollable)
+                // This Column will only take as much space as the sensors need.
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
+                ) {
+                    val fieldsByRow = state.fields.groupBy { it.rowNr }
+                    val sortedRows = fieldsByRow.keys.sorted()
+
+                    sortedRows.forEach { rowNr ->
+                        val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.height(IntrinsicSize.Min),
+                            horizontalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Start
+                        ) {
+                            fieldsInThisRow.forEach { fieldState ->
+                                Box(modifier = Modifier.weight(1f)) {
+                                    SensorFieldView(
+                                        fieldState = fieldState,
+                                        screenMode = screenMode,
+                                        isSelectedForMove = false,
+                                        shape = effectiveShape,
+                                        cardElevation = effectiveElevation,
+                                        border = effectiveBorder,
+                                        onStartMove = {},
+                                        onEdit = {},
+                                        onDelete = {}
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. The Map (Expanded)
+                // By using weight(1f) here, the Map will fill every pixel between
+                // the bottom of the sensors and the bottom of the screen.
+                if (state.showMap) {
+                    ATrainingTrackerMap(
+                        zoomFocus = state.zoomFocus,
+                        userBearing = state.userBearing,
+                        userSpeed = state.userSpeed,
+                        bSportType = state.bSportType,
+                        currentLocationFlow = currentLocationFlow,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f) // Fills remaining space
+                    ) {
+                        tracks(state.mapTracks)
+                        segments(state.mapSegments, state.activeLiveSegmentIds)
+                        routes(state.mapRoutes)
+                        markers(state.mapMarkers)
+                        liveTrack(state.currentTrack)
+                    }
+                }
+
+                // 3. The Elevation Profile (Below the Map)
+                if (state.showElevationProfile && state.pathPoints.isNotEmpty()) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    ) {
+                        ElevationProfile(
+                            pathPoints = state.pathPoints,
+                            currentDistance = state.pathPoints.lastOrNull()?.distance,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

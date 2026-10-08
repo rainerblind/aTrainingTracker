@@ -78,4 +78,55 @@ class TrackingTabWysiwygContractTest {
             content.contains("state.showLiveClimbs && tuningConfig.showLiveClimbs")
         )
     }
+
+    @Test
+    fun testSensorGridScreen_configurationMode_unifiedScrollableContainer() {
+        val screenFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        assertTrue("SensorGridScreen.kt must exist", screenFile.exists())
+        val content = screenFile.readText()
+
+        assertTrue(
+            "Configuration mode must declare unified verticalScroll container",
+            content.contains("screenMode == ScreenMode.CONFIGURATION") &&
+            content.contains(".verticalScroll(rememberScrollState())") &&
+            content.contains(".navigationBarsPadding()")
+        )
+    }
+
+    @Test
+    fun testSensorGridScreen_configurationMode_excludesLiveMapAndElevationProfile() {
+        val screenFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        assertTrue("SensorGridScreen.kt must exist", screenFile.exists())
+        val content = screenFile.readText()
+
+        // ATrainingTrackerMap must only be present in the non-CONFIGURATION branch
+        val configIndex = content.indexOf("if (screenMode == ScreenMode.CONFIGURATION)")
+        val elseIndex = content.indexOf("} else {", configIndex)
+        val mapIndex = content.indexOf("ATrainingTrackerMap(", elseIndex)
+
+        assertTrue("Configuration branch must exist", configIndex != -1)
+        assertTrue("Else branch must exist", elseIndex != -1)
+        assertTrue("ATrainingTrackerMap must only reside in the tracking/preview else branch", mapIndex > elseIndex)
+    }
+
+    @Test
+    fun testSensorGridScreen_isolatesBottomSheetScaffoldToTrackingMode() {
+        val screenFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        assertTrue("SensorGridScreen.kt must exist", screenFile.exists())
+        val content = screenFile.readText()
+
+        assertTrue(
+            "sheetPeekHeight must be gated to ScreenMode.TRACKING",
+            content.contains("screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment")
+        )
+        assertTrue(
+            "sheetSwipeEnabled must be gated to ScreenMode.TRACKING",
+            content.contains("sheetSwipeEnabled = (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING")
+        )
+        assertTrue(
+            "sheetContent must be gated to ScreenMode.TRACKING",
+            content.contains("screenMode == ScreenMode.TRACKING && showLiveSegments") &&
+            content.contains("screenMode == ScreenMode.TRACKING && showLiveClimbs")
+        )
+    }
 }
