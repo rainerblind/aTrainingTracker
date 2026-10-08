@@ -1620,6 +1620,10 @@
     <string name="routes_climb_start_at">Start na %s</string>
     <string name="routes_climb_avg_grade">Śr. %1$.1f%%</string>
     <string name="routes_climb_max_grade">Maks. %1$.1f%%</string>
+    <string name="routes_segments_section_title">Segmenty (%d)</string>
+    <string name="routes_segments_tab_title">Segmenty (%d)</string>
+    <string name="routes_segment_start_at">Start na %s</string>
+    <string name="routes_segment_pr">PR %s</string>
     <string name="tuning_show_live_climbs_title">Podjazdy na żywo (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Pokazuj kokpit podjazdu w czasie rzeczywistym na trasach i podczas swobodnej jazdy</string>
 

@@ -133,6 +133,7 @@ fun RoutesScreen(
                         route = selectedRoute.toMapRoute(),
                         routeSummary = selectedRoute.summary,
                         backgroundPaths = backgroundPaths,
+                        allSegments = allSegments,
                         modifier = Modifier,
                         onToggleSelection = { isSelected ->
                             viewModel.toggleRouteSelection(
