@@ -45,7 +45,7 @@ import java.time.temporal.TemporalAdjusters
  */
 class PeriodsRepository private constructor(private val application: Application) {
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    internal val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val dbManager = PeriodSummariesDatabaseManager.getInstance(application)
     private val workoutRepo = WorkoutRepository.getInstance(application)
     private val workoutSummariesManager = WorkoutSummariesDatabaseManager.getInstance(application)
@@ -77,11 +77,15 @@ class PeriodsRepository private constructor(private val application: Application
 
         @androidx.annotation.VisibleForTesting
         fun resetInstanceForTesting() {
+            instance?.scope?.cancel()
             instance = null
         }
 
         @androidx.annotation.VisibleForTesting
         fun setInstanceForTesting(repo: PeriodsRepository?) {
+            if (repo == null) {
+                instance?.scope?.cancel()
+            }
             instance = repo
         }
 
