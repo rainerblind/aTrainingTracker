@@ -68,6 +68,8 @@ fun DevicesTabbedScreen(
 ) {
     val uiState by tabViewModel.uiState.observeAsState()
     val isSearchingForNewDevices by tabViewModel.isSearchingForNewDevices.collectAsState()
+    val scanningProtocol by tabViewModel.scanningProtocol.collectAsState()
+    val scanningDeviceType by tabViewModel.scanningDeviceType.collectAsState()
     
     val protocol = tabViewModel.protocol
     var showDeleteConfirmFor by remember { mutableStateOf<DeviceUiData?>(null) }
@@ -132,6 +134,8 @@ fun DevicesTabbedScreen(
                                 viewModel = listViewModel,
                                 filterSpec = tabs[0],
                                 isSearchingForNewDevices = isSearchingForNewDevices,
+                                scanningProtocol = scanningProtocol,
+                                scanningDeviceType = scanningDeviceType,
                                 onDeviceSelected = { editingDeviceId = it },
                                 onDeleteDevice = { showDeleteConfirmFor = it },
                                 scrollState = availableListState,
@@ -329,7 +333,7 @@ fun DevicesTabbedScreen(
                         protocol = protocolToPair,
                         onSelected = { chosenDeviceType ->
                             selectedPairingProtocol = null
-                            tabViewModel.updateFilters(protocolToPair, chosenDeviceType)
+                            tabViewModel.startPairingScan(protocolToPair, chosenDeviceType)
                             scope.launch {
                                 pagerState.animateScrollToPage(0)
                             }

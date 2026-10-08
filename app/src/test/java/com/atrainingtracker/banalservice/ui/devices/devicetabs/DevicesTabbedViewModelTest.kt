@@ -172,4 +172,38 @@ class DevicesTabbedViewModelTest {
         assertTrue("UiState must resolve to DisplayingTabs", state is UiState.DisplayingTabs)
         assertEquals("DeviceType in DisplayingTabs must be ALL", DeviceType.ALL, (state as UiState.DisplayingTabs).deviceType)
     }
+
+    @Test
+    fun testStartPairingScan_setsScanningProtocolAndType_andCallsRepository() {
+        val savedStateHandle = SavedStateHandle()
+        val viewModel = DevicesTabbedViewModel(mockApplication, savedStateHandle)
+
+        viewModel.startPairingScan(Protocol.BLUETOOTH_LE, DeviceType.HRM)
+
+        assertEquals("scanningProtocol must reflect pairing protocol", Protocol.BLUETOOTH_LE, viewModel.scanningProtocol.value)
+        assertEquals("scanningDeviceType must reflect pairing device type", DeviceType.HRM, viewModel.scanningDeviceType.value)
+        verify(exactly = 1) { mockBanalServiceRepository.startSearchingForNewDevices(Protocol.BLUETOOTH_LE, DeviceType.HRM) }
+
+        // Tabs UI state must remain unchanged (e.g. DeviceType.ALL)
+        val state = viewModel.uiState.value
+        assertTrue(state is UiState.DisplayingTabs)
+        assertEquals(DeviceType.ALL, (state as UiState.DisplayingTabs).deviceType)
+    }
+
+    @Test
+    fun testStopSearching_clearsScanningProtocolAndDeviceType() {
+        val savedStateHandle = SavedStateHandle()
+        val viewModel = DevicesTabbedViewModel(mockApplication, savedStateHandle)
+
+        viewModel.startPairingScan(Protocol.ANT_PLUS, DeviceType.BIKE_SPEED)
+        assertEquals(Protocol.ANT_PLUS, viewModel.scanningProtocol.value)
+        assertEquals(DeviceType.BIKE_SPEED, viewModel.scanningDeviceType.value)
+
+        viewModel.stopSearching()
+
+        assertNull("scanningProtocol must be reset to null after stopSearching", viewModel.scanningProtocol.value)
+        assertNull("scanningDeviceType must be reset to null after stopSearching", viewModel.scanningDeviceType.value)
+        verify(exactly = 1) { mockBanalServiceRepository.stopSearchingForNewDevices() }
+    }
 }
+

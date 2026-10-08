@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
@@ -53,7 +54,9 @@ fun DeviceListScreen(
     modifier: Modifier = Modifier,
     scrollState: LazyListState = rememberLazyListState(),
     appBarOffsetPx: Int = 0,
-    headerHeightPx: Float = 0f
+    headerHeightPx: Float = 0f,
+    scanningProtocol: Protocol? = null,
+    scanningDeviceType: DeviceType? = null
 ) {
     val devices by viewModel.getFilteredDevices(filterSpec).collectAsState(initial = emptyList())
     val density = LocalDensity.current
@@ -70,9 +73,11 @@ fun DeviceListScreen(
         // Prominent Searching Header - Shown always when searching for NEW devices in the Available tab
         val isSearching = filterSpec.filterType == DeviceFilterType.CONNECTED && isSearchingForNewDevices
         if (isSearching) {
+            val targetProtocol = scanningProtocol ?: filterSpec.protocol
+            val targetDeviceType = scanningDeviceType ?: filterSpec.deviceType
             SearchingHeader(
-                protocolName = stringResource(UIHelper.getNameId(filterSpec.protocol)),
-                deviceTypeName = stringResource(UIHelper.getNameId(filterSpec.deviceType)),
+                protocolName = stringResource(UIHelper.getNameId(targetProtocol)),
+                deviceTypeName = stringResource(UIHelper.getNameId(targetDeviceType)),
                 modifier = Modifier.padding(top = topPadding, start = 8.dp, end = 8.dp)
             )
         }
