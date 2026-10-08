@@ -21,6 +21,8 @@ package com.atrainingtracker.banalservice.devices;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
@@ -33,6 +35,11 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 
 public abstract class SpeedAndLocationDevice extends MyDevice {
     public static final double ACCURACY_THRESHOLD = 200;
+    public static final long INACTIVITY_TIMEOUT_MS = 5000L;
+    public static final long DECAY_INTERVAL_MS = 1000L;
+    public static final double DECAY_FACTOR = 0.5;
+    public static final double SPEED_ZERO_THRESHOLD = 0.1;
+
     protected static final int SAMPLING_TIME = 1000;
     protected static final int MIN_DISTANCE = 0;
     private static final String TAG = "GPSSpeedAndLocationDevice";
@@ -51,12 +58,121 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
     protected Location mPrevLocation, mStartLocation = null;
     double mDistance, mSpeed;
 
+    protected Handler mWatchdogHandler;
+    private final Runnable mInactivityRunnable = new Runnable() {
+        @Override
+        public void run() {
+            onInactivityTimeout();
+        }
+    };
+    private final Runnable mDecayRunnable = new Runnable() {
+        @Override
+        public void run() {
+            triggerDecayTick();
+        }
+    };
+
 
     public SpeedAndLocationDevice(Context context, MySensorManager mySensorManager, DeviceType deviceType) {
         super(context, mySensorManager, deviceType);
         if (DEBUG) {
             Log.d(TAG, "constructor");
         }
+    }
+
+    protected synchronized Handler getWatchdogHandler() {
+        if (mWatchdogHandler == null) {
+            try {
+                Looper looper = null;
+                if (mContext != null) {
+                    looper = mContext.getMainLooper();
+                }
+                if (looper == null) {
+                    looper = Looper.getMainLooper();
+                }
+                if (looper != null) {
+                    mWatchdogHandler = new Handler(looper);
+                }
+            } catch (Throwable t) {
+                if (DEBUG) Log.w(TAG, "Cannot initialize Handler in current environment: " + t.getMessage());
+            }
+        }
+        return mWatchdogHandler;
+    }
+
+    public synchronized void setWatchdogHandler(Handler handler) {
+        mWatchdogHandler = handler;
+    }
+
+    private synchronized void resetWatchdog() {
+        Handler handler = getWatchdogHandler();
+        if (handler != null) {
+            try {
+                handler.removeCallbacks(mInactivityRunnable);
+                handler.removeCallbacks(mDecayRunnable);
+                handler.postDelayed(mInactivityRunnable, INACTIVITY_TIMEOUT_MS);
+            } catch (Throwable t) {
+                if (DEBUG) Log.w(TAG, "Failed to reset watchdog: " + t.getMessage());
+            }
+        }
+    }
+
+    private synchronized void cancelWatchdog() {
+        if (mWatchdogHandler != null) {
+            try {
+                mWatchdogHandler.removeCallbacks(mInactivityRunnable);
+                mWatchdogHandler.removeCallbacks(mDecayRunnable);
+            } catch (Throwable t) {
+                if (DEBUG) Log.w(TAG, "Failed to cancel watchdog: " + t.getMessage());
+            }
+        }
+    }
+
+    protected synchronized void onInactivityTimeout() {
+        if (DEBUG) Log.d(TAG, "onInactivityTimeout(): initiating speed decay");
+        triggerDecayTick();
+    }
+
+    protected synchronized void triggerDecayTick() {
+        mSpeed = mSpeed * DECAY_FACTOR;
+        if (mSpeed <= SPEED_ZERO_THRESHOLD) {
+            mSpeed = 0.0;
+            if (mSpeedSensor != null) {
+                mSpeedSensor.newValue(0.0);
+            }
+            if (mPaceSensor != null) {
+                mPaceSensor.newValue(null);
+            }
+            if (DEBUG) Log.d(TAG, "triggerDecayTick(): speed clamped to 0.0, decay stopped");
+        } else {
+            if (mSpeedSensor != null) {
+                mSpeedSensor.newValue(mSpeed);
+            }
+            if (mPaceSensor != null) {
+                mPaceSensor.newValue(1.0 / mSpeed);
+            }
+            Handler handler = getWatchdogHandler();
+            if (handler != null) {
+                try {
+                    handler.postDelayed(mDecayRunnable, DECAY_INTERVAL_MS);
+                } catch (Throwable t) {
+                    if (DEBUG) Log.w(TAG, "Failed to schedule next decay tick: " + t.getMessage());
+                }
+            }
+            if (DEBUG) Log.d(TAG, "triggerDecayTick(): speed decayed to " + mSpeed);
+        }
+    }
+
+    public synchronized void triggerInactivityTimeoutForTesting() {
+        onInactivityTimeout();
+    }
+
+    public synchronized void triggerDecayTickForTesting() {
+        triggerDecayTick();
+    }
+
+    public synchronized double getSpeed() {
+        return mSpeed;
     }
 
     protected void LocationAvailable() {
@@ -76,6 +192,10 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         if (LocationAvailable) {
             LocationAvailable = false;
             unregisterSensors();
+            cancelWatchdog();
+            if (mSpeed > 0) {
+                triggerDecayTick();
+            }
             mContext.sendBroadcast(new Intent(BANALService.LOCATION_UNAVAILABLE_INTENT)
                     .setPackage(mContext.getPackageName()));
         }
@@ -115,8 +235,23 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
     }
 
     @Override
-    protected void onAccumulatorsReset() {
+    protected synchronized void onAccumulatorsReset() {
         resetStartLocation();
+        cancelWatchdog();
+        mSpeed = 0.0;
+        if (mSpeedSensor != null) {
+            mSpeedSensor.newValue(0.0);
+        }
+        if (mPaceSensor != null) {
+            mPaceSensor.newValue(null);
+        }
+    }
+
+    @Override
+    public synchronized void shutDown() {
+        if (DEBUG) Log.i(TAG, "shutDown()");
+        cancelWatchdog();
+        super.shutDown();
     }
 
     public void resetStartLocation() {
@@ -135,6 +270,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 Log.d(TAG, "new location, provider: " + location.getProvider() + ", accuracy=" + location.getAccuracy() + ", threshold=" + accuracyThreshold);
             if (location.getAccuracy() <= accuracyThreshold) {
                 LocationAvailable();
+                resetWatchdog();
 
                 // save the first location, i.e., the start location
                 if (mStartLocation == null) {
@@ -151,7 +287,11 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 double speed = location.getSpeed();
                 mSpeed = (mSpeed + speed) / 2;
                 mSpeedSensor.newValue(mSpeed);
-                mPaceSensor.newValue(1 / mSpeed);
+                if (mSpeed > SPEED_ZERO_THRESHOLD) {
+                    mPaceSensor.newValue(1.0 / mSpeed);
+                } else {
+                    mPaceSensor.newValue(null);
+                }
 
                 if (mPrevLocation != null) {
                     double delta_distance = mPrevLocation.distanceTo(location);
