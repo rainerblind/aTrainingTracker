@@ -1520,9 +1520,24 @@
     <string name="import_fit_title">FIT-bestanden importeren</string>
     <string name="import_fit_description">Importeer trainingen van Garmin, Wahoo, Hammerhead of smartwatches (.fit).</string>
     <string name="import_fit_button">Selecteer FIT-bestanden</string>
+    <string name="import_fit_dropbox_button">Dropbox scannen (FIT)</string>
+    <string name="import_fit_gdrive_button">Google Drive scannen (FIT)</string>
     <string name="import_fit_progress">FIT-bestanden importeren (%1$d van %2$d)…</string>
     <string name="import_fit_summary_success">Succesvol %1$d trainingen geïmporteerd (%2$d duplicaten overgeslagen).</string>
     <string name="import_fit_summary_with_errors">%1$d trainingen geïmporteerd, %2$d duplicaten overgeslagen, %3$d mislukt.</string>
+    <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
+    <string name="import_tcx_title">TCX-bestanden importeren</string>
+    <string name="import_tcx_description">Workouts importeren uit Training Center XML-bestanden (.tcx).</string>
+    <string name="import_tcx_button">Lokaal TCX-bestand selecteren</string>
+    <string name="import_tcx_dropbox_button">Dropbox scannen (TCX)</string>
+    <string name="import_tcx_gdrive_button">Google Drive scannen (TCX)</string>
+    <string name="import_gpx_title">GPX-bestanden importeren</string>
+    <string name="import_gpx_description">Routes en activiteiten importeren uit GPS Exchange Format-bestanden (.gpx).</string>
+    <string name="import_gpx_button">Lokaal GPX-bestand selecteren</string>
+    <string name="import_gpx_dropbox_button">Dropbox scannen (GPX)</string>
+    <string name="import_gpx_gdrive_button">Google Drive scannen (GPX)</string>
+    <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
+    <string name="invalid_workout_file_format">Ongeldig bestandsformaat. Selecteer een %1$s-bestand.</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">Route selecteren</string>
     <string name="route_action_select">Route selecteren</string>
@@ -1539,6 +1554,8 @@
     <string name="route_filter_length">Lengte</string>
     <string name="route_empty_title">Geen routes beschikbaar</string>
     <string name="route_empty_desc">Importeer GPX-bestanden of synchroniseer met Strava.</string>
+    <string name="route_no_routes_nearby">Geen routes in de buurt</string>
+    <string name="route_no_matching_route_detected">Geen overeenkomende route gedetecteerd</string>
     <string name="google_drive">Google Drive</string>
     <string name="google_drive_connect">Verbinden met Google Drive</string>
     <string name="google_drive_disconnect">Verbinding met Google Drive verbreken</string>
@@ -1559,6 +1576,8 @@
     <string name="google_drive_error_network">Geen internetverbinding of netwerkfout tijdens Google Sign-In.</string>
     <string name="google_drive_error_generic">Inloggen met Google mislukt. Probeer het opnieuw.</string>
     <string name="google_drive_error_auth_expired">Google Drive-sessie verlopen of niet geautoriseerd. Meld u opnieuw aan in Instellingen.</string>
+    <string name="google_drive_error_api_disabled">Google Drive API is uitgeschakeld in Google Cloud Console. Schakel deze in binnen het Google Cloud-project.</string>
+    <string name="google_drive_error_folder_hierarchy">Kan de Google Drive-mapstructuur niet oplossen</string>
     <string name="google_drive_connect_prompt">Verbind uw Google-account om trainingen en databaseback-ups automatisch te synchroniseren met Google Drive.</string>
     <string name="scan_google_drive">Google Drive scannen</string>
     <string name="legacy_import__downloading_google_drive">%1$s downloaden van Google Drive…</string>
@@ -1598,6 +1617,11 @@
     <string name="routes_climbs_section_title">Beklimmingen (%d)</string>
     <string name="routes_climb_start_at">Start bij %s</string>
     <string name="routes_climb_avg_grade">Gem. %1$.1f%%</string>
+    <string name="routes_climb_max_grade">Max. %1$.1f%%</string>
+    <string name="routes_segments_section_title">Segmenten (%d)</string>
+    <string name="routes_segments_tab_title">Segmenten (%d)</string>
+    <string name="routes_segment_start_at">Start bij %s</string>
+    <string name="routes_segment_pr">PR %s</string>
     <string name="tuning_show_live_climbs_title">Live beklimmingen (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Toon realtime klimcockpit tijdens routes en vrij rijden</string>
 
@@ -1653,4 +1677,24 @@
     <string name="devices_pair_protocol_title">Selecteer protocol</string>
     <string name="devices_pair_protocol_ant">ANT+-sensor</string>
     <string name="devices_pair_protocol_ble">Bluetooth LE-sensor</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">Achtergrondenergie beperkt</string>
+    <string name="battery_optimization_warning_banner_desc">Android kan de workout-opname stoppen wanneer het scherm wordt uitgeschakeld. Schakel batterijoptimalisatie uit.</string>
+    <string name="battery_optimization_action_fix">Vrijstellen</string>
+    <string name="battery_optimization_dismiss_banner">Sluiten</string>
+
+    <!-- Contextual ANT+ Service Guidance (ATT-2513) -->
+    <string name="ant_status_sheet_title">ANT+ systeemdiensten</string>
+    <string name="ant_status_card_title">ANT+ hardware en diensten</string>
+    <string name="ant_status_card_desc">ANT+ sensoren op moderne smartphones vereisen een USB-OTG-adapter met ANT+ USB-stick en ANT+ systeemdiensten.</string>
+    <string name="ant_status_card_action">Status controleren</string>
+    <string name="ant_status_usb_dongle_note">Moderne smartphones hebben geen ingebouwde ANT+-chips. Een externe USB-OTG-adapter met ANT+ USB-stick is vereist voor ontvangst.</string>
+    <string name="ant_status_ble_alternative_note">Tip: Bluetooth LE sensoren werken direct zonder extra hardware of systeemdiensten.</string>
+    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
+    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
+    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
+    <string name="ant_service_installed">Geïnstalleerd</string>
+    <string name="ant_service_not_installed">Niet geïnstalleerd</string>
+    <string name="ant_service_install_button">Installeren</string>
 </resources>

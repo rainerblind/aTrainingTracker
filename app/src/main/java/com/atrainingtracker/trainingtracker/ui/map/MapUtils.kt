@@ -127,13 +127,22 @@ fun resolveWaypointCategoryColor(type: WaypointType): Int {
 }
 
 /**
+ * Default diameter for route waypoint badge markers in dp (REQ-MAP-037).
+ * Reduced from 32 dp to 22 dp to optimize map glanceability and prevent polyline track occlusion.
+ */
+const val DEFAULT_WAYPOINT_MARKER_SIZE_DP = 22
+
+/**
  * Creates a high-contrast circular badge marker with category-specific vibrant tinting,
- * a crisp white halo ring, an outer dark contrast hairline, and a centered white glyph (REQ-MAP-033).
+ * a crisp white halo ring, an outer dark contrast hairline, and a centered white glyph (REQ-MAP-033, REQ-MAP-037).
+ *
+ * Geometry and strokes scale proportionally with [sizeDp], with hairline clamping to guarantee
+ * crisp antialiased rendering across all screen densities.
  */
 fun createWaypointBadgeMarker(
     context: Context,
     type: WaypointType,
-    sizeDp: Int = 32
+    sizeDp: Int = DEFAULT_WAYPOINT_MARKER_SIZE_DP
 ): BitmapDescriptor? {
     val density = context.resources.displayMetrics.density
     val sizePx = (sizeDp * density).toInt().coerceAtLeast(1)
@@ -141,23 +150,26 @@ fun createWaypointBadgeMarker(
     val canvas = Canvas(bitmap)
 
     val center = sizePx / 2f
-    val outerRadius = center - (0.5f * density)
+    val scale = sizeDp / 32f
 
-    // 1. Outer subtle dark contrast hairline / shadow stroke (1 dp)
+    // 1. Outer subtle dark contrast hairline / shadow stroke (scaled, min 0.75 dp)
+    val darkStrokeWidth = (1f * density * scale).coerceAtLeast(0.75f * density)
     val darkStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 1f * density
+        strokeWidth = darkStrokeWidth
         color = 0x33000000
     }
+    val outerRadius = center - (darkStrokeWidth / 2f)
     canvas.drawCircle(center, center, outerRadius, darkStrokePaint)
 
-    // 2. Inner crisp white halo ring (stroke width 2 dp)
+    // 2. Inner crisp white halo ring (scaled, min 1.25 dp)
+    val haloStrokeWidth = (2f * density * scale).coerceAtLeast(1.25f * density)
     val whiteHaloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 2f * density
+        strokeWidth = haloStrokeWidth
         color = android.graphics.Color.WHITE
     }
-    val haloRadius = outerRadius - (0.5f * density)
+    val haloRadius = outerRadius - (darkStrokeWidth / 2f) - (haloStrokeWidth / 2f)
     canvas.drawCircle(center, center, haloRadius, whiteHaloPaint)
 
     // 3. Category vibrant filled disc
@@ -165,11 +177,11 @@ fun createWaypointBadgeMarker(
         style = Paint.Style.FILL
         color = resolveWaypointCategoryColor(type)
     }
-    val fillRadius = haloRadius - (1.0f * density)
+    val fillRadius = (haloRadius - (haloStrokeWidth / 2f)).coerceAtLeast(1f)
     canvas.drawCircle(center, center, fillRadius, fillPaint)
 
     // 4. Centered white Maki glyph
-    val iconSizePx = (sizePx * 0.55f).toInt()
+    val iconSizePx = (sizePx * 0.55f).toInt().coerceAtLeast(1)
     val drawable = ContextCompat.getDrawable(context, type.iconResId)?.mutate()
     drawable?.let {
         it.setTint(android.graphics.Color.WHITE)

@@ -283,19 +283,28 @@ fun CockpitTypographySection(
                 } else {
                     CardDefaults.cardElevation(defaultElevation = 0.dp)
                 }
+                val effectiveSpacing = remember(sensorFieldVariant, sensorFieldCornerRadius, sensorFieldBorderThickness) {
+                    SensorFieldStyle.resolveGridSpacing(
+                        variant = sensorFieldVariant,
+                        cornerRadius = sensorFieldCornerRadius.dp,
+                        borderThickness = sensorFieldBorderThickness.dp
+                    )
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(
-                        baseStyle.gridSpacing.coerceAtLeast(6.dp),
-                        Alignment.CenterHorizontally
-                    ),
+                    horizontalArrangement = if (effectiveSpacing > 0.dp) {
+                        Arrangement.spacedBy(effectiveSpacing, Alignment.CenterHorizontally)
+                    } else {
+                        Arrangement.Center
+                    },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     PreviewCockpitTile(
                         modifier = Modifier.weight(1f),
                         shape = tileShape,
                         border = tileBorder,
+                        borderThickness = sensorFieldBorderThickness.dp,
                         elevation = tileElevation,
                         value = "148",
                         unit = "bpm",
@@ -306,6 +315,7 @@ fun CockpitTypographySection(
                         modifier = Modifier.weight(1f),
                         shape = tileShape,
                         border = tileBorder,
+                        borderThickness = sensorFieldBorderThickness.dp,
                         elevation = tileElevation,
                         value = "28.5",
                         unit = "km/h",
@@ -316,6 +326,7 @@ fun CockpitTypographySection(
                         modifier = Modifier.weight(1f),
                         shape = tileShape,
                         border = tileBorder,
+                        borderThickness = sensorFieldBorderThickness.dp,
                         elevation = tileElevation,
                         value = "1:24:35",
                         unit = "TIME",
@@ -333,6 +344,7 @@ private fun PreviewCockpitTile(
     modifier: Modifier = Modifier,
     shape: Shape,
     border: BorderStroke?,
+    borderThickness: androidx.compose.ui.unit.Dp = 1.dp,
     elevation: CardElevation,
     value: String,
     unit: String,
@@ -348,10 +360,12 @@ private fun PreviewCockpitTile(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
+        val hPadding = (4.dp + borderThickness / 2f).coerceAtLeast(4.dp)
+        val vPadding = (8.dp + borderThickness / 2f).coerceAtLeast(8.dp)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp, horizontal = 4.dp),
+                .padding(vertical = vPadding, horizontal = hPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {

@@ -37,11 +37,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
+import androidx.compose.ui.platform.LocalContext
+import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusCard
+import androidx.compose.runtime.remember
 
 @Composable
 fun DeviceListScreen(
@@ -53,7 +58,10 @@ fun DeviceListScreen(
     modifier: Modifier = Modifier,
     scrollState: LazyListState = rememberLazyListState(),
     appBarOffsetPx: Int = 0,
-    headerHeightPx: Float = 0f
+    headerHeightPx: Float = 0f,
+    scanningProtocol: Protocol? = null,
+    scanningDeviceType: DeviceType? = null,
+    onCheckAntInstallation: (() -> Unit)? = null
 ) {
     val devices by viewModel.getFilteredDevices(filterSpec).collectAsState(initial = emptyList())
     val density = LocalDensity.current
@@ -61,6 +69,10 @@ fun DeviceListScreen(
     
     // Dynamically calculate bottom padding to clear the system navigation bar
     val navigationBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    val context = LocalContext.current
+    val areAntServicesInstalled = remember { BANALService.areAllANTServicesInstalled(context) }
+    val showAntCard = filterSpec.protocol == Protocol.ANT_PLUS && !areAntServicesInstalled && onCheckAntInstallation != null
 
     Column(
         modifier = modifier
@@ -70,10 +82,20 @@ fun DeviceListScreen(
         // Prominent Searching Header - Shown always when searching for NEW devices in the Available tab
         val isSearching = filterSpec.filterType == DeviceFilterType.CONNECTED && isSearchingForNewDevices
         if (isSearching) {
+            val targetProtocol = scanningProtocol ?: filterSpec.protocol
+            val targetDeviceType = scanningDeviceType ?: filterSpec.deviceType
             SearchingHeader(
-                protocolName = stringResource(UIHelper.getNameId(filterSpec.protocol)),
-                deviceTypeName = stringResource(UIHelper.getNameId(filterSpec.deviceType)),
+                protocolName = stringResource(UIHelper.getNameId(targetProtocol)),
+                deviceTypeName = stringResource(UIHelper.getNameId(targetDeviceType)),
                 modifier = Modifier.padding(top = topPadding, start = 8.dp, end = 8.dp)
+            )
+        }
+
+        if (showAntCard) {
+            val cardTopPadding = if (isSearching) 8.dp else topPadding
+            AntServicesStatusCard(
+                onCheckStatusClick = onCheckAntInstallation!!,
+                modifier = Modifier.padding(top = cardTopPadding)
             )
         }
 
@@ -83,7 +105,7 @@ fun DeviceListScreen(
                 DeviceFilterType.PAIRED -> stringResource(R.string.devices_no_paired_devices)
                 DeviceFilterType.ALL_KNOWN -> stringResource(R.string.devices_no_known_devices)
             }
-            val placeholderPadding = if (isSearching) 8.dp else topPadding
+            val placeholderPadding = if (isSearching || showAntCard) 8.dp else topPadding
             EmptyStatePlaceholder(
                 modifier = Modifier
                     .padding(top = placeholderPadding)
@@ -94,7 +116,7 @@ fun DeviceListScreen(
                 hint = "" // Information is now prominently in the header
             )
         } else {
-            val scrollbarTop = if (isSearching) 0.dp else topPadding
+            val scrollbarTop = if (isSearching || showAntCard) 0.dp else topPadding
             FastScrollableBox(
                 state = scrollState,
                 modifier = Modifier.fillMaxSize(),
@@ -105,7 +127,7 @@ fun DeviceListScreen(
                     state = scrollState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
-                        top = if (isSearching) 8.dp else topPadding + 8.dp,
+                        top = if (isSearching || showAntCard) 8.dp else topPadding + 8.dp,
                         bottom = navigationBarBottom + 16.dp,
                         start = 8.dp,
                         end = 8.dp

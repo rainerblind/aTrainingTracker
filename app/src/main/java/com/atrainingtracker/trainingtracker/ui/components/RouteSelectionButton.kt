@@ -75,6 +75,7 @@ fun RouteSelectionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isDimmed: Boolean = false,
+    emptySubtitleRes: Int = R.string.route_action_select_desc,
     returnNavState: ReturnNavigationState? = null,
     onClearRoute: (() -> Unit)? = null
 ) {
@@ -152,7 +153,7 @@ fun RouteSelectionButton(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = stringResource(id = R.string.route_action_select_desc),
+                            text = stringResource(id = emptySubtitleRes),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

@@ -68,7 +68,7 @@ class GoogleDriveBackupManagerTest {
         every { mockEditor.putLong(any(), any()) } returns mockEditor
 
         setStaticField(TrainingApplication::class.java, "cSharedPreferences", mockPrefs)
-        GoogleDriveBackupManager.clientProvider = { mockClient }
+        GoogleDriveBackupManager.clientProvider = { _ -> mockClient }
     }
 
     @After

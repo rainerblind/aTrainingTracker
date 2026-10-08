@@ -159,5 +159,27 @@ data class SensorFieldStyle(
             val color = lerp(subtleColor, maxContrastColor, t)
             return BorderStroke(borderThickness, color)
         }
+
+        /**
+         * Resolves inter-tile grid spacing dynamically based on preset baseline, corner radius,
+         * and border thickness (REQ-UI-292, ATT-2624).
+         * Guarantees 0.dp for the CLASSIC_SEAMLESS baseline (0 radius, <= 1.0.dp border),
+         * and proportionally expands whitespace when borders are thick or corners are rounded
+         * to prevent card collisions.
+         */
+        fun resolveGridSpacing(
+            variant: SensorFieldVariant,
+            cornerRadius: Dp,
+            borderThickness: Dp
+        ): Dp {
+            val baseStyle = forVariant(variant)
+            if (variant == SensorFieldVariant.CLASSIC_SEAMLESS && cornerRadius <= 0.dp && borderThickness <= 1.0.dp) {
+                return 0.dp
+            }
+            val thicknessPadding = (borderThickness - 1.0.dp).coerceAtLeast(0.dp) * 1.5f
+            val cornerPadding = if (cornerRadius > 0.dp) (cornerRadius * 0.15f).coerceAtLeast(1.dp) else 0.dp
+            val computed = baseStyle.gridSpacing.coerceAtLeast(2.dp) + thicknessPadding + cornerPadding
+            return computed.coerceIn(2.dp, 12.dp)
+        }
     }
 }

@@ -138,4 +138,36 @@ class EquipmentSensorMatrixScreenTest {
             )
         }
     }
+
+    @Test
+    fun testEquipmentIconTintContract_unifiesActiveBikeAndShoeToPrimary() {
+        val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/EquipmentSensorMatrixScreen.kt")
+        val content = file.readText()
+
+        // Extract MatrixEquipmentRow block to verify tint assignment
+        val rowStartIndex = content.indexOf("MatrixEquipmentRow(")
+        assertTrue("MatrixEquipmentRow composable must exist", rowStartIndex != -1)
+        val rowEndIndex = content.indexOf("fun EquipmentSportSensorMatrix", rowStartIndex)
+        assertTrue("EquipmentSportSensorMatrix must exist after MatrixEquipmentRow", rowEndIndex != -1)
+        val rowBlock = content.substring(rowStartIndex, rowEndIndex)
+
+        // Assert that active equipment icons use MaterialTheme.colorScheme.primary
+        assertTrue(
+            "MatrixEquipmentRow must assign MaterialTheme.colorScheme.primary for active equipment",
+            rowBlock.contains("else MaterialTheme.colorScheme.primary")
+        )
+
+        // Assert that MaterialTheme.colorScheme.secondary is NOT used for equipment icon tinting
+        org.junit.Assert.assertFalse(
+            "MatrixEquipmentRow must not tint shoe icons with secondary (REQ-UI-288, ATT-2630)",
+            rowBlock.contains("MaterialTheme.colorScheme.secondary")
+        )
+
+        // Assert that retired items preserve outline tint
+        assertTrue(
+            "MatrixEquipmentRow must assign MaterialTheme.colorScheme.outline for retired equipment",
+            rowBlock.contains("if (item.isRetired) MaterialTheme.colorScheme.outline")
+        )
+    }
 }
+

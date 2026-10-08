@@ -1440,11 +1440,18 @@ public class TrainingApplication extends Application {
         } else {
             intent.putExtra(TrackerService.START_TYPE, TrackerService.StartType.START_NORMAL.name());
         }
-        startService(intent);
-        startPebbleWatchapp();
+        try {
+            ContextCompat.startForegroundService(this, intent);
+            startPebbleWatchapp();
 
-        cTrackingMode = TrackingMode.TRACKING;
-        notifyTrackingStateChanged();
+            cTrackingMode = TrackingMode.TRACKING;
+            notifyTrackingStateChanged();
+        } catch (IllegalStateException | SecurityException e) {
+            Log.e(TAG, "Failed to start TrackerService: app in background or permission denied: " + e.getMessage(), e);
+            cTrackingMode = TrackingMode.READY;
+            notifyTrackingStateChanged();
+            TrackerService.showTrackingInterruptedNotification(this);
+        }
     }
 
     /**

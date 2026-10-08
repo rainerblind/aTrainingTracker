@@ -237,8 +237,46 @@ class SensorFieldStyleContractTest {
             content.contains("SensorFieldStyle.resolveBorder(")
         )
         assertTrue(
+            "SensorGridScreen must resolve effectiveSpacing using SensorFieldStyle.resolveGridSpacing",
+            content.contains("SensorFieldStyle.resolveGridSpacing(")
+        )
+        assertTrue(
             "SensorGridScreen must pass border with move selection override to SensorFieldView",
             content.contains("border = if (isSelected)")
         )
+    }
+
+    @Test
+    fun testResolveGridSpacing_preservesBaselineForClassicSeamless() {
+        assertEquals(
+            "Baseline CLASSIC_SEAMLESS (0 radius, 1.0 dp border) must return 0.dp",
+            0.dp,
+            SensorFieldStyle.resolveGridSpacing(SensorFieldVariant.CLASSIC_SEAMLESS, 0.dp, 1.0.dp)
+        )
+        assertEquals(
+            "Baseline CLASSIC_SEAMLESS (0 radius, 0.0 dp borderless) must return 0.dp",
+            0.dp,
+            SensorFieldStyle.resolveGridSpacing(SensorFieldVariant.CLASSIC_SEAMLESS, 0.dp, 0.0.dp)
+        )
+        assertEquals(
+            "Baseline CLASSIC_SEAMLESS (0 radius, 0.5 dp border) must return 0.dp",
+            0.dp,
+            SensorFieldStyle.resolveGridSpacing(SensorFieldVariant.CLASSIC_SEAMLESS, 0.dp, 0.5.dp)
+        )
+    }
+
+    @Test
+    fun testResolveGridSpacing_scalesWithBorderThicknessAndCornerRadius() {
+        val outlined = SensorFieldStyle.resolveGridSpacing(SensorFieldVariant.OUTLINED_TILES, 8.dp, 2.0.dp)
+        assertTrue("OUTLINED_TILES baseline spacing must be >= 6.dp, was $outlined", outlined >= 6.dp)
+
+        val thickBorder = SensorFieldStyle.resolveGridSpacing(SensorFieldVariant.CLASSIC_SEAMLESS, 0.dp, 4.0.dp)
+        assertTrue("Thick 4 dp border must scale spacing to >= 6.dp to avoid collisions, was $thickBorder", thickBorder >= 6.dp)
+
+        val roundedCorners = SensorFieldStyle.resolveGridSpacing(SensorFieldVariant.CLASSIC_SEAMLESS, 10.dp, 1.0.dp)
+        assertTrue("Rounded corners on CLASSIC_SEAMLESS must produce > 0.dp spacing, was $roundedCorners", roundedCorners > 0.dp)
+
+        val extremeThick = SensorFieldStyle.resolveGridSpacing(SensorFieldVariant.SOFT_CAPSULES, 20.dp, 4.0.dp)
+        assertTrue("Clamping must cap spacing at <= 12.dp, was $extremeThick", extremeThick <= 12.dp)
     }
 }

@@ -104,7 +104,8 @@ fun MapDetailLayout(
     powerZoneDistribution: ZoneDistributionData? = null,
     hrZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
     powerZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
-    climbs: List<Climb> = emptyList()
+    climbs: List<Climb> = emptyList(),
+    externalScrubDistance: Double? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -120,6 +121,12 @@ fun MapDetailLayout(
 
     var isSharing by remember { mutableStateOf(false) }
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
+
+    LaunchedEffect(externalScrubDistance) {
+        if (externalScrubDistance != null) {
+            selectedDistance = externalScrubDistance
+        }
+    }
     var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }
     var viewportStartFraction by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
     var isPanMode by remember(activeScrubPath) { mutableStateOf(false) }

@@ -249,4 +249,47 @@ class KnownLocationsRepositoryTest {
             mockDbManager.updateLocation(any(), any(), any(), any(), true)
         }
     }
+
+    /**
+     * TST-MAP-038.2: Verify loadLocations evaluates effectiveHomeId using HomeLocationResolver hierarchy.
+     */
+    @Test
+    fun testLoadLocations_resolvesEffectiveHomeId_whenNoExplicitHomeSet() = runTest {
+        val loc1 = KnownLocationsDatabaseManager.MyLocation(
+            10L, 48.137, 11.576, "Start Point Low Starts", 500.0, 200, 3, false, ElevationSource.LEGACY_RAW, false
+        )
+        val loc2 = KnownLocationsDatabaseManager.MyLocation(
+            20L, 48.155, 11.590, "Start Point High Starts", 510.0, 200, 42, false, ElevationSource.LEGACY_RAW, false
+        )
+        every { mockDbManager.allLocations } returns listOf(loc1, loc2)
+
+        val items = repository.loadLocations()
+
+        assertEquals(2, items.size)
+        val item1 = items.first { it.id == 10L }
+        val item2 = items.first { it.id == 20L }
+
+        assertFalse("Item 10 should not be home", item1.isHome)
+        assertTrue("Item 20 should be effective home due to highest start count", item2.isHome)
+    }
+
+    @Test
+    fun testLoadLocations_explicitHome_overridesStartCountHierarchy() = runTest {
+        val loc1 = KnownLocationsDatabaseManager.MyLocation(
+            10L, 48.137, 11.576, "Designated Home", 500.0, 200, 2, false, ElevationSource.MANUAL_USER, true
+        )
+        val loc2 = KnownLocationsDatabaseManager.MyLocation(
+            20L, 48.155, 11.590, "Popular Trailhead", 510.0, 200, 80, false, ElevationSource.LEGACY_RAW, false
+        )
+        every { mockDbManager.allLocations } returns listOf(loc1, loc2)
+
+        val items = repository.loadLocations()
+
+        assertEquals(2, items.size)
+        val item1 = items.first { it.id == 10L }
+        val item2 = items.first { it.id == 20L }
+
+        assertTrue("Item 10 should be home due to explicit designation", item1.isHome)
+        assertFalse("Item 20 should not be home despite higher start count", item2.isHome)
+    }
 }

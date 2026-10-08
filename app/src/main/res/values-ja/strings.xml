@@ -1500,9 +1500,24 @@
     <string name="import_fit_title">FITファイルをインポート</string>
     <string name="import_fit_description">Garmin、Wahoo、Hammerhead、スマートウォッチからワークアウトをインポート (.fit)。</string>
     <string name="import_fit_button">FITファイルを選択</string>
+    <string name="import_fit_dropbox_button">Dropboxをスキャン (FIT)</string>
+    <string name="import_fit_gdrive_button">Google ドライブをスキャン (FIT)</string>
     <string name="import_fit_progress">FITファイルをインポート中 (%1$d / %2$d)…</string>
     <string name="import_fit_summary_success">%1$d 件のワークアウトを正常にインポートしました (%2$d 件の重複をスキップ)。</string>
     <string name="import_fit_summary_with_errors">%1$d 件のワークアウトをインポート、%2$d 件の重複をスキップ、%3$d 件失敗。</string>
+    <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
+    <string name="import_tcx_title">TCXファイルをインポート</string>
+    <string name="import_tcx_description">Training Center XMLファイル（.tcx）からワークアウトをインポートします。</string>
+    <string name="import_tcx_button">ローカルTCXファイルを選択</string>
+    <string name="import_tcx_dropbox_button">Dropboxをスキャン (TCX)</string>
+    <string name="import_tcx_gdrive_button">Google ドライブをスキャン (TCX)</string>
+    <string name="import_gpx_title">GPXファイルをインポート</string>
+    <string name="import_gpx_description">GPS Exchange Formatファイル（.gpx）からルートとアクティビティをインポートします。</string>
+    <string name="import_gpx_button">ローカルGPXファイルを選択</string>
+    <string name="import_gpx_dropbox_button">Dropboxをスキャン (GPX)</string>
+    <string name="import_gpx_gdrive_button">Google ドライブをスキャン (GPX)</string>
+    <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
+    <string name="invalid_workout_file_format">無効なファイル形式です。%1$s ファイルを選択してください。</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">ルートを選択</string>
     <string name="route_action_select">ルートを選択</string>
@@ -1519,6 +1534,8 @@
     <string name="route_filter_length">長さ</string>
     <string name="route_empty_title">利用可能なルートがありません</string>
     <string name="route_empty_desc">GPXファイルをインポートするかStravaと同期してください。</string>
+    <string name="route_no_routes_nearby">近くにルートがありません</string>
+    <string name="route_no_matching_route_detected">一致するルートが検出されませんでした</string>
     <string name="google_drive">Google Drive</string>
     <string name="google_drive_connect">Google ドライブに接続</string>
     <string name="google_drive_disconnect">Google ドライブから切断</string>
@@ -1539,6 +1556,8 @@
     <string name="google_drive_error_network">Google サインイン中にインターネット接続がないか、ネットワークエラーが発生しました。</string>
     <string name="google_drive_error_generic">Google サインインに失敗しました。もう一度お試しください。</string>
     <string name="google_drive_error_auth_expired">Google ドライブのセッションの有効期限が切れたか、認証されていません。設定で再認証してください。</string>
+    <string name="google_drive_error_api_disabled">Google Cloud Console で Google Drive API が無効になっています。Google Cloud プロジェクトで有効にしてください。</string>
+    <string name="google_drive_error_folder_hierarchy">Google ドライブのフォルダ階層を解決できませんでした</string>
     <string name="google_drive_connect_prompt">Google アカウントを接続して、ワークアウトのエクスポートとデータベースのバックアップを Google ドライブに自動同期します。</string>
     <string name="scan_google_drive">Google ドライブをスキャン</string>
     <string name="legacy_import__downloading_google_drive">Google ドライブから %1$s をダウンロード中…</string>
@@ -1578,6 +1597,11 @@
     <string name="routes_climbs_section_title">登坂 (%d)</string>
     <string name="routes_climb_start_at">%s 地点から開始</string>
     <string name="routes_climb_avg_grade">平均 %1$.1f%%</string>
+    <string name="routes_climb_max_grade">最大 %1$.1f%%</string>
+    <string name="routes_segments_section_title">セグメント (%d)</string>
+    <string name="routes_segments_tab_title">セグメント (%d)</string>
+    <string name="routes_segment_start_at">%s 地点から開始</string>
+    <string name="routes_segment_pr">PR %s</string>
     <string name="tuning_show_live_climbs_title">ライブクライム (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">ルートおよびフリー走行中にリアルタイム登坂コックピットを表示</string>
 
@@ -1633,4 +1657,24 @@
     <string name="devices_pair_protocol_title">プロトコルを選択</string>
     <string name="devices_pair_protocol_ant">ANT+ センサー</string>
     <string name="devices_pair_protocol_ble">Bluetooth LE センサー</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">バックグラウンド消費電力の制限</string>
+    <string name="battery_optimization_warning_banner_desc">画面オフ時にAndroidによってワークアウト記録が停止される場合があります。バッテリーの最適化を無効にしてください。</string>
+    <string name="battery_optimization_action_fix">許可</string>
+    <string name="battery_optimization_dismiss_banner">閉じる</string>
+
+    <!-- Contextual ANT+ Service Guidance (ATT-2513) -->
+    <string name="ant_status_sheet_title">ANT+ システムサービス</string>
+    <string name="ant_status_card_title">ANT+ ハードウェアとサービス</string>
+    <string name="ant_status_card_desc">最新のスマートフォンで ANT+ センサーを使用するには、ANT+ USB ドングル付きの USB-OTG アダプターと ANT+ システムサービスが必要です。</string>
+    <string name="ant_status_card_action">ステータスを確認</string>
+    <string name="ant_status_usb_dongle_note">最新のスマートフォンには内蔵 ANT+ チップがありません。受信には ANT+ USB ドングル付きの外部 USB-OTG アダプターが必要です。</string>
+    <string name="ant_status_ble_alternative_note">ヒント: Bluetooth LE センサーは、追加のハードウェアやシステムサービスなしで直接動作します。</string>
+    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
+    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
+    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
+    <string name="ant_service_installed">インストール済み</string>
+    <string name="ant_service_not_installed">未インストール</string>
+    <string name="ant_service_install_button">インストール</string>
 </resources>

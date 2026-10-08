@@ -68,11 +68,32 @@ The expected behavior is:
   ```
 * `GoogleDriveUploader` assumes that a `null` return from `ensureFolderHierarchy()` is a directory structure failure, discarding the underlying root cause (HTTP 401 Unauthorized).
 * The user is shown `Failed to resolve Google Drive folder hierarchy`, leading to confusion and preventing the user from knowing that re-authentication is required.
-
 ### 2.4 Canonical Google Drive API v3 Folder Creation
 * In `GoogleDriveClient.createFolder()`, the payload specifies `"parents": ["root"]` when creating the top-level `aTrainingTracker` directory.
 * While `"root"` is a valid query alias in `files.list` (`'root' in parents`), the canonical specification for `files.create` in Google Drive API v3 is to **omit the `parents` field entirely** when creating in the user's root My Drive folder.
 * Furthermore, `GoogleDriveClient` currently discards `response.body?.string()` on failure, hindering live diagnostics.
+
+### 2.5 On-Device Live Logcat Discovery: Google Drive API Disabled in Google Cloud Console
+* During interactive live on-device testing on Google Pixel 10 (`66020DLCR002FL`) at 06:49:32, logcat revealed that `GoogleDriveAuthManager` successfully refreshed the Bearer token for `rainer.blind@gmail.com`.
+* However, Google Drive REST API calls were rejected with **HTTP 403 `SERVICE_DISABLED`** (`accessNotConfigured`):
+  ```text
+  "message": "Google Drive API has not been used in project 717488426058 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=717488426058 then retry."
+  ```
+* Because the HTTP code was 403 rather than 401, `GoogleDriveUploader` mapped it to the generic English string `"Failed to resolve Google Drive folder hierarchy"`.
+* Enabling the Google Drive API in Google Cloud Console for project `717488426058` immediately resolved the permission rejection.
+
+### 2.6 Parallel Export Concurrency Race Condition: Duplicate Root Folders
+* When workout export is triggered, WorkManager executes two workers in parallel:
+  - `Google Drive: TCX` at `07:06:27.393`
+  - `Google Drive: FIT` at `07:06:27.399` (6ms later)
+* Because `folderIdCache` was previously an instance field of `GoogleDriveClient`, each worker possessed its own isolated cache.
+* On initial export when `aTrainingTracker` did not yet exist:
+  1. Both workers queried `findFolderIdByName("aTrainingTracker", "root")`. Neither found an existing folder.
+  2. Both workers called `createFolder("aTrainingTracker", "root")`.
+  3. Because Google Drive allows duplicate folder names (files/folders are keyed by ID, not unique name), Google Drive created **two separate folders named `aTrainingTracker`**.
+  4. Worker 1 created `Workouts/` in folder 1 and uploaded `2026-10-08_060104.tcx`.
+  5. Worker 2 created `Workouts/` in folder 2 and uploaded `2026-10-08_060104.fit`.
+* Resolution requires a static/process-wide `globalFolderIdCache` and `synchronized(hierarchyLock)` with double-checked locking in `ensureFolderHierarchy`.
 
 ---
 
@@ -82,15 +103,17 @@ The expected behavior is:
   1. **Thread-Safe Token Refresh in `GoogleDriveAuthManager`**:
      Expose a thread-safe synchronous / worker-friendly token refresh method (`refreshTokenSync(context: Context): Result<String>`) that clears stale tokens via `GoogleAuthUtil.clearToken()` and acquires a fresh Bearer token from Google Play Services, persisting it to `SharedPreferences`.
   2. **Automatic 401 Retry & Refresh in `GoogleDriveClient`**:
-     Equip `GoogleDriveClient` with a `tokenRefresher: (() -> String?)?` provider or OkHttp `Authenticator`. When a request returns HTTP 401, invoke the refresher and retry the request seamlessly.
-  3. **Last Error Tracking in `GoogleDriveClient`**:
-     Expose `lastStatusCode: Int?` and `lastErrorMessage: String?` in `GoogleDriveClient` so callers can distinguish between network errors, expired credentials, and permission rejections.
-  4. **Canonical Folder Creation in `GoogleDriveClient`**:
+     Equip `GoogleDriveClient` with a `tokenRefresher: (() -> String?)?` provider. When a request returns HTTP 401, invoke the refresher and retry the request seamlessly.
+  3. **Process-Wide Concurrency Synchronization in `GoogleDriveClient`**:
+     Implement a static `globalFolderIdCache` and `synchronized(hierarchyLock)` with double-checked locking in `ensureFolderHierarchy()` to guarantee that concurrent workers share resolved folder IDs and never create duplicate root or child folders in Google Drive.
+  4. **Database Backup Token Renewal in `GoogleDriveBackupManager`**:
+     Pass `tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(context).getOrNull() }` via `clientProvider(context)` so database backups also refresh expired tokens.
+  5. **Actionable HTTP 403 & API Disabled Diagnostics in `GoogleDriveUploader`**:
+     Detect `SERVICE_DISABLED` / `accessNotConfigured` and return localized `google_drive_error_api_disabled`, and return `google_drive_error_folder_hierarchy` with HTTP status code for unmapped folder resolution errors across all 9 languages.
+  6. **Canonical Folder Creation in `GoogleDriveClient`**:
      In `createFolder()`, omit the `parents` array when `parentId == "root"` or blank, conforming strictly to Google Drive API v3 standards.
-  5. **Actionable & Localized Error Messages in `GoogleDriveUploader`**:
-     If token refresh fails or authentication remains unauthorized (401), return a localized error message (`google_drive_error_auth_expired`: *"Google Drive-Autorisierung abgelaufen. Bitte in Einstellungen neu verbinden."* / *"Google Drive authorization expired. Please reconnect in Settings."*) across all 9 supported application locales.
-  6. **Comprehensive Unit Testing**:
-     Add unit tests verifying automatic 401 token refresh, root folder creation payload structure, error state capture, and localized message reporting.
+  7. **Comprehensive Unit Testing & On-Device Verification**:
+     Add unit tests verifying concurrent folder creation safety, HTTP 403 API disabled mapping, canonical folder creation payload structure, and on-device export validation.
 
 * **Out-of-Scope Non-Goals (Scope Bounding)**:
   * Altering the OAuth2 scope (strictly maintain least-privilege `https://www.googleapis.com/auth/drive.file`).
@@ -101,11 +124,15 @@ The expected behavior is:
 
 ## 4. Requirement Archaeology & Chesterton's Fence Audit
 
-* **Original Requirement ID & Target**: `REQ-DAT-020` (*Google Drive Authentication, Settings UI & Disconnected State Parity*).
-* **Historical Origin & Commit Trace**: Ticket `ATT-1306` (Sprint 2026-41.1, commit `f57007ef`).
-* **Root Reason for Existing Formulation**: ATT-1306 introduced native Google Play Services sign-in with `drive.file` scope and error code mapping for Google Sign-In `ApiException` (Status 10 `DEVELOPER_ERROR`). However, `GoogleDriveUploader` used static cached tokens without integrating token renewal during post-ride exports.
+* **Original Requirement ID & Target**: `REQ-DAT-020` (*Google Drive Authentication, Settings UI & Disconnected State Parity*), refined into `REQ-DAT-022`.
+* **Historical Origin & Commit Trace**: Ticket `ATT-1306` (Sprint 2026-41.1, commit `f57007ef`), updated under `ATT-2631` (Sprint 2026-41.3).
+* **Root Reason for Existing Formulation**: ATT-1306 introduced native Google Play Services sign-in with `drive.file` scope and error code mapping for Google Sign-In `ApiException` (Status 10 `DEVELOPER_ERROR`). However:
+  1. `GoogleDriveUploader` used static cached tokens without integrating token renewal during post-ride exports.
+  2. Google Drive API was not enabled in Google Cloud Console for project `717488426058`.
+  3. Parallel WorkManager worker execution caused duplicate folder creation race condition.
 * **Preservation of Core Invariants**:
   - The `drive.file` least-privilege scope must be strictly preserved.
+  - Zero duplicate folder creation in Google Drive.
   - Independent cloud service operation (Google Drive vs. Dropbox) must remain decoupled.
   - Zero performance regression during ride tracking or export operations.
 
@@ -118,21 +145,24 @@ The expected behavior is:
    - Refactor `suspend fun refreshToken(context: Context)` to delegate to `refreshTokenSync(context)` via `withContext(Dispatchers.IO)`.
 
 2. **`GoogleDriveClient.kt`**:
+   - In `companion object`: declare `hierarchyLock = Any()`, `globalFolderIdCache = ConcurrentHashMap<String, String>()`, and `@VisibleForTesting fun clearFolderCache()`.
+   - In `ensureFolderHierarchy()`: use double-checked locking over `hierarchyLock` to synchronize folder resolution and creation across concurrent worker threads.
    - Accept optional `tokenRefresher: (() -> String?)? = null`.
-   - When any REST API call (`findFolderIdByName`, `createFolder`, `findFileIdByName`, `uploadOrOverwriteFile`) encounters HTTP 401:
-     - Invoke `tokenRefresher()`.
-     - If a fresh token is returned, update the auth header and retry the request once.
    - In `createFolder()`: omit `"parents"` when `parentId == "root"` or blank.
    - Retain `lastHttpCode: Int?` and detailed response error body for diagnostics.
 
-3. **`GoogleDriveUploader.kt`**:
-   - Pass `tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(mContext).getOrNull() }` to `GoogleDriveClient`.
-   - If folder hierarchy resolution fails due to 401 / expired auth:
-     - Return localized error string: `context.getString(R.string.google_drive_error_auth_expired)`.
-   - Update sync status and timestamp accordingly.
+3. **`GoogleDriveBackupManager.kt`**:
+   - Update `clientProvider: (Context) -> GoogleDriveClient` to pass `tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(context).getOrNull() }`.
 
-4. **Localization**:
-   - Add `google_drive_error_auth_expired` to `values/strings.xml` and replicate across all 8 localized `values-<locale>/strings.xml` files with 100% parity.
+4. **`GoogleDriveUploader.kt`**:
+   - Pass `tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(mContext).getOrNull() }` to `GoogleDriveClient`.
+   - If folder hierarchy resolution fails:
+     - HTTP 401: return `context.getString(R.string.google_drive_error_auth_expired)`.
+     - HTTP 403 (`SERVICE_DISABLED` / `accessNotConfigured`): return `context.getString(R.string.google_drive_error_api_disabled)`.
+     - Other: return `context.getString(R.string.google_drive_error_folder_hierarchy) + (HTTP $code)`.
+
+5. **Localization**:
+   - Ensure `google_drive_error_auth_expired`, `google_drive_error_api_disabled`, and `google_drive_error_folder_hierarchy` exist across all 9 localized `values*/strings.xml` files with 100% parity.
 
 ---
 
@@ -141,6 +171,8 @@ The expected behavior is:
 * **Invariants**:
   1. Clean-room test suite (`./gradlew testDebugUnitTest`) must pass 100% with zero regressions.
   2. 100% 9-language translation parity verified via `TranslationParityTest`.
-  3. No changes to SQLite schemas or core tracking services.
+  3. Zero duplicate folders created on Google Drive during parallel exports.
+  4. No changes to SQLite schemas or core tracking services.
 * **Risk Assessment**:
-  - *Low Risk*: Token refresh uses official Google Play Services APIs (`GoogleAuthUtil`) already bundled and tested in the app. Automatic retry on 401 is standard HTTP client behavior.
+  - *Low Risk*: Token refresh uses official Google Play Services APIs (`GoogleAuthUtil`) already bundled and tested in the app. Concurrency lock is scoped strictly to folder hierarchy resolution.
+r.

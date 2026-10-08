@@ -60,14 +60,25 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.ui.climbs.ClimbCategoryChip
+import com.atrainingtracker.trainingtracker.ui.climbs.ClimbDetailSheet
 import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcher
+import com.atrainingtracker.trainingtracker.routes.MatchedRouteSegment
+import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import kotlin.math.roundToInt
+
+enum class RouteBreakdownTab {
+    CLIMBS,
+    SEGMENTS
+}
 
 @Composable
 fun RouteOnMapScreen(
     route: MapRoute?,
     routeSummary: RouteSummary?,
     backgroundPaths: List<MappablePath> = emptyList(),
+    allSegments: List<SegmentWithPath> = emptyList(),
     onToggleSelection: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     useStatusBarsPadding: Boolean = true,
@@ -106,6 +117,25 @@ fun RouteOnMapScreen(
         } else null
     }
 
+    var selectedBreakdownTab by rememberSaveable { mutableStateOf(RouteBreakdownTab.CLIMBS) }
+    var selectedClimbForDetail by remember { mutableStateOf<Climb?>(null) }
+    var highlightedSegmentId by remember { mutableStateOf<Long?>(null) }
+    var externalScrubDistance by remember { mutableStateOf<Double?>(null) }
+
+    val matchedSegments by produceState<List<MatchedRouteSegment>>(
+        initialValue = emptyList(),
+        key1 = route?.path,
+        key2 = allSegments,
+        key3 = bSportType
+    ) {
+        val path = route?.path
+        value = if (!path.isNullOrEmpty() && allSegments.isNotEmpty()) {
+            RouteSegmentMatcher.matchSegments(path, allSegments, bSportType)
+        } else {
+            emptyList()
+        }
+    }
+
     MapDetailLayout(
         bSportType = bSportType,
         zoomFocus = if (routeBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
@@ -114,6 +144,7 @@ fun RouteOnMapScreen(
         useStatusBarsPadding = useStatusBarsPadding,
         showMap = showMap,
         climbs = climbs,
+        externalScrubDistance = externalScrubDistance,
         onHeaderHeightMeasured = onHeaderHeightMeasured,
         header = {
             routeSummary?.let {
@@ -126,14 +157,92 @@ fun RouteOnMapScreen(
                 )
             }
         },
-        analyticsContent = if (climbs.isNotEmpty()) {
+        analyticsContent = if (climbs.isNotEmpty() || matchedSegments.isNotEmpty()) {
             {
-                RouteClimbsBreakdownSection(climbs = climbs)
+                if (climbs.isNotEmpty() && matchedSegments.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = selectedBreakdownTab == RouteBreakdownTab.CLIMBS,
+                            onClick = { selectedBreakdownTab = RouteBreakdownTab.CLIMBS },
+                            label = {
+                                Text(stringResource(R.string.routes_climbs_section_title, climbs.size))
+                            }
+                        )
+                        FilterChip(
+                            selected = selectedBreakdownTab == RouteBreakdownTab.SEGMENTS,
+                            onClick = { selectedBreakdownTab = RouteBreakdownTab.SEGMENTS },
+                            label = {
+                                Text(stringResource(R.string.routes_segments_tab_title, matchedSegments.size))
+                            }
+                        )
+                    }
+                }
+
+                val showClimbs = when {
+                    climbs.isNotEmpty() && matchedSegments.isNotEmpty() -> selectedBreakdownTab == RouteBreakdownTab.CLIMBS
+                    climbs.isNotEmpty() -> true
+                    else -> false
+                }
+
+                if (showClimbs) {
+                    RouteClimbsBreakdownSection(
+                        climbs = climbs,
+                        onClimbClick = { climb -> selectedClimbForDetail = climb }
+                    )
+                } else {
+                    RouteSegmentsBreakdownSection(
+                        segments = matchedSegments,
+                        onSegmentClick = { matched ->
+                            val segId = matched.segment.summary.stravaId
+                            highlightedSegmentId = if (highlightedSegmentId == segId) null else segId
+                            externalScrubDistance = matched.startDistanceMeters
+                        }
+                    )
+                }
             }
         } else null,
         mapContent = {
             if (route != null) {
                 routes(listOf(route))
+                climbs(climbs)
+
+                if (matchedSegments.isNotEmpty()) {
+                    val segmentPaths = matchedSegments.map { matched ->
+                        val isHighlighted = highlightedSegmentId == matched.segment.summary.stravaId
+                        MapSegment(
+                            stravaId = matched.segment.summary.stravaId,
+                            name = matched.segment.summary.name,
+                            bSportType = matched.segment.summary.bSportType,
+                            path = matched.segment.path,
+                            minLat = matched.segment.summary.minLat,
+                            minLng = matched.segment.summary.minLng,
+                            maxLat = matched.segment.summary.maxLat,
+                            maxLng = matched.segment.summary.maxLng,
+                            onClick = { id ->
+                                highlightedSegmentId = if (highlightedSegmentId == id) null else id
+                                if (highlightedSegmentId != null) {
+                                    externalScrubDistance = matched.startDistanceMeters
+                                }
+                            }
+                        )
+                    }
+                    segments(
+                        segments = segmentPaths,
+                        activeLiveSegmentIds = highlightedSegmentId?.let { setOf(it) } ?: emptySet(),
+                        onSegmentClick = { id ->
+                            highlightedSegmentId = if (highlightedSegmentId == id) null else id
+                            val clicked = matchedSegments.find { it.segment.summary.stravaId == id }
+                            if (clicked != null && highlightedSegmentId != null) {
+                                externalScrubDistance = clicked.startDistanceMeters
+                            }
+                        }
+                    )
+                }
                 
                 // Add unified Start and End markers (SCRUM-185)
                 val allMarkers = mutableListOf<LocationMarker>()
@@ -179,12 +288,24 @@ fun RouteOnMapScreen(
         },
         modifier = modifier
     )
+
+    selectedClimbForDetail?.let { climb ->
+        val climbIndex = climbs.indexOf(climb).takeIf { it >= 0 }?.let { it + 1 }
+        ClimbDetailSheet(
+            climb = climb,
+            routeIndex = climbIndex,
+            totalRouteClimbs = climbs.size,
+            bSportType = bSportType,
+            onDismiss = { selectedClimbForDetail = null }
+        )
+    }
 }
 
 @Composable
 fun RouteClimbsBreakdownSection(
     climbs: List<Climb>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClimbClick: ((Climb) -> Unit)? = null
 ) {
     val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
 
@@ -203,6 +324,8 @@ fun RouteClimbsBreakdownSection(
 
         climbs.forEachIndexed { index, climb ->
             ElevatedCard(
+                onClick = { onClimbClick?.invoke(climb) },
+                enabled = onClimbClick != null,
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant

@@ -9,6 +9,7 @@ These rules are strictly binding on all AI assistants and agent instances operat
   3. The active stage skill: `.agents/skills/<skill_name>/SKILL.md`
   using `view_file` (`"Rule # 1: Obey the rules. Before starting a new ticket, the rules and protocols must be reread."` — Rainer Blind, Sprint Retro 2026-41.1 / ATT-2470).
 * **Autonomous Full-Sprint Mandate Integration**: In particular, this refresh guarantees that agents never forget that they must execute the entire sprint backlog autonomously to completion (Rule 15) without intermediate pauses, stops, or asking the user whether to continue.
+* **Compaction & Restart Resume Mandate**: Upon waking up from a context compaction or system restart during an active sprint, the agent **MUST NOT** ask the user what to do next or present an idle summary. The agent's first action **MUST** be to query the active sprint backlog, identify the current or next uncompleted ticket in rank order, re-read governance via `view_file`, and autonomously resume execution immediately.
 * Relying on degraded memory or conversational history from earlier turns across compactions is strictly prohibited. Re-reading canonical documentation pulls constraints directly into active working context, ensuring 100% compliance with current standards and preventing behavioral drift.
 
 ## 2. Absolute Primacy of Jira Governance over IDE Hooks
@@ -93,6 +94,7 @@ These rules are strictly binding on all AI assistants and agent instances operat
 ## 15. Autonomous Full-Sprint Execution Mandate
 * **Rule**: AI agents must execute the entire sprint backlog autonomously from ticket to ticket without intermediate pauses or asking the user whether to continue (`"Again, I was asked if we should continue. → Agents should do the entire Sprint."`).
 * Agents must not stop after completing an individual ticket to ask if they should continue with the next ticket. Execution must flow seamlessly across all sprint tickets until all reach `Final Review (Human)`, utilizing Rule 13 for any blocked subtasks requiring human decisions.
+* **Compaction & Turn-Ending Invariant**: When resuming from a context compaction or session restoration, the agent **MUST NOT** treat the compaction summary's "Next Steps" as an interactive prompt for the user or ask for permission. It must immediately execute the next step autonomously without pausing. Concluding a turn with questions like *"Shall I proceed with ATT-XXXX?"* or *"Would you like me to continue?"* is strictly prohibited.
 
 ## 16. Mandatory Device Deployment Invariant Before Sprint Review ("Install Before Review")
 * **Rule**: Ceremony 2 (Sprint Review) MUST begin with compiling and installing the latest integrated sprint build directly onto the attached physical test device (e.g. Google Pixel 10) via `./gradlew installDebug` (`"Sprint Review session must start with installing the latest sprint version on the phone."`).

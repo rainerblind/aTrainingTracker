@@ -202,6 +202,17 @@ def jira_request(url, method="GET", payload=None, is_binary=False, role="agent1"
             print(f"API Error: {masked_body}", file=sys.stderr)
         raise e
 
+def resolve_active_sprint(board_id, role="agent1"):
+    config = get_config()
+    sprints = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board/{board_id}/sprint?state=active", role=role)["values"]
+    if not sprints:
+        return None
+    dev_sprints = [s for s in sprints if s.get("name", "").strip().lower() != "human review"]
+    if dev_sprints:
+        dev_sprints.sort(key=lambda s: s.get("id", 0), reverse=True)
+        return dev_sprints[0]
+    return sprints[0]
+
 def list_sprint_issues(role="agent1"):
     config = get_config()
     # 1. Find the board
@@ -209,12 +220,12 @@ def list_sprint_issues(role="agent1"):
     board_id = boards[0]["id"]
 
     # 2. Find active sprint
-    sprints = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board/{board_id}/sprint?state=active", role=role)["values"]
-    if not sprints:
+    active_sprint = resolve_active_sprint(board_id, role=role)
+    if not active_sprint:
         print("No active sprint found.")
         return
-    sprint_id = sprints[0]["id"]
-    print(f"Active Sprint: {sprints[0]['name']}")
+    sprint_id = active_sprint["id"]
+    print(f"Active Sprint: {active_sprint['name']}")
 
     # 3. Get issues
     issues = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,fixVersions", role=role)["issues"]
@@ -739,15 +750,15 @@ def add_to_active_sprint(issue_key, role="agent1"):
     config = get_config()
     boards = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board", role=role)["values"]
     board_id = boards[0]["id"]
-    sprints = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board/{board_id}/sprint?state=active", role=role)["values"]
-    if not sprints:
+    active_sprint = resolve_active_sprint(board_id, role=role)
+    if not active_sprint:
         print("No active sprint found.")
         return
-    sprint_id = sprints[0]["id"]
+    sprint_id = active_sprint["id"]
     url = f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue"
     payload = {"issues": [issue_key]}
     jira_request(url, method="POST", payload=payload, role=role)
-    print(f"Added {issue_key} to active sprint '{sprints[0]['name']}' (id {sprint_id}).")
+    print(f"Added {issue_key} to active sprint '{active_sprint['name']}' (id {sprint_id}).")
 
 if __name__ == "__main__":
     active_role, remaining_argv = parse_role_from_args(sys.argv[1:])

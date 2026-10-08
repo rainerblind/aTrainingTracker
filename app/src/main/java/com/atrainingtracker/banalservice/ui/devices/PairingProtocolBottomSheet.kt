@@ -38,12 +38,18 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
+import androidx.compose.ui.platform.LocalContext
+import com.atrainingtracker.banalservice.BANALService
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PairingProtocolBottomSheet(
     onProtocolSelected: (Protocol) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onAntServicesMissing: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
+
     AppModalBottomSheet(
         title = stringResource(R.string.devices_pair_protocol_title),
         onDismissRequest = onDismiss
@@ -88,7 +94,13 @@ fun PairingProtocolBottomSheet(
                     tint = Color.Unspecified
                 )
             },
-            modifier = Modifier.clickable { onProtocolSelected(Protocol.ANT_PLUS) }
+            modifier = Modifier.clickable {
+                if (!BANALService.areAllANTServicesInstalled(context) && onAntServicesMissing != null) {
+                    onAntServicesMissing()
+                } else {
+                    onProtocolSelected(Protocol.ANT_PLUS)
+                }
+            }
         )
     }
 }

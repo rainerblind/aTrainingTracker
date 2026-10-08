@@ -1520,9 +1520,24 @@
     <string name="import_fit_title">Importar ficheiros FIT</string>
     <string name="import_fit_description">Importar treinos de Garmin, Wahoo, Hammerhead ou smartwatches (.fit).</string>
     <string name="import_fit_button">Selecionar ficheiros FIT</string>
+    <string name="import_fit_dropbox_button">Examinar Dropbox (FIT)</string>
+    <string name="import_fit_gdrive_button">Examinar Google Drive (FIT)</string>
     <string name="import_fit_progress">A importar ficheiros FIT (%1$d de %2$d)…</string>
     <string name="import_fit_summary_success">%1$d treinos importados com sucesso (%2$d duplicados ignorados).</string>
     <string name="import_fit_summary_with_errors">%1$d treinos importados, %2$d duplicados ignorados, %3$d falhados.</string>
+    <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
+    <string name="import_tcx_title">Importar arquivos TCX</string>
+    <string name="import_tcx_description">Importar treinos de arquivos Training Center XML (.tcx).</string>
+    <string name="import_tcx_button">Selecionar arquivo TCX local</string>
+    <string name="import_tcx_dropbox_button">Examinar Dropbox (TCX)</string>
+    <string name="import_tcx_gdrive_button">Examinar Google Drive (TCX)</string>
+    <string name="import_gpx_title">Importar arquivos GPX</string>
+    <string name="import_gpx_description">Importar percursos e atividades de arquivos GPS Exchange Format (.gpx).</string>
+    <string name="import_gpx_button">Selecionar arquivo GPX local</string>
+    <string name="import_gpx_dropbox_button">Examinar Dropbox (GPX)</string>
+    <string name="import_gpx_gdrive_button">Examinar Google Drive (GPX)</string>
+    <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
+    <string name="invalid_workout_file_format">Formato de arquivo inválido. Selecione um arquivo %1$s.</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">Selecionar rota</string>
     <string name="route_action_select">Selecionar rota</string>
@@ -1539,6 +1554,8 @@
     <string name="route_filter_length">Comprimento</string>
     <string name="route_empty_title">Nenhuma rota disponível</string>
     <string name="route_empty_desc">Importe ficheiros GPX ou sincronize com o Strava.</string>
+    <string name="route_no_routes_nearby">Nenhuma rota próxima</string>
+    <string name="route_no_matching_route_detected">Nenhuma rota correspondente detetada</string>
     <string name="google_drive">Google Drive</string>
     <string name="google_drive_connect">Conectar ao Google Drive</string>
     <string name="google_drive_disconnect">Desconectar do Google Drive</string>
@@ -1559,6 +1576,8 @@
     <string name="google_drive_error_network">Sem conexão com a Internet ou erro de rede durante o login com o Google.</string>
     <string name="google_drive_error_generic">Falha no login com o Google. Tente novamente.</string>
     <string name="google_drive_error_auth_expired">Sessão do Google Drive expirada ou não autorizada. Faça login novamente nas Configurações.</string>
+    <string name="google_drive_error_api_disabled">A API do Google Drive está desativada no Google Cloud Console. Ative-a no projeto do Google Cloud.</string>
+    <string name="google_drive_error_folder_hierarchy">Falha ao resolver a hierarquia de pastas do Google Drive</string>
     <string name="google_drive_connect_prompt">Conecte sua conta do Google para exportar treinos e sincronizar backups do banco de dados automaticamente no Google Drive.</string>
     <string name="scan_google_drive">Escanear Google Drive</string>
     <string name="legacy_import__downloading_google_drive">Baixando %1$s do Google Drive…</string>
@@ -1598,6 +1617,11 @@
     <string name="routes_climbs_section_title">Subidas (%d)</string>
     <string name="routes_climb_start_at">Início em %s</string>
     <string name="routes_climb_avg_grade">Média %1$.1f%%</string>
+    <string name="routes_climb_max_grade">Máx. %1$.1f%%</string>
+    <string name="routes_segments_section_title">Segmentos (%d)</string>
+    <string name="routes_segments_tab_title">Segmentos (%d)</string>
+    <string name="routes_segment_start_at">Início em %s</string>
+    <string name="routes_segment_pr">PR %s</string>
     <string name="tuning_show_live_climbs_title">Subidas ao vivo (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Mostrar painel de subida em tempo real durante rotas e pedalada livre</string>
 
@@ -1653,4 +1677,24 @@
     <string name="devices_pair_protocol_title">Selecionar protocolo</string>
     <string name="devices_pair_protocol_ant">Sensor ANT+</string>
     <string name="devices_pair_protocol_ble">Sensor Bluetooth LE</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">Energia em segundo plano restrita</string>
+    <string name="battery_optimization_warning_banner_desc">O Android pode interromper a gravação do treino quando o ecrã se desliga. Desative a otimização de bateria.</string>
+    <string name="battery_optimization_action_fix">Permitir</string>
+    <string name="battery_optimization_dismiss_banner">Dispensar</string>
+
+    <!-- Contextual ANT+ Service Guidance (ATT-2513) -->
+    <string name="ant_status_sheet_title">Serviços do sistema ANT+</string>
+    <string name="ant_status_card_title">Hardware e serviços ANT+</string>
+    <string name="ant_status_card_desc">Os sensores ANT+ em smartphones modernos requerem um adaptador USB-OTG com pen USB ANT+ e serviços de sistema ANT+.</string>
+    <string name="ant_status_card_action">Verificar estado</string>
+    <string name="ant_status_usb_dongle_note">Os smartphones modernos não possuem chips ANT+ integrados. É necessário um adaptador USB-OTG externo com pen USB ANT+ para a receção.</string>
+    <string name="ant_status_ble_alternative_note">Dica: Os sensores Bluetooth LE funcionam diretamente sem hardware nem serviços adicionais.</string>
+    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
+    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
+    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
+    <string name="ant_service_installed">Instalado</string>
+    <string name="ant_service_not_installed">Não instalado</string>
+    <string name="ant_service_install_button">Instalar</string>
 </resources>

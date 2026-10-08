@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.migration
 import android.content.Context
 import android.util.Log
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -36,13 +37,21 @@ object GoogleDriveBackupManager {
     val BACKUP_FOLDER_HIERARCHY = listOf("aTrainingTracker", "Backups")
 
     // Extensible client provider for dependency injection in unit tests
-    var clientProvider: () -> GoogleDriveClient = {
-        GoogleDriveClient(tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() })
+    var clientProvider: (Context) -> GoogleDriveClient = { context ->
+        GoogleDriveClient(
+            tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() },
+            tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull() }
+        )
     }
 
     @androidx.annotation.VisibleForTesting
     fun resetForTesting() {
-        clientProvider = { GoogleDriveClient(tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() }) }
+        clientProvider = { context ->
+            GoogleDriveClient(
+                tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() },
+                tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull() }
+            )
+        }
     }
 
     suspend fun uploadBackup(context: Context, backupFile: File): Boolean = withContext(Dispatchers.IO) {
@@ -58,7 +67,7 @@ object GoogleDriveBackupManager {
         }
 
         try {
-            val client = clientProvider()
+            val client = clientProvider(context)
             val folderId = client.ensureFolderHierarchy(BACKUP_FOLDER_HIERARCHY)
             if (folderId == null) {
                 Log.e(TAG, "Failed to resolve Google Drive folder hierarchy for backups")
@@ -98,7 +107,7 @@ object GoogleDriveBackupManager {
         }
 
         try {
-            val client = clientProvider()
+            val client = clientProvider(context)
             val folderId = client.ensureFolderHierarchy(BACKUP_FOLDER_HIERARCHY)
             if (folderId == null) {
                 Log.e(TAG, "Failed to resolve Google Drive folder hierarchy for backups")

@@ -408,8 +408,7 @@ private fun MatrixEquipmentRow(
                 ),
                 contentDescription = null,
                 tint = if (item.isRetired) MaterialTheme.colorScheme.outline
-                       else if (isBike) MaterialTheme.colorScheme.primary
-                       else MaterialTheme.colorScheme.secondary,
+                       else MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(22.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))

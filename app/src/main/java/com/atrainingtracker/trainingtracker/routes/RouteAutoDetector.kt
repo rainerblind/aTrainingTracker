@@ -52,7 +52,22 @@ class RouteAutoDetector(
         currentlyActiveRouteId: Long?,
         currentTimeMillis: Long = System.currentTimeMillis()
     ): RouteWithPath? {
-        if (routes.isEmpty()) return null
+        return evaluateMatchingRoutes(location, routes, currentlyActiveRouteId, currentTimeMillis).firstOrNull()
+    }
+
+    /**
+     * Evaluates user's current location against available routes and returns all matching candidates
+     * sorted by closest proximity distance ascending, then recency (syncedAt) descending (REQ-UI-289).
+     */
+    fun evaluateMatchingRoutes(
+        location: Location,
+        routes: List<RouteWithPath>,
+        currentlyActiveRouteId: Long?,
+        currentTimeMillis: Long = System.currentTimeMillis()
+    ): List<RouteWithPath> {
+        if (routes.isEmpty()) return emptyList()
+
+        val matchingRoutes = mutableListOf<Pair<RouteWithPath, Float>>()
 
         for (route in routes) {
             val routeId = route.summary.id
@@ -68,6 +83,8 @@ class RouteAutoDetector(
             val path = route.path
             if (path.isEmpty()) continue
 
+            var matchedDistance: Float? = null
+
             // 1. Check proximity to start point
             val startPoint = path.first()
             val distToStart = computeDistanceMeters(
@@ -76,42 +93,51 @@ class RouteAutoDetector(
             )
 
             if (distToStart <= startProximityThresholdMeters) {
-                // If moving with sufficient speed, check heading alignment with start segment
                 if (location.hasBearing() && location.speed >= 1.5f && path.size > 1) {
                     val segmentBearing = computeBearing(startPoint.latLng, path[1].latLng)
                     val angleDiff = computeAngleDifference(location.bearing, segmentBearing)
                     if (angleDiff <= headingThresholdDegrees) {
-                        Log.d(TAG, "Candidate detected at start: ${route.summary.name} (dist=$distToStart m, angleDiff=$angleDiff)")
-                        return route
+                        matchedDistance = distToStart
                     }
                 } else {
-                    Log.d(TAG, "Candidate detected at start (low speed/no bearing): ${route.summary.name} (dist=$distToStart m)")
-                    return route
+                    matchedDistance = distToStart
                 }
             }
 
-            // 2. Check proximity along the path segments
-            for (i in 0 until (path.size - 1)) {
-                val p1 = path[i].latLng
-                val p2 = path[i + 1].latLng
-                val distToSegment = distanceToSegmentMeters(location.latitude, location.longitude, p1, p2)
-                if (distToSegment <= pathProximityThresholdMeters) {
-                    if (location.hasBearing() && location.speed >= 1.5f) {
-                        val segmentBearing = computeBearing(p1, p2)
-                        val angleDiff = computeAngleDifference(location.bearing, segmentBearing)
-                        if (angleDiff <= headingThresholdDegrees) {
-                            Log.d(TAG, "Candidate detected on path segment: ${route.summary.name} (dist=$distToSegment m, angleDiff=$angleDiff)")
-                            return route
+            // 2. Check proximity along the path segments if not already matched
+            if (matchedDistance == null) {
+                for (i in 0 until (path.size - 1)) {
+                    val p1 = path[i].latLng
+                    val p2 = path[i + 1].latLng
+                    val distToSegment = distanceToSegmentMeters(location.latitude, location.longitude, p1, p2)
+                    if (distToSegment <= pathProximityThresholdMeters) {
+                        if (location.hasBearing() && location.speed >= 1.5f) {
+                            val segmentBearing = computeBearing(p1, p2)
+                            val angleDiff = computeAngleDifference(location.bearing, segmentBearing)
+                            if (angleDiff <= headingThresholdDegrees) {
+                                matchedDistance = distToSegment
+                                break
+                            }
+                        } else {
+                            matchedDistance = distToSegment
+                            break
                         }
-                    } else {
-                        Log.d(TAG, "Candidate detected on path segment (low speed): ${route.summary.name}")
-                        return route
                     }
                 }
+            }
+
+            if (matchedDistance != null) {
+                matchingRoutes.add(Pair(route, matchedDistance))
             }
         }
 
-        return null
+        return matchingRoutes
+            .sortedWith(
+                compareBy<Pair<RouteWithPath, Float>> { it.second }
+                    .thenByDescending { it.first.summary.syncedAt }
+                    .thenBy { it.first.summary.name }
+            )
+            .map { it.first }
     }
 
     /**

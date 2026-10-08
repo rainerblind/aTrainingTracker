@@ -1713,9 +1713,24 @@
     <string name="import_fit_title">Import FIT files</string>
     <string name="import_fit_description">Import workouts from Garmin, Wahoo, Hammerhead, or smartwatches (.fit).</string>
     <string name="import_fit_button">Select FIT Files</string>
+    <string name="import_fit_dropbox_button">Scan Dropbox (FIT)</string>
+    <string name="import_fit_gdrive_button">Scan Google Drive (FIT)</string>
     <string name="import_fit_progress">Importing FIT files (%1$d of %2$d)…</string>
     <string name="import_fit_summary_success">Successfully imported %1$d workouts (%2$d duplicates skipped).</string>
     <string name="import_fit_summary_with_errors">Imported %1$d workouts, %2$d duplicates skipped, %3$d failed.</string>
+    <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
+    <string name="import_tcx_title">Import TCX files</string>
+    <string name="import_tcx_description">Import workouts from Training Center XML files (.tcx).</string>
+    <string name="import_tcx_button">Select TCX File</string>
+    <string name="import_tcx_dropbox_button">Scan Dropbox (TCX)</string>
+    <string name="import_tcx_gdrive_button">Scan Google Drive (TCX)</string>
+    <string name="import_gpx_title">Import GPX files</string>
+    <string name="import_gpx_description">Import tracks and activities from GPS Exchange Format files (.gpx).</string>
+    <string name="import_gpx_button">Select GPX File</string>
+    <string name="import_gpx_dropbox_button">Scan Dropbox (GPX)</string>
+    <string name="import_gpx_gdrive_button">Scan Google Drive (GPX)</string>
+    <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
+    <string name="invalid_workout_file_format">Invalid file format. Please select a %1$s file.</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
     <string name="route_select_title">Select Route</string>
     <string name="route_action_select">Select Route</string>
@@ -1732,6 +1747,8 @@
     <string name="route_filter_length">Length</string>
     <string name="route_empty_title">No routes available</string>
     <string name="route_empty_desc">Import GPX files or sync with Strava.</string>
+    <string name="route_no_routes_nearby">No routes nearby</string>
+    <string name="route_no_matching_route_detected">No matching route detected</string>
     <string name="google_drive">Google Drive</string>
     <string name="google_drive_connect">Connect to Google Drive</string>
     <string name="google_drive_disconnect">Disconnect from Google Drive</string>
@@ -1752,6 +1769,8 @@
     <string name="google_drive_error_network">No internet connection or network error during Google Sign-In.</string>
     <string name="google_drive_error_generic">Google Sign-In failed. Please try again.</string>
     <string name="google_drive_error_auth_expired">Google Drive session expired or unauthorized. Please re-authenticate in Settings.</string>
+    <string name="google_drive_error_api_disabled">Google Drive API is disabled in Google Cloud Console. Please enable it in the Google Cloud project.</string>
+    <string name="google_drive_error_folder_hierarchy">Failed to resolve Google Drive folder hierarchy</string>
     <string name="google_drive_connect_prompt">Connect your Google account to automatically export workouts and synchronize database backups to Google Drive.</string>
     <string name="scan_google_drive">Scan Google Drive</string>
     <string name="legacy_import__downloading_google_drive">Downloading %1$s from Google Drive…</string>
@@ -1791,6 +1810,11 @@
     <string name="routes_climbs_section_title">Climbs (%d)</string>
     <string name="routes_climb_start_at">Start at %s</string>
     <string name="routes_climb_avg_grade">Avg. %1$.1f%%</string>
+    <string name="routes_climb_max_grade">Max. %1$.1f%%</string>
+    <string name="routes_segments_section_title">Segments (%d)</string>
+    <string name="routes_segments_tab_title">Segments (%d)</string>
+    <string name="routes_segment_start_at">Start at %s</string>
+    <string name="routes_segment_pr">PR %s</string>
     <string name="tuning_show_live_climbs_title">Live Climbs (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Show real-time climb cockpit sheet during routes and free riding</string>
 
@@ -1846,6 +1870,26 @@
     <string name="devices_pair_protocol_title">Select protocol</string>
     <string name="devices_pair_protocol_ant">ANT+ Sensor</string>
     <string name="devices_pair_protocol_ble">Bluetooth LE Sensor</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">Background Energy Restricted</string>
+    <string name="battery_optimization_warning_banner_desc">Android may stop workout recording when the screen turns off. Please disable battery optimization.</string>
+    <string name="battery_optimization_action_fix">Exempt</string>
+    <string name="battery_optimization_dismiss_banner">Dismiss</string>
+
+    <!-- Contextual ANT+ Service Guidance (ATT-2513) -->
+    <string name="ant_status_sheet_title">ANT+ System Services</string>
+    <string name="ant_status_card_title">ANT+ Hardware &amp; Services</string>
+    <string name="ant_status_card_desc">ANT+ sensors on modern smartphones require an external USB-OTG adapter with an ANT+ USB stick and ANT+ system services.</string>
+    <string name="ant_status_card_action">Check Status</string>
+    <string name="ant_status_usb_dongle_note">Modern smartphones lack integrated ANT+ chips. An external USB-OTG adapter with an ANT+ USB stick is required for wireless reception.</string>
+    <string name="ant_status_ble_alternative_note">Tip: Bluetooth LE sensors work directly without any additional hardware or system services.</string>
+    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
+    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
+    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
+    <string name="ant_service_installed">Installed</string>
+    <string name="ant_service_not_installed">Not installed</string>
+    <string name="ant_service_install_button">Install</string>
 </resources>
 
 

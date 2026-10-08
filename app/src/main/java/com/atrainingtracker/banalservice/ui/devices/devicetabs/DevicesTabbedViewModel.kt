@@ -33,7 +33,9 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Sealed class to represent the UI state in a clean and type-safe way.
@@ -66,6 +68,13 @@ class DevicesTabbedViewModel(
     private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application)
     val searchingFor: StateFlow<String?> = banalServiceRepository.searchingForDevice
     val isSearchingForNewDevices: StateFlow<Boolean> = banalServiceRepository.isSearchingForNewDevices
+
+    // Active targeted scanning parameters for pairing discovery (REQ-UI-291, ATT-2626)
+    private val _scanningProtocol = MutableStateFlow<Protocol?>(null)
+    val scanningProtocol: StateFlow<Protocol?> = _scanningProtocol.asStateFlow()
+
+    private val _scanningDeviceType = MutableStateFlow<DeviceType?>(null)
+    val scanningDeviceType: StateFlow<DeviceType?> = _scanningDeviceType.asStateFlow()
 
     private val _uiState = MutableLiveData<UiState>()
     val uiState: LiveData<UiState> = _uiState
@@ -126,13 +135,29 @@ class DevicesTabbedViewModel(
     }
 
     /**
+     * Initiates targeted wireless discovery for a new sensor while keeping all device types
+     * visible across the Sensors view tabs without restrictive filtering (REQ-UI-291, ATT-2626).
+     */
+    fun startPairingScan(protocolToPair: Protocol, deviceTypeToPair: DeviceType) {
+        _scanningProtocol.value = protocolToPair
+        _scanningDeviceType.value = deviceTypeToPair
+        if (isSearching) {
+            banalServiceRepository.stopSearchingForNewDevices()
+        }
+        banalServiceRepository.startSearchingForNewDevices(protocolToPair, deviceTypeToPair)
+        isSearching = true
+    }
+
+    /**
      * Sends a broadcast to start searching for devices.
      */
     fun startSearching() {
         val currentState = _uiState.value
         if (isSearching || currentState !is UiState.DisplayingTabs) return
 
-        banalServiceRepository.startSearchingForNewDevices(protocol, currentState.deviceType)
+        val targetProto = _scanningProtocol.value ?: protocol
+        val targetType = _scanningDeviceType.value ?: currentState.deviceType
+        banalServiceRepository.startSearchingForNewDevices(targetProto, targetType)
 
         isSearching = true
     }
@@ -143,6 +168,8 @@ class DevicesTabbedViewModel(
     fun stopSearching() {
         if (!isSearching) return
 
+        _scanningProtocol.value = null
+        _scanningDeviceType.value = null
         banalServiceRepository.stopSearchingForNewDevices()
 
         isSearching = false

@@ -53,6 +53,7 @@ import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialog
 import androidx.compose.foundation.rememberScrollState
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSportSensorMatrix
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModel
+import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusSheet
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
@@ -68,6 +69,8 @@ fun DevicesTabbedScreen(
 ) {
     val uiState by tabViewModel.uiState.observeAsState()
     val isSearchingForNewDevices by tabViewModel.isSearchingForNewDevices.collectAsState()
+    val scanningProtocol by tabViewModel.scanningProtocol.collectAsState()
+    val scanningDeviceType by tabViewModel.scanningDeviceType.collectAsState()
     
     val protocol = tabViewModel.protocol
     var showDeleteConfirmFor by remember { mutableStateOf<DeviceUiData?>(null) }
@@ -75,6 +78,7 @@ fun DevicesTabbedScreen(
     var menuExpanded by remember { mutableStateOf(false) }
     var showProtocolSheet by remember { mutableStateOf(false) }
     var selectedPairingProtocol by remember { mutableStateOf<Protocol?>(null) }
+    var showAntStatusSheet by remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -132,11 +136,14 @@ fun DevicesTabbedScreen(
                                 viewModel = listViewModel,
                                 filterSpec = tabs[0],
                                 isSearchingForNewDevices = isSearchingForNewDevices,
+                                scanningProtocol = scanningProtocol,
+                                scanningDeviceType = scanningDeviceType,
                                 onDeviceSelected = { editingDeviceId = it },
                                 onDeleteDevice = { showDeleteConfirmFor = it },
                                 scrollState = availableListState,
                                 appBarOffsetPx = connection.appBarOffset,
-                                headerHeightPx = appBarMaxHeightPx.toFloat()
+                                headerHeightPx = appBarMaxHeightPx.toFloat(),
+                                onCheckAntInstallation = { showAntStatusSheet = true }
                             )
                             1 -> DeviceListScreen(
                                 viewModel = listViewModel,
@@ -146,7 +153,8 @@ fun DevicesTabbedScreen(
                                 onDeleteDevice = { showDeleteConfirmFor = it },
                                 scrollState = pairedListState,
                                 appBarOffsetPx = connection.appBarOffset,
-                                headerHeightPx = appBarMaxHeightPx.toFloat()
+                                headerHeightPx = appBarMaxHeightPx.toFloat(),
+                                onCheckAntInstallation = { showAntStatusSheet = true }
                             )
                             2 -> DeviceListScreen(
                                 viewModel = listViewModel,
@@ -156,7 +164,8 @@ fun DevicesTabbedScreen(
                                 onDeleteDevice = { showDeleteConfirmFor = it },
                                 scrollState = allKnownListState,
                                 appBarOffsetPx = connection.appBarOffset,
-                                headerHeightPx = appBarMaxHeightPx.toFloat()
+                                headerHeightPx = appBarMaxHeightPx.toFloat(),
+                                onCheckAntInstallation = { showAntStatusSheet = true }
                             )
                             3 -> EquipmentSportSensorMatrix(
                                 items = bikes,
@@ -263,6 +272,7 @@ fun DevicesTabbedScreen(
                                                     text = { Text(stringResource(R.string.check_ANT_installation)) },
                                                     onClick = {
                                                         menuExpanded = false
+                                                        showAntStatusSheet = true
                                                         onCheckAntInstallation()
                                                     }
                                                 )
@@ -319,7 +329,17 @@ fun DevicesTabbedScreen(
                             showProtocolSheet = false
                             selectedPairingProtocol = selectedProtocol
                         },
+                        onAntServicesMissing = {
+                            showProtocolSheet = false
+                            showAntStatusSheet = true
+                        },
                         onDismiss = { showProtocolSheet = false }
+                    )
+                }
+
+                if (showAntStatusSheet) {
+                    AntServicesStatusSheet(
+                        onDismiss = { showAntStatusSheet = false }
                     )
                 }
 
@@ -329,7 +349,7 @@ fun DevicesTabbedScreen(
                         protocol = protocolToPair,
                         onSelected = { chosenDeviceType ->
                             selectedPairingProtocol = null
-                            tabViewModel.updateFilters(protocolToPair, chosenDeviceType)
+                            tabViewModel.startPairingScan(protocolToPair, chosenDeviceType)
                             scope.launch {
                                 pagerState.animateScrollToPage(0)
                             }

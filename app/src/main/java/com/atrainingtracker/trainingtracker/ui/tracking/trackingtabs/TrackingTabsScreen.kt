@@ -263,6 +263,8 @@ fun TrackingTabsScreen(
 
     LaunchedEffect(trackingMode) {
         batterySaverController.onWakeupEvent()
+        val isTracking = trackingMode == TrackingMode.TRACKING || trackingMode == TrackingMode.PAUSED
+        routeSelectorViewModel.setTrackingActive(isTracking)
     }
 
     var lastActiveSegmentStatus by remember { mutableStateOf<Map<Long, LiveSegmentStatus>>(emptyMap()) }
@@ -659,9 +661,16 @@ fun TrackingTabsScreen(
                             showResearchButton = hasPairedRemoteDevices,
                             locationCalibrationStatus = locationCalibrationStatus,
                             bottomContent = {
+                                val isDimmed = routeSelectorUiState.activeRoute == null && routeSelectorUiState.routes.isEmpty()
+                                val emptySubtitleRes = if (isDimmed) {
+                                    routeSelectorUiState.contextEmptyHintRes
+                                } else {
+                                    R.string.route_action_select_desc
+                                }
                                 RouteSelectionButton(
                                     activeRoute = routeSelectorUiState.activeRoute,
-                                    isDimmed = routeSelectorUiState.activeRoute == null && routeSelectorUiState.routes.isEmpty(),
+                                    isDimmed = isDimmed,
+                                    emptySubtitleRes = emptySubtitleRes,
                                     returnNavState = returnNavState,
                                     onClick = { showRouteSelectorSheet = true },
                                     onClearRoute = { routeSelectorViewModel.clearRoute() }

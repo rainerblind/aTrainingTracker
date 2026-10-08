@@ -71,10 +71,15 @@ class CockpitPreviewTileContractTest {
                 content.contains("elevation = tileElevation")
         )
 
-        // 3. Spaced grid arrangement
+        // 3. Spaced grid arrangement with dynamic resolveGridSpacing
         assertTrue(
-            "Tiles must be arranged horizontally with spacing",
-            content.contains("Arrangement.spacedBy(") && content.contains("gridSpacing")
+            "Tiles must be arranged horizontally using resolveGridSpacing",
+            content.contains("SensorFieldStyle.resolveGridSpacing") &&
+                content.contains("Arrangement.spacedBy(effectiveSpacing")
+        )
+        assertTrue(
+            "Preview must pass borderThickness to PreviewCockpitTile for padding compensation",
+            content.contains("borderThickness = sensorFieldBorderThickness.dp")
         )
 
         // 4. Sample telemetry values and units
