@@ -431,6 +431,7 @@ private fun XRayPolyline(
  * Requirements:
  * - Markers are rendered above both base and overlay polylines (zIndex >= 50f).
  * - Displays vector icon associated with [RouteWaypoint.type.iconResId].
+ * - Supports configurable [markerSizeDp] defaulting to [DEFAULT_WAYPOINT_MARKER_SIZE_DP] (22 dp) (REQ-MAP-037).
  * - Supports clicking on a waypoint marker to trigger [onWaypointClick].
  */
 @Composable
@@ -438,14 +439,15 @@ fun RouteWaypointsLayer(
     waypoints: List<RouteWaypoint>,
     context: Context? = null,
     alpha: Float = 1.0f,
+    markerSizeDp: Int = DEFAULT_WAYPOINT_MARKER_SIZE_DP,
     onWaypointClick: (RouteWaypoint) -> Unit = {}
 ) {
     if (waypoints.isEmpty()) return
 
     waypoints.forEach { waypoint ->
-        val iconDescriptor = remember(waypoint.type, context) {
+        val iconDescriptor = remember(waypoint.type, context, markerSizeDp) {
             context?.let { ctx ->
-                createWaypointBadgeMarker(ctx, waypoint.type, 32)
+                createWaypointBadgeMarker(ctx, waypoint.type, markerSizeDp)
             }
         }
 

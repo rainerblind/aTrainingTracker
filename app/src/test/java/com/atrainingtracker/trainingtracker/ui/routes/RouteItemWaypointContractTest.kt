@@ -88,4 +88,24 @@ class RouteItemWaypointContractTest {
         assertTrue("PathPreviewMap must check path is MapRoute and path.waypoints.isNotEmpty()", content.contains("path is MapRoute && path.waypoints.isNotEmpty()"))
         assertTrue("PathPreviewMap must invoke RouteWaypointsLayer", content.contains("RouteWaypointsLayer("))
     }
+
+    @Test
+    fun testRouteWaypointsLayer_exposesMarkerSizeDpParameter() {
+        var dir = java.io.File(".").canonicalFile
+        while (dir.parentFile != null) {
+            if (java.io.File(dir, "gradlew").exists() && java.io.File(dir, "app").exists()) {
+                break
+            }
+            dir = dir.parentFile!!
+        }
+        val mapLayersFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapLayers.kt")
+        assertTrue("MapLayers.kt must exist", mapLayersFile.exists())
+        val content = mapLayersFile.readText()
+        assertTrue("RouteWaypointsLayer must expose markerSizeDp parameter defaulting to DEFAULT_WAYPOINT_MARKER_SIZE_DP",
+            content.contains("markerSizeDp: Int = DEFAULT_WAYPOINT_MARKER_SIZE_DP"))
+        assertTrue("RouteWaypointsLayer must pass markerSizeDp to createWaypointBadgeMarker",
+            content.contains("createWaypointBadgeMarker(ctx, waypoint.type, markerSizeDp)"))
+        assertTrue("RouteWaypointsLayer must include markerSizeDp in remember cache key",
+            content.contains("remember(waypoint.type, context, markerSizeDp)"))
+    }
 }
