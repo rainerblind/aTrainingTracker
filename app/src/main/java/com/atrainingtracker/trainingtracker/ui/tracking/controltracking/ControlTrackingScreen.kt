@@ -284,34 +284,43 @@ fun ControlTrackingScreen(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        Box(modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp)
-        ) {
-            // The Information Area - Anchored to the MATHEMATICAL CENTER of the screen
-            Column(
-                modifier = Modifier.align(Alignment.TopCenter),
-                horizontalAlignment = Alignment.CenterHorizontally
+        // Status banner when actively searching for sensors (REQ-UI-301, ATT-2479)
+        SearchArea(
+            searchingFor = searchingFor
+        )
+
+        // Sensor header section: RemoteDevices and ResearchButton without collision (REQ-UI-301, ATT-2479)
+        if (devices.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                SearchArea(
-                    searchingFor = searchingFor
-                )
-
-                RemoteDevices(
-                    devices = devices,
-                    onDeviceClick = onDeviceClick
-                )
-            }
-
-            // Research Button - Anchored to the far left of the screen
-            // note that this must be added at the end to get the clicking working...
-            if (showResearchButton) {
-                Box(modifier = Modifier.align(Alignment.TopStart)) {
+                if (showResearchButton) {
                     ResearchButton(
                         isEnabled = searchingFor == null,
                         onClick = onSearch
                     )
                 }
+                RemoteDevices(
+                    devices = devices,
+                    onDeviceClick = onDeviceClick,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        } else if (showResearchButton) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ResearchButton(
+                    isEnabled = searchingFor == null,
+                    onClick = onSearch
+                )
             }
         }
 
@@ -560,7 +569,35 @@ fun PreviewControlTrackingScreenNoRemoteDevices() {
     }
 }
 
-
-
-
-
+@Preview(showBackground = true, name = "Light Mode - Multiple Remote Devices")
+@Preview(
+    showBackground = true,
+    name = "Dark Mode - Multiple Remote Devices",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PreviewControlTrackingScreenMultiDevices() {
+    ATrainingTrackerTheme {
+        Surface {
+            ControlTrackingScreen(
+                trackingMode = TrackingMode.READY,
+                searchingFor = null,
+                devices = listOf(
+                    RemoteDeviceUIData(1, deviceType = DeviceType.HRM, name = "Polar H10", R.drawable.hr),
+                    RemoteDeviceUIData(2, deviceType = DeviceType.BIKE_SPEED, name = "Speed", R.drawable.bt_bike_spd),
+                    RemoteDeviceUIData(3, deviceType = DeviceType.BIKE_CADENCE, name = "Cadence", R.drawable.bt_bike_cad),
+                    RemoteDeviceUIData(4, deviceType = DeviceType.BIKE_POWER, name = "Power", R.drawable.bt_bike_pwr),
+                    RemoteDeviceUIData(5, deviceType = DeviceType.RUN_SPEED, name = "Footpod", R.drawable.run_spd),
+                    RemoteDeviceUIData(6, deviceType = DeviceType.BIKE_SPEED_AND_CADENCE, name = "Combo", R.drawable.bt_bike_speed_and_cadence)
+                ),
+                currentSport = BSportType.BIKE,
+                isAntSupported = true,
+                isBluetoothSupported = true,
+                onSearch = {}, onDeviceClick = {}, onSportSelected = {},
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
+                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {},
+                showResearchButton = true
+            )
+        }
+    }
+}
