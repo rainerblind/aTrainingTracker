@@ -140,4 +140,44 @@ class RouteAutoDetectorTest {
         val candidate = detector.evaluate(loc, emptyList<RouteWithPath>(), currentlyActiveRouteId = null)
         assertNull(candidate)
     }
+
+    @Test
+    fun testEvaluateMatchingRoutes_returnsMultipleCorridorMatchesSortedByProximity() {
+        // Route 1 start is closer (~1m away)
+        val route1 = createSampleRoute(id = 1L, name = "Close Route", points = listOf(
+            LatLng(48.137155, 11.576125),
+            LatLng(48.138000, 11.577000)
+        ))
+        // Route 2 start is slightly farther (~20m away)
+        val route2 = createSampleRoute(id = 2L, name = "Farther Route", points = listOf(
+            LatLng(48.137300, 11.576200),
+            LatLng(48.138100, 11.577100)
+        ))
+        val loc = createLocation(48.137154, 11.576124, bearing = 38f)
+
+        val matches = detector.evaluateMatchingRoutes(loc, listOf(route2, route1), currentlyActiveRouteId = null)
+
+        assertEquals(2, matches.size)
+        assertEquals(1L, matches[0].summary.id)
+        assertEquals(2L, matches[1].summary.id)
+    }
+
+    @Test
+    fun testEvaluateMatchingRoutes_excludesActiveRouteAndDismissedRoute() {
+        val activeRoute = createSampleRoute(id = 10L, name = "Active Route")
+        val dismissedRoute = createSampleRoute(id = 20L, name = "Dismissed Route")
+        val matchingRoute = createSampleRoute(id = 30L, name = "Valid Route")
+        val loc = createLocation(48.137160, 11.576130, bearing = 38f)
+
+        detector.dismissRoute(20L)
+
+        val matches = detector.evaluateMatchingRoutes(
+            loc,
+            listOf(activeRoute, dismissedRoute, matchingRoute),
+            currentlyActiveRouteId = 10L
+        )
+
+        assertEquals(1, matches.size)
+        assertEquals(30L, matches[0].summary.id)
+    }
 }

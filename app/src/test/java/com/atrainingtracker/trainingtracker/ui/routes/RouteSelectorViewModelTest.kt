@@ -362,4 +362,55 @@ class RouteSelectorViewModelTest {
         assertEquals(5, state.totalRouteCount)
         assertEquals(0, state.routes.size)
     }
+
+    @Test
+    fun testPreTracking_ranksByStartProximity_andSetsContextEmptyHintRes() = runTest {
+        allRoutesFlow.value = sampleRoutes()
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
+        advanceUntilIdle()
+
+        // By default, isTrackingActive is false
+        assertEquals(false, viewModel.uiState.value.isTrackingActive)
+        assertEquals(com.atrainingtracker.R.string.route_no_routes_nearby, viewModel.uiState.value.contextEmptyHintRes)
+
+        // Set location near Route 1 start (48.137154, 11.576124)
+        val loc = mockk<Location>(relaxed = true)
+        every { loc.latitude } returns 48.137154
+        every { loc.longitude } returns 11.576124
+        viewModel.onLocationChanged(loc)
+        advanceUntilIdle()
+
+        // Within 1km, Route 1 qualifies
+        val routes = viewModel.uiState.value.routes
+        assertEquals(1, routes.size)
+        assertEquals(1L, routes[0].summary.id)
+    }
+
+    @Test
+    fun testInRide_evaluatesMatchingCorridorRoutes_andSetsContextEmptyHintRes() = runTest {
+        allRoutesFlow.value = sampleRoutes()
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
+        advanceUntilIdle()
+
+        // Switch to in-ride
+        viewModel.setTrackingActive(true)
+        advanceUntilIdle()
+
+        assertEquals(true, viewModel.uiState.value.isTrackingActive)
+        assertEquals(com.atrainingtracker.R.string.route_no_matching_route_detected, viewModel.uiState.value.contextEmptyHintRes)
+
+        // Location along Route 1 segment (48.138000, 11.577000)
+        val loc = mockk<Location>(relaxed = true)
+        every { loc.latitude } returns 48.138000
+        every { loc.longitude } returns 11.577000
+        every { loc.bearing } returns 38f
+        every { loc.hasBearing() } returns true
+        every { loc.speed } returns 5f
+        viewModel.onLocationChanged(loc)
+        advanceUntilIdle()
+
+        val routes = viewModel.uiState.value.routes
+        assertEquals(1, routes.size)
+        assertEquals(1L, routes[0].summary.id)
+    }
 }

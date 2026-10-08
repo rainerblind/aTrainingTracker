@@ -148,20 +148,6 @@ fun RouteSelectorContent(
             }
         }
 
-        // Auto-Detected Route Candidate Banner
-        AnimatedVisibility(visible = uiState.isAutoPromptVisible && uiState.autoDetectedCandidate != null) {
-            uiState.autoDetectedCandidate?.let { candidate ->
-                AutoDetectedRouteBanner(
-                    route = candidate,
-                    onActivate = {
-                        viewModel.activateCandidate(candidate.summary.id)
-                        onRouteSelected(candidate.summary.id)
-                    },
-                    onDismiss = { viewModel.dismissCandidate(candidate.summary.id) }
-                )
-            }
-        }
-
         Spacer(modifier = Modifier.height(8.dp))
 
         // Route List or Empty State
@@ -173,8 +159,13 @@ fun RouteSelectorContent(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val emptyTitle = if (uiState.totalRouteCount == 0) {
+                        stringResource(id = R.string.route_empty_title)
+                    } else {
+                        stringResource(id = uiState.contextEmptyHintRes)
+                    }
                     Text(
-                        text = stringResource(id = R.string.route_empty_title),
+                        text = emptyTitle,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium
                     )

@@ -1540,6 +1540,8 @@
     <string name="route_filter_length">Longueur</string>
     <string name="route_empty_title">Aucun itinéraire disponible</string>
     <string name="route_empty_desc">Importez des fichiers GPX ou synchronisez avec Strava.</string>
+    <string name="route_no_routes_nearby">Aucun itinéraire à proximité</string>
+    <string name="route_no_matching_route_detected">Aucun itinéraire correspondant détecté</string>
     <string name="google_drive">Google Drive</string>
     <string name="google_drive_connect">Se connecter à Google Drive</string>
     <string name="google_drive_disconnect">Se déconnecter de Google Drive</string>

@@ -63,4 +63,24 @@ class RouteSelectionButtonTest {
             content.contains("isDimmed = routeSelectorUiState.activeRoute == null && routeSelectorUiState.routes.isEmpty()")
         )
     }
+
+    @Test
+    fun testRouteSelectionButton_declaresEmptySubtitleResAndWiresInTrackingTabs() {
+        val buttonFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/RouteSelectionButton.kt")
+        val buttonContent = buttonFile.readText()
+
+        assertTrue(
+            "RouteSelectionButton must declare emptySubtitleRes parameter with default route_action_select_desc (REQ-UI-289)",
+            buttonContent.contains("emptySubtitleRes: Int = R.string.route_action_select_desc")
+        )
+
+        val trackingTabsFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsScreen.kt")
+        val trackingTabsContent = trackingTabsFile.readText()
+
+        assertTrue(
+            "TrackingTabsScreen must compute emptySubtitleRes using contextEmptyHintRes (REQ-UI-289)",
+            trackingTabsContent.contains("routeSelectorUiState.contextEmptyHintRes") &&
+                trackingTabsContent.contains("emptySubtitleRes = emptySubtitleRes")
+        )
+    }
 }
