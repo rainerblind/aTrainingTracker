@@ -156,4 +156,31 @@ class SensorGridScreenRouteIntegrationTest {
             content.contains("overlayAlpha = tuningConfig.navigationCueTransparency")
         )
     }
+
+    /**
+     * TST-MAP-041.4 & TST-MAP-041.5: ReturnNavigationHud floats in top-center overlay and is gated by showNavigationHints (REQ-MAP-039.4 / ATT-2938).
+     */
+    @Test
+    fun testSensorGridScreen_returnNavigationHud_floatsAsTopCenterOverlayAndGatedByNavigationHints() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        val mainColumnSection = content.substringAfter("Column(\n                    modifier = Modifier.fillMaxSize()\n                ) {")
+            .substringBefore("Column(\n                        modifier = Modifier\n                            .fillMaxWidth()\n                            .verticalScroll")
+
+        org.junit.Assert.assertFalse(
+            "ReturnNavigationHud must not be rendered inside the in-flow sensor grid Column",
+            mainColumnSection.contains("ReturnNavigationHud(")
+        )
+
+        assertTrue(
+            "ReturnNavigationHud must be gated behind state.showNavigationHints",
+            content.contains("if (state.showNavigationHints)") && content.contains("ReturnNavigationHud(")
+        )
+
+        assertTrue(
+            "ReturnNavigationHud must consume tuningConfig.navigationCueTransparency",
+            content.contains("overlayAlpha = tuningConfig.navigationCueTransparency")
+        )
+    }
 }

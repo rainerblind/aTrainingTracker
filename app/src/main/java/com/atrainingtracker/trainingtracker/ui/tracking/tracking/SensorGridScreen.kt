@@ -471,12 +471,6 @@ fun SensorGridScreen(
                         dismissDurationSec = tuningConfig.navigationCueDismissDurationSec
                     )
 
-                    // Return Navigation & Dynamic Elevation-Aware ETA HUD Banner (REQ-MAP-029 / ATT-1953)
-                    ReturnNavigationHud(
-                        navigationState = returnNavState,
-                        overlayAlpha = tuningConfig.navigationCueTransparency,
-                        onDismiss = { returnNavRepo.dismissHud() }
-                    )
 
                     // 1. The Sensor Grid (Scrollable)
                     // This Column will only take as much space as the sensors need.
@@ -552,20 +546,30 @@ fun SensorGridScreen(
                     }
                 }
 
-                // In-Ride Fork-in-the-Road Route Selection & Decision Alerts (REQ-MAP-031 / ATT-1955, ATT-2874)
+                // Top-Level Ambient Navigation Overlays (REQ-MAP-031, REQ-MAP-029, ATT-2874, ATT-2938)
                 // Floats on top at Alignment.TopCenter, strictly gated by state.showNavigationHints
                 if (state.showNavigationHints) {
-                    ForkDecisionCard(
-                        decisionState = forkDecisionState,
-                        overlayAlpha = tuningConfig.navigationCueTransparency,
-                        onRouteSelected = { routeId ->
-                            forkNavRepo.selectRouteManually(routeId)
-                        },
-                        onDismiss = {
-                            forkNavRepo.dismissPrompt()
-                        },
-                        modifier = Modifier.align(Alignment.TopCenter)
-                    )
+                    Column(
+                        modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                    ) {
+                        ReturnNavigationHud(
+                            navigationState = returnNavState,
+                            overlayAlpha = tuningConfig.navigationCueTransparency,
+                            onDismiss = { returnNavRepo.dismissHud() }
+                        )
+
+                        ForkDecisionCard(
+                            decisionState = forkDecisionState,
+                            overlayAlpha = tuningConfig.navigationCueTransparency,
+                            onRouteSelected = { routeId ->
+                                forkNavRepo.selectRouteManually(routeId)
+                            },
+                            onDismiss = {
+                                forkNavRepo.dismissPrompt()
+                            },
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                    }
                 }
             }
         }
