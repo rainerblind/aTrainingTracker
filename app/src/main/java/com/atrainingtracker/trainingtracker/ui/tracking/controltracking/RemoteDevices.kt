@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 
 
 @Composable
@@ -84,7 +85,7 @@ private fun RemoteDeviceItem(
             .padding(4.dp)
     ) {
         Icon(
-            painter = painterResource(id = device.iconRes),
+            painter = safePainterResource(id = device.iconRes),
             contentDescription = null,
             modifier = Modifier
                 .size(48.dp)
