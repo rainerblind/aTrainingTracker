@@ -152,5 +152,16 @@ These rules are strictly binding on all AI assistants and agent instances operat
   4. **Active Sprint Rebase / Merge**: If an active sprint branch (`sprint/<ID>`) is in flight during the hotfix, the hotfix changes MUST be immediately merged into `sprint/<ID>`. This ensures that in-flight sprint feature branches build upon the hotfix baseline, preventing merge conflicts and regressions.
 * Origin: Sprint 2026-41.2, ATT-2634 — Rainer Blind mandate: *"Define Workflow / Skill for Hotfixes."*
 
+## 27. Dual Branch Integration for Production Hotfix FixVersions
+* **Rule**: When an in-sprint ticket has a `FixVersion` targeting an active hotfix release (e.g. `hotfix/V4.9.38.4__267` for `V4.9.38.4`), the agent **MUST** backport/cherry-pick the verified code, resources, and deliverables onto the active hotfix branch immediately following Stage 5 verification on the sprint branch (`"Did you merge these two tickets also in the hotfix branch?"` — Rainer Blind, Sprint Retro 2026-41.5 / ATT-2867).
+* The agent must verify compilation via `./gradlew assembleDebug` on the hotfix branch after cherry-picking.
+* Origin: Sprint 2026-41.5, ATT-2858 & ATT-2856 — Crash fixes were merged to `sprint/2026-41.5` but needed explicit human inquiry to be integrated into `hotfix/V4.9.38.4__267`.
+
+## 28. Deferred Review State for Field-Tested Features
+* **Rule**: When a sprint ticket modifies in-ride GPS dynamics, algorithmic filtering, sensor connectivity, or real-time cycling cockpit prompts that require actual outdoor bike rides to judge, the ticket may remain in `Final Review (Human)` across sprint close.
+* The sprint integration branch `sprint/<SPRINT_NAME>` may still be merged into `develop` if the changes are stable and pass automated regressions. The ticket remains in `Final Review (Human)` until outdoor ride verification is complete.
+* Origin: Sprint 2026-41.5, ATT-2873 & ATT-2874 — Rainer Blind decision: *"Ticket must stay in Review"* for in-ride fork route detection and floating prompt testing.
+
+
 
 
