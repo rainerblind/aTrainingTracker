@@ -58,6 +58,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Objects
 
@@ -73,18 +74,19 @@ data class TrackingScreenState(
     val showLapButton: Boolean = true,
     val fields: List<SensorFieldState> = emptyList(),
     val pathPoints: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint> = emptyList(),
+    val mapState: TrackingMapState = TrackingMapState(showMap = showMap),
     
-    // Map specific state
-    val zoomFocus: MapZoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
-    val userBearing: Float = 0f,
-    val userSpeed: Float = 0f,
-    val bSportType: BSportType = BSportType.UNKNOWN,
-    val currentTrack: List<LatLng> = emptyList(),
-    val mapTracks: List<MapTrack> = emptyList(),
-    val mapSegments: List<MapSegment> = emptyList(),
-    val activeLiveSegmentIds: Set<Long> = emptySet(),
-    val mapRoutes: List<MapRoute> = emptyList(),
-    val mapMarkers: List<LocationMarker> = emptyList()
+    // Map specific state (backward-compatible)
+    val zoomFocus: MapZoomFocus = mapState.zoomFocus,
+    val userBearing: Float = mapState.userBearing,
+    val userSpeed: Float = mapState.userSpeed,
+    val bSportType: BSportType = mapState.bSportType,
+    val currentTrack: List<LatLng> = mapState.currentTrack,
+    val mapTracks: List<MapTrack> = mapState.mapTracks,
+    val mapSegments: List<MapSegment> = mapState.mapSegments,
+    val activeLiveSegmentIds: Set<Long> = mapState.activeLiveSegmentIds,
+    val mapRoutes: List<MapRoute> = mapState.mapRoutes,
+    val mapMarkers: List<LocationMarker> = mapState.mapMarkers
 )
 
 /**
@@ -104,6 +106,10 @@ class TrackingViewModel(
     // --- The StateFlow to hold and expose the UI state ---
     private val _uiState = MutableStateFlow(TrackingScreenState())
     val uiState: StateFlow<TrackingScreenState> = _uiState.asStateFlow()
+
+    // Holds the Map-specific state, decoupled from high-frequency sensor telemetry (REQ-UI-326 / ATT-2944)
+    private val _mapState = MutableStateFlow(TrackingMapState())
+    val mapState: StateFlow<TrackingMapState> = _mapState.asStateFlow()
 
     private val _activityType = MutableStateFlow<ActivityType>(ActivityType.getDefaultActivityType())
     val activityType: StateFlow<ActivityType> = _activityType.asStateFlow()
@@ -189,6 +195,7 @@ class TrackingViewModel(
 
     init {
         observeZoneDisplayOptions()
+        observeMapState()
         // Load both the main UI state and the activity type
         loadSensorFieldStates()
         loadActivityType()
@@ -222,9 +229,8 @@ class TrackingViewModel(
         val activeNavigatedRouteId: T4
     )
 
-    private fun loadSensorFieldStates() {
+    private fun observeMapState() {
         viewModelScope.launch {
-            // 1. First, create a combined flow for all Map-related data
             val mapDataFlow = combine(
                 liveSegmentsRepository.liveSegments,
                 activeLiveSegments,
@@ -234,16 +240,78 @@ class TrackingViewModel(
                 MapData(allSegments, activeSegments, allRoutes, activeNavigatedRouteId)
             }
 
-            // 2. Now combine the Sensor data with the Map data (This keeps us under the 5-flow limit)
+            combine(
+                trackingViewsRepository.getTrackingViewInfoFlow(viewId),
+                mapDataFlow,
+                banalServiceRepository.currentTrack,
+                banalServiceRepository.bSportType
+            ) { viewInfo, mapData, currentTrack, bSportType ->
+                val (allLiveSegments, activeLiveSegments, allRoutes, activeNavigatedRouteId) = mapData
+                val markerList = mutableListOf<LocationMarker>()
+                if (currentTrack.isNotEmpty()) {
+                    markerList.add(
+                        LocationMarker(
+                            position = currentTrack.first(),
+                            iconResId = R.drawable.start_logo_map,
+                            title = application.getString(R.string.Start)
+                        )
+                    )
+                }
+
+                // Convert LiveSegments into MapSegments
+                val mapSegments = allLiveSegments.map { live ->
+                    MapSegment(
+                        stravaId = live.staticData.summary.stravaId,
+                        name = live.staticData.summary.name,
+                        bSportType = live.staticData.summary.bSportType,
+                        path = live.staticData.path
+                    )
+                }
+
+                val activeIds = activeLiveSegments.map { it.staticData.summary.stravaId }.toSet()
+
+                TrackingMapState(
+                    showMap = viewInfo?.showMap ?: false,
+                    zoomFocus = MapZoomFocus.FOLLOW_ME,
+                    userSpeed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
+                    userBearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
+                    bSportType = bSportType,
+                    currentTrack = currentTrack,
+                    mapSegments = mapSegments,
+                    mapRoutes = allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeNavigatedRouteId)) },
+                    activeLiveSegmentIds = activeIds,
+                    mapMarkers = markerList
+                )
+            }.collect { newMapState ->
+                _mapState.value = newMapState
+                _uiState.update { current ->
+                    current.copy(
+                        showMap = newMapState.showMap,
+                        mapState = newMapState,
+                        zoomFocus = newMapState.zoomFocus,
+                        userBearing = newMapState.userBearing,
+                        userSpeed = newMapState.userSpeed,
+                        bSportType = newMapState.bSportType,
+                        currentTrack = newMapState.currentTrack,
+                        mapTracks = newMapState.mapTracks,
+                        mapSegments = newMapState.mapSegments,
+                        activeLiveSegmentIds = newMapState.activeLiveSegmentIds,
+                        mapRoutes = newMapState.mapRoutes,
+                        mapMarkers = newMapState.mapMarkers
+                    )
+                }
+            }
+        }
+    }
+
+    private fun loadSensorFieldStates() {
+        viewModelScope.launch {
             combine(
                 trackingViewsRepository.getSensorFieldConfigsForView(viewId),
                 banalServiceRepository.allFilteredSensorData,
                 trackingViewsRepository.getTrackingViewInfoFlow(viewId),
-                banalServiceRepository.currentPathPoints,
-                mapDataFlow
-            ) { configs, allSensorData, viewInfo, livePathPoints, mapData ->
-                val (allLiveSegments, activeLiveSegments, allRoutes, activeNavigatedRouteId) = mapData
-
+                banalServiceRepository.currentPathPoints
+            ) { configs, allSensorData, viewInfo, livePathPoints ->
                 // --- Step 1: Create the base state from the latest configurations ---
                 val currentActivity = banalServiceRepository.activityType.value
                 val baseFields = configs.map { config ->
@@ -278,49 +346,28 @@ class TrackingViewModel(
                 // --- Step 2: Apply live sensor data to the base state ---
                 val finalFields = applySensorData(baseFields, allSensorData, currentActivity)
 
-                val currentTrack = banalServiceRepository.currentTrack.value
-                val markerList = mutableListOf<LocationMarker>()
-                if (currentTrack.isNotEmpty()) {
-                    markerList.add(
-                        LocationMarker(
-                            position = currentTrack.first(),
-                            iconResId = R.drawable.start_logo_map,
-                            title = application.getString(R.string.Start)
-                        )
-                    )
-                }
-
-                // Convert LiveSegments into MapSegments
-                val mapSegments = allLiveSegments.map { live ->
-                    MapSegment(
-                        stravaId = live.staticData.summary.stravaId,
-                        name = live.staticData.summary.name,
-                        bSportType = live.staticData.summary.bSportType,
-                        path = live.staticData.path
-                    )
-                }
-
-                val activeIds = activeLiveSegments.map { it.staticData.summary.stravaId }.toSet()
-
-                // --- Step 4: Package everything into the TrackingScreenState ---
+                // --- Step 3: Package into TrackingScreenState reusing the decoupled mapState ---
+                val currentMap = _mapState.value
                 TrackingScreenState(
                     fields = finalFields,
                     showMap = viewInfo?.showMap ?: false,
-                    showLiveSegments =  viewInfo?.showLiveSegments ?: false,
+                    showLiveSegments = viewInfo?.showLiveSegments ?: false,
                     showElevationProfile = viewInfo?.showElevationProfile ?: false,
                     showLiveClimbs = viewInfo?.showLiveClimbs ?: true,
                     showNavigationHints = viewInfo?.showNavigationHints ?: true,
                     showLapButton = viewInfo?.showLapButton ?: true,
                     pathPoints = livePathPoints,
-                    zoomFocus = MapZoomFocus.FOLLOW_ME,
-                    userSpeed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
-                    userBearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
-                    bSportType = banalServiceRepository.bSportType.value,
-                    currentTrack = currentTrack,
-                    mapSegments = mapSegments,
-                    mapRoutes = allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeNavigatedRouteId)) },
-                    activeLiveSegmentIds = activeIds,
-                    mapMarkers = markerList
+                    mapState = currentMap,
+                    zoomFocus = currentMap.zoomFocus,
+                    userSpeed = currentMap.userSpeed,
+                    userBearing = currentMap.userBearing,
+                    bSportType = currentMap.bSportType,
+                    currentTrack = currentMap.currentTrack,
+                    mapTracks = currentMap.mapTracks,
+                    mapSegments = currentMap.mapSegments,
+                    mapRoutes = currentMap.mapRoutes,
+                    activeLiveSegmentIds = currentMap.activeLiveSegmentIds,
+                    mapMarkers = currentMap.mapMarkers
                 )
             }.collect { newState ->
                 _uiState.value = newState
