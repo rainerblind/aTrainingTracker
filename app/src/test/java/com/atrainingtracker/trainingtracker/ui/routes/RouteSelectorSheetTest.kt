@@ -138,6 +138,30 @@ class RouteSelectorSheetTest {
             "RouteCard must size sport icon at 24.dp",
             content.contains("modifier = Modifier.size(24.dp)")
         )
+        // REQ-UI-320 / ATT-2865: Preserve authentic multi-color vector asset colors without monochrome theme tinting
+        assertTrue(
+            "RouteCard must preserve authentic sport icon colors via tint = Color.Unspecified (REQ-UI-320 / ATT-2865)",
+            content.contains("tint = Color.Unspecified")
+        )
+        assertFalse(
+            "RouteCard must not tint sport icon with monochrome theme colors (REQ-UI-320 / ATT-2865)",
+            content.contains("tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant")
+        )
+    }
+
+    @Test
+    fun testRouteCard_preservesActiveRouteChipAndCardColors() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteSelectorSheet.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "RouteCard must set containerColor based on active state",
+            content.contains("if (isActive) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant")
+        )
+        assertTrue(
+            "RouteCard must render ACTIVE label chip for active route",
+            content.contains("\"ACTIVE\"") && content.contains("MaterialTheme.colorScheme.primary")
+        )
     }
 }
 
