@@ -62,25 +62,22 @@ class RouteDetailSheetContractTest {
         assertTrue("RouteDetailSheet.kt must exist", routeDetailSheetFile.exists())
         val content = routeDetailSheetFile.readText()
 
-        // 1. Material 3 AppModalBottomSheet usage
-        assertTrue("Must use AppModalBottomSheet", content.contains("AppModalBottomSheet"))
+        // 1. Material 3 ModalBottomSheet with BottomSheetDesign shape tokens
+        assertTrue("Must use ModalBottomSheet", content.contains("ModalBottomSheet"))
+        assertTrue("Must use BottomSheetDesign.SheetShape", content.contains("BottomSheetDesign.SheetShape"))
 
-        // 2. Header and Sport Icon
-        assertTrue("Must support close button", content.contains("showCloseButton = true"))
-        assertTrue("Must display sport icon", content.contains("summary.bSportType.iconResId") || content.contains("bSportType"))
+        // 2. Direct reuse of RouteOnMapScreen (REQ-UI-315.2 / REQ-UI-316)
+        assertTrue("Must host RouteOnMapScreen directly for visual/functional parity with route screen", content.contains("RouteOnMapScreen("))
+        assertTrue("Must pass useStatusBarsPadding = false", content.contains("useStatusBarsPadding = false"))
+        assertTrue("Must map route via toMapRoute", content.contains("toMapRoute("))
 
-        // 3. Telemetry metrics HUD in 16.dp cards
-        assertTrue("Must use 16.dp corner radius for cards (REQ-UI-316.3)", content.contains("RoundedCornerShape(16.dp)"))
-        assertTrue("Must render distance icon", content.contains("ic_distance"))
-        assertTrue("Must render ascent icon", content.contains("ic_ascent"))
+        // 3. Overlay dismiss button
+        assertTrue("Must include close icon button for non-destructive dismissal", content.contains("Icons.Default.Close"))
 
-        // 4. Embedded map with EXPLICIT_BOUNDS
-        assertTrue("Must use ATrainingTrackerMap", content.contains("ATrainingTrackerMap"))
-        assertTrue("Must use MapZoomFocus.EXPLICIT_BOUNDS", content.contains("MapZoomFocus.EXPLICIT_BOUNDS"))
-        assertTrue("Must invoke calculateRouteBounds", content.contains("calculateRouteBounds("))
-
-        // 5. Route elevation profile
-        assertTrue("Must render ElevationProfile", content.contains("ElevationProfile("))
+        // 4. Verify obsolete card composables are eliminated (Rule 23 - no duplicated code)
+        assertFalse("Obsolete RouteDetailMetricsCard must not exist", content.contains("RouteDetailMetricsCard"))
+        assertFalse("Obsolete RouteDetailMapCard must not exist", content.contains("RouteDetailMapCard"))
+        assertFalse("Obsolete RouteDetailElevationProfileCard must not exist", content.contains("RouteDetailElevationProfileCard"))
     }
 
     @Test
