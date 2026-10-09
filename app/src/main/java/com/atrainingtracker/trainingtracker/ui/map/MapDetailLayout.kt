@@ -123,9 +123,7 @@ fun MapDetailLayout(
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
 
     LaunchedEffect(externalScrubDistance) {
-        if (externalScrubDistance != null) {
-            selectedDistance = externalScrubDistance
-        }
+        selectedDistance = externalScrubDistance
     }
     var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }
     var viewportStartFraction by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }

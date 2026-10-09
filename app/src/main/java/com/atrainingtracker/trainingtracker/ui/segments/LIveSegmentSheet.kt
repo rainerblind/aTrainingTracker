@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
+import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.ui.map.MapDetailLayout
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.banalservice.BSportType
@@ -36,6 +37,14 @@ fun LiveSegmentSheet(
     liveSegment: LiveSegment,
     modifier: Modifier = Modifier
 ) {
+    val externalScrubDistance = when (liveSegment.liveData.segmentStatus) {
+        LiveSegmentStatus.ON_SEGMENT,
+        LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> liveSegment.liveData.distanceOnSegment_raw
+        LiveSegmentStatus.FINISHED -> liveSegment.staticData.summary.distance.toDouble().coerceAtLeast(liveSegment.liveData.distanceOnSegment_raw)
+        LiveSegmentStatus.APPROACHING,
+        LiveSegmentStatus.FAR_FAR_AWAY -> null
+    }
+
     MapDetailLayout(
         modifier = modifier.fillMaxWidth().wrapContentHeight(),
         bSportType = liveSegment.staticData.summary.bSportType,
@@ -44,6 +53,7 @@ fun LiveSegmentSheet(
         useStatusBarsPadding = false,
         showMap = false,
         showZoomControls = false,
+        externalScrubDistance = externalScrubDistance,
         header = {
             Column(
                 modifier = Modifier
