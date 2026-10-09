@@ -1,14 +1,13 @@
 # Stage 2: Requirement & Test Specification - ATT-2860: Visual and UX styling polish for Climb and Segment detail bottom sheets
 
 **Ticket**: [ATT-2860](https://atrainingtracker.atlassian.net/browse/ATT-2860)  
-**Sub-task**: [ATT-2891](https://atrainingtracker.atlassian.net/browse/ATT-2891) (`[Req & Test Spec]`)  
+**Sub-task**: [ATT-2950](https://atrainingtracker.atlassian.net/browse/ATT-2950) (`[Req & Test Spec]`)  
 **Parent Epic**: [ATT-355](https://atrainingtracker.atlassian.net/browse/ATT-355) (*Good and consistent UI*)  
 **Target Release**: `V4.9.40`  
-**Active Sprint**: `2026-41.5`  
-**Requirement Mapping**: `REQ-UI-315` (*Harmonized Visual & UX Styling for Climb and Segment Detail Bottom Sheets*)  
-**Amending**: `REQ-UI-300` (*Climb Detail Modal Bottom Sheet*) and `REQ-UI-303` (*Segment Detail Modal Bottom Sheet*)  
+**Active Sprint**: `2026-41.6`  
+**Requirement Mapping**: `REQ-UI-315` (*Harmonized Visual & UX Architecture for Climb, Segment, and Route Detail Bottom Sheets via MapDetailLayout*)  
 **Test Spec ID**: `TST-UI-275`  
-**Branch**: `improvement/ATT-2860`  
+**Branch**: `feature/ATT-2860`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-09  
 
@@ -17,74 +16,116 @@
 ## 1. Requirement Specification (REQ-UI-315)
 
 ### 1.1 Problem Statement & Rationale
-During Sprint Review 2026-41.4 on a physical Google Pixel 10 (ATT-2774 verification), athlete feedback requested follow-up visual and UX styling polish across both the `ClimbDetailSheet` and `SegmentDetailSheet` components to make them cohesive, beautiful, and consistent.
+During Sprint 2026-41.5 review, the previous attempt to polish `SegmentDetailSheet` and `ClimbDetailSheet` within an ad-hoc 3-card stack was rejected by the human user:
+> *"The segment popup must look identical to the one that pops up in the map. We should use the same code here. The route popup should follow this layout."*
 
-Inspection revealed:
-1. `ClimbDetailMetricsCard` mislabels the Maximum Grade metric using `graph_heading_elevation` ("Höhe") instead of "Max. Steigung" and lacks iconography.
-2. `SegmentDetailMapCard` renders the segment path via `MapTrack` (sport blue) instead of `MapSegment` (`TTColor.StravaOrange`).
-3. `ClimbDetailMapCard` layers a redundant blue track beneath the climb category highlight.
-4. `SegmentDetailElevationProfileCard` uses a flat route profile while `ClimbDetailSheet` features a vivid grade-colored slope profile.
-5. Inconsistent card corner radii (12.dp) that deviate from the modern 16.dp Material 3 surface aesthetic (Rule 23).
+Tapping an entity on the general map opens a rich, interactive `MapDetailLayout` surface (`SegmentOnMapScreen` / `RouteOnMapScreen`) featuring standardized header rows, draggable split-pane geometry, interactive map with zoom focus, and elevation profile/analytics. In contrast, modal sheets invoked from lists or route breakdowns rendered a disparate 3-card column layout that lacked gesture harmony, duplicated logic, and created visual inconsistency.
+
+`REQ-UI-315` is amended to unify modal entity inspection across the entire application by reusing `SegmentOnMapScreen`, `RouteOnMapScreen`, and `MapDetailLayout` directly within modal bottom sheet containers.
 
 ### 1.2 Functional & Architectural Requirements
+The system SHALL eliminate divergent card-stack implementations in modal detail sheets and enforce unified presentation and code reuse across segments, routes, and climbs:
 
-1. **REQ-UI-315.1: Mislabeled Metric Correction & Climb Metric Iconography**:
-   - The Maximum Grade metric label in `ClimbDetailMetricsCard` SHALL be displayed as `climb_max_grade_label` ("Max. Steigung" / "Max Grade").
-   - `ClimbDetailMetricsCard` SHALL feature icons (`ic_distance`, `ic_ascent`, `ic_grade`) for all key metrics.
-2. **REQ-UI-315.2: Map Polyline Contrast & Theming Parity**:
-   - `SegmentDetailMapCard` SHALL render the segment polyline via `MapSegment`, displaying in authentic `TTColor.StravaOrange`.
-   - `ClimbDetailMapCard` SHALL render the climb polyline strictly in its category color without conflicting base polyline tracks.
-3. **REQ-UI-315.3: Elevation Profile Visual Parity**:
-   - Both `ClimbDetailSheet` and `SegmentDetailSheet` SHALL render a color-coded slope elevation profile with vertical fill reflecting grade steepness categories.
-4. **REQ-UI-315.4: Material 3 Surface & Card Radius Harmony**:
-   - All cards in `ClimbDetailSheet` and `SegmentDetailSheet` SHALL use `RoundedCornerShape(16.dp)` and `CardDefaults.elevatedCardColors()` for consistent depth and elevation.
-5. **REQ-UI-315.5: 9-Language Localization Parity**:
-   - Any new string resource (such as `climb_max_grade_label`) SHALL be translated across all 9 application locales with 100% token parity.
+1. **Segment Detail Sheet Unification (`SegmentDetailSheet.kt`)**:
+   * `SegmentDetailSheet` SHALL directly host `SegmentOnMapScreen` within a non-scrolling modal bottom sheet container (`AppModalBottomSheet(scrollable = false, dragHandle = null, ...)` or equivalent modal container).
+   * It SHALL render the canonical `SegmentHeader` (sport icon, title, category chip, PR badge, dismiss close action), `HorizontalDivider`, and `SegmentDetails` (distance, Strava branding, grade, elevation gain, min/max altitude).
+   * It SHALL render `ATrainingTrackerMap` with bounding box focus (`MapZoomFocus.EXPLICIT_BOUNDS`) and interactive elevation profile via `MapDetailLayout`.
+   * It SHALL present `SegmentRoutesSection` in `analyticsContent` when containing routes exist.
+   * Obsolete standalone card composables (`SegmentDetailMetricsCard`, `SegmentDetailMapCard`, `SegmentDetailElevationProfileCard`) SHALL be completely removed.
+
+2. **Route Detail Sheet Unification (`RouteDetailSheet.kt`)**:
+   * `RouteDetailSheet` SHALL follow this unified architecture by directly hosting `RouteOnMapScreen` within a non-scrolling modal bottom sheet container.
+   * It SHALL present `RouteHeader`, `RouteDetails`, and `MapDetailLayout` with route polyline, start/stop pins, and elevation profile.
+   * Obsolete standalone card composables (`RouteDetailMetricsCard`, `RouteDetailMapCard`, `RouteDetailElevationProfileCard`) SHALL be completely removed.
+
+3. **Climb Detail Sheet Alignment (`ClimbDetailSheet.kt`)**:
+   * `ClimbDetailSheet` SHALL be refactored to align with this unified layout pattern, presenting a structured `ClimbHeader` and `ClimbDetails` row over `MapDetailLayout` with category-colored climb polyline and gradient elevation profile.
+
+4. **Dismissal & State Isolation**:
+   * Dismissing a modal detail sheet via close button, drag handle gesture, scrim tap, or system Back press SHALL cleanly dismiss the modal overlay and return to the parent screen with scroll position, route selection, and map zoom state 100% intact.
+
+5. **100% 9-Language Localization Parity**:
+   * All string resources utilized by detail sheets and headers SHALL maintain 100% parity across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
 ### 1.3 Acceptance Criteria (Given-When-Then)
 
-* **Criterion 1 (Climb Detail Metrics Labels & Icons)**:
-  * *Given* the athlete opens `ClimbDetailSheet` for any climb
-  * *When* viewing `ClimbDetailMetricsCard`
-  * *Then* the 4th metric is clearly labeled "Max. Steigung" / "Max Grade" (not "Höhe"), and metrics display thematic vector icons.
-* **Criterion 2 (Segment Map Polyline Theming)**:
-  * *Given* the athlete opens `SegmentDetailSheet` for a matched segment
-  * *When* inspecting the map viewport
-  * *Then* the segment path is rendered in Strava Orange (`TTColor.StravaOrange`).
-* **Criterion 3 (Climb Map Polyline Clarity)**:
-  * *Given* the athlete opens `ClimbDetailSheet`
-  * *When* inspecting the map viewport
-  * *Then* the climb path is highlighted cleanly in its category color with start and summit markers, without conflicting blue track lines.
-* **Criterion 4 (Segment Elevation Profile Slope Colors)**:
-  * *Given* `SegmentDetailSheet`
-  * *When* viewing the elevation profile card
-  * *Then* the profile curve is color-coded by slope grade with gradient fill, matching `ClimbDetailSheet`.
+* **Criterion 1 (Segment Detail Sheet Reuses Map Popup)**:
+  * *Given* an athlete viewing route details in `RouteOnMapScreen`,
+  * *When* tapping any matched segment item in `RouteSegmentsBreakdownSection`,
+  * *Then* `SegmentDetailSheet` SHALL open displaying the exact same layout, header (`SegmentHeader` + `SegmentDetails`), and `MapDetailLayout` as `SegmentOnMapScreen`.
+
+* **Criterion 2 (Route Detail Sheet Reuses Route Map Screen)**:
+  * *Given* an athlete viewing a segment in `SegmentOnMapScreen`,
+  * *When* tapping a containing route in `SegmentRoutesSection`,
+  * *Then* `RouteDetailSheet` SHALL open displaying the exact same layout and `MapDetailLayout` as `RouteOnMapScreen`.
+
+* **Criterion 3 (Interactive Map & Elevation Profile Harmony)**:
+  * *Given* `SegmentDetailSheet` or `RouteDetailSheet` open,
+  * *When* interacting with the embedded map or scrubbing the elevation profile,
+  * *Then* gestures SHALL operate smoothly via `MapDetailLayout` without vertical scroll competition or touch collisions.
+
+* **Criterion 4 (Clean Non-Destructive Dismissal)**:
+  * *Given* any modal detail sheet open,
+  * *When* the athlete taps the close button, drags down, or taps the scrim,
+  * *Then* the sheet SHALL dismiss immediately, returning to the caller screen with 100% preserved state.
+
+* **Criterion 5 (9-Language Parity)**:
+  * *Given* all 9 supported application locales,
+  * *When* auditing string resources across all detail sheets,
+  * *Then* zero missing translations and zero format specifier mismatches exist.
+
+### 1.4 System Invariants
+1. `MapDetailLayout` split-pane dragging, dynamic peek self-measurement, and zoom focus contracts MUST remain 100% preserved.
+2. Route selection toggle and GPX export lifecycles MUST NOT be affected.
+3. Clean-room unit regression test suite (`./gradlew testDebugUnitTest`) MUST pass with 100% success rate (0 failures).
+
+### Requirement Archaeology & Chesterton's Fence Audit
+* **Original Requirement ID & Target**: Amends `REQ-UI-300` (*Climb Detail Sheet*), `REQ-UI-303` (*Segment Detail Sheet*), and `REQ-UI-316` (*Route Detail Sheet*).
+* **Historical Origin & Commit Trace**: Ticket `ATT-2860`, Sprint `2026-41.5` -> `2026-41.6`, target release `V4.9.40`, Epic `ATT-355` (*Good and consistent UI*).
+* **Root Reason for Existing Formulation**: In sprint 2026-41.5, the initial implementation attempted to polish the 3-card stack within `AppModalBottomSheet`. The user rejected this during Sprint Review because having a separate 3-card column layout created a jarring visual and functional disconnect from what athletes see when tapping entities on the map (`SegmentOnMapScreen` / `RouteOnMapScreen` with `MapDetailLayout`). The user explicitly demanded: "The segment popup must look identical to the one that pops up in the map. We should use the same code here. The route popup should follow this layout."
+* **Preservation of Core Invariants**: Bounding box calculation, entity dismiss gestures, sport type filtering, route index counters, and 100% test pass rate are strictly preserved.
 
 ---
 
 ## 2. Test Specification (TST-UI-275)
 
-### Test Case 1: `ClimbDetailSheetContractTest` (`TST-UI-275.1`)
-* **Scope**: Composable Contract & Resource Verification
-* **Target File**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/climbs/ClimbDetailSheetContractTest.kt`
-* **Assertions**:
-  * Asserts `climb_max_grade_label` string resource exists and is used in `ClimbDetailMetricsCard`.
-  * Asserts cards use 16.dp rounded corner shapes.
-
-### Test Case 2: `SegmentDetailSheetContractTest` (`TST-UI-275.2`)
-* **Scope**: Composable Contract & Map Model Verification
+### Test Case 1: `SegmentDetailSheetContractTest` (`TST-UI-275.1`)
+* **Scope**: Compose Contract & Structural Unit Test
 * **Target File**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/segments/SegmentDetailSheetContractTest.kt`
-* **Assertions**:
-  * Asserts `SegmentDetailMapCard` constructs `MapSegment` (which provides `TTColor.StravaOrange`).
-  * Asserts cards use 16.dp rounded corner shapes.
+* **Preconditions**: Instantiated `MatchedRouteSegment` and mock dependencies.
+* **Action**:
+  1. Verify `SegmentDetailSheet` hosts `SegmentOnMapScreen` (or identical `MapDetailLayout` composite) rather than the obsolete 3-card stack.
+  2. Verify dismissal callback resets selection state cleanly.
+  3. Verify obsolete card composables (`SegmentDetailMetricsCard`, `SegmentDetailMapCard`, `SegmentDetailElevationProfileCard`) are deleted.
+* **Expected Result**: Contract test asserts structural parity with map popup and compilation passes.
 
-### Test Case 3: 9-Language Localization Audit (`TST-UI-275.3`)
-* **Scope**: `TranslationParityTest`
-* **Target**: Verify `climb_max_grade_label` across all 9 `strings.xml` files.
+### Test Case 2: `RouteDetailSheetContractTest` (`TST-UI-275.2`)
+* **Scope**: Compose Contract & Structural Unit Test
+* **Target File**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/routes/RouteDetailSheetContractTest.kt`
+* **Preconditions**: Instantiated `RouteWithPath`.
+* **Action**:
+  1. Verify `RouteDetailSheet` hosts `RouteOnMapScreen` (or identical `MapDetailLayout` composite) rather than the obsolete 3-card stack.
+  2. Verify obsolete card composables (`RouteDetailMetricsCard`, `RouteDetailMapCard`, `RouteDetailElevationProfileCard`) are deleted.
+* **Expected Result**: Contract test asserts structural parity with route map screen.
 
-### Test Case 4: Full Suite Clean-Room Regression (`TST-UI-275.4`)
+### Test Case 3: `ClimbDetailSheetContractTest` (`TST-UI-275.3`)
+* **Scope**: Compose Contract & Structural Unit Test
+* **Target File**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/climbs/ClimbDetailSheetContractTest.kt`
+* **Preconditions**: Instantiated `Climb` entity.
+* **Action**:
+  1. Verify `ClimbDetailSheet` structure conforms to the unified header + `MapDetailLayout` architecture.
+* **Expected Result**: Contract test verifies visual and architectural alignment.
+
+### Test Case 4: 9-Language Localization Audit (`TST-UI-275.4`)
+* **Scope**: Localization Parity Unit Test
+* **Target File**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/TranslationParityTest.kt`
+* **Goal**: Verify all string resources in detail sheets exist across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
+* **Expected Result**: 100% parity, 0 missing strings.
+
+### Test Case 5: Full Clean-Room Regression Suite (`TST-UI-275.5`)
 * **Command**: `./gradlew testDebugUnitTest`
-* **Expected Result**: 100% pass rate.
+* **Goal**: Execute all ~2,170 tests across the project.
+* **Expected Result**: 100% pass rate, 0 failures, 0 regressions.
 
 ---
 
@@ -92,7 +133,8 @@ Inspection revealed:
 
 | Test Case | Scope | Target Component | Requirement | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| `TST-UI-275.1` | Unit Contract | `ClimbDetailSheet.kt` | `REQ-UI-315.1`, `REQ-UI-315.4` | Specified |
-| `TST-UI-275.2` | Unit Contract | `SegmentDetailSheet.kt` | `REQ-UI-315.2`, `REQ-UI-315.3` | Specified |
-| `TST-UI-275.3` | Localization | `strings.xml` (9 locales) | `REQ-UI-315.5` | Specified |
-| `TST-UI-275.4` | Full Suite | Application Regression | `REQ-UI-315` | Specified |
+| `TST-UI-275.1` | Contract | `SegmentDetailSheet.kt`, `SegmentOnMapScreen.kt` | `REQ-UI-315.1` | Specified |
+| `TST-UI-275.2` | Contract | `RouteDetailSheet.kt`, `RouteOnMapScreen.kt` | `REQ-UI-315.2` | Specified |
+| `TST-UI-275.3` | Contract | `ClimbDetailSheet.kt` | `REQ-UI-315.3` | Specified |
+| `TST-UI-275.4` | Localization | `res/values-*/strings.xml` | `REQ-UI-315.5`, `REQ-UI-106` | Specified |
+| `TST-UI-275.5` | Regression | Full Test Suite (`./gradlew testDebugUnitTest`) | `REQ-PRO-001` | Specified |
