@@ -696,8 +696,9 @@ fun TrackingTabsScreen(
 
                         if (viewInfo != null) {
                             TrackingTabGridContent(
-                                viewInfo.tabViewId,
-                                screenMode,
+                                tabViewId = viewInfo.tabViewId,
+                                screenMode = screenMode,
+                                isTabActive = pagerState.currentPage == page,
                             )
                         } else {
                             // Optional: Show a placeholder or empty box while loading

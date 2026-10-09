@@ -38,6 +38,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSens
 fun TrackingTabGridContent(
     tabViewId: Long,
     screenMode: ScreenMode,
+    isTabActive: Boolean = true,
 ) {
     val context = LocalContext.current
     val activity = context as? ComponentActivity
@@ -124,7 +125,8 @@ fun TrackingTabGridContent(
         currentLocationFlow = viewModel.banalServiceRepository.currentLocation,
         liveSegments = viewModel.activeLiveSegments,
         selectedFieldForMove = selectedFieldForMove,
-        tabToggleActions = tabToggleActions
+        tabToggleActions = tabToggleActions,
+        isTabActive = isTabActive
     )
 
     val currentActivityType by viewModel.activityType.collectAsState()
