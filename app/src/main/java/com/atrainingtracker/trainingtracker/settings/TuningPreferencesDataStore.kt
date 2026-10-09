@@ -126,6 +126,28 @@ object TuningPreferencesDefaults {
     const val MIN_ELEVATION_SMOOTHING_SIGMA_METERS = 10.0f
     const val MAX_ELEVATION_SMOOTHING_SIGMA_METERS = 50.0f
     const val STEP_ELEVATION_SMOOTHING_SIGMA_METERS = 1.0f
+
+    const val DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM = 20.0f
+    const val MIN_MAP_FOLLOW_ME_INITIAL_ZOOM = 15.0f
+    const val MAX_MAP_FOLLOW_ME_INITIAL_ZOOM = 21.0f
+    const val STEP_MAP_FOLLOW_ME_INITIAL_ZOOM = 0.5f
+
+    const val DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED = true
+
+    const val DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM = 18.0f
+    const val MIN_MAP_FOLLOW_ME_CRUISING_ZOOM = 14.0f
+    const val MAX_MAP_FOLLOW_ME_CRUISING_ZOOM = 19.5f
+    const val STEP_MAP_FOLLOW_ME_CRUISING_ZOOM = 0.5f
+
+    const val DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE = 70.0f
+    const val MIN_MAP_FOLLOW_ME_TILT_ANGLE = 0.0f
+    const val MAX_MAP_FOLLOW_ME_TILT_ANGLE = 70.0f
+    const val STEP_MAP_FOLLOW_ME_TILT_ANGLE = 5.0f
+
+    const val DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT = 30.0f
+    const val MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT = 10.0f
+    const val MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT = 50.0f
+    const val STEP_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT = 5.0f
 }
 
 /**
@@ -160,7 +182,12 @@ data class TuningConfig(
     val routeSelectionRadiusKm: Float = TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM,
     val navigationCueTransparency: Float = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY,
     val navigationCueDismissDurationSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
-    val elevationSmoothingSigmaMeters: Float = TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS
+    val elevationSmoothingSigmaMeters: Float = TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS,
+    val mapFollowMeInitialZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
+    val mapFollowMeSpeedZoomEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+    val mapFollowMeCruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
+    val mapFollowMeTiltAngle: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE,
+    val mapFollowMeLookaheadPaddingPercent: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
 ) {
     @Deprecated("Use elevationXAxisDomain or telemetryXAxisDomain", ReplaceWith("elevationXAxisDomain"))
     val profileXAxisDomain: ProfileXAxisDomain
@@ -239,6 +266,12 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_navigation_cue_dismiss_duration_sec")
         val KEY_ELEVATION_SMOOTHING_SIGMA_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_elevation_smoothing_sigma_meters")
 
+        val KEY_MAP_FOLLOW_ME_INITIAL_ZOOM: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_initial_zoom")
+        val KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_map_follow_me_speed_zoom_enabled")
+        val KEY_MAP_FOLLOW_ME_CRUISING_ZOOM: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_cruising_zoom")
+        val KEY_MAP_FOLLOW_ME_TILT_ANGLE: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_tilt_angle")
+        val KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_lookahead_padding_percent")
+
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
             KEY_TELEMETRY_X_AXIS_DOMAIN,
@@ -269,7 +302,12 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_ROUTE_SELECTION_RADIUS_KM,
             KEY_NAVIGATION_CUE_TRANSPARENCY,
             KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC,
-            KEY_ELEVATION_SMOOTHING_SIGMA_METERS
+            KEY_ELEVATION_SMOOTHING_SIGMA_METERS,
+            KEY_MAP_FOLLOW_ME_INITIAL_ZOOM,
+            KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+            KEY_MAP_FOLLOW_ME_CRUISING_ZOOM,
+            KEY_MAP_FOLLOW_ME_TILT_ANGLE,
+            KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
         )
     }
 
@@ -438,6 +476,23 @@ class TuningPreferencesDataStore(private val context: Context) {
             elevationSmoothingSigmaMeters = (prefs[KEY_ELEVATION_SMOOTHING_SIGMA_METERS] ?: TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS).coerceIn(
                 TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
                 TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
+            ),
+            mapFollowMeInitialZoom = (prefs[KEY_MAP_FOLLOW_ME_INITIAL_ZOOM] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM).coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM
+            ),
+            mapFollowMeSpeedZoomEnabled = prefs[KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+            mapFollowMeCruisingZoom = (prefs[KEY_MAP_FOLLOW_ME_CRUISING_ZOOM] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM).coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM
+            ),
+            mapFollowMeTiltAngle = (prefs[KEY_MAP_FOLLOW_ME_TILT_ANGLE] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE).coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE
+            ),
+            mapFollowMeLookaheadPaddingPercent = (prefs[KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT).coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
             )
         )
     }
@@ -547,6 +602,23 @@ class TuningPreferencesDataStore(private val context: Context) {
                 TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
                 TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
             )
+            prefs[KEY_MAP_FOLLOW_ME_INITIAL_ZOOM] = config.mapFollowMeInitialZoom.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM
+            )
+            prefs[KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED] = config.mapFollowMeSpeedZoomEnabled
+            prefs[KEY_MAP_FOLLOW_ME_CRUISING_ZOOM] = config.mapFollowMeCruisingZoom.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM
+            )
+            prefs[KEY_MAP_FOLLOW_ME_TILT_ANGLE] = config.mapFollowMeTiltAngle.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE
+            )
+            prefs[KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT] = config.mapFollowMeLookaheadPaddingPercent.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
+            )
         }
     }
 
@@ -601,6 +673,52 @@ class TuningPreferencesDataStore(private val context: Context) {
         )
         context.dataStore.edit { prefs ->
             prefs[KEY_ELEVATION_SMOOTHING_SIGMA_METERS] = clamped
+        }
+    }
+
+    suspend fun updateMapFollowMeInitialZoom(zoom: Float) {
+        val clamped = zoom.coerceIn(
+            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM,
+            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_MAP_FOLLOW_ME_INITIAL_ZOOM] = clamped
+        }
+    }
+
+    suspend fun updateMapFollowMeSpeedZoomEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateMapFollowMeCruisingZoom(zoom: Float) {
+        val clamped = zoom.coerceIn(
+            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM,
+            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_MAP_FOLLOW_ME_CRUISING_ZOOM] = clamped
+        }
+    }
+
+    suspend fun updateMapFollowMeTiltAngle(angle: Float) {
+        val clamped = angle.coerceIn(
+            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE,
+            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_MAP_FOLLOW_ME_TILT_ANGLE] = clamped
+        }
+    }
+
+    suspend fun updateMapFollowMeLookaheadPaddingPercent(percent: Float) {
+        val clamped = percent.coerceIn(
+            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT] = clamped
         }
     }
 

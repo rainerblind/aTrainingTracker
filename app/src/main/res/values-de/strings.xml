@@ -1803,4 +1803,17 @@
     <string name="map_layer_track">Aufzeichnung</string>
     <string name="ant_dialog_view_status">ANT+ Status anzeigen</string>
     <string name="ant_dialog_dismiss">Verstanden</string>
+
+    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
+    <string name="tuning_map_camera_section_title">Kartenkamera &amp; Follow-Me-Navigation</string>
+    <string name="tuning_map_base_zoom_title">Follow-Me Basis-Zoom</string>
+    <string name="tuning_map_base_zoom_desc">Basis-Zoomstufe im Stillstand (0 km/h) im Follow-Me-Trackingmodus</string>
+    <string name="tuning_map_speed_zoom_enabled_title">Geschwindigkeitsabhängiger Zoom</string>
+    <string name="tuning_map_speed_zoom_enabled_desc">Zoomt bei zunehmender Geschwindigkeit schrittweise heraus für mehr Vorausschau</string>
+    <string name="tuning_map_cruising_zoom_title">Reisegeschwindigkeit-Zoom (bei 20 km/h)</string>
+    <string name="tuning_map_cruising_zoom_desc">Ziel-Zoomstufe bei typischer Fahrgeschwindigkeit (20 km/h)</string>
+    <string name="tuning_map_tilt_angle_title">Kamera-Neigungswinkel</string>
+    <string name="tuning_map_tilt_angle_desc">Perspektivischer Neigungswinkel für die 3D-Navigation (0° ist flaches 2D, 70° volle 3D-Perspektive)</string>
+    <string name="tuning_map_lookahead_padding_title">Vorausschau-Kameraabstand unten</string>
+    <string name="tuning_map_lookahead_padding_desc">Unterer Anzeigebereich-Puffer in Prozent, um die Fahrerposition nach unten zu versetzen und den Blick auf die Strecke nach vorn zu maximieren</string>
 </resources>
