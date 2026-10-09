@@ -120,4 +120,24 @@ class RouteSelectorSheetTest {
             content.contains("if (isMidRide && onTakeMeHome != null)")
         )
     }
+
+    @Test
+    fun testRouteCard_displaysSportIconWithAppropriateTokens() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteSelectorSheet.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "RouteCard must render sport icon via route.summary.bSportType.iconResId (REQ-UI-310 / ATT-2668)",
+            content.contains("painterResource(id = route.summary.bSportType.iconResId)")
+        )
+        assertTrue(
+            "RouteCard must provide localized accessibility description via stringResId",
+            content.contains("stringResource(id = route.summary.bSportType.stringResId)")
+        )
+        assertTrue(
+            "RouteCard must size sport icon at 24.dp",
+            content.contains("modifier = Modifier.size(24.dp)")
+        )
+    }
 }
+
