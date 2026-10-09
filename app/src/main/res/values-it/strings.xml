@@ -1547,10 +1547,6 @@
     <string name="route_action_stop">Termina percorso</string>
     <string name="route_action_clear">Rimuovi percorso</string>
     <string name="route_metrics_format">%1$s • %2$s</string>
-    <string name="route_auto_detect_title">Rilevamento percorso</string>
-    <string name="route_auto_detect_prompt">Stai seguendo \'%1$s\'?</string>
-    <string name="route_auto_detect_activate">Attiva</string>
-    <string name="route_auto_detect_dismiss">Rifiuta</string>
     <string name="route_filter_near">Nelle vicinanze</string>
     <string name="route_filter_recent">Percorso di recente</string>
     <string name="route_filter_length">Lunghezza</string>
