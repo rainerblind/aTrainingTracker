@@ -158,7 +158,8 @@ fun SensorGridScreen(
     gridSpacing: Dp = 0.dp,
     fieldShape: Shape = RectangleShape,
     fieldElevation: CardElevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    tabToggleActions: TabToggleActions = TabToggleActions.Empty
+    tabToggleActions: TabToggleActions = TabToggleActions.Empty,
+    isTabActive: Boolean = true
 ) {
     val context = LocalContext.current
     val tuningDataStore = remember { TuningPreferencesDataStore(context) }
@@ -213,6 +214,8 @@ fun SensorGridScreen(
     val activeLiveClimb by liveClimbsRepo.activeLiveClimb.collectAsState()
     val showLiveClimbs = !showLiveSegments && state.showLiveClimbs && tuningConfig.showLiveClimbs && activeLiveClimb != null
 
+    val shouldShowBottomSheet = isTabActive && (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING
+
     val navRepo = remember { TurnByTurnNavigationRepository.getInstance(context) }
     val navState by navRepo.navigationState.collectAsState()
 
@@ -222,13 +225,27 @@ fun SensorGridScreen(
     val forkNavRepo = remember { ForkNavigationRepository.getInstance(context) }
     val forkDecisionState by forkNavRepo.forkDecisionState.collectAsState()
 
-    // Control the sheet state
+    // Control the sheet state (REQ-UI-327)
+    val initialSheetValue = if (shouldShowBottomSheet) SheetValue.PartiallyExpanded else SheetValue.Hidden
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
-            initialValue = SheetValue.PartiallyExpanded,
+            initialValue = initialSheetValue,
             skipHiddenState = false // Allow it to hide if no segment or climb
         )
     )
+
+    // Reactively drive SheetValue transitions when active tab or climb/segment state changes
+    LaunchedEffect(shouldShowBottomSheet) {
+        if (!shouldShowBottomSheet) {
+            if (scaffoldState.bottomSheetState.currentValue != SheetValue.Hidden) {
+                scaffoldState.bottomSheetState.hide()
+            }
+        } else {
+            if (scaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
+                scaffoldState.bottomSheetState.partialExpand()
+            }
+        }
+    }
 
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
@@ -239,40 +256,36 @@ fun SensorGridScreen(
             sheetContainerColor = MaterialTheme.colorScheme.surface,
             sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
-        sheetDragHandle = null,
-        sheetPeekHeight = if ((showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
-        sheetSwipeEnabled = (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING,
-        sheetContent = {
-            if (screenMode == ScreenMode.TRACKING && showLiveSegments && activeSegment != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                        .sheetContour()
-                        .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
-                ) {
-                    LiveSegmentSheet(
-                        liveSegment = activeSegment
-                    )
+            sheetDragHandle = null,
+            sheetPeekHeight = if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
+            sheetSwipeEnabled = (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING && isTabActive,
+            sheetContent = {
+                if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveSegments && activeSegment != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                            .sheetContour()
+                            .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
+                    ) {
+                        LiveSegmentSheet(
+                            liveSegment = activeSegment
+                        )
+                    }
+                } else if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveClimbs && activeLiveClimb != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .sheetContour()
+                            .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
+                    ) {
+                        LiveClimbSheet(
+                            liveClimb = activeLiveClimb!!
+                        )
+                    }
                 }
-            } else if (screenMode == ScreenMode.TRACKING && showLiveClimbs && activeLiveClimb != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .sheetContour()
-                        .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
-                ) {
-                    LiveClimbSheet(
-                        liveClimb = activeLiveClimb!!
-                    )
-                }
-            } else {
-                Box(Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)) // Empty placeholder
             }
-        }
-    ) { paddingValues ->
+        ) { paddingValues ->
         if (screenMode == ScreenMode.CONFIGURATION) {
             // UNIFIED SCROLLABLE CONFIGURATION CONTAINER (REQ-UI-295 / ATT-2620)
             Column(
