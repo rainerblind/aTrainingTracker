@@ -19,13 +19,18 @@
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
 
 /**
  * Reusable slider form control for advanced tuning options (REQ-UI-262).
@@ -63,11 +68,13 @@ fun TuningSliderItem(
                 color = MaterialTheme.colorScheme.primary
             )
         }
-        Text(
-            text = helperText,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        if (helperText.isNotEmpty()) {
+            Text(
+                text = helperText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Text(
             text = defaultText,
             style = MaterialTheme.typography.labelSmall,
@@ -92,7 +99,8 @@ fun TuningSliderItem(
 fun TuningToggleItem(
     title: String,
     isChecked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    summary: String? = null
 ) {
     Row(
         modifier = Modifier
@@ -101,12 +109,24 @@ fun TuningToggleItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
-        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 12.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (!summary.isNullOrEmpty()) {
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         Switch(
             checked = isChecked,
             onCheckedChange = onCheckedChange,
@@ -114,3 +134,63 @@ fun TuningToggleItem(
         )
     }
 }
+
+/**
+ * Advisory warning banner for advanced tuning and experimental settings.
+ */
+@Composable
+fun TuningWarningNotice(modifier: Modifier = Modifier) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(24.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.advanced_tuning_warning_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+                Text(
+                    text = stringResource(R.string.advanced_tuning_warning_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Prominent factory reset button for tuning configuration.
+ */
+@Composable
+fun TuningResetDefaultsButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Icon(
+            imageVector = Icons.Default.RestartAlt,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(stringResource(R.string.reset_to_defaults))
+    }
+}
+

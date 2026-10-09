@@ -1618,6 +1618,10 @@
     <string name="tuning_default_format">Default: %1$s</string>
     <string name="reset_to_defaults">Reset to Defaults</string>
     <string name="reset_to_defaults_success">Tuning preferences restored to factory defaults.</string>
+    <string name="tuning_cat_sensor_search">Sensor Search &amp; Triggers</string>
+    <string name="tuning_sensor_search_subtitle">%1$d search rounds, %2$s auto-search</string>
+    <string name="tuning_sensor_search_active">Active</string>
+    <string name="tuning_sensor_search_disabled">Disabled</string>
     <string name="tuning_cat_sensors_gps">Sensors, GPS &amp; Filtering</string>
     <string name="tuning_cat_workout_masks_cards">Workout Cards &amp; Details</string>
     <string name="tuning_cat_navigation">Navigation</string>
