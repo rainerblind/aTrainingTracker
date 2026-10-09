@@ -93,6 +93,7 @@ import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
+import com.atrainingtracker.trainingtracker.ui.map.MapContentScope
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
 import com.atrainingtracker.trainingtracker.routes.ForkNavigationRepository
 import com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepository
@@ -502,27 +503,16 @@ fun SensorGridScreen(
                         }
                     }
 
-                    // 2. The Map (Expanded)
+                    // 2. The Map (Expanded - Isolated Recomposition Barrier, REQ-UI-326 / ATT-2944)
                     // By using weight(1f) here, the Map will fill every pixel between
                     // the bottom of the sensors and the bottom of the screen.
-                    if (state.showMap) {
-                        ATrainingTrackerMap(
-                            zoomFocus = state.zoomFocus,
-                            userBearing = state.userBearing,
-                            userSpeed = state.userSpeed,
-                            bSportType = state.bSportType,
-                            currentLocationFlow = currentLocationFlow,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f) // Fills remaining space
-                        ) {
-                            tracks(state.mapTracks)
-                            segments(state.mapSegments, state.activeLiveSegmentIds)
-                            routes(state.mapRoutes)
-                            markers(state.mapMarkers)
-                            liveTrack(state.currentTrack)
-                        }
-                    }
+                    TrackingMapContainer(
+                        mapState = state.mapState,
+                        currentLocationFlow = currentLocationFlow,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f) // Fills remaining space
+                    )
 
                     // 3. The Elevation Profile (Below the Map)
                     if (state.showElevationProfile && state.pathPoints.isNotEmpty()) {
@@ -574,6 +564,47 @@ fun SensorGridScreen(
         }
     }
 
+    }
+}
+
+/**
+ * Isolated recomposition barrier for the live tracking map.
+ * Because [mapState] is @Immutable, the Compose runtime skips this composable
+ * whenever parent recompositions are driven solely by sensor grid telemetry updates (REQ-UI-326 / ATT-2944).
+ */
+@Composable
+fun TrackingMapContainer(
+    mapState: TrackingMapState,
+    currentLocationFlow: StateFlow<LatLng?>,
+    modifier: Modifier = Modifier
+) {
+    if (mapState.showMap) {
+        val mapContent: MapContentScope.() -> Unit = remember(
+            mapState.mapTracks,
+            mapState.mapSegments,
+            mapState.activeLiveSegmentIds,
+            mapState.mapRoutes,
+            mapState.mapMarkers,
+            mapState.currentTrack
+        ) {
+            {
+                tracks(mapState.mapTracks)
+                segments(mapState.mapSegments, mapState.activeLiveSegmentIds)
+                routes(mapState.mapRoutes)
+                markers(mapState.mapMarkers)
+                liveTrack(mapState.currentTrack)
+            }
+        }
+
+        ATrainingTrackerMap(
+            zoomFocus = mapState.zoomFocus,
+            userBearing = mapState.userBearing,
+            userSpeed = mapState.userSpeed,
+            bSportType = mapState.bSportType,
+            currentLocationFlow = currentLocationFlow,
+            modifier = modifier,
+            content = mapContent
+        )
     }
 }
 
