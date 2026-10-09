@@ -1708,4 +1708,11 @@
     <string name="ant_service_installed">Installé</string>
     <string name="ant_service_not_installed">Non installé</string>
     <string name="ant_service_install_button">Installer</string>
+
+    <!-- ATT-2931: General Map Layers Control Menu -->
+    <string name="map_layers">Calques de la carte</string>
+    <string name="map_layer_routes">Itinéraires</string>
+    <string name="map_layer_segments">Segments</string>
+    <string name="map_layer_locations">Lieux favoris</string>
+    <string name="map_layer_track">Trace enregistrée</string>
 </resources>

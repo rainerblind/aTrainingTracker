@@ -19,8 +19,10 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.app.Application
+import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
@@ -47,12 +49,34 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
     private val knownLocationsRepository: KnownLocationsRepository = KnownLocationsRepository.getInstance(application),
     banalRepo: BANALServiceRepository? = null,
     segmentsRepo: SegmentsRepository? = null,
-    routesRepo: RoutesRepository? = null
+    routesRepo: RoutesRepository? = null,
+    prefs: SharedPreferences? = null
 ) : AndroidViewModel(application) {
 
     private val banalRepository = banalRepo ?: BANALServiceRepository.getInstance(application)
     private val segmentsRepository = segmentsRepo ?: SegmentsRepository.getInstance(application)
     private val routesRepository = routesRepo ?: RoutesRepository.getInstance(application)
+    private val sharedPreferences = prefs ?: PreferenceManager.getDefaultSharedPreferences(application)
+
+    private val _enabledLayers = MutableStateFlow(loadEnabledLayers())
+    val enabledLayers: StateFlow<Set<GeneralMapLayer>> = _enabledLayers.asStateFlow()
+
+    private fun loadEnabledLayers(): Set<GeneralMapLayer> {
+        val saved = sharedPreferences.getStringSet(PREF_GENERAL_MAP_ENABLED_LAYERS, null)
+            ?: return GeneralMapLayer.entries.toSet()
+        return saved.mapNotNull { name ->
+            runCatching { GeneralMapLayer.valueOf(name) }.getOrNull()
+        }.toSet()
+    }
+
+    fun toggleLayer(layer: GeneralMapLayer) {
+        val current = _enabledLayers.value
+        val updated = if (layer in current) current - layer else current + layer
+        _enabledLayers.value = updated
+        sharedPreferences.edit()
+            .putStringSet(PREF_GENERAL_MAP_ENABLED_LAYERS, updated.map { it.name }.toSet())
+            .apply()
+    }
 
     val liveSegments = segmentsRepository.allSegmentsWithPath
     val allRoutes = routesRepository.allRoutes
@@ -113,5 +137,9 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             knownLocationsRepository.updateLocation(id, name, altitude, radius, source)
         }
+    }
+
+    companion object {
+        const val PREF_GENERAL_MAP_ENABLED_LAYERS = "pref_general_map_enabled_layers"
     }
 }

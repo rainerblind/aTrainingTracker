@@ -1709,4 +1709,11 @@
     <string name="ant_service_installed">Instalado</string>
     <string name="ant_service_not_installed">No instalado</string>
     <string name="ant_service_install_button">Instalar</string>
+
+    <!-- ATT-2931: General Map Layers Control Menu -->
+    <string name="map_layers">Capas del mapa</string>
+    <string name="map_layer_routes">Rutas</string>
+    <string name="map_layer_segments">Segmentos</string>
+    <string name="map_layer_locations">Ubicaciones favoritas</string>
+    <string name="map_layer_track">Track grabado</string>
 </resources>
