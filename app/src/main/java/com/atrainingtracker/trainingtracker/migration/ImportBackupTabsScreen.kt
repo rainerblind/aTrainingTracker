@@ -82,9 +82,9 @@ import kotlinx.coroutines.withContext
 data class MappingData(val uri: Uri, val analysis: ImportEngine.AnalysisResult)
 
 // Format-specific MIME type definitions (ATT-2622, ATT-2740 / REQ-UI-294)
-val FIT_MIME_TYPES = arrayOf("application/vnd.ant.fit", "application/fit")
-val TCX_MIME_TYPES = arrayOf("application/vnd.garmin.tcx+xml", "application/xml", "text/xml")
-val GPX_MIME_TYPES = arrayOf("application/gpx+xml", "application/xml", "text/xml")
+val FIT_MIME_TYPES = arrayOf("application/vnd.ant.fit", "application/fit", "application/octet-stream")
+val TCX_MIME_TYPES = arrayOf("application/vnd.garmin.tcx+xml", "application/xml", "text/xml", "application/octet-stream")
+val GPX_MIME_TYPES = arrayOf("application/gpx+xml", "application/xml", "text/xml", "application/octet-stream")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
