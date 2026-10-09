@@ -515,7 +515,11 @@ public class TrackerService extends Service {
         Notification notification = mTrainingApplication != null ? mTrainingApplication.getSearchingAndTrackingNotification() : null;
         if (notification != null) {
             try {
-                performStartForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+                int foregroundServiceType = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    foregroundServiceType |= ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH | ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
+                }
+                performStartForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, foregroundServiceType);
             } catch (SecurityException | IllegalStateException e) {
                 Log.e(TAG, "Failed to start foreground service: " + e.getMessage(), e);
                 mTrackingInterrupted = true;
