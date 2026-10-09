@@ -93,3 +93,4 @@ In ATT-2791, we refactored the sensor header layout in [ControlTrackingScreen.kt
 - **Requirement**: `REQ-UI-313` (Control Tracking Screen Sensor Header Centering)
 - **Test Specification**: `TST-UI-273`
 - **Living Documentation**: [requirements.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/requirements.md) & [tests.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/tests.md) transitioned to `Verified`.
+- **Target Release Version**: `V4.9.40`. In accordance with ASPICE Rule 19 ("Add version when ticket is finished, not when started") and Rule 6, sub-tasks have no fix version assigned, and the parent ticket FixVersion will be set upon human acceptance.
