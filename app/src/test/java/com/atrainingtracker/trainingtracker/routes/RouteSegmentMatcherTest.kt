@@ -298,4 +298,64 @@ class RouteSegmentMatcherTest {
         )
         assertTrue("Empty candidate routes must return empty list", emptyMatches.isEmpty())
     }
+
+    @Test
+    fun testMatchSegments_sparseRouteVertices_matchesSegmentBetweenVertices() = runBlocking {
+        // Route with vertices spaced 60m apart
+        val sparseRoute = (0..20).map { i ->
+            val distMeters = i * 60.0
+            val lng = 11.0 + (distMeters / metersPerLngDegree)
+            PathPoint(distance = distMeters, latLng = LatLng(48.0, lng), altitude = 500.0)
+        }
+
+        // Segment starting at 210m (midpoint between 180m and 240m vertices; vertex distance = 30m > 25m)
+        // and ending at 510m (midpoint between 480m and 540m vertices; vertex distance = 30m > 25m)
+        val segPoints = listOf(
+            PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.0 + (210.0 / metersPerLngDegree)), altitude = 500.0),
+            PathPoint(distance = 150.0, latLng = LatLng(48.0, 11.0 + (360.0 / metersPerLngDegree)), altitude = 500.0),
+            PathPoint(distance = 300.0, latLng = LatLng(48.0, 11.0 + (510.0 / metersPerLngDegree)), altitude = 500.0)
+        )
+        val candidate = createSegment(401L, "Sparse Segment", BSportType.BIKE, segPoints, 300.0)
+
+        val matched = RouteSegmentMatcher.matchSegments(sparseRoute, listOf(candidate), BSportType.BIKE)
+
+        assertEquals("Should successfully match segment falling between sparse route vertices", 1, matched.size)
+        val result = matched[0]
+        assertEquals(401L, result.segment.summary.stravaId)
+        assertEquals(210.0, result.startDistanceMeters, 1.0)
+        assertEquals(510.0, result.endDistanceMeters, 1.0)
+    }
+
+    @Test
+    fun testMatchSegments_outAndBackRoute_matchesForwardOutboundLeg() = runBlocking {
+        // Out-and-back route: 0 to 5000m East, then 5000m to 10000m West
+        val outbound = (0..50).map { i ->
+            val dist = i * 100.0
+            val lng = 11.0 + (dist / metersPerLngDegree)
+            PathPoint(distance = dist, latLng = LatLng(48.0, lng), altitude = 500.0)
+        }
+        val returnLeg = (1..50).map { i ->
+            val dist = 5000.0 + i * 100.0
+            val lng = 11.0 + ((5000.0 - i * 100.0) / metersPerLngDegree)
+            PathPoint(distance = dist, latLng = LatLng(48.0, lng), altitude = 500.0)
+        }
+        val outAndBackPath = outbound + returnLeg
+
+        // Segment heading East from 1000m to 3000m
+        val segPoints = (10..30).map { i ->
+            val dist = (i - 10) * 100.0
+            val lng = 11.0 + ((i * 100.0) / metersPerLngDegree)
+            PathPoint(distance = dist, latLng = LatLng(48.0, lng), altitude = 500.0)
+        }
+        val candidate = createSegment(402L, "Outbound Segment", BSportType.BIKE, segPoints, 2000.0)
+
+        val matched = RouteSegmentMatcher.matchSegments(outAndBackPath, listOf(candidate), BSportType.BIKE)
+
+        assertEquals("Out-and-back route should match the forward outbound traversal", 1, matched.size)
+        val result = matched[0]
+        assertEquals(402L, result.segment.summary.stravaId)
+        assertEquals(1000.0, result.startDistanceMeters, 1.0)
+        assertEquals(3000.0, result.endDistanceMeters, 1.0)
+    }
 }
+
