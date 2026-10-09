@@ -66,6 +66,20 @@ class AntServicesStatusContractTest {
         assertTrue("Must check ANT USB service with USB host feature", content.contains("isANTUSBServiceInstalled"))
         assertTrue("Must reference market install URI", content.contains("market://details?id="))
         assertTrue("Must provide fallback play store URI", content.contains("https://play.google.com/store/apps/details?id="))
+
+        // REQ-UI-309 / ATT-2749: Untinted official ANT+ logo and elimination of BLE hint
+        assertTrue(
+            "Must pass iconTint = Color.Unspecified to AppModalBottomSheet (REQ-UI-309)",
+            content.contains("iconTint = Color.Unspecified")
+        )
+        org.junit.Assert.assertFalse(
+            "Must not reference ant_status_ble_alternative_note (REQ-UI-309)",
+            content.contains("ant_status_ble_alternative_note")
+        )
+        org.junit.Assert.assertFalse(
+            "Must not reference logo_protocol_bluetooth (REQ-UI-309)",
+            content.contains("logo_protocol_bluetooth")
+        )
     }
 
     @Test

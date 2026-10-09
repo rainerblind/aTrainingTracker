@@ -1702,7 +1702,6 @@
     <string name="ant_status_card_desc">Czujniki ANT+ na nowoczesnych smartfonach wymagają adaptera USB-OTG z odbiornikiem ANT+ USB i usług systemowych ANT+.</string>
     <string name="ant_status_card_action">Sprawdź status</string>
     <string name="ant_status_usb_dongle_note">Nowoczesne smartfony nie posiadają wbudowanych chipów ANT+. Do odbioru wymagany jest zewnętrzny adapter USB-OTG z odbiornikiem ANT+ USB.</string>
-    <string name="ant_status_ble_alternative_note">Wskazówka: Czujniki Bluetooth LE działają bezpośrednio bez dodatkowego sprzętu i usług systemowych.</string>
     <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
     <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
     <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>

@@ -1680,7 +1680,6 @@
     <string name="ant_status_card_desc">最新のスマートフォンで ANT+ センサーを使用するには、ANT+ USB ドングル付きの USB-OTG アダプターと ANT+ システムサービスが必要です。</string>
     <string name="ant_status_card_action">ステータスを確認</string>
     <string name="ant_status_usb_dongle_note">最新のスマートフォンには内蔵 ANT+ チップがありません。受信には ANT+ USB ドングル付きの外部 USB-OTG アダプターが必要です。</string>
-    <string name="ant_status_ble_alternative_note">ヒント: Bluetooth LE センサーは、追加のハードウェアやシステムサービスなしで直接動作します。</string>
     <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
     <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
     <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>

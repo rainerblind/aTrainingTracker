@@ -1701,7 +1701,6 @@
     <string name="ant_status_card_desc">Les capteurs ANT+ sur les smartphones modernes nécessitent un adaptateur USB-OTG avec une clé USB ANT+ et les services système ANT+.</string>
     <string name="ant_status_card_action">Vérifier l\'état</string>
     <string name="ant_status_usb_dongle_note">Les smartphones modernes ne possèdent pas de puces ANT+ intégrées. Un adaptateur USB-OTG externe avec une clé USB ANT+ est nécessaire.</string>
-    <string name="ant_status_ble_alternative_note">Astuce : Les capteurs Bluetooth LE fonctionnent directement sans matériel ni service supplémentaire.</string>
     <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
     <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
     <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>

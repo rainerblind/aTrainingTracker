@@ -1893,7 +1893,6 @@
     <string name="ant_status_card_desc">ANT+ sensors on modern smartphones require an external USB-OTG adapter with an ANT+ USB stick and ANT+ system services.</string>
     <string name="ant_status_card_action">Check Status</string>
     <string name="ant_status_usb_dongle_note">Modern smartphones lack integrated ANT+ chips. An external USB-OTG adapter with an ANT+ USB stick is required for wireless reception.</string>
-    <string name="ant_status_ble_alternative_note">Tip: Bluetooth LE sensors work directly without any additional hardware or system services.</string>
     <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
     <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
     <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>

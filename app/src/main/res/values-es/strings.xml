@@ -1702,7 +1702,6 @@
     <string name="ant_status_card_desc">Los sensores ANT+ en smartphones modernos requieren un adaptador USB-OTG con lápiz USB ANT+ y servicios de sistema ANT+.</string>
     <string name="ant_status_card_action">Comprobar estado</string>
     <string name="ant_status_usb_dongle_note">Los smartphones modernos no tienen chips ANT+ integrados. Se requiere un adaptador USB-OTG externo con lápiz USB ANT+ para la recepción.</string>
-    <string name="ant_status_ble_alternative_note">Consejo: Los sensores Bluetooth LE funcionan directamente sin hardware ni servicios adicionales.</string>
     <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
     <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
     <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
