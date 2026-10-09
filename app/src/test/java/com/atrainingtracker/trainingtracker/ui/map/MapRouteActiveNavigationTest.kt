@@ -29,6 +29,7 @@ import com.google.android.gms.maps.model.LatLng
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -62,7 +63,7 @@ class MapRouteActiveNavigationTest {
         assertEquals(TTColor.RouteActiveNavigation, activeRoute.color)
         assertEquals(Color(0xFF1E88E5), activeRoute.color)
         assertEquals(MapVisualization.ROUTE_ACTIVE_NAVIGATION_WIDTH, activeRoute.width, 0.001f)
-        assertEquals(16f, activeRoute.width, 0.001f)
+        assertEquals(26f, activeRoute.width, 0.001f)
         assertEquals(MapVisualization.ROUTE_ACTIVE_BASE_Z_INDEX, activeRoute.zIndex, 0.001f)
         assertEquals(24.0f, activeRoute.zIndex, 0.001f)
         assertEquals(MapVisualization.ROUTE_ACTIVE_OVERLAY_Z_INDEX, activeRoute.overlayZIndex, 0.001f)
@@ -72,13 +73,7 @@ class MapRouteActiveNavigationTest {
         assertEquals(MapVisualization.ROUTE_ACTIVE_OVERLAY_WIDTH, activeRoute.overlayWidth, 0.001f)
         assertEquals(8f, activeRoute.overlayWidth, 0.001f)
 
-        assertNotNull(activeRoute.pattern)
-        val pattern = activeRoute.pattern
-        assertEquals(2, pattern.size)
-        assertTrue(pattern[0] is Dash)
-        assertTrue(pattern[1] is Gap)
-        assertEquals(MapVisualization.ROUTE_ACTIVE_DASH_LENGTH, (pattern[0] as Dash).length, 0.001f)
-        assertEquals(MapVisualization.ROUTE_ACTIVE_GAP_LENGTH, (pattern[1] as Gap).length, 0.001f)
+        assertNull("Actively navigated route pattern must be null for clean solid ribbon rendering (REQ-MAP-040)", activeRoute.pattern)
     }
 
     @Test
@@ -89,13 +84,14 @@ class MapRouteActiveNavigationTest {
         assertEquals(TTColor.RouteSelected, passiveRoute.color)
         assertEquals(Color(0xFF1565C0), passiveRoute.color)
         assertEquals(MapVisualization.ROUTE_WIDTH, passiveRoute.width, 0.001f)
-        assertEquals(10f, passiveRoute.width, 0.001f)
+        assertEquals(18f, passiveRoute.width, 0.001f)
         assertEquals(MapVisualization.ROUTE_BASE_Z_INDEX, passiveRoute.zIndex, 0.001f)
         assertEquals(20.0f, passiveRoute.zIndex, 0.001f)
         assertEquals(MapVisualization.ROUTE_OVERLAY_Z_INDEX, passiveRoute.overlayZIndex, 0.001f)
         assertEquals(22.0f, passiveRoute.overlayZIndex, 0.001f)
         assertEquals(passiveRoute.color, passiveRoute.overlayColor)
         assertEquals(passiveRoute.width, passiveRoute.overlayWidth, 0.001f)
+        assertNull("Selected passive route pattern must be null for clean solid ribbon rendering (REQ-MAP-040)", passiveRoute.pattern)
     }
 
     @Test
@@ -109,6 +105,7 @@ class MapRouteActiveNavigationTest {
         assertEquals(6f, unselectedRoute.width, 0.001f)
         assertEquals(MapVisualization.ROUTE_UNSELECTED_Z_INDEX, unselectedRoute.zIndex, 0.001f)
         assertEquals(5.0f, unselectedRoute.zIndex, 0.001f)
+        assertNull(unselectedRoute.pattern)
     }
 
     @Test
@@ -167,11 +164,11 @@ class MapRouteActiveNavigationTest {
 
         val passiveMapRoute = routeWithPath.toMapRoute(isActiveNavigation = false)
         assertFalse(passiveMapRoute.isActiveNavigation)
-        assertEquals(10f, passiveMapRoute.width, 0.001f)
+        assertEquals(18f, passiveMapRoute.width, 0.001f)
 
         val activeMapRoute = routeWithPath.toMapRoute(isActiveNavigation = true)
         assertTrue(activeMapRoute.isActiveNavigation)
-        assertEquals(16f, activeMapRoute.width, 0.001f)
+        assertEquals(26f, activeMapRoute.width, 0.001f)
         assertEquals(TTColor.RouteActiveNavigation, activeMapRoute.color)
     }
 }
