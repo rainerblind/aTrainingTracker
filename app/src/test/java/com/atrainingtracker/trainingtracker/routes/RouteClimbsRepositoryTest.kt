@@ -42,6 +42,9 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -99,11 +102,14 @@ class RouteClimbsRepositoryTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.getStravaAccessToken() } returns null
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkStatic(TrainingApplication::class)
     }
 
     @Test

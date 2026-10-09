@@ -29,6 +29,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -46,7 +47,13 @@ class ForkNavigationRepositoryTest {
     private fun pt(lat: Double, lng: Double, dist: Double = 0.0) =
         PathPoint(dist, LatLng(lat, lng), 400.0)
 
-    private fun dummySummary(id: Long, name: String, dist: Double = 10000.0, elev: Double = 150.0) = RouteSummary(
+    private fun dummySummary(
+        id: Long,
+        name: String,
+        dist: Double = 10000.0,
+        elev: Double = 150.0,
+        isSelected: Boolean = true
+    ) = RouteSummary(
         id = id,
         externalId = "ext_$id",
         name = name,
@@ -54,7 +61,7 @@ class ForkNavigationRepositoryTest {
         distance = dist,
         elevationGain = elev,
         bSportType = BSportType.BIKE,
-        isSelected = false,
+        isSelected = isSelected,
         source = RouteSource.LOCAL_GPX
     )
 
@@ -90,6 +97,11 @@ class ForkNavigationRepositoryTest {
         allRoutesFlow.value = listOf(route1, route2)
 
         repository = ForkNavigationRepository(mockRoutesRepo)
+    }
+
+    @After
+    fun tearDown() {
+        repository.cancelScope()
     }
 
     @Test
@@ -210,4 +222,65 @@ class ForkNavigationRepositoryTest {
         // Distance must have counted down (~10-20m closer)
         assertTrue("Expected dist2 ($dist2) < dist1 ($dist1)", dist2 < dist1)
     }
+
+    /**
+     * TST-MAP-043: Quiescent short-circuit and alert dismissal when < 2 routes selected (REQ-MAP-041).
+     */
+    @Test
+    fun onLocationChanged_fewerThanTwoSelectedRoutes_skipsEvaluationAndClearsAlert() {
+        // Case A: 0 routes selected
+        val unselected1 = route1.copy(summary = route1.summary.copy(isSelected = false))
+        val unselected2 = route2.copy(summary = route2.summary.copy(isSelected = false))
+        allRoutesFlow.value = listOf(unselected1, unselected2)
+
+        val posApproach = LatLng(48.5072, 9.0000)
+        repository.onLocationChanged(posApproach)
+        assertNull(repository.forkDecisionState.value)
+
+        // Case B: Exactly 1 route selected
+        allRoutesFlow.value = listOf(route1, unselected2) // route1 isSelected = true, unselected2 isSelected = false
+        repository.onLocationChanged(posApproach)
+        assertNull(repository.forkDecisionState.value)
+
+        // Case C: Active alert dismissed when selected routes drop below 2
+        allRoutesFlow.value = listOf(route1, route2) // Both selected
+        repository.onLocationChanged(posApproach)
+        assertNotNull(repository.forkDecisionState.value)
+
+        // User unselects route2
+        allRoutesFlow.value = listOf(route1, unselected2)
+        repository.onLocationChanged(posApproach)
+        assertNull("Alert state must be cleared when selected routes drop below 2", repository.forkDecisionState.value)
+    }
+
+    /**
+     * TST-MAP-043: Unselected routes are excluded from fork candidate matching (REQ-MAP-041).
+     */
+    @Test
+    fun onLocationChanged_twoSelectedRoutesWithUnselectedCompetitor_onlyConsidersSelectedRoutes() {
+        // Route 3 shares corridor and turns straight North at 1000m, but is UNSELECTED
+        val sharedPoints = listOf(
+            pt(48.5000, 9.0000, 0.0),
+            pt(48.5045, 9.0000, 500.0),
+            pt(48.5090, 9.0000, 1000.0)
+        )
+        val route3Path = sharedPoints + listOf(
+            pt(48.5150, 9.0000, 1500.0),
+            pt(48.5200, 9.0000, 2000.0)
+        )
+        val route3Unselected = RouteWithPath(dummySummary(3L, "Straight Route", isSelected = false), route3Path)
+
+        allRoutesFlow.value = listOf(route1, route2, route3Unselected)
+
+        val posApproach = LatLng(48.5072, 9.0000)
+        repository.onLocationChanged(posApproach)
+
+        val state = repository.forkDecisionState.value
+        assertNotNull(state)
+        assertEquals(2, state?.branches?.size)
+        assertTrue(state?.branches?.any { it.routeId == 1L } == true)
+        assertTrue(state?.branches?.any { it.routeId == 2L } == true)
+        assertTrue("Unselected Route 3 must not appear in fork decision branches", state?.branches?.none { it.routeId == 3L } == true)
+    }
 }
+
