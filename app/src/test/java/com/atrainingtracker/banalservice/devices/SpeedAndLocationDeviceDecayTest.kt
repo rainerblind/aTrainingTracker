@@ -64,6 +64,7 @@ class SpeedAndLocationDeviceDecayTest {
     ) : SpeedAndLocationDevice(context, sensorManager, DeviceType.SPEED_AND_LOCATION_GPS) {
         fun getSpeedSensor(): MySensor<Double> = mSpeedSensor
         fun getPaceSensor(): MySensor<Double> = mPaceSensor
+        fun getBearingSensor(): MySensor<Double> = mBearingSensor
         fun getDistanceSensor(): MyDoubleAccumulatorSensor = mDistanceSensor
         fun getLapDistanceSensor(): MyDoubleAccumulatorSensor = mLapDistanceSensor
         fun callLocationUnavailable() = LocationUnavailable()
@@ -292,5 +293,68 @@ class SpeedAndLocationDeviceDecayTest {
         device.shutDown()
 
         verify { mockHandler.removeCallbacks(any()) }
+    }
+
+    @Test
+    fun testFallbackBearing_whenBearingMissing_calculatesFromLocationDifference() {
+        // Fix 1: initial fix
+        val loc1 = mockk<Location>(relaxed = true)
+        every { loc1.latitude } returns 48.0
+        every { loc1.longitude } returns 11.0
+        every { loc1.hasBearing() } returns false
+        every { loc1.bearing } returns 0.0f
+        every { loc1.accuracy } returns 2.5f
+        every { loc1.provider } returns "gps"
+        every { loc1.time } returns 1000L
+        device.onNewLocation(loc1)
+
+        // Fix 2: 1 second later, moving East (delta > 0.5m), bearingTo returning 90.0f
+        val loc2 = mockk<Location>(relaxed = true)
+        every { loc2.latitude } returns 48.0
+        every { loc2.longitude } returns 11.001
+        every { loc2.hasBearing() } returns false
+        every { loc2.bearing } returns 0.0f
+        every { loc2.accuracy } returns 2.5f
+        every { loc2.provider } returns "gps"
+        every { loc2.time } returns 2000L
+        every { loc1.distanceTo(loc2) } returns 7.0f
+        every { loc1.bearingTo(loc2) } returns 90.0f
+
+        device.onNewLocation(loc2)
+
+        // Bearing sensor should have been updated from bearingTo (90.0°)
+        assertEquals(90.0, device.getBearingSensor().value ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun testFallbackSpeed_whenSpeedMissing_calculatesFromLocationDifference() {
+        // Fix 1: initial fix
+        val loc1 = mockk<Location>(relaxed = true)
+        every { loc1.latitude } returns 48.0
+        every { loc1.longitude } returns 11.0
+        every { loc1.hasSpeed() } returns false
+        every { loc1.speed } returns 0.0f
+        every { loc1.accuracy } returns 2.5f
+        every { loc1.provider } returns "gps"
+        every { loc1.time } returns 1000L
+        device.onNewLocation(loc1)
+
+        // Fix 2: 1000ms later, distance delta = 10m -> calculated speed = 10 m/s
+        val loc2 = mockk<Location>(relaxed = true)
+        every { loc2.latitude } returns 48.0001
+        every { loc2.longitude } returns 11.0
+        every { loc2.hasSpeed() } returns false
+        every { loc2.speed } returns 0.0f
+        every { loc2.accuracy } returns 2.5f
+        every { loc2.provider } returns "gps"
+        every { loc2.time } returns 2000L
+        every { loc1.distanceTo(loc2) } returns 10.0f
+        every { loc1.bearingTo(loc2) } returns 0.0f
+
+        device.onNewLocation(loc2)
+
+        // Initial speed was 0.0, calculated 10.0 m/s -> smoothed = (0 + 10) / 2 = 5.0 m/s
+        assertEquals(5.0, device.speed, 0.001)
+        assertEquals(5.0, device.getSpeedSensor().value ?: -1.0, 0.001)
     }
 }

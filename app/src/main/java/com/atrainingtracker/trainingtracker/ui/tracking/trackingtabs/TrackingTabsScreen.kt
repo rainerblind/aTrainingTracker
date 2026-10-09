@@ -203,6 +203,12 @@ fun TrackingTabsScreen(
             val location = Location("GPS").apply {
                 latitude = latLng.latitude
                 longitude = latLng.longitude
+                controlViewModel.banalServiceRepository.currentBearing.value?.let {
+                    bearing = it.toFloat()
+                }
+                controlViewModel.banalServiceRepository.currentSpeed.value?.let {
+                    speed = it.toFloat()
+                }
             }
             routeSelectorViewModel.onLocationChanged(location)
         }

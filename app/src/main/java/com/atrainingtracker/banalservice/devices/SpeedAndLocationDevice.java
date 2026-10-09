@@ -280,24 +280,45 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 mLongitudeSensor.newValue(location.getLongitude());
                 mLatitudeSensor.newValue(location.getLatitude());
                 mAccuracySensor.newValue(location.getAccuracy() + 0.0);
-                mBearingSensor.newValue(location.getBearing() + 0.0);
                 mAltitudeSensor.newValue(location.getAltitude());
                 mLineDistanceSensor.newValue(location.distanceTo(mStartLocation) + 0.0);
 
+                double delta_distance = 0.0;
+                if (mPrevLocation != null) {
+                    delta_distance = mPrevLocation.distanceTo(location);
+
+                    mDistanceSensor.increment(delta_distance);
+                    mLapDistanceSensor.increment(delta_distance);
+                }
+
+                double bearing = location.getBearing();
+                if (bearing == 0.0f) {
+                    if (mPrevLocation != null && delta_distance > 0.5) {
+                        bearing = (mPrevLocation.bearingTo(location) + 360.0) % 360.0;
+                    } else if (mBearingSensor.getValue() != null) {
+                        bearing = mBearingSensor.getValue();
+                    }
+                }
+                mBearingSensor.newValue((bearing + 360.0) % 360.0);
+
                 double speed = location.getSpeed();
+                if (speed == 0.0 && mPrevLocation != null) {
+                    if (delta_distance > 0.1) {
+                        long dt_ms = location.getTime() - mPrevLocation.getTime();
+                        if (dt_ms > 0 && dt_ms < 30000) {
+                            double calcSpeed = delta_distance / (dt_ms / 1000.0);
+                            if (calcSpeed <= 70.0) { // Plausible speed limit (<= 252 km/h)
+                                speed = calcSpeed;
+                            }
+                        }
+                    }
+                }
                 mSpeed = (mSpeed + speed) / 2;
                 mSpeedSensor.newValue(mSpeed);
                 if (mSpeed > SPEED_ZERO_THRESHOLD) {
                     mPaceSensor.newValue(1.0 / mSpeed);
                 } else {
                     mPaceSensor.newValue(null);
-                }
-
-                if (mPrevLocation != null) {
-                    double delta_distance = mPrevLocation.distanceTo(location);
-
-                    mDistanceSensor.increment(delta_distance);
-                    mLapDistanceSensor.increment(delta_distance);
                 }
 
                 // finally, save the location
