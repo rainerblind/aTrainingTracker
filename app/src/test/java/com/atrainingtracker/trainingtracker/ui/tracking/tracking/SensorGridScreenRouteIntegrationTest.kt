@@ -134,4 +134,26 @@ class SensorGridScreenRouteIntegrationTest {
             content.contains("R.string.route_action_clear")
         )
     }
+
+    /**
+     * TST-UI-281.2 & TST-UI-281.3: ForkDecisionCard floats as top-center overlay and consumes navigationCueTransparency.
+     */
+    @Test
+    fun testSensorGridScreen_forkDecisionCard_floatsAsTopCenterOverlay() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "SensorGridScreen must render ForkDecisionCard with Alignment.TopCenter overlay modifier (REQ-UI-321.1 / ATT-2874)",
+            content.contains("modifier = Modifier.align(Alignment.TopCenter)")
+        )
+        assertTrue(
+            "SensorGridScreen must gate ForkDecisionCard behind state.showNavigationHints (REQ-UI-321.2 / ATT-2874)",
+            content.contains("if (state.showNavigationHints)")
+        )
+        assertTrue(
+            "SensorGridScreen must bind ForkDecisionCard overlayAlpha to tuningConfig.navigationCueTransparency (REQ-UI-321.3 / §5.7)",
+            content.contains("overlayAlpha = tuningConfig.navigationCueTransparency")
+        )
+    }
 }
