@@ -1716,4 +1716,6 @@
     <string name="map_layer_segments">Segmenty</string>
     <string name="map_layer_locations">Ulubione lokalizacje</string>
     <string name="map_layer_track">Zarejestrowany ślad</string>
+    <string name="ant_dialog_view_status">Pokaż status ANT+</string>
+    <string name="ant_dialog_dismiss">Rozumiem</string>
 </resources>

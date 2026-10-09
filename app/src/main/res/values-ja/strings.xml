@@ -1694,4 +1694,6 @@
     <string name="map_layer_segments">セグメント</string>
     <string name="map_layer_locations">お気に入りの場所</string>
     <string name="map_layer_track">記録トラック</string>
+    <string name="ant_dialog_view_status">ANT+ ステータスを表示</string>
+    <string name="ant_dialog_dismiss">了解</string>
 </resources>
