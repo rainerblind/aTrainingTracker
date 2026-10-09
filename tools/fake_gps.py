@@ -219,13 +219,14 @@ def get_sample_route(sample_name: str) -> Tuple[str, List[GpxPoint]]:
         return "Munich Olympic Park Scenic Loop", points
 
 
-# --- ADB Test Provider Controller ---
-
 class AdbController:
     """Manages Android system test location provider over ADB."""
 
-    def __init__(self, device_serial: Optional[str] = None):
+    DEFAULT_PROVIDERS = ("gps", "network", "fused")
+
+    def __init__(self, device_serial: Optional[str] = None, providers: Optional[List[str]] = None):
         self.device_serial = device_serial or self.detect_device()
+        self.providers = list(providers or self.DEFAULT_PROVIDERS)
         self.is_provider_registered = False
 
     def detect_device(self) -> str:
@@ -250,38 +251,39 @@ class AdbController:
         return subprocess.run(full_cmd, capture_output=True, text=True, check=check)
 
     def setup_test_provider(self):
-        """Grants mock location permission and registers system GPS test provider."""
+        """Grants mock location permission and registers test providers for gps, network, and fused."""
         # Grant mock_location permission to Android shell (UID 2000)
         self.run_adb(["shell", "appops", "set", "2000", "android:mock_location", "allow"], check=False)
-        # Register GPS test provider
-        self.run_adb([
-            "shell", "cmd", "location", "providers", "add-test-provider", "gps",
-            "--supportsAltitude", "--supportsSpeed", "--supportsBearing"
-        ], check=False)
-        # Enable the provider
-        self.run_adb(["shell", "cmd", "location", "providers", "set-test-provider-enabled", "gps", "true"], check=False)
+        # Register and enable all target providers in a single shell invocation
+        setup_cmds = []
+        for p in self.providers:
+            setup_cmds.append(
+                f"cmd location providers add-test-provider {p} --supportsAltitude --supportsSpeed --supportsBearing 2>/dev/null ; "
+                f"cmd location providers set-test-provider-enabled {p} true"
+            )
+        self.run_adb(["shell", " ; ".join(setup_cmds)], check=False)
         self.is_provider_registered = True
 
     def remove_test_provider(self):
-        """Removes test provider and restores real hardware GPS reception."""
+        """Removes all test providers and restores real hardware GNSS/Network reception."""
         if self.is_provider_registered:
             try:
-                self.run_adb(["shell", "cmd", "location", "providers", "remove-test-provider", "gps"], check=False)
+                teardown_cmds = [f"cmd location providers remove-test-provider {p} 2>/dev/null" for p in self.providers]
+                self.run_adb(["shell", " ; ".join(teardown_cmds)], check=False)
                 self.is_provider_registered = False
             except Exception:
                 pass
 
     def inject_location(self, lat: float, lon: float, accuracy: float = 2.5):
-        """Injects simulated location fix into system location manager."""
+        """Injects simulated location fix synchronously into all system location providers."""
         now_ms = int(time.time() * 1000)
         loc_str = f"{lat:.6f},{lon:.6f}"
         acc_str = f"{accuracy:.1f}"
-        self.run_adb([
-            "shell", "cmd", "location", "providers", "set-test-provider-location", "gps",
-            "--location", loc_str,
-            "--accuracy", acc_str,
-            "--time", str(now_ms)
-        ], check=False)
+        inject_cmds = [
+            f"cmd location providers set-test-provider-location {p} --location {loc_str} --accuracy {acc_str} --time {now_ms}"
+            for p in self.providers
+        ]
+        self.run_adb(["shell", " && ".join(inject_cmds)], check=False)
 
 
 # --- Simulation State Engine ---

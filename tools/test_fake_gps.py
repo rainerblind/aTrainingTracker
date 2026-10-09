@@ -185,5 +185,16 @@ class TestGpxSimulationEngine(unittest.TestCase):
         self.assertAlmostEqual(self.engine.progress_ratio, 1.0)
 
 
+class TestAdbController(unittest.TestCase):
+
+    def test_default_providers(self):
+        from tools.fake_gps import AdbController
+        # Verify that all 3 location sources (gps, network, fused) are targeted
+        self.assertIn("gps", AdbController.DEFAULT_PROVIDERS)
+        self.assertIn("network", AdbController.DEFAULT_PROVIDERS)
+        self.assertIn("fused", AdbController.DEFAULT_PROVIDERS)
+        self.assertEqual(len(AdbController.DEFAULT_PROVIDERS), 3)
+
+
 if __name__ == "__main__":
     unittest.main()
