@@ -31,9 +31,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
 import com.atrainingtracker.trainingtracker.ui.map.toMapSegment
-import com.atrainingtracker.trainingtracker.ui.routes.RouteOnMapScreen
+import com.atrainingtracker.trainingtracker.ui.routes.RouteDetailSheet
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 
 /**
@@ -62,30 +61,7 @@ fun StarredSegmentsScreen(
 
     // 2. Logic to switch between List and Detail
     Box(modifier = modifier) {
-        if (inspectedRouteId != null) {
-            val inspectedRoute = allRoutes.find { it.summary.id == inspectedRouteId }
-            if (inspectedRoute != null) {
-                val routeBackgroundPaths = remember(inspectedRoute, segments) {
-                    segments
-                        .filter { it.summary.bSportType == inspectedRoute.summary.bSportType }
-                        .map { it.toMapSegment(showStartAndFinishText = false) }
-                }
-
-                RouteOnMapScreen(
-                    route = inspectedRoute.toMapRoute(),
-                    routeSummary = inspectedRoute.summary,
-                    backgroundPaths = routeBackgroundPaths,
-                    allSegments = segments,
-                    onToggleSelection = { /* Read-only inspection from segment detail */ }
-                )
-
-                BackHandler {
-                    inspectedRouteId = null
-                }
-            } else {
-                inspectedRouteId = null
-            }
-        } else if (selectedSegmentId == null) {
+        if (selectedSegmentId == null) {
             // SHOW LIST
             SegmentsTabsScreen(
                 segmentsWithPath = segments,
@@ -133,9 +109,22 @@ fun StarredSegmentsScreen(
                     }
                 )
 
-                // Handle Back Press to return to list
+                // Route details modal bottom sheet overlay (REQ-UI-316 / ATT-2861)
+                val inspectedRoute = inspectedRouteId?.let { id -> allRoutes.find { it.summary.id == id } }
+                if (inspectedRoute != null) {
+                    RouteDetailSheet(
+                        routeWithPath = inspectedRoute,
+                        onDismiss = { inspectedRouteId = null }
+                    )
+                }
+
+                // Handle Back Press: dismiss inspected route first, then return to segment list
                 BackHandler {
-                    selectedSegmentId = null
+                    if (inspectedRouteId != null) {
+                        inspectedRouteId = null
+                    } else {
+                        selectedSegmentId = null
+                    }
                 }
             }
         }
