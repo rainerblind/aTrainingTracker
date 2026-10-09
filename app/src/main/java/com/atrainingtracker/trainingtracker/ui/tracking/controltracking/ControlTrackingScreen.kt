@@ -40,7 +40,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -289,7 +291,7 @@ fun ControlTrackingScreen(
             searchingFor = searchingFor
         )
 
-        // Sensor header section: RemoteDevices and ResearchButton without collision (REQ-UI-301, ATT-2479)
+        // Sensor header section: RemoteDevices and ResearchButton with symmetrical centering (REQ-UI-301, REQ-UI-313, ATT-2791)
         if (devices.isNotEmpty()) {
             Row(
                 modifier = Modifier
@@ -308,6 +310,19 @@ fun ControlTrackingScreen(
                     onDeviceClick = onDeviceClick,
                     modifier = Modifier.weight(1f)
                 )
+                if (showResearchButton) {
+                    // Symmetrical balancing anchor matching ResearchButton width to mathematically center RemoteDevices (REQ-UI-313)
+                    Box(
+                        modifier = Modifier
+                            .alpha(0f)
+                            .clearAndSetSemantics { }
+                    ) {
+                        ResearchButton(
+                            isEnabled = false,
+                            onClick = {}
+                        )
+                    }
+                }
             }
         } else if (showResearchButton) {
             Row(
@@ -589,6 +604,34 @@ fun PreviewControlTrackingScreenMultiDevices() {
                     RemoteDeviceUIData(4, deviceType = DeviceType.BIKE_POWER, name = "Power", R.drawable.bt_bike_pwr),
                     RemoteDeviceUIData(5, deviceType = DeviceType.RUN_SPEED, name = "Footpod", R.drawable.run_spd),
                     RemoteDeviceUIData(6, deviceType = DeviceType.BIKE_SPEED_AND_CADENCE, name = "Combo", R.drawable.bt_bike_speed_and_cadence)
+                ),
+                currentSport = BSportType.BIKE,
+                isAntSupported = true,
+                isBluetoothSupported = true,
+                onSearch = {}, onDeviceClick = {}, onSportSelected = {},
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
+                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {},
+                showResearchButton = true
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Light Mode - Single Remote Device (Centered)")
+@Preview(
+    showBackground = true,
+    name = "Dark Mode - Single Remote Device (Centered)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PreviewControlTrackingScreenSingleDevice() {
+    ATrainingTrackerTheme {
+        Surface {
+            ControlTrackingScreen(
+                trackingMode = TrackingMode.READY,
+                searchingFor = null,
+                devices = listOf(
+                    RemoteDeviceUIData(1, deviceType = DeviceType.BIKE_CADENCE, name = "cad", R.drawable.bt_bike_cad)
                 ),
                 currentSport = BSportType.BIKE,
                 isAntSupported = true,
