@@ -1361,7 +1361,14 @@ public class TrackerService extends Service {
         }
 
         // 5. Finalize Map and Streams (one last check)
-        String polyline = PolyUtil.encode(mLiveSession.getSampledLatLngs());
+        List<LatLng> pointsToSimplify = mLiveSession.getRawLatLngs();
+        if (pointsToSimplify.isEmpty()) {
+            pointsToSimplify = mLiveSession.getSampledLatLngs();
+        }
+        List<LatLng> simplifiedPoints = (pointsToSimplify != null && !pointsToSimplify.isEmpty())
+                ? PolyUtil.simplify(pointsToSimplify, 10.0)
+                : Collections.emptyList();
+        String polyline = PolyUtil.encode(simplifiedPoints);
         String altStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(mLiveSession.getSampledAltitudes());
         String distStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(mLiveSession.getSampledDistances());
         summariesManager.updateMapAndStreams(mWorkoutID, polyline, altStream, distStream);
