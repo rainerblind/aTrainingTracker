@@ -22,6 +22,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -34,6 +36,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,106 +70,127 @@ fun LiveClimbSheet(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // --- 1. Header Row ---
+        // --- 1. Top Header Row: 32dp Icon, Title, and Right-Aligned Category Chip ---
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f, fill = false)
-            ) {
-                // Category badge
-                ClimbCategoryChip(category = climb.category)
+            Icon(
+                imageVector = Icons.Default.Terrain,
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
 
-                Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = climb.name.ifBlank { stringResource(R.string.climb_title) },
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
 
-                Column {
-                    val subtitle = if (liveClimb.routeIndex != null && liveClimb.totalRouteClimbs != null) {
-                        stringResource(R.string.climb_route_counter, liveClimb.routeIndex, liveClimb.totalRouteClimbs)
-                    } else {
-                        stringResource(R.string.climb_title)
-                    }
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = climb.name,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
+            ClimbCategoryChip(category = climb.category)
+        }
 
-            // Status Badge
+        // --- 2. Second Row: Status and Route Counter ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             ClimbStatusBadge(
                 status = liveClimb.status,
                 distanceToStart = liveClimb.distanceToStart,
                 distanceFormatter = distanceFormatter
             )
+
+            val counterText = if (liveClimb.routeIndex != null && liveClimb.totalRouteClimbs != null) {
+                stringResource(R.string.climb_route_counter, liveClimb.routeIndex, liveClimb.totalRouteClimbs)
+            } else {
+                "${climb.elevationGainMeters.roundToInt()} m"
+            }
+            Text(
+                text = counterText,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // --- 2. Colored Elevation Profile Canvas ---
-        ClimbProfileCanvas(
-            liveClimb = liveClimb,
+        // --- 3. Standardized Horizontal Divider ---
+        HorizontalDivider(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(68.dp)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        HorizontalDivider(
+                .padding(vertical = 4.dp),
             thickness = 0.5.dp,
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
+        // --- 4. Live Telemetry HUD (Harmonized with SegmentLiveDetails) ---
+        val remDistStr = if (liveClimb.status == LiveClimbStatus.FINISHED) {
+            "0 m"
+        } else {
+            distanceFormatter.format_with_units(liveClimb.distanceToSummit) ?: "${liveClimb.distanceToSummit.roundToInt()} m"
+        }
+        val remElevStr = if (liveClimb.status == LiveClimbStatus.FINISHED) {
+            "0 m"
+        } else {
+            "${liveClimb.remainingElevationGain.roundToInt()} m"
+        }
+        val gradeStr = String.format(Locale.getDefault(), "%.1f%%", liveClimb.currentGradePercent)
 
-        // --- 3. Telemetry HUD Metrics ---
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val remDistStr = if (liveClimb.status == LiveClimbStatus.FINISHED) {
-                "0 m"
-            } else {
-                distanceFormatter.format_with_units(liveClimb.distanceToSummit) ?: "${liveClimb.distanceToSummit.roundToInt()} m"
+            // Left: Distance & Elevation Progress
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "$remDistStr ${stringResource(R.string.climb_remaining_dist)}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "$remElevStr ${stringResource(R.string.climb_remaining_elevation)}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            ClimbHudMetric(
-                label = stringResource(R.string.climb_remaining_dist),
-                value = remDistStr,
-                modifier = Modifier.weight(1f)
-            )
 
-            val remElevStr = if (liveClimb.status == LiveClimbStatus.FINISHED) {
-                "0 m"
-            } else {
-                "${liveClimb.remainingElevationGain.roundToInt()} m"
+            // Right: Instantaneous Grade in Headline Monospace
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = gradeStr,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(R.string.climb_grade),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            ClimbHudMetric(
-                label = stringResource(R.string.climb_remaining_elevation),
-                value = remElevStr,
-                modifier = Modifier.weight(1f)
-            )
-
-            val gradeStr = String.format(Locale.getDefault(), "%.1f%%", liveClimb.currentGradePercent)
-            ClimbHudMetric(
-                label = stringResource(R.string.climb_grade),
-                value = gradeStr,
-                modifier = Modifier.weight(1f)
-            )
         }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // --- 5. Colored Elevation Profile Canvas ---
+        ClimbProfileCanvas(
+            liveClimb = liveClimb,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+        )
     }
 }
 
