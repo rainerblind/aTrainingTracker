@@ -1426,6 +1426,10 @@
     <string name="tuning_default_format">Par défaut : %1$s</string>
     <string name="reset_to_defaults">Rétablir les paramètres par défaut</string>
     <string name="reset_to_defaults_success">Paramètres de réglage rétablis aux valeurs d\'usine par défaut.</string>
+    <string name="tuning_cat_sensor_search">Recherche de capteurs et déclencheurs</string>
+    <string name="tuning_sensor_search_subtitle">%1$d tours de recherche, %2$s recherche automatique</string>
+    <string name="tuning_sensor_search_active">Active</string>
+    <string name="tuning_sensor_search_disabled">Désactivée</string>
     <string name="tuning_cat_sensors_gps">Capteurs, GPS et filtrage</string>
     <string name="tuning_cat_workout_masks_cards">Cartes et détails d\'entraînement</string>
     <string name="tuning_cat_navigation">Navigation</string>

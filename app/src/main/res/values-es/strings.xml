@@ -1427,6 +1427,10 @@
     <string name="tuning_default_format">Predeterminado: %1$s</string>
     <string name="reset_to_defaults">Restablecer valores predeterminados</string>
     <string name="reset_to_defaults_success">Ajustes restablecidos a los valores predeterminados de fábrica.</string>
+    <string name="tuning_cat_sensor_search">Búsqueda de sensores y activadores</string>
+    <string name="tuning_sensor_search_subtitle">%1$d rondas de búsqueda, %2$s búsqueda automática</string>
+    <string name="tuning_sensor_search_active">Activa</string>
+    <string name="tuning_sensor_search_disabled">Desactivada</string>
     <string name="tuning_cat_sensors_gps">Sensores, GPS y filtrado</string>
     <string name="tuning_cat_workout_masks_cards">Tarjetas y detalles de entrenamiento</string>
     <string name="tuning_cat_navigation">Navegación</string>

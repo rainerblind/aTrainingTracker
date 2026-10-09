@@ -53,7 +53,8 @@ class AdvancedTuningModularityTest {
             "categories/SensorsGpsFilterSection.kt",
             "categories/AftermathAnalysisSection.kt",
             "categories/WorkoutMasksAndCardsSection.kt",
-            "categories/NavigationSection.kt"
+            "categories/NavigationSection.kt",
+            "categories/SensorSearchTuningSection.kt"
         )
 
         for (relPath in expectedFiles) {

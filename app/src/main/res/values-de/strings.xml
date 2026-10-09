@@ -1512,6 +1512,10 @@
     <string name="tuning_default_format">Standard: %1$s</string>
     <string name="reset_to_defaults">Auf Werkseinstellungen zurücksetzen</string>
     <string name="reset_to_defaults_success">Abstimmungseinstellungen auf Werkseinstellungen zurückgesetzt.</string>
+    <string name="tuning_cat_sensor_search">Sensorsuche &amp; Verhalten</string>
+    <string name="tuning_sensor_search_subtitle">%1$d Suchrunden, %2$s Autosuche</string>
+    <string name="tuning_sensor_search_active">Aktiv</string>
+    <string name="tuning_sensor_search_disabled">Deaktiviert</string>
     <string name="tuning_cat_sensors_gps">Sensoren, GPS &amp; Filter</string>
     <string name="tuning_cat_workout_masks_cards">Trainingsliste &amp; Details</string>
     <string name="tuning_cat_navigation">Navigation</string>
