@@ -1687,4 +1687,11 @@
     <string name="ant_service_installed">インストール済み</string>
     <string name="ant_service_not_installed">未インストール</string>
     <string name="ant_service_install_button">インストール</string>
+
+    <!-- ATT-2931: General Map Layers Control Menu -->
+    <string name="map_layers">マップレイヤー</string>
+    <string name="map_layer_routes">ルート</string>
+    <string name="map_layer_segments">セグメント</string>
+    <string name="map_layer_locations">お気に入りの場所</string>
+    <string name="map_layer_track">記録トラック</string>
 </resources>
