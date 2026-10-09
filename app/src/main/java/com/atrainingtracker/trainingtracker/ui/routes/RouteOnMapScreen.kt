@@ -277,6 +277,7 @@ fun RouteOnMapScreen(
                                 minLng = matched.segment.summary.minLng,
                                 maxLat = matched.segment.summary.maxLat,
                                 maxLng = matched.segment.summary.maxLng,
+                                isDashed = true,
                                 onClick = { id ->
                                     highlightedSegmentId = if (highlightedSegmentId == id) null else id
                                     if (highlightedSegmentId != null) {
@@ -326,6 +327,7 @@ fun RouteOnMapScreen(
             }
 
             // Filter backgroundPaths: suppress MapSegments when SEGMENTS layer is disabled or individual segment is hidden (REQ-UI-318)
+            // and render background segments as dashed polylines (REQ-UI-319 / ATT-2864)
             val isSegmentsLayerEnabled = RouteOverlayLayer.SEGMENTS in enabledOverlayLayers
             val visibleBackgroundPaths = backgroundPaths.filter { path ->
                 if (path is MapSegment) {
@@ -333,6 +335,8 @@ fun RouteOnMapScreen(
                 } else {
                     true
                 }
+            }.map { path ->
+                if (path is MapSegment) path.copy(isDashed = true) else path
             }
             if (visibleBackgroundPaths.isNotEmpty()) {
                 contextualPaths(visibleBackgroundPaths, sameSportAlpha = TTAlpha.Medium)

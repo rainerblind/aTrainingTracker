@@ -62,15 +62,18 @@ fun MappablePathLayer(
     onPathClick: (Long) -> Unit = {}
 ) {
     // 1. Core Path Rendering (Handles both Solid and X-Ray styles)
-    // Only apply the X-Ray pattern if the path is primary (alpha = 1.0)
-    // to avoid visual artifacts with overlapping transparent layers.
+    // Only apply the X-Ray pattern if the path is primary (alpha = 1.0) or a dashed segment,
+    // to avoid visual artifacts with overlapping transparent layers while preserving segment dashes.
+    val isDashedSegment = path is MapSegment && path.isDashed
+    val pattern = if (isDashedSegment || alpha >= 1.0f) path.pattern else null
     XRayPolyline(
         points = path.latLngs,
         color = path.color.copy(alpha = alpha),
         width = path.width,
         baseZIndex = path.zIndex,
         overlayZIndex = path.overlayZIndex ?: path.zIndex,
-        pattern = if (alpha >= 1.0f) path.pattern else null,
+        pattern = pattern,
+        hasSolidBase = !isDashedSegment,
         clickable = true,
         onClick = { onPathClick(path.id) },
         overlayColor = (path.overlayColor ?: path.color).copy(alpha = alpha),
@@ -395,6 +398,7 @@ private fun XRayPolyline(
     baseZIndex: Float,
     overlayZIndex: Float,
     pattern: List<PatternItem>? = null,
+    hasSolidBase: Boolean = true,
     jointType: Int = JointType.DEFAULT,
     clickable: Boolean = false,
     onClick: () -> Unit = {},
@@ -402,15 +406,17 @@ private fun XRayPolyline(
     overlayWidth: Float = width
 ) {
     // 1. Solid Base
-    Polyline(
-        points = points,
-        color = color,
-        width = width,
-        zIndex = baseZIndex,
-        clickable = clickable,
-        onClick = { if (clickable) onClick() },
-        jointType = jointType
-    )
+    if (hasSolidBase) {
+        Polyline(
+            points = points,
+            color = color,
+            width = width,
+            zIndex = baseZIndex,
+            clickable = clickable,
+            onClick = { if (clickable) onClick() },
+            jointType = jointType
+        )
+    }
     
     // 2. Patterned Overlay
     if (pattern != null) {
@@ -420,7 +426,9 @@ private fun XRayPolyline(
             width = overlayWidth,
             zIndex = overlayZIndex,
             pattern = pattern,
-            jointType = jointType
+            jointType = jointType,
+            clickable = !hasSolidBase && clickable,
+            onClick = { if (!hasSolidBase && clickable) onClick() }
         )
     }
 }
