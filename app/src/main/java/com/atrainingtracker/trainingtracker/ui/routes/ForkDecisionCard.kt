@@ -18,19 +18,21 @@
 
 package com.atrainingtracker.trainingtracker.ui.routes
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.CallSplit
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -38,19 +40,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.routes.ForkBranchOption
 import com.atrainingtracker.trainingtracker.routes.ForkDecisionState
 import com.atrainingtracker.trainingtracker.routes.ForkDirection
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.google.android.gms.maps.model.LatLng
 import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
  * Ambient HUD card presenting branching route options at a fork in the road.
  *
- * Conforms to REQ-MAP-031 clause 3.
+ * Conforms to REQ-MAP-031 clause 3 and REQ-UI-330 (ATT-2962).
  */
 @Composable
 fun ForkDecisionCard(
@@ -71,8 +77,9 @@ fun ForkDecisionCard(
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = overlayAlpha)
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = overlayAlpha)
             ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)),
             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
             modifier = Modifier
                 .fillMaxWidth()
@@ -89,7 +96,7 @@ fun ForkDecisionCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.CallSplit,
+                        imageVector = Icons.AutoMirrored.Filled.CallSplit,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
@@ -100,7 +107,7 @@ fun ForkDecisionCard(
                                 stringResource(R.string.fork_approaching_in_m, decisionState.distanceToForkMeters.roundToInt()) + ")",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(
@@ -118,11 +125,13 @@ fun ForkDecisionCard(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Branches
-                decisionState.branches.forEach { branch ->
-                    ForkBranchItem(
-                        branch = branch,
-                        onClick = { onRouteSelected(branch.routeId) }
+                // Directional Grouping (REQ-UI-330)
+                val groupedBranches = decisionState.branches.groupBy { it.direction }
+                groupedBranches.forEach { (direction, branches) ->
+                    ForkDirectionGroup(
+                        direction = direction,
+                        branches = branches,
+                        onRouteSelected = onRouteSelected
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                 }
@@ -131,86 +140,169 @@ fun ForkDecisionCard(
     }
 }
 
+/**
+ * Directional group container grouping candidate routes heading in the same relative direction.
+ */
 @Composable
-fun ForkBranchItem(
-    branch: ForkBranchOption,
-    onClick: () -> Unit,
+fun ForkDirectionGroup(
+    direction: ForkDirection,
+    branches: List<ForkBranchOption>,
+    onRouteSelected: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+        tonalElevation = 1.dp,
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Direction Icon & Label
+            // Direction Column
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.width(48.dp)
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .width(54.dp)
+                    .padding(vertical = 8.dp, horizontal = 4.dp)
             ) {
-                val icon = when (branch.direction) {
+                val icon = when (direction) {
                     ForkDirection.LEFT -> Icons.AutoMirrored.Filled.ArrowBack
                     ForkDirection.STRAIGHT -> Icons.Default.ArrowUpward
                     ForkDirection.RIGHT -> Icons.AutoMirrored.Filled.ArrowForward
                 }
                 Icon(
                     imageVector = icon,
-                    contentDescription = stringResource(branch.direction.labelRes),
+                    contentDescription = stringResource(direction.labelRes),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = stringResource(branch.direction.labelRes),
+                    text = stringResource(direction.labelRes),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            // Subtle vertical divider separating direction from routes
+            VerticalDivider(
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(vertical = 4.dp)
+            )
 
-            // Route Name & Metrics
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = branch.routeName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Row(
-                    modifier = Modifier.padding(top = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    val distKm = branch.totalDistanceMeters / 1000.0
-                    Text(
-                        text = String.format(Locale.US, "%.1f km", distKm),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "+${branch.totalElevationMeters.roundToInt()} m",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+            // Routes Column
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(vertical = 2.dp)
+            ) {
+                branches.forEachIndexed { index, branch ->
+                    if (index > 0) {
+                        HorizontalDivider(
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                    }
+                    ForkRouteRow(
+                        branch = branch,
+                        onClick = { onRouteSelected(branch.routeId) }
                     )
                 }
             }
-
-            // Hint: Tap to select
-            Text(
-                text = stringResource(R.string.fork_select_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-            )
         }
+    }
+}
+
+/**
+ * Clickable row displaying a single route candidate's title and metrics.
+ * Note: Redundant tap hint removed to optimize screen space and glanceability (REQ-UI-330).
+ */
+@Composable
+fun ForkRouteRow(
+    branch: ForkBranchOption,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = branch.routeName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Row(
+                modifier = Modifier.padding(top = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val distKm = branch.totalDistanceMeters / 1000.0
+                Text(
+                    text = String.format(Locale.US, "%.1f km", distKm),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "+${branch.totalElevationMeters.roundToInt()} m",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "Light Mode", showBackground = true)
+@Composable
+private fun ForkDecisionCardPreview_Light() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        val sampleBranches = listOf(
+            ForkBranchOption(1L, "Waldenbuch Scenic Loop", 38400.0, 420.0, ForkDirection.STRAIGHT, 0.0),
+            ForkBranchOption(2L, "Steinenbronn Direct Cut", 31200.0, 310.0, ForkDirection.STRAIGHT, 4.0),
+            ForkBranchOption(3L, "Dettenhausen Fast Ridge", 54200.0, 680.0, ForkDirection.RIGHT, 45.0)
+        )
+        val state = ForkDecisionState(
+            divergenceCoordinate = LatLng(48.5100, 9.0000),
+            distanceToForkMeters = 245.0,
+            branches = sampleBranches,
+            isApproaching = true
+        )
+        ForkDecisionCard(decisionState = state)
+    }
+}
+
+@Preview(name = "Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Composable
+private fun ForkDecisionCardPreview_Dark() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        val sampleBranches = listOf(
+            ForkBranchOption(1L, "Waldenbuch Scenic Loop", 38400.0, 420.0, ForkDirection.STRAIGHT, 0.0),
+            ForkBranchOption(2L, "Dettenhausen Fast Ridge", 54200.0, 680.0, ForkDirection.RIGHT, 45.0)
+        )
+        val state = ForkDecisionState(
+            divergenceCoordinate = LatLng(48.5100, 9.0000),
+            distanceToForkMeters = 180.0,
+            branches = sampleBranches,
+            isApproaching = true
+        )
+        ForkDecisionCard(decisionState = state)
     }
 }
