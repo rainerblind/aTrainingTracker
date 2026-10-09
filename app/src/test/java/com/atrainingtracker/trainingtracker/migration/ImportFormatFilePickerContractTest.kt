@@ -30,23 +30,23 @@ class ImportFormatFilePickerContractTest {
 
     @Test
     fun testFitMimeTypes_containsTargetedMimeSignatures() {
-        val expected = arrayOf("application/vnd.ant.fit", "application/fit")
+        val expected = arrayOf("application/vnd.ant.fit", "application/fit", "application/octet-stream")
         assertArrayEquals(expected, FIT_MIME_TYPES)
-        assertTrue(FIT_MIME_TYPES.none { it == "application/octet-stream" })
+        assertTrue(FIT_MIME_TYPES.contains("application/octet-stream"))
     }
 
     @Test
     fun testTcxMimeTypes_containsTargetedMimeSignatures() {
-        val expected = arrayOf("application/vnd.garmin.tcx+xml", "application/xml", "text/xml")
+        val expected = arrayOf("application/vnd.garmin.tcx+xml", "application/xml", "text/xml", "application/octet-stream")
         assertArrayEquals(expected, TCX_MIME_TYPES)
-        assertTrue(TCX_MIME_TYPES.none { it == "application/octet-stream" })
+        assertTrue(TCX_MIME_TYPES.contains("application/octet-stream"))
     }
 
     @Test
     fun testGpxMimeTypes_containsTargetedMimeSignatures() {
-        val expected = arrayOf("application/gpx+xml", "application/xml", "text/xml")
+        val expected = arrayOf("application/gpx+xml", "application/xml", "text/xml", "application/octet-stream")
         assertArrayEquals(expected, GPX_MIME_TYPES)
-        assertTrue(GPX_MIME_TYPES.none { it == "application/octet-stream" })
+        assertTrue(GPX_MIME_TYPES.contains("application/octet-stream"))
     }
 
     @Test
