@@ -315,8 +315,12 @@ class GpxSimulationEngine:
 
         self.current_lat = points[0].lat
         self.current_lon = points[0].lon
-        self.current_bearing = 0.0
         self.current_ele = points[0].ele
+        # Compute initial bearing from the difference between the first two route locations
+        if len(points) >= 2:
+            self.current_bearing = calculate_bearing(points[0].lat, points[0].lon, points[1].lat, points[1].lon)
+        else:
+            self.current_bearing = 0.0
         self.elapsed_time_sec = 0.0
 
     @property
@@ -334,18 +338,32 @@ class GpxSimulationEngine:
         return min(1.0, max(0.0, self.current_distance / self.total_distance))
 
     def step(self, delta_sec: float) -> Tuple[float, float, float, float]:
-        """Advances simulation by delta_sec, returning (lat, lon, bearing, ele)."""
+        """Advances simulation by delta_sec, returning (lat, lon, bearing, ele).
+
+        Calculates forward bearing strictly based on the difference between the
+        previous location and the newly calculated location.
+        """
         if self.status != "PLAYING" or self.total_distance <= 0.0:
             return self.current_lat, self.current_lon, self.current_bearing, self.current_ele
+
+        prev_lat = self.current_lat
+        prev_lon = self.current_lon
 
         delta_dist = self.effective_speed_mps * delta_sec
         self.current_distance = min(self.total_distance, self.current_distance + delta_dist)
         self.elapsed_time_sec += delta_sec
 
-        lat, lon, bearing, ele = self.interpolate_at_distance(self.current_distance)
+        lat, lon, seg_bearing, ele = self.interpolate_at_distance(self.current_distance)
 
         if self.is_deviating:
-            lat, lon = compute_off_route_point(lat, lon, bearing, self.deviation_offset_meters)
+            lat, lon = compute_off_route_point(lat, lon, seg_bearing, self.deviation_offset_meters)
+
+        # Calculate bearing based on the difference of the actual successive locations
+        move_dist = haversine_distance(prev_lat, prev_lon, lat, lon)
+        if move_dist > 0.05:  # Moved at least 5 cm
+            bearing = calculate_bearing(prev_lat, prev_lon, lat, lon)
+        else:
+            bearing = self.current_bearing
 
         self.current_lat = lat
         self.current_lon = lon
@@ -358,7 +376,7 @@ class GpxSimulationEngine:
         return lat, lon, bearing, ele
 
     def interpolate_at_distance(self, dist_m: float) -> Tuple[float, float, float, float]:
-        """Interpolates coordinate, bearing, and altitude at distance offset."""
+        """Interpolates coordinate, segment tangent bearing, and altitude at distance offset."""
         if dist_m <= 0.0:
             p0, p1 = self.points[0], self.points[1]
             bearing = calculate_bearing(p0.lat, p0.lon, p1.lat, p1.lon)
@@ -398,9 +416,26 @@ class GpxSimulationEngine:
         """Snaps simulation directly to given progress ratio [0.0, 1.0]."""
         ratio = min(1.0, max(0.0, ratio))
         self.current_distance = ratio * self.total_distance
-        lat, lon, bearing, ele = self.interpolate_at_distance(self.current_distance)
+        lat, lon, seg_bearing, ele = self.interpolate_at_distance(self.current_distance)
         if self.is_deviating:
-            lat, lon = compute_off_route_point(lat, lon, bearing, self.deviation_offset_meters)
+            lat, lon = compute_off_route_point(lat, lon, seg_bearing, self.deviation_offset_meters)
+
+        # Calculate bearing to point slightly ahead based on location difference
+        lookahead_dist = min(self.total_distance, self.current_distance + 2.0)
+        if lookahead_dist > self.current_distance:
+            ahead_lat, ahead_lon, _, _ = self.interpolate_at_distance(lookahead_dist)
+            if self.is_deviating:
+                ahead_lat, ahead_lon = compute_off_route_point(ahead_lat, ahead_lon, seg_bearing, self.deviation_offset_meters)
+            bearing = calculate_bearing(lat, lon, ahead_lat, ahead_lon)
+        elif self.current_distance >= 2.0:
+            # At end of route: calculate bearing from point slightly behind to current location
+            behind_lat, behind_lon, _, _ = self.interpolate_at_distance(self.current_distance - 2.0)
+            if self.is_deviating:
+                behind_lat, behind_lon = compute_off_route_point(behind_lat, behind_lon, seg_bearing, self.deviation_offset_meters)
+            bearing = calculate_bearing(behind_lat, behind_lon, lat, lon)
+        else:
+            bearing = self.current_bearing
+
         self.current_lat = lat
         self.current_lon = lon
         self.current_bearing = bearing

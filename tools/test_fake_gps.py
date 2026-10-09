@@ -184,6 +184,57 @@ class TestGpxSimulationEngine(unittest.TestCase):
         self.assertAlmostEqual(self.engine.current_distance, self.engine.total_distance)
         self.assertAlmostEqual(self.engine.progress_ratio, 1.0)
 
+    def test_bearing_calculated_from_successive_location_difference(self):
+        # Route with a sharp 90-degree right turn:
+        # Segment 1: Heading North from (48.000, 11.000) to (48.010, 11.000) (~1.1 km)
+        # Segment 2: Heading East from (48.010, 11.000) to (48.010, 11.020) (~1.5 km)
+        p0 = GpxPoint(48.000, 11.000, 500.0)
+        p1 = GpxPoint(48.010, 11.000, 500.0)
+        p2 = GpxPoint(48.010, 11.020, 500.0)
+        corner_engine = GpxSimulationEngine("Corner Test", [p0, p1, p2], base_speed_kmh=36.0)
+
+        # 1. Initial bearing is derived from difference of first two points (North = 0°)
+        self.assertAlmostEqual(corner_engine.current_bearing, 0.0, delta=1.0)
+
+        # 2. Step 10 seconds North (100 meters)
+        prev_lat, prev_lon = corner_engine.current_lat, corner_engine.current_lon
+        lat1, lon1, bearing1, _ = corner_engine.step(10.0)
+        expected_bearing1 = calculate_bearing(prev_lat, prev_lon, lat1, lon1)
+        self.assertAlmostEqual(bearing1, expected_bearing1, delta=0.5)
+        self.assertAlmostEqual(bearing1, 0.0, delta=1.0)
+
+        # 3. Fast-forward to the corner at segment 2 (around distance of p0->p1)
+        dist_to_corner = haversine_distance(p0.lat, p0.lon, p1.lat, p1.lon)
+        corner_engine.current_distance = dist_to_corner - 5.0  # 5 meters before corner
+        corner_engine.step(0.0)  # Update coords to just before corner
+        lat_before, lon_before = corner_engine.current_lat, corner_engine.current_lon
+
+        # Step 2 seconds past the corner (20 meters) -> now on the East-bound segment
+        lat_after, lon_after, bearing2, _ = corner_engine.step(2.0)
+        expected_bearing2 = calculate_bearing(lat_before, lon_before, lat_after, lon_after)
+        self.assertAlmostEqual(bearing2, expected_bearing2, delta=0.5)
+
+        # Stepping further purely along East segment should strictly be 90°
+        lat_prev, lon_prev = corner_engine.current_lat, corner_engine.current_lon
+        lat_east, lon_east, bearing_east, _ = corner_engine.step(5.0)
+        expected_east = calculate_bearing(lat_prev, lon_prev, lat_east, lon_east)
+        self.assertAlmostEqual(bearing_east, expected_east, delta=0.5)
+        self.assertAlmostEqual(bearing_east, 90.0, delta=1.0)
+
+    def test_seek_bearing_calculated_from_location_difference(self):
+        # Route East: (48.0, 11.0) to (48.0, 11.02)
+        p0 = GpxPoint(48.000, 11.000, 500.0)
+        p1 = GpxPoint(48.000, 11.020, 500.0)
+        east_engine = GpxSimulationEngine("East Test", [p0, p1], base_speed_kmh=25.0)
+
+        # Seek to 50%
+        east_engine.seek_progress(0.5)
+        self.assertAlmostEqual(east_engine.current_bearing, 90.0, delta=1.0)
+
+        # Seek to 100% (end of route)
+        east_engine.seek_progress(1.0)
+        self.assertAlmostEqual(east_engine.current_bearing, 90.0, delta=1.0)
+
 
 class TestAdbController(unittest.TestCase):
 
