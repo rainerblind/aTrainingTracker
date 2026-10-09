@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.routes
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.google.android.gms.maps.model.LatLng
@@ -35,7 +36,7 @@ import kotlinx.coroutines.launch
 /**
  * Coordinates in-ride fork-in-the-road decision alerts and autonomous route snapping.
  *
- * Conforms to REQ-MAP-031 clause 4.
+ * Conforms to REQ-MAP-031 clause 4 and REQ-MAP-038 clause 3.
  */
 class ForkNavigationRepository internal constructor(
     private val routesRepository: RoutesRepository,
@@ -47,6 +48,8 @@ class ForkNavigationRepository internal constructor(
     val forkDecisionState: StateFlow<ForkDecisionState?> = _forkDecisionState.asStateFlow()
 
     private var isDismissed = false
+    private var lastSearchTimeMs: Long = 0L
+    private var lastSearchPos: LatLng? = null
 
     init {
         if (banalRepository != null) {
@@ -63,10 +66,13 @@ class ForkNavigationRepository internal constructor(
     /**
      * Processes location updates during an active workout session.
      * Evaluates candidates, triggers proximity alerts, and performs autonomous binding.
+     * Throttles candidate searches during quiescent tracking (REQ-MAP-038 clause 3).
      */
     fun onLocationChanged(
         currentPos: LatLng,
-        recentHistory: List<LatLng>? = null
+        recentHistory: List<LatLng>? = null,
+        activeSportType: BSportType? = null,
+        currentTimeMs: Long = System.currentTimeMillis()
     ) {
         // If athlete is already navigating an active locked route, do not display fork alerts
         if (routesRepository.activeNavigatedRouteId.value != null) {
@@ -80,10 +86,27 @@ class ForkNavigationRepository internal constructor(
             return
         }
 
-        val allRoutes = routesRepository.allRoutes.value
-        val candidates = ForkRouteMatcher.findCandidateRoutes(allRoutes, currentPos, recentHistory)
-
         val activeState = _forkDecisionState.value
+        val isAlertActive = activeState != null
+
+        // Quiescent tracking throttling: skip if elapsed time < 3000ms AND displacement < 20m
+        if (!isAlertActive && lastSearchPos != null) {
+            val elapsedMs = currentTimeMs - lastSearchTimeMs
+            val distanceMoved = GeoUtils.haversineDistanceMeters(
+                lastSearchPos!!.latitude, lastSearchPos!!.longitude,
+                currentPos.latitude, currentPos.longitude
+            )
+            if (elapsedMs < QUIESCENT_THROTTLE_INTERVAL_MS && distanceMoved < QUIESCENT_THROTTLE_DISTANCE_METERS) {
+                return
+            }
+        }
+
+        lastSearchTimeMs = currentTimeMs
+        lastSearchPos = currentPos
+
+        val allRoutes = routesRepository.allRoutes.value
+        val candidates = ForkRouteMatcher.findCandidateRoutes(allRoutes, currentPos, recentHistory, activeSportType)
+
         if (activeState != null) {
             // Check for autonomous binding if rider has progressed past divergence point
             val chosenRoute = candidates.firstOrNull { route ->
@@ -157,6 +180,8 @@ class ForkNavigationRepository internal constructor(
         const val AUTO_BIND_MIN_DISTANCE_PAST_FORK_METERS = 50.0
         const val AUTO_BIND_MAX_CROSS_TRACK_CHOSEN_METERS = 25.0
         const val AUTO_BIND_MIN_CROSS_TRACK_ALTERNATIVE_METERS = 50.0
+        const val QUIESCENT_THROTTLE_INTERVAL_MS = 3000L
+        const val QUIESCENT_THROTTLE_DISTANCE_METERS = 20.0
 
         @Volatile
         private var instance: ForkNavigationRepository? = null

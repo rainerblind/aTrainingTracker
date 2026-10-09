@@ -116,4 +116,94 @@ class ForkRouteMatcherTest {
 
         assertTrue(candidates.isEmpty())
     }
+
+    /**
+     * TST-MAP-040.1: Spatial bounding box rejection (O(1)).
+     */
+    @Test
+    fun findCandidates_spatialBoundingBoxRejection_discardsDistantRouteInO1() {
+        // Distant route in Stuttgart (latitude 48.7758, longitude 9.1829), > 30km away
+        val distantPath = listOf(
+            pt(48.7758, 9.1829, 0.0),
+            pt(48.7800, 9.1850, 500.0)
+        )
+        val distantRoute = RouteWithPath(
+            dummySummary(5L, "Stuttgart Route").copy(
+                minLat = 48.7758, maxLat = 48.7800,
+                minLng = 9.1829, maxLng = 9.1850
+            ),
+            distantPath
+        )
+
+        // Athlete in Tübingen (48.5216, 9.0576)
+        val athletePos = LatLng(48.5216, 9.0576)
+        val candidates = ForkRouteMatcher.findCandidateRoutes(listOf(distantRoute), athletePos)
+
+        assertTrue(candidates.isEmpty())
+
+        // Test isPointWithinBoundingBox helper directly
+        val withinBounds = ForkRouteMatcher.isPointWithinBoundingBox(
+            point = athletePos,
+            minLat = 48.5200, maxLat = 48.5230,
+            minLng = 9.0550, maxLng = 9.0600,
+            marginMeters = 100.0
+        )
+        assertTrue(withinBounds)
+
+        val outsideBounds = ForkRouteMatcher.isPointWithinBoundingBox(
+            point = athletePos,
+            minLat = 48.7758, maxLat = 48.7800,
+            minLng = 9.1829, maxLng = 9.1850,
+            marginMeters = 100.0
+        )
+        org.junit.Assert.assertFalse(outsideBounds)
+    }
+
+    /**
+     * TST-MAP-040.2: Sport-type pre-filtering.
+     */
+    @Test
+    fun findCandidates_sportTypePreFiltering_filtersIncompatibleSport() {
+        val sharedPath = listOf(
+            pt(48.5000, 9.0000, 0.0),
+            pt(48.5050, 9.0000, 555.0),
+            pt(48.5100, 9.0000, 1111.0)
+        )
+        val bikeRoute = RouteWithPath(
+            dummySummary(10L, "Bike Corridor").copy(bSportType = BSportType.BIKE),
+            sharedPath
+        )
+        val runRoute = RouteWithPath(
+            dummySummary(11L, "Run Corridor").copy(bSportType = BSportType.RUN),
+            sharedPath
+        )
+
+        val athletePos = LatLng(48.5054, 9.0000)
+
+        // Cycling workout: only bike route matches
+        val cyclingCandidates = ForkRouteMatcher.findCandidateRoutes(
+            allRoutes = listOf(bikeRoute, runRoute),
+            currentPos = athletePos,
+            activeSportType = BSportType.BIKE
+        )
+        assertEquals(1, cyclingCandidates.size)
+        assertEquals(10L, cyclingCandidates.first().summary.id)
+
+        // Running workout: only run route matches
+        val runningCandidates = ForkRouteMatcher.findCandidateRoutes(
+            allRoutes = listOf(bikeRoute, runRoute),
+            currentPos = athletePos,
+            activeSportType = BSportType.RUN
+        )
+        assertEquals(1, runningCandidates.size)
+        assertEquals(11L, runningCandidates.first().summary.id)
+
+        // No active sport specified (null): both matching routes qualify
+        val allCandidates = ForkRouteMatcher.findCandidateRoutes(
+            allRoutes = listOf(bikeRoute, runRoute),
+            currentPos = athletePos,
+            activeSportType = null
+        )
+        assertEquals(2, allCandidates.size)
+    }
 }
