@@ -50,7 +50,11 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
+import com.atrainingtracker.trainingtracker.ui.ant.AntDialogState
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -231,49 +235,26 @@ class MainActivityWithNavigation :
         }
     }
 
-    private var showingSpecificInstallANTDialog: Boolean = false
+    var antDialogState: AntDialogState? by mutableStateOf(null)
+    var showAntStatusSheet: Boolean by mutableStateOf(false)
+
     fun showSpecificInstallANTDialog() {
-        if (showingSpecificInstallANTDialog) {
+        if (antDialogState != null || showAntStatusSheet) {
             return
-        } else {
-            showingSpecificInstallANTDialog = true
         }
-
-        val alertDialogBuilder = AlertDialog.Builder(this)
-        alertDialogBuilder.setTitle(R.string.ant_missing_dependency_title)
-        alertDialogBuilder.setMessage(getString(R.string.ant_missing_dependency_message, AntPluginPcc.getMissingDependencyName()))
-        alertDialogBuilder.setCancelable(true)
-        alertDialogBuilder.setPositiveButton(R.string.go_to_store) { _, _ ->
-            val startStore = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + AntPluginPcc.getMissingDependencyPackageName()))
-            startStore.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(startStore)
-        }
-        alertDialogBuilder.setNegativeButton(R.string.cancel) { dialog, _ ->
-            dialog.dismiss()
-        }
-
-        val waitDialog = alertDialogBuilder.create()
-        waitDialog.show()
+        val dependencyName = AntPluginPcc.getMissingDependencyName() ?: ""
+        val packageName = AntPluginPcc.getMissingDependencyPackageName() ?: ""
+        antDialogState = AntDialogState.MissingDependency(
+            dependencyName = dependencyName,
+            packageName = packageName
+        )
     }
 
-    private var isShowingANTAdapterMissingDialog: Boolean = false
     fun showANTAdapterMissingDialog() {
-        if (isShowingANTAdapterMissingDialog) {
+        if (antDialogState != null || showAntStatusSheet) {
             return
-        } else {
-            isShowingANTAdapterMissingDialog = true
         }
-
-        val alertDialogBuilder = AlertDialog.Builder(this)
-        alertDialogBuilder.setTitle(R.string.ant_missing_adapter_title)
-        alertDialogBuilder.setMessage(R.string.ant_missing_adapter_message)
-        alertDialogBuilder.setCancelable(true)
-        alertDialogBuilder.setNeutralButton(R.string.OK) { dialog, _ ->
-            dialog.dismiss()
-        }
-
-        val waitDialog = alertDialogBuilder.create()
-        waitDialog.show()
+        antDialogState = AntDialogState.MissingAdapter
     }
 
     override fun onNewIntent(intent: Intent) {

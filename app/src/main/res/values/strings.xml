@@ -1907,6 +1907,8 @@
     <string name="map_layer_segments">Segments</string>
     <string name="map_layer_locations">Favorite Locations</string>
     <string name="map_layer_track">Recorded Track</string>
+    <string name="ant_dialog_view_status">View ANT+ Status</string>
+    <string name="ant_dialog_dismiss">Got it</string>
 </resources>
 
 

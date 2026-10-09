@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.navigation
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -46,6 +48,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -60,7 +63,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusSheet
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreen
+import com.atrainingtracker.trainingtracker.ui.ant.AntDialogState
+import com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialog
+import com.atrainingtracker.trainingtracker.ui.ant.AntMissingDependencyDialog
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModel
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModel
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreen
@@ -488,5 +495,56 @@ fun ATrainingTrackerApp(
                 )
             }
         }
+    }
+
+    // Material 3 ANT+ Alert Dialogs & Status Sheet (REQ-UI-323 / ATT-2939)
+    when (val dialogState = activity.antDialogState) {
+        is AntDialogState.MissingAdapter -> {
+            AntMissingAdapterDialog(
+                onViewStatus = {
+                    activity.antDialogState = null
+                    activity.showAntStatusSheet = true
+                },
+                onDismiss = {
+                    activity.antDialogState = null
+                }
+            )
+        }
+        is AntDialogState.MissingDependency -> {
+            val context = LocalContext.current
+            AntMissingDependencyDialog(
+                dependencyName = dialogState.dependencyName,
+                onGoToStore = {
+                    activity.antDialogState = null
+                    val startStore = Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("market://details?id=${dialogState.packageName}")
+                    ).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    try {
+                        context.startActivity(startStore)
+                    } catch (e: Exception) {
+                        val webIntent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://play.google.com/store/apps/details?id=${dialogState.packageName}")
+                        ).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(webIntent)
+                    }
+                },
+                onDismiss = {
+                    activity.antDialogState = null
+                }
+            )
+        }
+        null -> Unit
+    }
+
+    if (activity.showAntStatusSheet) {
+        AntServicesStatusSheet(
+            onDismiss = { activity.showAntStatusSheet = false }
+        )
     }
 }
