@@ -1425,6 +1425,10 @@
     <string name="tuning_default_format">Padrão: %1$s</string>
     <string name="reset_to_defaults">Restaurar padrões</string>
     <string name="reset_to_defaults_success">Configurações de ajuste restauradas para os padrões de fábrica.</string>
+    <string name="tuning_cat_sensor_search">Busca de sensores e gatilhos</string>
+    <string name="tuning_sensor_search_subtitle">%1$d rodadas de busca, %2$s busca automática</string>
+    <string name="tuning_sensor_search_active">Ativa</string>
+    <string name="tuning_sensor_search_disabled">Desativada</string>
     <string name="tuning_cat_sensors_gps">Sensores, GPS e filtragem</string>
     <string name="tuning_cat_workout_masks_cards">Cartões e detalhes de treino</string>
     <string name="tuning_cat_navigation">Navegação</string>
@@ -1616,6 +1620,7 @@
     <string name="routes_climb_start_at">Início em %s</string>
     <string name="routes_climb_avg_grade">Média %1$.1f%%</string>
     <string name="routes_climb_max_grade">Máx. %1$.1f%%</string>
+    <string name="climb_max_grade_label">Inclinação máx.</string>
     <string name="routes_segments_section_title">Segmentos (%d)</string>
     <string name="routes_segments_tab_title">Segmentos (%d)</string>
     <string name="routes_segment_start_at">Início em %s</string>

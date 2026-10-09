@@ -124,7 +124,6 @@ object NavRoutes {
         R.id.drawer_units -> SettingsBottomSheetType.UNITS
         R.id.drawer_display_settings -> SettingsBottomSheetType.DISPLAY
         R.id.drawer_advanced_tuning -> SettingsBottomSheetType.ADVANCED_TUNING
-        R.id.drawer_search_settings -> SettingsBottomSheetType.SEARCH
         R.id.drawer_tracking_layouts -> SettingsBottomSheetType.ACTIVITY_TYPE
         else -> null
     }

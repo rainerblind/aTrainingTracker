@@ -57,6 +57,7 @@ enum class TuningSection {
     COCKPIT_TYPOGRAPHY,
     BATTERY_SAVER,
     SENSORS_GPS,
+    SENSOR_SEARCH,
     AFTERMATH_ANALYSIS,
     WORKOUT_MASKS_CARDS,
     NAVIGATION
@@ -128,6 +129,30 @@ object TuningSubtitleFormatter {
         val gpsMeters = gpsAccuracy.roundToInt()
         val speedStr = String.format(Locale.getDefault(), "%.1f m/s", slopeMinSpeed)
         return "GPS: ${gpsMeters}m, Alt: ${altitudeWindowSec}s, Speed: $speedStr"
+    }
+
+    fun formatSensorSearchSubtitle(
+        numberOfSearchTries: Int,
+        startSearchWhenAppStarts: Boolean,
+        startSearchWhenResumeFromPaused: Boolean,
+        startSearchWhenUserChangesSport: Boolean,
+        startSearchWhenTrackingStarts: Boolean,
+        context: Context
+    ): String {
+        val anyAutoSearch = startSearchWhenAppStarts ||
+                startSearchWhenResumeFromPaused ||
+                startSearchWhenUserChangesSport ||
+                startSearchWhenTrackingStarts
+        val autoSearchStatus = if (anyAutoSearch) {
+            context.getString(R.string.tuning_sensor_search_active)
+        } else {
+            context.getString(R.string.tuning_sensor_search_disabled)
+        }
+        return context.getString(
+            R.string.tuning_sensor_search_subtitle,
+            numberOfSearchTries,
+            autoSearchStatus
+        )
     }
 
     fun formatAftermathSubtitle(

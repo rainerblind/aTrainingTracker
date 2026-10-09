@@ -315,4 +315,50 @@ class AdvancedTuningAccordionTest {
             Locale.setDefault(defaultLocale)
         }
     }
+
+    @Test
+    fun testSensorSearchSubtitle_reflectsRoundsAndActiveStatus() {
+        val mockContext = mockk<Context>()
+        every { mockContext.getString(R.string.tuning_sensor_search_active) } returns "Active"
+        every { mockContext.getString(R.string.tuning_sensor_search_disabled) } returns "Disabled"
+        every {
+            mockContext.getString(R.string.tuning_sensor_search_subtitle, 3, "Active")
+        } returns "3 search rounds, Active auto-search"
+        every {
+            mockContext.getString(R.string.tuning_sensor_search_subtitle, 1, "Disabled")
+        } returns "1 search rounds, Disabled auto-search"
+        every {
+            mockContext.getString(R.string.tuning_sensor_search_subtitle, 2, "Active")
+        } returns "2 search rounds, Active auto-search"
+
+        val subtitleActive = TuningSubtitleFormatter.formatSensorSearchSubtitle(
+            numberOfSearchTries = 3,
+            startSearchWhenAppStarts = true,
+            startSearchWhenResumeFromPaused = false,
+            startSearchWhenUserChangesSport = false,
+            startSearchWhenTrackingStarts = false,
+            context = mockContext
+        )
+        assertEquals("3 search rounds, Active auto-search", subtitleActive)
+
+        val subtitleDisabled = TuningSubtitleFormatter.formatSensorSearchSubtitle(
+            numberOfSearchTries = 1,
+            startSearchWhenAppStarts = false,
+            startSearchWhenResumeFromPaused = false,
+            startSearchWhenUserChangesSport = false,
+            startSearchWhenTrackingStarts = false,
+            context = mockContext
+        )
+        assertEquals("1 search rounds, Disabled auto-search", subtitleDisabled)
+
+        val subtitlePartial = TuningSubtitleFormatter.formatSensorSearchSubtitle(
+            numberOfSearchTries = 2,
+            startSearchWhenAppStarts = false,
+            startSearchWhenResumeFromPaused = true,
+            startSearchWhenUserChangesSport = false,
+            startSearchWhenTrackingStarts = false,
+            context = mockContext
+        )
+        assertEquals("2 search rounds, Active auto-search", subtitlePartial)
+    }
 }

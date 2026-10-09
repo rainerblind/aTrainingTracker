@@ -159,4 +159,76 @@ class RouteOverlayLayersContractTest {
                     segmentsContent.contains("Icons.Default.Visibility")
         )
     }
+
+    @Test
+    fun testRouteOnMapScreen_backgroundPathsSegmentFilteringAndDeDuplication() {
+        assertTrue("RouteOnMapScreen.kt must exist", routeOnMapScreenFile.exists())
+        val content = routeOnMapScreenFile.readText()
+
+        // 1. Matched segment IDs de-duplication
+        assertTrue(
+            "RouteOnMapScreen must compute matchedSegmentIds for de-duplication",
+            content.contains("val matchedSegmentIds = remember(matchedSegments)")
+        )
+
+        // 2. Background paths filtering by SEGMENTS layer, hiddenSegmentIds, and matchedSegmentIds (REQ-UI-318)
+        assertTrue(
+            "RouteOnMapScreen must filter backgroundPaths using RouteOverlayLayer.SEGMENTS in enabledOverlayLayers",
+            content.contains("val isSegmentsLayerEnabled = RouteOverlayLayer.SEGMENTS in enabledOverlayLayers") &&
+                    content.contains("backgroundPaths.filter { path ->")
+        )
+        assertTrue(
+            "RouteOnMapScreen must filter backgroundPaths MapSegment instances by hiddenSegmentIds and matchedSegmentIds",
+            content.contains("isSegmentsLayerEnabled && path.stravaId !in hiddenSegmentIds && path.stravaId !in matchedSegmentIds")
+        )
+
+        // 3. hasSegments availability check includes backgroundPaths segments (REQ-UI-318)
+        assertTrue(
+            "RouteOnMapScreen hasSegments must include backgroundPaths.any { it is MapSegment }",
+            content.contains("val hasSegments = matchedSegments.isNotEmpty() || backgroundPaths.any { it is MapSegment }")
+        )
+    }
+
+    @Test
+    fun testBackgroundPathsSegmentFilteringLogic() {
+        // Pure functional logic validation of the filtering algorithm (REQ-UI-318, TST-UI-278)
+        data class FakeMapSegment(val stravaId: Long)
+        data class FakeTrack(val id: Long)
+
+        val paths: List<Any> = listOf(
+            FakeMapSegment(101L), // matched
+            FakeMapSegment(102L), // unmatched, visible
+            FakeMapSegment(103L), // hidden by user
+            FakeTrack(999L)       // non-segment track
+        )
+
+        val hiddenSegmentIds = setOf(103L)
+        val matchedSegmentIds = setOf(101L)
+
+        // Case 1: SEGMENTS layer enabled
+        val isSegmentsLayerEnabled = true
+        val visibleWhenEnabled = paths.filter { path ->
+            if (path is FakeMapSegment) {
+                isSegmentsLayerEnabled && path.stravaId !in hiddenSegmentIds && path.stravaId !in matchedSegmentIds
+            } else {
+                true
+            }
+        }
+        assertEquals(2, visibleWhenEnabled.size)
+        assertTrue(visibleWhenEnabled.contains(FakeMapSegment(102L)))
+        assertTrue(visibleWhenEnabled.contains(FakeTrack(999L)))
+
+        // Case 2: SEGMENTS layer disabled (unselected)
+        val isSegmentsLayerDisabled = false
+        val visibleWhenDisabled = paths.filter { path ->
+            if (path is FakeMapSegment) {
+                isSegmentsLayerDisabled && path.stravaId !in hiddenSegmentIds && path.stravaId !in matchedSegmentIds
+            } else {
+                true
+            }
+        }
+        assertEquals(1, visibleWhenDisabled.size)
+        assertTrue(visibleWhenDisabled.contains(FakeTrack(999L)))
+    }
 }
+

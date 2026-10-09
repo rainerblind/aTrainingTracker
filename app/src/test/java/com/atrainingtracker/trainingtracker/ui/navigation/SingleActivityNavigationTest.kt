@@ -124,7 +124,7 @@ class SingleActivityNavigationTest {
         assertEquals(SettingsBottomSheetType.ACTIVITY_TYPE, NavRoutes.toSettingsBottomSheetType(R.id.drawer_tracking_layouts))
         assertEquals(SettingsBottomSheetType.UNITS, NavRoutes.toSettingsBottomSheetType(R.id.drawer_units))
         assertEquals(SettingsBottomSheetType.DISPLAY, NavRoutes.toSettingsBottomSheetType(R.id.drawer_display_settings))
-        assertEquals(SettingsBottomSheetType.SEARCH, NavRoutes.toSettingsBottomSheetType(R.id.drawer_search_settings))
+        assertNull(NavRoutes.toSettingsBottomSheetType(R.id.drawer_search_settings))
 
         // Navigation destinations must return null for bottom sheet type
         assertNull(NavRoutes.toSettingsBottomSheetType(R.id.drawer_start_tracking))

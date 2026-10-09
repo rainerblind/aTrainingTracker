@@ -185,8 +185,8 @@ internal class MapContentScopeImpl(
     internal data class ClimbHighlightData(
         val path: List<LatLng>,
         val color: Color,
-        val zIndex: Float = 25f,
-        val width: Float = 10f
+        val zIndex: Float = MapVisualization.CLIMB_Z_INDEX,
+        val width: Float = MapVisualization.CLIMB_WIDTH
     )
     internal val climbHighlights = mutableStateListOf<ClimbHighlightData>()
 

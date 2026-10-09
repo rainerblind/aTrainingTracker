@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
@@ -54,6 +55,8 @@ import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.Amoled
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchPreferences
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchTuningSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.WorkoutMasksAndCardsSection
 import kotlinx.coroutines.launch
 
@@ -99,6 +102,7 @@ fun AdvancedTuningDialog(
     var navigationCueTransparency by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY) }
     var navigationCueDismissDurationSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC) }
     var elevationSmoothingSigmaMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS) }
+    var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
     var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -196,6 +200,7 @@ fun AdvancedTuningDialog(
                         preferenceManager.setWorkoutCardPreferences(workoutCardPrefs)
                         preferenceManager.setWorkoutDetailPreferences(workoutDetailPrefs)
                         preferenceManager.setWorkoutSectionsOrder(workoutSectionsOrder)
+                        SensorSearchPreferences.save(context, sensorSearchPrefs)
                         onSettingsChanged?.invoke()
                         onDismiss()
                     }
@@ -210,36 +215,7 @@ fun AdvancedTuningDialog(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Advisory Warning Notice
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = stringResource(R.string.advanced_tuning_warning_title),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Text(
-                            text = stringResource(R.string.advanced_tuning_warning_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-            }
+            TuningWarningNotice()
 
             // Section 1: Cockpit & Typografie
             TuningAccordionSection(
@@ -289,6 +265,27 @@ fun AdvancedTuningDialog(
                     gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
                     altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
                     slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it }
+                )
+            }
+
+            // Section 4: Sensorsuche & Verhalten
+            TuningAccordionSection(
+                icon = Icons.Default.Search,
+                title = stringResource(R.string.tuning_cat_sensor_search),
+                subtitle = TuningSubtitleFormatter.formatSensorSearchSubtitle(
+                    sensorSearchPrefs.numberOfSearchTries,
+                    sensorSearchPrefs.startSearchWhenAppStarts,
+                    sensorSearchPrefs.startSearchWhenResumeFromPaused,
+                    sensorSearchPrefs.startSearchWhenUserChangesSport,
+                    sensorSearchPrefs.startSearchWhenTrackingStarts,
+                    context
+                ),
+                isExpanded = isSectionExpanded(TuningSection.SENSOR_SEARCH),
+                onToggle = { toggleSection(TuningSection.SENSOR_SEARCH) }
+            ) {
+                SensorSearchTuningSection(
+                    prefs = sensorSearchPrefs,
+                    onPrefsChange = { sensorSearchPrefs = it }
                 )
             }
 
@@ -354,14 +351,15 @@ fun AdvancedTuningDialog(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Prominent Reset to Factory Defaults Action Button
-            OutlinedButton(
+            TuningResetDefaultsButton(
                 onClick = {
                     scope.launch {
                         tuningDataStore.resetToDefaults()
                         preferenceManager.setWorkoutCardPreferences(WorkoutCardSectionPreferences())
                         preferenceManager.setWorkoutDetailPreferences(WorkoutDetailPreferences())
                         preferenceManager.setWorkoutSectionsOrder(WorkoutSectionType.DEFAULT_ORDER)
+                        SensorSearchPreferences.reset(context)
+                        sensorSearchPrefs = SensorSearchPreferences()
                         workoutCardPrefs = WorkoutCardSectionPreferences()
                         workoutDetailPrefs = WorkoutDetailPreferences()
                         workoutSectionsOrder = WorkoutSectionType.DEFAULT_ORDER
@@ -370,6 +368,9 @@ fun AdvancedTuningDialog(
                         cockpitFontFamily = TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
                         cockpitFontWeight = TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT
                         sensorFieldVariant = TuningPreferencesDefaults.SENSOR_FIELD_VARIANT
+                        sensorFieldCornerRadius = TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS
+                        sensorFieldBorderThickness = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS
+                        sensorFieldBorderContrast = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST
                         fullDimFactor = TuningPreferencesDefaults.FULL_DIM_FACTOR
                         mediumDimFactor = TuningPreferencesDefaults.MEDIUM_DIM_FACTOR
                         slopeFlat = TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD
@@ -387,13 +388,8 @@ fun AdvancedTuningDialog(
                         onSettingsChanged?.invoke()
                         Toast.makeText(context, context.getString(R.string.reset_to_defaults_success), Toast.LENGTH_SHORT).show()
                     }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(imageVector = Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.reset_to_defaults))
-            }
+                }
+            )
         }
     }
 }

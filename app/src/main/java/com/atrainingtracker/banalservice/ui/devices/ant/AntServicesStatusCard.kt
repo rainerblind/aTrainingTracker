@@ -28,6 +28,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 
 /**
  * Modern Material 3 card presented contextually when viewing ANT+ sensors on
@@ -57,7 +58,7 @@ fun AntServicesStatusCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ant_logo),
+                    painter = safePainterResource(id = R.drawable.ant_logo),
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onSecondaryContainer

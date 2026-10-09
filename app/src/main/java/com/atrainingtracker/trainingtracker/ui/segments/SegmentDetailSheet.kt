@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.segments
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -25,6 +26,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -160,7 +166,7 @@ private fun SegmentDetailMetricsCard(
     val summary = matchedSegment.segment.summary
     ElevatedCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -228,12 +234,12 @@ private fun SegmentDetailMapCard(
     val pathPoints = matchedSegment.segment.path
     if (pathPoints.isEmpty()) return
 
-    Card(
+    ElevatedCard(
         modifier = modifier
             .fillMaxWidth()
             .height(200.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             ATrainingTrackerMap(
@@ -243,11 +249,12 @@ private fun SegmentDetailMapCard(
                 modifier = Modifier.fillMaxSize(),
                 content = {
                     path(
-                        path = MapTrack(
-                            id = matchedSegment.segment.summary.stravaId,
-                            type = TrackType.BEST,
+                        path = MapSegment(
+                            stravaId = matchedSegment.segment.summary.stravaId,
+                            name = matchedSegment.segment.summary.name,
                             bSportType = bSportType,
-                            path = pathPoints
+                            path = pathPoints,
+                            showStartAndFinishText = false
                         )
                     )
                     val markersList = mutableListOf<LocationMarker>()
@@ -289,10 +296,10 @@ private fun SegmentDetailElevationProfileCard(
     val pathPoints = matchedSegment.segment.path
     if (pathPoints.isEmpty()) return
 
-    Card(
+    ElevatedCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier
@@ -322,9 +329,8 @@ private fun SegmentDetailElevationProfileCard(
                 }
             }
 
-            ElevationProfile(
+            SegmentDetailElevationProfile(
                 pathPoints = pathPoints,
-                currentDistance = null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(110.dp)
@@ -347,6 +353,100 @@ private fun SegmentDetailElevationProfileCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+/**
+ * Isolated zoomed elevation profile canvas for a specific segment with grade-colored slope visualization.
+ */
+@Composable
+fun SegmentDetailElevationProfile(
+    pathPoints: List<PathPoint>,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val width = size.width
+        val height = size.height
+
+        if (pathPoints.size < 2) {
+            val rampPath = Path().apply {
+                moveTo(0f, height)
+                lineTo(width, 0f)
+                lineTo(width, height)
+                close()
+            }
+            drawPath(
+                path = rampPath,
+                brush = Brush.verticalGradient(
+                    colors = listOf(TTColor.StravaOrange.copy(alpha = 0.5f), Color.Transparent),
+                    startY = 0f,
+                    endY = height
+                )
+            )
+            drawLine(
+                color = TTColor.StravaOrange,
+                start = Offset(0f, height),
+                end = Offset(width, 0f),
+                strokeWidth = 3.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            return@Canvas
+        }
+
+        val startDist = pathPoints.first().distance
+        val totalDist = (pathPoints.last().distance - startDist).coerceAtLeast(1.0)
+        val minAlt = pathPoints.minOf { it.altitude }
+        val maxAlt = pathPoints.maxOf { it.altitude }
+        val altSpan = (maxAlt - minAlt).coerceAtLeast(10.0)
+
+        val topPadding = 8f
+        val bottomPadding = 4f
+        val usableHeight = height - topPadding - bottomPadding
+
+        var prevX = 0f
+        var prevY = (height - bottomPadding - (((pathPoints[0].altitude - minAlt) / altSpan) * usableHeight)).toFloat()
+
+        for (i in 1 until pathPoints.size) {
+            val p = pathPoints[i]
+            val x = (((p.distance - startDist) / totalDist) * width).toFloat().coerceIn(0f, width)
+            val y = (height - bottomPadding - (((p.altitude - minAlt) / altSpan) * usableHeight)).toFloat().coerceIn(0f, height)
+
+            val dDist = p.distance - pathPoints[i - 1].distance
+            val dAlt = p.altitude - pathPoints[i - 1].altitude
+            val grade = if (dDist > 0) (dAlt / dDist) * 100.0 else 0.0
+
+            val segmentColor = when {
+                grade < 3.0 -> Color(0xFF4CAF50)
+                grade < 6.0 -> Color(0xFF8BC34A)
+                grade < 9.0 -> Color(0xFFFFC107)
+                grade < 12.0 -> Color(0xFFFF9800)
+                grade < 20.0 -> Color(0xFFE53935)
+                else -> Color(0xFF212121)
+            }
+
+            val fillPath = Path().apply {
+                moveTo(prevX, height)
+                lineTo(prevX, prevY)
+                lineTo(x, y)
+                lineTo(x, height)
+                close()
+            }
+            drawPath(
+                path = fillPath,
+                color = segmentColor.copy(alpha = 0.35f)
+            )
+
+            drawLine(
+                color = segmentColor,
+                start = Offset(prevX, prevY),
+                end = Offset(x, y),
+                strokeWidth = 3.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+
+            prevX = x
+            prevY = y
         }
     }
 }

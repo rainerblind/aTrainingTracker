@@ -145,7 +145,7 @@ private fun ClimbDetailMetricsCard(
 ) {
     ElevatedCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -185,25 +185,29 @@ private fun ClimbDetailMetricsCard(
             ) {
                 // Distance
                 ClimbMetricItem(
+                    iconRes = R.drawable.ic_distance,
                     label = stringResource(R.string.climb_remaining_dist),
                     value = formatters.distance.format_with_units(climb.distanceMeters) ?: "${(climb.distanceMeters / 1000.0).roundToInt()} km"
                 )
 
                 // Elevation Gain
                 ClimbMetricItem(
+                    iconRes = R.drawable.ic_ascent,
                     label = stringResource(R.string.climb_remaining_elevation),
                     value = "+${formatters.altitude.format_with_units(climb.elevationGainMeters) ?: "${climb.elevationGainMeters.roundToInt()} m"}"
                 )
 
                 // Average Grade
                 ClimbMetricItem(
+                    iconRes = R.drawable.ic_grade,
                     label = stringResource(R.string.climb_grade),
                     value = stringResource(R.string.routes_climb_avg_grade, climb.avgGradePercent)
                 )
 
                 // Maximum Grade
                 ClimbMetricItem(
-                    label = stringResource(R.string.graph_heading_elevation),
+                    iconRes = R.drawable.ic_grade,
+                    label = stringResource(R.string.climb_max_grade_label),
                     value = stringResource(R.string.routes_climb_max_grade, climb.maxGradePercent)
                 )
             }
@@ -215,12 +219,22 @@ private fun ClimbDetailMetricsCard(
 private fun ClimbMetricItem(
     label: String,
     value: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    @androidx.annotation.DrawableRes iconRes: Int? = null
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        if (iconRes != null) {
+            Icon(
+                painter = androidx.compose.ui.res.painterResource(id = iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+        }
         Text(
             text = value,
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
@@ -250,12 +264,12 @@ private fun ClimbDetailMapCard(
         createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint)
     }
 
-    Card(
+    ElevatedCard(
         modifier = modifier
             .fillMaxWidth()
             .height(200.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             ATrainingTrackerMap(
@@ -265,22 +279,6 @@ private fun ClimbDetailMapCard(
                 modifier = Modifier.fillMaxSize(),
                 content = {
                     climbs(listOf(climb))
-                    val pathPoints = if (climb.pathPoints.isNotEmpty()) {
-                        climb.pathPoints
-                    } else {
-                        listOf(
-                            PathPoint(0.0, climb.startLatLng, 0.0),
-                            PathPoint(climb.distanceMeters, climb.endLatLng, climb.elevationGainMeters)
-                        )
-                    }
-                    path(
-                        path = MapTrack(
-                            id = climb.id,
-                            type = TrackType.BEST,
-                            bSportType = bSportType,
-                            path = pathPoints
-                        )
-                    )
                     val markersList = mutableListOf<LocationMarker>()
                     if (startMarker != null) {
                         markersList.add(
@@ -317,10 +315,10 @@ private fun ClimbDetailElevationProfileCard(
     formatters: MetricFormatterContext,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    ElevatedCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier

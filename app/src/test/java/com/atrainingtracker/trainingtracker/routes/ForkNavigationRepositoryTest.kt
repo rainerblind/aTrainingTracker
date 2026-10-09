@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -155,5 +156,58 @@ class ForkNavigationRepositoryTest {
         repository.dismissPrompt()
 
         assertNull(repository.forkDecisionState.value)
+    }
+
+    /**
+     * TST-MAP-040.3: Quiescent candidate evaluation throttling (< 3000ms AND < 20m displacement).
+     */
+    @Test
+    fun onLocationChanged_quiescentThrottling_skipsEvaluationWhenUnderTimeAndDistanceThresholds() {
+        // Initial quiescent fix at start of corridor (no fork within 300m)
+        val pos1 = LatLng(48.5000, 9.0000)
+        repository.onLocationChanged(pos1, currentTimeMs = 10000L)
+        assertNull(repository.forkDecisionState.value)
+
+        // Small displacement (~10m North) 1 second later (< 3000ms AND < 20m)
+        // Even if approaching position was reached, throttling would skip it
+        val posSmallMove = LatLng(48.50009, 9.0000)
+        repository.onLocationChanged(posSmallMove, currentTimeMs = 11000L)
+        assertNull(repository.forkDecisionState.value)
+
+        // Elapsed time >= 3000ms (even with small move): evaluation MUST trigger
+        val posTimeTrigger = LatLng(48.50010, 9.0000)
+        repository.onLocationChanged(posTimeTrigger, currentTimeMs = 13500L)
+        assertNull(repository.forkDecisionState.value)
+
+        // Distance delta >= 20m within 1000ms: evaluation MUST trigger
+        // Moving ~35m North (0.0003 deg lat ~ 33.3m)
+        val posDistanceTrigger = LatLng(48.50045, 9.0000)
+        repository.onLocationChanged(posDistanceTrigger, currentTimeMs = 14000L)
+        assertNull(repository.forkDecisionState.value)
+    }
+
+    /**
+     * TST-MAP-040.4: Active alert responsiveness (unthrottled 1 Hz during active fork prompt).
+     */
+    @Test
+    fun onLocationChanged_activeAlert_evaluatesEveryFixWithoutThrottling() {
+        // Trigger active fork alert (fork is at 1000m, athlete at 800m -> ~200m remaining)
+        val posApproach1 = LatLng(48.5072, 9.0000)
+        repository.onLocationChanged(posApproach1, currentTimeMs = 20000L)
+        val state1 = repository.forkDecisionState.value
+        assertNotNull(state1)
+        val dist1 = state1!!.distanceToForkMeters
+
+        // Rider moves ~16.6m North after 1000ms (both < 3000ms AND < 20m)
+        // In quiescent mode this would be skipped, but active alert must NOT throttle
+        // and distance countdown updates past the 10m sample step
+        val posApproach2 = LatLng(48.50735, 9.0000)
+        repository.onLocationChanged(posApproach2, currentTimeMs = 21000L)
+        val state2 = repository.forkDecisionState.value
+        assertNotNull(state2)
+        val dist2 = state2!!.distanceToForkMeters
+
+        // Distance must have counted down (~10-20m closer)
+        assertTrue("Expected dist2 ($dist2) < dist1 ($dist1)", dist2 < dist1)
     }
 }

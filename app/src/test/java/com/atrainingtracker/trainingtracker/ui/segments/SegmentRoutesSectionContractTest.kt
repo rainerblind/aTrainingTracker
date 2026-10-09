@@ -87,13 +87,13 @@ class SegmentRoutesSectionContractTest {
     }
 
     @Test
-    fun testStarredSegmentsScreen_crossNavigationToRouteOnMapScreen() {
+    fun testStarredSegmentsScreen_routeDetailSheetOverlay() {
         assertTrue("StarredSegmentsScreen.kt file must exist", starredSegmentsScreenFile.exists())
         val content = starredSegmentsScreenFile.readText()
 
         assertTrue("StarredSegmentsScreen must collect allRoutes from ViewModel", content.contains("val allRoutes by viewModel.allRoutes.collectAsStateWithLifecycle()"))
         assertTrue("StarredSegmentsScreen must maintain inspectedRouteId state", content.contains("inspectedRouteId"))
-        assertTrue("StarredSegmentsScreen must render RouteOnMapScreen on route tap", content.contains("RouteOnMapScreen("))
+        assertTrue("StarredSegmentsScreen must render RouteDetailSheet on route tap (REQ-UI-316)", content.contains("RouteDetailSheet("))
         assertTrue("StarredSegmentsScreen must forward candidateRoutes to SegmentOnMapScreen", content.contains("candidateRoutes = allRoutes"))
     }
 }

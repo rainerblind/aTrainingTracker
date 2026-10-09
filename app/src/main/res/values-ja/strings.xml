@@ -1405,6 +1405,10 @@
     <string name="tuning_default_format">デフォルト: %1$s</string>
     <string name="reset_to_defaults">デフォルトに戻す</string>
     <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>
+    <string name="tuning_cat_sensor_search">センサー検索とトリガー</string>
+    <string name="tuning_sensor_search_subtitle">%1$d回の検索ラウンド、%2$s自動検索</string>
+    <string name="tuning_sensor_search_active">有効</string>
+    <string name="tuning_sensor_search_disabled">無効</string>
     <string name="tuning_cat_sensors_gps">センサー、GPS、フィルター</string>
     <string name="tuning_cat_workout_masks_cards">ワークアウトカードと詳細</string>
     <string name="tuning_cat_navigation">ナビゲーション</string>
@@ -1596,6 +1600,7 @@
     <string name="routes_climb_start_at">%s 地点から開始</string>
     <string name="routes_climb_avg_grade">平均 %1$.1f%%</string>
     <string name="routes_climb_max_grade">最大 %1$.1f%%</string>
+    <string name="climb_max_grade_label">最大勾配</string>
     <string name="routes_segments_section_title">セグメント (%d)</string>
     <string name="routes_segments_tab_title">セグメント (%d)</string>
     <string name="routes_segment_start_at">%s 地点から開始</string>
