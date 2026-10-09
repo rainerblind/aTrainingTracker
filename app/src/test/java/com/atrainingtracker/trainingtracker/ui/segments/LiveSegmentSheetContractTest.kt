@@ -108,4 +108,49 @@ class LiveSegmentSheetContractTest {
             content.contains("LiveSegmentSheet(")
         )
     }
+
+    @Test
+    fun testLiveSegmentSheet_evaluatesAndForwardsExternalScrubDistance() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LIveSegmentSheet.kt")
+        val content = file.readText()
+
+        // 1. Evaluates externalScrubDistance based on segmentStatus
+        assertTrue(
+            "LiveSegmentSheet must evaluate externalScrubDistance (REQ-UI-331)",
+            content.contains("val externalScrubDistance = when (liveSegment.liveData.segmentStatus)")
+        )
+        assertTrue(
+            "LiveSegmentSheet must map ON_SEGMENT to distanceOnSegment_raw",
+            content.contains("LiveSegmentStatus.ON_SEGMENT") &&
+                    content.contains("LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> liveSegment.liveData.distanceOnSegment_raw")
+        )
+        assertTrue(
+            "LiveSegmentSheet must map FINISHED to total distance or distanceOnSegment_raw",
+            content.contains("LiveSegmentStatus.FINISHED -> liveSegment.staticData.summary.distance.toDouble().coerceAtLeast(liveSegment.liveData.distanceOnSegment_raw)")
+        )
+        assertTrue(
+            "LiveSegmentSheet must map APPROACHING and FAR_FAR_AWAY to null",
+            content.contains("LiveSegmentStatus.APPROACHING") &&
+                    content.contains("LiveSegmentStatus.FAR_FAR_AWAY -> null")
+        )
+
+        // 2. Forwards externalScrubDistance to MapDetailLayout
+        assertTrue(
+            "LiveSegmentSheet must pass externalScrubDistance to MapDetailLayout",
+            content.contains("externalScrubDistance = externalScrubDistance")
+        )
+    }
+
+    @Test
+    fun testMapDetailLayout_synchronizesSelectedDistanceWithoutNullGating() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayout.kt")
+        val content = file.readText()
+
+        // LaunchedEffect(externalScrubDistance) must synchronize selectedDistance without gating on != null
+        assertTrue(
+            "MapDetailLayout must synchronize selectedDistance = externalScrubDistance (REQ-UI-331)",
+            content.contains("LaunchedEffect(externalScrubDistance) {\n        selectedDistance = externalScrubDistance\n    }")
+        )
+    }
 }
+
