@@ -69,6 +69,9 @@ class ReturnNavigationRepository internal constructor(
                 allRoutes.find { it.summary.id == activeId }
             }.collect { activeRoute ->
                 currentActiveRoute = activeRoute
+                if (activeRoute == null) {
+                    isReverseReturn = false
+                }
                 recalculateNavigationMetrics()
             }
         }
@@ -95,11 +98,13 @@ class ReturnNavigationRepository internal constructor(
     }
 
     /**
-     * Deactivates "Take Me Home" mode.
+     * Deactivates "Take Me Home" mode and resets lifecycle state (REQ-MAP-039).
      */
     fun stopTakeMeHome() {
         isTakeMeHomeMode = false
-        recalculateNavigationMetrics()
+        isReverseReturn = false
+        isDismissed = false
+        _navigationState.value = ReturnNavigationState(isActive = false)
     }
 
     /**
@@ -142,11 +147,11 @@ class ReturnNavigationRepository internal constructor(
         val activeRoute = currentActiveRoute
         val hasActiveRoute = activeRoute != null && activeRoute.path.isNotEmpty()
 
-        // Active if either navigating a route OR athlete explicitly requested "Take Me Home"
-        val isActive = hasActiveRoute || isTakeMeHomeMode
+        // Active ONLY if athlete explicitly requested "Take Me Home" (REQ-MAP-039 / ATT-2938)
+        val isActive = isTakeMeHomeMode
 
         if (!isActive) {
-            _navigationState.value = ReturnNavigationState()
+            _navigationState.value = ReturnNavigationState(isActive = false)
             return
         }
 
@@ -155,7 +160,7 @@ class ReturnNavigationRepository internal constructor(
             currentLng = currentLocation.longitude,
             currentAltitude = 0.0,
             activeRoute = if (hasActiveRoute) activeRoute else null,
-            homeDestination = cachedHomeDestination,
+            homeDestination = if (isTakeMeHomeMode) cachedHomeDestination else null,
             savedRoutes = allSavedRoutes,
             forceReverseReturn = isReverseReturn
         )
