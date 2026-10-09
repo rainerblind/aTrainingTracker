@@ -115,4 +115,34 @@ class ControlTrackingSensorHeaderContractTest {
             content.contains("RemoteDeviceUIData(5") && content.contains("RemoteDeviceUIData(6")
         )
     }
+
+    @Test
+    fun testSymmetricalBalancingAnchorForRemoteDevicesCentering() {
+        val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingScreen.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "Balancing anchor with clearAndSetSemantics must be present to center RemoteDevices symmetrically (REQ-UI-313, ATT-2791)",
+            content.contains("clearAndSetSemantics")
+        )
+        assertTrue(
+            "Balancing anchor must have alpha(0f) to remain completely invisible",
+            content.contains("alpha(0f)")
+        )
+    }
+
+    @Test
+    fun testSingleDevicePreviewExists() {
+        val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingScreen.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "PreviewControlTrackingScreenSingleDevice preview composable must exist",
+            content.contains("fun PreviewControlTrackingScreenSingleDevice()")
+        )
+        assertTrue(
+            "Single-device preview must include cadence sensor 'cad' verifying centered layout",
+            content.contains("name = \"cad\"")
+        )
+    }
 }
