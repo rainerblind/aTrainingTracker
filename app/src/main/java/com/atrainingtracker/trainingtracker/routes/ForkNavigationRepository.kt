@@ -86,6 +86,18 @@ class ForkNavigationRepository internal constructor(
             return
         }
 
+        val allRoutes = routesRepository.allRoutes.value
+        val selectedRoutes = allRoutes.filter { it.summary.isSelected }
+
+        // Fork decision alerts require at least 2 active selected routes to prompt a choice (REQ-MAP-041).
+        // If fewer than 2 routes are selected, clear any active alert and short-circuit in O(1).
+        if (selectedRoutes.size < 2) {
+            if (_forkDecisionState.value != null) {
+                _forkDecisionState.value = null
+            }
+            return
+        }
+
         val activeState = _forkDecisionState.value
         val isAlertActive = activeState != null
 
@@ -104,8 +116,13 @@ class ForkNavigationRepository internal constructor(
         lastSearchTimeMs = currentTimeMs
         lastSearchPos = currentPos
 
-        val allRoutes = routesRepository.allRoutes.value
-        val candidates = ForkRouteMatcher.findCandidateRoutes(allRoutes, currentPos, recentHistory, activeSportType)
+        val candidates = ForkRouteMatcher.findCandidateRoutes(
+            allRoutes = selectedRoutes,
+            currentPos = currentPos,
+            recentHistory = recentHistory,
+            activeSportType = activeSportType,
+            requireSelected = true
+        )
 
         if (activeState != null) {
             // Check for autonomous binding if rider has progressed past divergence point
