@@ -77,6 +77,10 @@ class TrackingTabWysiwygContractTest {
             "LiveClimbSheet must be gated by state.showLiveClimbs",
             content.contains("state.showLiveClimbs && tuningConfig.showLiveClimbs")
         )
+        assertTrue(
+            "ForkDecisionCard must be gated by state.showNavigationHints (REQ-UI-321 / ATT-2874)",
+            content.contains("if (state.showNavigationHints)") && content.contains("ForkDecisionCard(")
+        )
     }
 
     @Test
