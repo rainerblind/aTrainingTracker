@@ -34,19 +34,21 @@ class RouteOnMapScreenClimbContractTest {
         val content = file.readText()
 
         assertTrue(
-            "RouteOnMapScreen.kt must call climbs(climbs) in mapContent",
-            content.contains("climbs(climbs)")
+            "RouteOnMapScreen.kt must call climbs(...) in mapContent",
+            content.contains("climbs(visibleClimbs)") || content.contains("climbs(climbs)")
         )
 
-        val routesIndex = content.indexOf("routes(listOf(route))")
-        val climbsIndex = content.indexOf("climbs(climbs)")
+        val routesIndex = content.indexOf("routes(listOf(routeToRender))").takeIf { it != -1 }
+            ?: content.indexOf("routes(listOf(route))")
+        val climbsIndex = content.indexOf("climbs(visibleClimbs)").takeIf { it != -1 }
+            ?: content.indexOf("climbs(climbs)")
 
         assertTrue(
-            "routes(listOf(route)) must be present",
+            "routes(listOf(...)) must be present",
             routesIndex != -1
         )
         assertTrue(
-            "climbs(climbs) must be called after routes(listOf(route)) in mapContent",
+            "climbs(...) must be called after routes(...) in mapContent",
             climbsIndex > routesIndex
         )
     }
