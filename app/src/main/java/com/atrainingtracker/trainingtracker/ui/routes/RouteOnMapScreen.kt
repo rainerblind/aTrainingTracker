@@ -149,6 +149,10 @@ fun RouteOnMapScreen(
         }
     }
 
+    val matchedSegmentIds = remember(matchedSegments) {
+        matchedSegments.map { it.segment.summary.stravaId }.toSet()
+    }
+
     MapDetailLayout(
         bSportType = bSportType,
         zoomFocus = if (routeBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
@@ -320,11 +324,23 @@ fun RouteOnMapScreen(
                     markers(allMarkers)
                 }
             }
-            contextualPaths(backgroundPaths, sameSportAlpha = TTAlpha.Medium)
+
+            // Filter backgroundPaths: suppress MapSegments when SEGMENTS layer is disabled or individual segment is hidden (REQ-UI-318)
+            val isSegmentsLayerEnabled = RouteOverlayLayer.SEGMENTS in enabledOverlayLayers
+            val visibleBackgroundPaths = backgroundPaths.filter { path ->
+                if (path is MapSegment) {
+                    isSegmentsLayerEnabled && path.stravaId !in hiddenSegmentIds && path.stravaId !in matchedSegmentIds
+                } else {
+                    true
+                }
+            }
+            if (visibleBackgroundPaths.isNotEmpty()) {
+                contextualPaths(visibleBackgroundPaths, sameSportAlpha = TTAlpha.Medium)
+            }
         },
         overlay = {
             val hasClimbs = climbs.isNotEmpty()
-            val hasSegments = matchedSegments.isNotEmpty()
+            val hasSegments = matchedSegments.isNotEmpty() || backgroundPaths.any { it is MapSegment }
             val hasWaypoints = route?.waypoints?.isNotEmpty() == true
             val hasAnyOverlays = hasClimbs || hasSegments || hasWaypoints
 
