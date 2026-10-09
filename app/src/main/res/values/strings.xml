@@ -1813,6 +1813,7 @@
     <string name="routes_climb_start_at">Start at %s</string>
     <string name="routes_climb_avg_grade">Avg. %1$.1f%%</string>
     <string name="routes_climb_max_grade">Max. %1$.1f%%</string>
+    <string name="climb_max_grade_label">Max Grade</string>
     <string name="routes_segments_section_title">Segments (%d)</string>
     <string name="routes_segments_tab_title">Segments (%d)</string>
     <string name="routes_segment_start_at">Start at %s</string>

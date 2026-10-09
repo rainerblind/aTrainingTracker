@@ -74,11 +74,16 @@ class ClimbDetailSheetContractTest {
         assertTrue("Must render elevation gain metric", content.contains("climb.elevationGainMeters"))
         assertTrue("Must render average grade metric", content.contains("routes_climb_avg_grade"))
         assertTrue("Must render maximum grade metric", content.contains("routes_climb_max_grade"))
+        assertTrue("Must use climb_max_grade_label for maximum grade label (REQ-UI-315.1)", content.contains("climb_max_grade_label"))
+        assertTrue("Must display metric icons in HUD (REQ-UI-315.1)", content.contains("ic_distance") && content.contains("ic_ascent") && content.contains("ic_grade"))
 
         // Embedded map with EXPLICIT_BOUNDS
         assertTrue("Must use ATrainingTrackerMap", content.contains("ATrainingTrackerMap"))
         assertTrue("Must use MapZoomFocus.EXPLICIT_BOUNDS", content.contains("MapZoomFocus.EXPLICIT_BOUNDS"))
         assertTrue("Must invoke calculateClimbBounds", content.contains("calculateClimbBounds(climb)"))
+
+        // Material 3 16.dp card corners
+        assertTrue("Must use 16.dp corner radius for cards (REQ-UI-315.4)", content.contains("RoundedCornerShape(16.dp)"))
 
         // Isolated zoomed elevation profile
         assertTrue("Must render ClimbDetailElevationProfileCard", content.contains("ClimbDetailElevationProfileCard"))

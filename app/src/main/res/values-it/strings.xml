@@ -1620,6 +1620,7 @@
     <string name="routes_climb_start_at">Inizio a %s</string>
     <string name="routes_climb_avg_grade">Media %1$.1f%%</string>
     <string name="routes_climb_max_grade">Max %1$.1f%%</string>
+    <string name="climb_max_grade_label">Pendenza max.</string>
     <string name="routes_segments_section_title">Segmenti (%d)</string>
     <string name="routes_segments_tab_title">Segmenti (%d)</string>
     <string name="routes_segment_start_at">Inizio a %s</string>

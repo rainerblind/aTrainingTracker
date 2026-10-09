@@ -74,13 +74,17 @@ class SegmentDetailSheetContractTest {
         assertTrue("Must render start at metric", content.contains("routes_segment_start_at"))
         assertTrue("Must reuse SegmentDetails", content.contains("SegmentDetails("))
 
-        // 4. Embedded map with EXPLICIT_BOUNDS
+        // 4. Embedded map with EXPLICIT_BOUNDS and StravaOrange MapSegment (REQ-UI-315.2)
         assertTrue("Must use ATrainingTrackerMap", content.contains("ATrainingTrackerMap"))
         assertTrue("Must use MapZoomFocus.EXPLICIT_BOUNDS", content.contains("MapZoomFocus.EXPLICIT_BOUNDS"))
         assertTrue("Must invoke calculateSegmentBounds", content.contains("calculateSegmentBounds(matchedSegment)"))
+        assertTrue("Must render MapSegment for authentic StravaOrange polyline (REQ-UI-315.2)", content.contains("MapSegment("))
 
-        // 5. Isolated zoomed elevation profile
-        assertTrue("Must render ElevationProfile", content.contains("ElevationProfile("))
+        // Material 3 16.dp card corners (REQ-UI-315.4)
+        assertTrue("Must use 16.dp corner radius for cards (REQ-UI-315.4)", content.contains("RoundedCornerShape(16.dp)"))
+
+        // 5. Isolated zoomed elevation profile with slope grade visualization (REQ-UI-315.3)
+        assertTrue("Must render SegmentDetailElevationProfile", content.contains("SegmentDetailElevationProfile("))
         assertTrue("Must render SegmentDetailElevationProfileCard", content.contains("SegmentDetailElevationProfileCard"))
     }
 

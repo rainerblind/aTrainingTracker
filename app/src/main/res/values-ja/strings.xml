@@ -1600,6 +1600,7 @@
     <string name="routes_climb_start_at">%s 地点から開始</string>
     <string name="routes_climb_avg_grade">平均 %1$.1f%%</string>
     <string name="routes_climb_max_grade">最大 %1$.1f%%</string>
+    <string name="climb_max_grade_label">最大勾配</string>
     <string name="routes_segments_section_title">セグメント (%d)</string>
     <string name="routes_segments_tab_title">セグメント (%d)</string>
     <string name="routes_segment_start_at">%s 地点から開始</string>
