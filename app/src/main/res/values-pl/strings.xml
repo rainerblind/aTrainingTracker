@@ -1549,10 +1549,6 @@
     <string name="route_action_stop">Zakończ trasę</string>
     <string name="route_action_clear">Wyczyść trasę</string>
     <string name="route_metrics_format">%1$s • %2$s</string>
-    <string name="route_auto_detect_title">Wykrywanie trasy</string>
-    <string name="route_auto_detect_prompt">Czy podążasz trasą \'%1$s\'?</string>
-    <string name="route_auto_detect_activate">Aktywuj</string>
-    <string name="route_auto_detect_dismiss">Odrzuć</string>
     <string name="route_filter_near">W pobliżu</string>
     <string name="route_filter_recent">Niedawno przejechane</string>
     <string name="route_filter_length">Długość</string>

@@ -1547,10 +1547,6 @@
     <string name="route_action_stop">Parar rota</string>
     <string name="route_action_clear">Limpar rota</string>
     <string name="route_metrics_format">%1$s • %2$s</string>
-    <string name="route_auto_detect_title">Deteção de rota</string>
-    <string name="route_auto_detect_prompt">Está a seguir \'%1$s\'?</string>
-    <string name="route_auto_detect_activate">Ativar</string>
-    <string name="route_auto_detect_dismiss">Rejeitar</string>
     <string name="route_filter_near">Por perto</string>
     <string name="route_filter_recent">Percorrido recentemente</string>
     <string name="route_filter_length">Comprimento</string>

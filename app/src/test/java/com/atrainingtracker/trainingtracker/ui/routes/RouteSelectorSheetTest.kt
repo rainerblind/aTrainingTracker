@@ -64,8 +64,8 @@ class RouteSelectorSheetTest {
             "RouteSelectorSheet must expose ActiveRouteBanner",
             content.contains("fun ActiveRouteBanner(")
         )
-        assertTrue(
-            "RouteSelectorSheet must expose AutoDetectedRouteBanner",
+        assertFalse(
+            "RouteSelectorSheet must not expose AutoDetectedRouteBanner (REQ-UI-311)",
             content.contains("fun AutoDetectedRouteBanner(")
         )
         assertTrue(

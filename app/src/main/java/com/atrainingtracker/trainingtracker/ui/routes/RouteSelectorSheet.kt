@@ -242,51 +242,6 @@ fun ActiveRouteBanner(
 }
 
 @Composable
-fun AutoDetectedRouteBanner(
-    route: RouteWithPath,
-    onActivate: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            Text(
-                text = stringResource(id = R.string.route_auto_detect_title),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onTertiaryContainer
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = stringResource(id = R.string.route_auto_detect_prompt, route.summary.name),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                horizontalArrangement = Arrangement.End,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedButton(onClick = onDismiss) {
-                    Text(stringResource(id = R.string.route_auto_detect_dismiss))
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = onActivate) {
-                    Text(stringResource(id = R.string.route_auto_detect_activate))
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun RouteCard(
     route: RouteWithPath,
     isActive: Boolean,
