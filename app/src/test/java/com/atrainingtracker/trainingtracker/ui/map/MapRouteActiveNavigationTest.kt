@@ -60,7 +60,7 @@ class MapRouteActiveNavigationTest {
 
         assertTrue(activeRoute.isActiveNavigation)
         assertEquals(TTColor.RouteActiveNavigation, activeRoute.color)
-        assertEquals(Color(0xFF00E676), activeRoute.color)
+        assertEquals(Color(0xFF1E88E5), activeRoute.color)
         assertEquals(MapVisualization.ROUTE_ACTIVE_NAVIGATION_WIDTH, activeRoute.width, 0.001f)
         assertEquals(16f, activeRoute.width, 0.001f)
         assertEquals(MapVisualization.ROUTE_ACTIVE_BASE_Z_INDEX, activeRoute.zIndex, 0.001f)
@@ -68,7 +68,7 @@ class MapRouteActiveNavigationTest {
         assertEquals(MapVisualization.ROUTE_ACTIVE_OVERLAY_Z_INDEX, activeRoute.overlayZIndex, 0.001f)
         assertEquals(45.0f, activeRoute.overlayZIndex, 0.001f)
         assertEquals(TTColor.RouteActiveNavigationOverlay, activeRoute.overlayColor)
-        assertEquals(Color(0xFF004D20), activeRoute.overlayColor)
+        assertEquals(Color(0xFF0D47A1), activeRoute.overlayColor)
         assertEquals(MapVisualization.ROUTE_ACTIVE_OVERLAY_WIDTH, activeRoute.overlayWidth, 0.001f)
         assertEquals(8f, activeRoute.overlayWidth, 0.001f)
 
@@ -87,7 +87,7 @@ class MapRouteActiveNavigationTest {
 
         assertFalse(passiveRoute.isActiveNavigation)
         assertEquals(TTColor.RouteSelected, passiveRoute.color)
-        assertEquals(Color(0xFF228B22), passiveRoute.color)
+        assertEquals(Color(0xFF1565C0), passiveRoute.color)
         assertEquals(MapVisualization.ROUTE_WIDTH, passiveRoute.width, 0.001f)
         assertEquals(10f, passiveRoute.width, 0.001f)
         assertEquals(MapVisualization.ROUTE_BASE_Z_INDEX, passiveRoute.zIndex, 0.001f)
@@ -104,6 +104,7 @@ class MapRouteActiveNavigationTest {
 
         assertFalse(unselectedRoute.isActiveNavigation)
         assertEquals(TTColor.RouteUnselected, unselectedRoute.color)
+        assertEquals(Color(0xFF90CAF9), unselectedRoute.color)
         assertEquals(MapVisualization.ROUTE_UNSELECTED_WIDTH, unselectedRoute.width, 0.001f)
         assertEquals(6f, unselectedRoute.width, 0.001f)
         assertEquals(MapVisualization.ROUTE_UNSELECTED_Z_INDEX, unselectedRoute.zIndex, 0.001f)

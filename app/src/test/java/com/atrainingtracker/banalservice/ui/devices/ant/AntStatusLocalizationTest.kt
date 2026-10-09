@@ -47,7 +47,6 @@ class AntStatusLocalizationTest {
         "ant_status_card_desc",
         "ant_status_card_action",
         "ant_status_usb_dongle_note",
-        "ant_status_ble_alternative_note",
         "ant_service_installed",
         "ant_service_not_installed",
         "ant_service_install_button"
@@ -100,6 +99,19 @@ class AntStatusLocalizationTest {
             assertTrue("Base string key '$targetKey' missing in default values/strings.xml", match != null)
             val text = match!!.groupValues[1].trim()
             assertFalse("Base string key '$targetKey' is empty", text.isEmpty())
+        }
+    }
+
+    @Test
+    fun testBleAlternativeNoteOmittedFromAllLocales() {
+        // REQ-UI-309 / ATT-2749: ant_status_ble_alternative_note must be absent from all 9 locales
+        for (locale in locales) {
+            val file = findFile("src/main/res/$locale/strings.xml")
+            val content = file.readText()
+            assertFalse(
+                "Locale $locale must not contain ant_status_ble_alternative_note (REQ-UI-309)",
+                content.contains("name=\"ant_status_ble_alternative_note\"")
+            )
         }
     }
 }

@@ -53,6 +53,8 @@ import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
@@ -222,6 +224,7 @@ fun ElevationProfile(
     isPanMode: Boolean = false,
     showScrubbingBadge: Boolean = true,
     climbs: List<Climb> = emptyList(),
+    smoothingSigma: Double? = null,
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -248,6 +251,7 @@ fun ElevationProfile(
         isPanMode = isPanMode,
         showScrubbingBadge = showScrubbingBadge,
         climbs = climbs,
+        smoothingSigma = smoothingSigma,
         modifier = modifier
     )
 }
@@ -271,13 +275,17 @@ fun ElevationProfile(
     modifier: Modifier = Modifier,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null,
-    climbs: List<Climb> = emptyList()
+    climbs: List<Climb> = emptyList(),
+    smoothingSigma: Double? = null
 ) {
     if (pathPoints.isEmpty()) return
 
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val unit = TrainingApplication.getUnit()
+    val tuningDataStore = remember(context) { TuningPreferencesDataStore(context) }
+    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
+    val effectiveSigma = smoothingSigma ?: tuningConfig.elevationSmoothingSigmaMeters.toDouble()
     var showLegend by remember { mutableStateOf(false) }
 
     var internalZoomScale by remember(pathPoints) { mutableFloatStateOf(1.0f) }
@@ -303,7 +311,7 @@ fun ElevationProfile(
 
     var lastTapTime by remember { mutableLongStateOf(0L) }
 
-    val cachedData = remember(pathPoints, unit, minAltitudeOverride, maxAltitudeOverride) {
+    val cachedData = remember(pathPoints, unit, minAltitudeOverride, maxAltitudeOverride, effectiveSigma) {
         val maxPoints = 500
         val pathPointsDownsampled = if (pathPoints.size > maxPoints) {
             val step = pathPoints.size / maxPoints
@@ -315,7 +323,7 @@ fun ElevationProfile(
         val totalDist = pathPointsDownsampled.last().distance
         val totalTimeSec = pathPointsDownsampled.last().timeSec
 
-        val smoothedAltitudes = ElevationSmoothingMath.smoothAltitudes(pathPointsDownsampled)
+        val smoothedAltitudes = ElevationSmoothingMath.smoothAltitudes(pathPointsDownsampled, sigma = effectiveSigma)
 
         val bounds = calculateElevationBounds(
             pathPoints = pathPointsDownsampled,
@@ -762,10 +770,10 @@ fun ElevationProfile(
                     drawLine(seg.color, Offset(x1, y1), Offset(x2, y2), 2.dp.toPx())
                 }
 
-                // Render horizontal climb span indicators along the X-axis baseline (REQ-UI-299)
+                // Render horizontal climb span indicators along the X-axis baseline (REQ-UI-299, REQ-UI-307)
                 if (!isTimeDomain && climbs.isNotEmpty()) {
                     val baselineY = height - 2.dp.toPx()
-                    climbs.filter { it.category != ClimbCategory.UNCATEGORIZED }.forEach { climb ->
+                    climbs.forEach { climb ->
                         val cPoints = climb.pathPoints
                         val startDist = cPoints.firstOrNull()?.distance ?: return@forEach
                         val endDist = cPoints.lastOrNull()?.distance ?: return@forEach

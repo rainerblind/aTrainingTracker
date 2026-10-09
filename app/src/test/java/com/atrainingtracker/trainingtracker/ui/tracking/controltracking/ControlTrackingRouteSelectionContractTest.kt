@@ -62,20 +62,20 @@ class ControlTrackingRouteSelectionContractTest {
     }
 
     @Test
-    fun testSensorGridScreen_preservesAutoDetectedRouteBanner() {
+    fun testSensorGridScreen_doesNotIntegrateAutoDetectedRouteBanner() {
         val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        assertTrue(
-            "SensorGridScreen must host AutoDetectedRouteBanner (REQ-UI-279.1)",
+        org.junit.Assert.assertFalse(
+            "SensorGridScreen must not host AutoDetectedRouteBanner (REQ-UI-311)",
             content.contains("AutoDetectedRouteBanner(")
         )
-        assertTrue(
-            "SensorGridScreen must handle activateCandidate",
+        org.junit.Assert.assertFalse(
+            "SensorGridScreen must not handle activateCandidate",
             content.contains("activateCandidate")
         )
-        assertTrue(
-            "SensorGridScreen must handle dismissCandidate",
+        org.junit.Assert.assertFalse(
+            "SensorGridScreen must not handle dismissCandidate",
             content.contains("dismissCandidate")
         )
     }

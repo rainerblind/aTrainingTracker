@@ -67,8 +67,8 @@ class ElevationSmoothingMathTest {
         // 2. Continuous grade evaluation in the interior (away from boundary cutoffs)
         // With raw data, grade oscillated between 0.0% on plateaus and 20.0% at step boundaries!
         // With distance-weighted Gaussian smoothing, grade should stay tightly around ~2.0%
-        val interiorStart = points.indexOfFirst { it.distance >= 105.0 }
-        val interiorEnd = points.indexOfLast { it.distance <= 395.0 }
+        val interiorStart = points.indexOfFirst { it.distance >= 63.0 }
+        val interiorEnd = points.indexOfLast { it.distance <= 437.0 }
 
         for (i in interiorStart until interiorEnd) {
             val p1 = points[i]
@@ -79,6 +79,23 @@ class ElevationSmoothingMathTest {
                 grade in 1.5..2.5
             )
         }
+    }
+
+    @Test
+    fun testDefaultConstantsAndDynamicCutoffScaling() {
+        assertEquals("DEFAULT_SIGMA must be 21.0 meters (ATT-2746)", 21.0, ElevationSmoothingMath.DEFAULT_SIGMA, 0.001)
+        assertEquals("DEFAULT_CUTOFF must be 63.0 meters (ATT-2746)", 63.0, ElevationSmoothingMath.DEFAULT_CUTOFF, 0.001)
+
+        // Verify custom sigma scales cutoff dynamically
+        val points = listOf(
+            createDummyPoint(0.0, 100.0),
+            createDummyPoint(20.0, 102.0),
+            createDummyPoint(40.0, 104.0),
+            createDummyPoint(60.0, 106.0)
+        )
+        val resultCustom = ElevationSmoothingMath.smoothAltitudes(points, sigma = 15.0)
+        assertEquals(4, resultCustom.size)
+        assertTrue(resultCustom[1] > resultCustom[0])
     }
 
     @Test

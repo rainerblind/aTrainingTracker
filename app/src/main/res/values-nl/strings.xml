@@ -1382,6 +1382,8 @@
     <string name="tuning_telemetry_x_axis_desc">Selecteer het horizontale asdomein voor telemetriegrafieken (hartslag, tempo/snelheid, vermogen).</string>
     <string name="tuning_pace_ceiling_title">Maximale tempogrens</string>
     <string name="tuning_pace_ceiling_desc">Filtert GPS-uitschieters in de tempografiek. Waarden sneller dan deze grens worden afgekapt.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Hoogteprofiel afvlakking (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Ruimtelijke Gaussiaanse filterstraal in meters. Lagere waarden (bijv. 15–21 m) reageren scherper op korte hellingen; hogere waarden verwijderen sensor-traptreden.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit en tegels</string>
@@ -1545,10 +1547,6 @@
     <string name="route_action_stop">Route beëindigen</string>
     <string name="route_action_clear">Route wissen</string>
     <string name="route_metrics_format">%1$s • %2$s</string>
-    <string name="route_auto_detect_title">Routedetectie</string>
-    <string name="route_auto_detect_prompt">Volg je \'%1$s\'?</string>
-    <string name="route_auto_detect_activate">Activeren</string>
-    <string name="route_auto_detect_dismiss">Afwijzen</string>
     <string name="route_filter_near">Dichtbij</string>
     <string name="route_filter_recent">Onlangs gereden</string>
     <string name="route_filter_length">Lengte</string>
@@ -1622,6 +1620,14 @@
     <string name="routes_segments_tab_title">Segmenten (%d)</string>
     <string name="routes_segment_start_at">Start bij %s</string>
     <string name="routes_segment_pr">PR %s</string>
+    <string name="routes_segment_counter">Segment %1$d van %2$d</string>
+    <string name="route_layers">Routelagen</string>
+    <string name="route_layer_climbs">Beklimmingen</string>
+    <string name="route_layer_segments">Segmenten</string>
+    <string name="route_layer_waypoints">Routepunten</string>
+    <string name="route_item_hide">Verbergen</string>
+    <string name="route_item_show">Tonen</string>
+    <string name="segment_routes_containing_title">Routes met dit segment (%d)</string>
     <string name="tuning_show_live_climbs_title">Live beklimmingen (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Toon realtime klimcockpit tijdens routes en vrij rijden</string>
 
@@ -1690,7 +1696,6 @@
     <string name="ant_status_card_desc">ANT+ sensoren op moderne smartphones vereisen een USB-OTG-adapter met ANT+ USB-stick en ANT+ systeemdiensten.</string>
     <string name="ant_status_card_action">Status controleren</string>
     <string name="ant_status_usb_dongle_note">Moderne smartphones hebben geen ingebouwde ANT+-chips. Een externe USB-OTG-adapter met ANT+ USB-stick is vereist voor ontvangst.</string>
-    <string name="ant_status_ble_alternative_note">Tip: Bluetooth LE sensoren werken direct zonder extra hardware of systeemdiensten.</string>
     <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
     <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
     <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>

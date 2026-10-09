@@ -1382,6 +1382,8 @@
     <string name="tuning_telemetry_x_axis_desc">Seleziona il dominio dell\'asse orizzontale per i grafici di telemetria (frequenza cardiaca, passo/velocità, potenza).</string>
     <string name="tuning_pace_ceiling_title">Limite massimo di passo</string>
     <string name="tuning_pace_ceiling_desc">Filtra i picchi GPS nel grafico del passo. Le andature più veloci di questo limite vengono tagliate.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Smussamento del profilo altimetrico (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Raggio spaziale del filtro gaussiano in metri. Valori più bassi (es. 15–21 m) offrono una risposta più nitida sulle rampe corte; valori più alti eliminano i gradini del sensore.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit e riquadri</string>
@@ -1545,10 +1547,6 @@
     <string name="route_action_stop">Termina percorso</string>
     <string name="route_action_clear">Rimuovi percorso</string>
     <string name="route_metrics_format">%1$s • %2$s</string>
-    <string name="route_auto_detect_title">Rilevamento percorso</string>
-    <string name="route_auto_detect_prompt">Stai seguendo \'%1$s\'?</string>
-    <string name="route_auto_detect_activate">Attiva</string>
-    <string name="route_auto_detect_dismiss">Rifiuta</string>
     <string name="route_filter_near">Nelle vicinanze</string>
     <string name="route_filter_recent">Percorso di recente</string>
     <string name="route_filter_length">Lunghezza</string>
@@ -1622,6 +1620,14 @@
     <string name="routes_segments_tab_title">Segmenti (%d)</string>
     <string name="routes_segment_start_at">Inizio a %s</string>
     <string name="routes_segment_pr">PR %s</string>
+    <string name="routes_segment_counter">Segmento %1$d di %2$d</string>
+    <string name="route_layers">Livelli percorso</string>
+    <string name="route_layer_climbs">Salite</string>
+    <string name="route_layer_segments">Segmenti</string>
+    <string name="route_layer_waypoints">Punti di passaggio</string>
+    <string name="route_item_hide">Nascondi</string>
+    <string name="route_item_show">Mostra</string>
+    <string name="segment_routes_containing_title">Percorsi con questo segmento (%d)</string>
     <string name="tuning_show_live_climbs_title">Salite in tempo reale (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Mostra il pannello salita in tempo reale durante i percorsi e la pedalata libera</string>
 
@@ -1690,7 +1696,6 @@
     <string name="ant_status_card_desc">I sensori ANT+ sugli smartphone moderni richiedono un adattatore USB-OTG con chiavetta USB ANT+ e i servizi di sistema ANT+.</string>
     <string name="ant_status_card_action">Controlla stato</string>
     <string name="ant_status_usb_dongle_note">Gli smartphone moderni non dispongono di chip ANT+ integrati. È necessario un adattatore USB-OTG esterno con chiavetta USB ANT+.</string>
-    <string name="ant_status_ble_alternative_note">Suggerimento: I sensori Bluetooth LE funzionano direttamente senza hardware o servizi aggiuntivi.</string>
     <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
     <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
     <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>

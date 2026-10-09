@@ -515,7 +515,11 @@ public class TrackerService extends Service {
         Notification notification = mTrainingApplication != null ? mTrainingApplication.getSearchingAndTrackingNotification() : null;
         if (notification != null) {
             try {
-                performStartForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+                int foregroundServiceType = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    foregroundServiceType |= ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH | ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
+                }
+                performStartForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, foregroundServiceType);
             } catch (SecurityException | IllegalStateException e) {
                 Log.e(TAG, "Failed to start foreground service: " + e.getMessage(), e);
                 mTrackingInterrupted = true;
@@ -1361,7 +1365,14 @@ public class TrackerService extends Service {
         }
 
         // 5. Finalize Map and Streams (one last check)
-        String polyline = PolyUtil.encode(mLiveSession.getSampledLatLngs());
+        List<LatLng> pointsToSimplify = mLiveSession.getRawLatLngs();
+        if (pointsToSimplify.isEmpty()) {
+            pointsToSimplify = mLiveSession.getSampledLatLngs();
+        }
+        List<LatLng> simplifiedPoints = (pointsToSimplify != null && !pointsToSimplify.isEmpty())
+                ? PolyUtil.simplify(pointsToSimplify, 10.0)
+                : Collections.emptyList();
+        String polyline = PolyUtil.encode(simplifiedPoints);
         String altStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(mLiveSession.getSampledAltitudes());
         String distStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(mLiveSession.getSampledDistances());
         summariesManager.updateMapAndStreams(mWorkoutID, polyline, altStream, distStream);

@@ -30,8 +30,8 @@ import kotlin.math.exp
  */
 object ElevationSmoothingMath {
 
-    const val DEFAULT_SIGMA: Double = 35.0 // Spatial kernel radius in meters
-    const val DEFAULT_CUTOFF: Double = 105.0 // 3 * sigma cutoff radius in meters
+    const val DEFAULT_SIGMA: Double = 21.0 // Spatial kernel radius in meters (ATT-2746)
+    const val DEFAULT_CUTOFF: Double = 63.0 // 3 * sigma cutoff radius in meters (ATT-2746)
 
     /**
      * Smooths an elevation series using local linear regression with a distance-weighted Gaussian kernel:
@@ -46,14 +46,14 @@ object ElevationSmoothingMath {
      * boundary sag and peaking by accounting for the local terrain slope.
      *
      * @param pathPoints Monotonically distance-ordered path points.
-     * @param sigma Gaussian kernel spatial standard deviation in meters (default 35.0m).
-     * @param cutoff Spatial cutoff radius beyond which weights are truncated (default 105.0m).
+     * @param sigma Gaussian kernel spatial standard deviation in meters (default 21.0m).
+     * @param cutoff Spatial cutoff radius beyond which weights are truncated (default 3 * sigma = 63.0m).
      * @return Primitive [DoubleArray] of smoothed altitudes matching the size of [pathPoints].
      */
     fun smoothAltitudes(
         pathPoints: List<PathPoint>,
         sigma: Double = DEFAULT_SIGMA,
-        cutoff: Double = DEFAULT_CUTOFF
+        cutoff: Double = 3.0 * sigma
     ): DoubleArray {
         val n = pathPoints.size
         if (n == 0) return DoubleArray(0)

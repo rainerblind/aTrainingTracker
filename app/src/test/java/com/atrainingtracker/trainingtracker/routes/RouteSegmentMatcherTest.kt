@@ -19,6 +19,9 @@
 package com.atrainingtracker.trainingtracker.routes
 
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.RouteSource
+import com.atrainingtracker.trainingtracker.database.RouteSummary
+import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentSummary
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
@@ -200,5 +203,99 @@ class RouteSegmentMatcherTest {
         assertEquals(1000.0, matched[0].startDistanceMeters, 1.0)
         assertEquals("Later segment must be second", 201L, matched[1].segment.summary.stravaId)
         assertEquals(6000.0, matched[1].startDistanceMeters, 1.0)
+    }
+
+    private fun createRoute(
+        id: Long,
+        name: String,
+        sportType: BSportType,
+        path: List<PathPoint>
+    ): RouteWithPath {
+        val summary = RouteSummary(
+            id = id,
+            externalId = "ext_$id",
+            name = name,
+            description = "Test description",
+            isSelected = false,
+            distance = path.lastOrNull()?.distance ?: 0.0,
+            elevationGain = 100.0,
+            bSportType = sportType,
+            source = RouteSource.LOCAL_GPX
+        )
+        return RouteWithPath(summary = summary, path = path)
+    }
+
+    @Test
+    fun testFindRoutesContainingSegment_forwardRouteMatches_returnsSegmentMatchedRoute() = runBlocking {
+        // Segment from km 2 to km 4 along sampleRoute
+        val segPoints = (20..40).map { i ->
+            val dist = (i - 20) * 100.0
+            val lng = 11.0 + ((i * 100.0) / metersPerLngDegree)
+            PathPoint(distance = dist, latLng = LatLng(48.0, lng), altitude = 500.0)
+        }
+        val segment = createSegment(301L, "Target Segment", BSportType.BIKE, segPoints, 2000.0)
+
+        val candidateRoute = createRoute(1001L, "Tour de Alps", BSportType.BIKE, sampleRoute)
+        val nonMatchingRoute = createRoute(1002L, "Running Route", BSportType.RUN, sampleRoute)
+
+        val matches = RouteSegmentMatcher.findRoutesContainingSegment(
+            segment = segment,
+            candidateRoutes = listOf(candidateRoute, nonMatchingRoute)
+        )
+
+        assertEquals(1, matches.size)
+        assertEquals(1001L, matches[0].route.summary.id)
+        assertEquals("Tour de Alps", matches[0].route.summary.name)
+        assertEquals(2000.0, matches[0].startDistanceMeters, 1.0)
+        assertEquals(4000.0, matches[0].endDistanceMeters, 1.0)
+    }
+
+    @Test
+    fun testFindRoutesContainingSegment_reverseDirectionRoute_returnsEmpty() = runBlocking {
+        // Reverse direction route (Westward: 10000m to 0m)
+        val reverseRoutePath = sampleRoute.reversed().mapIndexed { index, pt ->
+            PathPoint(distance = index * 100.0, latLng = pt.latLng, altitude = pt.altitude)
+        }
+        val reverseRoute = createRoute(1003L, "Reverse Route", BSportType.BIKE, reverseRoutePath)
+
+        // Segment heading East from km 2 to km 4
+        val segPoints = (20..40).map { i ->
+            val dist = (i - 20) * 100.0
+            val lng = 11.0 + ((i * 100.0) / metersPerLngDegree)
+            PathPoint(distance = dist, latLng = LatLng(48.0, lng), altitude = 500.0)
+        }
+        val segment = createSegment(302L, "Eastbound Segment", BSportType.BIKE, segPoints, 2000.0)
+
+        val matches = RouteSegmentMatcher.findRoutesContainingSegment(
+            segment = segment,
+            candidateRoutes = listOf(reverseRoute)
+        )
+
+        assertTrue("Reverse traversal route MUST not match", matches.isEmpty())
+    }
+
+    @Test
+    fun testFindRoutesContainingSegment_emptyOrSinglePoint_returnsEmpty() = runBlocking {
+        val singlePointSegment = createSegment(
+            303L,
+            "Single Point",
+            BSportType.BIKE,
+            listOf(sampleRoute.first()),
+            0.0
+        )
+        val candidateRoute = createRoute(1004L, "Sample Route", BSportType.BIKE, sampleRoute)
+
+        val matches = RouteSegmentMatcher.findRoutesContainingSegment(
+            segment = singlePointSegment,
+            candidateRoutes = listOf(candidateRoute)
+        )
+
+        assertTrue("Single-point segment must return empty list", matches.isEmpty())
+
+        val emptyMatches = RouteSegmentMatcher.findRoutesContainingSegment(
+            segment = singlePointSegment,
+            candidateRoutes = emptyList()
+        )
+        assertTrue("Empty candidate routes must return empty list", emptyMatches.isEmpty())
     }
 }

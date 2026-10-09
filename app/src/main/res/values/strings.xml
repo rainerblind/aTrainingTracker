@@ -1575,6 +1575,8 @@
     <string name="tuning_telemetry_x_axis_desc">Select horizontal axis domain for telemetry graphs (Heart Rate, Speed/Pace, Power).</string>
     <string name="tuning_pace_ceiling_title">Minimum Pace Ceiling</string>
     <string name="tuning_pace_ceiling_desc">Filters GPS noise spikes in the pace chart. Speeds faster than this ceiling are clamped.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Elevation Profile Smoothing (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Spatial Gaussian filter radius in meters. Lower values (e.g. 15–21 m) yield crisper response on short ramps; higher values eliminate sensor quantization staircasing.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit &amp; Tiles</string>
@@ -1738,10 +1740,6 @@
     <string name="route_action_stop">Stop Route</string>
     <string name="route_action_clear">Clear route</string>
     <string name="route_metrics_format">%1$s • %2$s</string>
-    <string name="route_auto_detect_title">Route Detection</string>
-    <string name="route_auto_detect_prompt">Are you following \'%1$s\'?</string>
-    <string name="route_auto_detect_activate">Activate</string>
-    <string name="route_auto_detect_dismiss">Dismiss</string>
     <string name="route_filter_near">Nearby</string>
     <string name="route_filter_recent">Recently Ridden</string>
     <string name="route_filter_length">Length</string>
@@ -1815,6 +1813,14 @@
     <string name="routes_segments_tab_title">Segments (%d)</string>
     <string name="routes_segment_start_at">Start at %s</string>
     <string name="routes_segment_pr">PR %s</string>
+    <string name="routes_segment_counter">Segment %1$d of %2$d</string>
+    <string name="route_layers">Route Layers</string>
+    <string name="route_layer_climbs">Climbs</string>
+    <string name="route_layer_segments">Segments</string>
+    <string name="route_layer_waypoints">Waypoints</string>
+    <string name="route_item_hide">Hide</string>
+    <string name="route_item_show">Show</string>
+    <string name="segment_routes_containing_title">Routes with this segment (%d)</string>
     <string name="tuning_show_live_climbs_title">Live Climbs (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Show real-time climb cockpit sheet during routes and free riding</string>
 
@@ -1883,7 +1889,6 @@
     <string name="ant_status_card_desc">ANT+ sensors on modern smartphones require an external USB-OTG adapter with an ANT+ USB stick and ANT+ system services.</string>
     <string name="ant_status_card_action">Check Status</string>
     <string name="ant_status_usb_dongle_note">Modern smartphones lack integrated ANT+ chips. An external USB-OTG adapter with an ANT+ USB stick is required for wireless reception.</string>
-    <string name="ant_status_ble_alternative_note">Tip: Bluetooth LE sensors work directly without any additional hardware or system services.</string>
     <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
     <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
     <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>

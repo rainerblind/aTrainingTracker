@@ -31,7 +31,6 @@ import androidx.compose.material3.MaterialTheme
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.atrainingtracker.trainingtracker.climbs.Climb
-import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
 import com.google.android.gms.maps.model.JointType
 import kotlinx.coroutines.Dispatchers
@@ -479,16 +478,14 @@ internal class MapContentScopeImpl(
 
     override fun climbs(climbs: List<Climb>) {
         climbs.forEach { climb ->
-            if (climb.category != ClimbCategory.UNCATEGORIZED) {
-                val points = if (climb.pathPoints.isNotEmpty()) {
-                    climb.pathPoints.map { it.latLng }
-                } else {
-                    listOf(climb.startLatLng, climb.endLatLng)
-                }
-                if (points.size >= 2) {
-                    val (color, _, _) = getClimbCategoryColors(climb.category)
-                    this.climbHighlights.add(ClimbHighlightData(path = points, color = color))
-                }
+            val points = if (climb.pathPoints.isNotEmpty()) {
+                climb.pathPoints.map { it.latLng }
+            } else {
+                listOf(climb.startLatLng, climb.endLatLng)
+            }
+            if (points.size >= 2) {
+                val (color, _, _) = getClimbCategoryColors(climb.category)
+                this.climbHighlights.add(ClimbHighlightData(path = points, color = color))
             }
         }
     }

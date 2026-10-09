@@ -1362,6 +1362,8 @@
     <string name="tuning_telemetry_x_axis_desc">テレメトリグラフ（心拍数、ペース/速度、パワー）の水平軸ドメインを選択します。</string>
     <string name="tuning_pace_ceiling_title">ペース上限（最速値）</string>
     <string name="tuning_pace_ceiling_desc">ペースグラフのGPS異常値を抑制します。この上限を超える速度はクランプされます。</string>
+    <string name="tuning_elevation_smoothing_sigma_title">標高プロファイルの平滑化 (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">メートル単位の空間ガウスフィルター半径。低い値 (例: 15〜21 m) は短い坂道での反応がシャープになり、高い値はセンサーの階段状ノイズを除去します。</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">コックピットとタイル</string>
@@ -1525,10 +1527,6 @@
     <string name="route_action_stop">ルートを終了</string>
     <string name="route_action_clear">ルートをクリア</string>
     <string name="route_metrics_format">%1$s • %2$s</string>
-    <string name="route_auto_detect_title">ルート検出</string>
-    <string name="route_auto_detect_prompt">「%1$s」を走行中ですか？</string>
-    <string name="route_auto_detect_activate">有効化</string>
-    <string name="route_auto_detect_dismiss">閉じる</string>
     <string name="route_filter_near">近く</string>
     <string name="route_filter_recent">最近走行</string>
     <string name="route_filter_length">長さ</string>
@@ -1602,6 +1600,14 @@
     <string name="routes_segments_tab_title">セグメント (%d)</string>
     <string name="routes_segment_start_at">%s 地点から開始</string>
     <string name="routes_segment_pr">PR %s</string>
+    <string name="routes_segment_counter">セグメント %1$d / %2$d</string>
+    <string name="route_layers">ルートレイヤー</string>
+    <string name="route_layer_climbs">登坂</string>
+    <string name="route_layer_segments">セグメント</string>
+    <string name="route_layer_waypoints">ウェイポイント</string>
+    <string name="route_item_hide">非表示</string>
+    <string name="route_item_show">表示</string>
+    <string name="segment_routes_containing_title">このセグメントを含むルート (%d)</string>
     <string name="tuning_show_live_climbs_title">ライブクライム (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">ルートおよびフリー走行中にリアルタイム登坂コックピットを表示</string>
 
@@ -1670,7 +1676,6 @@
     <string name="ant_status_card_desc">最新のスマートフォンで ANT+ センサーを使用するには、ANT+ USB ドングル付きの USB-OTG アダプターと ANT+ システムサービスが必要です。</string>
     <string name="ant_status_card_action">ステータスを確認</string>
     <string name="ant_status_usb_dongle_note">最新のスマートフォンには内蔵 ANT+ チップがありません。受信には ANT+ USB ドングル付きの外部 USB-OTG アダプターが必要です。</string>
-    <string name="ant_status_ble_alternative_note">ヒント: Bluetooth LE センサーは、追加のハードウェアやシステムサービスなしで直接動作します。</string>
     <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
     <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
     <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>

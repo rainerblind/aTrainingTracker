@@ -33,9 +33,12 @@ import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningPaceCeilingFormatter
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
 
+import kotlin.math.roundToInt
+
 /**
- * Aftermath telemetry & elevation analysis tuning category composable (REQ-UI-262).
- * Encapsulates independent X-axis domain chips and pace ceiling slider (15 discrete steps).
+ * Aftermath telemetry & elevation analysis tuning category composable (REQ-UI-262, REQ-UI-297).
+ * Encapsulates independent X-axis domain chips, pace ceiling slider (15 discrete steps),
+ * and elevation profile smoothing sigma slider (39 discrete steps, 10m-50m).
  */
 @Composable
 fun AftermathAnalysisSection(
@@ -44,7 +47,9 @@ fun AftermathAnalysisSection(
     telemetryXAxisDomain: ProfileXAxisDomain,
     onTelemetryDomainChange: (ProfileXAxisDomain) -> Unit,
     paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM,
-    onPaceCeilingChange: (Float) -> Unit = {}
+    onPaceCeilingChange: (Float) -> Unit = {},
+    elevationSmoothingSigmaMeters: Float = TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS,
+    onElevationSmoothingSigmaChange: (Float) -> Unit = {}
 ) {
     val isMetric = remember { TrainingApplication.getUnit() == MyUnits.METRIC }
     Column(
@@ -64,6 +69,22 @@ fun AftermathAnalysisSection(
             onValueChange = onPaceCeilingChange,
             valueRange = TuningPreferencesDefaults.MIN_PACE_CEILING_MIN_KM..TuningPreferencesDefaults.MAX_PACE_CEILING_MIN_KM,
             steps = 15
+        )
+
+        // Elevation Profile Smoothing Sigma (defaults to 21 m) (ATT-2746 / REQ-UI-297)
+        val sigmaMeters = elevationSmoothingSigmaMeters.roundToInt()
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_elevation_smoothing_sigma_title),
+            valueText = "$sigmaMeters m",
+            helperText = stringResource(R.string.tuning_elevation_smoothing_sigma_desc),
+            defaultText = stringResource(
+                R.string.tuning_default_format,
+                "${TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS.roundToInt()} m"
+            ),
+            value = elevationSmoothingSigmaMeters,
+            onValueChange = onElevationSmoothingSigmaChange,
+            valueRange = TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS..TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS,
+            steps = 39
         )
 
         // Elevation Profile X-Axis Domain (defaults to Distance)

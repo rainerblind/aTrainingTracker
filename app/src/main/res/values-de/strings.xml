@@ -1469,6 +1469,8 @@
     <string name="tuning_telemetry_x_axis_desc">Horizontale Achsendomäne für Telemetriegraphen (Herzfrequenz, Tempo/Geschwindigkeit, Leistung) wählen.</string>
     <string name="tuning_pace_ceiling_title">Schnellste Tempo-Grenze</string>
     <string name="tuning_pace_ceiling_desc">Filtert GPS-Ausreißer im Tempo-Diagramm. Werte schneller als diese Grenze werden abgeschnitten.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Höhenprofil-Glättung (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Räumlicher Gauß-Filterradius in Metern. Niedrigere Werte (z. B. 15–21 m) reagieren direkter auf kurze Rampen; höhere Werte glätten Sensor-Stufenartefakte.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Cockpit &amp; Kacheln</string>
@@ -1632,10 +1634,6 @@
     <string name="route_action_stop">Route beenden</string>
     <string name="route_action_clear">Route entfernen</string>
     <string name="route_metrics_format">%1$s • %2$s</string>
-    <string name="route_auto_detect_title">Routenerkennung</string>
-    <string name="route_auto_detect_prompt">Befindest du dich auf \'%1$s\'?</string>
-    <string name="route_auto_detect_activate">Aktivieren</string>
-    <string name="route_auto_detect_dismiss">Ablehnen</string>
     <string name="route_filter_near">In der Nähe</string>
     <string name="route_filter_recent">Zuletzt gefahren</string>
     <string name="route_filter_length">Länge</string>
@@ -1709,6 +1707,14 @@
     <string name="routes_segments_tab_title">Segmente (%d)</string>
     <string name="routes_segment_start_at">Start bei %s</string>
     <string name="routes_segment_pr">PR %s</string>
+    <string name="routes_segment_counter">Segment %1$d von %2$d</string>
+    <string name="route_layers">Routen-Ebenen</string>
+    <string name="route_layer_climbs">Anstiege</string>
+    <string name="route_layer_segments">Segmente</string>
+    <string name="route_layer_waypoints">Wegpunkte</string>
+    <string name="route_item_hide">Ausblenden</string>
+    <string name="route_item_show">Einblenden</string>
+    <string name="segment_routes_containing_title">Routen mit diesem Segment (%d)</string>
     <string name="tuning_show_live_climbs_title">Live-Anstiege (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Echtzeit-Anstiegs-Cockpit bei Strecken und freier Fahrt einblenden</string>
 
@@ -1777,7 +1783,6 @@
     <string name="ant_status_card_desc">Für ANT+ Sensoren auf modernen Smartphones ist ein USB-OTG-Adapter mit ANT+ USB-Stick sowie ANT+ Systemdienste erforderlich.</string>
     <string name="ant_status_card_action">Status prüfen</string>
     <string name="ant_status_usb_dongle_note">Moderne Smartphones besitzen keine integrierten ANT+-Funkchips. Ein externer USB-OTG-Adapter mit ANT+ USB-Stick ist für den Empfang nötig.</string>
-    <string name="ant_status_ble_alternative_note">Tipp: Bluetooth LE Sensoren funktionieren direkt ohne Zusatzhardware oder Systemdienste.</string>
     <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
     <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
     <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>

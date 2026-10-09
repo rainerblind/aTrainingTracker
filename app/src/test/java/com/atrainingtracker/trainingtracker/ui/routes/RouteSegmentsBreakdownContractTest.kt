@@ -139,5 +139,21 @@ class RouteSegmentsBreakdownContractTest {
             "RouteOnMapScreen must render matched segments in mapContent",
             content.contains("segments(")
         )
+
+        // 8. Verify selectedSegmentForDetail state declaration and SegmentDetailSheet integration (REQ-UI-303, ATT-2774)
+        assertTrue(
+            "RouteOnMapScreen must declare selectedSegmentForDetail state",
+            content.contains("var selectedSegmentForDetail by remember { mutableStateOf<MatchedRouteSegment?>(null) }")
+        )
+        assertTrue(
+            "RouteOnMapScreen must set selectedSegmentForDetail on segment click",
+            content.contains("selectedSegmentForDetail = matched")
+        )
+        assertTrue(
+            "RouteOnMapScreen must render SegmentDetailSheet when selectedSegmentForDetail is non-null",
+            content.contains("SegmentDetailSheet(") &&
+                    content.contains("matchedSegment = matched")
+        )
     }
 }
+

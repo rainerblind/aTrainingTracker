@@ -35,6 +35,7 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelUuid;
 import android.util.Log;
@@ -223,7 +224,7 @@ public class BTSearchForNewDevicesEngine
     };
 
     // Device scan callback.
-    private final ScanCallback mScanCallback = new ScanCallback() {
+    /* package */ final ScanCallback mScanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
@@ -238,10 +239,13 @@ public class BTSearchForNewDevicesEngine
                     @Override
                     public void run() {
                         if (DEBUG) Log.i(TAG, "trying to connect to Gatt");
-                        if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                            return;
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                                return;
+                            }
                         }
-                        mBTGatts.put(device.getAddress(), device.connectGatt(mContext, false, mGattCallback));
+                        BluetoothGatt gatt = device.connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE);
+                        mBTGatts.put(device.getAddress(), gatt);
                     }
                 });
             }
@@ -297,8 +301,10 @@ public class BTSearchForNewDevicesEngine
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
-                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                            return;
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                                return;
+                            }
                         }
                         btGatt.disconnect();
                         btGatt.close();
@@ -323,8 +329,16 @@ public class BTSearchForNewDevicesEngine
         if (!scanning) {
             resetTrackingState();
             if (DEBUG) Log.i(TAG, "starting to search for " + getDeviceType().name() + " devices");
-            if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                return;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                    Log.w(TAG, "BLUETOOTH_SCAN permission not granted");
+                    return;
+                }
+            } else {
+                if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    Log.w(TAG, "ACCESS_FINE_LOCATION permission not granted");
+                    return;
+                }
             }
 
             BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
@@ -345,6 +359,9 @@ public class BTSearchForNewDevicesEngine
 
             ScanSettings settings = new ScanSettings.Builder()
                     .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                    .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+                    .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
+                    .setNumOfMatches(ScanSettings.MATCH_NUM_ONE_ADVERTISEMENT)
                     .build();
 
             scanner.startScan(filters, settings, mScanCallback);
@@ -356,8 +373,10 @@ public class BTSearchForNewDevicesEngine
     @Override
     public void stopAsyncSearch() {
         if (DEBUG) Log.i(TAG, "stopAsyncSearch()");
-        if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
         }
 
         if (scanning) {

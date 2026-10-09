@@ -19,7 +19,6 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
-import android.location.Location
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -89,8 +88,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.database.RouteWithPath
-import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
@@ -102,10 +99,8 @@ import com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepository
 import com.atrainingtracker.trainingtracker.routes.ReturnNavigationState
 import com.atrainingtracker.trainingtracker.routes.TurnByTurnNavigationRepository
 import com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheet
-import com.atrainingtracker.trainingtracker.ui.routes.AutoDetectedRouteBanner
 import com.atrainingtracker.trainingtracker.ui.routes.ForkDecisionCard
 import com.atrainingtracker.trainingtracker.ui.routes.ReturnNavigationHud
-import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModel
 import com.atrainingtracker.trainingtracker.ui.routes.TurnPromptBanner
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
@@ -162,7 +157,6 @@ fun SensorGridScreen(
     gridSpacing: Dp = 0.dp,
     fieldShape: Shape = RectangleShape,
     fieldElevation: CardElevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    routeSelectorViewModel: RouteSelectorViewModel? = null,
     tabToggleActions: TabToggleActions = TabToggleActions.Empty
 ) {
     val context = LocalContext.current
@@ -226,25 +220,6 @@ fun SensorGridScreen(
 
     val forkNavRepo = remember { ForkNavigationRepository.getInstance(context) }
     val forkDecisionState by forkNavRepo.forkDecisionState.collectAsState()
-
-    val routesRepo = remember { RoutesRepository.getInstance(context) }
-    val actualRouteSelectorViewModel = routeSelectorViewModel ?: remember {
-        RouteSelectorViewModel(routesRepo, tuningPreferencesDataStore = tuningDataStore)
-    }
-    val routeSelectorUiState by actualRouteSelectorViewModel.uiState.collectAsState()
-
-    val currentLatLng by currentLocationFlow.collectAsState()
-    LaunchedEffect(currentLatLng, state.userBearing, state.userSpeed) {
-        currentLatLng?.let { latLng ->
-            val location = Location("GPS").apply {
-                latitude = latLng.latitude
-                longitude = latLng.longitude
-                bearing = state.userBearing
-                speed = state.userSpeed
-            }
-            actualRouteSelectorViewModel.onLocationChanged(location)
-        }
-    }
 
     // Control the sheet state
     val scaffoldState = rememberBottomSheetScaffoldState(
@@ -434,71 +409,48 @@ fun SensorGridScreen(
                     })
                 }
 
-                // Spatial WYSIWYG Toggles for Map & Elevation Profile (REQ-UI-275 / REQ-UI-295)
-                Row(
+                // Spatial WYSIWYG Toggles for Map, Elevation, Segments, Climbs & Lap Button (REQ-UI-275 / REQ-UI-295)
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     SpatialCockpitToggleCard(
                         title = stringResource(R.string.config_tracking__show_map),
                         isActive = state.showMap,
                         onToggle = { tabToggleActions.onToggleMap(it) },
                         icon = Icons.Default.Map,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
                     SpatialCockpitToggleCard(
                         title = stringResource(R.string.config_tracking__showElevationProfile),
                         isActive = state.showElevationProfile,
                         onToggle = { tabToggleActions.onToggleElevationProfile(it) },
                         icon = Icons.Default.ShowChart,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
-                }
-
-                // Spatial WYSIWYG Dock for Live Segments, Climbs & Lap Button (REQ-UI-275 / REQ-UI-295)
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 2.dp,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            SpatialCockpitToggleCard(
-                                title = stringResource(R.string.config_tracking__showLiveSegments),
-                                isActive = state.showLiveSegments,
-                                onToggle = { tabToggleActions.onToggleLiveSegments(it) },
-                                icon = Icons.Default.DirectionsRun,
-                                modifier = Modifier.weight(1f)
-                            )
-                            SpatialCockpitToggleCard(
-                                title = stringResource(R.string.config_tracking__show_live_climbs),
-                                isActive = state.showLiveClimbs,
-                                onToggle = { tabToggleActions.onToggleLiveClimbs(it) },
-                                icon = Icons.Default.Terrain,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        SpatialCockpitToggleCard(
-                            title = stringResource(R.string.config_tracking__showLapButton),
-                            isActive = state.showLapButton,
-                            onToggle = { tabToggleActions.onToggleLapButton(it) },
-                            icon = Icons.Default.Timer,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                    SpatialCockpitToggleCard(
+                        title = stringResource(R.string.config_tracking__showLiveSegments),
+                        isActive = state.showLiveSegments,
+                        onToggle = { tabToggleActions.onToggleLiveSegments(it) },
+                        icon = Icons.Default.DirectionsRun,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    SpatialCockpitToggleCard(
+                        title = stringResource(R.string.config_tracking__show_live_climbs),
+                        isActive = state.showLiveClimbs,
+                        onToggle = { tabToggleActions.onToggleLiveClimbs(it) },
+                        icon = Icons.Default.Terrain,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    SpatialCockpitToggleCard(
+                        title = stringResource(R.string.config_tracking__showLapButton),
+                        isActive = state.showLapButton,
+                        onToggle = { tabToggleActions.onToggleLapButton(it) },
+                        icon = Icons.Default.Timer,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         } else {
@@ -533,21 +485,6 @@ fun SensorGridScreen(
                         forkNavRepo.dismissPrompt()
                     }
                 )
-
-                // Auto-Detected Route Banner (REQ-MAP-024 / ATT-1835)
-                if (screenMode == ScreenMode.TRACKING && routeSelectorUiState.isAutoPromptVisible && routeSelectorUiState.autoDetectedCandidate != null) {
-                    routeSelectorUiState.autoDetectedCandidate?.let { candidate ->
-                        AutoDetectedRouteBanner(
-                            route = candidate,
-                            onActivate = {
-                                actualRouteSelectorViewModel.activateCandidate(candidate.summary.id)
-                            },
-                            onDismiss = {
-                                actualRouteSelectorViewModel.dismissCandidate(candidate.summary.id)
-                            }
-                        )
-                    }
-                }
 
                 // 1. The Sensor Grid (Scrollable)
                 // This Column will only take as much space as the sensors need.

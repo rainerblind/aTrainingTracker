@@ -1950,14 +1950,27 @@ object LegacyImportEngine {
             values.put(WorkoutSummaries.DESCENDING, totalDescent.toInt())
         }
 
-        // 3. Map & Streams
-        val polyline = if (points.isNotEmpty()) PolyUtil.encode(points) else ""
+        // 3. Map & Streams (REQ-DAT-023: Douglas-Peucker simplification & compact scalar streams)
+        val simplifiedPoints = if (points.isNotEmpty()) PolyUtil.simplify(points, 10.0) else emptyList()
+        val polyline = if (simplifiedPoints.isNotEmpty()) PolyUtil.encode(simplifiedPoints) else ""
         values.put(WorkoutSummaries.MAP_POLYLINE, polyline)
-        if (altitudes.isNotEmpty()) {
-            values.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.encodeDoubles(altitudes))
+
+        val sampledAltitudes = if (altitudes.size > WorkoutSummaries.ENCODING_STEP_SIZE) {
+            altitudes.filterIndexed { index, _ -> (index + 1) % WorkoutSummaries.ENCODING_STEP_SIZE == 0 }
+        } else {
+            altitudes
         }
-        if (distances.isNotEmpty()) {
-            values.put(WorkoutSummaries.DISTANCE_STREAM, NumericalEncodingUtils.encodeDoubles(distances))
+        if (sampledAltitudes.isNotEmpty()) {
+            values.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.encodeDoubles(sampledAltitudes))
+        }
+
+        val sampledDistances = if (distances.size > WorkoutSummaries.ENCODING_STEP_SIZE) {
+            distances.filterIndexed { index, _ -> (index + 1) % WorkoutSummaries.ENCODING_STEP_SIZE == 0 }
+        } else {
+            distances
+        }
+        if (sampledDistances.isNotEmpty()) {
+            values.put(WorkoutSummaries.DISTANCE_STREAM, NumericalEncodingUtils.encodeDoubles(sampledDistances))
         }
 
         // --- ATT-352: Persist spatial bounds for zero-latency periods framing ---

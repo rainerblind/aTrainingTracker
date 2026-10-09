@@ -29,9 +29,9 @@ import java.io.File
  *    preserving intrinsic slope gradient colors (REQ-UI-299 / ATT-2510).
  * 2. Dedicated category-colored horizontal climb span bars along the X-axis baseline.
  * 3. Proper distance coordinate bounds mapping and clipping.
- * 4. Exclusion of [com.atrainingtracker.trainingtracker.climbs.ClimbCategory.UNCATEGORIZED] climbs.
+ * 4. Full inclusion of all climbs, including [com.atrainingtracker.trainingtracker.climbs.ClimbCategory.UNCATEGORIZED] climbs (REQ-UI-307).
  * 5. Retention of summit category pins and badges.
- * (TST-UI-259)
+ * (TST-UI-259, TST-UI-267)
  */
 class ElevationProfileClimbSpanContractTest {
 
@@ -74,10 +74,10 @@ class ElevationProfileClimbSpanContractTest {
         assertTrue("ElevationProfile.kt must exist", elevationProfileFile.exists())
         val content = elevationProfileFile.readText()
 
-        // 1. Must contain REQ-UI-299 climb span comment
+        // 1. Must contain REQ-UI-299 / REQ-UI-307 climb span comment
         assertTrue(
-            "ElevationProfile must contain REQ-UI-299 X-axis climb span reference",
-            content.contains("Render horizontal climb span indicators along the X-axis baseline (REQ-UI-299)")
+            "ElevationProfile must contain REQ-UI-299 / REQ-UI-307 X-axis climb span reference",
+            content.contains("Render horizontal climb span indicators along the X-axis baseline (REQ-UI-299, REQ-UI-307)")
         )
 
         // 2. Baseline Y coordinate must be inset to avoid bottom boundary clipping
@@ -86,10 +86,14 @@ class ElevationProfileClimbSpanContractTest {
             content.contains("val baselineY = height - 2.dp.toPx()")
         )
 
-        // 3. Must filter out UNCATEGORIZED climbs
-        assertTrue(
-            "ElevationProfile must filter out UNCATEGORIZED climbs",
+        // 3. Must include all recognized climbs including UNCATEGORIZED (REQ-UI-307)
+        assertFalse(
+            "ElevationProfile must not filter out UNCATEGORIZED climbs (REQ-UI-307)",
             content.contains("climbs.filter { it.category != ClimbCategory.UNCATEGORIZED }")
+        )
+        assertTrue(
+            "ElevationProfile must iterate over all climbs on baseline",
+            content.contains("climbs.forEach { climb ->")
         )
 
         // 4. Must map start and end distance via ElevationProfileZoomMath.distanceToCanvasX

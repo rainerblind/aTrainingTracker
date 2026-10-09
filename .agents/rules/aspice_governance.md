@@ -115,6 +115,7 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * **Rule**: Parent tickets MUST ONLY receive a `Lösungsversion` (Fix Version/s, e.g. `V4.9.39`) when they are **FINISHED** (accepted during Joint Review / transitioned to `Erledigt` or ready for release), NEVER when work is started, created, or in progress (`"Add version when ticket is finished, not when started."`).
 * Setting Fix Version prematurely distorts sprint metrics, pollutes release changelogs, and creates stale version tags if a ticket is rejected, postponed, or shifted across sprints.
 * Sub-tasks must NEVER receive a `Lösungsversion` (Rule 7). For parent tickets, `fixVersions` must remain unset until final acceptance and completion.
+* **Emergency Hotfix Version Isolation**: When a sprint includes an emergency production crash hotfix (e.g. `V4.9.38.4`), that patch version is reserved exclusively for the hotfix ticket(s). All non-hotfix features, refactorings, and improvements developed in the sprint must be tagged with the upcoming minor release (e.g. `V4.9.39`). Never batch non-crash features into an emergency crash hotfix version.
 
 ## 20. Database & DTO Mapping Symmetry
 * **Rule**: When adding or altering entity/database fields, all mapping pathways (single-item `fromCursor`, batch `fromCursor(cursor, batch)`, and repository cache updaters) MUST map the fields symmetrically. Relying on default constructor arguments without explicitly mapping in all cursor overloads is prohibited, and must be guarded by architectural contract tests.

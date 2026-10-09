@@ -48,13 +48,13 @@ class SensorGridScreenRouteIntegrationTest {
     }
 
     @Test
-    fun testSensorGridScreen_declaresRouteSelectorViewModelParameter() {
+    fun testSensorGridScreen_doesNotDeclareRouteSelectorViewModelParameter() {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        assertTrue(
-            "SensorGridScreen must declare optional routeSelectorViewModel parameter",
-            content.contains("routeSelectorViewModel: RouteSelectorViewModel? = null")
+        org.junit.Assert.assertFalse(
+            "SensorGridScreen must not declare routeSelectorViewModel parameter (REQ-UI-311)",
+            content.contains("routeSelectorViewModel")
         )
     }
 
@@ -74,20 +74,20 @@ class SensorGridScreenRouteIntegrationTest {
     }
 
     @Test
-    fun testSensorGridScreen_integratesAutoDetectedRouteBanner() {
+    fun testSensorGridScreen_doesNotIntegrateAutoDetectedRouteBanner() {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        assertTrue(
-            "SensorGridScreen must host AutoDetectedRouteBanner",
+        org.junit.Assert.assertFalse(
+            "SensorGridScreen must not host AutoDetectedRouteBanner (REQ-UI-311)",
             content.contains("AutoDetectedRouteBanner(")
         )
-        assertTrue(
-            "AutoDetectedRouteBanner must hook into activateCandidate",
+        org.junit.Assert.assertFalse(
+            "SensorGridScreen must not hook into activateCandidate",
             content.contains("activateCandidate")
         )
-        assertTrue(
-            "AutoDetectedRouteBanner must hook into dismissCandidate",
+        org.junit.Assert.assertFalse(
+            "SensorGridScreen must not hook into dismissCandidate",
             content.contains("dismissCandidate")
         )
     }
@@ -110,13 +110,13 @@ class SensorGridScreenRouteIntegrationTest {
     }
 
     @Test
-    fun testSensorGridScreen_forwardsLocationUpdatesToRouteSelectorViewModel() {
+    fun testSensorGridScreen_doesNotForwardLocationUpdatesToRouteSelectorViewModel() {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        assertTrue(
-            "SensorGridScreen must observe currentLocationFlow and dispatch to onLocationChanged",
-            content.contains("onLocationChanged(location)")
+        org.junit.Assert.assertFalse(
+            "SensorGridScreen must not dispatch location updates to RouteSelectorViewModel (REQ-UI-311)",
+            content.contains("actualRouteSelectorViewModel.onLocationChanged")
         )
     }
 

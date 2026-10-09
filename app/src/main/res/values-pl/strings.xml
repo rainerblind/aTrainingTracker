@@ -1384,6 +1384,8 @@
     <string name="tuning_telemetry_x_axis_desc">Wybierz domenę osi poziomej dla wykresów telemetrycznych (tętno, tempo/prędkość, moc).</string>
     <string name="tuning_pace_ceiling_title">Górny limit tempa</string>
     <string name="tuning_pace_ceiling_desc">Filtruje anomalie GPS na wykresie tempa. Wartości szybsze niż ten limit są obcinane.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Wygładzanie profilu wysokości (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Przestrzenny promień filtra Gaussa w metrach. Niższe wartości (np. 15–21 m) dają ostrzejszą reakcję na krótkich podjazdach; wyższe eliminują schodkowanie czujnika.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
     <string name="tuning_cat_cockpit_typography">Kokpit i kafelki</string>
@@ -1547,10 +1549,6 @@
     <string name="route_action_stop">Zakończ trasę</string>
     <string name="route_action_clear">Wyczyść trasę</string>
     <string name="route_metrics_format">%1$s • %2$s</string>
-    <string name="route_auto_detect_title">Wykrywanie trasy</string>
-    <string name="route_auto_detect_prompt">Czy podążasz trasą \'%1$s\'?</string>
-    <string name="route_auto_detect_activate">Aktywuj</string>
-    <string name="route_auto_detect_dismiss">Odrzuć</string>
     <string name="route_filter_near">W pobliżu</string>
     <string name="route_filter_recent">Niedawno przejechane</string>
     <string name="route_filter_length">Długość</string>
@@ -1624,6 +1622,14 @@
     <string name="routes_segments_tab_title">Segmenty (%d)</string>
     <string name="routes_segment_start_at">Start na %s</string>
     <string name="routes_segment_pr">PR %s</string>
+    <string name="routes_segment_counter">Segment %1$d z %2$d</string>
+    <string name="route_layers">Warstwy trasy</string>
+    <string name="route_layer_climbs">Podjazdy</string>
+    <string name="route_layer_segments">Segmenty</string>
+    <string name="route_layer_waypoints">Punkty trasy</string>
+    <string name="route_item_hide">Ukryj</string>
+    <string name="route_item_show">Pokaż</string>
+    <string name="segment_routes_containing_title">Trasy z tym segmentem (%d)</string>
     <string name="tuning_show_live_climbs_title">Podjazdy na żywo (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Pokazuj kokpit podjazdu w czasie rzeczywistym na trasach i podczas swobodnej jazdy</string>
 
@@ -1692,7 +1698,6 @@
     <string name="ant_status_card_desc">Czujniki ANT+ na nowoczesnych smartfonach wymagają adaptera USB-OTG z odbiornikiem ANT+ USB i usług systemowych ANT+.</string>
     <string name="ant_status_card_action">Sprawdź status</string>
     <string name="ant_status_usb_dongle_note">Nowoczesne smartfony nie posiadają wbudowanych chipów ANT+. Do odbioru wymagany jest zewnętrzny adapter USB-OTG z odbiornikiem ANT+ USB.</string>
-    <string name="ant_status_ble_alternative_note">Wskazówka: Czujniki Bluetooth LE działają bezpośrednio bez dodatkowego sprzętu i usług systemowych.</string>
     <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
     <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
     <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>

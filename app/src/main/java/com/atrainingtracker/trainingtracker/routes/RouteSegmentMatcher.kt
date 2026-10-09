@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.routes
 
 import androidx.compose.runtime.Immutable
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import kotlinx.coroutines.CoroutineDispatcher
@@ -44,6 +45,20 @@ data class MatchedRouteSegment(
     val endDistanceMeters: Double,
     val startPathIndex: Int,
     val endPathIndex: Int
+)
+
+/**
+ * Encapsulates a candidate route that spatially and directionally contains a target segment (REQ-UI-305, ATT-2585).
+ *
+ * @property route The containing route with metadata and polyline.
+ * @property startDistanceMeters The accumulated route distance (in meters) where the segment begins.
+ * @property endDistanceMeters The accumulated route distance (in meters) where the segment ends.
+ */
+@Immutable
+data class SegmentMatchedRoute(
+    val route: RouteWithPath,
+    val startDistanceMeters: Double,
+    val endDistanceMeters: Double
 )
 
 /**
@@ -230,5 +245,51 @@ object RouteSegmentMatcher {
     private fun normalizeBearingDiff(b1: Double, b2: Double): Double {
         val diff = abs(b1 - b2)
         return if (diff > 180.0) 360.0 - diff else diff
+    }
+
+    /**
+     * Identifies which routes from [candidateRoutes] contain the target [segment] in the forward
+     * traversal direction within spatial and directional tolerances (REQ-UI-305, ATT-2585).
+     *
+     * Executes asynchronously on the specified [dispatcher] (default: [Dispatchers.Default]).
+     */
+    suspend fun findRoutesContainingSegment(
+        segment: SegmentWithPath,
+        candidateRoutes: List<RouteWithPath>,
+        dispatcher: CoroutineDispatcher = Dispatchers.Default
+    ): List<SegmentMatchedRoute> = withContext(dispatcher) {
+        findRoutesContainingSegmentPure(segment, candidateRoutes)
+    }
+
+    /**
+     * Pure functional evaluation of candidate routes containing the target segment.
+     */
+    fun findRoutesContainingSegmentPure(
+        segment: SegmentWithPath,
+        candidateRoutes: List<RouteWithPath>
+    ): List<SegmentMatchedRoute> {
+        if (segment.path.size < 2 || candidateRoutes.isEmpty()) return emptyList()
+
+        val matchedRoutes = mutableListOf<SegmentMatchedRoute>()
+
+        for (candidateRoute in candidateRoutes) {
+            val matches = matchSegmentsPure(
+                routePath = candidateRoute.path,
+                candidateSegments = listOf(segment),
+                routeSportType = candidateRoute.summary.bSportType
+            )
+            if (matches.isNotEmpty()) {
+                val match = matches.first()
+                matchedRoutes.add(
+                    SegmentMatchedRoute(
+                        route = candidateRoute,
+                        startDistanceMeters = match.startDistanceMeters,
+                        endDistanceMeters = match.endDistanceMeters
+                    )
+                )
+            }
+        }
+
+        return matchedRoutes
     }
 }
