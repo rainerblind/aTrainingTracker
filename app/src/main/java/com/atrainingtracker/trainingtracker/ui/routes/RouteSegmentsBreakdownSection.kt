@@ -20,6 +20,9 @@ package com.atrainingtracker.trainingtracker.ui.routes
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -40,11 +43,14 @@ import kotlin.math.roundToInt
 /**
  * Breakdown list of matched segments along a route displaying distance marker, length,
  * average grade, and athlete PR badge (REQ-UI-302, TST-UI-262, ATT-2583).
+ * Now supports item-level visibility toggling on the route map (REQ-UI-308, ATT-2763).
  */
 @Composable
 fun RouteSegmentsBreakdownSection(
     segments: List<MatchedRouteSegment>,
     modifier: Modifier = Modifier,
+    hiddenSegmentIds: Set<Long> = emptySet(),
+    onToggleSegmentVisibility: ((Long) -> Unit)? = null,
     onSegmentClick: ((MatchedRouteSegment) -> Unit)? = null
 ) {
     val formatters = LocalMetricFormatter.current
@@ -79,7 +85,7 @@ fun RouteSegmentsBreakdownSection(
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // Top Row: Sport icon, Category chip (if any), Segment name, and PR badge
+                    // Top Row: Sport icon, Category chip (if any), Segment name, PR badge, and Visibility Toggle
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -110,28 +116,48 @@ fun RouteSegmentsBreakdownSection(
                             )
                         }
 
-                        if (summary.prTime.isNotBlank() && summary.prTime != "--:--") {
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                modifier = Modifier.padding(start = 8.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (summary.prTime.isNotBlank() && summary.prTime != "--:--") {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    modifier = Modifier.padding(start = 4.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_pr_time),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.routes_segment_pr, summary.prTime),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (onToggleSegmentVisibility != null) {
+                                val isHidden = summary.stravaId in hiddenSegmentIds
+                                IconButton(
+                                    onClick = { onToggleSegmentVisibility(summary.stravaId) },
+                                    modifier = Modifier.size(36.dp)
                                 ) {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.ic_pr_time),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(14.dp),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.routes_segment_pr, summary.prTime),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        imageVector = if (isHidden) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = stringResource(if (isHidden) R.string.route_item_show else R.string.route_item_hide),
+                                        tint = if (isHidden) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }

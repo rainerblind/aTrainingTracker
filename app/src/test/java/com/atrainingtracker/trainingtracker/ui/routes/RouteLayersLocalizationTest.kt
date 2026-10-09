@@ -26,23 +26,24 @@ import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * TST-UI-262.3: 9-Language Localization Audit verifying all route segments strings
- * exist, are non-empty, and preserve format specifiers across all supported locales (REQ-UI-302, ATT-2583).
+ * TST-UI-264.4: 9-Language Localization Audit verifying all route layer toggle strings
+ * exist and are non-empty across all supported locales (REQ-UI-304, ATT-2775).
  */
-class RouteSegmentsLocalizationTest {
+class RouteLayersLocalizationTest {
 
     private val locales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
 
     private val expectedKeys = listOf(
-        "routes_segments_section_title",
-        "routes_segments_tab_title",
-        "routes_segment_start_at",
-        "routes_segment_pr",
-        "routes_segment_counter"
+        "route_layers",
+        "route_layer_climbs",
+        "route_layer_segments",
+        "route_layer_waypoints",
+        "route_item_hide",
+        "route_item_show"
     )
 
     @Test
-    fun testRouteSegmentsStringsParityAcrossAll9Locales() {
+    fun testRouteLayersStringsParityAcrossAll9Locales() {
         val resDir = findResDirectory()
 
         for (locale in locales) {
@@ -61,23 +62,6 @@ class RouteSegmentsLocalizationTest {
                     stringMap[key].isNullOrBlank()
                 )
             }
-
-            // Verify format specifiers
-            val sectionTitle = stringMap["routes_segments_section_title"]!!
-            assertTrue("routes_segments_section_title in $dirName must contain %d", sectionTitle.contains("%d"))
-
-            val tabTitle = stringMap["routes_segments_tab_title"]!!
-            assertTrue("routes_segments_tab_title in $dirName must contain %d", tabTitle.contains("%d"))
-
-            val startAt = stringMap["routes_segment_start_at"]!!
-            assertTrue("routes_segment_start_at in $dirName must contain %s", startAt.contains("%s"))
-
-            val pr = stringMap["routes_segment_pr"]!!
-            assertTrue("routes_segment_pr in $dirName must contain %s", pr.contains("%s"))
-
-            val counter = stringMap["routes_segment_counter"]!!
-            assertTrue("routes_segment_counter in $dirName must contain %1${'$'}d", counter.contains("%1${'$'}d"))
-            assertTrue("routes_segment_counter in $dirName must contain %2${'$'}d", counter.contains("%2${'$'}d"))
         }
     }
 

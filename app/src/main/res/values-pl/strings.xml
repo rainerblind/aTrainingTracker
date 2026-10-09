@@ -1627,6 +1627,12 @@
     <string name="routes_segment_start_at">Start na %s</string>
     <string name="routes_segment_pr">PR %s</string>
     <string name="routes_segment_counter">Segment %1$d z %2$d</string>
+    <string name="route_layers">Warstwy trasy</string>
+    <string name="route_layer_climbs">Podjazdy</string>
+    <string name="route_layer_segments">Segmenty</string>
+    <string name="route_layer_waypoints">Punkty trasy</string>
+    <string name="route_item_hide">Ukryj</string>
+    <string name="route_item_show">Pokaż</string>
     <string name="segment_routes_containing_title">Trasy z tym segmentem (%d)</string>
     <string name="tuning_show_live_climbs_title">Podjazdy na żywo (ClimbPro)</string>
     <string name="tuning_show_live_climbs_summary">Pokazuj kokpit podjazdu w czasie rzeczywistym na trasach i podczas swobodnej jazdy</string>
