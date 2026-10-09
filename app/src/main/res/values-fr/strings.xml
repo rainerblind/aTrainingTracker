@@ -1717,4 +1717,17 @@
     <string name="map_layer_track">Trace enregistrée</string>
     <string name="ant_dialog_view_status">Afficher l\'état ANT+</string>
     <string name="ant_dialog_dismiss">Compris</string>
+
+    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
+    <string name="tuning_map_camera_section_title">Caméra de carte et navigation suivi</string>
+    <string name="tuning_map_base_zoom_title">Zoom de base suivi</string>
+    <string name="tuning_map_base_zoom_desc">Niveau de zoom de base à l\'arrêt (0 km/h) en mode suivi</string>
+    <string name="tuning_map_speed_zoom_enabled_title">Zoom dépendant de la vitesse</string>
+    <string name="tuning_map_speed_zoom_enabled_desc">Effectue un zoom arrière progressif avec la vitesse pour élargir la visibilité vers l\'avant</string>
+    <string name="tuning_map_cruising_zoom_title">Zoom à vitesse de croisière (à 20 km/h)</string>
+    <string name="tuning_map_cruising_zoom_desc">Niveau de zoom de la caméra mis à l\'échelle à vitesse cycliste typique (20 km/h)</string>
+    <string name="tuning_map_tilt_angle_title">Angle d\'inclinaison de la caméra</string>
+    <string name="tuning_map_tilt_angle_desc">Angle d\'inclinaison de perspective pour navigation 3D (0° est 2D plat, 70° est perspective 3D complète)</string>
+    <string name="tuning_map_lookahead_padding_title">Marge inférieure pour visibilité vers l\'avant</string>
+    <string name="tuning_map_lookahead_padding_desc">Pourcentage de marge inférieure pour positionner le cycliste en bas et maximiser la route visible devant</string>
 </resources>

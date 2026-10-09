@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.map
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.*
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -182,7 +183,28 @@ fun MapBoundsController(
 }
 
 /**
- * Manages the "Follow Me" camera behavior with smoothed bearing and tilt.
+ * Calculates the target camera zoom level for Follow-Me tracking mode based on speed and tuning preferences (REQ-MAP-042).
+ * Converts speed from m/s to km/h and scales linearly between [baseZoom] at 0 km/h and [cruisingZoom] at 20 km/h.
+ * When [speedZoomEnabled] is false, locks the camera firmly to [baseZoom].
+ */
+fun calculateFollowMeTargetZoom(
+    speedMps: Float,
+    baseZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
+    speedZoomEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+    cruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
+    minZoom: Float = 12.0f,
+    maxZoom: Float = 21.0f
+): Float {
+    if (!speedZoomEnabled) {
+        return baseZoom.coerceIn(minZoom, maxZoom)
+    }
+    val speedKmh = (speedMps * 3.6f).coerceAtLeast(0.0f)
+    val zoomSlope = (baseZoom - cruisingZoom) / 20.0f
+    return (baseZoom - zoomSlope * speedKmh).coerceIn(minZoom, maxZoom)
+}
+
+/**
+ * Manages the "Follow Me" camera behavior with smoothed bearing, speed-dependent zoom, and tilt (REQ-MAP-042).
  * Returns the smoothed bearing for use in the user location marker.
  */
 @Composable
@@ -191,7 +213,11 @@ fun followMeController(
     bearing: Float,
     speed: Float,
     currentLocation: LatLng?,
-    cameraPositionState: CameraPositionState
+    cameraPositionState: CameraPositionState,
+    baseZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
+    speedZoomEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+    cruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
+    tiltAngle: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE
 ): Float {
     var filteredBearing by remember { mutableFloatStateOf(bearing) }
 
@@ -201,7 +227,7 @@ fun followMeController(
         }
     }
 
-    LaunchedEffect(currentLocation, bearing, speed) {
+    LaunchedEffect(currentLocation, bearing, speed, baseZoom, speedZoomEnabled, cruisingZoom, tiltAngle) {
         if (zoomFocus == MapZoomFocus.FOLLOW_ME && currentLocation != null) {
             val alpha = 0.15f
             var diff = bearing - filteredBearing
@@ -211,7 +237,13 @@ fun followMeController(
             filteredBearing += alpha * diff
             filteredBearing = (filteredBearing + 360f) % 360f
 
-            val targetZoom = (20f - 0.1f * speed).coerceIn(14f, 20f)
+            val targetZoom = calculateFollowMeTargetZoom(
+                speedMps = speed,
+                baseZoom = baseZoom,
+                speedZoomEnabled = speedZoomEnabled,
+                cruisingZoom = cruisingZoom
+            )
+            val effectiveTilt = tiltAngle.coerceIn(0f, 70f)
             try {
                 cameraPositionState.animate(
                     CameraUpdateFactory.newCameraPosition(
@@ -219,7 +251,7 @@ fun followMeController(
                             .target(currentLocation)
                             .bearing(filteredBearing)
                             .zoom(targetZoom)
-                            .tilt(70f)
+                            .tilt(effectiveTilt)
                             .build()
                     ),
                     400

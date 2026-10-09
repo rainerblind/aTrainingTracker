@@ -1718,4 +1718,17 @@
     <string name="map_layer_track">Zarejestrowany ślad</string>
     <string name="ant_dialog_view_status">Pokaż status ANT+</string>
     <string name="ant_dialog_dismiss">Rozumiem</string>
+
+    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
+    <string name="tuning_map_camera_section_title">Kamera mapy i nawigacja śledzenia</string>
+    <string name="tuning_map_base_zoom_title">Podstawowe przybliżenie śledzenia</string>
+    <string name="tuning_map_base_zoom_desc">Podstawowy poziom przybliżenia kamery podczas postoju (0 km/h) w trybie śledzenia</string>
+    <string name="tuning_map_speed_zoom_enabled_title">Przybliżenie zależne od prędkości</string>
+    <string name="tuning_map_speed_zoom_enabled_desc">Stopniowo oddala widok wraz ze wzrostem prędkości, aby poszerzyć pole widzenia trasy z przodu</string>
+    <string name="tuning_map_cruising_zoom_title">Przybliżenie przy prędkości przelotowej (przy 20 km/h)</string>
+    <string name="tuning_map_cruising_zoom_desc">Poziom przybliżenia kamery dopasowany do typowej prędkości jazdy na rowerze (20 km/h)</string>
+    <string name="tuning_map_tilt_angle_title">Kąt nachylenia kamery</string>
+    <string name="tuning_map_tilt_angle_desc">Kąt nachylenia perspektywy dla nawigacji 3D (0° to płaskie 2D, 70° to pełna perspektywa 3D)</string>
+    <string name="tuning_map_lookahead_padding_title">Dolny odstęp dla podglądu drogi przed rowerzystą</string>
+    <string name="tuning_map_lookahead_padding_desc">Procentowy dolny margines widoku, aby umieścić rowerzystę w dolnej części i zmaksymalizować widoczność drogi z przodu</string>
 </resources>

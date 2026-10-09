@@ -1696,4 +1696,17 @@
     <string name="map_layer_track">記録トラック</string>
     <string name="ant_dialog_view_status">ANT+ ステータスを表示</string>
     <string name="ant_dialog_dismiss">了解</string>
+
+    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
+    <string name="tuning_map_camera_section_title">マップカメラと追従ナビゲーション</string>
+    <string name="tuning_map_base_zoom_title">追従ベースズーム</string>
+    <string name="tuning_map_base_zoom_desc">追従トラッキングモードでの停止時（0 km/h）のベースズームレベル</string>
+    <string name="tuning_map_speed_zoom_enabled_title">速度依存ズーム</string>
+    <string name="tuning_map_speed_zoom_enabled_desc">走行速度が上がると段階的にズームアウトし、進行方向の見通しを広げます</string>
+    <string name="tuning_map_cruising_zoom_title">巡航速度ズーム（20 km/h時）</string>
+    <string name="tuning_map_cruising_zoom_desc">一般的なサイクリング速度（20 km/h）に合わせたカメラズームレベル</string>
+    <string name="tuning_map_tilt_angle_title">カメラ傾斜角度</string>
+    <string name="tuning_map_tilt_angle_desc">3Dナビゲーションの視点傾斜角度（0°はフラットな2D、70°は完全な3Dパースペクティブ）</string>
+    <string name="tuning_map_lookahead_padding_title">前方見通し用の下部パディング</string>
+    <string name="tuning_map_lookahead_padding_desc">ライダーの位置を下部に配置し、前方の道路を最大限に見えるようにする下部ビューポートパディング率</string>
 </resources>
