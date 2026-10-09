@@ -43,6 +43,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 
 /**
  * Modern Material 3 Bottom Sheet detailing ANT+ system services, hardware prerequisites
@@ -87,7 +88,7 @@ fun AntServicesStatusSheet(
     AppModalBottomSheet(
         title = stringResource(R.string.ant_status_sheet_title),
         onDismissRequest = onDismiss,
-        iconPainter = painterResource(id = R.drawable.ant_logo),
+        iconPainter = safePainterResource(id = R.drawable.ant_logo),
         iconTint = Color.Unspecified,
         modifier = modifier
     ) {
