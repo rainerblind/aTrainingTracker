@@ -32,6 +32,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
@@ -87,6 +88,7 @@ fun AntServicesStatusSheet(
         title = stringResource(R.string.ant_status_sheet_title),
         onDismissRequest = onDismiss,
         iconPainter = painterResource(id = R.drawable.ant_logo),
+        iconTint = Color.Unspecified,
         modifier = modifier
     ) {
         Column(
@@ -162,32 +164,6 @@ fun AntServicesStatusSheet(
                 )
             }
 
-            // BLE Alternative Note
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.logo_protocol_bluetooth),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Text(
-                        text = stringResource(R.string.ant_status_ble_alternative_note),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
