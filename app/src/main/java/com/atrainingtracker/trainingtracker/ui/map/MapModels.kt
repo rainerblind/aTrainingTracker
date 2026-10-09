@@ -93,7 +93,11 @@ data class MapStyle(
     val routeGapLength: Float = 15f,
     val segmentWidth: Float = 10f,
     val segmentZIndex: Float = 30f,
+    val segmentDashLength: Float = 20f,
+    val segmentGapLength: Float = 15f,
     val segmentUnselectedAlpha: Float = 0.3f,
+    val climbWidth: Float = 10f,
+    val climbZIndex: Float = 28f,
     val isDark: Boolean = false
 )
 
@@ -122,7 +126,11 @@ object MapVisualization {
     const val ROUTE_GAP_LENGTH = 15f
     const val SEGMENT_WIDTH = 10f
     const val SEGMENT_Z_INDEX = 30.0f
+    const val SEGMENT_DASH_LENGTH = 20f
+    const val SEGMENT_GAP_LENGTH = 15f
     const val SEGMENT_UNSELECTED_ALPHA = TTAlpha.Disabled
+    const val CLIMB_WIDTH = 10f
+    const val CLIMB_Z_INDEX = 28.0f
 }
 
 
@@ -218,6 +226,7 @@ data class MapSegment(
     override val maxLat: Double? = null,
     override val maxLng: Double? = null,
     val showStartAndFinishText: Boolean = true,
+    val isDashed: Boolean = false,
     override val onClick: ((Long) -> Unit)? = null
 ) : MappablePath {
     override val id: Long get() = stravaId
@@ -226,7 +235,13 @@ data class MapSegment(
     override val width: Float get() = MapVisualization.SEGMENT_WIDTH
     override val zIndex: Float get() = MapVisualization.SEGMENT_Z_INDEX
     override val overlayZIndex: Float? get() = null
-    override val pattern: List<com.google.android.gms.maps.model.PatternItem>? get() = null
+    override val pattern: List<com.google.android.gms.maps.model.PatternItem>?
+        get() = if (isDashed) {
+            listOf(
+                com.google.android.gms.maps.model.Dash(MapVisualization.SEGMENT_DASH_LENGTH),
+                com.google.android.gms.maps.model.Gap(MapVisualization.SEGMENT_GAP_LENGTH)
+            )
+        } else null
 }
 
 @Immutable
@@ -315,7 +330,10 @@ fun RouteWithPath.toMapRoute(isActiveNavigation: Boolean = false): MapRoute {
  * Extension function to convert a Database Segment (SegmentWithPath)
  * into a Map-ready Segment (MapSegment).
  */
-fun SegmentWithPath.toMapSegment(showStartAndFinishText: Boolean = true): MapSegment {
+fun SegmentWithPath.toMapSegment(
+    showStartAndFinishText: Boolean = true,
+    isDashed: Boolean = false
+): MapSegment {
     return MapSegment(
         stravaId = this.summary.stravaId,
         name = this.summary.name,
@@ -325,7 +343,8 @@ fun SegmentWithPath.toMapSegment(showStartAndFinishText: Boolean = true): MapSeg
         minLng = this.summary.minLng,
         maxLat = this.summary.maxLat,
         maxLng = this.summary.maxLng,
-        showStartAndFinishText = showStartAndFinishText
+        showStartAndFinishText = showStartAndFinishText,
+        isDashed = isDashed
     )
 }
 
