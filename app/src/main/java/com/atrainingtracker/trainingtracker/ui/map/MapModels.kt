@@ -80,10 +80,10 @@ data class MapStyle(
     val trackDotGap: Float = 15f,
     val routeWidth: Float = 10f,
     val routeBaseZIndex: Float = 20f,
-    val routeOverlayZIndex: Float = 40f,
+    val routeOverlayZIndex: Float = 22f,
     val routeActiveNavigationWidth: Float = 16f,
-    val routeActiveBaseZIndex: Float = 25f,
-    val routeActiveOverlayZIndex: Float = 45f,
+    val routeActiveBaseZIndex: Float = 24f,
+    val routeActiveOverlayZIndex: Float = 26f,
     val routeActiveDashLength: Float = 30f,
     val routeActiveGapLength: Float = 15f,
     val routeUnselectedZIndex: Float = 5f,
@@ -112,10 +112,10 @@ object MapVisualization {
     const val TRACK_DOT_GAP = 15f
     const val ROUTE_WIDTH = 10f
     const val ROUTE_BASE_Z_INDEX = 20.0f
-    const val ROUTE_OVERLAY_Z_INDEX = 40.0f
+    const val ROUTE_OVERLAY_Z_INDEX = 22.0f
     const val ROUTE_ACTIVE_NAVIGATION_WIDTH = 16f
-    const val ROUTE_ACTIVE_BASE_Z_INDEX = 25.0f
-    const val ROUTE_ACTIVE_OVERLAY_Z_INDEX = 45.0f
+    const val ROUTE_ACTIVE_BASE_Z_INDEX = 24.0f
+    const val ROUTE_ACTIVE_OVERLAY_Z_INDEX = 26.0f
     const val ROUTE_ACTIVE_DASH_LENGTH = 30f
     const val ROUTE_ACTIVE_GAP_LENGTH = 15f
     const val ROUTE_ACTIVE_OVERLAY_WIDTH = 8f

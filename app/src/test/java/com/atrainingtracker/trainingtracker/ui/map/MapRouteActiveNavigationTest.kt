@@ -64,9 +64,9 @@ class MapRouteActiveNavigationTest {
         assertEquals(MapVisualization.ROUTE_ACTIVE_NAVIGATION_WIDTH, activeRoute.width, 0.001f)
         assertEquals(16f, activeRoute.width, 0.001f)
         assertEquals(MapVisualization.ROUTE_ACTIVE_BASE_Z_INDEX, activeRoute.zIndex, 0.001f)
-        assertEquals(25.0f, activeRoute.zIndex, 0.001f)
+        assertEquals(24.0f, activeRoute.zIndex, 0.001f)
         assertEquals(MapVisualization.ROUTE_ACTIVE_OVERLAY_Z_INDEX, activeRoute.overlayZIndex, 0.001f)
-        assertEquals(45.0f, activeRoute.overlayZIndex, 0.001f)
+        assertEquals(26.0f, activeRoute.overlayZIndex, 0.001f)
         assertEquals(TTColor.RouteActiveNavigationOverlay, activeRoute.overlayColor)
         assertEquals(Color(0xFF0D47A1), activeRoute.overlayColor)
         assertEquals(MapVisualization.ROUTE_ACTIVE_OVERLAY_WIDTH, activeRoute.overlayWidth, 0.001f)
@@ -93,7 +93,7 @@ class MapRouteActiveNavigationTest {
         assertEquals(MapVisualization.ROUTE_BASE_Z_INDEX, passiveRoute.zIndex, 0.001f)
         assertEquals(20.0f, passiveRoute.zIndex, 0.001f)
         assertEquals(MapVisualization.ROUTE_OVERLAY_Z_INDEX, passiveRoute.overlayZIndex, 0.001f)
-        assertEquals(40.0f, passiveRoute.overlayZIndex, 0.001f)
+        assertEquals(22.0f, passiveRoute.overlayZIndex, 0.001f)
         assertEquals(passiveRoute.color, passiveRoute.overlayColor)
         assertEquals(passiveRoute.width, passiveRoute.overlayWidth, 0.001f)
     }
@@ -115,33 +115,38 @@ class MapRouteActiveNavigationTest {
     fun testXRayPolylineHierarchy_preservesSegmentInterleavingInvariants() {
         val passiveRoute = createRoute(isSelected = true, isActiveNavigation = false)
         val activeRoute = createRoute(isSelected = true, isActiveNavigation = true)
+        val climbZIndex = MapVisualization.CLIMB_Z_INDEX
         val segmentZIndex = MapVisualization.SEGMENT_Z_INDEX
         val userLocationZIndex = MapVisualization.USER_LOCATION_Z_INDEX
 
-        // Layer 1: Passive base (20f) < Active base (25f) < Strava Live Segment (30f)
+        // Layer 1: Passive base (20f) < Passive overlay (22f) < Active base (24f) < Active overlay (26f)
         assertTrue(
-            "Passive route base must be below active route base",
-            passiveRoute.zIndex < activeRoute.zIndex
+            "Passive route base must be below passive route overlay",
+            passiveRoute.zIndex < passiveRoute.overlayZIndex
         )
         assertTrue(
-            "Active route base must be below Strava Live Segment",
-            activeRoute.zIndex < segmentZIndex
+            "Passive route overlay must be below active route base",
+            passiveRoute.overlayZIndex < activeRoute.zIndex
+        )
+        assertTrue(
+            "Active route base must be below active route overlay",
+            activeRoute.zIndex < activeRoute.overlayZIndex
         )
 
-        // Layer 2: Strava Live Segment (30f) < Passive overlay (40f) < Active overlay (45f)
+        // Layer 2: All route layers below Climb (28f) and Segment (30f)
         assertTrue(
-            "Strava segment must be below passive overlay",
-            segmentZIndex < passiveRoute.overlayZIndex
+            "Active route overlay must be below Climb overlay",
+            activeRoute.overlayZIndex < climbZIndex
         )
         assertTrue(
-            "Passive overlay must be below active overlay",
-            passiveRoute.overlayZIndex < activeRoute.overlayZIndex
+            "Climb overlay must be below Strava Live Segment",
+            climbZIndex < segmentZIndex
         )
 
         // Layer 3: GPS user location puck (100f) above all layers
         assertTrue(
-            "User location must be above active route overlay",
-            activeRoute.overlayZIndex < userLocationZIndex
+            "User location must be above segment overlay",
+            segmentZIndex < userLocationZIndex
         )
     }
 
