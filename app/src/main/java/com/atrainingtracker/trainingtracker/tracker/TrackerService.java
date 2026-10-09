@@ -546,10 +546,9 @@ public class TrackerService extends Service {
         }
     }
 
-    protected void showTrackingInterruptedNotification() {
-        Context context = getApplicationContext();
+    public static void showTrackingInterruptedNotification(Context context) {
         if (context == null) {
-            context = this;
+            return;
         }
         Intent resumeIntent = new Intent(context, MainActivityWithNavigation.class);
         resumeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
@@ -564,8 +563,8 @@ public class TrackerService extends Service {
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, TrainingApplication.NOTIFICATION_CHANNEL__TRACKING_2)
                 .setSmallIcon(R.drawable.logo)
-                .setContentTitle(getString(R.string.tracking_interrupted_notification_title))
-                .setContentText(getString(R.string.tracking_interrupted_notification_text))
+                .setContentTitle(context.getString(R.string.tracking_interrupted_notification_title))
+                .setContentText(context.getString(R.string.tracking_interrupted_notification_text))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);
@@ -579,6 +578,10 @@ public class TrackerService extends Service {
         } catch (Exception e) {
             Log.e(TAG, "Failed to show tracking interrupted notification: " + e.getMessage(), e);
         }
+    }
+
+    protected void showTrackingInterruptedNotification() {
+        showTrackingInterruptedNotification(this);
     }
 
     public boolean isTrackingInterrupted() {

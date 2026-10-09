@@ -28,6 +28,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,13 +40,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
+
+private data class SportItemSpec(
+    val sport: BSportType,
+    val iconRes: Int,
+    val fallbackVector: ImageVector,
+    val labelRes: Int
+)
 
 @Composable
 fun SportTypeSelector(
@@ -50,11 +62,11 @@ fun SportTypeSelector(
     onSportSelected: (BSportType) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Parity with your current implementation's drawables and strings
+    // Parity with your current implementation's drawables, strings, and defensive fallback vectors
     val sports = listOf(
-        Triple(BSportType.RUN, R.drawable.bsport_run, R.string.sport_type_run),
-        Triple(BSportType.BIKE, R.drawable.bsport_bike, R.string.sport_type_bike),
-        Triple(BSportType.UNKNOWN, R.drawable.bsport_other, R.string.sport_type_other)
+        SportItemSpec(BSportType.RUN, R.drawable.bsport_run, Icons.AutoMirrored.Filled.DirectionsRun, R.string.sport_type_run),
+        SportItemSpec(BSportType.BIKE, R.drawable.bsport_bike, Icons.AutoMirrored.Filled.DirectionsBike, R.string.sport_type_bike),
+        SportItemSpec(BSportType.UNKNOWN, R.drawable.bsport_other, Icons.Default.FitnessCenter, R.string.sport_type_other)
     )
 
     Row(
@@ -64,10 +76,11 @@ fun SportTypeSelector(
         horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        sports.forEach { (sport, iconRes, labelRes) ->
+        sports.forEach { (sport, iconRes, fallbackVector, labelRes) ->
             SportItem(
                 isSelected = currentSport == sport,
                 iconRes = iconRes,
+                fallbackVector = fallbackVector,
                 labelRes = labelRes,
                 onClick = { onSportSelected(sport) }
             )
@@ -79,6 +92,7 @@ fun SportTypeSelector(
 private fun SportItem(
     isSelected: Boolean,
     iconRes: Int,
+    fallbackVector: ImageVector,
     labelRes: Int,
     onClick: () -> Unit
 ) {
@@ -89,7 +103,7 @@ private fun SportItem(
             .padding(4.dp)
     ) {
         Icon(
-            painter = painterResource(id = iconRes),
+            painter = safePainterResource(id = iconRes, fallback = fallbackVector),
             contentDescription = null,
             tint = if (isSelected) Color.Unspecified else Color.Gray, // selected: No change, unselected: Muted Gray
             modifier = Modifier.size(48.dp)

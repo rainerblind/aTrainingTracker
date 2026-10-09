@@ -185,4 +185,150 @@ class AccessibilityNodeInfoCompatResilienceTest {
             assertFalse(isSensitive)
         }
     }
+
+    /**
+     * TST-UI-116.1 & TST-UI-116.2: Verifies that getActionScrollInDirection() does not throw
+     * NoSuchFieldError or LinkageError on runtime invocations (ATT-2767, REQ-UI-164).
+     */
+    @Test
+    fun testGetActionScrollInDirection_doesNotThrowLinkageError() {
+        val getActionMethod = api34Class.getDeclaredMethod("getActionScrollInDirection")
+            .apply { isAccessible = true }
+
+        // Must invoke cleanly without unhandled LinkageError
+        val result = getActionMethod.invoke(null)
+        // If field exists on platform, result is non-null; if absent/broken, null fallback is safely returned
+        if (result != null) {
+            assertTrue(result is AccessibilityNodeInfo.AccessibilityAction)
+        }
+    }
+
+    /**
+     * TST-UI-116.3: Verifies that getContainerTitle catches LinkageError / NoSuchMethodError
+     * and safely returns null while logging diagnostic warning.
+     */
+    @Test
+    fun testGetContainerTitle_whenPlatformThrowsNoSuchMethodError_returnsNullSafely() {
+        val getContainerTitleMethod = api34Class.getDeclaredMethod(
+            "getContainerTitle",
+            AccessibilityNodeInfo::class.java
+        ).apply { isAccessible = true }
+
+        val mockNode = mockk<AccessibilityNodeInfo>(relaxed = true)
+        every { mockNode.containerTitle } throws NoSuchMethodError("getContainerTitle")
+
+        val result = getContainerTitleMethod.invoke(null, mockNode)
+        org.junit.Assert.assertNull(result)
+
+        verify(atLeast = 1) {
+            Log.w(
+                "AccessibilityNodeInfoCompat",
+                match { it.contains("getContainerTitle missing on platform framework") },
+                any<LinkageError>()
+            )
+        }
+    }
+
+    /**
+     * TST-UI-116.3: Verifies that setContainerTitle catches LinkageError / NoSuchMethodError
+     * and suppresses cleanly while logging diagnostic warning.
+     */
+    @Test
+    fun testSetContainerTitle_whenPlatformThrowsNoSuchMethodError_isSuppressedCleanly() {
+        val setContainerTitleMethod = api34Class.getDeclaredMethod(
+            "setContainerTitle",
+            AccessibilityNodeInfo::class.java,
+            CharSequence::class.java
+        ).apply { isAccessible = true }
+
+        val mockNode = mockk<AccessibilityNodeInfo>(relaxed = true)
+        every { mockNode.containerTitle = any() } throws NoSuchMethodError("setContainerTitle")
+
+        setContainerTitleMethod.invoke(null, mockNode, "Title")
+
+        verify(atLeast = 1) {
+            Log.w(
+                "AccessibilityNodeInfoCompat",
+                match { it.contains("setContainerTitle missing on platform framework") },
+                any<LinkageError>()
+            )
+        }
+    }
+
+    /**
+     * TST-UI-116.3: Verifies that hasRequestInitialAccessibilityFocus catches LinkageError / NoSuchMethodError
+     * and returns false safely while logging diagnostic warning.
+     */
+    @Test
+    fun testHasRequestInitialAccessibilityFocus_whenPlatformThrowsNoSuchMethodError_returnsFalseSafely() {
+        val hasRequestMethod = api34Class.getDeclaredMethod(
+            "hasRequestInitialAccessibilityFocus",
+            AccessibilityNodeInfo::class.java
+        ).apply { isAccessible = true }
+
+        val mockNode = mockk<AccessibilityNodeInfo>(relaxed = true)
+        every { mockNode.hasRequestInitialAccessibilityFocus() } throws NoSuchMethodError("hasRequestInitialAccessibilityFocus")
+
+        val result = hasRequestMethod.invoke(null, mockNode) as Boolean
+        assertFalse(result)
+
+        verify(atLeast = 1) {
+            Log.w(
+                "AccessibilityNodeInfoCompat",
+                match { it.contains("hasRequestInitialAccessibilityFocus missing on platform framework") },
+                any<LinkageError>()
+            )
+        }
+    }
+
+    /**
+     * TST-UI-116.3: Verifies that getMinDurationBetweenContentChangeMillis catches LinkageError / NoSuchMethodError
+     * and returns 0L safely while logging diagnostic warning.
+     */
+    @Test
+    fun testGetMinDurationBetweenContentChangeMillis_whenPlatformThrowsNoSuchMethodError_returnsZeroSafely() {
+        val getMinDurationMethod = api34Class.getDeclaredMethod(
+            "getMinDurationBetweenContentChangeMillis",
+            AccessibilityNodeInfo::class.java
+        ).apply { isAccessible = true }
+
+        val mockNode = mockk<AccessibilityNodeInfo>(relaxed = true)
+        every { mockNode.minDurationBetweenContentChanges } throws NoSuchMethodError("minDurationBetweenContentChanges")
+
+        val result = getMinDurationMethod.invoke(null, mockNode) as Long
+        assertEquals(0L, result)
+
+        verify(atLeast = 1) {
+            Log.w(
+                "AccessibilityNodeInfoCompat",
+                match { it.contains("getMinDurationBetweenContentChanges missing on platform framework") },
+                any<LinkageError>()
+            )
+        }
+    }
+
+    /**
+     * TST-UI-116.4: Safety invariant verification: Fatal non-linkage JVM errors
+     * (e.g. OutOfMemoryError) must NOT be caught or swallowed by blanket shield methods.
+     */
+    @Test
+    fun testApi34Impl_blanketShieldDoesNotSwallowFatalOutOfMemoryError() {
+        val getContainerTitleMethod = api34Class.getDeclaredMethod(
+            "getContainerTitle",
+            AccessibilityNodeInfo::class.java
+        ).apply { isAccessible = true }
+
+        val mockNode = mockk<AccessibilityNodeInfo>(relaxed = true)
+        every { mockNode.containerTitle } throws OutOfMemoryError("Simulated OOM")
+
+        try {
+            getContainerTitleMethod.invoke(null, mockNode)
+            fail("Expected OutOfMemoryError to propagate without being caught")
+        } catch (e: InvocationTargetException) {
+            assertTrue(
+                "Target exception must be OutOfMemoryError",
+                e.targetException is OutOfMemoryError
+            )
+        }
+    }
 }
