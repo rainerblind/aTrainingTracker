@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.trainingtracker.ui.routes
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,12 +35,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -140,18 +141,6 @@ fun RouteSelectorContent(
             )
         }
 
-        // Active Route Banner
-        AnimatedVisibility(visible = uiState.activeRoute != null) {
-            uiState.activeRoute?.let { activeRoute ->
-                ActiveRouteBanner(
-                    route = activeRoute,
-                    onStopRoute = { viewModel.stopRoute() }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
         // Route List or Empty State
         if (uiState.routes.isEmpty()) {
             Box(
@@ -191,6 +180,9 @@ fun RouteSelectorContent(
                         onClick = {
                             viewModel.selectRoute(route.summary.id)
                             onRouteSelected(route.summary.id)
+                        },
+                        onClearRoute = {
+                            viewModel.stopRoute()
                         }
                     )
                 }
@@ -246,7 +238,8 @@ fun ActiveRouteBanner(
 fun RouteCard(
     route: RouteWithPath,
     isActive: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onClearRoute: (() -> Unit)? = null
 ) {
     Card(
         modifier = Modifier
@@ -285,18 +278,36 @@ fun RouteCard(
                 )
             }
             if (isActive) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(MaterialTheme.colorScheme.primary)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "ACTIVE",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        fontSize = 10.sp
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "ACTIVE",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontSize = 10.sp
+                        )
+                    }
+                    if (onClearRoute != null) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = onClearRoute,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = stringResource(id = R.string.route_action_clear),
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
