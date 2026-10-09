@@ -47,6 +47,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -413,4 +414,100 @@ class RouteSelectorViewModelTest {
         assertEquals(1, routes.size)
         assertEquals(1L, routes[0].summary.id)
     }
+
+    @Test
+    fun testActiveSportFiltering_preTracking_filtersBikeAndRunRoutes() = runTest {
+        val routeRun = RouteWithPath(
+            summary = RouteSummary(
+                id = 10L, externalId = "r1", name = "Run 1", description = "", isSelected = false,
+                distance = 5000.0, elevationGain = 50.0, bSportType = BSportType.RUN,
+                source = RouteSource.LOCAL_GPX, syncedAt = 1000L
+            ),
+            path = listOf(PathPoint(0.0, LatLng(48.137, 11.576), 500.0))
+        )
+        val routeBike = RouteWithPath(
+            summary = RouteSummary(
+                id = 20L, externalId = "r2", name = "Bike 1", description = "", isSelected = false,
+                distance = 15000.0, elevationGain = 150.0, bSportType = BSportType.BIKE,
+                source = RouteSource.LOCAL_GPX, syncedAt = 2000L
+            ),
+            path = listOf(PathPoint(0.0, LatLng(48.1372, 11.5762), 500.0))
+        )
+        val routeUnknown = RouteWithPath(
+            summary = RouteSummary(
+                id = 30L, externalId = "r3", name = "Generic 1", description = "", isSelected = false,
+                distance = 8000.0, elevationGain = 80.0, bSportType = BSportType.UNKNOWN,
+                source = RouteSource.LOCAL_GPX, syncedAt = 3000L
+            ),
+            path = listOf(PathPoint(0.0, LatLng(48.1371, 11.5761), 500.0))
+        )
+
+        allRoutesFlow.value = listOf(routeRun, routeBike, routeUnknown)
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
+        advanceUntilIdle()
+
+        val loc = mockk<Location>(relaxed = true)
+        every { loc.latitude } returns 48.137
+        every { loc.longitude } returns 11.576
+        viewModel.onLocationChanged(loc)
+        advanceUntilIdle()
+
+        // 1. Default (UNKNOWN active sport) -> all 3 routes returned
+        assertEquals(3, viewModel.uiState.value.routes.size)
+
+        // 2. Select BIKE -> only Bike and Unknown
+        viewModel.setActiveSport(BSportType.BIKE)
+        advanceUntilIdle()
+        val bikeCandidates = viewModel.uiState.value.routes
+        assertEquals(2, bikeCandidates.size)
+        assertTrue(bikeCandidates.any { it.summary.id == 20L })
+        assertTrue(bikeCandidates.any { it.summary.id == 30L })
+        assertTrue(bikeCandidates.none { it.summary.id == 10L })
+
+        // 3. Select RUN -> only Run and Unknown
+        viewModel.setActiveSport(BSportType.RUN)
+        advanceUntilIdle()
+        val runCandidates = viewModel.uiState.value.routes
+        assertEquals(2, runCandidates.size)
+        assertTrue(runCandidates.any { it.summary.id == 10L })
+        assertTrue(runCandidates.any { it.summary.id == 30L })
+        assertTrue(runCandidates.none { it.summary.id == 20L })
+
+        // 4. Return to UNKNOWN -> all 3
+        viewModel.setActiveSport(BSportType.UNKNOWN)
+        advanceUntilIdle()
+        assertEquals(3, viewModel.uiState.value.routes.size)
+    }
+
+    @Test
+    fun testActiveSportFiltering_inTracking_evaluatesMatchingRoutesFilteredBySport() = runTest {
+        allRoutesFlow.value = sampleRoutes() // Route 1 is RUN, Route 2 is BIKE
+        val viewModel = RouteSelectorViewModel(mockRepository, autoDetector, mockTuningDataStore, SharingStarted.Eagerly)
+        advanceUntilIdle()
+
+        viewModel.setTrackingActive(true)
+        advanceUntilIdle()
+
+        // Location along Route 1 segment
+        val loc = mockk<Location>(relaxed = true)
+        every { loc.latitude } returns 48.138000
+        every { loc.longitude } returns 11.577000
+        every { loc.bearing } returns 38f
+        every { loc.hasBearing() } returns true
+        every { loc.speed } returns 5f
+        viewModel.onLocationChanged(loc)
+        advanceUntilIdle()
+
+        // When active sport is BIKE, Route 1 (RUN) is excluded even if geographically matching
+        viewModel.setActiveSport(BSportType.BIKE)
+        advanceUntilIdle()
+        assertEquals(0, viewModel.uiState.value.routes.size)
+
+        // When active sport is RUN, Route 1 (RUN) is included
+        viewModel.setActiveSport(BSportType.RUN)
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.routes.size)
+        assertEquals(1L, viewModel.uiState.value.routes[0].summary.id)
+    }
 }
+

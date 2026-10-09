@@ -283,4 +283,85 @@ class RouteProximityRankerTest {
         )
         assertEquals(1, resultLargeRadius.size)
     }
+
+    @Test
+    fun testFilterAndRankRoutes_filtersBySportType_bikeActive() {
+        val userLocation = LatLng(48.137, 11.576)
+        val bikeRoute = createRoute(1L, "Bike Route", sportType = BSportType.BIKE, startLat = 48.138, startLng = 11.576)
+        val runRoute = createRoute(2L, "Run Route", sportType = BSportType.RUN, startLat = 48.138, startLng = 11.576)
+        val unknownRoute = createRoute(3L, "Generic Route", sportType = BSportType.UNKNOWN, startLat = 48.138, startLng = 11.576)
+
+        val result = RouteProximityRanker.filterAndRankRoutes(
+            routes = listOf(bikeRoute, runRoute, unknownRoute),
+            currentLocation = userLocation,
+            radiusMeters = 1000.0f,
+            activeSport = BSportType.BIKE
+        )
+
+        assertEquals(2, result.size)
+        assertTrue("Bike route must be included", result.any { it.summary.id == 1L })
+        assertTrue("Untagged/Unknown route must be included as fallback", result.any { it.summary.id == 3L })
+        assertTrue("Run route must be excluded when active sport is BIKE", result.none { it.summary.id == 2L })
+    }
+
+    @Test
+    fun testFilterAndRankRoutes_filtersBySportType_runActive() {
+        val userLocation = LatLng(48.137, 11.576)
+        val bikeRoute = createRoute(1L, "Bike Route", sportType = BSportType.BIKE, startLat = 48.138, startLng = 11.576)
+        val runRoute = createRoute(2L, "Run Route", sportType = BSportType.RUN, startLat = 48.138, startLng = 11.576)
+        val unknownRoute = createRoute(3L, "Generic Route", sportType = BSportType.UNKNOWN, startLat = 48.138, startLng = 11.576)
+
+        val result = RouteProximityRanker.filterAndRankRoutes(
+            routes = listOf(bikeRoute, runRoute, unknownRoute),
+            currentLocation = userLocation,
+            radiusMeters = 1000.0f,
+            activeSport = BSportType.RUN
+        )
+
+        assertEquals(2, result.size)
+        assertTrue("Run route must be included", result.any { it.summary.id == 2L })
+        assertTrue("Untagged/Unknown route must be included as fallback", result.any { it.summary.id == 3L })
+        assertTrue("Bike route must be excluded when active sport is RUN", result.none { it.summary.id == 1L })
+    }
+
+    @Test
+    fun testFilterAndRankRoutes_filtersBySportType_unknownActive_returnsAll() {
+        val userLocation = LatLng(48.137, 11.576)
+        val bikeRoute = createRoute(1L, "Bike Route", sportType = BSportType.BIKE, startLat = 48.138, startLng = 11.576)
+        val runRoute = createRoute(2L, "Run Route", sportType = BSportType.RUN, startLat = 48.138, startLng = 11.576)
+        val unknownRoute = createRoute(3L, "Generic Route", sportType = BSportType.UNKNOWN, startLat = 48.138, startLng = 11.576)
+
+        val result = RouteProximityRanker.filterAndRankRoutes(
+            routes = listOf(bikeRoute, runRoute, unknownRoute),
+            currentLocation = userLocation,
+            radiusMeters = 1000.0f,
+            activeSport = BSportType.UNKNOWN
+        )
+
+        assertEquals("When active sport is UNKNOWN, all routes within radius must be included", 3, result.size)
+    }
+
+    @Test
+    fun testMatchesSport_invariants() {
+        // null active sport allows everything
+        assertTrue(RouteProximityRanker.matchesSport(BSportType.BIKE, null))
+        assertTrue(RouteProximityRanker.matchesSport(BSportType.RUN, null))
+        assertTrue(RouteProximityRanker.matchesSport(BSportType.UNKNOWN, null))
+
+        // UNKNOWN active sport allows everything
+        assertTrue(RouteProximityRanker.matchesSport(BSportType.BIKE, BSportType.UNKNOWN))
+        assertTrue(RouteProximityRanker.matchesSport(BSportType.RUN, BSportType.UNKNOWN))
+        assertTrue(RouteProximityRanker.matchesSport(BSportType.UNKNOWN, BSportType.UNKNOWN))
+
+        // BIKE active sport
+        assertTrue(RouteProximityRanker.matchesSport(BSportType.BIKE, BSportType.BIKE))
+        assertTrue(RouteProximityRanker.matchesSport(BSportType.UNKNOWN, BSportType.BIKE))
+        org.junit.Assert.assertFalse(RouteProximityRanker.matchesSport(BSportType.RUN, BSportType.BIKE))
+
+        // RUN active sport
+        assertTrue(RouteProximityRanker.matchesSport(BSportType.RUN, BSportType.RUN))
+        assertTrue(RouteProximityRanker.matchesSport(BSportType.UNKNOWN, BSportType.RUN))
+        org.junit.Assert.assertFalse(RouteProximityRanker.matchesSport(BSportType.BIKE, BSportType.RUN))
+    }
 }
+

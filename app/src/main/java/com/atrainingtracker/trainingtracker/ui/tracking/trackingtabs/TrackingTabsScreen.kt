@@ -208,6 +208,10 @@ fun TrackingTabsScreen(
         }
     }
 
+    LaunchedEffect(bSportType) {
+        routeSelectorViewModel.setActiveSport(bSportType)
+    }
+
     LaunchedEffect(tuningConfig) {
         batterySaverController.updateTuningConfig(
             com.atrainingtracker.trainingtracker.batterysaver.BatterySaverTuningConfig(

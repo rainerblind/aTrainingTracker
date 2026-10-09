@@ -51,6 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -305,6 +306,13 @@ fun RouteCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                painter = painterResource(id = route.summary.bSportType.iconResId),
+                contentDescription = stringResource(id = route.summary.bSportType.stringResId),
+                modifier = Modifier.size(24.dp),
+                tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = route.summary.name,
@@ -338,6 +346,7 @@ fun RouteCard(
         }
     }
 }
+
 
 private fun formatDistanceAndElevation(distanceMeters: Double, elevationMeters: Double): String {
     val km = distanceMeters / 1000.0

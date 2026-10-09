@@ -131,21 +131,40 @@ object RouteProximityRanker {
     }
 
     /**
+     * Checks if a route's sport type is compatible with the active sport discipline (REQ-UI-310 / ATT-2668).
+     *
+     * Invariants:
+     * - If activeSport is null, UNKNOWN, or CONFLICT: all routes are compatible.
+     * - If activeSport is BIKE or RUN: only routes matching activeSport or UNKNOWN (untagged) are compatible.
+     */
+    fun matchesSport(routeSport: BSportType, activeSport: BSportType?): Boolean {
+        if (activeSport == null || activeSport == BSportType.UNKNOWN || activeSport == BSportType.CONFLICT) {
+            return true
+        }
+        return routeSport == activeSport || routeSport == BSportType.UNKNOWN
+    }
+
+    /**
      * Filters routes strictly within the configurable radius (in meters) from the current GPS position,
-     * and sorts qualifying routes strictly by recency (syncedAt descending - "Zuletzt gefahren"),
-     * breaking ties by distance to start point ascending, then name (REQ-UI-281).
+     * matching the active sport discipline (REQ-UI-310), and sorts qualifying routes strictly by
+     * recency (syncedAt descending - "Zuletzt gefahren"), breaking ties by distance to start point
+     * ascending, then name (REQ-UI-281).
      *
      * If currentLocation is null or routes is empty, returns emptyList() since distance cannot be evaluated.
      */
     fun filterAndRankRoutes(
         routes: List<RouteWithPath>,
         currentLocation: LatLng?,
-        radiusMeters: Float = 1000.0f
+        radiusMeters: Float = 1000.0f,
+        activeSport: BSportType? = null
     ): List<RouteWithPath> {
         if (routes.isEmpty() || currentLocation == null) return emptyList()
 
         val qualifyingRoutes = mutableListOf<Pair<RouteWithPath, Float>>()
         for (route in routes) {
+            if (!matchesSport(route.summary.bSportType, activeSport)) {
+                continue
+            }
             val startPoint = route.path.firstOrNull()?.latLng ?: continue
             val dist = RouteAutoDetector.computeDistanceMeters(
                 currentLocation.latitude, currentLocation.longitude,
@@ -165,3 +184,4 @@ object RouteProximityRanker {
             .map { it.first }
     }
 }
+

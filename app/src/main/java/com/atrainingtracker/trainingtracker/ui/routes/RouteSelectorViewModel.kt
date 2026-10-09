@@ -22,6 +22,7 @@ import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.routes.RouteAutoDetector
@@ -69,6 +70,7 @@ class RouteSelectorViewModel(
     private val _lastLocation = MutableStateFlow<Location?>(null)
     private val _autoDetectedCandidate = MutableStateFlow<RouteWithPath?>(null)
     private val _isTrackingActive = MutableStateFlow(false)
+    private val _activeSportType = MutableStateFlow<BSportType>(BSportType.UNKNOWN)
 
     private val radiusFlow: Flow<Float> = tuningPreferencesDataStore?.tuningConfigFlow
         ?.map { it.routeSelectionRadiusKm * 1000.0f }
@@ -77,15 +79,17 @@ class RouteSelectorViewModel(
     private data class RouteContext(
         val location: Location?,
         val isTracking: Boolean,
-        val radiusMeters: Float
+        val radiusMeters: Float,
+        val activeSport: BSportType
     )
 
     private val routeContextFlow: Flow<RouteContext> = combine(
         _lastLocation,
         _isTrackingActive,
-        radiusFlow
-    ) { location, isTracking, radiusMeters ->
-        RouteContext(location, isTracking, radiusMeters)
+        radiusFlow,
+        _activeSportType
+    ) { location, isTracking, radiusMeters, activeSport ->
+        RouteContext(location, isTracking, radiusMeters, activeSport)
     }
 
     val uiState: StateFlow<RouteSelectorUiState> = combine(
@@ -101,14 +105,18 @@ class RouteSelectorViewModel(
             val ranked = RouteProximityRanker.filterAndRankRoutes(
                 routes = allRoutes,
                 currentLocation = currentLatLng,
-                radiusMeters = context.radiusMeters
+                radiusMeters = context.radiusMeters,
+                activeSport = context.activeSport
             )
             Pair(ranked, R.string.route_no_routes_nearby)
         } else {
             val matched = if (context.location != null) {
+                val candidateRoutesForSport = allRoutes.filter {
+                    RouteProximityRanker.matchesSport(it.summary.bSportType, context.activeSport)
+                }
                 autoDetector.evaluateMatchingRoutes(
                     location = context.location,
-                    routes = allRoutes,
+                    routes = candidateRoutesForSport,
                     currentlyActiveRouteId = activeRouteId
                 )
             } else {
@@ -131,6 +139,10 @@ class RouteSelectorViewModel(
         started = sharingStarted,
         initialValue = RouteSelectorUiState()
     )
+
+    fun setActiveSport(sport: BSportType) {
+        _activeSportType.value = sport
+    }
 
     fun setTrackingActive(isActive: Boolean) {
         _isTrackingActive.value = isActive
@@ -156,7 +168,10 @@ class RouteSelectorViewModel(
         val activeRouteId = routesRepository.activeNavigatedRouteId.value
         val allRoutes = routesRepository.allRoutes.value
 
-        val candidate = autoDetector.evaluate(location, allRoutes, activeRouteId)
+        val filteredRoutes = allRoutes.filter {
+            RouteProximityRanker.matchesSport(it.summary.bSportType, _activeSportType.value)
+        }
+        val candidate = autoDetector.evaluate(location, filteredRoutes, activeRouteId)
         if (candidate != null) {
             _autoDetectedCandidate.value = candidate
         }
@@ -173,3 +188,4 @@ class RouteSelectorViewModel(
         selectRoute(routeId)
     }
 }
+

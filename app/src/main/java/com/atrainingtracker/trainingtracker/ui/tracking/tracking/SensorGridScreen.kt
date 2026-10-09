@@ -246,6 +246,10 @@ fun SensorGridScreen(
         }
     }
 
+    LaunchedEffect(state.bSportType) {
+        actualRouteSelectorViewModel.setActiveSport(state.bSportType)
+    }
+
     // Control the sheet state
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
