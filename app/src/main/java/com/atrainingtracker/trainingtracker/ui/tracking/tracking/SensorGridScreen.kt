@@ -464,14 +464,6 @@ fun SensorGridScreen(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    TurnPromptBanner(
-                        navigationState = navState,
-                        promptsEnabled = state.showNavigationHints && tuningConfig.turnPromptsEnabled,
-                        overlayAlpha = tuningConfig.navigationCueTransparency,
-                        dismissDurationSec = tuningConfig.navigationCueDismissDurationSec
-                    )
-
-
                     // 1. The Sensor Grid (Scrollable)
                     // This Column will only take as much space as the sensors need.
                     Column(
@@ -546,12 +538,19 @@ fun SensorGridScreen(
                     }
                 }
 
-                // Top-Level Ambient Navigation Overlays (REQ-MAP-031, REQ-MAP-029, ATT-2874, ATT-2938)
+                // Top-Level Ambient Navigation Overlays (REQ-MAP-031, REQ-MAP-029, REQ-UI-324, ATT-2874, ATT-2938, ATT-2941)
                 // Floats on top at Alignment.TopCenter, strictly gated by state.showNavigationHints
                 if (state.showNavigationHints) {
                     Column(
                         modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
                     ) {
+                        TurnPromptBanner(
+                            navigationState = navState,
+                            promptsEnabled = state.showNavigationHints && tuningConfig.turnPromptsEnabled,
+                            overlayAlpha = tuningConfig.navigationCueTransparency,
+                            dismissDurationSec = tuningConfig.navigationCueDismissDurationSec
+                        )
+
                         ReturnNavigationHud(
                             navigationState = returnNavState,
                             overlayAlpha = tuningConfig.navigationCueTransparency,
