@@ -560,7 +560,26 @@ def run_interactive_simulation(
 
 # --- CLI Entry Point ---
 
+def kill_other_instances():
+    """Ensures only one instance of fake_gps.py runs at a time to prevent coordinate collision."""
+    my_pid = os.getpid()
+    try:
+        res = subprocess.run(["pgrep", "-f", "fake_gps.py"], capture_output=True, text=True)
+        for line in res.stdout.strip().splitlines():
+            pid_str = line.strip().split()[0]
+            try:
+                pid = int(pid_str)
+                if pid != my_pid:
+                    os.kill(pid, signal.SIGTERM)
+                    print(f"\033[1;33m[!] Terminated previously running fake_gps instance (PID {pid}) to avoid conflict.\033[0m")
+            except (ValueError, ProcessLookupError, PermissionError):
+                pass
+    except Exception:
+        pass
+
+
 def main():
+    kill_other_instances()
     parser = argparse.ArgumentParser(
         description="ATT-2467 Standalone External ADB GPX Replay & Mock GPS Simulation Tool"
     )
