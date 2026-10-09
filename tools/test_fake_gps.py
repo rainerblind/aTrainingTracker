@@ -9,7 +9,11 @@ speed scaling, scrubbing, and off-route deviation.
 import unittest
 import math
 import os
+import sys
 import tempfile
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from tools.fake_gps import (
     haversine_distance,
     calculate_bearing,
