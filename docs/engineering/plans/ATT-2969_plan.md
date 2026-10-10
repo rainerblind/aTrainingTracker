@@ -1,104 +1,138 @@
-# Stage 3 Implementation Plan: ATT-2969 - Synchronized TCX workout replay tool with PyQt6 GUI, BLE Power, Cadence, Heart Rate, and mock GPS
+# Stage 3 Implementation Plan: ATT-2969
 
 **Ticket**: [ATT-2969](https://atrainingtracker.atlassian.net/browse/ATT-2969)  
-**Sub-task**: [ATT-3041](https://atrainingtracker.atlassian.net/browse/ATT-3041) (`[Impl-Plan]`)  
+**Sub-task**: [ATT-3064](https://atrainingtracker.atlassian.net/browse/ATT-3064) (`[Impl-Plan]`)  
 **Parent Epic**: [ATT-2466](https://atrainingtracker.atlassian.net/browse/ATT-2466) (*Developer Testing Tools*)  
-**Target Release**: `V4.9.39`  
-**Active Sprint**: `Sprint 2026-41.6`  
+**Target Release**: None (Unassigned per Rule 19)  
+**Active Sprint**: `2026-41.7`  
+**Branch**: `feature/ATT-2969`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-10  
 
 ---
 
-## 1. Architecture & Component Decomposition
+## 1. Architectural Overview & Component Decomposition (SWE.2)
 
-The implementation of `tools/replay_workout.py` is decomposed into 6 cohesive, decoupled components:
+The implementation enhances the standalone workout replay tool (`tools/replay_workout.py`) and its unit test suite (`tools/test_replay_workout.py`):
 
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│                        PyQt6 Desktop GUI Window                        │
+│  (Transport Controls, Interactive Timeline Slider, Digital Gauges)     │
+│                     Connected strictly via pyqtSignal                  │
+└───────────────────────────────────▲────────────────────────────────────┘
+                                    │ pyqtSignal
+┌───────────────────────────────────┴────────────────────────────────────┐
+│                  ReplayEngine (Multi-Threaded Clock)                   │
+│   Advances trackpoints, interpolates metrics, seeks timeline cleanly   │
+└──────────────┬──────────────────────────────────────────┬──────────────┘
+               │                                          │
+               ▼                                          ▼
+┌───────────────────────────────┐          ┌─────────────────────────────┐
+│  BleReplayServer (BlueZ D-Bus)│          │      AdbGpsInjector         │
+│  • Dedicated GLib.MainContext │          │  • Strict Android 14+       │
+│  • BlueZ GattManager1 (0x1818,│          │    cmd location providers   │
+│    0x180D, 0x180A)            │          │    set-test-provider-loc    │
+│  • LEAdvertisingManager1      │          │  • Clean teardown on exit   │
+│    dual ads (1818 & 180d)     │          └─────────────────────────────┘
+└──────────────┬────────────────┘                         ▲
+               │                                          │
+               └───────────────┬──────────────────────────┘
+                               │
+                ┌──────────────┴───────────────┐
+                │ Host Pre-Flight Diagnostics  │
+                │ • Bluetooth Daemon & Adapter │
+                │ • ADB device & appops mock   │
+                └──────────────────────────────┘
 ```
-+------------------------------------------------------------------------+
-|                              CLI & MAIN                                |
-|  - Argument parsing (--headless, --no-ble, --no-gps, --speed, file)   |
-|  - Signal handlers (SIGINT, SIGTERM) and atexit cleanup                |
-+-------------------+--------------------------------+-------------------+
-                    |                                |
-       (if not headless)                         (if headless)
-                    v                                v
-+------------------------------------+   +-------------------------------+
-|     PyQt6 GUI (ReplayGuiWindow)    |   |     Headless CLI Runner       |
-|  - Dark/Obsidian Material Design   |   |  - Non-blocking keybindings   |
-|  - Transport Controls & Scrubber   |   |  - ANSI live terminal status  |
-|  - Digital Telemetry Cards         |   +---------------+---------------+
-|  - ADB & BLE Status Badges         |                   |
-+-------------------+----------------+                   |
-                    | Qt Signals                         | Calls
-                    +----------------+-------------------+
-                                     v
-+------------------------------------------------------------------------+
-|                         REPLAY ENGINE (ReplayEngine)                   |
-|  - State: PLAYING, PAUSED, STOPPED                                     |
-|  - Timeline position, scrubbing, duration, speed multipliers           |
-|  - Dispatches updates to BLE and ADB at 1 Hz * multiplier              |
-+-------------------+--------------------------------+-------------------+
-                    |                                |
-                    v                                v
-+------------------------------------+   +-------------------------------+
-|     BLE GATT Server (BlueZ)        |   |       ADB GPS Injector        |
-|  - Cycling Power Service (0x1818)  |   |  - gps, network, fused        |
-|  - Heart Rate Service (0x180D)     |   |  - cmd location providers     |
-+------------------------------------+   +-------------------------------+
-```
+
+### Architectural Boundaries & Concurrency Model
+1. **Host Pre-Flight Self-Diagnostics Module (`HostPreFlightDiagnostics`)**:
+   - Executes synchronously prior to engine launch.
+   - Evaluates:
+     - BlueZ daemon active (`org.bluez` on SystemBus).
+     - Bluetooth adapter present and powered on (`org.bluez.Adapter1` with `Powered = True`).
+     - LE Advertising Manager present on adapter (`org.bluez.LEAdvertisingManager1`).
+     - ADB binary presence and device connection (`adb devices`).
+     - Android shell mock location permission (`cmd appops get 2000 android:mock_location`).
+   - Returns a structured diagnostic report with actionable shell remediation commands.
+2. **BlueZ D-Bus GATT Server & Dual-Advertisement Engine (`BleReplayServer`)**:
+   - Implements full BlueZ GATT hierarchy: `Application`, `Service`, `Characteristic`, `Descriptor`, `Advertisement`.
+   - Reuses robust, verified GATT implementations from `ble_power_simulator.py` and `ble_hr_simulator.py`:
+     - Cycling Power Service (`0x1818`) with Measurement (`0x2A63`, notify), Feature (`0x2A65`, read), Sensor Location (`0x2A5D`, read).
+     - Heart Rate Service (`0x180D`) with Measurement (`0x2A37`, notify), Body Sensor Location (`0x2A38`, read).
+     - Device Information Service (`0x180A`).
+     - Advertisements: Dual registration for `ATT-Pwr` (`1818`) and `ATT-HRM` (`180d`) or consolidated multi-service advertisement.
+   - Thread isolation: The GLib main loop runs in a dedicated thread with `GLib.MainContext.push_thread_default()` and `loop.run()`.
+3. **Android 14+ Mock GPS Injector (`AdbGpsInjector`)**:
+   - Formats `cmd location providers set-test-provider-location <p> --location <lat>,<lon> --accuracy 2.5 --time <ms>` strictly adhering to Android 14 syntax.
+   - Preserves `appops set 2000 android:mock_location allow` setup and provider registration (`add-test-provider` + `set-test-provider-enabled true`).
+   - Ensures teardown via `remove-test-provider` in `atexit` and `signal` handlers.
+4. **Qt Thread Decoupling**:
+   - Cross-thread communication from `ReplayEngine` worker thread to GUI uses `pyqtSignal` exclusively.
 
 ---
 
-## 2. Step-by-Step Implementation Strategy
+## 2. UI Consistency Audit (Rule 23)
 
-### Step 1: Create Built-in Sample TCX File (`tools/sample_workout.tcx`)
-- Create standard Garmin Training Center Database XML with ~30 trackpoints.
-- Include realistic GPS coordinates along Munich Olympic Park, elevation gain, heart rate progression (130-165 bpm), cadence (80-95 rpm), and power (180-320 W).
-
-### Step 2: Implement TCX Parsing Engine (`TcxParser` in `tools/replay_workout.py`)
-- Parse XML namespaces dynamically.
-- Extract `Time`, `LatitudeDegrees`, `LongitudeDegrees`, `AltitudeMeters`, `DistanceMeters`, `HeartRateBpm`, `Cadence`, `Watts`, `Speed`.
-- Precalculate cumulative geodesic distance and forward bearings.
-
-### Step 3: Implement Replay Core Engine (`ReplayEngine`)
-- Thread-safe simulation state manager.
-- Implement timeline seeking (`seek_ratio(ratio)`), speed multipliers ($1\times, 2\times, 5\times, 10\times$), step forwards/backwards ($\pm 10s$).
-- Decouple time stepping from dispatching callbacks.
-
-### Step 4: Implement BLE GATT Broadcaster (`BleReplayServer`)
-- Reusable BlueZ DBus GATT server registering Cycling Power Service (`0x1818`) and Heart Rate Service (`0x180D`).
-- Build helper functions: `build_power_payload(watts, cadence)` and `build_hr_payload(bpm)`.
-- Graceful dummy fallback if DBus is unavailable or `--no-ble` is passed.
-
-### Step 5: Implement ADB Location Injector (`AdbGpsInjector`)
-- Wrap `AdbController` logic for multi-provider registration (`gps`, `network`, `fused`).
-- Inject latitude, longitude, altitude, speed, and forward bearing.
-- Graceful dummy fallback if no device is connected or `--no-gps` is passed.
-
-### Step 6: Implement PyQt6 Desktop GUI Dashboard (`ReplayGuiWindow`)
-- Modern dark/obsidian theme (`#121212` background, `#1E1E1E` card surfaces, `#BB86FC` primary accent, `#03DAC6` secondary accent).
-- Top bar: File name, duration, distance.
-- Transport controls: Play/Pause button, Stop button, Speed combo (`1x`, `2x`, `5x`, `10x`), Step buttons (`-10s`, `+10s`).
-- Interactive timeline scrubber (`QSlider`) with duration labels.
-- Digital telemetry cards: Power (W), Cadence (RPM), Heart Rate (BPM), Speed (km/h), Distance (km), Altitude (m).
-- Connection status indicators: ADB Device LED badge, BLE GATT LED badge.
-
-### Step 7: Implement Headless CLI Mode (`HeadlessCliRunner`)
-- Non-blocking terminal keybindings (`[Space]`, `[s]`, `[1]`, `[2]`, `[5]`, `[0]`, `[+]`, `[-]`, `[q]`).
-- ANSI live progress line displaying time, distance, power, HR, cadence, and GPS status.
-
-### Step 8: Comprehensive Unit Tests (`tools/test_replay_workout.py`)
-- Test XML parser against `sample_workout.tcx` and edge cases (missing attributes).
-- Test `ReplayEngine` seeking, stepping, and speed multipliers.
-- Test BLE payload byte packing contracts.
-- Test PyQt6 GUI initialization and contract compliance.
+* **Closest Reference**: Existing `replay_workout.py` desktop GUI layout and `SensorGridScreen.kt` telemetry card design language.
+* **Palette & Surfaces**:
+  - Obsidian Dark Theme: Background `#121214`, Surface Card `#1E1E22`, Outline `#2C2C32`.
+  - Brand & Accent Colors: Royal Blue `#2B5BE8` (active playback / track indicator), Emerald Green `#22C55E` (GPS active badge), Vivid Amber `#F59E0B` (BLE advertising badge), Crimson `#EF4444` (Diagnostics warning).
+* **Typography**: Clean monospace digital displays for telemetry numbers (Watts, BPM, RPM, km/h) with clear metric unit labels.
+* **Justification**: Enhances existing desktop GUI with a dedicated "Diagnostics & Hardware Status" card showing real-time BlueZ and ADB health.
 
 ---
 
-## 3. Invariants & Preservations Check
+## 3. Atomic Step Sequencing
 
-- [x] Zero Android application code touched (0% APK regression risk).
-- [x] Standard system packages only (`PyQt6`, `dbus`, `gi.repository`).
-- [x] Safe device teardown on exit (removes test providers via `atexit` and signal handlers).
-- [x] Full-suite clean-room regression passing 100%.
+### Step 1: Pre-Flight Self-Diagnostics Implementation (`tools/replay_workout.py`)
+- Define `HostPreFlightDiagnostics` class:
+  - `check_bluetooth() -> Tuple[bool, str, List[str]]`
+  - `check_adb() -> Tuple[bool, str, List[str]]`
+  - `run_all() -> PreFlightReport`
+- Integrate into CLI startup and GUI status card.
+- **Verification**: Unit tests in `tools/test_replay_workout.py`.
+
+### Step 2: ADB Android 14+ Mock Location Injector Fix (`tools/replay_workout.py`)
+- Modify `AdbGpsInjector.inject_location()`:
+  - Remove `--altitude`, `--speed`, `--bearing` from `set-test-provider-location`.
+  - Ensure `--location <lat:.6f>,<lon:.6f> --accuracy 2.5 --time <now_ms>` command line generation.
+  - Expose helper `_build_inject_cmd()` for unit test verification.
+- **Verification**: Run on attached Pixel 10 and verify exit code 0.
+
+### Step 3: Complete BlueZ D-Bus GATT Server & Dual-Advertisement Engine (`tools/replay_workout.py`)
+- Port `Advertisement`, `Application`, `Service`, `Characteristic`, `Descriptor` base classes from `ble_power_simulator.py` and `ble_hr_simulator.py`.
+- Implement `CyclingPowerService` (`0x1818`), `HeartRateService` (`0x180D`), and `DeviceInfoService` (`0x180A`).
+- Implement dual or multi-service advertising objects (`CyclingPowerAdvertisement` and `HeartRateAdvertisement`).
+- In `BleReplayServer.start()`:
+  - Register Application with `GattManager1`.
+  - Register Advertisements with `LEAdvertisingManager1`.
+  - Launch GLib main loop in background thread with `push_thread_default()`.
+- In `BleReplayServer.update_telemetry()`:
+  - Update characteristic values and emit D-Bus `PropertiesChanged` signal notifications.
+- In `BleReplayServer.stop()`:
+  - Unregister advertisements and quit GLib loop.
+
+### Step 4: Unit Test Suite Expansion (`tools/test_replay_workout.py`)
+- Add `TestAdbGpsInjector`:
+  - Verify generated command strings conform to Android 14+ syntax without illegal options.
+- Add `TestHostPreFlightDiagnostics`:
+  - Mock various system states and verify diagnostic accuracy.
+- Add `TestBluezGattStructures`:
+  - Verify GATT service and advertisement class properties and UUID signatures.
+
+### Step 5: Clean-Room Full Suite Regression Verification
+- Run `python3 -m unittest tools/test_replay_workout.py`.
+- Run `./gradlew testDebugUnitTest`.
+
+---
+
+## 4. Invariant Protection & Verification Commands
+
+| Step | Invariant Checked | Verification Command |
+| :--- | :--- | :--- |
+| Step 1 | Rule 30 Pre-Flight Diagnostics | `python3 -m unittest tools/test_replay_workout.py -k TestHostPreFlightDiagnostics` |
+| Step 2 | Android 14+ ADB location syntax | `python3 -m unittest tools/test_replay_workout.py -k TestAdbGpsInjector` |
+| Step 3 | BlueZ GATT Server & Advertising | `python3 -m unittest tools/test_replay_workout.py -k TestBluezGatt` |
+| Step 5 | Full clean-room regression | `python3 -m unittest tools/test_replay_workout.py && ./gradlew testDebugUnitTest` |
