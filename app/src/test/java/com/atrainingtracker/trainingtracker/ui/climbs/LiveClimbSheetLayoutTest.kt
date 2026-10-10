@@ -155,6 +155,43 @@ class LiveClimbSheetLayoutTest {
         }
     }
 
+    @Test
+    fun testLiveClimbSheet_previewComposablesExistAndCoverAllStates() {
+        val content = liveClimbSheetFile.readText()
+
+        assertTrue(
+            "LiveClimbSheet must declare LiveClimbSheet_OnClimb_Preview (REQ-UI-341, TST-UI-301)",
+            content.contains("fun LiveClimbSheet_OnClimb_Preview")
+        )
+        assertTrue(
+            "LiveClimbSheet must declare LiveClimbSheet_OnClimb_Dark_Preview with UI_MODE_NIGHT_YES",
+            content.contains("fun LiveClimbSheet_OnClimb_Dark_Preview") &&
+                content.contains("Configuration.UI_MODE_NIGHT_YES")
+        )
+        assertTrue(
+            "LiveClimbSheet must declare LiveClimbSheet_Approaching_Preview",
+            content.contains("fun LiveClimbSheet_Approaching_Preview")
+        )
+        assertTrue(
+            "LiveClimbSheet must declare LiveClimbSheet_Finished_Preview",
+            content.contains("fun LiveClimbSheet_Finished_Preview")
+        )
+    }
+
+    @Test
+    fun testLiveClimbSheet_profileCanvasContainsGroundLineAndRefinedHeight() {
+        val content = liveClimbSheetFile.readText()
+
+        assertTrue(
+            "LiveClimbSheet must configure ClimbProfileCanvas with refined 68.dp height (REQ-UI-341)",
+            content.contains(".height(68.dp)")
+        )
+        assertTrue(
+            "ClimbProfileCanvas must draw a baseline ground line using outlineVariant (REQ-UI-341)",
+            content.contains("outlineVariant") && content.contains("height - bottomPadding")
+        )
+    }
+
     private fun parseStringsFile(file: File): Map<String, String> {
         val map = mutableMapOf<String, String>()
         val factory = DocumentBuilderFactory.newInstance()
