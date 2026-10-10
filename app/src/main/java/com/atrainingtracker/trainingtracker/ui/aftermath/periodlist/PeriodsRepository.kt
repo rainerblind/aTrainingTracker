@@ -170,12 +170,12 @@ class PeriodsRepository private constructor(private val application: Application
         }
 
         // 4. Direct Finalization Broadcast Listening (ATT-3056 / REQ-PER-014)
-        val filter = IntentFilter(TrackerService.TRACKING_FINISHED_INTENT)
-        LocalBroadcastManager.getInstance(application).registerReceiver(trackingFinishedReceiver, filter)
         try {
+            val filter = IntentFilter(TrackerService.TRACKING_FINISHED_INTENT)
+            LocalBroadcastManager.getInstance(application).registerReceiver(trackingFinishedReceiver, filter)
             ContextCompat.registerReceiver(application, trackingFinishedReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to register system trackingFinishedReceiver", e)
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to register trackingFinishedReceiver", t)
         }
     }
 
