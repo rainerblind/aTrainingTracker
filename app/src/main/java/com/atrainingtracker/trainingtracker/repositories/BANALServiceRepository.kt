@@ -387,6 +387,7 @@ class BANALServiceRepository private constructor(context: Context) {
     }
 
     fun setUserSelectedSportType(bSportType: BSportType) {
+        _bSportType.value = bSportType
         _serviceBinder.value?.setUserSelectedSportType(bSportType)
     }
 

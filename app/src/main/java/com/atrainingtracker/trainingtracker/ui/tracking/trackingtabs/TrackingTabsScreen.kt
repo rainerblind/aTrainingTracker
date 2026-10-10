@@ -187,7 +187,11 @@ fun TrackingTabsScreen(
         factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return RouteSelectorViewModel(routesRepo, tuningPreferencesDataStore = tuningDataStore) as T
+                return RouteSelectorViewModel(
+                    routesRepository = routesRepo,
+                    tuningPreferencesDataStore = tuningDataStore,
+                    banalServiceRepository = controlViewModel.banalServiceRepository
+                ) as T
             }
         }
     )
