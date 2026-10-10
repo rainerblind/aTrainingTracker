@@ -18,20 +18,11 @@
 
 package com.atrainingtracker.trainingtracker.ui.routes
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
-import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
-import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
+import com.atrainingtracker.trainingtracker.ui.components.core.EntityDetailSheetScaffold
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -67,61 +58,30 @@ fun calculateRouteBounds(route: RouteWithPath): LatLngBounds? {
 }
 
 /**
- * Dedicated Route Detail Bottom Sheet (REQ-UI-315 / REQ-UI-316 / ATT-2860).
+ * Dedicated Route Detail Bottom Sheet (REQ-UI-315 / REQ-UI-316 / REQ-UI-333 / ATT-2860 / ATT-3053).
  *
- * Directly hosts [RouteOnMapScreen] inside a modal bottom sheet container to ensure
+ * Directly hosts [RouteOnMapScreen] inside [EntityDetailSheetScaffold] to ensure
  * 100% visual and functional identity with the map screen layout:
  * 1. Unified header featuring [RouteSummaryHeader].
- * 2. Interactive [MapDetailLayout] with elevation profile scrubbing and collapsible map viewport.
- * 3. Climbs and segments breakdown sections with overlay dismiss button.
+ * 2. Interactive [com.atrainingtracker.trainingtracker.ui.map.MapDetailLayout] with elevation profile scrubbing and collapsible map viewport.
+ * 3. Shared [EntityDetailSheetScaffold] container with standardized floating close button.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RouteDetailSheet(
     routeWithPath: RouteWithPath,
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = BottomSheetDesign.SheetShape,
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = BottomSheetDesign.SheetTonalElevation,
-        dragHandle = null,
-        modifier = modifier.fillMaxHeight()
+    EntityDetailSheetScaffold(
+        onDismiss = onDismiss,
+        modifier = modifier
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            RouteOnMapScreen(
-                route = routeWithPath.toMapRoute(),
-                routeSummary = routeWithPath.summary,
-                onToggleSelection = {},
-                modifier = Modifier.fillMaxSize(),
-                useStatusBarsPadding = false
-            )
-
-            // Top-right dismiss close button
-            IconButton(
-                onClick = onDismiss,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .zIndex(10f)
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                    shadowElevation = 2.dp
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.Cancel),
-                        modifier = Modifier.padding(6.dp)
-                    )
-                }
-            }
-        }
+        RouteOnMapScreen(
+            route = routeWithPath.toMapRoute(),
+            routeSummary = routeWithPath.summary,
+            onToggleSelection = {},
+            modifier = Modifier.fillMaxSize(),
+            useStatusBarsPadding = false
+        )
     }
 }

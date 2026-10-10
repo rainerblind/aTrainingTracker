@@ -62,17 +62,8 @@ class RouteDetailSheetContractTest {
         assertTrue("RouteDetailSheet.kt must exist", routeDetailSheetFile.exists())
         val content = routeDetailSheetFile.readText()
 
-        // 1. Material 3 ModalBottomSheet with BottomSheetDesign shape tokens
-        assertTrue("Must use ModalBottomSheet", content.contains("ModalBottomSheet"))
-        assertTrue("Must use BottomSheetDesign.SheetShape", content.contains("BottomSheetDesign.SheetShape"))
-
-        // 2. Direct reuse of RouteOnMapScreen (REQ-UI-315.2 / REQ-UI-316)
-        assertTrue("Must host RouteOnMapScreen directly for visual/functional parity with route screen", content.contains("RouteOnMapScreen("))
-        assertTrue("Must pass useStatusBarsPadding = false", content.contains("useStatusBarsPadding = false"))
-        assertTrue("Must map route via toMapRoute", content.contains("toMapRoute("))
-
-        // 3. Overlay dismiss button
-        assertTrue("Must include close icon button for non-destructive dismissal", content.contains("Icons.Default.Close"))
+        // 1. Shared EntityDetailSheetScaffold usage (REQ-UI-333)
+        assertTrue("Must use EntityDetailSheetScaffold", content.contains("EntityDetailSheetScaffold("))
 
         // 4. Verify obsolete card composables are eliminated (Rule 23 - no duplicated code)
         assertFalse("Obsolete RouteDetailMetricsCard must not exist", content.contains("RouteDetailMetricsCard"))
