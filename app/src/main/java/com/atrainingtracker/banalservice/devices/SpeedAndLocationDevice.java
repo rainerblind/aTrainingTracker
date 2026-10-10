@@ -334,4 +334,11 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
             }
         }
     }
+
+    /**
+     * Re-registers location updates if permissions or providers became available after initialization (ATT-3045).
+     */
+    public void checkOrReRegisterLocationUpdates() {
+        // Default no-op, overridden by subclasses that attach location listeners
+    }
 }

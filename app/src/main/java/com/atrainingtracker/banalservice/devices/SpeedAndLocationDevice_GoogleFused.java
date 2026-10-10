@@ -108,10 +108,26 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
 
 
     @Override
+    public synchronized void checkOrReRegisterLocationUpdates() {
+        if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
+            if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                try {
+                    LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+                    setLastActive();
+                    if (DEBUG) Log.i(TAG, "checkOrReRegisterLocationUpdates: Fused location updates registered successfully");
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to re-register Google Fused location updates: " + e.getMessage());
+                }
+            }
+        } else if (mGoogleApiClient != null && !mGoogleApiClient.isConnecting()) {
+            mGoogleApiClient.connect();
+        }
+    }
+
+    @Override
     public void shutDown() {
         mGoogleApiClient.disconnect();
 
         super.shutDown();
     }
-
 }
