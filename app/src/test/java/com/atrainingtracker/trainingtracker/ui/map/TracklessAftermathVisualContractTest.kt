@@ -59,7 +59,7 @@ class TracklessAftermathVisualContractTest {
         assertTrue(
             "TrackOnMapScreen must bind activeScrubPath to telemetryPath when hasGpsTrack is false",
             content.contains("val activeScrubPath = remember(hasGpsTrack, bestTrack, tracks, telemetryPath)") &&
-                    content.contains("telemetryPath.ifEmpty { null }")
+                    content.contains("telemetryPath.ifEmpty { tracks.firstOrNull { it.path.isNotEmpty() }?.path }")
         )
 
         assertTrue(
@@ -68,8 +68,13 @@ class TracklessAftermathVisualContractTest {
         )
 
         assertTrue(
-            "TrackOnMapScreen must gate showElevationProfile with hasGpsTrack",
-            content.contains("showElevationProfile = hasGpsTrack &&")
+            "TrackOnMapScreen must evaluate hasTracklessAltitude for trackless workouts with altitude data (REQ-UI-332)",
+            content.contains("val hasTracklessAltitude = !hasGpsTrack && (activeScrubPath?.any { it.altitude != 0.0 } == true)")
+        )
+
+        assertTrue(
+            "TrackOnMapScreen must decouple showElevationProfile allowing display for trackless workouts with altitude data (REQ-UI-332)",
+            content.contains("showElevationProfile = (hasGpsTrack || hasTracklessAltitude) && activeDetailPrefs.showElevationProfile && isElevationPostMap && hasAltitudeData")
         )
     }
 

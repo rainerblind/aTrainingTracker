@@ -130,7 +130,7 @@ fun TrackOnMapScreen(
         if (hasGpsTrack) {
             bestTrack?.path ?: tracks.firstOrNull()?.path
         } else {
-            telemetryPath.ifEmpty { null }
+            telemetryPath.ifEmpty { tracks.firstOrNull { it.path.isNotEmpty() }?.path }
         }
     }
 
@@ -156,6 +156,9 @@ fun TrackOnMapScreen(
     val isElevationPostMap = postMapSections.contains(WorkoutSectionType.ELEVATION)
     val isChartsPostMap = postMapSections.contains(WorkoutSectionType.CHARTS)
 
+    val hasTracklessAltitude = !hasGpsTrack && (activeScrubPath?.any { it.altitude != 0.0 } == true)
+    val hasAltitudeData = workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != 0.0 } == true)
+
     MapDetailLayout(
         bSportType = workoutData.bSportType,
         zoomFocus = MapZoomFocus.FIT_PRIMARY,
@@ -164,7 +167,7 @@ fun TrackOnMapScreen(
         maxAltitudeOverride = workoutData.maxAltitude,
         useStatusBarsPadding = useStatusBarsPadding,
         showMap = showMap && hasGpsTrack && activeDetailPrefs.showMap,
-        showElevationProfile = hasGpsTrack && activeDetailPrefs.showElevationProfile && isElevationPostMap && (workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != 0.0 } == true)),
+        showElevationProfile = (hasGpsTrack || hasTracklessAltitude) && activeDetailPrefs.showElevationProfile && isElevationPostMap && hasAltitudeData,
         showTelemetryCharts = activeDetailPrefs.showTelemetryCharts && isChartsPostMap,
         hrZoneDistribution = hrZoneDistribution,
         powerZoneDistribution = powerZoneDistribution,
