@@ -480,12 +480,12 @@ fun SensorGridScreen(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // 1. The Sensor Grid (Scrollable)
-                    // This Column will only take as much space as the sensors need.
+                    // 1. The Sensor Grid (Scrollable, flexibly constrained by weight to prevent crowding bottom cockpit views)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .verticalScroll(rememberScrollState()),
+                            .verticalScroll(rememberScrollState())
+                            .weight(1f, fill = false),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
                     ) {
@@ -548,15 +548,21 @@ fun SensorGridScreen(
                         }
                     }
 
-                    // 3. The Elevation Profile (Below the Map)
-                    if (state.showElevationProfile && state.pathPoints.isNotEmpty()) {
+                    // 3. The Elevation Profile (Below the Map or taking remaining space if map is hidden, REQ-UI-339 / ATT-3107)
+                    if (state.showElevationProfile && state.pathPoints.size >= 2) {
                         Surface(
-                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(
+                                    if (!state.mapState.showMap) Modifier.weight(1f) else Modifier
+                                )
+                                .padding(top = 8.dp)
                         ) {
                             ElevationProfile(
                                 pathPoints = state.pathPoints,
                                 currentDistance = state.pathPoints.lastOrNull()?.distance,
-                                modifier = Modifier.fillMaxWidth()
+                                fillParentHeight = !state.mapState.showMap,
+                                modifier = if (!state.mapState.showMap) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
                             )
                         }
                     }
