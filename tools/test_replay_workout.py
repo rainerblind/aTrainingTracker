@@ -90,6 +90,12 @@ class TestTcxParser(unittest.TestCase):
         finally:
             os.remove(tmp_name)
 
+    def test_tilde_path_expansion(self):
+        home_path = "~/sample.tcx"
+        expanded = os.path.expanduser(home_path)
+        self.assertFalse(expanded.startswith("~"))
+        self.assertTrue(os.path.isabs(expanded))
+
 
 class TestBlePayloads(unittest.TestCase):
     def test_build_power_payload(self):
@@ -230,6 +236,27 @@ class TestAdbGpsInjector(unittest.TestCase):
     def test_default_providers_contain_gps_network_fused(self):
         injector = AdbGpsInjector(enabled=False)
         self.assertEqual(injector.DEFAULT_PROVIDERS, ("gps", "network", "fused"))
+
+    def test_async_queue_injection(self):
+        injector = AdbGpsInjector(enabled=True, device_serial="DEVICE123")
+        injector.is_registered = True
+        self.assertEqual(injector._queue.qsize(), 0)
+        injector.inject_location(48.1, 11.5, 500.0, 10.0, 90.0)
+        self.assertEqual(injector._queue.qsize(), 1)
+        item = injector._queue.get_nowait()
+        self.assertEqual(item, (48.1, 11.5))
+
+    def test_queue_overflow_drops_oldest(self):
+        injector = AdbGpsInjector(enabled=True, device_serial="DEVICE123")
+        injector.is_registered = True
+        for i in range(5):
+            injector.inject_location(48.0 + i, 11.0 + i, 500.0, 10.0, 90.0)
+        self.assertEqual(injector._queue.qsize(), 5)
+        # Push 6th item - drops oldest (48.0, 11.0)
+        injector.inject_location(48.9, 11.9, 500.0, 10.0, 90.0)
+        self.assertEqual(injector._queue.qsize(), 5)
+        first_item = injector._queue.get_nowait()
+        self.assertEqual(first_item, (48.0 + 1, 11.0 + 1))
 
 
 class TestHostPreFlightDiagnostics(unittest.TestCase):
