@@ -102,12 +102,12 @@ private fun TurnCueCard(
     val isTurnNow = navigationState.isTurnNow
     val distanceRemaining = navigationState.distanceToNextCueMeters.roundToInt()
 
-    val containerColor = (if (isTurnNow) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+    val containerColor = (if (isTurnNow) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer)
         .copy(alpha = overlayAlpha)
     val borderColor = TTColor.RouteActiveNavigation.copy(alpha = overlayAlpha.coerceAtLeast(0.4f))
 
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         border = BorderStroke(1.dp, borderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
@@ -118,13 +118,13 @@ private fun TurnCueCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 painter = painterResource(id = cue.direction.iconResId),
                 contentDescription = stringResource(id = cue.direction.displayNameResId),
-                tint = if (isTurnNow) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                tint = if (isTurnNow) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(40.dp)
             )
 
@@ -139,7 +139,7 @@ private fun TurnCueCard(
                     },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = if (isTurnNow) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isTurnNow) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 val cueTitle = if (cue.wayName.isNotBlank()) cue.wayName else stringResource(cue.direction.displayNameResId)
@@ -148,7 +148,7 @@ private fun TurnCueCard(
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = if (isTurnNow) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    color = if (isTurnNow) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
             }
         }
@@ -166,7 +166,7 @@ private fun OffRouteCard(
     val borderColor = MaterialTheme.colorScheme.error.copy(alpha = overlayAlpha.coerceAtLeast(0.4f))
 
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         border = BorderStroke(1.dp, borderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
@@ -177,7 +177,7 @@ private fun OffRouteCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(

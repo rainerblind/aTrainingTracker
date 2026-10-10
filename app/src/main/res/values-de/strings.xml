@@ -950,7 +950,7 @@
         Falls Du zu den Glücklichen gehörst, deren Smartphone direkt ANT+ unterstützt, musst Du nur noch die notwendigen ANT Plugins installieren.
         Wenn dein Smartphone ANT+ nicht direkt unterstützt, kannst du dir einen USB ANT Dongle besorgen und diesen mittels eines USB OTG Adapters (USB-C to USB Adapter) verbinden.  Auch hier musst Du dann natürlich noch die ANT Plugins installieren.</string>
     <string name="ant_missing_adapter_title">Fehlender ANT Adapter</string>
-    <string name="ant_missing_adapter_message">Das ANT Interface meldet uns einen fehlenden ANT Adapter zurück.  Vermutlich hat dein Smartphone keine direkte ANT+ Unterstützung.  Du kannst dennoch ANT+ Sensoren koppeln, wenn Du dir einen USB ANT Dongle besorgst, den Du über einen OTG Adapter mit dem Smartphone verbindest (und dann auch noch den ANT USB Service intalliert hast).</string>
+    <string name="ant_missing_adapter_message">Das ANT Interface meldet uns einen fehlenden ANT Adapter zurück.  Vermutlich hat dein Smartphone keine direkte ANT+ Unterstützung.  Du kannst dennoch ANT+ Sensoren koppeln, wenn Du dir einen USB ANT Dongle besorgst, den Du über einen OTG Adapter mit dem Smartphone verbindest (und dann auch noch den ANT USB Service installiert hast).</string>
     <string name="ant_missing_dependency_title">Fehlende Abhängigkeit</string>
     <string name="ant_missing_dependency_message">Die notwendige Application\n\"%1$s\"\n ist nicht installiert.  Sollen wir im Play Store nach dieser suchen?</string>
     <string name="go_to_store">Zum Play Store</string>
@@ -1794,4 +1794,26 @@
     <string name="ant_service_installed">Installiert</string>
     <string name="ant_service_not_installed">Nicht installiert</string>
     <string name="ant_service_install_button">Installieren</string>
+
+    <!-- ATT-2931: General Map Layers Control Menu -->
+    <string name="map_layers">Kartenebenen</string>
+    <string name="map_layer_routes">Routen</string>
+    <string name="map_layer_segments">Segmente</string>
+    <string name="map_layer_locations">Lieblingsorte</string>
+    <string name="map_layer_track">Aufzeichnung</string>
+    <string name="ant_dialog_view_status">ANT+ Status anzeigen</string>
+    <string name="ant_dialog_dismiss">Verstanden</string>
+
+    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
+    <string name="tuning_map_camera_section_title">Kartenkamera &amp; Follow-Me-Navigation</string>
+    <string name="tuning_map_base_zoom_title">Follow-Me Basis-Zoom</string>
+    <string name="tuning_map_base_zoom_desc">Basis-Zoomstufe im Stillstand (0 km/h) im Follow-Me-Trackingmodus</string>
+    <string name="tuning_map_speed_zoom_enabled_title">Geschwindigkeitsabhängiger Zoom</string>
+    <string name="tuning_map_speed_zoom_enabled_desc">Zoomt bei zunehmender Geschwindigkeit schrittweise heraus für mehr Vorausschau</string>
+    <string name="tuning_map_cruising_zoom_title">Reisegeschwindigkeit-Zoom (bei 20 km/h)</string>
+    <string name="tuning_map_cruising_zoom_desc">Ziel-Zoomstufe bei typischer Fahrgeschwindigkeit (20 km/h)</string>
+    <string name="tuning_map_tilt_angle_title">Kamera-Neigungswinkel</string>
+    <string name="tuning_map_tilt_angle_desc">Perspektivischer Neigungswinkel für die 3D-Navigation (0° ist flaches 2D, 70° volle 3D-Perspektive)</string>
+    <string name="tuning_map_lookahead_padding_title">Vorausschau-Kameraabstand unten</string>
+    <string name="tuning_map_lookahead_padding_desc">Unterer Anzeigebereich-Puffer in Prozent, um die Fahrerposition nach unten zu versetzen und den Blick auf die Strecke nach vorn zu maximieren</string>
 </resources>

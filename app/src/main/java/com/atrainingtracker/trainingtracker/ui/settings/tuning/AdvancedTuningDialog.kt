@@ -102,6 +102,11 @@ fun AdvancedTuningDialog(
     var navigationCueTransparency by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY) }
     var navigationCueDismissDurationSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC) }
     var elevationSmoothingSigmaMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS) }
+    var mapFollowMeInitialZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM) }
+    var mapFollowMeSpeedZoomEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED) }
+    var mapFollowMeCruisingZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM) }
+    var mapFollowMeTiltAngle by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE) }
+    var mapFollowMeLookaheadPaddingPercent by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
@@ -139,29 +144,25 @@ fun AdvancedTuningDialog(
             isSectionsOrderInitialized = true
         }
     }
+    fun applyConfig(config: TuningConfig) {
+        elevationXAxisDomain = config.elevationXAxisDomain; telemetryXAxisDomain = config.telemetryXAxisDomain
+        cockpitFontFamily = config.cockpitFontFamily; cockpitFontWeight = config.cockpitFontWeight
+        sensorFieldVariant = config.sensorFieldVariant; sensorFieldCornerRadius = config.sensorFieldCornerRadius
+        sensorFieldBorderThickness = config.sensorFieldBorderThickness; sensorFieldBorderContrast = config.sensorFieldBorderContrast
+        fullDimFactor = config.fullDimFactor; mediumDimFactor = config.mediumDimFactor
+        slopeFlat = config.slopeFlatThreshold; slopeSteep = config.slopeSteepThreshold
+        wakeupSec = config.wakeupDurationSec; downwardDelaySec = config.downwardDelaySec
+        gpsAccuracy = config.gpsAccuracyThresholdMeters; altitudeWindowSec = config.altitudeFilterWindowSec
+        slopeMinSpeed = config.slopeMinSpeedMps; paceCeilingMinKm = config.paceCeilingMinKm
+        routeSelectionRadiusKm = config.routeSelectionRadiusKm; navigationCueTransparency = config.navigationCueTransparency
+        navigationCueDismissDurationSec = config.navigationCueDismissDurationSec; elevationSmoothingSigmaMeters = config.elevationSmoothingSigmaMeters
+        mapFollowMeInitialZoom = config.mapFollowMeInitialZoom; mapFollowMeSpeedZoomEnabled = config.mapFollowMeSpeedZoomEnabled
+        mapFollowMeCruisingZoom = config.mapFollowMeCruisingZoom; mapFollowMeTiltAngle = config.mapFollowMeTiltAngle
+        mapFollowMeLookaheadPaddingPercent = config.mapFollowMeLookaheadPaddingPercent
+    }
+
     LaunchedEffect(persistedConfig) {
-        elevationXAxisDomain = persistedConfig.elevationXAxisDomain
-        telemetryXAxisDomain = persistedConfig.telemetryXAxisDomain
-        cockpitFontFamily = persistedConfig.cockpitFontFamily
-        cockpitFontWeight = persistedConfig.cockpitFontWeight
-        sensorFieldVariant = persistedConfig.sensorFieldVariant
-        sensorFieldCornerRadius = persistedConfig.sensorFieldCornerRadius
-        sensorFieldBorderThickness = persistedConfig.sensorFieldBorderThickness
-        sensorFieldBorderContrast = persistedConfig.sensorFieldBorderContrast
-        fullDimFactor = persistedConfig.fullDimFactor
-        mediumDimFactor = persistedConfig.mediumDimFactor
-        slopeFlat = persistedConfig.slopeFlatThreshold
-        slopeSteep = persistedConfig.slopeSteepThreshold
-        wakeupSec = persistedConfig.wakeupDurationSec
-        downwardDelaySec = persistedConfig.downwardDelaySec
-        gpsAccuracy = persistedConfig.gpsAccuracyThresholdMeters
-        altitudeWindowSec = persistedConfig.altitudeFilterWindowSec
-        slopeMinSpeed = persistedConfig.slopeMinSpeedMps
-        paceCeilingMinKm = persistedConfig.paceCeilingMinKm
-        routeSelectionRadiusKm = persistedConfig.routeSelectionRadiusKm
-        navigationCueTransparency = persistedConfig.navigationCueTransparency
-        navigationCueDismissDurationSec = persistedConfig.navigationCueDismissDurationSec
-        elevationSmoothingSigmaMeters = persistedConfig.elevationSmoothingSigmaMeters
+        applyConfig(persistedConfig)
     }
 
     AppBottomSheetContent(
@@ -172,28 +173,20 @@ fun AdvancedTuningDialog(
             AppDialogActions.SaveCancel(
                 onSave = {
                     val newConfig = TuningConfig(
-                        elevationXAxisDomain = elevationXAxisDomain,
-                        telemetryXAxisDomain = telemetryXAxisDomain,
-                        cockpitFontFamily = cockpitFontFamily,
-                        cockpitFontWeight = cockpitFontWeight,
-                        sensorFieldVariant = sensorFieldVariant,
-                        sensorFieldCornerRadius = sensorFieldCornerRadius,
-                        sensorFieldBorderThickness = sensorFieldBorderThickness,
-                        sensorFieldBorderContrast = sensorFieldBorderContrast,
-                        fullDimFactor = fullDimFactor,
-                        mediumDimFactor = mediumDimFactor,
-                        slopeFlatThreshold = slopeFlat,
-                        slopeSteepThreshold = slopeSteep,
-                        wakeupDurationSec = wakeupSec,
-                        downwardDelaySec = downwardDelaySec,
-                        gpsAccuracyThresholdMeters = gpsAccuracy,
-                        altitudeFilterWindowSec = altitudeWindowSec,
-                        slopeMinSpeedMps = slopeMinSpeed,
-                        paceCeilingMinKm = paceCeilingMinKm,
-                        routeSelectionRadiusKm = routeSelectionRadiusKm,
-                        navigationCueTransparency = navigationCueTransparency,
-                        navigationCueDismissDurationSec = navigationCueDismissDurationSec,
-                        elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters
+                        elevationXAxisDomain = elevationXAxisDomain, telemetryXAxisDomain = telemetryXAxisDomain,
+                        cockpitFontFamily = cockpitFontFamily, cockpitFontWeight = cockpitFontWeight,
+                        sensorFieldVariant = sensorFieldVariant, sensorFieldCornerRadius = sensorFieldCornerRadius,
+                        sensorFieldBorderThickness = sensorFieldBorderThickness, sensorFieldBorderContrast = sensorFieldBorderContrast,
+                        fullDimFactor = fullDimFactor, mediumDimFactor = mediumDimFactor,
+                        slopeFlatThreshold = slopeFlat, slopeSteepThreshold = slopeSteep,
+                        wakeupDurationSec = wakeupSec, downwardDelaySec = downwardDelaySec,
+                        gpsAccuracyThresholdMeters = gpsAccuracy, altitudeFilterWindowSec = altitudeWindowSec,
+                        slopeMinSpeedMps = slopeMinSpeed, paceCeilingMinKm = paceCeilingMinKm,
+                        routeSelectionRadiusKm = routeSelectionRadiusKm, navigationCueTransparency = navigationCueTransparency,
+                        navigationCueDismissDurationSec = navigationCueDismissDurationSec, elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
+                        mapFollowMeInitialZoom = mapFollowMeInitialZoom, mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled,
+                        mapFollowMeCruisingZoom = mapFollowMeCruisingZoom, mapFollowMeTiltAngle = mapFollowMeTiltAngle,
+                        mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
@@ -345,7 +338,17 @@ fun AdvancedTuningDialog(
                     navigationCueTransparency = navigationCueTransparency,
                     onTransparencyChange = { navigationCueTransparency = it },
                     navigationCueDismissDurationSec = navigationCueDismissDurationSec,
-                    onDismissDurationChange = { navigationCueDismissDurationSec = it }
+                    onDismissDurationChange = { navigationCueDismissDurationSec = it },
+                    mapFollowMeInitialZoom = mapFollowMeInitialZoom,
+                    onMapFollowMeInitialZoomChange = { mapFollowMeInitialZoom = it },
+                    mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled,
+                    onMapFollowMeSpeedZoomEnabledChange = { mapFollowMeSpeedZoomEnabled = it },
+                    mapFollowMeCruisingZoom = mapFollowMeCruisingZoom,
+                    onMapFollowMeCruisingZoomChange = { mapFollowMeCruisingZoom = it },
+                    mapFollowMeTiltAngle = mapFollowMeTiltAngle,
+                    onMapFollowMeTiltAngleChange = { mapFollowMeTiltAngle = it },
+                    mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent,
+                    onMapFollowMeLookaheadPaddingPercentChange = { mapFollowMeLookaheadPaddingPercent = it }
                 )
             }
 
@@ -363,28 +366,7 @@ fun AdvancedTuningDialog(
                         workoutCardPrefs = WorkoutCardSectionPreferences()
                         workoutDetailPrefs = WorkoutDetailPreferences()
                         workoutSectionsOrder = WorkoutSectionType.DEFAULT_ORDER
-                        elevationXAxisDomain = TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN
-                        telemetryXAxisDomain = TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN
-                        cockpitFontFamily = TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
-                        cockpitFontWeight = TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT
-                        sensorFieldVariant = TuningPreferencesDefaults.SENSOR_FIELD_VARIANT
-                        sensorFieldCornerRadius = TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS
-                        sensorFieldBorderThickness = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS
-                        sensorFieldBorderContrast = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST
-                        fullDimFactor = TuningPreferencesDefaults.FULL_DIM_FACTOR
-                        mediumDimFactor = TuningPreferencesDefaults.MEDIUM_DIM_FACTOR
-                        slopeFlat = TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD
-                        slopeSteep = TuningPreferencesDefaults.SLOPE_STEEP_THRESHOLD
-                        wakeupSec = TuningPreferencesDefaults.WAKEUP_DURATION_SEC
-                        downwardDelaySec = TuningPreferencesDefaults.DOWNWARD_DELAY_SEC
-                        gpsAccuracy = TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M
-                        altitudeWindowSec = TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC
-                        slopeMinSpeed = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS
-                        paceCeilingMinKm = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
-                        routeSelectionRadiusKm = TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM
-                        navigationCueTransparency = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY
-                        navigationCueDismissDurationSec = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
-                        elevationSmoothingSigmaMeters = TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS
+                        applyConfig(TuningConfig())
                         onSettingsChanged?.invoke()
                         Toast.makeText(context, context.getString(R.string.reset_to_defaults_success), Toast.LENGTH_SHORT).show()
                     }

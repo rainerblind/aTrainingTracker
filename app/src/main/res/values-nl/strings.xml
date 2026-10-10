@@ -1707,4 +1707,26 @@
     <string name="ant_service_installed">Geïnstalleerd</string>
     <string name="ant_service_not_installed">Niet geïnstalleerd</string>
     <string name="ant_service_install_button">Installeren</string>
+
+    <!-- ATT-2931: General Map Layers Control Menu -->
+    <string name="map_layers">Kaartlagen</string>
+    <string name="map_layer_routes">Routes</string>
+    <string name="map_layer_segments">Segmenten</string>
+    <string name="map_layer_locations">Favoriete locaties</string>
+    <string name="map_layer_track">Opgenomen track</string>
+    <string name="ant_dialog_view_status">ANT+ status weergeven</string>
+    <string name="ant_dialog_dismiss">Begrepen</string>
+
+    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
+    <string name="tuning_map_camera_section_title">Kaartcamera &amp; Volg-mij-navigatie</string>
+    <string name="tuning_map_base_zoom_title">Volg-mij basiszoom</string>
+    <string name="tuning_map_base_zoom_desc">Basiszoomniveau van de camera bij stilstand (0 km/u) in volg-mij-modus</string>
+    <string name="tuning_map_speed_zoom_enabled_title">Snelheidsafhankelijke zoom</string>
+    <string name="tuning_map_speed_zoom_enabled_desc">Zoomt geleidelijk uit naarmate de snelheid toeneemt voor meer zicht vooruit</string>
+    <string name="tuning_map_cruising_zoom_title">Kruissnelheid-zoom (bij 20 km/u)</string>
+    <string name="tuning_map_cruising_zoom_desc">Camerazoomniveau geschaald naar typische fietssnelheid (20 km/u)</string>
+    <string name="tuning_map_tilt_angle_title">Kantelhoek van camera</string>
+    <string name="tuning_map_tilt_angle_desc">Perspectiefhoek voor 3D-navigatie (0° is plat 2D, 70° is volledig 3D-perspectief)</string>
+    <string name="tuning_map_lookahead_padding_title">Onderste marge voor vooruitblik</string>
+    <string name="tuning_map_lookahead_padding_desc">Percentage ondermarge om de fietser in het onderste deel te plaatsen en maximaal zicht op de weg vooruit te bieden</string>
 </resources>

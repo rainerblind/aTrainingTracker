@@ -93,6 +93,7 @@ import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
+import com.atrainingtracker.trainingtracker.ui.map.MapContentScope
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
 import com.atrainingtracker.trainingtracker.routes.ForkNavigationRepository
 import com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepository
@@ -157,7 +158,8 @@ fun SensorGridScreen(
     gridSpacing: Dp = 0.dp,
     fieldShape: Shape = RectangleShape,
     fieldElevation: CardElevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    tabToggleActions: TabToggleActions = TabToggleActions.Empty
+    tabToggleActions: TabToggleActions = TabToggleActions.Empty,
+    isTabActive: Boolean = true
 ) {
     val context = LocalContext.current
     val tuningDataStore = remember { TuningPreferencesDataStore(context) }
@@ -212,6 +214,8 @@ fun SensorGridScreen(
     val activeLiveClimb by liveClimbsRepo.activeLiveClimb.collectAsState()
     val showLiveClimbs = !showLiveSegments && state.showLiveClimbs && tuningConfig.showLiveClimbs && activeLiveClimb != null
 
+    val shouldShowBottomSheet = isTabActive && (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING
+
     val navRepo = remember { TurnByTurnNavigationRepository.getInstance(context) }
     val navState by navRepo.navigationState.collectAsState()
 
@@ -221,13 +225,27 @@ fun SensorGridScreen(
     val forkNavRepo = remember { ForkNavigationRepository.getInstance(context) }
     val forkDecisionState by forkNavRepo.forkDecisionState.collectAsState()
 
-    // Control the sheet state
+    // Control the sheet state (REQ-UI-327)
+    val initialSheetValue = if (shouldShowBottomSheet) SheetValue.PartiallyExpanded else SheetValue.Hidden
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
-            initialValue = SheetValue.PartiallyExpanded,
+            initialValue = initialSheetValue,
             skipHiddenState = false // Allow it to hide if no segment or climb
         )
     )
+
+    // Reactively drive SheetValue transitions when active tab or climb/segment state changes
+    LaunchedEffect(shouldShowBottomSheet) {
+        if (!shouldShowBottomSheet) {
+            if (scaffoldState.bottomSheetState.currentValue != SheetValue.Hidden) {
+                scaffoldState.bottomSheetState.hide()
+            }
+        } else {
+            if (scaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
+                scaffoldState.bottomSheetState.partialExpand()
+            }
+        }
+    }
 
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
@@ -238,40 +256,36 @@ fun SensorGridScreen(
             sheetContainerColor = MaterialTheme.colorScheme.surface,
             sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
-        sheetDragHandle = null,
-        sheetPeekHeight = if ((showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
-        sheetSwipeEnabled = (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING,
-        sheetContent = {
-            if (screenMode == ScreenMode.TRACKING && showLiveSegments && activeSegment != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                        .sheetContour()
-                        .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
-                ) {
-                    LiveSegmentSheet(
-                        liveSegment = activeSegment
-                    )
+            sheetDragHandle = null,
+            sheetPeekHeight = if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
+            sheetSwipeEnabled = (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING && isTabActive,
+            sheetContent = {
+                if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveSegments && activeSegment != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                            .sheetContour()
+                            .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
+                    ) {
+                        LiveSegmentSheet(
+                            liveSegment = activeSegment
+                        )
+                    }
+                } else if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveClimbs && activeLiveClimb != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .sheetContour()
+                            .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
+                    ) {
+                        LiveClimbSheet(
+                            liveClimb = activeLiveClimb!!
+                        )
+                    }
                 }
-            } else if (screenMode == ScreenMode.TRACKING && showLiveClimbs && activeLiveClimb != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .sheetContour()
-                        .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
-                ) {
-                    LiveClimbSheet(
-                        liveClimb = activeLiveClimb!!
-                    )
-                }
-            } else {
-                Box(Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)) // Empty placeholder
             }
-        }
-    ) { paddingValues ->
+        ) { paddingValues ->
         if (screenMode == ScreenMode.CONFIGURATION) {
             // UNIFIED SCROLLABLE CONFIGURATION CONTAINER (REQ-UI-295 / ATT-2620)
             Column(
@@ -464,20 +478,6 @@ fun SensorGridScreen(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    TurnPromptBanner(
-                        navigationState = navState,
-                        promptsEnabled = state.showNavigationHints && tuningConfig.turnPromptsEnabled,
-                        overlayAlpha = tuningConfig.navigationCueTransparency,
-                        dismissDurationSec = tuningConfig.navigationCueDismissDurationSec
-                    )
-
-                    // Return Navigation & Dynamic Elevation-Aware ETA HUD Banner (REQ-MAP-029 / ATT-1953)
-                    ReturnNavigationHud(
-                        navigationState = returnNavState,
-                        overlayAlpha = tuningConfig.navigationCueTransparency,
-                        onDismiss = { returnNavRepo.dismissHud() }
-                    )
-
                     // 1. The Sensor Grid (Scrollable)
                     // This Column will only take as much space as the sensors need.
                     Column(
@@ -516,27 +516,16 @@ fun SensorGridScreen(
                         }
                     }
 
-                    // 2. The Map (Expanded)
+                    // 2. The Map (Expanded - Isolated Recomposition Barrier, REQ-UI-326 / ATT-2944)
                     // By using weight(1f) here, the Map will fill every pixel between
                     // the bottom of the sensors and the bottom of the screen.
-                    if (state.showMap) {
-                        ATrainingTrackerMap(
-                            zoomFocus = state.zoomFocus,
-                            userBearing = state.userBearing,
-                            userSpeed = state.userSpeed,
-                            bSportType = state.bSportType,
-                            currentLocationFlow = currentLocationFlow,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f) // Fills remaining space
-                        ) {
-                            tracks(state.mapTracks)
-                            segments(state.mapSegments, state.activeLiveSegmentIds)
-                            routes(state.mapRoutes)
-                            markers(state.mapMarkers)
-                            liveTrack(state.currentTrack)
-                        }
-                    }
+                    TrackingMapContainer(
+                        mapState = state.mapState,
+                        currentLocationFlow = currentLocationFlow,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f) // Fills remaining space
+                    )
 
                     // 3. The Elevation Profile (Below the Map)
                     if (state.showElevationProfile && state.pathPoints.isNotEmpty()) {
@@ -552,25 +541,83 @@ fun SensorGridScreen(
                     }
                 }
 
-                // In-Ride Fork-in-the-Road Route Selection & Decision Alerts (REQ-MAP-031 / ATT-1955, ATT-2874)
+                // Top-Level Ambient Navigation Overlays (REQ-MAP-031, REQ-MAP-029, REQ-UI-324, ATT-2874, ATT-2938, ATT-2941)
                 // Floats on top at Alignment.TopCenter, strictly gated by state.showNavigationHints
                 if (state.showNavigationHints) {
-                    ForkDecisionCard(
-                        decisionState = forkDecisionState,
-                        overlayAlpha = tuningConfig.navigationCueTransparency,
-                        onRouteSelected = { routeId ->
-                            forkNavRepo.selectRouteManually(routeId)
-                        },
-                        onDismiss = {
-                            forkNavRepo.dismissPrompt()
-                        },
-                        modifier = Modifier.align(Alignment.TopCenter)
-                    )
+                    Column(
+                        modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                    ) {
+                        TurnPromptBanner(
+                            navigationState = navState,
+                            promptsEnabled = state.showNavigationHints && tuningConfig.turnPromptsEnabled,
+                            overlayAlpha = tuningConfig.navigationCueTransparency,
+                            dismissDurationSec = tuningConfig.navigationCueDismissDurationSec
+                        )
+
+                        ReturnNavigationHud(
+                            navigationState = returnNavState,
+                            overlayAlpha = tuningConfig.navigationCueTransparency,
+                            onDismiss = { returnNavRepo.dismissHud() }
+                        )
+
+                        ForkDecisionCard(
+                            decisionState = forkDecisionState,
+                            overlayAlpha = tuningConfig.navigationCueTransparency,
+                            onRouteSelected = { routeId ->
+                                forkNavRepo.selectRouteManually(routeId)
+                            },
+                            onDismiss = {
+                                forkNavRepo.dismissPrompt()
+                            },
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                    }
                 }
             }
         }
     }
 
+    }
+}
+
+/**
+ * Isolated recomposition barrier for the live tracking map.
+ * Because [mapState] is @Immutable, the Compose runtime skips this composable
+ * whenever parent recompositions are driven solely by sensor grid telemetry updates (REQ-UI-326 / ATT-2944).
+ */
+@Composable
+fun TrackingMapContainer(
+    mapState: TrackingMapState,
+    currentLocationFlow: StateFlow<LatLng?>,
+    modifier: Modifier = Modifier
+) {
+    if (mapState.showMap) {
+        val mapContent: MapContentScope.() -> Unit = remember(
+            mapState.mapTracks,
+            mapState.mapSegments,
+            mapState.activeLiveSegmentIds,
+            mapState.mapRoutes,
+            mapState.mapMarkers,
+            mapState.currentTrack
+        ) {
+            {
+                tracks(mapState.mapTracks)
+                segments(mapState.mapSegments, mapState.activeLiveSegmentIds)
+                routes(mapState.mapRoutes)
+                markers(mapState.mapMarkers)
+                liveTrack(mapState.currentTrack)
+            }
+        }
+
+        ATrainingTrackerMap(
+            zoomFocus = mapState.zoomFocus,
+            userBearing = mapState.userBearing,
+            userSpeed = mapState.userSpeed,
+            bSportType = mapState.bSportType,
+            currentLocationFlow = currentLocationFlow,
+            modifier = modifier,
+            content = mapContent
+        )
     }
 }
 

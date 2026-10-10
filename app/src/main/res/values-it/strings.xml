@@ -1707,4 +1707,26 @@
     <string name="ant_service_installed">Installato</string>
     <string name="ant_service_not_installed">Non installato</string>
     <string name="ant_service_install_button">Installa</string>
+
+    <!-- ATT-2931: General Map Layers Control Menu -->
+    <string name="map_layers">Livelli mappa</string>
+    <string name="map_layer_routes">Percorsi</string>
+    <string name="map_layer_segments">Segmenti</string>
+    <string name="map_layer_locations">Luoghi preferiti</string>
+    <string name="map_layer_track">Traccia registrata</string>
+    <string name="ant_dialog_view_status">Mostra stato ANT+</string>
+    <string name="ant_dialog_dismiss">Ho capito</string>
+
+    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
+    <string name="tuning_map_camera_section_title">Fotocamera mappa e navigazione seguimi</string>
+    <string name="tuning_map_base_zoom_title">Zoom di base seguimi</string>
+    <string name="tuning_map_base_zoom_desc">Livello di zoom base della fotocamera da fermo (0 km/h) in modalità seguimi</string>
+    <string name="tuning_map_speed_zoom_enabled_title">Zoom in base alla velocità</string>
+    <string name="tuning_map_speed_zoom_enabled_desc">Diminuisce gradualmente lo zoom all\'aumentare della velocità per ampliare la visibilità in avanti</string>
+    <string name="tuning_map_cruising_zoom_title">Zoom a velocità di crociera (a 20 km/h)</string>
+    <string name="tuning_map_cruising_zoom_desc">Livello di zoom della fotocamera ridimensionato alla tipica velocità ciclistica (20 km/h)</string>
+    <string name="tuning_map_tilt_angle_title">Angolo di inclinazione della fotocamera</string>
+    <string name="tuning_map_tilt_angle_desc">Angolo di inclinazione prospettica per navigazione 3D (0° è 2D piatto, 70° è prospettiva 3D completa)</string>
+    <string name="tuning_map_lookahead_padding_title">Spaziatura inferiore per visuale in avanti</string>
+    <string name="tuning_map_lookahead_padding_desc">Percentuale di spaziatura inferiore per posizionare il ciclista nella parte bassa e massimizzare la strada visibile in avanti</string>
 </resources>

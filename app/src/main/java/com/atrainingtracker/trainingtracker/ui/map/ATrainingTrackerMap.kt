@@ -21,6 +21,13 @@ package com.atrainingtracker.trainingtracker.ui.map
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -187,55 +194,79 @@ fun ATrainingTrackerMap(
         resolveMapProperties(isDark, darkOptions)
     }
 
+    val tuningDataStore = remember { TuningPreferencesDataStore(context) }
+    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
+
     androidx.compose.runtime.CompositionLocalProvider(LocalMapStyle provides style.copy(isDark = isDark)) {
-        GoogleMap(
-            modifier = modifier.background(if (isDark) Color(0xFF121212) else Color.White),
-            cameraPositionState = cameraPositionState,
-            onMapClick = { latLng -> onMapClick?.invoke(latLng) },
-            properties = mapProperties,
-            uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
-            onMapLoaded = { isMapLoaded = true }
-        ) {
-            // ATT-440: Instant Zoom Fit. 
-            // We use MapEffect to fit bounds as soon as the map object is available, 
-            // without waiting for all tiles to render (onMapLoaded).
-            // ATT-469: Added shouldTakeSnapshot to keys to trigger callback immediately.
-            MapEffect(initialBounds, isMapLoaded, shouldTakeSnapshot) { map ->
-                if (zoomFocus == MapZoomFocus.EXPLICIT_BOUNDS && initialBounds != null && !isMapLoaded) {
-                    val padding = (40 * context.resources.displayMetrics.density).toInt()
-                    map.moveCamera(com.google.android.gms.maps.CameraUpdateFactory.newLatLngBounds(initialBounds, padding))
-                }
-                
-                if (shouldTakeSnapshot) {
-                    map.snapshot { bitmap ->
-                        if (bitmap != null) {
-                            onSnapshotReady(bitmap)
-                        } else {
-                            onSnapshotError?.invoke()
+        BoxWithConstraints(modifier = modifier) {
+            val bottomPadding = if (zoomFocus == MapZoomFocus.FOLLOW_ME) {
+                maxHeight * (tuningConfig.mapFollowMeLookaheadPaddingPercent / 100f)
+            } else {
+                0.dp
+            }
+
+            GoogleMap(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(if (isDark) Color(0xFF121212) else Color.White),
+                cameraPositionState = cameraPositionState,
+                contentPadding = PaddingValues(bottom = bottomPadding),
+                onMapClick = { latLng -> onMapClick?.invoke(latLng) },
+                properties = mapProperties,
+                uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
+                onMapLoaded = { isMapLoaded = true }
+            ) {
+                // ATT-440: Instant Zoom Fit. 
+                // We use MapEffect to fit bounds as soon as the map object is available, 
+                // without waiting for all tiles to render (onMapLoaded).
+                // ATT-469: Added shouldTakeSnapshot to keys to trigger callback immediately.
+                MapEffect(initialBounds, isMapLoaded, shouldTakeSnapshot) { map ->
+                    if (zoomFocus == MapZoomFocus.EXPLICIT_BOUNDS && initialBounds != null && !isMapLoaded) {
+                        val padding = (40 * context.resources.displayMetrics.density).toInt()
+                        map.moveCamera(com.google.android.gms.maps.CameraUpdateFactory.newLatLngBounds(initialBounds, padding))
+                    }
+                    
+                    if (shouldTakeSnapshot) {
+                        map.snapshot { bitmap ->
+                            if (bitmap != null) {
+                                onSnapshotReady(bitmap)
+                            } else {
+                                onSnapshotError?.invoke()
+                            }
                         }
                     }
                 }
-            }
 
-            // Render the DSL content
-            scope.Render(currentZoom)
+                // Render the DSL content
+                scope.Render(currentZoom)
 
-            // Render Shared Overlays (Scrubber, User Location)
-            val scrubPath = activeScrubPath ?: emptyList()
-            ScrubberController(selectedDistance, scrubPath, cameraPositionState, activeScrubPoint = activeScrubPoint)
-            ScrubMarkerLayer(selectedDistance, scrubPath, scrubIcons.second, scrubIcons.first, activeScrubPoint = activeScrubPoint)
+                // Render Shared Overlays (Scrubber, User Location)
+                val scrubPath = activeScrubPath ?: emptyList()
+                ScrubberController(selectedDistance, scrubPath, cameraPositionState, activeScrubPoint = activeScrubPoint)
+                ScrubMarkerLayer(selectedDistance, scrubPath, scrubIcons.second, scrubIcons.first, activeScrubPoint = activeScrubPoint)
 
-            val filteredBearing = followMeController(zoomFocus, userBearing, userSpeed, currentLocation, cameraPositionState)
-
-            currentLocation?.let { loc ->
-                Marker(
-                    state = remember(loc) { MarkerState(position = loc) },
-                    icon = locationIcon,
-                    rotation = if (zoomFocus == MapZoomFocus.FOLLOW_ME) filteredBearing else userBearing,
-                    flat = true,
-                    anchor = Offset(0.5f, 0.5f),
-                    zIndex = style.userLocationZIndex
+                val filteredBearing = followMeController(
+                    zoomFocus = zoomFocus,
+                    bearing = userBearing,
+                    speed = userSpeed,
+                    currentLocation = currentLocation,
+                    cameraPositionState = cameraPositionState,
+                    baseZoom = tuningConfig.mapFollowMeInitialZoom,
+                    speedZoomEnabled = tuningConfig.mapFollowMeSpeedZoomEnabled,
+                    cruisingZoom = tuningConfig.mapFollowMeCruisingZoom,
+                    tiltAngle = tuningConfig.mapFollowMeTiltAngle
                 )
+
+                currentLocation?.let { loc ->
+                    Marker(
+                        state = remember(loc) { MarkerState(position = loc) },
+                        icon = locationIcon,
+                        rotation = if (zoomFocus == MapZoomFocus.FOLLOW_ME) filteredBearing else userBearing,
+                        flat = true,
+                        anchor = Offset(0.5f, 0.5f),
+                        zIndex = style.userLocationZIndex
+                    )
+                }
             }
         }
     }

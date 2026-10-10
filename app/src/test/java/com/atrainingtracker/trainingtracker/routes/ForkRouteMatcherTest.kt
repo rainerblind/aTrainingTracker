@@ -206,4 +206,44 @@ class ForkRouteMatcherTest {
         )
         assertEquals(2, allCandidates.size)
     }
+
+    /**
+     * TST-MAP-043: Active selected route filtering in ForkRouteMatcher (REQ-MAP-041).
+     */
+    @Test
+    fun findCandidates_requireSelected_filtersOutUnselectedRoutes() {
+        val sharedPath = listOf(
+            pt(48.5000, 9.0000, 0.0),
+            pt(48.5050, 9.0000, 555.0),
+            pt(48.5100, 9.0000, 1111.0)
+        )
+        val selectedRoute = RouteWithPath(
+            dummySummary(21L, "Selected Corridor").copy(isSelected = true),
+            sharedPath
+        )
+        val unselectedRoute = RouteWithPath(
+            dummySummary(22L, "Unselected Corridor").copy(isSelected = false),
+            sharedPath
+        )
+
+        val athletePos = LatLng(48.5054, 9.0000)
+
+        // With requireSelected = true: only selectedRoute is returned
+        val selectedOnly = ForkRouteMatcher.findCandidateRoutes(
+            allRoutes = listOf(selectedRoute, unselectedRoute),
+            currentPos = athletePos,
+            requireSelected = true
+        )
+        assertEquals(1, selectedOnly.size)
+        assertEquals(21L, selectedOnly.first().summary.id)
+
+        // With requireSelected = false (default backward compatibility): both are returned
+        val bothRoutes = ForkRouteMatcher.findCandidateRoutes(
+            allRoutes = listOf(selectedRoute, unselectedRoute),
+            currentPos = athletePos,
+            requireSelected = false
+        )
+        assertEquals(2, bothRoutes.size)
+    }
 }
+

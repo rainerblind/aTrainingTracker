@@ -142,13 +142,15 @@ object ForkRouteMatcher {
      * @param currentPos Current GPS location of the athlete
      * @param recentHistory Optional recent positions from the workout tracking session
      * @param activeSportType Optional active workout sport discipline for sport-type pre-filtering
+     * @param requireSelected Optional parameter to restrict evaluation strictly to routes selected by the athlete (REQ-MAP-041)
      * @return List of matching candidate routes
      */
     fun findCandidateRoutes(
         allRoutes: List<RouteWithPath>,
         currentPos: LatLng,
         recentHistory: List<LatLng>? = null,
-        activeSportType: BSportType? = null
+        activeSportType: BSportType? = null,
+        requireSelected: Boolean = false
     ): List<RouteWithPath> {
         val candidates = mutableListOf<RouteWithPath>()
 
@@ -158,6 +160,11 @@ object ForkRouteMatcher {
 
         for (route in allRoutes) {
             if (route.path.size < 2) continue
+
+            // 0. Active/Selected Route Filter (REQ-MAP-041)
+            if (requireSelected && !route.summary.isSelected) {
+                continue
+            }
 
             // 1. Sport-Type Pre-Filtering (REQ-MAP-038 clause 2)
             if (activeSportType != null && !RouteProximityRanker.matchesSport(route.summary.bSportType, activeSportType)) {

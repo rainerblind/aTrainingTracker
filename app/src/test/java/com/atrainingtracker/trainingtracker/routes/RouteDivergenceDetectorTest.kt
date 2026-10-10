@@ -123,4 +123,66 @@ class RouteDivergenceDetectorTest {
 
         assertNull(state)
     }
+
+    @Test
+    fun testDetectDivergence_suppressesAlertWhenAllBranchesShareSameDirection() {
+        // Shared corridor heading North for 1000m
+        val sharedPoints = listOf(
+            pt(48.5000, 9.0000, 0.0),
+            pt(48.5045, 9.0000, 500.0),
+            pt(48.5090, 9.0000, 1000.0)
+        )
+        // Route 1 continues straight North
+        val route1Path = sharedPoints + listOf(
+            pt(48.5135, 9.0000, 1500.0),
+            pt(48.5180, 9.0000, 2000.0)
+        )
+        // Route 2 diverges slightly east by ~50m (> 40m separation threshold),
+        // but its heading remains ~5° relative to approach corridor (well within [-20°, 20°] -> STRAIGHT)
+        val route2Path = sharedPoints + listOf(
+            pt(48.5135, 9.0007, 1500.0),
+            pt(48.5180, 9.0007, 2000.0)
+        )
+
+        val route1 = RouteWithPath(dummySummary(1L, "Main Highway", 20000.0, 100.0), route1Path)
+        val route2 = RouteWithPath(dummySummary(2L, "Cycle Track Parallel", 20000.0, 100.0), route2Path)
+
+        // Athlete at 800m (200m from divergence point)
+        val athletePos = LatLng(48.5072, 9.0000)
+        val state = RouteDivergenceDetector.detectDivergence(listOf(route1, route2), athletePos)
+
+        // Both routes classify as ForkDirection.STRAIGHT -> must be suppressed!
+        assertNull("Fork alert must be suppressed when all candidate routes head in the same direction (REQ-NAV-043)", state)
+    }
+
+    @Test
+    fun testDetectDivergence_activatesAlertWhenBranchesHaveDistinctDirections() {
+        val sharedPoints = listOf(
+            pt(48.5000, 9.0000, 0.0),
+            pt(48.5045, 9.0000, 500.0),
+            pt(48.5090, 9.0000, 1000.0)
+        )
+        // Route 1 continues straight North (STRAIGHT)
+        val route1Path = sharedPoints + listOf(
+            pt(48.5135, 9.0000, 1500.0),
+            pt(48.5180, 9.0000, 2000.0)
+        )
+        // Route 2 turns sharp Right towards East (RIGHT)
+        val route2Path = sharedPoints + listOf(
+            pt(48.5090, 9.0070, 1500.0),
+            pt(48.5090, 9.0140, 2000.0)
+        )
+
+        val route1 = RouteWithPath(dummySummary(1L, "Straight Route", 20000.0, 100.0), route1Path)
+        val route2 = RouteWithPath(dummySummary(2L, "Right Turn Route", 20000.0, 100.0), route2Path)
+
+        val athletePos = LatLng(48.5072, 9.0000)
+        val state = RouteDivergenceDetector.detectDivergence(listOf(route1, route2), athletePos)
+
+        assertNotNull("Fork alert must activate when routes diverge in distinct directions (REQ-NAV-043)", state)
+        requireNotNull(state)
+        assertEquals(2, state.branches.size)
+        assertTrue(state.branches.any { it.direction == ForkDirection.STRAIGHT })
+        assertTrue(state.branches.any { it.direction == ForkDirection.RIGHT })
+    }
 }

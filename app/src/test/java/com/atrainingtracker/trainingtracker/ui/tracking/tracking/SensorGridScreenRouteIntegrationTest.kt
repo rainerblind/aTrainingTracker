@@ -156,4 +156,93 @@ class SensorGridScreenRouteIntegrationTest {
             content.contains("overlayAlpha = tuningConfig.navigationCueTransparency")
         )
     }
+
+    /**
+     * TST-MAP-041.4 & TST-MAP-041.5: ReturnNavigationHud floats in top-center overlay and is gated by showNavigationHints (REQ-MAP-039.4 / ATT-2938).
+     */
+    @Test
+    fun testSensorGridScreen_returnNavigationHud_floatsAsTopCenterOverlayAndGatedByNavigationHints() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        val mainColumnSection = content.substringAfter("Column(\n                    modifier = Modifier.fillMaxSize()\n                ) {")
+            .substringBefore("Column(\n                        modifier = Modifier\n                            .fillMaxWidth()\n                            .verticalScroll")
+
+        org.junit.Assert.assertFalse(
+            "ReturnNavigationHud must not be rendered inside the in-flow sensor grid Column",
+            mainColumnSection.contains("ReturnNavigationHud(")
+        )
+
+        assertTrue(
+            "ReturnNavigationHud must be gated behind state.showNavigationHints",
+            content.contains("if (state.showNavigationHints)") && content.contains("ReturnNavigationHud(")
+        )
+
+        assertTrue(
+            "ReturnNavigationHud must consume tuningConfig.navigationCueTransparency",
+            content.contains("overlayAlpha = tuningConfig.navigationCueTransparency")
+        )
+    }
+
+    /**
+     * TST-UI-284.1: TurnPromptBanner floats in top-center overlay and is gated by showNavigationHints (REQ-UI-324 / ATT-2941).
+     */
+    @Test
+    fun testSensorGridScreen_turnPromptBanner_floatsAsTopCenterOverlayAndGatedByNavigationHints() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        val mainColumnSection = content.substringAfter("Column(\n                    modifier = Modifier.fillMaxSize()\n                ) {")
+            .substringBefore("Column(\n                        modifier = Modifier\n                            .fillMaxWidth()\n                            .verticalScroll")
+
+        org.junit.Assert.assertFalse(
+            "TurnPromptBanner must not be rendered inside the in-flow sensor grid Column",
+            mainColumnSection.contains("TurnPromptBanner(")
+        )
+
+        assertTrue(
+            "TurnPromptBanner must be gated behind state.showNavigationHints in the top overlay Column",
+            content.contains("if (state.showNavigationHints)") && content.contains("TurnPromptBanner(")
+        )
+
+        assertTrue(
+            "TurnPromptBanner must consume tuningConfig.navigationCueTransparency",
+            content.contains("overlayAlpha = tuningConfig.navigationCueTransparency")
+        )
+
+        assertTrue(
+            "TurnPromptBanner must consume tuningConfig.navigationCueDismissDurationSec",
+            content.contains("dismissDurationSec = tuningConfig.navigationCueDismissDurationSec")
+        )
+    }
+
+    /**
+     * TST-UI-284.2: TurnPromptBanner styling tokens conform to Design Guidelines §§ 5.2, 5.3, 5.4, 5.7 (REQ-UI-324 / ATT-2941).
+     */
+    @Test
+    fun testTurnPromptBanner_stylingTokens_conformsToDesignGuidelines() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/TurnPromptBanner.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "TurnCueCard must use RoundedCornerShape(16.dp)",
+            content.contains("shape = RoundedCornerShape(16.dp)")
+        )
+        assertTrue(
+            "TurnCueCard must resolve containerColor to surfaceContainer / primaryContainer",
+            content.contains("MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer")
+        )
+        assertTrue(
+            "TurnCueCard must apply Royal Blue navigation border stroke",
+            content.contains("val borderColor = TTColor.RouteActiveNavigation.copy(alpha = overlayAlpha.coerceAtLeast(0.4f))")
+        )
+        assertTrue(
+            "TurnCueCard must use 16.dp horizontal and 12.dp vertical content padding",
+            content.contains(".padding(horizontal = 16.dp, vertical = 12.dp)")
+        )
+        assertTrue(
+            "OffRouteCard must use RoundedCornerShape(16.dp) and errorContainer",
+            content.contains("MaterialTheme.colorScheme.errorContainer.copy(alpha = overlayAlpha)")
+        )
+    }
 }

@@ -163,5 +163,46 @@ class RouteSelectorSheetTest {
             content.contains("\"ACTIVE\"") && content.contains("MaterialTheme.colorScheme.primary")
         )
     }
+
+    @Test
+    fun testRouteSelectorContent_doesNotRenderUpperActiveRouteBanner() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteSelectorSheet.kt")
+        val content = file.readText()
+
+        // Extract RouteSelectorContent function block
+        val contentFnStart = content.indexOf("fun RouteSelectorContent(")
+        val contentFnEnd = content.indexOf("fun ActiveRouteBanner(")
+        assertTrue("RouteSelectorContent and ActiveRouteBanner must be located in file", contentFnStart != -1 && contentFnEnd > contentFnStart)
+        val contentFnBody = content.substring(contentFnStart, contentFnEnd)
+
+        assertFalse(
+            "RouteSelectorContent must NOT compose ActiveRouteBanner (REQ-UI-325 / ATT-2943)",
+            contentFnBody.contains("ActiveRouteBanner(")
+        )
+        assertTrue(
+            "RouteSelectorSheet must retain ActiveRouteBanner composable declaration for API backward compatibility",
+            content.contains("fun ActiveRouteBanner(")
+        )
+    }
+
+    @Test
+    fun testRouteCard_supportsDirectCancellationAction() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteSelectorSheet.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "RouteCard signature must accept onClearRoute parameter (REQ-UI-325 / ATT-2943)",
+            content.contains("onClearRoute: (() -> Unit)? = null")
+        )
+        assertTrue(
+            "RouteCard must render close icon button for direct route cancellation (REQ-UI-325 / ATT-2943)",
+            content.contains("Icons.Default.Close") &&
+                content.contains("contentDescription = stringResource(id = R.string.route_action_clear)")
+        )
+        assertTrue(
+            "RouteSelectorContent must pass onClearRoute callback to stop route",
+            content.contains("onClearRoute = {") && content.contains("viewModel.stopRoute()")
+        )
+    }
 }
 

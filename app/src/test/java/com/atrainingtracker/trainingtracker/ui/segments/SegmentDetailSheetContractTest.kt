@@ -62,30 +62,22 @@ class SegmentDetailSheetContractTest {
         assertTrue("SegmentDetailSheet.kt must exist", segmentDetailSheetFile.exists())
         val content = segmentDetailSheetFile.readText()
 
-        // 1. Material 3 AppModalBottomSheet usage
-        assertTrue("Must use AppModalBottomSheet", content.contains("AppModalBottomSheet"))
+        // 1. Material 3 ModalBottomSheet with BottomSheetDesign shape tokens
+        assertTrue("Must use ModalBottomSheet", content.contains("ModalBottomSheet"))
+        assertTrue("Must use BottomSheetDesign.SheetShape", content.contains("BottomSheetDesign.SheetShape"))
 
-        // 2. Header actions: counter, climb category, PR badge
-        assertTrue("Must display routes_segment_counter in header", content.contains("routes_segment_counter"))
-        assertTrue("Must support ClimbCategoryChip in header", content.contains("ClimbCategoryChip"))
-        assertTrue("Must display athlete PR badge in header", content.contains("routes_segment_pr"))
+        // 2. Direct reuse of SegmentOnMapScreen (REQ-UI-315.1)
+        assertTrue("Must host SegmentOnMapScreen directly for visual/functional parity with map popup", content.contains("SegmentOnMapScreen("))
+        assertTrue("Must pass useStatusBarsPadding = false", content.contains("useStatusBarsPadding = false"))
+        assertTrue("Must map segment via toMapSegment", content.contains("toMapSegment("))
 
-        // 3. Telemetry metrics HUD
-        assertTrue("Must render start at metric", content.contains("routes_segment_start_at"))
-        assertTrue("Must reuse SegmentDetails", content.contains("SegmentDetails("))
+        // 3. Overlay dismiss button
+        assertTrue("Must include close icon button for non-destructive dismissal", content.contains("Icons.Default.Close"))
 
-        // 4. Embedded map with EXPLICIT_BOUNDS and StravaOrange MapSegment (REQ-UI-315.2)
-        assertTrue("Must use ATrainingTrackerMap", content.contains("ATrainingTrackerMap"))
-        assertTrue("Must use MapZoomFocus.EXPLICIT_BOUNDS", content.contains("MapZoomFocus.EXPLICIT_BOUNDS"))
-        assertTrue("Must invoke calculateSegmentBounds", content.contains("calculateSegmentBounds(matchedSegment)"))
-        assertTrue("Must render MapSegment for authentic StravaOrange polyline (REQ-UI-315.2)", content.contains("MapSegment("))
-
-        // Material 3 16.dp card corners (REQ-UI-315.4)
-        assertTrue("Must use 16.dp corner radius for cards (REQ-UI-315.4)", content.contains("RoundedCornerShape(16.dp)"))
-
-        // 5. Isolated zoomed elevation profile with slope grade visualization (REQ-UI-315.3)
-        assertTrue("Must render SegmentDetailElevationProfile", content.contains("SegmentDetailElevationProfile("))
-        assertTrue("Must render SegmentDetailElevationProfileCard", content.contains("SegmentDetailElevationProfileCard"))
+        // 4. Verify obsolete card composables are eliminated (Rule 23 - no duplicated code)
+        assertFalse("Obsolete SegmentDetailMetricsCard must not exist", content.contains("SegmentDetailMetricsCard"))
+        assertFalse("Obsolete SegmentDetailMapCard must not exist", content.contains("SegmentDetailMapCard"))
+        assertFalse("Obsolete SegmentDetailElevationProfileCard must not exist", content.contains("SegmentDetailElevationProfileCard"))
     }
 
     @Test

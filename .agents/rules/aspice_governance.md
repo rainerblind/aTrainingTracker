@@ -157,11 +157,18 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * The agent must verify compilation via `./gradlew assembleDebug` on the hotfix branch after cherry-picking.
 * Origin: Sprint 2026-41.5, ATT-2858 & ATT-2856 — Crash fixes were merged to `sprint/2026-41.5` but needed explicit human inquiry to be integrated into `hotfix/V4.9.38.4__267`.
 
-## 28. Deferred Review State for Field-Tested Features
-* **Rule**: When a sprint ticket modifies in-ride GPS dynamics, algorithmic filtering, sensor connectivity, or real-time cycling cockpit prompts that require actual outdoor bike rides to judge, the ticket may remain in `Final Review (Human)` across sprint close.
-* The sprint integration branch `sprint/<SPRINT_NAME>` may still be merged into `develop` if the changes are stable and pass automated regressions. The ticket remains in `Final Review (Human)` until outdoor ride verification is complete.
-* Origin: Sprint 2026-41.5, ATT-2873 & ATT-2874 — Rainer Blind decision: *"Ticket must stay in Review"* for in-ride fork route detection and floating prompt testing.
 
+## 29. Defensive Service Lifecycle Finalization & FGS Permission Gating
+* **Rule**:
+  1. **Permission-Gated FGS Types**: Never pass Android 14+ (API 34+) specialized foreground service types (`FOREGROUND_SERVICE_TYPE_HEALTH`, `FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE`) to `startForeground()` unconditionally. The calling service MUST dynamically verify that the corresponding runtime permission (e.g. `ACTIVITY_RECOGNITION`, `BLUETOOTH_CONNECT`) is granted via `ContextCompat.checkSelfPermission(...)`. Unconditionally requesting types without runtime permissions triggers a fatal `SecurityException` in Android's `ActivityManagerService`.
+  2. **Unconditional Teardown & Guaranteed Finalization**: Critical session closure, database finalization (`FINISHED = 1`), and terminal broadcast intents must NEVER be gated behind transient error flags (such as `mTrackingInterrupted`). If a session ID is valid, finalization must execute in an explicit SQLite transaction (`beginTransaction() ... setTransactionSuccessful() ... endTransaction()`) and completion broadcasts dispatched within guaranteed `finally` blocks.
+* Origin: Sprint 2026-41.6, ATT-2972 / ATT-3055 — Unconditional FGS health type caused silent startup exception, setting `mTrackingInterrupted = true`, which bypassed `endWorkout()` on stop, leaving workouts unfinished in SQLite.
 
+## 30. Developer Tool Host Pre-Flight Diagnostics
+* **Rule**: Any developer tool, simulator, or hardware replay utility interacting with host system hardware (such as Bluetooth LE Broadcaster/Peripheral emulation via BlueZ/D-Bus, ADB mock locations, serial interfaces) MUST execute a self-diagnostic pre-flight check at startup.
+* The tool must verify that controller hardware supports required roles (e.g. LE peripheral mode), that D-Bus/system permissions are granted, and that target ADB devices are online. If prerequisites fail, the tool must surface clear actionable diagnostics rather than failing silently.
+* Origin: Sprint 2026-41.6, ATT-2969 / ATT-3055 — Replay tool passed mock unit tests but failed to advertise BLE or inject GPS on host due to BlueZ D-Bus permissions and missing device mock location configuration.
 
-
+## 31. Explanatory Scale Direction in Settings Sliders
+* **Rule**: Whenever exposing numerical sliders or continuous values in user settings (such as map zoom levels, camera tilt angles, sensitivity curves, or lookahead paddings), the preference subtitle or hint text MUST explicitly explain the physical direction of the scale (e.g., *"Höherer Wert = Näher herangezoomt"* / *"Niedrigerer Wert = Weiträumigere Übersicht"*).
+* Origin: Sprint 2026-41.6, ATT-2946 / ATT-3054 — Map camera zoom sliders did not communicate whether higher numbers meant closer or farther away.

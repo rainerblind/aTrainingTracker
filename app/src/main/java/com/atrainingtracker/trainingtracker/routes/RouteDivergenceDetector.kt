@@ -190,6 +190,13 @@ object RouteDivergenceDetector {
             )
         }.sortedBy { it.bearingDiffDegrees }
 
+        // If all candidate routes share the exact same relative direction (e.g. all STRAIGHT),
+        // there is no directional fork decision for the athlete to make. Suppress the alert (REQ-NAV-043, ATT-2964).
+        val distinctDirections = branchOptions.map { it.direction }.distinct()
+        if (distinctDirections.size < 2) {
+            return null
+        }
+
         return ForkDecisionState(
             divergenceCoordinate = divergencePoint,
             distanceToForkMeters = distanceToFork,

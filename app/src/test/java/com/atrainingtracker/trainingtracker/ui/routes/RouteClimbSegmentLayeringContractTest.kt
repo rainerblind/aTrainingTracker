@@ -67,24 +67,46 @@ class RouteClimbSegmentLayeringContractTest {
      */
     @Test
     fun testMapVisualizationAndStyleConstants_zIndexHierarchy() {
-        // Z-Index ordering: Route Base < Climb < Segment
+        // Z-Index ordering: Route Base < Route Overlay < Active Route Base < Active Route Overlay < Climb < Segment
         assertTrue(
-            "CLIMB_Z_INDEX (${MapVisualization.CLIMB_Z_INDEX}) must be strictly greater than ROUTE_BASE_Z_INDEX (${MapVisualization.ROUTE_BASE_Z_INDEX})",
-            MapVisualization.CLIMB_Z_INDEX > MapVisualization.ROUTE_BASE_Z_INDEX
+            "ROUTE_BASE_Z_INDEX (${MapVisualization.ROUTE_BASE_Z_INDEX}) must be strictly less than ROUTE_OVERLAY_Z_INDEX (${MapVisualization.ROUTE_OVERLAY_Z_INDEX})",
+            MapVisualization.ROUTE_BASE_Z_INDEX < MapVisualization.ROUTE_OVERLAY_Z_INDEX
         )
         assertTrue(
-            "SEGMENT_Z_INDEX (${MapVisualization.SEGMENT_Z_INDEX}) must be strictly greater than CLIMB_Z_INDEX (${MapVisualization.CLIMB_Z_INDEX})",
-            MapVisualization.SEGMENT_Z_INDEX > MapVisualization.CLIMB_Z_INDEX
+            "ROUTE_OVERLAY_Z_INDEX (${MapVisualization.ROUTE_OVERLAY_Z_INDEX}) must be strictly less than ROUTE_ACTIVE_BASE_Z_INDEX (${MapVisualization.ROUTE_ACTIVE_BASE_Z_INDEX})",
+            MapVisualization.ROUTE_OVERLAY_Z_INDEX < MapVisualization.ROUTE_ACTIVE_BASE_Z_INDEX
         )
+        assertTrue(
+            "ROUTE_ACTIVE_BASE_Z_INDEX (${MapVisualization.ROUTE_ACTIVE_BASE_Z_INDEX}) must be strictly less than ROUTE_ACTIVE_OVERLAY_Z_INDEX (${MapVisualization.ROUTE_ACTIVE_OVERLAY_Z_INDEX})",
+            MapVisualization.ROUTE_ACTIVE_BASE_Z_INDEX < MapVisualization.ROUTE_ACTIVE_OVERLAY_Z_INDEX
+        )
+        assertTrue(
+            "ROUTE_ACTIVE_OVERLAY_Z_INDEX (${MapVisualization.ROUTE_ACTIVE_OVERLAY_Z_INDEX}) must be strictly less than CLIMB_Z_INDEX (${MapVisualization.CLIMB_Z_INDEX})",
+            MapVisualization.ROUTE_ACTIVE_OVERLAY_Z_INDEX < MapVisualization.CLIMB_Z_INDEX
+        )
+        assertTrue(
+            "CLIMB_Z_INDEX (${MapVisualization.CLIMB_Z_INDEX}) must be strictly less than SEGMENT_Z_INDEX (${MapVisualization.SEGMENT_Z_INDEX})",
+            MapVisualization.CLIMB_Z_INDEX < MapVisualization.SEGMENT_Z_INDEX
+        )
+
+        assertEquals("ROUTE_BASE_Z_INDEX must be 20.0f", 20.0f, MapVisualization.ROUTE_BASE_Z_INDEX, 0.001f)
+        assertEquals("ROUTE_OVERLAY_Z_INDEX must be 22.0f", 22.0f, MapVisualization.ROUTE_OVERLAY_Z_INDEX, 0.001f)
+        assertEquals("ROUTE_ACTIVE_BASE_Z_INDEX must be 24.0f", 24.0f, MapVisualization.ROUTE_ACTIVE_BASE_Z_INDEX, 0.001f)
+        assertEquals("ROUTE_ACTIVE_OVERLAY_Z_INDEX must be 26.0f", 26.0f, MapVisualization.ROUTE_ACTIVE_OVERLAY_Z_INDEX, 0.001f)
         assertEquals("CLIMB_Z_INDEX must be 28.0f", 28.0f, MapVisualization.CLIMB_Z_INDEX, 0.001f)
         assertEquals("CLIMB_WIDTH must be 10.0f", 10.0f, MapVisualization.CLIMB_WIDTH, 0.001f)
+        assertEquals("SEGMENT_Z_INDEX must be 30.0f", 30.0f, MapVisualization.SEGMENT_Z_INDEX, 0.001f)
         assertEquals("SEGMENT_DASH_LENGTH must be 20.0f", 20.0f, MapVisualization.SEGMENT_DASH_LENGTH, 0.001f)
         assertEquals("SEGMENT_GAP_LENGTH must be 15.0f", 15.0f, MapVisualization.SEGMENT_GAP_LENGTH, 0.001f)
 
         // MapStyle defaults
         val defaultStyle = MapStyle()
+        assertEquals("MapStyle routeOverlayZIndex must be 22f", 22f, defaultStyle.routeOverlayZIndex, 0.001f)
+        assertEquals("MapStyle routeActiveBaseZIndex must be 24f", 24f, defaultStyle.routeActiveBaseZIndex, 0.001f)
+        assertEquals("MapStyle routeActiveOverlayZIndex must be 26f", 26f, defaultStyle.routeActiveOverlayZIndex, 0.001f)
         assertEquals("MapStyle climbZIndex must be 28f", 28f, defaultStyle.climbZIndex, 0.001f)
         assertEquals("MapStyle climbWidth must be 10f", 10f, defaultStyle.climbWidth, 0.001f)
+        assertEquals("MapStyle segmentZIndex must be 30f", 30f, defaultStyle.segmentZIndex, 0.001f)
         assertEquals("MapStyle segmentDashLength must be 20f", 20f, defaultStyle.segmentDashLength, 0.001f)
         assertEquals("MapStyle segmentGapLength must be 15f", 15f, defaultStyle.segmentGapLength, 0.001f)
     }
