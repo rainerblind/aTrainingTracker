@@ -341,36 +341,57 @@ public class DeviceManager {
     /**
      * Lazily checks and initializes GPS and Google Fused location devices if they
      * are currently null, paired in database, and ACCESS_FINE_LOCATION permission
-     * has now been granted (REQ-PRI-004, ATT-2357).
+     * has now been granted, or re-registers update listeners if already instantiated (REQ-PRI-004, ATT-2357, REQ-TRK-017, ATT-3045).
      */
     public synchronized void checkOrInitializeLocationDevices() {
         DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
         LocationManager locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
 
         long gpsDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
-        if (mSpeedAndLocationDevice_GPS == null && devicesDatabaseManager.isPaired(gpsDeviceId)
+        if (devicesDatabaseManager.isPaired(gpsDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
-            if (isProviderAvailableSafely(locationManager, LocationManager.GPS_PROVIDER)) {
-                if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: creating GPS location device");
-                try {
-                    mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
-                } catch (Exception e) {
-                    Log.w(TAG, "Could not initialize GPS location device: " + e.getMessage());
+            if (mSpeedAndLocationDevice_GPS == null) {
+                if (isProviderAvailableSafely(locationManager, LocationManager.GPS_PROVIDER)) {
+                    if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: creating GPS location device");
+                    try {
+                        mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
+                    } catch (Exception e) {
+                        Log.w(TAG, "Could not initialize GPS location device: " + e.getMessage());
+                    }
+                } else {
+                    if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: skipping GPS, provider unavailable");
                 }
             } else {
-                if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: skipping GPS, provider unavailable");
+                mSpeedAndLocationDevice_GPS.checkOrReRegisterLocationUpdates();
             }
         }
 
         long fusedDeviceId = devicesDatabaseManager.getSpeedAndLocationGoogleFusedDeviceId();
-        if (mSpeedAndLocationDevice_GoogleFused == null && devicesDatabaseManager.isPaired(fusedDeviceId)
+        if (devicesDatabaseManager.isPaired(fusedDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)
                 && GooglePlayServicesUtil.isGooglePlayServicesAvailable(mContext) == ConnectionResult.SUCCESS) {
-            if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: creating Google Fused location device");
-            try {
-                mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
-            } catch (Exception e) {
-                Log.w(TAG, "Could not initialize Google Fused location device: " + e.getMessage());
+            if (mSpeedAndLocationDevice_GoogleFused == null) {
+                if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: creating Google Fused location device");
+                try {
+                    mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not initialize Google Fused location device: " + e.getMessage());
+                }
+            } else {
+                mSpeedAndLocationDevice_GoogleFused.checkOrReRegisterLocationUpdates();
+            }
+        }
+
+        long networkDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
+        if (mSpeedAndLocationDevice_Network == null && devicesDatabaseManager.isPaired(networkDeviceId)
+                && TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            if (isProviderAvailableSafely(locationManager, LocationManager.NETWORK_PROVIDER)) {
+                if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: creating Network location device");
+                try {
+                    mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not initialize Network location device: " + e.getMessage());
+                }
             }
         }
     }
