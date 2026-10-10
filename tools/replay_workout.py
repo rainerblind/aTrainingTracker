@@ -29,6 +29,7 @@ import atexit
 import argparse
 import subprocess
 import threading
+import queue
 from dataclasses import dataclass
 from typing import List, Tuple, Optional, Callable
 import xml.etree.ElementTree as ET
@@ -815,12 +816,18 @@ class BleReplayServer:
 
             self.is_advertising = True
 
-            # Start GLib main loop in background thread with dedicated context
+            # Start GLib main loop in background thread with dedicated isolated context
             def glib_worker():
-                ctx = GLib.MainContext.default()
+                ctx = GLib.MainContext.new()
                 ctx.push_thread_default()
                 self.loop = GLib.MainLoop(ctx)
-                self.loop.run()
+                try:
+                    self.loop.run()
+                finally:
+                    try:
+                        ctx.pop_thread_default()
+                    except Exception:
+                        pass
 
             self.loop_thread = threading.Thread(target=glib_worker, daemon=True)
             self.loop_thread.start()
@@ -885,6 +892,9 @@ class AdbGpsInjector:
         self.enabled = enabled
         self.device_serial = device_serial
         self.is_registered = False
+        self._queue = queue.Queue(maxsize=5)
+        self._worker_thread = None
+        self._stop_event = threading.Event()
 
     def detect_device(self) -> Optional[str]:
         if not self.enabled:
@@ -920,9 +930,29 @@ class AdbGpsInjector:
                 )
             self._run_adb(["shell", " ; ".join(cmds)], check=False)
             self.is_registered = True
+
+            # Start background async injection worker thread
+            if not self._worker_thread or not self._worker_thread.is_alive():
+                self._stop_event.clear()
+                self._worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
+                self._worker_thread.start()
         except Exception as e:
             print(f"[!] Warning: Failed to setup ADB test providers: {e}")
             self.enabled = False
+
+    def _worker_loop(self):
+        while not self._stop_event.is_set():
+            try:
+                item = self._queue.get(timeout=0.1)
+            except queue.Empty:
+                continue
+            if item is None:
+                break
+            lat, lon = item
+            now_ms = int(time.time() * 1000)
+            cmds = [self.build_inject_cmd(p, lat, lon, now_ms, accuracy=2.5) for p in self.DEFAULT_PROVIDERS]
+            self._run_adb(["shell", " && ".join(cmds)], check=False)
+            self._queue.task_done()
 
     def _run_adb(self, cmd_args: List[str], check: bool = False):
         if not self.device_serial:
@@ -938,11 +968,22 @@ class AdbGpsInjector:
     def inject_location(self, lat: float, lon: float, ele: float, speed_mps: float, bearing_deg: float):
         if not self.enabled or not self.is_registered:
             return
-        now_ms = int(time.time() * 1000)
-        cmds = [self.build_inject_cmd(p, lat, lon, now_ms, accuracy=2.5) for p in self.DEFAULT_PROVIDERS]
-        self._run_adb(["shell", " && ".join(cmds)], check=False)
+        if self._queue.full():
+            try:
+                self._queue.get_nowait()
+            except queue.Empty:
+                pass
+        try:
+            self._queue.put_nowait((lat, lon))
+        except queue.Full:
+            pass
 
     def teardown(self):
+        self._stop_event.set()
+        try:
+            self._queue.put_nowait(None)
+        except Exception:
+            pass
         if self.is_registered and self.device_serial:
             try:
                 cmds = [f"cmd location providers remove-test-provider {p} 2>/dev/null" for p in self.DEFAULT_PROVIDERS]
@@ -1441,10 +1482,17 @@ def main():
     parser.add_argument("--speed", type=float, default=1.0, help="Initial playback speed multiplier")
     args = parser.parse_args()
 
-    # Resolve TCX file
-    tcx_path = args.tcx_file
-    if not os.path.isabs(tcx_path):
-        tcx_path = os.path.abspath(tcx_path)
+    # Determine if running GUI or Headless mode
+    is_gui = not (args.headless or not HAS_PYQT6 or not os.environ.get("DISPLAY"))
+
+    # When running in GUI mode, initialize QApplication as the root desktop action
+    # to ensure platform windowing/GTK initialization happens before background threads.
+    app = None
+    if is_gui:
+        app = QApplication(sys.argv)
+
+    # Resolve TCX file with tilde expansion
+    tcx_path = os.path.abspath(os.path.expanduser(args.tcx_file))
 
     if not os.path.isfile(tcx_path):
         print(f"Error: Specified TCX file not found: {tcx_path}", file=sys.stderr)
@@ -1494,15 +1542,14 @@ def main():
     engine.set_speed(args.speed)
 
     # Dispatch to GUI or Headless
-    if args.headless or not HAS_PYQT6 or not os.environ.get("DISPLAY"):
-        if not args.headless and not HAS_PYQT6:
-            print("[*] PyQt6 not found in environment. Defaulting to headless CLI mode.")
-        run_headless_cli(engine, ble_server, gps_injector)
-    else:
-        app = QApplication(sys.argv)
+    if is_gui:
         window = ReplayGuiWindow(tcx_path, engine, ble_server, gps_injector)
         window.show()
         sys.exit(app.exec())
+    else:
+        if not args.headless and not HAS_PYQT6:
+            print("[*] PyQt6 not found in environment. Defaulting to headless CLI mode.")
+        run_headless_cli(engine, ble_server, gps_injector)
 
 
 if __name__ == "__main__":
