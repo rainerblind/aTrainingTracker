@@ -1722,13 +1722,13 @@
     <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
     <string name="tuning_map_camera_section_title">Cámara del mapa y navegación sígueme</string>
     <string name="tuning_map_base_zoom_title">Zoom base sígueme</string>
-    <string name="tuning_map_base_zoom_desc">Nivel de zoom base de la cámara cuando está detenido (0 km/h) en modo sígueme</string>
+    <string name="tuning_map_base_zoom_desc">Nivel de zoom base de la cámara cuando está detenido (0 km/h) en modo sígueme (valor más alto = mayor acercamiento)</string>
     <string name="tuning_map_speed_zoom_enabled_title">Zoom según la velocidad</string>
     <string name="tuning_map_speed_zoom_enabled_desc">Aleja gradualmente el zoom al aumentar la velocidad para ampliar la visión de la ruta por delante</string>
     <string name="tuning_map_cruising_zoom_title">Zoom a velocidad de crucero (a 20 km/h)</string>
-    <string name="tuning_map_cruising_zoom_desc">Nivel de zoom de la cámara ajustado a la velocidad típica de ciclismo (20 km/h)</string>
+    <string name="tuning_map_cruising_zoom_desc">Nivel de zoom de la cámara ajustado a la velocidad típica de ciclismo (20 km/h) (valor más alto = mayor acercamiento)</string>
     <string name="tuning_map_tilt_angle_title">Ángulo de inclinación de la cámara</string>
     <string name="tuning_map_tilt_angle_desc">Ángulo de inclinación de perspectiva para navegación 3D (0° es 2D plano, 70° es perspectiva 3D completa)</string>
-    <string name="tuning_map_lookahead_padding_title">Margen inferior para vista anticipada hacia adelante</string>
-    <string name="tuning_map_lookahead_padding_desc">Porcentaje de margen inferior para situar al ciclista en la parte inferior y maximizar la carretera visible por delante</string>
+    <string name="tuning_map_lookahead_padding_title">Margen para vista anticipada</string>
+    <string name="tuning_map_lookahead_padding_desc">Porcentaje de margen para situar al ciclista en la parte inferior y maximizar la carretera visible por delante</string>
 </resources>
