@@ -245,4 +245,80 @@ class SensorGridScreenRouteIntegrationTest {
             content.contains("MaterialTheme.colorScheme.errorContainer.copy(alpha = overlayAlpha)")
         )
     }
+
+    /**
+     * TST-UI-295.1: Navigation hints overlay anchors inside map container over embedded map when map is present (REQ-UI-335 / ATT-3100).
+     */
+    @Test
+    fun testSensorGridScreen_navigationOverlay_anchorsInsideMapContainerWhenMapPresent() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        // 1. Verify map container is wrapped in a Box when showMap is true
+        assertTrue(
+            "SensorGridScreen must guard map container Box with if (state.mapState.showMap)",
+            content.contains("if (state.mapState.showMap)")
+        )
+
+        // 2. Extract map Box section
+        val mapSection = content.substringAfter("if (state.mapState.showMap) {")
+            .substringBefore("// 3. The Elevation Profile")
+
+        assertTrue(
+            "Map container must invoke TrackingMapContainer",
+            mapSection.contains("TrackingMapContainer(")
+        )
+
+        assertTrue(
+            "Map container must host NavigationHintsOverlay anchored at Alignment.TopCenter",
+            mapSection.contains("NavigationHintsOverlay(") &&
+                    mapSection.contains("modifier = Modifier.align(Alignment.TopCenter)")
+        )
+    }
+
+    /**
+     * TST-UI-295.2: Fallback navigation hints overlay anchors at top of tab when map is absent (REQ-UI-335 / ATT-3100).
+     */
+    @Test
+    fun testSensorGridScreen_navigationOverlay_anchorsAtRootWhenMapAbsent() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        // Verify root overlay is conditioned on !state.mapState.showMap
+        assertTrue(
+            "SensorGridScreen must render root NavigationHintsOverlay when map is absent",
+            content.contains("if (!state.mapState.showMap && state.showNavigationHints)")
+        )
+    }
+
+    /**
+     * TST-UI-295.3: NavigationHintsOverlay encapsulates TurnPromptBanner, ReturnNavigationHud, and ForkDecisionCard (REQ-UI-335 / ATT-3100).
+     */
+    @Test
+    fun testSensorGridScreen_definesNavigationHintsOverlay_encapsulatingAllNavigationAids() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "SensorGridScreen must define NavigationHintsOverlay composable",
+            content.contains("fun NavigationHintsOverlay(")
+        )
+
+        val overlaySection = content.substringAfter("fun NavigationHintsOverlay(")
+            .substringBefore("fun TrackingMapContainer(")
+
+        assertTrue(
+            "NavigationHintsOverlay must encapsulate TurnPromptBanner",
+            overlaySection.contains("TurnPromptBanner(")
+        )
+        assertTrue(
+            "NavigationHintsOverlay must encapsulate ReturnNavigationHud",
+            overlaySection.contains("ReturnNavigationHud(")
+        )
+        assertTrue(
+            "NavigationHintsOverlay must encapsulate ForkDecisionCard",
+            overlaySection.contains("ForkDecisionCard(")
+        )
+    }
 }
+
