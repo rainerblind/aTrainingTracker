@@ -11,10 +11,17 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.util.Log
+import androidx.core.content.ContextCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
@@ -58,6 +65,33 @@ class PeriodsRepository private constructor(private val application: Application
 
     private val rebuildMutex = Mutex()
 
+    private val trackingFinishedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val workoutId = intent.getLongExtra(TrackerService.WORKOUT_ID, -1L)
+            if (workoutId != -1L) {
+                Log.d(TAG, "TRACKING_FINISHED_INTENT received for workoutId=$workoutId")
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        workoutSummariesManager.getWorkoutCursor(workoutId)?.use { cursor ->
+                            if (cursor.moveToFirst()) {
+                                val mapper = WorkoutDataMapper(
+                                    application, workoutSummariesManager,
+                                    com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
+                                    com.atrainingtracker.trainingtracker.database.EquipmentDbHelper(application),
+                                    com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(application)
+                                )
+                                val workout = mapper.fromCursor(cursor)
+                                if (workout.finished) {
+                                    onWorkoutFinished(workout)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private val dayFormatter = DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG)
     private val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy")
     private val yearFormatter = DateTimeFormatter.ofPattern("yyyy")
@@ -77,14 +111,18 @@ class PeriodsRepository private constructor(private val application: Application
 
         @androidx.annotation.VisibleForTesting
         fun resetInstanceForTesting() {
-            instance?.scope?.cancel()
+            try {
+                instance?.scope?.cancel()
+            } catch (ignored: Throwable) {}
             instance = null
         }
 
         @androidx.annotation.VisibleForTesting
         fun setInstanceForTesting(repo: PeriodsRepository?) {
             if (repo == null) {
-                instance?.scope?.cancel()
+                try {
+                    instance?.scope?.cancel()
+                } catch (ignored: Throwable) {}
             }
             instance = repo
         }
@@ -129,6 +167,15 @@ class PeriodsRepository private constructor(private val application: Application
                 // This ensures maps pop in as soon as the first few workouts are loaded.
                 loadFromDatabase(forceIncremental = true)
             }
+        }
+
+        // 4. Direct Finalization Broadcast Listening (ATT-3056 / REQ-PER-014)
+        try {
+            val filter = IntentFilter(TrackerService.TRACKING_FINISHED_INTENT)
+            LocalBroadcastManager.getInstance(application).registerReceiver(trackingFinishedReceiver, filter)
+            ContextCompat.registerReceiver(application, trackingFinishedReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to register trackingFinishedReceiver", t)
         }
     }
 
@@ -350,23 +397,30 @@ class PeriodsRepository private constructor(private val application: Application
      */
     fun onWorkoutFinished(workout: WorkoutData) {
         scope.launch {
-            val ldt = workout.localDateTime
-            val dayStart = ldt.toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
-
-            withContext(Dispatchers.IO) {
-                dbManager.runInTransaction { db ->
-                    // 1. Update Day
-                    val workoutsInDay = fetchWorkoutsInDay(dayStart)
-                    aggregateWorkoutsToDay(workoutsInDay, dayStart)?.let { 
-                        dbManager.upsertPeriod(db, it)
-                    }
-
-                    // 2. Propagate Upwards
-                    rollupDayToParents(db, ldt)
-                }
+            rebuildMutex.withLock {
+                onWorkoutFinishedInternal(workout)
             }
-            loadFromDatabase()
         }
+    }
+
+    private suspend fun onWorkoutFinishedInternal(workout: WorkoutData) {
+        val ldt = workout.localDateTime
+        val dayStart = ldt.toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
+
+        withContext(Dispatchers.IO) {
+            dbManager.runInTransaction { db ->
+                // 1. Update Day
+                val workoutsInDay = fetchWorkoutsInDay(dayStart)
+                aggregateWorkoutsToDay(workoutsInDay, dayStart)?.let { 
+                    dbManager.upsertPeriod(db, it)
+                }
+
+                // 2. Propagate Upwards
+                rollupDayToParents(db, ldt)
+                dbManager.setSyncFinished(db, true)
+            }
+        }
+        loadFromDatabase(forceIncremental = true)
     }
 
     /**
@@ -374,23 +428,25 @@ class PeriodsRepository private constructor(private val application: Application
      */
     fun onWorkoutDeleted(workout: WorkoutData) {
         scope.launch {
-            val ldt = workout.localDateTime
-            val dayStart = ldt.toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
+            rebuildMutex.withLock {
+                val ldt = workout.localDateTime
+                val dayStart = ldt.toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
 
-            withContext(Dispatchers.IO) {
-                dbManager.runInTransaction { db ->
-                    val workoutsRemaining = fetchWorkoutsInDay(dayStart)
-                    if (workoutsRemaining.isEmpty()) {
-                        dbManager.deletePeriod(db, PeriodType.DAY, dayStart)
-                    } else {
-                        aggregateWorkoutsToDay(workoutsRemaining, dayStart)?.let {
-                            dbManager.upsertPeriod(db, it)
+                withContext(Dispatchers.IO) {
+                    dbManager.runInTransaction { db ->
+                        val workoutsRemaining = fetchWorkoutsInDay(dayStart)
+                        if (workoutsRemaining.isEmpty()) {
+                            dbManager.deletePeriod(db, PeriodType.DAY, dayStart)
+                        } else {
+                            aggregateWorkoutsToDay(workoutsRemaining, dayStart)?.let {
+                                dbManager.upsertPeriod(db, it)
+                            }
                         }
+                        rollupDayToParents(db, ldt)
                     }
-                    rollupDayToParents(db, ldt)
                 }
+                loadFromDatabase(forceIncremental = true)
             }
-            loadFromDatabase()
         }
     }
 
@@ -399,22 +455,24 @@ class PeriodsRepository private constructor(private val application: Application
      */
     fun onWorkoutSportChanged(newWorkout: WorkoutData, oldWorkout: WorkoutData) {
         scope.launch {
-            Log.d(TAG, "onWorkoutSportChanged: ${oldWorkout.bSportType} -> ${newWorkout.bSportType}")
-            
-            withContext(Dispatchers.IO) {
-                dbManager.runInTransaction { db ->
-                    getAffectedPeriodRanges(newWorkout.localDateTime).forEach { (type, start, _) ->
-                        val period = dbManager.getSummariesInRange(type, start, start).firstOrNull() ?: return@forEach
-                        
-                        // Transition logic: Subtract old metrics, then recalculate the Day
-                        val subtracted = subtractWorkoutFromPeriod(period, oldWorkout)
-                        // Merging new is easier by just recalculating the Day and rolling up
-                        dbManager.upsertPeriod(db, subtracted)
+            rebuildMutex.withLock {
+                Log.d(TAG, "onWorkoutSportChanged: ${oldWorkout.bSportType} -> ${newWorkout.bSportType}")
+                
+                withContext(Dispatchers.IO) {
+                    dbManager.runInTransaction { db ->
+                        getAffectedPeriodRanges(newWorkout.localDateTime).forEach { (type, start, _) ->
+                            val period = dbManager.getSummariesInRange(type, start, start).firstOrNull() ?: return@forEach
+                            
+                            // Transition logic: Subtract old metrics, then recalculate the Day
+                            val subtracted = subtractWorkoutFromPeriod(period, oldWorkout)
+                            // Merging new is easier by just recalculating the Day and rolling up
+                            dbManager.upsertPeriod(db, subtracted)
+                        }
                     }
                 }
+                // Logic optimization: Just call finished logic to ensure the new state is rolled up correctly
+                onWorkoutFinishedInternal(newWorkout)
             }
-            // Logic optimization: Just call finished logic to ensure the new state is rolled up correctly
-            onWorkoutFinished(newWorkout)
         }
     }
 
