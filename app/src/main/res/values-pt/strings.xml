@@ -1720,13 +1720,13 @@
     <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
     <string name="tuning_map_camera_section_title">Câmara do mapa e navegação siga-me</string>
     <string name="tuning_map_base_zoom_title">Zoom base siga-me</string>
-    <string name="tuning_map_base_zoom_desc">Nível de zoom base da câmara quando parado (0 km/h) no modo siga-me</string>
+    <string name="tuning_map_base_zoom_desc">Nível de zoom base da câmara quando parado (0 km/h) no modo siga-me (valor mais alto = zoom mais aproximado)</string>
     <string name="tuning_map_speed_zoom_enabled_title">Zoom dependente da velocidade</string>
     <string name="tuning_map_speed_zoom_enabled_desc">Afasta gradualmente o zoom com o aumento da velocidade para expandir a visibilidade à frente</string>
     <string name="tuning_map_cruising_zoom_title">Zoom a velocidade de cruzeiro (a 20 km/h)</string>
-    <string name="tuning_map_cruising_zoom_desc">Nível de zoom da câmara ajustado para a velocidade típica de ciclismo (20 km/h)</string>
+    <string name="tuning_map_cruising_zoom_desc">Nível de zoom da câmara ajustado para a velocidade típica de ciclismo (20 km/h) (valor mais alto = zoom mais aproximado)</string>
     <string name="tuning_map_tilt_angle_title">Ângulo de inclinação da câmara</string>
     <string name="tuning_map_tilt_angle_desc">Ângulo de inclinação da perspetiva para navegação 3D (0° é 2D plano, 70° é perspetiva 3D completa)</string>
-    <string name="tuning_map_lookahead_padding_title">Espaçamento inferior para visualização à frente</string>
-    <string name="tuning_map_lookahead_padding_desc">Percentagem de espaçamento inferior para posicionar o ciclista na parte inferior e maximizar a estrada visível à frente</string>
+    <string name="tuning_map_lookahead_padding_title">Margem de visão antecipada</string>
+    <string name="tuning_map_lookahead_padding_desc">Percentagem de margem para posicionar o ciclista na parte inferior e maximizar a estrada visível à frente</string>
 </resources>

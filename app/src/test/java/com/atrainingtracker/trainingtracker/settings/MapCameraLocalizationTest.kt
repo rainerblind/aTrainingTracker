@@ -70,6 +70,40 @@ class MapCameraLocalizationTest {
         }
     }
 
+    @Test
+    fun testMapCameraZoomDescriptions_clarifyDirectionAcrossAll9Locales() {
+        val resDir = findResDirectory()
+
+        for (locale in locales) {
+            val dirName = if (locale.isEmpty()) "values" else "values-$locale"
+            val file = File(resDir, "$dirName/strings.xml")
+            val stringMap = parseStringsFile(file)
+
+            val baseZoomDesc = stringMap["tuning_map_base_zoom_desc"] ?: ""
+            val cruisingZoomDesc = stringMap["tuning_map_cruising_zoom_desc"] ?: ""
+            val lookaheadTitle = stringMap["tuning_map_lookahead_padding_title"] ?: ""
+
+            assertTrue(
+                "Base zoom description in $dirName must provide direction guidance (contains parentheses hint): '$baseZoomDesc'",
+                baseZoomDesc.contains("(") || baseZoomDesc.contains("（")
+            )
+            assertTrue(
+                "Cruising zoom description in $dirName must provide direction guidance (contains parentheses hint): '$cruisingZoomDesc'",
+                cruisingZoomDesc.contains("(") || cruisingZoomDesc.contains("（")
+            )
+            assertFalse(
+                "Lookahead title in $dirName must not refer to bottom: '$lookaheadTitle'",
+                lookaheadTitle.contains("Bottom", ignoreCase = true) ||
+                    lookaheadTitle.contains("unten", ignoreCase = true) ||
+                    lookaheadTitle.contains("inferior", ignoreCase = true) ||
+                    lookaheadTitle.contains("inférieure", ignoreCase = true) ||
+                    lookaheadTitle.contains("onderste", ignoreCase = true) ||
+                    lookaheadTitle.contains("dolny", ignoreCase = true) ||
+                    lookaheadTitle.contains("下部", ignoreCase = true)
+            )
+        }
+    }
+
     private fun findResDirectory(): File {
         val candidates = listOf(
             File("src/main/res"),

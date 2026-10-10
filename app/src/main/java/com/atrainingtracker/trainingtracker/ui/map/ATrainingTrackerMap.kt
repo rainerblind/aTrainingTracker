@@ -199,7 +199,7 @@ fun ATrainingTrackerMap(
 
     androidx.compose.runtime.CompositionLocalProvider(LocalMapStyle provides style.copy(isDark = isDark)) {
         BoxWithConstraints(modifier = modifier) {
-            val bottomPadding = if (zoomFocus == MapZoomFocus.FOLLOW_ME) {
+            val topPadding = if (zoomFocus == MapZoomFocus.FOLLOW_ME) {
                 maxHeight * (tuningConfig.mapFollowMeLookaheadPaddingPercent / 100f)
             } else {
                 0.dp
@@ -210,7 +210,7 @@ fun ATrainingTrackerMap(
                     .fillMaxSize()
                     .background(if (isDark) Color(0xFF121212) else Color.White),
                 cameraPositionState = cameraPositionState,
-                contentPadding = PaddingValues(bottom = bottomPadding),
+                contentPadding = PaddingValues(top = topPadding),
                 onMapClick = { latLng -> onMapClick?.invoke(latLng) },
                 properties = mapProperties,
                 uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
