@@ -95,6 +95,18 @@ data class Climb(
 ) {
     val startLatLng: LatLng get() = LatLng(startLat, startLng)
     val endLatLng: LatLng get() = LatLng(endLat, endLng)
+
+    /**
+     * Sequence of path points normalized to local climb distance starting at 0.0 meters.
+     * Preserves latLng, altitude, time, and telemetry fields intact (REQ-UI-338, ATT-3105).
+     */
+    val normalizedPathPoints: List<PathPoint>
+        get() {
+            if (pathPoints.isEmpty()) return emptyList()
+            val startDist = pathPoints.first().distance
+            if (startDist == 0.0) return pathPoints
+            return pathPoints.map { it.copy(distance = (it.distance - startDist).coerceAtLeast(0.0)) }
+        }
 }
 
 /**
