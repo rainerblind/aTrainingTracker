@@ -5,7 +5,7 @@
 **Parent Epic**: [ATT-355](https://atrainingtracker.atlassian.net/browse/ATT-355) (*Good and consistent UI*)  
 **Target Release**: None (Unassigned per Rule 19)  
 **Active Sprint**: `2026-41.8`  
-**Requirement Mapping**: `REQ-UI-294` (*Newly Discovered Sensor Prioritization, Visual Highlight Badge & Discovery Feedback Notification*)  
+**Requirement Mapping**: `REQ-UI-334` (*Newly Discovered Sensor Prioritization, Visual Highlight Badge & Discovery Feedback Notification*)  
 **Test Spec ID**: `TST-UI-294`  
 **Branch**: `feature/ATT-3099`  
 **Author**: AI Agent 1 (Implementer)  
