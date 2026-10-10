@@ -24,6 +24,7 @@ import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.routes.RouteAutoDetector
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
@@ -58,6 +59,7 @@ class RouteSelectorViewModel(
     private val routesRepository: RoutesRepository,
     private val autoDetector: RouteAutoDetector = RouteAutoDetector(),
     private val tuningPreferencesDataStore: TuningPreferencesDataStore? = null,
+    private val banalServiceRepository: BANALServiceRepository? = null,
     sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5000)
 ) : ViewModel() {
 
@@ -65,7 +67,14 @@ class RouteSelectorViewModel(
         routesRepository: RoutesRepository,
         autoDetector: RouteAutoDetector,
         sharingStarted: SharingStarted
-    ) : this(routesRepository, autoDetector, null, sharingStarted)
+    ) : this(routesRepository, autoDetector, null, null, sharingStarted)
+
+    constructor(
+        routesRepository: RoutesRepository,
+        autoDetector: RouteAutoDetector,
+        tuningPreferencesDataStore: TuningPreferencesDataStore?,
+        sharingStarted: SharingStarted
+    ) : this(routesRepository, autoDetector, tuningPreferencesDataStore, null, sharingStarted)
 
     private val _lastLocation = MutableStateFlow<Location?>(null)
     private val _autoDetectedCandidate = MutableStateFlow<RouteWithPath?>(null)
@@ -150,6 +159,11 @@ class RouteSelectorViewModel(
 
     fun selectRoute(routeId: Long) {
         routesRepository.setActiveNavigatedRoute(routeId)
+        val selectedRoute = routesRepository.allRoutes.value.firstOrNull { it.summary.id == routeId }
+        val routeSport = selectedRoute?.summary?.bSportType
+        if (routeSport == BSportType.BIKE || routeSport == BSportType.RUN) {
+            banalServiceRepository?.setUserSelectedSportType(routeSport)
+        }
         if (_autoDetectedCandidate.value?.summary?.id == routeId) {
             _autoDetectedCandidate.value = null
         }
