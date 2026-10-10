@@ -45,6 +45,10 @@ class ClimbDetailSheetContractTest {
         File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/climbs/ClimbDetailSheet.kt")
     }
 
+    private val climbOnMapScreenFile: File by lazy {
+        File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/climbs/ClimbOnMapScreen.kt")
+    }
+
     @Test
     fun testClimbDetailSheet_composablesExistAndArePublic() {
         val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.climbs.ClimbDetailSheetKt")
@@ -56,37 +60,43 @@ class ClimbDetailSheetContractTest {
 
         val profileMethod = methods.find { it.name.startsWith("ClimbDetailElevationProfile") && Modifier.isPublic(it.modifiers) }
         assertNotNull("ClimbDetailElevationProfile composable function must exist and be public", profileMethod)
+
+        val screenClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.climbs.ClimbOnMapScreenKt")
+        assertNotNull("ClimbOnMapScreenKt class must exist", screenClazz)
+        val screenMethod = screenClazz.declaredMethods.find { it.name.startsWith("ClimbOnMapScreen") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("ClimbOnMapScreen composable function must exist and be public", screenMethod)
     }
 
     @Test
     fun testClimbDetailSheet_structuralTokensAndContracts() {
         assertTrue("ClimbDetailSheet.kt must exist", climbDetailSheetFile.exists())
-        val content = climbDetailSheetFile.readText()
+        val sheetContent = climbDetailSheetFile.readText()
 
-        // Material 3 AppModalBottomSheet usage
-        assertTrue("Must use AppModalBottomSheet", content.contains("AppModalBottomSheet"))
+        // Shared EntityDetailSheetScaffold usage (REQ-UI-333)
+        assertTrue("Must use EntityDetailSheetScaffold", sheetContent.contains("EntityDetailSheetScaffold("))
+        assertTrue("Must host ClimbOnMapScreen", sheetContent.contains("ClimbOnMapScreen("))
+
+        assertTrue("ClimbOnMapScreen.kt must exist", climbOnMapScreenFile.exists())
+        val screenContent = climbOnMapScreenFile.readText()
+
+        // MapDetailLayout integration with EXPLICIT_BOUNDS
+        assertTrue("Must use MapDetailLayout", screenContent.contains("MapDetailLayout("))
+        assertTrue("Must use MapZoomFocus.EXPLICIT_BOUNDS", screenContent.contains("MapZoomFocus.EXPLICIT_BOUNDS"))
+        assertTrue("Must invoke calculateClimbBounds", screenContent.contains("calculateClimbBounds(climb)"))
 
         // Category chip in header
-        assertTrue("Must display ClimbCategoryChip in header", content.contains("ClimbCategoryChip(category = climb.category)"))
+        assertTrue("Must display ClimbCategoryChip in header", screenContent.contains("ClimbCategoryChip(category = climb.category)"))
+
+        // Structured Header and Details
+        assertTrue("Must render ClimbHeader", screenContent.contains("ClimbHeader("))
+        assertTrue("Must render ClimbDetails", screenContent.contains("ClimbDetails("))
 
         // Telemetry metrics HUD
-        assertTrue("Must render distance metric", content.contains("climb.distanceMeters"))
-        assertTrue("Must render elevation gain metric", content.contains("climb.elevationGainMeters"))
-        assertTrue("Must render average grade metric", content.contains("routes_climb_avg_grade"))
-        assertTrue("Must render maximum grade metric", content.contains("routes_climb_max_grade"))
-        assertTrue("Must use climb_max_grade_label for maximum grade label (REQ-UI-315.1)", content.contains("climb_max_grade_label"))
-        assertTrue("Must display metric icons in HUD (REQ-UI-315.1)", content.contains("ic_distance") && content.contains("ic_ascent") && content.contains("ic_grade"))
-
-        // Embedded map with EXPLICIT_BOUNDS
-        assertTrue("Must use ATrainingTrackerMap", content.contains("ATrainingTrackerMap"))
-        assertTrue("Must use MapZoomFocus.EXPLICIT_BOUNDS", content.contains("MapZoomFocus.EXPLICIT_BOUNDS"))
-        assertTrue("Must invoke calculateClimbBounds", content.contains("calculateClimbBounds(climb)"))
-
-        // Material 3 16.dp card corners
-        assertTrue("Must use 16.dp corner radius for cards (REQ-UI-315.4)", content.contains("RoundedCornerShape(16.dp)"))
-
-        // Isolated zoomed elevation profile
-        assertTrue("Must render ClimbDetailElevationProfileCard", content.contains("ClimbDetailElevationProfileCard"))
+        assertTrue("Must render distance metric", screenContent.contains("climb.distanceMeters"))
+        assertTrue("Must render elevation gain metric", screenContent.contains("climb.elevationGainMeters"))
+        assertTrue("Must render average grade metric", screenContent.contains("routes_climb_avg_grade"))
+        assertTrue("Must render maximum grade metric", screenContent.contains("routes_climb_max_grade"))
+        assertTrue("Must display metric icons in HUD", screenContent.contains("ic_distance") && screenContent.contains("ic_ascent") && screenContent.contains("ic_grade"))
     }
 
     @Test
