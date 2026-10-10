@@ -69,7 +69,7 @@ class TrackOnMapScreenDetailPreferencesContractTest {
         )
         assertTrue(
             "TrackOnMapScreen must condition showElevationProfile on activeDetailPrefs.showElevationProfile",
-            content.contains("showElevationProfile = hasGpsTrack && activeDetailPrefs.showElevationProfile")
+            content.contains("showElevationProfile = (hasGpsTrack || hasTracklessAltitude) && activeDetailPrefs.showElevationProfile")
         )
 
         // 5. Telemetry Charts Gating
