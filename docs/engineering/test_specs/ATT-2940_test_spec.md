@@ -1,10 +1,10 @@
 # Stage 2: Requirement & Test Specification - ATT-2940: Increase selected route polyline thickness and remove dashed overlay at standard zoom levels
 
 **Ticket**: [ATT-2940](https://atrainingtracker.atlassian.net/browse/ATT-2940)  
-**Sub-task**: [ATT-3058](https://atrainingtracker.atlassian.net/browse/ATT-3058) (`[Req & Test Spec]`)  
+**Sub-task**: [ATT-3109](https://atrainingtracker.atlassian.net/browse/ATT-3109) (`[Req & Test Spec]`)  
 **Parent Epic**: [ATT-2564](https://atrainingtracker.atlassian.net/browse/ATT-2564) (*Navigation: Turn-by-Turn Guidance & Cockpit Prompts*)  
 **Target Release**: None (Unassigned per Rule 19)  
-**Active Sprint**: `2026-41.7`  
+**Active Sprint**: `2026-41.8`  
 **Requirement Mapping**: `REQ-MAP-040` (*High-Glanceability Route Polyline Scaling and Solid Line Rendering for Actively Navigated Route*)  
 **Test Spec ID**: `TST-MAP-042`  
 **Branch**: `feature/ATT-2940`  
@@ -16,15 +16,18 @@
 ## 1. Requirement Specification (REQ-MAP-040)
 
 ### 1.1 Problem Statement & Rationale
-During Sprint 2026-41.6 review, the human user identified that the previous implementation mistakenly applied line thickness increases and pattern nullification across all active routes instead of strictly to the single selected route the athlete is following:
+During Sprint 2026-41.7 Joint Review on Google Pixel 10, the athlete observed:
+> *"In on-device Sprint Review (Pixel 10), user activated and selected a route, but it remained not more prominent than unselected routes. Forensic investigation required on MapFragmentWithTrack, RouteDetail/RoutesScreen, and TrackingViewModel to ensure selected/activated routes properly receive prominent styling."*
+
+This refined the user requirement established in Sprint 2026-41.6:
 > *"Unfortunately, there was a misunderstanding. We have active routes and one selected route. The selected one is the one the user wants to follow. Only this one must be highlighted as requested by this ticket. The active routes should not have been touched."*
 
-Active/background routes visible on the map must retain their standard route width (`10f`) and standard dashed pattern (`Dash(15f)`, `Gap(15f)`). Only the route being actively navigated (`isActiveNavigation == true`) must be highlighted with prominent width (`26f`) and solid polyline rendering (`pattern = null`).
+Ambient active routes visible on the map must maintain their baseline width (`10f`) and standard dashed pattern (`Dash(15f)`, `Gap(15f)`). Only the single selected route the athlete has chosen to navigate or follow (`isActiveNavigation == true`) must be rendered as a prominent solid ribbon (`26f`, `pattern = null`).
 
 ### Requirement Archaeology & Chesterton's Fence Audit
 * **Original Requirement ID & Target**: Amends `REQ-MAP-040` (and `REQ-MAP-023`).
-* **Historical Origin & Commit Trace**: Ticket `ATT-2940` (commit `61218f1a`, Sprint 2026-41.6).
-* **Root Reason for Existing Formulation**: Ticket ATT-2940 in Sprint 2026-41.6 inadvertently increased polyline width across all active routes and nullified patterns globally, contrary to the user's intent to only highlight the actively navigated route.
+* **Historical Origin & Commit Trace**: Ticket `ATT-1841` (commit `f8194a2b`) introduced `isActiveNavigation` and `ROUTE_ACTIVE_NAVIGATION_WIDTH = 16f`. Ticket `ATT-2940` in Sprint 2026-41.6 over-applied 18f and null pattern to all active routes. In Sprint 2026-41.7, rolling back routeWidth to 10f left the selected route indistinguishable on the "Karte" tab because `MapFragmentWithTrackViewModel` failed to propagate `activeNavigatedRouteId`.
+* **Root Reason for Existing Formulation**: `MapFragmentWithTrackViewModel` mapped routes using default `toMapRoute()` without combining `routesRepository.activeNavigatedRouteId`.
 * **Preservation of Core Invariants**: Z-index stacking hierarchy, directional chevrons, and 100% clean-room test pass rate remain strictly preserved.
 
 ### 1.2 Functional & Architectural Requirements
@@ -40,7 +43,13 @@ Active/background routes visible on the map must retain their standard route wid
    * When `isActiveNavigation == false` and `isSelected == false`:
      * Polyline width SHALL be `6f` (`MapVisualization.ROUTE_UNSELECTED_WIDTH` and `MapStyle.routeUnselectedWidth`).
      * Polyline pattern SHALL be preserved as `listOf(Dash(ROUTE_DASH_LENGTH), Gap(ROUTE_GAP_LENGTH))`.
-4. **Stacking & Decoration Invariants**:
+4. **ViewModel Data Flow & Propagation (`MapFragmentWithTrackViewModel.kt`)**:
+   * `MapFragmentWithTrackViewModel` SHALL observe `routesRepository.activeNavigatedRouteId`.
+   * When assembling `uiState.routes`, the ViewModel SHALL map each route using:
+     `allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeNavigatedRouteId)) }`.
+5. **Route Inspection Screen Prominence (`RouteDetailSheet.kt`, `RoutesScreen.kt`)**:
+   * When presenting a single focused route in `RouteOnMapScreen`, `RouteDetailSheet` and `RoutesScreen` SHALL pass `route = selectedRoute.toMapRoute(isActiveNavigation = true)`.
+6. **Stacking & Decoration Invariants**:
    * Z-index stacking hierarchy SHALL strictly satisfy:
      `ROUTE_BASE_Z_INDEX (20f) < ROUTE_ACTIVE_BASE_Z_INDEX (24f) < CLIMB_Z_INDEX (28f) < SEGMENT_Z_INDEX (30f) < USER_LOCATION_Z_INDEX (100f)`.
    * Directional forward chevrons (`ActiveRouteDecorations`) SHALL remain rendered on actively navigated routes.
@@ -58,7 +67,15 @@ Active/background routes visible on the map must retain their standard route wid
   * *Given* an unselected route (`isSelected == false`, `isActiveNavigation == false`)
   * *When* querying polyline width and pattern from `MapRoute`
   * *Then* `width` is `6f` and `pattern` contains `Dash(15f)` and `Gap(15f)`.
-* **Criterion 4 (Z-Index Layering Integrity)**:
+* **Criterion 4 (Map Tab Active Navigation Propagation)**:
+  * *Given* an active navigated route in `routesRepository` (`activeNavigatedRouteId = 42L`)
+  * *When* `MapFragmentWithTrackViewModel.uiState` emits routes
+  * *Then* the route with `id == 42L` has `isActiveNavigation == true`, while other routes have `isActiveNavigation == false`.
+* **Criterion 5 (Route Inspection Screen Prominence)**:
+  * *Given* a route opened in `RouteDetailSheet` or `RoutesScreen`
+  * *When* rendering `RouteOnMapScreen`
+  * *Then* the route is passed with `isActiveNavigation = true`, rendering as a prominent solid polyline.
+* **Criterion 6 (Z-Index Layering Integrity)**:
   * *Given* the map layering constants in `MapVisualization` and `MapStyle`
   * *When* checking Z-index relationships
   * *Then* `ROUTE_BASE_Z_INDEX < ROUTE_ACTIVE_BASE_Z_INDEX < CLIMB_Z_INDEX < SEGMENT_Z_INDEX < USER_LOCATION_Z_INDEX`.
@@ -110,7 +127,23 @@ Active/background routes visible on the map must retain their standard route wid
 * **Expected Result**:
   * `ROUTE_BASE_Z_INDEX (20f) < ROUTE_ACTIVE_BASE_Z_INDEX (24f) < CLIMB_Z_INDEX (28f) < SEGMENT_Z_INDEX (30f) < USER_LOCATION_Z_INDEX (100f)`.
 
-### Test Case 5: Clean-Room Regression Suite (`TST-MAP-042.5`)
+### Test Case 5: MapFragmentWithTrackViewModel Active Route Propagation (`TST-MAP-042.5`)
+* **Scope**: JVM Unit Test
+* **Target File**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/MapFragmentWithTrackViewModelTest.kt`
+* **Preconditions**: `routesRepository.activeNavigatedRouteId` emitted with `42L`.
+* **Action**: Collect `uiState.routes`.
+* **Expected Result**:
+  * Route `42L` has `isActiveNavigation == true`.
+  * Other routes have `isActiveNavigation == false`.
+
+### Test Case 6: Route Detail Inspection Prominence (`TST-MAP-042.6`)
+* **Scope**: Compose Contract Test
+* **Target File**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/routes/RouteDetailSheetTest.kt`
+* **Preconditions**: `RouteDetailSheet` or `RouteOnMapScreen` invoked with focused route.
+* **Action**: Verify route passed to map scope.
+* **Expected Result**: `route.isActiveNavigation == true`.
+
+### Test Case 7: Clean-Room Regression Suite (`TST-MAP-042.7`)
 * **Command**: `./gradlew testDebugUnitTest`
 * **Goal**: 100% pass rate across the full test suite.
 
@@ -123,5 +156,7 @@ Active/background routes visible on the map must retain their standard route wid
 | `TST-MAP-042.1` | Unit | `MapRoute.width`, `MapRoute.pattern` | `REQ-MAP-040` (Criterion 1) | Specified |
 | `TST-MAP-042.2` | Unit | `MapRoute.width`, `MapRoute.pattern` | `REQ-MAP-040` (Criterion 2) | Specified |
 | `TST-MAP-042.3` | Unit | `MapRoute.width`, `MapRoute.pattern` | `REQ-MAP-040` (Criterion 3) | Specified |
-| `TST-MAP-042.4` | Unit | `MapVisualization` Z-indexes | `REQ-MAP-040` (Criterion 4) | Specified |
-| `TST-MAP-042.5` | Regression | Full Test Suite | `REQ-PRO-001` | Specified |
+| `TST-MAP-042.4` | Unit | `MapVisualization` Z-indexes | `REQ-MAP-040` (Criterion 6) | Specified |
+| `TST-MAP-042.5` | Unit | `MapFragmentWithTrackViewModel.uiState` | `REQ-MAP-040` (Criterion 4) | Specified |
+| `TST-MAP-042.6` | Contract | `RouteDetailSheet` / `RouteOnMapScreen` | `REQ-MAP-040` (Criterion 5) | Specified |
+| `TST-MAP-042.7` | Regression | Full Test Suite | `REQ-PRO-001` | Specified |
