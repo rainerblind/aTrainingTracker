@@ -80,15 +80,23 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
 
     val liveSegments = segmentsRepository.allSegmentsWithPath
     val allRoutes = routesRepository.allRoutes
+    val activeNavigatedRouteId = routesRepository.activeNavigatedRouteId
     val knownLocations = knownLocationsRepository.locationsFlow
+
+    private val mapRoutesFlow = combine(
+        routesRepository.allRoutes,
+        routesRepository.activeNavigatedRouteId
+    ) { allRoutes, activeRouteId ->
+        allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeRouteId)) }
+    }
 
     val uiState: StateFlow<MapFragmentUIState> = combine(
         banalRepository.bSportType,
         banalRepository.currentTrack,
         segmentsRepository.allSegmentsWithPath,
-        routesRepository.allRoutes,
+        mapRoutesFlow,
         knownLocationsRepository.locationsFlow
-    ) { bSportType, currentTrack, liveSegments, allRoutes, knownLocations ->
+    ) { bSportType, currentTrack, liveSegments, routes, knownLocations ->
 
         // Logic for Start Marker
         val markers = if (currentTrack.isNotEmpty()) {
@@ -113,7 +121,7 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
                     showStartAndFinishText = true
                 )
             },
-            routes = allRoutes.map { it.toMapRoute() },
+            routes = routes,
             knownLocations = knownLocations,
             bSportType = bSportType,
             currentTrack = currentTrack,
