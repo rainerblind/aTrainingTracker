@@ -89,20 +89,99 @@ def find_sprint_milestones(limit: int = 30) -> List[Dict[str, str]]:
     return milestones
 
 
-def cmd_list_sprints(limit: int = 15):
-    """Prints a formatted table of historical sprint milestones backwards."""
+def get_exponential_probes(milestones: List[Dict[str, str]]) -> List[Dict[str, any]]:
+    """
+    Computes the exponential backward probe sequence (offsets 1, 2, 4, 8, 16, 32...).
+    Offset 1 is 1 sprint back (index 0).
+    Offset 2 is 2 sprints back (index 1).
+    Offset 4 is 4 sprints back (index 3).
+    Offset 2^k is 2^k sprints back (index 2^k - 1).
+    """
+    probes = []
+    k = 0
+    while True:
+        offset = 1 << k  # 1, 2, 4, 8, 16, 32...
+        idx = offset - 1
+        if idx >= len(milestones):
+            break
+        probes.append({
+            "probe_num": k + 1,
+            "power": k,
+            "offset": offset,
+            "idx": idx,
+            "milestone": milestones[idx]
+        })
+        k += 1
+    return probes
+
+
+def cmd_list_exp_probes(limit: int = 64):
+    """Prints the exponential backward sprint search probe sequence."""
     milestones = find_sprint_milestones(limit=limit)
     if not milestones:
         print("No sprint milestones found in git history.")
         return
 
-    print("=" * 80)
-    print(f"{'Idx':<4} | {'Milestone / Sprint':<18} | {'SHA':<9} | {'Date':<10} | {'Commit Subject'}")
-    print("-" * 80)
+    probes = get_exponential_probes(milestones)
+    print("=" * 96)
+    print("EXPONENTIAL BACKWARD SPRINT SEARCH SEQUENCE (Galloping Search: 1, 2, 4, 8, 16...)")
+    print("=" * 96)
+    print(f"{'Probe':<6} | {'Offset':<10} | {'Milestone / Sprint':<18} | {'SHA':<9} | {'Date':<10} | {'Deploy Command'}")
+    print("-" * 96)
+    for p in probes:
+        m = p['milestone']
+        offset_str = f"-{p['offset']} (2^{p['power']})"
+        deploy_cmd = f"python3 tools/sprint_bisect.py deploy {m['sha']}"
+        print(f"#{p['probe_num']:<5} | {offset_str:<10} | {m['sprint']:<18} | {m['sha']:<9} | {m['date']:<10} | {deploy_cmd}")
+    print("=" * 96)
+    print("DECISION PROTOCOL:")
+    print("  1. Deploy Probe #1 (offset -1):")
+    print("     • If WORKS  -> Interval bounded: [C_good = Probe #1, C_bad = HEAD]. Proceed to Phase 2 (git bisect).")
+    print("     • If BROKEN -> Advance to Probe #2 (offset -2).")
+    print("  2. For Probe #K (K > 1, offset -2^(K-1)):")
+    print("     • If WORKS  -> Interval bounded: [C_good = Probe #K, C_bad = Probe #(K-1)]. Proceed to Phase 2.")
+    print("     • If BROKEN -> Advance to Probe #(K+1) (offset -2^K).")
+    print("=" * 96)
+
+
+def cmd_deploy_probe(probe_num: int, limit: int = 64):
+    """Directly deploys probe N (1, 2, 3...) from the exponential sequence."""
+    if probe_num < 1:
+        print("Error: Probe number must be >= 1.")
+        sys.exit(1)
+    milestones = find_sprint_milestones(limit=limit)
+    probes = get_exponential_probes(milestones)
+    if probe_num > len(probes):
+        print(f"Error: Probe #{probe_num} exceeds available milestones ({len(probes)} probes available).")
+        sys.exit(1)
+    target_probe = probes[probe_num - 1]
+    m = target_probe['milestone']
+    print(f"Deploying Probe #{probe_num}: {m['sprint']} (offset -{target_probe['offset']}, SHA {m['sha']}, {m['date']})...")
+    cmd_deploy(target_ref=m['sha'])
+
+
+def cmd_list_sprints(limit: int = 30):
+    """Prints a formatted table of historical sprint milestones backwards, highlighting exponential probe steps."""
+    milestones = find_sprint_milestones(limit=limit)
+    if not milestones:
+        print("No sprint milestones found in git history.")
+        return
+
+    probe_map = {}
+    for p in get_exponential_probes(milestones):
+        probe_map[p['idx']] = f"Probe #{p['probe_num']} (2^{p['power']})"
+
+    print("=" * 96)
+    print(f"{'Idx':<4} | {'Offset':<7} | {'Exp Probe':<15} | {'Milestone / Sprint':<18} | {'SHA':<9} | {'Date':<10} | {'Commit Subject'}")
+    print("-" * 96)
     for idx, m in enumerate(milestones):
-        subj = m['subject'][:35] + ("..." if len(m['subject']) > 35 else "")
-        print(f"{idx:<4} | {m['sprint']:<18} | {m['sha']:<9} | {m['date']:<10} | {subj}")
-    print("=" * 80)
+        subj = m['subject'][:28] + ("..." if len(m['subject']) > 28 else "")
+        probe_str = probe_map.get(idx, "--")
+        offset_str = f"-{idx + 1}"
+        print(f"{idx:<4} | {offset_str:<7} | {probe_str:<15} | {m['sprint']:<18} | {m['sha']:<9} | {m['date']:<10} | {subj}")
+    print("=" * 96)
+    print("Tip: Run 'python3 tools/sprint_bisect.py list-probes' to view only the exponential search probes.")
+
 
 
 def cmd_deploy(target_ref: Optional[str] = None):
@@ -211,7 +290,15 @@ def main():
 
     # list-sprints
     sp_list = subparsers.add_parser("list-sprints", help="List recent sprint milestones backwards")
-    sp_list.add_argument("-n", "--limit", type=int, default=15, help="Number of sprint milestones to display")
+    sp_list.add_argument("-n", "--limit", type=int, default=30, help="Number of sprint milestones to display")
+
+    # list-probes (exponential search)
+    sp_probes = subparsers.add_parser("list-probes", aliases=["probes"], help="List exponential backward sprint probes (1, 2, 4, 8, 16...)")
+    sp_probes.add_argument("-n", "--limit", type=int, default=64, help="Max history depth to scan")
+
+    # deploy-probe
+    sp_dep_probe = subparsers.add_parser("deploy-probe", help="Deploy probe N from exponential sequence directly")
+    sp_dep_probe.add_argument("probe", type=int, help="Probe number (1 for offset 1, 2 for offset 2, 3 for offset 4...)")
 
     # deploy
     sp_deploy = subparsers.add_parser("deploy", help="Build and install APK on device")
@@ -233,7 +320,11 @@ def main():
 
     args = parser.parse_args()
 
-    if args.command == "list-sprints":
+    if args.command in ("list-probes", "probes"):
+        cmd_list_exp_probes(limit=args.limit)
+    elif args.command == "deploy-probe":
+        cmd_deploy_probe(probe_num=args.probe)
+    elif args.command == "list-sprints":
         cmd_list_sprints(limit=args.limit)
     elif args.command == "deploy":
         cmd_deploy(target_ref=args.ref)
