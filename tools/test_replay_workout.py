@@ -15,7 +15,9 @@ from tools.replay_workout import (
     TcxParser, TcxPoint, ReplayEngine,
     build_power_payload, build_hr_payload,
     format_duration, haversine_distance, calculate_bearing,
-    BleReplayServer, AdbGpsInjector
+    BleReplayServer, AdbGpsInjector,
+    HostPreFlightDiagnostics, PreFlightReport,
+    CYCLING_POWER_SERVICE_UUID, HEART_RATE_SERVICE_UUID
 )
 
 try:
@@ -210,6 +212,40 @@ class TestPyQt6GuiContracts(unittest.TestCase):
         self.assertEqual(window.btn_play_pause.text(), "Play")
 
         window.close()
+
+
+class TestAdbGpsInjector(unittest.TestCase):
+    def test_build_inject_cmd_android14_syntax(self):
+        cmd = AdbGpsInjector.build_inject_cmd("gps", 48.123456, 11.654321, 1700000000000, accuracy=2.5)
+        # Must contain exact command line
+        self.assertEqual(
+            cmd,
+            "cmd location providers set-test-provider-location gps --location 48.123456,11.654321 --accuracy 2.5 --time 1700000000000"
+        )
+        # Crucial: Must NOT contain unsupported flags rejected on Android 14+
+        self.assertNotIn("--altitude", cmd)
+        self.assertNotIn("--speed", cmd)
+        self.assertNotIn("--bearing", cmd)
+
+    def test_default_providers_contain_gps_network_fused(self):
+        injector = AdbGpsInjector(enabled=False)
+        self.assertEqual(injector.DEFAULT_PROVIDERS, ("gps", "network", "fused"))
+
+
+class TestHostPreFlightDiagnostics(unittest.TestCase):
+    def test_preflight_report_structure(self):
+        report = PreFlightReport(
+            bt_ok=True, bt_message="BlueZ OK", bt_advice=[],
+            adb_ok=True, adb_message="ADB OK", adb_advice=[],
+            device_serial="DEVICE123"
+        )
+        self.assertTrue(report.bt_ok)
+        self.assertTrue(report.adb_ok)
+        self.assertEqual(report.device_serial, "DEVICE123")
+
+    def test_bluez_service_uuids(self):
+        self.assertEqual(CYCLING_POWER_SERVICE_UUID, '00001818-0000-1000-8000-00805f9b34fb')
+        self.assertEqual(HEART_RATE_SERVICE_UUID, '0000180d-0000-1000-8000-00805f9b34fb')
 
 
 if __name__ == "__main__":

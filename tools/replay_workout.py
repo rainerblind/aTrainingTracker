@@ -317,7 +317,6 @@ def build_power_payload(watts: int, cadence: int, cumulative_revs: int = 0, even
     crank_time_bytes = list((event_time_1024 % 65536).to_bytes(2, byteorder='little'))
     return flags_bytes + power_bytes + crank_rev_bytes + crank_time_bytes
 
-
 def build_hr_payload(bpm: int) -> List[int]:
     """Generates 2-byte BLE Heart Rate Measurement payload (UUID 0x2A37)."""
     flags = 0x00  # UINT8 format
@@ -325,13 +324,415 @@ def build_hr_payload(bpm: int) -> List[int]:
     return [flags, bpm_clamped]
 
 
-class BleReplayServer:
-    """Manages combined BlueZ GATT Peripheral for Cycling Power and Heart Rate."""
+# ==============================================================================
+# 3. Rule 30 Host Pre-Flight Self-Diagnostics
+# ==============================================================================
 
-    CYCLING_POWER_SERVICE_UUID = '00001818-0000-1000-8000-00805f9b34fb'
-    CYCLING_POWER_MEASUREMENT_UUID = '00002a63-0000-1000-8000-00805f9b34fb'
-    HEART_RATE_SERVICE_UUID = '0000180d-0000-1000-8000-00805f9b34fb'
-    HEART_RATE_MEASUREMENT_UUID = '00002a37-0000-1000-8000-00805f9b34fb'
+BLUEZ_SERVICE_NAME = 'org.bluez'
+DBUS_OM_IFACE = 'org.freedesktop.DBus.ObjectManager'
+DBUS_PROP_IFACE = 'org.freedesktop.DBus.Properties'
+GATT_MANAGER_IFACE = 'org.bluez.GattManager1'
+GATT_SERVICE_IFACE = 'org.bluez.GattService1'
+GATT_CHRC_IFACE = 'org.bluez.GattCharacteristic1'
+GATT_DESC_IFACE = 'org.bluez.GattDescriptor1'
+LE_ADVERTISING_MANAGER_IFACE = 'org.bluez.LEAdvertisingManager1'
+LE_ADVERTISEMENT_IFACE = 'org.bluez.LEAdvertisement1'
+
+CYCLING_POWER_SERVICE_UUID = '00001818-0000-1000-8000-00805f9b34fb'
+CYCLING_POWER_MEASUREMENT_UUID = '00002a63-0000-1000-8000-00805f9b34fb'
+CYCLING_POWER_FEATURE_UUID = '00002a65-0000-1000-8000-00805f9b34fb'
+SENSOR_LOCATION_UUID = '00002a5d-0000-1000-8000-00805f9b34fb'
+
+HEART_RATE_SERVICE_UUID = '0000180d-0000-1000-8000-00805f9b34fb'
+HEART_RATE_MEASUREMENT_UUID = '00002a37-0000-1000-8000-00805f9b34fb'
+BODY_SENSOR_LOCATION_UUID = '00002a38-0000-1000-8000-00805f9b34fb'
+
+DEVICE_INFO_SERVICE_UUID = '0000180a-0000-1000-8000-00805f9b34fb'
+MANUFACTURER_NAME_UUID = '00002a29-0000-1000-8000-00805f9b34fb'
+
+
+@dataclass
+class PreFlightReport:
+    bt_ok: bool
+    bt_message: str
+    bt_advice: List[str]
+    adb_ok: bool
+    adb_message: str
+    adb_advice: List[str]
+    device_serial: Optional[str] = None
+
+
+class HostPreFlightDiagnostics:
+    """Pre-flight self-diagnostics for host Bluetooth and ADB test devices (Rule 30)."""
+
+    @staticmethod
+    def check_bluetooth(bus=None) -> Tuple[bool, str, List[str]]:
+        if not HAS_DBUS:
+            return False, "Python dbus/GLib libraries missing", ["Install dependencies: sudo apt install python3-dbus python3-gi"]
+        try:
+            if bus is None:
+                dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+                bus = dbus.SystemBus()
+            remote_om = dbus.Interface(bus.get_object(BLUEZ_SERVICE_NAME, '/'), DBUS_OM_IFACE)
+            objects = remote_om.GetManagedObjects()
+
+            found_adapter = None
+            for o, props in objects.items():
+                if GATT_MANAGER_IFACE in props and LE_ADVERTISING_MANAGER_IFACE in props:
+                    found_adapter = o
+                    adapter_props = dbus.Interface(bus.get_object(BLUEZ_SERVICE_NAME, o), DBUS_PROP_IFACE)
+                    powered = bool(adapter_props.Get('org.bluez.Adapter1', 'Powered'))
+                    if not powered:
+                        return False, f"Bluetooth adapter {o} is powered OFF", [
+                            f"Power on adapter: sudo bluetoothctl power on",
+                            f"Or check rfkill: sudo rfkill unblock bluetooth"
+                        ]
+                    return True, f"BlueZ ready on {o} (GATT + LE Advertising)", []
+
+            return False, "No Bluetooth adapter with LE Advertising support found", [
+                "Verify Bluetooth service: sudo systemctl status bluetooth",
+                "Ensure Bluetooth controller supports LE Peripheral Mode"
+            ]
+        except Exception as e:
+            return False, f"BlueZ D-Bus query failed: {e}", [
+                "Start Bluetooth daemon: sudo systemctl start bluetooth",
+                "Check user permissions or D-Bus policy"
+            ]
+
+    @staticmethod
+    def check_adb(device_serial: Optional[str] = None) -> Tuple[bool, str, List[str], Optional[str]]:
+        try:
+            res = subprocess.run(["adb", "devices"], capture_output=True, text=True, check=True)
+            lines = res.stdout.strip().splitlines()
+            online_devices = []
+            unauthorized = []
+            for line in lines[1:]:
+                parts = line.split()
+                if len(parts) >= 2:
+                    if parts[1] == "device":
+                        online_devices.append(parts[0])
+                    elif parts[1] == "unauthorized":
+                        unauthorized.append(parts[0])
+
+            if unauthorized and not online_devices:
+                return False, f"Device {unauthorized[0]} is UNAUTHORIZED", [
+                    "Unlock your phone screen and accept 'Allow USB debugging' prompt",
+                    "Check USB debugging authorization in Developer Options"
+                ], None
+
+            if not online_devices:
+                return False, "No connected Android device found via ADB", [
+                    "Connect your Android test device (e.g. Pixel 10) via USB",
+                    "Enable USB Debugging in Developer Options",
+                    "Verify with: adb devices"
+                ], None
+
+            target = device_serial if (device_serial and device_serial in online_devices) else online_devices[0]
+
+            # Verify mock location appops permission
+            appops_res = subprocess.run(
+                ["adb", "-s", target, "shell", "cmd", "appops", "get", "2000", "android:mock_location"],
+                capture_output=True, text=True
+            )
+            out = appops_res.stdout.strip()
+            if "allow" not in out:
+                return False, f"Device {target} mock location NOT allowed for shell", [
+                    f"Grant mock location permission: adb -s {target} shell appops set 2000 android:mock_location allow",
+                    "Or set mock location app in Developer Options"
+                ], target
+
+            return True, f"ADB device {target} ready (mock location allowed)", [], target
+        except FileNotFoundError:
+            return False, "ADB binary not found in PATH", ["Install Android platform-tools: sudo apt install adb"], None
+        except Exception as e:
+            return False, f"ADB query failed: {e}", ["Ensure adb server is running: adb start-server"], None
+
+    @classmethod
+    def run_all(cls, bus=None, target_device: Optional[str] = None) -> PreFlightReport:
+        bt_ok, bt_msg, bt_adv = cls.check_bluetooth(bus)
+        adb_ok, adb_msg, adb_adv, dev = cls.check_adb(target_device)
+        return PreFlightReport(
+            bt_ok=bt_ok, bt_message=bt_msg, bt_advice=bt_adv,
+            adb_ok=adb_ok, adb_message=adb_msg, adb_advice=adb_adv,
+            device_serial=dev
+        )
+
+
+# ==============================================================================
+# 4. BlueZ D-Bus GATT Application, Services & Advertisements
+# ==============================================================================
+
+if HAS_DBUS:
+    class DBusInvalidArgsException(dbus.exceptions.DBusException):
+        _dbus_error_name = 'org.bluez.Error.InvalidArguments'
+
+    class DBusNotSupportedException(dbus.exceptions.DBusException):
+        _dbus_error_name = 'org.bluez.Error.NotSupported'
+
+    class DBusAdvertisement(dbus.service.Object):
+        PATH_BASE = '/org/bluez/att/replay/adv'
+
+        def __init__(self, bus, index, advertising_type, service_uuids, local_name):
+            self.path = self.PATH_BASE + str(index)
+            self.bus = bus
+            self.ad_type = advertising_type
+            self.service_uuids = service_uuids
+            self.local_name = local_name
+            dbus.service.Object.__init__(self, bus, self.path)
+
+        def get_properties(self):
+            props = {'Type': self.ad_type}
+            if self.service_uuids:
+                props['ServiceUUIDs'] = dbus.Array(self.service_uuids, signature='s')
+            if self.local_name:
+                props['LocalName'] = dbus.String(self.local_name)
+            return {LE_ADVERTISEMENT_IFACE: props}
+
+        def get_path(self):
+            return dbus.ObjectPath(self.path)
+
+        @dbus.service.method(DBUS_PROP_IFACE, in_signature='s', out_signature='a{sv}')
+        def GetAll(self, interface):
+            if interface != LE_ADVERTISEMENT_IFACE:
+                raise DBusInvalidArgsException()
+            return self.get_properties()[LE_ADVERTISEMENT_IFACE]
+
+        @dbus.service.method(LE_ADVERTISEMENT_IFACE, in_signature='', out_signature='')
+        def Release(self):
+            pass
+
+    class DBusApplication(dbus.service.Object):
+        def __init__(self, bus):
+            self.path = '/org/bluez/att/replay'
+            self.services = []
+            dbus.service.Object.__init__(self, bus, self.path)
+
+        def get_path(self):
+            return dbus.ObjectPath(self.path)
+
+        def add_service(self, service):
+            self.services.append(service)
+
+        @dbus.service.method(DBUS_OM_IFACE, out_signature='a{oa{sa{sv}}}')
+        def GetManagedObjects(self):
+            response = {}
+            for service in self.services:
+                response[service.get_path()] = service.get_properties()
+                for chrc in service.get_characteristics():
+                    response[chrc.get_path()] = chrc.get_properties()
+                    for desc in chrc.get_descriptors():
+                        response[desc.get_path()] = desc.get_properties()
+            return response
+
+    class DBusService(dbus.service.Object):
+        PATH_BASE = '/org/bluez/att/replay/service'
+
+        def __init__(self, bus, index, uuid, primary):
+            self.path = self.PATH_BASE + str(index)
+            self.bus = bus
+            self.uuid = uuid
+            self.primary = primary
+            self.characteristics = []
+            dbus.service.Object.__init__(self, bus, self.path)
+
+        def get_properties(self):
+            return {
+                GATT_SERVICE_IFACE: {
+                    'UUID': self.uuid,
+                    'Primary': self.primary,
+                    'Characteristics': dbus.Array(
+                        [chrc.get_path() for chrc in self.characteristics],
+                        signature='o'
+                    )
+                }
+            }
+
+        def get_path(self):
+            return dbus.ObjectPath(self.path)
+
+        def add_characteristic(self, characteristic):
+            self.characteristics.append(characteristic)
+
+        def get_characteristics(self):
+            return self.characteristics
+
+        @dbus.service.method(DBUS_PROP_IFACE, in_signature='s', out_signature='a{sv}')
+        def GetAll(self, interface):
+            if interface != GATT_SERVICE_IFACE:
+                raise DBusInvalidArgsException()
+            return self.get_properties()[GATT_SERVICE_IFACE]
+
+    class DBusCharacteristic(dbus.service.Object):
+        def __init__(self, bus, index, uuid, flags, service):
+            self.path = service.path + '/char' + str(index)
+            self.bus = bus
+            self.uuid = uuid
+            self.service = service
+            self.flags = flags
+            self.descriptors = []
+            dbus.service.Object.__init__(self, bus, self.path)
+
+        def get_properties(self):
+            return {
+                GATT_CHRC_IFACE: {
+                    'Service': self.service.get_path(),
+                    'UUID': self.uuid,
+                    'Flags': self.flags,
+                    'Descriptors': dbus.Array(
+                        [desc.get_path() for desc in self.descriptors],
+                        signature='o'
+                    )
+                }
+            }
+
+        def get_path(self):
+            return dbus.ObjectPath(self.path)
+
+        def add_descriptor(self, descriptor):
+            self.descriptors.append(descriptor)
+
+        def get_descriptors(self):
+            return self.descriptors
+
+        @dbus.service.method(DBUS_PROP_IFACE, in_signature='s', out_signature='a{sv}')
+        def GetAll(self, interface):
+            if interface != GATT_CHRC_IFACE:
+                raise DBusInvalidArgsException()
+            return self.get_properties()[GATT_CHRC_IFACE]
+
+        @dbus.service.method(GATT_CHRC_IFACE, in_signature='a{sv}', out_signature='ay')
+        def ReadValue(self, options):
+            raise DBusNotSupportedException()
+
+        @dbus.service.method(GATT_CHRC_IFACE, in_signature='aya{sv}')
+        def WriteValue(self, value, options):
+            raise DBusNotSupportedException()
+
+        @dbus.service.method(GATT_CHRC_IFACE)
+        def StartNotify(self):
+            raise DBusNotSupportedException()
+
+        @dbus.service.method(GATT_CHRC_IFACE)
+        def StopNotify(self):
+            raise DBusNotSupportedException()
+
+        @dbus.service.signal(DBUS_PROP_IFACE, signature='sa{sv}as')
+        def PropertiesChanged(self, interface, changed, invalidated):
+            pass
+
+    class CyclingPowerMeasurementCharacteristic(DBusCharacteristic):
+        def __init__(self, bus, index, service):
+            super().__init__(bus, index, CYCLING_POWER_MEASUREMENT_UUID, ['notify'], service)
+            self.notifying = False
+            self.power = 0
+            self.cadence = 0
+            self.cumulative_revs = 0
+            self.event_time_1024 = 0
+
+        def update_values(self, power: int, cadence: int, revs: int, time_1024: int):
+            self.power = power
+            self.cadence = cadence
+            self.cumulative_revs = revs
+            self.event_time_1024 = time_1024
+            if self.notifying:
+                payload = build_power_payload(self.power, self.cadence, self.cumulative_revs, self.event_time_1024)
+                val = dbus.Array([dbus.Byte(b) for b in payload], signature='y')
+                self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': val}, [])
+
+        @dbus.service.method(GATT_CHRC_IFACE)
+        def StartNotify(self):
+            self.notifying = True
+            payload = build_power_payload(self.power, self.cadence, self.cumulative_revs, self.event_time_1024)
+            val = dbus.Array([dbus.Byte(b) for b in payload], signature='y')
+            self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': val}, [])
+
+        @dbus.service.method(GATT_CHRC_IFACE)
+        def StopNotify(self):
+            self.notifying = False
+
+    class CyclingPowerFeatureCharacteristic(DBusCharacteristic):
+        def __init__(self, bus, index, service):
+            super().__init__(bus, index, CYCLING_POWER_FEATURE_UUID, ['read'], service)
+            self.value = [0x08, 0x00, 0x00, 0x00]  # Bit 3: Crank revs supported
+
+        @dbus.service.method(GATT_CHRC_IFACE, in_signature='a{sv}', out_signature='ay')
+        def ReadValue(self, options):
+            return dbus.Array([dbus.Byte(b) for b in self.value], signature='y')
+
+    class SensorLocationCharacteristic(DBusCharacteristic):
+        def __init__(self, bus, index, service):
+            super().__init__(bus, index, SENSOR_LOCATION_UUID, ['read'], service)
+            self.value = [13]  # Pedals
+
+        @dbus.service.method(GATT_CHRC_IFACE, in_signature='a{sv}', out_signature='ay')
+        def ReadValue(self, options):
+            return dbus.Array([dbus.Byte(b) for b in self.value], signature='y')
+
+    class HeartRateMeasurementCharacteristic(DBusCharacteristic):
+        def __init__(self, bus, index, service):
+            super().__init__(bus, index, HEART_RATE_MEASUREMENT_UUID, ['notify'], service)
+            self.notifying = False
+            self.bpm = 0
+
+        def update_values(self, bpm: int):
+            self.bpm = bpm
+            if self.notifying:
+                payload = build_hr_payload(self.bpm)
+                val = dbus.Array([dbus.Byte(b) for b in payload], signature='y')
+                self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': val}, [])
+
+        @dbus.service.method(GATT_CHRC_IFACE)
+        def StartNotify(self):
+            self.notifying = True
+            payload = build_hr_payload(self.bpm)
+            val = dbus.Array([dbus.Byte(b) for b in payload], signature='y')
+            self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': val}, [])
+
+        @dbus.service.method(GATT_CHRC_IFACE)
+        def StopNotify(self):
+            self.notifying = False
+
+    class BodySensorLocationCharacteristic(DBusCharacteristic):
+        def __init__(self, bus, index, service):
+            super().__init__(bus, index, BODY_SENSOR_LOCATION_UUID, ['read'], service)
+            self.value = [0x01]  # Chest
+
+        @dbus.service.method(GATT_CHRC_IFACE, in_signature='a{sv}', out_signature='ay')
+        def ReadValue(self, options):
+            return dbus.Array([dbus.Byte(b) for b in self.value], signature='y')
+
+    class ManufacturerNameCharacteristic(DBusCharacteristic):
+        def __init__(self, bus, index, service):
+            super().__init__(bus, index, MANUFACTURER_NAME_UUID, ['read'], service)
+            self.value = [ord(c) for c in "ATT-Replay"]
+
+        @dbus.service.method(GATT_CHRC_IFACE, in_signature='a{sv}', out_signature='ay')
+        def ReadValue(self, options):
+            return dbus.Array([dbus.Byte(b) for b in self.value], signature='y')
+
+    class CyclingPowerService(DBusService):
+        def __init__(self, bus, index):
+            super().__init__(bus, index, CYCLING_POWER_SERVICE_UUID, True)
+            self.meas_char = CyclingPowerMeasurementCharacteristic(bus, 0, self)
+            self.add_characteristic(self.meas_char)
+            self.add_characteristic(CyclingPowerFeatureCharacteristic(bus, 1, self))
+            self.add_characteristic(SensorLocationCharacteristic(bus, 2, self))
+
+    class HeartRateService(DBusService):
+        def __init__(self, bus, index):
+            super().__init__(bus, index, HEART_RATE_SERVICE_UUID, True)
+            self.meas_char = HeartRateMeasurementCharacteristic(bus, 0, self)
+            self.add_characteristic(self.meas_char)
+            self.add_characteristic(BodySensorLocationCharacteristic(bus, 1, self))
+
+    class DeviceInfoService(DBusService):
+        def __init__(self, bus, index):
+            super().__init__(bus, index, DEVICE_INFO_SERVICE_UUID, True)
+            self.add_characteristic(ManufacturerNameCharacteristic(bus, 0, self))
+
+
+class BleReplayServer:
+    """Manages combined BlueZ GATT Peripheral and dual advertising for Cycling Power and Heart Rate."""
 
     def __init__(self, enabled: bool = True):
         self.enabled = enabled and HAS_DBUS
@@ -341,20 +742,92 @@ class BleReplayServer:
         self.current_hr = 0
         self.cumulative_crank_revs = 0
         self.last_crank_event_time = 0
+
         self.bus = None
-        self.power_char = None
-        self.hr_char = None
+        self.adapter = None
+        self.app = None
+        self.cp_service = None
+        self.hr_service = None
+        self.ad_pwr = None
+        self.ad_hrm = None
+        self.ad_manager = None
+        self.service_manager = None
+        self.loop = None
+        self.loop_thread = None
 
     def start(self):
-        """Starts advertising BLE services if DBus is available."""
+        """Starts advertising BLE services over BlueZ D-Bus."""
         if not self.enabled:
             return
         try:
             dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
             self.bus = dbus.SystemBus()
+
+            remote_om = dbus.Interface(self.bus.get_object(BLUEZ_SERVICE_NAME, '/'), DBUS_OM_IFACE)
+            objects = remote_om.GetManagedObjects()
+            for o, props in objects.items():
+                if GATT_MANAGER_IFACE in props and LE_ADVERTISING_MANAGER_IFACE in props:
+                    self.adapter = o
+                    break
+
+            if not self.adapter:
+                print("[!] Warning: No Bluetooth adapter with LE Advertising support found. BLE inactive.")
+                self.is_advertising = False
+                return
+
+            # Ensure adapter powered
+            adapter_props = dbus.Interface(self.bus.get_object(BLUEZ_SERVICE_NAME, self.adapter), DBUS_PROP_IFACE)
+            adapter_props.Set('org.bluez.Adapter1', 'Powered', dbus.Boolean(True))
+
+            self.service_manager = dbus.Interface(self.bus.get_object(BLUEZ_SERVICE_NAME, self.adapter), GATT_MANAGER_IFACE)
+            self.ad_manager = dbus.Interface(self.bus.get_object(BLUEZ_SERVICE_NAME, self.adapter), LE_ADVERTISING_MANAGER_IFACE)
+
+            # Create GATT application
+            self.app = DBusApplication(self.bus)
+            self.cp_service = CyclingPowerService(self.bus, 0)
+            self.hr_service = HeartRateService(self.bus, 1)
+            self.app.add_service(self.cp_service)
+            self.app.add_service(self.hr_service)
+            self.app.add_service(DeviceInfoService(self.bus, 2))
+
+            # Create Advertisements: ATT-Pwr (1818) and ATT-HRM (180d)
+            self.ad_pwr = DBusAdvertisement(self.bus, 0, 'peripheral', ['1818'], 'ATT-Pwr')
+            self.ad_hrm = DBusAdvertisement(self.bus, 1, 'peripheral', ['180d'], 'ATT-HRM')
+
+            # Register Application
+            self.service_manager.RegisterApplication(
+                self.app.get_path(), {},
+                reply_handler=lambda: None,
+                error_handler=lambda e: print(f"[!] Warning: BlueZ GATT RegisterApplication error: {e}")
+            )
+
+            # Register Advertisements
+            self.ad_manager.RegisterAdvertisement(
+                self.ad_pwr.get_path(), {},
+                reply_handler=lambda: None,
+                error_handler=lambda e: print(f"[!] Warning: BlueZ RegisterAdvertisement (ATT-Pwr) error: {e}")
+            )
+            self.ad_manager.RegisterAdvertisement(
+                self.ad_hrm.get_path(), {},
+                reply_handler=lambda: None,
+                error_handler=lambda e: print(f"[!] Warning: BlueZ RegisterAdvertisement (ATT-HRM) error: {e}")
+            )
+
             self.is_advertising = True
+
+            # Start GLib main loop in background thread with dedicated context
+            def glib_worker():
+                ctx = GLib.MainContext.default()
+                ctx.push_thread_default()
+                self.loop = GLib.MainLoop(ctx)
+                self.loop.run()
+
+            self.loop_thread = threading.Thread(target=glib_worker, daemon=True)
+            self.loop_thread.start()
+            print("[*] BLE GATT server active: Advertising 'ATT-Pwr' (0x1818) and 'ATT-HRM' (0x180D).")
+
         except Exception as e:
-            print(f"[!] Warning: BlueZ DBus unavailable ({e}). Continuing in mock BLE mode.")
+            print(f"[!] Warning: BlueZ DBus error ({e}). Continuing in mock BLE mode.")
             self.is_advertising = False
 
     def update_telemetry(self, watts: int, cadence: int, hr_bpm: int):
@@ -369,16 +842,42 @@ class BleReplayServer:
             delta_1024 = int(round(1024.0 / revs_per_sec)) if revs_per_sec > 0 else 0
             self.last_crank_event_time = (self.last_crank_event_time + delta_1024) % 65536
 
+        if self.cp_service and self.cp_service.meas_char:
+            self.cp_service.meas_char.update_values(
+                self.current_watts, self.current_cadence,
+                self.cumulative_crank_revs, self.last_crank_event_time
+            )
+
+        if self.hr_service and self.hr_service.meas_char:
+            self.hr_service.meas_char.update_values(self.current_hr)
+
     def stop(self):
+        """Unregisters advertisements and releases BlueZ GATT resources."""
+        if self.ad_manager:
+            if self.ad_pwr:
+                try:
+                    self.ad_manager.UnregisterAdvertisement(self.ad_pwr.get_path())
+                except Exception:
+                    pass
+            if self.ad_hrm:
+                try:
+                    self.ad_manager.UnregisterAdvertisement(self.ad_hrm.get_path())
+                except Exception:
+                    pass
+        if self.loop:
+            try:
+                self.loop.quit()
+            except Exception:
+                pass
         self.is_advertising = False
 
 
 # ==============================================================================
-# 4. ADB Mock GPS Location Injector
+# 5. ADB Mock GPS Location Injector (Android 14+ Syntax)
 # ==============================================================================
 
 class AdbGpsInjector:
-    """Injects simulated GPS fixes via ADB cmd location providers."""
+    """Injects simulated GPS fixes via ADB cmd location providers strictly adhering to Android 14+."""
 
     DEFAULT_PROVIDERS = ("gps", "network", "fused")
 
@@ -411,7 +910,7 @@ class AdbGpsInjector:
             return
 
         try:
-            # Grant mock location to Android shell
+            # Grant mock location to Android shell (UID 2000)
             self._run_adb(["shell", "appops", "set", "2000", "android:mock_location", "allow"], check=False)
             cmds = []
             for p in self.DEFAULT_PROVIDERS:
@@ -431,18 +930,16 @@ class AdbGpsInjector:
         cmd = ["adb", "-s", self.device_serial] + cmd_args
         return subprocess.run(cmd, capture_output=True, text=True, check=check)
 
+    @classmethod
+    def build_inject_cmd(cls, provider: str, lat: float, lon: float, time_ms: int, accuracy: float = 2.5) -> str:
+        """Constructs Android 14+ compatible location injection shell command string."""
+        return f"cmd location providers set-test-provider-location {provider} --location {lat:.6f},{lon:.6f} --accuracy {accuracy:.1f} --time {time_ms}"
+
     def inject_location(self, lat: float, lon: float, ele: float, speed_mps: float, bearing_deg: float):
         if not self.enabled or not self.is_registered:
             return
         now_ms = int(time.time() * 1000)
-        loc_str = f"{lat:.6f},{lon:.6f}"
-        cmds = []
-        for p in self.DEFAULT_PROVIDERS:
-            cmds.append(
-                f"cmd location providers set-test-provider-location {p} --location {loc_str} "
-                f"--altitude {ele:.1f} --speed {speed_mps:.2f} --bearing {bearing_deg:.1f} "
-                f"--accuracy 2.5 --time {now_ms}"
-            )
+        cmds = [self.build_inject_cmd(p, lat, lon, now_ms, accuracy=2.5) for p in self.DEFAULT_PROVIDERS]
         self._run_adb(["shell", " && ".join(cmds)], check=False)
 
     def teardown(self):
@@ -679,7 +1176,7 @@ if HAS_PYQT6:
             # --- 5. Status Footer ---
             status_layout = QHBoxLayout()
             adb_text = f"ADB: {self.gps.device_serial}" if self.gps.enabled and self.gps.device_serial else "ADB: Inactive"
-            ble_text = "BLE: Advertising (Power + HR)" if self.ble.is_advertising else "BLE: Standby"
+            ble_text = "BLE: Advertising (ATT-Pwr + ATT-HRM)" if self.ble.is_advertising else "BLE: Standby"
 
             self.lbl_status_adb = QLabel(f"● {adb_text}")
             self.lbl_status_adb.setStyleSheet("color: #03DAC6; font-size: 11px;")
@@ -957,11 +1454,30 @@ def main():
     points = TcxParser.parse_file(tcx_path)
     print(f"[*] Loaded {len(points)} trackpoints ({points[-1].dist / 1000.0:.2f} km, {format_duration(points[-1].time_sec)}).")
 
+    # Rule 30 Host Pre-Flight Self-Diagnostics
+    print("[*] Running Rule 30 Host Pre-Flight Diagnostics...")
+    report = HostPreFlightDiagnostics.run_all(target_device=args.device)
+    if report.bt_ok:
+        print(f"  [OK] Bluetooth: {report.bt_message}")
+    else:
+        print(f"  [!] Bluetooth Warning: {report.bt_message}")
+        for adv in report.bt_advice:
+            print(f"      -> {adv}")
+
+    if report.adb_ok:
+        print(f"  [OK] ADB Location: {report.adb_message}")
+    else:
+        print(f"  [!] ADB Warning: {report.adb_message}")
+        for adv in report.adb_advice:
+            print(f"      -> {adv}")
+
+    target_device = args.device or report.device_serial
+
     # Initialize subsystems
     ble_server = BleReplayServer(enabled=not args.no_ble)
     ble_server.start()
 
-    gps_injector = AdbGpsInjector(enabled=not args.no_gps, device_serial=args.device)
+    gps_injector = AdbGpsInjector(enabled=not args.no_gps, device_serial=target_device)
     gps_injector.setup()
 
     # Clean exit teardown registration
