@@ -130,7 +130,7 @@ fun RoutesScreen(
                     }
 
                     RouteOnMapScreen(
-                        route = selectedRoute.toMapRoute(),
+                        route = selectedRoute.toMapRoute(isActiveNavigation = true),
                         routeSummary = selectedRoute.summary,
                         backgroundPaths = backgroundPaths,
                         allSegments = allSegments,
