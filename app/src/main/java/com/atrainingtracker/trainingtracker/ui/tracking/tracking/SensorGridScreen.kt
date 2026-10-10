@@ -509,7 +509,7 @@ fun SensorGridScreen(
                                             cardElevation = effectiveElevation,
                                             border = effectiveBorder,
                                             onStartMove = {},
-                                            onEdit = {},
+                                            onEdit = { gridActions.onEditField(fieldState) },
                                             onDelete = {}
                                         )
                                     }
