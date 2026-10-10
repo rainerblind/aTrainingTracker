@@ -1709,4 +1709,8 @@
     <string name="tuning_map_tilt_angle_desc">3Dナビゲーションの視点傾斜角度（0°はフラットな2D、70°は完全な3Dパースペクティブ）</string>
     <string name="tuning_map_lookahead_padding_title">前方視野マージン</string>
     <string name="tuning_map_lookahead_padding_desc">ライダーの位置を下部に配置し、前方の道路視野を最大化するためのビューポート余白比率（%）</string>
+
+    <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
+    <string name="devices_newly_discovered_badge">新規</string>
+    <string name="devices_new_sensor_discovered">新しいセンサーが検出されました: %1$s</string>
 </resources>

@@ -34,7 +34,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -100,6 +103,21 @@ fun DevicesTabbedScreen(
     val shoesListState = rememberLazyListState()
     val bikesHorizontalScrollState = rememberScrollState()
     val shoesHorizontalScrollState = rememberScrollState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+
+    LaunchedEffect(tabViewModel) {
+        tabViewModel.newDeviceDiscoveredEvent.collect { deviceName ->
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            availableListState.animateScrollToItem(0)
+            snackbarHostState.showSnackbar(
+                message = context.getString(R.string.devices_new_sensor_discovered, deviceName),
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
 
     Surface(modifier = modifier.fillMaxSize()) {
         when (val state = uiState) {
@@ -314,6 +332,15 @@ fun DevicesTabbedScreen(
                             contentDescription = stringResource(R.string.devices_pair_sensor)
                         )
                     }
+
+                    // --- DISCOVERY SNACKBAR HOST (ATT-3099) ---
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 80.dp)
+                            .navigationBarsPadding()
+                    )
                 }
                 
                 // Keep searching active while displaying tabs

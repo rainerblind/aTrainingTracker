@@ -28,14 +28,22 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Sealed class to represent the UI state in a clean and type-safe way.
@@ -56,11 +64,27 @@ class DevicesTabbedViewModel(
 
     private val deviceDBRepository = DeviceDataRepository.getInstance(application)
 
+    private val _newDeviceDiscoveredEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val newDeviceDiscoveredEvent: SharedFlow<String> = _newDeviceDiscoveredEvent.asSharedFlow()
+
     private val deviceDiscoveryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == BANALService.NEW_DEVICE_FOUND_INTENT) {
                 // Tell the repository to refresh its data from the DB
                 deviceDBRepository.handleNewDeviceFound()
+
+                val deviceId = intent.getLongExtra(BANALService.DEVICE_ID, -1L)
+                viewModelScope.launch {
+                    val resolvedName = if (deviceId != -1L) {
+                        deviceDBRepository.getDeviceSnapshotById(deviceId)?.deviceName
+                            ?: withContext(Dispatchers.IO) {
+                                runCatching {
+                                    DevicesDatabaseManager.getInstance(getApplication()).getDeviceName(deviceId)
+                                }.getOrNull()
+                            } ?: "Sensor"
+                    } else "Sensor"
+                    _newDeviceDiscoveredEvent.emit(resolvedName)
+                }
             }
         }
     }
