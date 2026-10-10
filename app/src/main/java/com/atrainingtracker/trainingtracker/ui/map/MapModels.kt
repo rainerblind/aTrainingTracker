@@ -78,7 +78,7 @@ data class MapStyle(
     val trackBaseZIndex: Float = 10f,
     val trackOverlayZIndex: Float = 50f,
     val trackDotGap: Float = 15f,
-    val routeWidth: Float = 18f,
+    val routeWidth: Float = 10f,
     val routeBaseZIndex: Float = 20f,
     val routeOverlayZIndex: Float = 22f,
     val routeActiveNavigationWidth: Float = 26f,
@@ -110,7 +110,7 @@ object MapVisualization {
     const val TRACK_BASE_Z_INDEX = 10.0f
     const val TRACK_OVERLAY_Z_INDEX = 50.0f
     const val TRACK_DOT_GAP = 15f
-    const val ROUTE_WIDTH = 18f
+    const val ROUTE_WIDTH = 10f
     const val ROUTE_BASE_Z_INDEX = 20.0f
     const val ROUTE_OVERLAY_Z_INDEX = 22.0f
     const val ROUTE_ACTIVE_NAVIGATION_WIDTH = 26f
@@ -293,7 +293,14 @@ data class MapRoute(
         width
     }
     override val pattern: List<com.google.android.gms.maps.model.PatternItem>?
-        get() = null
+        get() = if (isActiveNavigation) {
+            null
+        } else {
+            listOf(
+                com.google.android.gms.maps.model.Dash(MapVisualization.ROUTE_DASH_LENGTH),
+                com.google.android.gms.maps.model.Gap(MapVisualization.ROUTE_GAP_LENGTH)
+            )
+        }
 }
 /**
  * Extension function to convert a Database Route (RouteWithPath)

@@ -84,14 +84,17 @@ class MapRouteActiveNavigationTest {
         assertEquals(TTColor.RouteSelected, passiveRoute.color)
         assertEquals(Color(0xFF1565C0), passiveRoute.color)
         assertEquals(MapVisualization.ROUTE_WIDTH, passiveRoute.width, 0.001f)
-        assertEquals(18f, passiveRoute.width, 0.001f)
+        assertEquals(10f, passiveRoute.width, 0.001f)
         assertEquals(MapVisualization.ROUTE_BASE_Z_INDEX, passiveRoute.zIndex, 0.001f)
         assertEquals(20.0f, passiveRoute.zIndex, 0.001f)
         assertEquals(MapVisualization.ROUTE_OVERLAY_Z_INDEX, passiveRoute.overlayZIndex, 0.001f)
         assertEquals(22.0f, passiveRoute.overlayZIndex, 0.001f)
         assertEquals(passiveRoute.color, passiveRoute.overlayColor)
         assertEquals(passiveRoute.width, passiveRoute.overlayWidth, 0.001f)
-        assertNull("Selected passive route pattern must be null for clean solid ribbon rendering (REQ-MAP-040)", passiveRoute.pattern)
+        assertNotNull("Selected passive route pattern must be preserved for standard active route rendering", passiveRoute.pattern)
+        assertEquals(2, passiveRoute.pattern!!.size)
+        assertTrue(passiveRoute.pattern!![0] is Dash)
+        assertTrue(passiveRoute.pattern!![1] is Gap)
     }
 
     @Test
@@ -105,7 +108,7 @@ class MapRouteActiveNavigationTest {
         assertEquals(6f, unselectedRoute.width, 0.001f)
         assertEquals(MapVisualization.ROUTE_UNSELECTED_Z_INDEX, unselectedRoute.zIndex, 0.001f)
         assertEquals(5.0f, unselectedRoute.zIndex, 0.001f)
-        assertNull(unselectedRoute.pattern)
+        assertNotNull(unselectedRoute.pattern)
     }
 
     @Test
@@ -164,7 +167,7 @@ class MapRouteActiveNavigationTest {
 
         val passiveMapRoute = routeWithPath.toMapRoute(isActiveNavigation = false)
         assertFalse(passiveMapRoute.isActiveNavigation)
-        assertEquals(18f, passiveMapRoute.width, 0.001f)
+        assertEquals(10f, passiveMapRoute.width, 0.001f)
 
         val activeMapRoute = routeWithPath.toMapRoute(isActiveNavigation = true)
         assertTrue(activeMapRoute.isActiveNavigation)
