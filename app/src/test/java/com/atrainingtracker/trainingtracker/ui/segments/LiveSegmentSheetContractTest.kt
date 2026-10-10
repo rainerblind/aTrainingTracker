@@ -126,7 +126,7 @@ class LiveSegmentSheetContractTest {
         )
         assertTrue(
             "LiveSegmentSheet must map FINISHED to total distance or distanceOnSegment_raw",
-            content.contains("LiveSegmentStatus.FINISHED -> liveSegment.staticData.summary.distance.toDouble().coerceAtLeast(liveSegment.liveData.distanceOnSegment_raw)")
+            content.contains("LiveSegmentStatus.FINISHED -> liveSegment.staticData.summary.distance_raw.coerceAtLeast(liveSegment.liveData.distanceOnSegment_raw)")
         )
         assertTrue(
             "LiveSegmentSheet must map APPROACHING and FAR_FAR_AWAY to null",

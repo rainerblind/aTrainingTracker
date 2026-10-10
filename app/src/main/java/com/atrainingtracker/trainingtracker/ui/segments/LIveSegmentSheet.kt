@@ -40,7 +40,7 @@ fun LiveSegmentSheet(
     val externalScrubDistance = when (liveSegment.liveData.segmentStatus) {
         LiveSegmentStatus.ON_SEGMENT,
         LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> liveSegment.liveData.distanceOnSegment_raw
-        LiveSegmentStatus.FINISHED -> liveSegment.staticData.summary.distance.toDouble().coerceAtLeast(liveSegment.liveData.distanceOnSegment_raw)
+        LiveSegmentStatus.FINISHED -> liveSegment.staticData.summary.distance_raw.coerceAtLeast(liveSegment.liveData.distanceOnSegment_raw)
         LiveSegmentStatus.APPROACHING,
         LiveSegmentStatus.FAR_FAR_AWAY -> null
     }
