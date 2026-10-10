@@ -19,34 +19,20 @@
 package com.atrainingtracker.trainingtracker.ui.climbs
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.climbs.Climb
-import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
-import com.atrainingtracker.trainingtracker.ui.map.*
-import com.atrainingtracker.trainingtracker.ui.theme.TTColor
-import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
-import com.atrainingtracker.trainingtracker.ui.util.MetricFormatterContext
+import com.atrainingtracker.trainingtracker.ui.components.core.EntityDetailSheetScaffold
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlin.math.roundToInt
 
 /**
  * Computes tight LatLngBounds enclosing the climb path, with zero-area expansion fallback.
@@ -74,15 +60,14 @@ fun calculateClimbBounds(climb: Climb): LatLngBounds? {
 }
 
 /**
- * Dedicated Climb Detail Bottom Sheet (REQ-UI-300 / ATT-2511).
+ * Dedicated Climb Detail Bottom Sheet (REQ-UI-300 / REQ-UI-315 / REQ-UI-333 / ATT-3053).
  *
- * Displays:
- * 1. Header with climb name, route counter badge, and [ClimbCategoryChip].
- * 2. Key Metrics HUD (Distance, Elevation Gain, Avg Grade, Max Grade, Start Offset).
- * 3. Focused Map viewport tightly zoomed onto the climb geometry via [MapZoomFocus.EXPLICIT_BOUNDS].
- * 4. Isolated Zoomed Elevation Profile with slope grade coloring and elevation spans.
+ * Directly hosts [ClimbOnMapScreen] inside [EntityDetailSheetScaffold] to ensure
+ * 100% visual and functional identity with the map screen layout and [com.atrainingtracker.trainingtracker.ui.segments.SegmentDetailSheet]:
+ * 1. Unified header featuring [ClimbHeader] and [ClimbDetails].
+ * 2. Interactive [com.atrainingtracker.trainingtracker.ui.map.MapDetailLayout] with elevation profile scrubbing and collapsible map viewport.
+ * 3. Shared [EntityDetailSheetScaffold] with floating overlay close button.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClimbDetailSheet(
     climb: Climb,
@@ -92,290 +77,23 @@ fun ClimbDetailSheet(
     bSportType: BSportType = BSportType.BIKE,
     onDismiss: () -> Unit
 ) {
-    val formatters = LocalMetricFormatter.current
-
-    AppModalBottomSheet(
-        title = climb.name.ifBlank { stringResource(R.string.climb_title) },
-        onDismissRequest = onDismiss,
-        showCloseButton = true,
-        headerActions = {
-            if (routeIndex != null && totalRouteClimbs != null) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.climb_route_counter, routeIndex, totalRouteClimbs),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(6.dp))
-            }
-            ClimbCategoryChip(category = climb.category)
-        },
+    EntityDetailSheetScaffold(
+        onDismiss = onDismiss,
         modifier = modifier
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // 1. Key Metrics HUD
-            ClimbDetailMetricsCard(climb = climb, formatters = formatters)
-
-            // 2. Focused Map Viewport
-            ClimbDetailMapCard(climb = climb, bSportType = bSportType)
-
-            // 3. Isolated Zoomed Elevation Profile
-            ClimbDetailElevationProfileCard(climb = climb, formatters = formatters)
-
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-    }
-}
-
-@Composable
-private fun ClimbDetailMetricsCard(
-    climb: Climb,
-    formatters: MetricFormatterContext,
-    modifier: Modifier = Modifier
-) {
-    ElevatedCard(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ClimbOnMapScreen(
+            climb = climb,
+            routeIndex = routeIndex,
+            totalRouteClimbs = totalRouteClimbs,
+            bSportType = bSportType,
+            modifier = Modifier.fillMaxSize(),
+            useStatusBarsPadding = false
         )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val startDistMeters = climb.pathPoints.firstOrNull()?.distance ?: 0.0
-                Text(
-                    text = stringResource(
-                        R.string.routes_climb_start_at,
-                        formatters.distance.format_with_units(startDistMeters) ?: "${(startDistMeters / 1000.0).roundToInt()} km"
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            HorizontalDivider(
-                thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Distance
-                ClimbMetricItem(
-                    iconRes = R.drawable.ic_distance,
-                    label = stringResource(R.string.climb_remaining_dist),
-                    value = formatters.distance.format_with_units(climb.distanceMeters) ?: "${(climb.distanceMeters / 1000.0).roundToInt()} km"
-                )
-
-                // Elevation Gain
-                ClimbMetricItem(
-                    iconRes = R.drawable.ic_ascent,
-                    label = stringResource(R.string.climb_remaining_elevation),
-                    value = "+${formatters.altitude.format_with_units(climb.elevationGainMeters) ?: "${climb.elevationGainMeters.roundToInt()} m"}"
-                )
-
-                // Average Grade
-                ClimbMetricItem(
-                    iconRes = R.drawable.ic_grade,
-                    label = stringResource(R.string.climb_grade),
-                    value = stringResource(R.string.routes_climb_avg_grade, climb.avgGradePercent)
-                )
-
-                // Maximum Grade
-                ClimbMetricItem(
-                    iconRes = R.drawable.ic_grade,
-                    label = stringResource(R.string.climb_max_grade_label),
-                    value = stringResource(R.string.routes_climb_max_grade, climb.maxGradePercent)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ClimbMetricItem(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    @androidx.annotation.DrawableRes iconRes: Int? = null
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        if (iconRes != null) {
-            Icon(
-                painter = androidx.compose.ui.res.painterResource(id = iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-        }
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun ClimbDetailMapCard(
-    climb: Climb,
-    bSportType: BSportType,
-    modifier: Modifier = Modifier
-) {
-    val climbBounds = remember(climb) { calculateClimbBounds(climb) }
-    val context = LocalContext.current
-    val noLocation = remember { MutableStateFlow<LatLng?>(null) }
-    val startMarker = remember(context) {
-        createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint)
-    }
-    val endMarker = remember(context) {
-        createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint)
-    }
-
-    ElevatedCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(200.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            ATrainingTrackerMap(
-                zoomFocus = if (climbBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
-                initialBounds = climbBounds,
-                currentLocationFlow = noLocation,
-                modifier = Modifier.fillMaxSize(),
-                content = {
-                    climbs(listOf(climb))
-                    val markersList = mutableListOf<LocationMarker>()
-                    if (startMarker != null) {
-                        markersList.add(
-                            LocationMarker(
-                                position = climb.startLatLng,
-                                iconResId = R.drawable.control_start,
-                                title = "Start",
-                                iconDescriptor = startMarker
-                            )
-                        )
-                    }
-                    if (endMarker != null) {
-                        markersList.add(
-                            LocationMarker(
-                                position = climb.endLatLng,
-                                iconResId = R.drawable.control_stop,
-                                title = "Summit",
-                                iconDescriptor = endMarker
-                            )
-                        )
-                    }
-                    if (markersList.isNotEmpty()) {
-                        markers(markersList)
-                    }
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun ClimbDetailElevationProfileCard(
-    climb: Climb,
-    formatters: MetricFormatterContext,
-    modifier: Modifier = Modifier
-) {
-    ElevatedCard(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val minAlt = climb.pathPoints.minOfOrNull { it.altitude }
-                val maxAlt = climb.pathPoints.maxOfOrNull { it.altitude }
-                Text(
-                    text = stringResource(R.string.graph_heading_elevation),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (minAlt != null && maxAlt != null) {
-                    Text(
-                        text = "${minAlt.roundToInt()} m → ${maxAlt.roundToInt()} m",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            ClimbDetailElevationProfile(
-                climb = climb,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(110.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "0 km",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = formatters.distance.format_with_units(climb.distanceMeters) ?: "${(climb.distanceMeters / 1000.0).roundToInt()} km",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
     }
 }
 
 /**
- * Isolated zoomed elevation profile canvas for a specific climb.
+ * Isolated zoomed elevation profile canvas for a specific climb (retained for backward compatibility).
  */
 @Composable
 fun ClimbDetailElevationProfile(

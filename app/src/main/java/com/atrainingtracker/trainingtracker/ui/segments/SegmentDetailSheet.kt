@@ -18,21 +18,12 @@
 
 package com.atrainingtracker.trainingtracker.ui.segments
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
-import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.routes.MatchedRouteSegment
-import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
+import com.atrainingtracker.trainingtracker.ui.components.core.EntityDetailSheetScaffold
 import com.atrainingtracker.trainingtracker.ui.map.toMapSegment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -68,15 +59,14 @@ fun calculateSegmentBounds(matchedSegment: MatchedRouteSegment): LatLngBounds? {
 }
 
 /**
- * Dedicated Segment Detail Bottom Sheet (REQ-UI-315 / ATT-2860).
+ * Dedicated Segment Detail Bottom Sheet (REQ-UI-315 / REQ-UI-333 / ATT-2860 / ATT-3053).
  *
- * Directly hosts [SegmentOnMapScreen] inside a modal bottom sheet container to ensure
+ * Directly hosts [SegmentOnMapScreen] inside [EntityDetailSheetScaffold] to ensure
  * 100% visual and functional identity with the map popup:
  * 1. Unified header featuring [SegmentHeader] and [SegmentDetails].
- * 2. Interactive [MapDetailLayout] with elevation profile scrubbing and collapsible map viewport.
- * 3. Breakout routes analytics section and non-destructive overlay dismiss button.
+ * 2. Interactive [com.atrainingtracker.trainingtracker.ui.map.MapDetailLayout] with elevation profile scrubbing and collapsible map viewport.
+ * 3. Shared [EntityDetailSheetScaffold] container with standardized floating close button.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SegmentDetailSheet(
     matchedSegment: MatchedRouteSegment,
@@ -86,45 +76,15 @@ fun SegmentDetailSheet(
     bSportType: BSportType = BSportType.BIKE,
     onDismiss: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = BottomSheetDesign.SheetShape,
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = BottomSheetDesign.SheetTonalElevation,
-        dragHandle = null,
-        modifier = modifier.fillMaxHeight()
+    EntityDetailSheetScaffold(
+        onDismiss = onDismiss,
+        modifier = modifier
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            SegmentOnMapScreen(
-                segmentSummary = matchedSegment.segment.summary,
-                segment = matchedSegment.segment.toMapSegment(showStartAndFinishText = false),
-                modifier = Modifier.fillMaxSize(),
-                useStatusBarsPadding = false
-            )
-
-            // Top-right dismiss close button
-            IconButton(
-                onClick = onDismiss,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .zIndex(10f)
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                    shadowElevation = 2.dp
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.Cancel),
-                        modifier = Modifier.padding(6.dp)
-                    )
-                }
-            }
-        }
+        SegmentOnMapScreen(
+            segmentSummary = matchedSegment.segment.summary,
+            segment = matchedSegment.segment.toMapSegment(showStartAndFinishText = false),
+            modifier = Modifier.fillMaxSize(),
+            useStatusBarsPadding = false
+        )
     }
 }

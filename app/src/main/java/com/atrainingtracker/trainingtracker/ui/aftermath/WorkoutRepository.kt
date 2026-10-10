@@ -417,6 +417,7 @@ class WorkoutRepository private constructor(private val application: Application
             val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
             val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
             val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
+            val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
 
             var initialEpochSec: Long? = null
             var sampleIndex = 0L
@@ -436,14 +437,15 @@ class WorkoutRepository private constructor(private val application: Application
                 val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
                 val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
                 val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
+                val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else 0.0
                 val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
 
-                if (hr != null || power != null || speed != null) {
+                if (hr != null || power != null || speed != null || alt != 0.0) {
                     points.add(
                         PathPoint(
                             distance = dist,
                             latLng = LatLng(0.0, 0.0),
-                            altitude = 0.0,
+                            altitude = alt,
                             timeSec = timeSec,
                             hr = hr,
                             power = power,

@@ -15,7 +15,9 @@ from tools.replay_workout import (
     TcxParser, TcxPoint, ReplayEngine,
     build_power_payload, build_hr_payload,
     format_duration, haversine_distance, calculate_bearing,
-    BleReplayServer, AdbGpsInjector
+    BleReplayServer, AdbGpsInjector,
+    HostPreFlightDiagnostics, PreFlightReport,
+    CYCLING_POWER_SERVICE_UUID, HEART_RATE_SERVICE_UUID
 )
 
 try:
@@ -87,6 +89,12 @@ class TestTcxParser(unittest.TestCase):
                 TcxParser.parse_file(tmp_name)
         finally:
             os.remove(tmp_name)
+
+    def test_tilde_path_expansion(self):
+        home_path = "~/sample.tcx"
+        expanded = os.path.expanduser(home_path)
+        self.assertFalse(expanded.startswith("~"))
+        self.assertTrue(os.path.isabs(expanded))
 
 
 class TestBlePayloads(unittest.TestCase):
@@ -210,6 +218,61 @@ class TestPyQt6GuiContracts(unittest.TestCase):
         self.assertEqual(window.btn_play_pause.text(), "Play")
 
         window.close()
+
+
+class TestAdbGpsInjector(unittest.TestCase):
+    def test_build_inject_cmd_android14_syntax(self):
+        cmd = AdbGpsInjector.build_inject_cmd("gps", 48.123456, 11.654321, 1700000000000, accuracy=2.5)
+        # Must contain exact command line
+        self.assertEqual(
+            cmd,
+            "cmd location providers set-test-provider-location gps --location 48.123456,11.654321 --accuracy 2.5 --time 1700000000000"
+        )
+        # Crucial: Must NOT contain unsupported flags rejected on Android 14+
+        self.assertNotIn("--altitude", cmd)
+        self.assertNotIn("--speed", cmd)
+        self.assertNotIn("--bearing", cmd)
+
+    def test_default_providers_contain_gps_network_fused(self):
+        injector = AdbGpsInjector(enabled=False)
+        self.assertEqual(injector.DEFAULT_PROVIDERS, ("gps", "network", "fused"))
+
+    def test_async_queue_injection(self):
+        injector = AdbGpsInjector(enabled=True, device_serial="DEVICE123")
+        injector.is_registered = True
+        self.assertEqual(injector._queue.qsize(), 0)
+        injector.inject_location(48.1, 11.5, 500.0, 10.0, 90.0)
+        self.assertEqual(injector._queue.qsize(), 1)
+        item = injector._queue.get_nowait()
+        self.assertEqual(item, (48.1, 11.5))
+
+    def test_queue_overflow_drops_oldest(self):
+        injector = AdbGpsInjector(enabled=True, device_serial="DEVICE123")
+        injector.is_registered = True
+        for i in range(5):
+            injector.inject_location(48.0 + i, 11.0 + i, 500.0, 10.0, 90.0)
+        self.assertEqual(injector._queue.qsize(), 5)
+        # Push 6th item - drops oldest (48.0, 11.0)
+        injector.inject_location(48.9, 11.9, 500.0, 10.0, 90.0)
+        self.assertEqual(injector._queue.qsize(), 5)
+        first_item = injector._queue.get_nowait()
+        self.assertEqual(first_item, (48.0 + 1, 11.0 + 1))
+
+
+class TestHostPreFlightDiagnostics(unittest.TestCase):
+    def test_preflight_report_structure(self):
+        report = PreFlightReport(
+            bt_ok=True, bt_message="BlueZ OK", bt_advice=[],
+            adb_ok=True, adb_message="ADB OK", adb_advice=[],
+            device_serial="DEVICE123"
+        )
+        self.assertTrue(report.bt_ok)
+        self.assertTrue(report.adb_ok)
+        self.assertEqual(report.device_serial, "DEVICE123")
+
+    def test_bluez_service_uuids(self):
+        self.assertEqual(CYCLING_POWER_SERVICE_UUID, '00001818-0000-1000-8000-00805f9b34fb')
+        self.assertEqual(HEART_RATE_SERVICE_UUID, '0000180d-0000-1000-8000-00805f9b34fb')
 
 
 if __name__ == "__main__":

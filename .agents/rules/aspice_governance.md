@@ -158,6 +158,10 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * Origin: Sprint 2026-41.5, ATT-2858 & ATT-2856 — Crash fixes were merged to `sprint/2026-41.5` but needed explicit human inquiry to be integrated into `hotfix/V4.9.38.4__267`.
 
 
+## 28. Deferred Review State for Field-Tested Features
+* **Rule**: When a sprint ticket modifies in-ride GPS dynamics, algorithmic filtering, sensor connectivity, or real-time cycling cockpit prompts requiring outdoor rides or real-world physical activities to evaluate, the ticket may remain in `Final Review (Human)` across sprint close while `sprint/<sprint_id>` is merged to `develop`.
+* Origin: Sprint 2026-41.6, ATT-3055.
+
 ## 29. Defensive Service Lifecycle Finalization & FGS Permission Gating
 * **Rule**:
   1. **Permission-Gated FGS Types**: Never pass Android 14+ (API 34+) specialized foreground service types (`FOREGROUND_SERVICE_TYPE_HEALTH`, `FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE`) to `startForeground()` unconditionally. The calling service MUST dynamically verify that the corresponding runtime permission (e.g. `ACTIVITY_RECOGNITION`, `BLUETOOTH_CONNECT`) is granted via `ContextCompat.checkSelfPermission(...)`. Unconditionally requesting types without runtime permissions triggers a fatal `SecurityException` in Android's `ActivityManagerService`.
@@ -172,3 +176,14 @@ These rules are strictly binding on all AI assistants and agent instances operat
 ## 31. Explanatory Scale Direction in Settings Sliders
 * **Rule**: Whenever exposing numerical sliders or continuous values in user settings (such as map zoom levels, camera tilt angles, sensitivity curves, or lookahead paddings), the preference subtitle or hint text MUST explicitly explain the physical direction of the scale (e.g., *"Höherer Wert = Näher herangezoomt"* / *"Niedrigerer Wert = Weiträumigere Übersicht"*).
 * Origin: Sprint 2026-41.6, ATT-2946 / ATT-3054 — Map camera zoom sliders did not communicate whether higher numbers meant closer or farther away.
+
+## 32. Coordinate Space Normalization for Sub-Entity Inspection Charts
+* **Rule**: Whenever sub-entity segments, climbs, or intervals are displayed in an inspection chart (e.g. `ClimbDetailSheet`, `SegmentDetailSheet`), their distance domain coordinates MUST be normalized to the entity's local length ($[0, \text{length}]$) rather than inheriting the parent route's global coordinate space ($[0, \text{totalRouteDistance}]$).
+* Passing global route coordinates to sub-entity elevation profile charts squishes the entity into a tiny sliver at the far edge and leaves the chart mostly blank.
+* Origin: Sprint 2026-41.7, ATT-3053 / ATT-3105.
+
+## 33. Unified Viewport Anchor Authority for Map Tracking
+* **Rule**: Map camera tracking, Follow-Me lookahead offsets, and viewport content paddings MUST share a single spatial authority to prevent conflicting animation loops and viewport jitter.
+* Avoid competing camera updates where Google Maps `contentPadding` recalculation in `BoxWithConstraints` fights with `cameraPositionState.animate(...)`.
+* Origin: Sprint 2026-41.7, ATT-3054 / ATT-3102.
+

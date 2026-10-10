@@ -117,8 +117,11 @@ Sub-tasks represent stage execution activities (`[Analysis]`, `[Req & Test Spec]
 * **Defensive Service Lifecycle Finalization & FGS Permission Gating (Rule 29)**: Specialized Android 14+ FGS types (`HEALTH`, `CONNECTED_DEVICE`) must never be passed to `startForeground()` without dynamically checking held runtime permissions (`ContextCompat.checkSelfPermission(...)`). Critical session state finalization (`FINISHED = 1`) and terminal completion broadcasts must never be gated behind transient error flags (`mTrackingInterrupted`) and must execute within guaranteed `try/finally` blocks and SQLite transactions.
 * **Developer Tool Host Pre-Flight Diagnostics (Rule 30)**: Developer utilities, simulators, and replay tools relying on host hardware (Bluetooth LE broadcasers via BlueZ/D-Bus, ADB mock locations) must execute a self-diagnostic pre-flight check at startup, verifying controller roles, permissions, and device state before attempting playback.
 * **Explanatory Scale Direction in Settings Sliders (Rule 31)**: Whenever exposing numerical sliders or continuous values in user settings, preference subtitles/hints must explicitly explain the physical direction of the scale (e.g. *"Höherer Wert = Näher herangezoomt"*).
+* **Coordinate Space Normalization for Sub-Entity Inspection Charts (Rule 32)**: Sub-entity inspection screens (climbs, segments, laps) MUST normalize distance coordinates to $[0, \text{length}]$ rather than using global parent route distance.
+* **Unified Viewport Anchor Authority for Map Tracking (Rule 33)**: Map camera tracking, lookahead padding, and animation updates must share a single spatial authority to prevent camera oscillation and jitter.
 * **Human Decision Gate on Sprint Closure & Develop Merge**: The sprint branch (`sprint/<sprint_id>`) MUST NEVER be merged into `develop` autonomously by any agent. Sprint closure and merging into `develop` is an inviolable Human Decision Gate, executed strictly after explicit human review and agreement.
 * **Branch Cleanup**: Merged feature/bugfix branches must be immediately deleted upon integration into `develop`.
+
 
 ---
 

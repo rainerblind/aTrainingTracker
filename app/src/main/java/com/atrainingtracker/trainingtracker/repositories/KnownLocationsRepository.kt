@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.repositories
 
 import android.content.Context
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
@@ -225,14 +226,23 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
      * Custom names (edited by user) are strictly preserved.
      */
     open suspend fun healLegacyNames() = withContext(dbDispatcher) {
-        val rawLocations = databaseManager.allLocations
+        val rawLocations = try {
+            databaseManager.allLocations
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to load locations for healing", t)
+            return@withContext
+        }
         var changed = false
         for (loc in rawLocations) {
             if (LocationNameResolver.isPlaceholderName(loc.name)) {
                 val resolvedName = LocationNameResolver.resolveLocationName(context, loc.latLng.latitude, loc.latLng.longitude)
                 if (!LocationNameResolver.isPlaceholderName(resolvedName) && resolvedName != loc.name) {
-                    databaseManager.updateLocation(loc.id, resolvedName, loc.altitude, loc.source, loc.isLocked)
-                    changed = true
+                    try {
+                        databaseManager.updateLocation(loc.id, resolvedName, loc.altitude, loc.source, loc.isLocked)
+                        changed = true
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "Failed to update location name for healing", t)
+                    }
                 }
             }
         }
@@ -242,6 +252,8 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
     }
 
     companion object {
+        private const val TAG = "KnownLocationsRepo"
+
         @Volatile
         private var INSTANCE: KnownLocationsRepository? = null
 

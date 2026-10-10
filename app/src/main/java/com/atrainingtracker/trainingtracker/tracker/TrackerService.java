@@ -318,6 +318,10 @@ public class TrackerService extends Service {
         public void onServiceConnected(ComponentName name, IBinder service) {
             mBanalService = (BANALServiceComm) service;
             if (DEBUG) Log.i(TAG, "connected to BANAL Service");
+
+            // ATT-3045: Ensure location devices are checked/initialized defensively when service connects
+            BANALService.checkOrInitializeLocationDevices();
+
             if (!BANALService.isSearching()) {
                 onSearchingFinished();
             }
@@ -354,6 +358,9 @@ public class TrackerService extends Service {
         if (DEBUG) {
             Log.d(TAG, "onCreate");
         }
+
+        // ATT-3045: Ensure location devices are checked/initialized defensively upon service creation
+        BANALService.checkOrInitializeLocationDevices();
 
         mTrainingApplication = (TrainingApplication) getApplication();
         mWorkoutRepository = WorkoutRepository.Companion.getInstance((Application) getApplicationContext());

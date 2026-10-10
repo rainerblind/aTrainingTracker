@@ -454,7 +454,8 @@ public class WorkoutSummariesDatabaseManager {
      */
     public Cursor getWorkoutsInRangeCursor(long startTimeS, long endTimeS) {
         String selection = "strftime('%s', " + WorkoutSummaries.TIME_START + ") >= ? AND " +
-                "strftime('%s', " + WorkoutSummaries.TIME_START + ") <= ?";
+                "strftime('%s', " + WorkoutSummaries.TIME_START + ") <= ? AND " +
+                WorkoutSummaries.FINISHED + " = 1";
         String[] selectionArgs = {String.valueOf(startTimeS), String.valueOf(endTimeS)};
         return getDatabase().query(
                 WorkoutSummaries.TABLE,

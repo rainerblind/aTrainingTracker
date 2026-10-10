@@ -1913,15 +1913,15 @@
     <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
     <string name="tuning_map_camera_section_title">Map Camera &amp; Follow-Me Navigation</string>
     <string name="tuning_map_base_zoom_title">Follow-Me Base Zoom</string>
-    <string name="tuning_map_base_zoom_desc">Base camera zoom level when stationary (0 km/h) in follow-me tracking mode</string>
+    <string name="tuning_map_base_zoom_desc">Base camera zoom level when stationary (0 km/h) in follow-me tracking mode (higher value = closer zoom)</string>
     <string name="tuning_map_speed_zoom_enabled_title">Speed-Dependent Zoom</string>
     <string name="tuning_map_speed_zoom_enabled_desc">Gradually zooms out as travel speed increases to expand forward route visibility</string>
     <string name="tuning_map_cruising_zoom_title">Cruising Speed Zoom (at 20 km/h)</string>
-    <string name="tuning_map_cruising_zoom_desc">Camera zoom level scaled to at typical cycling speed (20 km/h)</string>
+    <string name="tuning_map_cruising_zoom_desc">Camera zoom level scaled to at typical cycling speed (20 km/h) (higher value = closer zoom)</string>
     <string name="tuning_map_tilt_angle_title">Camera Tilt Angle</string>
     <string name="tuning_map_tilt_angle_desc">Perspective pitch angle for 3D navigation (0° is flat 2D, 70° is full 3D perspective)</string>
-    <string name="tuning_map_lookahead_padding_title">Forward Lookahead Bottom Padding</string>
-    <string name="tuning_map_lookahead_padding_desc">Bottom viewport padding percent to position the rider in the lower portion and maximize visible road ahead</string>
+    <string name="tuning_map_lookahead_padding_title">Forward Lookahead Padding</string>
+    <string name="tuning_map_lookahead_padding_desc">Viewport padding percent to position the rider in the lower portion and maximize visible road ahead</string>
 </resources>
 
 

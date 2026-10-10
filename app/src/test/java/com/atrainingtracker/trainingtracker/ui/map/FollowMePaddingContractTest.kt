@@ -56,14 +56,14 @@ class FollowMePaddingContractTest {
             content.contains("BoxWithConstraints(modifier = modifier)")
         )
         assertTrue(
-            "ATrainingTrackerMap must calculate bottomPadding based on FOLLOW_ME zoomFocus and tuningConfig",
-            content.contains("val bottomPadding = if (zoomFocus == MapZoomFocus.FOLLOW_ME)") &&
+            "ATrainingTrackerMap must calculate topPadding based on FOLLOW_ME zoomFocus and tuningConfig",
+            content.contains("val topPadding = if (zoomFocus == MapZoomFocus.FOLLOW_ME)") &&
                 content.contains("maxHeight * (tuningConfig.mapFollowMeLookaheadPaddingPercent / 100f)") &&
                 content.contains("0.dp")
         )
         assertTrue(
-            "GoogleMap must receive PaddingValues(bottom = bottomPadding) as contentPadding",
-            content.contains("contentPadding = PaddingValues(bottom = bottomPadding)")
+            "GoogleMap must receive PaddingValues(top = topPadding) as contentPadding",
+            content.contains("contentPadding = PaddingValues(top = topPadding)")
         )
     }
 

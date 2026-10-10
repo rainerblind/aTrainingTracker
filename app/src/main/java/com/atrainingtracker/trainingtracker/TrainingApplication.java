@@ -1422,6 +1422,9 @@ public class TrainingApplication extends Application {
     /***********************************************************************************************/
     /*  Broadcast Receivers for handling the tracking state                                        */
     protected void startTracking() {
+        // ATT-3045: Ensure location devices are checked/initialized defensively when starting tracking
+        BANALService.checkOrInitializeLocationDevices();
+
         if (!cResumeFromCrash) {
             sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
                     .setPackage(getPackageName()));
