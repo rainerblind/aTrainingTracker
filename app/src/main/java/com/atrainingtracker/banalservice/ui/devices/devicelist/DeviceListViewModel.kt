@@ -61,11 +61,19 @@ class DeviceListViewModel(private val application: Application) : AndroidViewMod
             }
 
             // Then, apply secondary filters for protocol and device type to the result.
-            primaryFiltered.filter { device ->
+            val filtered = primaryFiltered.filter { device ->
                 val protocolMatch = spec.protocol == Protocol.ALL || device.protocol == spec.protocol
                 val deviceTypeMatch = spec.deviceType == DeviceType.ALL || device.deviceType == spec.deviceType
                 protocolMatch && deviceTypeMatch
             }
+
+            val newlyFoundIds = banalServiceRepository.newlyFoundDevicesIds.value
+            filtered.sortedWith(
+                compareByDescending<DeviceUiData> { it.isNewlyDiscovered }
+                    .thenByDescending { if (it.isNewlyDiscovered) newlyFoundIds.indexOf(it.id) else -1 }
+                    .thenByDescending { it.isConnected }
+                    .thenBy { it.deviceName }
+            )
         }
     }
 

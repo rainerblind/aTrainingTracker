@@ -78,8 +78,9 @@ data class DeviceUiData(
     // stuff that we don't get from the database but from the devices itself.
     val isConnected: Boolean,
     val mainValue: String?,
-    val allValues: List<String>?
-    )
+    val allValues: List<String>?,
+    val isNewlyDiscovered: Boolean = false
+)
 
 // --- THE NEW, SIMPLIFIED FACTORY ---
 fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {

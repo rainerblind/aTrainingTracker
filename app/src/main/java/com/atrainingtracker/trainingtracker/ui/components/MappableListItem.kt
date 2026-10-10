@@ -41,14 +41,16 @@ fun MappableListItem(
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     alpha: Float = 1.0f,
+    border: BorderStroke? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val shape = RoundedCornerShape(16.dp)
+    val effectiveBorder = border ?: BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ElevatedCard(
         modifier = modifier
             .fillMaxWidth()
             .border(
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                border = effectiveBorder,
                 shape = shape
             )
             .graphicsLayer { this.alpha = alpha },
