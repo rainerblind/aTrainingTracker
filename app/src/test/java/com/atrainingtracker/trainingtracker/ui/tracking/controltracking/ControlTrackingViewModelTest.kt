@@ -30,12 +30,17 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkConstructor
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
+import io.mockk.slot
 import io.mockk.unmockkAll
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,6 +68,7 @@ class ControlTrackingViewModelTest {
     private lateinit var mockDeviceDataRepository: DeviceDataRepository
     private lateinit var mockBanalRepo: BANALServiceRepository
     private lateinit var mockDevicesDb: DevicesDatabaseManager
+    private lateinit var mockWorkoutSummariesDb: WorkoutSummariesDatabaseManager
     private val allDevicesFlow = MutableStateFlow<List<DeviceUiData>>(emptyList())
 
     @Before
@@ -97,6 +103,19 @@ class ControlTrackingViewModelTest {
         mockkStatic(DevicesDatabaseManager::class)
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDb
         every { mockDevicesDb.hasPairedRemoteDevices() } returns false
+
+        mockWorkoutSummariesDb = mockk(relaxed = true)
+        mockkStatic(WorkoutSummariesDatabaseManager::class)
+        every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockWorkoutSummariesDb
+        every { mockWorkoutSummariesDb.hasUnfinishedWorkout() } returns false
+
+        mockkConstructor(android.content.Intent::class)
+        every { anyConstructed<android.content.Intent>().setPackage(any()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().action } returns TrainingApplication.REQUEST_START_TRACKING
+        every { anyConstructed<android.content.Intent>().`package` } returns "com.atrainingtracker"
+
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.isTracking() } returns false
 
         application = mockk(relaxed = true)
         every { application.packageName } returns "com.atrainingtracker"
@@ -210,6 +229,129 @@ class ControlTrackingViewModelTest {
         assertTrue(
             "Expected initialValue of hasPairedRemoteDevices to match synchronous database query result",
             viewModel.hasPairedRemoteDevices.value
+        )
+    }
+
+    @Test
+    fun testOnStartTracking_emitsShowRecoveryDialog_whenUnfinishedWorkoutExistsAndNotTracking() = runTest {
+        every { mockWorkoutSummariesDb.hasUnfinishedWorkout() } returns true
+        every { TrainingApplication.isTracking() } returns false
+
+        val viewModel = ControlTrackingViewModel(application)
+        val emittedEvents = mutableListOf<ControlNavigation>()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.navigationEvent.collect { emittedEvents.add(it) }
+        }
+
+        viewModel.onStartTracking()
+
+        assertTrue(
+            "Expected ControlNavigation.ShowRecoveryDialog when unfinished workout exists and not tracking",
+            emittedEvents.contains(ControlNavigation.ShowRecoveryDialog)
+        )
+        verify(exactly = 0) { application.sendBroadcast(any()) }
+        job.cancel()
+    }
+
+    @Test
+    fun testOnStartTracking_sendsBroadcast_whenNoUnfinishedWorkout() = runTest {
+        every { mockWorkoutSummariesDb.hasUnfinishedWorkout() } returns false
+        every { TrainingApplication.isTracking() } returns false
+
+        val viewModel = ControlTrackingViewModel(application)
+        val emittedEvents = mutableListOf<ControlNavigation>()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.navigationEvent.collect { emittedEvents.add(it) }
+        }
+
+        viewModel.onStartTracking()
+
+        assertFalse(
+            "Expected NO ShowRecoveryDialog event when no unfinished workout exists",
+            emittedEvents.contains(ControlNavigation.ShowRecoveryDialog)
+        )
+        val slot = slot<android.content.Intent>()
+        verify(exactly = 1) { application.sendBroadcast(capture(slot)) }
+        org.junit.Assert.assertEquals(TrainingApplication.REQUEST_START_TRACKING, slot.captured.action)
+        job.cancel()
+    }
+
+    @Test
+    fun testOnStartTracking_sendsBroadcast_whenAlreadyTracking() = runTest {
+        every { mockWorkoutSummariesDb.hasUnfinishedWorkout() } returns true
+        every { TrainingApplication.isTracking() } returns true
+
+        val viewModel = ControlTrackingViewModel(application)
+        val emittedEvents = mutableListOf<ControlNavigation>()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.navigationEvent.collect { emittedEvents.add(it) }
+        }
+
+        viewModel.onStartTracking()
+
+        assertFalse(
+            "Expected NO ShowRecoveryDialog event when already tracking",
+            emittedEvents.contains(ControlNavigation.ShowRecoveryDialog)
+        )
+        val slot = slot<android.content.Intent>()
+        verify(exactly = 1) { application.sendBroadcast(capture(slot)) }
+        org.junit.Assert.assertEquals(TrainingApplication.REQUEST_START_TRACKING, slot.captured.action)
+        job.cancel()
+    }
+
+    @Test
+    fun testRemoteDevices_filtersOutOrphanedOrDeletedConnectedSensors() = runTest {
+        // Given: activeRemoteDevicesIds has [10L, 20L, 30L] where 30L was deleted / not in DB
+        val activeIdsFlow = MutableStateFlow(listOf(10L, 20L, 30L))
+        every { mockBanalRepo.activeRemoteDevicesIds } returns activeIdsFlow
+
+        val dbDevices = listOf(
+            createDeviceUiData(10L, DeviceType.HRM, "Heart Rate Monitor"),
+            createDeviceUiData(20L, DeviceType.BIKE_POWER, "Power Meter")
+        )
+        allDevicesFlow.value = dbDevices
+
+        val viewModel = ControlTrackingViewModel(application)
+        val emittedDevices = mutableListOf<List<RemoteDeviceUIData>>()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.remoteDevices.collect { emittedDevices.add(it) }
+        }
+
+        val latest = emittedDevices.last()
+        org.junit.Assert.assertEquals("Expected exactly 2 valid devices", 2, latest.size)
+        org.junit.Assert.assertEquals(10L, latest[0].id)
+        org.junit.Assert.assertEquals(20L, latest[1].id)
+        assertFalse(
+            "Expected zero DUMMY or 'New Sensor' items for orphaned device 30L",
+            latest.any { it.deviceType == DeviceType.DUMMY || it.name == "New Sensor" || it.id == 30L }
+        )
+
+        job.cancel()
+    }
+
+    private fun createDeviceUiData(id: Long, deviceType: DeviceType, name: String): DeviceUiData {
+        return DeviceUiData(
+            id = id,
+            protocol = Protocol.BLUETOOTH_LE,
+            deviceType = deviceType,
+            lastSeen = "Now",
+            manufacturer = "Polar",
+            deviceName = name,
+            isPaired = true,
+            linkedEquipment = emptyList(),
+            availableEquipment = emptyList(),
+            powerFeaturesFlags = null,
+            batteryPercentage = 90,
+            linkedSportTypes = emptyList(),
+            deviceTypeIconRes = 0,
+            batteryStatusIconRes = 0,
+            onEquipmentResId = 0,
+            wheelCircumference = null,
+            calibrationFactor = null,
+            powerFeatures = null,
+            isConnected = true,
+            mainValue = null,
+            allValues = null
         )
     }
 }

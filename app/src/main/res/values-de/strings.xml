@@ -1311,6 +1311,17 @@
     <string name="filter_section_recordings">Aufzeichnungen</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d Aufzeichnungen</string>
     <string name="filter_no_matching_clusters">Keine Lieblingsstrecken entsprechen den aktiven Filtern</string>
+    <string name="filter_sensors_title">Sensoren filtern</string>
+    <string name="filter_section_protocol">Protokoll</string>
+    <string name="filter_section_category">Sensorkategorie</string>
+    <string name="filter_section_battery">Batteriestand</string>
+    <string name="filter_protocol_all">Alle</string>
+    <string name="filter_battery_all">Alle</string>
+    <string name="filter_battery_critical">Kritisch (≤ 20%)</string>
+    <string name="filter_battery_normal">Normal (> 20%)</string>
+    <string name="filter_battery_critical_chip">Batterie: ≤ 20%</string>
+    <string name="filter_battery_normal_chip">Batterie: > 20%</string>
+    <string name="filter_no_matching_sensors">Keine Sensoren entsprechen den aktiven Filtern</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">Lieblingsstrecken &amp; Clustering</string>
     <string name="cluster_info_what_title">Was sind Lieblingsstrecken?</string>
@@ -1815,7 +1826,7 @@
     <string name="tuning_map_tilt_angle_title">Kamera-Neigungswinkel</string>
     <string name="tuning_map_tilt_angle_desc">Perspektivischer Neigungswinkel für die 3D-Navigation (0° ist flaches 2D, 70° volle 3D-Perspektive)</string>
     <string name="tuning_map_lookahead_padding_title">Vorausschau-Kameraabstand</string>
-    <string name="tuning_map_lookahead_padding_desc">Anzeigebereich-Puffer in Prozent, um die Fahrerposition nach unten zu versetzen und den Blick auf die Strecke nach vorn zu maximieren</string>
+    <string name="tuning_map_lookahead_padding_desc">Anzeigebereich-Puffer in Prozent, um die Fahrerposition nach unten zu versetzen und den Blick auf die Strecke nach vorn zu maximieren (höherer Wert = Fahrer weiter unten / mehr Vorausschau)</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NEU</string>

@@ -13,11 +13,13 @@ import tempfile
 
 from tools.replay_workout import (
     TcxParser, TcxPoint, ReplayEngine,
-    build_power_payload, build_hr_payload,
+    build_power_payload, build_hr_payload, build_battery_payload,
     format_duration, haversine_distance, calculate_bearing,
     BleReplayServer, AdbGpsInjector,
     HostPreFlightDiagnostics, PreFlightReport,
-    CYCLING_POWER_SERVICE_UUID, HEART_RATE_SERVICE_UUID
+    CYCLING_POWER_SERVICE_UUID, HEART_RATE_SERVICE_UUID,
+    BATTERY_SERVICE_UUID, BATTERY_LEVEL_CHARACTERISTIC_UUID,
+    build_arg_parser, ScheduledTriggerManager
 )
 
 try:
@@ -127,6 +129,71 @@ class TestBlePayloads(unittest.TestCase):
         payload_low = build_hr_payload(-10)
         self.assertEqual(payload_low[1], 0)
 
+    def test_build_battery_payload(self):
+        self.assertEqual(build_battery_payload(100), [100])
+        self.assertEqual(build_battery_payload(50), [50])
+        self.assertEqual(build_battery_payload(15), [15])
+        self.assertEqual(build_battery_payload(0), [0])
+
+    def test_build_battery_payload_clamping(self):
+        self.assertEqual(build_battery_payload(150), [100])
+        self.assertEqual(build_battery_payload(-20), [0])
+
+
+class TestBleReplayServer(unittest.TestCase):
+    def test_battery_level_management(self):
+        server = BleReplayServer(enabled=False, hr_battery=80, power_battery=60)
+        self.assertEqual(server.hr_battery, 80)
+        self.assertEqual(server.power_battery, 60)
+
+        # Update via setters
+        server.set_hr_battery(15)
+        self.assertEqual(server.hr_battery, 15)
+        server.set_power_battery(5)
+        self.assertEqual(server.power_battery, 5)
+
+        # Clamping
+        server.set_hr_battery(150)
+        self.assertEqual(server.hr_battery, 100)
+        server.set_power_battery(-10)
+        self.assertEqual(server.power_battery, 0)
+
+    def test_ble_kill_and_revive_hr(self):
+        server = BleReplayServer(enabled=False)
+        self.assertFalse(server.is_hr_killed)
+
+        server.kill_hr()
+        self.assertTrue(server.is_hr_killed)
+        # Calling update_telemetry while killed should not fail
+        server.update_telemetry(watts=200, cadence=90, hr_bpm=140)
+
+        server.toggle_hr()
+        self.assertFalse(server.is_hr_killed)
+
+        server.toggle_hr()
+        self.assertTrue(server.is_hr_killed)
+
+        server.revive_hr()
+        self.assertFalse(server.is_hr_killed)
+
+    def test_ble_kill_and_revive_power(self):
+        server = BleReplayServer(enabled=False)
+        self.assertFalse(server.is_power_killed)
+
+        server.kill_power()
+        self.assertTrue(server.is_power_killed)
+        # Calling update_telemetry while killed should not fail
+        server.update_telemetry(watts=200, cadence=90, hr_bpm=140)
+
+        server.toggle_power()
+        self.assertFalse(server.is_power_killed)
+
+        server.toggle_power()
+        self.assertTrue(server.is_power_killed)
+
+        server.revive_power()
+        self.assertFalse(server.is_power_killed)
+
 
 class TestReplayEngine(unittest.TestCase):
     def setUp(self):
@@ -219,6 +286,133 @@ class TestPyQt6GuiContracts(unittest.TestCase):
 
         window.close()
 
+    def test_gui_battery_controls(self):
+        sample_path = os.path.join(os.path.dirname(__file__), "sample_workout.tcx")
+        points = TcxParser.parse_file(sample_path)
+        engine = ReplayEngine(points)
+        ble = BleReplayServer(enabled=False, hr_battery=85, power_battery=45)
+        gps = AdbGpsInjector(enabled=False)
+
+        window = ReplayGuiWindow(sample_path, engine, ble, gps)
+        self.assertIsNotNone(window.slider_hr_battery)
+        self.assertIsNotNone(window.slider_pwr_battery)
+        self.assertIsNotNone(window.lbl_hr_battery_val)
+        self.assertIsNotNone(window.lbl_pwr_battery_val)
+
+        # Verify initial values reflected in GUI
+        self.assertEqual(window.slider_hr_battery.value(), 85)
+        self.assertEqual(window.slider_pwr_battery.value(), 45)
+        self.assertIn("85%", window.lbl_hr_battery_val.text())
+        self.assertIn("45%", window.lbl_pwr_battery_val.text())
+
+        # Move sliders
+        window.slider_hr_battery.setValue(15)
+        self.assertEqual(ble.hr_battery, 15)
+        self.assertIn("15%", window.lbl_hr_battery_val.text())
+
+        window.slider_pwr_battery.setValue(5)
+        self.assertEqual(ble.power_battery, 5)
+        self.assertIn("5%", window.lbl_pwr_battery_val.text())
+
+        # Test preset buttons (HR)
+        window.btn_hr_100.click()
+        self.assertEqual(window.slider_hr_battery.value(), 100)
+        self.assertEqual(ble.hr_battery, 100)
+        self.assertIn("100%", window.lbl_hr_battery_val.text())
+
+        window.btn_hr_50.click()
+        self.assertEqual(window.slider_hr_battery.value(), 50)
+        self.assertEqual(ble.hr_battery, 50)
+
+        window.btn_hr_15.click()
+        self.assertEqual(window.slider_hr_battery.value(), 15)
+        self.assertEqual(ble.hr_battery, 15)
+
+        window.btn_hr_5.click()
+        self.assertEqual(window.slider_hr_battery.value(), 5)
+        self.assertEqual(ble.hr_battery, 5)
+
+        # Test preset buttons (Power)
+        window.btn_pwr_100.click()
+        self.assertEqual(window.slider_pwr_battery.value(), 100)
+        self.assertEqual(ble.power_battery, 100)
+        self.assertIn("100%", window.lbl_pwr_battery_val.text())
+
+        window.btn_pwr_50.click()
+        self.assertEqual(window.slider_pwr_battery.value(), 50)
+        self.assertEqual(ble.power_battery, 50)
+
+        window.btn_pwr_15.click()
+        self.assertEqual(window.slider_pwr_battery.value(), 15)
+        self.assertEqual(ble.power_battery, 15)
+
+        window.btn_pwr_5.click()
+        self.assertEqual(window.slider_pwr_battery.value(), 5)
+        self.assertEqual(ble.power_battery, 5)
+
+        window.close()
+
+    def test_gui_connectivity_controls(self):
+        sample_path = os.path.join(os.path.dirname(__file__), "sample_workout.tcx")
+        points = TcxParser.parse_file(sample_path)
+        engine = ReplayEngine(points)
+        ble = BleReplayServer(enabled=False)
+        gps = AdbGpsInjector(enabled=False)
+
+        window = ReplayGuiWindow(sample_path, engine, ble, gps)
+        self.assertIsNotNone(window.btn_toggle_hr)
+        self.assertIsNotNone(window.btn_toggle_pwr)
+        self.assertIsNotNone(window.btn_toggle_gps)
+        self.assertIsNotNone(window.lbl_status_hrm_badge)
+        self.assertIsNotNone(window.lbl_status_pwr_badge)
+        self.assertIsNotNone(window.lbl_status_gps_badge)
+
+        # Initial states
+        self.assertEqual(window.lbl_status_hrm_badge.text(), "● ATT-HRM Active")
+        self.assertEqual(window.lbl_status_pwr_badge.text(), "● ATT-Pwr Active")
+        self.assertEqual(window.lbl_status_gps_badge.text(), "● GPS Active")
+        self.assertEqual(window.btn_toggle_hr.text(), "Kill HR")
+        self.assertEqual(window.btn_toggle_pwr.text(), "Kill Power")
+        self.assertEqual(window.btn_toggle_gps.text(), "Kill GPS")
+
+        # Kill HR
+        window.btn_toggle_hr.click()
+        self.assertTrue(ble.is_hr_killed)
+        self.assertEqual(window.lbl_status_hrm_badge.text(), "■ ATT-HRM Killed")
+        self.assertEqual(window.btn_toggle_hr.text(), "Revive HR")
+
+        # Revive HR
+        window.btn_toggle_hr.click()
+        self.assertFalse(ble.is_hr_killed)
+        self.assertEqual(window.lbl_status_hrm_badge.text(), "● ATT-HRM Active")
+        self.assertEqual(window.btn_toggle_hr.text(), "Kill HR")
+
+        # Kill Power
+        window.btn_toggle_pwr.click()
+        self.assertTrue(ble.is_power_killed)
+        self.assertEqual(window.lbl_status_pwr_badge.text(), "■ ATT-Pwr Killed")
+        self.assertEqual(window.btn_toggle_pwr.text(), "Revive Power")
+
+        # Revive Power
+        window.btn_toggle_pwr.click()
+        self.assertFalse(ble.is_power_killed)
+        self.assertEqual(window.lbl_status_pwr_badge.text(), "● ATT-Pwr Active")
+        self.assertEqual(window.btn_toggle_pwr.text(), "Kill Power")
+
+        # Kill GPS
+        window.btn_toggle_gps.click()
+        self.assertTrue(gps.is_killed)
+        self.assertEqual(window.lbl_status_gps_badge.text(), "■ GPS Suppressed")
+        self.assertEqual(window.btn_toggle_gps.text(), "Revive GPS")
+
+        # Revive GPS
+        window.btn_toggle_gps.click()
+        self.assertFalse(gps.is_killed)
+        self.assertEqual(window.lbl_status_gps_badge.text(), "● GPS Active")
+        self.assertEqual(window.btn_toggle_gps.text(), "Kill GPS")
+
+        window.close()
+
 
 class TestAdbGpsInjector(unittest.TestCase):
     def test_build_inject_cmd_android14_syntax(self):
@@ -258,6 +452,26 @@ class TestAdbGpsInjector(unittest.TestCase):
         first_item = injector._queue.get_nowait()
         self.assertEqual(first_item, (48.0 + 1, 11.0 + 1))
 
+    def test_gps_kill_and_revive(self):
+        injector = AdbGpsInjector(enabled=True, device_serial="DEVICE123")
+        injector.is_registered = True
+        self.assertFalse(injector.is_killed)
+
+        injector.kill()
+        self.assertTrue(injector.is_killed)
+        injector.inject_location(48.1, 11.5, 500.0, 10.0, 90.0)
+        self.assertEqual(injector._queue.qsize(), 0)  # Dropped!
+
+        injector.revive()
+        self.assertFalse(injector.is_killed)
+        injector.inject_location(48.2, 11.6, 500.0, 10.0, 90.0)
+        self.assertEqual(injector._queue.qsize(), 1)  # Enqueued!
+
+        injector.toggle()
+        self.assertTrue(injector.is_killed)
+        injector.toggle()
+        self.assertFalse(injector.is_killed)
+
 
 class TestHostPreFlightDiagnostics(unittest.TestCase):
     def test_preflight_report_structure(self):
@@ -273,6 +487,93 @@ class TestHostPreFlightDiagnostics(unittest.TestCase):
     def test_bluez_service_uuids(self):
         self.assertEqual(CYCLING_POWER_SERVICE_UUID, '00001818-0000-1000-8000-00805f9b34fb')
         self.assertEqual(HEART_RATE_SERVICE_UUID, '0000180d-0000-1000-8000-00805f9b34fb')
+        self.assertEqual(BATTERY_SERVICE_UUID, '0000180f-0000-1000-8000-00805f9b34fb')
+        self.assertEqual(BATTERY_LEVEL_CHARACTERISTIC_UUID, '00002a19-0000-1000-8000-00805f9b34fb')
+
+
+class TestCliArguments(unittest.TestCase):
+    def test_default_battery_arguments(self):
+        parser = build_arg_parser()
+        args = parser.parse_args([])
+        self.assertEqual(args.hr_battery, 100)
+        self.assertEqual(args.power_battery, 100)
+
+    def test_custom_battery_arguments(self):
+        parser = build_arg_parser()
+        args = parser.parse_args(["--hr-battery", "25", "--power-battery", "8"])
+        self.assertEqual(args.hr_battery, 25)
+        self.assertEqual(args.power_battery, 8)
+
+    def test_scheduled_kill_cli_arguments(self):
+        parser = build_arg_parser()
+        args = parser.parse_args([
+            "--kill-hr-at", "10",
+            "--revive-hr-at", "20",
+            "--kill-power-at", "15",
+            "--revive-power-at", "25",
+            "--kill-gps-at", "12.5",
+            "--revive-gps-at", "22.5"
+        ])
+        self.assertEqual(args.kill_hr_at, 10.0)
+        self.assertEqual(args.revive_hr_at, 20.0)
+        self.assertEqual(args.kill_power_at, 15.0)
+        self.assertEqual(args.revive_power_at, 25.0)
+        self.assertEqual(args.kill_gps_at, 12.5)
+        self.assertEqual(args.revive_gps_at, 22.5)
+
+
+class TestScheduledTriggerManager(unittest.TestCase):
+    def test_scheduled_triggers_execution(self):
+        ble = BleReplayServer(enabled=False)
+        gps = AdbGpsInjector(enabled=False)
+        mgr = ScheduledTriggerManager(
+            ble, gps,
+            kill_hr_at=10.0, revive_hr_at=20.0,
+            kill_power_at=15.0, revive_power_at=25.0,
+            kill_gps_at=12.0, revive_gps_at=22.0
+        )
+
+        # t = 5.0 -> nothing triggered
+        mgr.evaluate(5.0)
+        self.assertFalse(ble.is_hr_killed)
+        self.assertFalse(ble.is_power_killed)
+        self.assertFalse(gps.is_killed)
+
+        # t = 10.0 -> HR killed
+        mgr.evaluate(10.0)
+        self.assertTrue(ble.is_hr_killed)
+        self.assertFalse(ble.is_power_killed)
+        self.assertFalse(gps.is_killed)
+
+        # t = 12.0 -> GPS killed
+        mgr.evaluate(12.0)
+        self.assertTrue(ble.is_hr_killed)
+        self.assertFalse(ble.is_power_killed)
+        self.assertTrue(gps.is_killed)
+
+        # t = 15.0 -> Power killed
+        mgr.evaluate(15.0)
+        self.assertTrue(ble.is_hr_killed)
+        self.assertTrue(ble.is_power_killed)
+        self.assertTrue(gps.is_killed)
+
+        # t = 20.0 -> HR revived
+        mgr.evaluate(20.0)
+        self.assertFalse(ble.is_hr_killed)
+        self.assertTrue(ble.is_power_killed)
+        self.assertTrue(gps.is_killed)
+
+        # t = 22.0 -> GPS revived
+        mgr.evaluate(22.0)
+        self.assertFalse(ble.is_hr_killed)
+        self.assertTrue(ble.is_power_killed)
+        self.assertFalse(gps.is_killed)
+
+        # t = 25.0 -> Power revived
+        mgr.evaluate(25.0)
+        self.assertFalse(ble.is_hr_killed)
+        self.assertFalse(ble.is_power_killed)
+        self.assertFalse(gps.is_killed)
 
 
 if __name__ == "__main__":

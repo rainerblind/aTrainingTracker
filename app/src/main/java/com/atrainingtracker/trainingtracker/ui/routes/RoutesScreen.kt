@@ -24,6 +24,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -80,6 +81,7 @@ fun RoutesScreen(
     val isSyncingStrava by viewModel.isSyncingStrava.collectAsStateWithLifecycle()
     val syncStravaStatus by viewModel.syncStravaStatus.collectAsStateWithLifecycle()
     val tuningConfig by viewModel.tuningConfig.collectAsStateWithLifecycle()
+    val activeNavigatedRouteId by viewModel.activeNavigatedRouteId.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -107,7 +109,10 @@ fun RoutesScreen(
     Scaffold(
         modifier = modifier,
         snackbarHost = {
-            SnackbarHost(snackbarHostState) { data ->
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.navigationBarsPadding()
+            ) { data ->
                 Snackbar(
                     snackbarData = data,
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -129,8 +134,9 @@ fun RoutesScreen(
                             .map { it.toMapSegment(showStartAndFinishText = false) }
                     }
 
+                    val isActivelyNavigating = selectedRoute.summary.id == activeNavigatedRouteId
                     RouteOnMapScreen(
-                        route = selectedRoute.toMapRoute(isActiveNavigation = true),
+                        route = selectedRoute.toMapRoute(isActiveNavigation = isActivelyNavigating),
                         routeSummary = selectedRoute.summary,
                         backgroundPaths = backgroundPaths,
                         allSegments = allSegments,

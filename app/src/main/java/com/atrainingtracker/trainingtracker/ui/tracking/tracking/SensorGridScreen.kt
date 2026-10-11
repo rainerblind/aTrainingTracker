@@ -227,8 +227,8 @@ fun SensorGridScreen(
     val forkNavRepo = remember { ForkNavigationRepository.getInstance(context) }
     val forkDecisionState by forkNavRepo.forkDecisionState.collectAsState()
 
-    // Control the sheet state (REQ-UI-327)
-    val initialSheetValue = if (shouldShowBottomSheet) SheetValue.PartiallyExpanded else SheetValue.Hidden
+    // Control the sheet state (REQ-UI-327, REQ-UI-343)
+    val initialSheetValue = if (shouldShowBottomSheet) SheetValue.Expanded else SheetValue.Hidden
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
             initialValue = initialSheetValue,
@@ -244,7 +244,7 @@ fun SensorGridScreen(
             }
         } else {
             if (scaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
-                scaffoldState.bottomSheetState.partialExpand()
+                scaffoldState.bottomSheetState.expand()
             }
         }
     }
@@ -519,7 +519,6 @@ fun SensorGridScreen(
                     }
 
                     // 2. The Map (Expanded - Isolated Recomposition Barrier, REQ-UI-326 / ATT-2944)
-                    // When showMap is true, anchors NavigationHintsOverlay over the top edge of the map (REQ-UI-335 / ATT-3100)
                     if (state.mapState.showMap) {
                         Box(
                             modifier = Modifier
@@ -531,46 +530,27 @@ fun SensorGridScreen(
                                 currentLocationFlow = currentLocationFlow,
                                 modifier = Modifier.fillMaxSize()
                             )
-
-                            if (state.showNavigationHints) {
-                                NavigationHintsOverlay(
-                                    state = state,
-                                    tuningConfig = tuningConfig,
-                                    navigationState = navState,
-                                    returnNavigationState = returnNavState,
-                                    forkDecisionState = forkDecisionState,
-                                    onDismissReturnNav = { returnNavRepo.dismissHud() },
-                                    onSelectForkRoute = { routeId -> forkNavRepo.selectRouteManually(routeId) },
-                                    onDismissFork = { forkNavRepo.dismissPrompt() },
-                                    modifier = Modifier.align(Alignment.TopCenter)
-                                )
-                            }
                         }
                     }
 
-                    // 3. The Elevation Profile (Below the Map or taking remaining space if map is hidden, REQ-UI-339 / ATT-3107)
+                    // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173)
                     if (state.showElevationProfile && state.pathPoints.size >= 2) {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .then(
-                                    if (!state.mapState.showMap) Modifier.weight(1f) else Modifier
-                                )
                                 .padding(top = 8.dp)
                         ) {
                             ElevationProfile(
                                 pathPoints = state.pathPoints,
                                 currentDistance = state.pathPoints.lastOrNull()?.distance,
-                                fillParentHeight = !state.mapState.showMap,
-                                modifier = if (!state.mapState.showMap) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
                 }
 
-                // Fallback Ambient Navigation Overlays when map is NOT present (REQ-UI-335 / ATT-3100)
-                // Floats on top at Alignment.TopCenter only when state.mapState.showMap is false.
-                if (!state.mapState.showMap && state.showNavigationHints) {
+                // Ambient Navigation Overlays floating at top of tracking tab across all views (REQ-UI-348 / ATT-3170)
+                if (state.showNavigationHints) {
                     NavigationHintsOverlay(
                         state = state,
                         tuningConfig = tuningConfig,
@@ -591,8 +571,8 @@ fun SensorGridScreen(
 }
 
 /**
- * Ambient navigation overlay displaying turn prompts, return navigation HUD, and fork decisions (REQ-UI-335 / ATT-3100).
- * Anchored over top edge of map view when present, or at the top of tracking tab when map is absent.
+ * Ambient navigation overlay displaying turn prompts, return navigation HUD, and fork decisions (REQ-UI-348 / ATT-3170).
+ * Anchored at the top of the tracking tab across all views regardless of map presence.
  */
 @Composable
 fun NavigationHintsOverlay(

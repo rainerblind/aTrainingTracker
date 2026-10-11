@@ -68,6 +68,8 @@ import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.core.view.WindowCompat
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
+import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog
+import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.batterysaver.BatterySaverController
@@ -649,6 +651,18 @@ fun TrackingTabsScreen(
                                             context.supportFragmentManager,
                                             "EditDeviceDialog"
                                         )
+                                    }
+
+                                    is ControlNavigation.ShowRecoveryDialog -> {
+                                        val recoveryHandler = context as? StartOrResumeInterface
+                                        if (recoveryHandler != null) {
+                                            recoveryHandler.showStartOrResumeDialog()
+                                        } else if (context.supportFragmentManager.findFragmentByTag(StartOrResumeDialog.TAG) == null) {
+                                            StartOrResumeDialog().show(
+                                                context.supportFragmentManager,
+                                                StartOrResumeDialog.TAG
+                                            )
+                                        }
                                     }
                                 }
                             }

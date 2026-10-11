@@ -1206,6 +1206,17 @@
     <string name="filter_section_recordings">記録</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d 件の記録</string>
     <string name="filter_no_matching_clusters">一致するお気に入りトラックはありません</string>
+    <string name="filter_sensors_title">センサーを絞り込む</string>
+    <string name="filter_section_protocol">プロトコル</string>
+    <string name="filter_section_category">センサーのカテゴリ</string>
+    <string name="filter_section_battery">バッテリー残量</string>
+    <string name="filter_protocol_all">すべて</string>
+    <string name="filter_battery_all">すべて</string>
+    <string name="filter_battery_critical">危険 (≤ 20%)</string>
+    <string name="filter_battery_normal">通常 (> 20%)</string>
+    <string name="filter_battery_critical_chip">バッテリー: ≤ 20%</string>
+    <string name="filter_battery_normal_chip">バッテリー: > 20%</string>
+    <string name="filter_no_matching_sensors">アクティブなフィルターに一致するセンサーはありません</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">お気に入りルートとクラスタリング</string>
     <string name="cluster_info_what_title">お気に入りルートとは？</string>
@@ -1708,7 +1719,7 @@
     <string name="tuning_map_tilt_angle_title">カメラ傾斜角度</string>
     <string name="tuning_map_tilt_angle_desc">3Dナビゲーションの視点傾斜角度（0°はフラットな2D、70°は完全な3Dパースペクティブ）</string>
     <string name="tuning_map_lookahead_padding_title">前方視野マージン</string>
-    <string name="tuning_map_lookahead_padding_desc">ライダーの位置を下部に配置し、前方の道路視野を最大化するためのビューポート余白比率（%）</string>
+    <string name="tuning_map_lookahead_padding_desc">ライダーの位置を下部に配置し、前方の道路視野を最大化するためのビューポート余白比率（%）（値が大きいほどライダーが下側に配置され前方が広く見えます）</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">新規</string>

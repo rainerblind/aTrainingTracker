@@ -302,6 +302,169 @@ class TrackingViewsDatabaseManagerTest {
     }
 
     @Test
+    fun testOnCreate_seedsCanonicalDefaultTabConfigurationMatrix() {
+        val dbHelper = spyk(TrackingViewsDatabaseManager.TrackingViewsDbHelper(mockContext))
+        every { mockDb.insert(any(), any(), any()) } returns 1L
+
+        dbHelper.onCreate(mockDb)
+
+        val supportedActivities = listOf(
+            com.atrainingtracker.banalservice.ActivityType.GENERIC_HR,
+            com.atrainingtracker.banalservice.ActivityType.RUN_SPEED_AND_CADENCE,
+            com.atrainingtracker.banalservice.ActivityType.BIKE_SPEED_AND_CADENCE,
+            com.atrainingtracker.banalservice.ActivityType.BIKE_POWER
+        )
+
+        for (activityType in supportedActivities) {
+            // Standard Tab: layoutNr 1, live segments, live climbs, nav hints
+            verify(atLeast = 1) {
+                dbHelper.addDefaultTab(
+                    mockDb,
+                    activityType,
+                    any(),
+                    1,
+                    false,
+                    false,
+                    true,
+                    true,
+                    true,
+                    any()
+                )
+            }
+            // Map Tab: layoutNr 2, map, elevation profile, nav hints, no live climbs or segments
+            verify(atLeast = 1) {
+                dbHelper.addDefaultTab(
+                    mockDb,
+                    activityType,
+                    any(),
+                    2,
+                    false,
+                    true,
+                    false,
+                    false,
+                    true,
+                    any()
+                )
+            }
+            // Laps Tab: layoutNr 3, lap button only, no live climbs, nav hints, or segments
+            verify(atLeast = 1) {
+                dbHelper.addDefaultTab(
+                    mockDb,
+                    activityType,
+                    any(),
+                    3,
+                    true,
+                    false,
+                    false,
+                    false,
+                    false,
+                    any()
+                )
+            }
+        }
+    }
+
+    @Test
+    fun testAddDefaultTab_propagatesAllConfigurableToggles() {
+        val dbHelper = TrackingViewsDatabaseManager.TrackingViewsDbHelper(mockContext)
+        val rowData = TrackingViewsDatabaseManager.TrackingViewsDbHelper.RowData(
+            com.atrainingtracker.banalservice.sensor.SensorType.HR,
+            com.atrainingtracker.trainingtracker.ui.tracking.ViewSize.NORMAL,
+            1,
+            1
+        )
+        every { mockDb.insert(any(), any(), any()) } returns 1L
+
+        // Test with showLiveClimbs = false, showNavigationHints = false
+        dbHelper.addDefaultTab(
+            mockDb,
+            com.atrainingtracker.banalservice.ActivityType.GENERIC_HR,
+            "CustomTabDisabled",
+            1,
+            false,
+            false,
+            false,
+            false,
+            false,
+            listOf(rowData)
+        )
+
+        verify {
+            anyConstructed<ContentValues>().put(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS,
+                0
+            )
+            anyConstructed<ContentValues>().put(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS,
+                0
+            )
+        }
+
+        // Test with showLiveClimbs = true, showNavigationHints = true
+        dbHelper.addDefaultTab(
+            mockDb,
+            com.atrainingtracker.banalservice.ActivityType.GENERIC_HR,
+            "CustomTabEnabled",
+            1,
+            false,
+            false,
+            false,
+            true,
+            true,
+            listOf(rowData)
+        )
+
+        verify {
+            anyConstructed<ContentValues>().put(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS,
+                1
+            )
+            anyConstructed<ContentValues>().put(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS,
+                1
+            )
+        }
+    }
+
+    @Test
+    fun testAddDefaultTab_backwardCompatibleOverload_delegatesWithClimbsAndHintsEnabled() {
+        val dbHelper = spyk(TrackingViewsDatabaseManager.TrackingViewsDbHelper(mockContext))
+        val rowData = TrackingViewsDatabaseManager.TrackingViewsDbHelper.RowData(
+            com.atrainingtracker.banalservice.sensor.SensorType.HR,
+            com.atrainingtracker.trainingtracker.ui.tracking.ViewSize.NORMAL,
+            1,
+            1
+        )
+        every { mockDb.insert(any(), any(), any()) } returns 1L
+
+        dbHelper.addDefaultTab(
+            mockDb,
+            com.atrainingtracker.banalservice.ActivityType.GENERIC_HR,
+            "LegacyTab",
+            1,
+            false,
+            false,
+            true,
+            listOf(rowData)
+        )
+
+        verify(exactly = 1) {
+            dbHelper.addDefaultTab(
+                mockDb,
+                com.atrainingtracker.banalservice.ActivityType.GENERIC_HR,
+                "LegacyTab",
+                1,
+                false,
+                false,
+                true,
+                true,
+                true,
+                listOf(rowData)
+            )
+        }
+    }
+
+    @Test
     fun testOnUpgrade_from10To11_executesRepairSql() {
         val dbHelper = TrackingViewsDatabaseManager.TrackingViewsDbHelper(mockContext)
         dbHelper.onUpgrade(mockDb, 10, 11)

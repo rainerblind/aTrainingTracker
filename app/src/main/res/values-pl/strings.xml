@@ -1222,6 +1222,17 @@
     <string name="filter_section_recordings">Nagrania</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d nagrań</string>
     <string name="filter_no_matching_clusters">Żadne ulubione trasy nie pasują do aktywnych filtrów</string>
+    <string name="filter_sensors_title">Filtruj czujniki</string>
+    <string name="filter_section_protocol">Protokół</string>
+    <string name="filter_section_category">Kategoria czujnika</string>
+    <string name="filter_section_battery">Poziom baterii</string>
+    <string name="filter_protocol_all">Wszystkie</string>
+    <string name="filter_battery_all">Wszystkie</string>
+    <string name="filter_battery_critical">Krytyczny (≤ 20%)</string>
+    <string name="filter_battery_normal">Normalny (> 20%)</string>
+    <string name="filter_battery_critical_chip">Bateria: ≤ 20%</string>
+    <string name="filter_battery_normal_chip">Bateria: > 20%</string>
+    <string name="filter_no_matching_sensors">Żaden czujnik nie pasuje do aktywnych filtrów</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">Ulubione trasy i klastrowanie</string>
     <string name="cluster_info_what_title">Czym są Ulubione trasy?</string>
@@ -1730,7 +1741,7 @@
     <string name="tuning_map_tilt_angle_title">Kąt nachylenia kamery</string>
     <string name="tuning_map_tilt_angle_desc">Kąt nachylenia perspektywy dla nawigacji 3D (0° to płaskie 2D, 70° to pełna perspektywa 3D)</string>
     <string name="tuning_map_lookahead_padding_title">Margines pola widzenia z przodu</string>
-    <string name="tuning_map_lookahead_padding_desc">Procentowy margines widoku, aby umieścić rowerzystę w dolnej części i zmaksymalizować widoczność drogi z przodu</string>
+    <string name="tuning_map_lookahead_padding_desc">Procentowy margines widoku, aby umieścić rowerzystę w dolnej części i zmaksymalizować widoczność drogi z przodu (wyższa wartość = rowerzysta niżej / większa widoczność z przodu)</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NOWY</string>

@@ -1224,6 +1224,17 @@
     <string name="filter_section_recordings">Registrazioni</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d registrazioni</string>
     <string name="filter_no_matching_clusters">Nessun percorso preferito corrisponde ai filtri attivi</string>
+    <string name="filter_sensors_title">Filtra sensori</string>
+    <string name="filter_section_protocol">Protocollo</string>
+    <string name="filter_section_category">Categoria sensore</string>
+    <string name="filter_section_battery">Livello batteria</string>
+    <string name="filter_protocol_all">Tutti</string>
+    <string name="filter_battery_all">Tutti</string>
+    <string name="filter_battery_critical">Critico (≤ 20%)</string>
+    <string name="filter_battery_normal">Normale (> 20%)</string>
+    <string name="filter_battery_critical_chip">Batteria: ≤ 20%</string>
+    <string name="filter_battery_normal_chip">Batteria: > 20%</string>
+    <string name="filter_no_matching_sensors">Nessun sensore corrisponde ai filtri attivi</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">Percorsi preferiti e raggruppamento</string>
     <string name="cluster_info_what_title">Cosa sono i Percorsi preferiti?</string>
@@ -1728,7 +1739,7 @@
     <string name="tuning_map_tilt_angle_title">Angolo di inclinazione della fotocamera</string>
     <string name="tuning_map_tilt_angle_desc">Angolo di inclinazione prospettica per navigazione 3D (0° è 2D piatto, 70° è prospettiva 3D completa)</string>
     <string name="tuning_map_lookahead_padding_title">Spaziatura per visuale in avanti</string>
-    <string name="tuning_map_lookahead_padding_desc">Percentuale di spaziatura per posizionare il ciclista nella parte bassa e massimizzare la strada visibile in avanti</string>
+    <string name="tuning_map_lookahead_padding_desc">Percentuale di spaziatura per posizionare il ciclista nella parte bassa e massimizzare la strada visibile in avanti (valore più alto = ciclista più in basso / maggiore visuale in avanti)</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NUOVO</string>

@@ -836,6 +836,7 @@ public class TrackerService extends Service {
         values.put(WorkoutSummaries.WORKOUT_NAME, mBaseFileName);
         values.put(WorkoutSummaries.FILE_BASE_NAME, mBaseFileName);
         values.put(WorkoutSummaries.SOURCE, WorkoutSource.TRACKED.name());
+        values.put(WorkoutSummaries.FINISHED, 0);
 
         WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
         SQLiteDatabase summariesDb = databaseManager.getDatabase();

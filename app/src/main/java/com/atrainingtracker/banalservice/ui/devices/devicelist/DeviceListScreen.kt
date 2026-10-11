@@ -61,9 +61,10 @@ fun DeviceListScreen(
     headerHeightPx: Float = 0f,
     scanningProtocol: Protocol? = null,
     scanningDeviceType: DeviceType? = null,
-    onCheckAntInstallation: (() -> Unit)? = null
+    onCheckAntInstallation: (() -> Unit)? = null,
+    filterCriteria: DeviceFilterCriteria = DeviceFilterCriteria()
 ) {
-    val devices by viewModel.getFilteredDevices(filterSpec).collectAsState(initial = emptyList())
+    val devices by viewModel.getFilteredDevices(filterSpec, filterCriteria).collectAsState(initial = emptyList())
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
     
@@ -100,10 +101,14 @@ fun DeviceListScreen(
         }
 
         if (devices.isEmpty()) {
-            val emptyMessage = when (filterSpec.filterType) {
-                DeviceFilterType.CONNECTED -> stringResource(R.string.devices_no_devices_available)
-                DeviceFilterType.PAIRED -> stringResource(R.string.devices_no_paired_devices)
-                DeviceFilterType.ALL_KNOWN -> stringResource(R.string.devices_no_known_devices)
+            val emptyMessage = if (filterCriteria.isNotEmpty) {
+                stringResource(R.string.filter_no_matching_sensors)
+            } else {
+                when (filterSpec.filterType) {
+                    DeviceFilterType.CONNECTED -> stringResource(R.string.devices_no_devices_available)
+                    DeviceFilterType.PAIRED -> stringResource(R.string.devices_no_paired_devices)
+                    DeviceFilterType.ALL_KNOWN -> stringResource(R.string.devices_no_known_devices)
+                }
             }
             val placeholderPadding = if (isSearching || showAntCard) 8.dp else topPadding
             EmptyStatePlaceholder(

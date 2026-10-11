@@ -324,6 +324,10 @@ def build_hr_payload(bpm: int) -> List[int]:
     bpm_clamped = max(0, min(255, int(bpm)))
     return [flags, bpm_clamped]
 
+def build_battery_payload(level: int) -> List[int]:
+    """Generates 1-byte BLE Battery Level payload (UUID 0x2A19), clamped to 0-100."""
+    return [max(0, min(100, int(level)))]
+
 
 # ==============================================================================
 # 3. Rule 30 Host Pre-Flight Self-Diagnostics
@@ -347,6 +351,9 @@ SENSOR_LOCATION_UUID = '00002a5d-0000-1000-8000-00805f9b34fb'
 HEART_RATE_SERVICE_UUID = '0000180d-0000-1000-8000-00805f9b34fb'
 HEART_RATE_MEASUREMENT_UUID = '00002a37-0000-1000-8000-00805f9b34fb'
 BODY_SENSOR_LOCATION_UUID = '00002a38-0000-1000-8000-00805f9b34fb'
+
+BATTERY_SERVICE_UUID = '0000180f-0000-1000-8000-00805f9b34fb'
+BATTERY_LEVEL_CHARACTERISTIC_UUID = '00002a19-0000-1000-8000-00805f9b34fb'
 
 DEVICE_INFO_SERVICE_UUID = '0000180a-0000-1000-8000-00805f9b34fb'
 MANUFACTURER_NAME_UUID = '00002a29-0000-1000-8000-00805f9b34fb'
@@ -711,6 +718,32 @@ if HAS_DBUS:
         def ReadValue(self, options):
             return dbus.Array([dbus.Byte(b) for b in self.value], signature='y')
 
+    class BatteryLevelCharacteristic(DBusCharacteristic):
+        def __init__(self, bus, index, service, initial_battery: int = 100):
+            super().__init__(bus, index, BATTERY_LEVEL_CHARACTERISTIC_UUID, ['read', 'notify'], service)
+            self.notifying = False
+            self.battery_level = max(0, min(100, int(initial_battery)))
+
+        def update_level(self, level: int):
+            self.battery_level = max(0, min(100, int(level)))
+            if self.notifying:
+                val = dbus.Array([dbus.Byte(self.battery_level)], signature='y')
+                self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': val}, [])
+
+        @dbus.service.method(GATT_CHRC_IFACE, in_signature='a{sv}', out_signature='ay')
+        def ReadValue(self, options):
+            return dbus.Array([dbus.Byte(self.battery_level)], signature='y')
+
+        @dbus.service.method(GATT_CHRC_IFACE)
+        def StartNotify(self):
+            self.notifying = True
+            val = dbus.Array([dbus.Byte(self.battery_level)], signature='y')
+            self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': val}, [])
+
+        @dbus.service.method(GATT_CHRC_IFACE)
+        def StopNotify(self):
+            self.notifying = False
+
     class CyclingPowerService(DBusService):
         def __init__(self, bus, index):
             super().__init__(bus, index, CYCLING_POWER_SERVICE_UUID, True)
@@ -731,13 +764,23 @@ if HAS_DBUS:
             super().__init__(bus, index, DEVICE_INFO_SERVICE_UUID, True)
             self.add_characteristic(ManufacturerNameCharacteristic(bus, 0, self))
 
+    class BatteryService(DBusService):
+        def __init__(self, bus, index, initial_battery: int = 100):
+            super().__init__(bus, index, BATTERY_SERVICE_UUID, True)
+            self.battery_char = BatteryLevelCharacteristic(bus, 0, self, initial_battery)
+            self.add_characteristic(self.battery_char)
+
 
 class BleReplayServer:
     """Manages combined BlueZ GATT Peripheral and dual advertising for Cycling Power and Heart Rate."""
 
-    def __init__(self, enabled: bool = True):
+    def __init__(self, enabled: bool = True, hr_battery: int = 100, power_battery: int = 100):
         self.enabled = enabled and HAS_DBUS
         self.is_advertising = False
+        self.is_hr_killed = False
+        self.is_power_killed = False
+        self.hr_battery = max(0, min(100, int(hr_battery)))
+        self.power_battery = max(0, min(100, int(power_battery)))
         self.current_watts = 0
         self.current_cadence = 0
         self.current_hr = 0
@@ -749,6 +792,8 @@ class BleReplayServer:
         self.app = None
         self.cp_service = None
         self.hr_service = None
+        self.cp_battery_service = None
+        self.hr_battery_service = None
         self.ad_pwr = None
         self.ad_hrm = None
         self.ad_manager = None
@@ -790,10 +835,14 @@ class BleReplayServer:
             self.app.add_service(self.cp_service)
             self.app.add_service(self.hr_service)
             self.app.add_service(DeviceInfoService(self.bus, 2))
+            self.cp_battery_service = BatteryService(self.bus, 3, initial_battery=self.power_battery)
+            self.hr_battery_service = BatteryService(self.bus, 4, initial_battery=self.hr_battery)
+            self.app.add_service(self.cp_battery_service)
+            self.app.add_service(self.hr_battery_service)
 
-            # Create Advertisements: ATT-Pwr (1818) and ATT-HRM (180d)
-            self.ad_pwr = DBusAdvertisement(self.bus, 0, 'peripheral', ['1818'], 'ATT-Pwr')
-            self.ad_hrm = DBusAdvertisement(self.bus, 1, 'peripheral', ['180d'], 'ATT-HRM')
+            # Create Advertisements: ATT-Pwr (1818, 180f) and ATT-HRM (180d, 180f)
+            self.ad_pwr = DBusAdvertisement(self.bus, 0, 'peripheral', ['1818', '180f'], 'ATT-Pwr')
+            self.ad_hrm = DBusAdvertisement(self.bus, 1, 'peripheral', ['180d', '180f'], 'ATT-HRM')
 
             # Register Application
             self.service_manager.RegisterApplication(
@@ -831,11 +880,102 @@ class BleReplayServer:
 
             self.loop_thread = threading.Thread(target=glib_worker, daemon=True)
             self.loop_thread.start()
-            print("[*] BLE GATT server active: Advertising 'ATT-Pwr' (0x1818) and 'ATT-HRM' (0x180D).")
+            print("[*] BLE GATT server active: Advertising 'ATT-Pwr' (0x1818, 0x180F) and 'ATT-HRM' (0x180D, 0x180F).")
 
         except Exception as e:
             print(f"[!] Warning: BlueZ DBus error ({e}). Continuing in mock BLE mode.")
             self.is_advertising = False
+
+    def _disconnect_clients(self):
+        """Attempts to disconnect connected BlueZ client devices to simulate hard signal drop."""
+        if not self.bus:
+            return
+        try:
+            remote_om = dbus.Interface(self.bus.get_object(BLUEZ_SERVICE_NAME, '/'), DBUS_OM_IFACE)
+            objects = remote_om.GetManagedObjects()
+            for path, interfaces in objects.items():
+                if 'org.bluez.Device1' in interfaces:
+                    props = interfaces['org.bluez.Device1']
+                    if props.get('Connected', False):
+                        dev_obj = dbus.Interface(self.bus.get_object(BLUEZ_SERVICE_NAME, path), 'org.bluez.Device1')
+                        try:
+                            dev_obj.Disconnect()
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+    def kill_hr(self):
+        """Kills Heart Rate simulation: unregisters advertisement and silences notifications."""
+        self.is_hr_killed = True
+        if self.ad_manager and self.ad_hrm:
+            try:
+                self.ad_manager.UnregisterAdvertisement(self.ad_hrm.get_path())
+            except Exception:
+                pass
+        self._disconnect_clients()
+
+    def revive_hr(self):
+        """Revives Heart Rate simulation: re-registers advertisement and resumes notifications."""
+        self.is_hr_killed = False
+        if self.ad_manager and self.ad_hrm and self.is_advertising:
+            try:
+                self.ad_manager.RegisterAdvertisement(
+                    self.ad_hrm.get_path(), {},
+                    reply_handler=lambda: None,
+                    error_handler=lambda e: None
+                )
+            except Exception:
+                pass
+
+    def toggle_hr(self) -> bool:
+        if self.is_hr_killed:
+            self.revive_hr()
+        else:
+            self.kill_hr()
+        return self.is_hr_killed
+
+    def kill_power(self):
+        """Kills Cycling Power simulation: unregisters advertisement and silences notifications."""
+        self.is_power_killed = True
+        if self.ad_manager and self.ad_pwr:
+            try:
+                self.ad_manager.UnregisterAdvertisement(self.ad_pwr.get_path())
+            except Exception:
+                pass
+        self._disconnect_clients()
+
+    def revive_power(self):
+        """Revives Cycling Power simulation: re-registers advertisement and resumes notifications."""
+        self.is_power_killed = False
+        if self.ad_manager and self.ad_pwr and self.is_advertising:
+            try:
+                self.ad_manager.RegisterAdvertisement(
+                    self.ad_pwr.get_path(), {},
+                    reply_handler=lambda: None,
+                    error_handler=lambda e: None
+                )
+            except Exception:
+                pass
+
+    def toggle_power(self) -> bool:
+        if self.is_power_killed:
+            self.revive_power()
+        else:
+            self.kill_power()
+        return self.is_power_killed
+
+    def set_hr_battery(self, level: int):
+        """Updates simulated Heart Rate sensor battery level and dispatches GATT notifications."""
+        self.hr_battery = max(0, min(100, int(level)))
+        if not self.is_hr_killed and self.hr_battery_service and self.hr_battery_service.battery_char:
+            self.hr_battery_service.battery_char.update_level(self.hr_battery)
+
+    def set_power_battery(self, level: int):
+        """Updates simulated Cycling Power meter battery level and dispatches GATT notifications."""
+        self.power_battery = max(0, min(100, int(level)))
+        if not self.is_power_killed and self.cp_battery_service and self.cp_battery_service.battery_char:
+            self.cp_battery_service.battery_char.update_level(self.power_battery)
 
     def update_telemetry(self, watts: int, cadence: int, hr_bpm: int):
         """Updates internal telemetry values and dispatches BLE notifications."""
@@ -849,13 +989,13 @@ class BleReplayServer:
             delta_1024 = int(round(1024.0 / revs_per_sec)) if revs_per_sec > 0 else 0
             self.last_crank_event_time = (self.last_crank_event_time + delta_1024) % 65536
 
-        if self.cp_service and self.cp_service.meas_char:
+        if not self.is_power_killed and self.cp_service and self.cp_service.meas_char:
             self.cp_service.meas_char.update_values(
                 self.current_watts, self.current_cadence,
                 self.cumulative_crank_revs, self.last_crank_event_time
             )
 
-        if self.hr_service and self.hr_service.meas_char:
+        if not self.is_hr_killed and self.hr_service and self.hr_service.meas_char:
             self.hr_service.meas_char.update_values(self.current_hr)
 
     def stop(self):
@@ -892,9 +1032,22 @@ class AdbGpsInjector:
         self.enabled = enabled
         self.device_serial = device_serial
         self.is_registered = False
+        self.is_killed = False
         self._queue = queue.Queue(maxsize=5)
         self._worker_thread = None
         self._stop_event = threading.Event()
+
+    def kill(self):
+        """Suppresses mock GPS location injection, simulating satellite signal loss."""
+        self.is_killed = True
+
+    def revive(self):
+        """Resumes mock GPS location injection."""
+        self.is_killed = False
+
+    def toggle(self) -> bool:
+        self.is_killed = not self.is_killed
+        return self.is_killed
 
     def detect_device(self) -> Optional[str]:
         if not self.enabled:
@@ -966,7 +1119,7 @@ class AdbGpsInjector:
         return f"cmd location providers set-test-provider-location {provider} --location {lat:.6f},{lon:.6f} --accuracy {accuracy:.1f} --time {time_ms}"
 
     def inject_location(self, lat: float, lon: float, ele: float, speed_mps: float, bearing_deg: float):
-        if not self.enabled or not self.is_registered:
+        if not self.enabled or not self.is_registered or self.is_killed:
             return
         if self._queue.full():
             try:
@@ -994,7 +1147,66 @@ class AdbGpsInjector:
 
 
 # ==============================================================================
-# 5. Core Replay Engine
+# 5. Scheduled Automation Trigger Manager (ATT-3179 / REQ-TOOL-004)
+# ==============================================================================
+
+class ScheduledTriggerManager:
+    """Evaluates and executes scheduled device kill/revive events during replay."""
+
+    def __init__(self, ble: BleReplayServer, gps: AdbGpsInjector,
+                 kill_hr_at: Optional[float] = None, revive_hr_at: Optional[float] = None,
+                 kill_power_at: Optional[float] = None, revive_power_at: Optional[float] = None,
+                 kill_gps_at: Optional[float] = None, revive_gps_at: Optional[float] = None):
+        self.ble = ble
+        self.gps = gps
+        self.kill_hr_at = kill_hr_at
+        self.revive_hr_at = revive_hr_at
+        self.kill_power_at = kill_power_at
+        self.revive_power_at = revive_power_at
+        self.kill_gps_at = kill_gps_at
+        self.revive_gps_at = revive_gps_at
+
+        self._hr_killed_triggered = False
+        self._hr_revived_triggered = False
+        self._power_killed_triggered = False
+        self._power_revived_triggered = False
+        self._gps_killed_triggered = False
+        self._gps_revived_triggered = False
+
+    def evaluate(self, time_sec: float):
+        if self.kill_hr_at is not None and not self._hr_killed_triggered and time_sec >= self.kill_hr_at:
+            self.ble.kill_hr()
+            self._hr_killed_triggered = True
+            print(f"[*] Scheduled event: ATT-HRM killed at {format_duration(time_sec)}")
+
+        if self.revive_hr_at is not None and not self._hr_revived_triggered and time_sec >= self.revive_hr_at:
+            self.ble.revive_hr()
+            self._hr_revived_triggered = True
+            print(f"[*] Scheduled event: ATT-HRM revived at {format_duration(time_sec)}")
+
+        if self.kill_power_at is not None and not self._power_killed_triggered and time_sec >= self.kill_power_at:
+            self.ble.kill_power()
+            self._power_killed_triggered = True
+            print(f"[*] Scheduled event: ATT-Pwr killed at {format_duration(time_sec)}")
+
+        if self.revive_power_at is not None and not self._power_revived_triggered and time_sec >= self.revive_power_at:
+            self.ble.revive_power()
+            self._power_revived_triggered = True
+            print(f"[*] Scheduled event: ATT-Pwr revived at {format_duration(time_sec)}")
+
+        if self.kill_gps_at is not None and not self._gps_killed_triggered and time_sec >= self.kill_gps_at:
+            self.gps.kill()
+            self._gps_killed_triggered = True
+            print(f"[*] Scheduled event: GPS killed at {format_duration(time_sec)}")
+
+        if self.revive_gps_at is not None and not self._gps_revived_triggered and time_sec >= self.revive_gps_at:
+            self.gps.revive()
+            self._gps_revived_triggered = True
+            print(f"[*] Scheduled event: GPS revived at {format_duration(time_sec)}")
+
+
+# ==============================================================================
+# 6. Core Replay Engine
 # ==============================================================================
 
 class ReplayEngine:
@@ -1083,15 +1295,16 @@ if HAS_PYQT6:
     class ReplayGuiWindow(QMainWindow):
         """Modern Obsidian Dark Desktop GUI for TCX Replay & Telemetry Monitoring."""
 
-        def __init__(self, file_path: str, engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInjector):
+        def __init__(self, file_path: str, engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInjector, trigger_mgr: Optional[ScheduledTriggerManager] = None):
             super().__init__()
             self.file_path = file_path
             self.engine = engine
             self.ble = ble
             self.gps = gps
+            self.trigger_mgr = trigger_mgr
 
             self.setWindowTitle("aTrainingTracker - TCX Workout Replay & Telemetry Simulator")
-            self.resize(880, 560)
+            self.resize(880, 750)
             self.setup_ui()
             self.apply_theme()
 
@@ -1214,7 +1427,179 @@ if HAS_PYQT6:
             transport_layout.addWidget(self.combo_speed)
             main_layout.addLayout(transport_layout)
 
-            # --- 5. Status Footer ---
+            # --- 5. Sensor Battery Simulation Controls (ATT-3178 / REQ-TOOL-003) ---
+            battery_frame = QFrame()
+            battery_frame.setStyleSheet("""
+                QFrame {
+                    background-color: #1A1A1A;
+                    border: 1px solid #2D2D2D;
+                    border-radius: 10px;
+                }
+            """)
+            battery_box = QVBoxLayout(battery_frame)
+            battery_box.setSpacing(8)
+            battery_box.setContentsMargins(14, 10, 14, 10)
+
+            lbl_battery_header = QLabel("SENSOR BATTERY SIMULATION")
+            lbl_battery_header.setFont(QFont("Inter", 9, QFont.Weight.Bold))
+            lbl_battery_header.setStyleSheet("color: #888888; border: none; background: transparent;")
+            battery_box.addWidget(lbl_battery_header)
+
+            battery_cols = QHBoxLayout()
+            battery_cols.setSpacing(24)
+
+            # Left Column: Heart Rate Monitor (ATT-HRM)
+            col_hr = QVBoxLayout()
+            col_hr.setSpacing(6)
+            hr_top = QHBoxLayout()
+            lbl_hr_name = QLabel("Heart Rate (ATT-HRM):")
+            lbl_hr_name.setFont(QFont("Inter", 10, QFont.Weight.Bold))
+            lbl_hr_name.setStyleSheet("border: none; background: transparent; color: #FFFFFF;")
+            self.lbl_hr_battery_val = QLabel(f"{self.ble.hr_battery}%")
+            self.lbl_hr_battery_val.setFont(QFont("Monospace", 11, QFont.Weight.Bold))
+            self._update_battery_label_color(self.lbl_hr_battery_val, self.ble.hr_battery)
+            hr_top.addWidget(lbl_hr_name)
+            hr_top.addStretch()
+            hr_top.addWidget(self.lbl_hr_battery_val)
+            col_hr.addLayout(hr_top)
+
+            self.slider_hr_battery = QSlider(Qt.Orientation.Horizontal)
+            self.slider_hr_battery.setRange(0, 100)
+            self.slider_hr_battery.setValue(self.ble.hr_battery)
+            self.slider_hr_battery.valueChanged.connect(self.on_hr_battery_slider_changed)
+            col_hr.addWidget(self.slider_hr_battery)
+
+            hr_presets = QHBoxLayout()
+            hr_presets.setSpacing(6)
+            self.btn_hr_100 = QPushButton("100%")
+            self.btn_hr_100.setFixedHeight(26)
+            self.btn_hr_100.clicked.connect(lambda: self.set_hr_battery_preset(100))
+            self.btn_hr_50 = QPushButton("50%")
+            self.btn_hr_50.setFixedHeight(26)
+            self.btn_hr_50.clicked.connect(lambda: self.set_hr_battery_preset(50))
+            self.btn_hr_15 = QPushButton("15% [Low]")
+            self.btn_hr_15.setFixedHeight(26)
+            self.btn_hr_15.clicked.connect(lambda: self.set_hr_battery_preset(15))
+            self.btn_hr_5 = QPushButton("5% [Crit]")
+            self.btn_hr_5.setFixedHeight(26)
+            self.btn_hr_5.clicked.connect(lambda: self.set_hr_battery_preset(5))
+            hr_presets.addWidget(self.btn_hr_100)
+            hr_presets.addWidget(self.btn_hr_50)
+            hr_presets.addWidget(self.btn_hr_15)
+            hr_presets.addWidget(self.btn_hr_5)
+            col_hr.addLayout(hr_presets)
+            battery_cols.addLayout(col_hr)
+
+            # Right Column: Cycling Power (ATT-Pwr)
+            col_pwr = QVBoxLayout()
+            col_pwr.setSpacing(6)
+            pwr_top = QHBoxLayout()
+            lbl_pwr_name = QLabel("Power Meter (ATT-Pwr):")
+            lbl_pwr_name.setFont(QFont("Inter", 10, QFont.Weight.Bold))
+            lbl_pwr_name.setStyleSheet("border: none; background: transparent; color: #FFFFFF;")
+            self.lbl_pwr_battery_val = QLabel(f"{self.ble.power_battery}%")
+            self.lbl_pwr_battery_val.setFont(QFont("Monospace", 11, QFont.Weight.Bold))
+            self._update_battery_label_color(self.lbl_pwr_battery_val, self.ble.power_battery)
+            pwr_top.addWidget(lbl_pwr_name)
+            pwr_top.addStretch()
+            pwr_top.addWidget(self.lbl_pwr_battery_val)
+            col_pwr.addLayout(pwr_top)
+
+            self.slider_pwr_battery = QSlider(Qt.Orientation.Horizontal)
+            self.slider_pwr_battery.setRange(0, 100)
+            self.slider_pwr_battery.setValue(self.ble.power_battery)
+            self.slider_pwr_battery.valueChanged.connect(self.on_pwr_battery_slider_changed)
+            col_pwr.addWidget(self.slider_pwr_battery)
+
+            pwr_presets = QHBoxLayout()
+            pwr_presets.setSpacing(6)
+            self.btn_pwr_100 = QPushButton("100%")
+            self.btn_pwr_100.setFixedHeight(26)
+            self.btn_pwr_100.clicked.connect(lambda: self.set_pwr_battery_preset(100))
+            self.btn_pwr_50 = QPushButton("50%")
+            self.btn_pwr_50.setFixedHeight(26)
+            self.btn_pwr_50.clicked.connect(lambda: self.set_pwr_battery_preset(50))
+            self.btn_pwr_15 = QPushButton("15% [Low]")
+            self.btn_pwr_15.setFixedHeight(26)
+            self.btn_pwr_15.clicked.connect(lambda: self.set_pwr_battery_preset(15))
+            self.btn_pwr_5 = QPushButton("5% [Crit]")
+            self.btn_pwr_5.setFixedHeight(26)
+            self.btn_pwr_5.clicked.connect(lambda: self.set_pwr_battery_preset(5))
+            pwr_presets.addWidget(self.btn_pwr_100)
+            pwr_presets.addWidget(self.btn_pwr_50)
+            pwr_presets.addWidget(self.btn_pwr_15)
+            pwr_presets.addWidget(self.btn_pwr_5)
+            col_pwr.addLayout(pwr_presets)
+            battery_cols.addLayout(col_pwr)
+
+            battery_box.addLayout(battery_cols)
+            main_layout.addWidget(battery_frame)
+
+            # --- 6. Device Connectivity & Dropout Simulation (ATT-3179 / REQ-TOOL-004) ---
+            conn_frame = QFrame()
+            conn_frame.setStyleSheet("""
+                QFrame {
+                    background-color: #1A1A1A;
+                    border: 1px solid #2D2D2D;
+                    border-radius: 10px;
+                }
+            """)
+            conn_box = QVBoxLayout(conn_frame)
+            conn_box.setSpacing(8)
+            conn_box.setContentsMargins(14, 10, 14, 10)
+
+            lbl_conn_header = QLabel("DEVICE CONNECTIVITY & DROPOUT SIMULATION")
+            lbl_conn_header.setFont(QFont("Inter", 9, QFont.Weight.Bold))
+            lbl_conn_header.setStyleSheet("color: #888888; border: none; background: transparent;")
+            conn_box.addWidget(lbl_conn_header)
+
+            conn_row = QHBoxLayout()
+            conn_row.setSpacing(14)
+
+            # HRM Kill/Revive
+            box_hrm = QHBoxLayout()
+            self.lbl_status_hrm_badge = QLabel("● ATT-HRM Active")
+            self.lbl_status_hrm_badge.setFont(QFont("Inter", 10, QFont.Weight.Bold))
+            self.lbl_status_hrm_badge.setStyleSheet("color: #03DAC6; border: none; background: transparent;")
+            self.btn_toggle_hr = QPushButton("Kill HR")
+            self.btn_toggle_hr.setFixedHeight(28)
+            self.btn_toggle_hr.clicked.connect(self.on_toggle_hr_clicked)
+            box_hrm.addWidget(self.lbl_status_hrm_badge)
+            box_hrm.addWidget(self.btn_toggle_hr)
+            conn_row.addLayout(box_hrm)
+
+            conn_row.addSpacing(10)
+
+            # Power Meter Kill/Revive
+            box_pwr = QHBoxLayout()
+            self.lbl_status_pwr_badge = QLabel("● ATT-Pwr Active")
+            self.lbl_status_pwr_badge.setFont(QFont("Inter", 10, QFont.Weight.Bold))
+            self.lbl_status_pwr_badge.setStyleSheet("color: #BB86FC; border: none; background: transparent;")
+            self.btn_toggle_pwr = QPushButton("Kill Power")
+            self.btn_toggle_pwr.setFixedHeight(28)
+            self.btn_toggle_pwr.clicked.connect(self.on_toggle_pwr_clicked)
+            box_pwr.addWidget(self.lbl_status_pwr_badge)
+            box_pwr.addWidget(self.btn_toggle_pwr)
+            conn_row.addLayout(box_pwr)
+
+            conn_row.addSpacing(10)
+
+            # GPS Kill/Revive
+            box_gps = QHBoxLayout()
+            self.lbl_status_gps_badge = QLabel("● GPS Active")
+            self.lbl_status_gps_badge.setFont(QFont("Inter", 10, QFont.Weight.Bold))
+            self.lbl_status_gps_badge.setStyleSheet("color: #03DAC6; border: none; background: transparent;")
+            self.btn_toggle_gps = QPushButton("Kill GPS")
+            self.btn_toggle_gps.setFixedHeight(28)
+            self.btn_toggle_gps.clicked.connect(self.on_toggle_gps_clicked)
+            box_gps.addWidget(self.lbl_status_gps_badge)
+            box_gps.addWidget(self.btn_toggle_gps)
+            conn_row.addLayout(box_gps)
+
+            conn_box.addLayout(conn_row)
+            main_layout.addWidget(conn_frame)
+
+            # --- 7. Status Footer ---
             status_layout = QHBoxLayout()
             adb_text = f"ADB: {self.gps.device_serial}" if self.gps.enabled and self.gps.device_serial else "ADB: Inactive"
             ble_text = "BLE: Advertising (ATT-Pwr + ATT-HRM)" if self.ble.is_advertising else "BLE: Standby"
@@ -1351,6 +1736,10 @@ if HAS_PYQT6:
                     self.btn_play_pause.setStyleSheet("background-color: #BB86FC; color: #000000; border-radius: 6px;")
 
         def on_engine_update(self, pt: TcxPoint):
+            if self.trigger_mgr:
+                self.trigger_mgr.evaluate(pt.time_sec)
+                self._update_connectivity_ui()
+
             # Update gauges
             self.val_power.setText(str(pt.watts))
             self.val_cadence.setText(str(pt.cadence))
@@ -1370,6 +1759,77 @@ if HAS_PYQT6:
             # Dispatch to BLE and ADB
             self.ble.update_telemetry(pt.watts, pt.cadence, pt.hr)
             self.gps.inject_location(pt.lat, pt.lon, pt.ele, pt.speed_mps, pt.bearing)
+
+        def _update_battery_label_color(self, label: QLabel, level: int):
+            if level <= 5:
+                color = "#CF6679"  # Critical red
+            elif level <= 20:
+                color = "#FFA726"  # Warning amber
+            else:
+                color = "#BB86FC"  # Normal accent purple
+            label.setStyleSheet(f"border: none; background: transparent; color: {color};")
+
+        def on_hr_battery_slider_changed(self, val: int):
+            self.lbl_hr_battery_val.setText(f"{val}%")
+            self._update_battery_label_color(self.lbl_hr_battery_val, val)
+            self.ble.set_hr_battery(val)
+
+        def on_pwr_battery_slider_changed(self, val: int):
+            self.lbl_pwr_battery_val.setText(f"{val}%")
+            self._update_battery_label_color(self.lbl_pwr_battery_val, val)
+            self.ble.set_power_battery(val)
+
+        def set_hr_battery_preset(self, val: int):
+            self.slider_hr_battery.setValue(val)
+
+        def set_pwr_battery_preset(self, val: int):
+            self.slider_pwr_battery.setValue(val)
+
+        def _update_connectivity_ui(self):
+            if self.ble.is_hr_killed:
+                self.lbl_status_hrm_badge.setText("■ ATT-HRM Killed")
+                self.lbl_status_hrm_badge.setStyleSheet("color: #CF6679; border: none; background: transparent;")
+                self.btn_toggle_hr.setText("Revive HR")
+                self.btn_toggle_hr.setStyleSheet("background-color: #CF6679; color: #000000; font-weight: bold;")
+            else:
+                self.lbl_status_hrm_badge.setText("● ATT-HRM Active")
+                self.lbl_status_hrm_badge.setStyleSheet("color: #03DAC6; border: none; background: transparent;")
+                self.btn_toggle_hr.setText("Kill HR")
+                self.btn_toggle_hr.setStyleSheet("background-color: #2A2A2A; color: #FFFFFF;")
+
+            if self.ble.is_power_killed:
+                self.lbl_status_pwr_badge.setText("■ ATT-Pwr Killed")
+                self.lbl_status_pwr_badge.setStyleSheet("color: #CF6679; border: none; background: transparent;")
+                self.btn_toggle_pwr.setText("Revive Power")
+                self.btn_toggle_pwr.setStyleSheet("background-color: #CF6679; color: #000000; font-weight: bold;")
+            else:
+                self.lbl_status_pwr_badge.setText("● ATT-Pwr Active")
+                self.lbl_status_pwr_badge.setStyleSheet("color: #BB86FC; border: none; background: transparent;")
+                self.btn_toggle_pwr.setText("Kill Power")
+                self.btn_toggle_pwr.setStyleSheet("background-color: #2A2A2A; color: #FFFFFF;")
+
+            if self.gps.is_killed:
+                self.lbl_status_gps_badge.setText("■ GPS Suppressed")
+                self.lbl_status_gps_badge.setStyleSheet("color: #CF6679; border: none; background: transparent;")
+                self.btn_toggle_gps.setText("Revive GPS")
+                self.btn_toggle_gps.setStyleSheet("background-color: #CF6679; color: #000000; font-weight: bold;")
+            else:
+                self.lbl_status_gps_badge.setText("● GPS Active")
+                self.lbl_status_gps_badge.setStyleSheet("color: #03DAC6; border: none; background: transparent;")
+                self.btn_toggle_gps.setText("Kill GPS")
+                self.btn_toggle_gps.setStyleSheet("background-color: #2A2A2A; color: #FFFFFF;")
+
+        def on_toggle_hr_clicked(self):
+            self.ble.toggle_hr()
+            self._update_connectivity_ui()
+
+        def on_toggle_pwr_clicked(self):
+            self.ble.toggle_power()
+            self._update_connectivity_ui()
+
+        def on_toggle_gps_clicked(self):
+            self.gps.toggle()
+            self._update_connectivity_ui()
 
 
 # ==============================================================================
@@ -1408,7 +1868,7 @@ class TerminalKeyReader:
         return None
 
 
-def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInjector):
+def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInjector, trigger_mgr: Optional[ScheduledTriggerManager] = None):
     """Runs interactive terminal dashboard for headless execution."""
     key_reader = TerminalKeyReader()
     atexit.register(key_reader.restore)
@@ -1417,9 +1877,12 @@ def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInje
     print("  aTrainingTracker - Headless TCX Workout Replay Simulator")
     print("=" * 70)
     print(f"Points: {len(engine.points)} | Duration: {format_duration(engine.total_duration_sec)} | Distance: {engine.total_distance_m / 1000.0:.2f} km")
-    print("Hotkeys: [Space] Play/Pause | [s] Stop | [1,2,5,0] Speed (1x,2x,5x,10x) | [q] Quit\n")
+    print(f"BLE Sensors: ATT-HRM Battery: {ble.hr_battery}% | ATT-Pwr Battery: {ble.power_battery}%")
+    print("Hotkeys: [Space] Play/Pause | [s] Stop | [1,2,5,0] Speed | [h] Toggle HR | [p] Toggle Power | [g] Toggle GPS | [q] Quit\n")
 
     def on_update(pt: TcxPoint):
+        if trigger_mgr:
+            trigger_mgr.evaluate(pt.time_sec)
         ble.update_telemetry(pt.watts, pt.cadence, pt.hr)
         gps.inject_location(pt.lat, pt.lon, pt.ele, pt.speed_mps, pt.bearing)
 
@@ -1445,6 +1908,15 @@ def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInje
                     engine.set_speed(5.0)
                 elif k == '0':
                     engine.set_speed(10.0)
+                elif k in ('h', 'H'):
+                    st = ble.toggle_hr()
+                    print(f"\n[*] Hotkey: ATT-HRM {'KILLED' if st else 'REVIVED'}")
+                elif k in ('p', 'P'):
+                    st = ble.toggle_power()
+                    print(f"\n[*] Hotkey: ATT-Pwr {'KILLED' if st else 'REVIVED'}")
+                elif k in ('g', 'G'):
+                    st = gps.toggle()
+                    print(f"\n[*] Hotkey: GPS {'KILLED' if st else 'REVIVED'}")
                 elif k in ('q', 'Q', '\x03'):
                     break
 
@@ -1455,10 +1927,13 @@ def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInje
             bar_len = 20
             filled = int(round(engine.progress_ratio * bar_len))
             bar = "[" + "#" * filled + "-" * (bar_len - filled) + "]"
+            hr_s = "OFF" if ble.is_hr_killed else "ON"
+            pwr_s = "OFF" if ble.is_power_killed else "ON"
+            gps_s = "OFF" if gps.is_killed else "ON"
             sys.stdout.write(
                 f"\r{bar} {format_duration(pt.time_sec)} | "
-                f"Pwr: {pt.watts:3d}W | Cad: {pt.cadence:2d} | HR: {pt.hr:3d} | "
-                f"Spd: {pt.speed_mps * 3.6:4.1f}km/h | {engine.status} ({engine.speed_multiplier:.0f}x)   "
+                f"Pwr:{pt.watts:3d}W ({pwr_s}) | Cad:{pt.cadence:2d} | HR:{pt.hr:3d} ({hr_s}) | "
+                f"GPS:{gps_s} | {engine.status} ({engine.speed_multiplier:.0f}x)   "
             )
             sys.stdout.flush()
 
@@ -1472,7 +1947,7 @@ def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInje
 # 8. Main Entrypoint & Argument Dispatcher
 # ==============================================================================
 
-def main():
+def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Synchronized TCX Workout Replay & Telemetry Simulator")
     parser.add_argument("tcx_file", nargs="?", default="tools/sample_workout.tcx", help="Path to TCX workout activity")
     parser.add_argument("--headless", "--cli", action="store_true", help="Run in headless terminal mode without GUI")
@@ -1480,6 +1955,19 @@ def main():
     parser.add_argument("--no-gps", action="store_true", help="Disable ADB mock GPS coordinate injection")
     parser.add_argument("--device", help="Target ADB device serial number")
     parser.add_argument("--speed", type=float, default=1.0, help="Initial playback speed multiplier")
+    parser.add_argument("--hr-battery", type=int, default=100, help="Initial Heart Rate sensor battery percentage (0-100, default 100)")
+    parser.add_argument("--power-battery", type=int, default=100, help="Initial Cycling Power sensor battery percentage (0-100, default 100)")
+    parser.add_argument("--kill-hr-at", type=float, help="Automatically kill Heart Rate sensor at given workout elapsed seconds")
+    parser.add_argument("--revive-hr-at", type=float, help="Automatically revive Heart Rate sensor at given workout elapsed seconds")
+    parser.add_argument("--kill-power-at", type=float, help="Automatically kill Cycling Power sensor at given workout elapsed seconds")
+    parser.add_argument("--revive-power-at", type=float, help="Automatically revive Cycling Power sensor at given workout elapsed seconds")
+    parser.add_argument("--kill-gps-at", type=float, help="Automatically kill GPS location injection at given workout elapsed seconds")
+    parser.add_argument("--revive-gps-at", type=float, help="Automatically revive GPS location injection at given workout elapsed seconds")
+    return parser
+
+
+def main():
+    parser = build_arg_parser()
     args = parser.parse_args()
 
     # Determine if running GUI or Headless mode
@@ -1522,11 +2010,18 @@ def main():
     target_device = args.device or report.device_serial
 
     # Initialize subsystems
-    ble_server = BleReplayServer(enabled=not args.no_ble)
+    ble_server = BleReplayServer(enabled=not args.no_ble, hr_battery=args.hr_battery, power_battery=args.power_battery)
     ble_server.start()
 
     gps_injector = AdbGpsInjector(enabled=not args.no_gps, device_serial=target_device)
     gps_injector.setup()
+
+    trigger_mgr = ScheduledTriggerManager(
+        ble=ble_server, gps=gps_injector,
+        kill_hr_at=args.kill_hr_at, revive_hr_at=args.revive_hr_at,
+        kill_power_at=args.kill_power_at, revive_power_at=args.revive_power_at,
+        kill_gps_at=args.kill_gps_at, revive_gps_at=args.revive_gps_at
+    )
 
     # Clean exit teardown registration
     def cleanup():
@@ -1543,13 +2038,13 @@ def main():
 
     # Dispatch to GUI or Headless
     if is_gui:
-        window = ReplayGuiWindow(tcx_path, engine, ble_server, gps_injector)
+        window = ReplayGuiWindow(tcx_path, engine, ble_server, gps_injector, trigger_mgr=trigger_mgr)
         window.show()
         sys.exit(app.exec())
     else:
         if not args.headless and not HAS_PYQT6:
             print("[*] PyQt6 not found in environment. Defaulting to headless CLI mode.")
-        run_headless_cli(engine, ble_server, gps_injector)
+        run_headless_cli(engine, ble_server, gps_injector, trigger_mgr=trigger_mgr)
 
 
 if __name__ == "__main__":

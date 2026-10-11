@@ -813,22 +813,18 @@ public class WorkoutSummariesDatabaseManager {
         if (db == null || !db.isOpen()) {
             return false;
         }
+        String selection = "(" + WorkoutSummaries.FINISHED + " IS NULL OR " + WorkoutSummaries.FINISHED + " = 0)";
         try (Cursor cursor = db.query(
                 WorkoutSummaries.TABLE,
                 new String[]{WorkoutSummaries.C_ID, WorkoutSummaries.FINISHED},
-                null,
+                selection,
                 null,
                 null,
                 null,
                 WorkoutSummaries.C_ID + " DESC",
                 "1"
         )) {
-            if (cursor != null && cursor.moveToFirst()) {
-                int finishedCol = cursor.getColumnIndex(WorkoutSummaries.FINISHED);
-                if (finishedCol != -1) {
-                    return cursor.getInt(finishedCol) == 0;
-                }
-            }
+            return cursor != null && cursor.moveToFirst();
         } catch (Exception e) {
             Log.e(TAG, "Error checking for unfinished workout: " + e.getMessage(), e);
         }
@@ -836,7 +832,7 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
-     * Finalizes any unfinished workout in the database (ATT-635).
+     * Finalizes any unfinished workout in the database (ATT-635, ATT-3165 / REQ-UI-345).
      */
     public void discardOrFinishUnfinishedWorkout() {
         SQLiteDatabase db = getDatabase();
@@ -846,7 +842,8 @@ public class WorkoutSummariesDatabaseManager {
         try {
             ContentValues values = new ContentValues();
             values.put(WorkoutSummaries.FINISHED, 1);
-            db.update(WorkoutSummaries.TABLE, values, WorkoutSummaries.FINISHED + " = 0", null);
+            String whereClause = "(" + WorkoutSummaries.FINISHED + " IS NULL OR " + WorkoutSummaries.FINISHED + " = 0)";
+            db.update(WorkoutSummaries.TABLE, values, whereClause, null);
         } catch (Exception e) {
             Log.e(TAG, "Error finalizing unfinished workout: " + e.getMessage(), e);
         }

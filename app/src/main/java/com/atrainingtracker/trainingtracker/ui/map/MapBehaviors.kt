@@ -205,32 +205,38 @@ fun calculateFollowMeTargetZoom(
 }
 
 /**
- * Calculates the forward lookahead camera target coordinate in follow-me mode (REQ-MAP-046 / Rule 33).
+ * Calculates the forward lookahead camera target coordinate in follow-me mode (REQ-MAP-046 / REQ-MAP-048 / Rule 33).
  *
  * Rather than shifting the viewport via competing GoogleMap content padding (which conflicts with
  * CameraPosition.builder().target(currentLocation) during camera animations), this function projects
  * the camera focal center ahead of the athlete along [bearing] so the athlete is anchored stably
  * in the lower portion of the screen without oscillation or jitter.
+ *
+ * Compensates for 3D perspective pitch tilt foreshortening so that slider adjustments from 10% to 50%
+ * produce visually distinct, proportional changes in the athlete's screen position across all tilt angles.
  */
 fun calculateFollowMeCameraTarget(
     currentLocation: LatLng,
     bearing: Float,
     zoom: Float,
     lookaheadPaddingPercent: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
-    viewportHeightDp: Float = 0f
+    viewportHeightDp: Float = 0f,
+    tiltAngle: Float = 0f
 ): LatLng {
     if (lookaheadPaddingPercent <= 0f || viewportHeightDp <= 0f) {
         return currentLocation
     }
     val latRad = Math.toRadians(currentLocation.latitude)
     val metersPerDp = (156543.03392 * Math.cos(latRad) / Math.pow(2.0, zoom.toDouble())).toFloat()
-    val offsetFraction = (lookaheadPaddingPercent / 100f) * 0.5f
-    val offsetMeters = viewportHeightDp * offsetFraction * metersPerDp
+    val offsetFraction = (lookaheadPaddingPercent / 100f) * 0.6f
+    val clampedTilt = tiltAngle.toDouble().coerceIn(0.0, 70.0)
+    val tiltFactor = Math.cos(Math.toRadians(clampedTilt)).toFloat().coerceAtLeast(0.34f)
+    val offsetMeters = (viewportHeightDp * offsetFraction * metersPerDp) / tiltFactor
     return SphericalUtil.computeOffset(currentLocation, offsetMeters.toDouble(), bearing.toDouble())
 }
 
 /**
- * Manages the "Follow Me" camera behavior with smoothed bearing, speed-dependent zoom, and tilt (REQ-MAP-042 / REQ-MAP-046).
+ * Manages the "Follow Me" camera behavior with smoothed bearing, speed-dependent zoom, and tilt (REQ-MAP-042 / REQ-MAP-046 / REQ-MAP-048).
  * Returns the smoothed bearing for use in the user location marker.
  */
 @Composable
@@ -277,7 +283,8 @@ fun followMeController(
                 bearing = filteredBearing,
                 zoom = targetZoom,
                 lookaheadPaddingPercent = lookaheadPaddingPercent,
-                viewportHeightDp = viewportHeightDp
+                viewportHeightDp = viewportHeightDp,
+                tiltAngle = effectiveTilt
             )
             try {
                 cameraPositionState.animate(

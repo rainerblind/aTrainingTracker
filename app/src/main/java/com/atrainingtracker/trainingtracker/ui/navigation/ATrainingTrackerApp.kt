@@ -131,7 +131,7 @@ fun ATrainingTrackerApp(
 
     // Attach NavController to Activity for direct intent / broadcast routing
     DisposableEffect(navController) {
-        activity.navController = navController
+        activity.onNavControllerReady(navController)
         onDispose {
             activity.navController = null
         }

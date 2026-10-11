@@ -86,6 +86,7 @@ class SensorBatteryNotificationManager @VisibleForTesting constructor(
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(MainActivityWithNavigation.SELECTED_FRAGMENT, MainActivityWithNavigation.SelectedFragment.SENSORS.name)
                 putExtra(MainActivityWithNavigation.EXTRA_DRAWER_ITEM_ID, R.id.drawer_my_sensors)
+                putExtra(MainActivityWithNavigation.EXTRA_FILTER_CRITICAL_BATTERY, true)
             }
             PendingIntent.getActivity(
                 context,

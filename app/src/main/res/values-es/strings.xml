@@ -1226,6 +1226,17 @@
     <string name="filter_section_recordings">Grabaciones</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d grabaciones</string>
     <string name="filter_no_matching_clusters">Ninguna ruta favorita coincide con los filtros activos</string>
+    <string name="filter_sensors_title">Filtrar sensores</string>
+    <string name="filter_section_protocol">Protocolo</string>
+    <string name="filter_section_category">Categoría de sensor</string>
+    <string name="filter_section_battery">Nivel de batería</string>
+    <string name="filter_protocol_all">Todos</string>
+    <string name="filter_battery_all">Todos</string>
+    <string name="filter_battery_critical">Crítico (≤ 20%)</string>
+    <string name="filter_battery_normal">Normal (> 20%)</string>
+    <string name="filter_battery_critical_chip">Batería: ≤ 20%</string>
+    <string name="filter_battery_normal_chip">Batería: > 20%</string>
+    <string name="filter_no_matching_sensors">Ningún sensor coincide con los filtros activos</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">Rutas favoritas y agrupación</string>
     <string name="cluster_info_what_title">¿Qué son las Rutas favoritas?</string>
@@ -1730,7 +1741,7 @@
     <string name="tuning_map_tilt_angle_title">Ángulo de inclinación de la cámara</string>
     <string name="tuning_map_tilt_angle_desc">Ángulo de inclinación de perspectiva para navegación 3D (0° es 2D plano, 70° es perspectiva 3D completa)</string>
     <string name="tuning_map_lookahead_padding_title">Margen para vista anticipada</string>
-    <string name="tuning_map_lookahead_padding_desc">Porcentaje de margen para situar al ciclista en la parte inferior y maximizar la carretera visible por delante</string>
+    <string name="tuning_map_lookahead_padding_desc">Porcentaje de margen para situar al ciclista en la parte inferior y maximizar la carretera visible por delante (valor más alto = ciclista más abajo / más carretera visible)</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NUEVO</string>

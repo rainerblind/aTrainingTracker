@@ -70,6 +70,8 @@ fun calculateRouteBounds(route: RouteWithPath): LatLngBounds? {
 fun RouteDetailSheet(
     routeWithPath: RouteWithPath,
     modifier: Modifier = Modifier,
+    isActiveNavigation: Boolean = false,
+    onToggleSelection: ((Boolean) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     EntityDetailSheetScaffold(
@@ -77,9 +79,9 @@ fun RouteDetailSheet(
         modifier = modifier
     ) {
         RouteOnMapScreen(
-            route = routeWithPath.toMapRoute(isActiveNavigation = true),
+            route = routeWithPath.toMapRoute(isActiveNavigation = isActiveNavigation),
             routeSummary = routeWithPath.summary,
-            onToggleSelection = {},
+            onToggleSelection = onToggleSelection ?: {},
             modifier = Modifier.fillMaxSize(),
             useStatusBarsPadding = false
         )

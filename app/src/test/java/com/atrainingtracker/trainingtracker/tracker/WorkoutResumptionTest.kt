@@ -109,7 +109,7 @@ class WorkoutResumptionTest {
             mockDb.query(
                 WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
                 any(),
-                null,
+                any(),
                 null,
                 null,
                 null,
@@ -141,7 +141,7 @@ class WorkoutResumptionTest {
             mockDb.query(
                 WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
                 any(),
-                null,
+                any(),
                 null,
                 null,
                 null,
@@ -150,9 +150,7 @@ class WorkoutResumptionTest {
             )
         } returns mockCursor
 
-        every { mockCursor.moveToFirst() } returns true
-        every { mockCursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.FINISHED) } returns 1
-        every { mockCursor.getInt(1) } returns 1 // FINISHED == 1
+        every { mockCursor.moveToFirst() } returns false // Rows with FINISHED == 1 do not match unfinalized query
 
         val mockContext = mockk<Context>(relaxed = true)
         val dbManager = object : WorkoutSummariesDatabaseManager(mockContext) {
@@ -173,7 +171,7 @@ class WorkoutResumptionTest {
             mockDb.query(
                 WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
                 any(),
-                null,
+                any(),
                 null,
                 null,
                 null,
@@ -216,7 +214,10 @@ class WorkoutResumptionTest {
 
         dbManager.discardOrFinishUnfinishedWorkout()
 
-        assertEquals("${WorkoutSummariesDatabaseManager.WorkoutSummaries.FINISHED} = 0", whereSlot.captured)
+        assertEquals(
+            "(${WorkoutSummariesDatabaseManager.WorkoutSummaries.FINISHED} IS NULL OR ${WorkoutSummariesDatabaseManager.WorkoutSummaries.FINISHED} = 0)",
+            whereSlot.captured
+        )
         verify {
             anyConstructed<ContentValues>().put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FINISHED, 1)
         }

@@ -216,34 +216,73 @@ class LiveClimbsRepository private constructor(
             )
         }
 
-        // Find closest point along climb path
-        var closestIdx = 0
-        var minPointDist = Double.MAX_VALUE
-        for (i in path.indices) {
-            Location.distanceBetween(location.latitude, location.longitude, path[i].latLng.latitude, path[i].latLng.longitude, results)
+        // Fallback for single-point or empty path
+        if (path.size < 2) {
+            val p0 = path.firstOrNull() ?: return null
+            Location.distanceBetween(location.latitude, location.longitude, p0.latLng.latitude, p0.latLng.longitude, results)
+            if (results[0].toDouble() > CLIMB_OFF_ROUTE_THRESHOLD_METERS) {
+                return null
+            }
+            return current.copy(
+                distanceToSummit = climb.distanceMeters.coerceAtLeast(0.0),
+                remainingElevationGain = 0.0,
+                currentGradePercent = climb.avgGradePercent,
+                currentProgressFraction = 0f
+            )
+        }
+
+        // Project rider coordinate orthogonally onto polyline segments [P_i, P_{i+1}]
+        // per REQ-MAP-047 and docs/design_guidelines.md Section 2.4
+        var bestSegIdx = 0
+        var bestT = 0.0
+        var minCrossTrackDist = Double.MAX_VALUE
+
+        for (i in 0 until path.size - 1) {
+            val p1 = path[i]
+            val p2 = path[i + 1]
+            val dLat = p2.latLng.latitude - p1.latLng.latitude
+            val dLng = p2.latLng.longitude - p1.latLng.longitude
+            val segLenSq = dLat * dLat + dLng * dLng
+
+            val t = if (segLenSq > 0.0) {
+                val u = ((location.latitude - p1.latLng.latitude) * dLat +
+                        (location.longitude - p1.latLng.longitude) * dLng) / segLenSq
+                u.coerceIn(0.0, 1.0)
+            } else {
+                0.0
+            }
+
+            val projLat = p1.latLng.latitude + t * dLat
+            val projLng = p1.latLng.longitude + t * dLng
+
+            Location.distanceBetween(location.latitude, location.longitude, projLat, projLng, results)
             val d = results[0].toDouble()
-            if (d < minPointDist) {
-                minPointDist = d
-                closestIdx = i
+            if (d < minCrossTrackDist) {
+                minCrossTrackDist = d
+                bestSegIdx = i
+                bestT = t
             }
         }
 
-        // Off-climb check
-        if (minPointDist > CLIMB_OFF_ROUTE_THRESHOLD_METERS) {
+        // Off-climb check using perpendicular cross-track distance
+        if (minCrossTrackDist > CLIMB_OFF_ROUTE_THRESHOLD_METERS) {
             return null
         }
 
-        val completedDist = path[closestIdx].distance - path.first().distance
+        val p1 = path[bestSegIdx]
+        val p2 = path[bestSegIdx + 1]
+        val segDist = p2.distance - p1.distance
+        val segAlt = p2.altitude - p1.altitude
+
+        val completedDist = ((p1.distance - path.first().distance) + bestT * segDist).coerceAtLeast(0.0)
         val remainingDist = (climb.distanceMeters - completedDist).coerceAtLeast(0.0)
-        val currentAlt = path[closestIdx].altitude
+        val currentAlt = p1.altitude + bestT * segAlt
         val summitAlt = path.last().altitude
         val remainingGain = (summitAlt - currentAlt).coerceAtLeast(0.0)
         val progressFraction = (completedDist / climb.distanceMeters).coerceIn(0.0, 1.0).toFloat()
 
-        val grade = if (closestIdx < path.size - 1) {
-            val dD = path[closestIdx + 1].distance - path[closestIdx].distance
-            val dA = path[closestIdx + 1].altitude - path[closestIdx].altitude
-            if (dD > 0) (dA / dD) * 100.0 else climb.avgGradePercent
+        val grade = if (segDist > 0.0) {
+            (segAlt / segDist) * 100.0
         } else {
             climb.avgGradePercent
         }
