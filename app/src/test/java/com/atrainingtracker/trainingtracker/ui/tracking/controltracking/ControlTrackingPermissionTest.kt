@@ -104,6 +104,11 @@ class ControlTrackingPermissionTest {
         mockkStatic(DevicesDatabaseManager::class)
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDb
 
+        val mockSummariesDb = mockk<com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager>(relaxed = true)
+        mockkStatic(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager::class)
+        every { com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockSummariesDb
+        every { mockSummariesDb.hasUnfinishedWorkout() } returns false
+
         application = mockk(relaxed = true)
         every { application.packageName } returns "com.atrainingtracker"
         viewModel = ControlTrackingViewModel(application)
