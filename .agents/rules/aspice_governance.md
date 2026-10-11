@@ -187,3 +187,27 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * Avoid competing camera updates where Google Maps `contentPadding` recalculation in `BoxWithConstraints` fights with `cameraPositionState.animate(...)`.
 * Origin: Sprint 2026-41.7, ATT-3054 / ATT-3102.
 
+## 34. Chesterton's Fence for Empty Callback Lambdas & Gesture Contract Tests
+* **Rule**: When refactoring screens, views, or container composables, developers and AI agents MUST NOT pass an empty lambda (`{}`) or suppress an existing callback parameter without first inspecting all internal call sites within the child component to audit every place that callback is invoked. Passing `{}` is functionally a deletion of code and feature behavior.
+* **Intent-Explicit Callback Signatures**: Avoid dual-use generic callbacks (e.g. `onEdit` triggered on single-click in configuration mode, but on long-click in tracking mode). Name callbacks explicitly after athlete intent (e.g. `onConfigureField`, `onPickTileToMove`).
+* **Gesture Contract Tests**: Interactive components handling multi-gesture inputs (`combinedClickable`, gestures) MUST have automated gesture contract tests asserting callback dispatch across all supported screen modes (`TRACKING`, `CONFIGURATION`, `PREVIEW`).
+* Origin: Sprint 2026-41.8, ATT-3101 / ATT-3175.
+
+## 35. Continuous Linear Projection for Sparse Geometry Progress Tracking
+* **Rule**: Progress tracking along geometric paths (climbs, segments, routes) MUST NOT rely exclusively on nearest-neighbor discrete vertex quantization (`path[closestIdx]`).
+* On straight road sections or imported GPX tracks where points may be 50–200 m apart, nearest-neighbor snapping causes telemetry metrics (remaining distance, elevation gain, current gradient) and visual rider pins to freeze and jump discontinuously.
+* Progress tracking algorithms MUST project the athlete's current coordinate vector onto the nearest line segment $[P_i, P_{i+1}]$ to determine the fractional progress $s \in [0.0, 1.0]$ and linearly interpolate continuous distance, altitude, and visual marker positions.
+* Origin: Sprint 2026-41.8, ATT-3103 / ATT-3174.
+
+## 36. Decoupled Canonical Chart Height from Container Flexibility
+* **Rule**: Visual analytics, elevation profiles, and telemetry charts MUST NOT be assigned unbounded flexible container weights (e.g. `Modifier.weight(1f)` or `fillMaxHeight()`) that cause them to balloon out of proportion when adjacent elements are hidden or disabled.
+* Chart heights must be governed strictly by their canonical domain sizing algorithms (e.g., `calculateElevationProfileHeight(range)` scaling between $70\text{dp}$ and $200\text{dp}$ based on vertical range $\Delta H$).
+* Flexible container space must be absorbed by scrollable content (e.g. sensor grid with `weight(1f, fill = false)`), while charts retain their fixed adaptive height. See `docs/design_guidelines.md` Section 2.3.
+* Origin: Sprint 2026-41.8, ATT-3107 / ATT-3173.
+
+## 37. Clean Hardware Teardown and Orphan Defense on Persistence Deletion
+* **Rule**: When an entity is deleted from local persistence (database), the background service managing active hardware connections (`BANALService`) MUST be immediately notified to cleanly disconnect and unregister the hardware resource.
+* UI ViewModels MUST defensively discard orphaned IDs that do not exist in the database rather than constructing invalid fallback data models (`DeviceType.DUMMY`) that open broken or dimmed modal dialogs.
+* Origin: Sprint 2026-41.8, ATT-3099 / ATT-3169.
+
+

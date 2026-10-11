@@ -85,6 +85,18 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 3. **Family Interaction Parity**:
    * When implementing gesture or zoom improvements across charts, verify tactile feel, travel distance, and responsiveness across **every sister chart** (Elevation Profile, Speed/Pace, Heart Rate, Power).
 
+### 2.3 Elevation Profile Sizing & Adaptive Height Invariant
+* **Vertical Range Scaling**:
+  * The elevation profile does NOT expand to arbitrary flexible screen heights (e.g. taking half the screen with `weight(1f)` or `fillMaxHeight()`).
+  * Its height is strictly determined by the canonical `calculateElevationProfileHeight(range)` algorithm, scaling adaptively based on the track's total elevation difference ($\Delta H = H_{\max} - H_{\min}$):
+    * **Minimum height**: `70.dp` (for flat or low-relief terrain, $\Delta H \approx 0\text{ m}$)
+    * **Maximum height**: `200.dp` (at $\Delta H \ge 1000\text{ m}$)
+    * **Curved progression**: $\text{height} = 70 + (\text{range} / 1000)^{0.6} \times (200 - 70)$
+* **Cockpit Space Allocation**:
+  * On tracking screens where the map is disabled and only the elevation profile is shown, the elevation profile retains its fixed adaptive height based on the track's elevation difference.
+  * The sensor grid column absorbs the flexible remaining vertical space (via `weight(1f, fill = false)`), wrapping naturally if there are few tiles and scrolling smoothly if there are many tiles, without stretching the elevation profile out of proportion.
+
+
 ---
 
 ## 3. Settings & Accordion Structure
@@ -150,4 +162,12 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Semi-Transparency for Glanceability**: Overlays must use a semi-transparent surface background (e.g. `surface` / `surfaceContainer` at ~80–85% opacity, `TTAlpha`) paired with a subtle Royal Blue border accent (`TTColor.RouteActiveNavigation`), so that athletes can immediately register the direction cue while still discerning underlying telemetry values and metrics behind the banner.
 * **Transient Auto-Dismiss (3–5 Seconds)**: Navigation cues are time-sensitive and ephemeral. Upon being triggered (or once a maneuver instruction is issued), the cue must automatically vanish after a brief, configurable interval (3–5 seconds) via a smooth animation (fade or slide), promptly returning the screen to full telemetry focus without requiring manual dismissal while riding.
 * **Expert Settings Customization**: Both overlay transparency (e.g. 50%–100%, default 80%) and auto-dismiss duration (e.g. 2–10 seconds or persistent until passed, default 4 seconds) must be exposed as configurable parameters in the Expert Settings (*Experteneinstellungen*), allowing athletes to tailor cue presentation to their ambient lighting conditions, cockpit layout, and riding speed.
+
+### 5.8 Live Tracking Bottom Sheets (Segments & Climbs)
+* **Default Fully Expanded Presentation**:
+  * Live Segment (`LiveSegmentSheet`) and Climb (`LiveClimbSheet`) bottom sheets during active tracking (`SensorGridScreen`) must pop up **fully expanded** (`SheetValue.Expanded`) by default instead of partially expanded (`SheetValue.PartiallyExpanded` / peek height).
+  * This provides immediate visibility of the elevation profile graph, instantaneous gradient profile, and live pacing telemetry HUD without requiring manual touch interaction or swipe gestures while riding or running.
+* **Dismissal and Collapse Ergonomics**:
+  * The bottom sheet retains swipe gestures (`sheetSwipeEnabled = true`), allowing athletes to manually collapse to peek height or dismiss if they intentionally wish to focus on underlying sensor tiles.
+
 

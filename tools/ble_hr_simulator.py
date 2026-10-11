@@ -4,13 +4,18 @@ BLE Heart Rate Monitor Simulator for aTrainingTracker
 Emulates a standard Bluetooth Low Energy Heart Rate Service (UUID 0x180D) with:
 - Heart Rate Measurement (UUID 0x2A37)
 - Body Sensor Location (UUID 0x2A38)
+- Battery Service (UUID 0x180F) with Battery Level (0x2A19)
 - Device Information (UUID 0x180A) with Manufacturer Name (0x2A29)
 
 Usage:
-    python3 tools/ble_hr_simulator.py
+    python3 tools/ble_hr_simulator.py                     # Default: 135 BPM, 100% Battery
+    python3 tools/ble_hr_simulator.py --battery 15        # Start with critical low battery (15%)
+    python3 tools/ble_hr_simulator.py --bpm 140 --battery 85
 """
 
 import sys
+import os
+import argparse
 import dbus
 import dbus.exceptions
 import dbus.mainloop.glib
@@ -93,6 +98,9 @@ HEART_RATE_SERVICE_UUID = '0000180d-0000-1000-8000-00805f9b34fb'
 HEART_RATE_MEASUREMENT_UUID = '00002a37-0000-1000-8000-00805f9b34fb'
 BODY_SENSOR_LOCATION_UUID = '00002a38-0000-1000-8000-00805f9b34fb'
 
+BATTERY_SERVICE_UUID = '0000180f-0000-1000-8000-00805f9b34fb'
+BATTERY_LEVEL_CHARACTERISTIC_UUID = '00002a19-0000-1000-8000-00805f9b34fb'
+
 DEVICE_INFO_SERVICE_UUID = '0000180a-0000-1000-8000-00805f9b34fb'
 MANUFACTURER_NAME_UUID = '00002a29-0000-1000-8000-00805f9b34fb'
 
@@ -100,8 +108,8 @@ MANUFACTURER_NAME_UUID = '00002a29-0000-1000-8000-00805f9b34fb'
 class HeartRateAdvertisement(Advertisement):
     def __init__(self, bus, index):
         super().__init__(bus, index, 'peripheral')
-        # Standard 16-bit BLE UUID so Android's ScanFilter matches exactly like a physical sensor
-        self.service_uuids = ['180d']
+        # Standard 16-bit BLE UUIDs: 0x180D (Heart Rate), 0x180F (Battery Service)
+        self.service_uuids = ['180d', '180f']
         self.local_name = 'ATT-HRM'
         self.include_tx_power = False
 
@@ -232,10 +240,10 @@ class Characteristic(dbus.service.Object):
 
 class HeartRateMeasurementCharacteristic(Characteristic):
     # UUID 0x2A37: Heart Rate Measurement
-    def __init__(self, bus, index, service):
+    def __init__(self, bus, index, service, initial_bpm=135):
         super().__init__(bus, index, HEART_RATE_MEASUREMENT_UUID, ['notify'], service)
         self.notifying = False
-        self.bpm = 135
+        self.bpm = max(30, min(240, int(initial_bpm)))
         self.timer_id = None
 
     def build_payload(self):
@@ -265,7 +273,7 @@ class HeartRateMeasurementCharacteristic(Characteristic):
         if not self.notifying:
             return
         self.notifying = False
-        print(f"[*] Client hat Herzfrequenz abbestellt.")
+        print("[*] Client hat Herzfrequenz abbestellt.")
         if self.timer_id:
             GLib.source_remove(self.timer_id)
             self.timer_id = None
@@ -284,11 +292,60 @@ class BodySensorLocationCharacteristic(Characteristic):
 
 
 class HeartRateService(Service):
-    def __init__(self, bus, index):
+    def __init__(self, bus, index, initial_bpm=135):
         super().__init__(bus, index, HEART_RATE_SERVICE_UUID, True)
-        self.measurement_char = HeartRateMeasurementCharacteristic(bus, 0, self)
+        self.measurement_char = HeartRateMeasurementCharacteristic(bus, 0, self, initial_bpm)
         self.add_characteristic(self.measurement_char)
         self.add_characteristic(BodySensorLocationCharacteristic(bus, 1, self))
+
+
+class BatteryLevelCharacteristic(Characteristic):
+    # UUID 0x2A19: Battery Level (0 - 100%)
+    def __init__(self, bus, index, service, initial_battery=100):
+        super().__init__(bus, index, BATTERY_LEVEL_CHARACTERISTIC_UUID, ['read', 'notify'], service)
+        self.battery_level = max(0, min(100, int(initial_battery)))
+        self.notifying = False
+
+    def build_payload(self):
+        return dbus.Array([dbus.Byte(self.battery_level)], signature='y')
+
+    def send_notification(self):
+        if not self.notifying:
+            return
+        val = self.build_payload()
+        self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': val}, [])
+
+    def set_battery(self, level):
+        self.battery_level = max(0, min(100, int(level)))
+        print(f"[*] Batteriestand aktualisiert auf: {self.battery_level}%")
+        self.send_notification()
+
+    @dbus.service.method(GATT_CHRC_IFACE, in_signature='a{sv}', out_signature='ay')
+    def ReadValue(self, options):
+        print(f"[*] Read BatteryLevel (0x2A19) -> {self.battery_level}%")
+        return self.build_payload()
+
+    @dbus.service.method(GATT_CHRC_IFACE)
+    def StartNotify(self):
+        if self.notifying:
+            return
+        self.notifying = True
+        print(f"[*] Client verbunden & Batteriestand abonniert! (Aktuell {self.battery_level}%)")
+        self.send_notification()
+
+    @dbus.service.method(GATT_CHRC_IFACE)
+    def StopNotify(self):
+        if not self.notifying:
+            return
+        self.notifying = False
+        print("[*] Client hat Batteriestand abbestellt.")
+
+
+class BatteryService(Service):
+    def __init__(self, bus, index, initial_battery=100):
+        super().__init__(bus, index, BATTERY_SERVICE_UUID, True)
+        self.battery_char = BatteryLevelCharacteristic(bus, 0, self, initial_battery)
+        self.add_characteristic(self.battery_char)
 
 
 class ManufacturerNameCharacteristic(Characteristic):
@@ -318,17 +375,19 @@ def find_adapter(bus):
     return None
 
 
-def keyboard_input_loop(meas_char, loop):
+def keyboard_input_loop(meas_char, battery_char, loop):
     time.sleep(0.5)
     print("\n" + "=" * 60)
-    print("  ATT BLE Herzfrequenz-Simulator LÄUFT")
+    print("  ATT BLE Herzfrequenz- & Batterie-Simulator LÄUFT")
     print("=" * 60)
     print("  Steuerung im Terminal:")
     print("    [+] / [-]     : Puls um 5 BPM erhöhen / verringern")
     print("    [h<Zahl>]     : Exakter Puls (z.B. h145 für 145 BPM)")
+    print("    [b<Zahl>]     : Batteriestand ändern (z.B. b15 für 15%, b85 für 85%)")
+    print("    [b+] / [b-]   : Batteriestand um 5% erhöhen / verringern")
     print("    [q]           : Beenden")
     print("=" * 60)
-    print(f"  Aktuell: {meas_char.bpm} BPM\n")
+    print(f"  Aktuell: {meas_char.bpm} BPM | Batterie: {battery_char.battery_level}%\n")
 
     while True:
         try:
@@ -337,26 +396,42 @@ def keyboard_input_loop(meas_char, loop):
                 continue
             if line == '+':
                 meas_char.bpm = min(240, meas_char.bpm + 5)
+                print(f" -> Herzfrequenz: {meas_char.bpm} BPM")
             elif line == '-':
                 meas_char.bpm = max(30, meas_char.bpm - 5)
+                print(f" -> Herzfrequenz: {meas_char.bpm} BPM")
+            elif line == 'b+':
+                battery_char.set_battery(battery_char.battery_level + 5)
+            elif line == 'b-':
+                battery_char.set_battery(battery_char.battery_level - 5)
             elif line.startswith('h'):
                 try:
                     meas_char.bpm = int(line[1:])
+                    print(f" -> Herzfrequenz: {meas_char.bpm} BPM")
                 except ValueError:
                     print("Ungültige BPM-Eingabe (z.B. h140)")
+            elif line.startswith('b'):
+                try:
+                    battery_char.set_battery(int(line[1:]))
+                except ValueError:
+                    print("Ungültige Batterie-Eingabe (z.B. b15)")
             elif line == 'q':
                 print("Beende Simulator...")
                 loop.quit()
                 break
             else:
-                print("Unbekannter Befehl (+, -, h<Zahl>, q)")
-            print(f" -> Herzfrequenz: {meas_char.bpm} BPM")
+                print("Unbekannter Befehl (+, -, h<Zahl>, b<Zahl>, b+, b-, q)")
         except (EOFError, KeyboardInterrupt):
             loop.quit()
             break
 
 
 def main():
+    parser = argparse.ArgumentParser(description="BLE Heart Rate & Battery Simulator for aTrainingTracker")
+    parser.add_argument("--bpm", type=int, default=135, help="Initial heart rate in BPM (default: 135)")
+    parser.add_argument("--battery", type=int, default=100, help="Initial battery percentage (0-100, default: 100)")
+    args = parser.parse_args()
+
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     bus = dbus.SystemBus()
 
@@ -372,26 +447,33 @@ def main():
     ad_manager = dbus.Interface(bus.get_object(BLUEZ_SERVICE_NAME, adapter), LE_ADVERTISING_MANAGER_IFACE)
 
     app = Application(bus)
-    hr_service = HeartRateService(bus, 0)
+    hr_service = HeartRateService(bus, 0, initial_bpm=args.bpm)
+    battery_service = BatteryService(bus, 1, initial_battery=args.battery)
     app.add_service(hr_service)
-    app.add_service(DeviceInfoService(bus, 1))
+    app.add_service(battery_service)
+    app.add_service(DeviceInfoService(bus, 2))
 
     ad = HeartRateAdvertisement(bus, 0)
 
     loop = GLib.MainLoop()
 
-    print("[*] Starte BLE Herzfrequenz Simulator...")
-    print("[*] Registriere GATT Application (Heart Rate 0x180D & Device Info 0x180A)...")
+    print("[*] Starte BLE Herzfrequenz & Batterie Simulator...")
+    print(f"[*] Initiale Werte: {hr_service.measurement_char.bpm} BPM, {battery_service.battery_char.battery_level}% Batterie")
+    print("[*] Registriere GATT Application (Heart Rate 0x180D, Battery 0x180F, Device Info 0x180A)...")
     service_manager.RegisterApplication(app.get_path(), {},
-                                        reply_handler=lambda: print("[OK] GATT Service registriert."),
+                                        reply_handler=lambda: print("[OK] GATT Services registriert."),
                                         error_handler=lambda e: print(f"[FEHLER] GATT Fehler: {e}"))
 
-    print(f"[*] Starte BLE Advertising als '{ad.local_name}' mit UUID {ad.service_uuids}...")
+    print(f"[*] Starte BLE Advertising als '{ad.local_name}' mit UUIDs {ad.service_uuids}...")
     ad_manager.RegisterAdvertisement(ad.get_path(), {},
-                                     reply_handler=lambda: print("[OK] Advertising aktiv. Herzfrequenz-Sensor ist jetzt sichtbar!"),
+                                     reply_handler=lambda: print("[OK] Advertising aktiv. Herzfrequenz- & Batterie-Sensor ist jetzt sichtbar!"),
                                      error_handler=lambda e: print(f"[FEHLER] Advertising Fehler: {e}"))
 
-    input_thread = threading.Thread(target=keyboard_input_loop, args=(hr_service.measurement_char, loop), daemon=True)
+    input_thread = threading.Thread(
+        target=keyboard_input_loop,
+        args=(hr_service.measurement_char, battery_service.battery_char, loop),
+        daemon=True
+    )
     input_thread.start()
 
     try:
