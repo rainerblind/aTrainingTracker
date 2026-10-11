@@ -119,7 +119,7 @@ class ControlTrackingViewModel(
     // 2. Combine the IDs from the BANALService with the Data from the Database
     val remoteDevices: StateFlow<List<RemoteDeviceUIData>> = banalServiceRepository.activeRemoteDevicesIds
         .combine(allDevicesFromDb) { ids, dbDevices ->
-            ids.map { id ->
+            ids.mapNotNull { id ->
                 // Look for the device in the DB list
                 val dbDevice = dbDevices.find { it.id == id }
 
@@ -132,13 +132,8 @@ class ControlTrackingViewModel(
                         iconRes = UIHelper.getIconId(dbDevice.deviceType, dbDevice.protocol)
                     )
                 } else {
-                    // Fallback if the device is found by service but not yet in DB
-                    RemoteDeviceUIData(
-                        id = id,
-                        deviceType = DeviceType.DUMMY,
-                        name = "New Sensor",
-                        iconRes = R.drawable.research_icon
-                    )
+                    // Defensively ignore orphaned or deleted devices
+                    null
                 }
             }
         }

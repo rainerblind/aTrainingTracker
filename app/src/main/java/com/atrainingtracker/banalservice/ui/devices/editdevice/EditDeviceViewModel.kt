@@ -74,14 +74,23 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     private val _deviceSnapshot = MutableStateFlow<DeviceUiData?>(null)
     val deviceSnapshot: StateFlow<DeviceUiData?> = _deviceSnapshot.asStateFlow()
 
+    // Indicates if the device could not be found/loaded from the database
+    private val _deviceNotFound = MutableStateFlow(false)
+    val deviceNotFound: StateFlow<Boolean> = _deviceNotFound.asStateFlow()
 
     /**
      * Loads the initial device data from the repository and populates the initial UI state.
      * This should be called once when the edit dialog is created.
      */
     fun loadInitialDeviceData(deviceId: Long) {
-        _deviceSnapshot.value = devicesRepository.getDeviceSnapshotById(deviceId)
-        _editingId.value = deviceId
+        val snapshot = devicesRepository.getDeviceSnapshotById(deviceId)
+        if (snapshot == null) {
+            _deviceNotFound.value = true
+        } else {
+            _deviceNotFound.value = false
+            _deviceSnapshot.value = snapshot
+            _editingId.value = deviceId
+        }
     }
 
     //--- dealing with wheel sizes

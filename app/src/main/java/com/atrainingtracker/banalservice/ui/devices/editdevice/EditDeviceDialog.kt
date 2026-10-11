@@ -62,10 +62,17 @@ fun EditDeviceDialog(
 ) {
     val snapshot by viewModel.deviceSnapshot.collectAsStateWithLifecycle()
     val liveData by viewModel.deviceLiveData.collectAsStateWithLifecycle(initialValue = null)
+    val deviceNotFound by viewModel.deviceNotFound.collectAsStateWithLifecycle()
 
     // Initialize data only once
     LaunchedEffect(deviceId) {
         viewModel.loadInitialDeviceData(deviceId)
+    }
+
+    LaunchedEffect(deviceNotFound) {
+        if (deviceNotFound) {
+            onDismiss()
+        }
     }
 
     snapshot?.let { data ->
