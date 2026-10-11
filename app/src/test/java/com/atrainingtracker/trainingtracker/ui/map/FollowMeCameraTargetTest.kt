@@ -167,4 +167,94 @@ class FollowMeCameraTargetTest {
             deltaLat17 > deltaLat18 * 1.8 && deltaLat17 < deltaLat18 * 2.2
         )
     }
+
+    @Test
+    fun testLookaheadPaddingScaling_increasesProportionally() {
+        val target10 = calculateFollowMeCameraTarget(
+            currentLocation = munichLocation,
+            bearing = 0f,
+            zoom = 18f,
+            lookaheadPaddingPercent = 10f,
+            viewportHeightDp = 600f,
+            tiltAngle = 0f
+        )
+        val target30 = calculateFollowMeCameraTarget(
+            currentLocation = munichLocation,
+            bearing = 0f,
+            zoom = 18f,
+            lookaheadPaddingPercent = 30f,
+            viewportHeightDp = 600f,
+            tiltAngle = 0f
+        )
+        val target50 = calculateFollowMeCameraTarget(
+            currentLocation = munichLocation,
+            bearing = 0f,
+            zoom = 18f,
+            lookaheadPaddingPercent = 50f,
+            viewportHeightDp = 600f,
+            tiltAngle = 0f
+        )
+
+        val delta10 = target10.latitude - munichLocation.latitude
+        val delta30 = target30.latitude - munichLocation.latitude
+        val delta50 = target50.latitude - munichLocation.latitude
+
+        assertEquals("Delta at 30% must be 3x delta at 10%", delta10 * 3.0, delta30, 0.000001)
+        assertEquals("Delta at 50% must be 5x delta at 10%", delta10 * 5.0, delta50, 0.000001)
+    }
+
+    @Test
+    fun testTiltForeshorteningCompensation_scalesGroundOffsetAtSteepTilt() {
+        val targetTilt0 = calculateFollowMeCameraTarget(
+            currentLocation = munichLocation,
+            bearing = 0f,
+            zoom = 18f,
+            lookaheadPaddingPercent = 30f,
+            viewportHeightDp = 600f,
+            tiltAngle = 0f
+        )
+        val targetTilt70 = calculateFollowMeCameraTarget(
+            currentLocation = munichLocation,
+            bearing = 0f,
+            zoom = 18f,
+            lookaheadPaddingPercent = 30f,
+            viewportHeightDp = 600f,
+            tiltAngle = 70f
+        )
+
+        val delta0 = targetTilt0.latitude - munichLocation.latitude
+        val delta70 = targetTilt70.latitude - munichLocation.latitude
+
+        val expectedFactor = 1.0 / Math.cos(Math.toRadians(70.0)) // ~2.9238
+        val actualFactor = delta70 / delta0
+
+        assertEquals("70 degree tilt should scale ground offset by ~2.92x to compensate foreshortening", expectedFactor, actualFactor, 0.01)
+    }
+
+    @Test
+    fun testTiltForeshorteningCompensation_clampsExtremeTiltSafely() {
+        val targetExtreme90 = calculateFollowMeCameraTarget(
+            currentLocation = munichLocation,
+            bearing = 0f,
+            zoom = 18f,
+            lookaheadPaddingPercent = 30f,
+            viewportHeightDp = 600f,
+            tiltAngle = 90f
+        )
+        val targetNegative = calculateFollowMeCameraTarget(
+            currentLocation = munichLocation,
+            bearing = 0f,
+            zoom = 18f,
+            lookaheadPaddingPercent = 30f,
+            viewportHeightDp = 600f,
+            tiltAngle = -30f
+        )
+
+        val deltaExtreme = targetExtreme90.latitude - munichLocation.latitude
+        val deltaNegative = targetNegative.latitude - munichLocation.latitude
+
+        assertTrue("Extreme 90 degree tilt should be clamped to valid finite double", !deltaExtreme.isNaN() && !deltaExtreme.isInfinite())
+        assertTrue("Negative tilt should be clamped and positive", deltaNegative > 0)
+    }
 }
+
