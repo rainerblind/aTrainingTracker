@@ -225,6 +225,7 @@ fun ElevationProfile(
     showScrubbingBadge: Boolean = true,
     climbs: List<Climb> = emptyList(),
     smoothingSigma: Double? = null,
+    fillParentHeight: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -252,6 +253,7 @@ fun ElevationProfile(
         showScrubbingBadge = showScrubbingBadge,
         climbs = climbs,
         smoothingSigma = smoothingSigma,
+        fillParentHeight = fillParentHeight,
         modifier = modifier
     )
 }
@@ -276,7 +278,8 @@ fun ElevationProfile(
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null,
     climbs: List<Climb> = emptyList(),
-    smoothingSigma: Double? = null
+    smoothingSigma: Double? = null,
+    fillParentHeight: Boolean = false
 ) {
     if (pathPoints.isEmpty()) return
 
@@ -409,9 +412,16 @@ fun ElevationProfile(
     val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight
 
     Box(modifier = modifier.fillMaxWidth()) {
-        val baseCanvasModifier = Modifier
-            .fillMaxWidth()
-            .height(totalCanvasHeight)
+        val baseCanvasModifier = if (fillParentHeight) {
+            Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = totalCanvasHeight)
+                .fillMaxHeight()
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .height(totalCanvasHeight)
+        }
 
         val canvasModifier = if (showZoomControls) {
             baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode) {

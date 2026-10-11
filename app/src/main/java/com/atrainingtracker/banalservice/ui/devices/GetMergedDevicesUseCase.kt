@@ -55,7 +55,8 @@ class GetMergedDevicesUseCase(
                             mainValue = "${mainSensorData.value} $unit".trim(),
                             allValues = telemetry.allValues.map {
                                 "${it.sensor.getShortName(application)}: ${it.value}"
-                            }
+                            },
+                            isNewlyDiscovered = isFound
                         )
                     } else {
                         knownDevice.copy(
@@ -64,17 +65,19 @@ class GetMergedDevicesUseCase(
                             mainValue = null,
                             allValues = telemetry.allValues.map {
                                 "${it.sensor.getShortName(application)}: ${it.value}"
-                            }
+                            },
+                            isNewlyDiscovered = isFound
                         )
                     }
                 }
 
                 isFound -> knownDevice.copy(
                     isConnected = true,
-                    lastSeen = application.getString(R.string.devices_now)
+                    lastSeen = application.getString(R.string.devices_now),
+                    isNewlyDiscovered = true
                 )
 
-                else -> knownDevice.copy(isConnected = false, mainValue = null)
+                else -> knownDevice.copy(isConnected = false, mainValue = null, isNewlyDiscovered = false)
             }
         }
     }

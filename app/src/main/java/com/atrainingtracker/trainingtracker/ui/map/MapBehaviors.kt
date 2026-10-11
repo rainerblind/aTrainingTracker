@@ -26,6 +26,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.maps.android.SphericalUtil
 import com.google.maps.android.compose.CameraPositionState
 
 /**
@@ -204,7 +205,32 @@ fun calculateFollowMeTargetZoom(
 }
 
 /**
- * Manages the "Follow Me" camera behavior with smoothed bearing, speed-dependent zoom, and tilt (REQ-MAP-042).
+ * Calculates the forward lookahead camera target coordinate in follow-me mode (REQ-MAP-046 / Rule 33).
+ *
+ * Rather than shifting the viewport via competing GoogleMap content padding (which conflicts with
+ * CameraPosition.builder().target(currentLocation) during camera animations), this function projects
+ * the camera focal center ahead of the athlete along [bearing] so the athlete is anchored stably
+ * in the lower portion of the screen without oscillation or jitter.
+ */
+fun calculateFollowMeCameraTarget(
+    currentLocation: LatLng,
+    bearing: Float,
+    zoom: Float,
+    lookaheadPaddingPercent: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+    viewportHeightDp: Float = 0f
+): LatLng {
+    if (lookaheadPaddingPercent <= 0f || viewportHeightDp <= 0f) {
+        return currentLocation
+    }
+    val latRad = Math.toRadians(currentLocation.latitude)
+    val metersPerDp = (156543.03392 * Math.cos(latRad) / Math.pow(2.0, zoom.toDouble())).toFloat()
+    val offsetFraction = (lookaheadPaddingPercent / 100f) * 0.5f
+    val offsetMeters = viewportHeightDp * offsetFraction * metersPerDp
+    return SphericalUtil.computeOffset(currentLocation, offsetMeters.toDouble(), bearing.toDouble())
+}
+
+/**
+ * Manages the "Follow Me" camera behavior with smoothed bearing, speed-dependent zoom, and tilt (REQ-MAP-042 / REQ-MAP-046).
  * Returns the smoothed bearing for use in the user location marker.
  */
 @Composable
@@ -217,7 +243,9 @@ fun followMeController(
     baseZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
     speedZoomEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
     cruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
-    tiltAngle: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE
+    tiltAngle: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE,
+    lookaheadPaddingPercent: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+    viewportHeightDp: Float = 0f
 ): Float {
     var filteredBearing by remember { mutableFloatStateOf(bearing) }
 
@@ -227,7 +255,7 @@ fun followMeController(
         }
     }
 
-    LaunchedEffect(currentLocation, bearing, speed, baseZoom, speedZoomEnabled, cruisingZoom, tiltAngle) {
+    LaunchedEffect(currentLocation, bearing, speed, baseZoom, speedZoomEnabled, cruisingZoom, tiltAngle, lookaheadPaddingPercent, viewportHeightDp) {
         if (zoomFocus == MapZoomFocus.FOLLOW_ME && currentLocation != null) {
             val alpha = 0.15f
             var diff = bearing - filteredBearing
@@ -244,11 +272,18 @@ fun followMeController(
                 cruisingZoom = cruisingZoom
             )
             val effectiveTilt = tiltAngle.coerceIn(0f, 70f)
+            val cameraTarget = calculateFollowMeCameraTarget(
+                currentLocation = currentLocation,
+                bearing = filteredBearing,
+                zoom = targetZoom,
+                lookaheadPaddingPercent = lookaheadPaddingPercent,
+                viewportHeightDp = viewportHeightDp
+            )
             try {
                 cameraPositionState.animate(
                     CameraUpdateFactory.newCameraPosition(
                         CameraPosition.builder()
-                            .target(currentLocation)
+                            .target(cameraTarget)
                             .bearing(filteredBearing)
                             .zoom(targetZoom)
                             .tilt(effectiveTilt)

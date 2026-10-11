@@ -1731,4 +1731,8 @@
     <string name="tuning_map_tilt_angle_desc">Kąt nachylenia perspektywy dla nawigacji 3D (0° to płaskie 2D, 70° to pełna perspektywa 3D)</string>
     <string name="tuning_map_lookahead_padding_title">Margines pola widzenia z przodu</string>
     <string name="tuning_map_lookahead_padding_desc">Procentowy margines widoku, aby umieścić rowerzystę w dolnej części i zmaksymalizować widoczność drogi z przodu</string>
+
+    <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
+    <string name="devices_newly_discovered_badge">NOWY</string>
+    <string name="devices_new_sensor_discovered">Wykryto nowy czujnik: %1$s</string>
 </resources>

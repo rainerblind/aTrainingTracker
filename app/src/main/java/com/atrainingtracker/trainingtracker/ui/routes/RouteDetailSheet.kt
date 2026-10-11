@@ -77,7 +77,7 @@ fun RouteDetailSheet(
         modifier = modifier
     ) {
         RouteOnMapScreen(
-            route = routeWithPath.toMapRoute(),
+            route = routeWithPath.toMapRoute(isActiveNavigation = true),
             routeSummary = routeWithPath.summary,
             onToggleSelection = {},
             modifier = Modifier.fillMaxSize(),

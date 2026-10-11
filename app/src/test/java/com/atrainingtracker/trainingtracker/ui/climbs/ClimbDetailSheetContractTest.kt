@@ -148,4 +148,29 @@ class ClimbDetailSheetContractTest {
         assertTrue("Northeast latitude must be strictly greater than southwest", bounds!!.northeast.latitude > bounds.southwest.latitude)
         assertTrue("Northeast longitude must be strictly greater than southwest", bounds.northeast.longitude > bounds.southwest.longitude)
     }
+
+    @Test
+    fun testClimbOnMapScreen_normalizedPathIntegrationAndHeaderRouteOffset() {
+        val screenContent = climbOnMapScreenFile.readText()
+
+        // Verify activeScrubPath is wired to normalized path points (REQ-UI-338, TST-UI-298)
+        assertTrue(
+            "ClimbOnMapScreen must compute normalized climb path using climb.normalizedPathPoints",
+            screenContent.contains("climb.normalizedPathPoints")
+        )
+        assertTrue(
+            "ClimbOnMapScreen must pass normalizedClimbPath as activeScrubPath to MapDetailLayout",
+            screenContent.contains("activeScrubPath = normalizedClimbPath")
+        )
+
+        // Verify ClimbHeader preserves global route offset formatting
+        assertTrue(
+            "ClimbHeader must retain original climb.pathPoints.firstOrNull()?.distance for route start offset",
+            screenContent.contains("climb.pathPoints.firstOrNull()?.distance")
+        )
+        assertTrue(
+            "ClimbHeader must format route start offset using routes_climb_start_at string resource",
+            screenContent.contains("R.string.routes_climb_start_at")
+        )
+    }
 }

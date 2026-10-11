@@ -112,4 +112,41 @@ class LiveSegmentSheetLayoutTest {
             liveSheetContent.contains(".background(MaterialTheme.colorScheme.surface)")
         )
     }
+
+    @Test
+    fun testLiveSegmentSheet_evaluatesFinishedDistanceUsingDistanceRawWithoutCrashing() {
+        val summary = com.atrainingtracker.trainingtracker.segments.SegmentSummary(
+            stravaId = 12345L,
+            name = "Test Segment",
+            bSportType = com.atrainingtracker.banalservice.BSportType.BIKE,
+            climbCategory_raw = 0,
+            climbCategory = "NC",
+            prTime_raw = 120,
+            prTime = "02:00",
+            city = "Test City",
+            distance = "766 m",
+            distance_raw = 766.0,
+            averageGrade_raw = 5.0,
+            averageGrade = "5%",
+            maxGrade = "8%",
+            elevationGain_raw = 50.0,
+            elevationGain = "50 m",
+            elevationMin = "200 m",
+            elevationMax = "250 m",
+            map_polyline = "abcde"
+        )
+        val liveData = com.atrainingtracker.trainingtracker.segments.LiveSegmentData(
+            segmentStatus = com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus.FINISHED,
+            distanceOnSegment_raw = 766.0
+        )
+        // Verify formula: summary.distance_raw.coerceAtLeast(liveData.distanceOnSegment_raw)
+        // With distance_raw = 766.0, evaluation does not throw NumberFormatException even though summary.distance is "766 m"
+        val evaluatedDistance = summary.distance_raw.coerceAtLeast(liveData.distanceOnSegment_raw)
+        assertEquals(766.0, evaluatedDistance, 0.001)
+
+        // Verify with comma-formatted decimal distance (e.g. "1,2 km")
+        val localizedSummary = summary.copy(distance = "1,2 km", distance_raw = 1200.0)
+        val localizedEvaluatedDistance = localizedSummary.distance_raw.coerceAtLeast(liveData.distanceOnSegment_raw)
+        assertEquals(1200.0, localizedEvaluatedDistance, 0.001)
+    }
 }

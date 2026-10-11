@@ -74,13 +74,12 @@ fun ForkDecisionCard(
     ) {
         if (decisionState == null) return@AnimatedVisibility
 
-        Card(
+        Surface(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = overlayAlpha)
-            ),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = overlayAlpha),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+            shadowElevation = 6.dp,
+            tonalElevation = 0.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -131,7 +130,8 @@ fun ForkDecisionCard(
                     ForkDirectionGroup(
                         direction = direction,
                         branches = branches,
-                        onRouteSelected = onRouteSelected
+                        onRouteSelected = onRouteSelected,
+                        overlayAlpha = overlayAlpha
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                 }
@@ -148,13 +148,14 @@ fun ForkDirectionGroup(
     direction: ForkDirection,
     branches: List<ForkBranchOption>,
     onRouteSelected: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    overlayAlpha: Float = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY
 ) {
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = overlayAlpha),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-        tonalElevation = 1.dp,
+        tonalElevation = 0.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Row(

@@ -176,4 +176,25 @@ class ElevationProfileLayoutTest {
         val isPanModeCount = Regex("""isPanMode:\s*Boolean\s*=\s*false""").findAll(content).count()
         assertEquals("Both ElevationProfile composable overloads must declare isPanMode: Boolean = false", 2, isPanModeCount)
     }
+
+    @Test
+    fun testElevationProfile_declaresFillParentHeightParameterAndDecoupledCanvasModifier() {
+        assertTrue("ElevationProfile.kt must exist", elevationProfileFile.exists())
+        val content = elevationProfileFile.readText()
+
+        // 1. Verify both overloads declare fillParentHeight: Boolean = false (REQ-UI-339 / TST-UI-299.5)
+        val fillParentHeightCount = Regex("""fillParentHeight:\s*Boolean\s*=\s*false""").findAll(content).count()
+        assertEquals("Both ElevationProfile overloads must declare fillParentHeight: Boolean = false", 2, fillParentHeightCount)
+
+        // 2. Verify conditional canvas modifier attachment
+        assertTrue(
+            "ElevationProfile must attach defaultMinSize(minHeight = totalCanvasHeight).fillMaxHeight() when fillParentHeight is true",
+            content.contains(".defaultMinSize(minHeight = totalCanvasHeight)\n                .fillMaxHeight()") ||
+                    content.contains(".defaultMinSize(minHeight = totalCanvasHeight).fillMaxHeight()")
+        )
+        assertTrue(
+            "ElevationProfile must attach .height(totalCanvasHeight) when fillParentHeight is false",
+            content.contains(".height(totalCanvasHeight)")
+        )
+    }
 }

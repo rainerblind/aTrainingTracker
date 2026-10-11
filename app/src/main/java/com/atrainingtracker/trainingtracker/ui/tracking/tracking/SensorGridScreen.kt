@@ -95,10 +95,12 @@ import com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMap
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.MapContentScope
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
+import com.atrainingtracker.trainingtracker.routes.ForkDecisionState
 import com.atrainingtracker.trainingtracker.routes.ForkNavigationRepository
 import com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepository
 import com.atrainingtracker.trainingtracker.routes.ReturnNavigationState
 import com.atrainingtracker.trainingtracker.routes.TurnByTurnNavigationRepository
+import com.atrainingtracker.trainingtracker.routes.TurnNavigationState
 import com.atrainingtracker.trainingtracker.ui.climbs.LiveClimbSheet
 import com.atrainingtracker.trainingtracker.ui.routes.ForkDecisionCard
 import com.atrainingtracker.trainingtracker.ui.routes.ReturnNavigationHud
@@ -478,12 +480,12 @@ fun SensorGridScreen(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // 1. The Sensor Grid (Scrollable)
-                    // This Column will only take as much space as the sensors need.
+                    // 1. The Sensor Grid (Scrollable, flexibly constrained by weight to prevent crowding bottom cockpit views)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .verticalScroll(rememberScrollState()),
+                            .verticalScroll(rememberScrollState())
+                            .weight(1f, fill = false),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
                     ) {
@@ -507,7 +509,7 @@ fun SensorGridScreen(
                                             cardElevation = effectiveElevation,
                                             border = effectiveBorder,
                                             onStartMove = {},
-                                            onEdit = {},
+                                            onEdit = { gridActions.onEditField(fieldState) },
                                             onDelete = {}
                                         )
                                     }
@@ -517,66 +519,118 @@ fun SensorGridScreen(
                     }
 
                     // 2. The Map (Expanded - Isolated Recomposition Barrier, REQ-UI-326 / ATT-2944)
-                    // By using weight(1f) here, the Map will fill every pixel between
-                    // the bottom of the sensors and the bottom of the screen.
-                    TrackingMapContainer(
-                        mapState = state.mapState,
-                        currentLocationFlow = currentLocationFlow,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f) // Fills remaining space
-                    )
+                    // When showMap is true, anchors NavigationHintsOverlay over the top edge of the map (REQ-UI-335 / ATT-3100)
+                    if (state.mapState.showMap) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f) // Fills remaining space
+                        ) {
+                            TrackingMapContainer(
+                                mapState = state.mapState,
+                                currentLocationFlow = currentLocationFlow,
+                                modifier = Modifier.fillMaxSize()
+                            )
 
-                    // 3. The Elevation Profile (Below the Map)
-                    if (state.showElevationProfile && state.pathPoints.isNotEmpty()) {
+                            if (state.showNavigationHints) {
+                                NavigationHintsOverlay(
+                                    state = state,
+                                    tuningConfig = tuningConfig,
+                                    navigationState = navState,
+                                    returnNavigationState = returnNavState,
+                                    forkDecisionState = forkDecisionState,
+                                    onDismissReturnNav = { returnNavRepo.dismissHud() },
+                                    onSelectForkRoute = { routeId -> forkNavRepo.selectRouteManually(routeId) },
+                                    onDismissFork = { forkNavRepo.dismissPrompt() },
+                                    modifier = Modifier.align(Alignment.TopCenter)
+                                )
+                            }
+                        }
+                    }
+
+                    // 3. The Elevation Profile (Below the Map or taking remaining space if map is hidden, REQ-UI-339 / ATT-3107)
+                    if (state.showElevationProfile && state.pathPoints.size >= 2) {
                         Surface(
-                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(
+                                    if (!state.mapState.showMap) Modifier.weight(1f) else Modifier
+                                )
+                                .padding(top = 8.dp)
                         ) {
                             ElevationProfile(
                                 pathPoints = state.pathPoints,
                                 currentDistance = state.pathPoints.lastOrNull()?.distance,
-                                modifier = Modifier.fillMaxWidth()
+                                fillParentHeight = !state.mapState.showMap,
+                                modifier = if (!state.mapState.showMap) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
                             )
                         }
                     }
                 }
 
-                // Top-Level Ambient Navigation Overlays (REQ-MAP-031, REQ-MAP-029, REQ-UI-324, ATT-2874, ATT-2938, ATT-2941)
-                // Floats on top at Alignment.TopCenter, strictly gated by state.showNavigationHints
-                if (state.showNavigationHints) {
-                    Column(
-                        modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
-                    ) {
-                        TurnPromptBanner(
-                            navigationState = navState,
-                            promptsEnabled = state.showNavigationHints && tuningConfig.turnPromptsEnabled,
-                            overlayAlpha = tuningConfig.navigationCueTransparency,
-                            dismissDurationSec = tuningConfig.navigationCueDismissDurationSec
-                        )
-
-                        ReturnNavigationHud(
-                            navigationState = returnNavState,
-                            overlayAlpha = tuningConfig.navigationCueTransparency,
-                            onDismiss = { returnNavRepo.dismissHud() }
-                        )
-
-                        ForkDecisionCard(
-                            decisionState = forkDecisionState,
-                            overlayAlpha = tuningConfig.navigationCueTransparency,
-                            onRouteSelected = { routeId ->
-                                forkNavRepo.selectRouteManually(routeId)
-                            },
-                            onDismiss = {
-                                forkNavRepo.dismissPrompt()
-                            },
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        )
-                    }
+                // Fallback Ambient Navigation Overlays when map is NOT present (REQ-UI-335 / ATT-3100)
+                // Floats on top at Alignment.TopCenter only when state.mapState.showMap is false.
+                if (!state.mapState.showMap && state.showNavigationHints) {
+                    NavigationHintsOverlay(
+                        state = state,
+                        tuningConfig = tuningConfig,
+                        navigationState = navState,
+                        returnNavigationState = returnNavState,
+                        forkDecisionState = forkDecisionState,
+                        onDismissReturnNav = { returnNavRepo.dismissHud() },
+                        onSelectForkRoute = { routeId -> forkNavRepo.selectRouteManually(routeId) },
+                        onDismissFork = { forkNavRepo.dismissPrompt() },
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
                 }
             }
         }
     }
 
+    }
+}
+
+/**
+ * Ambient navigation overlay displaying turn prompts, return navigation HUD, and fork decisions (REQ-UI-335 / ATT-3100).
+ * Anchored over top edge of map view when present, or at the top of tracking tab when map is absent.
+ */
+@Composable
+fun NavigationHintsOverlay(
+    state: TrackingScreenState,
+    tuningConfig: TuningConfig,
+    navigationState: TurnNavigationState,
+    returnNavigationState: ReturnNavigationState,
+    forkDecisionState: ForkDecisionState?,
+    onDismissReturnNav: () -> Unit,
+    onSelectForkRoute: (Long) -> Unit,
+    onDismissFork: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (state.showNavigationHints) {
+        Column(
+            modifier = modifier.fillMaxWidth()
+        ) {
+            TurnPromptBanner(
+                navigationState = navigationState,
+                promptsEnabled = state.showNavigationHints && tuningConfig.turnPromptsEnabled,
+                overlayAlpha = tuningConfig.navigationCueTransparency,
+                dismissDurationSec = tuningConfig.navigationCueDismissDurationSec
+            )
+
+            ReturnNavigationHud(
+                navigationState = returnNavigationState,
+                overlayAlpha = tuningConfig.navigationCueTransparency,
+                onDismiss = onDismissReturnNav
+            )
+
+            ForkDecisionCard(
+                decisionState = forkDecisionState,
+                overlayAlpha = tuningConfig.navigationCueTransparency,
+                onRouteSelected = onSelectForkRoute,
+                onDismiss = onDismissFork,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+        }
     }
 }
 

@@ -70,12 +70,15 @@ fun ClimbOnMapScreen(
     val endMarker = remember(context) {
         createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint)
     }
+    val normalizedClimbPath = remember(climb) {
+        climb.normalizedPathPoints
+    }
 
     MapDetailLayout(
         bSportType = bSportType,
         zoomFocus = if (climbBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
         initialBounds = climbBounds,
-        activeScrubPath = climb.pathPoints,
+        activeScrubPath = normalizedClimbPath,
         useStatusBarsPadding = useStatusBarsPadding,
         showMap = showMap,
         onHeaderHeightMeasured = onHeaderHeightMeasured,

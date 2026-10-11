@@ -24,6 +24,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.routes.RouteAutoDetector
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
@@ -508,6 +509,135 @@ class RouteSelectorViewModelTest {
         advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.routes.size)
         assertEquals(1L, viewModel.uiState.value.routes[0].summary.id)
+    }
+
+    @Test
+    fun testSelectRoute_bikeRoute_automaticallySynchronizesSportTypeToBike() = runTest {
+        allRoutesFlow.value = sampleRoutes() // Route 2 is BIKE
+        val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
+        val viewModel = RouteSelectorViewModel(
+            routesRepository = mockRepository,
+            autoDetector = autoDetector,
+            tuningPreferencesDataStore = mockTuningDataStore,
+            banalServiceRepository = mockBanalRepo,
+            sharingStarted = SharingStarted.Eagerly
+        )
+        advanceUntilIdle()
+
+        viewModel.selectRoute(2L)
+
+        verify(exactly = 1) { mockRepository.setActiveNavigatedRoute(2L) }
+        verify(exactly = 1) { mockBanalRepo.setUserSelectedSportType(BSportType.BIKE) }
+    }
+
+    @Test
+    fun testSelectRoute_runRoute_automaticallySynchronizesSportTypeToRun() = runTest {
+        allRoutesFlow.value = sampleRoutes() // Route 1 is RUN
+        val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
+        val viewModel = RouteSelectorViewModel(
+            routesRepository = mockRepository,
+            autoDetector = autoDetector,
+            tuningPreferencesDataStore = mockTuningDataStore,
+            banalServiceRepository = mockBanalRepo,
+            sharingStarted = SharingStarted.Eagerly
+        )
+        advanceUntilIdle()
+
+        viewModel.selectRoute(1L)
+
+        verify(exactly = 1) { mockRepository.setActiveNavigatedRoute(1L) }
+        verify(exactly = 1) { mockBanalRepo.setUserSelectedSportType(BSportType.RUN) }
+    }
+
+    @Test
+    fun testSelectRoute_unknownOrConflictRoute_doesNotAlterSportType() = runTest {
+        val unknownRoute = RouteWithPath(
+            summary = RouteSummary(
+                id = 3L,
+                externalId = "ext_3",
+                name = "Unknown Sport Route",
+                description = "Generic route",
+                isSelected = false,
+                distance = 1000.0,
+                elevationGain = 10.0,
+                bSportType = BSportType.UNKNOWN,
+                source = RouteSource.LOCAL_GPX,
+                syncedAt = 2000L
+            ),
+            path = emptyList()
+        )
+        val conflictRoute = RouteWithPath(
+            summary = RouteSummary(
+                id = 4L,
+                externalId = "ext_4",
+                name = "Conflict Sport Route",
+                description = "Mixed sport route",
+                isSelected = false,
+                distance = 1000.0,
+                elevationGain = 10.0,
+                bSportType = BSportType.CONFLICT,
+                source = RouteSource.LOCAL_GPX,
+                syncedAt = 2000L
+            ),
+            path = emptyList()
+        )
+        allRoutesFlow.value = sampleRoutes() + listOf(unknownRoute, conflictRoute)
+        val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
+        val viewModel = RouteSelectorViewModel(
+            routesRepository = mockRepository,
+            autoDetector = autoDetector,
+            tuningPreferencesDataStore = mockTuningDataStore,
+            banalServiceRepository = mockBanalRepo,
+            sharingStarted = SharingStarted.Eagerly
+        )
+        advanceUntilIdle()
+
+        viewModel.selectRoute(3L)
+        verify(exactly = 1) { mockRepository.setActiveNavigatedRoute(3L) }
+        verify(exactly = 0) { mockBanalRepo.setUserSelectedSportType(any()) }
+
+        viewModel.selectRoute(4L)
+        verify(exactly = 1) { mockRepository.setActiveNavigatedRoute(4L) }
+        verify(exactly = 0) { mockBanalRepo.setUserSelectedSportType(any()) }
+    }
+
+    @Test
+    fun testActivateCandidate_bikeRoute_automaticallySynchronizesSportTypeToBike() = runTest {
+        allRoutesFlow.value = sampleRoutes() // Route 2 is BIKE
+        val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
+        val viewModel = RouteSelectorViewModel(
+            routesRepository = mockRepository,
+            autoDetector = autoDetector,
+            tuningPreferencesDataStore = mockTuningDataStore,
+            banalServiceRepository = mockBanalRepo,
+            sharingStarted = SharingStarted.Eagerly
+        )
+        advanceUntilIdle()
+
+        viewModel.activateCandidate(2L)
+
+        verify(exactly = 1) { mockRepository.setActiveNavigatedRoute(2L) }
+        verify(exactly = 1) { mockBanalRepo.setUserSelectedSportType(BSportType.BIKE) }
+    }
+
+    @Test
+    fun testStopRoute_and_clearRoute_doesNotAlterSportType() = runTest {
+        val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
+        val viewModel = RouteSelectorViewModel(
+            routesRepository = mockRepository,
+            autoDetector = autoDetector,
+            tuningPreferencesDataStore = mockTuningDataStore,
+            banalServiceRepository = mockBanalRepo,
+            sharingStarted = SharingStarted.Eagerly
+        )
+
+        viewModel.stopRoute()
+        verify(exactly = 1) { mockRepository.setActiveNavigatedRoute(null) }
+        verify(exactly = 0) { mockBanalRepo.setUserSelectedSportType(any()) }
+
+        viewModel.clearRoute()
+        verify(exactly = 2) { mockRepository.setActiveNavigatedRoute(null) }
+        verify(exactly = 0) { mockBanalRepo.setUserSelectedSportType(any()) }
     }
 }
 

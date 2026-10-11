@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.climbs
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -40,13 +41,18 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbData
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbStatus
+import com.atrainingtracker.trainingtracker.ui.map.PathPoint
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.google.android.gms.maps.model.LatLng
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -189,7 +195,7 @@ fun LiveClimbSheet(
             liveClimb = liveClimb,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
+                .height(68.dp)
         )
     }
 }
@@ -280,6 +286,7 @@ private fun ClimbProfileCanvas(
 ) {
     val pathPoints = liveClimb.climb.pathPoints
     val progressFraction = liveClimb.currentProgressFraction.coerceIn(0f, 1f)
+    val groundLineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
 
     Canvas(modifier = modifier) {
         val width = size.width
@@ -354,6 +361,15 @@ private fun ClimbProfileCanvas(
             prevX = x
             prevY = y
         }
+
+        // Ground baseline line (REQ-UI-341)
+        val groundY = height - bottomPadding
+        drawLine(
+            color = groundLineColor,
+            start = Offset(0f, groundY),
+            end = Offset(width, groundY),
+            strokeWidth = 1.dp.toPx()
+        )
 
         // 2. Dynamic Rider Pin
         if (liveClimb.status == LiveClimbStatus.ON_CLIMB || liveClimb.status == LiveClimbStatus.FINISHED) {
@@ -435,6 +451,109 @@ private fun ClimbHudMetric(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
+        )
+    }
+}
+
+// =============================================================================
+// Preview Fixtures & Multi-State Previews (REQ-UI-341, ATT-3103)
+// =============================================================================
+
+private fun createMockLiveClimbData(
+    status: LiveClimbStatus = LiveClimbStatus.ON_CLIMB,
+    distanceToStart: Double = 0.0,
+    distanceToSummit: Double = 850.0,
+    remainingElevationGain: Double = 62.0,
+    currentGradePercent: Double = 7.4,
+    currentProgressFraction: Float = 0.45f
+): LiveClimbData {
+    val samplePoints = listOf(
+        PathPoint(distance = 0.0, latLng = LatLng(47.5, 11.5), altitude = 600.0),
+        PathPoint(distance = 400.0, latLng = LatLng(47.502, 11.502), altitude = 630.0),
+        PathPoint(distance = 800.0, latLng = LatLng(47.504, 11.504), altitude = 670.0),
+        PathPoint(distance = 1200.0, latLng = LatLng(47.506, 11.506), altitude = 715.0),
+        PathPoint(distance = 1550.0, latLng = LatLng(47.508, 11.508), altitude = 745.0)
+    )
+    val climb = Climb(
+        id = 1L,
+        name = "Alpe d'Huez Test Climb",
+        startLat = 47.5,
+        startLng = 11.5,
+        endLat = 47.508,
+        endLng = 11.508,
+        distanceMeters = 1550.0,
+        elevationGainMeters = 145.0,
+        avgGradePercent = 9.3,
+        maxGradePercent = 14.2,
+        category = ClimbCategory.CAT_2,
+        pathPoints = samplePoints
+    )
+    return LiveClimbData(
+        climb = climb,
+        status = status,
+        distanceToStart = distanceToStart,
+        distanceToSummit = distanceToSummit,
+        remainingElevationGain = remainingElevationGain,
+        currentGradePercent = currentGradePercent,
+        currentProgressFraction = currentProgressFraction,
+        routeIndex = 2,
+        totalRouteClimbs = 5
+    )
+}
+
+@Preview(name = "Light Mode - On Climb", showBackground = true)
+@Composable
+fun LiveClimbSheet_OnClimb_Preview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        LiveClimbSheet(
+            liveClimb = createMockLiveClimbData(
+                status = LiveClimbStatus.ON_CLIMB,
+                currentProgressFraction = 0.45f
+            )
+        )
+    }
+}
+
+@Preview(name = "Dark AMOLED Mode - On Climb", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun LiveClimbSheet_OnClimb_Dark_Preview() {
+    ATrainingTrackerTheme(darkTheme = true, amoled = true) {
+        LiveClimbSheet(
+            liveClimb = createMockLiveClimbData(
+                status = LiveClimbStatus.ON_CLIMB,
+                currentProgressFraction = 0.45f
+            )
+        )
+    }
+}
+
+@Preview(name = "Approaching Climb", showBackground = true)
+@Composable
+fun LiveClimbSheet_Approaching_Preview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        LiveClimbSheet(
+            liveClimb = createMockLiveClimbData(
+                status = LiveClimbStatus.APPROACHING,
+                distanceToStart = 350.0,
+                distanceToSummit = 1550.0,
+                remainingElevationGain = 145.0,
+                currentProgressFraction = 0f
+            )
+        )
+    }
+}
+
+@Preview(name = "Summit Finished", showBackground = true)
+@Composable
+fun LiveClimbSheet_Finished_Preview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        LiveClimbSheet(
+            liveClimb = createMockLiveClimbData(
+                status = LiveClimbStatus.FINISHED,
+                distanceToSummit = 0.0,
+                remainingElevationGain = 0.0,
+                currentProgressFraction = 1f
+            )
         )
     }
 }

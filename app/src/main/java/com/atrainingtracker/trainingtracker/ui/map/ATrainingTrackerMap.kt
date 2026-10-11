@@ -199,11 +199,10 @@ fun ATrainingTrackerMap(
 
     androidx.compose.runtime.CompositionLocalProvider(LocalMapStyle provides style.copy(isDark = isDark)) {
         BoxWithConstraints(modifier = modifier) {
-            val topPadding = if (zoomFocus == MapZoomFocus.FOLLOW_ME) {
-                maxHeight * (tuningConfig.mapFollowMeLookaheadPaddingPercent / 100f)
-            } else {
-                0.dp
-            }
+            // REQ-MAP-046 / Rule 33: Unified Viewport Anchor Authority
+            // Forward lookahead is handled directly by followMeController via analytical target projection,
+            // completely decoupling GoogleMap content padding to eliminate competing layout recentering loops.
+            val topPadding = 0.dp
 
             GoogleMap(
                 modifier = Modifier
@@ -254,7 +253,9 @@ fun ATrainingTrackerMap(
                     baseZoom = tuningConfig.mapFollowMeInitialZoom,
                     speedZoomEnabled = tuningConfig.mapFollowMeSpeedZoomEnabled,
                     cruisingZoom = tuningConfig.mapFollowMeCruisingZoom,
-                    tiltAngle = tuningConfig.mapFollowMeTiltAngle
+                    tiltAngle = tuningConfig.mapFollowMeTiltAngle,
+                    lookaheadPaddingPercent = tuningConfig.mapFollowMeLookaheadPaddingPercent,
+                    viewportHeightDp = maxHeight.value
                 )
 
                 currentLocation?.let { loc ->

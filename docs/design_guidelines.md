@@ -73,6 +73,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
   * When charts in a composite layout (e.g. `MapDetailLayout`) use different X-axis domains, the parent container **MUST NOT store a single shared raw metric scalar** for viewport offset / start position.
   * Storing seconds in a variable read as meters corrupts zoom and pan clamping boundaries.
   * **Solution**: Maintain independent domain offsets (`elevationStartDist` vs. `telemetryStartTimeSec`) or normalize continuous viewport pans into a **dimensionless fraction ($0.0 \dots 1.0$)** that is mapped to native units at the chart boundary.
+* **Sub-Entity Coordinate Space Normalization (Local vs. Global Domain)**:
+  * Whenever sub-entity segments, climbs, or intervals are displayed in an inspection chart (e.g. `ClimbDetailSheet`, `SegmentDetailSheet`), their distance domain coordinates MUST be normalized to the entity's local length ($[0, \text{length}]$) rather than inheriting the parent route's global coordinate space ($[0, \text{totalRouteDistance}]$).
+  * Passing global route coordinates to sub-entity elevation profile charts squishes the entity into a tiny sliver at the far edge and leaves the chart mostly blank (ATT-3053 / ATT-3105).
 
 ### 2.2 Touch, Pan & Gesture Interactions
 1. **Lifecycle Key Stability**:
@@ -84,6 +87,28 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
    * Dominant horizontal motion ($\Delta x \ge \Delta y$ past touch slop) must consume pointers and accumulate pan delta smoothly.
 3. **Family Interaction Parity**:
    * When implementing gesture or zoom improvements across charts, verify tactile feel, travel distance, and responsiveness across **every sister chart** (Elevation Profile, Speed/Pace, Heart Rate, Power).
+
+### 2.3 Elevation Profile Sizing & Adaptive Height Invariant
+* **Vertical Range Scaling**:
+  * The elevation profile does NOT expand to arbitrary flexible screen heights (e.g. taking half the screen with `weight(1f)` or `fillMaxHeight()`).
+  * Its height is strictly determined by the canonical `calculateElevationProfileHeight(range)` algorithm, scaling adaptively based on the track's total elevation difference ($\Delta H = H_{\max} - H_{\min}$):
+    * **Minimum height**: `70.dp` (for flat or low-relief terrain, $\Delta H \approx 0\text{ m}$)
+    * **Maximum height**: `200.dp` (at $\Delta H \ge 1000\text{ m}$)
+    * **Curved progression**: $\text{height} = 70 + (\text{range} / 1000)^{0.6} \times (200 - 70)$
+* **Cockpit Space Allocation**:
+  * On tracking screens where the map is disabled and only the elevation profile is shown, the elevation profile retains its fixed adaptive height based on the track's elevation difference.
+  * The sensor grid column absorbs the flexible remaining vertical space (via `weight(1f, fill = false)`), wrapping naturally if there are few tiles and scrolling smoothly if there are many tiles, without stretching the elevation profile out of proportion (ATT-3107 / ATT-3173).
+
+### 2.4 Continuous Linear Projection for Sparse Geometry Progress Tracking
+* **Linear Projection Invariant**:
+  * Progress tracking along geometric paths (climbs, segments, routes) MUST NOT rely exclusively on nearest-neighbor discrete vertex quantization (`path[closestIdx]`).
+  * On straight road sections or imported GPX tracks where points may be 50–200 m apart, nearest-neighbor snapping causes telemetry metrics (remaining distance, elevation gain, current gradient) and visual rider pins to freeze and jump discontinuously.
+  * Progress tracking algorithms MUST project the athlete's current coordinate vector onto the nearest line segment $[P_i, P_{i+1}]$ to determine the fractional progress $s \in [0.0, 1.0]$:
+    $$\vec{v} = P_{i+1} - P_i$$
+    $$s = \frac{(L - P_i) \cdot \vec{v}}{\|\vec{v}\|^2} \in [0.0, 1.0]$$
+    $$\text{dist} = P_i.\text{dist} + s \times (P_{i+1}.\text{dist} - P_i.\text{dist})$$
+    $$\text{alt} = P_i.\text{alt} + s \times (P_{i+1}.\text{alt} - P_i.\text{alt})$$
+  * Telemetry and visual marker positions along polyline profiles must be interpolated continuously using this projected distance and altitude (ATT-3103 / ATT-3174).
 
 ---
 
@@ -97,6 +122,10 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Instant Persistence & Defensive Defaults**:
   * Settings mutations must persist immediately to `DataStore`.
   * Deserialization must be defensive: deprecated or removed enum options (e.g. legacy `"BOTH"`) must cleanly resolve to modern defaults without errors or UI disruption.
+
+### 3.1 Explanatory Scale Direction in Settings Sliders
+* **Scale Direction Transparency**:
+  * Whenever exposing numerical sliders or continuous values in user settings (such as map zoom levels, camera tilt angles, sensitivity curves, or lookahead paddings), the preference subtitle or hint text MUST explicitly explain the physical direction of the scale (e.g., *"Höherer Wert = Näher herangezoomt"* / *"Niedrigerer Wert = Weiträumigere Übersicht"*) (ATT-2946 / ATT-3054 / ATT-3171).
 
 ---
 
@@ -150,4 +179,37 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Semi-Transparency for Glanceability**: Overlays must use a semi-transparent surface background (e.g. `surface` / `surfaceContainer` at ~80–85% opacity, `TTAlpha`) paired with a subtle Royal Blue border accent (`TTColor.RouteActiveNavigation`), so that athletes can immediately register the direction cue while still discerning underlying telemetry values and metrics behind the banner.
 * **Transient Auto-Dismiss (3–5 Seconds)**: Navigation cues are time-sensitive and ephemeral. Upon being triggered (or once a maneuver instruction is issued), the cue must automatically vanish after a brief, configurable interval (3–5 seconds) via a smooth animation (fade or slide), promptly returning the screen to full telemetry focus without requiring manual dismissal while riding.
 * **Expert Settings Customization**: Both overlay transparency (e.g. 50%–100%, default 80%) and auto-dismiss duration (e.g. 2–10 seconds or persistent until passed, default 4 seconds) must be exposed as configurable parameters in the Expert Settings (*Experteneinstellungen*), allowing athletes to tailor cue presentation to their ambient lighting conditions, cockpit layout, and riding speed.
+
+### 5.8 Live Tracking Bottom Sheets (Segments & Climbs)
+* **Default Fully Expanded Presentation**:
+  * Live Segment (`LiveSegmentSheet`) and Climb (`LiveClimbSheet`) bottom sheets during active tracking (`SensorGridScreen`) must pop up **fully expanded** (`SheetValue.Expanded`) by default instead of partially expanded (`SheetValue.PartiallyExpanded` / peek height).
+  * This provides immediate visibility of the elevation profile graph, instantaneous gradient profile, and live pacing telemetry HUD without requiring manual touch interaction or swipe gestures while riding or running.
+* **Dismissal and Collapse Ergonomics**:
+  * The bottom sheet retains swipe gestures (`sheetSwipeEnabled = true`), allowing athletes to manually collapse to peek height or dismiss if they intentionally wish to focus on underlying sensor tiles.
+
+### 5.9 Default Tracking Screens Configuration (Fresh Install)
+* **Purpose-Driven Screen Archetypes**:
+  * On a clean install or database creation (`TrackingViewsDbHelper.onCreate()`), three focused tracking tabs are generated per activity type, each tuned to a distinct athletic perspective:
+    1. **Standard** (`R.string.text_default`): Primary telemetry cockpit. Configured with in-ride intelligence enabled (**Navigation Hints**, **Live Segments**, and **Live Climbs**), without map canvas or lap button clutter.
+    2. **Map** (`R.string.tab_map`): Spatial guidance perspective. Configured with **Map Canvas**, **Elevation Profile**, and **Navigation Hints** enabled; live climb and segment bottom sheets are disabled to preserve an unobstructed map canvas.
+    3. **Laps** (`R.string.tab_laps`): Structured interval perspective. Configured with the **Lap Button** enabled; navigation cues, map, elevation profile, live climbs, and live segments are disabled to keep pure focus on lap splits.
+* **Canonical Default Toggle Matrix**:
+
+| Tracking Tab | Map Canvas | Elevation Profile | Lap Button | Live Segments | Live Climbs | Navigation Hints |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Standard** (`Layout 1`) | ❌ Off | ❌ Off | ❌ Off | ✅ **On** | ✅ **On** | ✅ **On** |
+| **Map** (`Layout 2`) | ✅ **On** | ✅ **On** | ❌ Off | ❌ Off | ❌ Off | ✅ **On** |
+| **Laps** (`Layout 3`) | ❌ Off | ❌ Off | ✅ **On** | ❌ Off | ❌ Off | ❌ Off |
+
+
+---
+
+## 6. Map Viewport & Camera Guidelines
+
+### 6.1 Unified Viewport Anchor Authority for Map Tracking
+* **Single Spatial Authority**:
+  * Map camera tracking, Follow-Me lookahead offsets, and viewport content paddings MUST share a single spatial authority to prevent conflicting animation loops and viewport jitter.
+  * Avoid competing camera updates where Google Maps `contentPadding` recalculation in `BoxWithConstraints` fights with `cameraPositionState.animate(...)`. Keep map paddings symmetric or fixed, and implement forward camera lookahead analytically via target coordinate projection (ATT-3054 / ATT-3102).
+
+
 

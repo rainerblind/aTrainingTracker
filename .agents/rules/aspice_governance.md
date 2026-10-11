@@ -173,17 +173,28 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * The tool must verify that controller hardware supports required roles (e.g. LE peripheral mode), that D-Bus/system permissions are granted, and that target ADB devices are online. If prerequisites fail, the tool must surface clear actionable diagnostics rather than failing silently.
 * Origin: Sprint 2026-41.6, ATT-2969 / ATT-3055 — Replay tool passed mock unit tests but failed to advertise BLE or inject GPS on host due to BlueZ D-Bus permissions and missing device mock location configuration.
 
-## 31. Explanatory Scale Direction in Settings Sliders
-* **Rule**: Whenever exposing numerical sliders or continuous values in user settings (such as map zoom levels, camera tilt angles, sensitivity curves, or lookahead paddings), the preference subtitle or hint text MUST explicitly explain the physical direction of the scale (e.g., *"Höherer Wert = Näher herangezoomt"* / *"Niedrigerer Wert = Weiträumigere Übersicht"*).
-* Origin: Sprint 2026-41.6, ATT-2946 / ATT-3054 — Map camera zoom sliders did not communicate whether higher numbers meant closer or farther away.
+## 31. Explanatory Scale Direction in Settings Sliders (UI Design Guideline)
+* **Rule**: Governed authoritatively by [`docs/design_guidelines.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/design_guidelines.md) Section 3.1 (*Explanatory Scale Direction in Settings Sliders*). Whenever exposing numerical sliders or continuous values in user settings, the preference subtitle or hint text MUST explicitly explain the physical direction of the scale.
+* Origin: Sprint 2026-41.6, ATT-2946 / ATT-3054.
 
-## 32. Coordinate Space Normalization for Sub-Entity Inspection Charts
-* **Rule**: Whenever sub-entity segments, climbs, or intervals are displayed in an inspection chart (e.g. `ClimbDetailSheet`, `SegmentDetailSheet`), their distance domain coordinates MUST be normalized to the entity's local length ($[0, \text{length}]$) rather than inheriting the parent route's global coordinate space ($[0, \text{totalRouteDistance}]$).
-* Passing global route coordinates to sub-entity elevation profile charts squishes the entity into a tiny sliver at the far edge and leaves the chart mostly blank.
+## 32. Coordinate Space Normalization for Sub-Entity Inspection Charts (UI Design Guideline)
+* **Rule**: Governed authoritatively by [`docs/design_guidelines.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/design_guidelines.md) Section 2.1 (*Coordinate Space & Cross-Domain Integrity*). Sub-entity inspection charts (climbs, segments) MUST normalize distance coordinates to $[0, \text{length}]$ rather than inheriting the parent route's global coordinate space.
 * Origin: Sprint 2026-41.7, ATT-3053 / ATT-3105.
 
-## 33. Unified Viewport Anchor Authority for Map Tracking
-* **Rule**: Map camera tracking, Follow-Me lookahead offsets, and viewport content paddings MUST share a single spatial authority to prevent conflicting animation loops and viewport jitter.
-* Avoid competing camera updates where Google Maps `contentPadding` recalculation in `BoxWithConstraints` fights with `cameraPositionState.animate(...)`.
+## 33. Unified Viewport Anchor Authority for Map Tracking (UI Design Guideline)
+* **Rule**: Governed authoritatively by [`docs/design_guidelines.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/design_guidelines.md) Section 6.1 (*Unified Viewport Anchor Authority for Map Tracking*). Map camera tracking, lookahead offsets, and viewport content paddings MUST share a single spatial authority to prevent conflicting animation loops and viewport jitter.
 * Origin: Sprint 2026-41.7, ATT-3054 / ATT-3102.
+
+## 34. Chesterton's Fence for Empty Callback Lambdas & Gesture Contract Tests
+* **Rule**: When refactoring screens, views, or container composables, developers and AI agents MUST NOT pass an empty lambda (`{}`) or suppress an existing callback parameter without first inspecting all internal call sites within the child component to audit every place that callback is invoked. Passing `{}` is functionally a deletion of code and feature behavior.
+* **Intent-Explicit Callback Signatures**: Avoid dual-use generic callbacks (e.g. `onEdit` triggered on single-click in configuration mode, but on long-click in tracking mode). Name callbacks explicitly after athlete intent (e.g. `onConfigureField`, `onPickTileToMove`).
+* **Gesture Contract Tests**: Interactive components handling multi-gesture inputs (`combinedClickable`, gestures) MUST have automated gesture contract tests asserting callback dispatch across all supported screen modes (`TRACKING`, `CONFIGURATION`, `PREVIEW`).
+* Origin: Sprint 2026-41.8, ATT-3101 / ATT-3175.
+
+## 35. Clean Hardware Teardown and Orphan Defense on Persistence Deletion
+* **Rule**: When an entity is deleted from local persistence (database), the background service managing active hardware connections (`BANALService`) MUST be immediately notified to cleanly disconnect and unregister the hardware resource.
+* UI ViewModels MUST defensively discard orphaned IDs that do not exist in the database rather than constructing invalid fallback data models (`DeviceType.DUMMY`) that open broken or dimmed modal dialogs.
+* Origin: Sprint 2026-41.8, ATT-3099 / ATT-3169.
+
+
 

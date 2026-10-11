@@ -163,6 +163,25 @@ class ForkDecisionCardTest {
         assertFalse("ForkDecisionCard must NOT render fork_select_hint", content.contains("R.string.fork_select_hint"))
     }
 
+    @Test
+    fun forkDecisionCard_enforcesZeroTonalElevationAndCleanSurfaces() {
+        val sourceFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/ForkDecisionCard.kt")
+        assertTrue("ForkDecisionCard.kt source must exist", sourceFile.exists())
+        val content = sourceFile.readText()
+
+        // REQ-UI-337 Clause 1: Strict zero tonal elevation across all containers (TST-UI-297.1)
+        assertTrue("Outer container must specify tonalElevation = 0.dp", content.contains("tonalElevation = 0.dp"))
+        assertTrue("Outer container must specify shadowElevation = 6.dp", content.contains("shadowElevation = 6.dp"))
+        assertFalse("tonalElevation must NOT be 1.dp or higher", content.contains("tonalElevation = 1.dp"))
+
+        // REQ-UI-337 Clause 2: Zero surfaceVariant container backgrounds (TST-UI-297.2)
+        assertFalse("ForkDecisionCard must NOT use surfaceVariant backgrounds", content.contains("MaterialTheme.colorScheme.surfaceVariant"))
+
+        // REQ-UI-337 Clause 2: Overlay alpha uniformity in ForkDirectionGroup (TST-UI-297.3)
+        assertTrue("ForkDirectionGroup must support overlayAlpha parameter", content.contains("overlayAlpha: Float"))
+        assertTrue("ForkDirectionGroup must apply overlayAlpha to surface color", content.contains("surface.copy(alpha = overlayAlpha)"))
+    }
+
     private fun findResDirectory(): File {
         val candidates = listOf(
             File("app/src/main/res"),

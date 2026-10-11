@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.ui.devices.devicelist
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -61,11 +62,18 @@ fun DeviceItem(
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
 
+    val highlightBorder = if (device.isNewlyDiscovered) {
+        BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+    } else {
+        null
+    }
+
     Box {
         MappableListItem(
             modifier = modifier,
             onClick = onItemClick,
-            onLongClick = { showContextMenu = true }
+            onLongClick = { showContextMenu = true },
+            border = highlightBorder
         ) {
             Box(
                 modifier = Modifier
@@ -128,6 +136,22 @@ fun DeviceItem(
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis
                                     )
+
+                                    if (device.isNewlyDiscovered) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        ) {
+                                            Text(
+                                                text = stringResource(id = R.string.devices_newly_discovered_badge),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
                                 }
                                 
                                 if (device.isConnected) {
