@@ -174,8 +174,8 @@ class GoogleDriveUploaderTest {
         every { mockPrefs.getString(TrainingApplication.SP_GOOGLE_DRIVE_AUTH_TOKEN, null) } returns "valid_token"
         every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
 
-        every { mockClient.ensureFolderHierarchy(listOf("aTrainingTracker", "Workouts")) } returns "workouts_folder_id"
-        every { mockClient.uploadOrOverwriteFile("workouts_folder_id", "workout.fit", any(), any()) } returns true
+        every { mockClient.ensureFolderHierarchy(listOf("aTrainingTracker", "FIT")) } returns "fit_folder_id"
+        every { mockClient.uploadOrOverwriteFile("fit_folder_id", "workout.fit", any(), any()) } returns true
 
         val uploader = createTestUploader(tempFolder.root)
         val result = uploader.doExport(exportInfo)
@@ -183,6 +183,34 @@ class GoogleDriveUploaderTest {
         assertTrue(result.success())
         verify { mockEditor.putString(TrainingApplication.SP_GOOGLE_DRIVE_LAST_SYNC_STATUS, "SUCCESS") }
         verify { mockEditor.putLong(TrainingApplication.SP_GOOGLE_DRIVE_LAST_SYNC, any()) }
+    }
+
+    @Test
+    fun testDoExport_formatSpecificFolders_tcxGpxCsvTargetRespectiveDirectories() {
+        every { mockPrefs.getString(TrainingApplication.SP_GOOGLE_DRIVE_AUTH_TOKEN, null) } returns "valid_token"
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
+
+        val formats = listOf(
+            Triple(FileFormat.TCX, "TCX", "workout.tcx"),
+            Triple(FileFormat.GPX, "GPX", "workout.gpx"),
+            Triple(FileFormat.CSV, "CSV", "workout.csv")
+        )
+
+        for ((format, dirName, fileName) in formats) {
+            val dir = File(tempFolder.root, dirName).apply { mkdirs() }
+            File(dir, fileName).apply { writeText("dummy content") }
+            val exportInfo = ExportInfo("workout", format, ExportType.GOOGLE_DRIVE)
+
+            every { mockClient.ensureFolderHierarchy(listOf("aTrainingTracker", dirName)) } returns "${dirName.lowercase()}_folder_id"
+            every { mockClient.uploadOrOverwriteFile("${dirName.lowercase()}_folder_id", fileName, any(), any()) } returns true
+
+            val uploader = createTestUploader(tempFolder.root)
+            val result = uploader.doExport(exportInfo)
+
+            assertTrue("Export for $dirName should succeed", result.success())
+            verify { mockClient.ensureFolderHierarchy(listOf("aTrainingTracker", dirName)) }
+            verify { mockClient.uploadOrOverwriteFile("${dirName.lowercase()}_folder_id", fileName, any(), any()) }
+        }
     }
 
     @Test

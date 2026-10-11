@@ -329,13 +329,30 @@ object LegacyImportEngine {
             else -> listOf(".fit", ".tcx", ".gpx")
         }
 
-        val candidateFolderHierarchies = listOf(
-            listOf("aTrainingTracker", "Workouts"),
-            listOf("aTrainingTracker", "FIT"),
-            listOf("aTrainingTracker", "TCX"),
-            listOf("aTrainingTracker", "GPX"),
-            listOf("aTrainingTracker")
-        )
+        val candidateFolderHierarchies = when (format.lowercase()) {
+            "fit" -> listOf(
+                listOf("aTrainingTracker", "FIT"),
+                listOf("aTrainingTracker", "Workouts"),
+                listOf("aTrainingTracker")
+            )
+            "tcx" -> listOf(
+                listOf("aTrainingTracker", "TCX"),
+                listOf("aTrainingTracker", "Workouts"),
+                listOf("aTrainingTracker")
+            )
+            "gpx" -> listOf(
+                listOf("aTrainingTracker", "GPX"),
+                listOf("aTrainingTracker", "Workouts"),
+                listOf("aTrainingTracker")
+            )
+            else -> listOf(
+                listOf("aTrainingTracker", "FIT"),
+                listOf("aTrainingTracker", "TCX"),
+                listOf("aTrainingTracker", "GPX"),
+                listOf("aTrainingTracker", "Workouts"),
+                listOf("aTrainingTracker")
+            )
+        }
 
         val allEntries = mutableListOf<DriveFileEntry>()
         val searchedFolderIds = mutableSetOf<String>()

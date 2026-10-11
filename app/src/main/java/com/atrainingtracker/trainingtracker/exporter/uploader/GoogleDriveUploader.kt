@@ -64,9 +64,11 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
 
         try {
             val client = createClient()
-            val folderId = client.ensureFolderHierarchy(listOf("aTrainingTracker", "Workouts"))
+            val formatDir = exportInfo.fileFormat.dirName.takeIf { it.isNotBlank() } ?: "Workouts"
+            val targetHierarchy = listOf("aTrainingTracker", formatDir)
+            val folderId = client.ensureFolderHierarchy(targetHierarchy)
             if (folderId == null) {
-                Log.e(TAG, "Failed to resolve folder hierarchy aTrainingTracker/Workouts (HTTP ${client.lastHttpCode}: ${client.lastErrorMessage})")
+                Log.e(TAG, "Failed to resolve folder hierarchy ${targetHierarchy.joinToString("/")} (HTTP ${client.lastHttpCode}: ${client.lastErrorMessage})")
                 val errorMsg = when {
                     client.lastHttpCode == 401 -> mContext.getString(R.string.google_drive_error_auth_expired)
                     client.lastHttpCode == 403 && (client.lastErrorMessage?.contains("SERVICE_DISABLED") == true || client.lastErrorMessage?.contains("accessNotConfigured") == true) ->
