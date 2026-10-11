@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -59,28 +60,38 @@ class SensorGridScreenLayoutTest {
     }
 
     @Test
-    fun testElevationProfile_appliesDynamicWeightWhenMapDisabled() {
+    fun testElevationProfile_doesNotApplyWeightWhenMapDisabled() {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        assertTrue(
-            "ElevationProfile Surface must conditionally apply Modifier.weight(1f) when !state.mapState.showMap (TST-UI-299.2)",
+        // REQ-UI-346 / TST-UI-306.1: Surface must not apply Modifier.weight(1f) to prevent half-screen stretching
+        assertFalse(
+            "ElevationProfile Surface must NOT apply Modifier.weight(1f) when !state.mapState.showMap (TST-UI-306.1)",
             content.contains("if (!state.mapState.showMap) Modifier.weight(1f) else Modifier")
+        )
+        assertFalse(
+            "ElevationProfile Surface must not apply weight(1f) (TST-UI-306.1)",
+            content.contains(".then(\n                                    if (!state.mapState.showMap) Modifier.weight(1f)")
         )
     }
 
     @Test
-    fun testElevationProfile_passesFillParentHeightAndFillMaxSizeWhenMapDisabled() {
+    fun testElevationProfile_doesNotPassFillParentHeightOrFillMaxSize() {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        assertTrue(
-            "ElevationProfile must receive fillParentHeight = !state.mapState.showMap (TST-UI-299.3)",
+        // REQ-UI-346 / TST-UI-306.2: ElevationProfile must use canonical adaptive height (not fillParentHeight or fillMaxSize)
+        assertFalse(
+            "ElevationProfile must NOT receive fillParentHeight = !state.mapState.showMap (TST-UI-306.2)",
             content.contains("fillParentHeight = !state.mapState.showMap")
         )
-        assertTrue(
-            "ElevationProfile must receive modifier = if (!state.mapState.showMap) Modifier.fillMaxSize() else Modifier.fillMaxWidth() (TST-UI-299.3)",
+        assertFalse(
+            "ElevationProfile must NOT receive dynamic fillMaxSize modifier (TST-UI-306.2)",
             content.contains("modifier = if (!state.mapState.showMap) Modifier.fillMaxSize() else Modifier.fillMaxWidth()")
+        )
+        assertTrue(
+            "ElevationProfile must receive modifier = Modifier.fillMaxWidth() (TST-UI-306.2)",
+            content.contains("modifier = Modifier.fillMaxWidth()")
         )
     }
 
@@ -90,7 +101,7 @@ class SensorGridScreenLayoutTest {
         val content = file.readText()
 
         assertTrue(
-            "ElevationProfile rendering must be guarded by state.pathPoints.size >= 2 to prevent empty canvas stretching (TST-UI-299.4)",
+            "ElevationProfile rendering must be guarded by state.pathPoints.size >= 2 to prevent empty canvas stretching (TST-UI-306.4)",
             content.contains("state.showElevationProfile && state.pathPoints.size >= 2")
         )
     }
