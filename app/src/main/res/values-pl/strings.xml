@@ -1746,4 +1746,9 @@
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NOWY</string>
     <string name="devices_new_sensor_discovered">Wykryto nowy czujnik: %1$s</string>
+
+    <!-- ATT-3220 / REQ-UI-353: Missing ANT adapter warning toggle -->
+    <string name="tuning_show_ant_missing_adapter_warnings_title">Pokaż ostrzeżenia o braku adaptera ANT+</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_desc">Pokaż okno dialogowe ostrzeżenia, gdy wyszukiwany jest czujnik ANT+, ale nie wykryto adaptera</string>
 </resources>
+

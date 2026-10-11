@@ -107,6 +107,7 @@ fun AdvancedTuningDialog(
     var mapFollowMeCruisingZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM) }
     var mapFollowMeTiltAngle by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE) }
     var mapFollowMeLookaheadPaddingPercent by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT) }
+    var showAntMissingAdapterWarnings by remember { mutableStateOf(!TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
@@ -159,6 +160,7 @@ fun AdvancedTuningDialog(
         mapFollowMeInitialZoom = config.mapFollowMeInitialZoom; mapFollowMeSpeedZoomEnabled = config.mapFollowMeSpeedZoomEnabled
         mapFollowMeCruisingZoom = config.mapFollowMeCruisingZoom; mapFollowMeTiltAngle = config.mapFollowMeTiltAngle
         mapFollowMeLookaheadPaddingPercent = config.mapFollowMeLookaheadPaddingPercent
+        showAntMissingAdapterWarnings = config.showAntMissingAdapterWarnings
     }
 
     LaunchedEffect(persistedConfig) {
@@ -186,7 +188,8 @@ fun AdvancedTuningDialog(
                         navigationCueDismissDurationSec = navigationCueDismissDurationSec, elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
                         mapFollowMeInitialZoom = mapFollowMeInitialZoom, mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled,
                         mapFollowMeCruisingZoom = mapFollowMeCruisingZoom, mapFollowMeTiltAngle = mapFollowMeTiltAngle,
-                        mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent
+                        mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent,
+                        suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
@@ -257,7 +260,9 @@ fun AdvancedTuningDialog(
                 SensorsGpsFilterSection(
                     gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
                     altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
-                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it }
+                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it },
+                    showAntMissingAdapterWarnings = showAntMissingAdapterWarnings,
+                    onShowAntMissingAdapterWarningsChange = { showAntMissingAdapterWarnings = it }
                 )
             }
 
