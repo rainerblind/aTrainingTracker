@@ -1417,6 +1417,17 @@
     <string name="filter_section_recordings">Recordings</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d recordings</string>
     <string name="filter_no_matching_clusters">No favorite tracks match the active filters</string>
+    <string name="filter_sensors_title">Filter Sensors</string>
+    <string name="filter_section_protocol">Protocol</string>
+    <string name="filter_section_category">Sensor Category</string>
+    <string name="filter_section_battery">Battery Level</string>
+    <string name="filter_protocol_all">All</string>
+    <string name="filter_battery_all">All</string>
+    <string name="filter_battery_critical">Critical (≤ 20%)</string>
+    <string name="filter_battery_normal">Normal (> 20%)</string>
+    <string name="filter_battery_critical_chip">Battery: ≤ 20%</string>
+    <string name="filter_battery_normal_chip">Battery: > 20%</string>
+    <string name="filter_no_matching_sensors">No sensors match the active filters</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">Favorite Tracks &amp; Clustering</string>
     <string name="cluster_info_what_title">What are Favorite Tracks?</string>

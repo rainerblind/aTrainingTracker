@@ -34,6 +34,8 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.devicelist.BatteryFilter
+import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterCriteria
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -99,6 +101,34 @@ class DevicesTabbedViewModel(
 
     private val _scanningDeviceType = MutableStateFlow<DeviceType?>(null)
     val scanningDeviceType: StateFlow<DeviceType?> = _scanningDeviceType.asStateFlow()
+
+    private val _filterCriteria = MutableStateFlow(
+        savedStateHandle.get<String>(KEY_FILTER_CRITERIA_JSON)?.let {
+            DeviceFilterCriteria.fromJson(it)
+        } ?: if (savedStateHandle.get<Boolean>(EXTRA_FILTER_CRITICAL_BATTERY) == true) {
+            DeviceFilterCriteria(batteryFilter = BatteryFilter.CRITICAL_ONLY)
+        } else {
+            DeviceFilterCriteria()
+        }
+    )
+    val filterCriteria: StateFlow<DeviceFilterCriteria> = _filterCriteria.asStateFlow()
+
+    fun updateFilterCriteria(criteria: DeviceFilterCriteria) {
+        _filterCriteria.value = criteria
+        if (criteria.isEmpty) {
+            savedStateHandle.remove<String>(KEY_FILTER_CRITERIA_JSON)
+        } else {
+            savedStateHandle[KEY_FILTER_CRITERIA_JSON] = criteria.toJson()
+        }
+    }
+
+    fun clearFilterCriteria() {
+        updateFilterCriteria(DeviceFilterCriteria())
+    }
+
+    fun setCriticalBatteryFilter() {
+        updateFilterCriteria(DeviceFilterCriteria(batteryFilter = BatteryFilter.CRITICAL_ONLY))
+    }
 
     private val _uiState = MutableLiveData<UiState>()
     val uiState: LiveData<UiState> = _uiState
@@ -207,5 +237,10 @@ class DevicesTabbedViewModel(
         } catch (e: Exception) {
             // Receiver might not be registered
         }
+    }
+
+    companion object {
+        const val KEY_FILTER_CRITERIA_JSON = "KEY_FILTER_CRITERIA_JSON"
+        const val EXTRA_FILTER_CRITICAL_BATTERY = "EXTRA_FILTER_CRITICAL_BATTERY"
     }
 }

@@ -54,6 +54,7 @@ import com.atrainingtracker.banalservice.ui.devices.devicelist.*
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialog
 import androidx.compose.foundation.rememberScrollState
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSportSensorMatrix
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModel
 import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusSheet
@@ -74,18 +75,21 @@ fun DevicesTabbedScreen(
     val isSearchingForNewDevices by tabViewModel.isSearchingForNewDevices.collectAsState()
     val scanningProtocol by tabViewModel.scanningProtocol.collectAsState()
     val scanningDeviceType by tabViewModel.scanningDeviceType.collectAsState()
+    val filterCriteria by tabViewModel.filterCriteria.collectAsState()
     
     val protocol = tabViewModel.protocol
     var showDeleteConfirmFor by remember { mutableStateOf<DeviceUiData?>(null) }
     var editingDeviceId by remember { mutableStateOf<Long?>(null) }
     var menuExpanded by remember { mutableStateOf(false) }
     var showProtocolSheet by remember { mutableStateOf(false) }
+    var showFilterSheet by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var selectedPairingProtocol by remember { mutableStateOf<Protocol?>(null) }
     var showAntStatusSheet by remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT).roundToPx() }
+    val chipsRowHeight = if (filterCriteria.isNotEmpty) 40.dp else 0.dp
+    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + chipsRowHeight).roundToPx() }
     
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
@@ -161,7 +165,8 @@ fun DevicesTabbedScreen(
                                 scrollState = availableListState,
                                 appBarOffsetPx = connection.appBarOffset,
                                 headerHeightPx = appBarMaxHeightPx.toFloat(),
-                                onCheckAntInstallation = { showAntStatusSheet = true }
+                                onCheckAntInstallation = { showAntStatusSheet = true },
+                                filterCriteria = filterCriteria
                             )
                             1 -> DeviceListScreen(
                                 viewModel = listViewModel,
@@ -172,7 +177,8 @@ fun DevicesTabbedScreen(
                                 scrollState = pairedListState,
                                 appBarOffsetPx = connection.appBarOffset,
                                 headerHeightPx = appBarMaxHeightPx.toFloat(),
-                                onCheckAntInstallation = { showAntStatusSheet = true }
+                                onCheckAntInstallation = { showAntStatusSheet = true },
+                                filterCriteria = filterCriteria
                             )
                             2 -> DeviceListScreen(
                                 viewModel = listViewModel,
@@ -183,7 +189,8 @@ fun DevicesTabbedScreen(
                                 scrollState = allKnownListState,
                                 appBarOffsetPx = connection.appBarOffset,
                                 headerHeightPx = appBarMaxHeightPx.toFloat(),
-                                onCheckAntInstallation = { showAntStatusSheet = true }
+                                onCheckAntInstallation = { showAntStatusSheet = true },
+                                filterCriteria = filterCriteria
                             )
                             3 -> EquipmentSportSensorMatrix(
                                 items = bikes,
@@ -272,28 +279,36 @@ fun DevicesTabbedScreen(
                                         )
                                     }
 
-                                    // Modern Options Menu (Only shown for ANT+ troubleshooting)
-                                    if (protocol == Protocol.ANT_PLUS || protocol == Protocol.ALL) {
-                                        Box {
-                                            IconButton(onClick = { menuExpanded = true }) {
-                                                Icon(
-                                                    imageVector = Icons.Default.MoreVert,
-                                                    contentDescription = stringResource(R.string.devices_settings_header),
-                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                                )
-                                            }
-                                            DropdownMenu(
-                                                expanded = menuExpanded,
-                                                onDismissRequest = { menuExpanded = false }
-                                            ) {
-                                                DropdownMenuItem(
-                                                    text = { Text(stringResource(R.string.check_ANT_installation)) },
-                                                    onClick = {
-                                                        menuExpanded = false
-                                                        showAntStatusSheet = true
-                                                        onCheckAntInstallation()
-                                                    }
-                                                )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        FilterActionButton(
+                                            onClick = { showFilterSheet = true },
+                                            isFilterActive = filterCriteria.isNotEmpty,
+                                            activeFilterCount = filterCriteria.activeFilterCount
+                                        )
+
+                                        // Modern Options Menu (Only shown for ANT+ troubleshooting)
+                                        if (protocol == Protocol.ANT_PLUS || protocol == Protocol.ALL) {
+                                            Box {
+                                                IconButton(onClick = { menuExpanded = true }) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.MoreVert,
+                                                        contentDescription = stringResource(R.string.devices_settings_header),
+                                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                                    )
+                                                }
+                                                DropdownMenu(
+                                                    expanded = menuExpanded,
+                                                    onDismissRequest = { menuExpanded = false }
+                                                ) {
+                                                    DropdownMenuItem(
+                                                        text = { Text(stringResource(R.string.check_ANT_installation)) },
+                                                        onClick = {
+                                                            menuExpanded = false
+                                                            showAntStatusSheet = true
+                                                            onCheckAntInstallation()
+                                                        }
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -311,6 +326,22 @@ fun DevicesTabbedScreen(
                                         text = {
                                             Text(title)
                                         }
+                                    )
+                                }
+                            }
+
+                            // Active Filter Chips Strip
+                            if (pagerState.currentPage < 3 && filterCriteria.isNotEmpty) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surface,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    ActiveDeviceFilterChipsRow(
+                                        criteria = filterCriteria,
+                                        onRemoveProtocol = { tabViewModel.updateFilterCriteria(filterCriteria.copy(protocol = null)) },
+                                        onRemoveDeviceType = { type -> tabViewModel.updateFilterCriteria(filterCriteria.copy(deviceTypes = filterCriteria.deviceTypes - type)) },
+                                        onRemoveBatteryFilter = { tabViewModel.updateFilterCriteria(filterCriteria.copy(batteryFilter = BatteryFilter.ALL)) },
+                                        onClearAll = { tabViewModel.clearFilterCriteria() }
                                     )
                                 }
                             }
@@ -367,6 +398,15 @@ fun DevicesTabbedScreen(
                 if (showAntStatusSheet) {
                     AntServicesStatusSheet(
                         onDismiss = { showAntStatusSheet = false }
+                    )
+                }
+
+                if (showFilterSheet) {
+                    DeviceFilterBottomSheet(
+                        criteria = filterCriteria,
+                        onApplyCriteria = { tabViewModel.updateFilterCriteria(it) },
+                        onClearAll = { tabViewModel.clearFilterCriteria() },
+                        onDismissRequest = { showFilterSheet = false }
                     )
                 }
 
