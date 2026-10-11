@@ -25,13 +25,13 @@ import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.SphericalUtil
+import com.atrainingtracker.trainingtracker.geo.PolylineProgressTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 /**
  * Repository orchestrating real-time detection, tracking, and telemetry for climbs (REQ-MAP-027).
@@ -231,61 +231,22 @@ class LiveClimbsRepository private constructor(
             )
         }
 
-        // Project rider coordinate orthogonally onto polyline segments [P_i, P_{i+1}]
-        // per REQ-MAP-047 and docs/design_guidelines.md Section 2.4
-        var bestSegIdx = 0
-        var bestT = 0.0
-        var minCrossTrackDist = Double.MAX_VALUE
-
-        for (i in 0 until path.size - 1) {
-            val p1 = path[i]
-            val p2 = path[i + 1]
-            val dLat = p2.latLng.latitude - p1.latLng.latitude
-            val dLng = p2.latLng.longitude - p1.latLng.longitude
-            val segLenSq = dLat * dLat + dLng * dLng
-
-            val t = if (segLenSq > 0.0) {
-                val u = ((location.latitude - p1.latLng.latitude) * dLat +
-                        (location.longitude - p1.latLng.longitude) * dLng) / segLenSq
-                u.coerceIn(0.0, 1.0)
-            } else {
-                0.0
-            }
-
-            val projLat = p1.latLng.latitude + t * dLat
-            val projLng = p1.latLng.longitude + t * dLng
-
-            Location.distanceBetween(location.latitude, location.longitude, projLat, projLng, results)
-            val d = results[0].toDouble()
-            if (d < minCrossTrackDist) {
-                minCrossTrackDist = d
-                bestSegIdx = i
-                bestT = t
-            }
-        }
+        // Project rider coordinate orthogonally onto polyline segments via unified engine (REQ-GEO-001)
+        val projection = PolylineProgressTracker.projectLocation(path, location)
+            ?: return null
 
         // Off-climb check using perpendicular cross-track distance
-        if (minCrossTrackDist > CLIMB_OFF_ROUTE_THRESHOLD_METERS) {
+        if (projection.crossTrackDistanceMeters > CLIMB_OFF_ROUTE_THRESHOLD_METERS) {
             return null
         }
 
-        val p1 = path[bestSegIdx]
-        val p2 = path[bestSegIdx + 1]
-        val segDist = p2.distance - p1.distance
-        val segAlt = p2.altitude - p1.altitude
-
-        val completedDist = ((p1.distance - path.first().distance) + bestT * segDist).coerceAtLeast(0.0)
+        val completedDist = projection.alongTrackDistance
         val remainingDist = (climb.distanceMeters - completedDist).coerceAtLeast(0.0)
-        val currentAlt = p1.altitude + bestT * segAlt
+        val currentAlt = projection.interpolatedAltitude ?: path.first().altitude
         val summitAlt = path.last().altitude
         val remainingGain = (summitAlt - currentAlt).coerceAtLeast(0.0)
         val progressFraction = (completedDist / climb.distanceMeters).coerceIn(0.0, 1.0).toFloat()
-
-        val grade = if (segDist > 0.0) {
-            (segAlt / segDist) * 100.0
-        } else {
-            climb.avgGradePercent
-        }
+        val grade = projection.instantaneousGradePercent ?: climb.avgGradePercent
 
         return current.copy(
             distanceToSummit = remainingDist,
@@ -296,8 +257,7 @@ class LiveClimbsRepository private constructor(
     }
 
     private fun getBearingDifference(b1: Double, b2: Double): Double {
-        val diff = abs(b1 - b2) % 360
-        return if (diff > 180) 360 - diff else diff
+        return PolylineProgressTracker.getBearingDifference(b1, b2)
     }
 
     fun cancelScope() {
