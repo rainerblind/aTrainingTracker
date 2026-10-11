@@ -814,16 +814,50 @@ public class TrackingViewsDatabaseManager {
 
             EnumMap<ActivityType, List<RowData>> viewMap = createViewMap();
             for (ActivityType activityType : viewMap.keySet()) {
-                // show the default tab with an lap button
-                addDefaultTab(db, activityType, mContext.getString(R.string.text_default), 1, false, false, true, viewMap.get(activityType));
-                // shot a tab with just some standard fields and the map but no lap button
-                addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 2, false, true, false, getDefaultStartRowDataList(activityType));
-                addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 3, true, false, false, getDefaultLapRowDataList(activityType));
+                // Standard Tab: layoutNr 1, live segments, live climbs, nav hints
+                addDefaultTab(db, activityType, mContext.getString(R.string.text_default), 1, false, false, true, true, true, viewMap.get(activityType));
+                // Map Tab: layoutNr 2, map, elevation profile, nav hints
+                addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 2, false, true, false, false, true, getDefaultStartRowDataList(activityType));
+                // Laps Tab: layoutNr 3, lap button only
+                addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 3, true, false, false, false, false, getDefaultLapRowDataList(activityType));
             }
             if (DEBUG) Log.d(TAG, "filled db");
         }
 
+        /**
+         * Backward-compatible overload for seeding default tracking views with live climbs and navigation hints enabled.
+         */
         public long addDefaultTab(@NonNull SQLiteDatabase db, @NonNull ActivityType activityType, String name, int layoutNr, boolean showLapButton, boolean showMap, boolean showLiveSegments, List<RowData> rowDataList) {
+            return addDefaultTab(db, activityType, name, layoutNr, showLapButton, showMap, showLiveSegments, true, true, rowDataList);
+        }
+
+        /**
+         * Seeds a default tracking view tab in SQLite with explicit toggles for live telemetry, segments, climbs, and navigation cues.
+         *
+         * @param db SQLite database instance.
+         * @param activityType Activity type profile.
+         * @param name Localized tab title.
+         * @param layoutNr Sequential layout index (1 = Standard, 2 = Map, 3 = Laps).
+         * @param showLapButton Whether the lap split button is visible.
+         * @param showMap Whether the map canvas and elevation profile are enabled.
+         * @param showLiveSegments Whether Strava live segment bottom sheets are enabled.
+         * @param showLiveClimbs Whether Live ClimbPro bottom sheets are enabled.
+         * @param showNavigationHints Whether turn prompts and navigation cues are enabled.
+         * @param rowDataList Initial sensor grid field layout.
+         * @return New view ID in {@link #VIEWS_TABLE}.
+         */
+        public long addDefaultTab(
+                @NonNull SQLiteDatabase db,
+                @NonNull ActivityType activityType,
+                String name,
+                int layoutNr,
+                boolean showLapButton,
+                boolean showMap,
+                boolean showLiveSegments,
+                boolean showLiveClimbs,
+                boolean showNavigationHints,
+                List<RowData> rowDataList
+        ) {
             if (DEBUG)
                 Log.i(TAG, "addDefaultActivity: activityType=" + activityType + ", layoutNr=" + layoutNr);
             long newViewId = -1;
@@ -842,8 +876,8 @@ public class TrackingViewsDatabaseManager {
             values.put(DAY, 0);
             values.put(NIGHT, 0);
             values.put(SHOW_LIVE_SEGMENTS, showLiveSegments ? 1 : 0);
-            values.put(SHOW_LIVE_CLIMBS, 1);
-            values.put(SHOW_NAVIGATION_HINTS, 1);
+            values.put(SHOW_LIVE_CLIMBS, showLiveClimbs ? 1 : 0);
+            values.put(SHOW_NAVIGATION_HINTS, showNavigationHints ? 1 : 0);
             newViewId = db.insert(VIEWS_TABLE, null, values);
 
             for (RowData rowData : rowDataList) {
