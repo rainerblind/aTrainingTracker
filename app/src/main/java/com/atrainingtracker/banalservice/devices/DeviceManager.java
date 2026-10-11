@@ -807,13 +807,14 @@ public class DeviceManager {
         if (DEBUG) Log.d(TAG, "removeAndStopRemoteDevice(" + deviceId + ")");
 
         MyRemoteDevice myRemoteDevice = mMyRemoteDevices.get(deviceId);
-
-        mSearchQueue.remove(myRemoteDevice);
-        if (cMyRemoteDeviceCurrentlySearchingFor == myRemoteDevice) {
-            searchForNextRemoteDevice();
+        if (myRemoteDevice != null) {
+            mSearchQueue.remove(myRemoteDevice);
+            if (cMyRemoteDeviceCurrentlySearchingFor == myRemoteDevice) {
+                searchForNextRemoteDevice();
+            }
+            mMyRemoteDevices.remove(deviceId);
+            myRemoteDevice.shutDown();
         }
-        mMyRemoteDevices.remove(deviceId);
-        myRemoteDevice.shutDown();
     }
 
     public MyRemoteDevice createNewANTDevice(long deviceID, DeviceType deviceType, int antDeviceNumber) {

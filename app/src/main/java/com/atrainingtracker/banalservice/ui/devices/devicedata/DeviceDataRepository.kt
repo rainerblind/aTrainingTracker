@@ -313,6 +313,7 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
 
     fun deleteDevice(deviceId: Long) {
         repositoryScope.launch {
+            sendPairingChangedBroadcast(deviceId, false)
             devicesDatabaseManager.deleteDevice(deviceId)
             loadAllDevices()
         }

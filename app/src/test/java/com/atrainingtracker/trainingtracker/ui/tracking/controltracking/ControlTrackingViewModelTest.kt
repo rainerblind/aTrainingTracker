@@ -298,4 +298,60 @@ class ControlTrackingViewModelTest {
         org.junit.Assert.assertEquals(TrainingApplication.REQUEST_START_TRACKING, slot.captured.action)
         job.cancel()
     }
+
+    @Test
+    fun testRemoteDevices_filtersOutOrphanedOrDeletedConnectedSensors() = runTest {
+        // Given: activeRemoteDevicesIds has [10L, 20L, 30L] where 30L was deleted / not in DB
+        val activeIdsFlow = MutableStateFlow(listOf(10L, 20L, 30L))
+        every { mockBanalRepo.activeRemoteDevicesIds } returns activeIdsFlow
+
+        val dbDevices = listOf(
+            createDeviceUiData(10L, DeviceType.HRM, "Heart Rate Monitor"),
+            createDeviceUiData(20L, DeviceType.BIKE_POWER, "Power Meter")
+        )
+        allDevicesFlow.value = dbDevices
+
+        val viewModel = ControlTrackingViewModel(application)
+        val emittedDevices = mutableListOf<List<RemoteDeviceUIData>>()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.remoteDevices.collect { emittedDevices.add(it) }
+        }
+
+        val latest = emittedDevices.last()
+        org.junit.Assert.assertEquals("Expected exactly 2 valid devices", 2, latest.size)
+        org.junit.Assert.assertEquals(10L, latest[0].id)
+        org.junit.Assert.assertEquals(20L, latest[1].id)
+        assertFalse(
+            "Expected zero DUMMY or 'New Sensor' items for orphaned device 30L",
+            latest.any { it.deviceType == DeviceType.DUMMY || it.name == "New Sensor" || it.id == 30L }
+        )
+
+        job.cancel()
+    }
+
+    private fun createDeviceUiData(id: Long, deviceType: DeviceType, name: String): DeviceUiData {
+        return DeviceUiData(
+            id = id,
+            protocol = Protocol.BLUETOOTH_LE,
+            deviceType = deviceType,
+            lastSeen = "Now",
+            manufacturer = "Polar",
+            deviceName = name,
+            isPaired = true,
+            linkedEquipment = emptyList(),
+            availableEquipment = emptyList(),
+            powerFeaturesFlags = null,
+            batteryPercentage = 90,
+            linkedSportTypes = emptyList(),
+            deviceTypeIconRes = 0,
+            batteryStatusIconRes = 0,
+            onEquipmentResId = 0,
+            wheelCircumference = null,
+            calibrationFactor = null,
+            powerFeatures = null,
+            isConnected = true,
+            mainValue = null,
+            allValues = null
+        )
+    }
 }

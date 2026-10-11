@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.ui.devices.devicedata
 
 import android.app.Application
+import android.content.Intent
 import android.database.Cursor
 import android.util.Log
 import com.atrainingtracker.banalservice.Protocol
@@ -193,5 +194,61 @@ class DeviceDataRepositoryEquipmentSyncTest {
 
         // Assert: ViewModel holds fresh updated state, not stale old state
         assertEquals(listOf("Updated Bike"), viewModel.deviceSnapshot.value?.linkedEquipment)
+    }
+
+    /**
+     * TST-UI-309.2: deleteDevice broadcasts BANALService.PAIRING_CHANGED with paired=false
+     * and deletes the device from the database.
+     */
+    @Test
+    fun testDeleteDevice_broadcastsPairingChangedWithUnpairedFlag() {
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<Long>()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<Boolean>()) } answers { self as Intent }
+
+        every { mockApplication.packageName } returns "com.atrainingtracker.trainingtracker"
+        val repository = DeviceDataRepository(mockApplication, testDispatcher)
+        DeviceDataRepository.resetForTesting(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Act: delete device 42L
+        repository.deleteDevice(42L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Assert: database deletion invoked
+        verify(exactly = 1) { mockDevicesDb.deleteDevice(42L) }
+
+        // Assert: broadcast dispatched with paired=false and deviceId=42L
+        verify(exactly = 1) { anyConstructed<Intent>().putExtra(com.atrainingtracker.banalservice.BANALService.DEVICE_ID, 42L) }
+        verify(exactly = 1) { anyConstructed<Intent>().putExtra(com.atrainingtracker.banalservice.BANALService.PAIRED, false) }
+        verify(atLeast = 1) { mockApplication.sendBroadcast(any()) }
+    }
+
+    /**
+     * TST-UI-309.3: EditDeviceViewModel.loadInitialDeviceData sets deviceNotFound to true
+     * when the device snapshot cannot be resolved from the repository.
+     */
+    @Test
+    fun testEditDeviceViewModel_deviceNotFound_whenSnapshotIsNull() {
+        val mockRepo = mockk<DeviceDataRepository>(relaxed = true)
+        DeviceDataRepository.resetForTesting(mockRepo)
+
+        val mockBanalServiceRepo = mockk<BANALServiceRepository>(relaxed = true)
+        mockkObject(BANALServiceRepository.Companion)
+        every { BANALServiceRepository.getInstance(any()) } returns mockBanalServiceRepo
+        every { mockBanalServiceRepo.allActiveDevicesTelemetry } returns MutableStateFlow(emptyList())
+        every { mockBanalServiceRepo.newlyFoundDevicesIds } returns MutableStateFlow(emptyList())
+        every { mockRepo.allDevices } returns MutableStateFlow(emptyList())
+
+        // Device 999L is deleted / missing
+        every { mockRepo.getDeviceSnapshotById(999L) } returns null
+
+        val viewModel = EditDeviceViewModel(mockApplication)
+        viewModel.loadInitialDeviceData(999L)
+
+        // Assert: deviceNotFound is true and snapshot is null
+        assertEquals(true, viewModel.deviceNotFound.value)
+        assertEquals(null, viewModel.deviceSnapshot.value)
     }
 }
