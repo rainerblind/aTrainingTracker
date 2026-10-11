@@ -23,6 +23,7 @@ import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -236,7 +237,10 @@ fun WorkoutSummariesTabbedScreen(
     Scaffold(
         modifier = modifier,
         snackbarHost = {
-            SnackbarHost(snackbarHostState) { data ->
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.navigationBarsPadding()
+            ) { data ->
                 Snackbar(
                     snackbarData = data,
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
