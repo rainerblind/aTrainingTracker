@@ -97,11 +97,14 @@ The ART boot classloader fails to find `android.view.inputmethod.SelectGesture` 
 1. **Why was this code introduced?**
    Google introduced `EditorInfoApi34` in Compose Foundation 1.7+ to support native stylus handwriting gestures on tablets and foldable devices.
 2. **Why does it fail on production devices?**
-   Google assumed that every device reporting `Build.VERSION.SDK_INT >= 34` contains the full stylus handwriting framework. In the wild, Android device fragmentation breaks this assumption.
-3. **What invariants must be preserved?**
+   Google assumed that every device reporting `Build.VERSION.SDK_INT >= 34` contains the full stylus handwriting framework. In the wild, Android device fragmentation breaks this assumption when OEMs omit `SelectGesture` from `framework.jar`.
+3. **Auditor Review & Rejection of Package Stubbing (Gate 1 Audit Feedback)**:
+   An initial consideration of bundling fallback stub classes in the `android.view.inputmethod` namespace was rightly rejected by Auditor Agent 2 during Gate 1 audit: defining classes within the protected platform `android.*` namespace in an application DEX violates Android runtime packaging rules, creates classloader collision risks on standard devices, and risks `SecurityException` or DEX verification rejection.
+4. **What invariants must be preserved?**
+   - No application classes placed inside reserved platform namespaces (`android.*`).
    - Text input across all 50+ dialogs, sheets, and search bars in the app must continue working seamlessly.
    - Text selection, typing, cut/copy/paste, and IME virtual keyboards must operate with 0 latency or regressions.
-   - Normal devices with stylus support must retain native functionality.
+   - Normal devices with stylus support retain full functionality, while fragmented devices are safeguarded.
    - Full clean-room test suite must pass with 100% success.
 
 ---
@@ -110,35 +113,48 @@ The ART boot classloader fails to find `android.view.inputmethod.SelectGesture` 
 
 We implement a two-pillar defense-in-depth architectural solution:
 
-### Pillar 1: Fallback Stub Gesture Classes (`android.view.inputmethod.*`)
-We provide lightweight, empty fallback classes directly in the application APK:
-- `android.view.inputmethod.HandwritingGesture`
-- `android.view.inputmethod.SelectGesture`
-- `android.view.inputmethod.DeleteGesture`
-- `android.view.inputmethod.SelectRangeGesture`
-- `android.view.inputmethod.DeleteRangeGesture`
-- `android.view.inputmethod.JoinOrSplitGesture`
-- `android.view.inputmethod.InsertGesture`
-- `android.view.inputmethod.RemoveSpaceGesture`
+### Pillar 1: Dynamic Runtime Guard (`ComposeHandwritingResilience`)
+Instead of package hijacking, we intercept the condition that causes Compose to invoke `EditorInfoApi34.setHandwritingGestures`.
 
-**How Dalvik/ART ClassLoader Resolves This**:
-- On standard Android 14+ devices with native stylus gestures, the parent `BootClassLoader` finds the platform class in `framework.jar`. The APK fallback is never touched.
-- On fragmented devices where the platform lacks `SelectGesture`, `BootClassLoader` delegates to the application `PathClassLoader`. The app's DEX files provide the class!
-- `ldc class android/view/inputmethod/SelectGesture` succeeds!
-- `NoClassDefFoundError` is completely eliminated at the class resolution level.
+**Mechanism**:
+1. In `EditorInfo.android.kt`, Compose evaluates:
+   ```kotlin
+   if (shouldEnableStylusHandwriting(imeOptions)) {
+       EditorInfoCompat.setStylusHandwritingEnabled(this, true)
+       EditorInfoApi34.setHandwritingGestures(this)
+   } else {
+       EditorInfoCompat.setStylusHandwritingEnabled(this, false)
+   }
+   ```
+2. `shouldEnableStylusHandwriting` delegates to `StylusHandwriting_androidKt.isStylusHandwritingSupported()`.
+3. At application startup (`TrainingApplication.onCreate()`), `ComposeHandwritingResilience.install()` executes:
+   - On Android < 34 (`Build.VERSION.SDK_INT < 34`), Compose already sets `isStylusHandwritingSupported` to `false`.
+   - On Android >= 34, it attempts a safe probe:
+     ```kotlin
+     val isAvailable = try {
+         Class.forName("android.view.inputmethod.SelectGesture")
+         true
+     } catch (t: Throwable) {
+         false
+     }
+     ```
+   - If `SelectGesture` is missing or fails resolution, `ComposeHandwritingResilience` updates `isStylusHandwritingSupported` to `false` via reflection/Unsafe.
+   - When any text field receives focus, `shouldEnableStylusHandwriting` returns `false`, gracefully disabling stylus gestures and completely avoiding the call to `EditorInfoApi34.setHandwritingGestures`.
+   - Standard IME typing, copy/paste, and software keyboards operate normally without exception.
 
 ### Pillar 2: Compose BOM Alignment (`app/build.gradle`)
-- Upgrade Compose BOM to `2026.09.00` (latest stable).
+- Upgrade Compose BOM from `2026.08.00` to `2026.09.00` (latest stable).
 - Remove hardcoded `:1.12.0` version pins on `ui`, `runtime-saveable`, and `foundation-layout`, allowing the BOM to orchestrate full version harmony.
 
 ---
 
 ## 5. Verification Plan
 
-1. **Class Resolution Unit Test (`SelectGestureClassResolutionResilienceTest.kt`)**:
-   - Verify `Class.forName("android.view.inputmethod.SelectGesture")` resolves without exception.
-   - Verify all 7 gesture classes resolve and inherit from `HandwritingGesture`.
+1. **Unit Test (`ComposeHandwritingResilienceTest.kt`)**:
+   - Verify `ComposeHandwritingResilience.install()` safely probes class availability without crashing.
+   - Verify that when `SelectGesture` is missing, `isStylusHandwritingSupported()` is safely disabled.
+   - Verify idempotency and error tolerance (graceful fallback if reflection fails).
 2. **Clean-Room Regression**:
    - Run `./gradlew testDebugUnitTest` asserting 100% pass rate.
-3. **Physical Device Verification (Pixel 10)**:
-   - Deploy debug APK, open search text field, enter text, and assert zero crashes.
+3. **Physical / Emulator Device Verification**:
+   - Assert zero crashes on text field focus.
