@@ -75,8 +75,8 @@ class SensorGridScreenClimbSuppressionTest {
         val content = screenFile.readText()
 
         assertTrue(
-            "initialSheetValue must be PartiallyExpanded when shouldShowBottomSheet is true, else Hidden",
-            content.contains("val initialSheetValue = if (shouldShowBottomSheet) SheetValue.PartiallyExpanded else SheetValue.Hidden")
+            "initialSheetValue must be Expanded when shouldShowBottomSheet is true, else Hidden (REQ-UI-343)",
+            content.contains("val initialSheetValue = if (shouldShowBottomSheet) SheetValue.Expanded else SheetValue.Hidden")
         )
         assertTrue(
             "scaffoldState must initialize with initialSheetValue",
@@ -85,7 +85,7 @@ class SensorGridScreenClimbSuppressionTest {
     }
 
     @Test
-    fun testSensorGridScreen_launchedEffect_drivesSheetStateHideAndPartialExpand() {
+    fun testSensorGridScreen_launchedEffect_drivesSheetStateHideAndExpand() {
         val screenFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = screenFile.readText()
 
@@ -98,8 +98,8 @@ class SensorGridScreenClimbSuppressionTest {
             content.contains("scaffoldState.bottomSheetState.hide()")
         )
         assertTrue(
-            "LaunchedEffect must call scaffoldState.bottomSheetState.partialExpand() when shouldShowBottomSheet is true",
-            content.contains("scaffoldState.bottomSheetState.partialExpand()")
+            "LaunchedEffect must call scaffoldState.bottomSheetState.expand() when shouldShowBottomSheet is true (REQ-UI-343)",
+            content.contains("scaffoldState.bottomSheetState.expand()")
         )
     }
 

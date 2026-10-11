@@ -227,8 +227,8 @@ fun SensorGridScreen(
     val forkNavRepo = remember { ForkNavigationRepository.getInstance(context) }
     val forkDecisionState by forkNavRepo.forkDecisionState.collectAsState()
 
-    // Control the sheet state (REQ-UI-327)
-    val initialSheetValue = if (shouldShowBottomSheet) SheetValue.PartiallyExpanded else SheetValue.Hidden
+    // Control the sheet state (REQ-UI-327, REQ-UI-343)
+    val initialSheetValue = if (shouldShowBottomSheet) SheetValue.Expanded else SheetValue.Hidden
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
             initialValue = initialSheetValue,
@@ -244,7 +244,7 @@ fun SensorGridScreen(
             }
         } else {
             if (scaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
-                scaffoldState.bottomSheetState.partialExpand()
+                scaffoldState.bottomSheetState.expand()
             }
         }
     }
