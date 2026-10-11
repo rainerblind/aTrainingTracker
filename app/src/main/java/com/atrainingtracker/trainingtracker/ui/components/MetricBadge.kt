@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -38,12 +39,13 @@ fun MetricBadge(
     text: String,
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
-    contentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer
+    contentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
+    shape: Shape = RoundedCornerShape(4.dp)
 ) {
     Surface(
         color = containerColor,
         contentColor = contentColor,
-        shape = RoundedCornerShape(4.dp),
+        shape = shape,
         modifier = modifier
     ) {
         Text(

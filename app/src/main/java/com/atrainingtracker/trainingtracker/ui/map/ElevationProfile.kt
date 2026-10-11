@@ -60,6 +60,7 @@ import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
+import com.atrainingtracker.trainingtracker.ui.climbs.getClimbGradeColor
 import com.atrainingtracker.trainingtracker.ui.theme.*
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
@@ -226,6 +227,9 @@ fun ElevationProfile(
     climbs: List<Climb> = emptyList(),
     smoothingSigma: Double? = null,
     fillParentHeight: Boolean = false,
+    climbGradientShading: Boolean = false,
+    segmentColorProvider: ((Double) -> Color)? = null,
+    fixedHeight: androidx.compose.ui.unit.Dp? = null,
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -254,6 +258,9 @@ fun ElevationProfile(
         climbs = climbs,
         smoothingSigma = smoothingSigma,
         fillParentHeight = fillParentHeight,
+        climbGradientShading = climbGradientShading,
+        segmentColorProvider = segmentColorProvider,
+        fixedHeight = fixedHeight,
         modifier = modifier
     )
 }
@@ -279,9 +286,12 @@ fun ElevationProfile(
     powerZoneThresholds: PowerZoneThresholds? = null,
     climbs: List<Climb> = emptyList(),
     smoothingSigma: Double? = null,
-    fillParentHeight: Boolean = false
+    fillParentHeight: Boolean = false,
+    climbGradientShading: Boolean = false,
+    segmentColorProvider: ((Double) -> Color)? = null,
+    fixedHeight: androidx.compose.ui.unit.Dp? = null
 ) {
-    if (pathPoints.isEmpty()) return
+    if (pathPoints.size < 2) return
 
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
@@ -314,7 +324,7 @@ fun ElevationProfile(
 
     var lastTapTime by remember { mutableLongStateOf(0L) }
 
-    val cachedData = remember(pathPoints, unit, minAltitudeOverride, maxAltitudeOverride, effectiveSigma) {
+    val cachedData = remember(pathPoints, unit, minAltitudeOverride, maxAltitudeOverride, effectiveSigma, climbGradientShading, segmentColorProvider) {
         val maxPoints = 500
         val pathPointsDownsampled = if (pathPoints.size > maxPoints) {
             val step = pathPoints.size / maxPoints
@@ -370,13 +380,17 @@ fun ElevationProfile(
             val a2 = ((sAlt2 - min) / range).toFloat()
             val grade = ElevationSmoothingMath.calculateGrade(p1.distance, sAlt1, p2.distance, sAlt2)
 
-            val color = when {
-                grade < 2.0 -> TTColor.Zone1
-                grade < 5.0 -> TTColor.Zone2
-                grade < 10.0 -> TTColor.Zone3
-                grade < 15.0 -> TTColor.Zone4
-                grade < 20.0 -> TTColor.Zone5
-                else -> Color.Black
+            val color = if (climbGradientShading) {
+                segmentColorProvider?.invoke(grade) ?: getClimbGradeColor(grade)
+            } else {
+                when {
+                    grade < 2.0 -> TTColor.Zone1
+                    grade < 5.0 -> TTColor.Zone2
+                    grade < 10.0 -> TTColor.Zone3
+                    grade < 15.0 -> TTColor.Zone4
+                    grade < 20.0 -> TTColor.Zone5
+                    else -> Color.Black
+                }
             }
             segments.add(ElevationSegment(p1.distance, p1.timeSec, a1, p2.distance, p2.timeSec, a2, color))
         }
@@ -409,7 +423,9 @@ fun ElevationProfile(
     }
 
     val topPadding = if (showZoomControls) 44.dp else 16.dp
-    val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight
+    val effectiveTopPadding = if (fixedHeight != null) 8.dp else topPadding
+    val bottomPadding = if (fixedHeight != null) 18.dp else 24.dp
+    val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight
 
     Box(modifier = modifier.fillMaxWidth()) {
         val baseCanvasModifier = if (fillParentHeight) {
@@ -580,7 +596,7 @@ fun ElevationProfile(
 
         Canvas(
             modifier = canvasModifier
-                .padding(bottom = 24.dp, start = 50.dp, end = 25.dp, top = topPadding)
+                .padding(bottom = bottomPadding, start = 50.dp, end = 25.dp, top = effectiveTopPadding)
         ) {
             val width = size.width
             val height = size.height
