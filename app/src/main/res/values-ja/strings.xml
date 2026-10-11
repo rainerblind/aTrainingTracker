@@ -1206,6 +1206,17 @@
     <string name="filter_section_recordings">記録</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d 件の記録</string>
     <string name="filter_no_matching_clusters">一致するお気に入りトラックはありません</string>
+    <string name="filter_sensors_title">センサーを絞り込む</string>
+    <string name="filter_section_protocol">プロトコル</string>
+    <string name="filter_section_category">センサーのカテゴリ</string>
+    <string name="filter_section_battery">バッテリー残量</string>
+    <string name="filter_protocol_all">すべて</string>
+    <string name="filter_battery_all">すべて</string>
+    <string name="filter_battery_critical">危険 (≤ 20%)</string>
+    <string name="filter_battery_normal">通常 (> 20%)</string>
+    <string name="filter_battery_critical_chip">バッテリー: ≤ 20%</string>
+    <string name="filter_battery_normal_chip">バッテリー: > 20%</string>
+    <string name="filter_no_matching_sensors">アクティブなフィルターに一致するセンサーはありません</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">お気に入りルートとクラスタリング</string>
     <string name="cluster_info_what_title">お気に入りルートとは？</string>

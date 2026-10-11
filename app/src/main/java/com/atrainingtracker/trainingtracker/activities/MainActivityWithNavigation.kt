@@ -164,6 +164,7 @@ class MainActivityWithNavigation :
         val EXTRA_RESUME_INTERRUPTED_WORKOUT = "com.atrainingtracker.EXTRA_RESUME_INTERRUPTED_WORKOUT"
 
         const val EXTRA_DRAWER_ITEM_ID = "com.atrainingtracker.EXTRA_DRAWER_ITEM_ID"
+        const val EXTRA_FILTER_CRITICAL_BATTERY = "EXTRA_FILTER_CRITICAL_BATTERY"
 
         private val DEBUG: Boolean
             get() = TrainingApplication.getDebug(true)
@@ -189,6 +190,19 @@ class MainActivityWithNavigation :
         NavigationDrawerController(DEFAULT_SELECTED_FRAGMENT_ID, R.string.tab_start)
     protected var mFragment: Fragment? = null
     var navController: NavHostController? = null
+    private var mPendingDrawerItemId: Int? = null
+
+    /**
+     * Invoked when Compose NavHostController is initialized and bound to ATrainingTrackerApp.
+     * Executes any queued drawer navigation action that arrived before the controller was ready.
+     */
+    fun onNavControllerReady(controller: NavHostController) {
+        navController = controller
+        mPendingDrawerItemId?.let { pendingId ->
+            mPendingDrawerItemId = null
+            navigateToDrawerItem(pendingId)
+        }
+    }
     protected val mHandler: Handler = Handler(Looper.getMainLooper())
     protected var mStartAndNotResume: Boolean = true
     private var mResumingFromInterruptedNotification: Boolean = false
@@ -302,6 +316,15 @@ class MainActivityWithNavigation :
                     }
                 }
             } catch (ignored: IllegalArgumentException) {
+            }
+        }
+
+        if (intent.getBooleanExtra(EXTRA_FILTER_CRITICAL_BATTERY, false)) {
+            try {
+                val tabViewModel = ViewModelProvider(this)[DevicesTabbedViewModel::class.java]
+                tabViewModel.setCriticalBatteryFilter()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error applying critical battery filter from intent: " + e.message, e)
             }
         }
     }
@@ -769,7 +792,10 @@ class MainActivityWithNavigation :
             mSelectedFragmentId = itemId
             mDrawerController.selectedItemId = itemId
 
-            navController?.let { controller ->
+            val controller = navController
+            if (controller == null) {
+                mPendingDrawerItemId = itemId
+            } else {
                 controller.navigate(route) {
                     popUpTo(controller.graph.findStartDestination().id) {
                         saveState = true

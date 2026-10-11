@@ -1224,6 +1224,17 @@
     <string name="filter_section_recordings">Opnamen</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d opnamen</string>
     <string name="filter_no_matching_clusters">Geen favoriete tracks komen overeen met de actieve filters</string>
+    <string name="filter_sensors_title">Sensoren filteren</string>
+    <string name="filter_section_protocol">Protocol</string>
+    <string name="filter_section_category">Sensorcategorie</string>
+    <string name="filter_section_battery">Batterijniveau</string>
+    <string name="filter_protocol_all">Alle</string>
+    <string name="filter_battery_all">Alle</string>
+    <string name="filter_battery_critical">Kritiek (≤ 20%)</string>
+    <string name="filter_battery_normal">Normaal (> 20%)</string>
+    <string name="filter_battery_critical_chip">Batterij: ≤ 20%</string>
+    <string name="filter_battery_normal_chip">Batterij: > 20%</string>
+    <string name="filter_no_matching_sensors">Geen sensoren komen overeen met de actieve filters</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">Favoriete routes en clustering</string>
     <string name="cluster_info_what_title">Wat zijn Favoriete routes?</string>

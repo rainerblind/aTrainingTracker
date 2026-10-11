@@ -1311,6 +1311,17 @@
     <string name="filter_section_recordings">Aufzeichnungen</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d Aufzeichnungen</string>
     <string name="filter_no_matching_clusters">Keine Lieblingsstrecken entsprechen den aktiven Filtern</string>
+    <string name="filter_sensors_title">Sensoren filtern</string>
+    <string name="filter_section_protocol">Protokoll</string>
+    <string name="filter_section_category">Sensorkategorie</string>
+    <string name="filter_section_battery">Batteriestand</string>
+    <string name="filter_protocol_all">Alle</string>
+    <string name="filter_battery_all">Alle</string>
+    <string name="filter_battery_critical">Kritisch (≤ 20%)</string>
+    <string name="filter_battery_normal">Normal (> 20%)</string>
+    <string name="filter_battery_critical_chip">Batterie: ≤ 20%</string>
+    <string name="filter_battery_normal_chip">Batterie: > 20%</string>
+    <string name="filter_no_matching_sensors">Keine Sensoren entsprechen den aktiven Filtern</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">Lieblingsstrecken &amp; Clustering</string>
     <string name="cluster_info_what_title">Was sind Lieblingsstrecken?</string>

@@ -1225,6 +1225,17 @@
     <string name="filter_section_recordings">Enregistrements</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d enregistrements</string>
     <string name="filter_no_matching_clusters">Aucun parcours favori ne correspond aux filtres actifs</string>
+    <string name="filter_sensors_title">Filtrer les capteurs</string>
+    <string name="filter_section_protocol">Protocole</string>
+    <string name="filter_section_category">Catégorie de capteur</string>
+    <string name="filter_section_battery">Niveau de batterie</string>
+    <string name="filter_protocol_all">Tous</string>
+    <string name="filter_battery_all">Tous</string>
+    <string name="filter_battery_critical">Critique (≤ 20%)</string>
+    <string name="filter_battery_normal">Normal (> 20%)</string>
+    <string name="filter_battery_critical_chip">Batterie : ≤ 20%</string>
+    <string name="filter_battery_normal_chip">Batterie : > 20%</string>
+    <string name="filter_no_matching_sensors">Aucun capteur ne correspond aux filtres actifs</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">Parcours favoris et regroupement</string>
     <string name="cluster_info_what_title">Que sont les Parcours favoris ?</string>
