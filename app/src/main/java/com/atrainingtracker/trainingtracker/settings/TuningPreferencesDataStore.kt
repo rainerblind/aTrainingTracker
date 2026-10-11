@@ -149,6 +149,16 @@ object TuningPreferencesDefaults {
     const val MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT = 50.0f
     const val STEP_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT = 5.0f
 
+    const val DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA = 0.10f
+    const val MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA = 0.02f
+    const val MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA = 0.50f
+    const val STEP_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA = 0.02f
+
+    const val DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA = 0.15f
+    const val MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA = 0.05f
+    const val MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA = 0.50f
+    const val STEP_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA = 0.05f
+
     const val SUPPRESS_ANT_MISSING_ADAPTER_DIALOG = false
 }
 
@@ -190,6 +200,8 @@ data class TuningConfig(
     val mapFollowMeCruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
     val mapFollowMeTiltAngle: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE,
     val mapFollowMeLookaheadPaddingPercent: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+    val mapFollowMeSpeedSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+    val mapFollowMeBearingSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
     val suppressAntMissingAdapterDialog: Boolean = TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG
 ) {
     val showAntMissingAdapterWarnings: Boolean
@@ -277,6 +289,8 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_MAP_FOLLOW_ME_CRUISING_ZOOM: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_cruising_zoom")
         val KEY_MAP_FOLLOW_ME_TILT_ANGLE: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_tilt_angle")
         val KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_lookahead_padding_percent")
+        val KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_speed_smoothing_alpha")
+        val KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_bearing_smoothing_alpha")
         val KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_suppress_ant_missing_adapter_dialog")
 
         internal val ALL_KEYS = listOf(
@@ -315,6 +329,8 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_MAP_FOLLOW_ME_CRUISING_ZOOM,
             KEY_MAP_FOLLOW_ME_TILT_ANGLE,
             KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+            KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+            KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
             KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG
         )
     }
@@ -502,6 +518,14 @@ class TuningPreferencesDataStore(private val context: Context) {
                 TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
                 TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
             ),
+            mapFollowMeSpeedSmoothingAlpha = (prefs[KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA).coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
+            ),
+            mapFollowMeBearingSmoothingAlpha = (prefs[KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA).coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
+            ),
             suppressAntMissingAdapterDialog = prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] ?: TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG
         )
     }
@@ -627,6 +651,14 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT] = config.mapFollowMeLookaheadPaddingPercent.coerceIn(
                 TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
                 TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
+            )
+            prefs[KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA] = config.mapFollowMeSpeedSmoothingAlpha.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
+            )
+            prefs[KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA] = config.mapFollowMeBearingSmoothingAlpha.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
             )
             prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] = config.suppressAntMissingAdapterDialog
         }

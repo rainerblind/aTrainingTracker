@@ -66,7 +66,11 @@ fun NavigationSection(
     mapFollowMeTiltAngle: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE,
     onMapFollowMeTiltAngleChange: (Float) -> Unit = {},
     mapFollowMeLookaheadPaddingPercent: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
-    onMapFollowMeLookaheadPaddingPercentChange: (Float) -> Unit = {}
+    onMapFollowMeLookaheadPaddingPercentChange: (Float) -> Unit = {},
+    mapFollowMeSpeedSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+    onMapFollowMeSpeedSmoothingAlphaChange: (Float) -> Unit = {},
+    mapFollowMeBearingSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+    onMapFollowMeBearingSmoothingAlphaChange: (Float) -> Unit = {}
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -257,6 +261,44 @@ fun NavigationSection(
             },
             valueRange = TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT..TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
             steps = 7
+        )
+
+        // Speed Smoothing (0.02 - 0.50, 0.02 steps)
+        if (mapFollowMeSpeedZoomEnabled) {
+            TuningSliderItem(
+                title = stringResource(R.string.tuning_map_follow_me_speed_smoothing_title),
+                valueText = String.format(Locale.getDefault(), "%.2f", mapFollowMeSpeedSmoothingAlpha),
+                helperText = stringResource(R.string.tuning_map_follow_me_speed_smoothing_desc),
+                defaultText = stringResource(R.string.tuning_default_format, "0.10"),
+                value = mapFollowMeSpeedSmoothingAlpha,
+                onValueChange = { snapped ->
+                    val rounded = (snapped * 50f).roundToInt() / 50f
+                    onMapFollowMeSpeedSmoothingAlphaChange(rounded.coerceIn(
+                        TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+                        TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
+                    ))
+                },
+                valueRange = TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA..TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+                steps = 23
+            )
+        }
+
+        // Bearing Smoothing (0.05 - 0.50, 0.05 steps)
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_map_follow_me_bearing_smoothing_title),
+            valueText = String.format(Locale.getDefault(), "%.2f", mapFollowMeBearingSmoothingAlpha),
+            helperText = stringResource(R.string.tuning_map_follow_me_bearing_smoothing_desc),
+            defaultText = stringResource(R.string.tuning_default_format, "0.15"),
+            value = mapFollowMeBearingSmoothingAlpha,
+            onValueChange = { snapped ->
+                val rounded = (snapped * 20f).roundToInt() / 20f
+                onMapFollowMeBearingSmoothingAlphaChange(rounded.coerceIn(
+                    TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+                    TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
+                ))
+            },
+            valueRange = TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA..TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+            steps = 8
         )
     }
 }
