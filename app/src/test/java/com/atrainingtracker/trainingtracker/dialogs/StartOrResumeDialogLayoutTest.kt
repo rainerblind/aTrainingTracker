@@ -190,4 +190,28 @@ class StartOrResumeDialogLayoutTest {
             }
         }
     }
+
+    @Test
+    fun testStartOrResumeDialog_overridesOnStartWithExplicitWindowBounds() {
+        val sourceFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/dialogs/StartOrResumeDialog.kt")
+        val content = sourceFile.readText()
+
+        assertTrue(
+            "StartOrResumeDialog must override onStart()",
+            content.contains("override fun onStart()")
+        )
+        assertTrue(
+            "onStart() must invoke dialog?.window?.setLayout",
+            content.contains("dialog?.window?.setLayout(")
+        )
+        assertTrue(
+            "onStart() must specify MATCH_PARENT width",
+            content.contains("LayoutParams.MATCH_PARENT")
+        )
+        assertTrue(
+            "onStart() must specify WRAP_CONTENT height",
+            content.contains("LayoutParams.WRAP_CONTENT")
+        )
+    }
 }
+

@@ -128,6 +128,14 @@ class StartOrResumeDialog : DialogFragment() {
             }
         }
     }
+
+    override fun onStart() {
+        super.onStart()
+        dialog?.window?.setLayout(
+            android.view.WindowManager.LayoutParams.MATCH_PARENT,
+            android.view.WindowManager.LayoutParams.WRAP_CONTENT
+        )
+    }
 }
 
 /**
