@@ -242,4 +242,107 @@ class LiveClimbsRepositoryTest {
         assertEquals(1, live!!.routeIndex)
         assertEquals(1, live.totalRouteClimbs)
     }
+
+    @Test
+    fun testProcessLocation_sparsePath_interpolatesProgressAndAltitudeContinuously() = runTest(testDispatcher) {
+        // REQ-MAP-047 / TST-MAP-049.1: Continuous linear projection on sparse geometry
+        repository.refreshClimbs(null)
+
+        // Enter climb at P0
+        repository.updateTracking(LatLng(47.0, 10.0), bearing = 0.0)
+        assertEquals(LiveClimbStatus.ON_CLIMB, repository.activeLiveClimb.value?.status)
+
+        // 1. Move to 25% along first 500m segment (lat 47.00125, lng 10.0 -> 125m along climb)
+        repository.updateTracking(LatLng(47.00125, 10.0), bearing = 0.0)
+        val live25 = repository.activeLiveClimb.value
+        assertNotNull(live25)
+        assertEquals(LiveClimbStatus.ON_CLIMB, live25!!.status)
+        assertEquals(0.125f, live25.currentProgressFraction, 0.01f)
+        assertEquals(875.0, live25.distanceToSummit, 5.0)
+        assertEquals(512.5, live25.climb.pathPoints.first().altitude + (live25.climb.pathPoints[1].altitude - live25.climb.pathPoints.first().altitude) * 0.25, 0.1)
+        assertEquals(87.5, live25.remainingElevationGain, 1.0)
+        assertEquals(10.0, live25.currentGradePercent, 0.1)
+
+        // 2. Move to 50% along first 500m segment (lat 47.0025, lng 10.0 -> 250m along climb)
+        repository.updateTracking(LatLng(47.0025, 10.0), bearing = 0.0)
+        val live50 = repository.activeLiveClimb.value
+        assertNotNull(live50)
+        assertEquals(0.25f, live50!!.currentProgressFraction, 0.01f)
+        assertEquals(750.0, live50.distanceToSummit, 5.0)
+        assertEquals(75.0, live50.remainingElevationGain, 1.0)
+        assertEquals(10.0, live50.currentGradePercent, 0.1)
+
+        // 3. Move to 75% along first 500m segment (lat 47.00375, lng 10.0 -> 375m along climb)
+        repository.updateTracking(LatLng(47.00375, 10.0), bearing = 0.0)
+        val live75 = repository.activeLiveClimb.value
+        assertNotNull(live75)
+        assertEquals(0.375f, live75!!.currentProgressFraction, 0.01f)
+        assertEquals(625.0, live75.distanceToSummit, 5.0)
+        assertEquals(62.5, live75.remainingElevationGain, 1.0)
+        assertEquals(10.0, live75.currentGradePercent, 0.1)
+    }
+
+    @Test
+    fun testProcessLocation_midSegmentSparseTrack_preventsFalseOffRoute() = runTest(testDispatcher) {
+        // REQ-MAP-047 / TST-MAP-049.2: Verify that an athlete between sparse vertices (250m from nearest vertex)
+        // with 10m cross-track distance is NOT falsely dismissed as off-route.
+        repository.refreshClimbs(null)
+
+        // Enter climb at P0
+        repository.updateTracking(LatLng(47.0, 10.0), bearing = 0.0)
+        assertEquals(LiveClimbStatus.ON_CLIMB, repository.activeLiveClimb.value?.status)
+
+        // Midpoint of segment 0 is lat 47.0025 (250m from P0 and 250m from P1).
+        // In the legacy code, distance to nearest vertex was 250m > 100m threshold -> falsely cancelled!
+        // Offset 10m East: at lat 47 deg, 1 deg lng ~ 111139 * cos(47 deg) ~ 75794m.
+        // 10m ~ 0.000132 deg lng.
+        val lngOffset10m = 10.0 / (111139.0 * cos(Math.toRadians(47.0)))
+        val midPointWith10mOffset = LatLng(47.0025, 10.0 + lngOffset10m)
+
+        repository.updateTracking(midPointWith10mOffset, bearing = 0.0)
+
+        val live = repository.activeLiveClimb.value
+        assertNotNull("Should NOT dismiss climb when cross-track distance is only 10m", live)
+        assertEquals(LiveClimbStatus.ON_CLIMB, live!!.status)
+        assertEquals(0.25f, live.currentProgressFraction, 0.02f)
+    }
+
+    @Test
+    fun testProcessLocation_trueOffRoute_dismissesClimb() = runTest(testDispatcher) {
+        // REQ-MAP-047 / TST-MAP-049.3: True off-route (> 100m perpendicular) dismisses climb.
+        repository.refreshClimbs(null)
+
+        repository.updateTracking(LatLng(47.0, 10.0), bearing = 0.0)
+        assertEquals(LiveClimbStatus.ON_CLIMB, repository.activeLiveClimb.value?.status)
+
+        // 120m East offset at lat 47.0025
+        val lngOffset120m = 120.0 / (111139.0 * cos(Math.toRadians(47.0)))
+        val offRoutePos = LatLng(47.0025, 10.0 + lngOffset120m)
+
+        repository.updateTracking(offRoutePos, bearing = 0.0)
+
+        val live = repository.activeLiveClimb.value
+        assertNull("Should dismiss climb when cross-track distance exceeds 100m", live)
+    }
+
+    @Test
+    fun testProcessLocation_singlePointPath_safeFallback() = runTest(testDispatcher) {
+        // REQ-MAP-047 / TST-MAP-049.4: Safe fallback for single-point geometry
+        val singlePointClimb = sampleClimb.copy(
+            id = 2L,
+            pathPoints = listOf(
+                PathPoint(distance = 0.0, latLng = LatLng(47.0, 10.0), altitude = 500.0)
+            )
+        )
+        coEvery { mockClimbsDb.getAllClimbs() } returns listOf(singlePointClimb)
+        repository.refreshClimbs(null)
+
+        // Enter climb
+        repository.updateTracking(LatLng(47.0, 10.0), bearing = 0.0)
+
+        val live = repository.activeLiveClimb.value
+        assertNotNull(live)
+        assertEquals(LiveClimbStatus.ON_CLIMB, live!!.status)
+        assertEquals(0f, live.currentProgressFraction, 0.001f)
+    }
 }
