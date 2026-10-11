@@ -80,6 +80,7 @@ fun RoutesScreen(
     val isSyncingStrava by viewModel.isSyncingStrava.collectAsStateWithLifecycle()
     val syncStravaStatus by viewModel.syncStravaStatus.collectAsStateWithLifecycle()
     val tuningConfig by viewModel.tuningConfig.collectAsStateWithLifecycle()
+    val activeNavigatedRouteId by viewModel.activeNavigatedRouteId.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -129,8 +130,9 @@ fun RoutesScreen(
                             .map { it.toMapSegment(showStartAndFinishText = false) }
                     }
 
+                    val isActivelyNavigating = selectedRoute.summary.id == activeNavigatedRouteId
                     RouteOnMapScreen(
-                        route = selectedRoute.toMapRoute(isActiveNavigation = true),
+                        route = selectedRoute.toMapRoute(isActiveNavigation = isActivelyNavigating),
                         routeSummary = selectedRoute.summary,
                         backgroundPaths = backgroundPaths,
                         allSegments = allSegments,
