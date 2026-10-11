@@ -61,8 +61,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,6 +71,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 
 /**
@@ -302,7 +304,10 @@ fun DrawerHeader() {
             horizontalArrangement = Arrangement.Start
         ) {
             Image(
-                painter = painterResource(id = R.drawable.logo_512),
+                painter = safePainterResource(
+                    id = R.drawable.logo_512,
+                    fallback = Icons.AutoMirrored.Filled.DirectionsRun
+                ),
                 contentDescription = null,
                 modifier = Modifier.size(46.dp),
                 contentScale = ContentScale.Fit
