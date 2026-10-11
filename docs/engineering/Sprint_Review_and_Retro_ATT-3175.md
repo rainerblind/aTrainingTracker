@@ -102,8 +102,8 @@ The interpolated metrics are continuous:
 $$\text{dist} = P_i.\text{dist} + s \times (P_{i+1}.\text{dist} - P_i.\text{dist})$$
 $$\text{alt} = P_i.\text{alt} + s \times (P_{i+1}.\text{alt} - P_i.\text{alt})$$
 
-### 3.3 Permanent Countermeasure (Rule 35)
-Progress tracking along geometric paths (climbs, segments, routes) MUST linearly project the athlete's current location onto the nearest line segment $[P_i, P_{i+1}]$ to continuously compute distance, altitude, and visual marker positions.
+### 3.3 Permanent Countermeasure (Design Guidelines §2.4)
+Progress tracking along geometric paths (climbs, segments, routes) MUST linearly project the athlete's current location onto the nearest line segment $[P_i, P_{i+1}]$ to continuously compute distance, altitude, and visual marker positions. Codified permanently in `docs/design_guidelines.md` Section 2.4 (*Continuous Linear Projection for Sparse Geometry Progress Tracking*).
 
 ---
 
@@ -117,11 +117,11 @@ Across the rest of the application (e.g., Segments and Route Detail sheets in `L
 $$\text{height} = 70\text{dp} + \left(\frac{\text{range}}{1000\text{m}}\right)^{0.6} \times (200\text{dp} - 70\text{dp})$$
 It scales between $70\text{dp}$ (flat) and $200\text{dp}$ (mountainous) based strictly on $\Delta H = H_{\max} - H_{\min}$, wrapping its content naturally without flexible stretching.
 
-### 4.3 Permanent Countermeasure (Rule 36)
+### 4.3 Permanent Countermeasure (Design Guidelines §2.3)
 * Visual analytics and elevation profiles must not be given unbounded flexible weights (e.g. `weight(1f)`) that stretch them out of proportion.
 * Sizing must adhere to canonical domain algorithms (`calculateElevationProfileHeight(range)`).
 * Flexible space must be absorbed by scrollable content (sensor grid with `weight(1f, fill = false)`), while charts retain their fixed adaptive height.
-* Documented in `docs/design_guidelines.md` Section 2.3.
+* Codified permanently in `docs/design_guidelines.md` Section 2.3 (*Elevation Profile Sizing & Adaptive Height Invariant*).
 
 ---
 
@@ -130,19 +130,30 @@ It scales between $70\text{dp}$ (flat) and $200\text{dp}$ (mountainous) based st
 ### 5.1 The Issue
 When a connected sensor was deleted from *Meine Sensoren* (`DeviceListFragment`), it was deleted from SQLite (`Devices.db`), but `BANALService` continued running and maintaining the active connection in memory. `ControlTrackingViewModel` looked up the active ID in `dbDevices`, found `null`, and fell back to `RemoteDeviceUIData(DeviceType.DUMMY, "New Sensor")`. Clicking this ghost icon opened an empty `DialogFragment` with `FLAG_DIM_BEHIND`, darkening the screen without any view content or dismissal controls.
 
-### 5.2 Permanent Countermeasure (Rule 37)
+### 5.2 Permanent Countermeasure (Governance Rule 35)
 * Deleting an entity from persistence must immediately notify and tear down the corresponding hardware/background service connection in `BANALService`.
 * ViewModels must defensively discard orphaned IDs rather than constructing invalid fallback models (`DeviceType.DUMMY`) that open broken dialogs.
+* Codified permanently in `.agents/rules/aspice_governance.md` Rule 35 (*Clean Hardware Teardown and Orphan Defense on Persistence Deletion*).
 
 ---
 
 ## 6. Retrospective Process Hardening & Countermeasures Summary
 
+### 6.1 ASPICE Governance Rules (`.agents/rules/aspice_governance.md`)
 1. **Rule 34: Chesterton's Fence for Empty Callback Lambdas & Gesture Contract Tests**:
    Never pass `{}` to suppress an existing callback without auditing child call sites. Use intent-explicit callback names. Protect multi-gesture components with gesture contract tests.
-2. **Rule 35: Continuous Linear Projection for Sparse Geometry Progress Tracking**:
-   Live metric and HUD progress along polyline paths must project coordinates onto adjacent segments to calculate continuous linear interpolation for distance, altitude, and visual marker positions.
-3. **Rule 36: Decoupled Canonical Chart Height from Container Flexibility**:
-   Elevation profile and chart heights must be governed by their canonical adaptive domain formulas rather than expanding via `weight(1f)` or `fillMaxHeight()`. Flexible space must be absorbed by scrollable content.
-4. **Rule 37: Clean Hardware Teardown and Orphan Defense on Persistence Deletion**:
+2. **Rule 35: Clean Hardware Teardown and Orphan Defense on Persistence Deletion**:
    Deleting persisted entities must trigger explicit disconnection and registration teardown in background services. UI layers must filter out orphaned entities.
+
+### 6.2 UI & Visual Analytics Standards (`docs/design_guidelines.md`)
+1. **Section 2.1: Coordinate Space Normalization for Sub-Entity Inspection Charts**:
+   Normalize sub-entity distance domains to $[0, \text{length}]$ rather than inheriting parent route global coordinates.
+2. **Section 2.3: Elevation Profile Sizing & Adaptive Height Invariant**:
+   Chart heights are governed by canonical adaptive domain formulas (70dp–200dp based on $\Delta H$). Flexible container space is absorbed by scrollable content (`weight(1f, fill = false)`).
+3. **Section 2.4: Continuous Linear Projection for Sparse Geometry Progress Tracking**:
+   Live metric and HUD progress along polyline paths must project coordinates onto adjacent segments to calculate continuous linear interpolation for distance, altitude, and visual marker positions.
+4. **Section 3.1: Explanatory Scale Direction in Settings Sliders**:
+   Settings sliders must explain physical scale direction in subtitle/hint text.
+5. **Section 6.1: Unified Viewport Anchor Authority for Map Tracking**:
+   Follow-Me camera positioning and lookahead offsets share a single spatial authority to prevent competing layout recentering loops and camera jitter.
+
