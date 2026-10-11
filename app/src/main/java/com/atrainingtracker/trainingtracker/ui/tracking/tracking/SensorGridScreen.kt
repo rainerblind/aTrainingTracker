@@ -519,7 +519,6 @@ fun SensorGridScreen(
                     }
 
                     // 2. The Map (Expanded - Isolated Recomposition Barrier, REQ-UI-326 / ATT-2944)
-                    // When showMap is true, anchors NavigationHintsOverlay over the top edge of the map (REQ-UI-335 / ATT-3100)
                     if (state.mapState.showMap) {
                         Box(
                             modifier = Modifier
@@ -531,20 +530,6 @@ fun SensorGridScreen(
                                 currentLocationFlow = currentLocationFlow,
                                 modifier = Modifier.fillMaxSize()
                             )
-
-                            if (state.showNavigationHints) {
-                                NavigationHintsOverlay(
-                                    state = state,
-                                    tuningConfig = tuningConfig,
-                                    navigationState = navState,
-                                    returnNavigationState = returnNavState,
-                                    forkDecisionState = forkDecisionState,
-                                    onDismissReturnNav = { returnNavRepo.dismissHud() },
-                                    onSelectForkRoute = { routeId -> forkNavRepo.selectRouteManually(routeId) },
-                                    onDismissFork = { forkNavRepo.dismissPrompt() },
-                                    modifier = Modifier.align(Alignment.TopCenter)
-                                )
-                            }
                         }
                     }
 
@@ -564,9 +549,8 @@ fun SensorGridScreen(
                     }
                 }
 
-                // Fallback Ambient Navigation Overlays when map is NOT present (REQ-UI-335 / ATT-3100)
-                // Floats on top at Alignment.TopCenter only when state.mapState.showMap is false.
-                if (!state.mapState.showMap && state.showNavigationHints) {
+                // Ambient Navigation Overlays floating at top of tracking tab across all views (REQ-UI-348 / ATT-3170)
+                if (state.showNavigationHints) {
                     NavigationHintsOverlay(
                         state = state,
                         tuningConfig = tuningConfig,
@@ -587,8 +571,8 @@ fun SensorGridScreen(
 }
 
 /**
- * Ambient navigation overlay displaying turn prompts, return navigation HUD, and fork decisions (REQ-UI-335 / ATT-3100).
- * Anchored over top edge of map view when present, or at the top of tracking tab when map is absent.
+ * Ambient navigation overlay displaying turn prompts, return navigation HUD, and fork decisions (REQ-UI-348 / ATT-3170).
+ * Anchored at the top of the tracking tab across all views regardless of map presence.
  */
 @Composable
 fun NavigationHintsOverlay(

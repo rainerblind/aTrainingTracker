@@ -247,10 +247,10 @@ class SensorGridScreenRouteIntegrationTest {
     }
 
     /**
-     * TST-UI-295.1: Navigation hints overlay anchors inside map container over embedded map when map is present (REQ-UI-335 / ATT-3100).
+     * TST-UI-308.1: Map container does NOT host NavigationHintsOverlay (REQ-UI-348 / ATT-3170, reverting ATT-3100).
      */
     @Test
-    fun testSensorGridScreen_navigationOverlay_anchorsInsideMapContainerWhenMapPresent() {
+    fun testSensorGridScreen_mapContainer_doesNotHostNavigationOverlay() {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
@@ -269,25 +269,37 @@ class SensorGridScreenRouteIntegrationTest {
             mapSection.contains("TrackingMapContainer(")
         )
 
-        assertTrue(
-            "Map container must host NavigationHintsOverlay anchored at Alignment.TopCenter",
-            mapSection.contains("NavigationHintsOverlay(") &&
-                    mapSection.contains("modifier = Modifier.align(Alignment.TopCenter)")
+        org.junit.Assert.assertFalse(
+            "Map container must NOT host NavigationHintsOverlay (REQ-UI-348 / ATT-3170)",
+            mapSection.contains("NavigationHintsOverlay(")
         )
     }
 
     /**
-     * TST-UI-295.2: Fallback navigation hints overlay anchors at top of tab when map is absent (REQ-UI-335 / ATT-3100).
+     * TST-UI-308.2: Navigation hints overlay anchors at top of root tracking container across all views (REQ-UI-348 / ATT-3170).
      */
     @Test
-    fun testSensorGridScreen_navigationOverlay_anchorsAtRootWhenMapAbsent() {
+    fun testSensorGridScreen_navigationOverlay_anchorsAtRootTopCenter() {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        // Verify root overlay is conditioned on !state.mapState.showMap
+        // Verify root overlay is conditioned solely on state.showNavigationHints
         assertTrue(
-            "SensorGridScreen must render root NavigationHintsOverlay when map is absent",
+            "SensorGridScreen must render root NavigationHintsOverlay when showNavigationHints is true",
+            content.contains("if (state.showNavigationHints)")
+        )
+
+        org.junit.Assert.assertFalse(
+            "SensorGridScreen must not condition root overlay on !state.mapState.showMap (REQ-UI-348)",
             content.contains("if (!state.mapState.showMap && state.showNavigationHints)")
+        )
+
+        val rootOverlaySection = content.substringAfter("// Ambient Navigation Overlays floating at top of tracking tab")
+            .substringBefore("fun NavigationHintsOverlay(")
+
+        assertTrue(
+            "Root NavigationHintsOverlay must be anchored at Alignment.TopCenter",
+            rootOverlaySection.contains("modifier = Modifier.align(Alignment.TopCenter)")
         )
     }
 
