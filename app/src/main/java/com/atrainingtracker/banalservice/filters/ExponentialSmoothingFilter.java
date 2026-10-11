@@ -55,8 +55,13 @@ public class ExponentialSmoothingFilter
     }
 
     @Override
+    public synchronized void reset() {
+        mFilteredValue = 0.0;
+    }
+
+    @Override
     public synchronized void newValue(Number value) {
-        if (value != null && !TrainingApplication.isPaused()) {
+        if (value != null) {
             mFilteredValue = mAlpha * value.doubleValue() + (1 - mAlpha) * mFilteredValue;
         }
     }
