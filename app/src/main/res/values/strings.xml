@@ -1577,6 +1577,8 @@
     <string name="tuning_altitude_window_desc">Moving average time window for instantaneous altitude and vertical speed.</string>
     <string name="tuning_slope_min_speed_title">Slope Minimum Speed</string>
     <string name="tuning_slope_min_speed_desc">Minimum moving speed required to calculate real-time gradient.</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_title">Show missing ANT+ adapter warnings</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_desc">Show alert dialog when an ANT+ sensor is searched but no adapter is detected</string>
     <string name="tuning_cat_aftermath">Aftermath &amp; Profile Analytics</string>
     <string name="tuning_profile_x_axis_title">Elevation Profile X-Axis</string>
     <string name="tuning_profile_x_axis_desc">Select horizontal axis domain for elevation profile graphs.</string>

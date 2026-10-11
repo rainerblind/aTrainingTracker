@@ -1471,6 +1471,8 @@
     <string name="tuning_altitude_window_desc">Gleitendes Zeitfenster für Momentanhöhe und Vertikalgeschwindigkeit.</string>
     <string name="tuning_slope_min_speed_title">Mindestgeschwindigkeit für Steigung</string>
     <string name="tuning_slope_min_speed_desc">Erforderliche Mindestgeschwindigkeit zur Berechnung der Echtzeit-Steigung.</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_title">Warnung bei fehlendem ANT+ Adapter</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_desc">Hinweisdialog anzeigen, wenn nach ANT+ Sensoren gesucht wird, aber kein Adapter erkannt wurde</string>
     <string name="tuning_cat_aftermath">Aftermath &amp; Profil-Analytik</string>
     <string name="tuning_profile_x_axis_title">Höhenprofil X-Achse</string>
     <string name="tuning_profile_x_axis_desc">Horizontale Achsenmetrik für Höhenprofildiagramme auswählen.</string>

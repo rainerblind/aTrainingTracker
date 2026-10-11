@@ -39,6 +39,9 @@ class TuningConfigTest {
         assertEquals(0.80f, TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY, 0.001f)
         assertEquals(4, config.navigationCueDismissDurationSec)
         assertEquals(4, TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC)
+        assertEquals(false, config.suppressAntMissingAdapterDialog)
+        assertEquals(false, TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG)
+        assertEquals(true, config.showAntMissingAdapterWarnings)
     }
 
     @Test

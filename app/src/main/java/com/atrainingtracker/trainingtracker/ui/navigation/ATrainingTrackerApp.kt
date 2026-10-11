@@ -46,7 +46,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -500,6 +503,8 @@ fun ATrainingTrackerApp(
     // Material 3 ANT+ Alert Dialogs & Status Sheet (REQ-UI-323 / ATT-2939)
     when (val dialogState = activity.antDialogState) {
         is AntDialogState.MissingAdapter -> {
+            val scope = rememberCoroutineScope()
+            val tuningDataStore = remember { TuningPreferencesDataStore(activity.applicationContext) }
             AntMissingAdapterDialog(
                 onViewStatus = {
                     activity.antDialogState = null
@@ -507,6 +512,9 @@ fun ATrainingTrackerApp(
                 },
                 onDismiss = {
                     activity.antDialogState = null
+                    scope.launch {
+                        tuningDataStore.setSuppressAntMissingAdapterDialog(true)
+                    }
                 }
             )
         }
