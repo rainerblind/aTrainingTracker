@@ -3,8 +3,8 @@
 ## 1. Executive Summary & Problem Domain
 * **Issue**: [ATT-3174](https://atrainingtracker.atlassian.net/browse/ATT-3174): `[Verbesserung] Linearly interpolate sparse path points on Climb elevation profile and live progress metrics`
 * **Parent Epic**: [ATT-2464](https://atrainingtracker.atlassian.net/browse/ATT-2464): *ClimbPro Live Climb Engine*
-* **Target Requirement**: Amend `REQ-MAP-027` (`REQ-MAP-039`)
-* **Target Test Spec**: `TST-MAP-039`
+* **Target Requirement**: Amend `REQ-MAP-027` (`REQ-MAP-047`)
+* **Target Test Spec**: `TST-MAP-049`
 * **Sprint**: `2026-41.9`
 
 ### Problem Description
@@ -93,6 +93,6 @@ val progressFraction = (completedDist / climb.distanceMeters).coerceIn(0.0, 1.0)
 | :--- | :--- | :--- |
 | **Climb Tracking Engine** | `LiveClimbsRepository.kt` | Implement orthogonal projection onto segments $[P_i, P_{i+1}]$ with linear interpolation of distance, altitude, progress fraction, and segment gradient. |
 | **Unit Verification** | `LiveClimbsRepositoryTest.kt` | Add test cases verifying continuous interpolation on sparse paths (e.g. at 25%, 50%, 75% between 500m vertices) and accurate cross-track off-route evaluation. |
-| **Living Documentation** | `docs/requirements.md` | Add `REQ-MAP-039` (amending `REQ-MAP-027`). |
-| **Test Documentation** | `docs/tests.md` | Add `TST-MAP-039`. |
+| **Living Documentation** | `docs/requirements.md` | Add `REQ-MAP-047` (amending `REQ-MAP-027`). |
+| **Test Documentation** | `docs/tests.md` | Add `TST-MAP-049`. |
 | **Design Guidelines** | `docs/design_guidelines.md` | Align with Section 2.4. |
