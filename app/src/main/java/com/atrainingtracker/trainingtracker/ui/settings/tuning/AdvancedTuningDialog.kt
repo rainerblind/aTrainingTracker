@@ -107,6 +107,8 @@ fun AdvancedTuningDialog(
     var mapFollowMeCruisingZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM) }
     var mapFollowMeTiltAngle by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE) }
     var mapFollowMeLookaheadPaddingPercent by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT) }
+    var mapFollowMeSpeedSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA) }
+    var mapFollowMeBearingSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA) }
     var showAntMissingAdapterWarnings by remember { mutableStateOf(!TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
@@ -160,6 +162,8 @@ fun AdvancedTuningDialog(
         mapFollowMeInitialZoom = config.mapFollowMeInitialZoom; mapFollowMeSpeedZoomEnabled = config.mapFollowMeSpeedZoomEnabled
         mapFollowMeCruisingZoom = config.mapFollowMeCruisingZoom; mapFollowMeTiltAngle = config.mapFollowMeTiltAngle
         mapFollowMeLookaheadPaddingPercent = config.mapFollowMeLookaheadPaddingPercent
+        mapFollowMeSpeedSmoothingAlpha = config.mapFollowMeSpeedSmoothingAlpha
+        mapFollowMeBearingSmoothingAlpha = config.mapFollowMeBearingSmoothingAlpha
         showAntMissingAdapterWarnings = config.showAntMissingAdapterWarnings
     }
 
@@ -189,6 +193,8 @@ fun AdvancedTuningDialog(
                         mapFollowMeInitialZoom = mapFollowMeInitialZoom, mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled,
                         mapFollowMeCruisingZoom = mapFollowMeCruisingZoom, mapFollowMeTiltAngle = mapFollowMeTiltAngle,
                         mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent,
+                        mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha,
+                        mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
                         suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings
                     )
                     scope.launch {
@@ -353,7 +359,11 @@ fun AdvancedTuningDialog(
                     mapFollowMeTiltAngle = mapFollowMeTiltAngle,
                     onMapFollowMeTiltAngleChange = { mapFollowMeTiltAngle = it },
                     mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent,
-                    onMapFollowMeLookaheadPaddingPercentChange = { mapFollowMeLookaheadPaddingPercent = it }
+                    onMapFollowMeLookaheadPaddingPercentChange = { mapFollowMeLookaheadPaddingPercent = it },
+                    mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha,
+                    onMapFollowMeSpeedSmoothingAlphaChange = { mapFollowMeSpeedSmoothingAlpha = it },
+                    mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
+                    onMapFollowMeBearingSmoothingAlphaChange = { mapFollowMeBearingSmoothingAlpha = it }
                 )
             }
 
