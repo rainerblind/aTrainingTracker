@@ -548,21 +548,17 @@ fun SensorGridScreen(
                         }
                     }
 
-                    // 3. The Elevation Profile (Below the Map or taking remaining space if map is hidden, REQ-UI-339 / ATT-3107)
+                    // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173)
                     if (state.showElevationProfile && state.pathPoints.size >= 2) {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .then(
-                                    if (!state.mapState.showMap) Modifier.weight(1f) else Modifier
-                                )
                                 .padding(top = 8.dp)
                         ) {
                             ElevationProfile(
                                 pathPoints = state.pathPoints,
                                 currentDistance = state.pathPoints.lastOrNull()?.distance,
-                                fillParentHeight = !state.mapState.showMap,
-                                modifier = if (!state.mapState.showMap) Modifier.fillMaxSize() else Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
