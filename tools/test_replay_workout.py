@@ -13,11 +13,13 @@ import tempfile
 
 from tools.replay_workout import (
     TcxParser, TcxPoint, ReplayEngine,
-    build_power_payload, build_hr_payload,
+    build_power_payload, build_hr_payload, build_battery_payload,
     format_duration, haversine_distance, calculate_bearing,
     BleReplayServer, AdbGpsInjector,
     HostPreFlightDiagnostics, PreFlightReport,
-    CYCLING_POWER_SERVICE_UUID, HEART_RATE_SERVICE_UUID
+    CYCLING_POWER_SERVICE_UUID, HEART_RATE_SERVICE_UUID,
+    BATTERY_SERVICE_UUID, BATTERY_LEVEL_CHARACTERISTIC_UUID,
+    build_arg_parser
 )
 
 try:
@@ -127,6 +129,35 @@ class TestBlePayloads(unittest.TestCase):
         payload_low = build_hr_payload(-10)
         self.assertEqual(payload_low[1], 0)
 
+    def test_build_battery_payload(self):
+        self.assertEqual(build_battery_payload(100), [100])
+        self.assertEqual(build_battery_payload(50), [50])
+        self.assertEqual(build_battery_payload(15), [15])
+        self.assertEqual(build_battery_payload(0), [0])
+
+    def test_build_battery_payload_clamping(self):
+        self.assertEqual(build_battery_payload(150), [100])
+        self.assertEqual(build_battery_payload(-20), [0])
+
+
+class TestBleReplayServer(unittest.TestCase):
+    def test_battery_level_management(self):
+        server = BleReplayServer(enabled=False, hr_battery=80, power_battery=60)
+        self.assertEqual(server.hr_battery, 80)
+        self.assertEqual(server.power_battery, 60)
+
+        # Update via setters
+        server.set_hr_battery(15)
+        self.assertEqual(server.hr_battery, 15)
+        server.set_power_battery(5)
+        self.assertEqual(server.power_battery, 5)
+
+        # Clamping
+        server.set_hr_battery(150)
+        self.assertEqual(server.hr_battery, 100)
+        server.set_power_battery(-10)
+        self.assertEqual(server.power_battery, 0)
+
 
 class TestReplayEngine(unittest.TestCase):
     def setUp(self):
@@ -219,6 +250,72 @@ class TestPyQt6GuiContracts(unittest.TestCase):
 
         window.close()
 
+    def test_gui_battery_controls(self):
+        sample_path = os.path.join(os.path.dirname(__file__), "sample_workout.tcx")
+        points = TcxParser.parse_file(sample_path)
+        engine = ReplayEngine(points)
+        ble = BleReplayServer(enabled=False, hr_battery=85, power_battery=45)
+        gps = AdbGpsInjector(enabled=False)
+
+        window = ReplayGuiWindow(sample_path, engine, ble, gps)
+        self.assertIsNotNone(window.slider_hr_battery)
+        self.assertIsNotNone(window.slider_pwr_battery)
+        self.assertIsNotNone(window.lbl_hr_battery_val)
+        self.assertIsNotNone(window.lbl_pwr_battery_val)
+
+        # Verify initial values reflected in GUI
+        self.assertEqual(window.slider_hr_battery.value(), 85)
+        self.assertEqual(window.slider_pwr_battery.value(), 45)
+        self.assertIn("85%", window.lbl_hr_battery_val.text())
+        self.assertIn("45%", window.lbl_pwr_battery_val.text())
+
+        # Move sliders
+        window.slider_hr_battery.setValue(15)
+        self.assertEqual(ble.hr_battery, 15)
+        self.assertIn("15%", window.lbl_hr_battery_val.text())
+
+        window.slider_pwr_battery.setValue(5)
+        self.assertEqual(ble.power_battery, 5)
+        self.assertIn("5%", window.lbl_pwr_battery_val.text())
+
+        # Test preset buttons (HR)
+        window.btn_hr_100.click()
+        self.assertEqual(window.slider_hr_battery.value(), 100)
+        self.assertEqual(ble.hr_battery, 100)
+        self.assertIn("100%", window.lbl_hr_battery_val.text())
+
+        window.btn_hr_50.click()
+        self.assertEqual(window.slider_hr_battery.value(), 50)
+        self.assertEqual(ble.hr_battery, 50)
+
+        window.btn_hr_15.click()
+        self.assertEqual(window.slider_hr_battery.value(), 15)
+        self.assertEqual(ble.hr_battery, 15)
+
+        window.btn_hr_5.click()
+        self.assertEqual(window.slider_hr_battery.value(), 5)
+        self.assertEqual(ble.hr_battery, 5)
+
+        # Test preset buttons (Power)
+        window.btn_pwr_100.click()
+        self.assertEqual(window.slider_pwr_battery.value(), 100)
+        self.assertEqual(ble.power_battery, 100)
+        self.assertIn("100%", window.lbl_pwr_battery_val.text())
+
+        window.btn_pwr_50.click()
+        self.assertEqual(window.slider_pwr_battery.value(), 50)
+        self.assertEqual(ble.power_battery, 50)
+
+        window.btn_pwr_15.click()
+        self.assertEqual(window.slider_pwr_battery.value(), 15)
+        self.assertEqual(ble.power_battery, 15)
+
+        window.btn_pwr_5.click()
+        self.assertEqual(window.slider_pwr_battery.value(), 5)
+        self.assertEqual(ble.power_battery, 5)
+
+        window.close()
+
 
 class TestAdbGpsInjector(unittest.TestCase):
     def test_build_inject_cmd_android14_syntax(self):
@@ -273,6 +370,22 @@ class TestHostPreFlightDiagnostics(unittest.TestCase):
     def test_bluez_service_uuids(self):
         self.assertEqual(CYCLING_POWER_SERVICE_UUID, '00001818-0000-1000-8000-00805f9b34fb')
         self.assertEqual(HEART_RATE_SERVICE_UUID, '0000180d-0000-1000-8000-00805f9b34fb')
+        self.assertEqual(BATTERY_SERVICE_UUID, '0000180f-0000-1000-8000-00805f9b34fb')
+        self.assertEqual(BATTERY_LEVEL_CHARACTERISTIC_UUID, '00002a19-0000-1000-8000-00805f9b34fb')
+
+
+class TestCliArguments(unittest.TestCase):
+    def test_default_battery_arguments(self):
+        parser = build_arg_parser()
+        args = parser.parse_args([])
+        self.assertEqual(args.hr_battery, 100)
+        self.assertEqual(args.power_battery, 100)
+
+    def test_custom_battery_arguments(self):
+        parser = build_arg_parser()
+        args = parser.parse_args(["--hr-battery", "25", "--power-battery", "8"])
+        self.assertEqual(args.hr_battery, 25)
+        self.assertEqual(args.power_battery, 8)
 
 
 if __name__ == "__main__":
