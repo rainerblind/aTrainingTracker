@@ -69,6 +69,16 @@ class RouteDetailSheetContractTest {
         assertFalse("Obsolete RouteDetailMetricsCard must not exist", content.contains("RouteDetailMetricsCard"))
         assertFalse("Obsolete RouteDetailMapCard must not exist", content.contains("RouteDetailMapCard"))
         assertFalse("Obsolete RouteDetailElevationProfileCard must not exist", content.contains("RouteDetailElevationProfileCard"))
+
+        // 5. Must NOT unconditionally hardcode isActiveNavigation = true (REQ-UI-347)
+        assertFalse(
+            "RouteDetailSheet.kt must not hardcode isActiveNavigation = true (REQ-UI-347)",
+            content.contains("toMapRoute(isActiveNavigation = true)")
+        )
+        assertTrue(
+            "RouteDetailSheet.kt must propagate isActiveNavigation parameter to toMapRoute",
+            content.contains("toMapRoute(isActiveNavigation = isActiveNavigation)")
+        )
     }
 
     @Test

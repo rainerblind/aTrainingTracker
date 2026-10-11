@@ -106,6 +106,11 @@ class RoutesViewModel(application: Application) :
             initialValue = emptyList()
         )
 
+    /**
+     * Currently active navigated route ID, if any workout route navigation is active (REQ-UI-347).
+     */
+    val activeNavigatedRouteId: StateFlow<Long?> = routesRepository.activeNavigatedRouteId
+
     val filterCriteria: StateFlow<RouteFilterCriteria> = preferenceManager.routeFilterCriteriaFlow
         .stateIn(
             scope = viewModelScope,
