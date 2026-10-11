@@ -1728,7 +1728,7 @@
     <string name="tuning_map_tilt_angle_title">Angolo di inclinazione della fotocamera</string>
     <string name="tuning_map_tilt_angle_desc">Angolo di inclinazione prospettica per navigazione 3D (0° è 2D piatto, 70° è prospettiva 3D completa)</string>
     <string name="tuning_map_lookahead_padding_title">Spaziatura per visuale in avanti</string>
-    <string name="tuning_map_lookahead_padding_desc">Percentuale di spaziatura per posizionare il ciclista nella parte bassa e massimizzare la strada visibile in avanti</string>
+    <string name="tuning_map_lookahead_padding_desc">Percentuale di spaziatura per posizionare il ciclista nella parte bassa e massimizzare la strada visibile in avanti (valore più alto = ciclista più in basso / maggiore visuale in avanti)</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NUOVO</string>

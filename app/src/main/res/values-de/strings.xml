@@ -1815,7 +1815,7 @@
     <string name="tuning_map_tilt_angle_title">Kamera-Neigungswinkel</string>
     <string name="tuning_map_tilt_angle_desc">Perspektivischer Neigungswinkel für die 3D-Navigation (0° ist flaches 2D, 70° volle 3D-Perspektive)</string>
     <string name="tuning_map_lookahead_padding_title">Vorausschau-Kameraabstand</string>
-    <string name="tuning_map_lookahead_padding_desc">Anzeigebereich-Puffer in Prozent, um die Fahrerposition nach unten zu versetzen und den Blick auf die Strecke nach vorn zu maximieren</string>
+    <string name="tuning_map_lookahead_padding_desc">Anzeigebereich-Puffer in Prozent, um die Fahrerposition nach unten zu versetzen und den Blick auf die Strecke nach vorn zu maximieren (höherer Wert = Fahrer weiter unten / mehr Vorausschau)</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NEU</string>

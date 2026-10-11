@@ -81,8 +81,13 @@ class FollowMeUnifiedAnchorContractTest {
             content.contains("val cameraTarget = calculateFollowMeCameraTarget(")
         )
         assertTrue(
+            "followMeController must pass tiltAngle = effectiveTilt to calculateFollowMeCameraTarget (REQ-MAP-048)",
+            content.contains("tiltAngle = effectiveTilt")
+        )
+        assertTrue(
             "followMeController must pass cameraTarget to CameraPosition.builder().target(cameraTarget)",
             content.contains(".target(cameraTarget)")
         )
     }
 }
+

@@ -1921,7 +1921,7 @@
     <string name="tuning_map_tilt_angle_title">Camera Tilt Angle</string>
     <string name="tuning_map_tilt_angle_desc">Perspective pitch angle for 3D navigation (0° is flat 2D, 70° is full 3D perspective)</string>
     <string name="tuning_map_lookahead_padding_title">Forward Lookahead Padding</string>
-    <string name="tuning_map_lookahead_padding_desc">Viewport padding percent to position the rider in the lower portion and maximize visible road ahead</string>
+    <string name="tuning_map_lookahead_padding_desc">Viewport padding percent to position the rider in the lower portion and maximize visible road ahead (higher value = rider further down / more road ahead)</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NEW</string>

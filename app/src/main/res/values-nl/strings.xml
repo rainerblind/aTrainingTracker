@@ -1728,7 +1728,7 @@
     <string name="tuning_map_tilt_angle_title">Kantelhoek van camera</string>
     <string name="tuning_map_tilt_angle_desc">Perspectiefhoek voor 3D-navigatie (0° is plat 2D, 70° is volledig 3D-perspectief)</string>
     <string name="tuning_map_lookahead_padding_title">Marge voor vooruitblik</string>
-    <string name="tuning_map_lookahead_padding_desc">Percentage marge om de fietser in het onderste deel te plaatsen en maximaal zicht op de weg vooruit te bieden</string>
+    <string name="tuning_map_lookahead_padding_desc">Percentage marge om de fietser in het onderste deel te plaatsen en maximaal zicht op de weg vooruit te bieden (hogere waarde = fietser verder onderin / meer zicht vooruit)</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NIEUW</string>
