@@ -1756,5 +1756,8 @@
     <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
     <string name="tuning_auto_follow_unique_route_title">Seguir automaticamente rota única</string>
     <string name="tuning_auto_follow_unique_route_desc">Alternar automaticamente para seguir uma rota quando ela se tornar a única correspondente em uma bifurcação</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Distância das indicações de mudança de direção</string>
+    <string name="tuning_nav_cue_distance_desc">Distância antes da curva para exibir avisos de navegação</string>
 </resources>
 

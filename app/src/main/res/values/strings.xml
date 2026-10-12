@@ -1947,6 +1947,9 @@
     <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
     <string name="tuning_auto_follow_unique_route_title">Auto-follow unique route</string>
     <string name="tuning_auto_follow_unique_route_desc">Automatically switch to follow a route when it becomes the only matching route at a fork</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Navigation Cue Distance</string>
+    <string name="tuning_nav_cue_distance_desc">Distance before upcoming turn to display navigation cue prompts</string>
 </resources>
 
 

@@ -786,6 +786,16 @@ class TuningPreferencesDataStore(private val context: Context) {
         }
     }
 
+    suspend fun updateTurnCueCountdownDistanceMeters(distanceMeters: Float) {
+        val clamped = distanceMeters.coerceIn(
+            TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+            TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] = clamped
+        }
+    }
+
     suspend fun resetToDefaults() {
         context.dataStore.edit { prefs ->
             for (key in ALL_KEYS) {

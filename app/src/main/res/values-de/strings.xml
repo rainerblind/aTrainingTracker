@@ -1841,4 +1841,7 @@
     <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
     <string name="tuning_auto_follow_unique_route_title">Eindeutiger Route automatisch folgen</string>
     <string name="tuning_auto_follow_unique_route_desc">Automatisch zu einer Route wechseln, sobald sie an einer Weggabelung als einzige übereinstimmt</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Distanz für Abbiegehinweise</string>
+    <string name="tuning_nav_cue_distance_desc">Entfernung vor dem Abbiegen zur Anzeige von Navigationshinweisen</string>
 </resources>

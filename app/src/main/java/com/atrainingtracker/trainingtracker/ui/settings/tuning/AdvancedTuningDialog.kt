@@ -111,14 +111,12 @@ fun AdvancedTuningDialog(
     var mapFollowMeBearingSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA) }
     var showAntMissingAdapterWarnings by remember { mutableStateOf(!TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG) }
     var autoFollowUniqueRouteEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED) }
+    var turnCueCountdownDistanceMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
-    var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
-    var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
-    var workoutDetailPrefs by remember { mutableStateOf(WorkoutDetailPreferences()) }
-    var isDetailPrefsInitialized by remember { mutableStateOf(false) }
-    var workoutSectionsOrder by remember { mutableStateOf(WorkoutSectionType.DEFAULT_ORDER) }
-    var isSectionsOrderInitialized by remember { mutableStateOf(false) }
+    var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
+    var workoutDetailPrefs by remember { mutableStateOf(WorkoutDetailPreferences()) }; var isDetailPrefsInitialized by remember { mutableStateOf(false) }
+    var workoutSectionsOrder by remember { mutableStateOf(WorkoutSectionType.DEFAULT_ORDER) }; var isSectionsOrderInitialized by remember { mutableStateOf(false) }
 
     // Multi-section expansion state tracked across configuration changes via string identifiers
     var expandedSections by rememberSaveable { mutableStateOf(emptySet<String>()) }
@@ -129,24 +127,15 @@ fun AdvancedTuningDialog(
 
     LaunchedEffect(persistedWorkoutCardPrefs) {
         val cardPrefs = persistedWorkoutCardPrefs
-        if (!isAftermathPrefsInitialized && cardPrefs != null) {
-            workoutCardPrefs = cardPrefs
-            isAftermathPrefsInitialized = true
-        }
+        if (!isAftermathPrefsInitialized && cardPrefs != null) { workoutCardPrefs = cardPrefs; isAftermathPrefsInitialized = true }
     }
     LaunchedEffect(persistedWorkoutDetailPrefs) {
         val detailPrefs = persistedWorkoutDetailPrefs
-        if (!isDetailPrefsInitialized && detailPrefs != null) {
-            workoutDetailPrefs = detailPrefs
-            isDetailPrefsInitialized = true
-        }
+        if (!isDetailPrefsInitialized && detailPrefs != null) { workoutDetailPrefs = detailPrefs; isDetailPrefsInitialized = true }
     }
     LaunchedEffect(persistedWorkoutSectionsOrder) {
         val order = persistedWorkoutSectionsOrder
-        if (!isSectionsOrderInitialized && order != null) {
-            workoutSectionsOrder = order
-            isSectionsOrderInitialized = true
-        }
+        if (!isSectionsOrderInitialized && order != null) { workoutSectionsOrder = order; isSectionsOrderInitialized = true }
     }
     fun applyConfig(config: TuningConfig) {
         elevationXAxisDomain = config.elevationXAxisDomain; telemetryXAxisDomain = config.telemetryXAxisDomain
@@ -167,6 +156,7 @@ fun AdvancedTuningDialog(
         mapFollowMeBearingSmoothingAlpha = config.mapFollowMeBearingSmoothingAlpha
         showAntMissingAdapterWarnings = config.showAntMissingAdapterWarnings
         autoFollowUniqueRouteEnabled = config.autoFollowUniqueRouteEnabled
+        turnCueCountdownDistanceMeters = config.turnCueCountdownDistanceMeters
     }
 
     LaunchedEffect(persistedConfig) {
@@ -198,7 +188,8 @@ fun AdvancedTuningDialog(
                         mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha,
                         mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
                         suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings,
-                        autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled
+                        autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
+                        turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
@@ -368,7 +359,9 @@ fun AdvancedTuningDialog(
                     mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
                     onMapFollowMeBearingSmoothingAlphaChange = { mapFollowMeBearingSmoothingAlpha = it },
                     autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
-                    onAutoFollowUniqueRouteEnabledChange = { autoFollowUniqueRouteEnabled = it }
+                    onAutoFollowUniqueRouteEnabledChange = { autoFollowUniqueRouteEnabled = it },
+                    turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters,
+                    onTurnCueCountdownDistanceChange = { turnCueCountdownDistanceMeters = it }
                 )
             }
 

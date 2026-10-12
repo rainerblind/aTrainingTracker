@@ -174,4 +174,52 @@ class TurnByTurnNavigationEngineTest {
         val s4 = engine.onLocationChanged(onLoc, config)
         assertFalse("Should recover when back on route", s4.isOffRoute)
     }
+
+    @Test
+    fun testTurnCueCountdownDistance_customTuningThresholdDynamic() {
+        val summary = RouteSummary(
+            id = 30L,
+            externalId = "route_30",
+            name = "Countdown Test",
+            description = "Test countdown threshold",
+            isSelected = false,
+            distance = 1000.0,
+            elevationGain = 0.0,
+            bSportType = BSportType.BIKE,
+            source = RouteSource.LOCAL_GPX
+        )
+        val path = listOf(
+            PathPoint(distance = 0.0, latLng = LatLng(47.000, 11.000), altitude = 0.0),
+            PathPoint(distance = 555.0, latLng = LatLng(47.005, 11.000), altitude = 0.0),
+            PathPoint(distance = 1000.0, latLng = LatLng(47.009, 11.000), altitude = 0.0)
+        )
+        val waypoints = listOf(
+            RouteWaypoint(
+                id = 2L,
+                routeId = 30L,
+                latLng = LatLng(47.005, 11.000),
+                type = WaypointType.TURN_LEFT,
+                distanceFromStart = 555.0,
+                name = "Turn Left"
+            )
+        )
+        val route = RouteWithPath(summary, path, waypoints)
+        val engine = TurnByTurnNavigationEngine()
+        engine.setActiveRoute(route)
+
+        // Location at 450m: distance to cue is 105m
+        val loc = createLocation(47.00405, 11.000)
+
+        // 1. With threshold set to 50m, 105m > 50m -> isApproaching must be false
+        val tightConfig = TuningConfig(turnCueCountdownDistanceMeters = 50f)
+        val stateTight = engine.onLocationChanged(loc, tightConfig)
+        assertEquals(105.0, stateTight.distanceToNextCueMeters, 1.0)
+        assertFalse("105m > 50m threshold -> should not be approaching", stateTight.isApproaching)
+
+        // 2. With threshold set to 200m, 105m <= 200m -> isApproaching must be true
+        val earlyConfig = TuningConfig(turnCueCountdownDistanceMeters = 200f)
+        val stateEarly = engine.onLocationChanged(loc, earlyConfig)
+        assertEquals(105.0, stateEarly.distanceToNextCueMeters, 1.0)
+        assertTrue("105m <= 200m threshold -> should be approaching", stateEarly.isApproaching)
+    }
 }
