@@ -1752,5 +1752,9 @@
     <!-- ATT-3220 / REQ-UI-353: Missing ANT adapter warning toggle -->
     <string name="tuning_show_ant_missing_adapter_warnings_title">Waarschuwingen voor ontbrekende ANT+-adapter tonen</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">Waarschuwingsdialoogvenster tonen wanneer naar een ANT+-sensor wordt gezocht maar er geen adapter is gedetecteerd</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Unieke route automatisch volgen</string>
+    <string name="tuning_auto_follow_unique_route_desc">Automatisch overschakelen om een route te volgen wanneer dit de enige overeenkomende route bij een splitsing is</string>
 </resources>
 

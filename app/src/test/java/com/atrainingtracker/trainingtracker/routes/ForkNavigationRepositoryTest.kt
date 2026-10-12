@@ -132,6 +132,39 @@ class ForkNavigationRepositoryTest {
     }
 
     @Test
+    fun onLocationChanged_pastForkOnBranchA_whenAutoFollowDisabled_suppressesAutoBindAndDismissesAlert() {
+        repository.autoFollowUniqueRouteEnabled = false
+
+        // First approach fork to trigger alert
+        val posApproach = LatLng(48.5072, 9.0000)
+        repository.onLocationChanged(posApproach)
+        assertNotNull(repository.forkDecisionState.value)
+
+        // Move > 50m down branch 1
+        val posBranch1 = LatLng(48.5120, 8.9950)
+        repository.onLocationChanged(posBranch1)
+
+        // Verifies auto-binding was SUPPRESSED (zero invocations)
+        verify(exactly = 0) { mockRoutesRepo.setActiveNavigatedRoute(any()) }
+        // Verifies alert was dismissed cleanly
+        assertNull(repository.forkDecisionState.value)
+    }
+
+    @Test
+    fun selectRouteManually_whenAutoFollowDisabled_stillBindsRouteImmediately() {
+        repository.autoFollowUniqueRouteEnabled = false
+
+        val posApproach = LatLng(48.5072, 9.0000)
+        repository.onLocationChanged(posApproach)
+        assertNotNull(repository.forkDecisionState.value)
+
+        repository.selectRouteManually(2L)
+
+        verify { mockRoutesRepo.setActiveNavigatedRoute(2L) }
+        assertNull(repository.forkDecisionState.value)
+    }
+
+    @Test
     fun onLocationChanged_deviatesFromBoth_dismissesPrompt() {
         // Approach fork
         val posApproach = LatLng(48.5072, 9.0000)

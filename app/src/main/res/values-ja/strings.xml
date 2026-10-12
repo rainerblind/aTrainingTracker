@@ -1732,5 +1732,9 @@
     <!-- ATT-3220 / REQ-UI-353: Missing ANT adapter warning toggle -->
     <string name="tuning_show_ant_missing_adapter_warnings_title">ANT+アダプター未検出の警告を表示</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">ANT+センサー検索時にアダプターが検出されない場合、警告ダイアログを表示します</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">分岐で一意のルートを自動追従</string>
+    <string name="tuning_auto_follow_unique_route_desc">分岐で一致するルートが1つだけになったときに自動的に追従を切り替えます</string>
 </resources>
 

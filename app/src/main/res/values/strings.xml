@@ -1943,6 +1943,10 @@
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NEW</string>
     <string name="devices_new_sensor_discovered">New sensor discovered: %1$s</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Auto-follow unique route</string>
+    <string name="tuning_auto_follow_unique_route_desc">Automatically switch to follow a route when it becomes the only matching route at a fork</string>
 </resources>
 
 

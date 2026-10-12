@@ -1752,5 +1752,9 @@
     <!-- ATT-3220 / REQ-UI-353: Missing ANT adapter warning toggle -->
     <string name="tuning_show_ant_missing_adapter_warnings_title">Mostrar avisos de adaptador ANT+ em falta</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">Mostrar caixa de diálogo de alerta quando um sensor ANT+ é procurado mas nenhum adaptador é detetado</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Seguir automaticamente rota única</string>
+    <string name="tuning_auto_follow_unique_route_desc">Alternar automaticamente para seguir uma rota quando ela se tornar a única correspondente em uma bifurcação</string>
 </resources>
 

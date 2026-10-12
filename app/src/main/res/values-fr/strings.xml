@@ -1751,4 +1751,8 @@
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NOUVEAU</string>
     <string name="devices_new_sensor_discovered">Nouveau capteur détecté : %1$s</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Suivre automatiquement un itinéraire unique</string>
+    <string name="tuning_auto_follow_unique_route_desc">Basculer automatiquement pour suivre un itinéraire lorsqu\'il devient le seul correspondant à une intersection</string>
 </resources>
