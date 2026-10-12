@@ -196,14 +196,3 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * UI ViewModels MUST defensively discard orphaned IDs that do not exist in the database rather than constructing invalid fallback data models (`DeviceType.DUMMY`) that open broken or dimmed modal dialogs.
 * Origin: Sprint 2026-41.8, ATT-3099 / ATT-3169.
 
-## 36. Dynamic Elevation Profile Sizing ("No Fixed Heights for Elevation Profiles")
-* **Rule**: All elevation profiles across tracking HUDs, bottom sheets, and route inspection views MUST compute their height dynamically based on the total elevation gain/span ($\Delta H = H_{\max} - H_{\min}$) using canonical domain algorithms (`calculateElevationProfileHeight(range)`). Hardcoding arbitrary fixed heights (e.g. `68.dp`) in bottom sheets or dialogs is strictly prohibited (`"The height of the elevation profile should also depend on the height of the climb. No exceptions here."` — Rainer Blind, Sprint Retro 2026-41.10 / ATT-3318).
-* Origin: Sprint 2026-41.10, ATT-3264 / ATT-3316.
-
-## 37. Cloud Access Boundary Defense Under `drive.file` Least-Privilege Scope
-* **Rule**: When integrating cloud storage APIs with restricted scopes (such as Google Drive `drive.file`), background scanning engines must account for the invariant that externally uploaded files are invisible to direct API queries. Features intended for historical recovery or bulk migration must provide a Storage Access Framework (SAF) or document picker fallback to allow athletes to explicitly grant file access.
-* Origin: Sprint 2026-41.10, ATT-2346 / ATT-3315.
-
-## 38. Multi-Scale Window Scoping for Route Elevation Analytics
-* **Rule**: Navigation elevation tracking must support multi-scale scoping (full-route macro overview vs. rolling lookahead micro window) configurable individually per tracking tab to prevent terrain feature compression on long routes.
-* Origin: Sprint 2026-41.10, ATT-3199 / ATT-3317.

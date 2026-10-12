@@ -155,7 +155,7 @@ To comply with Google Play Store security policies and avoid broad storage permi
 ### 6.1 The Issue
 `ATT-3199` delivered full route elevation profile rendering during active navigation. While effective for route overview, on long routes (e.g. 60–150 km), rendering the entire route horizontally compresses immediate terrain features, making upcoming small climbs and steep gradients imperceptible.
 
-### 6.2 Countermeasure (Rule 38)
+### 6.2 Countermeasure & Specification
 Athletes require multi-scale scoping tailored to their active tracking screen context:
 - **Macro View (Full Route)**: Shows total route profile from $0\text{ km}$ to finish with current progress indicator (ideal for Map overview tabs).
 - **Micro View (Rolling Lookahead Window)**: Shows a focused rolling window (e.g., next 5 km / 10 km) centered around the athlete with customizable lookahead distance (ideal for Cockpit / Climb tracking tabs).
@@ -164,20 +164,20 @@ Athletes require multi-scale scoping tailored to their active tracking screen co
 
 ---
 
-## 7. Retrospective Process Hardening & Governance Additions
+## 7. Retrospective Key Takeaways & Document Boundary Hygiene
 
-### 7.1 New ASPICE Governance Rules (`.agents/rules/aspice_governance.md`)
+A crucial insight from the Sprint 2026-41.10 retrospective was the clarification and enforcement of **strict document boundary hygiene**:
 
-* **Rule 36: Dynamic Elevation Profile Sizing ("No Fixed Heights for Elevation Profiles")**:
-  All elevation profiles across tracking HUDs, bottom sheets, and route inspection views must compute their height dynamically based on the total elevation gain ($\Delta H = H_{\max} - H_{\min}$) using canonical domain algorithms (`calculateElevationProfileHeight(range)`). Hardcoding arbitrary fixed heights (e.g. `68.dp`) is strictly prohibited.
-  *Origin*: Sprint 2026-41.10, ATT-3264 / ATT-3316.
-
-* **Rule 37: Cloud Access Boundary Defense Under `drive.file` Least-Privilege Scope**:
-  When integrating cloud storage APIs with restricted scopes (such as Google Drive `drive.file`), background scanning engines must account for the invariant that externally uploaded files are invisible to direct API queries. Features intended for historical recovery or bulk migration must provide a Storage Access Framework (SAF) or document picker fallback to allow athletes to explicitly grant file access.
-  *Origin*: Sprint 2026-41.10, ATT-2346 / ATT-3315.
-
-* **Rule 38: Multi-Scale Window Scoping for Route Elevation Analytics**:
-  Navigation elevation tracking must support multi-scale scoping (full-route macro overview vs. rolling lookahead micro window) configurable individually per tracking tab to prevent terrain feature compression on long routes.
-  *Origin*: Sprint 2026-41.10, ATT-3199 / ATT-3317.
+### 7.1 Document Boundary Separation
+1. **ASPICE Governance Rules (`.agents/rules/aspice_governance.md`)**:
+   - Strictly reserved for SWE process disciplines, phase gate criteria, test execution rules, and workflow integrity.
+   - Must *not* be diluted with UI styling heuristics or functional feature requirements.
+2. **UI & Interaction Design Guidelines (`docs/design_guidelines.md`)**:
+   - The authoritative source of truth for Jetpack Compose patterns, component selection heuristics, and visual styling rules.
+   - **Codified Invariant (Section 2.3)**: Elevation profile height must always dynamically scale with elevation difference ($\Delta H$); hardcoding fixed heights (e.g., `68.dp`) is prohibited.
+3. **Product Requirements & Backlog Tickets (`docs/requirements.md` & Jira)**:
+   - Functional capabilities and architectural countermeasures are captured as ranked user stories:
+     - **ATT-3315**: Cloud access boundary defense under `drive.file` scope using Storage Access Framework (SAF) document picker fallback.
+     - **ATT-3317**: Multi-scale window scoping (macro vs. rolling lookahead micro window) configurable per tracking tab.
 
 ---
