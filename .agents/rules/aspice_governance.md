@@ -196,5 +196,3 @@ These rules are strictly binding on all AI assistants and agent instances operat
 * UI ViewModels MUST defensively discard orphaned IDs that do not exist in the database rather than constructing invalid fallback data models (`DeviceType.DUMMY`) that open broken or dimmed modal dialogs.
 * Origin: Sprint 2026-41.8, ATT-3099 / ATT-3169.
 
-
-

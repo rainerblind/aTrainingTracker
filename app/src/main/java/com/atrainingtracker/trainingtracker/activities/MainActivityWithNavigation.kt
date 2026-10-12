@@ -83,7 +83,11 @@ import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModel
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -249,6 +253,12 @@ class MainActivityWithNavigation :
         }
     }
 
+    val tuningPreferencesDataStore: TuningPreferencesDataStore by lazy {
+        TuningPreferencesDataStore(applicationContext)
+    }
+    var isAntMissingAdapterDialogSuppressed: Boolean = false
+        internal set
+
     var antDialogState: AntDialogState? by mutableStateOf(null)
     var showAntStatusSheet: Boolean by mutableStateOf(false)
 
@@ -265,7 +275,7 @@ class MainActivityWithNavigation :
     }
 
     fun showANTAdapterMissingDialog() {
-        if (antDialogState != null || showAntStatusSheet) {
+        if (isAntMissingAdapterDialogSuppressed || antDialogState != null || showAntStatusSheet) {
             return
         }
         antDialogState = AntDialogState.MissingAdapter
@@ -468,6 +478,14 @@ class MainActivityWithNavigation :
                 mSelectedFragmentId = R.id.drawer_workouts
                 mDrawerController.selectedItemId = mSelectedFragmentId
                 navigateToDrawerItem(R.id.drawer_workouts)
+            }
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.CREATED) {
+                tuningPreferencesDataStore.suppressAntMissingAdapterDialogFlow.collect { suppressed ->
+                    isAntMissingAdapterDialogSuppressed = suppressed
+                }
             }
         }
     }

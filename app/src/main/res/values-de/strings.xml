@@ -1471,6 +1471,8 @@
     <string name="tuning_altitude_window_desc">Gleitendes Zeitfenster für Momentanhöhe und Vertikalgeschwindigkeit.</string>
     <string name="tuning_slope_min_speed_title">Mindestgeschwindigkeit für Steigung</string>
     <string name="tuning_slope_min_speed_desc">Erforderliche Mindestgeschwindigkeit zur Berechnung der Echtzeit-Steigung.</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_title">Warnung bei fehlendem ANT+ Adapter</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_desc">Hinweisdialog anzeigen, wenn nach ANT+ Sensoren gesucht wird, aber kein Adapter erkannt wurde</string>
     <string name="tuning_cat_aftermath">Aftermath &amp; Profil-Analytik</string>
     <string name="tuning_profile_x_axis_title">Höhenprofil X-Achse</string>
     <string name="tuning_profile_x_axis_desc">Horizontale Achsenmetrik für Höhenprofildiagramme auswählen.</string>
@@ -1827,6 +1829,10 @@
     <string name="tuning_map_tilt_angle_desc">Perspektivischer Neigungswinkel für die 3D-Navigation (0° ist flaches 2D, 70° volle 3D-Perspektive)</string>
     <string name="tuning_map_lookahead_padding_title">Vorausschau-Kameraabstand</string>
     <string name="tuning_map_lookahead_padding_desc">Anzeigebereich-Puffer in Prozent, um die Fahrerposition nach unten zu versetzen und den Blick auf die Strecke nach vorn zu maximieren (höherer Wert = Fahrer weiter unten / mehr Vorausschau)</string>
+    <string name="tuning_map_follow_me_speed_smoothing_title">Geschwindigkeits-Zoom-Glättung</string>
+    <string name="tuning_map_follow_me_speed_smoothing_desc">Dämpfungsfaktor für Geschwindigkeitsänderungen beim Follow-Me-Zoom (niedriger Wert = sanfter, höherer Wert = schnellere Reaktion)</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_title">Kompass- / Drehungsglättung</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_desc">Dämpfungsfaktor für Kameradrehungen im Follow-Me-Modus (niedriger Wert = sanfter, höherer Wert = schnellere Reaktion)</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NEU</string>

@@ -227,6 +227,8 @@ fun SensorGridScreen(
     val forkNavRepo = remember { ForkNavigationRepository.getInstance(context) }
     val forkDecisionState by forkNavRepo.forkDecisionState.collectAsState()
 
+    val currentLocation by currentLocationFlow.collectAsState()
+
     // Control the sheet state (REQ-UI-327, REQ-UI-343)
     val initialSheetValue = if (shouldShowBottomSheet) SheetValue.Expanded else SheetValue.Hidden
     val scaffoldState = rememberBottomSheetScaffoldState(
@@ -533,16 +535,26 @@ fun SensorGridScreen(
                         }
                     }
 
-                    // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173)
-                    if (state.showElevationProfile && state.pathPoints.size >= 2) {
+                    // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199)
+                    val activeNavigatedRoute = state.mapRoutes.firstOrNull { it.isActiveNavigation }
+                    val resolvedProfile = remember(activeNavigatedRoute, state.pathPoints, currentLocation) {
+                        TrackingElevationProfileResolver.resolve(
+                            activeNavigatedRoute = activeNavigatedRoute,
+                            recordedPathPoints = state.pathPoints,
+                            currentLocation = currentLocation
+                        )
+                    }
+
+                    if (state.showElevationProfile && resolvedProfile.pathPoints.size >= 2) {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 8.dp)
                         ) {
                             ElevationProfile(
-                                pathPoints = state.pathPoints,
-                                currentDistance = state.pathPoints.lastOrNull()?.distance,
+                                pathPoints = resolvedProfile.pathPoints,
+                                currentDistance = resolvedProfile.markerDistance,
+                                climbs = resolvedProfile.climbs,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

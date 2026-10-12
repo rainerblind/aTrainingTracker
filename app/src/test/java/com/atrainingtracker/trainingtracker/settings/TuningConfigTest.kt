@@ -39,6 +39,13 @@ class TuningConfigTest {
         assertEquals(0.80f, TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY, 0.001f)
         assertEquals(4, config.navigationCueDismissDurationSec)
         assertEquals(4, TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC)
+        assertEquals(false, config.suppressAntMissingAdapterDialog)
+        assertEquals(false, TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG)
+        assertEquals(true, config.showAntMissingAdapterWarnings)
+        assertEquals(0.10f, config.mapFollowMeSpeedSmoothingAlpha, 0.001f)
+        assertEquals(0.10f, TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA, 0.001f)
+        assertEquals(0.15f, config.mapFollowMeBearingSmoothingAlpha, 0.001f)
+        assertEquals(0.15f, TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA, 0.001f)
     }
 
     @Test

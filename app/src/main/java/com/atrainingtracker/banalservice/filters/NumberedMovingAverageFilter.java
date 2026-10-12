@@ -50,9 +50,19 @@ public class NumberedMovingAverageFilter
     }
 
     @Override
+    public synchronized void reset() {
+        mValues.clear();
+        mIndex = 0;
+    }
+
+    @Override
     public synchronized void newValue(Number value) {
-        if (value != null && !TrainingApplication.isPaused()){
-            mValues.add(mIndex, value);
+        if (value != null) {
+            if (mValues.size() < mSize) {
+                mValues.add(value);
+            } else {
+                mValues.set(mIndex, value);
+            }
             mIndex = (mIndex + 1) % mSize;
         }
     }

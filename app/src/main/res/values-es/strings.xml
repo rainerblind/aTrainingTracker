@@ -1386,6 +1386,8 @@
     <string name="tuning_altitude_window_desc">Ventana de tiempo para la media móvil de altitud instantánea y velocidad vertical.</string>
     <string name="tuning_slope_min_speed_title">Velocidad mínima para pendiente</string>
     <string name="tuning_slope_min_speed_desc">Velocidad mínima requerida para calcular la pendiente en tiempo real.</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_title">Mostrar advertencias de adaptador ANT+ ausente</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_desc">Mostrar cuadro de diálogo de alerta cuando se busca un sensor ANT+ pero no se detecta ningún adaptador</string>
     <string name="tuning_cat_aftermath">Aftermath y análisis de perfil</string>
     <string name="tuning_profile_x_axis_title">Eje X del perfil de altitud</string>
     <string name="tuning_profile_x_axis_desc">Seleccionar la métrica del eje horizontal para los gráficos de altitud.</string>
@@ -1742,6 +1744,10 @@
     <string name="tuning_map_tilt_angle_desc">Ángulo de inclinación de perspectiva para navegación 3D (0° es 2D plano, 70° es perspectiva 3D completa)</string>
     <string name="tuning_map_lookahead_padding_title">Margen para vista anticipada</string>
     <string name="tuning_map_lookahead_padding_desc">Porcentaje de margen para situar al ciclista en la parte inferior y maximizar la carretera visible por delante (valor más alto = ciclista más abajo / más carretera visible)</string>
+    <string name="tuning_map_follow_me_speed_smoothing_title">Suavizado de zoom por velocidad</string>
+    <string name="tuning_map_follow_me_speed_smoothing_desc">Factor de amortiguación para cambios de velocidad en el zoom de Sígueme (valor más bajo = más suave, más alto = respuesta más rápida)</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_title">Suavizado de rotación</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_desc">Factor de amortiguación para la rotación de la cámara en el modo Sígueme (valor más bajo = más suave, más alto = respuesta más rápida)</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NUEVO</string>

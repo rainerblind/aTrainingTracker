@@ -50,8 +50,13 @@ public class TimedMovingAverageFilter
     }
 
     @Override
+    public synchronized void reset() {
+        mTimestampedValues.clear();
+    }
+
+    @Override
     public synchronized void newValue(Number value) {
-        if (value != null && !TrainingApplication.isPaused()) {
+        if (value != null) {
             long currentTimeMillis = System.currentTimeMillis();
             mTimestampedValues.add(new TimestampedValue(currentTimeMillis, value));
             if (DEBUG)

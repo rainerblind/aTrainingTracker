@@ -66,8 +66,12 @@ class LiveClimbSheetLayoutTest {
             content.contains("MaterialTheme.colorScheme.surface")
         )
         assertTrue(
-            "LiveClimbSheet must include ClimbProfileCanvas for colored grade elevation profile",
-            content.contains("ClimbProfileCanvas(")
+            "LiveClimbSheet must include shared ElevationProfile for colored grade elevation profile (REQ-UI-352)",
+            content.contains("ElevationProfile(")
+        )
+        assertFalse(
+            "LiveClimbSheet must not retain bespoke ClimbProfileCanvas composable (REQ-UI-352)",
+            content.contains("fun ClimbProfileCanvas") || content.contains("ClimbProfileCanvas(")
         )
         assertTrue(
             "LiveClimbSheet must render ClimbCategoryChip badge",
@@ -179,16 +183,20 @@ class LiveClimbSheetLayoutTest {
     }
 
     @Test
-    fun testLiveClimbSheet_profileCanvasContainsGroundLineAndRefinedHeight() {
+    fun testLiveClimbSheet_elevationProfileConfiguredWithRefinedHeightAndGradientShading() {
         val content = liveClimbSheetFile.readText()
 
         assertTrue(
-            "LiveClimbSheet must configure ClimbProfileCanvas with refined 68.dp height (REQ-UI-341)",
-            content.contains(".height(68.dp)")
+            "LiveClimbSheet must configure ElevationProfile with refined 68.dp fixed height (REQ-UI-341, REQ-UI-352)",
+            content.contains("fixedHeight = 68.dp")
         )
         assertTrue(
-            "ClimbProfileCanvas must draw a baseline ground line using outlineVariant (REQ-UI-341)",
-            content.contains("outlineVariant") && content.contains("height - bottomPadding")
+            "LiveClimbSheet must configure ElevationProfile with climbGradientShading = true (REQ-UI-352)",
+            content.contains("climbGradientShading = true")
+        )
+        assertTrue(
+            "LiveClimbSheet must delegate ClimbCategoryChip and ClimbStatusBadge to MetricBadge (REQ-UI-352)",
+            content.contains("MetricBadge(")
         )
     }
 

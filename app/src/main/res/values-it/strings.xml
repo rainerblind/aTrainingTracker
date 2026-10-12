@@ -1740,8 +1740,17 @@
     <string name="tuning_map_tilt_angle_desc">Angolo di inclinazione prospettica per navigazione 3D (0° è 2D piatto, 70° è prospettiva 3D completa)</string>
     <string name="tuning_map_lookahead_padding_title">Spaziatura per visuale in avanti</string>
     <string name="tuning_map_lookahead_padding_desc">Percentuale di spaziatura per posizionare il ciclista nella parte bassa e massimizzare la strada visibile in avanti (valore più alto = ciclista più in basso / maggiore visuale in avanti)</string>
+    <string name="tuning_map_follow_me_speed_smoothing_title">Smorzamento zoom di velocità</string>
+    <string name="tuning_map_follow_me_speed_smoothing_desc">Fattore di smorzamento per le variazioni di velocità nello zoom Seguimi (valore inferiore = più fluido, valore superiore = risposta più rapida)</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_title">Smorzamento rotazione</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_desc">Fattore di smorzamento per la rotazione della fotocamera in modalità Seguimi (valore inferiore = più fluido, valore superiore = risposta più rapida)</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NUOVO</string>
     <string name="devices_new_sensor_discovered">Nuovo sensore rilevato: %1$s</string>
+
+    <!-- ATT-3220 / REQ-UI-353: Missing ANT adapter warning toggle -->
+    <string name="tuning_show_ant_missing_adapter_warnings_title">Mostra avvisi per adattatore ANT+ mancante</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_desc">Mostra una finestra di avviso quando si cerca un sensore ANT+ ma non viene rilevato alcun adattatore</string>
 </resources>
+

@@ -1720,8 +1720,17 @@
     <string name="tuning_map_tilt_angle_desc">3Dナビゲーションの視点傾斜角度（0°はフラットな2D、70°は完全な3Dパースペクティブ）</string>
     <string name="tuning_map_lookahead_padding_title">前方視野マージン</string>
     <string name="tuning_map_lookahead_padding_desc">ライダーの位置を下部に配置し、前方の道路視野を最大化するためのビューポート余白比率（%）（値が大きいほどライダーが下側に配置され前方が広く見えます）</string>
+    <string name="tuning_map_follow_me_speed_smoothing_title">速度ズームのスムージング</string>
+    <string name="tuning_map_follow_me_speed_smoothing_desc">追従モードズームにおける速度変化の減衰係数（小さい値 = より滑らか、大きい値 = より素早い応答）</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_title">方位・回転のスムージング</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_desc">追従モードにおけるカメラ回転の減衰係数（小さい値 = より滑らか、大きい値 = より素早い応答）</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">新規</string>
     <string name="devices_new_sensor_discovered">新しいセンサーが検出されました: %1$s</string>
+
+    <!-- ATT-3220 / REQ-UI-353: Missing ANT adapter warning toggle -->
+    <string name="tuning_show_ant_missing_adapter_warnings_title">ANT+アダプター未検出の警告を表示</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_desc">ANT+センサー検索時にアダプターが検出されない場合、警告ダイアログを表示します</string>
 </resources>
+

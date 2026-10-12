@@ -1577,6 +1577,8 @@
     <string name="tuning_altitude_window_desc">Moving average time window for instantaneous altitude and vertical speed.</string>
     <string name="tuning_slope_min_speed_title">Slope Minimum Speed</string>
     <string name="tuning_slope_min_speed_desc">Minimum moving speed required to calculate real-time gradient.</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_title">Show missing ANT+ adapter warnings</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_desc">Show alert dialog when an ANT+ sensor is searched but no adapter is detected</string>
     <string name="tuning_cat_aftermath">Aftermath &amp; Profile Analytics</string>
     <string name="tuning_profile_x_axis_title">Elevation Profile X-Axis</string>
     <string name="tuning_profile_x_axis_desc">Select horizontal axis domain for elevation profile graphs.</string>
@@ -1933,6 +1935,10 @@
     <string name="tuning_map_tilt_angle_desc">Perspective pitch angle for 3D navigation (0° is flat 2D, 70° is full 3D perspective)</string>
     <string name="tuning_map_lookahead_padding_title">Forward Lookahead Padding</string>
     <string name="tuning_map_lookahead_padding_desc">Viewport padding percent to position the rider in the lower portion and maximize visible road ahead (higher value = rider further down / more road ahead)</string>
+    <string name="tuning_map_follow_me_speed_smoothing_title">Speed Zoom Smoothing</string>
+    <string name="tuning_map_follow_me_speed_smoothing_desc">Dampening factor for speed changes in Follow-Me zoom (lower value = smoother, higher value = faster response)</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_title">Bearing Smoothing</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_desc">Dampening factor for camera rotation in Follow-Me mode (lower value = smoother, higher value = faster response)</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NEW</string>

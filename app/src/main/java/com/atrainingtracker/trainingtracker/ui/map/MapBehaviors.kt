@@ -251,37 +251,64 @@ fun followMeController(
     cruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
     tiltAngle: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE,
     lookaheadPaddingPercent: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
-    viewportHeightDp: Float = 0f
+    viewportHeightDp: Float = 0f,
+    speedSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+    bearingSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
 ): Float {
     var filteredBearing by remember { mutableFloatStateOf(bearing) }
+    var filteredSpeed by remember { mutableFloatStateOf(speed) }
+    var activeZoom by remember { mutableFloatStateOf(baseZoom) }
 
     LaunchedEffect(zoomFocus) {
         if (zoomFocus == MapZoomFocus.FOLLOW_ME) {
             filteredBearing = bearing
+            filteredSpeed = speed
+            activeZoom = baseZoom
         }
     }
 
-    LaunchedEffect(currentLocation, bearing, speed, baseZoom, speedZoomEnabled, cruisingZoom, tiltAngle, lookaheadPaddingPercent, viewportHeightDp) {
+    LaunchedEffect(
+        currentLocation, bearing, speed, baseZoom, speedZoomEnabled,
+        cruisingZoom, tiltAngle, lookaheadPaddingPercent, viewportHeightDp,
+        speedSmoothingAlpha, bearingSmoothingAlpha
+    ) {
         if (zoomFocus == MapZoomFocus.FOLLOW_ME && currentLocation != null) {
-            val alpha = 0.15f
+            val bAlpha = bearingSmoothingAlpha.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
+            )
             var diff = bearing - filteredBearing
             while (diff < -180f) diff += 360f
             while (diff > 180f) diff -= 360f
 
-            filteredBearing += alpha * diff
+            filteredBearing += bAlpha * diff
             filteredBearing = (filteredBearing + 360f) % 360f
 
+            val sAlpha = speedSmoothingAlpha.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
+            )
+            filteredSpeed += sAlpha * (speed - filteredSpeed)
+
             val targetZoom = calculateFollowMeTargetZoom(
-                speedMps = speed,
+                speedMps = filteredSpeed,
                 baseZoom = baseZoom,
                 speedZoomEnabled = speedZoomEnabled,
                 cruisingZoom = cruisingZoom
             )
+            val zoomDelta = Math.abs(targetZoom - activeZoom)
+            val effectiveZoom = if (zoomDelta >= 0.10f) {
+                activeZoom = targetZoom
+                targetZoom
+            } else {
+                activeZoom
+            }
+
             val effectiveTilt = tiltAngle.coerceIn(0f, 70f)
             val cameraTarget = calculateFollowMeCameraTarget(
                 currentLocation = currentLocation,
                 bearing = filteredBearing,
-                zoom = targetZoom,
+                zoom = effectiveZoom,
                 lookaheadPaddingPercent = lookaheadPaddingPercent,
                 viewportHeightDp = viewportHeightDp,
                 tiltAngle = effectiveTilt
@@ -292,7 +319,7 @@ fun followMeController(
                         CameraPosition.builder()
                             .target(cameraTarget)
                             .bearing(filteredBearing)
-                            .zoom(targetZoom)
+                            .zoom(effectiveZoom)
                             .tilt(effectiveTilt)
                             .build()
                     ),

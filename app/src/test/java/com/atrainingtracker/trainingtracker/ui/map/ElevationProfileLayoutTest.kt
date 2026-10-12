@@ -61,8 +61,9 @@ class ElevationProfileLayoutTest {
 
         // 2. Dynamic canvas height preserving exact drawable chart plotting area
         assertTrue(
-            "ElevationProfile must expand totalCanvasHeight by 28.dp when showZoomControls == true",
-            content.contains("val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight")
+            "ElevationProfile must expand totalCanvasHeight by 28.dp when showZoomControls == true (or respect fixedHeight)",
+            content.contains("val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight") ||
+                    content.contains("val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight")
         )
 
         // 3. ScrubbingTelemetryBadge anchored at top = 4.dp now that zoom buttons are decoupled (REQ-UI-225)

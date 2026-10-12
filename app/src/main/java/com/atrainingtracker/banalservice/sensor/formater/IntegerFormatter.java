@@ -24,8 +24,11 @@ public class IntegerFormatter implements MyFormatter<Number> {
     public String format(Number value) {
         if (value == null) {
             return "--";
-        } else {
-            return value.intValue() + "";
         }
+        double d = value.doubleValue();
+        if (Double.isNaN(d) || Double.isInfinite(d)) {
+            return "--";
+        }
+        return Long.toString(Math.round(d));
     }
 }
