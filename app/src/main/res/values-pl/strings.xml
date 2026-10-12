@@ -1758,5 +1758,8 @@
     <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
     <string name="tuning_auto_follow_unique_route_title">Automatycznie podążaj za unikalną trasą</string>
     <string name="tuning_auto_follow_unique_route_desc">Automatycznie przełącz na trasę, gdy stanie się jedyną pasującą na rozwidleniu</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Odległość wskazówek nawigacyjnych</string>
+    <string name="tuning_nav_cue_distance_desc">Odległość przed manewrem, przy której wyświetlane są wskazówki</string>
 </resources>
 

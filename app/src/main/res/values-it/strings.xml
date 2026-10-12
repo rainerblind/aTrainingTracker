@@ -1756,5 +1756,8 @@
     <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
     <string name="tuning_auto_follow_unique_route_title">Segui automaticamente percorso univoco</string>
     <string name="tuning_auto_follow_unique_route_desc">Passa automaticamente a seguire un percorso quando diventa l\'unico corrispondente a un bivio</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Distanza indicazioni di svolta</string>
+    <string name="tuning_nav_cue_distance_desc">Distanza prima della svolta per visualizzare gli avvisi di navigazione</string>
 </resources>
 

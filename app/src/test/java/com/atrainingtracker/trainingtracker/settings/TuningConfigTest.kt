@@ -48,6 +48,8 @@ class TuningConfigTest {
         assertEquals(0.15f, TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA, 0.001f)
         assertEquals(true, config.autoFollowUniqueRouteEnabled)
         assertEquals(true, TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED)
+        assertEquals(100.0f, config.turnCueCountdownDistanceMeters, 0.001f)
+        assertEquals(100.0f, TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS, 0.001f)
     }
 
     @Test
@@ -63,6 +65,8 @@ class TuningConfigTest {
         assertEquals(0.20f, TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY, 0.001f)
         assertEquals(1.00f, TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY, 0.001f)
         assertEquals(listOf(2, 3, 4, 5, 8, 0), TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS)
+        assertEquals(30.0f, TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS, 0.001f)
+        assertEquals(300.0f, TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS, 0.001f)
 
         assertEquals(0.0f, TuningPreferencesDefaults.MIN_SLOPE_FLAT, 0.001f)
         assertEquals(5.0f, TuningPreferencesDefaults.MAX_SLOPE_FLAT, 0.001f)

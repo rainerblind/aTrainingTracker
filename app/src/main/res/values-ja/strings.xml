@@ -1736,5 +1736,8 @@
     <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
     <string name="tuning_auto_follow_unique_route_title">分岐で一意のルートを自動追従</string>
     <string name="tuning_auto_follow_unique_route_desc">分岐で一致するルートが1つだけになったときに自動的に追従を切り替えます</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">ナビゲーション案内の距離</string>
+    <string name="tuning_nav_cue_distance_desc">右左折案内を表示する手前の距離</string>
 </resources>
 

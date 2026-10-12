@@ -72,7 +72,9 @@ fun NavigationSection(
     mapFollowMeBearingSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
     onMapFollowMeBearingSmoothingAlphaChange: (Float) -> Unit = {},
     autoFollowUniqueRouteEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
-    onAutoFollowUniqueRouteEnabledChange: (Boolean) -> Unit = {}
+    onAutoFollowUniqueRouteEnabledChange: (Boolean) -> Unit = {},
+    turnCueCountdownDistanceMeters: Float = TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+    onTurnCueCountdownDistanceChange: (Float) -> Unit = {}
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -173,6 +175,24 @@ fun NavigationSection(
                 }
             }
         }
+
+        // Navigation Cue Countdown Distance (30m - 300m, 10m increments) (ATT-3321 / REQ-UI-287)
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_nav_cue_distance_title),
+            valueText = "${turnCueCountdownDistanceMeters.roundToInt()} m",
+            helperText = stringResource(R.string.tuning_nav_cue_distance_desc),
+            defaultText = stringResource(R.string.tuning_default_format, "100 m"),
+            value = turnCueCountdownDistanceMeters,
+            onValueChange = { snapped ->
+                val rounded = (snapped / 10f).roundToInt() * 10f
+                onTurnCueCountdownDistanceChange(rounded.coerceIn(
+                    TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+                    TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS
+                ))
+            },
+            valueRange = TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS..TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+            steps = 26
+        )
 
         // Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031)
         TuningToggleItem(
