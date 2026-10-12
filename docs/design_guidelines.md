@@ -95,6 +95,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
     * **Minimum height**: `70.dp` (for flat or low-relief terrain, $\Delta H \approx 0\text{ m}$)
     * **Maximum height**: `200.dp` (at $\Delta H \ge 1000\text{ m}$)
     * **Curved progression**: $\text{height} = 70 + (\text{range} / 1000)^{0.6} \times (200 - 70)$
+* **No Hardcoded Fixed Heights ("No Exceptions")**:
+  * The height of the elevation profile MUST always depend on the height/elevation gain of the track, route, or climb.
+  * Hardcoding arbitrary compact fixed heights (e.g. `68.dp`) in bottom sheets, cards, or dialogs is strictly prohibited (ATT-3264 / ATT-3316 / Retro 2026-41.10).
 * **Cockpit Space Allocation**:
   * On tracking screens where the map is disabled and only the elevation profile is shown, the elevation profile retains its fixed adaptive height based on the track's elevation difference.
   * The sensor grid column absorbs the flexible remaining vertical space (via `weight(1f, fill = false)`), wrapping naturally if there are few tiles and scrolling smoothly if there are many tiles, without stretching the elevation profile out of proportion (ATT-3107 / ATT-3173).
