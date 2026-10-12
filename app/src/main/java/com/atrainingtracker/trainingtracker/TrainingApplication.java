@@ -1077,6 +1077,9 @@ public class TrainingApplication extends Application {
 
         cAppContext = getApplicationContext();
 
+        // ATT-3163 / REQ-UI-342: Intercept missing platform SelectGesture on Android 14+ OEM devices
+        com.atrainingtracker.trainingtracker.ui.common.ComposeHandwritingResilience.install();
+
         initWorkManager();
         if (sWorkManagerAvailable) {
             com.atrainingtracker.trainingtracker.migration.BackupWorker.Companion.schedule(this);
