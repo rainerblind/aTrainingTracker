@@ -85,21 +85,44 @@ class SensorGridScreenClimbSuppressionTest {
     }
 
     @Test
+    fun testSensorGridScreen_activeEntityKey_derivesUniqueKeyForSegmentsAndClimbs() {
+        val screenFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = screenFile.readText()
+
+        assertTrue(
+            "SensorGridScreen must compute activeEntityKey",
+            content.contains("val activeEntityKey = when {")
+        )
+        assertTrue(
+            "activeEntityKey must incorporate segment stravaId",
+            content.contains("activeSegment.staticData.summary.stravaId")
+        )
+        assertTrue(
+            "activeEntityKey must incorporate climb ID and routeIndex",
+            content.contains("activeLiveClimb?.climb?.id") && content.contains("activeLiveClimb?.routeIndex")
+        )
+    }
+
+    @Test
     fun testSensorGridScreen_launchedEffect_drivesSheetStateHideAndExpand() {
         val screenFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = screenFile.readText()
 
         assertTrue(
-            "LaunchedEffect must listen to shouldShowBottomSheet",
-            content.contains("LaunchedEffect(shouldShowBottomSheet)")
+            "LaunchedEffect must listen to both shouldShowBottomSheet and activeEntityKey (REQ-UI-343 / ATT-3319)",
+            content.contains("LaunchedEffect(shouldShowBottomSheet, activeEntityKey)")
         )
         assertTrue(
             "LaunchedEffect must call scaffoldState.bottomSheetState.hide() when shouldShowBottomSheet is false",
             content.contains("scaffoldState.bottomSheetState.hide()")
         )
         assertTrue(
-            "LaunchedEffect must call scaffoldState.bottomSheetState.expand() when shouldShowBottomSheet is true (REQ-UI-343)",
+            "LaunchedEffect must unconditionally call scaffoldState.bottomSheetState.expand() when shouldShowBottomSheet is true (REQ-UI-343 / ATT-3319)",
             content.contains("scaffoldState.bottomSheetState.expand()")
+        )
+        assertFalse(
+            "LaunchedEffect must not restrict expand() to SheetValue.Hidden guard",
+            content.contains("scaffoldState.bottomSheetState.currentValue == SheetValue.Hidden")
         )
     }
 
