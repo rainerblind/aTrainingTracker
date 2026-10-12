@@ -217,6 +217,11 @@ fun SensorGridScreen(
     val showLiveClimbs = !showLiveSegments && state.showLiveClimbs && tuningConfig.showLiveClimbs && activeLiveClimb != null
 
     val shouldShowBottomSheet = isTabActive && (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING
+    val activeEntityKey = when {
+        showLiveSegments -> "segment_${activeSegment.staticData.summary.stravaId}"
+        showLiveClimbs -> "climb_${activeLiveClimb?.climb?.id}_${activeLiveClimb?.routeIndex}_${activeLiveClimb?.climb?.name}"
+        else -> null
+    }
 
     val navRepo = remember { TurnByTurnNavigationRepository.getInstance(context) }
     val navState by navRepo.navigationState.collectAsState()
@@ -238,16 +243,15 @@ fun SensorGridScreen(
         )
     )
 
-    // Reactively drive SheetValue transitions when active tab or climb/segment state changes
-    LaunchedEffect(shouldShowBottomSheet) {
+    // Reactively drive SheetValue transitions when active tab or climb/segment state changes (REQ-UI-343)
+    LaunchedEffect(shouldShowBottomSheet, activeEntityKey) {
         if (!shouldShowBottomSheet) {
             if (scaffoldState.bottomSheetState.currentValue != SheetValue.Hidden) {
                 scaffoldState.bottomSheetState.hide()
             }
         } else {
-            if (scaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
-                scaffoldState.bottomSheetState.expand()
-            }
+            // Unconditionally expand to full height when a sheet activates or a new entity appears (REQ-UI-343 / ATT-3319)
+            scaffoldState.bottomSheetState.expand()
         }
     }
 
