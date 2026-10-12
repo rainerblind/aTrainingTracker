@@ -156,7 +156,7 @@ fun WorkoutHeader(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.my_locations),
+                                painter = painterResource(id = R.drawable.ic_favorite_route),
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
                                 tint = MaterialTheme.colorScheme.primary
@@ -177,7 +177,7 @@ fun WorkoutHeader(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.my_locations),
+                            painter = painterResource(id = R.drawable.ic_favorite_route),
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
