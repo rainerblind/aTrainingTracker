@@ -1837,4 +1837,8 @@
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NEU</string>
     <string name="devices_new_sensor_discovered">Neuer Sensor gefunden: %1$s</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Eindeutiger Route automatisch folgen</string>
+    <string name="tuning_auto_follow_unique_route_desc">Automatisch zu einer Route wechseln, sobald sie an einer Weggabelung als einzige übereinstimmt</string>
 </resources>

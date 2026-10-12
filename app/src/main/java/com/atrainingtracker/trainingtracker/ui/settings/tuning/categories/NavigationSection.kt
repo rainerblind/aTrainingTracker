@@ -70,7 +70,9 @@ fun NavigationSection(
     mapFollowMeSpeedSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
     onMapFollowMeSpeedSmoothingAlphaChange: (Float) -> Unit = {},
     mapFollowMeBearingSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
-    onMapFollowMeBearingSmoothingAlphaChange: (Float) -> Unit = {}
+    onMapFollowMeBearingSmoothingAlphaChange: (Float) -> Unit = {},
+    autoFollowUniqueRouteEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
+    onAutoFollowUniqueRouteEnabledChange: (Boolean) -> Unit = {}
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -171,6 +173,14 @@ fun NavigationSection(
                 }
             }
         }
+
+        // Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031)
+        TuningToggleItem(
+            title = stringResource(R.string.tuning_auto_follow_unique_route_title),
+            isChecked = autoFollowUniqueRouteEnabled,
+            onCheckedChange = onAutoFollowUniqueRouteEnabledChange,
+            summary = stringResource(R.string.tuning_auto_follow_unique_route_desc)
+        )
 
         // Follow-Me Map Camera Heading / Divider
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))

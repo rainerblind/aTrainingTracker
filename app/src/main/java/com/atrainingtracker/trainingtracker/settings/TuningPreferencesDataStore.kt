@@ -160,6 +160,7 @@ object TuningPreferencesDefaults {
     const val STEP_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA = 0.05f
 
     const val SUPPRESS_ANT_MISSING_ADAPTER_DIALOG = false
+    const val DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED = true
 }
 
 /**
@@ -202,7 +203,8 @@ data class TuningConfig(
     val mapFollowMeLookaheadPaddingPercent: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
     val mapFollowMeSpeedSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
     val mapFollowMeBearingSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
-    val suppressAntMissingAdapterDialog: Boolean = TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG
+    val suppressAntMissingAdapterDialog: Boolean = TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG,
+    val autoFollowUniqueRouteEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -292,6 +294,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_speed_smoothing_alpha")
         val KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_bearing_smoothing_alpha")
         val KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_suppress_ant_missing_adapter_dialog")
+        val KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_follow_unique_route_enabled")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -331,7 +334,8 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
             KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
             KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
-            KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG
+            KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG,
+            KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED
         )
     }
 
@@ -526,7 +530,8 @@ class TuningPreferencesDataStore(private val context: Context) {
                 TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
                 TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
             ),
-            suppressAntMissingAdapterDialog = prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] ?: TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG
+            suppressAntMissingAdapterDialog = prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] ?: TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG,
+            autoFollowUniqueRouteEnabled = prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED
         )
     }
 
@@ -661,6 +666,7 @@ class TuningPreferencesDataStore(private val context: Context) {
                 TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
             )
             prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] = config.suppressAntMissingAdapterDialog
+            prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] = config.autoFollowUniqueRouteEnabled
         }
     }
 
@@ -771,6 +777,12 @@ class TuningPreferencesDataStore(private val context: Context) {
     suspend fun setSuppressAntMissingAdapterDialog(suppress: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] = suppress
+        }
+    }
+
+    suspend fun updateAutoFollowUniqueRouteEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] = enabled
         }
     }
 

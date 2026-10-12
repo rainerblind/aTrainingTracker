@@ -110,6 +110,7 @@ fun AdvancedTuningDialog(
     var mapFollowMeSpeedSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA) }
     var mapFollowMeBearingSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA) }
     var showAntMissingAdapterWarnings by remember { mutableStateOf(!TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG) }
+    var autoFollowUniqueRouteEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
@@ -165,6 +166,7 @@ fun AdvancedTuningDialog(
         mapFollowMeSpeedSmoothingAlpha = config.mapFollowMeSpeedSmoothingAlpha
         mapFollowMeBearingSmoothingAlpha = config.mapFollowMeBearingSmoothingAlpha
         showAntMissingAdapterWarnings = config.showAntMissingAdapterWarnings
+        autoFollowUniqueRouteEnabled = config.autoFollowUniqueRouteEnabled
     }
 
     LaunchedEffect(persistedConfig) {
@@ -195,7 +197,8 @@ fun AdvancedTuningDialog(
                         mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent,
                         mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha,
                         mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
-                        suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings
+                        suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings,
+                        autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
@@ -363,7 +366,9 @@ fun AdvancedTuningDialog(
                     mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha,
                     onMapFollowMeSpeedSmoothingAlphaChange = { mapFollowMeSpeedSmoothingAlpha = it },
                     mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
-                    onMapFollowMeBearingSmoothingAlphaChange = { mapFollowMeBearingSmoothingAlpha = it }
+                    onMapFollowMeBearingSmoothingAlphaChange = { mapFollowMeBearingSmoothingAlpha = it },
+                    autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
+                    onAutoFollowUniqueRouteEnabledChange = { autoFollowUniqueRouteEnabled = it }
                 )
             }
 

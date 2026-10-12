@@ -46,6 +46,8 @@ class TuningConfigTest {
         assertEquals(0.10f, TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA, 0.001f)
         assertEquals(0.15f, config.mapFollowMeBearingSmoothingAlpha, 0.001f)
         assertEquals(0.15f, TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA, 0.001f)
+        assertEquals(true, config.autoFollowUniqueRouteEnabled)
+        assertEquals(true, TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED)
     }
 
     @Test
