@@ -64,7 +64,7 @@ class TuningConfigTest {
 
         assertEquals(0.20f, TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY, 0.001f)
         assertEquals(1.00f, TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY, 0.001f)
-        assertEquals(listOf(2, 3, 4, 5, 8, 0), TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS)
+        assertEquals(listOf(2, 3, 4, 5, 8, 10), TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS)
         assertEquals(30.0f, TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS, 0.001f)
         assertEquals(300.0f, TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS, 0.001f)
 

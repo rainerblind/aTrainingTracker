@@ -1447,7 +1447,6 @@
     <string name="tuning_route_selection_radius_desc">Distância máxima até o ponto de partida para seleção de rotas próximas</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Duração de exibição das indicações</string>
     <string name="tuning_nav_cue_dismiss_duration_desc">Tempo de ocultação automática dos avisos de mudança de direção</string>
-    <string name="tuning_nav_cue_dismiss_persistent">Persistente</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 cartões</string>
     <string name="tuning_matrix_col_list">Lista</string>
     <string name="tuning_matrix_col_details">Detalhes</string>

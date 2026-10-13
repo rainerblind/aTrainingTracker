@@ -294,7 +294,6 @@ class AdvancedTuningAccordionTest {
         try {
             Locale.setDefault(Locale.US)
             val mockContext = mockk<Context>()
-            every { mockContext.getString(R.string.tuning_nav_cue_dismiss_persistent) } returns "Persistent"
 
             val subtitle1 = TuningSubtitleFormatter.formatNavigationSubtitle(
                 radiusKm = 1.0f,
@@ -305,10 +304,17 @@ class AdvancedTuningAccordionTest {
 
             val subtitle2 = TuningSubtitleFormatter.formatNavigationSubtitle(
                 radiusKm = 2.5f,
+                dismissSec = 10,
+                context = mockContext
+            )
+            assertEquals("10s, 2.5 km", subtitle2)
+
+            val subtitle3 = TuningSubtitleFormatter.formatNavigationSubtitle(
+                radiusKm = 2.5f,
                 dismissSec = 0,
                 context = mockContext
             )
-            assertEquals("Persistent, 2.5 km", subtitle2)
+            assertEquals("4s, 2.5 km", subtitle3)
         } finally {
             Locale.setDefault(defaultLocale)
         }
