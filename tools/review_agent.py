@@ -299,6 +299,8 @@ def get_git_diff():
                 diff = subprocess.check_output(["git", "diff", base] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
                 if diff.strip():
                     return diff[:60000]
+                else:
+                    return "(No implementation code diff yet; Stage 1-3 design phase)"
     except Exception:
         pass
     try:
@@ -306,6 +308,8 @@ def get_git_diff():
         diff = subprocess.check_output(["git", "diff", base] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
         if diff.strip():
             return diff[:60000]
+        else:
+            return "(No implementation code diff yet; Stage 1-3 design phase)"
     except Exception:
         pass
     try:

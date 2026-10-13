@@ -74,6 +74,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.core.view.WindowCompat
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
+import com.atrainingtracker.trainingtracker.ui.theme.getBatterySnackbarColors
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
 import com.atrainingtracker.banalservice.BSportType
@@ -160,11 +161,19 @@ fun TrackingTabsScreen(
     LaunchedEffect(Unit) {
         WorkoutNavigationEvents.lowBatteryAlert.collect { alert ->
             if (alert != null) {
-                val result = snackbarHostState.showSnackbar(
+                if (alert.severity == WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL) {
+                    val currentVisuals = snackbarHostState.currentSnackbarData?.visuals as? WorkoutNavigationEvents.BatterySnackbarVisuals
+                    if (currentVisuals != null && currentVisuals.severity == WorkoutNavigationEvents.BatteryAlertSeverity.WARNING) {
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                    }
+                }
+                val visuals = WorkoutNavigationEvents.BatterySnackbarVisuals(
                     message = alert.message,
                     actionLabel = viewSensorsLabel,
-                    duration = SnackbarDuration.Long
+                    duration = SnackbarDuration.Long,
+                    severity = alert.severity
                 )
+                val result = snackbarHostState.showSnackbar(visuals)
                 if (result == SnackbarResult.ActionPerformed) {
                     (context as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors)
                 }
@@ -791,12 +800,23 @@ fun TrackingTabsScreen(
                     .navigationBarsPadding()
                     .padding(bottom = if (shouldShowLapButton) 64.dp else 8.dp)
             ) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionColor = MaterialTheme.colorScheme.primary
-                )
+                val visuals = data.visuals as? WorkoutNavigationEvents.BatterySnackbarVisuals
+                if (visuals != null) {
+                    val colors = getBatterySnackbarColors(visuals.severity)
+                    Snackbar(
+                        snackbarData = data,
+                        containerColor = colors.containerColor,
+                        contentColor = colors.contentColor,
+                        actionColor = colors.actionColor
+                    )
+                } else {
+                    Snackbar(
+                        snackbarData = data,
+                        containerColor = MaterialTheme.colorScheme.inverseSurface,
+                        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                        actionColor = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }

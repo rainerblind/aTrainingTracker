@@ -181,7 +181,8 @@ class MainActivityWithNavigation :
         private const val REQUEST_INSTALL_GOOGLE_PLAY_SERVICE = 2
         private const val MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1
         private const val WAITING_TIME_BEFORE_DISCONNECTING = 5L * 60 * 1000 // 5 min
-        const val CRITICAL_BATTERY_LEVEL = 20
+        const val LOW_BATTERY_WARNING_LEVEL = 20
+        const val CRITICAL_BATTERY_LEVEL = 10
     }
 
     enum class SelectedFragment {
@@ -238,6 +239,7 @@ class MainActivityWithNavigation :
             mDrawerController.startTrackingTitleRes = R.string.Start
             stopInRideBatteryMonitoring()
             mInRideAlertedSensorIds.clear()
+            mInRideCriticalAlertedSensorIds.clear()
         }
     }
 
@@ -245,6 +247,7 @@ class MainActivityWithNavigation :
         override fun onReceive(context: Context?, intent: Intent?) {
             stopInRideBatteryMonitoring()
             mInRideAlertedSensorIds.clear()
+            mInRideCriticalAlertedSensorIds.clear()
             mSelectedFragmentId = R.id.drawer_workouts
             navigateToDrawerItem(mSelectedFragmentId)
             val workoutId = intent?.getLongExtra(TrackerService.WORKOUT_ID, -1L) ?: -1L
@@ -957,7 +960,7 @@ class MainActivityWithNavigation :
                 }
 
                 val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
-                val allCritical = devDbManager.getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL)
+                val allCritical = devDbManager.getCriticalBatteryDevices(LOW_BATTERY_WARNING_LEVEL)
                 val criticalDevices = if (activeDeviceIds.isNotEmpty()) {
                     allCritical.filter { activeDeviceIds.contains(it.deviceId) }
                 } else if (workoutId <= 0) {
@@ -978,10 +981,18 @@ class MainActivityWithNavigation :
                         val names = criticalDevices.joinToString(", ") { "${it.name} (${it.batteryPercentage}%)" }
                         getString(R.string.sensor_battery_snackbar_many, criticalDevices.size, names)
                     }
+                    val minBattery = criticalDevices.minOf { it.batteryPercentage }
+                    val severity = if (criticalDevices.any { it.batteryPercentage <= CRITICAL_BATTERY_LEVEL }) {
+                        WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL
+                    } else {
+                        WorkoutNavigationEvents.BatteryAlertSeverity.WARNING
+                    }
                     WorkoutNavigationEvents.triggerLowBatteryAlert(
                         WorkoutNavigationEvents.LowBatteryAlert(
                             message = message,
-                            deviceNames = criticalDevices.map { it.name }
+                            deviceNames = criticalDevices.map { it.name },
+                            severity = severity,
+                            lowestBatteryPercentage = minBattery
                         )
                     )
                 }
@@ -993,17 +1004,24 @@ class MainActivityWithNavigation :
 
     private var mInRideBatteryMonitoringJob: Job? = null
     internal val mInRideAlertedSensorIds: MutableSet<Long> = Collections.synchronizedSet(mutableSetOf())
+    internal val mInRideCriticalAlertedSensorIds: MutableSet<Long> = Collections.synchronizedSet(mutableSetOf())
 
     internal fun checkSensorBatteryOnStart() {
         mInRideAlertedSensorIds.clear()
+        mInRideCriticalAlertedSensorIds.clear()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
-                val allCritical = devDbManager.getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL)
+                val allCritical = devDbManager.getCriticalBatteryDevices(LOW_BATTERY_WARNING_LEVEL)
                 val criticalDevices = allCritical.filter { devDbManager.isPaired(it.deviceId) }
 
                 if (criticalDevices.isNotEmpty()) {
-                    criticalDevices.forEach { mInRideAlertedSensorIds.add(it.deviceId) }
+                    criticalDevices.forEach { dev ->
+                        mInRideAlertedSensorIds.add(dev.deviceId)
+                        if (dev.batteryPercentage <= CRITICAL_BATTERY_LEVEL) {
+                            mInRideCriticalAlertedSensorIds.add(dev.deviceId)
+                        }
+                    }
                     val message = if (criticalDevices.size == 1) {
                         val dev = criticalDevices[0]
                         getString(R.string.sensor_battery_snackbar_single, dev.name, dev.batteryPercentage)
@@ -1011,10 +1029,18 @@ class MainActivityWithNavigation :
                         val names = criticalDevices.joinToString(", ") { "${it.name} (${it.batteryPercentage}%)" }
                         getString(R.string.sensor_battery_snackbar_many, criticalDevices.size, names)
                     }
+                    val minBattery = criticalDevices.minOf { it.batteryPercentage }
+                    val severity = if (criticalDevices.any { it.batteryPercentage <= CRITICAL_BATTERY_LEVEL }) {
+                        WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL
+                    } else {
+                        WorkoutNavigationEvents.BatteryAlertSeverity.WARNING
+                    }
                     WorkoutNavigationEvents.triggerLowBatteryAlert(
                         WorkoutNavigationEvents.LowBatteryAlert(
                             message = message,
-                            deviceNames = criticalDevices.map { it.name }
+                            deviceNames = criticalDevices.map { it.name },
+                            severity = severity,
+                            lowestBatteryPercentage = minBattery
                         )
                     )
                 }
@@ -1030,16 +1056,34 @@ class MainActivityWithNavigation :
             DeviceDataRepository.deviceBatteryUpdates.collect { (deviceId, percentage) ->
                 try {
                     val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
-                    if (percentage in 0..CRITICAL_BATTERY_LEVEL && devDbManager.isPaired(deviceId)) {
-                        if (mInRideAlertedSensorIds.add(deviceId)) {
-                            val deviceName = devDbManager.getDeviceName(deviceId) ?: "Sensor"
-                            val message = getString(R.string.sensor_battery_snackbar_single, deviceName, percentage)
-                            WorkoutNavigationEvents.triggerLowBatteryAlert(
-                                WorkoutNavigationEvents.LowBatteryAlert(
-                                    message = message,
-                                    deviceNames = listOf(deviceName)
+                    if (percentage in 0..LOW_BATTERY_WARNING_LEVEL && devDbManager.isPaired(deviceId)) {
+                        if (percentage <= CRITICAL_BATTERY_LEVEL) {
+                            if (mInRideCriticalAlertedSensorIds.add(deviceId)) {
+                                mInRideAlertedSensorIds.add(deviceId)
+                                val deviceName = devDbManager.getDeviceName(deviceId) ?: "Sensor"
+                                val message = getString(R.string.sensor_battery_snackbar_single, deviceName, percentage)
+                                WorkoutNavigationEvents.triggerLowBatteryAlert(
+                                    WorkoutNavigationEvents.LowBatteryAlert(
+                                        message = message,
+                                        deviceNames = listOf(deviceName),
+                                        severity = WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL,
+                                        lowestBatteryPercentage = percentage
+                                    )
                                 )
-                            )
+                            }
+                        } else {
+                            if (mInRideAlertedSensorIds.add(deviceId)) {
+                                val deviceName = devDbManager.getDeviceName(deviceId) ?: "Sensor"
+                                val message = getString(R.string.sensor_battery_snackbar_single, deviceName, percentage)
+                                WorkoutNavigationEvents.triggerLowBatteryAlert(
+                                    WorkoutNavigationEvents.LowBatteryAlert(
+                                        message = message,
+                                        deviceNames = listOf(deviceName),
+                                        severity = WorkoutNavigationEvents.BatteryAlertSeverity.WARNING,
+                                        lowestBatteryPercentage = percentage
+                                    )
+                                )
+                            }
                         }
                     }
                 } catch (e: Exception) {
