@@ -51,16 +51,16 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Enumeration of the 5 canonical, semantic subsections of Advanced Settings.
+ * Enumeration of the canonical, semantic subsections of Advanced Settings in athletic lifecycle sequence (REQ-UI-357).
  */
 enum class TuningSection {
+    NAVIGATION,
     COCKPIT_TYPOGRAPHY,
     BATTERY_SAVER,
     SENSORS_GPS,
     SENSOR_SEARCH,
-    AFTERMATH_ANALYSIS,
     WORKOUT_MASKS_CARDS,
-    NAVIGATION
+    AFTERMATH_ANALYSIS
 }
 
 /**

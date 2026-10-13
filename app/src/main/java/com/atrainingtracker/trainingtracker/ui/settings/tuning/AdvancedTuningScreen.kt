@@ -1,0 +1,371 @@
+/*
+ * aTrainingTracker (ANT+ BTLE)
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+ */
+
+package com.atrainingtracker.trainingtracker.ui.settings.tuning
+
+import android.widget.Toast
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
+import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AftermathAnalysisSection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchPreferences
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchTuningSection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.WorkoutMasksAndCardsSection
+import kotlinx.coroutines.launch
+
+/**
+ * Dedicated full-screen screen for Advanced Settings / Advanced Tuning (REQ-UI-357).
+ * Decoupled from ModalBottomSheet gestures to eliminate accidental scroll dismissals.
+ * Categories organized in 3-phase athletic lifecycle sequence.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdvancedTuningScreen(
+    onNavigateBack: () -> Unit,
+    onSettingsChanged: (() -> Unit)? = null
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val tuningDataStore = remember { TuningPreferencesDataStore(context) }
+    val persistedConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
+    val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
+    val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = null)
+    val persistedWorkoutDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = null)
+    val persistedWorkoutSectionsOrder by preferenceManager.workoutSectionsOrderFlow.collectAsState(initial = null)
+
+    var elevationXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN) }
+    var telemetryXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN) }
+    var fullDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.FULL_DIM_FACTOR) }
+    var mediumDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.MEDIUM_DIM_FACTOR) }
+    var slopeFlat by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD) }
+    var slopeSteep by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_STEEP_THRESHOLD) }
+    var wakeupSec by remember { mutableIntStateOf(TuningPreferencesDefaults.WAKEUP_DURATION_SEC) }
+    var downwardDelaySec by remember { mutableIntStateOf(TuningPreferencesDefaults.DOWNWARD_DELAY_SEC) }
+    var gpsAccuracy by remember { mutableFloatStateOf(TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M) }
+    var altitudeWindowSec by remember { mutableIntStateOf(TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC) }
+    var slopeMinSpeed by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS) }
+    var paceCeilingMinKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM) }
+    var cockpitFontFamily by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_FAMILY) }
+    var cockpitFontWeight by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT) }
+    var sensorFieldVariant by remember { mutableStateOf(TuningPreferencesDefaults.SENSOR_FIELD_VARIANT) }
+    var sensorFieldCornerRadius by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS) }
+    var sensorFieldBorderThickness by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS) }
+    var sensorFieldBorderContrast by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST) }
+    var routeSelectionRadiusKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM) }
+    var navigationCueDismissDurationSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC) }
+    var elevationSmoothingSigmaMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS) }
+    var mapFollowMeInitialZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM) }
+    var mapFollowMeSpeedZoomEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED) }
+    var mapFollowMeCruisingZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM) }
+    var mapFollowMeTiltAngle by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE) }
+    var mapFollowMeLookaheadPaddingPercent by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT) }
+    var mapFollowMeSpeedSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA) }
+    var mapFollowMeBearingSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA) }
+    var showAntMissingAdapterWarnings by remember { mutableStateOf(!TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG) }
+    var autoFollowUniqueRouteEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED) }
+    var turnCueCountdownDistanceMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS) }
+    var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
+
+    var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }
+    var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
+    var workoutDetailPrefs by remember { mutableStateOf(WorkoutDetailPreferences()) }
+    var isDetailPrefsInitialized by remember { mutableStateOf(false) }
+    var workoutSectionsOrder by remember { mutableStateOf(WorkoutSectionType.DEFAULT_ORDER) }
+    var isSectionsOrderInitialized by remember { mutableStateOf(false) }
+
+    var expandedSections by rememberSaveable { mutableStateOf(emptySet<String>()) }
+    fun isSectionExpanded(section: TuningSection): Boolean = expandedSections.contains(section.name)
+    fun toggleSection(section: TuningSection) {
+        expandedSections = if (expandedSections.contains(section.name)) expandedSections - section.name else expandedSections + section.name
+    }
+
+    LaunchedEffect(persistedWorkoutCardPrefs) {
+        val cardPrefs = persistedWorkoutCardPrefs
+        if (!isAftermathPrefsInitialized && cardPrefs != null) { workoutCardPrefs = cardPrefs; isAftermathPrefsInitialized = true }
+    }
+    LaunchedEffect(persistedWorkoutDetailPrefs) {
+        val detailPrefs = persistedWorkoutDetailPrefs
+        if (!isDetailPrefsInitialized && detailPrefs != null) { workoutDetailPrefs = detailPrefs; isDetailPrefsInitialized = true }
+    }
+    LaunchedEffect(persistedWorkoutSectionsOrder) {
+        val order = persistedWorkoutSectionsOrder
+        if (!isSectionsOrderInitialized && order != null) { workoutSectionsOrder = order; isSectionsOrderInitialized = true }
+    }
+
+    fun applyConfig(config: TuningConfig) {
+        elevationXAxisDomain = config.elevationXAxisDomain; telemetryXAxisDomain = config.telemetryXAxisDomain
+        cockpitFontFamily = config.cockpitFontFamily; cockpitFontWeight = config.cockpitFontWeight
+        sensorFieldVariant = config.sensorFieldVariant; sensorFieldCornerRadius = config.sensorFieldCornerRadius
+        sensorFieldBorderThickness = config.sensorFieldBorderThickness; sensorFieldBorderContrast = config.sensorFieldBorderContrast
+        fullDimFactor = config.fullDimFactor; mediumDimFactor = config.mediumDimFactor
+        slopeFlat = config.slopeFlatThreshold; slopeSteep = config.slopeSteepThreshold
+        wakeupSec = config.wakeupDurationSec; downwardDelaySec = config.downwardDelaySec
+        gpsAccuracy = config.gpsAccuracyThresholdMeters; altitudeWindowSec = config.altitudeFilterWindowSec
+        slopeMinSpeed = config.slopeMinSpeedMps; paceCeilingMinKm = config.paceCeilingMinKm
+        routeSelectionRadiusKm = config.routeSelectionRadiusKm
+        navigationCueDismissDurationSec = config.navigationCueDismissDurationSec
+        elevationSmoothingSigmaMeters = config.elevationSmoothingSigmaMeters
+        mapFollowMeInitialZoom = config.mapFollowMeInitialZoom; mapFollowMeSpeedZoomEnabled = config.mapFollowMeSpeedZoomEnabled
+        mapFollowMeCruisingZoom = config.mapFollowMeCruisingZoom; mapFollowMeTiltAngle = config.mapFollowMeTiltAngle
+        mapFollowMeLookaheadPaddingPercent = config.mapFollowMeLookaheadPaddingPercent
+        mapFollowMeSpeedSmoothingAlpha = config.mapFollowMeSpeedSmoothingAlpha
+        mapFollowMeBearingSmoothingAlpha = config.mapFollowMeBearingSmoothingAlpha
+        showAntMissingAdapterWarnings = config.showAntMissingAdapterWarnings
+        autoFollowUniqueRouteEnabled = config.autoFollowUniqueRouteEnabled
+        turnCueCountdownDistanceMeters = config.turnCueCountdownDistanceMeters
+    }
+    LaunchedEffect(persistedConfig) { applyConfig(persistedConfig) }
+
+    fun onResetToDefaults() {
+        scope.launch {
+            tuningDataStore.resetToDefaults()
+            preferenceManager.setWorkoutCardPreferences(WorkoutCardSectionPreferences())
+            preferenceManager.setWorkoutDetailPreferences(WorkoutDetailPreferences())
+            preferenceManager.setWorkoutSectionsOrder(WorkoutSectionType.DEFAULT_ORDER)
+            SensorSearchPreferences.reset(context)
+            sensorSearchPrefs = SensorSearchPreferences()
+            workoutCardPrefs = WorkoutCardSectionPreferences()
+            workoutDetailPrefs = WorkoutDetailPreferences()
+            workoutSectionsOrder = WorkoutSectionType.DEFAULT_ORDER
+            applyConfig(TuningConfig())
+            onSettingsChanged?.invoke()
+            Toast.makeText(context, context.getString(R.string.reset_to_defaults_success), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun onSaveSettings() {
+        val newConfig = TuningConfig(
+            elevationXAxisDomain = elevationXAxisDomain, telemetryXAxisDomain = telemetryXAxisDomain,
+            cockpitFontFamily = cockpitFontFamily, cockpitFontWeight = cockpitFontWeight,
+            sensorFieldVariant = sensorFieldVariant, sensorFieldCornerRadius = sensorFieldCornerRadius,
+            sensorFieldBorderThickness = sensorFieldBorderThickness, sensorFieldBorderContrast = sensorFieldBorderContrast,
+            fullDimFactor = fullDimFactor, mediumDimFactor = mediumDimFactor,
+            slopeFlatThreshold = slopeFlat, slopeSteepThreshold = slopeSteep,
+            wakeupDurationSec = wakeupSec, downwardDelaySec = downwardDelaySec,
+            gpsAccuracyThresholdMeters = gpsAccuracy, altitudeFilterWindowSec = altitudeWindowSec,
+            slopeMinSpeedMps = slopeMinSpeed, paceCeilingMinKm = paceCeilingMinKm,
+            routeSelectionRadiusKm = routeSelectionRadiusKm,
+            navigationCueDismissDurationSec = navigationCueDismissDurationSec,
+            elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
+            mapFollowMeInitialZoom = mapFollowMeInitialZoom, mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled,
+            mapFollowMeCruisingZoom = mapFollowMeCruisingZoom, mapFollowMeTiltAngle = mapFollowMeTiltAngle,
+            mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent,
+            mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha,
+            mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
+            suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings,
+            autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
+            turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters
+        )
+        scope.launch {
+            tuningDataStore.saveTuningConfig(newConfig)
+            preferenceManager.setWorkoutCardPreferences(workoutCardPrefs)
+            preferenceManager.setWorkoutDetailPreferences(workoutDetailPrefs)
+            preferenceManager.setWorkoutSectionsOrder(workoutSectionsOrder)
+            SensorSearchPreferences.save(context, sensorSearchPrefs)
+            onSettingsChanged?.invoke()
+            onNavigateBack()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(text = stringResource(R.string.advanced_tuning_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cancel))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { onResetToDefaults() }) {
+                        Icon(imageVector = Icons.Default.RestartAlt, contentDescription = stringResource(R.string.reset_to_defaults))
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            Surface(tonalElevation = 0.dp, modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
+                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    AppDialogActions.SaveCancel(onSave = { onSaveSettings() }, onCancel = onNavigateBack, saveText = stringResource(R.string.save))
+                }
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(paddingValues).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            TuningWarningNotice()
+
+            // Section 1: Navigation & Kartenführung (REQ-UI-357: Promoted to top)
+            TuningAccordionSection(
+                icon = Icons.Default.Navigation,
+                title = stringResource(R.string.tuning_cat_navigation),
+                subtitle = TuningSubtitleFormatter.formatNavigationSubtitle(routeSelectionRadiusKm, navigationCueDismissDurationSec, context),
+                isExpanded = isSectionExpanded(TuningSection.NAVIGATION),
+                onToggle = { toggleSection(TuningSection.NAVIGATION) }
+            ) {
+                NavigationSection(
+                    routeSelectionRadiusKm = routeSelectionRadiusKm, onRadiusChange = { routeSelectionRadiusKm = it },
+                    navigationCueDismissDurationSec = navigationCueDismissDurationSec, onDismissDurationChange = { navigationCueDismissDurationSec = it },
+                    mapFollowMeInitialZoom = mapFollowMeInitialZoom, onMapFollowMeInitialZoomChange = { mapFollowMeInitialZoom = it },
+                    mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled, onMapFollowMeSpeedZoomEnabledChange = { mapFollowMeSpeedZoomEnabled = it },
+                    mapFollowMeCruisingZoom = mapFollowMeCruisingZoom, onMapFollowMeCruisingZoomChange = { mapFollowMeCruisingZoom = it },
+                    mapFollowMeTiltAngle = mapFollowMeTiltAngle, onMapFollowMeTiltAngleChange = { mapFollowMeTiltAngle = it },
+                    mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent, onMapFollowMeLookaheadPaddingPercentChange = { mapFollowMeLookaheadPaddingPercent = it },
+                    mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha, onMapFollowMeSpeedSmoothingAlphaChange = { mapFollowMeSpeedSmoothingAlpha = it },
+                    mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha, onMapFollowMeBearingSmoothingAlphaChange = { mapFollowMeBearingSmoothingAlpha = it },
+                    autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled, onAutoFollowUniqueRouteEnabledChange = { autoFollowUniqueRouteEnabled = it },
+                    turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters, onTurnCueCountdownDistanceChange = { turnCueCountdownDistanceMeters = it }
+                )
+            }
+
+            // Section 2: Cockpit-Typografie & Sensorfelder
+            TuningAccordionSection(
+                icon = Icons.Default.TextFields,
+                title = stringResource(R.string.tuning_cat_cockpit_typography),
+                subtitle = TuningSubtitleFormatter.formatCockpitSubtitle(cockpitFontFamily, cockpitFontWeight, sensorFieldVariant, context),
+                isExpanded = isSectionExpanded(TuningSection.COCKPIT_TYPOGRAPHY),
+                onToggle = { toggleSection(TuningSection.COCKPIT_TYPOGRAPHY) }
+            ) {
+                CockpitTypographySection(
+                    cockpitFontFamily = cockpitFontFamily, onFontFamilyChange = { cockpitFontFamily = it },
+                    cockpitFontWeight = cockpitFontWeight, onFontWeightChange = { cockpitFontWeight = it },
+                    sensorFieldVariant = sensorFieldVariant, onSensorFieldVariantChange = { sensorFieldVariant = it },
+                    sensorFieldCornerRadius = sensorFieldCornerRadius, onCornerRadiusChange = { sensorFieldCornerRadius = it },
+                    sensorFieldBorderThickness = sensorFieldBorderThickness, onBorderThicknessChange = { sensorFieldBorderThickness = it },
+                    sensorFieldBorderContrast = sensorFieldBorderContrast, onBorderContrastChange = { sensorFieldBorderContrast = it }
+                )
+            }
+
+            // Section 3: AMOLED & Akkuschoner
+            TuningAccordionSection(
+                icon = Icons.Default.BrightnessMedium,
+                title = stringResource(R.string.tuning_cat_battery_saver),
+                subtitle = TuningSubtitleFormatter.formatBatterySaverSubtitle(fullDimFactor, mediumDimFactor, slopeFlat, slopeSteep),
+                isExpanded = isSectionExpanded(TuningSection.BATTERY_SAVER),
+                onToggle = { toggleSection(TuningSection.BATTERY_SAVER) }
+            ) {
+                AmoledBatterySaverSection(
+                    fullDimFactor = fullDimFactor, onFullDimChange = { fullDimFactor = it },
+                    mediumDimFactor = mediumDimFactor, onMediumDimChange = { mediumDimFactor = it },
+                    slopeFlat = slopeFlat, onSlopeFlatChange = { slopeFlat = it },
+                    slopeSteep = slopeSteep, onSlopeSteepChange = { slopeSteep = it },
+                    wakeupSec = wakeupSec, onWakeupSecChange = { wakeupSec = it },
+                    downwardDelaySec = downwardDelaySec, onDownwardDelayChange = { downwardDelaySec = it }
+                )
+            }
+
+            // Section 4: Sensoren & GPS-Filterung
+            TuningAccordionSection(
+                icon = Icons.Default.LocationOn,
+                title = stringResource(R.string.tuning_cat_sensors_gps),
+                subtitle = TuningSubtitleFormatter.formatSensorsGpsSubtitle(gpsAccuracy, altitudeWindowSec, slopeMinSpeed),
+                isExpanded = isSectionExpanded(TuningSection.SENSORS_GPS),
+                onToggle = { toggleSection(TuningSection.SENSORS_GPS) }
+            ) {
+                SensorsGpsFilterSection(
+                    gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
+                    altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
+                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it },
+                    showAntMissingAdapterWarnings = showAntMissingAdapterWarnings,
+                    onShowAntMissingAdapterWarningsChange = { showAntMissingAdapterWarnings = it }
+                )
+            }
+
+            // Section 5: Sensorsuche & Verbindungen
+            TuningAccordionSection(
+                icon = Icons.Default.Search,
+                title = stringResource(R.string.tuning_cat_sensor_search),
+                subtitle = TuningSubtitleFormatter.formatSensorSearchSubtitle(
+                    sensorSearchPrefs.numberOfSearchTries, sensorSearchPrefs.startSearchWhenAppStarts,
+                    sensorSearchPrefs.startSearchWhenResumeFromPaused, sensorSearchPrefs.startSearchWhenUserChangesSport,
+                    sensorSearchPrefs.startSearchWhenTrackingStarts, context
+                ),
+                isExpanded = isSectionExpanded(TuningSection.SENSOR_SEARCH),
+                onToggle = { toggleSection(TuningSection.SENSOR_SEARCH) }
+            ) {
+                SensorSearchTuningSection(prefs = sensorSearchPrefs, onPrefsChange = { sensorSearchPrefs = it })
+            }
+
+            // Section 6: Workout-Masken & Detailkarten
+            TuningAccordionSection(
+                icon = Icons.AutoMirrored.Filled.ViewList,
+                title = stringResource(R.string.tuning_cat_workout_masks_cards),
+                subtitle = TuningSubtitleFormatter.formatWorkoutMatrixSubtitle(workoutCardPrefs, workoutDetailPrefs, context),
+                isExpanded = isSectionExpanded(TuningSection.WORKOUT_MASKS_CARDS),
+                onToggle = { toggleSection(TuningSection.WORKOUT_MASKS_CARDS) }
+            ) {
+                WorkoutMasksAndCardsSection(
+                    workoutCardPrefs = workoutCardPrefs, onWorkoutCardPrefsChange = { workoutCardPrefs = it },
+                    workoutDetailPrefs = workoutDetailPrefs, onWorkoutDetailPrefsChange = { workoutDetailPrefs = it },
+                    workoutSectionsOrder = workoutSectionsOrder, onWorkoutSectionsOrderChange = { workoutSectionsOrder = it }
+                )
+            }
+
+            // Section 7: Aftermath & Analyse
+            TuningAccordionSection(
+                icon = Icons.AutoMirrored.Filled.ShowChart,
+                title = stringResource(R.string.tuning_cat_aftermath),
+                subtitle = TuningSubtitleFormatter.formatAftermathSubtitle(elevationXAxisDomain, telemetryXAxisDomain, context, elevationSmoothingSigmaMeters),
+                isExpanded = isSectionExpanded(TuningSection.AFTERMATH_ANALYSIS),
+                onToggle = { toggleSection(TuningSection.AFTERMATH_ANALYSIS) }
+            ) {
+                AftermathAnalysisSection(
+                    elevationXAxisDomain = elevationXAxisDomain, onElevationDomainChange = { elevationXAxisDomain = it },
+                    telemetryXAxisDomain = telemetryXAxisDomain, onTelemetryDomainChange = { telemetryXAxisDomain = it },
+                    paceCeilingMinKm = paceCeilingMinKm, onPaceCeilingChange = { paceCeilingMinKm = it },
+                    elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
+                    onElevationSmoothingSigmaChange = { elevationSmoothingSigmaMeters = it }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
