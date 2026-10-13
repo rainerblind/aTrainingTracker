@@ -1079,6 +1079,10 @@
     <string name="battery_level">Nivel de batería</string>
     <string name="calc_map_polyline">Calculando polilínea del mapa.</string>
     <string name="config_tracking__showElevationProfile">Perfil de elevación</string>
+    <string name="config_tracking__elevation_profile_scope">Ámbito</string>
+    <string name="config_tracking__elevation_profile_scope_full_route">Ruta completa</string>
+    <string name="config_tracking__elevation_profile_scope_rolling_window">Ventana continua</string>
+    <string name="config_tracking__elevation_profile_lookahead">Anticipación</string>
     <string name="current_value">Valor actual</string>
     <string name="editLocationName">Nombre:</string>
     <string name="edit_my_location">Editar ubicación</string>

@@ -66,10 +66,11 @@ object ElevationProfileZoomMath {
     /**
      * Maps a pixel X coordinate on canvas back to absolute route distance in meters.
      */
-    fun canvasXToDistance(canvasX: Float, startDist: Double, visibleDist: Double, canvasWidth: Float, totalDist: Double): Double {
-        if (canvasWidth <= 0f) return startDist.coerceIn(0.0, totalDist)
+    fun canvasXToDistance(canvasX: Float, startDist: Double, visibleDist: Double, canvasWidth: Float, totalDist: Double = startDist + visibleDist): Double {
+        val maxDist = if (totalDist >= startDist + visibleDist) totalDist else (startDist + visibleDist)
+        if (canvasWidth <= 0f) return startDist.coerceIn(0.0, maxDist)
         val ratio = (canvasX / canvasWidth).toDouble().coerceIn(0.0, 1.0)
-        return (startDist + ratio * visibleDist).coerceIn(0.0, totalDist)
+        return (startDist + ratio * visibleDist).coerceIn(startDist, maxDist)
     }
 
     /**

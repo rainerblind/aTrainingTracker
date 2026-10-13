@@ -517,8 +517,8 @@ class TrackingViewsDatabaseManagerTest {
     }
 
     @Test
-    fun testDatabaseVersionIs12() {
-        assertEquals(12, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    fun testDatabaseVersionIs13() {
+        assertEquals(13, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
     }
 
     @Test
@@ -531,6 +531,19 @@ class TrackingViewsDatabaseManagerTest {
             mockDb.execSQL(match { it.contains("ALTER TABLE ViewsTable ADD COLUMN ShowNavigationHints int DEFAULT 1;") })
             mockDb.execSQL(match { it.contains("UPDATE ViewsTable SET ShowLiveClimbs = 1 WHERE ShowLiveClimbs IS NULL;") })
             mockDb.execSQL(match { it.contains("UPDATE ViewsTable SET ShowNavigationHints = 1 WHERE ShowNavigationHints IS NULL;") })
+        }
+    }
+
+    @Test
+    fun testOnUpgrade_from12To13_addsElevationProfileColumns() {
+        val dbHelper = TrackingViewsDatabaseManager.TrackingViewsDbHelper(mockContext)
+        dbHelper.onUpgrade(mockDb, 12, 13)
+
+        verify(atLeast = 1) {
+            mockDb.execSQL(match { it.contains("ALTER TABLE ViewsTable ADD COLUMN ElevationProfileScope int DEFAULT 0;") })
+            mockDb.execSQL(match { it.contains("ALTER TABLE ViewsTable ADD COLUMN ElevationProfileLookahead int DEFAULT 2000;") })
+            mockDb.execSQL(match { it.contains("UPDATE ViewsTable SET ElevationProfileScope = 0 WHERE ElevationProfileScope IS NULL;") })
+            mockDb.execSQL(match { it.contains("UPDATE ViewsTable SET ElevationProfileLookahead = 2000 WHERE ElevationProfileLookahead IS NULL;") })
         }
     }
 
@@ -557,6 +570,40 @@ class TrackingViewsDatabaseManagerTest {
         injectMockDatabase(manager, mockDb)
 
         manager.updateShowNavigationHints(42L, false)
+
+        verify(exactly = 1) {
+            mockDb.update(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
+                arrayOf("42")
+            )
+        }
+    }
+
+    @Test
+    fun testUpdateElevationProfileScope_updatesViewsTable() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        manager.updateElevationProfileScope(42L, 1)
+
+        verify(exactly = 1) {
+            mockDb.update(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
+                arrayOf("42")
+            )
+        }
+    }
+
+    @Test
+    fun testUpdateElevationProfileLookahead_updatesViewsTable() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        manager.updateElevationProfileLookahead(42L, 5000)
 
         verify(exactly = 1) {
             mockDb.update(
