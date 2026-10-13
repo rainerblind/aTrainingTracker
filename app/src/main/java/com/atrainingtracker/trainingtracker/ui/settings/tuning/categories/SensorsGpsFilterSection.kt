@@ -26,14 +26,12 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
-import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
  * Sensors, GPS and filtering tuning category composable (REQ-UI-262).
- * Encapsulates GPS accuracy, altitude filter window, minimum slope speed thresholds,
- * and missing ANT+ adapter warning toggle (REQ-UI-353).
+ * Encapsulates GPS accuracy, altitude filter window, and minimum slope speed thresholds.
  */
 @Composable
 fun SensorsGpsFilterSection(
@@ -42,9 +40,7 @@ fun SensorsGpsFilterSection(
     altitudeWindowSec: Int,
     onAltitudeWindowChange: (Int) -> Unit,
     slopeMinSpeed: Float,
-    onSlopeMinSpeedChange: (Float) -> Unit,
-    showAntMissingAdapterWarnings: Boolean = true,
-    onShowAntMissingAdapterWarningsChange: (Boolean) -> Unit = {}
+    onSlopeMinSpeedChange: (Float) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -81,13 +77,6 @@ fun SensorsGpsFilterSection(
             onValueChange = onSlopeMinSpeedChange,
             valueRange = TuningPreferencesDefaults.MIN_SLOPE_SPEED_MPS..TuningPreferencesDefaults.MAX_SLOPE_SPEED_MPS,
             steps = 18
-        )
-
-        TuningToggleItem(
-            title = stringResource(R.string.tuning_show_ant_missing_adapter_warnings_title),
-            isChecked = showAntMissingAdapterWarnings,
-            onCheckedChange = onShowAntMissingAdapterWarningsChange,
-            summary = stringResource(R.string.tuning_show_ant_missing_adapter_warnings_desc)
         )
     }
 }
