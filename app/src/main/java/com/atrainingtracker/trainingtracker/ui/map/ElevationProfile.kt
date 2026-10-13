@@ -432,22 +432,22 @@ fun ElevationProfile(
 
     val density = LocalDensity.current
     val badgeTextSizeDp: Dp = with(density) { 10.sp.toDp() }
-    val requiredClimbTopClearance: Dp = badgeTextSizeDp + 4.dp + 8.dp + 2.dp
+    val requiredClimbTopClearance: Dp = ElevationProfileZoomMath.calculateRequiredClimbTopClearance(
+        badgeTextSizeDp = badgeTextSizeDp.value
+    ).dp
     val climbBadgeTopPadding: Dp = if (!isTimeDomain && climbs.isNotEmpty()) {
         (requiredClimbTopClearance - topPadding).coerceAtLeast(0.dp)
     } else {
         0.dp
     }
-    val effectiveTopPadding: Dp = if (fixedHeight != null) {
-        if (!isTimeDomain && climbs.isNotEmpty()) {
-            val maxAllowedTop: Dp = (fixedHeight - bottomPadding - 32.dp).coerceAtLeast(8.dp)
-            requiredClimbTopClearance.coerceIn(8.dp, maxAllowedTop)
-        } else {
-            8.dp
-        }
-    } else {
-        topPadding + climbBadgeTopPadding
-    }
+    val effectiveTopPadding: Dp = ElevationProfileZoomMath.calculateEffectiveTopPadding(
+        fixedHeightDp = fixedHeight?.value,
+        baseTopPaddingDp = topPadding.value,
+        bottomPaddingDp = bottomPadding.value,
+        requiredClearanceDp = requiredClimbTopClearance.value,
+        isTimeDomain = isTimeDomain,
+        hasClimbs = climbs.isNotEmpty()
+    ).dp
 
     Box(modifier = modifier.fillMaxWidth()) {
         val baseCanvasModifier = if (fillParentHeight) {
@@ -766,9 +766,18 @@ fun ElevationProfile(
                             val minAllowedPillTop = -(effectiveTopPadding.toPx()) + 2.dp.toPx()
                             val unconstrainedPillBottom = summitY - 8.dp.toPx()
                             val unconstrainedPillTop = unconstrainedPillBottom - pillHeight
-                            val pillTop = unconstrainedPillTop.coerceAtLeast(minAllowedPillTop)
+                            val pillTop = ElevationProfileZoomMath.calculateClampedPillTop(
+                                unconstrainedPillTop = unconstrainedPillTop,
+                                effectiveTopPaddingPx = effectiveTopPadding.toPx(),
+                                safetyMarginPx = 2.dp.toPx()
+                            )
                             val pillBottom = pillTop + pillHeight
-                            val pillLeft = (summitX - pillWidth / 2f).coerceIn(2.dp.toPx(), width - pillWidth - 2.dp.toPx())
+                            val pillLeft = ElevationProfileZoomMath.calculateClampedPillLeft(
+                                summitXPx = summitX,
+                                pillWidthPx = pillWidth,
+                                canvasWidthPx = width,
+                                safetyMarginPx = 2.dp.toPx()
+                            )
                             val pillRight = pillLeft + pillWidth
 
                             // Pin stem to the summit

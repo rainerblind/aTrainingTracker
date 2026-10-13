@@ -182,7 +182,8 @@ class ElevationProfileClimbBadgeClippingTest {
         )
         assertTrue(
             "ElevationProfile must enforce horizontal safety margins",
-            content.contains("2.dp.toPx(), width - pillWidth - 2.dp.toPx()") ||
+            content.contains("calculateClampedPillLeft") ||
+                    content.contains("2.dp.toPx(), width - pillWidth - 2.dp.toPx()") ||
                     content.contains("pillLeft = (summitX - pillWidth / 2f).coerceIn(2.dp.toPx()")
         )
 
@@ -226,5 +227,90 @@ class ElevationProfileClimbBadgeClippingTest {
             "Must preserve exact verbatim drawLine call for pin stem",
             content.contains("canvas.nativeCanvas.drawLine(summitX, summitY, summitX, pillBottom, stemPaint)")
         )
+    }
+
+    @Test
+    fun testClimbBadge_directEngine_clearanceAndEffectivePadding() {
+        // Direct invocation of ElevationProfileZoomMath pure methods
+        val clearance10x = ElevationProfileZoomMath.calculateRequiredClimbTopClearance(10f)
+        val clearance15x = ElevationProfileZoomMath.calculateRequiredClimbTopClearance(15f)
+        val clearance20x = ElevationProfileZoomMath.calculateRequiredClimbTopClearance(20f)
+
+        assertEquals(24f, clearance10x, 0.001f)
+        assertEquals(29f, clearance15x, 0.001f)
+        assertEquals(34f, clearance20x, 0.001f)
+
+        // Compact view with climbs (16dp base -> 24dp effective)
+        val effectiveCompact = ElevationProfileZoomMath.calculateEffectiveTopPadding(
+            fixedHeightDp = null,
+            baseTopPaddingDp = 16f,
+            bottomPaddingDp = 24f,
+            requiredClearanceDp = 24f,
+            isTimeDomain = false,
+            hasClimbs = true
+        )
+        assertEquals(24f, effectiveCompact, 0.001f)
+
+        // Detail view (44dp base -> 44dp effective, 0dp overhead)
+        val effectiveDetail = ElevationProfileZoomMath.calculateEffectiveTopPadding(
+            fixedHeightDp = null,
+            baseTopPaddingDp = 44f,
+            bottomPaddingDp = 24f,
+            requiredClearanceDp = 24f,
+            isTimeDomain = false,
+            hasClimbs = true
+        )
+        assertEquals(44f, effectiveDetail, 0.001f)
+
+        // Constrained view (50dp container: reserves 32dp chart, clamps top padding to 8dp)
+        val effectiveConstrained = ElevationProfileZoomMath.calculateEffectiveTopPadding(
+            fixedHeightDp = 50f,
+            baseTopPaddingDp = 16f,
+            bottomPaddingDp = 18f,
+            requiredClearanceDp = 24f,
+            isTimeDomain = false,
+            hasClimbs = true,
+            minChartHeightDp = 32f
+        )
+        assertEquals(8f, effectiveConstrained, 0.001f)
+    }
+
+    @Test
+    fun testClimbBadge_directEngine_clampedPillTopAndLeft_ltrAndRtl() {
+        // Test vertical ceiling guard at peak altitude (Y=0, pillTop = -22px with 24px top padding)
+        val clampedTop = ElevationProfileZoomMath.calculateClampedPillTop(
+            unconstrainedPillTop = -22f,
+            effectiveTopPaddingPx = 24f,
+            safetyMarginPx = 2f
+        )
+        assertEquals(-22f, clampedTop, 0.001f)
+        assertEquals(2f, 24f + clampedTop, 0.001f)
+
+        // Test clamped top in constrained container (effectiveTopPadding = 8px, unconstrained = -22px)
+        val clampedTopConstrained = ElevationProfileZoomMath.calculateClampedPillTop(
+            unconstrainedPillTop = -22f,
+            effectiveTopPaddingPx = 8f,
+            safetyMarginPx = 2f
+        )
+        assertEquals(-6f, clampedTopConstrained, 0.001f)
+        assertEquals(2f, 8f + clampedTopConstrained, 0.001f)
+
+        // Test horizontal boundary clamping (LTR/RTL symmetric margin guarantee)
+        val leftClamped = ElevationProfileZoomMath.calculateClampedPillLeft(
+            summitXPx = 0f,
+            pillWidthPx = 40f,
+            canvasWidthPx = 300f,
+            safetyMarginPx = 2f
+        )
+        assertEquals(2f, leftClamped, 0.001f)
+
+        val rightClamped = ElevationProfileZoomMath.calculateClampedPillLeft(
+            summitXPx = 300f,
+            pillWidthPx = 40f,
+            canvasWidthPx = 300f,
+            safetyMarginPx = 2f
+        )
+        assertEquals(258f, rightClamped, 0.001f)
+        assertEquals(298f, rightClamped + 40f, 0.001f)
     }
 }

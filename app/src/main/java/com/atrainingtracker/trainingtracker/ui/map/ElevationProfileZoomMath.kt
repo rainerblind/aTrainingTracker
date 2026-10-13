@@ -185,4 +185,92 @@ object ElevationProfileZoomMath {
         val endDist = startDist + visibleDist
         return dist in startDist..endDist
     }
+
+    /**
+     * Calculates the dynamic vertical clearance required above summit peaks to render
+     * climb category marker badges without clipping (REQ-UI-274, TST-UI-322).
+     *
+     * @param badgeTextSizeDp Rendered badge font size in Dp (dynamically scaled via LocalDensity)
+     * @param pillPaddingVDp Total vertical padding inside the pill (default 4dp: 2dp top + 2dp bottom)
+     * @param stemLengthDp Vertical length of the pin stem connecting summit to pill (8dp)
+     * @param safetyMarginDp Protective boundary clearance between badge top and container ceiling (2dp)
+     * @return Minimum vertical top clearance in Dp
+     */
+    fun calculateRequiredClimbTopClearance(
+        badgeTextSizeDp: Float,
+        pillPaddingVDp: Float = 4f,
+        stemLengthDp: Float = 8f,
+        safetyMarginDp: Float = 2f
+    ): Float = badgeTextSizeDp + pillPaddingVDp + stemLengthDp + safetyMarginDp
+
+    /**
+     * Calculates the effective top padding for [ElevationProfile], preserving container height stability
+     * and guaranteeing a minimum viable chart plotting height under constrained containers (REQ-UI-274).
+     *
+     * Under ASPICE invariant preservation:
+     * - Detail views (showZoomControls = true): baseTopPadding (44dp) exceeds required clearance, so 0dp overhead.
+     * - Compact views without climbs: baseTopPadding (16dp) is preserved with 0dp overhead.
+     * - Compact views with climbs: expands to at least [requiredClearanceDp] (24dp at 1.0x font scale).
+     * - Fixed-height views: container clamped to fixedHeight; reserves at least [minChartHeightDp] (32dp)
+     *   for elevation plotting while allocating available headroom up to [requiredClearanceDp].
+     */
+    fun calculateEffectiveTopPadding(
+        fixedHeightDp: Float?,
+        baseTopPaddingDp: Float,
+        bottomPaddingDp: Float,
+        requiredClearanceDp: Float,
+        isTimeDomain: Boolean,
+        hasClimbs: Boolean,
+        minChartHeightDp: Float = 32f
+    ): Float {
+        return if (fixedHeightDp != null) {
+            if (!isTimeDomain && hasClimbs) {
+                val maxAllowedTop = (fixedHeightDp - bottomPaddingDp - minChartHeightDp).coerceAtLeast(8f)
+                requiredClearanceDp.coerceIn(8f, maxAllowedTop)
+            } else {
+                8f
+            }
+        } else {
+            val overhead = if (!isTimeDomain && hasClimbs) {
+                (requiredClearanceDp - baseTopPaddingDp).coerceAtLeast(0f)
+            } else {
+                0f
+            }
+            baseTopPaddingDp + overhead
+        }
+    }
+
+    /**
+     * Calculates boundary ceiling clamping for climb category badge pill tops (REQ-UI-274).
+     *
+     * Ensures that even when a climb summit reaches the maximum route elevation (Canvas Y = 0f),
+     * the badge top in Composable Box coordinates satisfies y_box >= safetyMarginPx (2dp),
+     * preventing surface boundary clipping.
+     */
+    fun calculateClampedPillTop(
+        unconstrainedPillTop: Float,
+        effectiveTopPaddingPx: Float,
+        safetyMarginPx: Float = 2f
+    ): Float {
+        val minAllowedPillTop = -effectiveTopPaddingPx + safetyMarginPx
+        return unconstrainedPillTop.coerceAtLeast(minAllowedPillTop)
+    }
+
+    /**
+     * Enforces symmetric horizontal safety margins on climb badge pills (REQ-UI-274).
+     *
+     * Symmetrically clamps pill X coordinate within [safetyMarginPx, canvasWidthPx - pillWidthPx - safetyMarginPx].
+     * Because the margin is applied symmetrically to both left (X=0) and right (X=width) boundaries,
+     * this guarantees zero horizontal clipping in both LTR and RTL rendering environments.
+     */
+    fun calculateClampedPillLeft(
+        summitXPx: Float,
+        pillWidthPx: Float,
+        canvasWidthPx: Float,
+        safetyMarginPx: Float = 2f
+    ): Float {
+        val maxLeft = (canvasWidthPx - pillWidthPx - safetyMarginPx).coerceAtLeast(safetyMarginPx)
+        return (summitXPx - pillWidthPx / 2f).coerceIn(safetyMarginPx, maxLeft)
+    }
 }
+
