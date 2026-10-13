@@ -46,6 +46,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.routes.TurnDirection
 import com.atrainingtracker.trainingtracker.routes.TurnNavigationState
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -291,7 +292,7 @@ private fun TurnCueIconsGallery(modifier: Modifier = Modifier) {
 )
 @Composable
 private fun TurnCueIconsGalleryPreview() {
-    MaterialTheme {
+    ATrainingTrackerTheme {
         TurnCueIconsGallery()
     }
 }

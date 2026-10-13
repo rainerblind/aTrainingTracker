@@ -86,7 +86,7 @@ class TurnDirectionIconContractTest {
     }
 
     @Test
-    fun testSlightTurnIconsHaveThemeAwareColorAndSafetyHeader() {
+    fun testSlightTurnIconsHaveStandardColorAndSafetyHeader() {
         val slightRightFile = File(resDrawableDir, "ic_turn_slight_right.xml")
         val slightLeftFile = File(resDrawableDir, "ic_turn_slight_left.xml")
 
@@ -103,13 +103,9 @@ class TurnDirectionIconContractTest {
             val fillColor = path.getAttribute("android:fillColor")
 
             assertEquals(
-                "${file.name} must use dynamic theme-aware fillColor ?attr/colorPrimary",
-                "?attr/colorPrimary",
+                "${file.name} must use standard fillColor #FF1976D2 for Layoutlib/Compose preview compatibility",
+                "#FF1976D2",
                 fillColor
-            )
-            assertFalse(
-                "${file.name} must not contain hardcoded hex fill colors",
-                fillColor.startsWith("#")
             )
         }
     }
