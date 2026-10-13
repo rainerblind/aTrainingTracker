@@ -53,8 +53,6 @@ import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 fun NavigationSection(
     routeSelectionRadiusKm: Float,
     onRadiusChange: (Float) -> Unit,
-    navigationCueTransparency: Float = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY,
-    onTransparencyChange: (Float) -> Unit = {},
     navigationCueDismissDurationSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
     onDismissDurationChange: (Int) -> Unit = {},
     mapFollowMeInitialZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
@@ -96,24 +94,6 @@ fun NavigationSection(
             },
             valueRange = TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM..TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM,
             steps = 18
-        )
-
-        // Navigation Cue Transparency (20% - 100%, 5% increments)
-        TuningSliderItem(
-            title = stringResource(R.string.tuning_nav_cue_transparency_title),
-            valueText = "${(navigationCueTransparency * 100f).roundToInt()}%",
-            helperText = stringResource(R.string.tuning_nav_cue_transparency_desc),
-            defaultText = stringResource(R.string.tuning_default_format, "80%"),
-            value = navigationCueTransparency,
-            onValueChange = { snapped ->
-                val rounded = (snapped * 20f).roundToInt() / 20f
-                onTransparencyChange(rounded.coerceIn(
-                    TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY,
-                    TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY
-                ))
-            },
-            valueRange = TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY..TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY,
-            steps = 15
         )
 
         // Navigation Cue Dismiss Duration (2s, 3s, 4s [default], 5s, 8s, Persistent)

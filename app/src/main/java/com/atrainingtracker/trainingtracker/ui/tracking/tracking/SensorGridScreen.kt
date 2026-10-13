@@ -609,19 +609,16 @@ fun NavigationHintsOverlay(
             TurnPromptBanner(
                 navigationState = navigationState,
                 promptsEnabled = state.showNavigationHints && tuningConfig.turnPromptsEnabled,
-                overlayAlpha = tuningConfig.navigationCueTransparency,
                 dismissDurationSec = tuningConfig.navigationCueDismissDurationSec
             )
 
             ReturnNavigationHud(
                 navigationState = returnNavigationState,
-                overlayAlpha = tuningConfig.navigationCueTransparency,
                 onDismiss = onDismissReturnNav
             )
 
             ForkDecisionCard(
                 decisionState = forkDecisionState,
-                overlayAlpha = tuningConfig.navigationCueTransparency,
                 onRouteSelected = onSelectForkRoute,
                 onDismiss = onDismissFork,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
