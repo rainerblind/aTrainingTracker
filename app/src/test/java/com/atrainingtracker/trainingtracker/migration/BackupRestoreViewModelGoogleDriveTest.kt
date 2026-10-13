@@ -128,4 +128,30 @@ class BackupRestoreViewModelGoogleDriveTest {
         val successState = state as BackupRestoreViewModel.UiState.Success
         assertTrue("Message should report finished count", successState.message.contains("5"))
     }
+
+    @Test
+    fun testBulkRecoverGoogleDriveData_whenZeroScanned_emitsDiagnosticMessage() = runTest(testDispatcher) {
+        every { TrainingApplication.uploadToGoogleDrive() } returns true
+        every { TrainingApplication.getGoogleDriveAuthToken() } returns "valid_token_123"
+        every { mockApp.getString(R.string.google_drive_scan_empty_diagnostic) } returns "No accessible workout files found. Files copied externally to Google Drive are not visible via Google Drive API due to security permissions. Please tap “Select local file(s)” on the format card and pick your files from Google Drive using the file picker."
+
+        mockkObject(LegacyImportEngine)
+        coEvery {
+            LegacyImportEngine.bulkRecoverFromGoogleDrive(any(), any(), any(), any())
+        } returns LegacyImportEngine.RecoveryResult(
+            importedCount = 0,
+            skippedCount = 0,
+            failedCount = 0,
+            totalScanned = 0
+        )
+
+        val viewModel = BackupRestoreViewModel(mockApp)
+        val job = viewModel.bulkRecoverGoogleDriveData(mockContext, "all", testDispatcher)
+        job.join()
+
+        val state = viewModel.uiState.value
+        assertTrue("State should be Success upon completion", state is BackupRestoreViewModel.UiState.Success)
+        val successState = state as BackupRestoreViewModel.UiState.Success
+        assertTrue("Message should contain diagnostic guidance", successState.message.contains("No accessible workout files found"))
+    }
 }

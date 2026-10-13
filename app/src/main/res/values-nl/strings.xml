@@ -1594,6 +1594,8 @@
     <string name="google_drive_error_folder_hierarchy">Kan de Google Drive-mapstructuur niet oplossen</string>
     <string name="google_drive_connect_prompt">Verbind uw Google-account om trainingen en databaseback-ups automatisch te synchroniseren met Google Drive.</string>
     <string name="scan_google_drive">Google Drive scannen</string>
+    <string name="google_drive_scan_empty_diagnostic">Geen toegankelijke trainingsbestanden gevonden. Extern naar Google Drive gekopieerde bestanden zijn vanwege beveiligingsmachtigingen niet zichtbaar via de Google Drive API. Tik op „Lokaal bestand/bestanden kiezen” op de formaatkaart en kies uw bestanden uit Google Drive via de bestandenkiezer.</string>
+    <string name="import_workout_files_progress">Bestanden importeren (%1$d van %2$d)…</string>
     <string name="legacy_import__downloading_google_drive">%1$s downloaden van Google Drive…</string>
     <string name="gpx_enriching_elevation">Hoogtegegevens ophalen…</string>
     <string name="gpx_elevation_enriched">Hoogtegegevens succesvol toegevoegd</string>

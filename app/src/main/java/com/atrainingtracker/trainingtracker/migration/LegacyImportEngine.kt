@@ -331,21 +331,31 @@ object LegacyImportEngine {
 
         val candidateFolderHierarchies = when (format.lowercase()) {
             "fit" -> listOf(
+                listOf("FIT"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "FIT"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             "tcx" -> listOf(
+                listOf("TCX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "TCX"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             "gpx" -> listOf(
+                listOf("GPX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "GPX"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             else -> listOf(
+                listOf("FIT"),
+                listOf("TCX"),
+                listOf("GPX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "FIT"),
                 listOf("aTrainingTracker", "TCX"),
                 listOf("aTrainingTracker", "GPX"),

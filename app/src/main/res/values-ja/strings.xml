@@ -1574,6 +1574,8 @@
     <string name="google_drive_error_folder_hierarchy">Google ドライブのフォルダ階層を解決できませんでした</string>
     <string name="google_drive_connect_prompt">Google アカウントを接続して、ワークアウトのエクスポートとデータベースのバックアップを Google ドライブに自動同期します。</string>
     <string name="scan_google_drive">Google ドライブをスキャン</string>
+    <string name="google_drive_scan_empty_diagnostic">アクセス可能なワークアウトファイルが見つかりませんでした。セキュリティ制限のため、Google ドライブに外部からコピーされたファイルはGoogle Drive APIから認識されません。フォーマットカードの「ローカルファイルを選択」をタップし、ファイルピッカーからGoogle ドライブのファイルを選択してください。</string>
+    <string name="import_workout_files_progress">ファイルをインポート中 (%1$d / %2$d)…</string>
     <string name="legacy_import__downloading_google_drive">Google ドライブから %1$s をダウンロード中…</string>
     <string name="gpx_enriching_elevation">標高データを取得中…</string>
     <string name="gpx_elevation_enriched">標高データを正常に追加しました</string>

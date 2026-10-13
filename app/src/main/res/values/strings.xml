@@ -1789,6 +1789,8 @@
     <string name="google_drive_error_folder_hierarchy">Failed to resolve Google Drive folder hierarchy</string>
     <string name="google_drive_connect_prompt">Connect your Google account to automatically export workouts and synchronize database backups to Google Drive.</string>
     <string name="scan_google_drive">Scan Google Drive</string>
+    <string name="google_drive_scan_empty_diagnostic">No accessible workout files found. Files copied externally to Google Drive are not visible via Google Drive API due to security permissions. Please tap “Select local file(s)” on the format card and pick your files from Google Drive using the file picker.</string>
+    <string name="import_workout_files_progress">Importing files (%1$d of %2$d)…</string>
     <string name="legacy_import__downloading_google_drive">Downloading %1$s from Google Drive…</string>
     <string name="gpx_enriching_elevation">Fetching elevation data…</string>
     <string name="gpx_elevation_enriched">Elevation data successfully added</string>
