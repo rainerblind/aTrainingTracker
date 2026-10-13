@@ -1,4 +1,4 @@
-# Stage 1: Problem Domain & Root Cause Analysis - ATT-3453
+# Stage 1: Problem Domain & Root Cause Analysis - ATT-3453 (Revised)
 
 **Ticket**: [ATT-3453](https://atrainingtracker.atlassian.net/browse/ATT-3453)  
 **Summary**: Prevent clipping of climb category marker badges in elevation profile  
@@ -8,7 +8,7 @@
 **Requirement Mapping**: `REQ-UI-274` (amended)  
 **Test Mapping**: `TST-UI-234` / `TST-UI-322`  
 **Author**: AI Agent 1 (Analyst)  
-**Date**: 2026-10-13  
+**Date**: 2026-10-13 (Revised per Gate 1 Audit)  
 
 ---
 
@@ -42,9 +42,11 @@ In the recorded review evidence:
    ```
    Where:
    * The stem height is `8.dp`.
-   * `pillHeight = badgePaint.textSize (10.sp) + pillPaddingV * 2 (4.dp)` $\approx 16\text{dp} - 18\text{dp}$.
-   * Total badge height above summit is $8\text{dp} + 17\text{dp} \approx 25\text{dp}$.
-   When `summitY = 0f`, `pillBottom = -8.dp.toPx()` and `pillTop = -25.dp.toPx()`. The entire badge is drawn in negative Y space relative to the Canvas.
+   * `pillHeight = badgePaint.textSize (10.sp) + pillPaddingV * 2 (4.dp)`.
+   * At default font scale (1.0x), `pillHeight` is $\approx 14\text{dp}$.
+   * At 1.5x font scale, `pillHeight` is $\approx 19\text{dp}$.
+   * Total badge height above summit is $8\text{dp} + 14\text{dp} = 22\text{dp}$ (up to $27\text{dp} - 32\text{dp}$ under accessibility font scaling).
+   When `summitY = 0f`, `pillBottom = -8.dp.toPx()` and `pillTop = -22.dp.toPx()`. The entire badge is drawn in negative Y space relative to the Canvas.
 
 3. **Insufficient Canvas Top Clearance & Container Boundary Clipping**:
    In `ElevationProfile.kt` lines 427–430:
@@ -63,9 +65,9 @@ In the recorded review evidence:
    When `showZoomControls == false` (e.g. in live tracking HUD `SensorGridScreen.kt` or compact route previews):
    * `effectiveTopPadding = 16.dp`.
    * The top of the Canvas content is 16 dp below the top of the root `Box`.
-   * When `pillTop = -25.dp` in Canvas coordinates, its position in root `Box` coordinates is:
+   * When `pillTop = -22.dp` to `-25.dp` in Canvas coordinates, its position in root `Box` coordinates is:
      $$y_{\text{box}} = \text{effectiveTopPadding} + \text{pillTop} = 16\text{dp} - 25\text{dp} = -9\text{dp}$$
-   * Because $y_{\text{box}} < 0$, the top 9–10 dp of the badge extends outside the `ElevationProfile` composable bounds.
+   * Because $y_{\text{box}} < 0$, the top 6–10 dp of the badge extends outside the `ElevationProfile` composable bounds.
    * In `SensorGridScreen.kt`, `ElevationProfile` is wrapped in `Surface(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))`. Material 3 `Surface` clips its children to its layout bounds. Any content with $y < 0$ is clipped!
    * Furthermore, if `fixedHeight != null` (e.g. in compact route cards), `effectiveTopPadding = 8.dp`, resulting in $y_{\text{box}} = 8\text{dp} - 25\text{dp} = -17\text{dp}$ (almost the entire badge clipped).
 
@@ -91,77 +93,118 @@ In the recorded review evidence:
 
 ### 2.2 Chesterton's Fence Analysis
 * **Why was `topPadding` set to 16.dp when `showZoomControls == false`?**  
-  `16.dp` was chosen in `REQ-UI-225` for compact list previews when no zoom toolbar was present. At that time, test routes with climbs were tested in `MapDetailLayout` where `showZoomControls == true` (`topPadding = 44.dp`), where 44 dp absorbed the 25 dp badge. In live tracking (`SensorGridScreen.kt`), `showZoomControls == false`, leaving only 16 dp of padding.
+  `16.dp` was chosen in `REQ-UI-225` for compact list previews when no zoom toolbar was present. In `MapDetailLayout` where `showZoomControls == true` (`topPadding = 44.dp`), 44 dp easily absorbed the 22–25 dp badge. In live tracking (`SensorGridScreen.kt`), `showZoomControls == false`, leaving only 16 dp of padding.
 * **Why did `pillLeft` have clamping but not `pillTop`?**  
   The author implemented horizontal clamping `coerceIn(0f, width - pillWidth)` to prevent horizontal clipping when a climb starts at 0 km or ends at the route finish, but assumed `effectiveTopPadding` would always accommodate vertical extension.
 * **What invariants must be preserved?**  
   1. Slope gradient curve coloring (`Zone1`..`Zone5`) per `REQ-UI-299`.
   2. Horizontal X-axis climb span bars per `REQ-UI-299` and `REQ-UI-307`.
-  3. Literal compatibility with `ElevationProfileLayoutTest.kt` (`val topPadding = if (showZoomControls) 44.dp else 16.dp` and `totalCanvasHeight` contract checks).
-  4. Contract check compatibility with `ElevationProfileClimbSpanContractTest.kt` (`canvas.nativeCanvas.drawLine(summitX, summitY, summitX, pillBottom, stemPaint)` and `drawRoundRect`).
+  3. Exact source code literal compatibility with `ElevationProfileLayoutTest.kt`:
+     * Line 59: `val topPadding = if (showZoomControls) 44.dp else 16.dp`
+     * Line 65: `val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight`
+  4. Contract check compatibility with `ElevationProfileClimbSpanContractTest.kt`:
+     * Line 146: `canvas.nativeCanvas.drawLine(summitX, summitY, summitX, pillBottom, stemPaint)`
+     * Line 150: `canvas.nativeCanvas.drawRoundRect`
   5. 100% clean-room test pass rate across all 2573+ unit tests.
 
 ---
 
-## 3. Scope & Target Architecture
+## 3. Scope & Target Architecture (Revised)
 
-### 3.1 In-Scope Deliverables
-1. **Dynamic Top Clearance Allocation (`ElevationProfile.kt`)**:
-   * Detect when climb badges are active: `val hasClimbBadges = !isTimeDomain && climbs.isNotEmpty()`.
-   * Allocate dedicated climb badge headroom: `val climbBadgeTopPadding = if (hasClimbBadges) 18.dp else 0.dp`.
-   * Incorporate `climbBadgeTopPadding` into `effectiveTopPadding` and `totalCanvasHeight`:
-     ```kotlin
-     val topPadding = if (showZoomControls) 44.dp else 16.dp
-     val climbBadgeTopPadding = if (!isTimeDomain && climbs.isNotEmpty()) 18.dp else 0.dp
-     val effectiveTopPadding = (if (fixedHeight != null) 8.dp else topPadding) + climbBadgeTopPadding
-     val bottomPadding = if (fixedHeight != null) 18.dp else 24.dp
-     val totalCanvasHeight = (fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight) + climbBadgeTopPadding
-     ```
-   * This provides $16\text{dp} + 18\text{dp} = 34\text{dp}$ of top clearance in standard views, leaving $\sim 9\text{dp}$ of breathing room above the badge.
-   * Canvas plotting height is exactly preserved ($(\text{totalHeight} + 18) - (\text{topPadding} + 18) - \text{bottomPadding} = \text{height}$), ensuring zero distortion of the elevation curve.
+### 3.1 Refactored Top Clearance & Layout Strategy (Addressing Gate 1 Feedback)
 
-2. **Vertical & Horizontal Boundary Protection (`ElevationProfile.kt`)**:
-   * Add a top boundary ceiling constraint so that `pillTop` never exceeds the container's top boundary:
-     ```kotlin
-     val minAllowedPillTop = -effectiveTopPadding.toPx() + 2.dp.toPx()
-     val clampedPillTop = maxOf(pillTop, minAllowedPillTop)
-     val clampedPillBottom = clampedPillTop + pillHeight
-     ```
-   * Add a horizontal margin safety inset (`2.dp.toPx()`):
-     ```kotlin
-     val minMarginPx = 2.dp.toPx()
-     val pillLeft = (summitX - pillWidth / 2f).coerceIn(minMarginPx, (width - pillWidth - minMarginPx).coerceAtLeast(minMarginPx))
-     val pillRight = pillLeft + pillWidth
-     ```
-   * Ensure the pin stem connects from `summitY` to `clampedPillBottom`:
-     ```kotlin
-     val stemBottom = minOf(summitY, clampedPillBottom)
-     val stemTop = clampedPillBottom
-     if (stemBottom > stemTop) {
-         canvas.nativeCanvas.drawLine(summitX, stemBottom, summitX, stemTop, stemPaint)
-     }
-     ```
+#### A. Dynamic Font-Scale Aware Clearance (Eliminating Magic Numbers)
+Instead of a static "magic number" (e.g. 18.dp), the required top clearance is calculated dynamically using Compose text density metrics:
+```kotlin
+val climbBadgeTextHeight = with(LocalDensity.current) { 10.sp.toDp() }
+val climbBadgePillHeight = climbBadgeTextHeight + 4.dp // 2.dp top + 2.dp bottom internal padding
+val climbBadgeStemHeight = 8.dp
+val climbBadgeSafetyMargin = 2.dp
+val requiredClimbTopClearance = climbBadgePillHeight + climbBadgeStemHeight + climbBadgeSafetyMargin
+```
+* **At standard FontScale (1.0x)**: `10.sp.toDp() = 10.dp`, `pillHeight = 14.dp`, `requiredClimbTopClearance = 24.dp`.
+* **At Accessibility FontScale (1.5x)**: `10.sp.toDp() = 15.dp`, `pillHeight = 19.dp`, `requiredClimbTopClearance = 29.dp`.
+* **At Accessibility FontScale (2.0x)**: `10.sp.toDp() = 20.dp`, `pillHeight = 24.dp`, `requiredClimbTopClearance = 34.dp`.
 
-3. **Contract Test & Architectural Verification**:
-   * Author `ElevationProfileClimbBadgeClippingTest.kt` verifying:
-     - Top clearance expansion when `climbs.isNotEmpty()`.
-     - Zero clearance expansion when `climbs.isEmpty()`.
-     - Clamping of `pillTop` against negative container boundary.
-     - Preservation of existing layout contracts in `ElevationProfileLayoutTest.kt` and `ElevationProfileClimbSpanContractTest.kt`.
+The dynamic padding addition is then computed relative to the base top padding:
+```kotlin
+val topPadding = if (showZoomControls) 44.dp else 16.dp
+val baseTopPadding = if (fixedHeight != null) 8.dp else topPadding
+val climbBadgeTopPadding = if (!isTimeDomain && climbs.isNotEmpty()) {
+    (requiredClimbTopClearance - baseTopPadding).coerceAtLeast(0.dp)
+} else {
+    0.dp
+}
+val effectiveTopPadding = baseTopPadding + climbBadgeTopPadding
+val bottomPadding = if (fixedHeight != null) 18.dp else 24.dp
+val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight
+```
 
-### 3.2 Out-of-Scope (Non-Goals)
-* Modifying climb detection algorithms in `ClimbDetector.kt`.
-* Altering climb classification thresholds or color palettes in `ClimbCategory.kt` / `ClimbCategoryColors.kt`.
-* Modifying map polyline highlighting or live climb bottom sheets.
+#### B. Clarification of Layout Impact: Container Stability vs Chart Rescaling
+Agent 2 rightly scrutinized whether the parent container expands or the chart scales down:
+1. **Dynamic Container (`fixedHeight == null`)**:
+   * `totalCanvasHeight` is intentionally **kept stable** (`if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight`).
+   * **Architectural Rationale**: Expanding the parent container dynamically when climbs appear would cause "jumping" cards and layout instability in `SensorGridScreen.kt` and list views. Furthermore, keeping `val totalCanvasHeight = ...` identical preserves the exact contract in `ElevationProfileLayoutTest.kt` line 65.
+   * **Chart Rescaling**: The Canvas height is `height = size.height = totalCanvasHeight - effectiveTopPadding - bottomPadding`.
+   * When `effectiveTopPadding` increases by 8 dp (from 16 dp to 24 dp at 1.0x font scale), `height` decreases by 8 dp (e.g. from 110 dp to 102 dp). Because altitude normalization maps `y = height - (altNorm * height)`, the elevation polyline seamlessly and proportionally scales down by ~7%, allocating the necessary top headroom for the badge without changing the Composable's external dimensions or causing layout jumps.
+2. **Fixed Height Container (`fixedHeight != null`)**:
+   * The container height is strictly clamped to `fixedHeight` (e.g. 120 dp).
+   * `baseTopPadding = 8.dp`. With climbs present, `effectiveTopPadding = 24.dp` (at 1.0x).
+   * The chart plotting area `height = fixedHeight - 24.dp - 18.dp = fixedHeight - 42.dp` rescales the elevation polyline down.
+   * The badge fits entirely within the 24 dp top padding area, ensuring zero overlap with the parent container boundaries and zero overflow.
+
+#### C. Two-Layer Boundary Protection (Vertical Ceiling & Horizontal Margins)
+Even with dynamic padding, extreme accessibility font scaling (e.g. 3.0x) or unusually small `fixedHeight` values could theoretically threaten boundary limits. Therefore, a strict bounding ceiling is enforced inside the Canvas drawing loop:
+```kotlin
+val rawPillBottom = summitY - 8.dp.toPx()
+val rawPillTop = rawPillBottom - pillHeight
+val minAllowedPillTop = -effectiveTopPadding.toPx() + 2.dp.toPx()
+val pillTop = maxOf(rawPillTop, minAllowedPillTop)
+val pillBottom = pillTop + pillHeight
+
+val minMarginPx = 2.dp.toPx()
+val pillLeft = (summitX - pillWidth / 2f).coerceIn(minMarginPx, (width - pillWidth - minMarginPx).coerceAtLeast(minMarginPx))
+val pillRight = pillLeft + pillWidth
+```
+And the pin stem is connected preserving the exact contract line:
+```kotlin
+canvas.nativeCanvas.drawLine(summitX, summitY, summitX, pillBottom, stemPaint)
+```
+Because `pillBottom` is positioned at or above `summitY` (with `minAllowedPillTop` ensuring the pill stays within container bounds), the pin stem cleanly connects the summit coordinate to the bottom of the category badge.
 
 ---
 
-## 4. ASPICE Governance & Gate 1 Criteria
+## 4. Test Strategy & Contract Safeguards
+
+### 4.1 Regression & Invariant Safeguards
+* **`ElevationProfileLayoutTest.kt`**:
+  * Line 59: `val topPadding = if (showZoomControls) 44.dp else 16.dp` is preserved verbatim.
+  * Line 65: `val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight` is preserved verbatim.
+* **`ElevationProfileClimbSpanContractTest.kt`**:
+  * Line 146: `canvas.nativeCanvas.drawLine(summitX, summitY, summitX, pillBottom, stemPaint)` is preserved verbatim.
+  * Line 150: `canvas.nativeCanvas.drawRoundRect` is preserved verbatim.
+
+### 4.2 Targeted Unit Test Suite (`ElevationProfileClimbBadgeClippingTest.kt`)
+The new test suite will cover the following scenarios:
+1. `testClimbBadge_dynamicTopClearance_allocatesRequiredPadding()`: Verifies that when `climbs.isNotEmpty()`, `effectiveTopPadding` expands dynamically to accommodate font-scaled badge height + stem + safety margin.
+2. `testClimbBadge_zeroClimbBadgeTopPadding_whenClimbsEmpty()`: Verifies that when `climbs.isEmpty()`, `climbBadgeTopPadding == 0.dp`, preserving baseline preview padding.
+3. `testClimbBadge_detailViewWithZoomControls_noExtraPaddingNeeded()`: Verifies that when `showZoomControls == true` (`topPadding = 44.dp`), `climbBadgeTopPadding == 0.dp` since 44 dp is already $\ge$ required clearance.
+4. `testClimbBadge_fixedHeight_rescalesChartWithoutContainerOverflow()`: Verifies that when `fixedHeight != null`, the container height remains constant while the chart area rescales and the badge fits within bounds.
+5. `testClimbBadge_accessibilityFontScale_expandsClearance()`: Simulates font scales 1.0x, 1.5x, and 2.0x, verifying clearance $\ge 24\text{dp}, 29\text{dp}, 34\text{dp}$ respectively.
+6. `testClimbBadge_boundaryCeiling_preventsNegativeBoxCoordinates()`: Verifies that even when `summitY = 0f`, the computed badge top in Composable coordinates satisfies $y_{\text{box}} \ge 2\text{dp}$.
+7. `testClimbBadge_horizontalMarginInset_preventsEdgeClipping()`: Verifies `minMarginPx` horizontal boundary clamping at $X = 0$ and $X = \text{width}$.
+
+---
+
+## 5. ASPICE Governance & Gate 1 Checklist
 
 | Gate Requirement | Status / Evidence |
 |---|---|
 | Forensic Root Cause Identified | Yes — mathematical proof of $y_{\text{box}} < 0$ causing Surface clipping |
 | Chesterton's Fence Audit Completed | Yes — historical context from ATT-2388 & ATT-2386 analyzed |
 | Invariants Documented | Yes — curve gradient coloring, X-axis span bars, zoom layout contracts |
+| Dynamic Font-Scaling Addressed | Yes — `10.sp.toDp()` + dynamic density calculation replacing 18dp magic number |
+| Layout Impact Clarified | Yes — stable container height, chart area rescaling proportionally |
+| Preserved Layout Contracts Verified | Yes — verified against `ElevationProfileLayoutTest.kt` & `ElevationProfileClimbSpanContractTest.kt` |
 | Scope Bounded | Yes — targeted exclusively to `ElevationProfile.kt` clearance & boundary guard |
-| Target Test Strategy Defined | Yes — unit contract tests in `ElevationProfileClimbBadgeClippingTest.kt` |
+| Target Test Strategy Defined | Yes — comprehensive matrix in `ElevationProfileClimbBadgeClippingTest.kt` |
