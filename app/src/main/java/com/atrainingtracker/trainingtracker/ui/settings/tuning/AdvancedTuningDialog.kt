@@ -99,7 +99,6 @@ fun AdvancedTuningDialog(
     var sensorFieldBorderThickness by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS) }
     var sensorFieldBorderContrast by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST) }
     var routeSelectionRadiusKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM) }
-    var navigationCueTransparency by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY) }
     var navigationCueDismissDurationSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC) }
     var elevationSmoothingSigmaMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS) }
     var mapFollowMeInitialZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM) }
@@ -147,7 +146,7 @@ fun AdvancedTuningDialog(
         wakeupSec = config.wakeupDurationSec; downwardDelaySec = config.downwardDelaySec
         gpsAccuracy = config.gpsAccuracyThresholdMeters; altitudeWindowSec = config.altitudeFilterWindowSec
         slopeMinSpeed = config.slopeMinSpeedMps; paceCeilingMinKm = config.paceCeilingMinKm
-        routeSelectionRadiusKm = config.routeSelectionRadiusKm; navigationCueTransparency = config.navigationCueTransparency
+        routeSelectionRadiusKm = config.routeSelectionRadiusKm
         navigationCueDismissDurationSec = config.navigationCueDismissDurationSec; elevationSmoothingSigmaMeters = config.elevationSmoothingSigmaMeters
         mapFollowMeInitialZoom = config.mapFollowMeInitialZoom; mapFollowMeSpeedZoomEnabled = config.mapFollowMeSpeedZoomEnabled
         mapFollowMeCruisingZoom = config.mapFollowMeCruisingZoom; mapFollowMeTiltAngle = config.mapFollowMeTiltAngle
@@ -180,7 +179,7 @@ fun AdvancedTuningDialog(
                         wakeupDurationSec = wakeupSec, downwardDelaySec = downwardDelaySec,
                         gpsAccuracyThresholdMeters = gpsAccuracy, altitudeFilterWindowSec = altitudeWindowSec,
                         slopeMinSpeedMps = slopeMinSpeed, paceCeilingMinKm = paceCeilingMinKm,
-                        routeSelectionRadiusKm = routeSelectionRadiusKm, navigationCueTransparency = navigationCueTransparency,
+                        routeSelectionRadiusKm = routeSelectionRadiusKm,
                         navigationCueDismissDurationSec = navigationCueDismissDurationSec, elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
                         mapFollowMeInitialZoom = mapFollowMeInitialZoom, mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled,
                         mapFollowMeCruisingZoom = mapFollowMeCruisingZoom, mapFollowMeTiltAngle = mapFollowMeTiltAngle,
@@ -330,7 +329,6 @@ fun AdvancedTuningDialog(
                 title = stringResource(R.string.tuning_cat_navigation),
                 subtitle = TuningSubtitleFormatter.formatNavigationSubtitle(
                     radiusKm = routeSelectionRadiusKm,
-                    transparency = navigationCueTransparency,
                     dismissSec = navigationCueDismissDurationSec,
                     context = context
                 ),
@@ -340,8 +338,6 @@ fun AdvancedTuningDialog(
                 NavigationSection(
                     routeSelectionRadiusKm = routeSelectionRadiusKm,
                     onRadiusChange = { routeSelectionRadiusKm = it },
-                    navigationCueTransparency = navigationCueTransparency,
-                    onTransparencyChange = { navigationCueTransparency = it },
                     navigationCueDismissDurationSec = navigationCueDismissDurationSec,
                     onDismissDurationChange = { navigationCueDismissDurationSec = it },
                     mapFollowMeInitialZoom = mapFollowMeInitialZoom,

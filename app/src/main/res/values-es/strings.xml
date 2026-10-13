@@ -1449,8 +1449,6 @@
     <string name="tuning_cat_navigation">Navegación</string>
     <string name="tuning_route_selection_radius_title">Radio de selección de rutas</string>
     <string name="tuning_route_selection_radius_desc">Distancia máxima al punto de inicio para la selección de rutas cercanas</string>
-    <string name="tuning_nav_cue_transparency_title">Transparencia de indicaciones</string>
-    <string name="tuning_nav_cue_transparency_desc">Opacidad de avisos de giro y paneles de navegación</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Duración de avisos de navegación</string>
     <string name="tuning_nav_cue_dismiss_duration_desc">Duración de desaparición automática para avisos de giro</string>
     <string name="tuning_nav_cue_dismiss_persistent">Persistente</string>

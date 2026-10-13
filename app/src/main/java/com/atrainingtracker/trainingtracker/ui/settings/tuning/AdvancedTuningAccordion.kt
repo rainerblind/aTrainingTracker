@@ -107,18 +107,16 @@ object TuningSubtitleFormatter {
 
     fun formatNavigationSubtitle(
         radiusKm: Float,
-        transparency: Float = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY,
         dismissSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
         context: Context? = null
     ): String {
-        val transPercent = (transparency * 100f).roundToInt()
         val dismissStr = if (dismissSec == 0) {
             context?.getString(R.string.tuning_nav_cue_dismiss_persistent) ?: "Persistent"
         } else {
             "${dismissSec}s"
         }
         val radiusStr = String.format(Locale.getDefault(), "%.1f km", radiusKm)
-        return "$transPercent%, $dismissStr, $radiusStr"
+        return "$dismissStr, $radiusStr"
     }
 
     fun formatSensorsGpsSubtitle(

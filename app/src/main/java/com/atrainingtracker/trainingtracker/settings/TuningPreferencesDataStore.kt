@@ -114,9 +114,13 @@ object TuningPreferencesDefaults {
     const val MIN_ROUTE_SELECTION_RADIUS_KM = 0.5f
     const val MAX_ROUTE_SELECTION_RADIUS_KM = 10.0f
 
-    const val DEFAULT_NAVIGATION_CUE_TRANSPARENCY = 0.80f
+    @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
+    const val DEFAULT_NAVIGATION_CUE_TRANSPARENCY = 1.00f
+    @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
     const val MIN_NAVIGATION_CUE_TRANSPARENCY = 0.20f
+    @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
     const val MAX_NAVIGATION_CUE_TRANSPARENCY = 1.00f
+    @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
     const val STEP_NAVIGATION_CUE_TRANSPARENCY = 0.05f
 
     const val DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC = 4
@@ -193,6 +197,7 @@ data class TuningConfig(
     val sensorFieldBorderThickness: Float = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS,
     val sensorFieldBorderContrast: Float = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST,
     val routeSelectionRadiusKm: Float = TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM,
+    @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
     val navigationCueTransparency: Float = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY,
     val navigationCueDismissDurationSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
     val elevationSmoothingSigmaMeters: Float = TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS,
@@ -282,6 +287,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SENSOR_FIELD_BORDER_THICKNESS: Preferences.Key<Float> = floatPreferencesKey("tuning_sensor_field_border_thickness")
         val KEY_SENSOR_FIELD_BORDER_CONTRAST: Preferences.Key<Float> = floatPreferencesKey("tuning_sensor_field_border_contrast")
         val KEY_ROUTE_SELECTION_RADIUS_KM: Preferences.Key<Float> = floatPreferencesKey("tuning_route_selection_radius_km")
+        @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
         val KEY_NAVIGATION_CUE_TRANSPARENCY: Preferences.Key<Float> = floatPreferencesKey("tuning_navigation_cue_transparency")
         val KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_navigation_cue_dismiss_duration_sec")
         val KEY_ELEVATION_SMOOTHING_SIGMA_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_elevation_smoothing_sigma_meters")
@@ -693,6 +699,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         }
     }
 
+    @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
     suspend fun updateNavigationCueTransparency(transparency: Float) {
         val clamped = transparency.coerceIn(
             TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY,

@@ -1534,8 +1534,6 @@
     <string name="tuning_cat_navigation">Navigation</string>
     <string name="tuning_route_selection_radius_title">Routenauswahl-Radius</string>
     <string name="tuning_route_selection_radius_desc">Maximale Entfernung zum Routenstartpunkt für die Routenauswahl</string>
-    <string name="tuning_nav_cue_transparency_title">Transparenz der Navigationshinweise</string>
-    <string name="tuning_nav_cue_transparency_desc">Deckkraft von Abbiegehinweisen und Navigations-Overlays</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Anzeigedauer der Navigationshinweise</string>
     <string name="tuning_nav_cue_dismiss_duration_desc">Automatische Anzeigedauer für Abbiegehinweise</string>
     <string name="tuning_nav_cue_dismiss_persistent">Dauerhaft</string>

@@ -1445,8 +1445,6 @@
     <string name="tuning_cat_navigation">Navegação</string>
     <string name="tuning_route_selection_radius_title">Raio de seleção de rota</string>
     <string name="tuning_route_selection_radius_desc">Distância máxima até o ponto de partida para seleção de rotas próximas</string>
-    <string name="tuning_nav_cue_transparency_title">Transparência das indicações de navegação</string>
-    <string name="tuning_nav_cue_transparency_desc">Opacidade dos avisos de mudança de direção e sobreposições</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Duração de exibição das indicações</string>
     <string name="tuning_nav_cue_dismiss_duration_desc">Tempo de ocultação automática dos avisos de mudança de direção</string>
     <string name="tuning_nav_cue_dismiss_persistent">Persistente</string>
