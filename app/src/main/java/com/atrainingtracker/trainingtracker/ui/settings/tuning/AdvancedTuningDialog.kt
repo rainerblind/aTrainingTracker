@@ -64,6 +64,7 @@ import kotlinx.coroutines.launch
  * Advanced Tuning and Settings dialog structured into modular, collapsible
  * Material 3 accordion subsections with live active-value summary subtitles (REQ-UI-222, REQ-UI-262, REQ-UI-281).
  */
+@Deprecated("Use AdvancedTuningScreen instead (REQ-UI-357)")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdvancedTuningDialog(
@@ -212,118 +213,7 @@ fun AdvancedTuningDialog(
             // Advisory Warning Notice
             TuningWarningNotice()
 
-            // Section 1: Cockpit & Typografie
-            TuningAccordionSection(
-                icon = Icons.Default.TextFields,
-                title = stringResource(R.string.tuning_cat_cockpit_typography),
-                subtitle = TuningSubtitleFormatter.formatCockpitSubtitle(cockpitFontFamily, cockpitFontWeight, sensorFieldVariant, context),
-                isExpanded = isSectionExpanded(TuningSection.COCKPIT_TYPOGRAPHY),
-                onToggle = { toggleSection(TuningSection.COCKPIT_TYPOGRAPHY) }
-            ) {
-                CockpitTypographySection(
-                    cockpitFontFamily = cockpitFontFamily, onFontFamilyChange = { cockpitFontFamily = it },
-                    cockpitFontWeight = cockpitFontWeight, onFontWeightChange = { cockpitFontWeight = it },
-                    sensorFieldVariant = sensorFieldVariant, onSensorFieldVariantChange = { sensorFieldVariant = it },
-                    sensorFieldCornerRadius = sensorFieldCornerRadius, onCornerRadiusChange = { sensorFieldCornerRadius = it },
-                    sensorFieldBorderThickness = sensorFieldBorderThickness, onBorderThicknessChange = { sensorFieldBorderThickness = it },
-                    sensorFieldBorderContrast = sensorFieldBorderContrast, onBorderContrastChange = { sensorFieldBorderContrast = it }
-                )
-            }
-
-            // Section 2: AMOLED-Akkuschoner & Helligkeit
-            TuningAccordionSection(
-                icon = Icons.Default.BrightnessMedium,
-                title = stringResource(R.string.tuning_cat_battery_saver),
-                subtitle = TuningSubtitleFormatter.formatBatterySaverSubtitle(fullDimFactor, mediumDimFactor, slopeFlat, slopeSteep),
-                isExpanded = isSectionExpanded(TuningSection.BATTERY_SAVER),
-                onToggle = { toggleSection(TuningSection.BATTERY_SAVER) }
-            ) {
-                AmoledBatterySaverSection(
-                    fullDimFactor = fullDimFactor, onFullDimChange = { fullDimFactor = it },
-                    mediumDimFactor = mediumDimFactor, onMediumDimChange = { mediumDimFactor = it },
-                    slopeFlat = slopeFlat, onSlopeFlatChange = { slopeFlat = it },
-                    slopeSteep = slopeSteep, onSlopeSteepChange = { slopeSteep = it },
-                    wakeupSec = wakeupSec, onWakeupSecChange = { wakeupSec = it },
-                    downwardDelaySec = downwardDelaySec, onDownwardDelayChange = { downwardDelaySec = it }
-                )
-            }
-
-            // Section 3: Sensoren, GPS & Filter
-            TuningAccordionSection(
-                icon = Icons.Default.LocationOn,
-                title = stringResource(R.string.tuning_cat_sensors_gps),
-                subtitle = TuningSubtitleFormatter.formatSensorsGpsSubtitle(gpsAccuracy, altitudeWindowSec, slopeMinSpeed),
-                isExpanded = isSectionExpanded(TuningSection.SENSORS_GPS),
-                onToggle = { toggleSection(TuningSection.SENSORS_GPS) }
-            ) {
-                SensorsGpsFilterSection(
-                    gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
-                    altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
-                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it },
-                    showAntMissingAdapterWarnings = showAntMissingAdapterWarnings,
-                    onShowAntMissingAdapterWarningsChange = { showAntMissingAdapterWarnings = it }
-                )
-            }
-
-            // Section 4: Sensorsuche & Verhalten
-            TuningAccordionSection(
-                icon = Icons.Default.Search,
-                title = stringResource(R.string.tuning_cat_sensor_search),
-                subtitle = TuningSubtitleFormatter.formatSensorSearchSubtitle(
-                    sensorSearchPrefs.numberOfSearchTries,
-                    sensorSearchPrefs.startSearchWhenAppStarts,
-                    sensorSearchPrefs.startSearchWhenResumeFromPaused,
-                    sensorSearchPrefs.startSearchWhenUserChangesSport,
-                    sensorSearchPrefs.startSearchWhenTrackingStarts,
-                    context
-                ),
-                isExpanded = isSectionExpanded(TuningSection.SENSOR_SEARCH),
-                onToggle = { toggleSection(TuningSection.SENSOR_SEARCH) }
-            ) {
-                SensorSearchTuningSection(
-                    prefs = sensorSearchPrefs,
-                    onPrefsChange = { sensorSearchPrefs = it }
-                )
-            }
-
-            // Section 4: Aftermath & Analyse
-            TuningAccordionSection(
-                icon = Icons.AutoMirrored.Filled.ShowChart,
-                title = stringResource(R.string.tuning_cat_aftermath),
-                subtitle = TuningSubtitleFormatter.formatAftermathSubtitle(
-                    elevationXAxisDomain,
-                    telemetryXAxisDomain,
-                    context,
-                    elevationSmoothingSigmaMeters
-                ),
-                isExpanded = isSectionExpanded(TuningSection.AFTERMATH_ANALYSIS),
-                onToggle = { toggleSection(TuningSection.AFTERMATH_ANALYSIS) }
-            ) {
-                AftermathAnalysisSection(
-                    elevationXAxisDomain = elevationXAxisDomain, onElevationDomainChange = { elevationXAxisDomain = it },
-                    telemetryXAxisDomain = telemetryXAxisDomain, onTelemetryDomainChange = { telemetryXAxisDomain = it },
-                    paceCeilingMinKm = paceCeilingMinKm, onPaceCeilingChange = { paceCeilingMinKm = it },
-                    elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
-                    onElevationSmoothingSigmaChange = { elevationSmoothingSigmaMeters = it }
-                )
-            }
-
-            // Section 5: Workout-Masken & Detailkarten
-            TuningAccordionSection(
-                icon = Icons.AutoMirrored.Filled.ViewList,
-                title = stringResource(R.string.tuning_cat_workout_masks_cards),
-                subtitle = TuningSubtitleFormatter.formatWorkoutMatrixSubtitle(workoutCardPrefs, workoutDetailPrefs, context),
-                isExpanded = isSectionExpanded(TuningSection.WORKOUT_MASKS_CARDS),
-                onToggle = { toggleSection(TuningSection.WORKOUT_MASKS_CARDS) }
-            ) {
-                WorkoutMasksAndCardsSection(
-                    workoutCardPrefs = workoutCardPrefs, onWorkoutCardPrefsChange = { workoutCardPrefs = it },
-                    workoutDetailPrefs = workoutDetailPrefs, onWorkoutDetailPrefsChange = { workoutDetailPrefs = it },
-                    workoutSectionsOrder = workoutSectionsOrder, onWorkoutSectionsOrderChange = { workoutSectionsOrder = it }
-                )
-            }
-
-            // Section 6: Navigation
+            // Section 1: Navigation & Kartenführung (REQ-UI-357: Promoted to top)
             TuningAccordionSection(
                 icon = Icons.Default.Navigation,
                 title = stringResource(R.string.tuning_cat_navigation),
@@ -358,6 +248,117 @@ fun AdvancedTuningDialog(
                     onAutoFollowUniqueRouteEnabledChange = { autoFollowUniqueRouteEnabled = it },
                     turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters,
                     onTurnCueCountdownDistanceChange = { turnCueCountdownDistanceMeters = it }
+                )
+            }
+
+            // Section 2: Cockpit & Typografie
+            TuningAccordionSection(
+                icon = Icons.Default.TextFields,
+                title = stringResource(R.string.tuning_cat_cockpit_typography),
+                subtitle = TuningSubtitleFormatter.formatCockpitSubtitle(cockpitFontFamily, cockpitFontWeight, sensorFieldVariant, context),
+                isExpanded = isSectionExpanded(TuningSection.COCKPIT_TYPOGRAPHY),
+                onToggle = { toggleSection(TuningSection.COCKPIT_TYPOGRAPHY) }
+            ) {
+                CockpitTypographySection(
+                    cockpitFontFamily = cockpitFontFamily, onFontFamilyChange = { cockpitFontFamily = it },
+                    cockpitFontWeight = cockpitFontWeight, onFontWeightChange = { cockpitFontWeight = it },
+                    sensorFieldVariant = sensorFieldVariant, onSensorFieldVariantChange = { sensorFieldVariant = it },
+                    sensorFieldCornerRadius = sensorFieldCornerRadius, onCornerRadiusChange = { sensorFieldCornerRadius = it },
+                    sensorFieldBorderThickness = sensorFieldBorderThickness, onBorderThicknessChange = { sensorFieldBorderThickness = it },
+                    sensorFieldBorderContrast = sensorFieldBorderContrast, onBorderContrastChange = { sensorFieldBorderContrast = it }
+                )
+            }
+
+            // Section 3: AMOLED-Akkuschoner & Helligkeit
+            TuningAccordionSection(
+                icon = Icons.Default.BrightnessMedium,
+                title = stringResource(R.string.tuning_cat_battery_saver),
+                subtitle = TuningSubtitleFormatter.formatBatterySaverSubtitle(fullDimFactor, mediumDimFactor, slopeFlat, slopeSteep),
+                isExpanded = isSectionExpanded(TuningSection.BATTERY_SAVER),
+                onToggle = { toggleSection(TuningSection.BATTERY_SAVER) }
+            ) {
+                AmoledBatterySaverSection(
+                    fullDimFactor = fullDimFactor, onFullDimChange = { fullDimFactor = it },
+                    mediumDimFactor = mediumDimFactor, onMediumDimChange = { mediumDimFactor = it },
+                    slopeFlat = slopeFlat, onSlopeFlatChange = { slopeFlat = it },
+                    slopeSteep = slopeSteep, onSlopeSteepChange = { slopeSteep = it },
+                    wakeupSec = wakeupSec, onWakeupSecChange = { wakeupSec = it },
+                    downwardDelaySec = downwardDelaySec, onDownwardDelayChange = { downwardDelaySec = it }
+                )
+            }
+
+            // Section 4: Sensoren, GPS & Filter
+            TuningAccordionSection(
+                icon = Icons.Default.LocationOn,
+                title = stringResource(R.string.tuning_cat_sensors_gps),
+                subtitle = TuningSubtitleFormatter.formatSensorsGpsSubtitle(gpsAccuracy, altitudeWindowSec, slopeMinSpeed),
+                isExpanded = isSectionExpanded(TuningSection.SENSORS_GPS),
+                onToggle = { toggleSection(TuningSection.SENSORS_GPS) }
+            ) {
+                SensorsGpsFilterSection(
+                    gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
+                    altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
+                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it },
+                    showAntMissingAdapterWarnings = showAntMissingAdapterWarnings,
+                    onShowAntMissingAdapterWarningsChange = { showAntMissingAdapterWarnings = it }
+                )
+            }
+
+            // Section 5: Sensorsuche & Verhalten
+            TuningAccordionSection(
+                icon = Icons.Default.Search,
+                title = stringResource(R.string.tuning_cat_sensor_search),
+                subtitle = TuningSubtitleFormatter.formatSensorSearchSubtitle(
+                    sensorSearchPrefs.numberOfSearchTries,
+                    sensorSearchPrefs.startSearchWhenAppStarts,
+                    sensorSearchPrefs.startSearchWhenResumeFromPaused,
+                    sensorSearchPrefs.startSearchWhenUserChangesSport,
+                    sensorSearchPrefs.startSearchWhenTrackingStarts,
+                    context
+                ),
+                isExpanded = isSectionExpanded(TuningSection.SENSOR_SEARCH),
+                onToggle = { toggleSection(TuningSection.SENSOR_SEARCH) }
+            ) {
+                SensorSearchTuningSection(
+                    prefs = sensorSearchPrefs,
+                    onPrefsChange = { sensorSearchPrefs = it }
+                )
+            }
+
+            // Section 6: Workout-Masken & Detailkarten
+            TuningAccordionSection(
+                icon = Icons.AutoMirrored.Filled.ViewList,
+                title = stringResource(R.string.tuning_cat_workout_masks_cards),
+                subtitle = TuningSubtitleFormatter.formatWorkoutMatrixSubtitle(workoutCardPrefs, workoutDetailPrefs, context),
+                isExpanded = isSectionExpanded(TuningSection.WORKOUT_MASKS_CARDS),
+                onToggle = { toggleSection(TuningSection.WORKOUT_MASKS_CARDS) }
+            ) {
+                WorkoutMasksAndCardsSection(
+                    workoutCardPrefs = workoutCardPrefs, onWorkoutCardPrefsChange = { workoutCardPrefs = it },
+                    workoutDetailPrefs = workoutDetailPrefs, onWorkoutDetailPrefsChange = { workoutDetailPrefs = it },
+                    workoutSectionsOrder = workoutSectionsOrder, onWorkoutSectionsOrderChange = { workoutSectionsOrder = it }
+                )
+            }
+
+            // Section 7: Aftermath & Analyse
+            TuningAccordionSection(
+                icon = Icons.AutoMirrored.Filled.ShowChart,
+                title = stringResource(R.string.tuning_cat_aftermath),
+                subtitle = TuningSubtitleFormatter.formatAftermathSubtitle(
+                    elevationXAxisDomain,
+                    telemetryXAxisDomain,
+                    context,
+                    elevationSmoothingSigmaMeters
+                ),
+                isExpanded = isSectionExpanded(TuningSection.AFTERMATH_ANALYSIS),
+                onToggle = { toggleSection(TuningSection.AFTERMATH_ANALYSIS) }
+            ) {
+                AftermathAnalysisSection(
+                    elevationXAxisDomain = elevationXAxisDomain, onElevationDomainChange = { elevationXAxisDomain = it },
+                    telemetryXAxisDomain = telemetryXAxisDomain, onTelemetryDomainChange = { telemetryXAxisDomain = it },
+                    paceCeilingMinKm = paceCeilingMinKm, onPaceCeilingChange = { paceCeilingMinKm = it },
+                    elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
+                    onElevationSmoothingSigmaChange = { elevationSmoothingSigmaMeters = it }
                 )
             }
 

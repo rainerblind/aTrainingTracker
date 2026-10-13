@@ -43,6 +43,7 @@ class AdvancedTuningModularityTest {
         val tuningDir = findTuningDirectory()
 
         val expectedFiles = listOf(
+            "AdvancedTuningScreen.kt",
             "AdvancedTuningDialog.kt",
             "AdvancedTuningAccordion.kt",
             "AdvancedTuningDialogFragment.kt",

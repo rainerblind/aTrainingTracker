@@ -103,6 +103,7 @@ import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsD
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialog
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreen
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionDialog
@@ -447,6 +448,13 @@ fun ATrainingTrackerApp(
                     val backupRestoreViewModel: BackupRestoreViewModel = viewModel(activity)
                     ImportBackupTabsScreen(viewModel = backupRestoreViewModel)
                 }
+
+                composable(NavRoutes.ADVANCED_SETTINGS) {
+                    AdvancedTuningScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onSettingsChanged = { activity.applyDisplaySettings() }
+                    )
+                }
             }
         }
     }
@@ -480,7 +488,8 @@ fun ATrainingTrackerApp(
                     onDismiss = { drawerController.activeBottomSheet = null },
                     onSettingsChanged = { activity.applyDisplaySettings() },
                     onNavigateToTuning = {
-                        drawerController.activeBottomSheet = SettingsBottomSheetType.ADVANCED_TUNING
+                        drawerController.activeBottomSheet = null
+                        navController.navigate(NavRoutes.ADVANCED_SETTINGS)
                     }
                 )
                 SettingsBottomSheetType.ADVANCED_TUNING -> AdvancedTuningDialog(

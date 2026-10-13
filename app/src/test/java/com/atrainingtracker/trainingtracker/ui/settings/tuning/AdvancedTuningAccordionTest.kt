@@ -365,4 +365,18 @@ class AdvancedTuningAccordionTest {
         )
         assertEquals("2 search rounds, Active auto-search", subtitlePartial)
     }
+
+    @Test
+    fun testTuningSectionEnum_canonicalLifecycleSequence() {
+        val expected = listOf(
+            TuningSection.NAVIGATION,
+            TuningSection.COCKPIT_TYPOGRAPHY,
+            TuningSection.BATTERY_SAVER,
+            TuningSection.SENSORS_GPS,
+            TuningSection.SENSOR_SEARCH,
+            TuningSection.WORKOUT_MASKS_CARDS,
+            TuningSection.AFTERMATH_ANALYSIS
+        )
+        assertEquals(expected, TuningSection.values().toList())
+    }
 }
