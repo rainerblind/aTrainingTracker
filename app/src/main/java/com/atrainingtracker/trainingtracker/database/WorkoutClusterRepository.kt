@@ -76,10 +76,12 @@ class WorkoutClusterRepository internal constructor(
         private var instance: WorkoutClusterRepository? = null
 
         @JvmStatic
-        fun getInstance(
-            context: Context,
-            scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-        ): WorkoutClusterRepository {
+        fun getInstance(context: Context): WorkoutClusterRepository {
+            return getInstance(context, CoroutineScope(SupervisorJob() + Dispatchers.Default))
+        }
+
+        @JvmStatic
+        fun getInstance(context: Context, scope: CoroutineScope): WorkoutClusterRepository {
             return instance ?: synchronized(this) {
                 instance ?: WorkoutClusterRepository(context.applicationContext, scope).also { instance = it }
             }
