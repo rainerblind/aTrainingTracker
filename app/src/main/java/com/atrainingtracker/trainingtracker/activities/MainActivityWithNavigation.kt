@@ -50,7 +50,11 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
+import com.atrainingtracker.trainingtracker.ui.ant.AntDialogState
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -79,16 +83,22 @@ import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModel
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
 import com.atrainingtracker.trainingtracker.migration.BackupRestoreFragment
+import com.atrainingtracker.trainingtracker.notifications.SensorBatteryNotificationManager
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
@@ -98,6 +108,12 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsFragm
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import java.util.Collections
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersFragment
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModel
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
@@ -154,6 +170,9 @@ class MainActivityWithNavigation :
         @JvmField
         val EXTRA_RESUME_INTERRUPTED_WORKOUT = "com.atrainingtracker.EXTRA_RESUME_INTERRUPTED_WORKOUT"
 
+        const val EXTRA_DRAWER_ITEM_ID = "com.atrainingtracker.EXTRA_DRAWER_ITEM_ID"
+        const val EXTRA_FILTER_CRITICAL_BATTERY = "EXTRA_FILTER_CRITICAL_BATTERY"
+
         private val DEBUG: Boolean
             get() = TrainingApplication.getDebug(true)
 
@@ -162,12 +181,14 @@ class MainActivityWithNavigation :
         private const val REQUEST_INSTALL_GOOGLE_PLAY_SERVICE = 2
         private const val MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1
         private const val WAITING_TIME_BEFORE_DISCONNECTING = 5L * 60 * 1000 // 5 min
-        private const val CRITICAL_BATTERY_LEVEL = 30
+        const val LOW_BATTERY_WARNING_LEVEL = 20
+        const val CRITICAL_BATTERY_LEVEL = 10
     }
 
     enum class SelectedFragment {
         START_OR_TRACKING,
-        WORKOUT_LIST
+        WORKOUT_LIST,
+        SENSORS
     }
 
     protected lateinit var mTrainingApplication: TrainingApplication
@@ -177,6 +198,19 @@ class MainActivityWithNavigation :
         NavigationDrawerController(DEFAULT_SELECTED_FRAGMENT_ID, R.string.tab_start)
     protected var mFragment: Fragment? = null
     var navController: NavHostController? = null
+    private var mPendingDrawerItemId: Int? = null
+
+    /**
+     * Invoked when Compose NavHostController is initialized and bound to ATrainingTrackerApp.
+     * Executes any queued drawer navigation action that arrived before the controller was ready.
+     */
+    fun onNavControllerReady(controller: NavHostController) {
+        navController = controller
+        mPendingDrawerItemId?.let { pendingId ->
+            mPendingDrawerItemId = null
+            navigateToDrawerItem(pendingId)
+        }
+    }
     protected val mHandler: Handler = Handler(Looper.getMainLooper())
     protected var mStartAndNotResume: Boolean = true
     private var mResumingFromInterruptedNotification: Boolean = false
@@ -187,6 +221,10 @@ class MainActivityWithNavigation :
     internal val mStartTrackingReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             mDrawerController.startTrackingTitleRes = R.string.Tracking
+            if (intent?.action == TrainingApplication.REQUEST_START_TRACKING) {
+                checkSensorBatteryOnStart()
+            }
+            startInRideBatteryMonitoring()
         }
     }
 
@@ -199,14 +237,21 @@ class MainActivityWithNavigation :
     internal val mStopTrackingReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             mDrawerController.startTrackingTitleRes = R.string.Start
-            checkBatteryStatus()
+            stopInRideBatteryMonitoring()
+            mInRideAlertedSensorIds.clear()
+            mInRideCriticalAlertedSensorIds.clear()
         }
     }
 
     protected val mTrackingStoppedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            stopInRideBatteryMonitoring()
+            mInRideAlertedSensorIds.clear()
+            mInRideCriticalAlertedSensorIds.clear()
             mSelectedFragmentId = R.id.drawer_workouts
             navigateToDrawerItem(mSelectedFragmentId)
+            val workoutId = intent?.getLongExtra(TrackerService.WORKOUT_ID, -1L) ?: -1L
+            checkSensorBatteryAfterWorkout(workoutId)
         }
     }
 
@@ -222,49 +267,32 @@ class MainActivityWithNavigation :
         }
     }
 
-    private var showingSpecificInstallANTDialog: Boolean = false
+    val tuningPreferencesDataStore: TuningPreferencesDataStore by lazy {
+        TuningPreferencesDataStore(applicationContext)
+    }
+    var isAntMissingAdapterDialogSuppressed: Boolean = false
+        internal set
+
+    var antDialogState: AntDialogState? by mutableStateOf(null)
+    var showAntStatusSheet: Boolean by mutableStateOf(false)
+
     fun showSpecificInstallANTDialog() {
-        if (showingSpecificInstallANTDialog) {
+        if (antDialogState != null || showAntStatusSheet) {
             return
-        } else {
-            showingSpecificInstallANTDialog = true
         }
-
-        val alertDialogBuilder = AlertDialog.Builder(this)
-        alertDialogBuilder.setTitle(R.string.ant_missing_dependency_title)
-        alertDialogBuilder.setMessage(getString(R.string.ant_missing_dependency_message, AntPluginPcc.getMissingDependencyName()))
-        alertDialogBuilder.setCancelable(true)
-        alertDialogBuilder.setPositiveButton(R.string.go_to_store) { _, _ ->
-            val startStore = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + AntPluginPcc.getMissingDependencyPackageName()))
-            startStore.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(startStore)
-        }
-        alertDialogBuilder.setNegativeButton(R.string.cancel) { dialog, _ ->
-            dialog.dismiss()
-        }
-
-        val waitDialog = alertDialogBuilder.create()
-        waitDialog.show()
+        val dependencyName = AntPluginPcc.getMissingDependencyName() ?: ""
+        val packageName = AntPluginPcc.getMissingDependencyPackageName() ?: ""
+        antDialogState = AntDialogState.MissingDependency(
+            dependencyName = dependencyName,
+            packageName = packageName
+        )
     }
 
-    private var isShowingANTAdapterMissingDialog: Boolean = false
     fun showANTAdapterMissingDialog() {
-        if (isShowingANTAdapterMissingDialog) {
+        if (isAntMissingAdapterDialogSuppressed || antDialogState != null || showAntStatusSheet) {
             return
-        } else {
-            isShowingANTAdapterMissingDialog = true
         }
-
-        val alertDialogBuilder = AlertDialog.Builder(this)
-        alertDialogBuilder.setTitle(R.string.ant_missing_adapter_title)
-        alertDialogBuilder.setMessage(R.string.ant_missing_adapter_message)
-        alertDialogBuilder.setCancelable(true)
-        alertDialogBuilder.setNeutralButton(R.string.OK) { dialog, _ ->
-            dialog.dismiss()
-        }
-
-        val waitDialog = alertDialogBuilder.create()
-        waitDialog.show()
+        antDialogState = AntDialogState.MissingAdapter
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -289,6 +317,12 @@ class MainActivityWithNavigation :
             mSelectedFragmentId = R.id.drawer_start_tracking
             navigateToDrawerItem(mSelectedFragmentId)
             chooseResume()
+        } else if (intent.hasExtra(EXTRA_DRAWER_ITEM_ID)) {
+            val drawerItemId = intent.getIntExtra(EXTRA_DRAWER_ITEM_ID, -1)
+            if (drawerItemId != -1) {
+                mSelectedFragmentId = drawerItemId
+                navigateToDrawerItem(mSelectedFragmentId)
+            }
         } else if (intent.hasExtra(SELECTED_FRAGMENT)) {
             try {
                 val selectedName = intent.getStringExtra(SELECTED_FRAGMENT)
@@ -300,9 +334,21 @@ class MainActivityWithNavigation :
                     } else if (selected == SelectedFragment.START_OR_TRACKING) {
                         mSelectedFragmentId = R.id.drawer_start_tracking
                         navigateToDrawerItem(mSelectedFragmentId)
+                    } else if (selected == SelectedFragment.SENSORS) {
+                        mSelectedFragmentId = R.id.drawer_my_sensors
+                        navigateToDrawerItem(mSelectedFragmentId)
                     }
                 }
             } catch (ignored: IllegalArgumentException) {
+            }
+        }
+
+        if (intent.getBooleanExtra(EXTRA_FILTER_CRITICAL_BATTERY, false)) {
+            try {
+                val tabViewModel = ViewModelProvider(this)[DevicesTabbedViewModel::class.java]
+                tabViewModel.setCriticalBatteryFilter()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error applying critical battery filter from intent: " + e.message, e)
             }
         }
     }
@@ -381,16 +427,6 @@ class MainActivityWithNavigation :
             }
         }
 
-        // getPermissions
-        getPermissions(true)
-
-        // check ANT+ installation
-        if (TrainingApplication.checkANTInstallation() && !BANALService.areAllANTServicesInstalled(this)) {
-            showInstallANTShitDialog()
-        }
-
-        checkBatteryOptimizations()
-
         handleIntent(intent)
 
         checkGpsEnabledIfPermitted()
@@ -448,6 +484,24 @@ class MainActivityWithNavigation :
 
             WorkoutNavigationEvents.resetCluster()
         }
+
+        WorkoutNavigationEvents.navigateToWorkoutLiveData.observe(this) { workoutId: Long? ->
+            if (workoutId == null || workoutId <= 0) return@observe
+
+            if (mSelectedFragmentId != R.id.drawer_workouts) {
+                mSelectedFragmentId = R.id.drawer_workouts
+                mDrawerController.selectedItemId = mSelectedFragmentId
+                navigateToDrawerItem(R.id.drawer_workouts)
+            }
+        }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.CREATED) {
+                tuningPreferencesDataStore.suppressAntMissingAdapterDialogFlow.collect { suppressed ->
+                    isAntMissingAdapterDialogSuppressed = suppressed
+                }
+            }
+        }
     }
 
     private fun getPermissions(): List<String> {
@@ -476,16 +530,17 @@ class MainActivityWithNavigation :
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION) {
-            var foregroundLocationGranted = false
+            var fineLocationGranted = false
             for (i in permissions.indices) {
-                if ((permissions[i] == Manifest.permission.ACCESS_FINE_LOCATION || permissions[i] == Manifest.permission.ACCESS_COARSE_LOCATION) &&
+                if (permissions[i] == Manifest.permission.ACCESS_FINE_LOCATION &&
                     grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                    foregroundLocationGranted = true
+                    fineLocationGranted = true
                     break
                 }
             }
 
-            if (foregroundLocationGranted) {
+            if (fineLocationGranted) {
+                BANALService.checkOrInitializeLocationDevices()
                 checkGpsEnabledIfPermitted()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -507,7 +562,8 @@ class MainActivityWithNavigation :
             .show()
     }
 
-    private fun getPermissions(popup: Boolean) {
+    fun getPermissions(popup: Boolean) {
+        if (!popup) return
         var missingAnyPermission = false
         val requiredPerms = getPermissions()
         val requestPerms = ArrayList<String>()
@@ -592,7 +648,18 @@ class MainActivityWithNavigation :
         ContextCompat.registerReceiver(this, mAntDependencyReceiver, IntentFilter("com.atrainingtracker.ANT_DEPENDENCY_MISSING"), ContextCompat.RECEIVER_NOT_EXPORTED)
         ContextCompat.registerReceiver(this, mAntAdapterMissingReceiver, IntentFilter("com.atrainingtracker.ADAPTER_NOT_DETECTED"), ContextCompat.RECEIVER_NOT_EXPORTED)
 
+        if (com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper.isIgnoringBatteryOptimizations(this)) {
+            com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper.resetBatteryKillCount(this)
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            BANALService.checkOrInitializeLocationDevices()
+        }
+
         checkUnfinishedWorkout()
+        if (TrainingApplication.isTracking()) {
+            startInRideBatteryMonitoring()
+        }
     }
 
     private fun checkUnfinishedWorkout() {
@@ -719,6 +786,8 @@ class MainActivityWithNavigation :
         } catch (ignored: IllegalArgumentException) {
         }
 
+        stopInRideBatteryMonitoring()
+
         if (!isChangingConfigurations) {
             mHandler.postDelayed(mDisconnectFromBANALServiceRunnable, WAITING_TIME_BEFORE_DISCONNECTING)
         }
@@ -760,7 +829,10 @@ class MainActivityWithNavigation :
             mSelectedFragmentId = itemId
             mDrawerController.selectedItemId = itemId
 
-            navController?.let { controller ->
+            val controller = navController
+            if (controller == null) {
+                mPendingDrawerItemId = itemId
+            } else {
                 controller.navigate(route) {
                     popUpTo(controller.graph.findStartDestination().id) {
                         saveState = true
@@ -862,38 +934,168 @@ class MainActivityWithNavigation :
         if (DEBUG) Log.d(TAG, "startPairing: $protocol, deviceType: $deviceType")
         try {
             val tabViewModel: DevicesTabbedViewModel = ViewModelProvider(this)[DevicesTabbedViewModel::class.java]
-            tabViewModel.updateFilters(protocol, deviceType)
+            if (deviceType != null) {
+                tabViewModel.startPairingScan(protocol, deviceType)
+            } else {
+                tabViewModel.updateFilters(protocol, null)
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to pre-configure DevicesTabbedViewModel filters for pairing", e)
         }
         navigateToDrawerItem(R.id.drawer_my_sensors)
     }
 
+    @Deprecated("Replaced by non-blocking checkSensorBatteryAfterWorkout (ATT-2192)")
     protected fun checkBatteryStatus() {
-        val criticalBatteryDevices = DevicesDatabaseManager.getInstance(applicationContext).getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL)
-        if (criticalBatteryDevices.isNotEmpty()) {
-            val stringList = LinkedList<String>()
-            for (device in criticalBatteryDevices) {
-                stringList.add(
-                    getString(
-                        R.string.critical_battery_message_format,
-                        device.name,
-                        getString(BatteryStatusHelper.getBatteryStatusNameId(device.batteryPercentage))
-                    )
-                )
-            }
+        checkSensorBatteryAfterWorkout(-1L)
+    }
 
-            val builder = AlertDialog.Builder(this)
-            builder.setTitle(if (criticalBatteryDevices.size == 1) R.string.check_battery_status_title_1 else R.string.check_battery_status_title_many)
-            builder.setItems(stringList.toTypedArray()) { _, which ->
-                val deviceId = criticalBatteryDevices[which].deviceId
-                val devicesDatabaseManager = DevicesDatabaseManager.getInstance(applicationContext)
-                val deviceType = devicesDatabaseManager.getDeviceType(deviceId)
-                val editDeviceDialogFragment = EditDeviceFragmentFactory.create(deviceId, deviceType)
-                editDeviceDialogFragment.show(supportFragmentManager, "EditDeviceDialogFragment")
+    internal fun checkSensorBatteryAfterWorkout(workoutId: Long) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val activeDeviceIds = if (workoutId > 0) {
+                    ActiveDevicesDbHelper(applicationContext).getDatabaseIdsOfActiveDevices(workoutId)
+                } else {
+                    emptyList()
+                }
+
+                val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
+                val allCritical = devDbManager.getCriticalBatteryDevices(LOW_BATTERY_WARNING_LEVEL)
+                val criticalDevices = if (activeDeviceIds.isNotEmpty()) {
+                    allCritical.filter { activeDeviceIds.contains(it.deviceId) }
+                } else if (workoutId <= 0) {
+                    allCritical
+                } else {
+                    emptyList()
+                }
+
+                if (criticalDevices.isNotEmpty()) {
+                    // 1. Post Android System Notification
+                    SensorBatteryNotificationManager(applicationContext).showLowBatteryNotification(criticalDevices)
+
+                    // 2. Emit In-App Material 3 Snackbar Alert
+                    val message = if (criticalDevices.size == 1) {
+                        val dev = criticalDevices[0]
+                        getString(R.string.sensor_battery_snackbar_single, dev.name, dev.batteryPercentage)
+                    } else {
+                        val names = criticalDevices.joinToString(", ") { "${it.name} (${it.batteryPercentage}%)" }
+                        getString(R.string.sensor_battery_snackbar_many, criticalDevices.size, names)
+                    }
+                    val minBattery = criticalDevices.minOf { it.batteryPercentage }
+                    val severity = if (criticalDevices.any { it.batteryPercentage <= CRITICAL_BATTERY_LEVEL }) {
+                        WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL
+                    } else {
+                        WorkoutNavigationEvents.BatteryAlertSeverity.WARNING
+                    }
+                    WorkoutNavigationEvents.triggerLowBatteryAlert(
+                        WorkoutNavigationEvents.LowBatteryAlert(
+                            message = message,
+                            deviceNames = criticalDevices.map { it.name },
+                            severity = severity,
+                            lowestBatteryPercentage = minBattery
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking sensor battery after workout: ${e.message}", e)
             }
-            builder.create().show()
         }
+    }
+
+    private var mInRideBatteryMonitoringJob: Job? = null
+    internal val mInRideAlertedSensorIds: MutableSet<Long> = Collections.synchronizedSet(mutableSetOf())
+    internal val mInRideCriticalAlertedSensorIds: MutableSet<Long> = Collections.synchronizedSet(mutableSetOf())
+
+    internal fun checkSensorBatteryOnStart() {
+        mInRideAlertedSensorIds.clear()
+        mInRideCriticalAlertedSensorIds.clear()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
+                val allCritical = devDbManager.getCriticalBatteryDevices(LOW_BATTERY_WARNING_LEVEL)
+                val criticalDevices = allCritical.filter { devDbManager.isPaired(it.deviceId) }
+
+                if (criticalDevices.isNotEmpty()) {
+                    criticalDevices.forEach { dev ->
+                        mInRideAlertedSensorIds.add(dev.deviceId)
+                        if (dev.batteryPercentage <= CRITICAL_BATTERY_LEVEL) {
+                            mInRideCriticalAlertedSensorIds.add(dev.deviceId)
+                        }
+                    }
+                    val message = if (criticalDevices.size == 1) {
+                        val dev = criticalDevices[0]
+                        getString(R.string.sensor_battery_snackbar_single, dev.name, dev.batteryPercentage)
+                    } else {
+                        val names = criticalDevices.joinToString(", ") { "${it.name} (${it.batteryPercentage}%)" }
+                        getString(R.string.sensor_battery_snackbar_many, criticalDevices.size, names)
+                    }
+                    val minBattery = criticalDevices.minOf { it.batteryPercentage }
+                    val severity = if (criticalDevices.any { it.batteryPercentage <= CRITICAL_BATTERY_LEVEL }) {
+                        WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL
+                    } else {
+                        WorkoutNavigationEvents.BatteryAlertSeverity.WARNING
+                    }
+                    WorkoutNavigationEvents.triggerLowBatteryAlert(
+                        WorkoutNavigationEvents.LowBatteryAlert(
+                            message = message,
+                            deviceNames = criticalDevices.map { it.name },
+                            severity = severity,
+                            lowestBatteryPercentage = minBattery
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking sensor battery on start: ${e.message}", e)
+            }
+        }
+    }
+
+    internal fun startInRideBatteryMonitoring() {
+        if (mInRideBatteryMonitoringJob?.isActive == true) return
+        mInRideBatteryMonitoringJob = CoroutineScope(Dispatchers.IO).launch {
+            DeviceDataRepository.deviceBatteryUpdates.collect { (deviceId, percentage) ->
+                try {
+                    val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
+                    if (percentage in 0..LOW_BATTERY_WARNING_LEVEL && devDbManager.isPaired(deviceId)) {
+                        if (percentage <= CRITICAL_BATTERY_LEVEL) {
+                            if (mInRideCriticalAlertedSensorIds.add(deviceId)) {
+                                mInRideAlertedSensorIds.add(deviceId)
+                                val deviceName = devDbManager.getDeviceName(deviceId) ?: "Sensor"
+                                val message = getString(R.string.sensor_battery_snackbar_single, deviceName, percentage)
+                                WorkoutNavigationEvents.triggerLowBatteryAlert(
+                                    WorkoutNavigationEvents.LowBatteryAlert(
+                                        message = message,
+                                        deviceNames = listOf(deviceName),
+                                        severity = WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL,
+                                        lowestBatteryPercentage = percentage
+                                    )
+                                )
+                            }
+                        } else {
+                            if (mInRideAlertedSensorIds.add(deviceId)) {
+                                val deviceName = devDbManager.getDeviceName(deviceId) ?: "Sensor"
+                                val message = getString(R.string.sensor_battery_snackbar_single, deviceName, percentage)
+                                WorkoutNavigationEvents.triggerLowBatteryAlert(
+                                    WorkoutNavigationEvents.LowBatteryAlert(
+                                        message = message,
+                                        deviceNames = listOf(deviceName),
+                                        severity = WorkoutNavigationEvents.BatteryAlertSeverity.WARNING,
+                                        lowestBatteryPercentage = percentage
+                                    )
+                                )
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing in-ride battery update: ${e.message}", e)
+                }
+            }
+        }
+    }
+
+    internal fun stopInRideBatteryMonitoring() {
+        mInRideBatteryMonitoringJob?.cancel()
+        mInRideBatteryMonitoringJob = null
     }
 
     override fun onPreferenceStartScreen(preferenceFragmentCompat: PreferenceFragmentCompat, preferenceScreen: PreferenceScreen): Boolean {

@@ -50,6 +50,7 @@ import android.content.pm.PackageManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper;
+import com.atrainingtracker.trainingtracker.database.WorkoutSource;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
@@ -180,6 +181,7 @@ public class TrackerService extends Service {
     public static final int TRACKING_INTERRUPTED_NOTIFICATION_ID = 2;
     private boolean mTrackingInterrupted = false;
     private volatile long mWorkoutID;
+    private final Set<Long> mActiveSessionDeviceIds = Collections.synchronizedSet(new HashSet<>());
     private LiveWorkoutSession mLiveSession;
     private volatile CompletableFuture<Void> mTableInitializationFuture = CompletableFuture.completedFuture(null);
     private StartType mStartType;
@@ -317,6 +319,10 @@ public class TrackerService extends Service {
         public void onServiceConnected(ComponentName name, IBinder service) {
             mBanalService = (BANALServiceComm) service;
             if (DEBUG) Log.i(TAG, "connected to BANAL Service");
+
+            // ATT-3045: Ensure location devices are checked/initialized defensively when service connects
+            BANALService.checkOrInitializeLocationDevices();
+
             if (!BANALService.isSearching()) {
                 onSearchingFinished();
             }
@@ -353,6 +359,9 @@ public class TrackerService extends Service {
         if (DEBUG) {
             Log.d(TAG, "onCreate");
         }
+
+        // ATT-3045: Ensure location devices are checked/initialized defensively upon service creation
+        BANALService.checkOrInitializeLocationDevices();
 
         mTrainingApplication = (TrainingApplication) getApplication();
         mWorkoutRepository = WorkoutRepository.Companion.getInstance((Application) getApplicationContext());
@@ -406,6 +415,58 @@ public class TrackerService extends Service {
         return true;
     }
 
+    /**
+     * Returns the active Android platform API version code.
+     * Overridable in test suites to verify version-gated Foreground Service behavior.
+     */
+    protected int getBuildVersionSdkInt() {
+        return Build.VERSION.SDK_INT;
+    }
+
+    /**
+     * Verifies whether the application has been granted Bluetooth permissions required
+     * for peripheral sensor connections and scanning.
+     */
+    protected boolean hasBluetoothPermission() {
+        if (getBuildVersionSdkInt() >= Build.VERSION_CODES.S) {
+            return ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        }
+        return ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Verifies whether the application has been granted permissions required for the
+     * Android 14+ (API 34+) Health Foreground Service type.
+     * Enforces the Android contract requiring both FOREGROUND_SERVICE_HEALTH and a health
+     * runtime permission (e.g. ACTIVITY_RECOGNITION).
+     */
+    protected boolean hasHealthPermission() {
+        if (getBuildVersionSdkInt() >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            boolean hasHealthFgs = ContextCompat.checkSelfPermission(this, "android.permission.FOREGROUND_SERVICE_HEALTH") == android.content.pm.PackageManager.PERMISSION_GRANTED;
+            boolean hasActivityRec = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACTIVITY_RECOGNITION) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+            return hasHealthFgs && hasActivityRec;
+        }
+        return false;
+    }
+
+    /**
+     * Dynamically derives the permitted Foreground Service type bitmask based on held runtime permissions.
+     * Strictly omits FOREGROUND_SERVICE_TYPE_HEALTH unless health runtime permissions are granted,
+     * preventing fatal SecurityExceptions on Android 14+ (REQ-TRK-015, ATT-2972).
+     */
+    protected int determineForegroundServiceType() {
+        int foregroundServiceType = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
+        if (getBuildVersionSdkInt() >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            if (hasBluetoothPermission()) {
+                foregroundServiceType |= ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
+            }
+            if (hasHealthPermission()) {
+                foregroundServiceType |= ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH;
+            }
+        }
+        return foregroundServiceType;
+    }
+
     @Override
     public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
         if (DEBUG) {
@@ -446,6 +507,8 @@ public class TrackerService extends Service {
                 mDbExecutor.submit(() -> {
                     try {
                         mWorkoutID = createNewWorkout();
+                        mActiveSessionDeviceIds.clear();
+                        updateActiveSessionDevices();
                         if (mLiveSession != null) {
                             mLiveSession.setWorkoutId(mWorkoutID);
                         }
@@ -514,7 +577,7 @@ public class TrackerService extends Service {
         Notification notification = mTrainingApplication != null ? mTrainingApplication.getSearchingAndTrackingNotification() : null;
         if (notification != null) {
             try {
-                performStartForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+                performStartForeground(TrainingApplication.TRACKING_NOTIFICATION_ID, notification, determineForegroundServiceType());
             } catch (SecurityException | IllegalStateException e) {
                 Log.e(TAG, "Failed to start foreground service: " + e.getMessage(), e);
                 mTrackingInterrupted = true;
@@ -628,7 +691,6 @@ public class TrackerService extends Service {
             Thread.currentThread().interrupt();
         }
 
-        // mTrainingApplication.setTracking(false);
         if (!mTrackingInterrupted) {
             endWorkout();
         }
@@ -776,6 +838,8 @@ public class TrackerService extends Service {
         values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
         values.put(WorkoutSummaries.WORKOUT_NAME, mBaseFileName);
         values.put(WorkoutSummaries.FILE_BASE_NAME, mBaseFileName);
+        values.put(WorkoutSummaries.SOURCE, WorkoutSource.TRACKED.name());
+        values.put(WorkoutSummaries.FINISHED, 0);
 
         WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
         SQLiteDatabase summariesDb = databaseManager.getDatabase();
@@ -869,75 +933,113 @@ public class TrackerService extends Service {
             Log.d(TAG, "endWorkout");
         }
 
-        createNewLap();
+        try {
+            createNewLap();
+        } catch (Throwable t) {
+            Log.e(TAG, "Error in createNewLap during endWorkout", t);
+        }
 
-        // store the ANT Devices that were active during the workout
-        // TODO: store at very start and end of ANT (or BTLE) searching
+        // store the ANT and BTLE Devices that were active during the workout
         if (DEBUG) Log.d(TAG, "storing active device list");
-        SQLiteDatabase activeDevicesDb = new ActiveDevicesDbHelper(this).getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(ActiveDevices.WORKOUT_ID, mWorkoutID);
-        if (mBanalService != null) {
-            for (long deviceDbId : mBanalService.getDatabaseIdsOfActiveRemoteDevices()) {
-                if (DEBUG) Log.d(TAG, "adding deviceId " + deviceDbId + " to list of active devices");
-                values.put(ActiveDevices.DEVICE_DB_ID, deviceDbId);
-                activeDevicesDb.insert(ActiveDevices.TABLE, null, values);
+        try {
+            updateActiveSessionDevices();
+            ActiveDevicesDbHelper activeDevicesDbHelper = new ActiveDevicesDbHelper(this);
+            for (Long deviceDbId : mActiveSessionDeviceIds) {
+                if (deviceDbId != null && deviceDbId >= 0) {
+                    activeDevicesDbHelper.addActiveDevice(mWorkoutID, deviceDbId);
+                }
             }
+        } catch (Throwable t) {
+            Log.e(TAG, "Error saving active devices during endWorkout", t);
         }
 
         WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
-        // save the accumulated SensorTypes
-        if (mBanalService != null) {
-            summariesDatabaseManager.saveAccumulatedSensorTypes(mWorkoutID, mBanalService.getAccumulatedSensorTypeSet());
-        }
-
-        // update the summaries
-        ContentValues summaryValues = new ContentValues();
-
-        summaryValues.put(WorkoutSummaries.FINISHED, 1);  // remove this line for testing
-        // WTF, when the service crashes, not only the flag is not set but the whole method is not executed.
-        // Thus, use a return statement at the very beginning for debugging
-
-        // TODO: store at very beginning, end of ANT and BTLE searching, GPS found
-        if (mBanalService != null) {
-            summaryValues.put(WorkoutSummaries.GC_DATA, mBanalService.getAccumulatedGCDataString());
-        }
-
-        long sportTypeId = getSportTypeId();
-        summaryValues.put(WorkoutSummaries.SPORT_ID, sportTypeId);
-        summaryValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
-
         SQLiteDatabase summariesDb = summariesDatabaseManager.getDatabase();
-        summariesDb.update(WorkoutSummaries.TABLE,
-                summaryValues,
-                WorkoutSummaries.C_ID + "=" + mWorkoutID,
-                null);
+        summariesDb.beginTransaction();
+        try {
+            // save the accumulated SensorTypes
+            if (mBanalService != null) {
+                summariesDatabaseManager.saveAccumulatedSensorTypes(mWorkoutID, mBanalService.getAccumulatedSensorTypeSet());
+            }
 
-        // Finalize Live Session (Auto Name, Commute, Trainer)
-        if (mLiveSession != null) {
-            finalizeLiveSession();
+            // update the summaries
+            ContentValues summaryValues = new ContentValues();
+            summaryValues.put(WorkoutSummaries.FINISHED, 1);
+
+            // TODO: store at very beginning, end of ANT and BTLE searching, GPS found
+            if (mBanalService != null) {
+                summaryValues.put(WorkoutSummaries.GC_DATA, mBanalService.getAccumulatedGCDataString());
+            }
+
+            long sportTypeId = getSportTypeId();
+            summaryValues.put(WorkoutSummaries.SPORT_ID, sportTypeId);
+            summaryValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
+
+            summariesDb.update(WorkoutSummaries.TABLE,
+                    summaryValues,
+                    WorkoutSummaries.C_ID + "=" + mWorkoutID,
+                    null);
+
+            summariesDb.setTransactionSuccessful();
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating summaries table during endWorkout transaction", e);
+        } finally {
+            summariesDb.endTransaction();
         }
 
-        ExportManager exportManager = new ExportManager(this);
-        exportManager.workoutFinished(mBaseFileName);
+        try {
+            // Finalize Live Session (Auto Name, Commute, Trainer)
+            if (mLiveSession != null) {
+                finalizeLiveSession();
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Error finalizing live session during endWorkout", t);
+        }
 
-        // 1. Broadcast TRACKING_FINISHED_INTENT with WORKOUT_ID at system level
-        Intent finishedIntent = new Intent(TRACKING_FINISHED_INTENT)
-                .setPackage(getPackageName())
-                .putExtra(WORKOUT_ID, mWorkoutID);
-        sendBroadcast(finishedIntent);
+        try {
+            ExportManager exportManager = new ExportManager(this);
+            exportManager.workoutFinished(mBaseFileName);
+        } catch (Throwable t) {
+            Log.e(TAG, "Error finishing workout export during endWorkout", t);
+        } finally {
+            // 1. Broadcast TRACKING_FINISHED_INTENT with WORKOUT_ID at system level
+            Intent finishedIntent = new Intent(TRACKING_FINISHED_INTENT)
+                    .setPackage(getPackageName())
+                    .putExtra(WORKOUT_ID, mWorkoutID);
+            sendBroadcast(finishedIntent);
 
-        // 2. Broadcast TRACKING_FINISHED_INTENT via LocalBroadcastManager
-        // for internal components (WorkoutRepository, etc.) to trigger reactive period & cluster updates (REQ-TRK-010, ATT-505)
-        Intent localFinishedIntent = new Intent(TRACKING_FINISHED_INTENT)
-                .putExtra(WORKOUT_ID, mWorkoutID);
-        LocalBroadcastManager.getInstance(this).sendBroadcast(localFinishedIntent);
+            // 2. Broadcast TRACKING_FINISHED_INTENT via LocalBroadcastManager
+            // for internal components (WorkoutRepository, etc.) to trigger reactive period & cluster updates (REQ-TRK-010, ATT-505)
+            Intent localFinishedIntent = new Intent(TRACKING_FINISHED_INTENT)
+                    .putExtra(WORKOUT_ID, mWorkoutID);
+            LocalBroadcastManager.getInstance(this).sendBroadcast(localFinishedIntent);
+        }
+    }
+
+    /**
+     * Continuously records active session remote devices into ActiveDevicesDbHelper (REQ-CON-007, ATT-3312).
+     */
+    private void updateActiveSessionDevices() {
+        if (mBanalService != null && mWorkoutID > 0) {
+            try {
+                for (long deviceDbId : mBanalService.getDatabaseIdsOfActiveRemoteDevices()) {
+                    if (deviceDbId >= 0 && mActiveSessionDeviceIds.add(deviceDbId)) {
+                        if (DEBUG) Log.d(TAG, "New active session device detected: " + deviceDbId);
+                        new ActiveDevicesDbHelper(this).addActiveDevice(mWorkoutID, deviceDbId);
+                    }
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "Error updating active session devices", t);
+            }
+        }
     }
 
     private void sampleAndWriteToDb() {
         if (DEBUG) Log.d(TAG, "sampleAndWriteToDb()");
 
         if (mBanalService == null) return;
+
+        updateActiveSessionDevices();
 
         // 1. Always capture Total Time (SCRUM-97: needs to update during pause)
         SensorData<Integer> totalTimeData = mBanalService.getBestSensorData(SensorType.TIME_TOTAL);
@@ -1344,7 +1446,8 @@ public class TrackerService extends Service {
                     resolvedSport,
                     startLoc,
                     endLoc,
-                    endpointDist
+                    endpointDist,
+                    mDistanceTotal_m
                 );
                 if (autoName != null && !autoName.trim().isEmpty()) {
                     ContentValues nameValues = new ContentValues();
@@ -1358,7 +1461,14 @@ public class TrackerService extends Service {
         }
 
         // 5. Finalize Map and Streams (one last check)
-        String polyline = PolyUtil.encode(mLiveSession.getSampledLatLngs());
+        List<LatLng> pointsToSimplify = mLiveSession.getRawLatLngs();
+        if (pointsToSimplify.isEmpty()) {
+            pointsToSimplify = mLiveSession.getSampledLatLngs();
+        }
+        List<LatLng> simplifiedPoints = (pointsToSimplify != null && !pointsToSimplify.isEmpty())
+                ? PolyUtil.simplify(pointsToSimplify, 10.0)
+                : Collections.emptyList();
+        String polyline = PolyUtil.encode(simplifiedPoints);
         String altStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(mLiveSession.getSampledAltitudes());
         String distStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(mLiveSession.getSampledDistances());
         summariesManager.updateMapAndStreams(mWorkoutID, polyline, altStream, distStream);

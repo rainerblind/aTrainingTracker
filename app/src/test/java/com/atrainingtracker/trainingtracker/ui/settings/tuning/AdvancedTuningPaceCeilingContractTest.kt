@@ -34,8 +34,14 @@ class AdvancedTuningPaceCeilingContractTest {
 
     @Test
     fun testAdvancedTuningDialog_hostsPaceCeilingSlider() {
-        val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
-        val content = file.readText()
+        val dialogFile = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
+        val aftermathFileCandidates = listOf(
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/AftermathAnalysisSection.kt"),
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/AftermathAnalysisSection.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/AftermathAnalysisSection.kt")
+        )
+        val aftermathFile = aftermathFileCandidates.firstOrNull { it.exists() }
+        val content = dialogFile.readText() + "\n" + (aftermathFile?.readText() ?: "")
 
         assertTrue(
             "AdvancedTuningDialog must reference tuning_pace_ceiling_title",

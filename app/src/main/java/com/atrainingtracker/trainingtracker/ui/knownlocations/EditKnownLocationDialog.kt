@@ -24,23 +24,28 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -105,7 +110,7 @@ fun EditKnownLocationDialog(
     location: KnownLocationItem,
     isMetric: Boolean,
     showMap: Boolean = false,
-    onConfirm: (id: Long, name: String, altitudeMeters: Double, radiusMeters: Int, source: ElevationSource) -> Unit,
+    onConfirm: (id: Long, name: String, altitudeMeters: Double, radiusMeters: Int, source: ElevationSource, isHome: Boolean) -> Unit,
     onDismiss: () -> Unit,
     onFetchDem: (suspend (id: Long, latLng: LatLng) -> ElevationResult)? = null,
     onRadiusChange: ((Int) -> Unit)? = null
@@ -118,6 +123,7 @@ fun EditKnownLocationDialog(
         mutableFloatStateOf(location.radius.coerceIn(50, 1000).toFloat())
     }
     var currentSource by remember { mutableStateOf(location.source) }
+    var isHome by remember { mutableStateOf(location.isHome) }
     var isAltitudeError by remember { mutableStateOf(false) }
 
     val unitSuffix = if (isMetric) "m" else "ft"
@@ -132,7 +138,7 @@ fun EditKnownLocationDialog(
                     val parsed = KnownLocationsUnitConversions.parseInputToMeters(altitudeText, isMetric)
                     if (parsed != null) {
                         val finalName = if (name.isNotBlank()) name.trim() else location.name
-                        onConfirm(location.id, finalName, parsed, radiusMeters.roundToInt(), currentSource)
+                        onConfirm(location.id, finalName, parsed, radiusMeters.roundToInt(), currentSource, isHome)
                     } else {
                         isAltitudeError = true
                     }
@@ -188,6 +194,48 @@ fun EditKnownLocationDialog(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Home Base Designation Toggle (REQ-MAP-034)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("edit_location_home_toggle_row"),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = if (isHome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Column {
+                        Text(
+                            text = stringResource(R.string.known_locations_home_base),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.known_locations_set_home),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Switch(
+                    checked = isHome,
+                    onCheckedChange = { isHome = it },
+                    modifier = Modifier.testTag("edit_location_home_switch")
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Geofence Radius Control (REQ-UI-179)
             Text(
                 text = stringResource(
@@ -238,6 +286,34 @@ fun EditKnownLocationDialog(
 }
 
 /**
+ * 5-parameter overload for backward compatibility with existing callers/tests.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditKnownLocationDialog(
+    location: KnownLocationItem,
+    isMetric: Boolean,
+    showMap: Boolean = false,
+    onConfirm: (id: Long, name: String, altitudeMeters: Double, radiusMeters: Int, source: ElevationSource) -> Unit,
+    onDismiss: () -> Unit,
+    onFetchDem: (suspend (id: Long, latLng: LatLng) -> ElevationResult)? = null,
+    onRadiusChange: ((Int) -> Unit)? = null
+) {
+    EditKnownLocationDialog(
+        location = location,
+        isMetric = isMetric,
+        showMap = showMap,
+        onConfirm = { id, name, altitudeMeters, radiusMeters, source, _ ->
+            onConfirm(id, name, altitudeMeters, radiusMeters, source)
+        },
+        onDismiss = onDismiss,
+        onFetchDem = onFetchDem,
+        onRadiusChange = onRadiusChange
+    )
+}
+
+
+/**
  * Standalone bottom sheet content for editing a known start location.
  * Uses [AppBottomSheetContent] so it can be previewed in Android Studio and rendered in bottom sheet dialogs.
  */
@@ -246,7 +322,7 @@ fun EditKnownLocationSheetContent(
     location: KnownLocationItem,
     isMetric: Boolean,
     showMap: Boolean = false,
-    onConfirm: (id: Long, name: String, altitudeMeters: Double, radiusMeters: Int, source: ElevationSource) -> Unit,
+    onConfirm: (id: Long, name: String, altitudeMeters: Double, radiusMeters: Int, source: ElevationSource, isHome: Boolean) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     onRadiusChange: ((Int) -> Unit)? = null
@@ -259,6 +335,7 @@ fun EditKnownLocationSheetContent(
         mutableFloatStateOf(location.radius.coerceIn(50, 1000).toFloat())
     }
     var currentSource by remember { mutableStateOf(location.source) }
+    var isHome by remember { mutableStateOf(location.isHome) }
     var isAltitudeError by remember { mutableStateOf(false) }
 
     val unitSuffix = if (isMetric) "m" else "ft"
@@ -273,7 +350,7 @@ fun EditKnownLocationSheetContent(
                     val parsed = KnownLocationsUnitConversions.parseInputToMeters(altitudeText, isMetric)
                     if (parsed != null) {
                         val finalName = if (name.isNotBlank()) name.trim() else location.name
-                        onConfirm(location.id, finalName, parsed, radiusMeters.roundToInt(), currentSource)
+                        onConfirm(location.id, finalName, parsed, radiusMeters.roundToInt(), currentSource, isHome)
                     } else {
                         isAltitudeError = true
                     }
@@ -330,6 +407,48 @@ fun EditKnownLocationSheetContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Home Base Designation Toggle (REQ-MAP-034)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("edit_location_home_toggle_row"),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = if (isHome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Column {
+                        Text(
+                            text = stringResource(R.string.known_locations_home_base),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.known_locations_set_home),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Switch(
+                    checked = isHome,
+                    onCheckedChange = { isHome = it },
+                    modifier = Modifier.testTag("edit_location_home_switch")
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Geofence Radius Control (REQ-UI-179)
             Text(
                 text = stringResource(
@@ -378,6 +497,33 @@ fun EditKnownLocationSheetContent(
         }
     }
 }
+
+/**
+ * 5-parameter overload for backward compatibility with existing callers/tests.
+ */
+@Composable
+fun EditKnownLocationSheetContent(
+    location: KnownLocationItem,
+    isMetric: Boolean,
+    showMap: Boolean = false,
+    onConfirm: (id: Long, name: String, altitudeMeters: Double, radiusMeters: Int, source: ElevationSource) -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    onRadiusChange: ((Int) -> Unit)? = null
+) {
+    EditKnownLocationSheetContent(
+        location = location,
+        isMetric = isMetric,
+        showMap = showMap,
+        onConfirm = { id, name, altitudeMeters, radiusMeters, source, _ ->
+            onConfirm(id, name, altitudeMeters, radiusMeters, source)
+        },
+        onDismiss = onDismiss,
+        modifier = modifier,
+        onRadiusChange = onRadiusChange
+    )
+}
+
 
 /**
  * Inline mini-map showing the known location marker and its geofence radius.

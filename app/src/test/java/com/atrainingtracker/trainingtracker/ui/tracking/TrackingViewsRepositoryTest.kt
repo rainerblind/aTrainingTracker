@@ -26,8 +26,13 @@ import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
 import io.mockk.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -38,8 +43,10 @@ import java.lang.reflect.Field
  * Unit test verifying null-safe and robust enum deserialization in TrackingViewsRepository
  * (REQ-UI-253, TST-UI-212).
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class TrackingViewsRepositoryTest {
 
+    private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var mockContext: Context
     private lateinit var mockViewsDbManager: TrackingViewsDatabaseManager
     private lateinit var mockDevicesDbManager: DevicesDatabaseManager
@@ -47,6 +54,7 @@ class TrackingViewsRepositoryTest {
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         mockContext = mockk(relaxed = true)
         mockDb = mockk(relaxed = true)
         mockViewsDbManager = mockk(relaxed = true)
@@ -65,6 +73,7 @@ class TrackingViewsRepositoryTest {
 
     @After
     fun tearDown() {
+        Dispatchers.resetMain()
         unmockkAll()
         resetSingleton()
     }
@@ -215,5 +224,89 @@ class TrackingViewsRepositoryTest {
         assertEquals(ViewSize.NORMAL, config!!.viewSize)
         assertEquals(SensorType.TIME_ACTIVE, config.sensorType)
         assertEquals(FilterType.INSTANTANEOUS, config.filterType)
+    }
+
+    @Test
+    fun trackingViewInfo_defaultsShowLiveClimbsAndNavigationHintsToTrue() {
+        val info = TrackingViewInfo(
+            tabViewId = 1L,
+            name = "Default",
+            showMap = true,
+            showLapButton = true,
+            showLiveSegments = false,
+            showElevationProfile = true
+        )
+        assertTrue(info.showLiveClimbs)
+        assertTrue(info.showNavigationHints)
+    }
+
+    @Test
+    fun fetchTrackingViewInfo_mapsLiveClimbsAndNavigationHintsCorrectly() = runBlocking {
+        val repository = TrackingViewsRepository.getInstance(mockContext)
+
+        val cursor = mockk<Cursor>(relaxed = true)
+        every { cursor.moveToFirst() } returns true
+
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID) } returns 0
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME) } returns 1
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP) } returns 2
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON) } returns 3
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS) } returns 4
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE) } returns 5
+        every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS) } returns 6
+        every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS) } returns 7
+
+        every { cursor.getLong(0) } returns 42L
+        every { cursor.getString(1) } returns "Cockpit Tab"
+        every { cursor.getInt(2) } returns 1
+        every { cursor.getInt(3) } returns 0
+        every { cursor.getInt(4) } returns 1
+        every { cursor.getInt(5) } returns 0
+        every { cursor.getInt(6) } returns 0 // showLiveClimbs = false
+        every { cursor.getInt(7) } returns 1 // showNavigationHints = true
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
+                arrayOf("42"),
+                null, null, null
+            )
+        } returns cursor
+
+        val info = repository.getTrackingViewInfoFlow(42L).first()
+
+        assertNotNull(info)
+        assertEquals(42L, info!!.tabViewId)
+        assertEquals("Cockpit Tab", info.name)
+        assertTrue(info.showMap)
+        assertFalse(info.showLapButton)
+        assertTrue(info.showLiveSegments)
+        assertFalse(info.showElevationProfile)
+        assertFalse(info.showLiveClimbs)
+        assertTrue(info.showNavigationHints)
+    }
+
+    @Test
+    fun updateShowLiveClimbs_delegatesToViewsDbManager() = runBlocking {
+        val repository = TrackingViewsRepository.getInstance(mockContext)
+
+        repository.updateShowLiveClimbs(101L, false)
+
+        verify(exactly = 1) {
+            mockViewsDbManager.updateShowLiveClimbs(101L, false)
+        }
+    }
+
+    @Test
+    fun updateShowNavigationHints_delegatesToViewsDbManager() = runBlocking {
+        val repository = TrackingViewsRepository.getInstance(mockContext)
+
+        repository.updateShowNavigationHints(101L, false)
+
+        verify(exactly = 1) {
+            mockViewsDbManager.updateShowNavigationHints(101L, false)
+        }
     }
 }

@@ -37,11 +37,14 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
@@ -52,9 +55,14 @@ import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
-import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
+import com.atrainingtracker.trainingtracker.ui.climbs.getClimbGradeColor
 import com.atrainingtracker.trainingtracker.ui.theme.*
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
@@ -218,6 +226,12 @@ fun ElevationProfile(
     onZoomChanged: ((zoomScale: Float, startDist: Double) -> Unit)? = null,
     isPanMode: Boolean = false,
     showScrubbingBadge: Boolean = true,
+    climbs: List<Climb> = emptyList(),
+    smoothingSigma: Double? = null,
+    fillParentHeight: Boolean = false,
+    climbGradientShading: Boolean = false,
+    segmentColorProvider: ((Double) -> Color)? = null,
+    fixedHeight: androidx.compose.ui.unit.Dp? = null,
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -243,6 +257,12 @@ fun ElevationProfile(
         onZoomChanged = onZoomChanged,
         isPanMode = isPanMode,
         showScrubbingBadge = showScrubbingBadge,
+        climbs = climbs,
+        smoothingSigma = smoothingSigma,
+        fillParentHeight = fillParentHeight,
+        climbGradientShading = climbGradientShading,
+        segmentColorProvider = segmentColorProvider,
+        fixedHeight = fixedHeight,
         modifier = modifier
     )
 }
@@ -265,18 +285,29 @@ fun ElevationProfile(
     showScrubbingBadge: Boolean = true,
     modifier: Modifier = Modifier,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
-    powerZoneThresholds: PowerZoneThresholds? = null
+    powerZoneThresholds: PowerZoneThresholds? = null,
+    climbs: List<Climb> = emptyList(),
+    smoothingSigma: Double? = null,
+    fillParentHeight: Boolean = false,
+    climbGradientShading: Boolean = false,
+    segmentColorProvider: ((Double) -> Color)? = null,
+    fixedHeight: androidx.compose.ui.unit.Dp? = null
 ) {
-    if (pathPoints.isEmpty()) return
+    if (pathPoints.size < 2) return
 
+    val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val unit = TrainingApplication.getUnit()
+    val tuningDataStore = remember(context) { TuningPreferencesDataStore(context) }
+    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
+    val effectiveSigma = smoothingSigma ?: tuningConfig.elevationSmoothingSigmaMeters.toDouble()
     var showLegend by remember { mutableStateOf(false) }
 
+    val pathStartDist = pathPoints.firstOrNull()?.distance ?: 0.0
     var internalZoomScale by remember(pathPoints) { mutableFloatStateOf(1.0f) }
-    var internalStartDist by remember(pathPoints) { mutableDoubleStateOf(0.0) }
+    var internalStartDist by remember(pathPoints) { mutableDoubleStateOf(pathStartDist) }
     val currentZoomScale = if (onZoomChanged != null) zoomScale else internalZoomScale
-    val currentStartDist = if (onZoomChanged != null) startDist else internalStartDist
+    val currentStartDist = if (onZoomChanged != null) (if (startDist != 0.0 || pathStartDist == 0.0) startDist else pathStartDist) else internalStartDist
 
     val currentOnZoomChangedState by rememberUpdatedState(onZoomChanged)
     val currentStartDistState by rememberUpdatedState(currentStartDist)
@@ -296,7 +327,7 @@ fun ElevationProfile(
 
     var lastTapTime by remember { mutableLongStateOf(0L) }
 
-    val cachedData = remember(pathPoints, unit, minAltitudeOverride, maxAltitudeOverride) {
+    val cachedData = remember(pathPoints, unit, minAltitudeOverride, maxAltitudeOverride, effectiveSigma, climbGradientShading, segmentColorProvider) {
         val maxPoints = 500
         val pathPointsDownsampled = if (pathPoints.size > maxPoints) {
             val step = pathPoints.size / maxPoints
@@ -305,26 +336,11 @@ fun ElevationProfile(
             pathPoints
         }
 
-        val totalDist = pathPointsDownsampled.last().distance
-        val totalTimeSec = pathPointsDownsampled.last().timeSec
-        val pointCount = pathPointsDownsampled.size
-        val avgPointSpacing = if (pointCount > 0) totalDist / pointCount else 1.0
-        val targetWindowMeters = 75f
-        val calculatedWindow = (targetWindowMeters / avgPointSpacing).toInt().coerceIn(3, 21)
-        val windowSize = if (calculatedWindow % 2 == 0) calculatedWindow + 1 else calculatedWindow
-        val halfWindow = windowSize / 2
+        val baseStartDist = pathPointsDownsampled.first().distance
+        val totalDist = (pathPointsDownsampled.last().distance - baseStartDist).coerceAtLeast(1.0)
+        val totalTimeSec = (pathPointsDownsampled.last().timeSec - pathPointsDownsampled.first().timeSec).coerceAtLeast(1L)
 
-        val smoothedAltitudes = pathPointsDownsampled.indices.map { i ->
-            val start = (i - halfWindow).coerceAtLeast(0)
-            val end = (i + halfWindow).coerceAtMost(pathPointsDownsampled.size - 1)
-            var sum = 0.0
-            var count = 0
-            for (j in start..end) {
-                sum += pathPointsDownsampled[j].altitude
-                count++
-            }
-            sum / count
-        }
+        val smoothedAltitudes = ElevationSmoothingMath.smoothAltitudes(pathPointsDownsampled, sigma = effectiveSigma)
 
         val bounds = calculateElevationBounds(
             pathPoints = pathPointsDownsampled,
@@ -366,16 +382,19 @@ fun ElevationProfile(
             val sAlt2 = smoothedAltitudes[i + 1]
             val a1 = ((sAlt1 - min) / range).toFloat()
             val a2 = ((sAlt2 - min) / range).toFloat()
-            val distDiff = p2.distance - p1.distance
-            val grade = if (distDiff > 1.0) ((sAlt2 - sAlt1) / distDiff) * 100 else 0.0
+            val grade = ElevationSmoothingMath.calculateGrade(p1.distance, sAlt1, p2.distance, sAlt2)
 
-            val color = when {
-                grade < 2.0 -> TTColor.Zone1
-                grade < 5.0 -> TTColor.Zone2
-                grade < 10.0 -> TTColor.Zone3
-                grade < 15.0 -> TTColor.Zone4
-                grade < 20.0 -> TTColor.Zone5
-                else -> Color.Black
+            val color = if (climbGradientShading) {
+                segmentColorProvider?.invoke(grade) ?: getClimbGradeColor(grade)
+            } else {
+                when {
+                    grade < 2.0 -> TTColor.Zone1
+                    grade < 5.0 -> TTColor.Zone2
+                    grade < 10.0 -> TTColor.Zone3
+                    grade < 15.0 -> TTColor.Zone4
+                    grade < 20.0 -> TTColor.Zone5
+                    else -> Color.Black
+                }
             }
             segments.add(ElevationSegment(p1.distance, p1.timeSec, a1, p2.distance, p2.timeSec, a2, color))
         }
@@ -384,8 +403,8 @@ fun ElevationProfile(
         CachedProfileData(segments, min, max, totalDist, totalTimeSec, range, distStep, altStep, adaptiveHeight)
     }
 
-    val isTimeDomain = xAxisDomain == ProfileXAxisDomain.TIME && cachedData.totalTimeSec > 0
-    val totalSpan = if (isTimeDomain) cachedData.totalTimeSec.toDouble() else cachedData.totalDist
+    val isTimeDomain = ProfileDomainMath.isEffectiveTimeDomain(xAxisDomain, totalDistance = cachedData.totalDist, totalTimeSec = cachedData.totalTimeSec)
+    val totalSpan = ProfileDomainMath.calculateTotalSpan(xAxisDomain, totalDistance = cachedData.totalDist, totalTimeSec = cachedData.totalTimeSec)
     val visibleSpan = ElevationProfileZoomMath.calculateVisibleDistance(totalSpan, currentZoomScale)
 
     val altitudeFormatter = remember(unit) { AltitudeFormatter() }
@@ -408,12 +427,39 @@ fun ElevationProfile(
     }
 
     val topPadding = if (showZoomControls) 44.dp else 16.dp
-    val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight
+    val bottomPadding = if (fixedHeight != null) 18.dp else 24.dp
+    val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight
+
+    val density = LocalDensity.current
+    val badgeTextSizeDp: Dp = with(density) { 10.sp.toDp() }
+    val requiredClimbTopClearance: Dp = ElevationProfileZoomMath.calculateRequiredClimbTopClearance(
+        badgeTextSizeDp = badgeTextSizeDp.value
+    ).dp
+    val climbBadgeTopPadding: Dp = if (!isTimeDomain && climbs.isNotEmpty()) {
+        (requiredClimbTopClearance - topPadding).coerceAtLeast(0.dp)
+    } else {
+        0.dp
+    }
+    val effectiveTopPadding: Dp = ElevationProfileZoomMath.calculateEffectiveTopPadding(
+        fixedHeightDp = fixedHeight?.value,
+        baseTopPaddingDp = topPadding.value,
+        bottomPaddingDp = bottomPadding.value,
+        requiredClearanceDp = requiredClimbTopClearance.value,
+        isTimeDomain = isTimeDomain,
+        hasClimbs = climbs.isNotEmpty()
+    ).dp
 
     Box(modifier = modifier.fillMaxWidth()) {
-        val baseCanvasModifier = Modifier
-            .fillMaxWidth()
-            .height(totalCanvasHeight)
+        val baseCanvasModifier = if (fillParentHeight) {
+            Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = totalCanvasHeight)
+                .fillMaxHeight()
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .height(totalCanvasHeight)
+        }
 
         val canvasModifier = if (showZoomControls) {
             baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode) {
@@ -572,7 +618,7 @@ fun ElevationProfile(
 
         Canvas(
             modifier = canvasModifier
-                .padding(bottom = 24.dp, start = 50.dp, end = 25.dp, top = topPadding)
+                .padding(bottom = bottomPadding, start = 50.dp, end = 25.dp, top = effectiveTopPadding)
         ) {
             val width = size.width
             val height = size.height
@@ -593,14 +639,23 @@ fun ElevationProfile(
                 val endLabelWidth = highlightPaint.measureText(endLabel)
                 canvas.nativeCanvas.drawText(endLabel, width - endLabelWidth, height + 45f, highlightPaint)
 
-                if (currentZoomScale > 1.01f) {
+                val minSpacingPx = 24.dp.toPx()
+                val isZoomedOrSliced = currentZoomScale > 1.01f || currentStartDist > 1.0
+                val startLabelWidth = if (isZoomedOrSliced) {
                     val startLabel = if (isTimeDomain) {
                         ElevationProfileZoomMath.formatTimeTick(currentStartDist.toLong())
                     } else {
                         distanceFormatter.format_with_units(currentStartDist)
                     }
                     canvas.nativeCanvas.drawText(startLabel, 0f, height + 45f, highlightPaint)
+                    highlightPaint.measureText(startLabel)
+                } else {
+                    0f
                 }
+
+                val startClearanceThreshold = if (isZoomedOrSliced) startLabelWidth + minSpacingPx else minSpacingPx
+                val endClearanceThreshold = width - endLabelWidth - minSpacingPx
+                var lastDrawnRightX = if (currentZoomScale > 1.01f) startLabelWidth else if (isZoomedOrSliced) startLabelWidth else -1f
 
                 if (isTimeDomain) {
                     val adaptiveTimeStep = ElevationProfileZoomMath.calculateAdaptiveTimeStep(visibleSpan).toDouble()
@@ -610,11 +665,22 @@ fun ElevationProfile(
                     }
                     while (currentT < currentStartDist + visibleSpan) {
                         val x = ElevationProfileZoomMath.distanceToCanvasX(currentT, currentStartDist, visibleSpan, width)
-                        if (x > 60f && (width - x) > (endLabelWidth + 50f)) {
+                        val label = ElevationProfileZoomMath.formatTimeTick(currentT.toLong())
+                        val lWidth = textPaint.measureText(label)
+                        val labelLeft = x - (lWidth / 2f)
+                        val labelRight = x + (lWidth / 2f)
+                        if (ElevationProfileZoomMath.shouldRenderTickLabel(
+                                labelLeft = labelLeft,
+                                labelRight = labelRight,
+                                lastDrawnRightX = lastDrawnRightX,
+                                startClearanceThreshold = startClearanceThreshold,
+                                endClearanceThreshold = endClearanceThreshold,
+                                minSpacing = minSpacingPx
+                            )
+                        ) {
                             canvas.nativeCanvas.drawLine(x, height, x, height - 10f, textPaint)
-                            val label = ElevationProfileZoomMath.formatTimeTick(currentT.toLong())
-                            val lWidth = textPaint.measureText(label)
-                            canvas.nativeCanvas.drawText(label, x - (lWidth / 2), height + 45f, textPaint)
+                            canvas.nativeCanvas.drawText(label, labelLeft, height + 45f, textPaint)
+                            lastDrawnRightX = labelRight
                         }
                         currentT += adaptiveTimeStep
                     }
@@ -626,19 +692,30 @@ fun ElevationProfile(
                     }
                     while (currentD < currentStartDist + visibleSpan) {
                         val x = ElevationProfileZoomMath.distanceToCanvasX(currentD, currentStartDist, visibleSpan, width)
-                        if (x > 60f && (width - x) > (endLabelWidth + 50f)) {
+                        val label = if (unit == MyUnits.METRIC) {
+                            if (visibleSpan < 1500) "${currentD.toInt()}m"
+                            else if (currentD % 1000.0 != 0.0) String.format(Locale.getDefault(), "%.1f", currentD / 1000.0)
+                            else "${(currentD / 1000.0).toInt()}"
+                        } else {
+                            val miles = currentD / BANALService.METER_PER_MILE
+                            if (miles % 1.0 != 0.0) String.format(Locale.getDefault(), "%.1f", miles)
+                            else "${miles.toInt()}"
+                        }
+                        val lWidth = textPaint.measureText(label)
+                        val labelLeft = x - (lWidth / 2f)
+                        val labelRight = x + (lWidth / 2f)
+                        if (ElevationProfileZoomMath.shouldRenderTickLabel(
+                                labelLeft = labelLeft,
+                                labelRight = labelRight,
+                                lastDrawnRightX = lastDrawnRightX,
+                                startClearanceThreshold = startClearanceThreshold,
+                                endClearanceThreshold = endClearanceThreshold,
+                                minSpacing = minSpacingPx
+                            )
+                        ) {
                             canvas.nativeCanvas.drawLine(x, height, x, height - 10f, textPaint)
-                            val label = if (unit == MyUnits.METRIC) {
-                                if (visibleSpan < 1500) "${currentD.toInt()}m"
-                                else if (currentD % 1000.0 != 0.0) String.format(Locale.getDefault(), "%.1f", currentD / 1000.0)
-                                else "${(currentD / 1000.0).toInt()}"
-                            } else {
-                                val miles = currentD / BANALService.METER_PER_MILE
-                                if (miles % 1.0 != 0.0) String.format(Locale.getDefault(), "%.1f", miles)
-                                else "${miles.toInt()}"
-                            }
-                            val lWidth = textPaint.measureText(label)
-                            canvas.nativeCanvas.drawText(label, x - (lWidth / 2), height + 45f, textPaint)
+                            canvas.nativeCanvas.drawText(label, labelLeft, height + 45f, textPaint)
+                            lastDrawnRightX = labelRight
                         }
                         currentD += adaptiveDistStep
                     }
@@ -655,6 +732,78 @@ fun ElevationProfile(
                         lastY = y
                     }
                     currentA += cachedData.altStep
+                }
+
+                // Render Summit Category Badges (REQ-UI-274)
+                if (!isTimeDomain && climbs.isNotEmpty()) {
+                    climbs.forEach { climb ->
+                        val summitPt = climb.pathPoints.maxByOrNull { it.altitude } ?: climb.pathPoints.lastOrNull()
+                        if (summitPt != null && summitPt.distance in currentStartDist..(currentStartDist + visibleSpan)) {
+                            val summitX = ElevationProfileZoomMath.distanceToCanvasX(summitPt.distance, currentStartDist, visibleSpan, width)
+                            val summitY = height - (((summitPt.altitude - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
+
+                            val (bgColor, textColor, labelRes) = getClimbCategoryColors(climb.category)
+                            val badgeText = context.getString(labelRes)
+
+                            val badgePaint = Paint().apply {
+                                color = textColor.toArgb()
+                                textSize = 10.sp.toPx()
+                                isAntiAlias = true
+                                isFakeBoldText = true
+                                textAlign = Paint.Align.CENTER
+                            }
+                            val bgPaint = Paint().apply {
+                                color = bgColor.toArgb()
+                                isAntiAlias = true
+                                style = Paint.Style.FILL
+                            }
+
+                            val textWidth = badgePaint.measureText(badgeText)
+                            val pillPaddingH = 6.dp.toPx()
+                            val pillPaddingV = 2.dp.toPx()
+                            val pillHeight = badgePaint.textSize + pillPaddingV * 2
+                            val pillWidth = textWidth + pillPaddingH * 2
+                            val minAllowedPillTop = -(effectiveTopPadding.toPx()) + 2.dp.toPx()
+                            val unconstrainedPillBottom = summitY - 8.dp.toPx()
+                            val unconstrainedPillTop = unconstrainedPillBottom - pillHeight
+                            val pillTop = ElevationProfileZoomMath.calculateClampedPillTop(
+                                unconstrainedPillTop = unconstrainedPillTop,
+                                effectiveTopPaddingPx = effectiveTopPadding.toPx(),
+                                safetyMarginPx = 2.dp.toPx()
+                            )
+                            val pillBottom = pillTop + pillHeight
+                            val pillLeft = ElevationProfileZoomMath.calculateClampedPillLeft(
+                                summitXPx = summitX,
+                                pillWidthPx = pillWidth,
+                                canvasWidthPx = width,
+                                safetyMarginPx = 2.dp.toPx()
+                            )
+                            val pillRight = pillLeft + pillWidth
+
+                            // Pin stem to the summit
+                            val stemPaint = Paint().apply {
+                                color = bgColor.toArgb()
+                                strokeWidth = 1.5.dp.toPx()
+                                isAntiAlias = true
+                            }
+                            canvas.nativeCanvas.drawLine(summitX, summitY, summitX, pillBottom, stemPaint)
+
+                            // Category pill background
+                            canvas.nativeCanvas.drawRoundRect(
+                                pillLeft,
+                                pillTop,
+                                pillRight,
+                                pillBottom,
+                                4.dp.toPx(),
+                                4.dp.toPx(),
+                                bgPaint
+                            )
+
+                            // Category text
+                            val textY = pillBottom - pillPaddingV - badgePaint.descent()
+                            canvas.nativeCanvas.drawText(badgeText, (pillLeft + pillRight) / 2f, textY, badgePaint)
+                        }
+                    }
                 }
             }
 
@@ -680,6 +829,33 @@ fun ElevationProfile(
                         seg.color.copy(alpha = TTAlpha.Disabled)
                     )
                     drawLine(seg.color, Offset(x1, y1), Offset(x2, y2), 2.dp.toPx())
+                }
+
+                // Render horizontal climb span indicators along the X-axis baseline (REQ-UI-299, REQ-UI-307)
+                if (!isTimeDomain && climbs.isNotEmpty()) {
+                    val baselineY = height - 2.dp.toPx()
+                    climbs.forEach { climb ->
+                        val cPoints = climb.pathPoints
+                        val startDist = cPoints.firstOrNull()?.distance ?: return@forEach
+                        val endDist = cPoints.lastOrNull()?.distance ?: return@forEach
+                        if (endDist < currentStartDist || startDist > currentStartDist + visibleSpan) return@forEach
+
+                        val rawX1 = ElevationProfileZoomMath.distanceToCanvasX(startDist, currentStartDist, visibleSpan, width)
+                        val rawX2 = ElevationProfileZoomMath.distanceToCanvasX(endDist, currentStartDist, visibleSpan, width)
+                        val x1 = rawX1.coerceIn(0f, width)
+                        val x2 = rawX2.coerceIn(0f, width)
+
+                        if (x2 > x1) {
+                            val (bgColor, _, _) = getClimbCategoryColors(climb.category)
+                            drawLine(
+                                color = bgColor,
+                                start = Offset(x1, baselineY),
+                                end = Offset(x2, baselineY),
+                                strokeWidth = 4.dp.toPx(),
+                                cap = StrokeCap.Round
+                            )
+                        }
+                    }
                 }
             }
 
@@ -785,29 +961,11 @@ fun ScrubbingTelemetryBadge(
 ) {
     val context = LocalContext.current
     val effectiveHrThresholds = remember(hrZoneThresholds, bSportType, context) {
-        hrZoneThresholds ?: runCatching {
-            val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
-            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
-                HeartRateZoneThresholds(z1, z2, z3, z4)
-            } else null
-        }.getOrNull()
+        hrZoneThresholds ?: TelemetryZoneMath.loadHeartRateThresholds(context, bSportType)
     }
 
     val effectivePowerThresholds = remember(powerZoneThresholds, context) {
-        powerZoneThresholds ?: runCatching {
-            val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
-            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
-                PowerZoneThresholds(z1, z2, z3, z4)
-            } else null
-        }.getOrNull()
+        powerZoneThresholds ?: TelemetryZoneMath.loadPowerThresholds(context)
     }
 
     val distanceFormatter = remember(unit) { DistanceFormatter() }

@@ -34,6 +34,11 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -68,6 +73,10 @@ import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.core.view.WindowCompat
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
+import com.atrainingtracker.trainingtracker.ui.theme.getBatterySnackbarColors
+import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog
+import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.batterysaver.BatterySaverController
@@ -75,6 +84,7 @@ import com.atrainingtracker.trainingtracker.batterysaver.TelemetrySnapshot
 import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
 import com.atrainingtracker.trainingtracker.batterysaver.calculateZoneIndex
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.routes.TurnByTurnNavigationRepository
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
@@ -87,6 +97,12 @@ import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlT
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorStatus
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabGridContent
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepository
+import com.atrainingtracker.trainingtracker.ui.components.RouteSelectionButton
+import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModel
+import android.location.Location
 import kotlinx.coroutines.launch
 
 private const val TAG = "TrackingTabsScreen"
@@ -140,6 +156,32 @@ fun TrackingTabsScreen(
         }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val viewSensorsLabel = stringResource(R.string.sensor_battery_action_view_sensors)
+    LaunchedEffect(Unit) {
+        WorkoutNavigationEvents.lowBatteryAlert.collect { alert ->
+            if (alert != null) {
+                if (alert.severity == WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL) {
+                    val currentVisuals = snackbarHostState.currentSnackbarData?.visuals as? WorkoutNavigationEvents.BatterySnackbarVisuals
+                    if (currentVisuals != null && currentVisuals.severity == WorkoutNavigationEvents.BatteryAlertSeverity.WARNING) {
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                    }
+                }
+                val visuals = WorkoutNavigationEvents.BatterySnackbarVisuals(
+                    message = alert.message,
+                    actionLabel = viewSensorsLabel,
+                    duration = SnackbarDuration.Long,
+                    severity = alert.severity
+                )
+                val result = snackbarHostState.showSnackbar(visuals)
+                if (result == SnackbarResult.ActionPerformed) {
+                    (context as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors)
+                }
+                WorkoutNavigationEvents.consumeLowBatteryAlert()
+            }
+        }
+    }
+
     val trackingViews by trackingTabsViewModel.trackingViews.collectAsState(initial = emptyList())
     val trackingMode by trackingTabsViewModel.trackingMode.observeAsState(TrackingMode.READY)
     val screenMode by trackingTabsViewModel.screenMode.collectAsState()
@@ -165,6 +207,7 @@ fun TrackingTabsScreen(
     val activeSensors by controlViewModel.activeSensors.collectAsState()
     val bSportType by controlViewModel.bSportType.collectAsState()
     val selectingProtocol by controlViewModel.selectingProtocol.collectAsState()
+    val hasPairedRemoteDevices by controlViewModel.hasPairedRemoteDevices.collectAsState()
     val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
 
     // Battery Saver Telemetry & Event Subscriptions
@@ -172,6 +215,47 @@ fun TrackingTabsScreen(
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
         initial = com.atrainingtracker.trainingtracker.settings.TuningConfig()
     )
+
+    // Route Selection and Navigation state for Control Tracking screen (REQ-UI-279 / ATT-2458, REQ-UI-281 / ATT-2460)
+    val routesRepo = remember { RoutesRepository.getInstance(context) }
+    val routeSelectorViewModel: RouteSelectorViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return RouteSelectorViewModel(
+                    routesRepository = routesRepo,
+                    tuningPreferencesDataStore = tuningDataStore,
+                    banalServiceRepository = controlViewModel.banalServiceRepository
+                ) as T
+            }
+        }
+    )
+    val routeSelectorUiState by routeSelectorViewModel.uiState.collectAsState()
+    var showRouteSelectorSheet by remember { mutableStateOf(false) }
+
+    val returnNavRepo = remember { ReturnNavigationRepository.getInstance(context) }
+    val returnNavState by returnNavRepo.navigationState.collectAsState()
+
+    val currentLatLng by controlViewModel.banalServiceRepository.currentLocation.collectAsState()
+    LaunchedEffect(currentLatLng) {
+        currentLatLng?.let { latLng ->
+            val location = Location("GPS").apply {
+                latitude = latLng.latitude
+                longitude = latLng.longitude
+                controlViewModel.banalServiceRepository.currentBearing.value?.let {
+                    bearing = it.toFloat()
+                }
+                controlViewModel.banalServiceRepository.currentSpeed.value?.let {
+                    speed = it.toFloat()
+                }
+            }
+            routeSelectorViewModel.onLocationChanged(location)
+        }
+    }
+
+    LaunchedEffect(bSportType) {
+        routeSelectorViewModel.setActiveSport(bSportType)
+    }
 
     LaunchedEffect(tuningConfig) {
         batterySaverController.updateTuningConfig(
@@ -228,6 +312,8 @@ fun TrackingTabsScreen(
 
     LaunchedEffect(trackingMode) {
         batterySaverController.onWakeupEvent()
+        val isTracking = trackingMode == TrackingMode.TRACKING || trackingMode == TrackingMode.PAUSED
+        routeSelectorViewModel.setTrackingActive(isTracking)
     }
 
     var lastActiveSegmentStatus by remember { mutableStateOf<Map<Long, LiveSegmentStatus>>(emptyMap()) }
@@ -251,6 +337,18 @@ fun TrackingTabsScreen(
         if (hasRelevantTransition) {
             batterySaverController.onWakeupEvent()
         }
+    }
+
+    val navRepo = remember { TurnByTurnNavigationRepository.getInstance(context) }
+    val navState by navRepo.navigationState.collectAsState()
+    var lastTurnApproaching by remember { mutableStateOf(false) }
+    var lastOffRoute by remember { mutableStateOf(false) }
+    LaunchedEffect(navState.isApproaching, navState.isOffRoute) {
+        if ((!lastTurnApproaching && navState.isApproaching) || (!lastOffRoute && navState.isOffRoute)) {
+            batterySaverController.onWakeupEvent()
+        }
+        lastTurnApproaching = navState.isApproaching
+        lastOffRoute = navState.isOffRoute
     }
 
 
@@ -488,10 +586,6 @@ fun TrackingTabsScreen(
                                         onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
                                         onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
                                         onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
-                                        onUpdateShowMap = { id, show -> trackingTabsViewModel.onUpdateShowMap(id, show) },
-                                        onUpdateShowLiveSegments = { id, show -> trackingTabsViewModel.onUpdateShowLiveSegments(id, show)},
-                                        onUpdateShowElevationProfile = { id, show -> trackingTabsViewModel.onUpdateShowElevationProfile(id, show) },
-                                        onUpdateShowLapButton = { id, show -> trackingTabsViewModel.onUpdateShowLapButton(id, show) },
                                         onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
                                     )
                                 }
@@ -591,6 +685,18 @@ fun TrackingTabsScreen(
                                             "EditDeviceDialog"
                                         )
                                     }
+
+                                    is ControlNavigation.ShowRecoveryDialog -> {
+                                        val recoveryHandler = context as? StartOrResumeInterface
+                                        if (recoveryHandler != null) {
+                                            recoveryHandler.showStartOrResumeDialog()
+                                        } else if (context.supportFragmentManager.findFragmentByTag(StartOrResumeDialog.TAG) == null) {
+                                            StartOrResumeDialog().show(
+                                                context.supportFragmentManager,
+                                                StartOrResumeDialog.TAG
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -613,7 +719,24 @@ fun TrackingTabsScreen(
                             selectingProtocol = selectingProtocol,
                             onDeviceTypeSelected = { controlViewModel.onDeviceTypeSelected(it) },
                             onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() },
-                            locationCalibrationStatus = locationCalibrationStatus
+                            showResearchButton = hasPairedRemoteDevices,
+                            locationCalibrationStatus = locationCalibrationStatus,
+                            bottomContent = {
+                                val isDimmed = routeSelectorUiState.activeRoute == null && routeSelectorUiState.routes.isEmpty()
+                                val emptySubtitleRes = if (isDimmed) {
+                                    routeSelectorUiState.contextEmptyHintRes
+                                } else {
+                                    R.string.route_action_select_desc
+                                }
+                                RouteSelectionButton(
+                                    activeRoute = routeSelectorUiState.activeRoute,
+                                    isDimmed = isDimmed,
+                                    emptySubtitleRes = emptySubtitleRes,
+                                    returnNavState = returnNavState,
+                                    onClick = { showRouteSelectorSheet = true },
+                                    onClearRoute = { routeSelectorViewModel.clearRoute() }
+                                )
+                            }
                         )
                     } else {
                         val viewIndex =
@@ -624,8 +747,9 @@ fun TrackingTabsScreen(
 
                         if (viewInfo != null) {
                             TrackingTabGridContent(
-                                viewInfo.tabViewId,
-                                screenMode,
+                                tabViewId = viewInfo.tabViewId,
+                                screenMode = screenMode,
+                                isTabActive = pagerState.currentPage == page,
                             )
                         } else {
                             // Optional: Show a placeholder or empty box while loading
@@ -635,8 +759,8 @@ fun TrackingTabsScreen(
                 }
             }
 
-            // --- Conditionally show the Lap Button
-            val shouldShowLapButton = currentViewInfo?.showLapButton == true
+            // --- Conditionally show the Lap Button (suppressed in CONFIGURATION mode per REQ-UI-295)
+            val shouldShowLapButton = currentViewInfo?.showLapButton == true && screenMode != ScreenMode.CONFIGURATION
             if (shouldShowLapButton) {
                 Box(
                     modifier = Modifier
@@ -651,6 +775,46 @@ fun TrackingTabsScreen(
                             .padding(horizontal = 16.dp),
                         trackingMode = trackingMode,
                         onClick = { trackingTabsViewModel.onLapButtonClick() }
+                    )
+                }
+            }
+
+            // Modal Bottom Sheet for Route Selector (REQ-UI-279, REQ-UI-280, REQ-UI-282 / ATT-2459, ATT-2462)
+            if (showRouteSelectorSheet) {
+                val isMidRide = trackingMode == TrackingMode.TRACKING || trackingMode == TrackingMode.PAUSED
+                RouteSelectorModalBottomSheet(
+                    viewModel = routeSelectorViewModel,
+                    onDismiss = { showRouteSelectorSheet = false },
+                    isMidRide = isMidRide,
+                    onTakeMeHome = {
+                        returnNavRepo.startTakeMeHome()
+                        showRouteSelectorSheet = false
+                    }
+                )
+            }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = if (shouldShowLapButton) 64.dp else 8.dp)
+            ) { data ->
+                val visuals = data.visuals as? WorkoutNavigationEvents.BatterySnackbarVisuals
+                if (visuals != null) {
+                    val colors = getBatterySnackbarColors(visuals.severity)
+                    Snackbar(
+                        snackbarData = data,
+                        containerColor = colors.containerColor,
+                        contentColor = colors.contentColor,
+                        actionColor = colors.actionColor
+                    )
+                } else {
+                    Snackbar(
+                        snackbarData = data,
+                        containerColor = MaterialTheme.colorScheme.inverseSurface,
+                        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                        actionColor = MaterialTheme.colorScheme.primary
                     )
                 }
             }

@@ -33,7 +33,6 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
-import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
@@ -58,10 +57,7 @@ class DevicesTabbedContainerFragment : Fragment() {
                 ATrainingTrackerTheme {
                     DevicesTabbedScreen(
                         tabViewModel = viewModel,
-                        initialTab = finalInitialTab,
-                        onCheckAntInstallation = {
-                            InstallANTShitDialog().show(parentFragmentManager, InstallANTShitDialog.TAG)
-                        }
+                        initialTab = finalInitialTab
                     )
                 }
             }

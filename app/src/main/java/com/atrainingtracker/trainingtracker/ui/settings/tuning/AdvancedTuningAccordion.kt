@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
 import android.content.Context
+import com.atrainingtracker.banalservice.BANALService
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -43,28 +44,46 @@ import com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Enumeration of the 5 canonical, semantic subsections of Advanced Settings.
+ * Enumeration of the canonical, semantic subsections of Advanced Settings in athletic lifecycle sequence (REQ-UI-357).
  */
 enum class TuningSection {
+    NAVIGATION,
     COCKPIT_TYPOGRAPHY,
     BATTERY_SAVER,
     SENSORS_GPS,
-    AFTERMATH_ANALYSIS,
-    WORKOUT_MASKS_CARDS
+    SENSOR_SEARCH,
+    WORKOUT_MASKS_CARDS,
+    ROUTE_CLUSTERING,
+    AFTERMATH_ANALYSIS
 }
 
 /**
  * Pure, deterministic subtitle formatters generating live active-value summary strings
- * for collapsed and expanded accordion section headers (REQ-UI-222).
+ * for collapsed and expanded accordion section headers (REQ-UI-222, REQ-UI-258).
  */
 object TuningSubtitleFormatter {
 
+    fun formatCockpitSubtitle(
+        family: CockpitFontFamily,
+        weight: CockpitFontWeight,
+        variant: SensorFieldVariant,
+        context: Context
+    ): String {
+        val familyName = context.getString(family.getDisplayNameRes())
+        val weightName = context.getString(weight.getDisplayNameRes())
+        val variantName = context.getString(variant.titleResId)
+        return "$familyName, $weightName · $variantName"
+    }
+
+    @Deprecated("Use formatCockpitSubtitle(family, weight, variant, context)")
     fun formatCockpitSubtitle(
         family: CockpitFontFamily,
         weight: CockpitFontWeight,
@@ -88,6 +107,21 @@ object TuningSubtitleFormatter {
         return "$fullPercent% / $mediumPercent%, Flat: $flatStr, Steep: $steepStr"
     }
 
+    fun formatNavigationSubtitle(
+        radiusKm: Float,
+        dismissSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+        context: Context? = null
+    ): String {
+        val effectiveDismiss = if (dismissSec in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) {
+            dismissSec
+        } else {
+            TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+        }
+        val dismissStr = "${effectiveDismiss}s"
+        val radiusStr = String.format(Locale.getDefault(), "%.1f km", radiusKm)
+        return "$dismissStr, $radiusStr"
+    }
+
     fun formatSensorsGpsSubtitle(
         gpsAccuracy: Float,
         altitudeWindowSec: Int,
@@ -98,10 +132,35 @@ object TuningSubtitleFormatter {
         return "GPS: ${gpsMeters}m, Alt: ${altitudeWindowSec}s, Speed: $speedStr"
     }
 
+    fun formatSensorSearchSubtitle(
+        numberOfSearchTries: Int,
+        startSearchWhenAppStarts: Boolean,
+        startSearchWhenResumeFromPaused: Boolean,
+        startSearchWhenUserChangesSport: Boolean,
+        startSearchWhenTrackingStarts: Boolean,
+        context: Context
+    ): String {
+        val anyAutoSearch = startSearchWhenAppStarts ||
+                startSearchWhenResumeFromPaused ||
+                startSearchWhenUserChangesSport ||
+                startSearchWhenTrackingStarts
+        val autoSearchStatus = if (anyAutoSearch) {
+            context.getString(R.string.tuning_sensor_search_active)
+        } else {
+            context.getString(R.string.tuning_sensor_search_disabled)
+        }
+        return context.getString(
+            R.string.tuning_sensor_search_subtitle,
+            numberOfSearchTries,
+            autoSearchStatus
+        )
+    }
+
     fun formatAftermathSubtitle(
         elevationDomain: ProfileXAxisDomain,
         telemetryDomain: ProfileXAxisDomain,
-        context: Context
+        context: Context,
+        smoothingSigma: Float = TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS
     ): String {
         val elevStr = if (elevationDomain == ProfileXAxisDomain.DISTANCE) {
             context.getString(R.string.tuning_profile_x_axis_distance)
@@ -115,7 +174,7 @@ object TuningSubtitleFormatter {
         }
         val elevPrefix = context.getString(R.string.tuning_profile_x_axis_title)
         val telemPrefix = context.getString(R.string.tuning_telemetry_x_axis_title)
-        return "$elevPrefix: $elevStr | $telemPrefix: $telemStr"
+        return "$elevPrefix: $elevStr | $telemPrefix: $telemStr | \u03c3: ${smoothingSigma.roundToInt()}m"
     }
 
     @Deprecated("Use formatAftermathSubtitle(elevationDomain, telemetryDomain, context)")
@@ -187,6 +246,37 @@ object TuningSubtitleFormatter {
         context: Context
     ): String {
         return formatWorkoutMasksSubtitle(cardPrefs, context)
+    }
+
+    fun formatClusterTuningSubtitle(
+        endpointTolerance: Float,
+        apexTolerance: Float,
+        distanceTolerance: Float,
+        altitudePositionTolerance: Float,
+        useSportTypeForClustering: Boolean,
+        useAltitudePosForClustering: Boolean,
+        isImperial: Boolean,
+        context: Context
+    ): String {
+        val locale = Locale.getDefault()
+        val distUnit = if (isImperial) {
+            context.getString(R.string.units_distance_imperial)
+        } else {
+            context.getString(R.string.units_distance_metric)
+        }
+        val multiplier = if (isImperial) (1.0 / BANALService.METER_PER_MILE).toFloat() else 0.001f
+        val decPlaces = 3
+
+        val endStr = String.format(locale, "%.${decPlaces}f%s", endpointTolerance * multiplier, distUnit)
+        val apexStr = String.format(locale, "%.${decPlaces}f%s", apexTolerance * multiplier, distUnit)
+        val distPctStr = "${(distanceTolerance * 100).roundToInt()}%"
+
+        return if (useAltitudePosForClustering) {
+            val altStr = String.format(locale, "%.${decPlaces}f%s", altitudePositionTolerance * multiplier, distUnit)
+            "End: $endStr · Apex: $apexStr · Dist: $distPctStr · Alt: $altStr"
+        } else {
+            "End: $endStr · Apex: $apexStr · Dist: $distPctStr"
+        }
     }
 }
 

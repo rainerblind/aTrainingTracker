@@ -27,7 +27,9 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
@@ -78,7 +80,12 @@ data class MapStyle(
     val trackDotGap: Float = 15f,
     val routeWidth: Float = 10f,
     val routeBaseZIndex: Float = 20f,
-    val routeOverlayZIndex: Float = 40f,
+    val routeOverlayZIndex: Float = 22f,
+    val routeActiveNavigationWidth: Float = 26f,
+    val routeActiveBaseZIndex: Float = 24f,
+    val routeActiveOverlayZIndex: Float = 26f,
+    val routeActiveDashLength: Float = 30f,
+    val routeActiveGapLength: Float = 15f,
     val routeUnselectedZIndex: Float = 5f,
     val routeUnselectedWidth: Float = 6f,
     val routeUnselectedAlpha: Float = 0.3f,
@@ -86,7 +93,11 @@ data class MapStyle(
     val routeGapLength: Float = 15f,
     val segmentWidth: Float = 10f,
     val segmentZIndex: Float = 30f,
+    val segmentDashLength: Float = 20f,
+    val segmentGapLength: Float = 15f,
     val segmentUnselectedAlpha: Float = 0.3f,
+    val climbWidth: Float = 10f,
+    val climbZIndex: Float = 28f,
     val isDark: Boolean = false
 )
 
@@ -101,7 +112,13 @@ object MapVisualization {
     const val TRACK_DOT_GAP = 15f
     const val ROUTE_WIDTH = 10f
     const val ROUTE_BASE_Z_INDEX = 20.0f
-    const val ROUTE_OVERLAY_Z_INDEX = 40.0f
+    const val ROUTE_OVERLAY_Z_INDEX = 22.0f
+    const val ROUTE_ACTIVE_NAVIGATION_WIDTH = 26f
+    const val ROUTE_ACTIVE_BASE_Z_INDEX = 24.0f
+    const val ROUTE_ACTIVE_OVERLAY_Z_INDEX = 26.0f
+    const val ROUTE_ACTIVE_DASH_LENGTH = 30f
+    const val ROUTE_ACTIVE_GAP_LENGTH = 15f
+    const val ROUTE_ACTIVE_OVERLAY_WIDTH = 8f
     const val ROUTE_UNSELECTED_Z_INDEX = 5.0f
     const val ROUTE_UNSELECTED_WIDTH = 6f
     const val ROUTE_UNSELECTED_ALPHA = TTAlpha.Disabled
@@ -109,7 +126,11 @@ object MapVisualization {
     const val ROUTE_GAP_LENGTH = 15f
     const val SEGMENT_WIDTH = 10f
     const val SEGMENT_Z_INDEX = 30.0f
+    const val SEGMENT_DASH_LENGTH = 20f
+    const val SEGMENT_GAP_LENGTH = 15f
     const val SEGMENT_UNSELECTED_ALPHA = TTAlpha.Disabled
+    const val CLIMB_WIDTH = 10f
+    const val CLIMB_Z_INDEX = 28.0f
 }
 
 
@@ -159,6 +180,8 @@ interface MappablePath {
     val width: Float
     val zIndex: Float
     val overlayZIndex: Float?
+    val overlayColor: Color? get() = null
+    val overlayWidth: Float? get() = null
     val pattern: List<com.google.android.gms.maps.model.PatternItem>?
     val onClick: ((Long) -> Unit)?
 }
@@ -203,6 +226,7 @@ data class MapSegment(
     override val maxLat: Double? = null,
     override val maxLng: Double? = null,
     val showStartAndFinishText: Boolean = true,
+    val isDashed: Boolean = false,
     override val onClick: ((Long) -> Unit)? = null
 ) : MappablePath {
     override val id: Long get() = stravaId
@@ -211,7 +235,13 @@ data class MapSegment(
     override val width: Float get() = MapVisualization.SEGMENT_WIDTH
     override val zIndex: Float get() = MapVisualization.SEGMENT_Z_INDEX
     override val overlayZIndex: Float? get() = null
-    override val pattern: List<com.google.android.gms.maps.model.PatternItem>? get() = null
+    override val pattern: List<com.google.android.gms.maps.model.PatternItem>?
+        get() = if (isDashed) {
+            listOf(
+                com.google.android.gms.maps.model.Dash(MapVisualization.SEGMENT_DASH_LENGTH),
+                com.google.android.gms.maps.model.Gap(MapVisualization.SEGMENT_GAP_LENGTH)
+            )
+        } else null
 }
 
 @Immutable
@@ -225,22 +255,58 @@ data class MapRoute(
     override val minLng: Double? = null,
     override val maxLat: Double? = null,
     override val maxLng: Double? = null,
+    val isActiveNavigation: Boolean = false,
+    val waypoints: List<RouteWaypoint> = emptyList(),
+    val climbs: List<Climb> = emptyList(),
     override val onClick: ((Long) -> Unit)? = null
 ) : MappablePath {
     override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
-    override val color: Color get() = if (isSelected) TTColor.RouteSelected else TTColor.RouteUnselected
-    override val width: Float get() = if (isSelected) MapVisualization.ROUTE_WIDTH else MapVisualization.ROUTE_UNSELECTED_WIDTH
-    override val zIndex: Float get() = if (isSelected) MapVisualization.ROUTE_BASE_Z_INDEX else MapVisualization.ROUTE_UNSELECTED_Z_INDEX
+    override val color: Color get() = when {
+        isActiveNavigation -> TTColor.RouteActiveNavigation
+        isSelected -> TTColor.RouteSelected
+        else -> TTColor.RouteUnselected
+    }
+    override val width: Float get() = when {
+        isActiveNavigation -> MapVisualization.ROUTE_ACTIVE_NAVIGATION_WIDTH
+        isSelected -> MapVisualization.ROUTE_WIDTH
+        else -> MapVisualization.ROUTE_UNSELECTED_WIDTH
+    }
+    override val zIndex: Float get() = when {
+        isActiveNavigation -> MapVisualization.ROUTE_ACTIVE_BASE_Z_INDEX
+        isSelected -> MapVisualization.ROUTE_BASE_Z_INDEX
+        else -> MapVisualization.ROUTE_UNSELECTED_Z_INDEX
+    }
 
-    override val overlayZIndex: Float get() = MapVisualization.ROUTE_OVERLAY_Z_INDEX
-    override val pattern: List<com.google.android.gms.maps.model.PatternItem>
-        get() = listOf(com.google.android.gms.maps.model.Dash(MapVisualization.ROUTE_DASH_LENGTH), com.google.android.gms.maps.model.Gap(MapVisualization.ROUTE_GAP_LENGTH))
+    override val overlayZIndex: Float get() = if (isActiveNavigation) {
+        MapVisualization.ROUTE_ACTIVE_OVERLAY_Z_INDEX
+    } else {
+        MapVisualization.ROUTE_OVERLAY_Z_INDEX
+    }
+    override val overlayColor: Color get() = if (isActiveNavigation) {
+        TTColor.RouteActiveNavigationOverlay
+    } else {
+        color
+    }
+    override val overlayWidth: Float get() = if (isActiveNavigation) {
+        MapVisualization.ROUTE_ACTIVE_OVERLAY_WIDTH
+    } else {
+        width
+    }
+    override val pattern: List<com.google.android.gms.maps.model.PatternItem>?
+        get() = if (isActiveNavigation) {
+            null
+        } else {
+            listOf(
+                com.google.android.gms.maps.model.Dash(MapVisualization.ROUTE_DASH_LENGTH),
+                com.google.android.gms.maps.model.Gap(MapVisualization.ROUTE_GAP_LENGTH)
+            )
+        }
 }
 /**
  * Extension function to convert a Database Route (RouteWithPath)
  * into a Map-ready Route (MapRoute).
  */
-fun RouteWithPath.toMapRoute(): MapRoute {
+fun RouteWithPath.toMapRoute(isActiveNavigation: Boolean = false): MapRoute {
     return MapRoute(
         id = this.summary.id,
         name = this.summary.name,
@@ -250,7 +316,10 @@ fun RouteWithPath.toMapRoute(): MapRoute {
         minLat = this.summary.minLat,
         minLng = this.summary.minLng,
         maxLat = this.summary.maxLat,
-        maxLng = this.summary.maxLng
+        maxLng = this.summary.maxLng,
+        isActiveNavigation = isActiveNavigation,
+        waypoints = this.waypoints,
+        climbs = this.climbs
     )
 }
 
@@ -258,7 +327,10 @@ fun RouteWithPath.toMapRoute(): MapRoute {
  * Extension function to convert a Database Segment (SegmentWithPath)
  * into a Map-ready Segment (MapSegment).
  */
-fun SegmentWithPath.toMapSegment(showStartAndFinishText: Boolean = true): MapSegment {
+fun SegmentWithPath.toMapSegment(
+    showStartAndFinishText: Boolean = true,
+    isDashed: Boolean = false
+): MapSegment {
     return MapSegment(
         stravaId = this.summary.stravaId,
         name = this.summary.name,
@@ -268,7 +340,8 @@ fun SegmentWithPath.toMapSegment(showStartAndFinishText: Boolean = true): MapSeg
         minLng = this.summary.minLng,
         maxLat = this.summary.maxLat,
         maxLng = this.summary.maxLng,
-        showStartAndFinishText = showStartAndFinishText
+        showStartAndFinishText = showStartAndFinishText,
+        isDashed = isDashed
     )
 }
 

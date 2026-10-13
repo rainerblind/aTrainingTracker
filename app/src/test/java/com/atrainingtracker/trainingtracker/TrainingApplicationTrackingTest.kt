@@ -168,4 +168,13 @@ class TrainingApplicationTrackingTest {
         verify(exactly = 1) { TrackerService.showTrackingInterruptedNotification(app) }
         assertTrue("notifyTrackingStateChanged must be invoked", app.stateChangedNotified)
     }
+
+    @Test
+    fun testSetTracking_callsNotifyTrackingStateChanged() {
+        app.stateChangedNotified = false
+        app.setTracking()
+
+        assertEquals(TrackingMode.TRACKING, TrainingApplication.cTrackingMode)
+        assertTrue("notifyTrackingStateChanged must be invoked on setTracking", app.stateChangedNotified)
+    }
 }

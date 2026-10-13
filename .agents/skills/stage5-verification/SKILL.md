@@ -17,6 +17,7 @@ This skill guides the agent through **Stage 5 (Verification & Release Quality Ga
    - Assert 100% pass rate with zero failures.
 2. **On-Device / Physical Verification**:
    - For UI/Sensor changes: Deploy debug APK to Pixel 10 (`./gradlew installDebug`) and verify live rendering, navigation, and absence of crash loops.
+   - **Visual Consistency Check (Rule 23)**: For UI changes, capture on-device screenshots (`adb exec-out screencap -p > docs/engineering/walkthroughs/img/<KEY>_<name>.png`) of the new/changed UI and of the reference screen named in the plan's `UI Consistency` section. Embed them side by side in the walkthrough (Light and Dark/AMOLED where relevant) and compare against `docs/design_guidelines.md` Section 5. Fix visible mismatches (shapes, spacing, colors, tab/button styles, branding) before handing over to `Final Review (Human)`.
 3. **Walkthrough Documentation**:
    - Author `docs/engineering/walkthroughs/<TICKET_KEY>_walkthrough.md` using `templates/walkthrough_template.md`.
 4. **Living Documentation Synchronization**:

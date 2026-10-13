@@ -417,6 +417,7 @@ class WorkoutRepository private constructor(private val application: Application
             val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
             val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
             val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
+            val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
 
             var initialEpochSec: Long? = null
             var sampleIndex = 0L
@@ -436,14 +437,15 @@ class WorkoutRepository private constructor(private val application: Application
                 val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
                 val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
                 val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
+                val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else 0.0
                 val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
 
-                if (hr != null || power != null || speed != null) {
+                if (hr != null || power != null || speed != null || alt != 0.0) {
                     points.add(
                         PathPoint(
                             distance = dist,
                             latLng = LatLng(0.0, 0.0),
-                            altitude = 0.0,
+                            altitude = alt,
                             timeSec = timeSec,
                             hr = hr,
                             power = power,
@@ -745,7 +747,7 @@ class WorkoutRepository private constructor(private val application: Application
 
 
     val exportStatusDataProvider = ExportStatusDataProvider(application)
-    val orderedExportTypes = listOf(ExportType.FILE, ExportType.DROPBOX, ExportType.COMMUNITY)
+    val orderedExportTypes = listOf(ExportType.FILE, ExportType.DROPBOX, ExportType.GOOGLE_DRIVE, ExportType.COMMUNITY)
 
     private var isListLoading = false
 
@@ -779,27 +781,29 @@ class WorkoutRepository private constructor(private val application: Application
                     val totalCount = c.count
 
                     while (!c.isAfterLast) {
-                        // 1. Gather IDs, names, and cluster IDs for the next chunk
-                        val chunkIds = mutableListOf<Long>()
-                        val chunkNames = mutableListOf<String>()
-                        val chunkClusterIds = mutableSetOf<Long>()
-                        val currentChunkStartPos = c.position
-                        
+                        // 1. Gather raw snapshots for the next chunk in a single forward-only pass (ATT-2309 / REQ-STB-013)
+                        val snapshots = mutableListOf<WorkoutDataMapper.RawCursorSnapshot>()
                         var i = 0
                         while (i < batchSize && !c.isAfterLast) {
-                            chunkIds.add(c.getLong(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)))
-                            c.getString(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME))?.let {
-                                chunkNames.add(it)
-                            }
-                            val clusterId = c.getLong(c.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID))
-                            if (clusterId != -1L) {
-                                chunkClusterIds.add(clusterId)
+                            try {
+                                val snapshot = mapper.readCursorSnapshot(c)
+                                snapshots.add(snapshot)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "loadAllWorkouts: error reading row at position ${c.position}, skipping", e)
                             }
                             c.moveToNext()
                             i++
                         }
 
+                        if (snapshots.isEmpty()) {
+                            continue
+                        }
+
                         // 2. Fetch Metadata for the chunk in vectorized queries (ATT-359/388)
+                        val chunkIds = snapshots.map { it.workoutId }
+                        val chunkNames = snapshots.mapNotNull { it.fileBaseName }
+                        val chunkClusterIds = snapshots.mapNotNull { if (it.clusterId != -1L) it.clusterId else null }.toSet()
+
                         val extremaList = summariesManager.getExtremaForWorkouts(chunkIds)
                         val stravaDataMap = stravaUploadDbHelper.getStravaActivityDataForWorkouts(chunkNames)
                         val clusterNamesMap = WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkClusterIds)
@@ -812,11 +816,9 @@ class WorkoutRepository private constructor(private val application: Application
                             laps = lapsMap
                         )
 
-                        // 3. Map the chunk
-                        c.moveToPosition(currentChunkStartPos)
-                        var j = 0
-                        while (j < batchSize && !c.isAfterLast) {
-                            val workoutData = mapper.fromCursor(c, batchMetadata)
+                        // 3. Map the chunk in memory without cursor seeking (ATT-2309)
+                        for (snapshot in snapshots) {
+                            val workoutData = mapper.fromSnapshot(snapshot, batchMetadata)
 
                             // Add Export Statuses (Fast from memory-only providers if possible)
                             val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
@@ -829,8 +831,6 @@ class WorkoutRepository private constructor(private val application: Application
 
                             allLoadedWorkouts.add(workoutData.copy(exportStatuses = exportStatuses))
                             processedCount++
-                            c.moveToNext()
-                            j++
                         }
 
                         // 4. PROGRESSIVE UI PUMP (ATT-346 Style)
@@ -1178,6 +1178,7 @@ class WorkoutRepository private constructor(private val application: Application
                             commute = userEditedWorkout.commute,
                             trainer = userEditedWorkout.trainer,
                             race = userEditedWorkout.race,
+                            source = current.source,
                             uploadToStrava = userEditedWorkout.uploadToStrava
                         )
                     } else current

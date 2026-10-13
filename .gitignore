@@ -35,3 +35,6 @@ __pycache__/
 
 # Scratch
 scratch/
+
+# Local Android / ADB artifacts
+.android/

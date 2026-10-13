@@ -371,6 +371,7 @@
     <string name="jsonWrite">exportar para JSON Golden Cheetah</string>
     <string name="tcxWrite">exportar para TCX</string>
     <string name="gpxWrite">exportar para GPX</string>
+    <string name="fitWrite">exportar para FIT</string>
     <string name="stravaUpload">carregar para Strava</string>
     <string name="runkeeperUpload">carregar para Runkeeper</string>
     <string name="trainingPeaksUpload">carregar para TrainingPeaks</string>
@@ -390,6 +391,11 @@
     <string name="equipment_type_shoe">Sapatilhas</string>
     <string name="equipment_no_bikes">Sem bikes</string>
     <string name="equipment_no_shoes">Sem sapatilhas</string>
+    <string name="equipment_tab_sensor_matrix">Matriz de sensores</string>
+    <string name="equipment_matrix_no_sensors">Nenhum sensor emparelhado encontrado. Emparelhe os sensores primeiro nas Definições.</string>
+    <string name="equipment_matrix_no_equipment">Nenhum equipamento encontrado. Adicione bicicletas ou sapatos primeiro.</string>
+    <string name="equipment_matrix_no_bike_sensors">Nenhum sensor de bicicleta compatível encontrado.</string>
+    <string name="equipment_matrix_no_shoe_sensors">Nenhum sensor de calçado compatível encontrado.</string>
 
     <string name="SD_card_not_available">Cartão SD não disponível.</string>
 
@@ -578,6 +584,10 @@
     <string name="config_tracking__show_map">Mapa</string>
     <string name="config_tracking__showLiveSegments">Live Segments</string>
     <string name="config_tracking__showLapButton">Botão Volta</string>
+    <string name="config_tracking__show_navigation_hints">Instruções de navegação</string>
+    <string name="config_tracking__show_live_climbs">Subidas ao vivo</string>
+    <string name="config_tracking__wysiwyg_active">Ativo</string>
+    <string name="config_tracking__wysiwyg_hidden">Oculto</string>
     <string name="add_view_before">adicionar vista antes</string>
     <string name="delete_view">excluir vista</string>
     <string name="add_view_after">adicionar vista depois</string>
@@ -692,6 +702,23 @@
     <plurals name="export_notification__detail__Dropbox_failed">
         <item quantity="one">❌ Falha upload %1$s para Dropbox.</item>
         <item quantity="other">❌ Falha upload %1$s para Dropbox.</item>
+    </plurals>
+
+<plurals name="export_notification__detail__GoogleDrive_waiting">
+        <item quantity="one">⏳ Aguardando para enviar o arquivo %1$s para o Google Drive.</item>
+        <item quantity="other">⏳ Aguardando para enviar os arquivos %1$s para o Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_ongoing">
+        <item quantity="one">📤 Enviando o arquivo %1$s para o Google Drive.</item>
+        <item quantity="other">📤 Enviando os arquivos %1$s para o Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_success">
+        <item quantity="one">✅ Arquivo %1$s enviado com sucesso para o Google Drive.</item>
+        <item quantity="other">✅ Arquivos %1$s enviados com sucesso para o Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_failed">
+        <item quantity="one">❌ Falha ao enviar o arquivo %1$s para o Google Drive.</item>
+        <item quantity="other">❌ Falha ao enviar os arquivos %1$s para o Google Drive.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Community_failed">
@@ -1049,6 +1076,10 @@
     <string name="battery_level">Nível da bateria</string>
     <string name="calc_map_polyline">Calculando polilinha do mapa.</string>
     <string name="config_tracking__showElevationProfile">Perfil de elevação</string>
+    <string name="config_tracking__elevation_profile_scope">Escopo</string>
+    <string name="config_tracking__elevation_profile_scope_full_route">Rota completa</string>
+    <string name="config_tracking__elevation_profile_scope_rolling_window">Janela contínua</string>
+    <string name="config_tracking__elevation_profile_lookahead">Antecipação</string>
     <string name="current_value">Valor atual</string>
     <string name="editLocationName">Nome:</string>
     <string name="edit_my_location">Editar localização</string>
@@ -1127,6 +1158,7 @@
     <string name="filter_section_sport">Tipo de esporte</string>
     <string name="filter_section_equipment">Equipamento</string>
     <string name="filter_section_attributes">Atributos</string>
+    <string name="filter_section_origin_source">Origem dos dados</string>
     <string name="filter_section_thresholds">Distância e duração</string>
     <string name="filter_section_start_at">Início em</string>
     <string name="settings_workout_card_title">Lista de treinos (cartões detalhados)</string>
@@ -1196,12 +1228,23 @@
     <string name="filter_section_recordings">Gravações</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d gravações</string>
     <string name="filter_no_matching_clusters">Nenhum trajeto favorito corresponde aos filtros ativos</string>
+    <string name="filter_sensors_title">Filtrar sensores</string>
+    <string name="filter_section_protocol">Protocolo</string>
+    <string name="filter_section_category">Categoria do sensor</string>
+    <string name="filter_section_battery">Nível da bateria</string>
+    <string name="filter_protocol_all">Todos</string>
+    <string name="filter_battery_all">Todos</string>
+    <string name="filter_battery_critical">Crítico (≤ 20%)</string>
+    <string name="filter_battery_normal">Normal (> 20%)</string>
+    <string name="filter_battery_critical_chip">Bateria: ≤ 20%</string>
+    <string name="filter_battery_normal_chip">Bateria: > 20%</string>
+    <string name="filter_no_matching_sensors">Nenhum sensor corresponde aos filtros ativos</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">Rotas favoritas e agrupamento</string>
     <string name="cluster_info_what_title">O que são Rotas favoritas?</string>
     <string name="cluster_info_what_desc">Ao treinar repetidamente no mesmo percurso, o aplicativo reconhece e agrupa as sessões em uma Rota favorita (cluster). Isso permite nomeação automática (ex.: «Volta à Lagoa de Óbidos #5»), registro de equipamento e comparação de desempenho em trajetos idênticos.</string>
     <string name="cluster_info_fingerprint_title">Impressão digital topológica 3D</string>
-    <string name="cluster_info_fingerprint_desc">As rotas são comparadas por meio de um algoritmo simples, mas surpreendentemente eficaz, baseado em uma assinatura espacial multidimensional em vez de pontos de GPS individuais. Esse algoritmo tolera pequenas variações, mas separa os treinos quando eles são realmente diferentes:&#10;• Início e Fim: Coordenadas geográficas de partida e chegada (tolerância: 200 m).&#10;• Ápice (Ponto mais distante): O ponto do trajeto mais afastado do início (tolerância: 400 m).&#10;• Distância total: Comprimento total do percurso (tolerância: 20%).&#10;• Altitude mín. e máx.: Posições geográficas do ponto mais baixo e mais alto (tolerância: 400 m, opcional). Isso diferencia com precisão rotas em vales de cumes com traçados semelhantes.</string>
+    <string name="cluster_info_fingerprint_desc">As rotas são comparadas por meio de um algoritmo simples, mas surpreendentemente eficaz, baseado em uma assinatura espacial multidimensional em vez de pontos de GPS individuais. Esse algoritmo tolera pequenas variações, mas separa os treinos quando eles são realmente diferentes:\n• Início e Fim: Coordenadas geográficas de partida e chegada (tolerância: 200 m).\n• Ápice (Ponto mais distante): O ponto do trajeto mais afastado do início (tolerância: 400 m).\n• Distância total: Comprimento total do percurso (tolerância: 20%).\n• Altitude mín. e máx.: Posições geográficas do ponto mais baixo e mais alto (tolerância: 400 m, opcional). Isso diferencia com precisão rotas em vales de cumes com traçados semelhantes.</string>
     <string name="cluster_info_sports_title">Separação por desporto e centroide adaptativo</string>
     <string name="cluster_info_sports_desc">As rotas favoritas podem ser separadas por tipo de desporto, garantindo que passeios de bicicleta e corridas não se misturem. À medida que novos treinos são registados, o cluster atualiza dinamicamente as suas coordenadas através de um centroide ponderado.</string>
     <string name="cluster_info_tuning_title">Sensibilidade e ajuste de parâmetros</string>
@@ -1285,6 +1328,10 @@
     <string name="workout_name_ride_from">Pedal a partir de %1$s</string>
     <string name="workout_name_activity_from">Atividade a partir de %1$s</string>
     <string name="workout_name_round_trip">Circuito a partir de %1$s</string>
+    <string name="workout_name_run_from_with_distance">Corrida a partir de %1$s (%2$s)</string>
+    <string name="workout_name_ride_from_with_distance">Pedal a partir de %1$s (%2$s)</string>
+    <string name="workout_name_activity_from_with_distance">Atividade a partir de %1$s (%2$s)</string>
+    <string name="workout_name_round_trip_with_distance">Circuito a partir de %1$s (%2$s)</string>
     <string name="workout_name_run_from_to">Corrida de %1$s a %2$s</string>
     <string name="workout_name_ride_from_to">Pedal de %1$s a %2$s</string>
     <string name="workout_name_activity_from_to">Atividade de %1$s a %2$s</string>
@@ -1304,6 +1351,10 @@
     <string name="cluster_start_location">Início: %s</string>
     <string name="known_location_routes_header">Rotas a partir daqui (%d):</string>
     <string name="filter_by_start_location">Filtrar por local de início</string>
+    <string name="known_locations_home_base">Base principal</string>
+    <string name="known_locations_home_badge">Base principal</string>
+    <string name="known_locations_set_home">Definir como base principal</string>
+    <string name="known_locations_remove_home">Remover base principal</string>
     <plurals name="known_locations_routes">
         <item quantity="one">%1$d rota</item>
         <item quantity="other">%1$d rotas</item>
@@ -1346,9 +1397,11 @@
     <string name="tuning_telemetry_x_axis_desc">Selecione o domínio do eixo horizontal para os gráficos de telemetria (frequência cardíaca, ritmo/velocidade, potência).</string>
     <string name="tuning_pace_ceiling_title">Limite de ritmo mais rápido</string>
     <string name="tuning_pace_ceiling_desc">Filtra anomalias de GPS no gráfico de ritmo. Valores mais rápidos que este limite são limitados.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Suavização do perfil de elevação (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Raio espacial do filtro gaussiano em metros. Valores mais baixos (ex.: 15–21 m) oferecem uma resposta mais nítida em rampas curtas; valores mais altos eliminam degraus do sensor.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
-    <string name="tuning_cat_cockpit_typography">Tipografia do cockpit</string>
+    <string name="tuning_cat_cockpit_typography">Cockpit e blocos</string>
     <string name="tuning_cockpit_font_family_title">Família da fonte</string>
     <string name="tuning_font_system_default">Padrão do sistema</string>
     <string name="tuning_font_seven_segment">Digital de 7 segmentos</string>
@@ -1368,14 +1421,40 @@
     <string name="tuning_weight_semi_bold">Seminegrito</string>
     <string name="tuning_weight_bold">Negrito</string>
     <string name="tuning_cockpit_preview_title">Pré-visualização ao vivo</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">Design de blocos e grelha</string>
+    <string name="sensor_field_variant_v0">Grelha clássica contínua</string>
+    <string name="sensor_field_variant_v1">Blocos desportivos com contorno</string>
+    <string name="sensor_field_variant_v2">Cartões desportivos em relevo</string>
+    <string name="sensor_field_variant_v3">Cápsulas de realce suave</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">Raio dos cantos</string>
+    <string name="tuning_sensor_field_corner_radius_desc">Arredondamento dos cantos dos blocos do painel</string>
+    <string name="tuning_sensor_field_corner_radius_default">Padrão: 0 dp (Clássico sem emendas)</string>
+    <string name="tuning_sensor_field_border_thickness_title">Espessura da borda</string>
+    <string name="tuning_sensor_field_border_thickness_desc">Espessura do traço da borda dos blocos (0 dp = sem borda)</string>
+    <string name="tuning_sensor_field_border_thickness_default">Padrão: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">Contraste da borda</string>
+    <string name="tuning_sensor_field_border_contrast_desc">Contraste de cor da borda (sutil a branco/preto máximo)</string>
+    <string name="tuning_sensor_field_border_contrast_default">Padrão: Sutil (0%)</string>
     <string name="tuning_default_format">Padrão: %1$s</string>
     <string name="reset_to_defaults">Restaurar padrões</string>
     <string name="reset_to_defaults_success">Configurações de ajuste restauradas para os padrões de fábrica.</string>
+    <string name="tuning_cat_sensor_search">Busca de sensores e gatilhos</string>
+    <string name="tuning_sensor_search_subtitle">%1$d rodadas de busca, %2$s busca automática</string>
+    <string name="tuning_sensor_search_active">Ativa</string>
+    <string name="tuning_sensor_search_disabled">Desativada</string>
     <string name="tuning_cat_sensors_gps">Sensores, GPS e filtragem</string>
     <string name="tuning_cat_workout_masks_cards">Cartões e detalhes de treino</string>
+    <string name="tuning_cat_navigation">Navegação</string>
+    <string name="tuning_cat_route_clustering">Agrupamento de percursos e treinos</string>
+    <string name="tuning_route_selection_radius_title">Raio de seleção de rota</string>
+    <string name="tuning_route_selection_radius_desc">Distância máxima até o ponto de partida para seleção de rotas próximas</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">Duração de exibição das indicações</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">Tempo de ocultação automática dos avisos de mudança de direção</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 cartões</string>
-    <string name="tuning_matrix_col_list">Na lista</string>
-    <string name="tuning_matrix_col_details">Nos detalhes</string>
+    <string name="tuning_matrix_col_list">Lista</string>
+    <string name="tuning_matrix_col_details">Detalhes</string>
     <string name="tuning_matrix_feature">Elemento</string>
     <string name="tuning_summary_matrix_format">%1$d/8 na lista, %2$d/8 nos detalhes</string>
     <string name="map_splitter_content_description">Barra divisora do mapa e telemetria. Arraste verticalmente para redimensionar, toque duas vezes para redefinir.</string>
@@ -1413,4 +1492,277 @@
     <string name="settings_lap_display_mode_table">Tabela</string>
     <string name="settings_lap_display_mode_visualizer">Visualizador</string>
     <string name="settings_lap_display_mode_both">Ambos</string>
+
+    <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
+    <string name="workout_source_tracked">Gravado</string>
+    <string name="workout_source_tcx">TCX</string>
+    <string name="workout_source_gpx">GPX</string>
+    <string name="workout_source_fit">FIT</string>
+
+    <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
+    <string name="action_move_up">Mover para cima</string>
+    <string name="action_move_down">Mover para baixo</string>
+
+    <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
+    <string name="permission_rationale_title">Permissões para rastreamento sem interrupções</string>
+    <string name="permission_rationale_subtitle">Para registrar com precisão as métricas do seu treino, são necessárias as seguintes permissões:</string>
+    <string name="permission_rationale_location_title">Localização e GPS</string>
+    <string name="permission_rationale_location_desc">Registra continuamente a rota, o ritmo e a elevação enquanto o telefone está bloqueado no bolso da camisa de ciclismo ou cinto de corrida.</string>
+    <string name="permission_rationale_bluetooth_title">Bluetooth e sensores</string>
+    <string name="permission_rationale_bluetooth_desc">Conecta a monitores de frequência cardíaca, medidores de potência, sensores de cadência e rolos inteligentes.</string>
+    <string name="permission_rationale_notification_title">Controles de treino e notificações</string>
+    <string name="permission_rationale_notification_desc">Exibe métricas em tempo real e botões de pausa/retomada diretamente na tela de bloqueio.</string>
+    <string name="permission_rationale_continue">Continuar</string>
+    <string name="permission_rationale_not_now">Agora não</string>
+    <string name="permission_rationale_open_settings">Abrir configurações</string>
+    <string name="permission_rationale_settings_explanation">A permissão de localização foi negada. Sem acesso à localização, a gravação de rotas e pontos GPS não fica disponível. Você pode conceder a permissão nas configurações do app.</string>
+    <string name="permission_rationale_precise_location_explanation">A localização precisa (GPS) é necessária para registrar o treino. A localização aproximada não registra distância, velocidade, rota ou altitude. Selecione \'Precisa\' nas permissões.</string>
+    <string name="action_view_workout">Visualizar</string>
+    <string name="permission_warning_badge_desc">Permissão de localização ausente</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">Treino interrompido</string>
+    <string name="unfinished_workout_title_battery">Treino interrompido: Otimização da bateria</string>
+    <string name="unfinished_workout_title_memory">Treino interrompido: Memória insuficiente</string>
+    <string name="unfinished_workout_title_permission">Treino interrompido: Permissão revogada</string>
+    <string name="kill_reason_battery_title">Encerrado pela otimização de bateria</string>
+    <string name="kill_reason_battery_stage1">O Android interrompeu a gravação em segundo plano porque a otimização da bateria está ativada para esta aplicação. Para garantir o registo contínuo dos seus quilómetros e elevação, desative a otimização da bateria para o aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage1_strava">Sabemos como a telemetria de treino completa é importante para as suas atividades no Strava.</string>
+    <string name="kill_reason_battery_stage2">A gravação foi novamente interrompida pela gestão de bateria do sistema. Sem excluir a aplicação, o Android continuará a parar as gravações em segundo plano. Reserve um momento para desativar a otimização da bateria.</string>
+    <string name="kill_reason_battery_stage3">Foram detetadas interrupções repetidas em segundo plano. As versões modernas do Android encerram estritamente os serviços em segundo plano que não estejam isentos. Toque no botão abaixo para isentar o aTrainingTracker e proteger os seus treinos.</string>
+    <string name="kill_reason_low_memory">A gravação foi interrompida pelo Android devido à falta de memória RAM (ex.: câmera ou navegação 3D em primeiro plano). Seus dados até esse momento foram salvos.</string>
+    <string name="kill_reason_permission_revoked">A gravação foi interrompida porque as permissões de localização ou notificação foram revogadas durante o treino.</string>
+    <string name="action_disable_battery_optimization">Desativar otimização de bateria</string>
+    <string name="battery_optimization_exempt_celebration">Gravação sem restrições ativa para os seus dados de treino</string>
+
+    <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
+    <string name="import_fit_title">Importar ficheiros FIT</string>
+    <string name="import_fit_description">Importar treinos de Garmin, Wahoo, Hammerhead ou smartwatches (.fit).</string>
+    <string name="import_fit_button">Selecionar ficheiros FIT</string>
+    <string name="import_fit_dropbox_button">Examinar Dropbox (FIT)</string>
+    <string name="import_fit_gdrive_button">Examinar Google Drive (FIT)</string>
+    <string name="import_fit_progress">A importar ficheiros FIT (%1$d de %2$d)…</string>
+    <string name="import_fit_summary_success">%1$d treinos importados com sucesso (%2$d duplicados ignorados).</string>
+    <string name="import_fit_summary_with_errors">%1$d treinos importados, %2$d duplicados ignorados, %3$d falhados.</string>
+    <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
+    <string name="import_tcx_title">Importar arquivos TCX</string>
+    <string name="import_tcx_description">Importar treinos de arquivos Training Center XML (.tcx).</string>
+    <string name="import_tcx_button">Selecionar arquivo TCX local</string>
+    <string name="import_tcx_dropbox_button">Examinar Dropbox (TCX)</string>
+    <string name="import_tcx_gdrive_button">Examinar Google Drive (TCX)</string>
+    <string name="import_gpx_title">Importar arquivos GPX</string>
+    <string name="import_gpx_description">Importar percursos e atividades de arquivos GPS Exchange Format (.gpx).</string>
+    <string name="import_gpx_button">Selecionar arquivo GPX local</string>
+    <string name="import_gpx_dropbox_button">Examinar Dropbox (GPX)</string>
+    <string name="import_gpx_gdrive_button">Examinar Google Drive (GPX)</string>
+    <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
+    <string name="invalid_workout_file_format">Formato de arquivo inválido. Selecione um arquivo %1$s.</string>
+    <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
+    <string name="route_select_title">Selecionar rota</string>
+    <string name="route_action_select">Selecionar rota</string>
+    <string name="route_action_select_desc">Escolher a partir de ficheiro ou histórico</string>
+    <string name="route_action_stop">Parar rota</string>
+    <string name="route_action_clear">Limpar rota</string>
+    <string name="route_metrics_format">%1$s • %2$s</string>
+    <string name="route_filter_near">Por perto</string>
+    <string name="route_filter_recent">Percorrido recentemente</string>
+    <string name="route_filter_length">Comprimento</string>
+    <string name="route_empty_title">Nenhuma rota disponível</string>
+    <string name="route_empty_desc">Importe ficheiros GPX ou sincronize com o Strava.</string>
+    <string name="route_no_routes_nearby">Nenhuma rota próxima</string>
+    <string name="route_no_matching_route_detected">Nenhuma rota correspondente detetada</string>
+    <string name="google_drive">Google Drive</string>
+    <string name="google_drive_connect">Conectar ao Google Drive</string>
+    <string name="google_drive_disconnect">Desconectar do Google Drive</string>
+    <string name="google_drive_connected_status">Você está conectado ao Google Drive</string>
+    <string name="google_drive_disconnected_status">Você não está conectado ao Google Drive</string>
+    <string name="google_drive_account_email_label">Conta: %1$s</string>
+    <string name="upload_workouts_to_google_drive">Exportar treinos automaticamente</string>
+    <string name="upload_workouts_to_google_drive_summary">Envia atividades (FIT, TCX, GPX, CSV) para o Google Drive após salvar</string>
+    <string name="upload_backup_to_google_drive">Sincronizar backup automaticamente</string>
+    <string name="upload_backup_to_google_drive_summary">Faz backup periódico do banco de dados no Google Drive</string>
+    <string name="google_drive_only_wifi">Enviar apenas via Wi-Fi</string>
+    <string name="google_drive_only_wifi_summary">Economiza dados móveis</string>
+    <string name="google_drive_last_sync">Último upload: %1$s</string>
+    <string name="google_drive_never_synced">Ainda não sincronizado</string>
+    <string name="restore_from_google_drive">Restaurar do Google Drive</string>
+    <string name="upload_to_google_drive">Fazer backup no Google Drive</string>
+    <string name="google_drive_error_developer_config">Erro de configuração do Google Sign-In (status 10): Verifique o registro do cliente OAuth (nome do pacote com.atrainingtracker.debug e impressão digital SHA-1) no Google Cloud Console.</string>
+    <string name="google_drive_error_network">Sem conexão com a Internet ou erro de rede durante o login com o Google.</string>
+    <string name="google_drive_error_generic">Falha no login com o Google. Tente novamente.</string>
+    <string name="google_drive_error_auth_expired">Sessão do Google Drive expirada ou não autorizada. Faça login novamente nas Configurações.</string>
+    <string name="google_drive_error_api_disabled">A API do Google Drive está desativada no Google Cloud Console. Ative-a no projeto do Google Cloud.</string>
+    <string name="google_drive_error_folder_hierarchy">Falha ao resolver a hierarquia de pastas do Google Drive</string>
+    <string name="google_drive_connect_prompt">Conecte sua conta do Google para exportar treinos e sincronizar backups do banco de dados automaticamente no Google Drive.</string>
+    <string name="scan_google_drive">Escanear Google Drive</string>
+    <string name="google_drive_scan_empty_diagnostic">Nenhum arquivo de treino acessível encontrado. Arquivos copiados externamente para o Google Drive não são visíveis via API do Google Drive devido a permissões de segurança. Toque em «Selecionar arquivo(s) local(is)» no cartão de formato e escolha seus arquivos do Google Drive usando o seletor de arquivos.</string>
+    <string name="import_workout_files_progress">Importando arquivos (%1$d de %2$d)…</string>
+    <string name="legacy_import__downloading_google_drive">Baixando %1$s do Google Drive…</string>
+    <string name="gpx_enriching_elevation">A obter dados de elevação…</string>
+    <string name="gpx_elevation_enriched">Dados de elevação adicionados com sucesso</string>
+    <string name="gpx_elevation_enrichment_failed">Falha ao obter altitude, rota 2D importada</string>
+    <string name="waypoint_type_bench">Banco / Descanso</string>
+    <string name="waypoint_type_shelter">Abrigo</string>
+    <string name="waypoint_type_water">Ponto de água</string>
+    <string name="waypoint_type_summit">Cume / Passo</string>
+    <string name="waypoint_type_food">Comida / Café</string>
+    <string name="waypoint_type_viewpoint">Miradouro</string>
+    <string name="waypoint_type_first_aid">Primeiros socorros</string>
+    <string name="waypoint_type_danger">Perigo</string>
+    <string name="waypoint_type_turn_left">Virar à esquerda</string>
+    <string name="waypoint_type_turn_right">Virar à direita</string>
+    <string name="waypoint_type_turn_straight">Seguir em frente</string>
+    <string name="waypoint_type_generic">Ponto de passagem</string>
+    <string name="route_cue_sheet_title">Ficha de rota</string>
+    <string name="route_waypoints_header">Pontos de passagem e POIs (%1$d)</string>
+
+    <string name="climb_title">Subida</string>
+    <string name="climb_approaching">Aproximando</string>
+    <string name="climb_on_climb">Na subida</string>
+    <string name="climb_summit">Cume</string>
+    <string name="climb_remaining_dist">Restante</string>
+    <string name="climb_remaining_elevation">Elevação</string>
+    <string name="climb_grade">Inclinação</string>
+    <string name="climb_route_counter">Subida %1$d de %2$d</string>
+    <string name="climb_category_hc">HC</string>
+    <string name="climb_category_cat1">Cat 1</string>
+    <string name="climb_category_cat2">Cat 2</string>
+    <string name="climb_category_cat3">Cat 3</string>
+    <string name="climb_category_cat4">Cat 4</string>
+    <string name="climb_category_uc">UC</string>
+    <string name="routes_climb_count">%d Subidas</string>
+    <string name="routes_climbs_section_title">Subidas (%d)</string>
+    <string name="routes_climb_start_at">Início em %s</string>
+    <string name="routes_climb_avg_grade">Média %1$.1f%%</string>
+    <string name="routes_climb_max_grade">Máx. %1$.1f%%</string>
+    <string name="climb_max_grade_label">Inclinação máx.</string>
+    <string name="routes_segments_section_title">Segmentos (%d)</string>
+    <string name="routes_segments_tab_title">Segmentos (%d)</string>
+    <string name="routes_segment_start_at">Início em %s</string>
+    <string name="routes_segment_pr">PR %s</string>
+    <string name="routes_segment_counter">Segmento %1$d de %2$d</string>
+    <string name="route_layers">Camadas do percurso</string>
+    <string name="route_layer_climbs">Subidas</string>
+    <string name="route_layer_segments">Segmentos</string>
+    <string name="route_layer_waypoints">Pontos de passagem</string>
+    <string name="route_item_hide">Ocultar</string>
+    <string name="route_item_show">Mostrar</string>
+    <string name="segment_routes_containing_title">Rotas com este segmento (%d)</string>
+    <string name="tuning_show_live_climbs_title">Subidas ao vivo (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_summary">Mostrar painel de subida em tempo real durante rotas e pedalada livre</string>
+
+    <string name="turn_cue_left">Vire à esquerda</string>
+    <string name="turn_cue_right">Vire à direita</string>
+    <string name="turn_cue_slight_left">Ligeiramente à esquerda</string>
+    <string name="turn_cue_slight_right">Ligeiramente à direita</string>
+    <string name="turn_cue_sharp_left">Curva apertada à esquerda</string>
+    <string name="turn_cue_sharp_right">Curva apertada à direita</string>
+    <string name="turn_cue_straight">Siga em frente</string>
+    <string name="turn_cue_u_turn">Fazer inversão de marcha</string>
+    <string name="turn_cue_gallery_title">Ícones de indicações de direção</string>
+    <string name="turn_cue_now">AGORA</string>
+    <string name="turn_cue_off_route">Fora da rota (%1$d m)</string>
+    <string name="turn_cue_back_on_route">De volta à rota</string>
+    <string name="turn_prompts_title">Indicações de mudança de direção</string>
+    <string name="turn_prompts_summary">Mostrar indicações passo a passo durante a navegação ativa da rota</string>
+    <string name="turn_audio_alerts_title">Alertas sonoros de direção</string>
+    <string name="turn_audio_alerts_summary">Emitir sinais sonoros antes das mudanças de direção e ao desviar-se da rota</string>
+    <string name="turn_cue_countdown_distance_title">Distância de aviso de curva</string>
+    <string name="turn_cue_countdown_distance_summary">Distância de pré-aviso antes das curvas (metros)</string>
+    <string name="off_route_corridor_threshold_title">Tolerância de desvio de rota</string>
+    <string name="off_route_corridor_threshold_summary">Desvio máximo antes do aviso de saída de rota (metros)</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">Levar para casa</string>
+    <string name="take_me_home_desc">Orientação de regresso por rotas conhecidas</string>
+    <string name="nav_remaining_dist">Restante</string>
+    <string name="nav_remaining_climb">Subida</string>
+    <string name="nav_eta_label">Chegada</string>
+    <string name="nav_destination_home">Casa</string>
+    <string name="nav_stop_return">Parar regresso</string>
+    <string name="nav_route_reverse">Regressar pela rota</string>
+
+    <string name="fork_alert_title">Bifurcação à frente</string>
+    <string name="fork_approaching_in_m">a %1$d m</string>
+    <string name="fork_direction_left">Esquerda</string>
+    <string name="fork_direction_straight">Em frente</string>
+    <string name="fork_direction_right">Direita</string>
+    <string name="fork_dismiss">Dispensar</string>
+    <string name="fork_select_hint">Toque para selecionar</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">Bateria do sensor</string>
+    <string name="notification_channel_description__sensor_battery">Alertas quando o nível da bateria do sensor estiver baixo</string>
+    <string name="sensor_battery_notification_title_1">Bateria do sensor fraca</string>
+    <string name="sensor_battery_notification_title_many">Várias baterias de sensores fracas</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: Bateria fraca (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d sensores: Bateria fraca (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">Ver sensores</string>
+
+    <!-- Sensor Pairing Relocation (ATT-2189) -->
+    <string name="devices_pair_sensor">Emparelhar sensor</string>
+    <string name="devices_pair_protocol_title">Selecionar protocolo</string>
+    <string name="devices_pair_protocol_ant">Sensor ANT+</string>
+    <string name="devices_pair_protocol_ble">Sensor Bluetooth LE</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">Energia em segundo plano restrita</string>
+    <string name="battery_optimization_warning_banner_desc">O Android pode interromper a gravação do treino quando o ecrã se desliga. Desative a otimização de bateria.</string>
+    <string name="battery_optimization_action_fix">Permitir</string>
+    <string name="battery_optimization_dismiss_banner">Dispensar</string>
+
+    <!-- Contextual ANT+ Service Guidance (ATT-2513) -->
+    <string name="ant_status_sheet_title">Serviços do sistema ANT+</string>
+    <string name="ant_status_card_title">Hardware e serviços ANT+</string>
+    <string name="ant_status_card_desc">Os sensores ANT+ em smartphones modernos requerem um adaptador USB-OTG com pen USB ANT+ e serviços de sistema ANT+.</string>
+    <string name="ant_status_card_action">Verificar estado</string>
+    <string name="ant_status_usb_dongle_note">Os smartphones modernos não possuem chips ANT+ integrados. É necessário um adaptador USB-OTG externo com pen USB ANT+ para a receção.</string>
+    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
+    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
+    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
+    <string name="ant_service_installed">Instalado</string>
+    <string name="ant_service_not_installed">Não instalado</string>
+    <string name="ant_service_install_button">Instalar</string>
+
+    <!-- ATT-2931: General Map Layers Control Menu -->
+    <string name="map_layers">Camadas do mapa</string>
+    <string name="map_layer_routes">Percursos</string>
+    <string name="map_layer_segments">Segmentos</string>
+    <string name="map_layer_locations">Locais favoritos</string>
+    <string name="map_layer_track">Trilha gravada</string>
+    <string name="ant_dialog_view_status">Ver estado do ANT+</string>
+    <string name="ant_dialog_dismiss">Entendido</string>
+
+    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
+    <string name="tuning_map_camera_section_title">Câmara do mapa e navegação siga-me</string>
+    <string name="tuning_map_base_zoom_title">Zoom base siga-me</string>
+    <string name="tuning_map_base_zoom_desc">Nível de zoom base da câmara quando parado (0 km/h) no modo siga-me (valor mais alto = zoom mais aproximado)</string>
+    <string name="tuning_map_speed_zoom_enabled_title">Zoom dependente da velocidade</string>
+    <string name="tuning_map_speed_zoom_enabled_desc">Afasta gradualmente o zoom com o aumento da velocidade para expandir a visibilidade à frente</string>
+    <string name="tuning_map_cruising_zoom_title">Zoom a velocidade de cruzeiro (a 20 km/h)</string>
+    <string name="tuning_map_cruising_zoom_desc">Nível de zoom da câmara ajustado para a velocidade típica de ciclismo (20 km/h) (valor mais alto = zoom mais aproximado)</string>
+    <string name="tuning_map_tilt_angle_title">Ângulo de inclinação da câmara</string>
+    <string name="tuning_map_tilt_angle_desc">Ângulo de inclinação da perspetiva para navegação 3D (0° é 2D plano, 70° é perspetiva 3D completa)</string>
+    <string name="tuning_map_lookahead_padding_title">Margem de visão antecipada</string>
+    <string name="tuning_map_lookahead_padding_desc">Percentagem de margem para posicionar o ciclista na parte inferior e maximizar a estrada visível à frente (valor mais alto = ciclista mais abaixo / mais estrada visível à frente)</string>
+    <string name="tuning_map_follow_me_speed_smoothing_title">Suavização de zoom por velocidade</string>
+    <string name="tuning_map_follow_me_speed_smoothing_desc">Fator de amortecimento para alterações de velocidade no zoom Seguir-me (valor inferior = mais suave, valor superior = resposta mais rápida)</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_title">Suavização da orientação</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_desc">Fator de amortecimento para rotação da câmara no modo Seguir-me (valor inferior = mais suave, valor superior = resposta mais rápida)</string>
+
+    <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
+    <string name="devices_newly_discovered_badge">NOVO</string>
+    <string name="devices_new_sensor_discovered">Novo sensor detetado: %1$s</string>
+
+    <!-- ATT-3220 / REQ-UI-353: Missing ANT adapter warning toggle -->
+    <string name="tuning_show_ant_missing_adapter_warnings_title">Mostrar avisos de adaptador ANT+ em falta</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_desc">Mostrar caixa de diálogo de alerta quando um sensor ANT+ é procurado mas nenhum adaptador é detetado</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Seguir automaticamente rota única</string>
+    <string name="tuning_auto_follow_unique_route_desc">Alternar automaticamente para seguir uma rota quando ela se tornar a única correspondente em uma bifurcação</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Distância das indicações de mudança de direção</string>
+    <string name="tuning_nav_cue_distance_desc">Distância antes da curva para exibir avisos de navegação</string>
 </resources>
+

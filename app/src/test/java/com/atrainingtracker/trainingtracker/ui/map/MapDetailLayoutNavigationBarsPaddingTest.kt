@@ -129,11 +129,16 @@ class MapDetailLayoutNavigationBarsPaddingTest {
 
         assertTrue(
             "SensorGridScreen must include navBarHeight in peek height (ATT-1645)",
-            content.contains("sheetPeekHeight = if (showLiveSegments && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp")
+            content.contains("sheetPeekHeight = if ((showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp") ||
+            content.contains("BottomSheetDesign.PeekHeightLiveSegment + navBarHeight")
         )
         assertTrue(
             "SensorGridScreen must host LiveSegmentSheet inside sheetContent",
             content.contains("LiveSegmentSheet(")
+        )
+        assertTrue(
+            "SensorGridScreen must host LiveClimbSheet inside sheetContent (REQ-MAP-027)",
+            content.contains("LiveClimbSheet(")
         )
     }
 }

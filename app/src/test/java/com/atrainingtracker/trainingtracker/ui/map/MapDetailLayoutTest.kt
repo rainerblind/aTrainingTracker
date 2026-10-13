@@ -100,8 +100,8 @@ class MapDetailLayoutTest {
         )
 
         assertTrue(
-            "MapDetailLayout lower container must use dynamic weight (1f - splitFraction) when scrollable (REQ-UI-223)",
-            content.contains("if (showMap && hasScrollableContent)") &&
+            "MapDetailLayout lower container must use dynamic weight (1f - splitFraction) when lower section is present (REQ-UI-223, REQ-UI-267)",
+            (content.contains("if (showMap && hasLowerSection)") || content.contains("if (showMap && hasScrollableContent)")) &&
                     content.contains(".weight(1f - splitFraction)")
         )
     }
@@ -226,6 +226,28 @@ class MapDetailLayoutTest {
         assertTrue(
             "MapDetailLayout must wire onZoomChanged callback to ElevationProfile and 3 TelemetryMetricGraphs (count >= 4) (REQ-UI-232)",
             occurrencesOnZoomChanged >= 4
+        )
+    }
+
+    @Test
+    fun testMapDetailLayout_detectsLowerSection() {
+        assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
+        val content = mapDetailLayoutFile.readText()
+
+        assertTrue(
+            "MapDetailLayout must compute hasLowerSection including showElevationProfile when activeScrubPath is present (REQ-UI-267)",
+            content.contains("val hasLowerSection = (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty() || metadataContent != null || analyticsContent != null")
+        )
+    }
+
+    @Test
+    fun testMapDetailLayout_activatesSplitPaneForLowerSection() {
+        assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
+        val content = mapDetailLayoutFile.readText()
+
+        assertTrue(
+            "MapDetailLayout must gate resizable split pane on (showMap && hasLowerSection) (REQ-UI-267)",
+            content.contains("if (showMap && hasLowerSection)")
         )
     }
 }

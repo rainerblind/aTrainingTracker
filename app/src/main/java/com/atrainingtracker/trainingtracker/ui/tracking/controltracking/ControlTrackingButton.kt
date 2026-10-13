@@ -37,6 +37,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -51,6 +54,7 @@ fun ControlTrackingButton(
     modifier: Modifier = Modifier,
     mode: TrackingMode,
     enabled: Boolean = true,
+    hasPermissionWarning: Boolean = false,
     onStart: () -> Unit,
     onPause: () -> Unit,
     onResume: () -> Unit,
@@ -99,7 +103,8 @@ fun ControlTrackingButton(
                     labelRes = R.string.start_tracking,
                     onClick = onStart,
                     iconSize = 100.dp,
-                    enabled = enabled // Pass down
+                    enabled = enabled,
+                    hasPermissionWarning = hasPermissionWarning
                 )
             }
         }
@@ -112,7 +117,8 @@ private fun ControlItem(
     labelRes: Int,
     onClick: () -> Unit,
     iconSize: androidx.compose.ui.unit.Dp,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    hasPermissionWarning: Boolean = false
 ) {
     // Determine the alpha based on the enabled state
     val contentAlpha = if (enabled) TTAlpha.High else TTAlpha.Disabled
@@ -124,13 +130,34 @@ private fun ControlItem(
             .clickable(enabled = enabled, onClick = onClick)
             .padding(8.dp)
     ) {
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            modifier = Modifier.size(iconSize),
-            // Apply alpha to the tint
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = contentAlpha)
-        )
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(iconSize),
+                // Apply alpha to the tint
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = contentAlpha)
+            )
+            if (hasPermissionWarning) {
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFFF59E0B),
+                    contentColor = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 4.dp, end = 4.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_place),
+                        contentDescription = stringResource(id = R.string.permission_warning_badge_desc),
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .padding(4.dp)
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(8.dp))
         Text(
             text = stringResource(id = labelRes),
@@ -143,6 +170,20 @@ private fun ControlItem(
 }
 
 // --- Previews ---
+
+@Preview(showBackground = true, name = "Start State with Permission Warning")
+@Composable
+fun PreviewControlStartWithWarning() {
+    ATrainingTrackerTheme {
+        Surface {
+            ControlTrackingButton(
+                mode = TrackingMode.READY,
+                hasPermissionWarning = true,
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}
+            )
+        }
+    }
+}
 
 @Preview(showBackground = true, name = "Start State")
 @Composable

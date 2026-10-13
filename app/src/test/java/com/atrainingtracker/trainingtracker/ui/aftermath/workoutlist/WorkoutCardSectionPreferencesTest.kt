@@ -34,16 +34,17 @@ class WorkoutCardSectionPreferencesTest {
     fun defaultPreferences_haveExpectedValues() {
         val prefs = WorkoutCardSectionPreferences()
 
-        // High-density standard card defaults
+        // High-density standard card defaults (REQ-UI-285)
         assertTrue("Description should be enabled by default", prefs.showDescription)
         assertTrue("Extrema should be enabled by default", prefs.showExtrema)
-        assertTrue("Laps should be enabled by default", prefs.showLaps)
+        assertFalse("Laps should be disabled by default for list cards", prefs.showLaps)
         assertTrue("Strava activity should be enabled by default", prefs.showStrava)
         assertTrue("Map preview should be enabled by default", prefs.showMapPreview)
         // Heavy analytical sections (including elevation profile) default to false for 60/120fps LazyColumn scroll performance (REQ-UI-240)
         assertFalse("Elevation profile should be disabled by default for list cards", prefs.showElevationProfile)
         assertFalse("Telemetry charts should be disabled by default", prefs.showTelemetryCharts)
-        assertFalse("Zone analysis should be disabled by default", prefs.showZoneAnalysis)
+        assertTrue("Zone analysis should be enabled by default", prefs.showZoneAnalysis)
+        assertTrue("Export status should be enabled by default", prefs.showExportStatus)
     }
 
     @Test
@@ -52,7 +53,7 @@ class WorkoutCardSectionPreferencesTest {
         val modified = original.copy(
             showMapPreview = false,
             showTelemetryCharts = true,
-            showZoneAnalysis = true
+            showLaps = true
         )
 
         assertTrue(modified.showDescription)
@@ -63,6 +64,7 @@ class WorkoutCardSectionPreferencesTest {
         assertFalse(modified.showElevationProfile)
         assertTrue(modified.showTelemetryCharts)
         assertTrue(modified.showZoneAnalysis)
+        assertTrue(modified.showExportStatus)
     }
 
     @Test

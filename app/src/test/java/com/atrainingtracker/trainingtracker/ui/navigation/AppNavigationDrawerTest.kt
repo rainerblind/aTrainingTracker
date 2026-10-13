@@ -120,7 +120,9 @@ class AppNavigationDrawerTest {
     fun testDrawerGroups_monochromeItems_enableTinting() {
         val groups = createDrawerGroups(R.string.tab_start)
         val allItems = groups.flatMap { it.items }
-        val monochromeItems = allItems.filter { it.id != R.id.drawer_strava && it.id != R.id.drawer_dropbox }
+        val monochromeItems = allItems.filter {
+            it.id != R.id.drawer_strava && it.id != R.id.drawer_dropbox && it.id != R.id.drawer_google_drive
+        }
 
         assertTrue("Drawer must define multiple monochrome items", monochromeItems.size >= 19)
         monochromeItems.forEach { item ->
@@ -143,6 +145,10 @@ class AppNavigationDrawerTest {
         val dropboxItem = allItems.firstOrNull { it.id == R.id.drawer_dropbox }
         assertTrue("Dropbox drawer item must exist", dropboxItem != null)
         assertFalse("Dropbox icon must NOT be tinted with monochrome colors (tintIcon = false)", dropboxItem!!.tintIcon)
+
+        val googleDriveItem = allItems.firstOrNull { it.id == R.id.drawer_google_drive }
+        assertTrue("Google Drive drawer item must exist", googleDriveItem != null)
+        assertFalse("Google Drive icon must NOT be tinted with monochrome colors (tintIcon = false)", googleDriveItem!!.tintIcon)
     }
 
     @Test

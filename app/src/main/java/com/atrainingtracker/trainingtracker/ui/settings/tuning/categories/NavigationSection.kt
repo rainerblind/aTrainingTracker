@@ -1,0 +1,270 @@
+/*
+ * aTrainingTracker (ANT+ BTLE)
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+ */
+
+package com.atrainingtracker.trainingtracker.ui.settings.tuning.categories
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
+import java.util.Locale
+import kotlin.math.roundToInt
+
+import androidx.compose.material3.HorizontalDivider
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
+
+/**
+ * Navigation tuning category composable (REQ-UI-281, REQ-UI-287, REQ-MAP-042 / ATT-2460, ATT-2632, ATT-2946).
+ * Encapsulates pre-ride route selection proximity radius, cue overlay transparency, auto-dismiss duration,
+ * and Follow-Me map camera parameters (base zoom, speed zoom, tilt, lookahead padding).
+ */
+@Composable
+fun NavigationSection(
+    routeSelectionRadiusKm: Float,
+    onRadiusChange: (Float) -> Unit,
+    navigationCueDismissDurationSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+    onDismissDurationChange: (Int) -> Unit = {},
+    mapFollowMeInitialZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
+    onMapFollowMeInitialZoomChange: (Float) -> Unit = {},
+    mapFollowMeSpeedZoomEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+    onMapFollowMeSpeedZoomEnabledChange: (Boolean) -> Unit = {},
+    mapFollowMeCruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
+    onMapFollowMeCruisingZoomChange: (Float) -> Unit = {},
+    mapFollowMeTiltAngle: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE,
+    onMapFollowMeTiltAngleChange: (Float) -> Unit = {},
+    mapFollowMeLookaheadPaddingPercent: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+    onMapFollowMeLookaheadPaddingPercentChange: (Float) -> Unit = {},
+    mapFollowMeSpeedSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+    onMapFollowMeSpeedSmoothingAlphaChange: (Float) -> Unit = {},
+    mapFollowMeBearingSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+    onMapFollowMeBearingSmoothingAlphaChange: (Float) -> Unit = {},
+    autoFollowUniqueRouteEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
+    onAutoFollowUniqueRouteEnabledChange: (Boolean) -> Unit = {},
+    turnCueCountdownDistanceMeters: Float = TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+    onTurnCueCountdownDistanceChange: (Float) -> Unit = {}
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // Route Selection Radius
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_route_selection_radius_title),
+            valueText = String.format(Locale.getDefault(), "%.1f km", routeSelectionRadiusKm),
+            helperText = stringResource(R.string.tuning_route_selection_radius_desc),
+            defaultText = stringResource(R.string.tuning_default_format, "1.0 km"),
+            value = routeSelectionRadiusKm,
+            onValueChange = { snapped ->
+                val rounded = (snapped * 2f).roundToInt() / 2f
+                onRadiusChange(rounded.coerceIn(
+                    TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
+                    TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
+                ))
+            },
+            valueRange = TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM..TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM,
+            steps = 18
+        )
+
+        // Navigation Cue Dismiss Duration (1s - 10s, 1s increments) (ATT-3450 / REQ-UI-287)
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_nav_cue_dismiss_duration_title),
+            valueText = "${navigationCueDismissDurationSec}s",
+            helperText = stringResource(R.string.tuning_nav_cue_dismiss_duration_desc),
+            defaultText = stringResource(
+                R.string.tuning_default_format,
+                "${TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC}s"
+            ),
+            value = navigationCueDismissDurationSec.toFloat(),
+            onValueChange = { snapped ->
+                onDismissDurationChange(
+                    snapped.roundToInt().coerceIn(
+                        TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+                        TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
+                    )
+                )
+            },
+            valueRange = TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC.toFloat()..TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC.toFloat(),
+            steps = 8
+        )
+
+        // Navigation Cue Countdown Distance (30m - 300m, 10m increments) (ATT-3321 / REQ-UI-287)
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_nav_cue_distance_title),
+            valueText = "${turnCueCountdownDistanceMeters.roundToInt()} m",
+            helperText = stringResource(R.string.tuning_nav_cue_distance_desc),
+            defaultText = stringResource(R.string.tuning_default_format, "100 m"),
+            value = turnCueCountdownDistanceMeters,
+            onValueChange = { snapped ->
+                val rounded = (snapped / 10f).roundToInt() * 10f
+                onTurnCueCountdownDistanceChange(rounded.coerceIn(
+                    TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+                    TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS
+                ))
+            },
+            valueRange = TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS..TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+            steps = 26
+        )
+
+        // Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031)
+        TuningToggleItem(
+            title = stringResource(R.string.tuning_auto_follow_unique_route_title),
+            isChecked = autoFollowUniqueRouteEnabled,
+            onCheckedChange = onAutoFollowUniqueRouteEnabledChange,
+            summary = stringResource(R.string.tuning_auto_follow_unique_route_desc)
+        )
+
+        // Follow-Me Map Camera Heading / Divider
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        Text(
+            text = stringResource(R.string.tuning_map_camera_section_title),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        // Follow-Me Base Zoom (15.0 - 21.0, 0.5 steps)
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_map_base_zoom_title),
+            valueText = String.format(Locale.getDefault(), "%.1f", mapFollowMeInitialZoom),
+            helperText = stringResource(R.string.tuning_map_base_zoom_desc),
+            defaultText = stringResource(R.string.tuning_default_format, "20.0"),
+            value = mapFollowMeInitialZoom,
+            onValueChange = { snapped ->
+                val rounded = (snapped * 2f).roundToInt() / 2f
+                onMapFollowMeInitialZoomChange(rounded.coerceIn(
+                    TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM,
+                    TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM
+                ))
+            },
+            valueRange = TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM..TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM,
+            steps = 11
+        )
+
+        // Speed-Dependent Zoom Toggle
+        TuningToggleItem(
+            title = stringResource(R.string.tuning_map_speed_zoom_enabled_title),
+            isChecked = mapFollowMeSpeedZoomEnabled,
+            onCheckedChange = onMapFollowMeSpeedZoomEnabledChange,
+            summary = stringResource(R.string.tuning_map_speed_zoom_enabled_desc)
+        )
+
+        // Cruising Speed Zoom (14.0 - 19.5, 0.5 steps)
+        if (mapFollowMeSpeedZoomEnabled) {
+            TuningSliderItem(
+                title = stringResource(R.string.tuning_map_cruising_zoom_title),
+                valueText = String.format(Locale.getDefault(), "%.1f", mapFollowMeCruisingZoom),
+                helperText = stringResource(R.string.tuning_map_cruising_zoom_desc),
+                defaultText = stringResource(R.string.tuning_default_format, "18.0"),
+                value = mapFollowMeCruisingZoom,
+                onValueChange = { snapped ->
+                    val rounded = (snapped * 2f).roundToInt() / 2f
+                    onMapFollowMeCruisingZoomChange(rounded.coerceIn(
+                        TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM,
+                        TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM
+                    ))
+                },
+                valueRange = TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM..TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM,
+                steps = 10
+            )
+        }
+
+        // Camera Tilt Angle (0° - 70°, 5° steps)
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_map_tilt_angle_title),
+            valueText = "${mapFollowMeTiltAngle.roundToInt()}°",
+            helperText = stringResource(R.string.tuning_map_tilt_angle_desc),
+            defaultText = stringResource(R.string.tuning_default_format, "70°"),
+            value = mapFollowMeTiltAngle,
+            onValueChange = { snapped ->
+                val rounded = (snapped / 5f).roundToInt() * 5f
+                onMapFollowMeTiltAngleChange(rounded.coerceIn(
+                    TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE,
+                    TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE
+                ))
+            },
+            valueRange = TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE..TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE,
+            steps = 13
+        )
+
+        // Forward Lookahead Bottom Padding (10% - 50%, 5% steps)
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_map_lookahead_padding_title),
+            valueText = "${mapFollowMeLookaheadPaddingPercent.roundToInt()}%",
+            helperText = stringResource(R.string.tuning_map_lookahead_padding_desc),
+            defaultText = stringResource(R.string.tuning_default_format, "30%"),
+            value = mapFollowMeLookaheadPaddingPercent,
+            onValueChange = { snapped ->
+                val rounded = (snapped / 5f).roundToInt() * 5f
+                onMapFollowMeLookaheadPaddingPercentChange(rounded.coerceIn(
+                    TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+                    TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
+                ))
+            },
+            valueRange = TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT..TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+            steps = 7
+        )
+
+        // Speed Smoothing (0.02 - 0.50, 0.02 steps)
+        if (mapFollowMeSpeedZoomEnabled) {
+            TuningSliderItem(
+                title = stringResource(R.string.tuning_map_follow_me_speed_smoothing_title),
+                valueText = String.format(Locale.getDefault(), "%.2f", mapFollowMeSpeedSmoothingAlpha),
+                helperText = stringResource(R.string.tuning_map_follow_me_speed_smoothing_desc),
+                defaultText = stringResource(R.string.tuning_default_format, "0.10"),
+                value = mapFollowMeSpeedSmoothingAlpha,
+                onValueChange = { snapped ->
+                    val rounded = (snapped * 50f).roundToInt() / 50f
+                    onMapFollowMeSpeedSmoothingAlphaChange(rounded.coerceIn(
+                        TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+                        TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
+                    ))
+                },
+                valueRange = TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA..TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+                steps = 23
+            )
+        }
+
+        // Bearing Smoothing (0.05 - 0.50, 0.05 steps)
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_map_follow_me_bearing_smoothing_title),
+            valueText = String.format(Locale.getDefault(), "%.2f", mapFollowMeBearingSmoothingAlpha),
+            helperText = stringResource(R.string.tuning_map_follow_me_bearing_smoothing_desc),
+            defaultText = stringResource(R.string.tuning_default_format, "0.15"),
+            value = mapFollowMeBearingSmoothingAlpha,
+            onValueChange = { snapped ->
+                val rounded = (snapped * 20f).roundToInt() / 20f
+                onMapFollowMeBearingSmoothingAlphaChange(rounded.coerceIn(
+                    TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+                    TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
+                ))
+            },
+            valueRange = TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA..TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+            steps = 8
+        )
+    }
+}

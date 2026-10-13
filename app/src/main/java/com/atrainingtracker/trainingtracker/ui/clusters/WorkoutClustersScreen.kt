@@ -61,7 +61,6 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutList
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel
 import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
 import com.atrainingtracker.trainingtracker.ui.map.toMapTrack
-import kotlinx.coroutines.flow.collectLatest
 
 /**
  * Top-level Composable for Workout Clusters tabbed list, detail heatmap, and management (REQ-UI-159).
@@ -87,7 +86,6 @@ fun WorkoutClustersScreen(
     var inspectedWorkout by remember { mutableStateOf<WorkoutData?>(null) }
     var editedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
 
-    var isTuning by remember { mutableStateOf(false) }
     var isAdding by remember { mutableStateOf(false) }
 
     val pagerState = rememberPagerState { 5 }
@@ -106,26 +104,7 @@ fun WorkoutClustersScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.recalculationFinished.collectLatest {
-            isTuning = false
-        }
-    }
-
     when {
-        isTuning -> {
-            BackHandler {
-                viewModel.saveTuningParameters()
-                isTuning = false
-            }
-            ClusterTuningScreen(
-                viewModel = viewModel,
-                onBack = {
-                    viewModel.saveTuningParameters()
-                    isTuning = false
-                }
-            )
-        }
         isAdding -> {
             BackHandler { isAdding = false }
             ManualClusterScreen(
@@ -198,6 +177,7 @@ fun WorkoutClustersScreen(
             val cluster = viewingWorkoutsForCluster!!
             val isCompactView by summariesViewModel.isCompactView.collectAsStateWithLifecycle()
             val workoutCardPreferences by summariesViewModel.workoutCardPreferences.collectAsStateWithLifecycle()
+            val workoutSectionsOrder by summariesViewModel.workoutSectionsOrder.collectAsStateWithLifecycle()
             val sortOrder by summariesViewModel.sortOrder.collectAsStateWithLifecycle()
 
             BackHandler { viewingWorkoutsForCluster = null }
@@ -249,7 +229,8 @@ fun WorkoutClustersScreen(
                         headerHeightPx = 0f,
                         onClusterClick = { viewingWorkoutsForCluster = null },
                         onMarkFinished = { workoutId -> summariesViewModel.markWorkoutFinished(workoutId) },
-                        workoutCardPreferences = workoutCardPreferences
+                        workoutCardPreferences = workoutCardPreferences,
+                        workoutSectionsOrder = workoutSectionsOrder
                     )
                 }
             }
@@ -292,7 +273,6 @@ fun WorkoutClustersScreen(
                 onClusterClick = { viewModel.selectCluster(it) },
                 onWorkoutClick = { inspectedWorkout = it },
                 onHitCountClick = { viewingWorkoutsForCluster = it },
-                onTuneClick = { isTuning = true },
                 onAddClick = { isAdding = true },
                 onDeleteRequest = { clusterToDelete = it },
                 migrationStatus = migrationStatus

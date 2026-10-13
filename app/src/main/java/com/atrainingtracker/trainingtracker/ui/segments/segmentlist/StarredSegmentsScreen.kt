@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.trainingtracker.ui.map.toMapSegment
+import com.atrainingtracker.trainingtracker.ui.routes.RouteDetailSheet
 import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 
 /**
@@ -48,6 +49,7 @@ fun StarredSegmentsScreen(
     val refreshingSports by viewModel.refreshingSports.collectAsStateWithLifecycle()
     val isLocationAvailable by viewModel.isLocationAvailable.collectAsStateWithLifecycle()
     val filterCriteria by viewModel.filterCriteria.collectAsStateWithLifecycle()
+    val allRoutes by viewModel.allRoutes.collectAsStateWithLifecycle()
 
     val pagerState = rememberPagerState(pageCount = { 2 })
     val bikeListState = rememberLazyListState()
@@ -55,6 +57,7 @@ fun StarredSegmentsScreen(
 
     // 1. Manage local navigation state
     var selectedSegmentId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var inspectedRouteId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     // 2. Logic to switch between List and Detail
     Box(modifier = modifier) {
@@ -99,12 +102,29 @@ fun StarredSegmentsScreen(
                 SegmentOnMapScreen(
                     segmentSummary = selectedSegment.summary,
                     segment = selectedSegment.toMapSegment(showStartAndFinishText = false),
-                    backgroundPaths = backgroundPaths
+                    backgroundPaths = backgroundPaths,
+                    candidateRoutes = allRoutes,
+                    onRouteClick = { routeId ->
+                        inspectedRouteId = routeId
+                    }
                 )
 
-                // Handle Back Press to return to list
+                // Route details modal bottom sheet overlay (REQ-UI-316 / ATT-2861)
+                val inspectedRoute = inspectedRouteId?.let { id -> allRoutes.find { it.summary.id == id } }
+                if (inspectedRoute != null) {
+                    RouteDetailSheet(
+                        routeWithPath = inspectedRoute,
+                        onDismiss = { inspectedRouteId = null }
+                    )
+                }
+
+                // Handle Back Press: dismiss inspected route first, then return to segment list
                 BackHandler {
-                    selectedSegmentId = null
+                    if (inspectedRouteId != null) {
+                        inspectedRouteId = null
+                    } else {
+                        selectedSegmentId = null
+                    }
                 }
             }
         }

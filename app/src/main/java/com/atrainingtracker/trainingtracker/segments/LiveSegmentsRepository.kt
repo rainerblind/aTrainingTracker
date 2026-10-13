@@ -27,9 +27,12 @@ import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.SphericalUtil
+import com.atrainingtracker.trainingtracker.geo.PolylineGate
+import com.atrainingtracker.trainingtracker.geo.PolylineProgressTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
@@ -48,9 +51,11 @@ data class LiveSegmentData(
     val segmentStatus: LiveSegmentStatus,
     val timeOnSegment: String = "--:--",
     val distanceToStart: String = "--",
+    val distanceToStart_raw: Double = Double.MAX_VALUE,
     val distanceOnSegment: String = "--",
     val distanceOnSegment_raw: Double = 0.0,
     val remainingDistance: String = "--",
+    val remainingDistance_raw: Double = Double.MAX_VALUE,
     val segmentOffset: String = "--",
     val segmentOffset_raw: Double = 0.0
 )
@@ -69,7 +74,9 @@ data class LiveSegmentMath(
     var end_cross_loc: Double = 0.0,  // the cross product of the current/past location to the finish line
     var startTime_ms: Long = -1,      // the time (in milliseconds) when we started the segment
     var startDistance: Double = 0.0,  // the distance, when we started the segment
-    var indexOfDistance: Int = 0      // index of the segment flow of the current distance
+    var indexOfDistance: Int = 0,     // index of the segment flow of the current distance
+    val startGate: PolylineGate? = null,
+    val endGate: PolylineGate? = null
 )
 
 // data class that encapsulates all data for a live segment (summary, path, time and distances, as well as the math details)
@@ -80,25 +87,23 @@ data class LiveSegment(
 )
 
 
-class LiveSegmentsRepository private constructor(context: Context) {
-
-    val segmentsRepository = SegmentsRepository.getInstance(context)
-    val banalRepository = BANALServiceRepository.getInstance(context)
+class LiveSegmentsRepository internal constructor(
+    context: Context,
+    val segmentsRepository: SegmentsRepository = SegmentsRepository.getInstance(context),
+    val banalRepository: BANALServiceRepository = BANALServiceRepository.getInstance(context),
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+) {
 
     // Helpers for formatting time and distance
     private val tf = TimeFormatter()
     private val df = DistanceFormatter()
-
-
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val _liveSegments = MutableStateFlow<List<LiveSegment>>(emptyList())
     val liveSegments = _liveSegments.asStateFlow()
 
     init {
         // 1. Listen for new/changed segments from the Data Repository
-        scope.launch(Dispatchers.Default) {
+        scope.launch {
             segmentsRepository.allSegmentsWithPath.collect { staticSegments ->
                 reconcileSegments(staticSegments)
             }
@@ -119,7 +124,7 @@ class LiveSegmentsRepository private constructor(context: Context) {
     /**
      * Handles adding new segments without resetting the state of existing ones.
      */
-    private fun reconcileSegments(newStaticData: List<SegmentWithPath>) {
+    internal fun reconcileSegments(newStaticData: List<SegmentWithPath>) {
         val currentLive = _liveSegments.value.associateBy { it.staticData.summary.stravaId }
 
         val updatedList = newStaticData.mapNotNull { segmentWithPath ->
@@ -142,44 +147,40 @@ class LiveSegmentsRepository private constructor(context: Context) {
      * Calculates the virtual gates (start/finish lines) and distances for a segment.
      * The gates are perpendicular to the path direction.
      */
-    private fun calculateInitialLiveSegmentState(segmentWithPath: SegmentWithPath): LiveSegment? {
+    internal fun calculateInitialLiveSegmentState(segmentWithPath: SegmentWithPath): LiveSegment? {
         val path = segmentWithPath.path
 
         if (path.size < 6) return null
 
-        val start = path.first().latLng
-        val next = path[5].latLng
-        val end = path.last().latLng
-        val prevToEnd = path[path.size - 6].latLng
+        val startGate = PolylineProgressTracker.createGate(
+            points = path,
+            isStartGate = true,
+            gateThresholdMeters = SEGMENT_START_DISTANCE_THRESHOLD.toDouble(),
+            sampleOffset = 5
+        ) ?: return null
 
-        // 1. Calculate Start Gate (Perpendicular to first path segment)
-        val startA = LatLng(start.latitude + (start.longitude - next.longitude), start.longitude - (start.latitude - next.latitude))
-        val startB = LatLng(start.latitude - (start.longitude - next.longitude), start.longitude + (start.latitude - next.latitude))
-
-        // Calculate the bearing of the segment start
-        val segmentStartBearing = SphericalUtil.computeHeading(start, next)
-
-        // 2. Calculate End Gate (Perpendicular to last path segment)
-        val endA = LatLng(end.latitude + (end.longitude - prevToEnd.longitude), end.longitude - (end.latitude - prevToEnd.latitude))
-        val endB = LatLng(end.latitude - (end.longitude - prevToEnd.longitude), end.longitude + (end.latitude - prevToEnd.latitude))
-
-        // 3. Pre-calculate cross products for next start/ prev end points
-        val startCrossN = crossProduct(startA, startB, next)
-        val endCrossP = crossProduct(endA, endB, prevToEnd)
+        val endGate = PolylineProgressTracker.createGate(
+            points = path,
+            isStartGate = false,
+            gateThresholdMeters = SEGMENT_END_DISTANCE_THRESHOLD.toDouble(),
+            sampleOffset = 5
+        ) ?: return null
 
         return LiveSegment(
             staticData = segmentWithPath,
             liveData = LiveSegmentData(segmentStatus = LiveSegmentStatus.FAR_FAR_AWAY),
             math = LiveSegmentMath(
-                start = start,
-                start_a = startA,
-                start_b = startB,
-                segmentStartBearing = segmentStartBearing,
-                start_cross_n = startCrossN,
-                end = end,
-                end_a = endA,
-                end_b = endB,
-                end_cross_p = endCrossP,
+                start = path.first().latLng,
+                start_a = startGate.gateStart,
+                start_b = startGate.gateEnd,
+                segmentStartBearing = startGate.bearing,
+                start_cross_n = startGate.referenceCrossProduct,
+                end = path.last().latLng,
+                end_a = endGate.gateStart,
+                end_b = endGate.gateEnd,
+                end_cross_p = endGate.referenceCrossProduct,
+                startGate = startGate,
+                endGate = endGate
             )
         )
     }
@@ -189,7 +190,7 @@ class LiveSegmentsRepository private constructor(context: Context) {
     /**
      * Updates the live segment data whenever the user's location changes.
      */
-    private fun updateLiveSegments(currentLocation: LatLng, currentBearing: Double, currentDistance: Double) {
+    internal fun updateLiveSegments(currentLocation: LatLng, currentBearing: Double, currentDistance: Double) {
         if (DEBUG) Log.i(TAG, "updateLiveSegments ...")
 
         _liveSegments.value = _liveSegments.value.map { liveSegment ->
@@ -197,20 +198,29 @@ class LiveSegmentsRepository private constructor(context: Context) {
 
             var newSegmentStatus = liveSegment.liveData.segmentStatus
 
+            val startGate = liveSegment.math.startGate ?: PolylineGate(
+                gateStart = liveSegment.math.start_a,
+                gateEnd = liveSegment.math.start_b,
+                referencePoint = liveSegment.math.start,
+                referenceCrossProduct = liveSegment.math.start_cross_n,
+                gateThresholdMeters = SEGMENT_START_DISTANCE_THRESHOLD.toDouble(),
+                bearing = liveSegment.math.segmentStartBearing
+            )
+            val endGate = liveSegment.math.endGate ?: PolylineGate(
+                gateStart = liveSegment.math.end_a,
+                gateEnd = liveSegment.math.end_b,
+                referencePoint = liveSegment.math.end,
+                referenceCrossProduct = liveSegment.math.end_cross_p,
+                gateThresholdMeters = SEGMENT_END_DISTANCE_THRESHOLD.toDouble(),
+                bearing = liveSegment.math.segmentStartBearing
+            )
+
             val start_cross_loc =
-                crossProduct(liveSegment.math.start_a, liveSegment.math.start_b, currentLocation)
-            val distanceToStart = PolyUtil.distanceToLine(
-                currentLocation,
-                liveSegment.math.start_a,
-                liveSegment.math.start_b
-            )
+                PolylineProgressTracker.crossProduct(startGate.gateStart, startGate.gateEnd, currentLocation)
+            val distanceToStart = PolylineProgressTracker.distanceToGate(currentLocation, startGate)
             val end_cross_loc =
-                crossProduct(liveSegment.math.end_a, liveSegment.math.end_b, currentLocation)
-            val distanceToEnd = PolyUtil.distanceToLine(
-                currentLocation,
-                liveSegment.math.end_a,
-                liveSegment.math.end_b
-            )
+                PolylineProgressTracker.crossProduct(endGate.gateStart, endGate.gateEnd, currentLocation)
+            val distanceToEnd = PolylineProgressTracker.distanceToGate(currentLocation, endGate)
 
             if (DEBUG) Log.i(
                 TAG,
@@ -225,8 +235,11 @@ class LiveSegmentsRepository private constructor(context: Context) {
             when (liveSegment.liveData.segmentStatus) {
                 LiveSegmentStatus.FAR_FAR_AWAY -> {
                     // Calculate bearing alignment
-                    val bearingDiff = getBearingDifference(currentBearing, liveSegment.math.segmentStartBearing)
-                    val isHeadingCorrect = bearingDiff <= 45f // 45 degrees tolerance
+                    val isHeadingCorrect = PolylineProgressTracker.isHeadingAligned(
+                        currentBearing,
+                        startGate.bearing,
+                        45.0
+                    )
 
                     if (distanceToStart <= SEGMENT_START_DISTANCE_THRESHOLD                // close enough to start
                         && isHeadingCorrect                                                // going in the right direction
@@ -237,10 +250,15 @@ class LiveSegmentsRepository private constructor(context: Context) {
                     }
                 }
                 LiveSegmentStatus.APPROACHING -> {
-                    // crossing the start line
-                    if (liveSegment.math.start_cross_loc.sign != start_cross_loc.sign      // sign has changed -> crossed the start line
-                        && start_cross_loc.sign == liveSegment.math.start_cross_n.sign     // same sign as the 'first' point in the segment -> crossed the start line in the right direction
-                        && distanceToStart <= SEGMENT_DISTANCE_THRESHOLD) {                // close enough to the segment.
+                    // crossing the start line via 2D vector cross-product sign-flip (REQ-GEO-001)
+                    val crossedStart = PolylineProgressTracker.checkGateCrossing(
+                        gate = startGate,
+                        prevCrossProduct = liveSegment.math.start_cross_loc,
+                        currCrossProduct = start_cross_loc,
+                        distanceToGate = distanceToStart,
+                        isStartGate = true
+                    )
+                    if (crossedStart && distanceToStart <= SEGMENT_DISTANCE_THRESHOLD) { // close enough to the segment
                         if (DEBUG) Log.i(TAG, "  We crossed the start line of : ${liveSegment.staticData.summary.name}")
 
                         // remember the startTime and startDistance
@@ -266,8 +284,14 @@ class LiveSegmentsRepository private constructor(context: Context) {
                     }
                 }
                 LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> {
-                    if (liveSegment.math.end_cross_loc.sign != end_cross_loc.sign       // sign has changed -> crossed the finish line
-                        && end_cross_loc.sign != liveSegment.math.end_cross_p.sign) {   // different sign as the 'last' point in the segment -> crossed the finish line in the right direction
+                    val crossedEnd = PolylineProgressTracker.checkGateCrossing(
+                        gate = endGate,
+                        prevCrossProduct = liveSegment.math.end_cross_loc,
+                        currCrossProduct = end_cross_loc,
+                        distanceToGate = distanceToEnd,
+                        isStartGate = false
+                    )
+                    if (crossedEnd) {
                         if (DEBUG) Log.i(TAG, "  We crossed the finish line: ${liveSegment.staticData.summary.name}")
 
                         newSegmentStatus = LiveSegmentStatus.FINISHED
@@ -291,11 +315,14 @@ class LiveSegmentsRepository private constructor(context: Context) {
             // now, do an update based on the new state
             when (newSegmentStatus) {
                 LiveSegmentStatus.APPROACHING -> {
+                    val remainingDistance = liveSegment.staticData.summary.distance_raw + distanceToStart
                     liveSegment.copy(
                         liveData = LiveSegmentData(
                             segmentStatus = LiveSegmentStatus.APPROACHING,
                             distanceToStart = df.format_with_units(distanceToStart),
-                            remainingDistance = df.format_with_units(liveSegment.staticData.summary.distance_raw + distanceToStart)
+                            distanceToStart_raw = distanceToStart,
+                            remainingDistance = df.format_with_units(remainingDistance),
+                            remainingDistance_raw = remainingDistance
                         )
                     )
                 }
@@ -305,37 +332,19 @@ class LiveSegmentsRepository private constructor(context: Context) {
 
                     val timeOnSegment =
                         (System.currentTimeMillis() - liveSegment.math.startTime_ms) / 1000
-                    val distanceOnSegment = currentDistance - liveSegment.math.startDistance
 
-                    // The remainingDistance can be calculated by subtracting the distance on the segment form the segments distance or by the line distance to the finish line.
-                    // The difference between the segments distance and the distance on the segment is perfect as long as we are not close to the finish line.
-                    // The line distance to the finish line is perfect when we are close to the finish line.
-                    // To get the best of both, we use a linear combination of this difference and the line distance to the finish line when we are close to the finish line.
-                    // In doing so, we get a remainingDistance of zero at the finish line but no jumps of the remainingDistance.
-                    val lambda = (distanceToEnd / SEGMENT_END_DISTANCE_THRESHOLD).coerceAtMost(1.0)
-                    val remainingDistance =
-                        (liveSegment.staticData.summary.distance_raw - distanceOnSegment) * lambda + (1 - lambda) * distanceToEnd
+                    // Continuous orthogonal polyline projection (REQ-GEO-001)
+                    val projection = PolylineProgressTracker.projectLocation(liveSegment.staticData.path, currentLocation)
+                    val distanceOnSegment = projection?.alongTrackDistance ?: (currentDistance - liveSegment.math.startDistance)
+                    val distanceToSegment = projection?.crossTrackDistanceMeters ?: 0.0
 
-                    // find the index that matches the current distance
-                    while (liveSegment.math.indexOfDistance < liveSegment.staticData.path.size - 1
-                        && liveSegment.staticData.path[liveSegment.math.indexOfDistance].distance <= distanceOnSegment
-                    ) {
-                        liveSegment.math.indexOfDistance++
-                    }
-                    // -> indexOfDistance is such that it points to the distance that is bigger than the current distance
-                    // when we assume that the first distance in the segment stream is zero and the distance on segment is zero, when we just start the segment,
-                    // we should get indexOfDistance = 1
-
-                    // get the distance of the current location to the segment
-                    val distanceToSegment = if (liveSegment.math.indexOfDistance > 0) {
-                        PolyUtil.distanceToLine(
-                            currentLocation,
-                            liveSegment.staticData.path[liveSegment.math.indexOfDistance - 1].latLng,
-                            liveSegment.staticData.path[liveSegment.math.indexOfDistance].latLng
-                        )
-                    } else {
-                        0.0  // simply 0.
-                    }
+                    // Smooth finish remaining distance lambda-blending (REQ-GEO-001)
+                    val remainingDistance = PolylineProgressTracker.calculateBlendedRemainingDistance(
+                        totalDistance = liveSegment.staticData.summary.distance_raw,
+                        completedDistance = distanceOnSegment,
+                        distanceToEnd = distanceToEnd,
+                        finishThresholdMeters = SEGMENT_END_DISTANCE_THRESHOLD.toDouble()
+                    )
 
                     // if distance to segment is too far away, we set its state to FAR_FAR_AWAY
                     if (distanceToSegment > SEGMENT_DISTANCE_THRESHOLD) {
@@ -352,6 +361,8 @@ class LiveSegmentsRepository private constructor(context: Context) {
                                 distanceOnSegment = df.format_with_units(distanceOnSegment),
                                 distanceOnSegment_raw = distanceOnSegment,
                                 remainingDistance = df.format_with_units(remainingDistance),
+                                remainingDistance_raw = remainingDistance,
+                                distanceToStart_raw = 0.0,
                                 segmentOffset = df.format_with_units(distanceToSegment),
                                 segmentOffset_raw = distanceToSegment
                             )
@@ -363,7 +374,8 @@ class LiveSegmentsRepository private constructor(context: Context) {
                     if (liveSegment.liveData.segmentStatus != LiveSegmentStatus.FINISHED) {   // just finished
                         val timeOnSegment =
                             (System.currentTimeMillis() - liveSegment.math.startTime_ms) / 1000
-                        val distanceOnSegment = currentDistance - liveSegment.math.startDistance
+                        val projection = PolylineProgressTracker.projectLocation(liveSegment.staticData.path, currentLocation)
+                        val distanceOnSegment = projection?.alongTrackDistance ?: (currentDistance - liveSegment.math.startDistance)
                         liveSegment.copy(
                             liveData = LiveSegmentData(
                                 segmentStatus = newSegmentStatus,
@@ -371,14 +383,18 @@ class LiveSegmentsRepository private constructor(context: Context) {
                                 distanceOnSegment = df.format_with_units(distanceOnSegment),
                                 distanceOnSegment_raw = distanceOnSegment,
                                 remainingDistance = df.format_with_units(0),
-                                segmentOffset = df.format_with_units(distanceToEnd)
+                                remainingDistance_raw = 0.0,
+                                distanceToStart_raw = 0.0,
+                                segmentOffset = df.format_with_units(distanceToEnd),
+                                segmentOffset_raw = distanceToEnd
                             )
                         )
                     }
                     else {  // finished some time ago -> only update the segmentOffset as the distance to the end.
                         liveSegment.copy(
                             liveData = liveSegment.liveData.copy(
-                                segmentOffset = df.format_with_units(distanceToEnd)
+                                segmentOffset = df.format_with_units(distanceToEnd),
+                                segmentOffset_raw = distanceToEnd
                             )
                         )
                     }
@@ -401,7 +417,7 @@ class LiveSegmentsRepository private constructor(context: Context) {
     }
 
     private fun crossProduct(a: LatLng, b: LatLng, c: LatLng): Double {
-        return (b.latitude - a.latitude) * (c.longitude - a.longitude) - (b.longitude - a.longitude) * (c.latitude - a.latitude)
+        return PolylineProgressTracker.crossProduct(a, b, c)
     }
 
     /**
@@ -409,13 +425,16 @@ class LiveSegmentsRepository private constructor(context: Context) {
      * Result is between 0 and 180.
      */
     private fun getBearingDifference(bearing1: Double, bearing2: Double): Double {
-        val diff = Math.abs(bearing1 - bearing2) % 360
-        return if (diff > 180) 360 - diff else diff
+        return PolylineProgressTracker.getBearingDifference(bearing1, bearing2)
     }
 
 
 
 
+
+    fun cancelScope() {
+        scope.cancel()
+    }
 
     /***********************************************************************************************
      * Companion Object
@@ -438,6 +457,11 @@ class LiveSegmentsRepository private constructor(context: Context) {
             return instance ?: synchronized(this) {
                 instance ?: LiveSegmentsRepository(context.applicationContext).also { instance = it }
             }
+        }
+
+        fun resetForTesting(newInstance: LiveSegmentsRepository? = null) {
+            instance?.cancelScope()
+            instance = newInstance
         }
     }
 }

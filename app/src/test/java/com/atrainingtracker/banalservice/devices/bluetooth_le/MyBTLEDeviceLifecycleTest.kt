@@ -19,10 +19,13 @@
 package com.atrainingtracker.banalservice.devices.bluetooth_le
 
 import android.Manifest
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
+import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.content.pm.PackageManager
@@ -131,12 +134,22 @@ class MyBTLEDeviceLifecycleTest {
         } returns PackageManager.PERMISSION_GRANTED
         every { ContextCompat.registerReceiver(any(), any(), any(), any()) } returns null
 
+        mockkStatic(ActivityCompat::class)
+        every {
+            ActivityCompat.checkSelfPermission(any(), Manifest.permission.BLUETOOTH_CONNECT)
+        } returns PackageManager.PERMISSION_GRANTED
+
         mockkStatic(DevicesDatabaseManager::class)
         val mockDevicesDbManager = mockk<DevicesDatabaseManager>(relaxed = true)
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDbManager
 
         mockkConstructor(android.content.Intent::class)
         every { anyConstructed<android.content.Intent>().setPackage(any()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().putExtra(any<String>(), any<String>()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().putExtra(any<String>(), any<Int>()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().putExtra(any<String>(), any<Long>()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().putExtra(any<String>(), any<Boolean>()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().putExtra(any<String>(), any<java.io.Serializable>()) } answers { self as android.content.Intent }
 
         mockkConstructor(Handler::class)
         every { anyConstructed<Handler>().post(any()) } answers {
@@ -359,5 +372,60 @@ class MyBTLEDeviceLifecycleTest {
 
         // Assert: Permission check aborted execution before calling gatt
         verify(exactly = 0) { mockGatt.readCharacteristic(any()) }
+    }
+
+    /**
+     * TST-CON-011.1: Verify that on API 23+, startSearching connects GATT with BluetoothDevice.TRANSPORT_LE.
+     */
+    @Test
+    fun testStartSearching_onApi23Plus_connectsGattWithTransportLe() {
+        val mockBtManager = mockk<BluetoothManager>(relaxed = true)
+        val mockAdapter = mockk<BluetoothAdapter>(relaxed = true)
+        val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+
+        every { mockContext.getSystemService(Context.BLUETOOTH_SERVICE) } returns mockBtManager
+        every { mockBtManager.adapter } returns mockAdapter
+        every { mockAdapter.getRemoteDevice("AA:BB:CC:DD:EE:01") } returns mockDevice
+
+        val device = TestBTLEDevice(mockContext, mockSensorManager, 1L, "AA:BB:CC:DD:EE:01")
+
+        // Act
+        device.startSearching()
+        assertEquals(1, postedRunnables.size)
+        postedRunnables.first().run()
+
+        // Assert: connectGatt was called with TRANSPORT_LE
+        verify(exactly = 1) {
+            mockDevice.connectGatt(mockContext, false, any(), BluetoothDevice.TRANSPORT_LE)
+        }
+    }
+
+    /**
+     * TST-CON-011.1: Verify that when BLUETOOTH_CONNECT is denied, startSearching does not call connectGatt.
+     */
+    @Test
+    fun testStartSearching_whenPermissionDenied_doesNotCallConnectGatt() {
+        every {
+            ActivityCompat.checkSelfPermission(any(), Manifest.permission.BLUETOOTH_CONNECT)
+        } returns PackageManager.PERMISSION_DENIED
+
+        val mockBtManager = mockk<BluetoothManager>(relaxed = true)
+        val mockAdapter = mockk<BluetoothAdapter>(relaxed = true)
+        val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+
+        every { mockContext.getSystemService(Context.BLUETOOTH_SERVICE) } returns mockBtManager
+        every { mockBtManager.adapter } returns mockAdapter
+        every { mockAdapter.getRemoteDevice("AA:BB:CC:DD:EE:02") } returns mockDevice
+
+        val device = TestBTLEDevice(mockContext, mockSensorManager, 2L, "AA:BB:CC:DD:EE:02")
+
+        // Act
+        device.startSearching()
+        assertEquals(1, postedRunnables.size)
+        postedRunnables.first().run()
+
+        // Assert: connectGatt never called
+        verify(exactly = 0) { mockDevice.connectGatt(any<Context>(), any<Boolean>(), any<BluetoothGattCallback>(), any<Int>()) }
+        verify(exactly = 0) { mockDevice.connectGatt(any<Context>(), any<Boolean>(), any<BluetoothGattCallback>()) }
     }
 }

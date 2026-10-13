@@ -109,6 +109,7 @@ fun RouteList(
                         onHeaderClick = onHeaderClick,
                         onDeleteConfirmed = onDeleteConfirmed,
                         onDuplicateAsLocal = onDuplicateAsLocal,
+                        waypoints = route.waypoints,
                         modifier = Modifier
                     )
                 }

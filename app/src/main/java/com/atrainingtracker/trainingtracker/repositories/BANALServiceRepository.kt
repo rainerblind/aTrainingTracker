@@ -208,7 +208,7 @@ class BANALServiceRepository private constructor(context: Context) {
 
 
     init {
-        _trackingMode.postValue(TrackingMode.READY)
+        _trackingMode.postValue(TrainingApplication.getTrackingMode())
 
         appContext.registerReceiver(
             trackingModeReceiver,
@@ -387,6 +387,7 @@ class BANALServiceRepository private constructor(context: Context) {
     }
 
     fun setUserSelectedSportType(bSportType: BSportType) {
+        _bSportType.value = bSportType
         _serviceBinder.value?.setUserSelectedSportType(bSportType)
     }
 

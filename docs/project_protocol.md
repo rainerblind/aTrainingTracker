@@ -106,12 +106,22 @@ Sub-tasks represent stage execution activities (`[Analysis]`, `[Req & Test Spec]
 * **Unattended Autonomous In-Sprint Escalation Protocol**: All tickets of an active sprint must proceed autonomously without stopping the console. When human clarification or decisions are strictly required, the blocked sub-task must be reassigned to the Human user (`rainer`) with an explicit Jira question comment, while the agent proceeds with another ticket.
 * **Retro Before Merge**: The Sprint Retrospective and all process/rule updates MUST be finalized and committed to the sprint branch BEFORE merging into `develop`.
 * **Strict Ticket Rank Ordering Enforcement During Ceremonies**: During Sprint Planning (Ceremony 1) and Sprint Review (Ceremony 2), tickets MUST be queried, presented, and evaluated strictly in JIRA backlog rank order (`ORDER BY rank ASC`). No ticket may jump ahead of a higher-ranked ticket.
-* **Autonomous Full-Sprint Execution Mandate**: AI agents must execute the entire sprint backlog autonomously from ticket to ticket without intermediate pauses or asking the user whether to continue. Execution flows continuously across all tickets until all reach `Final Review (Human)`.
-* **Mandatory Rules & Skills Refresh ("Obey the Rules")**: Whenever starting work on any new ticket or transitioning between lifecycle stages, the agent MUST explicitly re-read `.agents/rules/aspice_governance.md` and the active stage skill (`SKILL.md`) using `view_file` to reload constraints into active working memory and prevent context drift or memory degradation across compactions.
+* **Autonomous Full-Sprint Execution Mandate**: AI agents must execute the entire sprint backlog autonomously from ticket to ticket without intermediate pauses or asking the user whether to continue. Execution flows continuously across all tickets until all reach `Final Review (Human)`. Resuming from context compaction or server restarts must never prompt the user for permission; agents immediately query the active sprint and execute the next task.
+* **Obey the Rules (Rule 1)**: Whenever starting work on any new ticket or transitioning between lifecycle stages, the agent MUST explicitly re-read `.agents/rules/aspice_governance.md`, `docs/project_protocol.md`, and the active stage skill (`SKILL.md`) using `view_file` to reload constraints into active working memory, preventing memory degradation across compactions and ensuring the entire sprint backlog is executed autonomously without stopping (Rule 15).
 * **Egress Sandbox Bypass for Cloud APIs**: Tool commands communicating with external cloud APIs (e.g. Jira REST API via `tools/jira_util.py`) must use `BypassSandbox: true` so requests reach external hosts cleanly.
 * **Mandatory Device Build & Deployment ('Install Before Review')**: Ceremony 2 (Joint Review) MUST begin with compiling and installing the latest integrated sprint build directly onto the attached physical test device (Google Pixel 10) via `./gradlew installDebug` before any ticket inspection begins.
+* **Avoid Redundant Diagnostic Builds (Rule 24)**: Before invoking heavy, time-consuming Gradle tasks or diagnostic utilities (such as `./gradlew signingReport`) in Stage 1 Analysis, agents MUST inspect ticket history, previous Sprint Retrospective deliverables, and existing documentation.
+* **Lean Defect Recording with Immediate Evidence Capture (Rule 25)**: During Ceremony 2 (Sprint-End Joint Review), when defects or regressions are observed, capture on-device screenshots immediately and attach them to the newly filed follow-up ticket in Jira, strictly observing zero code changes during review.
+* **Dual Branch Integration for Production Hotfix FixVersions (Rule 27)**: When an in-sprint ticket has a `FixVersion` targeting an active hotfix release branch (`hotfix/*`), the agent must backport/cherry-pick the verified code, assets, and docs to the hotfix branch immediately following Stage 5 verification on the sprint branch, and verify compilation via `./gradlew assembleDebug`.
+* **Deferred Review State for Field-Tested Features (Rule 28)**: When a sprint ticket modifies in-ride GPS dynamics, algorithmic filtering, sensor connectivity, or real-time cycling cockpit prompts requiring outdoor rides to evaluate, the ticket may remain in `Final Review (Human)` across sprint close while `sprint/<sprint_id>` is merged to `develop`.
+* **Defensive Service Lifecycle Finalization & FGS Permission Gating (Rule 29)**: Specialized Android 14+ FGS types (`HEALTH`, `CONNECTED_DEVICE`) must never be passed to `startForeground()` without dynamically checking held runtime permissions (`ContextCompat.checkSelfPermission(...)`). Critical session state finalization (`FINISHED = 1`) and terminal completion broadcasts must never be gated behind transient error flags (`mTrackingInterrupted`) and must execute within guaranteed `try/finally` blocks and SQLite transactions.
+* **Developer Tool Host Pre-Flight Diagnostics (Rule 30)**: Developer utilities, simulators, and replay tools relying on host hardware (Bluetooth LE broadcasers via BlueZ/D-Bus, ADB mock locations) must execute a self-diagnostic pre-flight check at startup, verifying controller roles, permissions, and device state before attempting playback.
+* **Explanatory Scale Direction in Settings Sliders (Rule 31)**: Whenever exposing numerical sliders or continuous values in user settings, preference subtitles/hints must explicitly explain the physical direction of the scale (e.g. *"Höherer Wert = Näher herangezoomt"*).
+* **Coordinate Space Normalization for Sub-Entity Inspection Charts (Rule 32)**: Sub-entity inspection screens (climbs, segments, laps) MUST normalize distance coordinates to $[0, \text{length}]$ rather than using global parent route distance.
+* **Unified Viewport Anchor Authority for Map Tracking (Rule 33)**: Map camera tracking, lookahead padding, and animation updates must share a single spatial authority to prevent camera oscillation and jitter.
 * **Human Decision Gate on Sprint Closure & Develop Merge**: The sprint branch (`sprint/<sprint_id>`) MUST NEVER be merged into `develop` autonomously by any agent. Sprint closure and merging into `develop` is an inviolable Human Decision Gate, executed strictly after explicit human review and agreement.
 * **Branch Cleanup**: Merged feature/bugfix branches must be immediately deleted upon integration into `develop`.
+
 
 ---
 
@@ -122,6 +132,7 @@ The detailed procedural rules, quality checklists, and templates are encapsulate
 | Stage / Role | Skill Directory | Core Focus & Encapsulated Assets |
 | :--- | :--- | :--- |
 | **Sprint Facilitation** | [sprint-planner](file:///.agents/skills/sprint-planner/SKILL.md) | Sprint-Start Screening (interaktiv mit User), Anforderungsklährung, Übergabe an autonome Phase, Sprint-End Joint Review. |
+| **Regression Archaeology** | [regression-bisect](file:///.agents/skills/regression-bisect/SKILL.md) | Interval bisection, exponential boundary search (1, 2, 4, 8, 16...), binary git bisection (`tools/sprint_bisect.py`), and Chesterton's Fence forensics before fixing. |
 | **Stage 1: Analysis** | [stage1-analysis](file:///.agents/skills/stage1-analysis/SKILL.md) | Forensic RCA, Chesterton's Fence archaeology, scope bounding.<br>Template: `templates/analysis_template.md` |
 | **Stage 2: Req & Test Spec** | [stage2-req-test-spec](file:///.agents/skills/stage2-req-test-spec/SKILL.md) | Requirements specification (`REQ-XXX`), test cases (`TST-XXX`), 9-language localization audit, living doc synchronization.<br>Template: `templates/test_spec_template.md` |
 | **Stage 3: Impl Plan** | [stage3-impl-plan](file:///.agents/skills/stage3-impl-plan/SKILL.md) | Architectural decomposition, SWE.2 layering, atomic step breakdown, invariants.<br>Template: `templates/plan_template.md` |
@@ -133,18 +144,32 @@ The detailed procedural rules, quality checklists, and templates are encapsulate
 
 ---
 
-## 4. UI & Software Engineering Standards
+## 4. UI & Software Engineering Standards (The Document Triad)
 
-### A. Jetpack Compose UI Fast Iteration, Previews & Prototyping
-* Prioritize `@Preview` composables with light/dark theme wrappers (`AppTheme`) and isolated JVM screenshot/unit tests during development.
-* Visual decisions: Present visual variants side-by-side to the user for instant alignment.
-* Hardware validation: Physical Google Pixel 10 remains the mandatory verification gate in Stage 5.
+Detailed standards for design and implementation are codified in dedicated companion documents:
+* **UI & Interaction Design Guidelines**: [`docs/design_guidelines.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/design_guidelines.md)
+  * Visual consistency baseline and component reuse (Section 5)
+  * Discrete scalar ranges & durations ($\ge 5$ numeric values) — sliders over wrapping chips (Section 1.4)
+  * Sub-entity chart coordinate normalization (Section 2.1)
+  * Adaptive elevation profile scaling and fixed heights prohibition (Section 2.3)
+  * Elevation profile marker badge boundary clearance (Section 2.4)
+  * Continuous linear projection for sparse geometry progress tracking (Section 2.5)
+  * Settings sliders explanatory hints and scannable accordions (Section 3)
+  * Unified viewport anchor authority for maps (Section 6.1)
+  * Jetpack Compose multi-state `@Preview` tooling, 9-language localization parity, and positional format specifiers (`%1$s`) (Section 4)
+* **Technical Architecture & Coding Standards**: [`docs/coding_standards.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/coding_standards.md)
+  * Single Source of Truth & DRY — Shared Code Over Duplication (canonical formatters & unit math) (Section 1.1)
+  * Chesterton's Fence for empty callback lambdas & gesture contract tests (Section 1.2)
+  * Strict prohibition of sorting and ranking on formatted display strings (Section 1.3)
+  * Explicit confirmation dialogs for destructive or cache-invalidating operations (Section 1.4)
+  * Database & DTO mapping symmetry (`fromCursor`) (Section 2.1)
+  * Specific direct platform intents over generic app settings (Section 3.1)
+  * Defensive service lifecycle finalization & FGS permission gating (Section 3.2)
+  * Clean hardware teardown and orphan defense on persistence deletion (Section 3.3)
+  * Developer tool host pre-flight diagnostics (Section 4.1)
+  * Testing standards & prohibition of `returnDefaultValues = true` (Section 5)
 
-### B. Localization & String Resource Hardening
-* **9-Language Parity**: All user-facing strings must be defined across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
-* **Positional Specifiers**: String placeholders MUST use positional specifiers with type characters (e.g. `%1$s`, `%2$d`). Bare specifiers (`%s`, `%d`) are strictly forbidden.
-
-### C. Internal Documentation & Code Quality
+### Internal Documentation & Code Quality
 * Every class and public method must have KDoc/JavaDoc headers describing purpose, architectural role, and threading constraints (`REQ-PRO-011`).
 
 ---

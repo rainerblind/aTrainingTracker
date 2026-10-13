@@ -260,6 +260,7 @@ private fun DeviceIdentityBlock(
             }
             DeviceStatusRow(
                 device = device,
+                isConnected = isConnected,
                 alpha = TTAlpha.Medium,
                 textStyle = MaterialTheme.typography.bodySmall
             )

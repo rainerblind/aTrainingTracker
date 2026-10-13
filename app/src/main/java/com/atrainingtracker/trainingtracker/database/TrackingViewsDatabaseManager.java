@@ -205,6 +205,28 @@ public class TrackingViewsDatabaseManager {
         updateBoolean(viewId, TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE, showElevationProfile);
     }
 
+    public void updateShowLiveClimbs(long viewId, boolean showLiveClimbs) {
+        updateBoolean(viewId, TrackingViewsDbHelper.SHOW_LIVE_CLIMBS, showLiveClimbs);
+    }
+
+    public void updateShowNavigationHints(long viewId, boolean showNavigationHints) {
+        updateBoolean(viewId, TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS, showNavigationHints);
+    }
+
+    public void updateElevationProfileScope(long viewId, int scope) {
+        ContentValues values = new ContentValues();
+        values.put(TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE, scope);
+        SQLiteDatabase db = getDatabase();
+        db.update(TrackingViewsDbHelper.VIEWS_TABLE, values, TrackingViewsDbHelper.C_ID + "=?", new String[]{Long.toString(viewId)});
+    }
+
+    public void updateElevationProfileLookahead(long viewId, int lookaheadMeters) {
+        ContentValues values = new ContentValues();
+        values.put(TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD, lookaheadMeters);
+        SQLiteDatabase db = getDatabase();
+        db.update(TrackingViewsDbHelper.VIEWS_TABLE, values, TrackingViewsDbHelper.C_ID + "=?", new String[]{Long.toString(viewId)});
+    }
+
     public void deleteSensorField(long sensorFieldId) {
         if (DEBUG) Log.i(TAG, "deleteSensorField(" + sensorFieldId + ")");
 
@@ -533,6 +555,8 @@ public class TrackingViewsDatabaseManager {
         values.put(TrackingViewsDbHelper.LAYOUT_NR, newLayoutNr);
         values.put(TrackingViewsDbHelper.SHOW_LAP_BUTTON, 1);
         values.put(TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE, 0);
+        values.put(TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE, 0);
+        values.put(TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD, 2000);
 
         db.insert(TrackingViewsDbHelper.VIEWS_TABLE, null, values);
     }
@@ -594,7 +618,9 @@ public class TrackingViewsDatabaseManager {
         // public version 8 at 25.02.2026
         // public static final int DB_VERSION = 9;  // upgraded to version 9 at 12.04.2026: Adding Live Segments
         // public static final int DB_VERSION = 10; // upgraded to version 10 at 08.06.2026: Adding Elevation Profile
-        public static final int DB_VERSION = 11; // upgraded to version 11 at 03.10.2026: Repair missing ViewSize defaults in rows
+        // public static final int DB_VERSION = 11; // upgraded to version 11 at 03.10.2026: Repair missing ViewSize defaults in rows
+        // public static final int DB_VERSION = 12; // upgraded to version 12 at 06.10.2026: Adding Live Climbs & Navigation Hints (ATT-2360)
+        public static final int DB_VERSION = 13; // upgraded to version 13 at 13.10.2026: Adding Elevation Profile Scope & Lookahead (ATT-3317)
         public static final String VIEWS_TABLE = "ViewsTable";                // the table for the different 'tabs'
         public static final String ROWS_TABLE = "LayoutRowsTable";            // the table for the sensor fields within each tab
         public static final String C_ID = BaseColumns._ID;
@@ -634,6 +660,12 @@ public class TrackingViewsDatabaseManager {
         public static final String SHOW_LIVE_SEGMENTS = "ShowLiveSegments";
         // new in V10 -> Elevation Profile
         public static final String SHOW_ELEVATION_PROFILE = "ShowElevationProfile";
+        // new in V12 -> Live Climbs & Navigation Hints (ATT-2360)
+        public static final String SHOW_LIVE_CLIMBS = "ShowLiveClimbs";
+        public static final String SHOW_NAVIGATION_HINTS = "ShowNavigationHints";
+        // new in V13 -> Elevation Profile Scope & Lookahead (ATT-3317)
+        public static final String ELEVATION_PROFILE_SCOPE = "ElevationProfileScope";
+        public static final String ELEVATION_PROFILE_LOOKAHEAD = "ElevationProfileLookahead";
 
         @Deprecated
         protected static final String CREATE_VIEWS_TABLE_V1 = "create table " + VIEWS_TABLE + " ("
@@ -707,6 +739,42 @@ public class TrackingViewsDatabaseManager {
                 + SHOW_LIVE_SEGMENTS + " int, "
                 + SHOW_ELEVATION_PROFILE + " int)";
 
+        protected static final String CREATE_VIEWS_TABLE_V12 = "create table " + VIEWS_TABLE + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + ACTIVITY_TYPE + " text, "
+                + NAME + " text, "
+                + LAYOUT_NR + " int, "
+                + NEXT_POSITION + " int, "
+                + SHOW_LAP_BUTTON + " int, "
+                + SHOW_MAP + " int, "
+                + FULL_SCREEN + " int, "
+                + SYSTEM_SETTING + " int, "
+                + DAY + " int, "
+                + NIGHT + " int, "
+                + SHOW_LIVE_SEGMENTS + " int, "
+                + SHOW_ELEVATION_PROFILE + " int, "
+                + SHOW_LIVE_CLIMBS + " int, "
+                + SHOW_NAVIGATION_HINTS + " int)";
+
+        protected static final String CREATE_VIEWS_TABLE_V13 = "create table " + VIEWS_TABLE + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + ACTIVITY_TYPE + " text, "
+                + NAME + " text, "
+                + LAYOUT_NR + " int, "
+                + NEXT_POSITION + " int, "
+                + SHOW_LAP_BUTTON + " int, "
+                + SHOW_MAP + " int, "
+                + FULL_SCREEN + " int, "
+                + SYSTEM_SETTING + " int, "
+                + DAY + " int, "
+                + NIGHT + " int, "
+                + SHOW_LIVE_SEGMENTS + " int, "
+                + SHOW_ELEVATION_PROFILE + " int, "
+                + SHOW_LIVE_CLIMBS + " int, "
+                + SHOW_NAVIGATION_HINTS + " int, "
+                + ELEVATION_PROFILE_SCOPE + " int, "
+                + ELEVATION_PROFILE_LOOKAHEAD + " int)";
+
         @Deprecated
         protected static final String CREATE_LAYOUTS_TABLE_V3 = "create table " + ROWS_TABLE + " ("
                 + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -774,10 +842,10 @@ public class TrackingViewsDatabaseManager {
 
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
-            db.execSQL(CREATE_VIEWS_TABLE_V10);
+            db.execSQL(CREATE_VIEWS_TABLE_V13);
             db.execSQL(CREATE_LAYOUTS_TABLE_V8);
 
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V10);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V13);
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V8);
 
 
@@ -785,16 +853,50 @@ public class TrackingViewsDatabaseManager {
 
             EnumMap<ActivityType, List<RowData>> viewMap = createViewMap();
             for (ActivityType activityType : viewMap.keySet()) {
-                // show the default tab with an lap button
-                addDefaultTab(db, activityType, mContext.getString(R.string.text_default), 1, false, false, true, viewMap.get(activityType));
-                // shot a tab with just some standard fields and the map but no lap button
-                addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 2, false, true, false, getDefaultStartRowDataList(activityType));
-                addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 3, true, false, false, getDefaultLapRowDataList(activityType));
+                // Standard Tab: layoutNr 1, live segments, live climbs, nav hints
+                addDefaultTab(db, activityType, mContext.getString(R.string.text_default), 1, false, false, true, true, true, viewMap.get(activityType));
+                // Map Tab: layoutNr 2, map, elevation profile, nav hints
+                addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 2, false, true, false, false, true, getDefaultStartRowDataList(activityType));
+                // Laps Tab: layoutNr 3, lap button only
+                addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 3, true, false, false, false, false, getDefaultLapRowDataList(activityType));
             }
             if (DEBUG) Log.d(TAG, "filled db");
         }
 
+        /**
+         * Backward-compatible overload for seeding default tracking views with live climbs and navigation hints enabled.
+         */
         public long addDefaultTab(@NonNull SQLiteDatabase db, @NonNull ActivityType activityType, String name, int layoutNr, boolean showLapButton, boolean showMap, boolean showLiveSegments, List<RowData> rowDataList) {
+            return addDefaultTab(db, activityType, name, layoutNr, showLapButton, showMap, showLiveSegments, true, true, rowDataList);
+        }
+
+        /**
+         * Seeds a default tracking view tab in SQLite with explicit toggles for live telemetry, segments, climbs, and navigation cues.
+         *
+         * @param db SQLite database instance.
+         * @param activityType Activity type profile.
+         * @param name Localized tab title.
+         * @param layoutNr Sequential layout index (1 = Standard, 2 = Map, 3 = Laps).
+         * @param showLapButton Whether the lap split button is visible.
+         * @param showMap Whether the map canvas and elevation profile are enabled.
+         * @param showLiveSegments Whether Strava live segment bottom sheets are enabled.
+         * @param showLiveClimbs Whether Live ClimbPro bottom sheets are enabled.
+         * @param showNavigationHints Whether turn prompts and navigation cues are enabled.
+         * @param rowDataList Initial sensor grid field layout.
+         * @return New view ID in {@link #VIEWS_TABLE}.
+         */
+        public long addDefaultTab(
+                @NonNull SQLiteDatabase db,
+                @NonNull ActivityType activityType,
+                String name,
+                int layoutNr,
+                boolean showLapButton,
+                boolean showMap,
+                boolean showLiveSegments,
+                boolean showLiveClimbs,
+                boolean showNavigationHints,
+                List<RowData> rowDataList
+        ) {
             if (DEBUG)
                 Log.i(TAG, "addDefaultActivity: activityType=" + activityType + ", layoutNr=" + layoutNr);
             long newViewId = -1;
@@ -813,6 +915,10 @@ public class TrackingViewsDatabaseManager {
             values.put(DAY, 0);
             values.put(NIGHT, 0);
             values.put(SHOW_LIVE_SEGMENTS, showLiveSegments ? 1 : 0);
+            values.put(SHOW_LIVE_CLIMBS, showLiveClimbs ? 1 : 0);
+            values.put(SHOW_NAVIGATION_HINTS, showNavigationHints ? 1 : 0);
+            values.put(ELEVATION_PROFILE_SCOPE, 0);
+            values.put(ELEVATION_PROFILE_LOOKAHEAD, 2000);
             newViewId = db.insert(VIEWS_TABLE, null, values);
 
             for (RowData rowData : rowDataList) {
@@ -954,6 +1060,38 @@ public class TrackingViewsDatabaseManager {
                 } catch (Exception e) {
                     Log.e(TAG, "Failed to repair null VIEW_SIZE", e);
                 }
+            }
+
+            if (oldVersion < 12) {
+                Log.i(TAG, "Upgrading database to version 12: Adding Live Climbs and Navigation Hints");
+                try {
+                    addColumn(db, VIEWS_TABLE, SHOW_LIVE_CLIMBS, "int DEFAULT 1");
+                } catch (Exception e) {
+                    Log.w(TAG, "Column " + SHOW_LIVE_CLIMBS + " might already exist.", e);
+                }
+                try {
+                    addColumn(db, VIEWS_TABLE, SHOW_NAVIGATION_HINTS, "int DEFAULT 1");
+                } catch (Exception e) {
+                    Log.w(TAG, "Column " + SHOW_NAVIGATION_HINTS + " might already exist.", e);
+                }
+                db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + SHOW_LIVE_CLIMBS + " = 1 WHERE " + SHOW_LIVE_CLIMBS + " IS NULL;");
+                db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + SHOW_NAVIGATION_HINTS + " = 1 WHERE " + SHOW_NAVIGATION_HINTS + " IS NULL;");
+            }
+
+            if (oldVersion < 13) {
+                Log.i(TAG, "Upgrading database to version 13: Adding Elevation Profile Scope and Lookahead");
+                try {
+                    addColumn(db, VIEWS_TABLE, ELEVATION_PROFILE_SCOPE, "int DEFAULT 0");
+                } catch (Exception e) {
+                    Log.w(TAG, "Column " + ELEVATION_PROFILE_SCOPE + " might already exist.", e);
+                }
+                try {
+                    addColumn(db, VIEWS_TABLE, ELEVATION_PROFILE_LOOKAHEAD, "int DEFAULT 2000");
+                } catch (Exception e) {
+                    Log.w(TAG, "Column " + ELEVATION_PROFILE_LOOKAHEAD + " might already exist.", e);
+                }
+                db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + ELEVATION_PROFILE_SCOPE + " = 0 WHERE " + ELEVATION_PROFILE_SCOPE + " IS NULL;");
+                db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + ELEVATION_PROFILE_LOOKAHEAD + " = 2000 WHERE " + ELEVATION_PROFILE_LOOKAHEAD + " IS NULL;");
             }
         }
 

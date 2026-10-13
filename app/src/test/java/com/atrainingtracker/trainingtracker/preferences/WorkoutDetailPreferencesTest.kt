@@ -44,21 +44,23 @@ class WorkoutDetailPreferencesTest {
         assertTrue("Elevation profile should be enabled by default in details", prefs.showElevationProfile)
         assertTrue("Telemetry charts should be enabled by default in details", prefs.showTelemetryCharts)
         assertTrue("Zone analysis should be enabled by default in details", prefs.showZoneAnalysis)
+        assertTrue("Export status should be enabled by default in details", prefs.showExportStatus)
     }
 
     @Test
     fun listCardPreferences_defaultsElevationAndChartsToFalse() {
         val listPrefs = WorkoutCardSectionPreferences()
 
-        // Contrast verification: list cards default heavy charts to false to safeguard 60/120 FPS
+        // Contrast verification: list cards default heavy charts and laps to false (REQ-UI-285)
         assertTrue("Description should be enabled in list", listPrefs.showDescription)
         assertTrue("Extrema should be enabled in list", listPrefs.showExtrema)
-        assertTrue("Laps should be enabled in list", listPrefs.showLaps)
+        assertFalse("Laps should be disabled by default in list", listPrefs.showLaps)
         assertTrue("Strava should be enabled in list", listPrefs.showStrava)
         assertTrue("Map preview should be enabled in list", listPrefs.showMapPreview)
         assertFalse("Elevation profile should be disabled by default in list", listPrefs.showElevationProfile)
         assertFalse("Telemetry charts should be disabled by default in list", listPrefs.showTelemetryCharts)
-        assertFalse("Zone analysis should be disabled by default in list", listPrefs.showZoneAnalysis)
+        assertTrue("Zone analysis should be enabled by default in list", listPrefs.showZoneAnalysis)
+        assertTrue("Export status should be enabled by default in list", listPrefs.showExportStatus)
     }
 
     @Test

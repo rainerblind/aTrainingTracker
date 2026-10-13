@@ -28,12 +28,24 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.devicelist.BatteryFilter
+import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterCriteria
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Sealed class to represent the UI state in a clean and type-safe way.
@@ -54,11 +66,27 @@ class DevicesTabbedViewModel(
 
     private val deviceDBRepository = DeviceDataRepository.getInstance(application)
 
+    private val _newDeviceDiscoveredEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val newDeviceDiscoveredEvent: SharedFlow<String> = _newDeviceDiscoveredEvent.asSharedFlow()
+
     private val deviceDiscoveryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == BANALService.NEW_DEVICE_FOUND_INTENT) {
                 // Tell the repository to refresh its data from the DB
                 deviceDBRepository.handleNewDeviceFound()
+
+                val deviceId = intent.getLongExtra(BANALService.DEVICE_ID, -1L)
+                viewModelScope.launch {
+                    val resolvedName = if (deviceId != -1L) {
+                        deviceDBRepository.getDeviceSnapshotById(deviceId)?.deviceName
+                            ?: withContext(Dispatchers.IO) {
+                                runCatching {
+                                    DevicesDatabaseManager.getInstance(getApplication()).getDeviceName(deviceId)
+                                }.getOrNull()
+                            } ?: "Sensor"
+                    } else "Sensor"
+                    _newDeviceDiscoveredEvent.emit(resolvedName)
+                }
             }
         }
     }
@@ -66,6 +94,41 @@ class DevicesTabbedViewModel(
     private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application)
     val searchingFor: StateFlow<String?> = banalServiceRepository.searchingForDevice
     val isSearchingForNewDevices: StateFlow<Boolean> = banalServiceRepository.isSearchingForNewDevices
+
+    // Active targeted scanning parameters for pairing discovery (REQ-UI-291, ATT-2626)
+    private val _scanningProtocol = MutableStateFlow<Protocol?>(null)
+    val scanningProtocol: StateFlow<Protocol?> = _scanningProtocol.asStateFlow()
+
+    private val _scanningDeviceType = MutableStateFlow<DeviceType?>(null)
+    val scanningDeviceType: StateFlow<DeviceType?> = _scanningDeviceType.asStateFlow()
+
+    private val _filterCriteria = MutableStateFlow(
+        savedStateHandle.get<String>(KEY_FILTER_CRITERIA_JSON)?.let {
+            DeviceFilterCriteria.fromJson(it)
+        } ?: if (savedStateHandle.get<Boolean>(EXTRA_FILTER_CRITICAL_BATTERY) == true) {
+            DeviceFilterCriteria(batteryFilter = BatteryFilter.CRITICAL_ONLY)
+        } else {
+            DeviceFilterCriteria()
+        }
+    )
+    val filterCriteria: StateFlow<DeviceFilterCriteria> = _filterCriteria.asStateFlow()
+
+    fun updateFilterCriteria(criteria: DeviceFilterCriteria) {
+        _filterCriteria.value = criteria
+        if (criteria.isEmpty) {
+            savedStateHandle.remove<String>(KEY_FILTER_CRITERIA_JSON)
+        } else {
+            savedStateHandle[KEY_FILTER_CRITERIA_JSON] = criteria.toJson()
+        }
+    }
+
+    fun clearFilterCriteria() {
+        updateFilterCriteria(DeviceFilterCriteria())
+    }
+
+    fun setCriticalBatteryFilter() {
+        updateFilterCriteria(DeviceFilterCriteria(batteryFilter = BatteryFilter.CRITICAL_ONLY))
+    }
 
     private val _uiState = MutableLiveData<UiState>()
     val uiState: LiveData<UiState> = _uiState
@@ -108,6 +171,10 @@ class DevicesTabbedViewModel(
         val targetType = newDeviceType ?: DeviceType.ALL
         savedStateHandle[BANALService.DEVICE_TYPE] = targetType.name
         _uiState.value = UiState.DisplayingTabs(targetType)
+        if (isSearching) {
+            banalServiceRepository.stopSearchingForNewDevices()
+            banalServiceRepository.startSearchingForNewDevices(protocol, targetType)
+        }
     }
 
     /**
@@ -122,13 +189,29 @@ class DevicesTabbedViewModel(
     }
 
     /**
+     * Initiates targeted wireless discovery for a new sensor while keeping all device types
+     * visible across the Sensors view tabs without restrictive filtering (REQ-UI-291, ATT-2626).
+     */
+    fun startPairingScan(protocolToPair: Protocol, deviceTypeToPair: DeviceType) {
+        _scanningProtocol.value = protocolToPair
+        _scanningDeviceType.value = deviceTypeToPair
+        if (isSearching) {
+            banalServiceRepository.stopSearchingForNewDevices()
+        }
+        banalServiceRepository.startSearchingForNewDevices(protocolToPair, deviceTypeToPair)
+        isSearching = true
+    }
+
+    /**
      * Sends a broadcast to start searching for devices.
      */
     fun startSearching() {
         val currentState = _uiState.value
         if (isSearching || currentState !is UiState.DisplayingTabs) return
 
-        banalServiceRepository.startSearchingForNewDevices(protocol, currentState.deviceType)
+        val targetProto = _scanningProtocol.value ?: protocol
+        val targetType = _scanningDeviceType.value ?: currentState.deviceType
+        banalServiceRepository.startSearchingForNewDevices(targetProto, targetType)
 
         isSearching = true
     }
@@ -139,6 +222,8 @@ class DevicesTabbedViewModel(
     fun stopSearching() {
         if (!isSearching) return
 
+        _scanningProtocol.value = null
+        _scanningDeviceType.value = null
         banalServiceRepository.stopSearchingForNewDevices()
 
         isSearching = false
@@ -152,5 +237,10 @@ class DevicesTabbedViewModel(
         } catch (e: Exception) {
             // Receiver might not be registered
         }
+    }
+
+    companion object {
+        const val KEY_FILTER_CRITERIA_JSON = "KEY_FILTER_CRITERIA_JSON"
+        const val EXTRA_FILTER_CRITICAL_BATTERY = "EXTRA_FILTER_CRITICAL_BATTERY"
     }
 }

@@ -42,6 +42,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
@@ -102,7 +103,9 @@ fun MapDetailLayout(
     hrZoneDistribution: ZoneDistributionData? = null,
     powerZoneDistribution: ZoneDistributionData? = null,
     hrZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
-    powerZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES
+    powerZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
+    climbs: List<Climb> = emptyList(),
+    externalScrubDistance: Double? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -118,18 +121,23 @@ fun MapDetailLayout(
 
     var isSharing by remember { mutableStateOf(false) }
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
+
+    LaunchedEffect(externalScrubDistance) {
+        selectedDistance = externalScrubDistance
+    }
     var profileZoomScale by remember(activeScrubPath) { mutableFloatStateOf(1.0f) }
     var viewportStartFraction by remember(activeScrubPath) { mutableDoubleStateOf(0.0) }
     var isPanMode by remember(activeScrubPath) { mutableStateOf(false) }
     var splitFraction by rememberSaveable { mutableFloatStateOf(SplitPaneMath.DEFAULT_SPLIT_FRACTION) }
     val noLocation = remember { MutableStateFlow<LatLng?>(null) }
 
-    val isTrackless = (activeScrubPath?.lastOrNull()?.distance ?: 0.0) == 0.0 && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
+    val isTrackless = ProfileDomainMath.isTracklessWorkout(activeScrubPath)
+    val isElevationTimeDomain = ProfileDomainMath.isEffectiveTimeDomain(tuningConfig.elevationXAxisDomain, activeScrubPath)
+    val isTelemetryTimeDomain = ProfileDomainMath.isEffectiveTimeDomain(tuningConfig.telemetryXAxisDomain, activeScrubPath)
     val activeTelemetryDomain = if (isTrackless) ProfileXAxisDomain.TIME else tuningConfig.telemetryXAxisDomain
-    val isElevationTimeDomain = (tuningConfig.elevationXAxisDomain == ProfileXAxisDomain.TIME || isTrackless) && (activeScrubPath?.lastOrNull()?.timeSec ?: 0) > 0
-    val elevationTotalSpan = if (isElevationTimeDomain) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
-    val telemetryTotalSpan = if (activeTelemetryDomain == ProfileXAxisDomain.TIME) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
-    val totalSpan = if (isElevationTimeDomain || isTrackless) (activeScrubPath?.lastOrNull()?.timeSec ?: 0).toDouble() else (activeScrubPath?.lastOrNull()?.distance ?: 0.0)
+    val elevationTotalSpan = ProfileDomainMath.calculateTotalSpan(tuningConfig.elevationXAxisDomain, activeScrubPath)
+    val telemetryTotalSpan = ProfileDomainMath.calculateTotalSpan(tuningConfig.telemetryXAxisDomain, activeScrubPath)
+    val totalSpan = if (showElevationProfile) elevationTotalSpan else telemetryTotalSpan
 
     val hasTelemetryGraphs = showZoomControls && showTelemetryCharts && activeScrubPath != null && (
         TelemetryMetricUtils.hasHeartRateData(activeScrubPath) ||
@@ -138,49 +146,24 @@ fun MapDetailLayout(
     )
     val hasZoomToolbar = showZoomControls && (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty()
     val hasScrollableContent = metadataContent != null || analyticsContent != null || hasTelemetryGraphs
+    val hasLowerSection = (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty() || metadataContent != null || analyticsContent != null
 
     val unit = remember { TrainingApplication.getUnit() }
     val connection = remember { CollapsingAppBarNestedScrollConnection(0) }
     var headerHeightPx by remember { mutableIntStateOf(0) }
 
     val hrThresholds = remember(bSportType, context) {
-        runCatching {
-            val zoneType = if (bSportType == BSportType.BIKE) {
-                com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.HR_BIKE
-            } else {
-                com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.HR_RUN
-            }
-            val z1 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            if (z1 > 0 && z2 > 0 && z3 > 0 && z4 > 0) {
-                HeartRateZoneThresholds(z1, z2, z3, z4)
-            } else null
-        }.getOrNull()
+        TelemetryZoneMath.loadHeartRateThresholds(context, bSportType)
     }
 
     val powerThresholds = remember(context) {
-        runCatching {
-            val zoneType = com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.PWR_BIKE
-            val z1 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            if (z1 > 0 && z2 > 0 && z3 > 0 && z4 > 0) {
-                PowerZoneThresholds(z1, z2, z3, z4)
-            } else null
-        }.getOrNull()
+        TelemetryZoneMath.loadPowerThresholds(context)
     }
 
     val activeScrubPoint = remember(selectedDistance, activeScrubPath, isTrackless) {
         if (selectedDistance != null && !activeScrubPath.isNullOrEmpty()) {
-            if (isTrackless) {
-                activeScrubPath.minByOrNull { abs(it.timeSec - selectedDistance!!) }
-            } else {
-                val activeIndex = activeScrubPath.indexOfLast { it.distance <= selectedDistance!! }.coerceAtLeast(0)
-                activeScrubPath.getOrNull(activeIndex) ?: activeScrubPath.firstOrNull()
-            }
+            TelemetryMetricUtils.findNearestPoint(activeScrubPath, selectedDistance!!, isTimeDomain = isTrackless)
+                ?: TelemetryMetricUtils.findNearestPoint(activeScrubPath, selectedDistance!!, isTimeDomain = true)
         } else null
     }
 
@@ -217,9 +200,11 @@ fun MapDetailLayout(
                 bSportType = bSportType,
                 altitude = activeScrubAltitude,
                 unit = unit,
-                xAxisDomain = if (isTrackless) ProfileXAxisDomain.TIME
-                              else if (showElevationProfile) tuningConfig.elevationXAxisDomain
-                              else tuningConfig.telemetryXAxisDomain,
+                xAxisDomain = if (showElevationProfile) {
+                    if (isElevationTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
+                } else {
+                    if (isTelemetryTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
+                },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 2.dp, end = 8.dp),
@@ -238,6 +223,7 @@ fun MapDetailLayout(
                 currentLocationFlow = noLocation,
                 selectedDistance = selectedDistance,
                 activeScrubPath = activeScrubPath,
+                activeScrubPoint = activeScrubPoint,
                 modifier = Modifier.fillMaxSize(),
                 shouldTakeSnapshot = isSharing,
                 onMapClick = onMapClick,
@@ -352,6 +338,9 @@ fun MapDetailLayout(
                                         },
                                         isPanMode = isPanMode,
                                         showScrubbingBadge = false,
+                                        hrZoneThresholds = hrThresholds,
+                                        powerZoneThresholds = powerThresholds,
+                                        climbs = climbs,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -392,11 +381,11 @@ fun MapDetailLayout(
                                     if (TelemetryMetricUtils.hasHeartRateData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))
                                         val activeHrPoint = if (selectedDistance != null) {
-                                            if (isTrackless) {
-                                                path.minByOrNull { abs(it.timeSec - selectedDistance!!) }
-                                            } else {
-                                                path.minByOrNull { abs(it.distance - selectedDistance!!) }
-                                            }
+                                            TelemetryMetricUtils.findNearestPoint(
+                                                points = path,
+                                                targetValue = selectedDistance!!,
+                                                isTimeDomain = isTrackless
+                                            )
                                         } else null
                                         val activeHr = activeHrPoint?.hr
                                         val hrHeaderText = if (activeHr != null) {
@@ -429,6 +418,7 @@ fun MapDetailLayout(
                                                 profileZoomScale = z
                                                 viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
+                                            hrZoneThresholds = hrThresholds,
                                             zoneDistribution = hrZoneDistribution,
                                             zoneDisplayMode = hrZoneDisplayMode,
                                             modifier = Modifier.fillMaxWidth()
@@ -439,11 +429,11 @@ fun MapDetailLayout(
                                     if (TelemetryMetricUtils.hasPowerData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))
                                         val activePowerPoint = if (selectedDistance != null) {
-                                            if (isTrackless) {
-                                                path.minByOrNull { abs(it.timeSec - selectedDistance!!) }
-                                            } else {
-                                                path.minByOrNull { abs(it.distance - selectedDistance!!) }
-                                            }
+                                            TelemetryMetricUtils.findNearestPoint(
+                                                points = path,
+                                                targetValue = selectedDistance!!,
+                                                isTimeDomain = isTrackless
+                                            )
                                         } else null
                                         val activePower = activePowerPoint?.power
                                         val powerHeaderText = if (activePower != null) {
@@ -476,6 +466,7 @@ fun MapDetailLayout(
                                                 profileZoomScale = z
                                                 viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
+                                            powerZoneThresholds = powerThresholds,
                                             zoneDistribution = powerZoneDistribution,
                                             zoneDisplayMode = powerZoneDisplayMode,
                                             modifier = Modifier.fillMaxWidth()
@@ -519,7 +510,9 @@ fun MapDetailLayout(
             .then(
                 if (!useStatusBarsPadding) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier
             )
-            .nestedScroll(connection)
+            .then(
+                if (showMap || hasScrollableContent) Modifier.nestedScroll(connection) else Modifier
+            )
     ) {
         val density = LocalDensity.current
         val screenHeightPx = constraints.maxHeight
@@ -534,11 +527,13 @@ fun MapDetailLayout(
                 .offset { IntOffset(0, connection.appBarOffset) }
                 .onGloballyPositioned { coordinates ->
                     val measured = coordinates.size.height
-                    headerHeightPx = measured
-                    connection.appBarMaxHeight = measured
-                    if (!useStatusBarsPadding && onHeaderHeightMeasured != null) {
-                        val heightDp = with(density) { measured.toDp() }
-                        onHeaderHeightMeasured(heightDp)
+                    if (measured != headerHeightPx) {
+                        headerHeightPx = measured
+                        connection.appBarMaxHeight = measured
+                        if (!useStatusBarsPadding && onHeaderHeightMeasured != null) {
+                            val heightDp = with(density) { measured.toDp() }
+                            onHeaderHeightMeasured(heightDp)
+                        }
                     }
                 }
         ) {
@@ -593,91 +588,134 @@ fun MapDetailLayout(
         }
 
         // 2. RESIZABLE VIEWPORT (Map + SplitPaneDivider + Scrollable Lower Section)
+        val viewportModifier = if (showMap || hasScrollableContent) {
+            Modifier.fillMaxSize()
+        } else {
+            Modifier.fillMaxWidth().wrapContentHeight()
+        }
         Box(
-            modifier = Modifier
-                .fillMaxSize()
+            modifier = viewportModifier
                 .padding(top = currentTopPaddingDp)
         ) {
-            if (showMap && hasScrollableContent) {
-                BoxWithConstraints(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                val density = LocalDensity.current
-                val totalHeightPx = constraints.maxHeight.toFloat()
-                val dividerHeightPx = with(density) { SplitPaneMath.DIVIDER_TOUCH_HEIGHT.toPx() }
-                val toolbarHeightPx = if (hasZoomToolbar) with(density) { GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT.toPx() } else 0f
-                val minMapHeightPx = with(density) { SplitPaneMath.MIN_MAP_HEIGHT.toPx() }
-                val minLowerHeightPx = with(density) { SplitPaneMath.MIN_LOWER_HEIGHT.toPx() }
-
-                val availableHeightPx = SplitPaneMath.calculateAvailableHeight(totalHeightPx, dividerHeightPx + toolbarHeightPx)
-                val minFraction = SplitPaneMath.calculateMinFraction(minMapHeightPx, availableHeightPx)
-                val maxFraction = SplitPaneMath.calculateMaxFraction(minLowerHeightPx, availableHeightPx, minFraction)
-
-                Column(modifier = Modifier.fillMaxSize()) {
-                    mapBox(
-                        Modifier
-                            .weight(splitFraction)
-                            .heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT)
-                            .fillMaxWidth()
-                    )
-
-                    // INTERACTIVE DRAGGABLE SPLITTER (REQ-UI-223 / ATT-1890)
-                    SplitPaneDivider(
-                        onDelta = { delta ->
-                            splitFraction = SplitPaneMath.updateFraction(
-                                currentFraction = splitFraction,
-                                deltaPx = delta,
-                                availableHeightPx = availableHeightPx,
-                                minFraction = minFraction,
-                                maxFraction = maxFraction
-                            )
-                        },
-                        onReset = {
-                            splitFraction = SplitPaneMath.DEFAULT_SPLIT_FRACTION
-                        }
-                    )
-
-                    // PERSISTENT STICKY LOWER VIEWPORT CONTAINER (REQ-UI-246 / ATT-2113)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f - splitFraction)
-                            .fillMaxWidth()
+            if (showMap && hasLowerSection) {
+                if (hasScrollableContent) {
+                    BoxWithConstraints(
+                        modifier = Modifier.fillMaxSize()
                     ) {
+                        val density = LocalDensity.current
+                        val totalHeightPx = constraints.maxHeight.toFloat()
+                        val dividerHeightPx = with(density) { SplitPaneMath.DIVIDER_TOUCH_HEIGHT.toPx() }
+                        val toolbarHeightPx = if (hasZoomToolbar) with(density) { GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT.toPx() } else 0f
+                        val minMapHeightPx = with(density) { SplitPaneMath.MIN_MAP_HEIGHT.toPx() }
+                        val minLowerHeightPx = with(density) { SplitPaneMath.MIN_LOWER_HEIGHT.toPx() }
+
+                        val availableHeightPx = SplitPaneMath.calculateAvailableHeight(totalHeightPx, dividerHeightPx + toolbarHeightPx)
+                        val minFraction = SplitPaneMath.calculateMinFraction(minMapHeightPx, availableHeightPx)
+                        val maxFraction = SplitPaneMath.calculateMaxFraction(minLowerHeightPx, availableHeightPx, minFraction)
+
                         Column(modifier = Modifier.fillMaxSize()) {
-                            if (hasZoomToolbar) {
-                                GlobalTelemetryZoomToolbar(
-                                    zoomScale = profileZoomScale,
-                                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                                    totalSpan = totalSpan,
-                                    onZoomChanged = { z, s ->
-                                        profileZoomScale = z
-                                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                                    },
-                                    isPanMode = isPanMode,
-                                    onPanModeToggle = { isPanMode = !isPanMode },
-                                    modifier = Modifier.fillMaxWidth()
+                            mapBox(
+                                Modifier
+                                    .weight(splitFraction)
+                                    .heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT)
+                                    .fillMaxWidth()
+                            )
+
+                            // INTERACTIVE DRAGGABLE SPLITTER (REQ-UI-223 / ATT-1890)
+                            SplitPaneDivider(
+                                onDelta = { delta ->
+                                    splitFraction = SplitPaneMath.updateFraction(
+                                        currentFraction = splitFraction,
+                                        deltaPx = delta,
+                                        availableHeightPx = availableHeightPx,
+                                        minFraction = minFraction,
+                                        maxFraction = maxFraction
+                                    )
+                                },
+                                onReset = {
+                                    splitFraction = SplitPaneMath.DEFAULT_SPLIT_FRACTION
+                                }
+                            )
+
+                            // PERSISTENT STICKY LOWER VIEWPORT CONTAINER (REQ-UI-246 / ATT-2113)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f - splitFraction)
+                                    .fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.fillMaxSize()) {
+                                    if (hasZoomToolbar) {
+                                        GlobalTelemetryZoomToolbar(
+                                            zoomScale = profileZoomScale,
+                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                                            totalSpan = totalSpan,
+                                            onZoomChanged = { z, s ->
+                                                profileZoomScale = z
+                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                                            },
+                                            isPanMode = isPanMode,
+                                            onPanModeToggle = { isPanMode = !isPanMode },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                    lowerColumn(
+                                        Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth()
+                                            .verticalScroll(rememberScrollState())
+                                    )
+                                }
+                                scrubbingOverlay()
+                            }
+                        }
+                    }
+                } else {
+                    // Route & Segment Details: Dynamically maximized map + bottom-anchored intrinsic elevation profile (REQ-UI-273 / ATT-2386)
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        mapBox(
+                            Modifier
+                                .weight(1f)
+                                .heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT)
+                                .fillMaxWidth()
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
+                                if (hasZoomToolbar) {
+                                    GlobalTelemetryZoomToolbar(
+                                        zoomScale = profileZoomScale,
+                                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                                        totalSpan = totalSpan,
+                                        onZoomChanged = { z, s ->
+                                            profileZoomScale = z
+                                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                                        },
+                                        isPanMode = isPanMode,
+                                        onPanModeToggle = { isPanMode = !isPanMode },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                lowerColumn(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .wrapContentHeight()
                                 )
                             }
-                            lowerColumn(
-                                Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                                    .verticalScroll(rememberScrollState())
-                            )
+                            scrubbingOverlay()
                         }
-                        scrubbingOverlay()
                     }
                 }
-            }
-        } else {
-            // When hasScrollableContent is false (Routes & Segments), or when showMap is false (LiveSegmentSheet)
+            } else {
+            // When hasLowerSection is false (Heatmap / Empty map), or when showMap is false (LiveSegmentSheet / Trackless)
             if (showMap) {
                 mapBox(
                     Modifier.fillMaxSize()
                 )
-            }
-
-            if (!showMap && hasScrollableContent) {
+            } else if (!showMap && hasScrollableContent) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     Box(
                         modifier = Modifier
@@ -709,32 +747,34 @@ fun MapDetailLayout(
                         scrubbingOverlay()
                     }
                 }
-            } else {
-                if (hasZoomToolbar) {
-                    GlobalTelemetryZoomToolbar(
-                        zoomScale = profileZoomScale,
-                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
-                        totalSpan = totalSpan,
-                        onZoomChanged = { z, s ->
-                            profileZoomScale = z
-                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
-                        },
-                        isPanMode = isPanMode,
-                        onPanModeToggle = { isPanMode = !isPanMode },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                ) {
-                    lowerColumn(
-                        Modifier
+            } else if (hasLowerSection) {
+                Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
+                    if (hasZoomToolbar) {
+                        GlobalTelemetryZoomToolbar(
+                            zoomScale = profileZoomScale,
+                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                            totalSpan = totalSpan,
+                            onZoomChanged = { z, s ->
+                                profileZoomScale = z
+                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                            },
+                            isPanMode = isPanMode,
+                            onPanModeToggle = { isPanMode = !isPanMode },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight()
-                    )
-                    scrubbingOverlay()
+                    ) {
+                        lowerColumn(
+                            Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                        )
+                        scrubbingOverlay()
+                    }
                 }
             }
         }

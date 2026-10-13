@@ -84,6 +84,7 @@ class SingleActivityNavigationTest {
         assertEquals(NavRoutes.SPORT_TYPES, NavRoutes.fromDrawerItemId(R.id.drawer_sport_types))
         assertEquals(NavRoutes.TRAINING_ZONES, NavRoutes.fromDrawerItemId(R.id.drawer_training_zones))
         assertEquals(NavRoutes.BACKUP_RESTORE, NavRoutes.fromDrawerItemId(R.id.drawer_backup_restore))
+        assertEquals(NavRoutes.ADVANCED_SETTINGS, NavRoutes.fromDrawerItemId(R.id.drawer_advanced_tuning))
 
         // Non-route items must return null
         assertNull(NavRoutes.fromDrawerItemId(R.id.drawer_strava))
@@ -111,6 +112,7 @@ class SingleActivityNavigationTest {
         assertEquals(R.id.drawer_sport_types, NavRoutes.toDrawerItemId(NavRoutes.SPORT_TYPES))
         assertEquals(R.id.drawer_training_zones, NavRoutes.toDrawerItemId(NavRoutes.TRAINING_ZONES))
         assertEquals(R.id.drawer_backup_restore, NavRoutes.toDrawerItemId(NavRoutes.BACKUP_RESTORE))
+        assertEquals(R.id.drawer_advanced_tuning, NavRoutes.toDrawerItemId(NavRoutes.ADVANCED_SETTINGS))
 
         // Unknown route falls back to start tracking
         assertEquals(R.id.drawer_start_tracking, NavRoutes.toDrawerItemId("unknown_route"))
@@ -124,11 +126,12 @@ class SingleActivityNavigationTest {
         assertEquals(SettingsBottomSheetType.ACTIVITY_TYPE, NavRoutes.toSettingsBottomSheetType(R.id.drawer_tracking_layouts))
         assertEquals(SettingsBottomSheetType.UNITS, NavRoutes.toSettingsBottomSheetType(R.id.drawer_units))
         assertEquals(SettingsBottomSheetType.DISPLAY, NavRoutes.toSettingsBottomSheetType(R.id.drawer_display_settings))
-        assertEquals(SettingsBottomSheetType.SEARCH, NavRoutes.toSettingsBottomSheetType(R.id.drawer_search_settings))
+        assertNull(NavRoutes.toSettingsBottomSheetType(R.id.drawer_search_settings))
 
         // Navigation destinations must return null for bottom sheet type
         assertNull(NavRoutes.toSettingsBottomSheetType(R.id.drawer_start_tracking))
         assertNull(NavRoutes.toSettingsBottomSheetType(R.id.drawer_workouts))
+        assertNull(NavRoutes.toSettingsBottomSheetType(R.id.drawer_advanced_tuning))
         assertNull(NavRoutes.toSettingsBottomSheetType(R.id.drawer_privacy_policy))
     }
 

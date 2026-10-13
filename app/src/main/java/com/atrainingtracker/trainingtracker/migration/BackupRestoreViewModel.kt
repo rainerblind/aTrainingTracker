@@ -36,6 +36,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
@@ -47,7 +48,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     sealed class UiState {
         object Idle : UiState()
         data class Loading(val message: String? = null) : UiState()
-        data class Success(val message: String) : UiState()
+        data class Success(val message: String, val importedWorkoutId: Long? = null) : UiState()
         data class Error(val message: String) : UiState()
         data class Progress(val current: Int, val total: Int, val name: String) : UiState()
         data class MappingRequired(val uri: Uri, val analysis: ImportEngine.AnalysisResult) : UiState()
@@ -116,7 +117,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     var automatedBackupsEnabled by mutableStateOf(prefs.getBoolean("automated_backups", true))
         private set
 
-    var backupIntervalDays by mutableIntStateOf(prefs.getString("backup_interval_days", "1")?.toInt() ?: 1)
+    var backupIntervalDays by mutableIntStateOf(prefs.getString("backup_interval_days", "1")?.toIntOrNull() ?: 1)
         private set
 
     // Clustering Tolerances (ATT-315/350/502)
@@ -232,6 +233,62 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
+    fun uploadToGoogleDrive(context: Context) {
+        viewModelScope.launch {
+            val token = TrainingApplication.getGoogleDriveAuthToken()
+            if (token.isNullOrBlank() || !TrainingApplication.uploadToGoogleDrive()) {
+                _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
+                return@launch
+            }
+            _uiState.value = UiState.Loading("Creating backup...")
+            val backupFile = withContext(Dispatchers.IO) { 
+                BackupManager.createBackup(context, object : BackupManager.ProgressListener {
+                    override fun onProgress(message: String) {
+                        _uiState.value = UiState.Loading(message)
+                    }
+                }) 
+            }
+            if (backupFile != null) {
+                _uiState.value = UiState.Loading("Uploading to Google Drive...")
+                val success = GoogleDriveBackupManager.uploadBackup(context, backupFile)
+                if (success) {
+                    _uiState.value = UiState.Success("Backup uploaded to Google Drive")
+                } else {
+                    _uiState.value = UiState.Error("Google Drive upload failed")
+                }
+            } else {
+                _uiState.value = UiState.Error("Failed to create backup")
+            }
+        }
+    }
+
+    fun restoreFromGoogleDrive(context: Context) {
+        viewModelScope.launch {
+            val token = TrainingApplication.getGoogleDriveAuthToken()
+            if (token.isNullOrBlank() || !TrainingApplication.uploadToGoogleDrive()) {
+                _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
+                return@launch
+            }
+            _uiState.value = UiState.Loading("Downloading from Google Drive...")
+            val tempFile = File(context.cacheDir, "google_drive_restore.attbackup")
+            val downloadSuccess = GoogleDriveBackupManager.downloadBackup(context, tempFile)
+            if (downloadSuccess) {
+                val success = withContext(Dispatchers.IO) { 
+                    MigrationEngine.performFullRestore(context, tempFile, object : MigrationEngine.ProgressListener {
+                        override fun onProgress(message: String) {
+                            _uiState.value = UiState.Loading(message)
+                        }
+                    }) 
+                }
+                if (!success) {
+                    _uiState.value = UiState.Error("Restore failed")
+                }
+            } else {
+                _uiState.value = UiState.Error("Failed to download from Google Drive")
+            }
+        }
+    }
+
     fun performFullRestore(context: Context, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = UiState.Loading("Processing backup file...")
@@ -311,36 +368,99 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    fun importLegacyFile(context: Context, uri: Uri, format: String) {
+    fun importLegacyFile(context: Context, uri: Uri, format: String): Job {
+        return importWorkoutFiles(context, listOf(uri), format)
+    }
+
+    /**
+     * Imports multiple Garmin FIT workout files sequentially with duplicate skipping (REQ-DAT-019).
+     */
+    fun importFitFiles(
+        context: Context,
+        uris: List<Uri>,
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): Job {
+        return importWorkoutFiles(context, uris, "fit", dispatcher)
+    }
+
+    /**
+     * Ingests a batch of workout files (FIT, TCX, GPX) sequentially with duplicate skipping,
+     * progress feedback, and post-import database reconciliation (REQ-DAT-019, REQ-UI-293, ATT-3315).
+     */
+    fun importWorkoutFiles(
+        context: Context,
+        uris: List<Uri>,
+        format: String,
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): Job {
+        if (uris.isEmpty()) return Job().apply { complete() }
         saveClusteringTolerances()
-        viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = UiState.Loading("Importing legacy file...")
-            val displayName = try {
-                context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                        if (idx != -1) cursor.getString(idx) else null
-                    } else null
+        return viewModelScope.launch(dispatcher) {
+            val totalFiles = uris.size
+            var importedCount = 0
+            var skippedCount = 0
+            var failedCount = 0
+            var lastImportedWorkoutId: Long? = null
+
+            val progressFormatString = if (format.lowercase() == "fit") {
+                context.getString(R.string.import_fit_progress, 0, totalFiles)
+            } else {
+                context.getString(R.string.import_workout_files_progress, 0, totalFiles)
+            }
+            _uiState.value = UiState.Loading(progressFormatString)
+
+            uris.forEachIndexed { index, uri ->
+                val progressStepString = if (format.lowercase() == "fit") {
+                    context.getString(R.string.import_fit_progress, index + 1, totalFiles)
+                } else {
+                    context.getString(R.string.import_workout_files_progress, index + 1, totalFiles)
                 }
-            } catch (e: Exception) {
-                null
+                _uiState.value = UiState.Loading(progressStepString)
+
+                val displayName = try {
+                    context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                            if (idx != -1) cursor.getString(idx) else null
+                        } else null
+                    }
+                } catch (e: Exception) {
+                    null
+                }
+                val fileName = displayName?.takeIf { it.isNotBlank() } ?: "import_${System.currentTimeMillis()}_$index.$format"
+                val tempFile = File(context.cacheDir, fileName)
+                try {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        tempFile.outputStream().use { output -> input.copyTo(output) }
+                    }
+
+                    val fileExt = if (fileName.contains('.')) fileName.substringAfterLast('.').lowercase() else format.lowercase()
+                    val result = when (fileExt) {
+                        "tcx" -> LegacyImportEngine.importFromTcxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                        "gpx" -> LegacyImportEngine.importFromGpxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                        "fit" -> LegacyImportEngine.importFromFitResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                        else -> LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.FAILED)
+                    }
+
+                    when (result.status) {
+                        LegacyImportEngine.ImportStatus.SUCCESS -> {
+                            importedCount++
+                            if (result.workoutId != null) {
+                                lastImportedWorkoutId = result.workoutId
+                            }
+                        }
+                        LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> skippedCount++
+                        LegacyImportEngine.ImportStatus.FAILED -> failedCount++
+                    }
+                } catch (e: Exception) {
+                    Log.e("BackupRestoreVM", "Failed to import $format URI $uri: ${e.message}", e)
+                    failedCount++
+                } finally {
+                    tempFile.delete()
+                }
             }
-            val fileName = displayName?.takeIf { it.isNotBlank() } ?: "legacy_import_${System.currentTimeMillis()}.$format"
-            Log.i("BackupRestoreVM", "importLegacyFile: uri=$uri, fileName=$fileName, uploadToStravaOnImport=$uploadToStravaOnImport")
-            val tempFile = File(context.cacheDir, fileName)
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                tempFile.outputStream().use { output -> input.copyTo(output) }
-            }
-            val fileExt = if (fileName.contains('.')) fileName.substringAfterLast('.').lowercase() else format.lowercase()
-            val success = when (fileExt) {
-                "tcx" -> LegacyImportEngine.importFromTcx(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                "gpx" -> LegacyImportEngine.importFromGpx(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                else -> false
-            }
-            Log.i("BackupRestoreVM", "importLegacyFile execution result: fileExt=$fileExt, success=$success")
-            tempFile.delete()
-            if (success) {
-                // ATT-909 / REQ-MIG-026: Post-import reactive reconciliation
+
+            if (importedCount > 0) {
                 try {
                     val app = getApplication<Application>()
                     WorkoutRepository.getInstance(app).loadAllWorkouts()
@@ -349,16 +469,40 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 } catch (e: Exception) {
                     Log.w("BackupRestoreVM", "Post-import reconciliation failed: ${e.message}")
                 }
-                _uiState.value = UiState.Success("Successfully imported workout from ${fileExt.uppercase()} file.")
+            }
+
+            if (totalFiles == 1 && format.lowercase() != "fit") {
+                val fileExt = format.uppercase()
+                if (importedCount > 0) {
+                    _uiState.value = UiState.Success("Successfully imported workout from $fileExt file.", lastImportedWorkoutId)
+                } else if (skippedCount > 0) {
+                    _uiState.value = UiState.Success(context.getString(R.string.import_fit_summary_success, 0, 1), null)
+                } else {
+                    _uiState.value = UiState.Error("Failed to import workout. It might already exist or the file format is invalid.")
+                }
             } else {
-                _uiState.value = UiState.Error("Failed to import workout. It might already exist or the file format is invalid.")
+                val resultMsg = if (failedCount > 0) {
+                    context.getString(R.string.import_fit_summary_with_errors, importedCount, skippedCount, failedCount)
+                } else {
+                    context.getString(R.string.import_fit_summary_success, importedCount, skippedCount)
+                }
+
+                if (importedCount > 0 || skippedCount > 0) {
+                    _uiState.value = UiState.Success(resultMsg, if (importedCount > 0) lastImportedWorkoutId else null)
+                } else {
+                    _uiState.value = UiState.Error(resultMsg)
+                }
             }
         }
     }
 
-    fun bulkRecoverLegacyData(context: Context, format: String) {
+    fun bulkRecoverLegacyData(
+        context: Context,
+        format: String = "all",
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): kotlinx.coroutines.Job {
         saveClusteringTolerances()
-        viewModelScope.launch(Dispatchers.IO) {
+        return viewModelScope.launch(dispatcher) {
             val credential = TrainingApplication.readDropboxCredential()
             if (credential == null || !TrainingApplication.uploadToDropbox()) {
                 _uiState.value = UiState.Error(context.getString(R.string.dropbox_disconnected_status))
@@ -391,6 +535,59 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             }
             if (result.importedCount > 0) {
                 // ATT-909 / REQ-MIG-026: Post-bulk recovery reactive reconciliation
+                try {
+                    WorkoutRepository.getInstance(app).loadAllWorkouts()
+                    PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
+                    WorkoutClusterRepository.getInstance(app).refreshClusters()
+                } catch (e: Exception) {
+                    Log.w("BackupRestoreVM", "Post-bulk recovery reconciliation failed: ${e.message}")
+                }
+            }
+            _uiState.value = UiState.Success(message)
+        }
+    }
+
+    fun bulkRecoverGoogleDriveData(
+        context: Context,
+        format: String = "all",
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): kotlinx.coroutines.Job {
+        saveClusteringTolerances()
+        return viewModelScope.launch(dispatcher) {
+            val token = TrainingApplication.getGoogleDriveAuthToken()
+            if (token.isNullOrBlank() || !TrainingApplication.uploadToGoogleDrive()) {
+                _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
+                return@launch
+            }
+            _uiState.value = UiState.Loading("Initializing Google Drive recovery...")
+            val result = LegacyImportEngine.bulkRecoverFromGoogleDrive(context, format, createLegacyListener(), uploadToStravaOnImport)
+            val app = getApplication<Application>()
+            val message = if (result.failedCount > 0) {
+                app.getString(
+                    R.string.legacy_import__finished_with_failed,
+                    result.importedCount,
+                    result.skippedCount,
+                    result.failedCount,
+                    result.totalScanned
+                )
+            } else if (result.skippedCount > 0) {
+                app.getString(
+                    R.string.legacy_import__finished_with_skipped,
+                    result.importedCount,
+                    result.skippedCount,
+                    result.totalScanned
+                )
+            } else if (result.totalScanned == 0) {
+                app.getString(R.string.google_drive_scan_empty_diagnostic)
+            } else {
+                app.getString(
+                    R.string.legacy_import__finished_all_new,
+                    result.importedCount,
+                    result.totalScanned
+                )
+            }
+            if (result.importedCount > 0) {
+                // REQ-MIG-034: Post-recovery reactive reconciliation
                 try {
                     WorkoutRepository.getInstance(app).loadAllWorkouts()
                     PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()

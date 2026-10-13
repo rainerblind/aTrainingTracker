@@ -44,6 +44,11 @@ public class MaxValueFilter extends MyFilter<Number> {
     }
 
     @Override
+    public synchronized void reset() {
+        mMaxValue = 0;
+    }
+
+    @Override
     public synchronized void newValue(Number value) {
         if (DEBUG) Log.i(TAG, "newValue: value=" + value + ", maxValue=" + mMaxValue);
 

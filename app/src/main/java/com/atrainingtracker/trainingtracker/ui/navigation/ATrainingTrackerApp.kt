@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.navigation
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -44,8 +46,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -60,8 +66,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog
+import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusSheet
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreen
+import com.atrainingtracker.trainingtracker.ui.ant.AntDialogState
+import com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialog
+import com.atrainingtracker.trainingtracker.ui.ant.AntMissingDependencyDialog
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModel
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModel
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreen
@@ -92,7 +101,9 @@ import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegme
 import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialog
+import com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialog
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreen
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.ActivityTypeSelectionDialog
@@ -124,7 +135,7 @@ fun ATrainingTrackerApp(
 
     // Attach NavController to Activity for direct intent / broadcast routing
     DisposableEffect(navController) {
-        activity.navController = navController
+        activity.onNavControllerReady(navController)
         onDispose {
             activity.navController = null
         }
@@ -389,12 +400,11 @@ fun ATrainingTrackerApp(
 
                 composable(NavRoutes.SENSORS) {
                     val tabViewModel: DevicesTabbedViewModel = viewModel(activity)
+                    val equipmentViewModel: EquipmentViewModel = viewModel(activity)
                     DevicesTabbedScreen(
                         tabViewModel = tabViewModel,
-                        initialTab = 2,
-                        onCheckAntInstallation = {
-                            InstallANTShitDialog().show(activity.supportFragmentManager, InstallANTShitDialog.TAG)
-                        }
+                        equipmentViewModel = equipmentViewModel,
+                        initialTab = 2
                     )
                 }
 
@@ -438,6 +448,13 @@ fun ATrainingTrackerApp(
                     val backupRestoreViewModel: BackupRestoreViewModel = viewModel(activity)
                     ImportBackupTabsScreen(viewModel = backupRestoreViewModel)
                 }
+
+                composable(NavRoutes.ADVANCED_SETTINGS) {
+                    AdvancedTuningScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onSettingsChanged = { activity.applyDisplaySettings() }
+                    )
+                }
             }
         }
     }
@@ -458,6 +475,9 @@ fun ATrainingTrackerApp(
                 SettingsBottomSheetType.DROPBOX -> DropboxSettingsDialog(
                     onDismiss = { drawerController.activeBottomSheet = null }
                 )
+                SettingsBottomSheetType.GOOGLE_DRIVE -> GoogleDriveSettingsDialog(
+                    onDismiss = { drawerController.activeBottomSheet = null }
+                )
                 SettingsBottomSheetType.EXPORT -> ExportSettingsDialog(
                     onDismiss = { drawerController.activeBottomSheet = null }
                 )
@@ -468,7 +488,8 @@ fun ATrainingTrackerApp(
                     onDismiss = { drawerController.activeBottomSheet = null },
                     onSettingsChanged = { activity.applyDisplaySettings() },
                     onNavigateToTuning = {
-                        drawerController.activeBottomSheet = SettingsBottomSheetType.ADVANCED_TUNING
+                        drawerController.activeBottomSheet = null
+                        navController.navigate(NavRoutes.ADVANCED_SETTINGS)
                     }
                 )
                 SettingsBottomSheetType.ADVANCED_TUNING -> AdvancedTuningDialog(
@@ -486,5 +507,61 @@ fun ATrainingTrackerApp(
                 )
             }
         }
+    }
+
+    // Material 3 ANT+ Alert Dialogs & Status Sheet (REQ-UI-323 / ATT-2939)
+    when (val dialogState = activity.antDialogState) {
+        is AntDialogState.MissingAdapter -> {
+            val scope = rememberCoroutineScope()
+            val tuningDataStore = remember { TuningPreferencesDataStore(activity.applicationContext) }
+            AntMissingAdapterDialog(
+                onViewStatus = {
+                    activity.antDialogState = null
+                    activity.showAntStatusSheet = true
+                },
+                onDismiss = {
+                    activity.antDialogState = null
+                    scope.launch {
+                        tuningDataStore.setSuppressAntMissingAdapterDialog(true)
+                    }
+                }
+            )
+        }
+        is AntDialogState.MissingDependency -> {
+            val context = LocalContext.current
+            AntMissingDependencyDialog(
+                dependencyName = dialogState.dependencyName,
+                onGoToStore = {
+                    activity.antDialogState = null
+                    val startStore = Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("market://details?id=${dialogState.packageName}")
+                    ).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    try {
+                        context.startActivity(startStore)
+                    } catch (e: Exception) {
+                        val webIntent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://play.google.com/store/apps/details?id=${dialogState.packageName}")
+                        ).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(webIntent)
+                    }
+                },
+                onDismiss = {
+                    activity.antDialogState = null
+                }
+            )
+        }
+        null -> Unit
+    }
+
+    if (activity.showAntStatusSheet) {
+        AntServicesStatusSheet(
+            onDismiss = { activity.showAntStatusSheet = false }
+        )
     }
 }

@@ -202,6 +202,17 @@ def jira_request(url, method="GET", payload=None, is_binary=False, role="agent1"
             print(f"API Error: {masked_body}", file=sys.stderr)
         raise e
 
+def resolve_active_sprint(board_id, role="agent1"):
+    config = get_config()
+    sprints = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board/{board_id}/sprint?state=active", role=role)["values"]
+    if not sprints:
+        return None
+    dev_sprints = [s for s in sprints if s.get("name", "").strip().lower() != "human review"]
+    if dev_sprints:
+        dev_sprints.sort(key=lambda s: s.get("id", 0), reverse=True)
+        return dev_sprints[0]
+    return sprints[0]
+
 def list_sprint_issues(role="agent1"):
     config = get_config()
     # 1. Find the board
@@ -209,12 +220,12 @@ def list_sprint_issues(role="agent1"):
     board_id = boards[0]["id"]
 
     # 2. Find active sprint
-    sprints = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board/{board_id}/sprint?state=active", role=role)["values"]
-    if not sprints:
+    active_sprint = resolve_active_sprint(board_id, role=role)
+    if not active_sprint:
         print("No active sprint found.")
         return
-    sprint_id = sprints[0]["id"]
-    print(f"Active Sprint: {sprints[0]['name']}")
+    sprint_id = active_sprint["id"]
+    print(f"Active Sprint: {active_sprint['name']}")
 
     # 3. Get issues
     issues = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,fixVersions", role=role)["issues"]
@@ -226,7 +237,7 @@ def list_sprint_issues(role="agent1"):
 
 def show_issue(issue_key, role="agent1"):
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype,status,subtasks,fixVersions,assignee"
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype,status,subtasks,fixVersions,assignee,priority,labels"
     issue = jira_request(url, role=role)
 
     itype = issue['fields']['issuetype']['name']
@@ -237,6 +248,14 @@ def show_issue(issue_key, role="agent1"):
     assignee = issue['fields'].get('assignee')
     assignee_name = assignee.get('displayName', 'Unassigned') if assignee else 'Unassigned'
     print(f"\n*Assignee*: {assignee_name}")
+
+    priority = issue['fields'].get('priority')
+    priority_name = priority.get('name', 'None') if priority else 'None'
+    print(f"\n*Priority*: {priority_name}")
+
+    labels = issue['fields'].get('labels', [])
+    if labels:
+        print(f"\n*Labels*: {', '.join(labels)}")
 
     # Fix Version / Lösungsversion
     fix_versions = issue['fields'].get('fixVersions', [])
@@ -331,6 +350,19 @@ def set_fix_version(issue_key, version_name, role="agent1"):
         print(f"Available active unreleased versions: {', '.join(active_versions)}", file=sys.stderr)
         sys.exit(1)
 
+    # Governance Mandates (Rule 6 & Rule 19)
+    url_issue = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=status,issuetype"
+    issue_data = jira_request(url_issue, role=role)
+    if issue_data.get('fields', {}).get('issuetype', {}).get('subtask', False):
+        print(f"Error: Sub-tasks must not get a solution ('Lösungsversion') assigned! (Rule 6)", file=sys.stderr)
+        sys.exit(1)
+
+    status_name = issue_data.get('fields', {}).get('status', {}).get('name', '')
+    premature_statuses = ["Zu erledigen", "In Arbeit", "Analysis", "Open", "To Do", "In Progress", "In Specification"]
+    if status_name in premature_statuses and role in ("agent1", "agent2", "coordinator"):
+        print(f"Error: Premature Fix Version assignment blocked on {issue_key}! Status is '{status_name}'. Mandate: 'Add version when ticket is finished, not when started' (Rule 19).", file=sys.stderr)
+        sys.exit(1)
+
     url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
     payload = {
         "fields": {
@@ -339,6 +371,7 @@ def set_fix_version(issue_key, version_name, role="agent1"):
     }
     jira_request(url, method="PUT", payload=payload, role=role)
     print(f"Lösungsversion (Fix Version) '{version_name}' successfully set on {issue_key}.")
+
 
 def print_status(issue_key, role="agent1"):
     config = get_config()
@@ -594,6 +627,17 @@ def update_issue_summary(issue_key, summary, role="agent1"):
     jira_request(url, method="PUT", payload=payload, role=role)
     print(f"Summary updated for {issue_key}.")
 
+def set_parent(issue_key, parent_key, role="agent1"):
+    config = get_config()
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
+    payload = {
+        "fields": {
+            "parent": {"key": parent_key}
+        }
+    }
+    jira_request(url, method="PUT", payload=payload, role=role)
+    print(f"Parent of {issue_key} updated to {parent_key}.")
+
 def create_subtask(parent_key, summary, description, role="coordinator", add_to_sprint=False, fix_version=None):
     if fix_version:
         print("Error: Sub-tasks must not get a solution ('Lösungsversion') assigned! (Governance mandate)", file=sys.stderr)
@@ -652,14 +696,29 @@ def create_subtask(parent_key, summary, description, role="coordinator", add_to_
     print(f"Sub-task {new_key} created for parent {parent_key}.")
 
     if add_to_sprint:
-        add_to_active_sprint(new_key, role=role)
+        parent_sprint_id = None
+        try:
+            parent_agile = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/issue/{parent_key}", role=role)
+            parent_sprint = parent_agile.get("fields", {}).get("sprint")
+            if parent_sprint and parent_sprint.get("id"):
+                parent_sprint_id = parent_sprint["id"]
+        except Exception:
+            pass
+
+        if parent_sprint_id:
+            url_sprint = f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{parent_sprint_id}/issue"
+            payload_sprint = {"issues": [new_key]}
+            jira_request(url_sprint, method="POST", payload=payload_sprint, role=role)
+            print(f"Added {new_key} to parent's sprint (id {parent_sprint_id}).")
+        else:
+            add_to_active_sprint(new_key, role=role)
 
     # Initial assignment: default subtasks to agent1
     assign_issue(new_key, "agent1", role=role)
 
     return new_key
 
-def create_issue(summary, description, issuetype_id="10008", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None):
+def create_issue(summary, description, issuetype_id="10008", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None):
     if description.startswith("@") and os.path.exists(description[1:]):
         with open(description[1:], "r", encoding="utf-8") as f:
             description = f.read()
@@ -681,6 +740,12 @@ def create_issue(summary, description, issuetype_id="10008", parent_key=None, ro
         fields["parent"] = {"key": parent_key}
     if fix_version:
         fields["fixVersions"] = [{"name": fix_version}]
+    if priority:
+        fields["priority"] = {"name": priority}
+    if labels:
+        if isinstance(labels, str):
+            labels = [l.strip() for l in labels.split(",") if l.strip()]
+        fields["labels"] = labels
 
     payload = {"fields": fields}
     data = jira_request(url, method="POST", payload=payload, role=role)
@@ -699,15 +764,15 @@ def add_to_active_sprint(issue_key, role="agent1"):
     config = get_config()
     boards = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board", role=role)["values"]
     board_id = boards[0]["id"]
-    sprints = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/board/{board_id}/sprint?state=active", role=role)["values"]
-    if not sprints:
+    active_sprint = resolve_active_sprint(board_id, role=role)
+    if not active_sprint:
         print("No active sprint found.")
         return
-    sprint_id = sprints[0]["id"]
+    sprint_id = active_sprint["id"]
     url = f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue"
     payload = {"issues": [issue_key]}
     jira_request(url, method="POST", payload=payload, role=role)
-    print(f"Added {issue_key} to active sprint '{sprints[0]['name']}' (id {sprint_id}).")
+    print(f"Added {issue_key} to active sprint '{active_sprint['name']}' (id {sprint_id}).")
 
 if __name__ == "__main__":
     active_role, remaining_argv = parse_role_from_args(sys.argv[1:])
@@ -747,6 +812,8 @@ if __name__ == "__main__":
         update_issue_description(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "update-summary" and len(remaining_argv) == 3:
         update_issue_summary(remaining_argv[1], remaining_argv[2], role=active_role)
+    elif cmd == "set-parent" and len(remaining_argv) == 3:
+        set_parent(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "assign" and len(remaining_argv) == 3:
         assign_issue(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "create-subtask" and len(remaining_argv) >= 4:
@@ -776,6 +843,8 @@ if __name__ == "__main__":
     elif cmd == "create-issue" and len(remaining_argv) >= 3:
         add_sprint = False
         fix_ver = None
+        priority_arg = None
+        labels_arg = None
         filtered_args = []
         for arg in remaining_argv[1:]:
             if arg == "--add-to-sprint":
@@ -783,20 +852,28 @@ if __name__ == "__main__":
                     print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)
                     sys.exit(1)
                 add_sprint = True
-            elif arg.startswith("--fixversion="):
+            elif arg.startswith("--fixversion=") or arg.startswith("--fix-version="):
+                if active_role in ("agent1", "agent2", "coordinator"):
+                    print("Error: Tickets must not get a solution ('Lösungsversion') assigned at creation time! Mandate: 'Add version when ticket is finished, not when started' (Rule 19).", file=sys.stderr)
+                    sys.exit(1)
                 fix_ver = arg.split("=", 1)[1]
+            elif arg.startswith("--priority="):
+                priority_arg = arg.split("=", 1)[1]
+            elif arg.startswith("--labels="):
+                labels_arg = arg.split("=", 1)[1]
             else:
                 filtered_args.append(arg)
 
+
         if len(filtered_args) < 2:
-            print("Usage: create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--add-to-sprint] [--fixversion=VERSION]", file=sys.stderr)
+            print("Usage: create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--add-to-sprint] [--fixversion=VERSION] [--priority=PRIORITY] [--labels=L1,L2]", file=sys.stderr)
             sys.exit(1)
 
         summary = filtered_args[0]
         desc = filtered_args[1]
         type_id = filtered_args[2] if len(filtered_args) >= 3 else "10008"
         parent = filtered_args[3] if len(filtered_args) >= 4 else None
-        create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver)
+        create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver, priority=priority_arg, labels=labels_arg)
     elif cmd == "add-to-sprint" and len(remaining_argv) == 2:
         if active_role in ("agent1", "agent2", "coordinator"):
             print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)

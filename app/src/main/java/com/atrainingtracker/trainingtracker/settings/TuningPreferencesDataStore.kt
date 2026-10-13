@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -27,8 +28,10 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
 
 /**
  * Selectable horizontal X-axis domain for Aftermath elevation profile and scrubbing.
@@ -48,6 +51,7 @@ object TuningPreferencesDefaults {
     val PROFILE_X_AXIS_DOMAIN = ELEVATION_X_AXIS_DOMAIN
     val COCKPIT_FONT_FAMILY = CockpitFontFamily.SYSTEM_DEFAULT
     val COCKPIT_FONT_WEIGHT = CockpitFontWeight.SEMI_BOLD
+    val SENSOR_FIELD_VARIANT = SensorFieldVariant.CLASSIC_SEAMLESS
     const val FULL_DIM_FACTOR = 0.25f
     const val MEDIUM_DIM_FACTOR = 0.50f
     const val SLOPE_FLAT_THRESHOLD = 2.0f
@@ -80,6 +84,110 @@ object TuningPreferencesDefaults {
     const val DEFAULT_PACE_CEILING_MIN_KM = 3.0f
     const val MIN_PACE_CEILING_MIN_KM = 2.0f
     const val MAX_PACE_CEILING_MIN_KM = 6.0f
+
+    const val SHOW_LIVE_CLIMBS = true
+    const val CLIMB_MIN_LENGTH_METERS = 500.0f
+    const val CLIMB_MIN_GRADIENT_PERCENT = 3.0f
+
+    const val TURN_PROMPTS_ENABLED = true
+    const val TURN_AUDIO_ALERTS_ENABLED = true
+    const val TURN_CUE_COUNTDOWN_DISTANCE_METERS = 100.0f
+    const val MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS = 30.0f
+    const val MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS = 300.0f
+    const val OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 50.0f
+    const val MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 20.0f
+    const val MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS = 200.0f
+
+
+    const val SENSOR_FIELD_CORNER_RADIUS = 0.0f
+    const val MIN_SENSOR_FIELD_CORNER_RADIUS = 0.0f
+    const val MAX_SENSOR_FIELD_CORNER_RADIUS = 20.0f
+
+    const val SENSOR_FIELD_BORDER_THICKNESS = 1.0f
+    const val MIN_SENSOR_FIELD_BORDER_THICKNESS = 0.0f
+    const val MAX_SENSOR_FIELD_BORDER_THICKNESS = 4.0f
+
+    const val SENSOR_FIELD_BORDER_CONTRAST = 0.0f
+    const val MIN_SENSOR_FIELD_BORDER_CONTRAST = 0.0f
+    const val MAX_SENSOR_FIELD_BORDER_CONTRAST = 1.0f
+
+    const val DEFAULT_ROUTE_SELECTION_RADIUS_KM = 1.0f
+    const val MIN_ROUTE_SELECTION_RADIUS_KM = 0.5f
+    const val MAX_ROUTE_SELECTION_RADIUS_KM = 10.0f
+
+    @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
+    const val DEFAULT_NAVIGATION_CUE_TRANSPARENCY = 1.00f
+    @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
+    const val MIN_NAVIGATION_CUE_TRANSPARENCY = 0.20f
+    @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
+    const val MAX_NAVIGATION_CUE_TRANSPARENCY = 1.00f
+    @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
+    const val STEP_NAVIGATION_CUE_TRANSPARENCY = 0.05f
+
+    const val DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC = 4
+    const val MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC = 1
+    const val MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC = 10
+    const val STEP_NAVIGATION_CUE_DISMISS_DURATION_SEC = 1
+    val NAVIGATION_CUE_DISMISS_OPTIONS = (MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC..MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC).toList()
+
+    const val DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS = 21.0f
+    const val MIN_ELEVATION_SMOOTHING_SIGMA_METERS = 10.0f
+    const val MAX_ELEVATION_SMOOTHING_SIGMA_METERS = 50.0f
+    const val STEP_ELEVATION_SMOOTHING_SIGMA_METERS = 1.0f
+
+    const val DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM = 20.0f
+    const val MIN_MAP_FOLLOW_ME_INITIAL_ZOOM = 15.0f
+    const val MAX_MAP_FOLLOW_ME_INITIAL_ZOOM = 21.0f
+    const val STEP_MAP_FOLLOW_ME_INITIAL_ZOOM = 0.5f
+
+    const val DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED = true
+
+    const val DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM = 18.0f
+    const val MIN_MAP_FOLLOW_ME_CRUISING_ZOOM = 14.0f
+    const val MAX_MAP_FOLLOW_ME_CRUISING_ZOOM = 19.5f
+    const val STEP_MAP_FOLLOW_ME_CRUISING_ZOOM = 0.5f
+
+    const val DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE = 70.0f
+    const val MIN_MAP_FOLLOW_ME_TILT_ANGLE = 0.0f
+    const val MAX_MAP_FOLLOW_ME_TILT_ANGLE = 70.0f
+    const val STEP_MAP_FOLLOW_ME_TILT_ANGLE = 5.0f
+
+    const val DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT = 30.0f
+    const val MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT = 10.0f
+    const val MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT = 50.0f
+    const val STEP_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT = 5.0f
+
+    const val DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA = 0.10f
+    const val MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA = 0.02f
+    const val MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA = 0.50f
+    const val STEP_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA = 0.02f
+
+    const val DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA = 0.15f
+    const val MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA = 0.05f
+    const val MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA = 0.50f
+    const val STEP_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA = 0.05f
+
+    const val SUPPRESS_ANT_MISSING_ADAPTER_DIALOG = false
+    const val DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED = true
+
+    const val CLUSTER_TOL_ENDPOINTS = 200.0f
+    const val MIN_CLUSTER_TOL_ENDPOINTS = 10.0f
+    const val MAX_CLUSTER_TOL_ENDPOINTS = 500.0f
+
+    const val CLUSTER_TOL_APEX = 400.0f
+    const val MIN_CLUSTER_TOL_APEX = 10.0f
+    const val MAX_CLUSTER_TOL_APEX = 500.0f
+
+    const val CLUSTER_TOL_DISTANCE = 0.20f
+    const val MIN_CLUSTER_TOL_DISTANCE = 0.01f
+    const val MAX_CLUSTER_TOL_DISTANCE = 0.20f
+
+    const val CLUSTER_TOL_ALTITUDE_POS = 400.0f
+    const val MIN_CLUSTER_TOL_ALTITUDE_POS = 10.0f
+    const val MAX_CLUSTER_TOL_ALTITUDE_POS = 500.0f
+
+    const val CLUSTER_USE_SPORT_TYPE = true
+    const val CLUSTER_USE_ALTITUDE_POS = true
 }
 
 /**
@@ -90,6 +198,7 @@ data class TuningConfig(
     val telemetryXAxisDomain: ProfileXAxisDomain = TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN,
     val cockpitFontFamily: CockpitFontFamily = TuningPreferencesDefaults.COCKPIT_FONT_FAMILY,
     val cockpitFontWeight: CockpitFontWeight = TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT,
+    val sensorFieldVariant: SensorFieldVariant = TuningPreferencesDefaults.SENSOR_FIELD_VARIANT,
     val fullDimFactor: Float = TuningPreferencesDefaults.FULL_DIM_FACTOR,
     val mediumDimFactor: Float = TuningPreferencesDefaults.MEDIUM_DIM_FACTOR,
     val slopeFlatThreshold: Float = TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD,
@@ -99,8 +208,41 @@ data class TuningConfig(
     val gpsAccuracyThresholdMeters: Float = TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M,
     val altitudeFilterWindowSec: Int = TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC,
     val slopeMinSpeedMps: Float = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS,
-    val paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM
+    val paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM,
+    val showLiveClimbs: Boolean = TuningPreferencesDefaults.SHOW_LIVE_CLIMBS,
+    val climbMinLengthMeters: Float = TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS,
+    val climbMinGradientPercent: Float = TuningPreferencesDefaults.CLIMB_MIN_GRADIENT_PERCENT,
+    val turnPromptsEnabled: Boolean = TuningPreferencesDefaults.TURN_PROMPTS_ENABLED,
+    val turnAudioAlertsEnabled: Boolean = TuningPreferencesDefaults.TURN_AUDIO_ALERTS_ENABLED,
+    val turnCueCountdownDistanceMeters: Float = TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+    val offRouteCorridorThresholdMeters: Float = TuningPreferencesDefaults.OFF_ROUTE_CORRIDOR_THRESHOLD_METERS,
+    val sensorFieldCornerRadius: Float = TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS,
+    val sensorFieldBorderThickness: Float = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS,
+    val sensorFieldBorderContrast: Float = TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST,
+    val routeSelectionRadiusKm: Float = TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM,
+    @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
+    val navigationCueTransparency: Float = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY,
+    val navigationCueDismissDurationSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+    val elevationSmoothingSigmaMeters: Float = TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS,
+    val mapFollowMeInitialZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
+    val mapFollowMeSpeedZoomEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+    val mapFollowMeCruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
+    val mapFollowMeTiltAngle: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE,
+    val mapFollowMeLookaheadPaddingPercent: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+    val mapFollowMeSpeedSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+    val mapFollowMeBearingSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+    val suppressAntMissingAdapterDialog: Boolean = TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG,
+    val autoFollowUniqueRouteEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
+    val clusterTolEndpoints: Float = TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS,
+    val clusterTolApex: Float = TuningPreferencesDefaults.CLUSTER_TOL_APEX,
+    val clusterTolDistance: Float = TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE,
+    val clusterTolAltitudePos: Float = TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS,
+    val clusterUseSportType: Boolean = TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE,
+    val clusterUseAltitudePos: Boolean = TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS
 ) {
+    val showAntMissingAdapterWarnings: Boolean
+        get() = !suppressAntMissingAdapterDialog
+
     @Deprecated("Use elevationXAxisDomain or telemetryXAxisDomain", ReplaceWith("elevationXAxisDomain"))
     val profileXAxisDomain: ProfileXAxisDomain
         get() = elevationXAxisDomain
@@ -151,6 +293,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_PROFILE_X_AXIS_DOMAIN: Preferences.Key<String> = stringPreferencesKey("tuning_profile_x_axis_domain")
         val KEY_COCKPIT_FONT_FAMILY: Preferences.Key<String> = stringPreferencesKey("tuning_cockpit_font_family")
         val KEY_COCKPIT_FONT_WEIGHT: Preferences.Key<String> = stringPreferencesKey("tuning_cockpit_font_weight")
+        val KEY_SENSOR_FIELD_VARIANT: Preferences.Key<String> = stringPreferencesKey("tuning_sensor_field_variant")
         val KEY_FULL_DIM_FACTOR: Preferences.Key<Float> = floatPreferencesKey("tuning_battery_saver_full_dim")
         val KEY_MEDIUM_DIM_FACTOR: Preferences.Key<Float> = floatPreferencesKey("tuning_battery_saver_medium_dim")
         val KEY_SLOPE_FLAT: Preferences.Key<Float> = floatPreferencesKey("tuning_battery_saver_slope_flat")
@@ -161,13 +304,46 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_ALTITUDE_FILTER_WINDOW: Preferences.Key<Int> = intPreferencesKey("tuning_altitude_filter_window")
         val KEY_SLOPE_MIN_SPEED: Preferences.Key<Float> = floatPreferencesKey("tuning_slope_min_speed")
         val KEY_PACE_CEILING_MIN_KM: Preferences.Key<Float> = floatPreferencesKey("tuning_pace_ceiling_min_km")
+        val KEY_SHOW_LIVE_CLIMBS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_live_climbs")
+        val KEY_CLIMB_MIN_LENGTH_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_climb_min_length_meters")
+        val KEY_CLIMB_MIN_GRADIENT_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_climb_min_gradient_percent")
+        val KEY_TURN_PROMPTS_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_turn_prompts_enabled")
+        val KEY_TURN_AUDIO_ALERTS_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_turn_audio_alerts_enabled")
+        val KEY_TURN_CUE_COUNTDOWN_DISTANCE: Preferences.Key<Float> = floatPreferencesKey("tuning_turn_cue_countdown_distance")
+        val KEY_OFF_ROUTE_CORRIDOR_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_off_route_corridor_threshold")
 
-        private val ALL_KEYS = listOf(
+        val KEY_SENSOR_FIELD_CORNER_RADIUS: Preferences.Key<Float> = floatPreferencesKey("tuning_sensor_field_corner_radius")
+        val KEY_SENSOR_FIELD_BORDER_THICKNESS: Preferences.Key<Float> = floatPreferencesKey("tuning_sensor_field_border_thickness")
+        val KEY_SENSOR_FIELD_BORDER_CONTRAST: Preferences.Key<Float> = floatPreferencesKey("tuning_sensor_field_border_contrast")
+        val KEY_ROUTE_SELECTION_RADIUS_KM: Preferences.Key<Float> = floatPreferencesKey("tuning_route_selection_radius_km")
+        @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
+        val KEY_NAVIGATION_CUE_TRANSPARENCY: Preferences.Key<Float> = floatPreferencesKey("tuning_navigation_cue_transparency")
+        val KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_navigation_cue_dismiss_duration_sec")
+        val KEY_ELEVATION_SMOOTHING_SIGMA_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_elevation_smoothing_sigma_meters")
+
+        val KEY_MAP_FOLLOW_ME_INITIAL_ZOOM: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_initial_zoom")
+        val KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_map_follow_me_speed_zoom_enabled")
+        val KEY_MAP_FOLLOW_ME_CRUISING_ZOOM: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_cruising_zoom")
+        val KEY_MAP_FOLLOW_ME_TILT_ANGLE: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_tilt_angle")
+        val KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_lookahead_padding_percent")
+        val KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_speed_smoothing_alpha")
+        val KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_bearing_smoothing_alpha")
+        val KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_suppress_ant_missing_adapter_dialog")
+        val KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_follow_unique_route_enabled")
+        val KEY_CLUSTER_TOL_ENDPOINTS: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_tol_endpoints")
+        val KEY_CLUSTER_TOL_APEX: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_tol_apex")
+        val KEY_CLUSTER_TOL_DISTANCE: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_tol_distance")
+        val KEY_CLUSTER_TOL_ALTITUDE_POS: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_tol_altitude_pos")
+        val KEY_CLUSTER_USE_SPORT_TYPE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_sport_type")
+        val KEY_CLUSTER_USE_ALTITUDE_POS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_altitude_pos")
+
+        internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
             KEY_TELEMETRY_X_AXIS_DOMAIN,
             KEY_PROFILE_X_AXIS_DOMAIN,
             KEY_COCKPIT_FONT_FAMILY,
             KEY_COCKPIT_FONT_WEIGHT,
+            KEY_SENSOR_FIELD_VARIANT,
             KEY_FULL_DIM_FACTOR,
             KEY_MEDIUM_DIM_FACTOR,
             KEY_SLOPE_FLAT,
@@ -177,7 +353,36 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_GPS_ACCURACY_THRESHOLD,
             KEY_ALTITUDE_FILTER_WINDOW,
             KEY_SLOPE_MIN_SPEED,
-            KEY_PACE_CEILING_MIN_KM
+            KEY_PACE_CEILING_MIN_KM,
+            KEY_SHOW_LIVE_CLIMBS,
+            KEY_CLIMB_MIN_LENGTH_METERS,
+            KEY_CLIMB_MIN_GRADIENT_PERCENT,
+            KEY_TURN_PROMPTS_ENABLED,
+            KEY_TURN_AUDIO_ALERTS_ENABLED,
+            KEY_TURN_CUE_COUNTDOWN_DISTANCE,
+            KEY_OFF_ROUTE_CORRIDOR_THRESHOLD,
+            KEY_SENSOR_FIELD_CORNER_RADIUS,
+            KEY_SENSOR_FIELD_BORDER_THICKNESS,
+            KEY_SENSOR_FIELD_BORDER_CONTRAST,
+            KEY_ROUTE_SELECTION_RADIUS_KM,
+            KEY_NAVIGATION_CUE_TRANSPARENCY,
+            KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+            KEY_ELEVATION_SMOOTHING_SIGMA_METERS,
+            KEY_MAP_FOLLOW_ME_INITIAL_ZOOM,
+            KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+            KEY_MAP_FOLLOW_ME_CRUISING_ZOOM,
+            KEY_MAP_FOLLOW_ME_TILT_ANGLE,
+            KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+            KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+            KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+            KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG,
+            KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
+            KEY_CLUSTER_TOL_ENDPOINTS,
+            KEY_CLUSTER_TOL_APEX,
+            KEY_CLUSTER_TOL_DISTANCE,
+            KEY_CLUSTER_TOL_ALTITUDE_POS,
+            KEY_CLUSTER_USE_SPORT_TYPE,
+            KEY_CLUSTER_USE_ALTITUDE_POS
         )
     }
 
@@ -202,6 +407,9 @@ class TuningPreferencesDataStore(private val context: Context) {
         } catch (e: Exception) {
             TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
         }
+
+        val rawVariantStr = prefs[KEY_SENSOR_FIELD_VARIANT]
+        val sensorFieldVariant = SensorFieldVariant.fromStorage(rawVariantStr)
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
         val cockpitFontWeight = try {
@@ -267,11 +475,51 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MAX_PACE_CEILING_MIN_KM
         )
 
+        val showLiveClimbs = prefs[KEY_SHOW_LIVE_CLIMBS] ?: TuningPreferencesDefaults.SHOW_LIVE_CLIMBS
+        val climbMinLength = prefs[KEY_CLIMB_MIN_LENGTH_METERS] ?: TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS
+        val climbMinGradient = prefs[KEY_CLIMB_MIN_GRADIENT_PERCENT] ?: TuningPreferencesDefaults.CLIMB_MIN_GRADIENT_PERCENT
+
+        val turnPromptsEnabled = prefs[KEY_TURN_PROMPTS_ENABLED] ?: TuningPreferencesDefaults.TURN_PROMPTS_ENABLED
+        val turnAudioAlertsEnabled = prefs[KEY_TURN_AUDIO_ALERTS_ENABLED] ?: TuningPreferencesDefaults.TURN_AUDIO_ALERTS_ENABLED
+        val rawTurnCountdown = prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] ?: TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS
+        val clampedTurnCountdown = rawTurnCountdown.coerceIn(
+            TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+            TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS
+        )
+        val rawOffRoute = prefs[KEY_OFF_ROUTE_CORRIDOR_THRESHOLD] ?: TuningPreferencesDefaults.OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
+        val clampedOffRoute = rawOffRoute.coerceIn(
+            TuningPreferencesDefaults.MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS,
+            TuningPreferencesDefaults.MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
+        )
+
+        val rawCornerRadius = prefs[KEY_SENSOR_FIELD_CORNER_RADIUS] ?: TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS
+        val clampedCornerRadius = rawCornerRadius.coerceIn(
+            TuningPreferencesDefaults.MIN_SENSOR_FIELD_CORNER_RADIUS,
+            TuningPreferencesDefaults.MAX_SENSOR_FIELD_CORNER_RADIUS
+        )
+        val rawBorderThickness = prefs[KEY_SENSOR_FIELD_BORDER_THICKNESS] ?: TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS
+        val clampedBorderThickness = rawBorderThickness.coerceIn(
+            TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_THICKNESS,
+            TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_THICKNESS
+        )
+        val rawBorderContrast = prefs[KEY_SENSOR_FIELD_BORDER_CONTRAST] ?: TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST
+        val clampedBorderContrast = rawBorderContrast.coerceIn(
+            TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_CONTRAST,
+            TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_CONTRAST
+        )
+
+        val rawRadiusKm = prefs[KEY_ROUTE_SELECTION_RADIUS_KM] ?: TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM
+        val clampedRadiusKm = rawRadiusKm.coerceIn(
+            TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
+            TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
+        )
+
         TuningConfig(
             elevationXAxisDomain = elevationDomain,
             telemetryXAxisDomain = telemetryDomain,
             cockpitFontFamily = cockpitFontFamily,
             cockpitFontWeight = cockpitFontWeight,
+            sensorFieldVariant = sensorFieldVariant,
             fullDimFactor = clampedFullDim,
             mediumDimFactor = clampedMediumDim,
             slopeFlatThreshold = clampedSlopeFlat,
@@ -281,7 +529,81 @@ class TuningPreferencesDataStore(private val context: Context) {
             gpsAccuracyThresholdMeters = clampedAccuracy,
             altitudeFilterWindowSec = clampedAltWindow,
             slopeMinSpeedMps = clampedSlopeSpeed,
-            paceCeilingMinKm = clampedPaceCeiling
+            paceCeilingMinKm = clampedPaceCeiling,
+            showLiveClimbs = showLiveClimbs,
+            climbMinLengthMeters = climbMinLength,
+            climbMinGradientPercent = climbMinGradient,
+            turnPromptsEnabled = turnPromptsEnabled,
+            turnAudioAlertsEnabled = turnAudioAlertsEnabled,
+            turnCueCountdownDistanceMeters = clampedTurnCountdown,
+            offRouteCorridorThresholdMeters = clampedOffRoute,
+            sensorFieldCornerRadius = clampedCornerRadius,
+            sensorFieldBorderThickness = clampedBorderThickness,
+            sensorFieldBorderContrast = clampedBorderContrast,
+            routeSelectionRadiusKm = clampedRadiusKm,
+            navigationCueTransparency = (prefs[KEY_NAVIGATION_CUE_TRANSPARENCY] ?: TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY).coerceIn(
+                TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY,
+                TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY
+            ),
+            navigationCueDismissDurationSec = (prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] ?: TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC).let {
+                if (it == 0) {
+                    TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+                } else {
+                    it.coerceIn(
+                        TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+                        TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
+                    )
+                }
+            },
+            elevationSmoothingSigmaMeters = (prefs[KEY_ELEVATION_SMOOTHING_SIGMA_METERS] ?: TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS).coerceIn(
+                TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
+                TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
+            ),
+            mapFollowMeInitialZoom = (prefs[KEY_MAP_FOLLOW_ME_INITIAL_ZOOM] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM).coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM
+            ),
+            mapFollowMeSpeedZoomEnabled = prefs[KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+            mapFollowMeCruisingZoom = (prefs[KEY_MAP_FOLLOW_ME_CRUISING_ZOOM] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM).coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM
+            ),
+            mapFollowMeTiltAngle = (prefs[KEY_MAP_FOLLOW_ME_TILT_ANGLE] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE).coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE
+            ),
+            mapFollowMeLookaheadPaddingPercent = (prefs[KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT).coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
+            ),
+            mapFollowMeSpeedSmoothingAlpha = (prefs[KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA).coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
+            ),
+            mapFollowMeBearingSmoothingAlpha = (prefs[KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA).coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
+            ),
+            suppressAntMissingAdapterDialog = prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] ?: TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG,
+            autoFollowUniqueRouteEnabled = prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
+            clusterTolEndpoints = (prefs[KEY_CLUSTER_TOL_ENDPOINTS] ?: TrainingApplication.getClusterTolEndpoints()).coerceIn(
+                TuningPreferencesDefaults.MIN_CLUSTER_TOL_ENDPOINTS,
+                TuningPreferencesDefaults.MAX_CLUSTER_TOL_ENDPOINTS
+            ),
+            clusterTolApex = (prefs[KEY_CLUSTER_TOL_APEX] ?: TrainingApplication.getClusterTolApex()).coerceIn(
+                TuningPreferencesDefaults.MIN_CLUSTER_TOL_APEX,
+                TuningPreferencesDefaults.MAX_CLUSTER_TOL_APEX
+            ),
+            clusterTolDistance = (prefs[KEY_CLUSTER_TOL_DISTANCE] ?: TrainingApplication.getClusterTolDistance()).coerceIn(
+                TuningPreferencesDefaults.MIN_CLUSTER_TOL_DISTANCE,
+                TuningPreferencesDefaults.MAX_CLUSTER_TOL_DISTANCE
+            ),
+            clusterTolAltitudePos = (prefs[KEY_CLUSTER_TOL_ALTITUDE_POS] ?: TrainingApplication.getClusterTolAltitudePos()).coerceIn(
+                TuningPreferencesDefaults.MIN_CLUSTER_TOL_ALTITUDE_POS,
+                TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS
+            ),
+            clusterUseSportType = prefs[KEY_CLUSTER_USE_SPORT_TYPE] ?: TrainingApplication.useSportTypeForClustering(),
+            clusterUseAltitudePos = prefs[KEY_CLUSTER_USE_ALTITUDE_POS] ?: TrainingApplication.useAltitudePosForClustering()
         )
     }
 
@@ -326,6 +648,38 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MIN_PACE_CEILING_MIN_KM,
             TuningPreferencesDefaults.MAX_PACE_CEILING_MIN_KM
         )
+        val clampedCornerRadius = config.sensorFieldCornerRadius.coerceIn(
+            TuningPreferencesDefaults.MIN_SENSOR_FIELD_CORNER_RADIUS,
+            TuningPreferencesDefaults.MAX_SENSOR_FIELD_CORNER_RADIUS
+        )
+        val clampedBorderThickness = config.sensorFieldBorderThickness.coerceIn(
+            TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_THICKNESS,
+            TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_THICKNESS
+        )
+        val clampedBorderContrast = config.sensorFieldBorderContrast.coerceIn(
+            TuningPreferencesDefaults.MIN_SENSOR_FIELD_BORDER_CONTRAST,
+            TuningPreferencesDefaults.MAX_SENSOR_FIELD_BORDER_CONTRAST
+        )
+        val clampedRadiusKm = config.routeSelectionRadiusKm.coerceIn(
+            TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
+            TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
+        )
+        val clampedClusterTolEndpoints = config.clusterTolEndpoints.coerceIn(
+            TuningPreferencesDefaults.MIN_CLUSTER_TOL_ENDPOINTS,
+            TuningPreferencesDefaults.MAX_CLUSTER_TOL_ENDPOINTS
+        )
+        val clampedClusterTolApex = config.clusterTolApex.coerceIn(
+            TuningPreferencesDefaults.MIN_CLUSTER_TOL_APEX,
+            TuningPreferencesDefaults.MAX_CLUSTER_TOL_APEX
+        )
+        val clampedClusterTolDistance = config.clusterTolDistance.coerceIn(
+            TuningPreferencesDefaults.MIN_CLUSTER_TOL_DISTANCE,
+            TuningPreferencesDefaults.MAX_CLUSTER_TOL_DISTANCE
+        )
+        val clampedClusterTolAltitudePos = config.clusterTolAltitudePos.coerceIn(
+            TuningPreferencesDefaults.MIN_CLUSTER_TOL_ALTITUDE_POS,
+            TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS
+        )
 
         context.dataStore.edit { prefs ->
             prefs[KEY_ELEVATION_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
@@ -333,6 +687,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_PROFILE_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
             prefs[KEY_COCKPIT_FONT_FAMILY] = config.cockpitFontFamily.name
             prefs[KEY_COCKPIT_FONT_WEIGHT] = config.cockpitFontWeight.name
+            prefs[KEY_SENSOR_FIELD_VARIANT] = config.sensorFieldVariant.name
             prefs[KEY_FULL_DIM_FACTOR] = clampedFullDim
             prefs[KEY_MEDIUM_DIM_FACTOR] = clampedMediumDim
             prefs[KEY_SLOPE_FLAT] = clampedSlopeFlat
@@ -343,6 +698,209 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_ALTITUDE_FILTER_WINDOW] = clampedAltWindow
             prefs[KEY_SLOPE_MIN_SPEED] = clampedSlopeSpeed
             prefs[KEY_PACE_CEILING_MIN_KM] = clampedPaceCeiling
+            prefs[KEY_SHOW_LIVE_CLIMBS] = config.showLiveClimbs
+            prefs[KEY_CLIMB_MIN_LENGTH_METERS] = config.climbMinLengthMeters
+            prefs[KEY_CLIMB_MIN_GRADIENT_PERCENT] = config.climbMinGradientPercent
+            prefs[KEY_TURN_PROMPTS_ENABLED] = config.turnPromptsEnabled
+            prefs[KEY_TURN_AUDIO_ALERTS_ENABLED] = config.turnAudioAlertsEnabled
+            prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] = config.turnCueCountdownDistanceMeters.coerceIn(
+                TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+                TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS
+            )
+            prefs[KEY_OFF_ROUTE_CORRIDOR_THRESHOLD] = config.offRouteCorridorThresholdMeters.coerceIn(
+                TuningPreferencesDefaults.MIN_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS,
+                TuningPreferencesDefaults.MAX_OFF_ROUTE_CORRIDOR_THRESHOLD_METERS
+            )
+            prefs[KEY_SENSOR_FIELD_CORNER_RADIUS] = clampedCornerRadius
+            prefs[KEY_SENSOR_FIELD_BORDER_THICKNESS] = clampedBorderThickness
+            prefs[KEY_SENSOR_FIELD_BORDER_CONTRAST] = clampedBorderContrast
+            prefs[KEY_ROUTE_SELECTION_RADIUS_KM] = clampedRadiusKm
+            prefs[KEY_NAVIGATION_CUE_TRANSPARENCY] = config.navigationCueTransparency.coerceIn(
+                TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY,
+                TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY
+            )
+            prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] = if (config.navigationCueDismissDurationSec == 0) {
+                TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+            } else {
+                config.navigationCueDismissDurationSec.coerceIn(
+                    TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+                    TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
+                )
+            }
+            prefs[KEY_ELEVATION_SMOOTHING_SIGMA_METERS] = config.elevationSmoothingSigmaMeters.coerceIn(
+                TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
+                TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
+            )
+            prefs[KEY_MAP_FOLLOW_ME_INITIAL_ZOOM] = config.mapFollowMeInitialZoom.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM
+            )
+            prefs[KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED] = config.mapFollowMeSpeedZoomEnabled
+            prefs[KEY_MAP_FOLLOW_ME_CRUISING_ZOOM] = config.mapFollowMeCruisingZoom.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM
+            )
+            prefs[KEY_MAP_FOLLOW_ME_TILT_ANGLE] = config.mapFollowMeTiltAngle.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE
+            )
+            prefs[KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT] = config.mapFollowMeLookaheadPaddingPercent.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
+            )
+            prefs[KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA] = config.mapFollowMeSpeedSmoothingAlpha.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
+            )
+            prefs[KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA] = config.mapFollowMeBearingSmoothingAlpha.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
+            )
+            prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] = config.suppressAntMissingAdapterDialog
+            prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] = config.autoFollowUniqueRouteEnabled
+            prefs[KEY_CLUSTER_TOL_ENDPOINTS] = clampedClusterTolEndpoints
+            prefs[KEY_CLUSTER_TOL_APEX] = clampedClusterTolApex
+            prefs[KEY_CLUSTER_TOL_DISTANCE] = clampedClusterTolDistance
+            prefs[KEY_CLUSTER_TOL_ALTITUDE_POS] = clampedClusterTolAltitudePos
+            prefs[KEY_CLUSTER_USE_SPORT_TYPE] = config.clusterUseSportType
+            prefs[KEY_CLUSTER_USE_ALTITUDE_POS] = config.clusterUseAltitudePos
+        }
+
+        TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
+        TrainingApplication.setClusterTolApex(clampedClusterTolApex)
+        TrainingApplication.setClusterTolDistance(clampedClusterTolDistance)
+        TrainingApplication.setClusterTolAltitudePos(clampedClusterTolAltitudePos)
+        TrainingApplication.setUseSportTypeForClustering(config.clusterUseSportType)
+        TrainingApplication.setUseAltitudePosForClustering(config.clusterUseAltitudePos)
+    }
+
+
+    suspend fun updateShowLiveClimbs(show: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_SHOW_LIVE_CLIMBS] = show
+        }
+    }
+
+    suspend fun updateSensorFieldVariant(variant: SensorFieldVariant) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_SENSOR_FIELD_VARIANT] = variant.name
+        }
+    }
+
+    suspend fun updateRouteSelectionRadiusKm(radiusKm: Float) {
+        val clamped = radiusKm.coerceIn(
+            TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
+            TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ROUTE_SELECTION_RADIUS_KM] = clamped
+        }
+    }
+
+    @Deprecated("Navigation cue overlays are permanently solid (1.0f) per REQ-UI-287 / ATT-3322")
+    suspend fun updateNavigationCueTransparency(transparency: Float) {
+        val clamped = transparency.coerceIn(
+            TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY,
+            TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_NAVIGATION_CUE_TRANSPARENCY] = clamped
+        }
+    }
+
+    suspend fun updateNavigationCueDismissDurationSec(durationSec: Int) {
+        val valid = if (durationSec == 0) {
+            TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+        } else {
+            durationSec.coerceIn(
+                TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+                TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
+            )
+        }
+        context.dataStore.edit { prefs ->
+            prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] = valid
+        }
+    }
+
+    suspend fun updateElevationSmoothingSigmaMeters(sigma: Float) {
+        val clamped = sigma.coerceIn(
+            TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
+            TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ELEVATION_SMOOTHING_SIGMA_METERS] = clamped
+        }
+    }
+
+    suspend fun updateMapFollowMeInitialZoom(zoom: Float) {
+        val clamped = zoom.coerceIn(
+            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM,
+            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_MAP_FOLLOW_ME_INITIAL_ZOOM] = clamped
+        }
+    }
+
+    suspend fun updateMapFollowMeSpeedZoomEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateMapFollowMeCruisingZoom(zoom: Float) {
+        val clamped = zoom.coerceIn(
+            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM,
+            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_MAP_FOLLOW_ME_CRUISING_ZOOM] = clamped
+        }
+    }
+
+    suspend fun updateMapFollowMeTiltAngle(angle: Float) {
+        val clamped = angle.coerceIn(
+            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE,
+            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_MAP_FOLLOW_ME_TILT_ANGLE] = clamped
+        }
+    }
+
+    suspend fun updateMapFollowMeLookaheadPaddingPercent(percent: Float) {
+        val clamped = percent.coerceIn(
+            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT] = clamped
+        }
+    }
+
+    val suppressAntMissingAdapterDialogFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] ?: TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG
+    }
+
+    suspend fun setSuppressAntMissingAdapterDialog(suppress: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] = suppress
+        }
+    }
+
+    suspend fun updateAutoFollowUniqueRouteEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateTurnCueCountdownDistanceMeters(distanceMeters: Float) {
+        val clamped = distanceMeters.coerceIn(
+            TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+            TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] = clamped
         }
     }
 
@@ -352,5 +910,11 @@ class TuningPreferencesDataStore(private val context: Context) {
                 prefs.remove(key)
             }
         }
+        TrainingApplication.setClusterTolEndpoints(TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS)
+        TrainingApplication.setClusterTolApex(TuningPreferencesDefaults.CLUSTER_TOL_APEX)
+        TrainingApplication.setClusterTolDistance(TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE)
+        TrainingApplication.setClusterTolAltitudePos(TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS)
+        TrainingApplication.setUseSportTypeForClustering(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE)
+        TrainingApplication.setUseAltitudePosForClustering(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS)
     }
 }

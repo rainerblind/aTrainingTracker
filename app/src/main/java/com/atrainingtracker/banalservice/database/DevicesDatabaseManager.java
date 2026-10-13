@@ -62,7 +62,8 @@ public class DevicesDatabaseManager {
     private final Context mContext;
     private SQLiteDatabase mDatabase = null;
 
-    private DevicesDatabaseManager(@NonNull Context context) {
+    @androidx.annotation.VisibleForTesting
+    protected DevicesDatabaseManager(@NonNull Context context) {
         this.mContext = context.getApplicationContext();
         this.cDevicesDbHelper = new DevicesDbHelper(mContext);
     }
@@ -253,6 +254,35 @@ public class DevicesDatabaseManager {
         cursor.close();
 
         return result;
+    }
+
+    /**
+     * Checks if at least one real, paired remote device (protocol ANT+ or Bluetooth LE with paired > 0)
+     * exists in the database (REQ-UI-259).
+     *
+     * @return true if at least one paired remote device is registered in SQLite, false otherwise.
+     */
+    public boolean hasPairedRemoteDevices() {
+        if (DEBUG) Log.d(TAG, "hasPairedRemoteDevices()");
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return false;
+        }
+        try (Cursor cursor = db.query(
+                DevicesDbHelper.DEVICES,
+                new String[]{DevicesDbHelper.C_ID},
+                DevicesDbHelper.PAIRED + " > 0 AND (" + DevicesDbHelper.PROTOCOL + "=? OR " + DevicesDbHelper.PROTOCOL + "=?)",
+                new String[]{Protocol.ANT_PLUS.name(), Protocol.BLUETOOTH_LE.name()},
+                null,
+                null,
+                null,
+                "1"
+        )) {
+            return cursor != null && cursor.moveToFirst();
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking paired remote devices", e);
+            return false;
+        }
     }
 
     public DeviceIdAndNameLists getDeviceIdAndNameLists(SensorType sensorType) {
@@ -532,6 +562,11 @@ public class DevicesDatabaseManager {
 
     public void setBatteryPercentage(long deviceId, int percentage) {
         setInt(deviceId, DevicesDbHelper.LAST_BATTERY_PERCENTAGE, percentage);
+        try {
+            com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository.notifyBatteryUpdated(deviceId, percentage);
+        } catch (Throwable t) {
+            Log.e(TAG, "Error notifying DeviceDataRepository of battery update", t);
+        }
     }
 
     public void putBikePowerSensorFlags(long deviceId, int sensorFlags) {
@@ -689,15 +724,47 @@ public class DevicesDatabaseManager {
     public static class SimpleSensorInfo {
         public final long id;
         public final String name;
+        @Nullable
+        public final DeviceType deviceType;
 
         public SimpleSensorInfo(long id, String name) {
+            this(id, name, null);
+        }
+
+        public SimpleSensorInfo(long id, String name, @Nullable DeviceType deviceType) {
             this.id = id;
             this.name = name;
+            this.deviceType = deviceType;
+        }
+
+        @Nullable
+        public DeviceType getDeviceType() {
+            return deviceType;
         }
     }
 
+    public static boolean isBikeSensor(@Nullable DeviceType type) {
+        if (type == null) return false;
+        return type.getSportType() == BSportType.BIKE
+                || type == DeviceType.BIKE_SPEED
+                || type == DeviceType.BIKE_CADENCE
+                || type == DeviceType.BIKE_SPEED_AND_CADENCE
+                || type == DeviceType.BIKE_POWER;
+    }
+
+    public static boolean isRunSensor(@Nullable DeviceType type) {
+        if (type == null) return false;
+        return type.getSportType() == BSportType.RUN
+                || type == DeviceType.RUN_SPEED;
+    }
+
+    public static boolean isSharedSensor(@Nullable DeviceType type) {
+        if (type == null) return false;
+        return type == DeviceType.HRM || type == DeviceType.ENVIRONMENT;
+    }
+
     /**
-     * Returns a list of sensors filtered by the sport type.
+     * Returns a list of sensors filtered by the sport type, including universally shared sensors (REQ-UI-256).
      *
      * @param sportType The sport type (Cycling, Running, etc.) to filter relevant sensors.
      * @return A list of SimpleSensorInfo objects.
@@ -710,27 +777,80 @@ public class DevicesDatabaseManager {
         String selection = DevicesDbHelper.NAME + " IS NOT NULL AND " + DevicesDbHelper.NAME + " != ''";
 
         if (sportType == BSportType.BIKE) {
-            selection += " AND (" + DevicesDbHelper.DEVICE_TYPE + " LIKE 'BIKE%')";
+            selection += " AND (" + DevicesDbHelper.DEVICE_TYPE + " LIKE 'BIKE%' OR " + DevicesDbHelper.DEVICE_TYPE + " = 'HRM' OR " + DevicesDbHelper.DEVICE_TYPE + " = 'ENVIRONMENT')";
         }
         else if (sportType == BSportType.RUN) {
-            selection += " AND (" + DevicesDbHelper.DEVICE_TYPE + " LIKE 'RUN%')";
+            selection += " AND (" + DevicesDbHelper.DEVICE_TYPE + " LIKE 'RUN%' OR " + DevicesDbHelper.DEVICE_TYPE + " = 'HRM' OR " + DevicesDbHelper.DEVICE_TYPE + " = 'ENVIRONMENT')";
         }
 
         Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
-                new String[]{DevicesDbHelper.C_ID, DevicesDbHelper.NAME},
+                new String[]{DevicesDbHelper.C_ID, DevicesDbHelper.NAME, DevicesDbHelper.DEVICE_TYPE},
                 selection,
-                null, null, null, DevicesDbHelper.NAME + " ASC");
+                null, null, null, DevicesDbHelper.NAME + " COLLATE NOCASE ASC");
 
-        int idCol = cursor.getColumnIndex(DevicesDbHelper.C_ID);
-        int nameCol = cursor.getColumnIndex(DevicesDbHelper.NAME);
+        if (cursor != null) {
+            int idCol = cursor.getColumnIndex(DevicesDbHelper.C_ID);
+            int nameCol = cursor.getColumnIndex(DevicesDbHelper.NAME);
+            int typeCol = cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE);
 
-        while (cursor.moveToNext()) {
-            sensors.add(new SimpleSensorInfo(
-                    cursor.getLong(idCol),
-                    cursor.getString(nameCol)
-            ));
+            while (cursor.moveToNext()) {
+                DeviceType dt = null;
+                if (typeCol != -1 && !cursor.isNull(typeCol)) {
+                    try {
+                        dt = DeviceType.valueOf(cursor.getString(typeCol));
+                    } catch (Exception ignored) {}
+                }
+                sensors.add(new SimpleSensorInfo(
+                        cursor.getLong(idCol),
+                        cursor.getString(nameCol),
+                        dt
+                ));
+            }
+            cursor.close();
         }
-        cursor.close();
+
+        sensors.sort(com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrdering.getComparator(sportType));
+
+        return sensors;
+    }
+
+    /**
+     * Returns all paired external remote sensors (ANT+ and Bluetooth LE), excluding internal smartphone sensors (REQ-UI-256).
+     *
+     * @return Alphabetically sorted list of SimpleSensorInfo objects.
+     */
+    public List<SimpleSensorInfo> getAllRemoteSensors() {
+        List<SimpleSensorInfo> sensors = new ArrayList<>();
+        String selection = DevicesDbHelper.NAME + " IS NOT NULL AND " + DevicesDbHelper.NAME + " != ''"
+                + " AND (" + DevicesDbHelper.PROTOCOL + " = 'ANT_PLUS' OR " + DevicesDbHelper.PROTOCOL + " = 'BLUETOOTH_LE'"
+                + " OR " + DevicesDbHelper.DEVICE_TYPE + " LIKE 'BIKE%' OR " + DevicesDbHelper.DEVICE_TYPE + " LIKE 'RUN%'"
+                + " OR " + DevicesDbHelper.DEVICE_TYPE + " = 'HRM' OR " + DevicesDbHelper.DEVICE_TYPE + " = 'ENVIRONMENT')";
+
+        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+                new String[]{DevicesDbHelper.C_ID, DevicesDbHelper.NAME, DevicesDbHelper.DEVICE_TYPE},
+                selection,
+                null, null, null, DevicesDbHelper.NAME + " COLLATE NOCASE ASC");
+
+        if (cursor != null) {
+            int idCol = cursor.getColumnIndex(DevicesDbHelper.C_ID);
+            int nameCol = cursor.getColumnIndex(DevicesDbHelper.NAME);
+            int typeCol = cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE);
+
+            while (cursor.moveToNext()) {
+                DeviceType dt = null;
+                if (typeCol != -1 && !cursor.isNull(typeCol)) {
+                    try {
+                        dt = DeviceType.valueOf(cursor.getString(typeCol));
+                    } catch (Exception ignored) {}
+                }
+                sensors.add(new SimpleSensorInfo(
+                        cursor.getLong(idCol),
+                        cursor.getString(nameCol),
+                        dt
+                ));
+            }
+            cursor.close();
+        }
 
         return sensors;
     }

@@ -31,6 +31,7 @@ import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -172,4 +173,93 @@ class DevicesTabbedViewModelTest {
         assertTrue("UiState must resolve to DisplayingTabs", state is UiState.DisplayingTabs)
         assertEquals("DeviceType in DisplayingTabs must be ALL", DeviceType.ALL, (state as UiState.DisplayingTabs).deviceType)
     }
+
+    @Test
+    fun testStartPairingScan_setsScanningProtocolAndType_andCallsRepository() {
+        val savedStateHandle = SavedStateHandle()
+        val viewModel = DevicesTabbedViewModel(mockApplication, savedStateHandle)
+
+        viewModel.startPairingScan(Protocol.BLUETOOTH_LE, DeviceType.HRM)
+
+        assertEquals("scanningProtocol must reflect pairing protocol", Protocol.BLUETOOTH_LE, viewModel.scanningProtocol.value)
+        assertEquals("scanningDeviceType must reflect pairing device type", DeviceType.HRM, viewModel.scanningDeviceType.value)
+        verify(exactly = 1) { mockBanalServiceRepository.startSearchingForNewDevices(Protocol.BLUETOOTH_LE, DeviceType.HRM) }
+
+        // Tabs UI state must remain unchanged (e.g. DeviceType.ALL)
+        val state = viewModel.uiState.value
+        assertTrue(state is UiState.DisplayingTabs)
+        assertEquals(DeviceType.ALL, (state as UiState.DisplayingTabs).deviceType)
+    }
+
+    @Test
+    fun testStopSearching_clearsScanningProtocolAndDeviceType() {
+        val savedStateHandle = SavedStateHandle()
+        val viewModel = DevicesTabbedViewModel(mockApplication, savedStateHandle)
+
+        viewModel.startPairingScan(Protocol.ANT_PLUS, DeviceType.BIKE_SPEED)
+        assertEquals(Protocol.ANT_PLUS, viewModel.scanningProtocol.value)
+        assertEquals(DeviceType.BIKE_SPEED, viewModel.scanningDeviceType.value)
+
+        viewModel.stopSearching()
+
+        assertNull("scanningProtocol must be reset to null after stopSearching", viewModel.scanningProtocol.value)
+        assertNull("scanningDeviceType must be reset to null after stopSearching", viewModel.scanningDeviceType.value)
+        verify(exactly = 1) { mockBanalServiceRepository.stopSearchingForNewDevices() }
+    }
+
+    @Test
+    fun testNewDeviceFoundBroadcast_emitsResolvedDeviceNameToSharedFlow() = kotlinx.coroutines.test.runTest {
+        val receiverSlot = slot<android.content.BroadcastReceiver>()
+        every { mockApplication.registerReceiver(capture(receiverSlot), any(), any()) } returns null
+        every { mockApplication.registerReceiver(capture(receiverSlot), any()) } returns null
+
+        val device = com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData(
+            id = 555L,
+            protocol = Protocol.ANT_PLUS,
+            deviceType = DeviceType.HRM,
+            lastSeen = null,
+            manufacturer = "Garmin",
+            deviceName = "Garmin HRM-Pro",
+            isPaired = false,
+            linkedEquipment = emptyList(),
+            availableEquipment = emptyList(),
+            powerFeaturesFlags = null,
+            batteryPercentage = 100,
+            linkedSportTypes = emptyList(),
+            deviceTypeIconRes = 0,
+            batteryStatusIconRes = 0,
+            onEquipmentResId = 0,
+            wheelCircumference = null,
+            calibrationFactor = null,
+            powerFeatures = null,
+            isConnected = false,
+            mainValue = null,
+            allValues = null,
+            isNewlyDiscovered = true
+        )
+        every { mockDeviceDataRepository.getDeviceSnapshotById(555L) } returns device
+
+        val savedStateHandle = SavedStateHandle()
+        val viewModel = DevicesTabbedViewModel(mockApplication, savedStateHandle)
+
+        assertTrue(receiverSlot.isCaptured)
+        val receiver = receiverSlot.captured
+
+        val mockIntent = mockk<android.content.Intent>()
+        every { mockIntent.action } returns BANALService.NEW_DEVICE_FOUND_INTENT
+        every { mockIntent.getLongExtra(BANALService.DEVICE_ID, -1L) } returns 555L
+
+        var emitted: String? = null
+        val job = backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.newDeviceDiscoveredEvent.collect { emitted = it }
+        }
+
+        receiver.onReceive(mockApplication, mockIntent)
+        testScheduler.advanceUntilIdle()
+        job.cancel()
+
+        assertEquals("Garmin HRM-Pro", emitted)
+    }
 }
+
+

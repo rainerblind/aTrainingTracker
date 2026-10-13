@@ -72,6 +72,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.*
+import android.widget.Toast
 import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.Dispatchers
@@ -80,10 +81,18 @@ import kotlinx.coroutines.withContext
 
 data class MappingData(val uri: Uri, val analysis: ImportEngine.AnalysisResult)
 
+// Format-specific MIME type definitions (ATT-2622, ATT-2740 / REQ-UI-294)
+val FIT_MIME_TYPES = arrayOf("application/vnd.ant.fit", "application/fit", "application/octet-stream")
+val TCX_MIME_TYPES = arrayOf("application/vnd.garmin.tcx+xml", "application/xml", "text/xml", "application/octet-stream")
+val GPX_MIME_TYPES = arrayOf("application/gpx+xml", "application/xml", "text/xml", "application/octet-stream")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImportBackupTabsScreen(
-    viewModel: BackupRestoreViewModel
+    viewModel: BackupRestoreViewModel,
+    onNavigateToWorkout: ((Long) -> Unit)? = { workoutId ->
+        com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents.triggerNavigateToWorkout(workoutId)
+    }
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -104,12 +113,22 @@ fun ImportBackupTabsScreen(
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
     var showMappingDialog by remember { mutableStateOf<MappingData?>(null) }
     
-    // ATT-315: Pre-import Tuning state
+    // ATT-315 / ATT-2623: Pre-import Tuning & Format Scoping state
     var showTuningDialogForBulk by remember { mutableStateOf(false) }
+    var pendingDropboxFormat by remember { mutableStateOf("all") }
+    var showTuningDialogForGoogleDrive by remember { mutableStateOf(false) }
+    var pendingGoogleDriveFormat by remember { mutableStateOf("all") }
     var pendingSingleLegacyUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingLegacyUris by remember { mutableStateOf<List<Uri>?>(null) }
+    var pendingFitUris by remember { mutableStateOf<List<Uri>?>(null) }
+    var pendingSingleLegacyFormat by remember { mutableStateOf("auto") }
     var showDropboxDisconnectedDialog by remember { mutableStateOf(false) }
+    var showGoogleDriveDisconnectedDialog by remember { mutableStateOf(false) }
     val isDropboxConnected = remember(uiState) {
         TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
+    }
+    val isGoogleDriveConnected = remember(uiState) {
+        TrainingApplication.uploadToGoogleDrive() && !TrainingApplication.getGoogleDriveAuthToken().isNullOrBlank()
     }
     
     val isBusy = uiState is BackupRestoreViewModel.UiState.Loading || uiState is BackupRestoreViewModel.UiState.Progress
@@ -134,10 +153,44 @@ fun ImportBackupTabsScreen(
     }
 
     val pickLegacyFileLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let {
-            pendingSingleLegacyUri = it
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            val validUris = uris.filter { uri ->
+                val fileName = ImportFileValidator.resolveDisplayName(context, uri)
+                ImportFileValidator.isMatchingFormat(fileName, pendingSingleLegacyFormat)
+            }
+            if (validUris.size < uris.size) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.invalid_workout_file_format, pendingSingleLegacyFormat.uppercase()),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            if (validUris.isNotEmpty()) {
+                pendingLegacyUris = validUris
+            }
+        }
+    }
+
+    val pickFitFilesLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            val validUris = uris.filter { uri ->
+                val fileName = ImportFileValidator.resolveDisplayName(context, uri)
+                ImportFileValidator.isMatchingFormat(fileName, "fit")
+            }
+            if (validUris.size < uris.size) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.invalid_workout_file_format, "FIT"),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            if (validUris.isNotEmpty()) {
+                pendingFitUris = validUris
+            }
         }
     }
 
@@ -191,7 +244,7 @@ fun ImportBackupTabsScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             // --- State Overlays (Shown at the very top of content) ---
-            StateOverlaySection(uiState, onClearState = { viewModel.clearState() })
+            StateOverlaySection(uiState, onClearState = { viewModel.clearState() }, onNavigateToWorkout = onNavigateToWorkout)
 
             HorizontalPager(
                 state = pagerState,
@@ -203,14 +256,40 @@ fun ImportBackupTabsScreen(
                     0 -> ImportTabContent(
                         isBusy = isBusy,
                         isDropboxConnected = isDropboxConnected,
-                        onBulkRecoverClick = {
+                        isGoogleDriveConnected = isGoogleDriveConnected,
+                        onLocalImportClick = { format ->
+                            when (format) {
+                                "fit" -> pickFitFilesLauncher.launch(FIT_MIME_TYPES)
+                                "tcx" -> {
+                                    pendingSingleLegacyFormat = "tcx"
+                                    pickLegacyFileLauncher.launch(TCX_MIME_TYPES)
+                                }
+                                "gpx" -> {
+                                    pendingSingleLegacyFormat = "gpx"
+                                    pickLegacyFileLauncher.launch(GPX_MIME_TYPES)
+                                }
+                                else -> {
+                                    pendingSingleLegacyFormat = format
+                                    pickLegacyFileLauncher.launch(arrayOf("*/*"))
+                                }
+                            }
+                        },
+                        onDropboxScanClick = { format ->
                             if (isDropboxConnected) {
+                                pendingDropboxFormat = format
                                 showTuningDialogForBulk = true
                             } else {
                                 showDropboxDisconnectedDialog = true
                             }
                         },
-                        onSingleLegacyImportClick = { pickLegacyFileLauncher.launch(arrayOf("*/*")) }
+                        onGoogleDriveScanClick = { format ->
+                            if (isGoogleDriveConnected) {
+                                pendingGoogleDriveFormat = format
+                                showTuningDialogForGoogleDrive = true
+                            } else {
+                                showGoogleDriveDisconnectedDialog = true
+                            }
+                        }
                     )
                     1 -> BackupTabContent(
                         viewModel = viewModel,
@@ -344,15 +423,41 @@ fun ImportBackupTabsScreen(
         )
     }
 
-    // ATT-315 / ATT-793: Pre-import Tuning Bottom Sheets
+    // ATT-315 / ATT-793 / ATT-2623: Pre-import Tuning Bottom Sheets
     if (showTuningDialogForBulk) {
         PreImportTuningBottomSheet(
             viewModel = viewModel,
             onConfirm = {
                 showTuningDialogForBulk = false
-                viewModel.bulkRecoverLegacyData(context, "all")
+                viewModel.bulkRecoverLegacyData(context, pendingDropboxFormat)
             },
             onDismiss = { showTuningDialogForBulk = false }
+        )
+    }
+
+    if (showTuningDialogForGoogleDrive) {
+        PreImportTuningBottomSheet(
+            viewModel = viewModel,
+            onConfirm = {
+                showTuningDialogForGoogleDrive = false
+                viewModel.bulkRecoverGoogleDriveData(context, pendingGoogleDriveFormat)
+            },
+            onDismiss = { showTuningDialogForGoogleDrive = false }
+        )
+    }
+
+    if (showGoogleDriveDisconnectedDialog) {
+        AlertDialog(
+            onDismissRequest = { showGoogleDriveDisconnectedDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+            title = { Text(stringResource(R.string.upload_to_google_drive)) },
+            text = { Text(stringResource(R.string.google_drive_disconnected_status)) },
+            confirmButton = {
+                TextButton(onClick = { showGoogleDriveDisconnectedDialog = false }) {
+                    Text(stringResource(R.string.OK))
+                }
+            }
         )
     }
 
@@ -360,10 +465,37 @@ fun ImportBackupTabsScreen(
         PreImportTuningBottomSheet(
             viewModel = viewModel,
             onConfirm = {
-                viewModel.importLegacyFile(context, uri, "auto")
+                viewModel.importLegacyFile(context, uri, pendingSingleLegacyFormat)
                 pendingSingleLegacyUri = null
             },
             onDismiss = { pendingSingleLegacyUri = null }
+        )
+    }
+
+    pendingLegacyUris?.let { uris ->
+        PreImportTuningBottomSheet(
+            viewModel = viewModel,
+            onConfirm = {
+                if (uris.size == 1) {
+                    val uri = uris.first()
+                    viewModel.importLegacyFile(context, uri, pendingSingleLegacyFormat)
+                } else {
+                    viewModel.importWorkoutFiles(context, uris, pendingSingleLegacyFormat)
+                }
+                pendingLegacyUris = null
+            },
+            onDismiss = { pendingLegacyUris = null }
+        )
+    }
+
+    pendingFitUris?.let { uris ->
+        PreImportTuningBottomSheet(
+            viewModel = viewModel,
+            onConfirm = {
+                viewModel.importFitFiles(context, uris)
+                pendingFitUris = null
+            },
+            onDismiss = { pendingFitUris = null }
         )
     }
 }
@@ -847,7 +979,11 @@ fun ImportMappingDialog(
 }
 
 @Composable
-private fun StateOverlaySection(uiState: BackupRestoreViewModel.UiState, onClearState: () -> Unit) {
+private fun StateOverlaySection(
+    uiState: BackupRestoreViewModel.UiState,
+    onClearState: () -> Unit,
+    onNavigateToWorkout: ((Long) -> Unit)? = null
+) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         when (val state = uiState) {
             is BackupRestoreViewModel.UiState.Loading -> {
@@ -881,6 +1017,16 @@ private fun StateOverlaySection(uiState: BackupRestoreViewModel.UiState, onClear
                 ) {
                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(text = state.message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        if (state.importedWorkoutId != null) {
+                            TextButton(onClick = {
+                                val workoutId = state.importedWorkoutId
+                                onClearState()
+                                onNavigateToWorkout?.invoke(workoutId)
+                            }) {
+                                Text(stringResource(R.string.action_view_workout))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                         TextButton(onClick = onClearState) { Text(stringResource(R.string.OK)) }
                     }
                 }
@@ -902,11 +1048,18 @@ private fun StateOverlaySection(uiState: BackupRestoreViewModel.UiState, onClear
 }
 
 @Composable
-private fun ImportTabContent(
-    isBusy: Boolean,
+private fun FormatImportCard(
+    title: String,
+    description: String,
+    localButtonText: String,
+    onLocalClick: () -> Unit,
+    dropboxButtonText: String,
     isDropboxConnected: Boolean,
-    onBulkRecoverClick: () -> Unit,
-    onSingleLegacyImportClick: () -> Unit
+    onDropboxClick: () -> Unit,
+    googleDriveButtonText: String,
+    isGoogleDriveConnected: Boolean,
+    onGoogleDriveClick: () -> Unit,
+    isBusy: Boolean
 ) {
     val scanButtonColors = if (isDropboxConnected) {
         ButtonDefaults.outlinedButtonColors()
@@ -921,38 +1074,127 @@ private fun ImportTabContent(
         BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
     }
 
+    val googleDriveButtonColors = if (isGoogleDriveConnected) {
+        ButtonDefaults.outlinedButtonColors()
+    } else {
+        ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        )
+    }
+    val googleDriveBorder = if (isGoogleDriveConnected) {
+        ButtonDefaults.outlinedButtonBorder(enabled = !isBusy)
+    } else {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+    }
+
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onLocalClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isBusy
+            ) {
+                Icon(Icons.Default.CloudUpload, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(localButtonText)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onDropboxClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isBusy,
+                colors = scanButtonColors,
+                border = scanBorder
+            ) {
+                Text(dropboxButtonText)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onGoogleDriveClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isBusy,
+                colors = googleDriveButtonColors,
+                border = googleDriveBorder
+            ) {
+                Text(googleDriveButtonText)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImportTabContent(
+    isBusy: Boolean,
+    isDropboxConnected: Boolean,
+    isGoogleDriveConnected: Boolean,
+    onLocalImportClick: (format: String) -> Unit,
+    onDropboxScanClick: (format: String) -> Unit,
+    onGoogleDriveScanClick: (format: String) -> Unit
+) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- Legacy Recovery Card ---
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = stringResource(R.string.legacy_recovery_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = stringResource(R.string.legacy_recovery_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onBulkRecoverClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isBusy,
-                    colors = scanButtonColors,
-                    border = scanBorder
-                ) {
-                    Text(stringResource(R.string.scan_tcx))
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = onSingleLegacyImportClick, modifier = Modifier.fillMaxWidth(), enabled = !isBusy) {
-                    Icon(Icons.Default.CloudUpload, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.import_single_file))
-                }
-            }
-        }
+        // --- FIT Importer Card (REQ-DAT-019 / REQ-UI-293) ---
+        FormatImportCard(
+            title = stringResource(R.string.import_fit_title),
+            description = stringResource(R.string.import_fit_description),
+            localButtonText = stringResource(R.string.import_fit_button),
+            onLocalClick = { onLocalImportClick("fit") },
+            dropboxButtonText = stringResource(R.string.import_fit_dropbox_button),
+            isDropboxConnected = isDropboxConnected,
+            onDropboxClick = { onDropboxScanClick("fit") },
+            googleDriveButtonText = stringResource(R.string.import_fit_gdrive_button),
+            isGoogleDriveConnected = isGoogleDriveConnected,
+            onGoogleDriveClick = { onGoogleDriveScanClick("fit") },
+            isBusy = isBusy
+        )
+
+        // --- TCX Importer Card (REQ-UI-293) ---
+        FormatImportCard(
+            title = stringResource(R.string.import_tcx_title),
+            description = stringResource(R.string.import_tcx_description),
+            localButtonText = stringResource(R.string.import_tcx_button),
+            onLocalClick = { onLocalImportClick("tcx") },
+            dropboxButtonText = stringResource(R.string.import_tcx_dropbox_button),
+            isDropboxConnected = isDropboxConnected,
+            onDropboxClick = { onDropboxScanClick("tcx") },
+            googleDriveButtonText = stringResource(R.string.import_tcx_gdrive_button),
+            isGoogleDriveConnected = isGoogleDriveConnected,
+            onGoogleDriveClick = { onGoogleDriveScanClick("tcx") },
+            isBusy = isBusy
+        )
+
+        // --- GPX Importer Card (REQ-MIG-030 / REQ-UI-293) ---
+        FormatImportCard(
+            title = stringResource(R.string.import_gpx_title),
+            description = stringResource(R.string.import_gpx_description),
+            localButtonText = stringResource(R.string.import_gpx_button),
+            onLocalClick = { onLocalImportClick("gpx") },
+            dropboxButtonText = stringResource(R.string.import_gpx_dropbox_button),
+            isDropboxConnected = isDropboxConnected,
+            onDropboxClick = { onDropboxScanClick("gpx") },
+            googleDriveButtonText = stringResource(R.string.import_gpx_gdrive_button),
+            isGoogleDriveConnected = isGoogleDriveConnected,
+            onGoogleDriveClick = { onGoogleDriveScanClick("gpx") },
+            isBusy = isBusy
+        )
     }
 }
 

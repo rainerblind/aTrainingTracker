@@ -36,15 +36,16 @@ class AftermathTuningSettingsTest {
     fun testWorkoutCardSectionPreferences_defaultAndMutation() {
         val defaultPrefs = WorkoutCardSectionPreferences()
 
-        // Verify factory defaults
+        // Verify factory defaults (REQ-UI-285)
         assertTrue(defaultPrefs.showDescription)
         assertTrue(defaultPrefs.showExtrema)
-        assertTrue(defaultPrefs.showLaps)
+        assertFalse(defaultPrefs.showLaps)
         assertTrue(defaultPrefs.showStrava)
         assertTrue(defaultPrefs.showMapPreview)
         assertFalse(defaultPrefs.showElevationProfile)
         assertFalse(defaultPrefs.showTelemetryCharts)
-        assertFalse(defaultPrefs.showZoneAnalysis)
+        assertTrue(defaultPrefs.showZoneAnalysis)
+        assertTrue(defaultPrefs.showExportStatus)
 
         // Simulate tuning customization
         val customizedPrefs = defaultPrefs.copy(

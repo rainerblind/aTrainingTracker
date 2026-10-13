@@ -41,7 +41,11 @@ class AftermathTuningLocalizationTest {
         "tuning_profile_x_axis_distance",
         "tuning_profile_x_axis_time",
         "tuning_telemetry_x_axis_title",
-        "tuning_telemetry_x_axis_desc"
+        "tuning_telemetry_x_axis_desc",
+        "tuning_pace_ceiling_title",
+        "tuning_pace_ceiling_desc",
+        "tuning_elevation_smoothing_sigma_title",
+        "tuning_elevation_smoothing_sigma_desc"
     )
 
     private fun findResDir(): File {

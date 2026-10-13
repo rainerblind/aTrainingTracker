@@ -24,6 +24,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -33,7 +35,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,9 +49,16 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.UIHelper
+import com.atrainingtracker.banalservice.ui.devices.DeviceTypeSelectionDialog
+import com.atrainingtracker.banalservice.ui.devices.PairingProtocolBottomSheet
 import com.atrainingtracker.banalservice.ui.devices.devicelist.*
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialog
+import androidx.compose.foundation.rememberScrollState
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
+import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSportSensorMatrix
+import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModel
+import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusSheet
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
@@ -55,29 +67,62 @@ import kotlinx.coroutines.launch
 fun DevicesTabbedScreen(
     tabViewModel: DevicesTabbedViewModel,
     listViewModel: DeviceListViewModel = viewModel(),
+    equipmentViewModel: EquipmentViewModel = viewModel(),
     initialTab: Int = 0,
     onCheckAntInstallation: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by tabViewModel.uiState.observeAsState()
     val isSearchingForNewDevices by tabViewModel.isSearchingForNewDevices.collectAsState()
+    val scanningProtocol by tabViewModel.scanningProtocol.collectAsState()
+    val scanningDeviceType by tabViewModel.scanningDeviceType.collectAsState()
+    val filterCriteria by tabViewModel.filterCriteria.collectAsState()
     
     val protocol = tabViewModel.protocol
     var showDeleteConfirmFor by remember { mutableStateOf<DeviceUiData?>(null) }
     var editingDeviceId by remember { mutableStateOf<Long?>(null) }
     var menuExpanded by remember { mutableStateOf(false) }
+    var showProtocolSheet by remember { mutableStateOf(false) }
+    var showFilterSheet by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var selectedPairingProtocol by remember { mutableStateOf<Protocol?>(null) }
+    var showAntStatusSheet by remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT).roundToPx() }
+    val chipsRowHeight = if (filterCriteria.isNotEmpty) 40.dp else 0.dp
+    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + chipsRowHeight).roundToPx() }
     
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
     }
 
+    val bikes by equipmentViewModel.bikes.collectAsState()
+    val shoes by equipmentViewModel.shoes.collectAsState()
+    val bikeSensors by equipmentViewModel.bikeSensors.collectAsState()
+    val shoeSensors by equipmentViewModel.shoeSensors.collectAsState()
+
     val availableListState = rememberLazyListState()
     val pairedListState = rememberLazyListState()
     val allKnownListState = rememberLazyListState()
+    val bikesListState = rememberLazyListState()
+    val shoesListState = rememberLazyListState()
+    val bikesHorizontalScrollState = rememberScrollState()
+    val shoesHorizontalScrollState = rememberScrollState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+
+    LaunchedEffect(tabViewModel) {
+        tabViewModel.newDeviceDiscoveredEvent.collect { deviceName ->
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            availableListState.animateScrollToItem(0)
+            snackbarHostState.showSnackbar(
+                message = context.getString(R.string.devices_new_sensor_discovered, deviceName),
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
 
     Surface(modifier = modifier.fillMaxSize()) {
         when (val state = uiState) {
@@ -90,8 +135,15 @@ fun DevicesTabbedScreen(
                         DeviceFilterSpec(DeviceFilterType.ALL_KNOWN, protocol, deviceType)
                     )
                 }
+                val tabTitles = listOf(
+                    stringResource(R.string.devices_tab_available),
+                    stringResource(R.string.devices_tab_paired),
+                    stringResource(R.string.devices_tab_known),
+                    stringResource(R.string.devices_tab_bikes),
+                    stringResource(R.string.devices_tab_shoes)
+                )
                 
-                val pagerState = rememberPagerState(initialPage = initialTab) { tabs.size }
+                val pagerState = rememberPagerState(initialPage = initialTab) { tabTitles.size }
                 val scope = rememberCoroutineScope()
 
                 Box(Modifier.nestedScroll(connection)) {
@@ -102,21 +154,74 @@ fun DevicesTabbedScreen(
                         verticalAlignment = Alignment.Top,
                         beyondViewportPageCount = 2
                     ) { page ->
-                        val scrollState = when (page) {
-                            0 -> availableListState
-                            1 -> pairedListState
-                            else -> allKnownListState
+                        when (page) {
+                            0 -> DeviceListScreen(
+                                viewModel = listViewModel,
+                                filterSpec = tabs[0],
+                                isSearchingForNewDevices = isSearchingForNewDevices,
+                                scanningProtocol = scanningProtocol,
+                                scanningDeviceType = scanningDeviceType,
+                                onDeviceSelected = { editingDeviceId = it },
+                                onDeleteDevice = { showDeleteConfirmFor = it },
+                                scrollState = availableListState,
+                                appBarOffsetPx = connection.appBarOffset,
+                                headerHeightPx = appBarMaxHeightPx.toFloat(),
+                                onCheckAntInstallation = { showAntStatusSheet = true },
+                                filterCriteria = filterCriteria
+                            )
+                            1 -> DeviceListScreen(
+                                viewModel = listViewModel,
+                                filterSpec = tabs[1],
+                                isSearchingForNewDevices = false,
+                                onDeviceSelected = { editingDeviceId = it },
+                                onDeleteDevice = { showDeleteConfirmFor = it },
+                                scrollState = pairedListState,
+                                appBarOffsetPx = connection.appBarOffset,
+                                headerHeightPx = appBarMaxHeightPx.toFloat(),
+                                onCheckAntInstallation = { showAntStatusSheet = true },
+                                filterCriteria = filterCriteria
+                            )
+                            2 -> DeviceListScreen(
+                                viewModel = listViewModel,
+                                filterSpec = tabs[2],
+                                isSearchingForNewDevices = false,
+                                onDeviceSelected = { editingDeviceId = it },
+                                onDeleteDevice = { showDeleteConfirmFor = it },
+                                scrollState = allKnownListState,
+                                appBarOffsetPx = connection.appBarOffset,
+                                headerHeightPx = appBarMaxHeightPx.toFloat(),
+                                onCheckAntInstallation = { showAntStatusSheet = true },
+                                filterCriteria = filterCriteria
+                            )
+                            3 -> EquipmentSportSensorMatrix(
+                                items = bikes,
+                                sensors = bikeSensors,
+                                isBike = true,
+                                onToggleLink = { eqId, sId, isLinked ->
+                                    equipmentViewModel.setSensorLink(eqId, sId, isLinked)
+                                },
+                                appBarOffsetPx = connection.appBarOffset,
+                                headerHeightPx = appBarMaxHeightPx.toFloat(),
+                                scrollState = bikesListState,
+                                horizontalScrollState = bikesHorizontalScrollState,
+                                emptyEquipmentMessage = stringResource(R.string.equipment_no_bikes),
+                                emptySensorsMessage = stringResource(R.string.equipment_matrix_no_bike_sensors)
+                            )
+                            4 -> EquipmentSportSensorMatrix(
+                                items = shoes,
+                                sensors = shoeSensors,
+                                isBike = false,
+                                onToggleLink = { eqId, sId, isLinked ->
+                                    equipmentViewModel.setSensorLink(eqId, sId, isLinked)
+                                },
+                                appBarOffsetPx = connection.appBarOffset,
+                                headerHeightPx = appBarMaxHeightPx.toFloat(),
+                                scrollState = shoesListState,
+                                horizontalScrollState = shoesHorizontalScrollState,
+                                emptyEquipmentMessage = stringResource(R.string.equipment_no_shoes),
+                                emptySensorsMessage = stringResource(R.string.equipment_matrix_no_shoe_sensors)
+                            )
                         }
-                        DeviceListScreen(
-                            viewModel = listViewModel,
-                            filterSpec = tabs[page],
-                            isSearchingForNewDevices = if (page == 0) isSearchingForNewDevices else false,
-                            onDeviceSelected = { editingDeviceId = it },
-                            onDeleteDevice = { showDeleteConfirmFor = it },
-                            scrollState = scrollState,
-                            appBarOffsetPx = connection.appBarOffset,
-                            headerHeightPx = appBarMaxHeightPx.toFloat()
-                        )
                     }
 
                     // --- HEADER ---
@@ -175,27 +280,36 @@ fun DevicesTabbedScreen(
                                         )
                                     }
 
-                                    // Modern Options Menu (Only shown for ANT+ troubleshooting)
-                                    if (protocol == Protocol.ANT_PLUS || protocol == Protocol.ALL) {
-                                        Box {
-                                            IconButton(onClick = { menuExpanded = true }) {
-                                                Icon(
-                                                    imageVector = Icons.Default.MoreVert,
-                                                    contentDescription = stringResource(R.string.devices_settings_header),
-                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                                )
-                                            }
-                                            DropdownMenu(
-                                                expanded = menuExpanded,
-                                                onDismissRequest = { menuExpanded = false }
-                                            ) {
-                                                DropdownMenuItem(
-                                                    text = { Text(stringResource(R.string.check_ANT_installation)) },
-                                                    onClick = {
-                                                        menuExpanded = false
-                                                        onCheckAntInstallation()
-                                                    }
-                                                )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        FilterActionButton(
+                                            onClick = { showFilterSheet = true },
+                                            isFilterActive = filterCriteria.isNotEmpty,
+                                            activeFilterCount = filterCriteria.activeFilterCount
+                                        )
+
+                                        // Modern Options Menu (Only shown for ANT+ troubleshooting)
+                                        if (protocol == Protocol.ANT_PLUS || protocol == Protocol.ALL) {
+                                            Box {
+                                                IconButton(onClick = { menuExpanded = true }) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.MoreVert,
+                                                        contentDescription = stringResource(R.string.devices_settings_header),
+                                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                                    )
+                                                }
+                                                DropdownMenu(
+                                                    expanded = menuExpanded,
+                                                    onDismissRequest = { menuExpanded = false }
+                                                ) {
+                                                    DropdownMenuItem(
+                                                        text = { Text(stringResource(R.string.check_ANT_installation)) },
+                                                        onClick = {
+                                                            menuExpanded = false
+                                                            showAntStatusSheet = true
+                                                            onCheckAntInstallation()
+                                                        }
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -206,24 +320,127 @@ fun DevicesTabbedScreen(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                                 divider = {}
                             ) {
-                                tabs.forEachIndexed { index, spec ->
+                                tabTitles.forEachIndexed { index, title ->
+                                    val isMatrixTab = index == 3 || index == 4
                                     Tab(
                                         selected = pagerState.currentPage == index,
                                         onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                                         text = {
-                                            Text(getTabTitle(spec))
+                                            if (isMatrixTab) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Link,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(16.dp),
+                                                        tint = LocalContentColor.current
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(title)
+                                                }
+                                            } else {
+                                                Text(title)
+                                            }
                                         }
+                                    )
+                                }
+                            }
+
+                            // Active Filter Chips Strip
+                            if (pagerState.currentPage < 3 && filterCriteria.isNotEmpty) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surface,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    ActiveDeviceFilterChipsRow(
+                                        criteria = filterCriteria,
+                                        onRemoveProtocol = { tabViewModel.updateFilterCriteria(filterCriteria.copy(protocol = null)) },
+                                        onRemoveDeviceType = { type -> tabViewModel.updateFilterCriteria(filterCriteria.copy(deviceTypes = filterCriteria.deviceTypes - type)) },
+                                        onRemoveBatteryFilter = { tabViewModel.updateFilterCriteria(filterCriteria.copy(batteryFilter = BatteryFilter.ALL)) },
+                                        onClearAll = { tabViewModel.clearFilterCriteria() }
                                     )
                                 }
                             }
                         }
                     }
+
+                    // --- PAIRING FAB (ATT-2189) ---
+                    FloatingActionButton(
+                        onClick = { showProtocolSheet = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp)
+                            .navigationBarsPadding(),
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = stringResource(R.string.devices_pair_sensor)
+                        )
+                    }
+
+                    // --- DISCOVERY SNACKBAR HOST (ATT-3099) ---
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 80.dp)
+                            .navigationBarsPadding()
+                    )
                 }
                 
                 // Keep searching active while displaying tabs
                 DisposableEffect(Unit) {
                     tabViewModel.startSearching()
                     onDispose { tabViewModel.stopSearching() }
+                }
+
+                // Pairing Protocol Bottom Sheet (ATT-2189)
+                if (showProtocolSheet) {
+                    PairingProtocolBottomSheet(
+                        onProtocolSelected = { selectedProtocol ->
+                            showProtocolSheet = false
+                            selectedPairingProtocol = selectedProtocol
+                        },
+                        onAntServicesMissing = {
+                            showProtocolSheet = false
+                            showAntStatusSheet = true
+                        },
+                        onDismiss = { showProtocolSheet = false }
+                    )
+                }
+
+                if (showAntStatusSheet) {
+                    AntServicesStatusSheet(
+                        onDismiss = { showAntStatusSheet = false }
+                    )
+                }
+
+                if (showFilterSheet) {
+                    DeviceFilterBottomSheet(
+                        criteria = filterCriteria,
+                        onApplyCriteria = { tabViewModel.updateFilterCriteria(it) },
+                        onClearAll = { tabViewModel.clearFilterCriteria() },
+                        onDismissRequest = { showFilterSheet = false }
+                    )
+                }
+
+                // Device Type Selection for Pairing (ATT-2189)
+                selectedPairingProtocol?.let { protocolToPair ->
+                    DeviceTypeSelectionDialog(
+                        protocol = protocolToPair,
+                        onSelected = { chosenDeviceType ->
+                            selectedPairingProtocol = null
+                            tabViewModel.startPairingScan(protocolToPair, chosenDeviceType)
+                            scope.launch {
+                                pagerState.animateScrollToPage(0)
+                            }
+                        },
+                        onDismiss = { selectedPairingProtocol = null }
+                    )
                 }
             }
             else -> {

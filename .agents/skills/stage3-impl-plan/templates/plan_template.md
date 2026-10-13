@@ -43,6 +43,13 @@
 ### Component 2: [Component Name]
 <!-- Description of layer, interfaces, classes modified or created -->
 
+### UI Consistency (Rule 23 — mandatory if UI is added or changed)
+<!-- Per docs/design_guidelines.md Section 5. Write "No UI changes." if not applicable. -->
+* **Reference screen / component**: `...` (closest existing equivalent in the app)
+* **Reused components**: `...` (e.g. `MetricItem`, `DropdownSelector`, tabbed layout of `RouteTabbedScreen`)
+* **Theme tokens**: shapes `...`, spacing `...`, colors `MaterialTheme.colorScheme.*` / `TTColor.*`
+* **New one-off styles & justification**: None / `...`
+
 ---
 
 ## 5. Step-by-Step Implementation Sequence (Stage 4 Construction)

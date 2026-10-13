@@ -33,6 +33,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -57,6 +59,7 @@ data class RemoteDeviceUIData(
 sealed class ControlNavigation {
     data class ToPairing(val protocol: Protocol, val deviceType: DeviceType? = null) : ControlNavigation()
     data class ToEditDevice(val deviceId: Long, val deviceType: DeviceType) : ControlNavigation()
+    data object ShowRecoveryDialog : ControlNavigation()
 }
 
 class ControlTrackingViewModel(
@@ -98,10 +101,25 @@ class ControlTrackingViewModel(
     // 1. Repository StateFlow (Single Source of Truth)
     private val allDevicesFromDb = devicesRepository.allDevices
 
+    /**
+     * Emits true if at least one real, paired remote sensor (ANT+ or Bluetooth LE with isPaired == true)
+     * exists in the database, false otherwise (REQ-UI-259).
+     * Seeded synchronously from SQLite on cold start to prevent UI flicker.
+     */
+    val hasPairedRemoteDevices: StateFlow<Boolean> = allDevicesFromDb
+        .map { devices ->
+            devices.any { it.isPaired && (it.protocol == Protocol.ANT_PLUS || it.protocol == Protocol.BLUETOOTH_LE) }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = devicesDatabaseManager.hasPairedRemoteDevices()
+        )
+
     // 2. Combine the IDs from the BANALService with the Data from the Database
     val remoteDevices: StateFlow<List<RemoteDeviceUIData>> = banalServiceRepository.activeRemoteDevicesIds
         .combine(allDevicesFromDb) { ids, dbDevices ->
-            ids.map { id ->
+            ids.mapNotNull { id ->
                 // Look for the device in the DB list
                 val dbDevice = dbDevices.find { it.id == id }
 
@@ -114,13 +132,8 @@ class ControlTrackingViewModel(
                         iconRes = UIHelper.getIconId(dbDevice.deviceType, dbDevice.protocol)
                     )
                 } else {
-                    // Fallback if the device is found by service but not yet in DB
-                    RemoteDeviceUIData(
-                        id = id,
-                        deviceType = DeviceType.DUMMY,
-                        name = "New Sensor",
-                        iconRes = R.drawable.research_icon
-                    )
+                    // Defensively ignore orphaned or deleted devices
+                    null
                 }
             }
         }
@@ -178,7 +191,14 @@ class ControlTrackingViewModel(
     // TODO: 1. create a tracking repository which sends these boradcasts.
     // TODO: 2. Replace this sending of Broadcasts.
     fun onStartTracking() {
-        sendBroadcast(TrainingApplication.REQUEST_START_TRACKING)
+        val dbManager = WorkoutSummariesDatabaseManager.getInstance(application)
+        if (!TrainingApplication.isTracking() && dbManager.hasUnfinishedWorkout()) {
+            viewModelScope.launch {
+                _navigationEvent.emit(ControlNavigation.ShowRecoveryDialog)
+            }
+        } else {
+            sendBroadcast(TrainingApplication.REQUEST_START_TRACKING)
+        }
     }
 
     fun onPauseTracking() {

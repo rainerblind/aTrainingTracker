@@ -15,7 +15,7 @@ This skill guides the agent through **Stage 2 (Requirement & Test Specification)
    - Validate governance via `python3 tools/verify_requirement_governance.py`.
 2. **Test Specification (`TST-XXX`)**:
    - Specify deterministic unit, repository, ViewModel, database, and UI test cases.
-   - Include 9-language localization audit (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) ensuring zero missing entries and matching format specifiers.
+   - Include 9-language localization audit (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) ensuring zero missing entries, matching format specifiers, and literal `\n` linebreaks (never XML entity `&#10;` which AAPT2 collapses).
    - Synchronize `docs/tests.md` with the new test definition.
 3. **Traceability Matrix**:
    - Map all test cases to requirement IDs in a structured markdown table.

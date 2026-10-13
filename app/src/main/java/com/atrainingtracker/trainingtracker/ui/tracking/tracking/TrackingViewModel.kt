@@ -48,6 +48,7 @@ import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
 import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
@@ -58,6 +59,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Objects
 
@@ -68,20 +70,26 @@ data class TrackingScreenState(
     val showMap: Boolean = false,
     val showLiveSegments: Boolean = false,
     val showElevationProfile: Boolean = false,
+    val showLiveClimbs: Boolean = true,
+    val showNavigationHints: Boolean = true,
+    val showLapButton: Boolean = true,
+    val elevationProfileScope: ElevationProfileScope = ElevationProfileScope.FULL_ROUTE,
+    val elevationProfileLookahead: Int = 2000,
     val fields: List<SensorFieldState> = emptyList(),
     val pathPoints: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint> = emptyList(),
+    val mapState: TrackingMapState = TrackingMapState(showMap = showMap),
     
-    // Map specific state
-    val zoomFocus: MapZoomFocus = MapZoomFocus.TRACK_AND_MARKERS,
-    val userBearing: Float = 0f,
-    val userSpeed: Float = 0f,
-    val bSportType: BSportType = BSportType.UNKNOWN,
-    val currentTrack: List<LatLng> = emptyList(),
-    val mapTracks: List<MapTrack> = emptyList(),
-    val mapSegments: List<MapSegment> = emptyList(),
-    val activeLiveSegmentIds: Set<Long> = emptySet(),
-    val mapRoutes: List<MapRoute> = emptyList(),
-    val mapMarkers: List<LocationMarker> = emptyList()
+    // Map specific state (backward-compatible)
+    val zoomFocus: MapZoomFocus = mapState.zoomFocus,
+    val userBearing: Float = mapState.userBearing,
+    val userSpeed: Float = mapState.userSpeed,
+    val bSportType: BSportType = mapState.bSportType,
+    val currentTrack: List<LatLng> = mapState.currentTrack,
+    val mapTracks: List<MapTrack> = mapState.mapTracks,
+    val mapSegments: List<MapSegment> = mapState.mapSegments,
+    val activeLiveSegmentIds: Set<Long> = mapState.activeLiveSegmentIds,
+    val mapRoutes: List<MapRoute> = mapState.mapRoutes,
+    val mapMarkers: List<LocationMarker> = mapState.mapMarkers
 )
 
 /**
@@ -101,6 +109,10 @@ class TrackingViewModel(
     // --- The StateFlow to hold and expose the UI state ---
     private val _uiState = MutableStateFlow(TrackingScreenState())
     val uiState: StateFlow<TrackingScreenState> = _uiState.asStateFlow()
+
+    // Holds the Map-specific state, decoupled from high-frequency sensor telemetry (REQ-UI-326 / ATT-2944)
+    private val _mapState = MutableStateFlow(TrackingMapState())
+    val mapState: StateFlow<TrackingMapState> = _mapState.asStateFlow()
 
     private val _activityType = MutableStateFlow<ActivityType>(ActivityType.getDefaultActivityType())
     val activityType: StateFlow<ActivityType> = _activityType.asStateFlow()
@@ -150,17 +162,17 @@ class TrackingViewModel(
                         else -> 0
                     }
                 }.thenBy {
-                    // Priority 2: Conditional tie-breaker
+                    // Priority 2: Conditional tie-breaker (REQ-LIV-005: strictly Double numeric values)
                     when(it.liveData.segmentStatus) {
                         // If we are ON the segment, prioritize by remaining distance (finish line)
                         LiveSegmentStatus.ON_SEGMENT,
-                        LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> it.liveData.remainingDistance
+                        LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> it.liveData.remainingDistance_raw
 
                         // If we are APPROACHING, prioritize by distance to the start line
-                        LiveSegmentStatus.APPROACHING -> it.liveData.distanceToStart
+                        LiveSegmentStatus.APPROACHING -> it.liveData.distanceToStart_raw
 
-                        // For the other cases, it is not clear what to do.  Thus, we try the segment offset. I.e., the closest segment (although this might jump).
-                        else -> it.liveData.segmentOffset
+                        // For the other cases, sort by segment offset (closest to athlete)
+                        else -> it.liveData.segmentOffset_raw
                     }
                 }
             )
@@ -186,6 +198,7 @@ class TrackingViewModel(
 
     init {
         observeZoneDisplayOptions()
+        observeMapState()
         // Load both the main UI state and the activity type
         loadSensorFieldStates()
         loadActivityType()
@@ -212,27 +225,96 @@ class TrackingViewModel(
         }
     }
 
-    private fun loadSensorFieldStates() {
+    private data class MapData<T1, T2, T3, T4>(
+        val allLiveSegments: T1,
+        val activeLiveSegments: T2,
+        val allRoutes: T3,
+        val activeNavigatedRouteId: T4
+    )
+
+    private fun observeMapState() {
         viewModelScope.launch {
-            // 1. First, create a combined flow for all Map-related data
             val mapDataFlow = combine(
                 liveSegmentsRepository.liveSegments,
                 activeLiveSegments,
-                routesRepository.allRoutes
-            ) { allSegments, activeSegments, allRoutes ->
-                Triple(allSegments, activeSegments, allRoutes)
+                routesRepository.allRoutes,
+                routesRepository.activeNavigatedRouteId
+            ) { allSegments, activeSegments, allRoutes, activeNavigatedRouteId ->
+                MapData(allSegments, activeSegments, allRoutes, activeNavigatedRouteId)
             }
 
-            // 2. Now combine the Sensor data with the Map data (This keeps us under the 5-flow limit)
+            combine(
+                trackingViewsRepository.getTrackingViewInfoFlow(viewId),
+                mapDataFlow,
+                banalServiceRepository.currentTrack,
+                banalServiceRepository.bSportType
+            ) { viewInfo, mapData, currentTrack, bSportType ->
+                val (allLiveSegments, activeLiveSegments, allRoutes, activeNavigatedRouteId) = mapData
+                val markerList = mutableListOf<LocationMarker>()
+                if (currentTrack.isNotEmpty()) {
+                    markerList.add(
+                        LocationMarker(
+                            position = currentTrack.first(),
+                            iconResId = R.drawable.start_logo_map,
+                            title = application.getString(R.string.Start)
+                        )
+                    )
+                }
+
+                // Convert LiveSegments into MapSegments
+                val mapSegments = allLiveSegments.map { live ->
+                    MapSegment(
+                        stravaId = live.staticData.summary.stravaId,
+                        name = live.staticData.summary.name,
+                        bSportType = live.staticData.summary.bSportType,
+                        path = live.staticData.path
+                    )
+                }
+
+                val activeIds = activeLiveSegments.map { it.staticData.summary.stravaId }.toSet()
+
+                TrackingMapState(
+                    showMap = viewInfo?.showMap ?: false,
+                    zoomFocus = MapZoomFocus.FOLLOW_ME,
+                    userSpeed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
+                    userBearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
+                    bSportType = bSportType,
+                    currentTrack = currentTrack,
+                    mapSegments = mapSegments,
+                    mapRoutes = allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeNavigatedRouteId)) },
+                    activeLiveSegmentIds = activeIds,
+                    mapMarkers = markerList
+                )
+            }.collect { newMapState ->
+                _mapState.value = newMapState
+                _uiState.update { current ->
+                    current.copy(
+                        showMap = newMapState.showMap,
+                        mapState = newMapState,
+                        zoomFocus = newMapState.zoomFocus,
+                        userBearing = newMapState.userBearing,
+                        userSpeed = newMapState.userSpeed,
+                        bSportType = newMapState.bSportType,
+                        currentTrack = newMapState.currentTrack,
+                        mapTracks = newMapState.mapTracks,
+                        mapSegments = newMapState.mapSegments,
+                        activeLiveSegmentIds = newMapState.activeLiveSegmentIds,
+                        mapRoutes = newMapState.mapRoutes,
+                        mapMarkers = newMapState.mapMarkers
+                    )
+                }
+            }
+        }
+    }
+
+    private fun loadSensorFieldStates() {
+        viewModelScope.launch {
             combine(
                 trackingViewsRepository.getSensorFieldConfigsForView(viewId),
                 banalServiceRepository.allFilteredSensorData,
                 trackingViewsRepository.getTrackingViewInfoFlow(viewId),
-                banalServiceRepository.currentPathPoints,
-                mapDataFlow
-            ) { configs, allSensorData, viewInfo, livePathPoints, mapData ->
-                val (allLiveSegments, activeLiveSegments, allRoutes) = mapData
-
+                banalServiceRepository.currentPathPoints
+            ) { configs, allSensorData, viewInfo, livePathPoints ->
                 // --- Step 1: Create the base state from the latest configurations ---
                 val currentActivity = banalServiceRepository.activityType.value
                 val baseFields = configs.map { config ->
@@ -267,46 +349,30 @@ class TrackingViewModel(
                 // --- Step 2: Apply live sensor data to the base state ---
                 val finalFields = applySensorData(baseFields, allSensorData, currentActivity)
 
-                val currentTrack = banalServiceRepository.currentTrack.value
-                val markerList = mutableListOf<LocationMarker>()
-                if (currentTrack.isNotEmpty()) {
-                    markerList.add(
-                        LocationMarker(
-                            position = currentTrack.first(),
-                            iconResId = R.drawable.start_logo_map,
-                            title = application.getString(R.string.Start)
-                        )
-                    )
-                }
-
-                // Convert LiveSegments into MapSegments
-                val mapSegments = allLiveSegments.map { live ->
-                    MapSegment(
-                        stravaId = live.staticData.summary.stravaId,
-                        name = live.staticData.summary.name,
-                        bSportType = live.staticData.summary.bSportType,
-                        path = live.staticData.path
-                    )
-                }
-
-                val activeIds = activeLiveSegments.map { it.staticData.summary.stravaId }.toSet()
-
-                // --- Step 4: Package everything into the TrackingScreenState ---
+                // --- Step 3: Package into TrackingScreenState reusing the decoupled mapState ---
+                val currentMap = _mapState.value
                 TrackingScreenState(
                     fields = finalFields,
                     showMap = viewInfo?.showMap ?: false,
-                    showLiveSegments =  viewInfo?.showLiveSegments ?: false,
+                    showLiveSegments = viewInfo?.showLiveSegments ?: false,
                     showElevationProfile = viewInfo?.showElevationProfile ?: false,
+                    showLiveClimbs = viewInfo?.showLiveClimbs ?: true,
+                    showNavigationHints = viewInfo?.showNavigationHints ?: true,
+                    showLapButton = viewInfo?.showLapButton ?: true,
+                    elevationProfileScope = viewInfo?.elevationProfileScope ?: ElevationProfileScope.FULL_ROUTE,
+                    elevationProfileLookahead = viewInfo?.elevationProfileLookahead ?: 2000,
                     pathPoints = livePathPoints,
-                    zoomFocus = MapZoomFocus.FOLLOW_ME,
-                    userSpeed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
-                    userBearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
-                    bSportType = banalServiceRepository.bSportType.value,
-                    currentTrack = currentTrack,
-                    mapSegments = mapSegments,
-                    mapRoutes = allRoutes.map { it.toMapRoute() },
-                    activeLiveSegmentIds = activeIds,
-                    mapMarkers = markerList
+                    mapState = currentMap,
+                    zoomFocus = currentMap.zoomFocus,
+                    userSpeed = currentMap.userSpeed,
+                    userBearing = currentMap.userBearing,
+                    bSportType = currentMap.bSportType,
+                    currentTrack = currentMap.currentTrack,
+                    mapTracks = currentMap.mapTracks,
+                    mapSegments = currentMap.mapSegments,
+                    mapRoutes = currentMap.mapRoutes,
+                    activeLiveSegmentIds = currentMap.activeLiveSegmentIds,
+                    mapMarkers = currentMap.mapMarkers
                 )
             }.collect { newState ->
                 _uiState.value = newState
@@ -457,6 +523,54 @@ class TrackingViewModel(
         }
         viewModelScope.launch {
             trackingViewsRepository.deleteSensorField(sensorFieldId)
+        }
+    }
+
+    fun onUpdateShowMap(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowMap(viewId, show)
+        }
+    }
+
+    fun onUpdateShowElevationProfile(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowElevationProfile(viewId, show)
+        }
+    }
+
+    fun onUpdateElevationProfileScope(scope: ElevationProfileScope) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateElevationProfileScope(viewId, scope)
+        }
+    }
+
+    fun onUpdateElevationProfileLookahead(lookaheadMeters: Int) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateElevationProfileLookahead(viewId, lookaheadMeters)
+        }
+    }
+
+    fun onUpdateShowLiveSegments(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowLiveSegments(viewId, show)
+        }
+    }
+
+    fun onUpdateShowLiveClimbs(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowLiveClimbs(viewId, show)
+        }
+    }
+
+    fun onUpdateShowNavigationHints(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowNavigationHints(viewId, show)
+        }
+    }
+
+    fun onUpdateShowLapButton(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowLapButton(viewId, show)
         }
     }
 

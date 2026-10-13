@@ -48,6 +48,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -155,7 +156,7 @@ fun WorkoutHeader(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.my_locations),
+                                painter = painterResource(id = R.drawable.ic_favorite_route),
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
                                 tint = MaterialTheme.colorScheme.primary
@@ -176,7 +177,7 @@ fun WorkoutHeader(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.my_locations),
+                            painter = painterResource(id = R.drawable.ic_favorite_route),
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
@@ -248,6 +249,28 @@ fun WorkoutHeader(
                                     fontWeight = FontWeight.Bold
                                 )
                             }
+                        }
+                    }
+
+                    // Origin Source Badge (ATT-2186)
+                    if (data.source != WorkoutSource.TRACKED) {
+                        val sourceLabel = when (data.source) {
+                            WorkoutSource.TCX -> stringResource(R.string.workout_source_tcx)
+                            WorkoutSource.GPX -> stringResource(R.string.workout_source_gpx)
+                            WorkoutSource.FIT -> stringResource(R.string.workout_source_fit)
+                            WorkoutSource.TRACKED -> ""
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ) {
+                            Text(
+                                text = sourceLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
                         }
                     }
                 }
@@ -359,6 +382,7 @@ fun WorkoutHeader(
                             val standardFormats = listOf(
                                 FileFormat.TCX to R.string.tcxWrite,
                                 FileFormat.GPX to R.string.gpxWrite,
+                                FileFormat.FIT to R.string.fitWrite,
                                 FileFormat.CSV to R.string.csvWrite,
                                 FileFormat.GC to R.string.jsonWrite
                             )

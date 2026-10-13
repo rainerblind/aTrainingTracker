@@ -17,6 +17,7 @@ This skill guides the agent through **Stage 3 (Implementation Planning)**. It pr
    - Map each step to specific target files and targeted unit test commands.
 3. **Invariant Protection & Rollback Safety**:
    - Explicitly list non-negotiable invariants (backward compatibility, null safety, human decision gate).
+   - **UI Consistency (Rule 23)**: If the ticket adds or changes UI, read `docs/design_guidelines.md` (Section 5) and fill the plan's `UI Consistency` section: closest existing reference screen, reused components (`ui/components/`), theme tokens (shapes, spacing, `MaterialTheme.colorScheme`, `TTColor`), and a justification for any new one-off style.
 4. **Deliverable Production & Gate Audit**:
    - Author `docs/engineering/plans/<TICKET_KEY>_plan.md` using `templates/plan_template.md`.
    - Update Stage 3 Jira subtask (`[Impl-Plan]`) Description with the complete text.

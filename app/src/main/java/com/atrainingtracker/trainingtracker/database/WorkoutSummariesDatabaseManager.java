@@ -171,6 +171,11 @@ public class WorkoutSummariesDatabaseManager {
         // race (ATT-2005)
         values.put(WorkoutSummaries.RACE, workoutData.getRace() ? 1 : 0);
 
+        // source (ATT-2186)
+        if (workoutData.getSource() != null) {
+            values.put(WorkoutSummaries.SOURCE, workoutData.getSource().name());
+        }
+
         // individual Strava upload
         values.put(WorkoutSummaries.UPLOAD_TO_STRAVA, workoutData.getUploadToStrava());
 
@@ -449,7 +454,8 @@ public class WorkoutSummariesDatabaseManager {
      */
     public Cursor getWorkoutsInRangeCursor(long startTimeS, long endTimeS) {
         String selection = "strftime('%s', " + WorkoutSummaries.TIME_START + ") >= ? AND " +
-                "strftime('%s', " + WorkoutSummaries.TIME_START + ") <= ?";
+                "strftime('%s', " + WorkoutSummaries.TIME_START + ") <= ? AND " +
+                WorkoutSummaries.FINISHED + " = 1";
         String[] selectionArgs = {String.valueOf(startTimeS), String.valueOf(endTimeS)};
         return getDatabase().query(
                 WorkoutSummaries.TABLE,
@@ -807,22 +813,18 @@ public class WorkoutSummariesDatabaseManager {
         if (db == null || !db.isOpen()) {
             return false;
         }
+        String selection = "(" + WorkoutSummaries.FINISHED + " IS NULL OR " + WorkoutSummaries.FINISHED + " = 0)";
         try (Cursor cursor = db.query(
                 WorkoutSummaries.TABLE,
                 new String[]{WorkoutSummaries.C_ID, WorkoutSummaries.FINISHED},
-                null,
+                selection,
                 null,
                 null,
                 null,
                 WorkoutSummaries.C_ID + " DESC",
                 "1"
         )) {
-            if (cursor != null && cursor.moveToFirst()) {
-                int finishedCol = cursor.getColumnIndex(WorkoutSummaries.FINISHED);
-                if (finishedCol != -1) {
-                    return cursor.getInt(finishedCol) == 0;
-                }
-            }
+            return cursor != null && cursor.moveToFirst();
         } catch (Exception e) {
             Log.e(TAG, "Error checking for unfinished workout: " + e.getMessage(), e);
         }
@@ -830,7 +832,7 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
-     * Finalizes any unfinished workout in the database (ATT-635).
+     * Finalizes any unfinished workout in the database (ATT-635, ATT-3165 / REQ-UI-345).
      */
     public void discardOrFinishUnfinishedWorkout() {
         SQLiteDatabase db = getDatabase();
@@ -840,7 +842,8 @@ public class WorkoutSummariesDatabaseManager {
         try {
             ContentValues values = new ContentValues();
             values.put(WorkoutSummaries.FINISHED, 1);
-            db.update(WorkoutSummaries.TABLE, values, WorkoutSummaries.FINISHED + " = 0", null);
+            String whereClause = "(" + WorkoutSummaries.FINISHED + " IS NULL OR " + WorkoutSummaries.FINISHED + " = 0)";
+            db.update(WorkoutSummaries.TABLE, values, whereClause, null);
         } catch (Exception e) {
             Log.e(TAG, "Error finalizing unfinished workout: " + e.getMessage(), e);
         }
@@ -1362,6 +1365,7 @@ public class WorkoutSummariesDatabaseManager {
         public static final String BOUND_MAX_LAT = "boundMaxLat"; // added in Version 21
         public static final String BOUND_MAX_LNG = "boundMaxLng"; // added in Version 21
         public static final String RACE = "race"; // added in Version 23 (02.10.2026, ATT-2005)
+        public static final String SOURCE = "source"; // added in Version 24 (03.10.2026, ATT-2186)
         // new entries in version 5 of the DB
         @Deprecated
         public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
@@ -1415,7 +1419,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 17; // 08.05.2026: Bugfix: add eventually missing columns (altitude and distance stream)
         // public static final int DB_VERSION = 21; // 25.07.2026 Added bounding box for performance (ATT-352)
         // public static final int DB_VERSION = 22; // 01.10.2026 Added composite index on extrema table for start location queries (ATT-1734)
-        public static final int DB_VERSION = 23; // 02.10.2026 Added race column (ATT-2005)
+        // public static final int DB_VERSION = 23; // 02.10.2026 Added race column (ATT-2005)
+        public static final int DB_VERSION = 24; // 03.10.2026 Added source column (ATT-2186)
         
 
 
@@ -1456,7 +1461,8 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.BOUND_MIN_LNG + " real,"   // added in Version 21
                 + WorkoutSummaries.BOUND_MAX_LAT + " real,"   // added in Version 21
                 + WorkoutSummaries.BOUND_MAX_LNG + " real,"   // added in Version 21
-                + WorkoutSummaries.RACE + " int DEFAULT 0)";  // added in Version 23
+                + WorkoutSummaries.RACE + " int DEFAULT 0, "  // added in Version 23
+                + WorkoutSummaries.SOURCE + " text DEFAULT 'TRACKED')";  // added in Version 24
 
         protected static final String CREATE_TABLE_EXTREMA_VALUES = "create table " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1702,6 +1708,11 @@ public class WorkoutSummariesDatabaseManager {
             if (oldVersion < 23) {
                 Log.i(TAG, "upgrading to DB version 23 (Adding race column)");
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.RACE, "int", "0");
+            }
+
+            if (oldVersion < 24) {
+                Log.i(TAG, "upgrading to DB version 24 (Adding source column)");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.SOURCE, "text", "'TRACKED'");
             }
         }
 

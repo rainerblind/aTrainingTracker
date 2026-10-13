@@ -18,10 +18,20 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import android.content.Context
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -162,5 +172,79 @@ class TelemetryZoneMathTest {
         assertTrue(TelemetryZoneMath.calculateHeartRateZoneBands(hrThresholds, 150.0, 150.0).isEmpty())
         assertTrue(TelemetryZoneMath.calculateHeartRateZoneBands(hrThresholds, 160.0, 150.0).isEmpty())
         assertTrue(TelemetryZoneMath.calculatePowerZoneBands(powerThresholds, 200.0, 100.0).isEmpty())
+    }
+
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
+
+    @Test
+    fun testLoadHeartRateThresholds_bike_loadsHrBike() {
+        val context = mockk<Context>()
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_BIKE, 1) } returns 120
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_BIKE, 2) } returns 140
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_BIKE, 3) } returns 160
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_BIKE, 4) } returns 180
+
+        val result = TelemetryZoneMath.loadHeartRateThresholds(context, BSportType.BIKE)
+        assertEquals(HeartRateZoneThresholds(120, 140, 160, 180), result)
+    }
+
+    @Test
+    fun testLoadHeartRateThresholds_run_loadsHrRun() {
+        val context = mockk<Context>()
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_RUN, 1) } returns 125
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_RUN, 2) } returns 145
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_RUN, 3) } returns 165
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_RUN, 4) } returns 185
+
+        val result = TelemetryZoneMath.loadHeartRateThresholds(context, BSportType.RUN)
+        assertEquals(HeartRateZoneThresholds(125, 145, 165, 185), result)
+    }
+
+    @Test
+    fun testLoadHeartRateThresholds_invalidValues_returnsNull() {
+        val context = mockk<Context>()
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        // Zero threshold
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_RUN, 1) } returns 0
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_RUN, 2) } returns 145
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_RUN, 3) } returns 165
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_RUN, 4) } returns 185
+
+        assertNull(TelemetryZoneMath.loadHeartRateThresholds(context, BSportType.RUN))
+
+        // Non-ascending thresholds (z2 <= z1)
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_RUN, 1) } returns 150
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.HR_RUN, 2) } returns 140
+        assertNull(TelemetryZoneMath.loadHeartRateThresholds(context, BSportType.RUN))
+    }
+
+    @Test
+    fun testLoadPowerThresholds_loadsPwrBike() {
+        val context = mockk<Context>()
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 1) } returns 150
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 2) } returns 200
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 3) } returns 250
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 4) } returns 300
+
+        val result = TelemetryZoneMath.loadPowerThresholds(context)
+        assertEquals(PowerZoneThresholds(150, 200, 250, 300), result)
+    }
+
+    @Test
+    fun testLoadPowerThresholds_invalidValues_returnsNull() {
+        val context = mockk<Context>()
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 1) } returns 150
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 2) } returns 0
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 3) } returns 250
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 4) } returns 300
+
+        assertNull(TelemetryZoneMath.loadPowerThresholds(context))
     }
 }

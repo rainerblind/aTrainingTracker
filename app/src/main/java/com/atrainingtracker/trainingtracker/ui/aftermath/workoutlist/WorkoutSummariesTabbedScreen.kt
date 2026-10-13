@@ -23,14 +23,18 @@ import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,6 +55,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
+import com.atrainingtracker.trainingtracker.ui.theme.getBatterySnackbarColors
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
@@ -134,9 +139,49 @@ fun WorkoutSummariesTabbedScreen(
         }
     }
 
+    LaunchedEffect(workouts) {
+        WorkoutNavigationEvents.navigateToWorkout.collect { targetWorkoutId ->
+            if (targetWorkoutId != null && workouts.isNotEmpty()) {
+                val workout = workouts.find { it.id == targetWorkoutId }
+                if (workout != null) {
+                    val pageIndex = when (workout.bSportType) {
+                        BSportType.BIKE -> 1
+                        BSportType.RUN -> 2
+                        BSportType.UNKNOWN -> 3
+                        else -> 0
+                    }
+
+                    val listState = when (pageIndex) {
+                        1 -> bikeListState
+                        2 -> runListState
+                        3 -> otherListState
+                        else -> allListState
+                    }
+
+                    val filteredWorkouts = when (pageIndex) {
+                        1 -> workouts.filter { it.bSportType == BSportType.BIKE }
+                        2 -> workouts.filter { it.bSportType == BSportType.RUN }
+                        3 -> workouts.filter { it.bSportType == BSportType.UNKNOWN }
+                        else -> workouts
+                    }
+                    val itemIndex = filteredWorkouts.indexOfFirst { it.id == workout.id }
+
+                    if (itemIndex != -1) {
+                        scope.launch {
+                            pagerState.animateScrollToPage(pageIndex)
+                            listState.animateScrollToItem(itemIndex)
+                        }
+                    }
+                    WorkoutNavigationEvents.resetNavigateToWorkout()
+                }
+            }
+        }
+    }
+
     val sortOrder by viewModel.sortOrder.collectAsState()
     val isCompactView by viewModel.isCompactView.collectAsState()
     val workoutCardPreferences by viewModel.workoutCardPreferences.collectAsStateWithLifecycle()
+    val workoutSectionsOrder by viewModel.workoutSectionsOrder.collectAsStateWithLifecycle()
     val filterCriteria by viewModel.filterCriteria.collectAsStateWithLifecycle()
     val allWorkouts by viewModel.allWorkouts.collectAsStateWithLifecycle()
     val knownLocations by viewModel.knownLocations.collectAsStateWithLifecycle()
@@ -154,6 +199,31 @@ fun WorkoutSummariesTabbedScreen(
             val message = if (success) successMsg else errorMsg
             snackbarHostState.showSnackbar(message)
             viewModel.resetSaveRouteStatus()
+        }
+    }
+
+    val viewSensorsLabel = stringResource(R.string.sensor_battery_action_view_sensors)
+    LaunchedEffect(Unit) {
+        WorkoutNavigationEvents.lowBatteryAlert.collect { alert ->
+            if (alert != null) {
+                if (alert.severity == WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL) {
+                    val currentVisuals = snackbarHostState.currentSnackbarData?.visuals as? WorkoutNavigationEvents.BatterySnackbarVisuals
+                    if (currentVisuals != null && currentVisuals.severity == WorkoutNavigationEvents.BatteryAlertSeverity.WARNING) {
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                    }
+                }
+                val visuals = WorkoutNavigationEvents.BatterySnackbarVisuals(
+                    message = alert.message,
+                    actionLabel = viewSensorsLabel,
+                    duration = SnackbarDuration.Long,
+                    severity = alert.severity
+                )
+                val result = snackbarHostState.showSnackbar(visuals)
+                if (result == SnackbarResult.ActionPerformed) {
+                    (activity as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors)
+                }
+                WorkoutNavigationEvents.consumeLowBatteryAlert()
+            }
         }
     }
 
@@ -176,13 +246,27 @@ fun WorkoutSummariesTabbedScreen(
     Scaffold(
         modifier = modifier,
         snackbarHost = {
-            SnackbarHost(snackbarHostState) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionColor = MaterialTheme.colorScheme.primary
-                )
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.navigationBarsPadding()
+            ) { data ->
+                val visuals = data.visuals as? WorkoutNavigationEvents.BatterySnackbarVisuals
+                if (visuals != null) {
+                    val colors = getBatterySnackbarColors(visuals.severity)
+                    Snackbar(
+                        snackbarData = data,
+                        containerColor = colors.containerColor,
+                        contentColor = colors.contentColor,
+                        actionColor = colors.actionColor
+                    )
+                } else {
+                    Snackbar(
+                        snackbarData = data,
+                        containerColor = MaterialTheme.colorScheme.inverseSurface,
+                        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                        actionColor = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         },
         contentWindowInsets = WindowInsets(0.dp)
@@ -257,7 +341,8 @@ fun WorkoutSummariesTabbedScreen(
                     onMarkFinished = { workoutId -> viewModel.markWorkoutFinished(workoutId) },
                     knownLocations = knownLocations,
                     availableClusters = availableClusters,
-                    workoutCardPreferences = workoutCardPreferences
+                    workoutCardPreferences = workoutCardPreferences,
+                    workoutSectionsOrder = workoutSectionsOrder
                 )
             }
 

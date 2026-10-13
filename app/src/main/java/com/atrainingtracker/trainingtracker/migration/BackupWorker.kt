@@ -37,24 +37,45 @@ class BackupWorker(
         val prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val automatedEnabled = prefs.getBoolean("automated_backups", false)
         val dropboxConnected = TrainingApplication.uploadToDropbox()
+        val googleDriveConnected = TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
 
-        if (!automatedEnabled || !dropboxConnected) {
-            Log.d(TAG, "Automated backups disabled or Dropbox not connected. Skipping.")
+        if (!automatedEnabled || (!dropboxConnected && !googleDriveConnected)) {
+            Log.d(TAG, "Automated backups disabled or no cloud provider connected. Skipping.")
             return Result.success()
         }
 
         val backupFile = BackupManager.createBackup(applicationContext)
         return if (backupFile != null) {
-            val success = DropboxBackupManager.uploadBackup(applicationContext, backupFile)
-            if (success) {
+            var anyUploadSuccess = false
+            var anyUploadFailed = false
+
+            if (dropboxConnected) {
+                val dbxSuccess = DropboxBackupManager.uploadBackup(applicationContext, backupFile)
+                if (dbxSuccess) {
+                    anyUploadSuccess = true
+                } else {
+                    anyUploadFailed = true
+                }
+            }
+
+            if (googleDriveConnected) {
+                val gdSuccess = GoogleDriveBackupManager.uploadBackup(applicationContext, backupFile)
+                if (gdSuccess) {
+                    anyUploadSuccess = true
+                } else {
+                    anyUploadFailed = true
+                }
+            }
+
+            if (anyUploadSuccess) {
                 prefs.edit(commit = true) {
                     putLong("last_backup_timestamp", System.currentTimeMillis())
-                    putString("last_backup_status", "SUCCESS")
+                    putString("last_backup_status", if (anyUploadFailed) "PARTIAL_SUCCESS" else "SUCCESS")
                 }
                 Result.success()
             } else {
                 prefs.edit(commit = true) {
-                    putString("last_backup_status", "Dropbox upload failed")
+                    putString("last_backup_status", "Upload failed")
                 }
                 Result.retry()
             }

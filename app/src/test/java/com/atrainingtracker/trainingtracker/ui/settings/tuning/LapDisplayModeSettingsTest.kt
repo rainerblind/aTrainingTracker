@@ -108,13 +108,16 @@ class LapDisplayModeSettingsTest {
     @Test
     fun testAdvancedTuningDialog_lapDisplayModeUsesSegmentedButton() {
         val candidates = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
             File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
             File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
             File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
         )
-        val dialogFile = candidates.firstOrNull { it.exists() }
-            ?: error("AdvancedTuningDialog.kt not found in candidates: $candidates")
-        val content = dialogFile.readText()
+        val targetFile = candidates.firstOrNull { it.exists() }
+            ?: error("Target file not found in candidates: $candidates")
+        val content = targetFile.readText()
 
         // 1. Verify SingleChoiceSegmentedButtonRow is present for lap display mode
         assertTrue(

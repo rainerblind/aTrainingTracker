@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 
 import androidx.compose.runtime.Immutable
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData
@@ -78,6 +79,7 @@ data class WorkoutData(
     val commute: Boolean,
     val trainer: Boolean,
     val race: Boolean = false,
+    val source: WorkoutSource = WorkoutSource.TRACKED,
     val mapPolyline: String,
     val encodedAltitudes: String,
     val encodedDistances: String,
@@ -140,6 +142,7 @@ data class WorkoutData(
             commute = commute,
             trainer = trainer,
             race = race,
+            source = source,
             uploadToStrava = uploadToStrava,
             stravaSportName = stravaSportName,
             clusterId = clusterId,

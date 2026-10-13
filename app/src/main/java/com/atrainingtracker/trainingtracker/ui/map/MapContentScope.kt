@@ -30,6 +30,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.MaterialTheme
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.heatmaps.HeatmapTileProvider
+import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
+import com.google.android.gms.maps.model.JointType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -100,6 +103,11 @@ interface MapContentScope {
         path: List<LatLng>,
         color: Color? = null
     )
+
+    /**
+     * Renders climb highlights along a route or track color-coded by climb category (REQ-UI-298 / ATT-2509).
+     */
+    fun climbs(climbs: List<Climb>)
 
     /**
      * Renders a density-based heatmap using a Cyan -> Indigo sequential gradient.
@@ -174,6 +182,14 @@ internal class MapContentScopeImpl(
     private data class LapHighlightData(val path: List<LatLng>, val color: Color?)
     private val lapHighlights = mutableStateListOf<LapHighlightData>()
 
+    internal data class ClimbHighlightData(
+        val path: List<LatLng>,
+        val color: Color,
+        val zIndex: Float = MapVisualization.CLIMB_Z_INDEX,
+        val width: Float = MapVisualization.CLIMB_WIDTH
+    )
+    internal val climbHighlights = mutableStateListOf<ClimbHighlightData>()
+
     fun collect(block: MapContentScope.() -> Unit) {
         trackData.clear()
         segmentData.clear()
@@ -184,6 +200,7 @@ internal class MapContentScopeImpl(
         contextualPaths.clear()
         locationData.clear()
         lapHighlights.clear()
+        climbHighlights.clear()
         this.apply(block)
     }
 
@@ -287,7 +304,8 @@ internal class MapContentScopeImpl(
         routeData.forEach { data ->
             val style = LocalMapStyle.current
             val route = data.path as MapRoute
-            val highlightRoute = zoomFocus != MapZoomFocus.FOLLOW_ME 
+            val highlightRoute = route.isActiveNavigation
+                    || zoomFocus != MapZoomFocus.FOLLOW_ME 
                     || (route.isSelected && route.bSportType == bSportType)
 
             MappablePathLayer(
@@ -342,6 +360,17 @@ internal class MapContentScopeImpl(
                 color = highlight.color ?: MaterialTheme.colorScheme.primary,
                 width = 10f,
                 zIndex = 25f
+            )
+        }
+
+        // 6c. Climb Span Highlights (REQ-UI-298 / ATT-2509)
+        climbHighlights.forEach { highlight ->
+            Polyline(
+                points = highlight.path,
+                color = highlight.color,
+                width = highlight.width,
+                zIndex = highlight.zIndex,
+                jointType = JointType.ROUND
             )
         }
 
@@ -444,6 +473,20 @@ internal class MapContentScopeImpl(
     override fun lapHighlight(path: List<LatLng>, color: Color?) {
         if (path.isNotEmpty()) {
             this.lapHighlights.add(LapHighlightData(path, color))
+        }
+    }
+
+    override fun climbs(climbs: List<Climb>) {
+        climbs.forEach { climb ->
+            val points = if (climb.pathPoints.isNotEmpty()) {
+                climb.pathPoints.map { it.latLng }
+            } else {
+                listOf(climb.startLatLng, climb.endLatLng)
+            }
+            if (points.size >= 2) {
+                val (color, _, _) = getClimbCategoryColors(climb.category)
+                this.climbHighlights.add(ClimbHighlightData(path = points, color = color))
+            }
         }
     }
 }

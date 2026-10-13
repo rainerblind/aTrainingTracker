@@ -371,6 +371,7 @@
     <string name="jsonWrite">Golden Cheetah JSON出力</string>
     <string name="tcxWrite">TCX出力</string>
     <string name="gpxWrite">GPX出力</string>
+    <string name="fitWrite">FIT出力</string>
     <string name="stravaUpload">Stravaへアップロード</string>
     <string name="runkeeperUpload">Runkeeperへアップロード</string>
     <string name="trainingPeaksUpload">TrainingPeaksへアップロード</string>
@@ -390,6 +391,11 @@
     <string name="equipment_type_shoe">シューズ</string>
     <string name="equipment_no_bikes">バイクなし</string>
     <string name="equipment_no_shoes">シューズなし</string>
+    <string name="equipment_tab_sensor_matrix">センサーマトリックス</string>
+    <string name="equipment_matrix_no_sensors">ペアリングされたセンサーが見つかりません。設定で最初にセンサーをペアリングしてください。</string>
+    <string name="equipment_matrix_no_equipment">ギアが見つかりません。最初にバイクやシューズを追加してください。</string>
+    <string name="equipment_matrix_no_bike_sensors">互換性のあるバイクセンサーが見つかりません。</string>
+    <string name="equipment_matrix_no_shoe_sensors">互換性のあるシューズセンサーが見つかりません。</string>
 
     <string name="SD_card_not_available">SDカードが利用できません。</string>
 
@@ -576,6 +582,10 @@
     <string name="config_tracking__show_map">マップ表示</string>
     <string name="config_tracking__showLiveSegments">ライブセグメント</string>
     <string name="config_tracking__showLapButton">ラップボタン</string>
+    <string name="config_tracking__show_navigation_hints">ターンバイターン案内</string>
+    <string name="config_tracking__show_live_climbs">ライブクライム</string>
+    <string name="config_tracking__wysiwyg_active">有効</string>
+    <string name="config_tracking__wysiwyg_hidden">非表示</string>
     <string name="add_view_before">前に表示を追加</string>
     <string name="delete_view">表示を削除</string>
     <string name="add_view_after">後に表示を追加</string>
@@ -679,6 +689,19 @@
 
     <plurals name="export_notification__detail__Dropbox_failed">
         <item quantity="other">❌ %1$s の Dropbox 送信に失敗しました。</item>
+    </plurals>
+
+<plurals name="export_notification__detail__GoogleDrive_waiting">
+        <item quantity="other">⏳ %1$s ファイルを Google ドライブにアップロードするのを待機中。</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_ongoing">
+        <item quantity="other">📤 %1$s ファイルを Google ドライブにアップロード中。</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_success">
+        <item quantity="other">✅ %1$s ファイルを Google ドライブに正常にアップロードしました。</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_failed">
+        <item quantity="other">❌ %1$s ファイルの Google ドライブへのアップロードに失敗しました。</item>
     </plurals>
 
     <plurals name="export_notification__detail__Community_failed">
@@ -1031,6 +1054,10 @@
     <string name="battery_level">電池残量</string>
     <string name="calc_map_polyline">マップポリラインを計算中...</string>
     <string name="config_tracking__showElevationProfile">高度プロファイル</string>
+    <string name="config_tracking__elevation_profile_scope">範囲</string>
+    <string name="config_tracking__elevation_profile_scope_full_route">全ルート</string>
+    <string name="config_tracking__elevation_profile_scope_rolling_window">ローリングウィンドウ</string>
+    <string name="config_tracking__elevation_profile_lookahead">先読み</string>
     <string name="current_value">現在の値</string>
     <string name="editLocationName">名前:</string>
     <string name="edit_my_location">場所を編集</string>
@@ -1113,6 +1140,7 @@
     <string name="filter_section_sport">スポーツの種類</string>
     <string name="filter_section_equipment">装備</string>
     <string name="filter_section_attributes">属性</string>
+    <string name="filter_section_origin_source">データソース</string>
     <string name="filter_section_thresholds">距離と時間</string>
     <string name="filter_section_start_at">開始地点</string>
     <string name="settings_workout_card_title">ワークアウト一覧（詳細カード）</string>
@@ -1182,12 +1210,23 @@
     <string name="filter_section_recordings">記録</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d 件の記録</string>
     <string name="filter_no_matching_clusters">一致するお気に入りトラックはありません</string>
+    <string name="filter_sensors_title">センサーを絞り込む</string>
+    <string name="filter_section_protocol">プロトコル</string>
+    <string name="filter_section_category">センサーのカテゴリ</string>
+    <string name="filter_section_battery">バッテリー残量</string>
+    <string name="filter_protocol_all">すべて</string>
+    <string name="filter_battery_all">すべて</string>
+    <string name="filter_battery_critical">危険 (≤ 20%)</string>
+    <string name="filter_battery_normal">通常 (> 20%)</string>
+    <string name="filter_battery_critical_chip">バッテリー: ≤ 20%</string>
+    <string name="filter_battery_normal_chip">バッテリー: > 20%</string>
+    <string name="filter_no_matching_sensors">アクティブなフィルターに一致するセンサーはありません</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">お気に入りルートとクラスタリング</string>
     <string name="cluster_info_what_title">お気に入りルートとは？</string>
     <string name="cluster_info_what_desc">同じコースで複数回トレーニングを行うと、アプリが自動的に検知してお気に入りルート（クラスタ）としてグループ化します。これにより、自動命名（例:「琵琶湖一周 #5」）、ギアの自動割り当て、同一コースでのパフォーマンス比較が可能になります。</string>
     <string name="cluster_info_fingerprint_title">3Dトポロジカル指紋</string>
-    <string name="cluster_info_fingerprint_desc">ルートはGPSの点単位ではなく、多次元の空間シグネチャに基づく「シンプルでありながら驚くほど優れたアルゴリズム」によって比較されます。このアルゴリズムはわずかなルートの違いに寛容でありながら、実際に異なるコースのワークアウトは確実に分離します:&#10;• スタートとゴール: 地理的な開始点と終了点（許容範囲: 200 m）。&#10;• エイペックス（最遠点）: スタートから最も離れたコース上の地点（許容範囲: 400 m）。&#10;• 総距離: ルートの全体距離（許容範囲: 20%）。&#10;• 最低・最高高度位置: 最低地点および最高地点の地理的位置（許容範囲: 400 m、オプション）。これにより、輪郭が似た谷沿いのルートと尾根ルートを確実に区別します。</string>
+    <string name="cluster_info_fingerprint_desc">ルートはGPSの点単位ではなく、多次元の空間シグネチャに基づく「シンプルでありながら驚くほど優れたアルゴリズム」によって比較されます。このアルゴリズムはわずかなルートの違いに寛容でありながら、実際に異なるコースのワークアウトは確実に分離します:\n• スタートとゴール: 地理的な開始点と終了点（許容範囲: 200 m）。\n• エイペックス（最遠点）: スタートから最も離れたコース上の地点（許容範囲: 400 m）。\n• 総距離: ルートの全体距離（許容範囲: 20%）。\n• 最低・最高高度位置: 最低地点および最高地点の地理的位置（許容範囲: 400 m、オプション）。これにより、輪郭が似た谷沿いのルートと尾根ルートを確実に区別します。</string>
     <string name="cluster_info_sports_title">スポーツ種別の分離と適応重心</string>
     <string name="cluster_info_sports_desc">お気に入りルートはスポーツ種別ごとに分離できるため、同じ道でのサイクリングとランニングが混ざりません。ワークアウトが追加されるたびに、加重移動平均（重心）によって参照座標が自動的に微調整されます。</string>
     <string name="cluster_info_tuning_title">感度とパラメータ調整</string>
@@ -1273,6 +1312,10 @@
     <string name="workout_name_ride_from">%1$s からのライド</string>
     <string name="workout_name_activity_from">%1$s からのアクティビティ</string>
     <string name="workout_name_round_trip">%1$s からの周回</string>
+    <string name="workout_name_run_from_with_distance">%1$s からのラン (%2$s)</string>
+    <string name="workout_name_ride_from_with_distance">%1$s からのライド (%2$s)</string>
+    <string name="workout_name_activity_from_with_distance">%1$s からのアクティビティ (%2$s)</string>
+    <string name="workout_name_round_trip_with_distance">%1$s からの周回 (%2$s)</string>
     <string name="workout_name_run_from_to">%1$s から %2$s へのラン</string>
     <string name="workout_name_ride_from_to">%1$s から %2$s へのライド</string>
     <string name="workout_name_activity_from_to">%1$s から %2$s へのアクティビティ</string>
@@ -1293,6 +1336,10 @@
     <string name="cluster_start_location">開始: %s</string>
     <string name="known_location_routes_header">ここからのルート (%d):</string>
     <string name="filter_by_start_location">開始地点で絞り込む</string>
+    <string name="known_locations_home_base">ホーム拠点</string>
+    <string name="known_locations_home_badge">ホーム拠点</string>
+    <string name="known_locations_set_home">ホーム拠点に設定</string>
+    <string name="known_locations_remove_home">ホーム拠点を解除</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">エキスパート設定</string>
@@ -1330,9 +1377,11 @@
     <string name="tuning_telemetry_x_axis_desc">テレメトリグラフ（心拍数、ペース/速度、パワー）の水平軸ドメインを選択します。</string>
     <string name="tuning_pace_ceiling_title">ペース上限（最速値）</string>
     <string name="tuning_pace_ceiling_desc">ペースグラフのGPS異常値を抑制します。この上限を超える速度はクランプされます。</string>
+    <string name="tuning_elevation_smoothing_sigma_title">標高プロファイルの平滑化 (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">メートル単位の空間ガウスフィルター半径。低い値 (例: 15〜21 m) は短い坂道での反応がシャープになり、高い値はセンサーの階段状ノイズを除去します。</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
-    <string name="tuning_cat_cockpit_typography">コックピットのフォント</string>
+    <string name="tuning_cat_cockpit_typography">コックピットとタイル</string>
     <string name="tuning_cockpit_font_family_title">フォントファミリー</string>
     <string name="tuning_font_system_default">システムデフォルト</string>
     <string name="tuning_font_seven_segment">7セグメントデジタル</string>
@@ -1352,11 +1401,37 @@
     <string name="tuning_weight_semi_bold">中太</string>
     <string name="tuning_weight_bold">太字</string>
     <string name="tuning_cockpit_preview_title">ライブプレビュー</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">タイルデザインとグリッドスタイル</string>
+    <string name="sensor_field_variant_v0">クラシック・シームレスグリッド</string>
+    <string name="sensor_field_variant_v1">モダン・アウトラインスポーツタイル</string>
+    <string name="sensor_field_variant_v2">立体スポーツカード</string>
+    <string name="sensor_field_variant_v3">ソフトアクセント・カプセル</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">角の半径</string>
+    <string name="tuning_sensor_field_corner_radius_desc">コックピットタイルの角の丸み</string>
+    <string name="tuning_sensor_field_corner_radius_default">デフォルト: 0 dp (クラシックシームレス)</string>
+    <string name="tuning_sensor_field_border_thickness_title">枠線の太さ</string>
+    <string name="tuning_sensor_field_border_thickness_desc">タイルの枠線の太さ (0 dp = 枠線なし)</string>
+    <string name="tuning_sensor_field_border_thickness_default">デフォルト: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">枠線のコントラスト</string>
+    <string name="tuning_sensor_field_border_contrast_desc">枠線のカラーコントラスト (控えめから最大白/黒まで)</string>
+    <string name="tuning_sensor_field_border_contrast_default">デフォルト: 控えめ (0%)</string>
     <string name="tuning_default_format">デフォルト: %1$s</string>
     <string name="reset_to_defaults">デフォルトに戻す</string>
     <string name="reset_to_defaults_success">チューニング設定が工場出荷時のデフォルトに戻りました。</string>
+    <string name="tuning_cat_sensor_search">センサー検索とトリガー</string>
+    <string name="tuning_sensor_search_subtitle">%1$d回の検索ラウンド、%2$s自動検索</string>
+    <string name="tuning_sensor_search_active">有効</string>
+    <string name="tuning_sensor_search_disabled">無効</string>
     <string name="tuning_cat_sensors_gps">センサー、GPS、フィルター</string>
     <string name="tuning_cat_workout_masks_cards">ワークアウトカードと詳細</string>
+    <string name="tuning_cat_navigation">ナビゲーション</string>
+    <string name="tuning_cat_route_clustering">ルートとワークアウトのクラスタリング</string>
+    <string name="tuning_route_selection_radius_title">ルート選択半径</string>
+    <string name="tuning_route_selection_radius_desc">近くのルート選択のためのルート開始地点までの最大距離</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">ナビゲーション案内の表示時間</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">進行方向案内の自動非表示時間</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 カード</string>
     <string name="tuning_matrix_col_list">一覧</string>
     <string name="tuning_matrix_col_details">詳細</string>
@@ -1397,4 +1472,277 @@
     <string name="settings_lap_display_mode_table">テーブル</string>
     <string name="settings_lap_display_mode_visualizer">ビジュアライザー</string>
     <string name="settings_lap_display_mode_both">両方</string>
+
+    <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
+    <string name="workout_source_tracked">記録済み</string>
+    <string name="workout_source_tcx">TCX</string>
+    <string name="workout_source_gpx">GPX</string>
+    <string name="workout_source_fit">FIT</string>
+
+    <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
+    <string name="action_move_up">上へ移動</string>
+    <string name="action_move_down">下へ移動</string>
+
+    <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
+    <string name="permission_rationale_title">シームレスなトラッキングのための権限</string>
+    <string name="permission_rationale_subtitle">ワークアウトの指標を正確に記録するには、以下の権限が必要です：</string>
+    <string name="permission_rationale_location_title">位置情報とGPS</string>
+    <string name="permission_rationale_location_desc">スマートフォンがサイクリングジャージやランニングベルトに収納されてロックされている間も、ルート、ペース、標高を継続して記録します。</string>
+    <string name="permission_rationale_bluetooth_title">Bluetoothと周辺機器</string>
+    <string name="permission_rationale_bluetooth_desc">心拍計、パワーメーター、ケイデンスセンサー、スマートトレーナーに接続します。</string>
+    <string name="permission_rationale_notification_title">ワークアウト操作と通知</string>
+    <string name="permission_rationale_notification_desc">リアルタイムの測定値と一時停止/再開ボタンをロック画面に直接表示します。</string>
+    <string name="permission_rationale_continue">続ける</string>
+    <string name="permission_rationale_not_now">後で</string>
+    <string name="permission_rationale_open_settings">設定を開く</string>
+    <string name="permission_rationale_settings_explanation">位置情報の権限が拒否されました。位置情報へのアクセスがない場合、GPSルートの記録は利用できません。アプリの設定で権限を付与できます。</string>
+    <string name="permission_rationale_precise_location_explanation">ワークアウトの記録には正確な位置情報 (GPS) が必要です。おおよその位置情報では、距離、速度、ルート、高度を記録できません。権限で「正確」を選択してください。</string>
+    <string name="action_view_workout">表示</string>
+    <string name="permission_warning_badge_desc">位置情報の権限がありません</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">トレーニングが中断されました</string>
+    <string name="unfinished_workout_title_battery">ワークアウト中断: バッテリー最適化</string>
+    <string name="unfinished_workout_title_memory">ワークアウト中断: メモリ不足</string>
+    <string name="unfinished_workout_title_permission">ワークアウト中断: 権限の取り消し</string>
+    <string name="kill_reason_battery_title">バッテリー最適化により停止しました</string>
+    <string name="kill_reason_battery_stage1">バッテリー最適化が有効になっているため、Androidがバックグラウンド記録を中断しました。走行距離と標高を確実に記録するために、aTrainingTrackerのバッテリー最適化を無効にしてください。</string>
+    <string name="kill_reason_battery_stage1_strava">Stravaのアクティビティにとって完全なトレーニングデータがいかに重要であるかを理解しています。</string>
+    <string name="kill_reason_battery_stage2">システムのバッテリー管理によって記録が再び中断されました。例外設定を行わないと、Androidは長時間のワークアウト中にバックグラウンド記録を停止し続けます。バッテリー最適化の解除をお願いします。</string>
+    <string name="kill_reason_battery_stage3">バックグラウンドでの中断が繰り返し検出されました。最新のAndroidでは、バッテリー制限から除外されていないサービスは強制終了されます。下のボタンをタップしてaTrainingTrackerを除外設定し、ワークアウトを保護してください。</string>
+    <string name="kill_reason_low_memory">メモリ不足（カメラや3Dナビなど高負荷アプリの使用）のため、Androidにより記録が停止されました。それまでのデータは保存されています。</string>
+    <string name="kill_reason_permission_revoked">トレーニング中に位置情報または通知の権限が取り消されたため、記録が中断されました。</string>
+    <string name="action_disable_battery_optimization">バッテリー最適化を解除</string>
+    <string name="battery_optimization_exempt_celebration">トレーニングデータの無制限記録が有効になりました</string>
+
+    <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
+    <string name="import_fit_title">FITファイルをインポート</string>
+    <string name="import_fit_description">Garmin、Wahoo、Hammerhead、スマートウォッチからワークアウトをインポート (.fit)。</string>
+    <string name="import_fit_button">FITファイルを選択</string>
+    <string name="import_fit_dropbox_button">Dropboxをスキャン (FIT)</string>
+    <string name="import_fit_gdrive_button">Google ドライブをスキャン (FIT)</string>
+    <string name="import_fit_progress">FITファイルをインポート中 (%1$d / %2$d)…</string>
+    <string name="import_fit_summary_success">%1$d 件のワークアウトを正常にインポートしました (%2$d 件の重複をスキップ)。</string>
+    <string name="import_fit_summary_with_errors">%1$d 件のワークアウトをインポート、%2$d 件の重複をスキップ、%3$d 件失敗。</string>
+    <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
+    <string name="import_tcx_title">TCXファイルをインポート</string>
+    <string name="import_tcx_description">Training Center XMLファイル（.tcx）からワークアウトをインポートします。</string>
+    <string name="import_tcx_button">ローカルTCXファイルを選択</string>
+    <string name="import_tcx_dropbox_button">Dropboxをスキャン (TCX)</string>
+    <string name="import_tcx_gdrive_button">Google ドライブをスキャン (TCX)</string>
+    <string name="import_gpx_title">GPXファイルをインポート</string>
+    <string name="import_gpx_description">GPS Exchange Formatファイル（.gpx）からルートとアクティビティをインポートします。</string>
+    <string name="import_gpx_button">ローカルGPXファイルを選択</string>
+    <string name="import_gpx_dropbox_button">Dropboxをスキャン (GPX)</string>
+    <string name="import_gpx_gdrive_button">Google ドライブをスキャン (GPX)</string>
+    <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
+    <string name="invalid_workout_file_format">無効なファイル形式です。%1$s ファイルを選択してください。</string>
+    <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
+    <string name="route_select_title">ルートを選択</string>
+    <string name="route_action_select">ルートを選択</string>
+    <string name="route_action_select_desc">ファイルまたは履歴から選択</string>
+    <string name="route_action_stop">ルートを終了</string>
+    <string name="route_action_clear">ルートをクリア</string>
+    <string name="route_metrics_format">%1$s • %2$s</string>
+    <string name="route_filter_near">近く</string>
+    <string name="route_filter_recent">最近走行</string>
+    <string name="route_filter_length">長さ</string>
+    <string name="route_empty_title">利用可能なルートがありません</string>
+    <string name="route_empty_desc">GPXファイルをインポートするかStravaと同期してください。</string>
+    <string name="route_no_routes_nearby">近くにルートがありません</string>
+    <string name="route_no_matching_route_detected">一致するルートが検出されませんでした</string>
+    <string name="google_drive">Google Drive</string>
+    <string name="google_drive_connect">Google ドライブに接続</string>
+    <string name="google_drive_disconnect">Google ドライブから切断</string>
+    <string name="google_drive_connected_status">Google ドライブに接続されています</string>
+    <string name="google_drive_disconnected_status">Google ドライブに接続されていません</string>
+    <string name="google_drive_account_email_label">アカウント: %1$s</string>
+    <string name="upload_workouts_to_google_drive">ワークアウトを自動エクスポート</string>
+    <string name="upload_workouts_to_google_drive_summary">保存後にアクティビティ（FIT、TCX、GPX、CSV）を Google ドライブにアップロードします</string>
+    <string name="upload_backup_to_google_drive">データベースバックアップを自動同期</string>
+    <string name="upload_backup_to_google_drive_summary">データベースを定期的に Google ドライブにバックアップします</string>
+    <string name="google_drive_only_wifi">Wi-Fi 経由でのみアップロード</string>
+    <string name="google_drive_only_wifi_summary">モバイルデータ通信量を節約します</string>
+    <string name="google_drive_last_sync">前回のアップロード: %1$s</string>
+    <string name="google_drive_never_synced">まだ同期されていません</string>
+    <string name="restore_from_google_drive">Google ドライブから復元</string>
+    <string name="upload_to_google_drive">Google ドライブにバックアップ</string>
+    <string name="google_drive_error_developer_config">Google サインイン設定エラー (ステータス 10): Google Cloud Console で OAuth クライアント登録 (パッケージ名 com.atrainingtracker.debug および SHA-1 フィンガープリント) を確認してください。</string>
+    <string name="google_drive_error_network">Google サインイン中にインターネット接続がないか、ネットワークエラーが発生しました。</string>
+    <string name="google_drive_error_generic">Google サインインに失敗しました。もう一度お試しください。</string>
+    <string name="google_drive_error_auth_expired">Google ドライブのセッションの有効期限が切れたか、認証されていません。設定で再認証してください。</string>
+    <string name="google_drive_error_api_disabled">Google Cloud Console で Google Drive API が無効になっています。Google Cloud プロジェクトで有効にしてください。</string>
+    <string name="google_drive_error_folder_hierarchy">Google ドライブのフォルダ階層を解決できませんでした</string>
+    <string name="google_drive_connect_prompt">Google アカウントを接続して、ワークアウトのエクスポートとデータベースのバックアップを Google ドライブに自動同期します。</string>
+    <string name="scan_google_drive">Google ドライブをスキャン</string>
+    <string name="google_drive_scan_empty_diagnostic">アクセス可能なワークアウトファイルが見つかりませんでした。セキュリティ制限のため、Google ドライブに外部からコピーされたファイルはGoogle Drive APIから認識されません。フォーマットカードの「ローカルファイルを選択」をタップし、ファイルピッカーからGoogle ドライブのファイルを選択してください。</string>
+    <string name="import_workout_files_progress">ファイルをインポート中 (%1$d / %2$d)…</string>
+    <string name="legacy_import__downloading_google_drive">Google ドライブから %1$s をダウンロード中…</string>
+    <string name="gpx_enriching_elevation">標高データを取得中…</string>
+    <string name="gpx_elevation_enriched">標高データを正常に追加しました</string>
+    <string name="gpx_elevation_enrichment_failed">標高の取得に失敗しました。2Dルートをインポートしました</string>
+    <string name="waypoint_type_bench">ベンチ / 休憩所</string>
+    <string name="waypoint_type_shelter">避難小屋</string>
+    <string name="waypoint_type_water">給水所 / 水場</string>
+    <string name="waypoint_type_summit">山頂 / 峠</string>
+    <string name="waypoint_type_food">補給所 / カフェ</string>
+    <string name="waypoint_type_viewpoint">展望ポイント</string>
+    <string name="waypoint_type_first_aid">救護所</string>
+    <string name="waypoint_type_danger">危険箇所</string>
+    <string name="waypoint_type_turn_left">左折</string>
+    <string name="waypoint_type_turn_right">右折</string>
+    <string name="waypoint_type_turn_straight">直進</string>
+    <string name="waypoint_type_generic">ウェイポイント</string>
+    <string name="route_cue_sheet_title">キューシート</string>
+    <string name="route_waypoints_header">ウェイポイントとPOI (%1$d)</string>
+
+    <string name="climb_title">登坂</string>
+    <string name="climb_approaching">接近中</string>
+    <string name="climb_on_climb">登坂中</string>
+    <string name="climb_summit">山頂</string>
+    <string name="climb_remaining_dist">残り</string>
+    <string name="climb_remaining_elevation">獲得標高</string>
+    <string name="climb_grade">勾配</string>
+    <string name="climb_route_counter">登坂 %1$d / %2$d</string>
+    <string name="climb_category_hc">HC</string>
+    <string name="climb_category_cat1">カテゴリー 1</string>
+    <string name="climb_category_cat2">カテゴリー 2</string>
+    <string name="climb_category_cat3">カテゴリー 3</string>
+    <string name="climb_category_cat4">カテゴリー 4</string>
+    <string name="climb_category_uc">UC</string>
+    <string name="routes_climb_count">%d 登坂</string>
+    <string name="routes_climbs_section_title">登坂 (%d)</string>
+    <string name="routes_climb_start_at">%s 地点から開始</string>
+    <string name="routes_climb_avg_grade">平均 %1$.1f%%</string>
+    <string name="routes_climb_max_grade">最大 %1$.1f%%</string>
+    <string name="climb_max_grade_label">最大勾配</string>
+    <string name="routes_segments_section_title">セグメント (%d)</string>
+    <string name="routes_segments_tab_title">セグメント (%d)</string>
+    <string name="routes_segment_start_at">%s 地点から開始</string>
+    <string name="routes_segment_pr">PR %s</string>
+    <string name="routes_segment_counter">セグメント %1$d / %2$d</string>
+    <string name="route_layers">ルートレイヤー</string>
+    <string name="route_layer_climbs">登坂</string>
+    <string name="route_layer_segments">セグメント</string>
+    <string name="route_layer_waypoints">ウェイポイント</string>
+    <string name="route_item_hide">非表示</string>
+    <string name="route_item_show">表示</string>
+    <string name="segment_routes_containing_title">このセグメントを含むルート (%d)</string>
+    <string name="tuning_show_live_climbs_title">ライブクライム (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_summary">ルートおよびフリー走行中にリアルタイム登坂コックピットを表示</string>
+
+    <string name="turn_cue_left">左折</string>
+    <string name="turn_cue_right">右折</string>
+    <string name="turn_cue_slight_left">左斜め方向</string>
+    <string name="turn_cue_slight_right">右斜め方向</string>
+    <string name="turn_cue_sharp_left">左へ急カーブ</string>
+    <string name="turn_cue_sharp_right">右へ急カーブ</string>
+    <string name="turn_cue_straight">直進</string>
+    <string name="turn_cue_u_turn">Uターン</string>
+    <string name="turn_cue_gallery_title">方向転換指示アイコン</string>
+    <string name="turn_cue_now">今すぐ</string>
+    <string name="turn_cue_off_route">コースアウト (%1$d m)</string>
+    <string name="turn_cue_back_on_route">コース復帰</string>
+    <string name="turn_prompts_title">ターンバイターン案内</string>
+    <string name="turn_prompts_summary">ルートナビゲーション中に進行方向案内を表示します</string>
+    <string name="turn_audio_alerts_title">方向転換アラーム音</string>
+    <string name="turn_audio_alerts_summary">方向転換前およびコースアウト時にビープ音を再生します</string>
+    <string name="turn_cue_countdown_distance_title">案内開始距離</string>
+    <string name="turn_cue_countdown_distance_summary">曲がり角の手前での事前警告距離（メートル）</string>
+    <string name="off_route_corridor_threshold_title">コースアウト判定閾値</string>
+    <string name="off_route_corridor_threshold_summary">警告を発するまでの最大逸脱距離（メートル）</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">家に戻る</string>
+    <string name="take_me_home_desc">よく走るルートに沿った帰り道案内</string>
+    <string name="nav_remaining_dist">残り</string>
+    <string name="nav_remaining_climb">獲得標高</string>
+    <string name="nav_eta_label">到着予想</string>
+    <string name="nav_destination_home">自宅</string>
+    <string name="nav_stop_return">帰り道終了</string>
+    <string name="nav_route_reverse">ルートを逆走して戻る</string>
+
+    <string name="fork_alert_title">分岐接近</string>
+    <string name="fork_approaching_in_m">%1$d m先</string>
+    <string name="fork_direction_left">左</string>
+    <string name="fork_direction_straight">直進</string>
+    <string name="fork_direction_right">右</string>
+    <string name="fork_dismiss">閉じる</string>
+    <string name="fork_select_hint">タップして選択</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">センサーのバッテリー</string>
+    <string name="notification_channel_description__sensor_battery">センサーのバッテリー残量が少なくなったときのアラート</string>
+    <string name="sensor_battery_notification_title_1">センサーのバッテリー残量低下</string>
+    <string name="sensor_battery_notification_title_many">複数のセンサーのバッテリー残量低下</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: バッテリー残量低下 (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d 個のセンサー: バッテリー残量低下 (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">センサーを見る</string>
+
+    <!-- Sensor Pairing Relocation (ATT-2189) -->
+    <string name="devices_pair_sensor">センサーをペアリング</string>
+    <string name="devices_pair_protocol_title">プロトコルを選択</string>
+    <string name="devices_pair_protocol_ant">ANT+ センサー</string>
+    <string name="devices_pair_protocol_ble">Bluetooth LE センサー</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">バックグラウンド消費電力の制限</string>
+    <string name="battery_optimization_warning_banner_desc">画面オフ時にAndroidによってワークアウト記録が停止される場合があります。バッテリーの最適化を無効にしてください。</string>
+    <string name="battery_optimization_action_fix">許可</string>
+    <string name="battery_optimization_dismiss_banner">閉じる</string>
+
+    <!-- Contextual ANT+ Service Guidance (ATT-2513) -->
+    <string name="ant_status_sheet_title">ANT+ システムサービス</string>
+    <string name="ant_status_card_title">ANT+ ハードウェアとサービス</string>
+    <string name="ant_status_card_desc">最新のスマートフォンで ANT+ センサーを使用するには、ANT+ USB ドングル付きの USB-OTG アダプターと ANT+ システムサービスが必要です。</string>
+    <string name="ant_status_card_action">ステータスを確認</string>
+    <string name="ant_status_usb_dongle_note">最新のスマートフォンには内蔵 ANT+ チップがありません。受信には ANT+ USB ドングル付きの外部 USB-OTG アダプターが必要です。</string>
+    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
+    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
+    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
+    <string name="ant_service_installed">インストール済み</string>
+    <string name="ant_service_not_installed">未インストール</string>
+    <string name="ant_service_install_button">インストール</string>
+
+    <!-- ATT-2931: General Map Layers Control Menu -->
+    <string name="map_layers">マップレイヤー</string>
+    <string name="map_layer_routes">ルート</string>
+    <string name="map_layer_segments">セグメント</string>
+    <string name="map_layer_locations">お気に入りの場所</string>
+    <string name="map_layer_track">記録トラック</string>
+    <string name="ant_dialog_view_status">ANT+ ステータスを表示</string>
+    <string name="ant_dialog_dismiss">了解</string>
+
+    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
+    <string name="tuning_map_camera_section_title">マップカメラと追従ナビゲーション</string>
+    <string name="tuning_map_base_zoom_title">追従ベースズーム</string>
+    <string name="tuning_map_base_zoom_desc">追従トラッキングモードでの停止時（0 km/h）のベースズームレベル（値が大きいほど拡大表示）</string>
+    <string name="tuning_map_speed_zoom_enabled_title">速度依存ズーム</string>
+    <string name="tuning_map_speed_zoom_enabled_desc">走行速度が上がると段階的にズームアウトし、進行方向の見通しを広げます</string>
+    <string name="tuning_map_cruising_zoom_title">巡航速度ズーム（20 km/h時）</string>
+    <string name="tuning_map_cruising_zoom_desc">一般的なサイクリング速度（20 km/h）に合わせたカメラズームレベル（値が大きいほど拡大表示）</string>
+    <string name="tuning_map_tilt_angle_title">カメラ傾斜角度</string>
+    <string name="tuning_map_tilt_angle_desc">3Dナビゲーションの視点傾斜角度（0°はフラットな2D、70°は完全な3Dパースペクティブ）</string>
+    <string name="tuning_map_lookahead_padding_title">前方視野マージン</string>
+    <string name="tuning_map_lookahead_padding_desc">ライダーの位置を下部に配置し、前方の道路視野を最大化するためのビューポート余白比率（%）（値が大きいほどライダーが下側に配置され前方が広く見えます）</string>
+    <string name="tuning_map_follow_me_speed_smoothing_title">速度ズームのスムージング</string>
+    <string name="tuning_map_follow_me_speed_smoothing_desc">追従モードズームにおける速度変化の減衰係数（小さい値 = より滑らか、大きい値 = より素早い応答）</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_title">方位・回転のスムージング</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_desc">追従モードにおけるカメラ回転の減衰係数（小さい値 = より滑らか、大きい値 = より素早い応答）</string>
+
+    <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
+    <string name="devices_newly_discovered_badge">新規</string>
+    <string name="devices_new_sensor_discovered">新しいセンサーが検出されました: %1$s</string>
+
+    <!-- ATT-3220 / REQ-UI-353: Missing ANT adapter warning toggle -->
+    <string name="tuning_show_ant_missing_adapter_warnings_title">ANT+アダプター未検出の警告を表示</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_desc">ANT+センサー検索時にアダプターが検出されない場合、警告ダイアログを表示します</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">分岐で一意のルートを自動追従</string>
+    <string name="tuning_auto_follow_unique_route_desc">分岐で一致するルートが1つだけになったときに自動的に追従を切り替えます</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">ナビゲーション案内の距離</string>
+    <string name="tuning_nav_cue_distance_desc">右左折案内を表示する手前の距離</string>
 </resources>
+

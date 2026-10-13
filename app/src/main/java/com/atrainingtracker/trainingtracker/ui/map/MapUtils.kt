@@ -32,6 +32,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.routes.WaypointType
 import com.atrainingtracker.trainingtracker.segments.SegmentHelper
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -99,6 +100,94 @@ fun createHeartPinMarker(
     pinDrawable?.let {
         it.setTint(pinColor.toArgb())
         it.setBounds(0, 0, size, size)
+        it.draw(canvas)
+    }
+
+    return saveBitmapDescriptorFactoryFromBitmap(bitmap)
+}
+
+/**
+ * Resolves semantic category color for waypoint badge rendering (REQ-MAP-033).
+ */
+fun resolveWaypointCategoryColor(type: WaypointType): Int {
+    return when (type) {
+        WaypointType.POI_SUMMIT -> 0xFFE65100.toInt()     // Deep Amber / Orange
+        WaypointType.POI_WATER -> 0xFF0288D1.toInt()      // Azure Blue
+        WaypointType.POI_BENCH -> 0xFF2E7D32.toInt()      // Forest Green
+        WaypointType.POI_SHELTER -> 0xFF00695C.toInt()    // Pine Teal
+        WaypointType.POI_FOOD -> 0xFFEF6C00.toInt()       // Coral Orange
+        WaypointType.POI_VIEWPOINT -> 0xFF6A1B9A.toInt()  // Royal Purple
+        WaypointType.POI_DANGER -> 0xFFD32F2F.toInt()     // Warning Red
+        WaypointType.POI_FIRST_AID -> 0xFFC62828.toInt()   // Crimson
+        WaypointType.TURN_LEFT,
+        WaypointType.TURN_RIGHT,
+        WaypointType.TURN_STRAIGHT -> 0xFF1565C0.toInt()  // Cobalt Blue
+        WaypointType.GENERIC -> 0xFF546E7A.toInt()        // Slate
+    }
+}
+
+/**
+ * Default diameter for route waypoint badge markers in dp (REQ-MAP-037).
+ * Reduced from 32 dp to 22 dp to optimize map glanceability and prevent polyline track occlusion.
+ */
+const val DEFAULT_WAYPOINT_MARKER_SIZE_DP = 22
+
+/**
+ * Creates a high-contrast circular badge marker with category-specific vibrant tinting,
+ * a crisp white halo ring, an outer dark contrast hairline, and a centered white glyph (REQ-MAP-033, REQ-MAP-037).
+ *
+ * Geometry and strokes scale proportionally with [sizeDp], with hairline clamping to guarantee
+ * crisp antialiased rendering across all screen densities.
+ */
+fun createWaypointBadgeMarker(
+    context: Context,
+    type: WaypointType,
+    sizeDp: Int = DEFAULT_WAYPOINT_MARKER_SIZE_DP
+): BitmapDescriptor? {
+    val density = context.resources.displayMetrics.density
+    val sizePx = (sizeDp * density).toInt().coerceAtLeast(1)
+    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    val center = sizePx / 2f
+    val scale = sizeDp / 32f
+
+    // 1. Outer subtle dark contrast hairline / shadow stroke (scaled, min 0.75 dp)
+    val darkStrokeWidth = (1f * density * scale).coerceAtLeast(0.75f * density)
+    val darkStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = darkStrokeWidth
+        color = 0x33000000
+    }
+    val outerRadius = center - (darkStrokeWidth / 2f)
+    canvas.drawCircle(center, center, outerRadius, darkStrokePaint)
+
+    // 2. Inner crisp white halo ring (scaled, min 1.25 dp)
+    val haloStrokeWidth = (2f * density * scale).coerceAtLeast(1.25f * density)
+    val whiteHaloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = haloStrokeWidth
+        color = android.graphics.Color.WHITE
+    }
+    val haloRadius = outerRadius - (darkStrokeWidth / 2f) - (haloStrokeWidth / 2f)
+    canvas.drawCircle(center, center, haloRadius, whiteHaloPaint)
+
+    // 3. Category vibrant filled disc
+    val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = resolveWaypointCategoryColor(type)
+    }
+    val fillRadius = (haloRadius - (haloStrokeWidth / 2f)).coerceAtLeast(1f)
+    canvas.drawCircle(center, center, fillRadius, fillPaint)
+
+    // 4. Centered white Maki glyph
+    val iconSizePx = (sizePx * 0.55f).toInt().coerceAtLeast(1)
+    val drawable = ContextCompat.getDrawable(context, type.iconResId)?.mutate()
+    drawable?.let {
+        it.setTint(android.graphics.Color.WHITE)
+        val left = (sizePx - iconSizePx) / 2
+        val top = (sizePx - iconSizePx) / 2
+        it.setBounds(left, top, left + iconSizePx, top + iconSizePx)
         it.draw(canvas)
     }
 

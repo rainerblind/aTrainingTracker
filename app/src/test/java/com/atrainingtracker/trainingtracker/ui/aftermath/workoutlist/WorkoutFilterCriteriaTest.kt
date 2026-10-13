@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -49,7 +50,8 @@ class WorkoutFilterCriteriaTest {
         activeTimeSec: Long = 7200L, // 2 hours
         description: String? = "Hilly route through the Black Forest",
         goal: String? = "Threshold pace",
-        method: String? = "Interval training"
+        method: String? = "Interval training",
+        source: WorkoutSource = WorkoutSource.TRACKED
     ): WorkoutData {
         return WorkoutData(
             id = id,
@@ -83,7 +85,8 @@ class WorkoutFilterCriteriaTest {
             description = description,
             goal = goal,
             method = method,
-            stravaSportName = null
+            stravaSportName = null,
+            source = source
         )
     }
 
@@ -451,5 +454,60 @@ class WorkoutFilterCriteriaTest {
 
         val empty3 = WorkoutFilterCriteria.fromJson("{ invalid json")
         assertTrue(empty3.isEmpty)
+    }
+
+    @Test
+    fun testFilterByOriginSource_MatchesCorrectSource() {
+        val wTracked = createWorkout(id = 1L, source = WorkoutSource.TRACKED)
+        val wTcx = createWorkout(id = 2L, source = WorkoutSource.TCX)
+        val wGpx = createWorkout(id = 3L, source = WorkoutSource.GPX)
+        val wFit = createWorkout(id = 4L, source = WorkoutSource.FIT)
+
+        val critTracked = WorkoutFilterCriteria(source = WorkoutSource.TRACKED)
+        assertTrue("Tracked criteria should match TRACKED workout", critTracked.matches(wTracked))
+        assertFalse("Tracked criteria should not match TCX workout", critTracked.matches(wTcx))
+        assertFalse("Tracked criteria should not match GPX workout", critTracked.matches(wGpx))
+        assertFalse("Tracked criteria should not match FIT workout", critTracked.matches(wFit))
+
+        val critTcx = WorkoutFilterCriteria(source = WorkoutSource.TCX)
+        assertFalse("TCX criteria should not match TRACKED workout", critTcx.matches(wTracked))
+        assertTrue("TCX criteria should match TCX workout", critTcx.matches(wTcx))
+        assertFalse("TCX criteria should not match GPX workout", critTcx.matches(wGpx))
+        assertFalse("TCX criteria should not match FIT workout", critTcx.matches(wFit))
+
+        val critGpx = WorkoutFilterCriteria(source = WorkoutSource.GPX)
+        assertFalse("GPX criteria should not match TRACKED workout", critGpx.matches(wTracked))
+        assertFalse("GPX criteria should not match TCX workout", critGpx.matches(wTcx))
+        assertTrue("GPX criteria should match GPX workout", critGpx.matches(wGpx))
+        assertFalse("GPX criteria should not match FIT workout", critGpx.matches(wFit))
+
+        val critFit = WorkoutFilterCriteria(source = WorkoutSource.FIT)
+        assertFalse("FIT criteria should not match TRACKED workout", critFit.matches(wTracked))
+        assertFalse("FIT criteria should not match TCX workout", critFit.matches(wTcx))
+        assertFalse("FIT criteria should not match GPX workout", critFit.matches(wGpx))
+        assertTrue("FIT criteria should match FIT workout", critFit.matches(wFit))
+    }
+
+    @Test
+    fun testFilterByOriginSource_ActiveFilterCount() {
+        val criteria = WorkoutFilterCriteria(source = WorkoutSource.FIT)
+        assertFalse("Criteria should not be empty", criteria.isEmpty)
+        assertTrue("Criteria should be not empty", criteria.isNotEmpty)
+        assertEquals("Active filter count should be 1", 1, criteria.activeFilterCount)
+    }
+
+    @Test
+    fun testFilterByOriginSource_JsonSerializationDeserialization() {
+        for (source in WorkoutSource.values()) {
+            val original = WorkoutFilterCriteria(source = source)
+            val json = original.toJson()
+            val deserialized = WorkoutFilterCriteria.fromJson(json)
+            assertEquals("Roundtrip serialization failed for $source", source, deserialized.source)
+        }
+
+        // Test fallback on invalid or unknown source string in JSON
+        val malformedSourceJson = """{"source":"UNKNOWN_VAL"}"""
+        val deserializedMalformed = WorkoutFilterCriteria.fromJson(malformedSourceJson)
+        assertEquals(null, deserializedMalformed.source)
     }
 }

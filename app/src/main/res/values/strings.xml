@@ -83,6 +83,7 @@
     <string name="TCX" translatable="false">TCX</string>
     <string name="GPX" translatable="false">GPX</string>
     <string name="GC" translatable="false">GC</string>
+    <string name="FIT" translatable="false">FIT</string>
     <string name="TrainingPeaks" translatable="false">TrainingPeaks</string>
     <string name="unknown_manufacturer">Unknown</string>
     <string name="unknown_last_seen_date">never seen</string>
@@ -469,6 +470,7 @@
     <string name="jsonWrite">export to Golden Cheetah json</string>
     <string name="tcxWrite">export to TCX</string>
     <string name="gpxWrite">export to GPX</string>
+    <string name="fitWrite">export to FIT</string>
     <!--     <string name="gpxShow">show GPX data in other application</string>  -->
     <!-- 	<string name="deleteWorkout">delete Workout</string> -->
     <string name="stravaUpload">upload to Strava</string>
@@ -492,6 +494,11 @@
     <string name="equipment_type_shoe">Shoes</string>
     <string name="equipment_no_bikes">No Bikes</string>
     <string name="equipment_no_shoes">No Shoes</string>
+    <string name="equipment_tab_sensor_matrix">Sensor Matrix</string>
+    <string name="equipment_matrix_no_sensors">No paired sensors found. Pair external sensors first in Settings.</string>
+    <string name="equipment_matrix_no_equipment">No equipment found. Add bikes or shoes first.</string>
+    <string name="equipment_matrix_no_bike_sensors">No compatible bike sensors found.</string>
+    <string name="equipment_matrix_no_shoe_sensors">No compatible shoe sensors found.</string>
 
     <!-- dialogs -->
     <string name="SD_card_not_available">Sorry, the SD Card is not available.</string>
@@ -729,7 +736,15 @@
     <string name="config_tracking__show_map">Map</string>
     <string name="config_tracking__showLiveSegments">Live Segments</string>
     <string name="config_tracking__showElevationProfile">Elevation Profile</string>
+    <string name="config_tracking__elevation_profile_scope">Scope</string>
+    <string name="config_tracking__elevation_profile_scope_full_route">Full Route</string>
+    <string name="config_tracking__elevation_profile_scope_rolling_window">Rolling Window</string>
+    <string name="config_tracking__elevation_profile_lookahead">Lookahead</string>
     <string name="config_tracking__showLapButton">Lap Button</string>
+    <string name="config_tracking__show_navigation_hints">Turn Prompts</string>
+    <string name="config_tracking__show_live_climbs">Live Climbs</string>
+    <string name="config_tracking__wysiwyg_active">Active</string>
+    <string name="config_tracking__wysiwyg_hidden">Hidden</string>
     <string name="add_view_before">add view</string>
     <string name="delete_view">delete view</string>
     <string name="add_view_after">add view</string>
@@ -888,6 +903,23 @@
     <plurals name="export_notification__detail__Dropbox_failed">
         <item quantity="one">❌ Uploading the %1$s file to Dropbox failed.</item>     <!-- Uploading the TCX file to Dropbox failed. -->
         <item quantity="other">❌ Uploading the %1$s files to Dropbox failed.</item>  <!-- Uploading the TCX and CSV files to Dropbox failed. -->
+    </plurals>
+
+<plurals name="export_notification__detail__GoogleDrive_waiting">
+        <item quantity="one">⏳ Waiting to upload the %1$s file to Google Drive.</item>
+        <item quantity="other">⏳ Waiting to upload the %1$s files to Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_ongoing">
+        <item quantity="one">📤 Uploading the %1$s file to Google Drive.</item>
+        <item quantity="other">📤 Uploading the %1$s files to Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_success">
+        <item quantity="one">✅ Successfully uploaded the %1$s file to Google Drive.</item>
+        <item quantity="other">✅ Successfully uploaded the %1$s files to Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_failed">
+        <item quantity="one">❌ Uploading the %1$s file to Google Drive failed.</item>
+        <item quantity="other">❌ Uploading the %1$s files to Google Drive failed.</item>
     </plurals>
 
     <!-- writing to Community failed
@@ -1319,6 +1351,7 @@
     <string name="filter_section_sport">Sport Type</string>
     <string name="filter_section_equipment">Equipment</string>
     <string name="filter_section_attributes">Attributes</string>
+    <string name="filter_section_origin_source">Origin Source</string>
     <string name="filter_section_thresholds">Distance &amp; Duration</string>
     <string name="filter_section_start_at">Start at</string>
     <string name="settings_workout_card_title">Workout List (Detailed Cards)</string>
@@ -1388,12 +1421,23 @@
     <string name="filter_section_recordings">Recordings</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d recordings</string>
     <string name="filter_no_matching_clusters">No favorite tracks match the active filters</string>
+    <string name="filter_sensors_title">Filter Sensors</string>
+    <string name="filter_section_protocol">Protocol</string>
+    <string name="filter_section_category">Sensor Category</string>
+    <string name="filter_section_battery">Battery Level</string>
+    <string name="filter_protocol_all">All</string>
+    <string name="filter_battery_all">All</string>
+    <string name="filter_battery_critical">Critical (≤ 20%)</string>
+    <string name="filter_battery_normal">Normal (> 20%)</string>
+    <string name="filter_battery_critical_chip">Battery: ≤ 20%</string>
+    <string name="filter_battery_normal_chip">Battery: > 20%</string>
+    <string name="filter_no_matching_sensors">No sensors match the active filters</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">Favorite Tracks &amp; Clustering</string>
     <string name="cluster_info_what_title">What are Favorite Tracks?</string>
     <string name="cluster_info_what_desc">When you record multiple activities along the same route, the app automatically recognizes and groups them into a Favorite Track (Workout Cluster). This allows automatic naming (e.g. \"Lake Tahoe Loop #5\"), gear tracking, and comparing your performance across repeated efforts on identical courses.</string>
     <string name="cluster_info_fingerprint_title">3D Topological Fingerprint</string>
-    <string name="cluster_info_fingerprint_desc">Routes are compared using a simple but surprisingly good algorithm based on a multidimensional spatial signature rather than point-by-point GPS traces. This algorithm gives some tolerance to small variations, but separates the workouts when they are really different:&#10;• Start &amp; End: Geographical start and finish locations (default tolerance: 200 m).&#10;• Apex (Furthest Point): The point along the route furthest away from the start (default tolerance: 400 m).&#10;• Total Distance: Overall route length (default tolerance: 20%).&#10;• Min &amp; Max Altitude: Geographical locations of lowest and highest elevation (default tolerance: 400 m, optional). This reliably separates valley routes from mountain ridges with otherwise similar footprints.</string>
+    <string name="cluster_info_fingerprint_desc">Routes are compared using a simple but surprisingly good algorithm based on a multidimensional spatial signature rather than point-by-point GPS traces. This algorithm gives some tolerance to small variations, but separates the workouts when they are really different:\n• Start &amp; End: Geographical start and finish locations (default tolerance: 200 m).\n• Apex (Furthest Point): The point along the route furthest away from the start (default tolerance: 400 m).\n• Total Distance: Overall route length (default tolerance: 20%).\n• Min &amp; Max Altitude: Geographical locations of lowest and highest elevation (default tolerance: 400 m, optional). This reliably separates valley routes from mountain ridges with otherwise similar footprints.</string>
     <string name="cluster_info_sports_title">Sport Awareness &amp; Adaptive Centroid</string>
     <string name="cluster_info_sports_desc">Favorite Tracks can enforce sport-type matching, ensuring bike rides and runs along the same trail are kept in distinct clusters. As you record more workouts on a route, the cluster automatically refines its reference coordinates by computing a weighted running average (centroid).</string>
     <string name="cluster_info_tuning_title">Sensitivity &amp; Parameter Tuning</string>
@@ -1481,6 +1525,10 @@
     <string name="workout_name_ride_from">Ride from %1$s</string>
     <string name="workout_name_activity_from">Activity from %1$s</string>
     <string name="workout_name_round_trip">Loop from %1$s</string>
+    <string name="workout_name_run_from_with_distance">Run from %1$s (%2$s)</string>
+    <string name="workout_name_ride_from_with_distance">Ride from %1$s (%2$s)</string>
+    <string name="workout_name_activity_from_with_distance">Activity from %1$s (%2$s)</string>
+    <string name="workout_name_round_trip_with_distance">Loop from %1$s (%2$s)</string>
     <string name="workout_name_run_from_to">Run from %1$s to %2$s</string>
     <string name="workout_name_ride_from_to">Ride from %1$s to %2$s</string>
     <string name="workout_name_activity_from_to">Activity from %1$s to %2$s</string>
@@ -1501,6 +1549,10 @@
     <string name="cluster_start_location">Start: %s</string>
     <string name="known_location_routes_header">Routes starting here (%d):</string>
     <string name="filter_by_start_location">Filter by Start Location</string>
+    <string name="known_locations_home_base">Home base</string>
+    <string name="known_locations_home_badge">Home Base</string>
+    <string name="known_locations_set_home">Set as home base</string>
+    <string name="known_locations_remove_home">Remove home base</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">Expert Settings</string>
@@ -1529,6 +1581,8 @@
     <string name="tuning_altitude_window_desc">Moving average time window for instantaneous altitude and vertical speed.</string>
     <string name="tuning_slope_min_speed_title">Slope Minimum Speed</string>
     <string name="tuning_slope_min_speed_desc">Minimum moving speed required to calculate real-time gradient.</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_title">Show missing ANT+ adapter warnings</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_desc">Show alert dialog when an ANT+ sensor is searched but no adapter is detected</string>
     <string name="tuning_cat_aftermath">Aftermath &amp; Profile Analytics</string>
     <string name="tuning_profile_x_axis_title">Elevation Profile X-Axis</string>
     <string name="tuning_profile_x_axis_desc">Select horizontal axis domain for elevation profile graphs.</string>
@@ -1538,9 +1592,11 @@
     <string name="tuning_telemetry_x_axis_desc">Select horizontal axis domain for telemetry graphs (Heart Rate, Speed/Pace, Power).</string>
     <string name="tuning_pace_ceiling_title">Minimum Pace Ceiling</string>
     <string name="tuning_pace_ceiling_desc">Filters GPS noise spikes in the pace chart. Speeds faster than this ceiling are clamped.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Elevation Profile Smoothing (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Spatial Gaussian filter radius in meters. Lower values (e.g. 15–21 m) yield crisper response on short ramps; higher values eliminate sensor quantization staircasing.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
-    <string name="tuning_cat_cockpit_typography">Cockpit Typography</string>
+    <string name="tuning_cat_cockpit_typography">Cockpit &amp; Tiles</string>
     <string name="tuning_cockpit_font_family_title">Font Family</string>
     <string name="tuning_font_system_default">System Default</string>
     <string name="tuning_font_seven_segment">7-Segment Digital</string>
@@ -1560,14 +1616,40 @@
     <string name="tuning_weight_semi_bold">Semi-Bold</string>
     <string name="tuning_weight_bold">Bold</string>
     <string name="tuning_cockpit_preview_title">Live Preview</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">Tile Design &amp; Layout</string>
+    <string name="sensor_field_variant_v0">Classic Seamless Grid</string>
+    <string name="sensor_field_variant_v1">Modern Outlined Sport Tiles</string>
+    <string name="sensor_field_variant_v2">Elevated Sports Cards</string>
+    <string name="sensor_field_variant_v3">Soft Accent Capsules</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">Corner Radius</string>
+    <string name="tuning_sensor_field_corner_radius_desc">Corner rounding of cockpit telemetry tiles</string>
+    <string name="tuning_sensor_field_corner_radius_default">Default: 0 dp (Classic Seamless)</string>
+    <string name="tuning_sensor_field_border_thickness_title">Border Thickness</string>
+    <string name="tuning_sensor_field_border_thickness_desc">Outline stroke width of tiles (0 dp = borderless)</string>
+    <string name="tuning_sensor_field_border_thickness_default">Default: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">Border Contrast</string>
+    <string name="tuning_sensor_field_border_contrast_desc">Color contrast of outline (subtle to maximum white/black)</string>
+    <string name="tuning_sensor_field_border_contrast_default">Default: Subtle (0%)</string>
     <string name="tuning_default_format">Default: %1$s</string>
     <string name="reset_to_defaults">Reset to Defaults</string>
     <string name="reset_to_defaults_success">Tuning preferences restored to factory defaults.</string>
+    <string name="tuning_cat_sensor_search">Sensor Search &amp; Triggers</string>
+    <string name="tuning_sensor_search_subtitle">%1$d search rounds, %2$s auto-search</string>
+    <string name="tuning_sensor_search_active">Active</string>
+    <string name="tuning_sensor_search_disabled">Disabled</string>
     <string name="tuning_cat_sensors_gps">Sensors, GPS &amp; Filtering</string>
     <string name="tuning_cat_workout_masks_cards">Workout Cards &amp; Details</string>
+    <string name="tuning_cat_navigation">Navigation</string>
+    <string name="tuning_cat_route_clustering">Route &amp; Workout Clustering</string>
+    <string name="tuning_route_selection_radius_title">Route Selection Radius</string>
+    <string name="tuning_route_selection_radius_desc">Maximum distance to route start point for nearby route selection</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">Navigation Cue Dismiss Duration</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">Auto-dismiss duration for turn maneuver prompts</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 Cards</string>
-    <string name="tuning_matrix_col_list">In List</string>
-    <string name="tuning_matrix_col_details">In Details</string>
+    <string name="tuning_matrix_col_list">List</string>
+    <string name="tuning_matrix_col_details">Details</string>
     <string name="tuning_matrix_feature">Feature</string>
     <string name="tuning_summary_matrix_format">%1$d/8 List, %2$d/8 Details</string>
     <string name="map_splitter_content_description">Map and telemetry splitter bar. Drag vertically to resize, double-tap to reset.</string>
@@ -1605,5 +1687,274 @@
     <string name="settings_lap_display_mode_table">Table</string>
     <string name="settings_lap_display_mode_visualizer">Visualizer</string>
     <string name="settings_lap_display_mode_both">Both</string>
+
+    <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
+    <string name="workout_source_tracked">Tracked</string>
+    <string name="workout_source_tcx">TCX</string>
+    <string name="workout_source_gpx">GPX</string>
+    <string name="workout_source_fit">FIT</string>
+
+    <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
+    <string name="action_move_up">Move up</string>
+    <string name="action_move_down">Move down</string>
+
+    <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
+    <string name="permission_rationale_title">Permissions for Seamless Tracking</string>
+    <string name="permission_rationale_subtitle">To accurately record your workout metrics, the following permissions are needed:</string>
+    <string name="permission_rationale_location_title">Location &amp; GPS</string>
+    <string name="permission_rationale_location_desc">Records continuous route, pace, and elevation while your phone is locked in your cycling jersey or running belt.</string>
+    <string name="permission_rationale_bluetooth_title">Bluetooth &amp; Nearby Devices</string>
+    <string name="permission_rationale_bluetooth_desc">Connects to heart rate monitors, bike power meters, cadence sensors, and smart trainers.</string>
+    <string name="permission_rationale_notification_title">Workout Controls &amp; Notifications</string>
+    <string name="permission_rationale_notification_desc">Shows live workout metrics and pause/resume buttons directly on your lock screen.</string>
+    <string name="permission_rationale_continue">Continue</string>
+    <string name="permission_rationale_not_now">Not Now</string>
+    <string name="permission_rationale_open_settings">Open Settings</string>
+    <string name="permission_rationale_settings_explanation">Location permission was denied. Without location access, GPS trackpoints and route recording are unavailable. You can grant permission in App Settings.</string>
+    <string name="permission_rationale_precise_location_explanation">Precise Location (GPS) is required for workout tracking. Approximate location cannot record distance, speed, route coordinates, or elevation. Please allow Precise Location in permissions.</string>
+    <string name="action_view_workout">View</string>
+    <string name="permission_warning_badge_desc">Location permission missing</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">Workout Interrupted</string>
+    <string name="unfinished_workout_title_battery">Workout Interrupted: Battery Optimization</string>
+    <string name="unfinished_workout_title_memory">Workout Interrupted: Low Memory</string>
+    <string name="unfinished_workout_title_permission">Workout Interrupted: Permission Revoked</string>
+    <string name="kill_reason_battery_title">Terminated by Battery Optimization</string>
+    <string name="kill_reason_battery_stage1">Android interrupted background tracking because battery optimization is enabled for this app. To ensure continuous recording of your kilometers and elevation, please disable battery optimization for aTrainingTracker.</string>
+    <string name="kill_reason_battery_stage1_strava">We know how important complete workout telemetry is for your Strava activities.</string>
+    <string name="kill_reason_battery_stage2">Tracking was interrupted again by system battery management. Without exempting the app, Android will continue stopping background recordings during longer workouts. Please take a moment to disable battery optimization.</string>
+    <string name="kill_reason_battery_stage3">Repeated background interruptions detected. Modern Android versions strictly terminate tracking services that are not exempted from battery restrictions. Please tap the button below to exempt aTrainingTracker and protect your workouts.</string>
+    <string name="kill_reason_low_memory">Tracking was terminated by Android due to acute memory pressure (e.g. high-resolution camera or 3D navigation in foreground). Your workout metrics up to that point were safely preserved.</string>
+    <string name="kill_reason_permission_revoked">Tracking was interrupted because location or notification permissions were revoked during your workout.</string>
+    <string name="action_disable_battery_optimization">Disable Battery Optimization</string>
+    <string name="battery_optimization_exempt_celebration">Unrestricted recording active for your training data</string>
+
+    <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
+    <string name="import_fit_title">Import FIT files</string>
+    <string name="import_fit_description">Import workouts from Garmin, Wahoo, Hammerhead, or smartwatches (.fit).</string>
+    <string name="import_fit_button">Select FIT Files</string>
+    <string name="import_fit_dropbox_button">Scan Dropbox (FIT)</string>
+    <string name="import_fit_gdrive_button">Scan Google Drive (FIT)</string>
+    <string name="import_fit_progress">Importing FIT files (%1$d of %2$d)…</string>
+    <string name="import_fit_summary_success">Successfully imported %1$d workouts (%2$d duplicates skipped).</string>
+    <string name="import_fit_summary_with_errors">Imported %1$d workouts, %2$d duplicates skipped, %3$d failed.</string>
+    <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
+    <string name="import_tcx_title">Import TCX files</string>
+    <string name="import_tcx_description">Import workouts from Training Center XML files (.tcx).</string>
+    <string name="import_tcx_button">Select TCX File</string>
+    <string name="import_tcx_dropbox_button">Scan Dropbox (TCX)</string>
+    <string name="import_tcx_gdrive_button">Scan Google Drive (TCX)</string>
+    <string name="import_gpx_title">Import GPX files</string>
+    <string name="import_gpx_description">Import tracks and activities from GPS Exchange Format files (.gpx).</string>
+    <string name="import_gpx_button">Select GPX File</string>
+    <string name="import_gpx_dropbox_button">Scan Dropbox (GPX)</string>
+    <string name="import_gpx_gdrive_button">Scan Google Drive (GPX)</string>
+    <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
+    <string name="invalid_workout_file_format">Invalid file format. Please select a %1$s file.</string>
+    <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
+    <string name="route_select_title">Select Route</string>
+    <string name="route_action_select">Select Route</string>
+    <string name="route_action_select_desc">Choose from file or history</string>
+    <string name="route_action_stop">Stop Route</string>
+    <string name="route_action_clear">Clear route</string>
+    <string name="route_metrics_format">%1$s • %2$s</string>
+    <string name="route_filter_near">Nearby</string>
+    <string name="route_filter_recent">Recently Ridden</string>
+    <string name="route_filter_length">Length</string>
+    <string name="route_empty_title">No routes available</string>
+    <string name="route_empty_desc">Import GPX files or sync with Strava.</string>
+    <string name="route_no_routes_nearby">No routes nearby</string>
+    <string name="route_no_matching_route_detected">No matching route detected</string>
+    <string name="google_drive">Google Drive</string>
+    <string name="google_drive_connect">Connect to Google Drive</string>
+    <string name="google_drive_disconnect">Disconnect from Google Drive</string>
+    <string name="google_drive_connected_status">You are connected to Google Drive</string>
+    <string name="google_drive_disconnected_status">You are not connected to Google Drive</string>
+    <string name="google_drive_account_email_label">Account: %1$s</string>
+    <string name="upload_workouts_to_google_drive">Automatically export workouts</string>
+    <string name="upload_workouts_to_google_drive_summary">Uploads activities (FIT, TCX, GPX, CSV) to Google Drive after saving</string>
+    <string name="upload_backup_to_google_drive">Automatically synchronize database backup</string>
+    <string name="upload_backup_to_google_drive_summary">Periodically backs up the database to Google Drive</string>
+    <string name="google_drive_only_wifi">Upload over Wi-Fi only</string>
+    <string name="google_drive_only_wifi_summary">Conserves mobile cellular data</string>
+    <string name="google_drive_last_sync">Last upload: %1$s</string>
+    <string name="google_drive_never_synced">Not synchronized yet</string>
+    <string name="restore_from_google_drive">Restore from Google Drive</string>
+    <string name="upload_to_google_drive">Back up to Google Drive</string>
+    <string name="google_drive_error_developer_config">Google Sign-In configuration error (status 10): Please check the OAuth client registration (package name com.atrainingtracker.debug and SHA-1 fingerprint) in the Google Cloud Console.</string>
+    <string name="google_drive_error_network">No internet connection or network error during Google Sign-In.</string>
+    <string name="google_drive_error_generic">Google Sign-In failed. Please try again.</string>
+    <string name="google_drive_error_auth_expired">Google Drive session expired or unauthorized. Please re-authenticate in Settings.</string>
+    <string name="google_drive_error_api_disabled">Google Drive API is disabled in Google Cloud Console. Please enable it in the Google Cloud project.</string>
+    <string name="google_drive_error_folder_hierarchy">Failed to resolve Google Drive folder hierarchy</string>
+    <string name="google_drive_connect_prompt">Connect your Google account to automatically export workouts and synchronize database backups to Google Drive.</string>
+    <string name="scan_google_drive">Scan Google Drive</string>
+    <string name="google_drive_scan_empty_diagnostic">No accessible workout files found. Files copied externally to Google Drive are not visible via Google Drive API due to security permissions. Please tap “Select local file(s)” on the format card and pick your files from Google Drive using the file picker.</string>
+    <string name="import_workout_files_progress">Importing files (%1$d of %2$d)…</string>
+    <string name="legacy_import__downloading_google_drive">Downloading %1$s from Google Drive…</string>
+    <string name="gpx_enriching_elevation">Fetching elevation data…</string>
+    <string name="gpx_elevation_enriched">Elevation data successfully added</string>
+    <string name="gpx_elevation_enrichment_failed">Elevation lookup failed, imported 2D route</string>
+    <string name="waypoint_type_bench">Bench / Rest Spot</string>
+    <string name="waypoint_type_shelter">Shelter</string>
+    <string name="waypoint_type_water">Water Source</string>
+    <string name="waypoint_type_summit">Summit / Pass</string>
+    <string name="waypoint_type_food">Food / Cafe</string>
+    <string name="waypoint_type_viewpoint">Viewpoint</string>
+    <string name="waypoint_type_first_aid">First Aid</string>
+    <string name="waypoint_type_danger">Danger / Hazard</string>
+    <string name="waypoint_type_turn_left">Turn Left</string>
+    <string name="waypoint_type_turn_right">Turn Right</string>
+    <string name="waypoint_type_turn_straight">Continue Straight</string>
+    <string name="waypoint_type_generic">Waypoint</string>
+    <string name="route_cue_sheet_title">Cue Sheet</string>
+    <string name="route_waypoints_header">Waypoints &amp; POIs (%1$d)</string>
+
+    <string name="climb_title">Climb</string>
+    <string name="climb_approaching">Approaching</string>
+    <string name="climb_on_climb">On Climb</string>
+    <string name="climb_summit">Summit</string>
+    <string name="climb_remaining_dist">Remaining</string>
+    <string name="climb_remaining_elevation">Elevation</string>
+    <string name="climb_grade">Grade</string>
+    <string name="climb_route_counter">Climb %1$d of %2$d</string>
+    <string name="climb_category_hc">HC</string>
+    <string name="climb_category_cat1">Cat 1</string>
+    <string name="climb_category_cat2">Cat 2</string>
+    <string name="climb_category_cat3">Cat 3</string>
+    <string name="climb_category_cat4">Cat 4</string>
+    <string name="climb_category_uc">UC</string>
+    <string name="routes_climb_count">%d Climbs</string>
+    <string name="routes_climbs_section_title">Climbs (%d)</string>
+    <string name="routes_climb_start_at">Start at %s</string>
+    <string name="routes_climb_avg_grade">Avg. %1$.1f%%</string>
+    <string name="routes_climb_max_grade">Max. %1$.1f%%</string>
+    <string name="climb_max_grade_label">Max Grade</string>
+    <string name="routes_segments_section_title">Segments (%d)</string>
+    <string name="routes_segments_tab_title">Segments (%d)</string>
+    <string name="routes_segment_start_at">Start at %s</string>
+    <string name="routes_segment_pr">PR %s</string>
+    <string name="routes_segment_counter">Segment %1$d of %2$d</string>
+    <string name="route_layers">Route Layers</string>
+    <string name="route_layer_climbs">Climbs</string>
+    <string name="route_layer_segments">Segments</string>
+    <string name="route_layer_waypoints">Waypoints</string>
+    <string name="route_item_hide">Hide</string>
+    <string name="route_item_show">Show</string>
+    <string name="segment_routes_containing_title">Routes with this segment (%d)</string>
+    <string name="tuning_show_live_climbs_title">Live Climbs (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_summary">Show real-time climb cockpit sheet during routes and free riding</string>
+
+    <string name="turn_cue_left">Turn left</string>
+    <string name="turn_cue_right">Turn right</string>
+    <string name="turn_cue_slight_left">Slight left</string>
+    <string name="turn_cue_slight_right">Slight right</string>
+    <string name="turn_cue_sharp_left">Sharp left</string>
+    <string name="turn_cue_sharp_right">Sharp right</string>
+    <string name="turn_cue_straight">Straight ahead</string>
+    <string name="turn_cue_u_turn">U-turn</string>
+    <string name="turn_cue_gallery_title">Turn Cue Direction Icons</string>
+    <string name="turn_cue_now">NOW</string>
+    <string name="turn_cue_off_route">Off Route (%1$d m)</string>
+    <string name="turn_cue_back_on_route">Back on Route</string>
+    <string name="turn_prompts_title">Turn Prompts</string>
+    <string name="turn_prompts_summary">Show turn-by-turn prompts during active navigation</string>
+    <string name="turn_audio_alerts_title">Turn Audio Alerts</string>
+    <string name="turn_audio_alerts_summary">Play chimes on upcoming turns and off-route deviations</string>
+    <string name="turn_cue_countdown_distance_title">Turn Warning Distance</string>
+    <string name="turn_cue_countdown_distance_summary">Advance warning distance before turns (meters)</string>
+    <string name="off_route_corridor_threshold_title">Off-Route Threshold</string>
+    <string name="off_route_corridor_threshold_summary">Maximum deviation distance before off-route warning (meters)</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">Take Me Home</string>
+    <string name="take_me_home_desc">Return guidance along familiar routes</string>
+    <string name="nav_remaining_dist">Remaining</string>
+    <string name="nav_remaining_climb">Climb</string>
+    <string name="nav_eta_label">ETA</string>
+    <string name="nav_destination_home">Home</string>
+    <string name="nav_stop_return">Stop Return</string>
+    <string name="nav_route_reverse">Return along route</string>
+
+    <string name="fork_alert_title">Fork Ahead</string>
+    <string name="fork_approaching_in_m">in %1$d m</string>
+    <string name="fork_direction_left">Left</string>
+    <string name="fork_direction_straight">Straight</string>
+    <string name="fork_direction_right">Right</string>
+    <string name="fork_dismiss">Dismiss</string>
+    <string name="fork_select_hint">Tap to select route</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">Sensor battery</string>
+    <string name="notification_channel_description__sensor_battery">Alerts when sensor battery level is low</string>
+    <string name="sensor_battery_notification_title_1">Sensor battery low</string>
+    <string name="sensor_battery_notification_title_many">Low sensor batteries</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: Low battery (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d sensors: Low battery (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">View Sensors</string>
+
+    <!-- Sensor Pairing Relocation (ATT-2189) -->
+    <string name="devices_pair_sensor">Pair sensor</string>
+    <string name="devices_pair_protocol_title">Select protocol</string>
+    <string name="devices_pair_protocol_ant">ANT+ Sensor</string>
+    <string name="devices_pair_protocol_ble">Bluetooth LE Sensor</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">Background Energy Restricted</string>
+    <string name="battery_optimization_warning_banner_desc">Android may stop workout recording when the screen turns off. Please disable battery optimization.</string>
+    <string name="battery_optimization_action_fix">Exempt</string>
+    <string name="battery_optimization_dismiss_banner">Dismiss</string>
+
+    <!-- Contextual ANT+ Service Guidance (ATT-2513) -->
+    <string name="ant_status_sheet_title">ANT+ System Services</string>
+    <string name="ant_status_card_title">ANT+ Hardware &amp; Services</string>
+    <string name="ant_status_card_desc">ANT+ sensors on modern smartphones require an external USB-OTG adapter with an ANT+ USB stick and ANT+ system services.</string>
+    <string name="ant_status_card_action">Check Status</string>
+    <string name="ant_status_usb_dongle_note">Modern smartphones lack integrated ANT+ chips. An external USB-OTG adapter with an ANT+ USB stick is required for wireless reception.</string>
+    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
+    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
+    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
+    <string name="ant_service_installed">Installed</string>
+    <string name="ant_service_not_installed">Not installed</string>
+    <string name="ant_service_install_button">Install</string>
+
+    <!-- ATT-2931: General Map Layers Control Menu -->
+    <string name="map_layers">Map Layers</string>
+    <string name="map_layer_routes">Routes</string>
+    <string name="map_layer_segments">Segments</string>
+    <string name="map_layer_locations">Favorite Locations</string>
+    <string name="map_layer_track">Recorded Track</string>
+    <string name="ant_dialog_view_status">View ANT+ Status</string>
+    <string name="ant_dialog_dismiss">Got it</string>
+
+    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
+    <string name="tuning_map_camera_section_title">Map Camera &amp; Follow-Me Navigation</string>
+    <string name="tuning_map_base_zoom_title">Follow-Me Base Zoom</string>
+    <string name="tuning_map_base_zoom_desc">Base camera zoom level when stationary (0 km/h) in follow-me tracking mode (higher value = closer zoom)</string>
+    <string name="tuning_map_speed_zoom_enabled_title">Speed-Dependent Zoom</string>
+    <string name="tuning_map_speed_zoom_enabled_desc">Gradually zooms out as travel speed increases to expand forward route visibility</string>
+    <string name="tuning_map_cruising_zoom_title">Cruising Speed Zoom (at 20 km/h)</string>
+    <string name="tuning_map_cruising_zoom_desc">Camera zoom level scaled to at typical cycling speed (20 km/h) (higher value = closer zoom)</string>
+    <string name="tuning_map_tilt_angle_title">Camera Tilt Angle</string>
+    <string name="tuning_map_tilt_angle_desc">Perspective pitch angle for 3D navigation (0° is flat 2D, 70° is full 3D perspective)</string>
+    <string name="tuning_map_lookahead_padding_title">Forward Lookahead Padding</string>
+    <string name="tuning_map_lookahead_padding_desc">Viewport padding percent to position the rider in the lower portion and maximize visible road ahead (higher value = rider further down / more road ahead)</string>
+    <string name="tuning_map_follow_me_speed_smoothing_title">Speed Zoom Smoothing</string>
+    <string name="tuning_map_follow_me_speed_smoothing_desc">Dampening factor for speed changes in Follow-Me zoom (lower value = smoother, higher value = faster response)</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_title">Bearing Smoothing</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_desc">Dampening factor for camera rotation in Follow-Me mode (lower value = smoother, higher value = faster response)</string>
+
+    <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
+    <string name="devices_newly_discovered_badge">NEW</string>
+    <string name="devices_new_sensor_discovered">New sensor discovered: %1$s</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Auto-follow unique route</string>
+    <string name="tuning_auto_follow_unique_route_desc">Automatically switch to follow a route when it becomes the only matching route at a fork</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Navigation Cue Distance</string>
+    <string name="tuning_nav_cue_distance_desc">Distance before upcoming turn to display navigation cue prompts</string>
 </resources>
+
 

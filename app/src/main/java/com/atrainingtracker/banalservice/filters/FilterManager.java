@@ -62,6 +62,15 @@ public class FilterManager {
         }
     };
 
+    protected IntentFilter mResetAccumulatorsFilter = new IntentFilter(BANALService.RESET_ACCUMULATORS_INTENT);
+    protected BroadcastReceiver mResetAccumulatorsReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (DEBUG) Log.i(TAG, "mResetAccumulatorsReceiver.onReceive(): resetting all filters");
+            resetAllFilters();
+        }
+    };
+
     public FilterManager(Context context, DeviceManager deviceManager, MySensorManager mySensorManager) {
         if (DEBUG) Log.i(TAG, "FilterManager()");
 
@@ -70,6 +79,7 @@ public class FilterManager {
         mContext = context;
 
         ContextCompat.registerReceiver(mContext, mSensorsChangedReceiver, mSensorsChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(mContext, mResetAccumulatorsReceiver, mResetAccumulatorsFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     public void createFilter(FilterData filterData) {
@@ -155,7 +165,29 @@ public class FilterManager {
             mMapFilter2Sensor.get(myFilter).removeSensorListener(myFilter);
         }
 
-        mContext.unregisterReceiver(mSensorsChangedReceiver);
+        try {
+            mContext.unregisterReceiver(mSensorsChangedReceiver);
+        } catch (IllegalArgumentException e) {
+            if (DEBUG) Log.w(TAG, "mSensorsChangedReceiver already unregistered", e);
+        }
+
+        try {
+            mContext.unregisterReceiver(mResetAccumulatorsReceiver);
+        } catch (IllegalArgumentException e) {
+            if (DEBUG) Log.w(TAG, "mResetAccumulatorsReceiver already unregistered", e);
+        }
+    }
+
+    /**
+     * Resets all registered filters upon session start/reset (REQ-FIL-013).
+     */
+    public synchronized void resetAllFilters() {
+        if (DEBUG) Log.i(TAG, "resetAllFilters()");
+        for (MyFilter myFilter : myFilterMap.values()) {
+            if (myFilter != null) {
+                myFilter.reset();
+            }
+        }
     }
 
 

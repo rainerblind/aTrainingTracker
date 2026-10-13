@@ -97,8 +97,8 @@ GATE_DEFINITIONS = {
    - Verify ./gradlew testDebugUnitTest executed with 100% success (0 failures, 0 regressions) across all project modules.
 2. Living Documentation Parity:
    - Confirm docs/requirements.md and docs/tests.md status fields are updated to Verified.
-3. Mandatory Lösungsversion (Fix Version/s) Audit:
-   - Check the Parent Lösungsversion field in the header above. If it lists a release version (e.g. V4.9.38), this check PASSES. If it is 'None', flag as CHALLENGED / REVISE.
+3. Mandatory Lösungsversion (Fix Version/s) Governance Audit:
+   - In accordance with ASPICE Rule 19 ("Add version when ticket is finished, not when started") and Rule 6 (sub-tasks must never have fixVersions), active in-sprint tickets legitimately have Parent Lösungsversion as 'None' until final acceptance during Joint Review or release. Verify that the deliverable references the target release version (e.g. V4.9.40) and that sub-tasks have no fix version assigned. This check PASSES when Rule 19 governance is followed.
 4. Recommendation:
    - Issue an explicit recommendation: RECOMMEND PASS or RECOMMEND REVISION."""
     }
@@ -137,15 +137,13 @@ def call_gemini_api(prompt, system_instruction=None, explicit_model=None):
         raise ValueError("GEMINI_API_KEY not found in .env.gemini")
 
     default_candidates = [
-        "gemini-3.5-flash-lite",
         "gemini-3.1-flash-lite",
-        "gemini-flash-lite-latest",
+        "gemini-flash-latest",
+        "gemini-3.5-flash",
         "gemini-3.8-flash",
         "gemini-3.7-flash",
         "gemini-3.6-flash",
-        "gemini-3.5-flash",
-        "gemini-3-flash-preview",
-        "gemini-flash-latest"
+        "gemini-flash-lite-latest"
     ]
     if explicit_model:
         candidate_models = [explicit_model] + [m for m in default_candidates if m != explicit_model]
@@ -290,30 +288,35 @@ def detect_gate(summary):
 
 
 def get_git_diff():
-    """Returns complete ticket diff against sprint or develop merge-base, including uncommitted changes."""
+    """Returns complete ticket diff against sprint or develop merge-base, excluding oversized docs/*."""
+    exclude_args = ["--", ".", ":(exclude)docs/*"]
     try:
         branches = subprocess.check_output(["git", "branch", "--list", "sprint/*"], stderr=subprocess.DEVNULL).decode("utf-8").strip().splitlines()
-        for b in branches:
-            clean_b = b.replace("*", "").strip()
+        branches = sorted([b.replace("*", "").strip() for b in branches if b.strip()], reverse=True)
+        for clean_b in branches:
             if clean_b:
                 base = subprocess.check_output(["git", "merge-base", clean_b, "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
-                diff = subprocess.check_output(["git", "diff", base], stderr=subprocess.DEVNULL).decode("utf-8")
+                diff = subprocess.check_output(["git", "diff", base] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
                 if diff.strip():
-                    return diff[:100000]
+                    return diff[:60000]
+                else:
+                    return "(No implementation code diff yet; Stage 1-3 design phase)"
     except Exception:
         pass
     try:
         base = subprocess.check_output(["git", "merge-base", "develop", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
-        diff = subprocess.check_output(["git", "diff", base], stderr=subprocess.DEVNULL).decode("utf-8")
+        diff = subprocess.check_output(["git", "diff", base] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
         if diff.strip():
-            return diff[:100000]
+            return diff[:60000]
+        else:
+            return "(No implementation code diff yet; Stage 1-3 design phase)"
     except Exception:
         pass
     try:
-        diff = subprocess.check_output(["git", "diff", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
+        diff = subprocess.check_output(["git", "diff", "HEAD"] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
         if not diff.strip():
-            diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
-        return diff[:100000]
+            diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD"] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
+        return diff[:60000]
     except Exception:
         return ""
 

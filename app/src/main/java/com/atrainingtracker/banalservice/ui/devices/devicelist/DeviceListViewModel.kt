@@ -49,7 +49,10 @@ class DeviceListViewModel(private val application: Application) : AndroidViewMod
      * This is the key public method.
      * Fragments will call this to get a Flow stream tailored to their specific needs.
      */
-    fun getFilteredDevices(spec: DeviceFilterSpec): Flow<List<DeviceUiData>> {
+    fun getFilteredDevices(
+        spec: DeviceFilterSpec,
+        criteria: DeviceFilterCriteria = DeviceFilterCriteria()
+    ): Flow<List<DeviceUiData>> {
         // We apply another .map transformation to our already-transformed list.
         // This returns a new Flow stream that will re-filter whenever allListDevices changes.
         return allDevices.map { devices ->
@@ -61,11 +64,22 @@ class DeviceListViewModel(private val application: Application) : AndroidViewMod
             }
 
             // Then, apply secondary filters for protocol and device type to the result.
-            primaryFiltered.filter { device ->
+            val specFiltered = primaryFiltered.filter { device ->
                 val protocolMatch = spec.protocol == Protocol.ALL || device.protocol == spec.protocol
                 val deviceTypeMatch = spec.deviceType == DeviceType.ALL || device.deviceType == spec.deviceType
                 protocolMatch && deviceTypeMatch
             }
+
+            // Then, apply multi-dimensional filter criteria (protocol, categories, battery)
+            val filtered = specFiltered.filter { criteria.matches(it) }
+
+            val newlyFoundIds = banalServiceRepository.newlyFoundDevicesIds.value
+            filtered.sortedWith(
+                compareByDescending<DeviceUiData> { it.isNewlyDiscovered }
+                    .thenByDescending { if (it.isNewlyDiscovered) newlyFoundIds.indexOf(it.id) else -1 }
+                    .thenByDescending { it.isConnected }
+                    .thenBy { it.deviceName }
+            )
         }
     }
 

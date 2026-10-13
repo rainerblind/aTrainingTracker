@@ -30,6 +30,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.atrainingtracker.banalservice.BSportType;
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -229,6 +230,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         } finally {
             db.endTransaction();
         }
+        EquipmentRepository.notifyEquipmentLinksChanged(null);
     }
 
     public void updateEquipment(long id, String name, int frameType, @NonNull List<Long> linkedDeviceIds) {
@@ -262,6 +264,70 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     /**
+     * Atomically adds a link between an equipment item and a sensor device (REQ-UI-256).
+     *
+     * @param equipmentId ID of the equipment (bike or shoe)
+     * @param deviceId ID of the sensor device
+     */
+    public void addDeviceLink(long equipmentId, long deviceId) {
+        if (equipmentId <= 0 || deviceId <= 0) {
+            return;
+        }
+        SQLiteDatabase db = this.getWritableDatabase();
+        try (Cursor cursor = db.query(LINKS, null, EQUIPMENT_ID + "=? AND " + ANT_DEVICE_ID + "=?",
+                new String[]{String.valueOf(equipmentId), String.valueOf(deviceId)}, null, null, null)) {
+            if (cursor == null || !cursor.moveToFirst()) {
+                ContentValues values = new ContentValues();
+                values.put(EQUIPMENT_ID, equipmentId);
+                values.put(ANT_DEVICE_ID, deviceId);
+                db.insert(LINKS, null, values);
+                if (DEBUG) Log.d(TAG, "addDeviceLink: linked eq " + equipmentId + " to device " + deviceId);
+                EquipmentRepository.notifyEquipmentLinksChanged(deviceId);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error adding device link: eq=" + equipmentId + ", dev=" + deviceId, e);
+        }
+    }
+
+    /**
+     * Atomically removes a link between an equipment item and a sensor device (REQ-UI-256).
+     *
+     * @param equipmentId ID of the equipment (bike or shoe)
+     * @param deviceId ID of the sensor device
+     */
+    public void removeDeviceLink(long equipmentId, long deviceId) {
+        if (equipmentId <= 0 || deviceId <= 0) {
+            return;
+        }
+        SQLiteDatabase db = this.getWritableDatabase();
+        try {
+            int deleted = db.delete(LINKS, EQUIPMENT_ID + "=? AND " + ANT_DEVICE_ID + "=?",
+                    new String[]{String.valueOf(equipmentId), String.valueOf(deviceId)});
+            if (DEBUG) Log.d(TAG, "removeDeviceLink: unlinked eq " + equipmentId + " from device " + deviceId);
+            if (deleted > 0) {
+                EquipmentRepository.notifyEquipmentLinksChanged(deviceId);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error removing device link: eq=" + equipmentId + ", dev=" + deviceId, e);
+        }
+    }
+
+    /**
+     * Toggles or sets a link between an equipment item and a sensor device (REQ-UI-256).
+     *
+     * @param equipmentId ID of the equipment (bike or shoe)
+     * @param deviceId ID of the sensor device
+     * @param isLinked True to establish link, false to remove
+     */
+    public void setDeviceLink(long equipmentId, long deviceId, boolean isLinked) {
+        if (isLinked) {
+            addDeviceLink(equipmentId, deviceId);
+        } else {
+            removeDeviceLink(equipmentId, deviceId);
+        }
+    }
+
+    /**
      * Deletes equipment and its associated sensor links in one transaction.
      */
     public void deleteEquipment(long id) {
@@ -277,6 +343,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         } finally {
             db.endTransaction();
         }
+        EquipmentRepository.notifyEquipmentLinksChanged(null);
     }
 
 
@@ -536,6 +603,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         }
 
         if (DEBUG) Log.d(TAG, "inserted");
+        EquipmentRepository.notifyEquipmentLinksChanged((long) antDeviceId);
     }
 
     private long getEquipmentId(@NonNull SQLiteDatabase db, @NonNull String equipmentName) {

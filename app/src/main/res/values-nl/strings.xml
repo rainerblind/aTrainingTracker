@@ -371,6 +371,7 @@
     <string name="jsonWrite">naar Golden Cheetah JSON exporteren</string>
     <string name="tcxWrite">naar TCX exporteren</string>
     <string name="gpxWrite">naar GPX exporteren</string>
+    <string name="fitWrite">naar FIT exporteren</string>
     <string name="stravaUpload">naar Strava uploaden</string>
     <string name="runkeeperUpload">naar Runkeeper uploaden</string>
     <string name="trainingPeaksUpload">naar TrainingPeaks uploaden</string>
@@ -390,6 +391,11 @@
     <string name="equipment_type_shoe">Schoenen</string>
     <string name="equipment_no_bikes">Geen fietsen</string>
     <string name="equipment_no_shoes">Geen schoenen</string>
+    <string name="equipment_tab_sensor_matrix">Sensormatrix</string>
+    <string name="equipment_matrix_no_sensors">Geen gekoppelde sensoren gevonden. Koppel eerst sensoren in Instellingen.</string>
+    <string name="equipment_matrix_no_equipment">Geen uitrusting gevonden. Voeg eerst fietsen of schoenen toe.</string>
+    <string name="equipment_matrix_no_bike_sensors">Geen compatibele fietssensoren gevonden.</string>
+    <string name="equipment_matrix_no_shoe_sensors">Geen compatibele schoensensoren gevonden.</string>
 
     <string name="SD_card_not_available">SD-kaart niet beschikbaar.</string>
 
@@ -578,6 +584,10 @@
     <string name="config_tracking__show_map">Kaart</string>
     <string name="config_tracking__showLiveSegments">Live Segmenten</string>
     <string name="config_tracking__showLapButton">Ronde-knop</string>
+    <string name="config_tracking__show_navigation_hints">Aanwijzingen</string>
+    <string name="config_tracking__show_live_climbs">Live beklimmingen</string>
+    <string name="config_tracking__wysiwyg_active">Actief</string>
+    <string name="config_tracking__wysiwyg_hidden">Verborgen</string>
     <string name="add_view_before">weergave ervoor</string>
     <string name="delete_view">weergave verwijderen</string>
     <string name="add_view_after">weergave erna</string>
@@ -692,6 +702,23 @@
     <plurals name="export_notification__detail__Dropbox_failed">
         <item quantity="one">❌ Fout bij Dropbox upload %1$s.</item>
         <item quantity="other">❌ Fout bij Dropbox upload %1$s.</item>
+    </plurals>
+
+<plurals name="export_notification__detail__GoogleDrive_waiting">
+        <item quantity="one">⏳ Wachten op uploaden van het %1$s-bestand naar Google Drive.</item>
+        <item quantity="other">⏳ Wachten op uploaden van de %1$s-bestanden naar Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_ongoing">
+        <item quantity="one">📤 %1$s-bestand wordt geüpload naar Google Drive.</item>
+        <item quantity="other">📤 %1$s-bestanden worden geüpload naar Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_success">
+        <item quantity="one">✅ %1$s-bestand succesvol geüpload naar Google Drive.</item>
+        <item quantity="other">✅ %1$s-bestanden succesvol geüpload naar Google Drive.</item>
+    </plurals>
+    <plurals name="export_notification__detail__GoogleDrive_failed">
+        <item quantity="one">❌ Uploaden van het %1$s-bestand naar Google Drive mislukt.</item>
+        <item quantity="other">❌ Uploaden van de %1$s-bestanden naar Google Drive mislukt.</item>
     </plurals>
 
     <plurals name="export_notification__detail__Community_failed">
@@ -1049,6 +1076,10 @@
     <string name="battery_level">Batterijniveau</string>
     <string name="calc_map_polyline">Kaartpolyline berekenen.</string>
     <string name="config_tracking__showElevationProfile">Hoogteprofiel</string>
+    <string name="config_tracking__elevation_profile_scope">Bereik</string>
+    <string name="config_tracking__elevation_profile_scope_full_route">Volledige route</string>
+    <string name="config_tracking__elevation_profile_scope_rolling_window">Rollend venster</string>
+    <string name="config_tracking__elevation_profile_lookahead">Vooruitkijken</string>
     <string name="current_value">Huidige waarde</string>
     <string name="editLocationName">Naam:</string>
     <string name="edit_my_location">Locatie bewerken</string>
@@ -1127,6 +1158,7 @@
     <string name="filter_section_sport">Sporttype</string>
     <string name="filter_section_equipment">Uitrusting</string>
     <string name="filter_section_attributes">Kenmerken</string>
+    <string name="filter_section_origin_source">Gegevensbron</string>
     <string name="filter_section_thresholds">Afstand &amp; tijdsduur</string>
     <string name="filter_section_start_at">Start bij</string>
     <string name="settings_workout_card_title">Trainingslijst (gedetailleerde kaarten)</string>
@@ -1196,12 +1228,23 @@
     <string name="filter_section_recordings">Opnamen</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d opnamen</string>
     <string name="filter_no_matching_clusters">Geen favoriete tracks komen overeen met de actieve filters</string>
+    <string name="filter_sensors_title">Sensoren filteren</string>
+    <string name="filter_section_protocol">Protocol</string>
+    <string name="filter_section_category">Sensorcategorie</string>
+    <string name="filter_section_battery">Batterijniveau</string>
+    <string name="filter_protocol_all">Alle</string>
+    <string name="filter_battery_all">Alle</string>
+    <string name="filter_battery_critical">Kritiek (≤ 20%)</string>
+    <string name="filter_battery_normal">Normaal (> 20%)</string>
+    <string name="filter_battery_critical_chip">Batterij: ≤ 20%</string>
+    <string name="filter_battery_normal_chip">Batterij: > 20%</string>
+    <string name="filter_no_matching_sensors">Geen sensoren komen overeen met de actieve filters</string>
     <!-- Cluster Algorithm Info (ATT-501) -->
     <string name="cluster_info_title">Favoriete routes en clustering</string>
     <string name="cluster_info_what_title">Wat zijn Favoriete routes?</string>
     <string name="cluster_info_what_desc">Wanneer je herhaaldelijk dezelfde route aflegt, herkent de app dit automatisch en groepeert de sessies in een Favoriete route (cluster). Dit maakt automatische naamgeving mogelijk (bijv. „Rondje IJsselmeer #5”), evenals uitrustingsregistratie en directe prestatievergelijkingen over identieke trajecten.</string>
     <string name="cluster_info_fingerprint_title">3D Topologische vingerafdruk</string>
-    <string name="cluster_info_fingerprint_desc">Routes worden vergeleken met een eenvoudig maar verrassend goed algoritme op basis van een multidimensionale ruimtelijke handtekening in plaats van punt-voor-punt GPS-sporen. Dit algoritme biedt tolerantie voor kleine variaties, maar scheidt trainingen betrouwbaar wanneer ze echt verschillend zijn:&#10;• Start &amp; Finish: Geografische begin- en eindpunten (tolerantie: 200 m).&#10;• Apex (Verste punt): Het punt op de route dat het verst van de start ligt (tolerantie: 400 m).&#10;• Totale afstand: Totale routelengte (tolerantie: 20%).&#10;• Min &amp; Max hoogte: Geografische locaties van het laagste en hoogste punt (tolerantie: 400 m, optioneel). Dit onderscheidt dalroutes betrouwbaar van bergkammen met vergelijkbare omtrekken.</string>
+    <string name="cluster_info_fingerprint_desc">Routes worden vergeleken met een eenvoudig maar verrassend goed algoritme op basis van een multidimensionale ruimtelijke handtekening in plaats van punt-voor-punt GPS-sporen. Dit algoritme biedt tolerantie voor kleine variaties, maar scheidt trainingen betrouwbaar wanneer ze echt verschillend zijn:\n• Start &amp; Finish: Geografische begin- en eindpunten (tolerantie: 200 m).\n• Apex (Verste punt): Het punt op de route dat het verst van de start ligt (tolerantie: 400 m).\n• Totale afstand: Totale routelengte (tolerantie: 20%).\n• Min &amp; Max hoogte: Geografische locaties van het laagste en hoogste punt (tolerantie: 400 m, optioneel). Dit onderscheidt dalroutes betrouwbaar van bergkammen met vergelijkbare omtrekken.</string>
     <string name="cluster_info_sports_title">Sportonderscheid &amp; Lerend zwaartepunt</string>
     <string name="cluster_info_sports_desc">Favoriete routes kunnen sporttypes scheiden, zodat fietstochten en hardloopsessies op hetzelfde pad niet worden samengevoegd. Naarmate er meer trainingen worden toegevoegd, past het cluster zijn referentiecoördinaten dynamisch aan via een gewogen zwaartepunt (centroid).</string>
     <string name="cluster_info_tuning_title">Gevoeligheid &amp; Parameterinstellingen</string>
@@ -1289,6 +1332,10 @@
     <string name="workout_name_ride_from">Rit vanaf %1$s</string>
     <string name="workout_name_activity_from">Activiteit vanaf %1$s</string>
     <string name="workout_name_round_trip">Ronde vanaf %1$s</string>
+    <string name="workout_name_run_from_with_distance">Hardlopen vanaf %1$s (%2$s)</string>
+    <string name="workout_name_ride_from_with_distance">Rit vanaf %1$s (%2$s)</string>
+    <string name="workout_name_activity_from_with_distance">Activiteit vanaf %1$s (%2$s)</string>
+    <string name="workout_name_round_trip_with_distance">Ronde vanaf %1$s (%2$s)</string>
     <string name="workout_name_run_from_to">Hardlopen van %1$s naar %2$s</string>
     <string name="workout_name_ride_from_to">Rit van %1$s naar %2$s</string>
     <string name="workout_name_activity_from_to">Activiteit van %1$s naar %2$s</string>
@@ -1309,6 +1356,10 @@
     <string name="cluster_start_location">Start: %s</string>
     <string name="known_location_routes_header">Routes vanaf hier (%d):</string>
     <string name="filter_by_start_location">Filteren op startlocatie</string>
+    <string name="known_locations_home_base">Thuisbasis</string>
+    <string name="known_locations_home_badge">Thuisbasis</string>
+    <string name="known_locations_set_home">Instellen als thuisbasis</string>
+    <string name="known_locations_remove_home">Thuisbasis verwijderen</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">Expertinstellingen</string>
@@ -1346,9 +1397,11 @@
     <string name="tuning_telemetry_x_axis_desc">Selecteer het horizontale asdomein voor telemetriegrafieken (hartslag, tempo/snelheid, vermogen).</string>
     <string name="tuning_pace_ceiling_title">Maximale tempogrens</string>
     <string name="tuning_pace_ceiling_desc">Filtert GPS-uitschieters in de tempografiek. Waarden sneller dan deze grens worden afgekapt.</string>
+    <string name="tuning_elevation_smoothing_sigma_title">Hoogteprofiel afvlakking (\u03c3)</string>
+    <string name="tuning_elevation_smoothing_sigma_desc">Ruimtelijke Gaussiaanse filterstraal in meters. Lagere waarden (bijv. 15–21 m) reageren scherper op korte hellingen; hogere waarden verwijderen sensor-traptreden.</string>
 
     <!-- Cockpit Typography & Boldness (ATT-1751 / REQ-UI-212) -->
-    <string name="tuning_cat_cockpit_typography">Cockpit-typografie</string>
+    <string name="tuning_cat_cockpit_typography">Cockpit en tegels</string>
     <string name="tuning_cockpit_font_family_title">Lettertype</string>
     <string name="tuning_font_system_default">Systeemstandaard</string>
     <string name="tuning_font_seven_segment">7-segment digitaal</string>
@@ -1368,14 +1421,40 @@
     <string name="tuning_weight_semi_bold">Halfvet</string>
     <string name="tuning_weight_bold">Vet</string>
     <string name="tuning_cockpit_preview_title">Live voorbeeld</string>
+    <!-- Sensor Field Tile Variants & Styling (ATT-2058 / REQ-UI-258) -->
+    <string name="tuning_sensor_field_variant_title">Tegelontwerp en rasterstijl</string>
+    <string name="sensor_field_variant_v0">Klassiek naadloos raster</string>
+    <string name="sensor_field_variant_v1">Moderne sporttegels met rand</string>
+    <string name="sensor_field_variant_v2">Verheven sportkaarten</string>
+    <string name="sensor_field_variant_v3">Zachte accentcapsules</string>
+    <!-- Cockpit Tile Granular Geometry & Border Contrast (ATT-2456 / REQ-UI-276) -->
+    <string name="tuning_sensor_field_corner_radius_title">Hoekradius</string>
+    <string name="tuning_sensor_field_corner_radius_desc">Afronding van de tegelhoeken voor de cockpit</string>
+    <string name="tuning_sensor_field_corner_radius_default">Standaard: 0 dp (Klassiek naadloos)</string>
+    <string name="tuning_sensor_field_border_thickness_title">Randdikte</string>
+    <string name="tuning_sensor_field_border_thickness_desc">Lijndikte van de tegelrand (0 dp = randloos)</string>
+    <string name="tuning_sensor_field_border_thickness_default">Standaard: 1.0 dp</string>
+    <string name="tuning_sensor_field_border_contrast_title">Randcontrast</string>
+    <string name="tuning_sensor_field_border_contrast_desc">Kleurcontrast van de rand (subtiel tot maximaal wit/zwart)</string>
+    <string name="tuning_sensor_field_border_contrast_default">Standaard: Subtiel (0%)</string>
     <string name="tuning_default_format">Standaard: %1$s</string>
     <string name="reset_to_defaults">Fabrieksinstellingen herstellen</string>
     <string name="reset_to_defaults_success">Afstemmingsinstellingen hersteld naar fabrieksinstellingen.</string>
+    <string name="tuning_cat_sensor_search">Sensorzoekopdracht en triggers</string>
+    <string name="tuning_sensor_search_subtitle">%1$d zoekrondes, %2$s automatisch zoeken</string>
+    <string name="tuning_sensor_search_active">Actief</string>
+    <string name="tuning_sensor_search_disabled">Uitgeschakeld</string>
     <string name="tuning_cat_sensors_gps">Sensoren, gps en filtering</string>
     <string name="tuning_cat_workout_masks_cards">Workout-kaarten en details</string>
+    <string name="tuning_cat_navigation">Navigatie</string>
+    <string name="tuning_cat_route_clustering">Route- en workout-clustering</string>
+    <string name="tuning_route_selection_radius_title">Straal voor routeselectie</string>
+    <string name="tuning_route_selection_radius_desc">Maximale afstand tot het startpunt voor selectie van routes in de buurt</string>
+    <string name="tuning_nav_cue_dismiss_duration_title">Weergaveduur navigatieaanwijzingen</string>
+    <string name="tuning_nav_cue_dismiss_duration_desc">Automatische sluitingsduur voor afslaginstructies</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 kaarten</string>
-    <string name="tuning_matrix_col_list">In lijst</string>
-    <string name="tuning_matrix_col_details">In details</string>
+    <string name="tuning_matrix_col_list">Lijst</string>
+    <string name="tuning_matrix_col_details">Details</string>
     <string name="tuning_matrix_feature">Onderdeel</string>
     <string name="tuning_summary_matrix_format">%1$d/8 in lijst, %2$d/8 in details</string>
     <string name="map_splitter_content_description">Verdeellijn voor kaart en telemetrie. Sleep verticaal om het formaat te wijzigen, dubbeltik om te herstellen.</string>
@@ -1413,4 +1492,277 @@
     <string name="settings_lap_display_mode_table">Tabel</string>
     <string name="settings_lap_display_mode_visualizer">Visualizer</string>
     <string name="settings_lap_display_mode_both">Beide</string>
+
+    <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
+    <string name="workout_source_tracked">Opgenomen</string>
+    <string name="workout_source_tcx">TCX</string>
+    <string name="workout_source_gpx">GPX</string>
+    <string name="workout_source_fit">FIT</string>
+
+    <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
+    <string name="action_move_up">Omhoog verplaatsen</string>
+    <string name="action_move_down">Omlaag verplaatsen</string>
+
+    <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
+    <string name="permission_rationale_title">Machtigingen voor naadloze tracking</string>
+    <string name="permission_rationale_subtitle">Om je trainingsgegevens nauwkeurig vast te leggen, zijn de volgende machtigingen vereist:</string>
+    <string name="permission_rationale_location_title">Locatie en GPS</string>
+    <string name="permission_rationale_location_desc">Legt continue route, tempo en hoogte vast terwijl de telefoon vergrendeld in je fietsshirt of hardloopriem zit.</string>
+    <string name="permission_rationale_bluetooth_title">Bluetooth &amp; sensoren</string>
+    <string name="permission_rationale_bluetooth_desc">Verbindt met hartslagmeters, vermogensmeters, cadanssensoren en smart trainers.</string>
+    <string name="permission_rationale_notification_title">Trainingsbediening &amp; meldingen</string>
+    <string name="permission_rationale_notification_desc">Toont live trainingsgegevens en pauze/hervat-knoppen direct op het vergrendelscherm.</string>
+    <string name="permission_rationale_continue">Doorgaan</string>
+    <string name="permission_rationale_not_now">Niet nu</string>
+    <string name="permission_rationale_open_settings">Instellingen openen</string>
+    <string name="permission_rationale_settings_explanation">Locatietoestemming is geweigerd. Zonder locatietoegang kunnen er geen GPS-routegegevens worden vastgelegd. Je kunt toestemming geven in de app-instellingen.</string>
+    <string name="permission_rationale_precise_location_explanation">Precieze locatie (gps) is vereist voor het vastleggen van de training. Geschatte locatie kan geen afstand, snelheid, route of hoogte registreren. Selecteer \'Precies\' bij machtigingen.</string>
+    <string name="action_view_workout">Bekijken</string>
+    <string name="permission_warning_badge_desc">Locatietoestemming ontbreekt</string>
+
+    <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
+    <string name="unfinished_workout_title">Training onderbroken</string>
+    <string name="unfinished_workout_title_battery">Training onderbroken: Batterijoptimalisatie</string>
+    <string name="unfinished_workout_title_memory">Training onderbroken: Geheugentekort</string>
+    <string name="unfinished_workout_title_permission">Training onderbroken: Toestemming ingetrokken</string>
+    <string name="kill_reason_battery_title">Beëindigd door batterijoptimalisatie</string>
+    <string name="kill_reason_battery_stage1">Android heeft de achtergrondregistratie onderbroken omdat batterijoptimalisatie is ingeschakeld voor deze app. Schakel batterijoptimalisatie uit voor aTrainingTracker om continue registratie van je kilometers en hoogtemeters te garanderen.</string>
+    <string name="kill_reason_battery_stage1_strava">We weten hoe belangrijk volledige trainingsgegevens zijn voor je Strava-activiteiten.</string>
+    <string name="kill_reason_battery_stage2">De opname is opnieuw onderbroken door het batterijbeheer van het systeem. Zonder uitzondering zal Android achtergrondopnames blijven stoppen. Neem even de tijd om batterijoptimalisatie uit te schakelen.</string>
+    <string name="kill_reason_battery_stage3">Herhaalde onderbrekingen op de achtergrond gedetecteerd. Moderne Android-versies beëindigen achtergronddiensten zonder uitzondering strikt. Tik op de onderstaande knop om aTrainingTracker uit te zonderen en je trainingen te beschermen.</string>
+    <string name="kill_reason_low_memory">De registratie is door Android gestopt wegens acuut geheugentekort (bijv. camera of 3D-navigatie op de voorgrond). Je gegevens tot dat moment zijn bewaard.</string>
+    <string name="kill_reason_permission_revoked">De registratie is onderbroken omdat locatie- of meldingsmachtigingen tijdens de training zijn ingetrokken.</string>
+    <string name="action_disable_battery_optimization">Batterijoptimalisatie uitschakelen</string>
+    <string name="battery_optimization_exempt_celebration">Onbeperkte registratie actief voor je trainingsgegevens</string>
+
+    <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
+    <string name="import_fit_title">FIT-bestanden importeren</string>
+    <string name="import_fit_description">Importeer trainingen van Garmin, Wahoo, Hammerhead of smartwatches (.fit).</string>
+    <string name="import_fit_button">Selecteer FIT-bestanden</string>
+    <string name="import_fit_dropbox_button">Dropbox scannen (FIT)</string>
+    <string name="import_fit_gdrive_button">Google Drive scannen (FIT)</string>
+    <string name="import_fit_progress">FIT-bestanden importeren (%1$d van %2$d)…</string>
+    <string name="import_fit_summary_success">Succesvol %1$d trainingen geïmporteerd (%2$d duplicaten overgeslagen).</string>
+    <string name="import_fit_summary_with_errors">%1$d trainingen geïmporteerd, %2$d duplicaten overgeslagen, %3$d mislukt.</string>
+    <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
+    <string name="import_tcx_title">TCX-bestanden importeren</string>
+    <string name="import_tcx_description">Workouts importeren uit Training Center XML-bestanden (.tcx).</string>
+    <string name="import_tcx_button">Lokaal TCX-bestand selecteren</string>
+    <string name="import_tcx_dropbox_button">Dropbox scannen (TCX)</string>
+    <string name="import_tcx_gdrive_button">Google Drive scannen (TCX)</string>
+    <string name="import_gpx_title">GPX-bestanden importeren</string>
+    <string name="import_gpx_description">Routes en activiteiten importeren uit GPS Exchange Format-bestanden (.gpx).</string>
+    <string name="import_gpx_button">Lokaal GPX-bestand selecteren</string>
+    <string name="import_gpx_dropbox_button">Dropbox scannen (GPX)</string>
+    <string name="import_gpx_gdrive_button">Google Drive scannen (GPX)</string>
+    <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
+    <string name="invalid_workout_file_format">Ongeldig bestandsformaat. Selecteer een %1$s-bestand.</string>
+    <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
+    <string name="route_select_title">Route selecteren</string>
+    <string name="route_action_select">Route selecteren</string>
+    <string name="route_action_select_desc">Kiezen uit bestand of geschiedenis</string>
+    <string name="route_action_stop">Route beëindigen</string>
+    <string name="route_action_clear">Route wissen</string>
+    <string name="route_metrics_format">%1$s • %2$s</string>
+    <string name="route_filter_near">Dichtbij</string>
+    <string name="route_filter_recent">Onlangs gereden</string>
+    <string name="route_filter_length">Lengte</string>
+    <string name="route_empty_title">Geen routes beschikbaar</string>
+    <string name="route_empty_desc">Importeer GPX-bestanden of synchroniseer met Strava.</string>
+    <string name="route_no_routes_nearby">Geen routes in de buurt</string>
+    <string name="route_no_matching_route_detected">Geen overeenkomende route gedetecteerd</string>
+    <string name="google_drive">Google Drive</string>
+    <string name="google_drive_connect">Verbinden met Google Drive</string>
+    <string name="google_drive_disconnect">Verbinding met Google Drive verbreken</string>
+    <string name="google_drive_connected_status">Je bent verbonden met Google Drive</string>
+    <string name="google_drive_disconnected_status">Je bent niet verbonden met Google Drive</string>
+    <string name="google_drive_account_email_label">Account: %1$s</string>
+    <string name="upload_workouts_to_google_drive">Workouts automatisch exporteren</string>
+    <string name="upload_workouts_to_google_drive_summary">Uploadt activiteiten (FIT, TCX, GPX, CSV) naar Google Drive na opslaan</string>
+    <string name="upload_backup_to_google_drive">Database-back-up automatisch synchroniseren</string>
+    <string name="upload_backup_to_google_drive_summary">Maakt periodiek een back-up van de database naar Google Drive</string>
+    <string name="google_drive_only_wifi">Alleen uploaden via wifi</string>
+    <string name="google_drive_only_wifi_summary">Bespaart mobiele data</string>
+    <string name="google_drive_last_sync">Laatste upload: %1$s</string>
+    <string name="google_drive_never_synced">Nog niet gesynchroniseerd</string>
+    <string name="restore_from_google_drive">Herstellen vanaf Google Drive</string>
+    <string name="upload_to_google_drive">Back-up maken naar Google Drive</string>
+    <string name="google_drive_error_developer_config">Configuratiefout voor Google Sign-In (status 10): Controleer de OAuth-clientregistratie (pakketnaam com.atrainingtracker.debug en SHA-1-vingerafdruk) in Google Cloud Console.</string>
+    <string name="google_drive_error_network">Geen internetverbinding of netwerkfout tijdens Google Sign-In.</string>
+    <string name="google_drive_error_generic">Inloggen met Google mislukt. Probeer het opnieuw.</string>
+    <string name="google_drive_error_auth_expired">Google Drive-sessie verlopen of niet geautoriseerd. Meld u opnieuw aan in Instellingen.</string>
+    <string name="google_drive_error_api_disabled">Google Drive API is uitgeschakeld in Google Cloud Console. Schakel deze in binnen het Google Cloud-project.</string>
+    <string name="google_drive_error_folder_hierarchy">Kan de Google Drive-mapstructuur niet oplossen</string>
+    <string name="google_drive_connect_prompt">Verbind uw Google-account om trainingen en databaseback-ups automatisch te synchroniseren met Google Drive.</string>
+    <string name="scan_google_drive">Google Drive scannen</string>
+    <string name="google_drive_scan_empty_diagnostic">Geen toegankelijke trainingsbestanden gevonden. Extern naar Google Drive gekopieerde bestanden zijn vanwege beveiligingsmachtigingen niet zichtbaar via de Google Drive API. Tik op „Lokaal bestand/bestanden kiezen” op de formaatkaart en kies uw bestanden uit Google Drive via de bestandenkiezer.</string>
+    <string name="import_workout_files_progress">Bestanden importeren (%1$d van %2$d)…</string>
+    <string name="legacy_import__downloading_google_drive">%1$s downloaden van Google Drive…</string>
+    <string name="gpx_enriching_elevation">Hoogtegegevens ophalen…</string>
+    <string name="gpx_elevation_enriched">Hoogtegegevens succesvol toegevoegd</string>
+    <string name="gpx_elevation_enrichment_failed">Hoogte ophalen mislukt, 2D-route geïmporteerd</string>
+    <string name="waypoint_type_bench">Bank / Rustpunt</string>
+    <string name="waypoint_type_shelter">Schuilplaats</string>
+    <string name="waypoint_type_water">Waterpunt</string>
+    <string name="waypoint_type_summit">Top / Pas</string>
+    <string name="waypoint_type_food">Eten / Café</string>
+    <string name="waypoint_type_viewpoint">Uitzichtpunt</string>
+    <string name="waypoint_type_first_aid">EHBO</string>
+    <string name="waypoint_type_danger">Gevaar</string>
+    <string name="waypoint_type_turn_left">Links afslaan</string>
+    <string name="waypoint_type_turn_right">Rechts afslaan</string>
+    <string name="waypoint_type_turn_straight">Rechtdoor vervolgen</string>
+    <string name="waypoint_type_generic">Routepunt</string>
+    <string name="route_cue_sheet_title">Routebeschrijving</string>
+    <string name="route_waypoints_header">Routepunten en POI\'s (%1$d)</string>
+
+    <string name="climb_title">Klim</string>
+    <string name="climb_approaching">Benaderen</string>
+    <string name="climb_on_climb">Op de klim</string>
+    <string name="climb_summit">Top</string>
+    <string name="climb_remaining_dist">Resterend</string>
+    <string name="climb_remaining_elevation">Hoogtemeters</string>
+    <string name="climb_grade">Stijging</string>
+    <string name="climb_route_counter">Klim %1$d van %2$d</string>
+    <string name="climb_category_hc">HC</string>
+    <string name="climb_category_cat1">Cat 1</string>
+    <string name="climb_category_cat2">Cat 2</string>
+    <string name="climb_category_cat3">Cat 3</string>
+    <string name="climb_category_cat4">Cat 4</string>
+    <string name="climb_category_uc">UC</string>
+    <string name="routes_climb_count">%d Beklimmingen</string>
+    <string name="routes_climbs_section_title">Beklimmingen (%d)</string>
+    <string name="routes_climb_start_at">Start bij %s</string>
+    <string name="routes_climb_avg_grade">Gem. %1$.1f%%</string>
+    <string name="routes_climb_max_grade">Max. %1$.1f%%</string>
+    <string name="climb_max_grade_label">Max. stijging</string>
+    <string name="routes_segments_section_title">Segmenten (%d)</string>
+    <string name="routes_segments_tab_title">Segmenten (%d)</string>
+    <string name="routes_segment_start_at">Start bij %s</string>
+    <string name="routes_segment_pr">PR %s</string>
+    <string name="routes_segment_counter">Segment %1$d van %2$d</string>
+    <string name="route_layers">Routelagen</string>
+    <string name="route_layer_climbs">Beklimmingen</string>
+    <string name="route_layer_segments">Segmenten</string>
+    <string name="route_layer_waypoints">Routepunten</string>
+    <string name="route_item_hide">Verbergen</string>
+    <string name="route_item_show">Tonen</string>
+    <string name="segment_routes_containing_title">Routes met dit segment (%d)</string>
+    <string name="tuning_show_live_climbs_title">Live beklimmingen (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_summary">Toon realtime klimcockpit tijdens routes en vrij rijden</string>
+
+    <string name="turn_cue_left">Linksaf slaan</string>
+    <string name="turn_cue_right">Rechtsaf slaan</string>
+    <string name="turn_cue_slight_left">Flauwe bocht naar links</string>
+    <string name="turn_cue_slight_right">Flauwe bocht naar rechts</string>
+    <string name="turn_cue_sharp_left">Scherpe bocht naar links</string>
+    <string name="turn_cue_sharp_right">Scherpe bocht naar rechts</string>
+    <string name="turn_cue_straight">Rechtdoor</string>
+    <string name="turn_cue_u_turn">U-bocht</string>
+    <string name="turn_cue_gallery_title">Afslaginstructiepictogrammen</string>
+    <string name="turn_cue_now">NU</string>
+    <string name="turn_cue_off_route">Van de route af (%1$d m)</string>
+    <string name="turn_cue_back_on_route">Terug op de route</string>
+    <string name="turn_prompts_title">Aanwijzingen</string>
+    <string name="turn_prompts_summary">Toon afslag-voor-afslag aanwijzingen tijdens actieve routenavigatie</string>
+    <string name="turn_audio_alerts_title">Geluidssignalen bij afslagen</string>
+    <string name="turn_audio_alerts_summary">Speel waarschuwingstonen af voor afslagen en bij afwijking van de route</string>
+    <string name="turn_cue_countdown_distance_title">Afstand vooraankondiging afslag</string>
+    <string name="turn_cue_countdown_distance_summary">Afstand voor tijdige waarschuwing voor een afslag (meter)</string>
+    <string name="off_route_corridor_threshold_title">Drempelwaarde routeafwijking</string>
+    <string name="off_route_corridor_threshold_summary">Maximale afwijking voor waarschuwing buiten de route (meter)</string>
+
+    <!-- Return Navigation & Take Me Home (ATT-1953) -->
+    <string name="take_me_home_title">Breng me naar huis</string>
+    <string name="take_me_home_desc">Terugwegbegeleiding langs bekende routes</string>
+    <string name="nav_remaining_dist">Resterend</string>
+    <string name="nav_remaining_climb">Klimmen</string>
+    <string name="nav_eta_label">Aankomst</string>
+    <string name="nav_destination_home">Thuis</string>
+    <string name="nav_stop_return">Terugweg stoppen</string>
+    <string name="nav_route_reverse">Terugkeren langs route</string>
+
+    <string name="fork_alert_title">Splitsing vooruit</string>
+    <string name="fork_approaching_in_m">over %1$d m</string>
+    <string name="fork_direction_left">Links</string>
+    <string name="fork_direction_straight">Rechtdoor</string>
+    <string name="fork_direction_right">Rechts</string>
+    <string name="fork_dismiss">Sluiten</string>
+    <string name="fork_select_hint">Tik om te kiezen</string>
+
+    <!-- Modernized Post-Workout Low Sensor Battery Alerting (ATT-2192) -->
+    <string name="notification_channel_name__sensor_battery">Sensorbatterij</string>
+    <string name="notification_channel_description__sensor_battery">Waarschuwingen wanneer het batterijniveau van de sensor laag is</string>
+    <string name="sensor_battery_notification_title_1">Sensorbatterij bijna leeg</string>
+    <string name="sensor_battery_notification_title_many">Meerdere sensorbatterijen bijna leeg</string>
+    <string name="sensor_battery_snackbar_single">⚠️ %1$s: Batterij bijna leeg (%2$d%%)</string>
+    <string name="sensor_battery_snackbar_many">⚠️ %1$d sensoren: Batterij bijna leeg (%2$s)</string>
+    <string name="sensor_battery_action_view_sensors">Sensoren bekijken</string>
+
+    <!-- Sensor Pairing Relocation (ATT-2189) -->
+    <string name="devices_pair_sensor">Sensor koppelen</string>
+    <string name="devices_pair_protocol_title">Selecteer protocol</string>
+    <string name="devices_pair_protocol_ant">ANT+-sensor</string>
+    <string name="devices_pair_protocol_ble">Bluetooth LE-sensor</string>
+
+    <!-- Battery Optimization Warning Banner (ATT-2621) -->
+    <string name="battery_optimization_warning_banner_title">Achtergrondenergie beperkt</string>
+    <string name="battery_optimization_warning_banner_desc">Android kan de workout-opname stoppen wanneer het scherm wordt uitgeschakeld. Schakel batterijoptimalisatie uit.</string>
+    <string name="battery_optimization_action_fix">Vrijstellen</string>
+    <string name="battery_optimization_dismiss_banner">Sluiten</string>
+
+    <!-- Contextual ANT+ Service Guidance (ATT-2513) -->
+    <string name="ant_status_sheet_title">ANT+ systeemdiensten</string>
+    <string name="ant_status_card_title">ANT+ hardware en diensten</string>
+    <string name="ant_status_card_desc">ANT+ sensoren op moderne smartphones vereisen een USB-OTG-adapter met ANT+ USB-stick en ANT+ systeemdiensten.</string>
+    <string name="ant_status_card_action">Status controleren</string>
+    <string name="ant_status_usb_dongle_note">Moderne smartphones hebben geen ingebouwde ANT+-chips. Een externe USB-OTG-adapter met ANT+ USB-stick is vereist voor ontvangst.</string>
+    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
+    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
+    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
+    <string name="ant_service_installed">Geïnstalleerd</string>
+    <string name="ant_service_not_installed">Niet geïnstalleerd</string>
+    <string name="ant_service_install_button">Installeren</string>
+
+    <!-- ATT-2931: General Map Layers Control Menu -->
+    <string name="map_layers">Kaartlagen</string>
+    <string name="map_layer_routes">Routes</string>
+    <string name="map_layer_segments">Segmenten</string>
+    <string name="map_layer_locations">Favoriete locaties</string>
+    <string name="map_layer_track">Opgenomen track</string>
+    <string name="ant_dialog_view_status">ANT+ status weergeven</string>
+    <string name="ant_dialog_dismiss">Begrepen</string>
+
+    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
+    <string name="tuning_map_camera_section_title">Kaartcamera &amp; Volg-mij-navigatie</string>
+    <string name="tuning_map_base_zoom_title">Volg-mij basiszoom</string>
+    <string name="tuning_map_base_zoom_desc">Basiszoomniveau van de camera bij stilstand (0 km/u) in volg-mij-modus (hogere waarde = dichter ingezoomd)</string>
+    <string name="tuning_map_speed_zoom_enabled_title">Snelheidsafhankelijke zoom</string>
+    <string name="tuning_map_speed_zoom_enabled_desc">Zoomt geleidelijk uit naarmate de snelheid toeneemt voor meer zicht vooruit</string>
+    <string name="tuning_map_cruising_zoom_title">Kruissnelheid-zoom (bij 20 km/u)</string>
+    <string name="tuning_map_cruising_zoom_desc">Camerazoomniveau geschaald naar typische fietssnelheid (20 km/u) (hogere waarde = dichter ingezoomd)</string>
+    <string name="tuning_map_tilt_angle_title">Kantelhoek van camera</string>
+    <string name="tuning_map_tilt_angle_desc">Perspectiefhoek voor 3D-navigatie (0° is plat 2D, 70° is volledig 3D-perspectief)</string>
+    <string name="tuning_map_lookahead_padding_title">Marge voor vooruitblik</string>
+    <string name="tuning_map_lookahead_padding_desc">Percentage marge om de fietser in het onderste deel te plaatsen en maximaal zicht op de weg vooruit te bieden (hogere waarde = fietser verder onderin / meer zicht vooruit)</string>
+    <string name="tuning_map_follow_me_speed_smoothing_title">Snelheidszoom vloeiend maken</string>
+    <string name="tuning_map_follow_me_speed_smoothing_desc">Dempingsfactor voor snelheidsveranderingen in Volg-mij-zoom (lagere waarde = vloeiender, hogere waarde = snellere reactie)</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_title">Draaiing vloeiend maken</string>
+    <string name="tuning_map_follow_me_bearing_smoothing_desc">Dempingsfactor voor camerabeweging in de Volg-mij-modus (lagere waarde = vloeiender, hogere waarde = snellere reactie)</string>
+
+    <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
+    <string name="devices_newly_discovered_badge">NIEUW</string>
+    <string name="devices_new_sensor_discovered">Nieuwe sensor ontdekt: %1$s</string>
+
+    <!-- ATT-3220 / REQ-UI-353: Missing ANT adapter warning toggle -->
+    <string name="tuning_show_ant_missing_adapter_warnings_title">Waarschuwingen voor ontbrekende ANT+-adapter tonen</string>
+    <string name="tuning_show_ant_missing_adapter_warnings_desc">Waarschuwingsdialoogvenster tonen wanneer naar een ANT+-sensor wordt gezocht maar er geen adapter is gedetecteerd</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Unieke route automatisch volgen</string>
+    <string name="tuning_auto_follow_unique_route_desc">Automatisch overschakelen om een route te volgen wanneer dit de enige overeenkomende route bij een splitsing is</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Afstand voor navigatie-aanwijzingen</string>
+    <string name="tuning_nav_cue_distance_desc">Afstand vóór de afslag om navigatiemeldingen weer te geven</string>
 </resources>
+

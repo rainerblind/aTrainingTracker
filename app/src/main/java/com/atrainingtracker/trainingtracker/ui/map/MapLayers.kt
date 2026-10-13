@@ -32,6 +32,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.Dash
@@ -61,17 +62,22 @@ fun MappablePathLayer(
     onPathClick: (Long) -> Unit = {}
 ) {
     // 1. Core Path Rendering (Handles both Solid and X-Ray styles)
-    // Only apply the X-Ray pattern if the path is primary (alpha = 1.0)
-    // to avoid visual artifacts with overlapping transparent layers.
+    // Only apply the X-Ray pattern if the path is primary (alpha = 1.0) or a dashed segment,
+    // to avoid visual artifacts with overlapping transparent layers while preserving segment dashes.
+    val isDashedSegment = path is MapSegment && path.isDashed
+    val pattern = if (isDashedSegment || alpha >= 1.0f) path.pattern else null
     XRayPolyline(
         points = path.latLngs,
         color = path.color.copy(alpha = alpha),
         width = path.width,
         baseZIndex = path.zIndex,
         overlayZIndex = path.overlayZIndex ?: path.zIndex,
-        pattern = if (alpha >= 1.0f) path.pattern else null,
+        pattern = pattern,
+        hasSolidBase = !isDashedSegment,
         clickable = true,
-        onClick = { onPathClick(path.id) }
+        onClick = { onPathClick(path.id) },
+        overlayColor = (path.overlayColor ?: path.color).copy(alpha = alpha),
+        overlayWidth = path.overlayWidth ?: path.width
     )
 
     // 2. Specialized Decorations (Segments only)
@@ -83,6 +89,67 @@ fun MappablePathLayer(
             context = context,
             directionIcons = directionIcons
         )
+    } else if (path is MapRoute && path.isActiveNavigation && directionIcons != null) {
+        ActiveRouteDecorations(
+            route = path,
+            alpha = alpha,
+            currentZoom = currentZoom,
+            directionIcons = directionIcons
+        )
+    }
+
+    // 3. Waypoint / POI Markers (REQ-MAP-026)
+    if (path is MapRoute && path.waypoints.isNotEmpty()) {
+        RouteWaypointsLayer(
+            waypoints = path.waypoints,
+            context = context,
+            alpha = alpha
+        )
+    }
+}
+
+/**
+ * Specialized decorations for actively navigated routes: Directional chevrons along polyline.
+ * (REQ-MAP-023 / ATT-1841)
+ */
+@Composable
+private fun ActiveRouteDecorations(
+    route: MapRoute,
+    alpha: Float,
+    currentZoom: Float,
+    directionIcons: Triple<BitmapDescriptor?, BitmapDescriptor?, BitmapDescriptor?>
+) {
+    if (currentZoom > 13f && route.path.size >= 2) {
+        val arrowIcon = when {
+            currentZoom > 17f -> directionIcons.third
+            currentZoom > 15.5f -> directionIcons.second
+            else -> directionIcons.first
+        }
+
+        val step = when {
+            currentZoom > 16f -> 10
+            currentZoom > 14f -> 20
+            else -> 40
+        }
+
+        route.path.windowed(2, step).forEach { pair ->
+            val p1 = pair[0].latLng
+            val p2 = pair[1].latLng
+            val midPos = LatLng(
+                (p1.latitude + p2.latitude) / 2.0,
+                (p1.longitude + p2.longitude) / 2.0
+            )
+            val bearing = calculateBearing(p1, p2).toFloat()
+            Marker(
+                state = remember(midPos) { MarkerState(position = midPos) },
+                icon = arrowIcon,
+                rotation = bearing,
+                flat = true,
+                anchor = Offset(0.5f, 0.5f),
+                alpha = alpha,
+                zIndex = route.zIndex + 1.0f
+            )
+        }
     }
 }
 
@@ -272,45 +339,51 @@ fun MarkerLayer(
 }
 
 /**
- * Renders the specialized marker that follows the distance scrubber.
+ * Renders a specialized marker on the map indicating the athlete's position during profile scrubbing.
+ * Supports direct [activeScrubPoint] propagation as well as fallback to [selectedDistance] (REQ-MAP-032 / ATT-2340).
  */
 @Composable
 fun ScrubMarkerLayer(
     selectedDistance: Double?,
     activePath: List<PathPoint>,
     scrubIconLeft: BitmapDescriptor?,
-    scrubIconRight: BitmapDescriptor?
+    scrubIconRight: BitmapDescriptor?,
+    activeScrubPoint: PathPoint? = null
 ) {
-    selectedDistance?.let { targetDist ->
-        val index = activePath.indexOfFirst { it.distance >= targetDist }
+    val point = activeScrubPoint ?: selectedDistance?.let { targetDist ->
+        TelemetryMetricUtils.findNearestPoint(activePath, targetDist, isTimeDomain = false)
+            ?: activePath.find { it.distance >= targetDist }
+    }
 
-        if (index != -1) {
-            val point = activePath[index]
-            val isWestbound = run {
-                val nextSignificantPoint = activePath.drop(index + 1).firstOrNull {
+    if (point != null && (point.latLng.latitude != 0.0 || point.latLng.longitude != 0.0)) {
+        val index = activePath.indexOf(point).let { idx ->
+            if (idx != -1) idx else activePath.indexOfFirst { it.distance >= point.distance }
+        }
+
+        val isWestbound = if (index != -1) {
+            val nextSignificantPoint = activePath.drop(index + 1).firstOrNull {
+                it.latLng.longitude != point.latLng.longitude
+            }
+            if (nextSignificantPoint != null) {
+                nextSignificantPoint.latLng.longitude < point.latLng.longitude
+            } else {
+                val prevSignificantPoint = activePath.take(index).lastOrNull {
                     it.latLng.longitude != point.latLng.longitude
                 }
-                if (nextSignificantPoint != null) {
-                    nextSignificantPoint.latLng.longitude < point.latLng.longitude
+                if (prevSignificantPoint != null) {
+                    point.latLng.longitude < prevSignificantPoint.latLng.longitude
                 } else {
-                    val prevSignificantPoint = activePath.take(index).lastOrNull {
-                        it.latLng.longitude != point.latLng.longitude
-                    }
-                    if (prevSignificantPoint != null) {
-                        point.latLng.longitude < prevSignificantPoint.latLng.longitude
-                    } else {
-                        false
-                    }
+                    false
                 }
             }
+        } else false
 
-            Marker(
-                state = remember(point.latLng) { MarkerState(position = point.latLng) },
-                icon = if (isWestbound) scrubIconLeft else scrubIconRight,
-                zIndex = 5.0f,
-                flat = true
-            )
-        }
+        Marker(
+            state = remember(point.latLng) { MarkerState(position = point.latLng) },
+            icon = if (isWestbound) scrubIconLeft else scrubIconRight,
+            zIndex = 5.0f,
+            flat = true
+        )
     }
 }
 
@@ -325,30 +398,87 @@ private fun XRayPolyline(
     baseZIndex: Float,
     overlayZIndex: Float,
     pattern: List<PatternItem>? = null,
+    hasSolidBase: Boolean = true,
     jointType: Int = JointType.DEFAULT,
     clickable: Boolean = false,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    overlayColor: Color = color,
+    overlayWidth: Float = width
 ) {
     // 1. Solid Base
-    Polyline(
-        points = points,
-        color = color,
-        width = width,
-        zIndex = baseZIndex,
-        clickable = clickable,
-        onClick = { if (clickable) onClick() },
-        jointType = jointType
-    )
+    if (hasSolidBase) {
+        Polyline(
+            points = points,
+            color = color,
+            width = width,
+            zIndex = baseZIndex,
+            clickable = clickable,
+            onClick = { if (clickable) onClick() },
+            jointType = jointType
+        )
+    }
     
     // 2. Patterned Overlay
     if (pattern != null) {
         Polyline(
             points = points,
-            color = color,
-            width = width,
+            color = overlayColor,
+            width = overlayWidth,
             zIndex = overlayZIndex,
             pattern = pattern,
-            jointType = jointType
+            jointType = jointType,
+            clickable = !hasSolidBase && clickable,
+            onClick = { if (!hasSolidBase && clickable) onClick() }
+        )
+    }
+}
+
+/**
+ * Renders route waypoints / POIs as interactive map markers (REQ-MAP-026).
+ *
+ * Requirements:
+ * - Markers are rendered above both base and overlay polylines (zIndex >= 50f).
+ * - Displays vector icon associated with [RouteWaypoint.type.iconResId].
+ * - Supports configurable [markerSizeDp] defaulting to [DEFAULT_WAYPOINT_MARKER_SIZE_DP] (22 dp) (REQ-MAP-037).
+ * - Supports clicking on a waypoint marker to trigger [onWaypointClick].
+ */
+@Composable
+fun RouteWaypointsLayer(
+    waypoints: List<RouteWaypoint>,
+    context: Context? = null,
+    alpha: Float = 1.0f,
+    markerSizeDp: Int = DEFAULT_WAYPOINT_MARKER_SIZE_DP,
+    onWaypointClick: (RouteWaypoint) -> Unit = {}
+) {
+    if (waypoints.isEmpty()) return
+
+    waypoints.forEach { waypoint ->
+        val iconDescriptor = remember(waypoint.type, context, markerSizeDp) {
+            context?.let { ctx ->
+                createWaypointBadgeMarker(ctx, waypoint.type, markerSizeDp)
+            }
+        }
+
+        val snippetText = remember(waypoint.description, waypoint.altitude) {
+            val altText = if (waypoint.altitude > 0.0) "${waypoint.altitude.toInt()} m" else null
+            when {
+                waypoint.description.isNotBlank() && altText != null -> "${waypoint.description} • $altText"
+                waypoint.description.isNotBlank() -> waypoint.description
+                else -> altText
+            }
+        }
+
+        Marker(
+            state = remember(waypoint.id, waypoint.latLng) { MarkerState(position = waypoint.latLng) },
+            title = waypoint.name,
+            snippet = snippetText,
+            icon = iconDescriptor,
+            alpha = alpha,
+            zIndex = 50.0f,
+            onClick = {
+                onWaypointClick(waypoint)
+                false // Allow Google Maps to display native InfoWindow
+            }
         )
     }
 }

@@ -61,8 +61,9 @@ class ElevationProfileLayoutTest {
 
         // 2. Dynamic canvas height preserving exact drawable chart plotting area
         assertTrue(
-            "ElevationProfile must expand totalCanvasHeight by 28.dp when showZoomControls == true",
-            content.contains("val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight")
+            "ElevationProfile must expand totalCanvasHeight by 28.dp when showZoomControls == true (or respect fixedHeight)",
+            content.contains("val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight") ||
+                    content.contains("val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight")
         )
 
         // 3. ScrubbingTelemetryBadge anchored at top = 4.dp now that zoom buttons are decoupled (REQ-UI-225)
@@ -175,5 +176,26 @@ class ElevationProfileLayoutTest {
         // Verify both overloads declare isPanMode: Boolean = false (REQ-UI-225)
         val isPanModeCount = Regex("""isPanMode:\s*Boolean\s*=\s*false""").findAll(content).count()
         assertEquals("Both ElevationProfile composable overloads must declare isPanMode: Boolean = false", 2, isPanModeCount)
+    }
+
+    @Test
+    fun testElevationProfile_declaresFillParentHeightParameterAndDecoupledCanvasModifier() {
+        assertTrue("ElevationProfile.kt must exist", elevationProfileFile.exists())
+        val content = elevationProfileFile.readText()
+
+        // 1. Verify both overloads declare fillParentHeight: Boolean = false (REQ-UI-339 / TST-UI-299.5)
+        val fillParentHeightCount = Regex("""fillParentHeight:\s*Boolean\s*=\s*false""").findAll(content).count()
+        assertEquals("Both ElevationProfile overloads must declare fillParentHeight: Boolean = false", 2, fillParentHeightCount)
+
+        // 2. Verify conditional canvas modifier attachment
+        assertTrue(
+            "ElevationProfile must attach defaultMinSize(minHeight = totalCanvasHeight).fillMaxHeight() when fillParentHeight is true",
+            content.contains(".defaultMinSize(minHeight = totalCanvasHeight)\n                .fillMaxHeight()") ||
+                    content.contains(".defaultMinSize(minHeight = totalCanvasHeight).fillMaxHeight()")
+        )
+        assertTrue(
+            "ElevationProfile must attach .height(totalCanvasHeight) when fillParentHeight is false",
+            content.contains(".height(totalCanvasHeight)")
+        )
     }
 }

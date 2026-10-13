@@ -29,6 +29,7 @@ import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
 
@@ -126,7 +127,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                         btGattChar = btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL);
                         if (btGattChar != null) {
                             Log.i(TAG, "go battery service, request to read battery characteristic");
+                            mBatteryCharacteristic = btGattChar;
                             mReadCharacteristicQueue.add(btGattChar);
+                            gatt.setCharacteristicNotification(btGattChar, true);
                         } else {
                             Log.d(TAG, "WTF: btGattChar == null for battery characteristic");
                         }
@@ -149,6 +152,21 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             characteristicUpdate(gatt, characteristic);
+        }
+
+        @Override
+        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+            if (DEBUG) Log.i(TAG, "onDescriptorWrite: " + descriptor.getUuid() + " status: " + status);
+            // After primary measurement descriptor is written, chain writing battery CCCD if supported (REQ-CON-007, ATT-3312)
+            if (mBatteryCharacteristic != null && (mBatteryCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0) {
+                BluetoothGattDescriptor batteryDescriptor = mBatteryCharacteristic.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
+                if (batteryDescriptor != null && !batteryDescriptor.equals(descriptor)) {
+                    if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                        batteryDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                        gatt.writeDescriptor(batteryDescriptor);
+                    }
+                }
+            }
         }
     };
 
@@ -198,7 +216,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                     return;
                 }
                 synchronized (mGattLock) {
-                    mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback);
+                    mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE);
                 }
             }
         });

@@ -60,7 +60,6 @@ fun WorkoutClustersTabsScreen(
     onClusterClick: (WorkoutCluster) -> Unit,
     onWorkoutClick: (WorkoutData) -> Unit,
     onHitCountClick: (WorkoutCluster) -> Unit,
-    onTuneClick: () -> Unit,
     onAddClick: () -> Unit,
     onDeleteRequest: (WorkoutCluster) -> Unit,
     migrationStatus: com.atrainingtracker.trainingtracker.ui.util.MigrationStatus? = null
@@ -263,14 +262,6 @@ fun WorkoutClustersTabsScreen(
                             )
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = onTuneClick) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_settings_24),
-                                        contentDescription = stringResource(R.string.cluster_tuning_content_desc),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-
                                 // --- INFO BUTTON (ATT-501) ---
                                 IconButton(onClick = { showInfoDialog = true }) {
                                     Icon(

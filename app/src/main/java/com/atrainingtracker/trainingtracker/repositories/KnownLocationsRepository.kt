@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.repositories
 
 import android.content.Context
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
@@ -26,6 +27,7 @@ import com.atrainingtracker.trainingtracker.elevation.ElevationResult
 import com.atrainingtracker.trainingtracker.elevation.ElevationService
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.location.LocationNameResolver
+import com.atrainingtracker.trainingtracker.routes.HomeLocationResolver
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -60,7 +62,8 @@ data class KnownLocationItem(
     val latLng: LatLng,
     val hitCount: Int,
     val isLocked: Boolean,
-    val source: ElevationSource
+    val source: ElevationSource,
+    val isHome: Boolean = false
 )
 
 /**
@@ -125,6 +128,7 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
      */
     open suspend fun loadLocations(): List<KnownLocationItem> = withContext(dbDispatcher) {
         val rawLocations = databaseManager.allLocations
+        val effectiveHomeId = HomeLocationResolver.resolveHomeLocationId(rawLocations)
         val items = rawLocations.map { loc ->
             KnownLocationItem(
                 id = loc.id,
@@ -134,7 +138,8 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
                 latLng = loc.latLng,
                 hitCount = loc.hitCount,
                 isLocked = loc.isLocked,
-                source = loc.source
+                source = loc.source,
+                isHome = (loc.id == effectiveHomeId)
             )
         }
         _locations.value = items
@@ -181,6 +186,22 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
     }
 
     /**
+     * Atomically sets the designated home location for return navigation (REQ-MAP-034).
+     */
+    open suspend fun setHomeLocation(id: Long) = withContext(dbDispatcher) {
+        databaseManager.setHomeLocation(id)
+        loadLocations()
+    }
+
+    /**
+     * Clears the designated home location across all saved locations (REQ-MAP-034).
+     */
+    open suspend fun clearHomeLocation() = withContext(dbDispatcher) {
+        databaseManager.clearHomeLocation()
+        loadLocations()
+    }
+
+    /**
      * Queries Open-Meteo DEM elevation for the specified location coordinates.
      * On success, persists the DEM elevation with [ElevationSource.INTERNET_DEM] and [isLocked] = false.
      */
@@ -205,14 +226,23 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
      * Custom names (edited by user) are strictly preserved.
      */
     open suspend fun healLegacyNames() = withContext(dbDispatcher) {
-        val rawLocations = databaseManager.allLocations
+        val rawLocations = try {
+            databaseManager.allLocations
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to load locations for healing", t)
+            return@withContext
+        }
         var changed = false
         for (loc in rawLocations) {
             if (LocationNameResolver.isPlaceholderName(loc.name)) {
                 val resolvedName = LocationNameResolver.resolveLocationName(context, loc.latLng.latitude, loc.latLng.longitude)
                 if (!LocationNameResolver.isPlaceholderName(resolvedName) && resolvedName != loc.name) {
-                    databaseManager.updateLocation(loc.id, resolvedName, loc.altitude, loc.source, loc.isLocked)
-                    changed = true
+                    try {
+                        databaseManager.updateLocation(loc.id, resolvedName, loc.altitude, loc.source, loc.isLocked)
+                        changed = true
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "Failed to update location name for healing", t)
+                    }
                 }
             }
         }
@@ -222,6 +252,8 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
     }
 
     companion object {
+        private const val TAG = "KnownLocationsRepo"
+
         @Volatile
         private var INSTANCE: KnownLocationsRepository? = null
 

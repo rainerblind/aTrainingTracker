@@ -30,20 +30,23 @@ import java.io.File
  */
 class AdvancedTuningAftermathContractTest {
 
-    private fun findAdvancedTuningDialogFile(): File {
+    private fun findTuningSourceContent(): String {
         val candidates = listOf(
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
-            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
-            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning")
         )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("AdvancedTuningDialog.kt not found in candidates: $candidates")
+        val dir = candidates.firstOrNull { it.exists() && it.isDirectory }
+            ?: return ""
+        val dialogFile = File(dir, "AdvancedTuningDialog.kt")
+        val matrixFile = File(dir, "categories/WorkoutMasksAndCardsSection.kt")
+        return (if (dialogFile.exists()) dialogFile.readText() else "") + "\n" +
+                (if (matrixFile.exists()) matrixFile.readText() else "")
     }
 
     @Test
     fun testAdvancedTuningDialog_containsWorkoutCardTogglesAndOmitsEditDialogToggles() {
-        val file = findAdvancedTuningDialogFile()
-        val content = file.readText()
+        val content = findTuningSourceContent()
 
         // 1. Model Imports & References
         assertTrue(
@@ -97,8 +100,7 @@ class AdvancedTuningAftermathContractTest {
 
     @Test
     fun testAdvancedTuningDialog_hostsMatrixTableWithWorkoutDetailPreferences() {
-        val file = findAdvancedTuningDialogFile()
-        val content = file.readText()
+        val content = findTuningSourceContent()
 
         // 1. Model Imports & References
         assertTrue(

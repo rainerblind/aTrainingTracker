@@ -28,6 +28,7 @@ import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
@@ -77,6 +78,7 @@ class SegmentListViewModel(
     }
 
     // Observation of other map context
+    val allRoutes: StateFlow<List<RouteWithPath>> = routesRepository.allRoutes
     val routes: StateFlow<List<MapRoute>> = routesRepository.allRoutes
         .map { list -> list.map { it.toMapRoute() } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

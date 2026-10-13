@@ -99,12 +99,14 @@ fun StravaActivitySection(
             )
         }
 
+        val timeFormatter = remember { TimeFormatter() }
+
         // --- ATT-912 / REQ-EXP-010: Celebration Banner for new Personal Bests (PR #1 / KOM) ---
         val newPrEfforts = remember(activity.segmentEfforts) {
             activity.segmentEfforts.filter { it.prRank == 1 || it.komRank == 1 }
         }
         if (newPrEfforts.isNotEmpty()) {
-            SegmentPrCelebrationBanner(newPrEfforts)
+            SegmentPrCelebrationBanner(newPrEfforts, timeFormatter = timeFormatter)
         }
 
         // --- Status message if no efforts/segments are available ---
@@ -168,7 +170,7 @@ fun StravaActivitySection(
             }
 
             displayedBestEfforts.forEach { effort ->
-                BestEffortRow(effort)
+                BestEffortRow(effort = effort, timeFormatter = timeFormatter)
             }
 
             if (isCollapsible) {
@@ -238,7 +240,7 @@ fun StravaActivitySection(
                 val isEffortStarred = effort.isStarred ||
                     (effort.segmentId != null && starredIds.contains(effort.segmentId)) ||
                     starredNames.contains(effort.name.trim().lowercase())
-                SegmentEffortRow(effort = effort, isStarred = isEffortStarred)
+                SegmentEffortRow(effort = effort, isStarred = isEffortStarred, timeFormatter = timeFormatter)
             }
 
             if (isCollapsible) {
@@ -280,9 +282,10 @@ fun StravaActivitySection(
 @Composable
 internal fun SegmentPrCelebrationBanner(
     efforts: List<StravaSegmentEffort>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    timeFormatter: TimeFormatter = remember { TimeFormatter() }
 ) {
-    val tf = TimeFormatter()
+    val tf = timeFormatter
     val title = if (efforts.size == 1) {
         stringResource(R.string.strava_new_pr_banner_title_single)
     } else {
@@ -350,8 +353,11 @@ internal fun SegmentPrCelebrationBanner(
 }
 
 @Composable
-private fun BestEffortRow(effort: StravaBestEffort) {
-    val tf = TimeFormatter()
+private fun BestEffortRow(
+    effort: StravaBestEffort,
+    timeFormatter: TimeFormatter = remember { TimeFormatter() }
+) {
+    val tf = timeFormatter
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -376,9 +382,10 @@ private fun BestEffortRow(effort: StravaBestEffort) {
 @Composable
 private fun SegmentEffortRow(
     effort: StravaSegmentEffort,
-    isStarred: Boolean = false
+    isStarred: Boolean = false,
+    timeFormatter: TimeFormatter = remember { TimeFormatter() }
 ) {
-    val tf = TimeFormatter()
+    val tf = timeFormatter
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,

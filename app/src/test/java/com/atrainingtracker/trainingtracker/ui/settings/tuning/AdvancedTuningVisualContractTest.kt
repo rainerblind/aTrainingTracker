@@ -104,10 +104,21 @@ class AdvancedTuningVisualContractTest {
         )
     }
 
+    private fun findTuningSourceFiles(): List<File> {
+        val rootCandidates = listOf(
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning")
+        )
+        val dir = rootCandidates.firstOrNull { it.exists() && it.isDirectory }
+            ?: return emptyList()
+        return dir.walkTopDown().filter { it.extension == "kt" }.toList()
+    }
+
     @Test
     fun testDecoupledSubsections_existAsIndividualComposables() {
-        val dialogFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
-        val content = dialogFile.readText()
+        val tuningFiles = findTuningSourceFiles()
+        val content = tuningFiles.joinToString("\n") { it.readText() }
 
         // Verify each decoupled subsection composable function signature
         assertTrue(
@@ -170,8 +181,17 @@ class AdvancedTuningVisualContractTest {
 
     @Test
     fun testWorkoutMasksAndCardsSection_lapDisplayModeUsesSegmentedButton() {
-        val dialogFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
-        val content = dialogFile.readText()
+        val candidates = listOf(
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
+        )
+        val targetFile = candidates.firstOrNull { it.exists() }
+            ?: error("Target file not found in candidates: $candidates")
+        val content = targetFile.readText()
 
         val sectionStartIndex = content.indexOf("fun WorkoutMasksAndCardsSection(")
         assertTrue("WorkoutMasksAndCardsSection must exist", sectionStartIndex >= 0)
@@ -191,5 +211,50 @@ class AdvancedTuningVisualContractTest {
             sectionContent.contains("FilterChip(")
         )
     }
+
+    @Test
+    fun testNavigationSection_dismissDurationUsesSliderContract() {
+        val candidates = listOf(
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/NavigationSection.kt"),
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/NavigationSection.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/NavigationSection.kt")
+        )
+        val targetFile = candidates.firstOrNull { it.exists() }
+            ?: error("Target file not found in candidates: $candidates")
+        val content = targetFile.readText()
+
+        val sectionStartIndex = content.indexOf("fun NavigationSection(")
+        assertTrue("NavigationSection must exist", sectionStartIndex >= 0)
+        val sectionContent = content.substring(sectionStartIndex)
+
+        // 1. TuningSliderItem used for dismiss duration (REQ-UI-287 / ATT-3450 / TST-UI-247.5)
+        assertTrue(
+            "NavigationSection must invoke TuningSliderItem with tuning_nav_cue_dismiss_duration_title",
+            sectionContent.contains("stringResource(R.string.tuning_nav_cue_dismiss_duration_title)")
+        )
+        assertTrue(
+            "NavigationSection dismiss duration slider must specify steps = 8",
+            sectionContent.contains("steps = 8")
+        )
+        assertTrue(
+            "NavigationSection must format live value as \${navigationCueDismissDurationSec}s",
+            sectionContent.contains("\"${'$'}{navigationCueDismissDurationSec}s\"")
+        )
+        assertTrue(
+            "NavigationSection dismiss duration slider must bound valueRange using TuningPreferencesDefaults constants",
+            sectionContent.contains("TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC.toFloat()..TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC.toFloat()")
+        )
+
+        // 2. Zero FilterChip items in NavigationSection (REQ-UI-287 / ATT-3450 / docs/design_guidelines.md § 1.4)
+        assertFalse(
+            "NavigationSection must NOT use FilterChip for dismiss duration",
+            sectionContent.contains("FilterChip(")
+        )
+        assertFalse(
+            "NavigationSection must NOT use FlowRow for dismiss duration",
+            sectionContent.contains("FlowRow(")
+        )
+    }
 }
+
 

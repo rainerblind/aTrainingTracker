@@ -21,10 +21,12 @@ package com.atrainingtracker.trainingtracker.ui.map
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.*
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.maps.android.SphericalUtil
 import com.google.maps.android.compose.CameraPositionState
 
 /**
@@ -182,7 +184,59 @@ fun MapBoundsController(
 }
 
 /**
- * Manages the "Follow Me" camera behavior with smoothed bearing and tilt.
+ * Calculates the target camera zoom level for Follow-Me tracking mode based on speed and tuning preferences (REQ-MAP-042).
+ * Converts speed from m/s to km/h and scales linearly between [baseZoom] at 0 km/h and [cruisingZoom] at 20 km/h.
+ * When [speedZoomEnabled] is false, locks the camera firmly to [baseZoom].
+ */
+fun calculateFollowMeTargetZoom(
+    speedMps: Float,
+    baseZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
+    speedZoomEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+    cruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
+    minZoom: Float = 12.0f,
+    maxZoom: Float = 21.0f
+): Float {
+    if (!speedZoomEnabled) {
+        return baseZoom.coerceIn(minZoom, maxZoom)
+    }
+    val speedKmh = (speedMps * 3.6f).coerceAtLeast(0.0f)
+    val zoomSlope = (baseZoom - cruisingZoom) / 20.0f
+    return (baseZoom - zoomSlope * speedKmh).coerceIn(minZoom, maxZoom)
+}
+
+/**
+ * Calculates the forward lookahead camera target coordinate in follow-me mode (REQ-MAP-046 / REQ-MAP-048 / Rule 33).
+ *
+ * Rather than shifting the viewport via competing GoogleMap content padding (which conflicts with
+ * CameraPosition.builder().target(currentLocation) during camera animations), this function projects
+ * the camera focal center ahead of the athlete along [bearing] so the athlete is anchored stably
+ * in the lower portion of the screen without oscillation or jitter.
+ *
+ * Compensates for 3D perspective pitch tilt foreshortening so that slider adjustments from 10% to 50%
+ * produce visually distinct, proportional changes in the athlete's screen position across all tilt angles.
+ */
+fun calculateFollowMeCameraTarget(
+    currentLocation: LatLng,
+    bearing: Float,
+    zoom: Float,
+    lookaheadPaddingPercent: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+    viewportHeightDp: Float = 0f,
+    tiltAngle: Float = 0f
+): LatLng {
+    if (lookaheadPaddingPercent <= 0f || viewportHeightDp <= 0f) {
+        return currentLocation
+    }
+    val latRad = Math.toRadians(currentLocation.latitude)
+    val metersPerDp = (156543.03392 * Math.cos(latRad) / Math.pow(2.0, zoom.toDouble())).toFloat()
+    val offsetFraction = (lookaheadPaddingPercent / 100f) * 0.6f
+    val clampedTilt = tiltAngle.toDouble().coerceIn(0.0, 70.0)
+    val tiltFactor = Math.cos(Math.toRadians(clampedTilt)).toFloat().coerceAtLeast(0.34f)
+    val offsetMeters = (viewportHeightDp * offsetFraction * metersPerDp) / tiltFactor
+    return SphericalUtil.computeOffset(currentLocation, offsetMeters.toDouble(), bearing.toDouble())
+}
+
+/**
+ * Manages the "Follow Me" camera behavior with smoothed bearing, speed-dependent zoom, and tilt (REQ-MAP-042 / REQ-MAP-046 / REQ-MAP-048).
  * Returns the smoothed bearing for use in the user location marker.
  */
 @Composable
@@ -191,35 +245,82 @@ fun followMeController(
     bearing: Float,
     speed: Float,
     currentLocation: LatLng?,
-    cameraPositionState: CameraPositionState
+    cameraPositionState: CameraPositionState,
+    baseZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
+    speedZoomEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+    cruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
+    tiltAngle: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE,
+    lookaheadPaddingPercent: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+    viewportHeightDp: Float = 0f,
+    speedSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+    bearingSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
 ): Float {
     var filteredBearing by remember { mutableFloatStateOf(bearing) }
+    var filteredSpeed by remember { mutableFloatStateOf(speed) }
+    var activeZoom by remember { mutableFloatStateOf(baseZoom) }
 
     LaunchedEffect(zoomFocus) {
         if (zoomFocus == MapZoomFocus.FOLLOW_ME) {
             filteredBearing = bearing
+            filteredSpeed = speed
+            activeZoom = baseZoom
         }
     }
 
-    LaunchedEffect(currentLocation, bearing, speed) {
+    LaunchedEffect(
+        currentLocation, bearing, speed, baseZoom, speedZoomEnabled,
+        cruisingZoom, tiltAngle, lookaheadPaddingPercent, viewportHeightDp,
+        speedSmoothingAlpha, bearingSmoothingAlpha
+    ) {
         if (zoomFocus == MapZoomFocus.FOLLOW_ME && currentLocation != null) {
-            val alpha = 0.15f
+            val bAlpha = bearingSmoothingAlpha.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
+            )
             var diff = bearing - filteredBearing
             while (diff < -180f) diff += 360f
             while (diff > 180f) diff -= 360f
 
-            filteredBearing += alpha * diff
+            filteredBearing += bAlpha * diff
             filteredBearing = (filteredBearing + 360f) % 360f
 
-            val targetZoom = (20f - 0.1f * speed).coerceIn(14f, 20f)
+            val sAlpha = speedSmoothingAlpha.coerceIn(
+                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
+            )
+            filteredSpeed += sAlpha * (speed - filteredSpeed)
+
+            val targetZoom = calculateFollowMeTargetZoom(
+                speedMps = filteredSpeed,
+                baseZoom = baseZoom,
+                speedZoomEnabled = speedZoomEnabled,
+                cruisingZoom = cruisingZoom
+            )
+            val zoomDelta = Math.abs(targetZoom - activeZoom)
+            val effectiveZoom = if (zoomDelta >= 0.10f) {
+                activeZoom = targetZoom
+                targetZoom
+            } else {
+                activeZoom
+            }
+
+            val effectiveTilt = tiltAngle.coerceIn(0f, 70f)
+            val cameraTarget = calculateFollowMeCameraTarget(
+                currentLocation = currentLocation,
+                bearing = filteredBearing,
+                zoom = effectiveZoom,
+                lookaheadPaddingPercent = lookaheadPaddingPercent,
+                viewportHeightDp = viewportHeightDp,
+                tiltAngle = effectiveTilt
+            )
             try {
                 cameraPositionState.animate(
                     CameraUpdateFactory.newCameraPosition(
                         CameraPosition.builder()
-                            .target(currentLocation)
+                            .target(cameraTarget)
                             .bearing(filteredBearing)
-                            .zoom(targetZoom)
-                            .tilt(70f)
+                            .zoom(effectiveZoom)
+                            .tilt(effectiveTilt)
                             .build()
                     ),
                     400
@@ -235,18 +336,23 @@ fun followMeController(
 
 /**
  * Manages auto-centering the map on the distance scrubber with a safety margin.
+ * Supports direct [activeScrubPoint] propagation as well as fallback to [selectedDistance] (REQ-MAP-032 / ATT-2340).
  */
 @Composable
 fun ScrubberController(
     selectedDistance: Double?,
     activePath: List<PathPoint>,
-    cameraPositionState: CameraPositionState
+    cameraPositionState: CameraPositionState,
+    activeScrubPoint: PathPoint? = null
 ) {
-    LaunchedEffect(selectedDistance, activePath) {
-        selectedDistance?.let { targetDist ->
-            val scrubPoint = activePath.find { it.distance >= targetDist }
+    LaunchedEffect(selectedDistance, activeScrubPoint, activePath) {
+        val scrubPoint = activeScrubPoint ?: selectedDistance?.let { targetDist ->
+            TelemetryMetricUtils.findNearestPoint(activePath, targetDist, isTimeDomain = false)
+                ?: activePath.find { it.distance >= targetDist }
+        }
 
-            scrubPoint?.let { point ->
+        scrubPoint?.let { point ->
+            if (point.latLng.latitude != 0.0 || point.latLng.longitude != 0.0) {
                 val projection = cameraPositionState.projection
                 val bounds = projection?.visibleRegion?.latLngBounds
 

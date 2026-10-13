@@ -209,6 +209,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     fun loadPeriods() {
         viewModelScope.launch {
             workoutRepo.loadAllWorkouts()
+            periodsRepo.checkIntegrityAndSync()
         }
     }
 

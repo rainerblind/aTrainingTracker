@@ -26,6 +26,7 @@ import com.atrainingtracker.R
 enum class SettingsBottomSheetType {
     STRAVA,
     DROPBOX,
+    GOOGLE_DRIVE,
     EXPORT,
     UNITS,
     DISPLAY,
@@ -56,6 +57,7 @@ object NavRoutes {
     const val SPORT_TYPES = "sport_types"
     const val TRAINING_ZONES = "training_zones"
     const val BACKUP_RESTORE = "backup_restore"
+    const val ADVANCED_SETTINGS = "advanced_settings"
 
     /**
      * Builds a navigation route to the central map, optionally parameterized with a target location ID.
@@ -88,6 +90,7 @@ object NavRoutes {
         R.id.drawer_sport_types -> SPORT_TYPES
         R.id.drawer_training_zones -> TRAINING_ZONES
         R.id.drawer_backup_restore -> BACKUP_RESTORE
+        R.id.drawer_advanced_tuning -> ADVANCED_SETTINGS
         else -> null
     }
 
@@ -109,6 +112,7 @@ object NavRoutes {
         SPORT_TYPES -> R.id.drawer_sport_types
         TRAINING_ZONES -> R.id.drawer_training_zones
         BACKUP_RESTORE -> R.id.drawer_backup_restore
+        ADVANCED_SETTINGS -> R.id.drawer_advanced_tuning
         else -> R.id.drawer_start_tracking
     }
 
@@ -118,11 +122,10 @@ object NavRoutes {
     fun toBottomSheetType(itemId: Int): SettingsBottomSheetType? = when (itemId) {
         R.id.drawer_strava -> SettingsBottomSheetType.STRAVA
         R.id.drawer_dropbox -> SettingsBottomSheetType.DROPBOX
+        R.id.drawer_google_drive -> SettingsBottomSheetType.GOOGLE_DRIVE
         R.id.drawer_export -> SettingsBottomSheetType.EXPORT
         R.id.drawer_units -> SettingsBottomSheetType.UNITS
         R.id.drawer_display_settings -> SettingsBottomSheetType.DISPLAY
-        R.id.drawer_advanced_tuning -> SettingsBottomSheetType.ADVANCED_TUNING
-        R.id.drawer_search_settings -> SettingsBottomSheetType.SEARCH
         R.id.drawer_tracking_layouts -> SettingsBottomSheetType.ACTIVITY_TYPE
         else -> null
     }

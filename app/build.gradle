@@ -46,8 +46,8 @@ android {
         minSdkVersion 26 // Android 8
         targetSdkVersion 37
         multiDexEnabled = true
-        versionName = "4.9.38.5"
-        versionCode = 269
+        versionName = "4.9.39"
+        versionCode = 270
     }
 
     signingConfigs {
@@ -97,6 +97,20 @@ android {
     }
     kotlinOptions {
         jvmTarget = '17'
+    }
+
+    testOptions {
+        unitTests.all {
+            maxParallelForks = Math.max(1, (int) (Runtime.runtime.availableProcessors() / 2))
+            forkEvery = 80
+            minHeapSize = "256m"
+            maxHeapSize = "768m"
+            jvmArgs "-XX:+TieredCompilation", "-XX:TieredStopAtLevel=1", "-Dfile.encoding=UTF-8"
+            testLogging {
+                events "failed"
+                exceptionFormat "full"
+            }
+        }
     }
 }
 
@@ -162,9 +176,10 @@ dependencies {
     implementation 'androidx.navigation:navigation-compose:2.8.8'
     debugImplementation 'androidx.compose.ui:ui-tooling'
 
-    // --- Google Maps & Firebase ---
+    // --- Google Maps, Location, Auth & Firebase ---
     implementation 'com.google.android.gms:play-services-maps:20.0.0'
     implementation 'com.google.android.gms:play-services-location:21.4.0'
+    implementation 'com.google.android.gms:play-services-auth:21.3.0'
     implementation 'com.google.maps.android:maps-compose:8.6.0'
     implementation 'com.google.maps.android:android-maps-utils:5.2.0'
     implementation platform('com.google.firebase:firebase-bom:34.18.0')
@@ -180,6 +195,9 @@ dependencies {
 
     // GPX import
     implementation 'com.github.ticofab:android-gpx-parser:2.3.1'
+
+    // Garmin FIT SDK (ATT-1827 / ATT-1117)
+    implementation 'com.garmin:fit:21.141.0'
 
     // --- Unit Testing ---
     testImplementation 'junit:junit:4.13.2'

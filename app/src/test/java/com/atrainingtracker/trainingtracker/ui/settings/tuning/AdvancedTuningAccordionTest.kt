@@ -77,6 +77,32 @@ class AdvancedTuningAccordionTest {
     }
 
     @Test
+    fun testCockpitTypographySubtitle_reflectsFontWeightAndVariant() {
+        val mockContext = mockk<Context>()
+
+        every { mockContext.getString(R.string.tuning_font_system_default) } returns "System Default"
+        every { mockContext.getString(R.string.tuning_weight_semi_bold) } returns "Semi-Bold"
+        every { mockContext.getString(R.string.sensor_field_variant_v0) } returns "Classic Seamless Grid"
+        every { mockContext.getString(R.string.sensor_field_variant_v2) } returns "Elevated Sports Cards"
+
+        val subtitleWithVariant0 = TuningSubtitleFormatter.formatCockpitSubtitle(
+            CockpitFontFamily.SYSTEM_DEFAULT,
+            CockpitFontWeight.SEMI_BOLD,
+            com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant.CLASSIC_SEAMLESS,
+            mockContext
+        )
+        assertEquals("System Default, Semi-Bold · Classic Seamless Grid", subtitleWithVariant0)
+
+        val subtitleWithVariant2 = TuningSubtitleFormatter.formatCockpitSubtitle(
+            CockpitFontFamily.SYSTEM_DEFAULT,
+            CockpitFontWeight.SEMI_BOLD,
+            com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant.ELEVATED_CARDS,
+            mockContext
+        )
+        assertEquals("System Default, Semi-Bold · Elevated Sports Cards", subtitleWithVariant2)
+    }
+
+    @Test
     fun testAmoledBatterySaverSubtitle_reflectsDimFactorsAndSlopes() {
         val defaultLocale = Locale.getDefault()
         try {
@@ -157,7 +183,15 @@ class AdvancedTuningAccordionTest {
             ProfileXAxisDomain.TIME,
             mockContext
         )
-        assertEquals("Elevation: Distance | Telemetry: Time", subtitle)
+        assertEquals("Elevation: Distance | Telemetry: Time | \u03c3: 21m", subtitle)
+
+        val customSubtitle = TuningSubtitleFormatter.formatAftermathSubtitle(
+            ProfileXAxisDomain.DISTANCE,
+            ProfileXAxisDomain.TIME,
+            mockContext,
+            smoothingSigma = 35.0f
+        )
+        assertEquals("Elevation: Distance | Telemetry: Time | \u03c3: 35m", customSubtitle)
     }
 
     @Test
@@ -252,5 +286,130 @@ class AdvancedTuningAccordionTest {
             mockContext
         )
         assertEquals("3/8 List, 8/8 Details", subtitle)
+    }
+
+    @Test
+    fun testNavigationSubtitle_reflectsTransparencyDismissDurationAndRadius() {
+        val defaultLocale = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.US)
+            val mockContext = mockk<Context>()
+
+            val subtitle1 = TuningSubtitleFormatter.formatNavigationSubtitle(
+                radiusKm = 1.0f,
+                dismissSec = 4,
+                context = mockContext
+            )
+            assertEquals("4s, 1.0 km", subtitle1)
+
+            val subtitle2 = TuningSubtitleFormatter.formatNavigationSubtitle(
+                radiusKm = 2.5f,
+                dismissSec = 10,
+                context = mockContext
+            )
+            assertEquals("10s, 2.5 km", subtitle2)
+
+            val subtitle3 = TuningSubtitleFormatter.formatNavigationSubtitle(
+                radiusKm = 2.5f,
+                dismissSec = 0,
+                context = mockContext
+            )
+            assertEquals("4s, 2.5 km", subtitle3)
+        } finally {
+            Locale.setDefault(defaultLocale)
+        }
+    }
+
+    @Test
+    fun testSensorSearchSubtitle_reflectsRoundsAndActiveStatus() {
+        val mockContext = mockk<Context>()
+        every { mockContext.getString(R.string.tuning_sensor_search_active) } returns "Active"
+        every { mockContext.getString(R.string.tuning_sensor_search_disabled) } returns "Disabled"
+        every {
+            mockContext.getString(R.string.tuning_sensor_search_subtitle, 3, "Active")
+        } returns "3 search rounds, Active auto-search"
+        every {
+            mockContext.getString(R.string.tuning_sensor_search_subtitle, 1, "Disabled")
+        } returns "1 search rounds, Disabled auto-search"
+        every {
+            mockContext.getString(R.string.tuning_sensor_search_subtitle, 2, "Active")
+        } returns "2 search rounds, Active auto-search"
+
+        val subtitleActive = TuningSubtitleFormatter.formatSensorSearchSubtitle(
+            numberOfSearchTries = 3,
+            startSearchWhenAppStarts = true,
+            startSearchWhenResumeFromPaused = false,
+            startSearchWhenUserChangesSport = false,
+            startSearchWhenTrackingStarts = false,
+            context = mockContext
+        )
+        assertEquals("3 search rounds, Active auto-search", subtitleActive)
+
+        val subtitleDisabled = TuningSubtitleFormatter.formatSensorSearchSubtitle(
+            numberOfSearchTries = 1,
+            startSearchWhenAppStarts = false,
+            startSearchWhenResumeFromPaused = false,
+            startSearchWhenUserChangesSport = false,
+            startSearchWhenTrackingStarts = false,
+            context = mockContext
+        )
+        assertEquals("1 search rounds, Disabled auto-search", subtitleDisabled)
+
+        val subtitlePartial = TuningSubtitleFormatter.formatSensorSearchSubtitle(
+            numberOfSearchTries = 2,
+            startSearchWhenAppStarts = false,
+            startSearchWhenResumeFromPaused = true,
+            startSearchWhenUserChangesSport = false,
+            startSearchWhenTrackingStarts = false,
+            context = mockContext
+        )
+        assertEquals("2 search rounds, Active auto-search", subtitlePartial)
+    }
+
+    @Test
+    fun testClusterTuningSubtitle_formatting() {
+        Locale.setDefault(Locale.US)
+        val mockContext = mockk<Context>()
+        every { mockContext.getString(R.string.units_distance_metric) } returns "km"
+        every { mockContext.getString(R.string.units_distance_imperial) } returns "mi"
+
+        val metricSubtitle = TuningSubtitleFormatter.formatClusterTuningSubtitle(
+            endpointTolerance = 200f,
+            apexTolerance = 400f,
+            distanceTolerance = 0.20f,
+            altitudePositionTolerance = 400f,
+            useSportTypeForClustering = true,
+            useAltitudePosForClustering = true,
+            isImperial = false,
+            context = mockContext
+        )
+        assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20% · Alt: 0.400km", metricSubtitle)
+
+        val metricSubtitleNoAlt = TuningSubtitleFormatter.formatClusterTuningSubtitle(
+            endpointTolerance = 200f,
+            apexTolerance = 400f,
+            distanceTolerance = 0.20f,
+            altitudePositionTolerance = 400f,
+            useSportTypeForClustering = true,
+            useAltitudePosForClustering = false,
+            isImperial = false,
+            context = mockContext
+        )
+        assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20%", metricSubtitleNoAlt)
+    }
+
+    @Test
+    fun testTuningSectionEnum_canonicalLifecycleSequence() {
+        val expected = listOf(
+            TuningSection.NAVIGATION,
+            TuningSection.COCKPIT_TYPOGRAPHY,
+            TuningSection.BATTERY_SAVER,
+            TuningSection.SENSORS_GPS,
+            TuningSection.SENSOR_SEARCH,
+            TuningSection.WORKOUT_MASKS_CARDS,
+            TuningSection.ROUTE_CLUSTERING,
+            TuningSection.AFTERMATH_ANALYSIS
+        )
+        assertEquals(expected, TuningSection.values().toList())
     }
 }

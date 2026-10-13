@@ -42,6 +42,7 @@ public class LiveWorkoutSession {
     private final Set<SensorType> sensorsForAverage;
     
     private int stepCounter = 0;
+    private final List<LatLng> rawLatLngs = new ArrayList<>();
     private final List<LatLng> sampledLatLngs = new ArrayList<>();
     private final List<Double> sampledAltitudes = new ArrayList<>();
     private final List<Double> sampledDistances = new ArrayList<>();
@@ -97,6 +98,9 @@ public class LiveWorkoutSession {
      * @return the incremental encoded strings if a point was added, null otherwise.
      */
     public StreamIncrement recordStreamPoint(LatLng latLng, Double altitude, Double distance) {
+        if (latLng != null) {
+            rawLatLngs.add(latLng);
+        }
         stepCounter++;
         if (stepCounter >= WorkoutSummaries.ENCODING_STEP_SIZE) {
             stepCounter = 0;
@@ -158,6 +162,23 @@ public class LiveWorkoutSession {
 
     public List<LatLng> getSampledLatLngs() {
         return sampledLatLngs;
+    }
+
+    /**
+     * Returns a copy of all raw 1 Hz trackpoints collected during the live session.
+     * Used for Douglas-Peucker simplification upon session finalization.
+     */
+    public List<LatLng> getRawLatLngs() {
+        return new ArrayList<>(rawLatLngs);
+    }
+
+    /**
+     * Adds a raw LatLng trackpoint directly.
+     */
+    public void addRawLatLng(LatLng latLng) {
+        if (latLng != null) {
+            rawLatLngs.add(latLng);
+        }
     }
 
     public List<Double> getSampledAltitudes() {

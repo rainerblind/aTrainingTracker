@@ -37,6 +37,7 @@ public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
 
 
     LocationManager mLocationManager;
+    private boolean mUpdatesRegistered = false;
 
     public SpeedAndLocationDevice_GPS(Context context, MySensorManager mySensorManager) {
         super(context, mySensorManager, DeviceType.SPEED_AND_LOCATION_GPS);
@@ -53,12 +54,46 @@ public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
             try {
                 if (mLocationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
                     mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+                    mUpdatesRegistered = true;
                 } else {
                     Log.w(TAG, "GPS location provider is not available on this device");
                     LocationUnavailable();
                 }
             } catch (IllegalArgumentException | SecurityException e) {
                 Log.w(TAG, "Failed to register GPS location updates: " + e.getMessage());
+                LocationUnavailable();
+            }
+        } else {
+            Log.w(TAG, "GPS location provider is not available on this device");
+            LocationUnavailable();
+        }
+    }
+
+    public synchronized boolean isLocationUpdatesRegistered() {
+        return mUpdatesRegistered;
+    }
+
+    @Override
+    public synchronized void checkOrReRegisterLocationUpdates() {
+        if (mUpdatesRegistered) {
+            return;
+        }
+        if (mLocationManager == null) {
+            mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+        }
+        if (mLocationManager != null) {
+            try {
+                if (mLocationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+                    mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+                    mUpdatesRegistered = true;
+                    setLastActive();
+                    if (DEBUG) Log.i(TAG, "checkOrReRegisterLocationUpdates: GPS updates registered successfully");
+                } else {
+                    Log.w(TAG, "GPS location provider is not available on this device");
+                    LocationUnavailable();
+                }
+            } catch (IllegalArgumentException | SecurityException e) {
+                Log.w(TAG, "Failed to re-register GPS location updates: " + e.getMessage());
                 LocationUnavailable();
             }
         } else {
@@ -76,6 +111,7 @@ public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
                 Log.w(TAG, "Failed to remove GPS location updates: " + e.getMessage());
             }
         }
+        mUpdatesRegistered = false;
 
         super.shutDown();
     }
@@ -94,6 +130,7 @@ public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
                 try {
                     if (mLocationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
                         mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, SAMPLING_TIME, MIN_DISTANCE, this);
+                        mUpdatesRegistered = true;
                         // set last active
                         setLastActive();
                     }
@@ -115,6 +152,7 @@ public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
                     Log.w(TAG, "Failed to remove GPS location updates on provider disabled: " + e.getMessage());
                 }
             }
+            mUpdatesRegistered = false;
             LocationUnavailable();
         }
     }

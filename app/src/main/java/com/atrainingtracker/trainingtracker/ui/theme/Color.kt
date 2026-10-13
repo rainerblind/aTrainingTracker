@@ -18,7 +18,11 @@
 
 package com.atrainingtracker.trainingtracker.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 
 object TTAlpha {
     const val High = 1.0f
@@ -109,6 +113,70 @@ val AmoledOutlineVariant = Color(0xFF262626) // Subtle tile divider border (ATT-
 val AmoledOutline = Color(0xFF38383A)
 val AmoledOnSurfaceVariant = Color(0xFF9E9E9E) // Muted grey for labels and units (ATT-1264 / REQ-UI-171)
 
+/**
+ * Semantic Warning Color Tokens for peripheral battery and caution notifications (REQ-UI-356, ATT-3451).
+ * Specifically designed and verified for WCAG 2.1 AAA contrast compliance (> 7:1) in both Light and Dark modes.
+ */
+val LightWarning = Color(0xFFE65100)
+val LightWarningContainer = Color(0xFFFFE082)   // Warm Amber 200
+val LightOnWarningContainer = Color(0xFF3E2723) // Deep Brown (contrast > 10:1 on LightWarningContainer)
+val LightWarningAction = Color(0xFF6D3B00)      // Deep Amber (contrast > 7:1 on LightWarningContainer)
+
+val DarkWarning = Color(0xFFFFB74D)
+val DarkWarningContainer = Color(0xFF4E2C00)    // Deep warm amber-brown
+val DarkOnWarningContainer = Color(0xFFFFE082)  // Soft pale amber (contrast > 9:1 on DarkWarningContainer)
+val DarkWarningAction = Color(0xFFFFD54F)       // Vibrant Amber 300 (contrast > 8:1 on DarkWarningContainer)
+
+/**
+ * Color tuple containing container, content (body text), and action button colors
+ * for battery snackbar presentation in Compose Material 3 (REQ-UI-356, ATT-3451).
+ *
+ * @property containerColor Background tint for the snackbar container.
+ * @property contentColor High-contrast foreground color for text/icons.
+ * @property actionColor High-contrast foreground color for the actionable button text.
+ */
+data class BatterySnackbarColors(
+    val containerColor: Color,
+    val contentColor: Color,
+    val actionColor: Color
+)
+
+/**
+ * Composable color resolver mapping a [WorkoutNavigationEvents.BatteryAlertSeverity]
+ * to high-contrast theme-aware [BatterySnackbarColors] conforming to Material 3 design
+ * guidelines (REQ-UI-356, ATT-3451).
+ *
+ * - [WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL]: Uses errorContainer / onErrorContainer / error.
+ * - [WorkoutNavigationEvents.BatteryAlertSeverity.WARNING]: Uses amber warning tokens with WCAG AAA contrast (> 7:1).
+ *
+ * @param severity The severity tier of the low battery alert.
+ * @return The corresponding [BatterySnackbarColors] tailored to the current dark/light theme.
+ */
+@Composable
+fun getBatterySnackbarColors(severity: WorkoutNavigationEvents.BatteryAlertSeverity): BatterySnackbarColors {
+    val isDark = isSystemInDarkTheme()
+    return when (severity) {
+        WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL -> BatterySnackbarColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            actionColor = MaterialTheme.colorScheme.error
+        )
+        WorkoutNavigationEvents.BatteryAlertSeverity.WARNING -> if (isDark) {
+            BatterySnackbarColors(
+                containerColor = DarkWarningContainer,
+                contentColor = DarkOnWarningContainer,
+                actionColor = DarkWarningAction
+            )
+        } else {
+            BatterySnackbarColors(
+                containerColor = LightWarningContainer,
+                contentColor = LightOnWarningContainer,
+                actionColor = LightWarningAction
+            )
+        }
+    }
+}
+
 
 
 object TTColor {
@@ -129,8 +197,10 @@ object TTColor {
     val ConnectionStatusGreen = Color(0xFF4CAF50)
 
     // Route Visualization
-    val RouteSelected = Color(0xFF228B22) // ForestGreen
-    val RouteUnselected = Color(0xFF90EE90) // LightGreen
+    val RouteSelected = Color(0xFF1565C0) // Material Blue 800 (Royal Blue)
+    val RouteUnselected = Color(0xFF90CAF9) // Material Blue 200 (Soft Steel Blue)
+    val RouteActiveNavigation = Color(0xFF1E88E5) // Material Blue 600 (Vibrant Sapphire Blue for actively navigated routes)
+    val RouteActiveNavigationOverlay = Color(0xFF0D47A1) // Material Blue 900 (Deep Midnight Navy for active route dashed overlay)
 
     // Spatial Signature Points
     val StartPoint = Color(0xFF2E7D32) // Material Green 800

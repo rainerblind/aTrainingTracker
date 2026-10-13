@@ -35,16 +35,27 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
+import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
@@ -91,6 +102,7 @@ fun MapScreenWithTrack(
     val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
     val liveSegments by viewModel.liveSegments.collectAsStateWithLifecycle()
     val allRoutes by viewModel.allRoutes.collectAsStateWithLifecycle()
+    val enabledLayers by viewModel.enabledLayers.collectAsStateWithLifecycle()
 
     // The ID of the segment/route/location currently being "peeked"
     var selectedSegmentId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -252,35 +264,126 @@ fun MapScreenWithTrack(
                 }
             }
         ) { innerPadding ->
-            ATrainingTrackerMap(
-                zoomFocus = if (initialBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.LOCAL_SEGMENTS,
-                initialBounds = initialBounds,
-                bSportType = uiState.bSportType,
-                currentLocationFlow = MutableStateFlow(currentLocation),
-                onMapClick = {
-                    selectedSegmentId = null
-                    selectedRouteId = null
-                    selectedLocationId = null
-                },
-                modifier = Modifier.fillMaxSize()
-            ) {
-                knownLocations(displayLocations, onLocationClick = { id ->
-                    selectedSegmentId = null
-                    selectedRouteId = null
-                    selectedLocationId = id
-                })
-                segments(uiState.segments, onSegmentClick = { id ->
-                    selectedRouteId = null
-                    selectedLocationId = null
-                    selectedSegmentId = id
-                })
-                routes(uiState.routes, onRouteClick = { id ->
-                    selectedSegmentId = null
-                    selectedLocationId = null
-                    selectedRouteId = id
-                })
-                markers(uiState.markers)
-                liveTrack(uiState.currentTrack)
+            Box(modifier = Modifier.fillMaxSize()) {
+                ATrainingTrackerMap(
+                    zoomFocus = if (initialBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.LOCAL_SEGMENTS,
+                    initialBounds = initialBounds,
+                    bSportType = uiState.bSportType,
+                    currentLocationFlow = MutableStateFlow(currentLocation),
+                    onMapClick = {
+                        selectedSegmentId = null
+                        selectedRouteId = null
+                        selectedLocationId = null
+                    },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    if (GeneralMapLayer.KNOWN_LOCATIONS in enabledLayers) {
+                        knownLocations(displayLocations, onLocationClick = { id ->
+                            selectedSegmentId = null
+                            selectedRouteId = null
+                            selectedLocationId = id
+                        })
+                    }
+                    if (GeneralMapLayer.SEGMENTS in enabledLayers) {
+                        segments(uiState.segments, onSegmentClick = { id ->
+                            selectedRouteId = null
+                            selectedLocationId = null
+                            selectedSegmentId = id
+                        })
+                    }
+                    if (GeneralMapLayer.ROUTES in enabledLayers) {
+                        routes(uiState.routes, onRouteClick = { id ->
+                            selectedSegmentId = null
+                            selectedLocationId = null
+                            selectedRouteId = id
+                        })
+                    }
+                    if (GeneralMapLayer.TRACK in enabledLayers) {
+                        markers(uiState.markers)
+                        liveTrack(uiState.currentTrack)
+                    }
+                }
+
+                // Floating Layers Button & DropdownMenu (REQ-UI-322)
+                var showLayersMenu by remember { mutableStateOf(false) }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(top = 16.dp, end = 16.dp)
+                ) {
+                    Surface(
+                        onClick = { showLayersMenu = true },
+                        modifier = Modifier.size(44.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                        shadowElevation = 6.dp,
+                        tonalElevation = 2.dp
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            val anyLayerDisabled = enabledLayers.size < GeneralMapLayer.entries.size
+                            Icon(
+                                imageVector = Icons.Default.Layers,
+                                contentDescription = stringResource(R.string.map_layers),
+                                modifier = Modifier.size(22.dp),
+                                tint = if (anyLayerDisabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = showLayersMenu,
+                        onDismissRequest = { showLayersMenu = false }
+                    ) {
+                        GeneralMapLayer.entries.forEach { layer ->
+                            val (layerName, layerColor) = when (layer) {
+                                GeneralMapLayer.ROUTES -> Pair(
+                                    stringResource(R.string.map_layer_routes),
+                                    TTColor.RouteSelected
+                                )
+                                GeneralMapLayer.SEGMENTS -> Pair(
+                                    stringResource(R.string.map_layer_segments),
+                                    TTColor.StravaOrange
+                                )
+                                GeneralMapLayer.KNOWN_LOCATIONS -> Pair(
+                                    stringResource(R.string.map_layer_locations),
+                                    MaterialTheme.colorScheme.tertiary
+                                )
+                                GeneralMapLayer.TRACK -> Pair(
+                                    stringResource(R.string.map_layer_track),
+                                    TrackType.BEST.color
+                                )
+                            }
+
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Checkbox(
+                                            checked = layer in enabledLayers,
+                                            onCheckedChange = null
+                                        )
+                                        Surface(
+                                            modifier = Modifier.size(12.dp),
+                                            color = layerColor,
+                                            shape = RoundedCornerShape(2.dp)
+                                        ) {}
+                                        Text(
+                                            text = layerName,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    viewModel.toggleLayer(layer)
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
     }

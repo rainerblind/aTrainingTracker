@@ -42,8 +42,15 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import com.atrainingtracker.trainingtracker.database.RouteSource
+import com.atrainingtracker.trainingtracker.database.RouteSummary
+import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -65,6 +72,8 @@ class MapFragmentWithTrackViewModelTest {
     private val fakeLocationsFlow = MutableStateFlow<List<KnownLocationItem>>(emptyList())
     private val fakeSportTypeFlow = MutableStateFlow(BSportType.UNKNOWN)
     private val fakeCurrentTrackFlow = MutableStateFlow<List<LatLng>>(emptyList())
+    private val fakeRoutesFlow = MutableStateFlow<List<com.atrainingtracker.trainingtracker.database.RouteWithPath>>(emptyList())
+    private val fakeActiveNavigatedRouteIdFlow = MutableStateFlow<Long?>(null)
 
     @Before
     fun setUp() {
@@ -80,7 +89,8 @@ class MapFragmentWithTrackViewModelTest {
         every { mockBanalRepository.currentTrack } returns fakeCurrentTrackFlow
         every { mockBanalRepository.currentLocation } returns MutableStateFlow(null)
         every { mockSegmentsRepository.allSegmentsWithPath } returns MutableStateFlow(emptyList())
-        every { mockRoutesRepository.allRoutes } returns MutableStateFlow(emptyList())
+        every { mockRoutesRepository.allRoutes } returns fakeRoutesFlow
+        every { mockRoutesRepository.activeNavigatedRouteId } returns fakeActiveNavigatedRouteIdFlow
     }
 
     @After
@@ -156,5 +166,71 @@ class MapFragmentWithTrackViewModelTest {
         coVerify(exactly = 1) {
             mockKnownLocationsRepository.updateLocation(42L, "Trailhead", 550.0, 300, ElevationSource.MANUAL_USER)
         }
+    }
+
+    /**
+     * Verifies that when a route is actively navigated (activeNavigatedRouteId matches route summary id),
+     * uiState.routes maps that route with isActiveNavigation = true (prominent width and solid pattern),
+     * while other selected routes remain passive (standard width and dashed pattern).
+     *
+     * Traceability: REQ-MAP-040, TST-MAP-042 (ATT-2940).
+     */
+    @Test
+    fun testUiState_mapsActiveNavigatedRouteWithProminence() = runTest {
+        val samplePath = listOf(
+            PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.0), altitude = 500.0),
+            PathPoint(distance = 100.0, latLng = LatLng(48.001, 11.001), altitude = 505.0)
+        )
+        val routeActive = RouteWithPath(
+            summary = RouteSummary(
+                id = 101L,
+                externalId = "ext_101",
+                name = "Active Route",
+                description = "Active route description",
+                isSelected = true,
+                distance = 5000.0,
+                elevationGain = 200.0,
+                bSportType = BSportType.BIKE,
+                source = RouteSource.LOCAL_GPX
+            ),
+            path = samplePath
+        )
+        val routePassive = RouteWithPath(
+            summary = RouteSummary(
+                id = 102L,
+                externalId = "ext_102",
+                name = "Passive Route",
+                description = "Passive route description",
+                isSelected = true,
+                distance = 3000.0,
+                elevationGain = 100.0,
+                bSportType = BSportType.BIKE,
+                source = RouteSource.LOCAL_GPX
+            ),
+            path = samplePath
+        )
+
+        fakeRoutesFlow.value = listOf(routeActive, routePassive)
+        fakeActiveNavigatedRouteIdFlow.value = 101L
+
+        val viewModel = createViewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val uiRoutes = viewModel.uiState.value.routes
+        assertEquals(2, uiRoutes.size)
+
+        val activeMapRoute = uiRoutes.first { it.id == 101L }
+        assertTrue("Actively navigated route must have isActiveNavigation = true", activeMapRoute.isActiveNavigation)
+        assertEquals(26f, activeMapRoute.width, 0.001f)
+        assertNull("Actively navigated route must have null pattern (solid line)", activeMapRoute.pattern)
+
+        val passiveMapRoute = uiRoutes.first { it.id == 102L }
+        assertFalse("Passive route must have isActiveNavigation = false", passiveMapRoute.isActiveNavigation)
+        assertEquals(10f, passiveMapRoute.width, 0.001f)
+        assertNotNull("Passive route must retain dash pattern", passiveMapRoute.pattern)
     }
 }

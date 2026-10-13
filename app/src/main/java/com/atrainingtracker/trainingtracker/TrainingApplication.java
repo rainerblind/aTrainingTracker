@@ -111,6 +111,14 @@ public class TrainingApplication extends Application {
     //    protected static final String SP_DROPBOX_KEY       = "dropboxKey";
 //    protected static final String SP_DROPBOX_SECRET    = "dropboxSecret";
     public static final String SP_UPLOAD_TO_DROPBOX = "uploadToDropbox";
+    public static final String SP_UPLOAD_TO_GOOGLE_DRIVE = "uploadToGoogleDrive";
+    public static final String SP_UPLOAD_WORKOUTS_TO_GOOGLE_DRIVE = "uploadWorkoutsToGoogleDrive";
+    public static final String SP_UPLOAD_BACKUP_TO_GOOGLE_DRIVE = "uploadBackupToGoogleDrive";
+    public static final String SP_GOOGLE_DRIVE_ONLY_WIFI = "googleDriveOnlyWifi";
+    public static final String SP_GOOGLE_DRIVE_ACCOUNT_EMAIL = "googleDriveAccountEmail";
+    public static final String SP_GOOGLE_DRIVE_AUTH_TOKEN = "googleDriveAuthToken";
+    public static final String SP_GOOGLE_DRIVE_LAST_SYNC = "googleDriveLastSync";
+    public static final String SP_GOOGLE_DRIVE_LAST_SYNC_STATUS = "googleDriveLastSyncStatus";
     public static final String PREFERENCE_SCREEN_STRAVA = "psUploadToStrava";
     public static final String SP_UPLOAD_TO_STRAVA = "uploadToStrava";
     public static final String SP_IMPORT_TCX_UPLOAD_TO_STRAVA = "import_tcx_upload_to_strava";
@@ -148,6 +156,7 @@ public class TrainingApplication extends Application {
     public static final String SP_EXPORT_GPX = "export_gpx";
     public static final String SP_EXPORT_CSV = "export_csv";
     public static final String SP_EXPORT_GC_JSON = "export_gcjson";
+    public static final String SP_EXPORT_FIT = "export_fit";
     public static final String SP_CHECK_ANT_INSTALLATION = "checkANTInstallation";
     public static final String MIN_WALK_SPEED = "minWalkSpeed";
     public static final String MAX_WALK_SPEED = "maxWalkSpeed";
@@ -167,6 +176,7 @@ public class TrainingApplication extends Application {
     protected static final String NOTIFICATION_CHANNEL__TRACKING = "NOTIFICATION_CHANNEL__TRACKING";
     public static final String NOTIFICATION_CHANNEL__TRACKING_2 = "NOTIFICATION_CHANNEL__TRACKING_2";
     public static final String NOTIFICATION_CHANNEL__EXPORT = "NOTIFICATION_CHANNEL__EXPORT";
+    public static final String NOTIFICATION_CHANNEL__SENSOR_BATTERY = "NOTIFICATION_CHANNEL__SENSOR_BATTERY";
     public static final int TRACKING_NOTIFICATION_ID = 1;
 
     public static final double DISTANCE_TO_MAX_THRESHOLD_FOR_TRAINER = 200;
@@ -650,6 +660,99 @@ public class TrainingApplication extends Application {
     }
 
     /*
+     * Google Drive helpers
+     */
+    public static boolean uploadToGoogleDrive() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, false);
+    }
+
+    public static void setUploadToGoogleDrive(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, value).apply();
+    }
+
+    public static boolean uploadWorkoutsToGoogleDrive() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_UPLOAD_WORKOUTS_TO_GOOGLE_DRIVE, true);
+    }
+
+    public static void setUploadWorkoutsToGoogleDrive(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_WORKOUTS_TO_GOOGLE_DRIVE, value).apply();
+    }
+
+    public static boolean uploadBackupToGoogleDrive() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_UPLOAD_BACKUP_TO_GOOGLE_DRIVE, true);
+    }
+
+    public static void setUploadBackupToGoogleDrive(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_BACKUP_TO_GOOGLE_DRIVE, value).apply();
+    }
+
+    public static boolean uploadToGoogleDriveOnlyOnWifi() {
+        if (cSharedPreferences == null) return true;
+        return cSharedPreferences.getBoolean(SP_GOOGLE_DRIVE_ONLY_WIFI, true);
+    }
+
+    public static void setUploadToGoogleDriveOnlyOnWifi(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_GOOGLE_DRIVE_ONLY_WIFI, value).apply();
+    }
+
+    public static void storeGoogleDriveCredential(String email, String token) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit()
+                .putString(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL, email)
+                .putString(SP_GOOGLE_DRIVE_AUTH_TOKEN, token)
+                .putBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, true)
+                .apply();
+    }
+
+    public static String getGoogleDriveAccountEmail() {
+        if (cSharedPreferences == null) return null;
+        String email = cSharedPreferences.getString(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL, null);
+        return (email == null || email.trim().isEmpty()) ? null : email;
+    }
+
+    public static String getGoogleDriveAuthToken() {
+        if (cSharedPreferences == null) return null;
+        String token = cSharedPreferences.getString(SP_GOOGLE_DRIVE_AUTH_TOKEN, null);
+        return (token == null || token.trim().isEmpty()) ? null : token;
+    }
+
+    public static void deleteGoogleDriveCredential() {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit()
+                .remove(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL)
+                .remove(SP_GOOGLE_DRIVE_AUTH_TOKEN)
+                .putBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, false)
+                .apply();
+    }
+
+    public static long getGoogleDriveLastSyncTimestamp() {
+        if (cSharedPreferences == null) return 0L;
+        return cSharedPreferences.getLong(SP_GOOGLE_DRIVE_LAST_SYNC, 0L);
+    }
+
+    public static void setGoogleDriveLastSyncTimestamp(long timestamp) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putLong(SP_GOOGLE_DRIVE_LAST_SYNC, timestamp).apply();
+    }
+
+    public static String getGoogleDriveLastSyncStatus() {
+        if (cSharedPreferences == null) return null;
+        return cSharedPreferences.getString(SP_GOOGLE_DRIVE_LAST_SYNC_STATUS, null);
+    }
+
+    public static void setGoogleDriveLastSyncStatus(String status) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putString(SP_GOOGLE_DRIVE_LAST_SYNC_STATUS, status).apply();
+    }
+
+    /*
      * Strava helpers
      */
     public static boolean uploadToStrava() {
@@ -680,7 +783,8 @@ public class TrainingApplication extends Application {
         if (cSharedPreferences == null) {
             return null;
         }
-        return cSharedPreferences.getString(SP_STRAVA_TOKEN, null);
+        String token = cSharedPreferences.getString(SP_STRAVA_TOKEN, null);
+        return (token == null || token.isEmpty()) ? null : token;
     }
 
     public static void setStravaAccessToken(String token) {
@@ -975,6 +1079,14 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putBoolean(SP_EXPORT_GC_JSON, value).apply();
     }
 
+    public static boolean exportToFIT() {
+        return cSharedPreferences.getBoolean(SP_EXPORT_FIT, false);
+    }
+
+    public static void setExportToFIT(boolean value) {
+        cSharedPreferences.edit().putBoolean(SP_EXPORT_FIT, value).apply();
+    }
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     public static boolean exportToFile(@NonNull FileFormat fileFormat) {
@@ -983,6 +1095,7 @@ public class TrainingApplication extends Application {
             case GC -> exportToGCJson();
             case TCX -> exportToTCX();
             case GPX -> exportToGPX();
+            case FIT -> exportToFIT();
             case STRAVA -> uploadToStrava();
             /* case RUNKEEPER:
                 return uploadToRunKeeper(); */
@@ -1303,15 +1416,18 @@ public class TrainingApplication extends Application {
         Toast.makeText(context, "TODO: " + text, Toast.LENGTH_SHORT).show();
     }
 
-    // TODO: Note that here notifyTrackingStateChanged is not called!
     public void setTracking() {
         cTrackingMode = TrackingMode.TRACKING;
+        notifyTrackingStateChanged();
     }
 
 
     /***********************************************************************************************/
     /*  Broadcast Receivers for handling the tracking state                                        */
     protected void startTracking() {
+        // ATT-3045: Ensure location devices are checked/initialized defensively when starting tracking
+        BANALService.checkOrInitializeLocationDevices();
+
         if (!cResumeFromCrash) {
             sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
                     .setPackage(getPackageName()));
@@ -1432,6 +1548,12 @@ public class TrainingApplication extends Application {
                 getString(R.string.notification_channel_name__export),
                 NotificationManager.IMPORTANCE_LOW);
         channel.setDescription(getString(R.string.notification_channel_description__export));
+        notificationManager.createNotificationChannel(channel);
+
+        channel = new NotificationChannel(NOTIFICATION_CHANNEL__SENSOR_BATTERY,
+                getString(R.string.notification_channel_name__sensor_battery),
+                NotificationManager.IMPORTANCE_DEFAULT);
+        channel.setDescription(getString(R.string.notification_channel_description__sensor_battery));
         notificationManager.createNotificationChannel(channel);
     }
 

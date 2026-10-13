@@ -22,20 +22,26 @@ import android.content.Context
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.climbs.ClimbDetector
+import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
+import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaRoute
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaStream
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,14 +62,28 @@ import okhttp3.Request
  */
 class RoutesRepository internal constructor(
     private val context: Context,
-    private val routesDb: RoutesDatabaseManager
+    private val routesDb: RoutesDatabaseManager,
+    private val climbsDb: ClimbsDatabaseManager,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
-    private constructor(context: Context) : this(
-        context.applicationContext,
-        RoutesDatabaseManager.getInstance(context.applicationContext)
+    internal constructor(
+        context: Context,
+        routesDb: RoutesDatabaseManager
+    ) : this(
+        context,
+        routesDb,
+        ClimbsDatabaseManager.getInstance(context.applicationContext),
+        Dispatchers.IO
     )
 
-    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private constructor(context: Context) : this(
+        context.applicationContext,
+        RoutesDatabaseManager.getInstance(context.applicationContext),
+        ClimbsDatabaseManager.getInstance(context.applicationContext),
+        Dispatchers.IO
+    )
+
+    private val repositoryScope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val syncMutex = Mutex()
 
     // StateFlow for the UI to observe the list of routes
@@ -73,6 +93,24 @@ class RoutesRepository internal constructor(
     // StateFlow to track active route synchronization (ATT-1230)
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+    // StateFlow to track actively navigated route ID (REQ-MAP-023 / ATT-1841)
+    private val _activeNavigatedRouteId = MutableStateFlow<Long?>(null)
+    val activeNavigatedRouteId: StateFlow<Long?> = _activeNavigatedRouteId.asStateFlow()
+
+    // StateFlow to track whether the active route was selected automatically (ATT-3326)
+    private val _isRouteAutoSelected = MutableStateFlow(false)
+    val isRouteAutoSelected: StateFlow<Boolean> = _isRouteAutoSelected.asStateFlow()
+
+    /**
+     * Sets or clears the actively navigated route.
+     * When set, this route is visually highlighted with high prominence and directional chevrons.
+     * [isAutoSelected] indicates whether the route was bound automatically (e.g. at a trail fork).
+     */
+    fun setActiveNavigatedRoute(routeId: Long?, isAutoSelected: Boolean = false) {
+        _activeNavigatedRouteId.value = routeId
+        _isRouteAutoSelected.value = if (routeId != null) isAutoSelected else false
+    }
 
     init {
         // Prune any expired cached Strava routes on initialization (Section 6.2 compliance)
@@ -92,13 +130,31 @@ class RoutesRepository internal constructor(
     }
 
     /**
+     * Enriches a route with its climbs from ClimbsDatabaseManager, falling back
+     * to on-the-fly detection via ClimbDetector if no climbs are stored (REQ-UI-274).
+     */
+    private suspend fun enrichRouteWithClimbs(route: RouteWithPath): RouteWithPath {
+        var climbs = climbsDb.getClimbsForRoute(route.summary.id)
+        if (climbs.isEmpty() && route.path.size >= 2) {
+            val detected = ClimbDetector.detectClimbs(route.path, routeId = route.summary.id)
+            if (detected.isNotEmpty()) {
+                climbsDb.insertClimbsWithDeduplicationBatch(detected)
+                climbs = detected
+            }
+        }
+        return route.copy(climbs = climbs)
+    }
+
+    /**
      * Refreshes both flows from the database.
      * This is called automatically after any DB modification.
      */
     fun refreshRoutes() {
         repositoryScope.launch {
-            // Fetch summaries for the list view
-            _allRoutes.value = routesDb.getAllRoutes()
+            // Fetch summaries for the list view and enrich with climbs (REQ-UI-274)
+            val routes = routesDb.getAllRoutes()
+            val enriched = routes.map { enrichRouteWithClimbs(it) }
+            _allRoutes.value = enriched
         }
     }
 
@@ -113,7 +169,14 @@ class RoutesRepository internal constructor(
      * Fetches a route by its linked cluster ID.
      */
     suspend fun getRouteByClusterId(clusterId: Long): RouteWithPath? = withContext(Dispatchers.IO) {
-        routesDb.getRouteByClusterId(clusterId)
+        routesDb.getRouteByClusterId(clusterId)?.let { enrichRouteWithClimbs(it) }
+    }
+
+    /**
+     * Fetches a route by its database ID.
+     */
+    suspend fun getRouteById(routeId: Long): RouteWithPath? = withContext(Dispatchers.IO) {
+        routesDb.getRouteById(routeId)?.let { enrichRouteWithClimbs(it) }
     }
 
     /**
@@ -139,13 +202,17 @@ class RoutesRepository internal constructor(
     }
 
     /**
-     * Inserts a new route (from GPX import or API) and refreshes the flow.
+     * Inserts a new route (from GPX/TCX import or API) and refreshes the flow.
      */
-    suspend fun insertRoute(summary: RouteSummary, path: List<PathPoint>): Long = withContext(Dispatchers.IO) {
-        val newId = routesDb.insertRoute(summary, path)
+    suspend fun insertRoute(
+        summary: RouteSummary,
+        path: List<PathPoint>,
+        waypoints: List<RouteWaypoint> = emptyList()
+    ): Long = withContext(Dispatchers.IO) {
+        val newId = routesDb.insertRoute(summary, path, waypoints)
         
         // Seed the cluster database (SCRUM-207)
-        val routeWithPath = RouteWithPath(summary.copy(id = newId), path)
+        val routeWithPath = RouteWithPath(summary.copy(id = newId), path, waypoints)
         val clusterId = WorkoutClusterEngine.getInstance(context)
             .learnFromRoute(routeWithPath)
 
@@ -154,8 +221,43 @@ class RoutesRepository internal constructor(
             routesDb.updateRouteSummary(summary.copy(id = newId, clusterId = clusterId))
         }
 
+        // Detect and persist climbs (ATT-1281 / REQ-MAP-027)
+        try {
+            val detectedClimbs = ClimbDetector.detectClimbs(path, routeId = newId)
+            if (detectedClimbs.isNotEmpty()) {
+                ClimbsDatabaseManager.getInstance(context).insertClimbsWithDeduplicationBatch(detectedClimbs)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to extract climbs for route $newId", e)
+        }
+
         refreshRoutes() // Notify observers that a new route is available
         newId
+    }
+
+    /**
+     * Retrieves all waypoints for a specific route ID.
+     */
+    suspend fun getWaypointsForRoute(routeId: Long): List<RouteWaypoint> = withContext(Dispatchers.IO) {
+        routesDb.getWaypointsForRoute(routeId)
+    }
+
+    /**
+     * Retrieves all climbs for a specific route ID (REQ-MAP-027, REQ-UI-274).
+     */
+    suspend fun getClimbsForRoute(routeId: Long): List<Climb> = withContext(Dispatchers.IO) {
+        var climbs = climbsDb.getClimbsForRoute(routeId)
+        if (climbs.isEmpty()) {
+            val path = routesDb.getRoutePath(routeId)
+            if (path.size >= 2) {
+                val detected = ClimbDetector.detectClimbs(path, routeId = routeId)
+                if (detected.isNotEmpty()) {
+                    climbsDb.insertClimbsWithDeduplicationBatch(detected)
+                    climbs = detected
+                }
+            }
+        }
+        climbs
     }
 
     /**
@@ -334,6 +436,16 @@ class RoutesRepository internal constructor(
                     if (clusterId != -1L) {
                         routesDb.updateRouteSummary(summary.copy(id = newId, clusterId = clusterId))
                     }
+
+                    // Detect and persist climbs for Strava route (ATT-1281 / REQ-MAP-027)
+                    try {
+                        val detectedClimbs = ClimbDetector.detectClimbs(pathPoints, routeId = newId)
+                        if (detectedClimbs.isNotEmpty()) {
+                            ClimbsDatabaseManager.getInstance(context).insertClimbsWithDeduplicationBatch(detectedClimbs)
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to extract climbs for Strava route $newId", e)
+                    }
                 }
 
                 // 4b. Prune orphan Strava routes that were deleted or unstarred on Strava
@@ -433,7 +545,10 @@ class RoutesRepository internal constructor(
         return@withContext pathPoints
     }
 
-
+    @androidx.annotation.VisibleForTesting
+    fun cancelScope() {
+        repositoryScope.cancel()
+    }
 
     companion object {
         private val TAG = RoutesRepository::class.java.simpleName
@@ -449,6 +564,7 @@ class RoutesRepository internal constructor(
 
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: RoutesRepository? = null) {
+            instance?.repositoryScope?.cancel()
             instance = newInstance
         }
     }

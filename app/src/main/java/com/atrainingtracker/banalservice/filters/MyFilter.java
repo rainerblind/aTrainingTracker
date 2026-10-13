@@ -44,4 +44,12 @@ public abstract class MyFilter<T>
         T filteredValue = getFilteredValue();
         return new FilteredSensorData(mSensorType, filteredValue, mSensorType.getMyFormatter().format(filteredValue), mDeviceName, getFilterType(), getFilterConstant());
     }
+
+    /**
+     * Resets filter internal state, sample buffers, and accumulators (REQ-FIL-013).
+     * Default implementation is a no-op for stateless filters.
+     */
+    public void reset() {
+        // Default no-op for stateless filters (e.g. InstantaneousFilter)
+    }
 }

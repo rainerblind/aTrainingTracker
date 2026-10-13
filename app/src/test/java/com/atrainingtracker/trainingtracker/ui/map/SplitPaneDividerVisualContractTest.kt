@@ -127,17 +127,17 @@ class SplitPaneDividerVisualContractTest {
     }
 
     @Test
-    fun testMapDetailLayout_preservesRoutesAndSegmentsWithoutSplitter() {
+    fun testMapDetailLayout_gatesSplitterOnLowerSection() {
         assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
         val content = mapDetailLayoutFile.readText()
 
         assertTrue(
-            "MapDetailLayout must conditionally render splitter only when showMap && hasScrollableContent",
-            content.contains("if (showMap && hasScrollableContent)")
+            "MapDetailLayout must conditionally render splitter when showMap && hasLowerSection (REQ-UI-267)",
+            content.contains("if (showMap && hasLowerSection)") || content.contains("if (showMap && hasScrollableContent)")
         )
 
         assertTrue(
-            "MapDetailLayout must retain wrapContentHeight for routes and segments",
+            "MapDetailLayout must retain wrapContentHeight for compact bottom sheets (LiveSegmentSheet)",
             content.contains(".wrapContentHeight()")
         )
     }

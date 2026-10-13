@@ -40,6 +40,12 @@ public class AverageFilter extends MyFilter<Number> {
     }
 
     @Override
+    public synchronized void reset() {
+        mAccumulatedValue = 0;
+        mNumberOfSamples = 0;
+    }
+
+    @Override
     public synchronized void newValue(Number value) {
         if (value != null && !TrainingApplication.isPaused()) {
             mAccumulatedValue += value.doubleValue();

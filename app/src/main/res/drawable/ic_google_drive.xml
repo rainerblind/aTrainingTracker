@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Google Drive Brand Triangle Vector -->
+    <!-- Yellow top segment -->
+    <path
+        android:fillColor="#FFBA00"
+        android:pathData="M8.01,2.02L15.99,2.02L22.25,12.87L14.27,12.87Z" />
+    <!-- Blue bottom segment -->
+    <path
+        android:fillColor="#2684FC"
+        android:pathData="M14.27,12.87L22.25,12.87L18.26,19.78L10.28,19.78Z" />
+    <!-- Green left segment -->
+    <path
+        android:fillColor="#00AC47"
+        android:pathData="M1.75,12.87L5.74,5.97L13.72,19.78L9.73,19.78Z" />
+</vector>

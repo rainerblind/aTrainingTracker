@@ -34,6 +34,7 @@ fun ExportSettingsDialog(
     var exportGpx by remember { mutableStateOf(TrainingApplication.exportToGPX()) }
     var exportGcJson by remember { mutableStateOf(TrainingApplication.exportToGCJson()) }
     var exportCsv by remember { mutableStateOf(TrainingApplication.exportToCSV()) }
+    var exportFit by remember { mutableStateOf(TrainingApplication.exportToFIT()) }
 
     AppBottomSheetContent(
         title = stringResource(R.string.prefs_Export),
@@ -46,6 +47,7 @@ fun ExportSettingsDialog(
                     TrainingApplication.setExportToGPX(exportGpx)
                     TrainingApplication.setExportToGCJson(exportGcJson)
                     TrainingApplication.setExportToCSV(exportCsv)
+                    TrainingApplication.setExportToFIT(exportFit)
                     onDismiss()
                 },
                 onCancel = onDismiss,
@@ -76,6 +78,11 @@ fun ExportSettingsDialog(
                 label = "CSV",
                 isChecked = exportCsv,
                 onCheckedChange = { exportCsv = it }
+            )
+            ExportOptionToggle(
+                label = "FIT",
+                isChecked = exportFit,
+                onCheckedChange = { exportFit = it }
             )
         }
     }

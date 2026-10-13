@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui
 
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarVisuals
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import kotlinx.coroutines.channels.BufferOverflow
@@ -37,8 +39,8 @@ object WorkoutNavigationEvents {
     )
     val navigateToEdit = _navigateToEdit.asSharedFlow()
 
-    @JvmStatic
-    val navigateToEditLiveData: LiveData<Long?> = _navigateToEdit.asLiveData()
+    @get:JvmStatic
+    val navigateToEditLiveData: LiveData<Long?> by lazy { _navigateToEdit.asLiveData() }
 
     @JvmStatic
     fun triggerEdit(workoutId: Long) {
@@ -56,8 +58,8 @@ object WorkoutNavigationEvents {
     )
     val navigateToCluster = _navigateToCluster.asSharedFlow()
 
-    @JvmStatic
-    val navigateToClusterLiveData: LiveData<Long?> = _navigateToCluster.asLiveData()
+    @get:JvmStatic
+    val navigateToClusterLiveData: LiveData<Long?> by lazy { _navigateToCluster.asLiveData() }
 
     /**
      * Triggers navigation to the cluster detail heatmap screen for [clusterId].
@@ -73,5 +75,81 @@ object WorkoutNavigationEvents {
     @JvmStatic
     fun resetCluster() {
         _navigateToCluster.tryEmit(null)
+    }
+
+    private val _navigateToWorkout = MutableSharedFlow<Long?>(
+        replay = 1, // Sticky event
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val navigateToWorkout = _navigateToWorkout.asSharedFlow()
+
+    @get:JvmStatic
+    val navigateToWorkoutLiveData: LiveData<Long?> by lazy { _navigateToWorkout.asLiveData() }
+
+    /**
+     * Triggers navigation and focus to the workout item with [workoutId] in the workouts list (ATT-2337 / REQ-MIG-032).
+     */
+    @JvmStatic
+    fun triggerNavigateToWorkout(workoutId: Long) {
+        _navigateToWorkout.tryEmit(workoutId)
+    }
+
+    /**
+     * Clears the active workout navigation event after consumption (REQ-MIG-032).
+     */
+    @JvmStatic
+    fun resetNavigateToWorkout() {
+        _navigateToWorkout.tryEmit(null)
+    }
+
+    /**
+     * Severity tiers for low peripheral sensor battery alerts (REQ-UI-356, ATT-3451).
+     */
+    enum class BatteryAlertSeverity {
+        WARNING,  // <= 20% and > 10%
+        CRITICAL  // <= 10%
+    }
+
+    /**
+     * Encapsulates low peripheral sensor battery warning data (ATT-2192, ATT-3451).
+     */
+    data class LowBatteryAlert(
+        val message: String,
+        val deviceNames: List<String> = emptyList(),
+        val severity: BatteryAlertSeverity = BatteryAlertSeverity.WARNING,
+        val lowestBatteryPercentage: Int? = null
+    )
+
+    /**
+     * Typed Material 3 SnackbarVisuals implementation carrying battery alert severity (REQ-UI-356, ATT-3451).
+     */
+    data class BatterySnackbarVisuals(
+        override val message: String,
+        override val actionLabel: String?,
+        override val withDismissAction: Boolean = false,
+        override val duration: SnackbarDuration = SnackbarDuration.Long,
+        val severity: BatteryAlertSeverity = BatteryAlertSeverity.WARNING
+    ) : SnackbarVisuals
+
+    private val _lowBatteryAlert = MutableSharedFlow<LowBatteryAlert?>(
+        replay = 1, // Sticky event
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val lowBatteryAlert = _lowBatteryAlert.asSharedFlow()
+
+    /**
+     * Triggers a low sensor battery alert across the application.
+     */
+    @JvmStatic
+    fun triggerLowBatteryAlert(alert: LowBatteryAlert) {
+        _lowBatteryAlert.tryEmit(alert)
+    }
+
+    /**
+     * Clears the active low sensor battery alert after consumption.
+     */
+    @JvmStatic
+    fun consumeLowBatteryAlert() {
+        _lowBatteryAlert.tryEmit(null)
     }
 }

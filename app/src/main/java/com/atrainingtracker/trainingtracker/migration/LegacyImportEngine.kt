@@ -30,6 +30,7 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
@@ -41,6 +42,8 @@ import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.dropbox.core.DbxRequestConfig
 import com.dropbox.core.v2.DbxClientV2
+import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClient
+import com.atrainingtracker.trainingtracker.cloud.googledrive.DriveFileEntry
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.CoroutineScope
@@ -50,6 +53,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.xmlpull.v1.XmlPullParser
+import com.garmin.fit.Decode
+import com.garmin.fit.MesgBroadcaster
+import com.garmin.fit.FileIdMesg
+import com.garmin.fit.FileIdMesgListener
+import com.garmin.fit.SessionMesg
+import com.garmin.fit.SessionMesgListener
+import com.garmin.fit.LapMesg
+import com.garmin.fit.LapMesgListener
+import com.garmin.fit.RecordMesg
+import com.garmin.fit.RecordMesgListener
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -88,6 +101,17 @@ object LegacyImportEngine {
         DUPLICATE_SKIPPED,
         FAILED
     }
+
+    /**
+     * Enriched result of an activity file import operation (REQ-MIG-032).
+     *
+     * @property status The execution status of the import attempt.
+     * @property workoutId The primary key ID of the created workout in [WorkoutSummaries.TABLE] if successful.
+     */
+    data class ImportResult(
+        val status: ImportStatus,
+        val workoutId: Long? = null
+    )
 
     interface ProgressListener {
         fun onProgress(current: Int, total: Int, name: String)
@@ -129,13 +153,15 @@ object LegacyImportEngine {
         val possiblePaths = when (format.lowercase()) {
             "tcx" -> listOf("/TCX", "/apps/Workouts/TCX")
             "gpx" -> listOf("/GPX", "/apps/Workouts/GPX")
-            else -> listOf("/TCX", "/apps/Workouts/TCX", "/GPX", "/apps/Workouts/GPX")
+            "fit" -> listOf("/FIT", "/apps/Workouts/FIT", "/Workouts/FIT")
+            else -> listOf("/TCX", "/apps/Workouts/TCX", "/GPX", "/apps/Workouts/GPX", "/FIT", "/apps/Workouts/FIT", "/Workouts/FIT")
         }
 
         val targetExtensions = when (format.lowercase()) {
             "tcx" -> listOf(".tcx")
             "gpx" -> listOf(".gpx")
-            else -> listOf(".tcx", ".gpx")
+            "fit" -> listOf(".fit")
+            else -> listOf(".tcx", ".gpx", ".fit")
         }
 
         val allEntries = mutableListOf<com.dropbox.core.v2.files.Metadata>()
@@ -214,9 +240,11 @@ object LegacyImportEngine {
                                 val status = when (ext) {
                                     "tcx" -> importFromTcxInternal(context, tempFile, listener, uploadToStrava)
                                     "gpx" -> importFromGpxInternal(context, tempFile, listener, uploadToStrava)
+                                    "fit" -> importFromFitInternal(context, tempFile, listener, uploadToStrava)
                                     else -> when (format.lowercase()) {
                                         "tcx" -> importFromTcxInternal(context, tempFile, listener, uploadToStrava)
                                         "gpx" -> importFromGpxInternal(context, tempFile, listener, uploadToStrava)
+                                        "fit" -> importFromFitInternal(context, tempFile, listener, uploadToStrava)
                                         else -> ImportStatus.FAILED
                                     }
                                 }
@@ -276,23 +304,200 @@ object LegacyImportEngine {
     }
 
     /**
-     * Recreates a workout from a TCX file.
+     * Scans Google Drive recursively across candidate paths and recovers historical workouts (.fit, .tcx, .gpx).
+     *
+     * Adheres to REQ-MIG-034:
+     * - Discovers .fit, .tcx, and .gpx archives across standard folders
+     * - Skips existing workouts prior to download based on base file name
+     * - Deduplicates identical base filenames across folders
+     * - Downloads and parses using internal format importers
+     * - Returns a [RecoveryResult] tallying imported, skipped, and failed activities
      */
-    suspend fun importFromTcx(
+    suspend fun bulkRecoverFromGoogleDrive(
         context: Context,
-        tcxFile: File,
+        format: String = "all",
         listener: ProgressListener? = null,
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
-    ): Boolean {
-        return importFromTcxInternal(context, tcxFile, listener, uploadToStrava) == ImportStatus.SUCCESS
+    ): RecoveryResult {
+        val token = TrainingApplication.getGoogleDriveAuthToken() ?: return RecoveryResult(0, 0, 0, 0)
+        val driveClient = GoogleDriveClient(tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() })
+
+        val targetExtensions = when (format.lowercase()) {
+            "fit" -> listOf(".fit")
+            "tcx" -> listOf(".tcx")
+            "gpx" -> listOf(".gpx")
+            else -> listOf(".fit", ".tcx", ".gpx")
+        }
+
+        val candidateFolderHierarchies = when (format.lowercase()) {
+            "fit" -> listOf(
+                listOf("FIT"),
+                listOf("Workouts"),
+                listOf("aTrainingTracker", "FIT"),
+                listOf("aTrainingTracker", "Workouts"),
+                listOf("aTrainingTracker")
+            )
+            "tcx" -> listOf(
+                listOf("TCX"),
+                listOf("Workouts"),
+                listOf("aTrainingTracker", "TCX"),
+                listOf("aTrainingTracker", "Workouts"),
+                listOf("aTrainingTracker")
+            )
+            "gpx" -> listOf(
+                listOf("GPX"),
+                listOf("Workouts"),
+                listOf("aTrainingTracker", "GPX"),
+                listOf("aTrainingTracker", "Workouts"),
+                listOf("aTrainingTracker")
+            )
+            else -> listOf(
+                listOf("FIT"),
+                listOf("TCX"),
+                listOf("GPX"),
+                listOf("Workouts"),
+                listOf("aTrainingTracker", "FIT"),
+                listOf("aTrainingTracker", "TCX"),
+                listOf("aTrainingTracker", "GPX"),
+                listOf("aTrainingTracker", "Workouts"),
+                listOf("aTrainingTracker")
+            )
+        }
+
+        val allEntries = mutableListOf<DriveFileEntry>()
+        val searchedFolderIds = mutableSetOf<String>()
+
+        for (hierarchy in candidateFolderHierarchies) {
+            try {
+                val folderNameDisplay = hierarchy.joinToString("/")
+                listener?.onStatus("Scanning Google Drive: $folderNameDisplay...")
+                val folderId = driveClient.resolveFolderHierarchy(hierarchy)
+                if (folderId != null && searchedFolderIds.add(folderId)) {
+                    val entries = driveClient.listFilesRecursively(folderId, targetExtensions)
+                    allEntries.addAll(entries)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Google Drive folder scan failed for ${hierarchy.joinToString("/")}: ${e.message}")
+            }
+        }
+
+        // Deduplicate entries by base name across scanned paths (REQ-MIG-031 / REQ-MIG-034)
+        val entries = allEntries.distinctBy {
+            it.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~").lowercase()
+        }
+        if (entries.isEmpty()) return RecoveryResult(0, 0, 0, 0)
+
+        val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+        val tempDir = File(context.cacheDir, "gdrive_recovery")
+        if (tempDir.exists()) tempDir.deleteRecursively()
+        tempDir.mkdirs()
+
+        val importedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val skippedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val failedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val processedCount = java.util.concurrent.atomic.AtomicInteger(0)
+
+        try {
+            kotlinx.coroutines.coroutineScope {
+                val channel = kotlinx.coroutines.channels.Channel<Pair<Int, DriveFileEntry>>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+                entries.forEachIndexed { index, entry -> channel.trySend(Pair(index, entry)) }
+                channel.close()
+
+                (1..3).map {
+                    launch(Dispatchers.IO) {
+                        for ((_, entry) in channel) {
+                            val current = processedCount.incrementAndGet()
+                            listener?.onProgress(current, entries.size, entry.name)
+
+                            val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
+                            if (isWorkoutExisting(summaryDb, baseFileName)) {
+                                if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
+                                skippedCount.incrementAndGet()
+                                continue
+                            }
+
+                            listener?.onStatus(context.getString(R.string.legacy_import__downloading_google_drive, entry.name))
+                            val workerDir = File(tempDir, "job_$current").apply { mkdirs() }
+                            val tempFile = File(workerDir, entry.name)
+                            try {
+                                val downloaded = downloadGoogleDriveFileWithRetry(driveClient, entry.id, tempFile)
+                                if (!downloaded) {
+                                    failedCount.incrementAndGet()
+                                    continue
+                                }
+
+                                val ext = entry.name.substringAfterLast('.').lowercase()
+                                val status = when (ext) {
+                                    "fit" -> importFromFitInternal(context, tempFile, listener, uploadToStrava)
+                                    "tcx" -> importFromTcxInternal(context, tempFile, listener, uploadToStrava)
+                                    "gpx" -> importFromGpxInternal(context, tempFile, listener, uploadToStrava)
+                                    else -> when (format.lowercase()) {
+                                        "fit" -> importFromFitInternal(context, tempFile, listener, uploadToStrava)
+                                        "tcx" -> importFromTcxInternal(context, tempFile, listener, uploadToStrava)
+                                        "gpx" -> importFromGpxInternal(context, tempFile, listener, uploadToStrava)
+                                        else -> ImportStatus.FAILED
+                                    }
+                                }
+                                when (status) {
+                                    ImportStatus.SUCCESS -> importedCount.incrementAndGet()
+                                    ImportStatus.DUPLICATE_SKIPPED -> skippedCount.incrementAndGet()
+                                    ImportStatus.FAILED -> failedCount.incrementAndGet()
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to download/import ${entry.name}", e)
+                                failedCount.incrementAndGet()
+                            } finally {
+                                tempFile.delete()
+                                workerDir.delete()
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Google Drive bulk recovery failed", e)
+        }
+
+        return RecoveryResult(
+            importedCount = importedCount.get(),
+            skippedCount = skippedCount.get(),
+            failedCount = failedCount.get(),
+            totalScanned = entries.size
+        )
     }
 
-    internal suspend fun importFromTcxInternal(
+    private fun downloadGoogleDriveFileWithRetry(
+        driveClient: GoogleDriveClient,
+        fileId: String,
+        targetFile: File,
+        maxRetries: Int = 3
+    ): Boolean {
+        var attempt = 0
+        while (attempt < maxRetries) {
+            attempt++
+            try {
+                val success = driveClient.downloadFileById(fileId, targetFile)
+                if (success) return true
+                if (attempt >= maxRetries) return false
+                try { Thread.sleep(1000L * attempt) } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.e(TAG, "Transient download error for Google Drive file $fileId (attempt $attempt/$maxRetries): ${e.message}")
+                if (attempt >= maxRetries) return false
+                try { Thread.sleep(1000L * attempt) } catch (_: Exception) {}
+            }
+        }
+        return false
+    }
+
+    /**
+     * Recreates a workout from a TCX file returning an enriched [ImportResult] (REQ-MIG-032).
+     */
+    suspend fun importFromTcxResult(
         context: Context,
         tcxFile: File,
         listener: ProgressListener? = null,
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
-    ): ImportStatus {
+    ): ImportResult {
         try {
             var baseFileName = tcxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
             val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
@@ -300,7 +505,7 @@ object LegacyImportEngine {
             // ATT-314: Early exit if workout already exists to prevent redundant processing
             if (!baseFileName.startsWith("legacy_import", ignoreCase = true) && isWorkoutExisting(summaryDb, baseFileName)) {
                 if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
-                return ImportStatus.DUPLICATE_SKIPPED
+                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
             }
             
             val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
@@ -699,6 +904,7 @@ object LegacyImportEngine {
                             put(WorkoutSummaries.B_SPORT, bSportType.name)
                             put(WorkoutSummaries.EQUIPMENT_ID, -1L)
                             put(WorkoutSummaries.FINISHED, 1)
+                            put(WorkoutSummaries.SOURCE, WorkoutSource.TCX.name)
                             if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
                                 put(WorkoutSummaries.UPLOAD_TO_STRAVA, 1)
                             } else {
@@ -712,7 +918,7 @@ object LegacyImportEngine {
             }
 
             if (isDuplicate) {
-                return ImportStatus.DUPLICATE_SKIPPED
+                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
             }
 
             if (firstTime != null) {
@@ -742,33 +948,45 @@ object LegacyImportEngine {
                 // ATT-602 (REQ-EXT-008): Automatically schedule background upload to Strava and online communities
                 schedulePostImportCommunityUpload(context, workoutId, baseFileName)
 
-                return ImportStatus.SUCCESS
+                return ImportResult(ImportStatus.SUCCESS, workoutId)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import TCX: ${tcxFile.name}", e)
         }
-        return ImportStatus.FAILED
+        return ImportResult(ImportStatus.FAILED)
     }
 
     /**
-     * Recreates a workout from a GPX file (GPX 1.0 or 1.1).
-     * (REQ-MIG-030)
+     * Recreates a workout from a TCX file.
      */
-    suspend fun importFromGpx(
+    suspend fun importFromTcx(
         context: Context,
-        gpxFile: File,
+        tcxFile: File,
         listener: ProgressListener? = null,
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
     ): Boolean {
-        return importFromGpxInternal(context, gpxFile, listener, uploadToStrava) == ImportStatus.SUCCESS
+        return importFromTcxResult(context, tcxFile, listener, uploadToStrava).status == ImportStatus.SUCCESS
     }
 
-    internal suspend fun importFromGpxInternal(
+    internal suspend fun importFromTcxInternal(
+        context: Context,
+        tcxFile: File,
+        listener: ProgressListener? = null,
+        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
+    ): ImportStatus {
+        return importFromTcxResult(context, tcxFile, listener, uploadToStrava).status
+    }
+
+    /**
+     * Recreates a workout from a GPX file (GPX 1.0 or 1.1) returning an enriched [ImportResult] (REQ-MIG-032).
+     * (REQ-MIG-030)
+     */
+    suspend fun importFromGpxResult(
         context: Context,
         gpxFile: File,
         listener: ProgressListener? = null,
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
-    ): ImportStatus {
+    ): ImportResult {
         try {
             var baseFileName = gpxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
             val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
@@ -776,7 +994,7 @@ object LegacyImportEngine {
             // Early exit if workout already exists to prevent redundant processing
             if (!baseFileName.startsWith("legacy_import", ignoreCase = true) && isWorkoutExisting(summaryDb, baseFileName)) {
                 if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
-                return ImportStatus.DUPLICATE_SKIPPED
+                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
             }
 
             val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
@@ -1108,6 +1326,7 @@ object LegacyImportEngine {
                             put(WorkoutSummaries.B_SPORT, bSportType.name)
                             put(WorkoutSummaries.EQUIPMENT_ID, -1L)
                             put(WorkoutSummaries.FINISHED, 1)
+                            put(WorkoutSummaries.SOURCE, WorkoutSource.GPX.name)
                             if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
                                 put(WorkoutSummaries.UPLOAD_TO_STRAVA, 1)
                             } else {
@@ -1121,7 +1340,7 @@ object LegacyImportEngine {
             }
 
             if (isDuplicate) {
-                return ImportStatus.DUPLICATE_SKIPPED
+                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
             }
 
             if (firstTime != null) {
@@ -1173,12 +1392,373 @@ object LegacyImportEngine {
 
                 schedulePostImportCommunityUpload(context, workoutId, baseFileName)
 
-                return ImportStatus.SUCCESS
+                return ImportResult(ImportStatus.SUCCESS, workoutId)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import GPX: ${gpxFile.name}", e)
         }
-        return ImportStatus.FAILED
+        return ImportResult(ImportStatus.FAILED)
+    }
+
+    /**
+     * Recreates a workout from a GPX file (GPX 1.0 or 1.1).
+     * (REQ-MIG-030)
+     */
+    suspend fun importFromGpx(
+        context: Context,
+        gpxFile: File,
+        listener: ProgressListener? = null,
+        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
+    ): Boolean {
+        return importFromGpxResult(context, gpxFile, listener, uploadToStrava).status == ImportStatus.SUCCESS
+    }
+
+    internal suspend fun importFromGpxInternal(
+        context: Context,
+        gpxFile: File,
+        listener: ProgressListener? = null,
+        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
+    ): ImportStatus {
+        return importFromGpxResult(context, gpxFile, listener, uploadToStrava).status
+    }
+
+    /**
+     * Recreates a workout from an external Garmin FIT binary file returning an enriched [ImportResult] (REQ-MIG-032).
+     * (REQ-DAT-019)
+     */
+    suspend fun importFromFitResult(
+        context: Context,
+        fitFile: File,
+        listener: ProgressListener? = null,
+        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
+    ): ImportResult {
+        try {
+            var baseFileName = fitFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
+            val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+
+            // Early exit if workout already exists to prevent redundant processing
+            if (!baseFileName.startsWith("legacy_import", ignoreCase = true) && isWorkoutExisting(summaryDb, baseFileName)) {
+                if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
+                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
+            }
+
+            // Verify file integrity
+            val decode = Decode()
+            val isIntegrityValid = try {
+                FileInputStream(fitFile).use { fis ->
+                    decode.checkFileIntegrity(fis)
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "Integrity check exception for ${fitFile.name}: ${t.message}")
+                false
+            }
+            if (!isIntegrityValid) {
+                Log.e(TAG, "FIT file integrity check failed for ${fitFile.name}")
+                return ImportResult(ImportStatus.FAILED)
+            }
+
+            val rawFileIds = mutableListOf<FileIdMesg>()
+            val rawSessions = mutableListOf<SessionMesg>()
+            val rawLaps = mutableListOf<LapMesg>()
+            val rawRecords = mutableListOf<RecordMesg>()
+
+            val broadcaster = MesgBroadcaster(decode)
+            broadcaster.addListener(FileIdMesgListener { rawFileIds.add(it) })
+            broadcaster.addListener(SessionMesgListener { rawSessions.add(it) })
+            broadcaster.addListener(LapMesgListener { rawLaps.add(it) })
+            broadcaster.addListener(RecordMesgListener { rawRecords.add(it) })
+
+            val readSuccess = try {
+                FileInputStream(fitFile).use { fis ->
+                    decode.read(fis, broadcaster)
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Error decoding FIT file ${fitFile.name}: ${t.message}", t)
+                false
+            }
+
+            if (!readSuccess || rawRecords.isEmpty()) {
+                Log.e(TAG, "Decoding failed or no record trackpoints found in ${fitFile.name}")
+                return ImportResult(ImportStatus.FAILED)
+            }
+
+            val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
+            val timeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+
+            var firstTime: String? = null
+            var lastTime: String? = null
+            val points = mutableListOf<LatLng>()
+            val altitudes = mutableListOf<Double>()
+            val distances = mutableListOf<Double>()
+            val bufferedSamples = mutableListOf<ContentValues>()
+            val parsedLaps = mutableListOf<ParsedLap>()
+
+            var minAltVal = Double.MAX_VALUE
+            var maxAltVal = -Double.MAX_VALUE
+            var minAltPos: LatLng? = null
+            var maxAltPos: LatLng? = null
+
+            // Build parsed laps
+            rawLaps.forEachIndexed { index, lapMesg ->
+                val lapStartTime = lapMesg.startTime?.date?.let { timeFormat.format(it) }
+                val lapTotalTime = (lapMesg.totalTimerTime ?: lapMesg.totalElapsedTime ?: 0f).toDouble()
+                val lapDist = (lapMesg.totalDistance ?: 0f).toDouble()
+                val lapMaxSpeed = (lapMesg.enhancedMaxSpeed ?: lapMesg.maxSpeed)?.toDouble()
+                val lapCalories = lapMesg.totalCalories
+                val lapAvgHr = lapMesg.avgHeartRate?.toInt()
+                val lapMaxHr = lapMesg.maxHeartRate?.toInt()
+
+                parsedLaps.add(
+                    ParsedLap(
+                        lapNr = index.toLong(),
+                        startTime = lapStartTime,
+                        totalTimeSeconds = lapTotalTime,
+                        distanceMeters = lapDist,
+                        maxSpeed = lapMaxSpeed,
+                        calories = lapCalories,
+                        avgHeartRate = lapAvgHr,
+                        maxHeartRate = lapMaxHr
+                    )
+                )
+            }
+
+            // Build samples from raw records
+            rawRecords.forEach { record ->
+                val date = record.timestamp?.date ?: return@forEach
+                val formattedTime = timeFormat.format(date)
+                if (firstTime == null) {
+                    firstTime = formattedTime
+                }
+                lastTime = formattedTime
+
+                val values = ContentValues()
+                values.put("time", formattedTime)
+
+                val latSemi = record.positionLat
+                val lngSemi = record.positionLong
+                val altVal = (record.enhancedAltitude ?: record.altitude)?.toDouble()?.takeIf { it in -500.0..10000.0 }
+
+                if (latSemi != null && lngSemi != null && latSemi != 0x7FFFFFFF && lngSemi != 0x7FFFFFFF) {
+                    val latDeg = latSemi * (180.0 / 2147483648.0)
+                    val lngDeg = lngSemi * (180.0 / 2147483648.0)
+                    values.put(SensorType.LATITUDE.name, latDeg)
+                    values.put(SensorType.LONGITUDE.name, lngDeg)
+
+                    val pos = LatLng(latDeg, lngDeg)
+                    points.add(pos)
+
+                    altVal?.let { alt ->
+                        if (alt < minAltVal) {
+                            minAltVal = alt
+                            minAltPos = pos
+                        }
+                        if (alt > maxAltVal) {
+                            maxAltVal = alt
+                            maxAltPos = pos
+                        }
+                    }
+                }
+
+                altVal?.let { alt ->
+                    values.put(SensorType.ALTITUDE.name, alt)
+                    altitudes.add(alt)
+                }
+
+                record.distance?.toDouble()?.let { dist ->
+                    values.put(SensorType.DISTANCE_m.name, dist)
+                    distances.add(dist)
+                }
+
+                val spdVal = (record.enhancedSpeed ?: record.speed)?.toDouble()
+                if (spdVal != null && spdVal in 0.0..100.0) {
+                    values.put(SensorType.SPEED_mps.name, spdVal)
+                }
+
+                record.heartRate?.toInt()?.let { hr ->
+                    if (hr in 30..250) {
+                        values.put(SensorType.HR.name, hr)
+                    }
+                }
+
+                record.cadence?.toDouble()?.let { cad ->
+                    if (cad >= 0) {
+                        values.put(SensorType.CADENCE.name, cad)
+                    }
+                }
+
+                record.power?.toDouble()?.let { pwr ->
+                    if (pwr >= 0) {
+                        values.put(SensorType.POWER.name, pwr)
+                    }
+                }
+
+                record.temperature?.toDouble()?.let { temp ->
+                    values.put(SensorType.TEMPERATURE.name, temp)
+                }
+
+                // Determine lapNr
+                var sampleLapNr = 0L
+                if (parsedLaps.size > 1) {
+                    val recordEpoch = date.time
+                    for (i in parsedLaps.indices.reversed()) {
+                        val lapStart = parsedLaps[i].startTime?.let {
+                            try { timeFormat.parse(it)?.time } catch (_: Exception) { null }
+                        }
+                        if (lapStart != null && recordEpoch >= lapStart) {
+                            sampleLapNr = i.toLong()
+                            break
+                        }
+                    }
+                }
+                values.put(SensorType.LAP_NR.name, sampleLapNr)
+
+                bufferedSamples.add(values)
+            }
+
+            if (firstTime == null && parsedLaps.isNotEmpty() && parsedLaps.first().startTime != null) {
+                firstTime = parsedLaps.first().startTime
+            }
+
+            if (baseFileName.startsWith("legacy_import", ignoreCase = true) && firstTime != null) {
+                baseFileName = firstTime!!.replace(" ", "_").replace(":", "")
+            }
+
+            // Fallback lap if none parsed
+            if (parsedLaps.isEmpty()) {
+                val totalDist = distances.lastOrNull() ?: 0.0
+                parsedLaps.add(ParsedLap(lapNr = 0L, startTime = firstTime, distanceMeters = totalDist))
+            }
+
+            // Sport resolution
+            val primarySession = rawSessions.firstOrNull()
+            var bSportType = FitSportMapper.mapFitSport(primarySession?.sport, primarySession?.subSport)
+            var resolvedSportId = if (bSportType != BSportType.UNKNOWN) {
+                com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+            } else {
+                -1L
+            }
+
+            // Infer sport from speed if still unknown (ATT-1116)
+            if (bSportType == BSportType.UNKNOWN && distances.isNotEmpty() && bufferedSamples.size > 1) {
+                val totalDist = distances.last()
+                val durationSec = parsedLaps.sumOf { it.totalTimeSeconds }.takeIf { it > 0 } ?: (bufferedSamples.size.toDouble())
+                val avgSpeed = if (durationSec > 0) totalDist / durationSec else 0.0
+                if (avgSpeed > 7.0) {
+                    bSportType = BSportType.BIKE
+                    resolvedSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE)
+                } else if (avgSpeed in 1.5..7.0) {
+                    bSportType = BSportType.RUN
+                    resolvedSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(BSportType.RUN)
+                }
+            }
+
+            var workoutId = -1L
+
+            // Mutex-guarded multi-dimensional deduplication and atomic insertion
+            val isDuplicate = importMutex.withLock {
+                if (isWorkoutExisting(summaryDb, baseFileName, firstTime, bSportType)) {
+                    if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
+                    return@withLock true
+                }
+
+                if (bufferedSamples.isNotEmpty()) {
+                    samplesDbManager.createNewTable(baseFileName, SensorType.values().toList())
+                    val targetDb = samplesDbManager.database
+                    val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+                    targetDb.beginTransaction()
+                    try {
+                        bufferedSamples.forEach { sampleValues ->
+                            targetDb.insert(tableName, null, sampleValues)
+                        }
+                        targetDb.setTransactionSuccessful()
+                    } finally {
+                        targetDb.endTransaction()
+                    }
+                }
+
+                if (firstTime != null) {
+                    workoutId = getWorkoutId(summaryDb, baseFileName)
+                    if (workoutId == -1L) {
+                        try {
+                            StravaUploadDbHelper(context).deleteWorkout(baseFileName)
+                        } catch (t: Throwable) {
+                            Log.w(TAG, "Could not clean StravaUploadDb for $baseFileName: ${t.message}")
+                        }
+
+                        val summaryValues = ContentValues().apply {
+                            put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
+                            put(WorkoutSummaries.WORKOUT_NAME, baseFileName)
+                            put(WorkoutSummaries.TIME_START, firstTime)
+                            put(WorkoutSummaries.SPORT_ID, resolvedSportId)
+                            put(WorkoutSummaries.B_SPORT, bSportType.name)
+                            put(WorkoutSummaries.EQUIPMENT_ID, -1L)
+                            put(WorkoutSummaries.FINISHED, 1)
+                            put(WorkoutSummaries.SOURCE, WorkoutSource.FIT.name)
+                            if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
+                                put(WorkoutSummaries.UPLOAD_TO_STRAVA, 1)
+                            } else {
+                                put(WorkoutSummaries.UPLOAD_TO_STRAVA, 0)
+                            }
+                        }
+                        workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
+                    }
+                }
+                false
+            }
+
+            if (isDuplicate) {
+                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
+            }
+
+            if (firstTime != null) {
+                recalculateStats(
+                    context = context,
+                    workoutId = workoutId,
+                    baseFileName = baseFileName,
+                    points = points,
+                    altitudes = altitudes,
+                    distances = distances,
+                    bSportType = bSportType,
+                    foundSensors = emptySet(),
+                    parsedLaps = parsedLaps,
+                    workoutNotes = null,
+                    workoutName = baseFileName,
+                    firstTime = firstTime,
+                    lastTime = lastTime,
+                    minAltPos = minAltPos,
+                    maxAltPos = maxAltPos,
+                    listener = listener
+                )
+
+                schedulePostImportCommunityUpload(context, workoutId, baseFileName)
+
+                return ImportResult(ImportStatus.SUCCESS, workoutId)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to import FIT: ${fitFile.name}", e)
+        }
+        return ImportResult(ImportStatus.FAILED)
+    }
+
+    /**
+     * Recreates a workout from an external Garmin FIT binary file (REQ-DAT-019).
+     */
+    suspend fun importFromFit(
+        context: Context,
+        fitFile: File,
+        listener: ProgressListener? = null,
+        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
+    ): Boolean {
+        return importFromFitResult(context, fitFile, listener, uploadToStrava).status == ImportStatus.SUCCESS
+    }
+
+    internal suspend fun importFromFitInternal(
+        context: Context,
+        fitFile: File,
+        listener: ProgressListener? = null,
+        uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
+    ): ImportStatus {
+        return importFromFitResult(context, fitFile, listener, uploadToStrava).status
     }
 
     private fun getWorkoutId(db: WorkoutSummariesDatabaseManager, fileBaseName: String): Long {
@@ -1397,14 +1977,27 @@ object LegacyImportEngine {
             values.put(WorkoutSummaries.DESCENDING, totalDescent.toInt())
         }
 
-        // 3. Map & Streams
-        val polyline = if (points.isNotEmpty()) PolyUtil.encode(points) else ""
+        // 3. Map & Streams (REQ-DAT-023: Douglas-Peucker simplification & compact scalar streams)
+        val simplifiedPoints = if (points.isNotEmpty()) PolyUtil.simplify(points, 10.0) else emptyList()
+        val polyline = if (simplifiedPoints.isNotEmpty()) PolyUtil.encode(simplifiedPoints) else ""
         values.put(WorkoutSummaries.MAP_POLYLINE, polyline)
-        if (altitudes.isNotEmpty()) {
-            values.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.encodeDoubles(altitudes))
+
+        val sampledAltitudes = if (altitudes.size > WorkoutSummaries.ENCODING_STEP_SIZE) {
+            altitudes.filterIndexed { index, _ -> (index + 1) % WorkoutSummaries.ENCODING_STEP_SIZE == 0 }
+        } else {
+            altitudes
         }
-        if (distances.isNotEmpty()) {
-            values.put(WorkoutSummaries.DISTANCE_STREAM, NumericalEncodingUtils.encodeDoubles(distances))
+        if (sampledAltitudes.isNotEmpty()) {
+            values.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.encodeDoubles(sampledAltitudes))
+        }
+
+        val sampledDistances = if (distances.size > WorkoutSummaries.ENCODING_STEP_SIZE) {
+            distances.filterIndexed { index, _ -> (index + 1) % WorkoutSummaries.ENCODING_STEP_SIZE == 0 }
+        } else {
+            distances
+        }
+        if (sampledDistances.isNotEmpty()) {
+            values.put(WorkoutSummaries.DISTANCE_STREAM, NumericalEncodingUtils.encodeDoubles(sampledDistances))
         }
 
         // --- ATT-352: Persist spatial bounds for zero-latency periods framing ---

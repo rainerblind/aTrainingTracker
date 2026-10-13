@@ -285,6 +285,18 @@ class TrackingTabsViewModel(
         }
     }
 
+    fun onUpdateShowLiveClimbs(tabViewId: Long, show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowLiveClimbs(tabViewId, show)
+        }
+    }
+
+    fun onUpdateShowNavigationHints(tabViewId: Long, show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowNavigationHints(tabViewId, show)
+        }
+    }
+
     fun onAddTabRelative(tabViewId: Long, addAfter: Boolean) {
         viewModelScope.launch {
             trackingViewsRepository.addEmptyTabView(tabViewId, addAfter)

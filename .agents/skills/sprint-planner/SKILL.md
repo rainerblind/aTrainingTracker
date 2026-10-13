@@ -30,9 +30,9 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
 
 ### Step-by-Step Procedure
 1. **Query Active Sprint Backlog**:
-   Find all tickets in the active sprint currently in status `Zu erledigen`:
+   Find all tickets in the active sprint currently in status `Zu erledigen` using the exact active sprint ID or name (do not use generic `openSprints()` which can match multiple concurrently active sprints):
    ```bash
-   python3 tools/jira_util.py search "project = ATT AND sprint in openSprints() AND status = 'Zu erledigen' ORDER BY rank ASC"
+   python3 tools/jira_util.py search "project = ATT AND sprint = <SPRINT_ID> AND status = 'Zu erledigen' ORDER BY rank ASC"
    ```
    *Strict Invariant*: AI agents MUST NEVER move tickets into active sprints or pull backlog items autonomously (`"Agents must not move tickets to sprints!"`). Only the human user assigns tickets to sprints.
 2. **Establish Sprint Integration Branch**:
@@ -45,6 +45,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
 3. **Ticket-by-Ticket Walkthrough with the Human User**:
    For each ticket in sequence:
    * **Present Summary & Context**: Present the ticket key, title, and current description to the user.
+   * **Human Prerequisite Detection (Rule 22)**: Explicitly check whether the ticket depends on actions only the human can perform (e.g. Google Cloud Console / OAuth client registration, SHA-1 fingerprints, API keys, Play Console settings, third-party accounts, test hardware/sensors, outdoor rides). If so, name each action to the user, record them in the ticket description under a `Human Prerequisites` section, and agree whether they are completed before development starts (`"Tickets that need actions by me should be detected during the sprint planning."` — Retro 2026-40.16, ATT-1306).
    * **Screening Evaluation**:
      * *Case A: Clean & Unambiguous*: If the ticket description clearly articulates the goal, scope, and expected outcome, confirm with the user and advance the ticket to `Analysis`:
        ```bash
@@ -90,9 +91,9 @@ Jointly review all completed sprint tickets with the human user against expectat
    Confirm successful installation before proceeding to ticket walkthroughs.
 
 2. **Query Tickets Ready for Review in Rank Order**:
-   Find all sprint tickets in status `Final Review (Human)` sorted strictly by backlog rank:
+   Find all sprint tickets in status `Final Review (Human)` sorted strictly by backlog rank for the exact active sprint ID or name:
    ```bash
-   python3 tools/jira_util.py search "project = ATT AND sprint in openSprints() AND status = 'Final Review (Human)' ORDER BY rank ASC"
+   python3 tools/jira_util.py search "project = ATT AND sprint = <SPRINT_ID> AND status = 'Final Review (Human)' ORDER BY rank ASC"
    ```
 
 3. **Collaborative Ticket Inspection**:
@@ -129,7 +130,10 @@ Jointly review all completed sprint tickets with the human user against expectat
    git checkout develop
    git pull origin develop
    git merge --no-ff sprint/<SPRINT_NAME> -m "Merge branch 'sprint/<SPRINT_NAME>' into develop"
+   git push origin develop
    git branch -d sprint/<SPRINT_NAME>
+   # Post-condition verification: ensure no merged sprint branches remain locally
+   git branch --list 'sprint/*'
    ```
    * Transition the sprint's `Review & Retro` ticket to `Erledigt` with the human user.
    * Post final integration notice to Jira.

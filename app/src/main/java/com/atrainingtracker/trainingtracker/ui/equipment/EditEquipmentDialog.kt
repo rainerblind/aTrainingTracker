@@ -114,10 +114,25 @@ fun EditEquipmentDialog(
                 }
             )
 
-            // Multi-select for Sensors
-            if (availableSensors.isNotEmpty()) {
+            // Multi-select for Sensors (Defensive compatibility filtering & prioritized ordering: REQ-UI-256, REQ-UI-283)
+            val compatibleSensors = remember(availableSensors, item.frameType) {
+                val isBike = item.frameType > 0
+                val sportType = if (isBike) BSportType.BIKE else BSportType.RUN
+                val filtered = availableSensors.filter { sensor ->
+                    if (sensor.deviceType == null) {
+                        true
+                    } else if (isBike) {
+                        DevicesDatabaseManager.isBikeSensor(sensor.deviceType) || DevicesDatabaseManager.isSharedSensor(sensor.deviceType)
+                    } else {
+                        DevicesDatabaseManager.isRunSensor(sensor.deviceType) || DevicesDatabaseManager.isSharedSensor(sensor.deviceType)
+                    }
+                }
+                EquipmentSensorOrdering.sortSensors(filtered, sportType)
+            }
+
+            if (compatibleSensors.isNotEmpty()) {
                 MultiSelectSensorSpinner(
-                    allSensors = availableSensors,
+                    allSensors = compatibleSensors,
                     selectedIds = selectedSensorIds,
                     onToggleSensor = { id ->
                         selectedSensorIds = if (selectedSensorIds.contains(id)) {

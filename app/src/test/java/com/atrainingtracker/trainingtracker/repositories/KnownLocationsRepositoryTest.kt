@@ -39,6 +39,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -71,15 +72,18 @@ class KnownLocationsRepositoryTest {
         every { Log.d(any<String>(), any<String>()) } returns 0
         every { Log.i(any<String>(), any<String>()) } returns 0
         every { Log.w(any<String>(), any<String>()) } returns 0
+        every { Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
+        every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
 
         mockContext = mockk(relaxed = true)
         mockDbManager = mockk(relaxed = true)
         mockElevationService = mockk(relaxed = true)
 
-        every { mockContext.getString(R.string.known_location_unnamed_format, any(), any()) } answers {
-            "Startort (${args[1]}, ${args[2]})"
-        }
+        every { mockDbManager.allLocations } returns emptyList()
+        every { mockDbManager.reconcileHitCountsWithWorkoutSummaries(any()) } returns 0
+        every { mockContext.getString(any<Int>()) } returns "Startort"
+        every { mockContext.getString(any<Int>(), *anyVararg()) } returns "Startort (48.137, 11.576)"
 
         repository = KnownLocationsRepository(
             context = mockContext,
@@ -91,6 +95,11 @@ class KnownLocationsRepositoryTest {
 
     @After
     fun tearDown() {
+        runBlocking {
+            withContext(testDispatcher) {
+                // Drain any pending coroutine tasks on single-threaded dispatcher before clearing mocks
+            }
+        }
         clearAllMocks()
         unmockkStatic(Log::class)
         KnownLocationsRepository.resetForTesting(null)
@@ -247,5 +256,48 @@ class KnownLocationsRepositoryTest {
         verify(exactly = 50) {
             mockDbManager.updateLocation(any(), any(), any(), any(), true)
         }
+    }
+
+    /**
+     * TST-MAP-038.2: Verify loadLocations evaluates effectiveHomeId using HomeLocationResolver hierarchy.
+     */
+    @Test
+    fun testLoadLocations_resolvesEffectiveHomeId_whenNoExplicitHomeSet() = runTest {
+        val loc1 = KnownLocationsDatabaseManager.MyLocation(
+            10L, 48.137, 11.576, "Start Point Low Starts", 500.0, 200, 3, false, ElevationSource.LEGACY_RAW, false
+        )
+        val loc2 = KnownLocationsDatabaseManager.MyLocation(
+            20L, 48.155, 11.590, "Start Point High Starts", 510.0, 200, 42, false, ElevationSource.LEGACY_RAW, false
+        )
+        every { mockDbManager.allLocations } returns listOf(loc1, loc2)
+
+        val items = repository.loadLocations()
+
+        assertEquals(2, items.size)
+        val item1 = items.first { it.id == 10L }
+        val item2 = items.first { it.id == 20L }
+
+        assertFalse("Item 10 should not be home", item1.isHome)
+        assertTrue("Item 20 should be effective home due to highest start count", item2.isHome)
+    }
+
+    @Test
+    fun testLoadLocations_explicitHome_overridesStartCountHierarchy() = runTest {
+        val loc1 = KnownLocationsDatabaseManager.MyLocation(
+            10L, 48.137, 11.576, "Designated Home", 500.0, 200, 2, false, ElevationSource.MANUAL_USER, true
+        )
+        val loc2 = KnownLocationsDatabaseManager.MyLocation(
+            20L, 48.155, 11.590, "Popular Trailhead", 510.0, 200, 80, false, ElevationSource.LEGACY_RAW, false
+        )
+        every { mockDbManager.allLocations } returns listOf(loc1, loc2)
+
+        val items = repository.loadLocations()
+
+        assertEquals(2, items.size)
+        val item1 = items.first { it.id == 10L }
+        val item2 = items.first { it.id == 20L }
+
+        assertTrue("Item 10 should be home due to explicit designation", item1.isHome)
+        assertFalse("Item 20 should not be home despite higher start count", item2.isHome)
     }
 }

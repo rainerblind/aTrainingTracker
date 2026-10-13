@@ -47,6 +47,10 @@ import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.MapDetailLayout
 import com.atrainingtracker.trainingtracker.ui.map.MappablePath
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.routes.RouteSegmentMatcher
+import com.atrainingtracker.trainingtracker.routes.SegmentMatchedRoute
+import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -56,6 +60,8 @@ fun SegmentOnMapScreen(
     segmentSummary: SegmentSummary?,
     segment: MapSegment?,
     backgroundPaths: List<MappablePath> = emptyList(),
+    candidateRoutes: List<RouteWithPath> = emptyList(),
+    onRouteClick: ((Long) -> Unit)? = null,
     modifier: Modifier = Modifier,
     useStatusBarsPadding: Boolean = true,
     showMap: Boolean = true,
@@ -72,6 +78,27 @@ fun SegmentOnMapScreen(
         } else null
     }
 
+    val matchingRoutes by produceState(
+        initialValue = emptyList<SegmentMatchedRoute>(),
+        key1 = segment?.path,
+        key2 = candidateRoutes,
+        key3 = segmentSummary
+    ) {
+        val segPath = segment?.path
+        value = if (!segPath.isNullOrEmpty() && candidateRoutes.isNotEmpty() && segmentSummary != null) {
+            val segmentWithPath = SegmentWithPath(
+                summary = segmentSummary,
+                path = segPath
+            )
+            RouteSegmentMatcher.findRoutesContainingSegment(
+                segment = segmentWithPath,
+                candidateRoutes = candidateRoutes
+            )
+        } else {
+            emptyList()
+        }
+    }
+
     MapDetailLayout(
         bSportType = bSportType,
         zoomFocus = if (segmentBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
@@ -80,6 +107,14 @@ fun SegmentOnMapScreen(
         useStatusBarsPadding = useStatusBarsPadding,
         showMap = showMap,
         onHeaderHeightMeasured = onHeaderHeightMeasured,
+        analyticsContent = if (matchingRoutes.isNotEmpty()) {
+            {
+                SegmentRoutesSection(
+                    matchingRoutes = matchingRoutes,
+                    onRouteClick = onRouteClick
+                )
+            }
+        } else null,
         header = {
             segmentSummary?.let {
                 Column {
