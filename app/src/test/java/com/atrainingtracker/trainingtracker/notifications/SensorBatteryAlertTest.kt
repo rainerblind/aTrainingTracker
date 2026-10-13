@@ -270,16 +270,32 @@ class SensorBatteryAlertTest {
         assertEquals(WorkoutNavigationEvents.BatteryAlertSeverity.WARNING, warningVisuals.severity)
         assertEquals(WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL, criticalVisuals.severity)
 
-        // Mock preemption behaviour
-        var dismissedCurrent = false
-        val currentSnackbarVisible = true
-
-        val alertSeverity = criticalVisuals.severity
-        if (alertSeverity == WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL && currentSnackbarVisible) {
-            dismissedCurrent = true
+        // Preemption helper mirroring UI logic
+        fun shouldPreempt(incomingSeverity: WorkoutNavigationEvents.BatteryAlertSeverity, currentVisuals: androidx.compose.material3.SnackbarVisuals?): Boolean {
+            if (incomingSeverity == WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL) {
+                val batteryVisuals = currentVisuals as? WorkoutNavigationEvents.BatterySnackbarVisuals
+                return batteryVisuals != null && batteryVisuals.severity == WorkoutNavigationEvents.BatteryAlertSeverity.WARNING
+            }
+            return false
         }
 
-        assertTrue("Critical alert must dismiss existing snackbar before displaying", dismissedCurrent)
+        // 1. Critical incoming when current is WARNING battery alert -> MUST preempt
+        assertTrue("Critical alert must preempt active WARNING battery snackbar", shouldPreempt(criticalVisuals.severity, warningVisuals))
+
+        // 2. Critical incoming when current is already CRITICAL -> must NOT preempt
+        assertFalse("Critical alert must not preempt already CRITICAL battery snackbar", shouldPreempt(criticalVisuals.severity, criticalVisuals))
+
+        // 3. Warning incoming when current is WARNING -> must NOT preempt
+        assertFalse("Warning alert must not preempt existing snackbar", shouldPreempt(warningVisuals.severity, warningVisuals))
+
+        // 4. Critical incoming when current is generic non-battery snackbar -> must NOT preempt (preserves system notifications)
+        val genericVisuals = object : androidx.compose.material3.SnackbarVisuals {
+            override val message: String = "Generic message"
+            override val actionLabel: String? = null
+            override val withDismissAction: Boolean = false
+            override val duration: androidx.compose.material3.SnackbarDuration = androidx.compose.material3.SnackbarDuration.Short
+        }
+        assertFalse("Critical alert must not dismiss unrelated generic snackbars", shouldPreempt(criticalVisuals.severity, genericVisuals))
     }
 }
 

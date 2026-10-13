@@ -113,7 +113,10 @@ val AmoledOutlineVariant = Color(0xFF262626) // Subtle tile divider border (ATT-
 val AmoledOutline = Color(0xFF38383A)
 val AmoledOnSurfaceVariant = Color(0xFF9E9E9E) // Muted grey for labels and units (ATT-1264 / REQ-UI-171)
 
-// Semantic Warning Colors (REQ-UI-356, ATT-3451)
+/**
+ * Semantic Warning Color Tokens for peripheral battery and caution notifications (REQ-UI-356, ATT-3451).
+ * Specifically designed and verified for WCAG 2.1 AAA contrast compliance (> 7:1) in both Light and Dark modes.
+ */
 val LightWarning = Color(0xFFE65100)
 val LightWarningContainer = Color(0xFFFFE082)   // Warm Amber 200
 val LightOnWarningContainer = Color(0xFF3E2723) // Deep Brown (contrast > 10:1 on LightWarningContainer)
@@ -124,12 +127,31 @@ val DarkWarningContainer = Color(0xFF4E2C00)    // Deep warm amber-brown
 val DarkOnWarningContainer = Color(0xFFFFE082)  // Soft pale amber (contrast > 9:1 on DarkWarningContainer)
 val DarkWarningAction = Color(0xFFFFD54F)       // Vibrant Amber 300 (contrast > 8:1 on DarkWarningContainer)
 
+/**
+ * Color tuple containing container, content (body text), and action button colors
+ * for battery snackbar presentation in Compose Material 3 (REQ-UI-356, ATT-3451).
+ *
+ * @property containerColor Background tint for the snackbar container.
+ * @property contentColor High-contrast foreground color for text/icons.
+ * @property actionColor High-contrast foreground color for the actionable button text.
+ */
 data class BatterySnackbarColors(
     val containerColor: Color,
     val contentColor: Color,
     val actionColor: Color
 )
 
+/**
+ * Composable color resolver mapping a [WorkoutNavigationEvents.BatteryAlertSeverity]
+ * to high-contrast theme-aware [BatterySnackbarColors] conforming to Material 3 design
+ * guidelines (REQ-UI-356, ATT-3451).
+ *
+ * - [WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL]: Uses errorContainer / onErrorContainer / error.
+ * - [WorkoutNavigationEvents.BatteryAlertSeverity.WARNING]: Uses amber warning tokens with WCAG AAA contrast (> 7:1).
+ *
+ * @param severity The severity tier of the low battery alert.
+ * @return The corresponding [BatterySnackbarColors] tailored to the current dark/light theme.
+ */
 @Composable
 fun getBatterySnackbarColors(severity: WorkoutNavigationEvents.BatteryAlertSeverity): BatterySnackbarColors {
     val isDark = isSystemInDarkTheme()

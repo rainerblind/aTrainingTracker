@@ -100,8 +100,9 @@ class TrackingTabsScreenLayoutTest {
             content.contains("WorkoutNavigationEvents.BatterySnackbarVisuals(")
         )
         assertTrue(
-            "TrackingTabsScreen.kt must check for critical alert preemption and dismiss active snackbar",
+            "TrackingTabsScreen.kt must check for critical alert preemption and dismiss active warning battery snackbar",
             content.contains("alert.severity == WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL") &&
+                content.contains("currentVisuals.severity == WorkoutNavigationEvents.BatteryAlertSeverity.WARNING") &&
                 content.contains("snackbarHostState.currentSnackbarData?.dismiss()")
         )
 

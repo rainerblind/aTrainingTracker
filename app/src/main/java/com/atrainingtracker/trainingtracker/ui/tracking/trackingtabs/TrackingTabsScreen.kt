@@ -162,7 +162,10 @@ fun TrackingTabsScreen(
         WorkoutNavigationEvents.lowBatteryAlert.collect { alert ->
             if (alert != null) {
                 if (alert.severity == WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL) {
-                    snackbarHostState.currentSnackbarData?.dismiss()
+                    val currentVisuals = snackbarHostState.currentSnackbarData?.visuals as? WorkoutNavigationEvents.BatterySnackbarVisuals
+                    if (currentVisuals != null && currentVisuals.severity == WorkoutNavigationEvents.BatteryAlertSeverity.WARNING) {
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                    }
                 }
                 val visuals = WorkoutNavigationEvents.BatterySnackbarVisuals(
                     message = alert.message,
