@@ -80,6 +80,11 @@ class ProcessExitReasonHelperTest {
             val default = secondArg<Long>()
             (prefStorage[key] as? Long) ?: default
         }
+        every { sharedPreferences.getString(any(), any()) } answers {
+            val key = firstArg<String>()
+            val default = secondArg<String?>()
+            (prefStorage[key] as? String) ?: default
+        }
 
         every { sharedPreferences.edit() } returns sharedPreferencesEditor
         every { sharedPreferencesEditor.putInt(any(), any()) } answers {
@@ -92,6 +97,17 @@ class ProcessExitReasonHelperTest {
             val key = firstArg<String>()
             val value = secondArg<Long>()
             prefStorage[key] = value
+            sharedPreferencesEditor
+        }
+        every { sharedPreferencesEditor.putString(any(), any()) } answers {
+            val key = firstArg<String>()
+            val value = secondArg<String>()
+            prefStorage[key] = value
+            sharedPreferencesEditor
+        }
+        every { sharedPreferencesEditor.remove(any()) } answers {
+            val key = firstArg<String>()
+            prefStorage.remove(key)
             sharedPreferencesEditor
         }
         every { sharedPreferencesEditor.apply() } answers { }
@@ -255,5 +271,88 @@ class ProcessExitReasonHelperTest {
         val captured = intentSlot.captured
         assertEquals(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, captured.action)
         assertEquals(mockUri, captured.data)
+    }
+
+    @Test
+    fun testClassify_simulatedLowMemory_returnsLowMemoryAndClearsPref() {
+        prefStorage[ProcessExitReasonHelper.PREF_DEBUG_SIMULATED_KILL_REASON] = "LOW_MEMORY"
+
+        val diagnosis = ProcessExitReasonHelper.resolveKillReason(
+            context,
+            sdkInt = Build.VERSION_CODES.R,
+            isDebug = true
+        )
+
+        assertEquals(KillReason.LOW_MEMORY, diagnosis.reason)
+        assertEquals(0, diagnosis.escalationLevel)
+        assertFalse(diagnosis.shouldShowBatteryButton)
+        assertFalse(prefStorage.containsKey(ProcessExitReasonHelper.PREF_DEBUG_SIMULATED_KILL_REASON))
+    }
+
+    @Test
+    fun testClassify_simulatedPermissionRevoked_returnsPermissionRevokedAndClearsPref() {
+        prefStorage[ProcessExitReasonHelper.PREF_DEBUG_SIMULATED_KILL_REASON] = "PERMISSION_REVOKED"
+
+        val diagnosis = ProcessExitReasonHelper.resolveKillReason(
+            context,
+            sdkInt = Build.VERSION_CODES.R,
+            isDebug = true
+        )
+
+        assertEquals(KillReason.PERMISSION_REVOKED, diagnosis.reason)
+        assertEquals(0, diagnosis.escalationLevel)
+        assertFalse(diagnosis.shouldShowBatteryButton)
+        assertFalse(prefStorage.containsKey(ProcessExitReasonHelper.PREF_DEBUG_SIMULATED_KILL_REASON))
+    }
+
+    @Test
+    fun testClassify_simulatedBatteryKill_returnsBatteryKillAndClearsPref() {
+        prefStorage[ProcessExitReasonHelper.PREF_DEBUG_SIMULATED_KILL_REASON] = "BATTERY_KILL"
+        every { powerManager.isIgnoringBatteryOptimizations("com.atrainingtracker") } returns false
+
+        val diagnosis = ProcessExitReasonHelper.resolveKillReason(
+            context,
+            sdkInt = Build.VERSION_CODES.R,
+            isDebug = true
+        )
+
+        assertEquals(KillReason.BATTERY_KILL, diagnosis.reason)
+        assertEquals(1, diagnosis.escalationLevel)
+        assertTrue(diagnosis.shouldShowBatteryButton)
+        assertFalse(prefStorage.containsKey(ProcessExitReasonHelper.PREF_DEBUG_SIMULATED_KILL_REASON))
+    }
+
+    @Test
+    fun testClassify_simulatedGeneric_returnsGenericUnfinishedAndClearsPref() {
+        prefStorage[ProcessExitReasonHelper.PREF_DEBUG_SIMULATED_KILL_REASON] = "GENERIC"
+
+        val diagnosis = ProcessExitReasonHelper.resolveKillReason(
+            context,
+            sdkInt = Build.VERSION_CODES.R,
+            isDebug = true
+        )
+
+        assertEquals(KillReason.GENERIC_UNFINISHED, diagnosis.reason)
+        assertEquals(0, diagnosis.escalationLevel)
+        assertFalse(diagnosis.shouldShowBatteryButton)
+        assertFalse(prefStorage.containsKey(ProcessExitReasonHelper.PREF_DEBUG_SIMULATED_KILL_REASON))
+    }
+
+    @Test
+    fun testClassify_simulatedLowMemory_releaseBuildIgnoresSimulatedPref() {
+        prefStorage[ProcessExitReasonHelper.PREF_DEBUG_SIMULATED_KILL_REASON] = "LOW_MEMORY"
+        every { activityManager.getHistoricalProcessExitReasons("com.atrainingtracker", 0, 1) } returns emptyList()
+        every { powerManager.isIgnoringBatteryOptimizations("com.atrainingtracker") } returns true
+
+        val diagnosis = ProcessExitReasonHelper.resolveKillReason(
+            context,
+            sdkInt = Build.VERSION_CODES.R,
+            isDebug = false
+        )
+
+        // In release builds, simulated pref is ignored, falling back to GENERIC_UNFINISHED
+        assertEquals(KillReason.GENERIC_UNFINISHED, diagnosis.reason)
+        // Preference was NOT consumed/cleared because isDebug == false
+        assertTrue(prefStorage.containsKey(ProcessExitReasonHelper.PREF_DEBUG_SIMULATED_KILL_REASON))
     }
 }
