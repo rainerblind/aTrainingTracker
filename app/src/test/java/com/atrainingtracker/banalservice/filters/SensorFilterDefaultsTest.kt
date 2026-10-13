@@ -44,6 +44,32 @@ class SensorFilterDefaultsTest {
     }
 
     @Test
+    fun testSpeedSensor_defaultsToTwoSecondMovingAverage() {
+        val config = SensorFilterDefaults.getDefaultFilterConfig(SensorType.SPEED_mps)
+        assertEquals(FilterType.MOVING_AVERAGE_TIME, config.filterType)
+        assertEquals(2.0, config.filterConstant, 0.001)
+        assertEquals("sec", config.unit)
+
+        assertEquals(FilterType.MOVING_AVERAGE_TIME, SensorFilterDefaults.getDefaultFilterType(SensorType.SPEED_mps))
+        assertEquals(2.0, SensorFilterDefaults.getDefaultFilterConstant(SensorType.SPEED_mps), 0.001)
+        assertEquals("sec", SensorFilterDefaults.getDefaultUnit(SensorType.SPEED_mps))
+        assertEquals(config, SensorType.SPEED_mps.getDefaultFilterConfig())
+    }
+
+    @Test
+    fun testCadenceSensor_defaultsToTwoSecondMovingAverage() {
+        val config = SensorFilterDefaults.getDefaultFilterConfig(SensorType.CADENCE)
+        assertEquals(FilterType.MOVING_AVERAGE_TIME, config.filterType)
+        assertEquals(2.0, config.filterConstant, 0.001)
+        assertEquals("sec", config.unit)
+
+        assertEquals(FilterType.MOVING_AVERAGE_TIME, SensorFilterDefaults.getDefaultFilterType(SensorType.CADENCE))
+        assertEquals(2.0, SensorFilterDefaults.getDefaultFilterConstant(SensorType.CADENCE), 0.001)
+        assertEquals("sec", SensorFilterDefaults.getDefaultUnit(SensorType.CADENCE))
+        assertEquals(config, SensorType.CADENCE.getDefaultFilterConfig())
+    }
+
+    @Test
     fun testPaceSensor_defaultsToFiveSecondMovingAverage() {
         val config = SensorFilterDefaults.getDefaultFilterConfig(SensorType.PACE_spm)
         assertEquals(FilterType.MOVING_AVERAGE_TIME, config.filterType)
@@ -108,8 +134,6 @@ class SensorFilterDefaultsTest {
     fun testContinuousMetrics_defaultToInstantaneous() {
         val continuousSensors = listOf(
             SensorType.HR,
-            SensorType.SPEED_mps,
-            SensorType.CADENCE,
             SensorType.ALTITUDE,
             SensorType.TEMPERATURE
         )
