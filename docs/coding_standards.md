@@ -6,10 +6,15 @@ This document serves as the authoritative living source of truth for software en
 
 ## 1. Core Engineering Principles & Software Construction
 
-### 1.1 Single Source of Truth & DRY (Don't Repeat Yourself) — Shared Code Over Duplication (Rule 36)
-* **Mandatory Reuse Over Divergent Logic**:
+### 1.1 Reuse Before Create & DRY (Shared Code, Utilities & Architecture Over Duplication) (Rule 36)
+* **Overarching Invariant**:
+  * Before designing or implementing a new helper method, repository, calculator, formatter, or data structure, developers and AI agents **MUST** inspect the existing codebase and reuse existing shared architectural components.
   * Always favor existing shared utilities, repositories, formatters, and reusable composables over writing parallel, ad-hoc, or duplicate code.
-  * Before introducing new helper methods or metric conversion logic, inspect existing utilities in `com.atrainingtracker.trainingtracker.util`, `com.atrainingtracker.trainingtracker.ui.common`, and `ui.components`.
+  * Look first in:
+    * `com.atrainingtracker.trainingtracker.util`
+    * `com.atrainingtracker.trainingtracker.formatters`
+    * `com.atrainingtracker.trainingtracker.ui.common`
+    * `com.atrainingtracker.trainingtracker.ui.components`
 * **Canonical Formatters & Unit Parity**:
   * All distance, altitude, speed, pace, and time presentation across both classic View and Jetpack Compose layers **MUST** route through canonical formatters:
     * **Distance**: `DistanceFormatter`
@@ -32,6 +37,17 @@ This document serves as the authoritative living source of truth for software en
   * Avoid dual-use generic callbacks (e.g. an `onEdit` callback triggered on single-click in configuration mode, but on long-click in tracking mode). Name callbacks explicitly after athlete intent (e.g. `onConfigureField`, `onPickTileToMove`, `onToggleMap`).
 * **Gesture Contract Tests**:
   * Interactive components handling multi-gesture inputs (`combinedClickable`, gestures) **MUST** have automated gesture contract tests asserting callback dispatch across all supported screen modes (`ScreenMode.TRACKING`, `ScreenMode.CONFIGURATION`, `ScreenMode.PREVIEW`).
+
+### 1.3 Prohibition of Sorting and Ranking on Formatted Display Strings (ATT-3324)
+* **Strict Numeric Primitive Invariant**:
+  * All sorting comparators, tie-breakers, candidate rankings, and thresholds in domain repositories and ViewModels **MUST** evaluate raw numeric primitives (`Double`, `Float`, `Long`, `Int`), never formatted display strings.
+  * Display formatters switch units at boundary thresholds (e.g. `DistanceFormatter` switches from meters `"995 m"` to kilometers `"2.40 km"` at 1,000m). Because string comparison is lexicographical by ASCII code, `"2.40 km" < "995 m"` evaluates as true, causing candidate entities to flip incorrectly at unit boundaries.
+  * Models exposing formatted strings for UI presentation must also expose raw unrounded primitives (`Double`) with default fallback values (e.g. `Double.MAX_VALUE`) for sorting and mathematical comparison.
+
+### 1.4 Explicit Confirmation for Destructive or Cache-Invalidating Operations (ATT-3355)
+* **Destructive & Bulk Re-computation Guard**:
+  * Any user-triggered action that invalidates existing historical caches, re-clusters historical workouts, clears bulk data, or resets persistent preferences **MUST** be protected by an explicit confirmation dialog (`AppDialogActions` / `AlertDialog`).
+  * The dialog must clearly explain the consequences of the re-computation (e.g. re-clustering historical workouts) before executing the background task.
 
 ---
 

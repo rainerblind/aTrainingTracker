@@ -59,6 +59,13 @@ SingleChoiceSegmentedButtonRow(
   * Options list exceeds horizontal screen space.
   * *Examples*: Sensor device selection, audio cue sound profile selection, map tile source.
 
+### 1.4 Discrete Scalar Ranges & Durations ($\ge 5$ Numeric Values) (ATT-3325 / ATT-3450)
+* **Standard Control**: Discrete Slider (`TuningSliderItem` / Material 3 `Slider`) or connected `SingleChoiceSegmentedButtonRow`.
+* **When to Use**:
+  * Configuring durations, distances, or numeric settings offering $\ge 5$ discrete scalar options (e.g. `[1s, 2s, 3s, ... 10s]` or `[30m, 40m, ... 300m]`).
+* **Anti-Pattern (Avoid)**:
+  * ❌ **Do NOT use multi-chip rows (`FilterChip` in `FlowRow`)** for large scalar sets. On mobile viewports, the trailing chip(s) frequently wrap onto an isolated second row, creating unbalanced whitespace and poor visual rhythm. Prefer an interactive slider with snap steps and a live value indicator.
+
 ---
 
 ## 2. Chart & Visual Analytics Guidelines
@@ -102,7 +109,13 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
   * On tracking screens where the map is disabled and only the elevation profile is shown, the elevation profile retains its fixed adaptive height based on the track's elevation difference.
   * The sensor grid column absorbs the flexible remaining vertical space (via `weight(1f, fill = false)`), wrapping naturally if there are few tiles and scrolling smoothly if there are many tiles, without stretching the elevation profile out of proportion (ATT-3107 / ATT-3173).
 
-### 2.4 Continuous Linear Projection for Sparse Geometry Progress Tracking
+### 2.4 Elevation Profile Marker Badge Boundary Clearance (ATT-3343 / ATT-3453)
+* **Boundary Clipping Prevention**:
+  * Overlay badges and markers rendered on elevation profile canvases (e.g. climb category pills `UC`, `CAT 4`, `CAT 3`, `CAT 2`, `CAT 1`, `HC`, start/finish markers) must have guaranteed top and horizontal boundary clearance.
+  * Canvas drawing routines MUST allocate adequate top padding (at least 16–20 dp) above the peak terrain line so category badges drawn above hill summits are never clipped or truncated at the top canvas boundary.
+  * Badges positioned near the right or left viewport edges must clamp horizontal bounds so badge pills remain fully visible within the canvas width.
+
+### 2.5 Continuous Linear Projection for Sparse Geometry Progress Tracking
 * **Linear Projection Invariant**:
   * Progress tracking along geometric paths (climbs, segments, routes) MUST NOT rely exclusively on nearest-neighbor discrete vertex quantization (`path[closestIdx]`).
   * On straight road sections or imported GPX tracks where points may be 50–200 m apart, nearest-neighbor snapping causes telemetry metrics (remaining distance, elevation gain, current gradient) and visual rider pins to freeze and jump discontinuously.
@@ -155,7 +168,7 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 
 > Origin: Retro Sprint 2026-40.16 — ATT-1835 (Quick Route Selector), ATT-1953 (Take Me Home HUD) and ATT-2058 (tile variants) were functionally correct but did not look/feel like the rest of the app (follow-ups ATT-2456 … ATT-2462). The values below are the de-facto standard measured across the existing codebase. Binding for every ticket that adds or changes UI (Governance Rule 23).
 
-### 5.1 Reuse Before Create
+### 5.1 Reuse Existing UI Components & Visual Patterns (Visual Baseline)
 * Before designing a new screen, card, sheet, HUD element or button, find the **closest existing equivalent** in the app and copy its structure, shapes, spacing and colors.
 * Prefer shared components from `ui/components/` (e.g. `MetricItem`, `MetricBadge`, `DropdownSelector`, `EmptyStatePlaceholder`, `DeleteConfirmationDialog`, `BottomSheetUtils`, `MappableListItem`) and `ui/common/`.
 * Tabbed screens follow the existing tabbed layout pattern (`RouteTabbedScreen`, `EquipmentTabsScreen`): collapsing header with `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` title row + standard Material 3 tab row. Do not invent alternative tab/segment visuals for top-level navigation.
@@ -175,6 +188,11 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * Surfaces, text and accents come from `MaterialTheme.colorScheme` so that Light, Dark and **AMOLED** themes all render correctly. Verify new UI in all three.
 * Domain semantics come from `TTColor` (zones, routes, start/end points, branding). Add a new `TTColor` entry instead of an inline `Color(0x…)`.
 * **Route & Navigation Domain Tints**: Route geometry and trajectories on the map use Royal Blue tones (`TTColor.RouteSelected`, `TTColor.RouteActiveNavigation`). Consequently, interactive UI elements, cards, and buttons specifically associated with route selection or navigation (e.g. the Route Selection button on the Control Tracking screen in ATT-2458) should incorporate a subtle Royal Blue touch (e.g. subtle Royal Blue border accent, tinted icon, or gentle container tint) to establish an intuitive semantic connection with the map's Royal Blue route visualization, while keeping the effect minimal and harmonious with the theme.
+* **Semantic Alert & Warning Containers (ATT-3313 / ATT-3451)**:
+  * In-app alert snackbars, badges, and warning banners **MUST NOT** use default primary blue for warnings or alerts. Blue conveys active navigation or informative telemetry, not hazard states.
+  * Use dedicated semantic warning containers:
+    * **Low / Warning Level** (e.g. low battery $\le 20\%$): Amber/yellow warning container with high-contrast text.
+    * **Critical / Danger Level** (e.g. critical battery $\le 10\%$, sensor lost): `MaterialTheme.colorScheme.errorContainer` / error red with `onErrorContainer` text.
 * Never hardcode `Color.White` / `Color.Black` for text or backgrounds in normal app UI (cockpit tiles follow `CockpitThemeMode`).
 
 ### 5.5 Typography & Icons
