@@ -1642,6 +1642,7 @@
     <string name="tuning_cat_sensors_gps">Sensors, GPS &amp; Filtering</string>
     <string name="tuning_cat_workout_masks_cards">Workout Cards &amp; Details</string>
     <string name="tuning_cat_navigation">Navigation</string>
+    <string name="tuning_cat_route_clustering">Route &amp; Workout Clustering</string>
     <string name="tuning_route_selection_radius_title">Route Selection Radius</string>
     <string name="tuning_route_selection_radius_desc">Maximum distance to route start point for nearby route selection</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Navigation Cue Dismiss Duration</string>

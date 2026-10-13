@@ -1427,6 +1427,7 @@
     <string name="tuning_cat_sensors_gps">センサー、GPS、フィルター</string>
     <string name="tuning_cat_workout_masks_cards">ワークアウトカードと詳細</string>
     <string name="tuning_cat_navigation">ナビゲーション</string>
+    <string name="tuning_cat_route_clustering">ルートとワークアウトのクラスタリング</string>
     <string name="tuning_route_selection_radius_title">ルート選択半径</string>
     <string name="tuning_route_selection_radius_desc">近くのルート選択のためのルート開始地点までの最大距離</string>
     <string name="tuning_nav_cue_dismiss_duration_title">ナビゲーション案内の表示時間</string>

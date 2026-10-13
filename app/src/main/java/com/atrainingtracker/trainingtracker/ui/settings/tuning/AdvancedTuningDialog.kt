@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.RestartAlt
@@ -52,6 +53,7 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetCon
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AftermathAnalysisSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.ClusterTuningSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSection
@@ -81,37 +83,26 @@ fun AdvancedTuningDialog(
     val persistedWorkoutDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = null)
     val persistedWorkoutSectionsOrder by preferenceManager.workoutSectionsOrderFlow.collectAsState(initial = null)
 
-    var elevationXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN) }
-    var telemetryXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN) }
-    var fullDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.FULL_DIM_FACTOR) }
-    var mediumDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.MEDIUM_DIM_FACTOR) }
-    var slopeFlat by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD) }
-    var slopeSteep by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_STEEP_THRESHOLD) }
-    var wakeupSec by remember { mutableIntStateOf(TuningPreferencesDefaults.WAKEUP_DURATION_SEC) }
-    var downwardDelaySec by remember { mutableIntStateOf(TuningPreferencesDefaults.DOWNWARD_DELAY_SEC) }
-    var gpsAccuracy by remember { mutableFloatStateOf(TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M) }
-    var altitudeWindowSec by remember { mutableIntStateOf(TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC) }
-    var slopeMinSpeed by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS) }
-    var paceCeilingMinKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM) }
-    var cockpitFontFamily by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_FAMILY) }
-    var cockpitFontWeight by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT) }
-    var sensorFieldVariant by remember { mutableStateOf(TuningPreferencesDefaults.SENSOR_FIELD_VARIANT) }
-    var sensorFieldCornerRadius by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS) }
-    var sensorFieldBorderThickness by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS) }
-    var sensorFieldBorderContrast by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST) }
-    var routeSelectionRadiusKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM) }
-    var navigationCueDismissDurationSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC) }
+    var elevationXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN) }; var telemetryXAxisDomain by remember { mutableStateOf(TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN) }
+    var fullDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.FULL_DIM_FACTOR) }; var mediumDimFactor by remember { mutableFloatStateOf(TuningPreferencesDefaults.MEDIUM_DIM_FACTOR) }
+    var slopeFlat by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_FLAT_THRESHOLD) }; var slopeSteep by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_STEEP_THRESHOLD) }
+    var wakeupSec by remember { mutableIntStateOf(TuningPreferencesDefaults.WAKEUP_DURATION_SEC) }; var downwardDelaySec by remember { mutableIntStateOf(TuningPreferencesDefaults.DOWNWARD_DELAY_SEC) }
+    var gpsAccuracy by remember { mutableFloatStateOf(TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M) }; var altitudeWindowSec by remember { mutableIntStateOf(TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC) }
+    var slopeMinSpeed by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS) }; var paceCeilingMinKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM) }
+    var cockpitFontFamily by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_FAMILY) }; var cockpitFontWeight by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT) }
+    var sensorFieldVariant by remember { mutableStateOf(TuningPreferencesDefaults.SENSOR_FIELD_VARIANT) }; var sensorFieldCornerRadius by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS) }
+    var sensorFieldBorderThickness by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS) }; var sensorFieldBorderContrast by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST) }
+    var routeSelectionRadiusKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM) }; var navigationCueDismissDurationSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC) }
     var elevationSmoothingSigmaMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS) }
-    var mapFollowMeInitialZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM) }
-    var mapFollowMeSpeedZoomEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED) }
-    var mapFollowMeCruisingZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM) }
-    var mapFollowMeTiltAngle by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE) }
+    var mapFollowMeInitialZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM) }; var mapFollowMeSpeedZoomEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED) }
+    var mapFollowMeCruisingZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM) }; var mapFollowMeTiltAngle by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE) }
     var mapFollowMeLookaheadPaddingPercent by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT) }
-    var mapFollowMeSpeedSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA) }
-    var mapFollowMeBearingSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA) }
-    var showAntMissingAdapterWarnings by remember { mutableStateOf(!TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG) }
-    var autoFollowUniqueRouteEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED) }
+    var mapFollowMeSpeedSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA) }; var mapFollowMeBearingSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA) }
+    var showAntMissingAdapterWarnings by remember { mutableStateOf(!TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG) }; var autoFollowUniqueRouteEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED) }
     var turnCueCountdownDistanceMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS) }
+    var clusterTolEndpoints by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS) }; var clusterTolApex by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_APEX) }
+    var clusterTolDistance by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE) }; var clusterTolAltitudePos by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS) }
+    var clusterUseSportType by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE) }; var clusterUseAltitudePos by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -157,6 +148,9 @@ fun AdvancedTuningDialog(
         showAntMissingAdapterWarnings = config.showAntMissingAdapterWarnings
         autoFollowUniqueRouteEnabled = config.autoFollowUniqueRouteEnabled
         turnCueCountdownDistanceMeters = config.turnCueCountdownDistanceMeters
+        clusterTolEndpoints = config.clusterTolEndpoints; clusterTolApex = config.clusterTolApex
+        clusterTolDistance = config.clusterTolDistance; clusterTolAltitudePos = config.clusterTolAltitudePos
+        clusterUseSportType = config.clusterUseSportType; clusterUseAltitudePos = config.clusterUseAltitudePos
     }
 
     LaunchedEffect(persistedConfig) {
@@ -185,20 +179,18 @@ fun AdvancedTuningDialog(
                         mapFollowMeInitialZoom = mapFollowMeInitialZoom, mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled,
                         mapFollowMeCruisingZoom = mapFollowMeCruisingZoom, mapFollowMeTiltAngle = mapFollowMeTiltAngle,
                         mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent,
-                        mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha,
-                        mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
-                        suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings,
-                        autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
-                        turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters
+                        mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha, mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
+                        suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings, autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
+                        turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters,
+                        clusterTolEndpoints = clusterTolEndpoints, clusterTolApex = clusterTolApex,
+                        clusterTolDistance = clusterTolDistance, clusterTolAltitudePos = clusterTolAltitudePos,
+                        clusterUseSportType = clusterUseSportType, clusterUseAltitudePos = clusterUseAltitudePos
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
-                        preferenceManager.setWorkoutCardPreferences(workoutCardPrefs)
-                        preferenceManager.setWorkoutDetailPreferences(workoutDetailPrefs)
-                        preferenceManager.setWorkoutSectionsOrder(workoutSectionsOrder)
-                        SensorSearchPreferences.save(context, sensorSearchPrefs)
-                        onSettingsChanged?.invoke()
-                        onDismiss()
+                        preferenceManager.setWorkoutCardPreferences(workoutCardPrefs); preferenceManager.setWorkoutDetailPreferences(workoutDetailPrefs)
+                        preferenceManager.setWorkoutSectionsOrder(workoutSectionsOrder); SensorSearchPreferences.save(context, sensorSearchPrefs)
+                        onSettingsChanged?.invoke(); onDismiss()
                     }
                 },
                 onCancel = onDismiss,
@@ -340,7 +332,29 @@ fun AdvancedTuningDialog(
                 )
             }
 
-            // Section 7: Aftermath & Analyse
+            // Section 7: Routen- & Workout-Clustering
+            val isImperial = com.atrainingtracker.trainingtracker.TrainingApplication.getUnit() == com.atrainingtracker.trainingtracker.MyUnits.IMPERIAL
+            TuningAccordionSection(
+                icon = Icons.Default.Hub,
+                title = stringResource(R.string.tuning_cat_route_clustering),
+                subtitle = TuningSubtitleFormatter.formatClusterTuningSubtitle(
+                    clusterTolEndpoints, clusterTolApex, clusterTolDistance, clusterTolAltitudePos,
+                    clusterUseSportType, clusterUseAltitudePos, isImperial, context
+                ),
+                isExpanded = isSectionExpanded(TuningSection.ROUTE_CLUSTERING),
+                onToggle = { toggleSection(TuningSection.ROUTE_CLUSTERING) }
+            ) {
+                ClusterTuningSection(
+                    endpointTolerance = clusterTolEndpoints, onEndpointToleranceChange = { clusterTolEndpoints = it },
+                    apexTolerance = clusterTolApex, onApexToleranceChange = { clusterTolApex = it },
+                    distanceTolerance = clusterTolDistance, onDistanceToleranceChange = { clusterTolDistance = it },
+                    altitudePositionTolerance = clusterTolAltitudePos, onAltitudePositionToleranceChange = { clusterTolAltitudePos = it },
+                    useSportTypeForClustering = clusterUseSportType, onUseSportTypeChange = { clusterUseSportType = it },
+                    useAltitudePosForClustering = clusterUseAltitudePos, onUseAltitudePosChange = { clusterUseAltitudePos = it }
+                )
+            }
+
+            // Section 8: Aftermath & Analyse
             TuningAccordionSection(
                 icon = Icons.AutoMirrored.Filled.ShowChart,
                 title = stringResource(R.string.tuning_cat_aftermath),
@@ -368,14 +382,10 @@ fun AdvancedTuningDialog(
                 onClick = {
                     scope.launch {
                         tuningDataStore.resetToDefaults()
-                        preferenceManager.setWorkoutCardPreferences(WorkoutCardSectionPreferences())
-                        preferenceManager.setWorkoutDetailPreferences(WorkoutDetailPreferences())
-                        preferenceManager.setWorkoutSectionsOrder(WorkoutSectionType.DEFAULT_ORDER)
-                        SensorSearchPreferences.reset(context)
-                        sensorSearchPrefs = SensorSearchPreferences()
-                        workoutCardPrefs = WorkoutCardSectionPreferences()
-                        workoutDetailPrefs = WorkoutDetailPreferences()
-                        workoutSectionsOrder = WorkoutSectionType.DEFAULT_ORDER
+                        preferenceManager.setWorkoutCardPreferences(WorkoutCardSectionPreferences()); workoutCardPrefs = WorkoutCardSectionPreferences()
+                        preferenceManager.setWorkoutDetailPreferences(WorkoutDetailPreferences()); workoutDetailPrefs = WorkoutDetailPreferences()
+                        preferenceManager.setWorkoutSectionsOrder(WorkoutSectionType.DEFAULT_ORDER); workoutSectionsOrder = WorkoutSectionType.DEFAULT_ORDER
+                        SensorSearchPreferences.reset(context); sensorSearchPrefs = SensorSearchPreferences()
                         applyConfig(TuningConfig())
                         onSettingsChanged?.invoke()
                         Toast.makeText(context, context.getString(R.string.reset_to_defaults_success), Toast.LENGTH_SHORT).show()
