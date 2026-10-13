@@ -159,17 +159,17 @@ class TrackingViewModel(
                         else -> 0
                     }
                 }.thenBy {
-                    // Priority 2: Conditional tie-breaker
+                    // Priority 2: Conditional tie-breaker (REQ-LIV-005: strictly Double numeric values)
                     when(it.liveData.segmentStatus) {
                         // If we are ON the segment, prioritize by remaining distance (finish line)
                         LiveSegmentStatus.ON_SEGMENT,
-                        LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> it.liveData.remainingDistance
+                        LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH -> it.liveData.remainingDistance_raw
 
                         // If we are APPROACHING, prioritize by distance to the start line
-                        LiveSegmentStatus.APPROACHING -> it.liveData.distanceToStart
+                        LiveSegmentStatus.APPROACHING -> it.liveData.distanceToStart_raw
 
-                        // For the other cases, it is not clear what to do.  Thus, we try the segment offset. I.e., the closest segment (although this might jump).
-                        else -> it.liveData.segmentOffset
+                        // For the other cases, sort by segment offset (closest to athlete)
+                        else -> it.liveData.segmentOffset_raw
                     }
                 }
             )

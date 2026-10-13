@@ -51,9 +51,11 @@ data class LiveSegmentData(
     val segmentStatus: LiveSegmentStatus,
     val timeOnSegment: String = "--:--",
     val distanceToStart: String = "--",
+    val distanceToStart_raw: Double = Double.MAX_VALUE,
     val distanceOnSegment: String = "--",
     val distanceOnSegment_raw: Double = 0.0,
     val remainingDistance: String = "--",
+    val remainingDistance_raw: Double = Double.MAX_VALUE,
     val segmentOffset: String = "--",
     val segmentOffset_raw: Double = 0.0
 )
@@ -313,11 +315,14 @@ class LiveSegmentsRepository internal constructor(
             // now, do an update based on the new state
             when (newSegmentStatus) {
                 LiveSegmentStatus.APPROACHING -> {
+                    val remainingDistance = liveSegment.staticData.summary.distance_raw + distanceToStart
                     liveSegment.copy(
                         liveData = LiveSegmentData(
                             segmentStatus = LiveSegmentStatus.APPROACHING,
                             distanceToStart = df.format_with_units(distanceToStart),
-                            remainingDistance = df.format_with_units(liveSegment.staticData.summary.distance_raw + distanceToStart)
+                            distanceToStart_raw = distanceToStart,
+                            remainingDistance = df.format_with_units(remainingDistance),
+                            remainingDistance_raw = remainingDistance
                         )
                     )
                 }
@@ -356,6 +361,8 @@ class LiveSegmentsRepository internal constructor(
                                 distanceOnSegment = df.format_with_units(distanceOnSegment),
                                 distanceOnSegment_raw = distanceOnSegment,
                                 remainingDistance = df.format_with_units(remainingDistance),
+                                remainingDistance_raw = remainingDistance,
+                                distanceToStart_raw = 0.0,
                                 segmentOffset = df.format_with_units(distanceToSegment),
                                 segmentOffset_raw = distanceToSegment
                             )
@@ -376,14 +383,18 @@ class LiveSegmentsRepository internal constructor(
                                 distanceOnSegment = df.format_with_units(distanceOnSegment),
                                 distanceOnSegment_raw = distanceOnSegment,
                                 remainingDistance = df.format_with_units(0),
-                                segmentOffset = df.format_with_units(distanceToEnd)
+                                remainingDistance_raw = 0.0,
+                                distanceToStart_raw = 0.0,
+                                segmentOffset = df.format_with_units(distanceToEnd),
+                                segmentOffset_raw = distanceToEnd
                             )
                         )
                     }
                     else {  // finished some time ago -> only update the segmentOffset as the distance to the end.
                         liveSegment.copy(
                             liveData = liveSegment.liveData.copy(
-                                segmentOffset = df.format_with_units(distanceToEnd)
+                                segmentOffset = df.format_with_units(distanceToEnd),
+                                segmentOffset_raw = distanceToEnd
                             )
                         )
                     }
