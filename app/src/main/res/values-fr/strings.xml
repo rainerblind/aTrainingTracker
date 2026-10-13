@@ -1597,6 +1597,8 @@
     <string name="google_drive_error_folder_hierarchy">Échec de la résolution de la hiérarchie des dossiers Google Drive</string>
     <string name="google_drive_connect_prompt">Connectez votre compte Google pour exporter automatiquement vos entraînements et synchroniser vos sauvegardes vers Google Drive.</string>
     <string name="scan_google_drive">Scanner Google Drive</string>
+    <string name="google_drive_scan_empty_diagnostic">Aucun fichier d\'entraînement accessible trouvé. Les fichiers copiés de manière externe sur Google Drive ne sont pas visibles via l\'API Google Drive pour des raisons de sécurité. Veuillez appuyer sur « Sélectionner fichier(s) local(aux) » sur la carte de format et choisir vos fichiers depuis Google Drive à l\'aide du sélecteur de fichiers.</string>
+    <string name="import_workout_files_progress">Importation des fichiers (%1$d sur %2$d)…</string>
     <string name="legacy_import__downloading_google_drive">Téléchargement de %1$s depuis Google Drive…</string>
     <string name="gpx_enriching_elevation">Récupération des données d\'altitude…</string>
     <string name="gpx_elevation_enriched">Données d\'altitude ajoutées avec succès</string>

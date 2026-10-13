@@ -1598,6 +1598,8 @@
     <string name="google_drive_error_folder_hierarchy">Error al resolver la jerarquía de carpetas de Google Drive</string>
     <string name="google_drive_connect_prompt">Conecte su cuenta de Google para exportar entrenamientos y sincronizar copias de seguridad de la base de datos automáticamente en Google Drive.</string>
     <string name="scan_google_drive">Escanear Google Drive</string>
+    <string name="google_drive_scan_empty_diagnostic">No se encontraron archivos de entrenamiento accesibles. Los archivos copiados externamente a Google Drive no son visibles a través de la API de Google Drive debido a permisos de seguridad. Toque «Seleccionar archivo(s) local(es)» en la tarjeta del formato y elija sus archivos de Google Drive usando el selector de archivos.</string>
+    <string name="import_workout_files_progress">Importando archivos (%1$d de %2$d)…</string>
     <string name="legacy_import__downloading_google_drive">Descargando %1$s de Google Drive…</string>
     <string name="gpx_enriching_elevation">Obteniendo datos de elevación…</string>
     <string name="gpx_elevation_enriched">Datos de elevación añadidos con éxito</string>

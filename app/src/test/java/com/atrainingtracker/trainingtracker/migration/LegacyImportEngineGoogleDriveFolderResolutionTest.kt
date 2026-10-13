@@ -62,21 +62,31 @@ class LegacyImportEngineGoogleDriveFolderResolutionTest {
         val format = "fit"
         val candidateFolderHierarchies = when (format.lowercase()) {
             "fit" -> listOf(
+                listOf("FIT"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "FIT"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             "tcx" -> listOf(
+                listOf("TCX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "TCX"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             "gpx" -> listOf(
+                listOf("GPX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "GPX"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             else -> listOf(
+                listOf("FIT"),
+                listOf("TCX"),
+                listOf("GPX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "FIT"),
                 listOf("aTrainingTracker", "TCX"),
                 listOf("aTrainingTracker", "GPX"),
@@ -85,9 +95,9 @@ class LegacyImportEngineGoogleDriveFolderResolutionTest {
             )
         }
 
-        assertEquals(listOf("aTrainingTracker", "FIT"), candidateFolderHierarchies[0])
-        assertEquals(listOf("aTrainingTracker", "Workouts"), candidateFolderHierarchies[1])
-        assertEquals(listOf("aTrainingTracker"), candidateFolderHierarchies[2])
+        assertEquals(listOf("FIT"), candidateFolderHierarchies[0])
+        assertEquals(listOf("Workouts"), candidateFolderHierarchies[1])
+        assertEquals(listOf("aTrainingTracker", "FIT"), candidateFolderHierarchies[2])
     }
 
     @Test
@@ -95,21 +105,31 @@ class LegacyImportEngineGoogleDriveFolderResolutionTest {
         val format = "tcx"
         val candidateFolderHierarchies = when (format.lowercase()) {
             "fit" -> listOf(
+                listOf("FIT"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "FIT"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             "tcx" -> listOf(
+                listOf("TCX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "TCX"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             "gpx" -> listOf(
+                listOf("GPX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "GPX"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             else -> listOf(
+                listOf("FIT"),
+                listOf("TCX"),
+                listOf("GPX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "FIT"),
                 listOf("aTrainingTracker", "TCX"),
                 listOf("aTrainingTracker", "GPX"),
@@ -118,9 +138,9 @@ class LegacyImportEngineGoogleDriveFolderResolutionTest {
             )
         }
 
-        assertEquals(listOf("aTrainingTracker", "TCX"), candidateFolderHierarchies[0])
-        assertEquals(listOf("aTrainingTracker", "Workouts"), candidateFolderHierarchies[1])
-        assertEquals(listOf("aTrainingTracker"), candidateFolderHierarchies[2])
+        assertEquals(listOf("TCX"), candidateFolderHierarchies[0])
+        assertEquals(listOf("Workouts"), candidateFolderHierarchies[1])
+        assertEquals(listOf("aTrainingTracker", "TCX"), candidateFolderHierarchies[2])
     }
 
     @Test
@@ -128,21 +148,31 @@ class LegacyImportEngineGoogleDriveFolderResolutionTest {
         val format = "gpx"
         val candidateFolderHierarchies = when (format.lowercase()) {
             "fit" -> listOf(
+                listOf("FIT"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "FIT"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             "tcx" -> listOf(
+                listOf("TCX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "TCX"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             "gpx" -> listOf(
+                listOf("GPX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "GPX"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             else -> listOf(
+                listOf("FIT"),
+                listOf("TCX"),
+                listOf("GPX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "FIT"),
                 listOf("aTrainingTracker", "TCX"),
                 listOf("aTrainingTracker", "GPX"),
@@ -151,9 +181,9 @@ class LegacyImportEngineGoogleDriveFolderResolutionTest {
             )
         }
 
-        assertEquals(listOf("aTrainingTracker", "GPX"), candidateFolderHierarchies[0])
-        assertEquals(listOf("aTrainingTracker", "Workouts"), candidateFolderHierarchies[1])
-        assertEquals(listOf("aTrainingTracker"), candidateFolderHierarchies[2])
+        assertEquals(listOf("GPX"), candidateFolderHierarchies[0])
+        assertEquals(listOf("Workouts"), candidateFolderHierarchies[1])
+        assertEquals(listOf("aTrainingTracker", "GPX"), candidateFolderHierarchies[2])
     }
 
     @Test
@@ -161,21 +191,31 @@ class LegacyImportEngineGoogleDriveFolderResolutionTest {
         val format = "all"
         val candidateFolderHierarchies = when (format.lowercase()) {
             "fit" -> listOf(
+                listOf("FIT"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "FIT"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             "tcx" -> listOf(
+                listOf("TCX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "TCX"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             "gpx" -> listOf(
+                listOf("GPX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "GPX"),
                 listOf("aTrainingTracker", "Workouts"),
                 listOf("aTrainingTracker")
             )
             else -> listOf(
+                listOf("FIT"),
+                listOf("TCX"),
+                listOf("GPX"),
+                listOf("Workouts"),
                 listOf("aTrainingTracker", "FIT"),
                 listOf("aTrainingTracker", "TCX"),
                 listOf("aTrainingTracker", "GPX"),
@@ -184,12 +224,12 @@ class LegacyImportEngineGoogleDriveFolderResolutionTest {
             )
         }
 
-        assertEquals(5, candidateFolderHierarchies.size)
-        assertEquals(listOf("aTrainingTracker", "FIT"), candidateFolderHierarchies[0])
-        assertEquals(listOf("aTrainingTracker", "TCX"), candidateFolderHierarchies[1])
-        assertEquals(listOf("aTrainingTracker", "GPX"), candidateFolderHierarchies[2])
-        assertEquals(listOf("aTrainingTracker", "Workouts"), candidateFolderHierarchies[3])
-        assertEquals(listOf("aTrainingTracker"), candidateFolderHierarchies[4])
+        assertEquals(9, candidateFolderHierarchies.size)
+        assertEquals(listOf("FIT"), candidateFolderHierarchies[0])
+        assertEquals(listOf("TCX"), candidateFolderHierarchies[1])
+        assertEquals(listOf("GPX"), candidateFolderHierarchies[2])
+        assertEquals(listOf("Workouts"), candidateFolderHierarchies[3])
+        assertEquals(listOf("aTrainingTracker", "FIT"), candidateFolderHierarchies[4])
     }
 
     @Test

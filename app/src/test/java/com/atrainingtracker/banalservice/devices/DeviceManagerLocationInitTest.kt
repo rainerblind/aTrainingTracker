@@ -30,16 +30,19 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Test
 
 /**
@@ -58,6 +61,24 @@ class DeviceManagerLocationInitTest {
     private val fusedDeviceId = 102L
     private val networkDeviceId = 103L
 
+    companion object {
+        @JvmStatic
+        @BeforeClass
+        fun setUpClass() {
+            mockkConstructor(Intent::class)
+            every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+            mockkConstructor(ClockDevice::class)
+            mockkConstructor(BatteryDevice::class)
+            mockkConstructor(SpeedAndLocationDevice_GPS::class)
+        }
+
+        @JvmStatic
+        @AfterClass
+        fun tearDownClass() {
+            unmockkAll()
+        }
+    }
+
     @Before
     fun setUp() {
         mockkStatic(Log::class)
@@ -70,9 +91,6 @@ class DeviceManagerLocationInitTest {
 
         mockkStatic(ContextCompat::class)
         every { ContextCompat.registerReceiver(any(), any(), any(), any()) } returns null
-
-        mockkConstructor(Intent::class)
-        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
 
         mockkStatic(TrainingApplication::class)
         every { TrainingApplication.startSearchWhenAppStarts() } returns false
@@ -104,15 +122,11 @@ class DeviceManagerLocationInitTest {
         every { mockBanalService.getSystemService(Context.LOCATION_SERVICE) } returns mockLocationManager
         every { mockBanalService.getSystemService(Context.SENSOR_SERVICE) } returns mockAndroidSensorManager
         every { mockBanalService.packageName } returns "com.atrainingtracker"
-
-        mockkConstructor(ClockDevice::class)
-        mockkConstructor(BatteryDevice::class)
-        mockkConstructor(SpeedAndLocationDevice_GPS::class)
     }
 
     @After
     fun tearDown() {
-        unmockkAll()
+        clearAllMocks(answers = false)
     }
 
     @Test
