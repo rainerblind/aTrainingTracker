@@ -562,6 +562,11 @@ public class DevicesDatabaseManager {
 
     public void setBatteryPercentage(long deviceId, int percentage) {
         setInt(deviceId, DevicesDbHelper.LAST_BATTERY_PERCENTAGE, percentage);
+        try {
+            com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository.notifyBatteryUpdated(deviceId, percentage);
+        } catch (Throwable t) {
+            Log.e(TAG, "Error notifying DeviceDataRepository of battery update", t);
+        }
     }
 
     public void putBikePowerSensorFlags(long deviceId, int sensorFlags) {

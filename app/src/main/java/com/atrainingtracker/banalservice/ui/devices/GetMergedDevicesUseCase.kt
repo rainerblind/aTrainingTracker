@@ -42,6 +42,11 @@ class GetMergedDevicesUseCase(
         dbList.map { knownDevice ->
             val telemetry = activeTelemetry.find { it.deviceId == knownDevice.id }
             val isFound = foundIds.contains(knownDevice.id)
+            val liveBattery = if (telemetry != null && telemetry.batteryPercentage >= 0) {
+                telemetry.batteryPercentage
+            } else {
+                knownDevice.batteryPercentage
+            }
 
             when {
                 telemetry != null -> {
@@ -52,6 +57,7 @@ class GetMergedDevicesUseCase(
                         knownDevice.copy(
                             isConnected = true,
                             lastSeen = application.getString(R.string.devices_now),
+                            batteryPercentage = liveBattery,
                             mainValue = "${mainSensorData.value} $unit".trim(),
                             allValues = telemetry.allValues.map {
                                 "${it.sensor.getShortName(application)}: ${it.value}"
@@ -62,6 +68,7 @@ class GetMergedDevicesUseCase(
                         knownDevice.copy(
                             isConnected = true,
                             lastSeen = application.getString(R.string.devices_now),
+                            batteryPercentage = liveBattery,
                             mainValue = null,
                             allValues = telemetry.allValues.map {
                                 "${it.sensor.getShortName(application)}: ${it.value}"
