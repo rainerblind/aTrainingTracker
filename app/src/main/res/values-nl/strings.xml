@@ -1659,6 +1659,7 @@
     <string name="turn_cue_sharp_right">Scherpe bocht naar rechts</string>
     <string name="turn_cue_straight">Rechtdoor</string>
     <string name="turn_cue_u_turn">U-bocht</string>
+    <string name="turn_cue_gallery_title">Afslaginstructiepictogrammen</string>
     <string name="turn_cue_now">NU</string>
     <string name="turn_cue_off_route">Van de route af (%1$d m)</string>
     <string name="turn_cue_back_on_route">Terug op de route</string>

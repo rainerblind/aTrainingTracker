@@ -1663,6 +1663,7 @@
     <string name="turn_cue_sharp_right">Giro cerrado a la derecha</string>
     <string name="turn_cue_straight">Continuar recto</string>
     <string name="turn_cue_u_turn">Cambio de sentido</string>
+    <string name="turn_cue_gallery_title">Iconos de indicaciones de giro</string>
     <string name="turn_cue_now">AHORA</string>
     <string name="turn_cue_off_route">Fuera de ruta (%1$d m)</string>
     <string name="turn_cue_back_on_route">De vuelta en la ruta</string>

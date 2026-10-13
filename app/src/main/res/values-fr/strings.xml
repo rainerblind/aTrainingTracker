@@ -1662,6 +1662,7 @@
     <string name="turn_cue_sharp_right">Serrer à droite</string>
     <string name="turn_cue_straight">Tout droit</string>
     <string name="turn_cue_u_turn">Faire demi-tour</string>
+    <string name="turn_cue_gallery_title">Icônes des indications de direction</string>
     <string name="turn_cue_now">MAINTENANT</string>
     <string name="turn_cue_off_route">Hors itinéraire (%1$d m)</string>
     <string name="turn_cue_back_on_route">De retour sur l\'itinéraire</string>

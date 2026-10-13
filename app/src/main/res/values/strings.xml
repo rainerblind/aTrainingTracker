@@ -1854,6 +1854,7 @@
     <string name="turn_cue_sharp_right">Sharp right</string>
     <string name="turn_cue_straight">Straight ahead</string>
     <string name="turn_cue_u_turn">U-turn</string>
+    <string name="turn_cue_gallery_title">Turn Cue Direction Icons</string>
     <string name="turn_cue_now">NOW</string>
     <string name="turn_cue_off_route">Off Route (%1$d m)</string>
     <string name="turn_cue_back_on_route">Back on Route</string>
