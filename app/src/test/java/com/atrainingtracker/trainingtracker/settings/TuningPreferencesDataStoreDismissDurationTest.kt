@@ -17,19 +17,24 @@ import org.junit.Test
 
 /**
  * Unit tests for navigation cue dismiss duration options, default constants,
- * legacy 0 coercion, and 10s option inclusion (TST-UI-247 / REQ-UI-287 / ATT-3325).
+ * legacy 0 coercion, and 1s-10s slider range clamping (TST-UI-247 / REQ-UI-287 / ATT-3450).
  */
 class TuningPreferencesDataStoreDismissDurationTest {
 
     @Test
     fun defaultConstants_matchExpectedSpecification() {
+        assertEquals(1, TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC)
+        assertEquals(10, TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC)
+        assertEquals(1, TuningPreferencesDefaults.STEP_NAVIGATION_CUE_DISMISS_DURATION_SEC)
         assertEquals(4, TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC)
-        assertEquals(listOf(2, 3, 4, 5, 8, 10), TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS)
+        assertEquals((1..10).toList(), TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS)
     }
 
     @Test
-    fun options_contains10SecondsAndExcludesZero() {
-        assertTrue(TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS.contains(10))
+    fun options_containsAllValuesFrom1To10AndExcludesZero() {
+        for (sec in 1..10) {
+            assertTrue("Expected $sec to be in NAVIGATION_CUE_DISMISS_OPTIONS", TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS.contains(sec))
+        }
         assertFalse(TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS.contains(0))
     }
 
@@ -40,40 +45,65 @@ class TuningPreferencesDataStoreDismissDurationTest {
     }
 
     @Test
-    fun tuningConfig_customDuration10s_retained() {
-        val config = TuningConfig(navigationCueDismissDurationSec = 10)
-        assertEquals(10, config.navigationCueDismissDurationSec)
+    fun tuningConfig_customDuration_retained() {
+        for (sec in 1..10) {
+            val config = TuningConfig(navigationCueDismissDurationSec = sec)
+            assertEquals(sec, config.navigationCueDismissDurationSec)
+        }
     }
 
     @Test
     fun validation_legacyZeroCoercesToDefault() {
         val rawPref = 0
-        val validated = if (rawPref in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) {
-            rawPref
-        } else {
+        val validated = if (rawPref == 0) {
             TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+        } else {
+            rawPref.coerceIn(
+                TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+                TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
+            )
         }
         assertEquals(4, validated)
     }
 
     @Test
-    fun validation_unknownDurationCoercesToDefault() {
+    fun validation_negativeValuesCoerceToDefault() {
+        val rawPref = -5
+        val validated = if (rawPref <= 0) {
+            TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+        } else {
+            rawPref.coerceIn(
+                TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+                TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
+            )
+        }
+        assertEquals(4, validated)
+    }
+
+    @Test
+    fun validation_outOfBoundsHighClampsToMax() {
         val rawPref = 42
-        val validated = if (rawPref in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) {
-            rawPref
-        } else {
+        val validated = if (rawPref == 0) {
             TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+        } else {
+            rawPref.coerceIn(
+                TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+                TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
+            )
         }
-        assertEquals(4, validated)
+        assertEquals(10, validated)
     }
 
     @Test
-    fun validation_allConfiguredOptionsAreValid() {
-        for (sec in listOf(2, 3, 4, 5, 8, 10)) {
-            val validated = if (sec in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) {
-                sec
-            } else {
+    fun validation_allDiscreteSeconds1To10ArePreserved() {
+        for (sec in 1..10) {
+            val validated = if (sec == 0) {
                 TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+            } else {
+                sec.coerceIn(
+                    TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+                    TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
+                )
             }
             assertEquals(sec, validated)
         }
