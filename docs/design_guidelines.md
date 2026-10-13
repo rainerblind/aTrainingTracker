@@ -136,8 +136,18 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 
 * **Design Tokens**:
   * Always use the existing theme tokens rather than hardcoded raw colors: `MaterialTheme.colorScheme.*`, `MaterialTheme.typography.*`, `TTColor` (domain colors: zones, routes, achievements, branding), `TTAlpha` (opacity levels) and `LayoutConstants` (header heights). There is currently no `TTDimens` object — use the spacing scale in Section 5.2.
-* **Localization Invariant**:
-  * Any user-visible string (titles, subtitles, button labels, descriptions) must be localized across all 9 supported application locales (`de`, `en`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
+* **Jetpack Compose Multi-State `@Preview` Tooling**:
+  * Every reusable composable and screen container **MUST** provide comprehensive `@Preview` composables.
+  * Previews must cover multiple states: Light and Dark/AMOLED theme, empty state, populated content state, error state, and loading/shimmer state.
+  * Wrap previews in `TrainingTrackerTheme` to ensure accurate font scaling, shape, and palette rendering in Android Studio preview panes.
+* **9-Language Localization Parity**:
+  * Any user-visible string (titles, subtitles, button labels, descriptions, error dialogs, tooltips) must be localized across all 9 supported application locales (`values/strings.xml`, `values-de/strings.xml`, `values-es/strings.xml`, `values-fr/strings.xml`, `values-it/strings.xml`, `values-ja/strings.xml`, `values-nl/strings.xml`, `values-pl/strings.xml`, `values-pt/strings.xml`).
+  * Hardcoding untranslated string literals in Kotlin code or Compose layouts is strictly forbidden.
+* **Positional Format Specifiers Invariant**:
+  * When formatted strings contain multiple dynamic arguments, they **MUST** use indexed positional specifiers (e.g. `%1$s`, `%2$d`, `%1$f`) rather than unindexed specifiers (e.g. `%s`, `%d`).
+  * Unindexed specifiers fail Android Lint and crash or misorder text in languages whose grammatical syntax reorders subject and object (such as Japanese, German, or Polish).
+* **Font Scaling & Layout Truncation**:
+  * UI layouts must gracefully handle user font scale settings up to 130% without clipping labels or overlapping adjacent icons. Use `TextOverflow.Ellipsis`, soft wrapping, or flexible container heights.
 
 ---
 
