@@ -77,7 +77,12 @@ class TurnByTurnNavigationRepository internal constructor(
                 if (latLng != null) {
                     val newState = navigationEngine.onLocationChanged(latLng, activeConfig)
                     dispatchAlertsIfTriggered(previousState, newState, activeConfig)
-                    previousState = newState
+                    if (newState.isOffRoute && routesRepository.isRouteAutoSelected.value) {
+                        routesRepository.setActiveNavigatedRoute(null)
+                        previousState = TurnNavigationState()
+                    } else {
+                        previousState = newState
+                    }
                 }
             }
         }

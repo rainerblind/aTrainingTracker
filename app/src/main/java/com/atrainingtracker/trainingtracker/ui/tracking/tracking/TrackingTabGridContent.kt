@@ -30,6 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
+import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModel
 import com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.EditSensorFieldViewModelFactory
@@ -101,6 +102,12 @@ fun TrackingTabGridContent(
             }
             override fun onToggleElevationProfile(enabled: Boolean) {
                 viewModel.onUpdateShowElevationProfile(enabled)
+            }
+            override fun onUpdateElevationProfileScope(scope: ElevationProfileScope) {
+                viewModel.onUpdateElevationProfileScope(scope)
+            }
+            override fun onUpdateElevationProfileLookahead(lookaheadMeters: Int) {
+                viewModel.onUpdateElevationProfileLookahead(lookaheadMeters)
             }
             override fun onToggleLiveSegments(enabled: Boolean) {
                 viewModel.onUpdateShowLiveSegments(enabled)

@@ -34,6 +34,11 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -68,6 +73,7 @@ import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.core.view.WindowCompat
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
 import com.atrainingtracker.banalservice.BSportType
@@ -146,6 +152,24 @@ fun TrackingTabsScreen(
     DisposableEffect(batterySaverController) {
         onDispose {
             batterySaverController.release()
+        }
+    }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val viewSensorsLabel = stringResource(R.string.sensor_battery_action_view_sensors)
+    LaunchedEffect(Unit) {
+        WorkoutNavigationEvents.lowBatteryAlert.collect { alert ->
+            if (alert != null) {
+                val result = snackbarHostState.showSnackbar(
+                    message = alert.message,
+                    actionLabel = viewSensorsLabel,
+                    duration = SnackbarDuration.Long
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    (context as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors)
+                }
+                WorkoutNavigationEvents.consumeLowBatteryAlert()
+            }
         }
     }
 
@@ -757,6 +781,21 @@ fun TrackingTabsScreen(
                         returnNavRepo.startTakeMeHome()
                         showRouteSelectorSheet = false
                     }
+                )
+            }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = if (shouldShowLapButton) 64.dp else 8.dp)
+            ) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    actionColor = MaterialTheme.colorScheme.primary
                 )
             }
         }

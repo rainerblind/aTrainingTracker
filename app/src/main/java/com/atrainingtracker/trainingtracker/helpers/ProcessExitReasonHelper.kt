@@ -40,6 +40,7 @@ object ProcessExitReasonHelper {
     private const val TAG = "ProcessExitReasonHelper"
     const val PREF_BATTERY_KILL_COUNT = "pref_battery_kill_count"
     const val PREF_LAST_EVALUATED_EXIT_TIMESTAMP = "pref_last_evaluated_exit_timestamp"
+    const val PREF_DEBUG_SIMULATED_KILL_REASON = "pref_debug_simulated_kill_reason"
 
     private var sessionEvaluated = false
 
@@ -60,16 +61,40 @@ object ProcessExitReasonHelper {
     /**
      * Resolves the root cause of the previous process termination when an unfinished workout exists.
      * Evaluates Android 11+ [ApplicationExitInfo] and [PowerManager.isIgnoringBatteryOptimizations].
+     * In debug builds ([isDebug]), checks [PREF_DEBUG_SIMULATED_KILL_REASON] for desk simulation injection (REQ-STB-015).
      * Idempotently tracks exit timestamps to prevent spurious counter increments during screen rotation.
      */
     fun resolveKillReason(
         context: Context,
-        sdkInt: Int = Build.VERSION.SDK_INT
+        sdkInt: Int = Build.VERSION.SDK_INT,
+        isDebug: Boolean = com.atrainingtracker.BuildConfig.DEBUG
     ): KillDiagnosis {
         var detectedReason = KillReason.GENERIC_UNFINISHED
         var exitTimestamp: Long? = null
+        var isSimulated = false
 
-        if (sdkInt >= Build.VERSION_CODES.R) {
+        if (isDebug) {
+            try {
+                val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+                val simulated = prefs.getString(PREF_DEBUG_SIMULATED_KILL_REASON, null)
+                if (!simulated.isNullOrBlank()) {
+                    prefs.edit().remove(PREF_DEBUG_SIMULATED_KILL_REASON).apply()
+                    detectedReason = when (simulated) {
+                        "LOW_MEMORY" -> KillReason.LOW_MEMORY
+                        "PERMISSION_REVOKED" -> KillReason.PERMISSION_REVOKED
+                        "BATTERY_KILL" -> KillReason.BATTERY_KILL
+                        "GENERIC" -> KillReason.GENERIC_UNFINISHED
+                        else -> KillReason.GENERIC_UNFINISHED
+                    }
+                    isSimulated = true
+                    Log.i(TAG, "Consuming simulated kill reason: $simulated -> $detectedReason")
+                }
+            } catch (e: Throwable) {
+                Log.w(TAG, "Failed to read simulated kill reason", e)
+            }
+        }
+
+        if (!isSimulated && sdkInt >= Build.VERSION_CODES.R) {
             try {
                 val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
                 val exitInfos = activityManager?.getHistoricalProcessExitReasons(context.packageName, 0, 1)
@@ -93,7 +118,7 @@ object ProcessExitReasonHelper {
             resetBatteryKillCount(context)
         }
 
-        if (detectedReason == KillReason.GENERIC_UNFINISHED && !isIgnoringBattery) {
+        if (!isSimulated && detectedReason == KillReason.GENERIC_UNFINISHED && !isIgnoringBattery) {
             detectedReason = KillReason.BATTERY_KILL
         }
 

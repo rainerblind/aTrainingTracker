@@ -23,6 +23,8 @@ import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,17 +43,28 @@ import kotlinx.coroutines.launch
 class ForkNavigationRepository internal constructor(
     private val routesRepository: RoutesRepository,
     private val banalRepository: BANALServiceRepository? = null,
+    private val tuningPreferencesDataStore: TuningPreferencesDataStore? = null,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
 
     private val _forkDecisionState = MutableStateFlow<ForkDecisionState?>(null)
     val forkDecisionState: StateFlow<ForkDecisionState?> = _forkDecisionState.asStateFlow()
 
+    @VisibleForTesting
+    var autoFollowUniqueRouteEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED
+
     private var isDismissed = false
     private var lastSearchTimeMs: Long = 0L
     private var lastSearchPos: LatLng? = null
 
     init {
+        if (tuningPreferencesDataStore != null) {
+            scope.launch {
+                tuningPreferencesDataStore.tuningConfigFlow.collect { config ->
+                    autoFollowUniqueRouteEnabled = config.autoFollowUniqueRouteEnabled
+                }
+            }
+        }
         if (banalRepository != null) {
             scope.launch {
                 banalRepository.currentLocation.collect { latLng ->
@@ -144,7 +157,9 @@ class ForkNavigationRepository internal constructor(
                 }
 
                 if (alternativesFar) {
-                    routesRepository.setActiveNavigatedRoute(chosenRoute.summary.id)
+                    if (autoFollowUniqueRouteEnabled) {
+                        routesRepository.setActiveNavigatedRoute(chosenRoute.summary.id, isAutoSelected = true)
+                    }
                     _forkDecisionState.value = null
                     return
                 }
@@ -175,7 +190,7 @@ class ForkNavigationRepository internal constructor(
      * Manually binds a route choice selected by the athlete and dismisses the alert.
      */
     fun selectRouteManually(routeId: Long) {
-        routesRepository.setActiveNavigatedRoute(routeId)
+        routesRepository.setActiveNavigatedRoute(routeId, isAutoSelected = false)
         _forkDecisionState.value = null
         isDismissed = false
     }
@@ -207,7 +222,8 @@ class ForkNavigationRepository internal constructor(
             return instance ?: synchronized(this) {
                 instance ?: ForkNavigationRepository(
                     routesRepository = RoutesRepository.getInstance(context.applicationContext),
-                    banalRepository = BANALServiceRepository.getInstance(context.applicationContext)
+                    banalRepository = BANALServiceRepository.getInstance(context.applicationContext),
+                    tuningPreferencesDataStore = TuningPreferencesDataStore(context.applicationContext)
                 ).also { instance = it }
             }
         }

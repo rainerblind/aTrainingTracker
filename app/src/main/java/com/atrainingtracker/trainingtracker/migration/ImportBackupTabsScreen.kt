@@ -119,6 +119,8 @@ fun ImportBackupTabsScreen(
     var showTuningDialogForGoogleDrive by remember { mutableStateOf(false) }
     var pendingGoogleDriveFormat by remember { mutableStateOf("all") }
     var pendingSingleLegacyUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingLegacyUris by remember { mutableStateOf<List<Uri>?>(null) }
+    var pendingFitUris by remember { mutableStateOf<List<Uri>?>(null) }
     var pendingSingleLegacyFormat by remember { mutableStateOf("auto") }
     var showDropboxDisconnectedDialog by remember { mutableStateOf(false) }
     var showGoogleDriveDisconnectedDialog by remember { mutableStateOf(false) }
@@ -151,18 +153,22 @@ fun ImportBackupTabsScreen(
     }
 
     val pickLegacyFileLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let {
-            val fileName = ImportFileValidator.resolveDisplayName(context, it)
-            if (ImportFileValidator.isMatchingFormat(fileName, pendingSingleLegacyFormat)) {
-                pendingSingleLegacyUri = it
-            } else {
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            val validUris = uris.filter { uri ->
+                val fileName = ImportFileValidator.resolveDisplayName(context, uri)
+                ImportFileValidator.isMatchingFormat(fileName, pendingSingleLegacyFormat)
+            }
+            if (validUris.size < uris.size) {
                 Toast.makeText(
                     context,
                     context.getString(R.string.invalid_workout_file_format, pendingSingleLegacyFormat.uppercase()),
                     Toast.LENGTH_LONG
                 ).show()
+            }
+            if (validUris.isNotEmpty()) {
+                pendingLegacyUris = validUris
             }
         }
     }
@@ -183,7 +189,7 @@ fun ImportBackupTabsScreen(
                 ).show()
             }
             if (validUris.isNotEmpty()) {
-                viewModel.importFitFiles(context, validUris)
+                pendingFitUris = validUris
             }
         }
     }
@@ -463,6 +469,33 @@ fun ImportBackupTabsScreen(
                 pendingSingleLegacyUri = null
             },
             onDismiss = { pendingSingleLegacyUri = null }
+        )
+    }
+
+    pendingLegacyUris?.let { uris ->
+        PreImportTuningBottomSheet(
+            viewModel = viewModel,
+            onConfirm = {
+                if (uris.size == 1) {
+                    val uri = uris.first()
+                    viewModel.importLegacyFile(context, uri, pendingSingleLegacyFormat)
+                } else {
+                    viewModel.importWorkoutFiles(context, uris, pendingSingleLegacyFormat)
+                }
+                pendingLegacyUris = null
+            },
+            onDismiss = { pendingLegacyUris = null }
+        )
+    }
+
+    pendingFitUris?.let { uris ->
+        PreImportTuningBottomSheet(
+            viewModel = viewModel,
+            onConfirm = {
+                viewModel.importFitFiles(context, uris)
+                pendingFitUris = null
+            },
+            onDismiss = { pendingFitUris = null }
         )
     }
 }

@@ -39,6 +39,8 @@ object SensorFilterDefaults {
      * Resolves the domain-optimized default filter configuration for the given [sensorType].
      *
      * - [SensorType.POWER]: 3-second moving average (dampens pedal stroke dead-spots)
+     * - [SensorType.SPEED_mps]: 2-second moving average (dampens 1Hz GPS quantization noise, ATT-3310)
+     * - [SensorType.CADENCE]: 2-second moving average (dampens crank rotation timing flutter, ATT-3310)
      * - [SensorType.PACE_spm]: 5-second moving average (dampens GPS step jitter)
      * - [SensorType.VERTICAL_SPEED]: 15-second moving average (dampens 1Hz barometric quantization noise)
      * - [SensorType.SLOPE]: 5-second moving average (prevents divide-by-small-delta spikes)
@@ -51,6 +53,8 @@ object SensorFilterDefaults {
         }
         return when (sensorType) {
             SensorType.POWER -> DefaultFilterConfig(FilterType.MOVING_AVERAGE_TIME, 3.0, "sec")
+            SensorType.SPEED_mps -> DefaultFilterConfig(FilterType.MOVING_AVERAGE_TIME, 2.0, "sec")
+            SensorType.CADENCE -> DefaultFilterConfig(FilterType.MOVING_AVERAGE_TIME, 2.0, "sec")
             SensorType.PACE_spm -> DefaultFilterConfig(FilterType.MOVING_AVERAGE_TIME, 5.0, "sec")
             SensorType.VERTICAL_SPEED -> DefaultFilterConfig(FilterType.MOVING_AVERAGE_TIME, 15.0, "sec")
             SensorType.SLOPE -> DefaultFilterConfig(FilterType.MOVING_AVERAGE_TIME, 5.0, "sec")

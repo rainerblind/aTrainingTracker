@@ -736,6 +736,10 @@
     <string name="config_tracking__show_map">Map</string>
     <string name="config_tracking__showLiveSegments">Live Segments</string>
     <string name="config_tracking__showElevationProfile">Elevation Profile</string>
+    <string name="config_tracking__elevation_profile_scope">Scope</string>
+    <string name="config_tracking__elevation_profile_scope_full_route">Full Route</string>
+    <string name="config_tracking__elevation_profile_scope_rolling_window">Rolling Window</string>
+    <string name="config_tracking__elevation_profile_lookahead">Lookahead</string>
     <string name="config_tracking__showLapButton">Lap Button</string>
     <string name="config_tracking__show_navigation_hints">Turn Prompts</string>
     <string name="config_tracking__show_live_climbs">Live Climbs</string>
@@ -1638,13 +1642,11 @@
     <string name="tuning_cat_sensors_gps">Sensors, GPS &amp; Filtering</string>
     <string name="tuning_cat_workout_masks_cards">Workout Cards &amp; Details</string>
     <string name="tuning_cat_navigation">Navigation</string>
+    <string name="tuning_cat_route_clustering">Route &amp; Workout Clustering</string>
     <string name="tuning_route_selection_radius_title">Route Selection Radius</string>
     <string name="tuning_route_selection_radius_desc">Maximum distance to route start point for nearby route selection</string>
-    <string name="tuning_nav_cue_transparency_title">Navigation Cue Transparency</string>
-    <string name="tuning_nav_cue_transparency_desc">Opacity of turn prompts and navigation overlays</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Navigation Cue Dismiss Duration</string>
     <string name="tuning_nav_cue_dismiss_duration_desc">Auto-dismiss duration for turn maneuver prompts</string>
-    <string name="tuning_nav_cue_dismiss_persistent">Persistent</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 Cards</string>
     <string name="tuning_matrix_col_list">List</string>
     <string name="tuning_matrix_col_details">Details</string>
@@ -1788,6 +1790,8 @@
     <string name="google_drive_error_folder_hierarchy">Failed to resolve Google Drive folder hierarchy</string>
     <string name="google_drive_connect_prompt">Connect your Google account to automatically export workouts and synchronize database backups to Google Drive.</string>
     <string name="scan_google_drive">Scan Google Drive</string>
+    <string name="google_drive_scan_empty_diagnostic">No accessible workout files found. Files copied externally to Google Drive are not visible via Google Drive API due to security permissions. Please tap “Select local file(s)” on the format card and pick your files from Google Drive using the file picker.</string>
+    <string name="import_workout_files_progress">Importing files (%1$d of %2$d)…</string>
     <string name="legacy_import__downloading_google_drive">Downloading %1$s from Google Drive…</string>
     <string name="gpx_enriching_elevation">Fetching elevation data…</string>
     <string name="gpx_elevation_enriched">Elevation data successfully added</string>
@@ -1943,6 +1947,13 @@
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NEW</string>
     <string name="devices_new_sensor_discovered">New sensor discovered: %1$s</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Auto-follow unique route</string>
+    <string name="tuning_auto_follow_unique_route_desc">Automatically switch to follow a route when it becomes the only matching route at a fork</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Navigation Cue Distance</string>
+    <string name="tuning_nav_cue_distance_desc">Distance before upcoming turn to display navigation cue prompts</string>
 </resources>
 
 

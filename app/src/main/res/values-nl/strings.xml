@@ -1076,6 +1076,10 @@
     <string name="battery_level">Batterijniveau</string>
     <string name="calc_map_polyline">Kaartpolyline berekenen.</string>
     <string name="config_tracking__showElevationProfile">Hoogteprofiel</string>
+    <string name="config_tracking__elevation_profile_scope">Bereik</string>
+    <string name="config_tracking__elevation_profile_scope_full_route">Volledige route</string>
+    <string name="config_tracking__elevation_profile_scope_rolling_window">Rollend venster</string>
+    <string name="config_tracking__elevation_profile_lookahead">Vooruitkijken</string>
     <string name="current_value">Huidige waarde</string>
     <string name="editLocationName">Naam:</string>
     <string name="edit_my_location">Locatie bewerken</string>
@@ -1443,13 +1447,11 @@
     <string name="tuning_cat_sensors_gps">Sensoren, gps en filtering</string>
     <string name="tuning_cat_workout_masks_cards">Workout-kaarten en details</string>
     <string name="tuning_cat_navigation">Navigatie</string>
+    <string name="tuning_cat_route_clustering">Route- en workout-clustering</string>
     <string name="tuning_route_selection_radius_title">Straal voor routeselectie</string>
     <string name="tuning_route_selection_radius_desc">Maximale afstand tot het startpunt voor selectie van routes in de buurt</string>
-    <string name="tuning_nav_cue_transparency_title">Transparantie navigatieaanwijzingen</string>
-    <string name="tuning_nav_cue_transparency_desc">Dekking van afslaginstructies en navigatie-overlays</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Weergaveduur navigatieaanwijzingen</string>
     <string name="tuning_nav_cue_dismiss_duration_desc">Automatische sluitingsduur voor afslaginstructies</string>
-    <string name="tuning_nav_cue_dismiss_persistent">Blijvend</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 kaarten</string>
     <string name="tuning_matrix_col_list">Lijst</string>
     <string name="tuning_matrix_col_details">Details</string>
@@ -1593,6 +1595,8 @@
     <string name="google_drive_error_folder_hierarchy">Kan de Google Drive-mapstructuur niet oplossen</string>
     <string name="google_drive_connect_prompt">Verbind uw Google-account om trainingen en databaseback-ups automatisch te synchroniseren met Google Drive.</string>
     <string name="scan_google_drive">Google Drive scannen</string>
+    <string name="google_drive_scan_empty_diagnostic">Geen toegankelijke trainingsbestanden gevonden. Extern naar Google Drive gekopieerde bestanden zijn vanwege beveiligingsmachtigingen niet zichtbaar via de Google Drive API. Tik op „Lokaal bestand/bestanden kiezen” op de formaatkaart en kies uw bestanden uit Google Drive via de bestandenkiezer.</string>
+    <string name="import_workout_files_progress">Bestanden importeren (%1$d van %2$d)…</string>
     <string name="legacy_import__downloading_google_drive">%1$s downloaden van Google Drive…</string>
     <string name="gpx_enriching_elevation">Hoogtegegevens ophalen…</string>
     <string name="gpx_elevation_enriched">Hoogtegegevens succesvol toegevoegd</string>
@@ -1752,5 +1756,12 @@
     <!-- ATT-3220 / REQ-UI-353: Missing ANT adapter warning toggle -->
     <string name="tuning_show_ant_missing_adapter_warnings_title">Waarschuwingen voor ontbrekende ANT+-adapter tonen</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">Waarschuwingsdialoogvenster tonen wanneer naar een ANT+-sensor wordt gezocht maar er geen adapter is gedetecteerd</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Unieke route automatisch volgen</string>
+    <string name="tuning_auto_follow_unique_route_desc">Automatisch overschakelen om een route te volgen wanneer dit de enige overeenkomende route bij een splitsing is</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Afstand voor navigatie-aanwijzingen</string>
+    <string name="tuning_nav_cue_distance_desc">Afstand vóór de afslag om navigatiemeldingen weer te geven</string>
 </resources>
 

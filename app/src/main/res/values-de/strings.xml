@@ -1173,6 +1173,10 @@
     <string name="battery_level">Batteriestand</string>
     <string name="calc_map_polyline">Berechne Karten-Polyline.</string>
     <string name="config_tracking__showElevationProfile">Höhenprofil</string>
+    <string name="config_tracking__elevation_profile_scope">Bereich</string>
+    <string name="config_tracking__elevation_profile_scope_full_route">Gesamte Route</string>
+    <string name="config_tracking__elevation_profile_scope_rolling_window">Rollendes Fenster</string>
+    <string name="config_tracking__elevation_profile_lookahead">Vorausschau</string>
     <string name="current_value">Aktueller Wert</string>
     <string name="editLocationName">Name:</string>
     <string name="edit_my_location">Strecke bearbeiten</string>
@@ -1532,13 +1536,11 @@
     <string name="tuning_cat_sensors_gps">Sensoren, GPS &amp; Filter</string>
     <string name="tuning_cat_workout_masks_cards">Trainingsliste &amp; Details</string>
     <string name="tuning_cat_navigation">Navigation</string>
+    <string name="tuning_cat_route_clustering">Routen- &amp; Workout-Clustering</string>
     <string name="tuning_route_selection_radius_title">Routenauswahl-Radius</string>
     <string name="tuning_route_selection_radius_desc">Maximale Entfernung zum Routenstartpunkt für die Routenauswahl</string>
-    <string name="tuning_nav_cue_transparency_title">Transparenz der Navigationshinweise</string>
-    <string name="tuning_nav_cue_transparency_desc">Deckkraft von Abbiegehinweisen und Navigations-Overlays</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Anzeigedauer der Navigationshinweise</string>
     <string name="tuning_nav_cue_dismiss_duration_desc">Automatische Anzeigedauer für Abbiegehinweise</string>
-    <string name="tuning_nav_cue_dismiss_persistent">Dauerhaft</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 Karten</string>
     <string name="tuning_matrix_col_list">Liste</string>
     <string name="tuning_matrix_col_details">Details</string>
@@ -1682,6 +1684,8 @@
     <string name="google_drive_error_folder_hierarchy">Auflösen der Google Drive-Ordnerhierarchie fehlgeschlagen</string>
     <string name="google_drive_connect_prompt">Verbinden Sie Ihr Google-Konto, um abgeschlossene Workouts und Datenbank-Backups automatisch in Google Drive zu sichern.</string>
     <string name="scan_google_drive">Google Drive durchsuchen</string>
+    <string name="google_drive_scan_empty_diagnostic">Keine zugreifbaren Trainingsdateien gefunden. Extern nach Google Drive kopierte Dateien sind aus Sicherheitsgründen nicht über die Google Drive API sichtbar. Bitte tippen Sie auf der Format-Karte auf „Lokale Datei(en) wählen“ und wählen Sie die Dateien aus Google Drive über den Dateidialog aus.</string>
+    <string name="import_workout_files_progress">Dateien werden importiert (%1$d von %2$d)…</string>
     <string name="legacy_import__downloading_google_drive">%1$s von Google Drive herunterladen…</string>
     <string name="gpx_enriching_elevation">Höhendaten werden abgerufen…</string>
     <string name="gpx_elevation_enriched">Höhendaten erfolgreich hinzugefügt</string>
@@ -1837,4 +1841,11 @@
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NEU</string>
     <string name="devices_new_sensor_discovered">Neuer Sensor gefunden: %1$s</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Eindeutiger Route automatisch folgen</string>
+    <string name="tuning_auto_follow_unique_route_desc">Automatisch zu einer Route wechseln, sobald sie an einer Weggabelung als einzige übereinstimmt</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Distanz für Abbiegehinweise</string>
+    <string name="tuning_nav_cue_distance_desc">Entfernung vor dem Abbiegen zur Anzeige von Navigationshinweisen</string>
 </resources>

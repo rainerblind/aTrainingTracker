@@ -55,6 +55,18 @@ try:
 except ImportError:
     HAS_TERMIOS = False
 
+try:
+    from PyQt6.QtWidgets import (
+        QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+        QGridLayout, QPushButton, QLabel, QFrame, QTextEdit, QStatusBar,
+        QScrollArea
+    )
+    from PyQt6.QtCore import Qt, QTimer
+    from PyQt6.QtGui import QFont, QPalette, QColor
+    HAS_PYQT6 = True
+except ImportError:
+    HAS_PYQT6 = False
+
 TARGET_PACKAGES = ["com.atrainingtracker.debug", "com.atrainingtracker"]
 MAIN_ACTIVITY = ".activities.MainActivityWithNavigation"
 LOCATION_PERMISSION = "android.permission.ACCESS_FINE_LOCATION"
@@ -274,7 +286,7 @@ class KillSimulatorController:
         return prefs
 
     def reset_kill_counter(self):
-        """Resets battery kill count and last evaluated timestamp in SharedPreferences."""
+        """Resets battery kill count, last evaluated timestamp, and debug simulation key in SharedPreferences."""
         res = self.run_adb(
             ["shell", f"run-as {self.package_name} cat /data/data/{self.package_name}/shared_prefs/{self.package_name}_preferences.xml 2>/dev/null"],
             check=False
@@ -286,12 +298,45 @@ class KillSimulatorController:
         try:
             root = ET.fromstring(output)
             for elem in list(root):
-                if elem.get("name") in ("pref_battery_kill_count", "pref_last_evaluated_exit_timestamp"):
+                if elem.get("name") in (
+                    "pref_battery_kill_count",
+                    "pref_last_evaluated_exit_timestamp",
+                    "pref_debug_simulated_kill_reason"
+                ):
                     root.remove(elem)
 
             new_item = ET.SubElement(root, "int")
             new_item.set("name", "pref_battery_kill_count")
             new_item.set("value", "0")
+
+            xml_str = ET.tostring(root, encoding="utf-8").decode("utf-8")
+            escaped_xml = xml_str.replace('"', '\\"').replace('$', '\\$')
+            self.run_adb(
+                ["shell", f"run-as {self.package_name} sh -c 'echo \"{escaped_xml}\" > /data/data/{self.package_name}/shared_prefs/{self.package_name}_preferences.xml'"],
+                check=False
+            )
+        except Exception:
+            pass
+
+    def inject_simulated_kill_reason(self, reason: str):
+        """Injects pref_debug_simulated_kill_reason into SharedPreferences XML via run-as (REQ-STB-015)."""
+        res = self.run_adb(
+            ["shell", f"run-as {self.package_name} cat /data/data/{self.package_name}/shared_prefs/{self.package_name}_preferences.xml 2>/dev/null"],
+            check=False
+        )
+        output = res.stdout or ""
+        try:
+            if output and "<map>" in output:
+                root = ET.fromstring(output)
+                for elem in list(root):
+                    if elem.get("name") == "pref_debug_simulated_kill_reason":
+                        root.remove(elem)
+            else:
+                root = ET.Element("map")
+
+            new_item = ET.SubElement(root, "string")
+            new_item.set("name", "pref_debug_simulated_kill_reason")
+            new_item.text = reason
 
             xml_str = ET.tostring(root, encoding="utf-8").decode("utf-8")
             escaped_xml = xml_str.replace('"', '\\"').replace('$', '\\$')
@@ -343,9 +388,11 @@ class KillSimulatorController:
     def kill_battery_simulation(self) -> Tuple[List[int], bool]:
         """
         Executes complete battery-kill simulation:
-        1. Removes package from battery whitelist (!isIgnoringBatteryOptimizations).
-        2. Kills running process via SIGKILL.
+        1. Injects pref_debug_simulated_kill_reason = 'BATTERY_KILL' (REQ-STB-015).
+        2. Removes package from battery whitelist (!isIgnoringBatteryOptimizations).
+        3. Kills running process via SIGKILL.
         """
+        self.inject_simulated_kill_reason("BATTERY_KILL")
         self.set_battery_whitelist(False)
         time.sleep(0.2)
         killed_pids = self.kill_process_sigkill()
@@ -354,15 +401,18 @@ class KillSimulatorController:
     def kill_permission_simulation(self) -> Tuple[bool, str]:
         """
         Executes permission-change simulation:
-        Revokes ACCESS_FINE_LOCATION, triggering native Android OS REASON_PERMISSION_CHANGE kill.
+        1. Injects pref_debug_simulated_kill_reason = 'PERMISSION_REVOKED' (REQ-STB-015).
+        2. Revokes ACCESS_FINE_LOCATION, triggering native Android OS REASON_PERMISSION_CHANGE kill.
         """
+        self.inject_simulated_kill_reason("PERMISSION_REVOKED")
         self.revoke_location_permission()
         time.sleep(0.5)
         pids = self.get_running_pids()
         return len(pids) == 0, LOCATION_PERMISSION
 
     def kill_lmk_simulation(self) -> List[int]:
-        """Simulates low memory / background trim kill via am kill."""
+        """Simulates low memory / background trim kill via am kill with simulated exit reason injection (REQ-STB-015)."""
+        self.inject_simulated_kill_reason("LOW_MEMORY")
         pids = self.get_running_pids()
         self.run_adb(["shell", "am", "send-trim-memory", self.package_name, "RUNNING_CRITICAL"], check=False)
         self.run_adb(["shell", "am", "kill", self.package_name], check=False)
@@ -928,16 +978,306 @@ def start_web_gui(ctrl: KillSimulatorController, port: int = 8088, auto_open: bo
             print("\nShutting down Web GUI server.")
 
 
+if HAS_PYQT6:
+    class KillSimulatorWindow(QMainWindow):
+        """
+        Native PyQt6 Desktop GUI for Process Kill & Exit Reason Simulation.
+        Matches obsidian dark theme and design standards of tools/replay_workout.py (REQ-STB-015).
+        """
+        def __init__(self, controller: KillSimulatorController):
+            super().__init__()
+            self.ctrl = controller
+            self.setWindowTitle("Process Kill & Exit Reason Simulator (ATT-3377)")
+            self.setMinimumSize(860, 700)
+            self.apply_theme()
+
+            central_widget = QWidget()
+            self.setCentralWidget(central_widget)
+            main_layout = QVBoxLayout(central_widget)
+            main_layout.setContentsMargins(20, 20, 20, 20)
+            main_layout.setSpacing(14)
+
+            # Header
+            header_layout = QHBoxLayout()
+            title_lbl = QLabel("PROCESS KILL & EXIT REASON SIMULATOR")
+            title_lbl.setFont(QFont("Inter", 15, QFont.Weight.Bold))
+            title_lbl.setStyleSheet("color: #BB86FC;")
+            subtitle_lbl = QLabel(f"Device: {self.ctrl.device_serial} | Package: {self.ctrl.package_name}")
+            subtitle_lbl.setFont(QFont("Inter", 10))
+            subtitle_lbl.setStyleSheet("color: #888888;")
+            header_layout.addWidget(title_lbl)
+            header_layout.addStretch()
+            header_layout.addWidget(subtitle_lbl)
+            main_layout.addLayout(header_layout)
+
+            # Status Cards Grid
+            cards_grid = QGridLayout()
+            cards_grid.setSpacing(10)
+
+            self.card_state, self.lbl_state = self.create_card("Process State", "--")
+            self.card_pids, self.lbl_pids = self.create_card("Running PIDs", "--")
+            self.card_whitelist, self.lbl_whitelist = self.create_card("Battery Whitelist", "--")
+            self.card_perms, self.lbl_perms = self.create_card("Permissions", "--")
+            self.card_escalation, self.lbl_escalation = self.create_card("Escalation Ladder", "--")
+            self.card_exit, self.lbl_exit = self.create_card("Last Exit Reason", "--")
+
+            cards_grid.addWidget(self.card_state, 0, 0)
+            cards_grid.addWidget(self.card_pids, 0, 1)
+            cards_grid.addWidget(self.card_whitelist, 0, 2)
+            cards_grid.addWidget(self.card_perms, 1, 0)
+            cards_grid.addWidget(self.card_escalation, 1, 1)
+            cards_grid.addWidget(self.card_exit, 1, 2)
+
+            main_layout.addLayout(cards_grid)
+
+            # Control Actions Section
+            actions_frame = QFrame()
+            actions_frame.setStyleSheet("background-color: #1E1E1E; border: 1px solid #333333; border-radius: 8px; padding: 12px;")
+            actions_layout = QVBoxLayout(actions_frame)
+
+            actions_title = QLabel("SIMULATION CONTROLS")
+            actions_title.setFont(QFont("Inter", 11, QFont.Weight.Bold))
+            actions_title.setStyleSheet("color: #E0E0E0; border: none;")
+            actions_layout.addWidget(actions_title)
+
+            # Kills row
+            kills_row = QHBoxLayout()
+            self.btn_lmk = QPushButton("📉 Low Memory Kill (LMK)")
+            self.btn_lmk.setStyleSheet("background-color: #3700B3; color: white;")
+            self.btn_lmk.clicked.connect(self.on_kill_lmk)
+
+            self.btn_battery = QPushButton("🔋 Battery Kill (SIGKILL)")
+            self.btn_battery.setStyleSheet("background-color: #CF6679; color: black; font-weight: bold;")
+            self.btn_battery.clicked.connect(self.on_kill_battery)
+
+            self.btn_perm = QPushButton("🔒 Permission Kill")
+            self.btn_perm.setStyleSheet("background-color: #D32F2F; color: white;")
+            self.btn_perm.clicked.connect(self.on_kill_permission)
+
+            self.btn_sigkill = QPushButton("🛑 SIGKILL (kill -9)")
+            self.btn_sigkill.clicked.connect(self.on_kill_sigkill)
+
+            kills_row.addWidget(self.btn_lmk)
+            kills_row.addWidget(self.btn_battery)
+            kills_row.addWidget(self.btn_perm)
+            kills_row.addWidget(self.btn_sigkill)
+            actions_layout.addLayout(kills_row)
+
+            # Toggles and Escalation row
+            toggles_row = QHBoxLayout()
+            self.btn_toggle_wl = QPushButton("Toggle Battery Whitelist")
+            self.btn_toggle_wl.clicked.connect(self.on_toggle_whitelist)
+
+            self.btn_toggle_perm = QPushButton("Toggle Location Permission")
+            self.btn_toggle_perm.clicked.connect(self.on_toggle_permission)
+
+            stage_lbl = QLabel("Stage:")
+            stage_lbl.setStyleSheet("color: #888888; border: none;")
+            self.btn_stage0 = QPushButton("Clean (0)")
+            self.btn_stage0.clicked.connect(lambda: self.on_set_stage(0))
+            self.btn_stage1 = QPushButton("Stage 1")
+            self.btn_stage1.clicked.connect(lambda: self.on_set_stage(1))
+            self.btn_stage2 = QPushButton("Stage 2")
+            self.btn_stage2.clicked.connect(lambda: self.on_set_stage(2))
+            self.btn_stage3 = QPushButton("Stage 3")
+            self.btn_stage3.clicked.connect(lambda: self.on_set_stage(3))
+
+            toggles_row.addWidget(self.btn_toggle_wl)
+            toggles_row.addWidget(self.btn_toggle_perm)
+            toggles_row.addWidget(stage_lbl)
+            toggles_row.addWidget(self.btn_stage0)
+            toggles_row.addWidget(self.btn_stage1)
+            toggles_row.addWidget(self.btn_stage2)
+            toggles_row.addWidget(self.btn_stage3)
+            actions_layout.addLayout(toggles_row)
+
+            # Utilities row
+            utils_row = QHBoxLayout()
+            self.btn_launch = QPushButton("🚀 Launch App")
+            self.btn_launch.setStyleSheet("background-color: #03DAC6; color: black; font-weight: bold;")
+            self.btn_launch.clicked.connect(self.on_launch_app)
+
+            self.btn_reset = QPushButton("🔄 Clean Reset")
+            self.btn_reset.setStyleSheet("background-color: #2E7D32; color: white;")
+            self.btn_reset.clicked.connect(self.on_reset)
+
+            utils_row.addWidget(self.btn_launch)
+            utils_row.addWidget(self.btn_reset)
+            actions_layout.addLayout(utils_row)
+
+            main_layout.addWidget(actions_frame)
+
+            # Console Log Output
+            log_title = QLabel("ACTION & DIAGNOSTIC LOG")
+            log_title.setFont(QFont("Inter", 10, QFont.Weight.Bold))
+            log_title.setStyleSheet("color: #888888;")
+            main_layout.addWidget(log_title)
+
+            self.txt_log = QTextEdit()
+            self.txt_log.setReadOnly(True)
+            self.txt_log.setFont(QFont("Monospace", 9))
+            self.txt_log.setStyleSheet("background-color: #1A1A1A; color: #00FF66; border: 1px solid #333333; border-radius: 6px;")
+            self.txt_log.setMaximumHeight(150)
+            main_layout.addWidget(self.txt_log)
+
+            # Timer for live status refresh
+            self.timer = QTimer(self)
+            self.timer.setInterval(1000)
+            self.timer.timeout.connect(self.refresh_status)
+            self.timer.start()
+
+            self.log(f"KillSimulatorWindow initialized for {self.ctrl.package_name}")
+            self.refresh_status()
+
+        def create_card(self, title: str, default_val: str) -> Tuple[QFrame, QLabel]:
+            card = QFrame()
+            card.setStyleSheet("background-color: #1E1E1E; border: 1px solid #333333; border-radius: 8px; padding: 10px;")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(10, 8, 10, 8)
+            layout.setSpacing(4)
+
+            lbl_title = QLabel(title)
+            lbl_title.setFont(QFont("Inter", 9, QFont.Weight.Bold))
+            lbl_title.setStyleSheet("color: #888888; border: none; background: transparent;")
+
+            lbl_val = QLabel(default_val)
+            lbl_val.setFont(QFont("Inter", 11))
+            lbl_val.setStyleSheet("color: #E0E0E0; border: none; background: transparent;")
+            lbl_val.setWordWrap(True)
+
+            layout.addWidget(lbl_title)
+            layout.addWidget(lbl_val)
+            return card, lbl_val
+
+        def apply_theme(self):
+            self.setStyleSheet("""
+                QMainWindow { background-color: #121212; }
+                QLabel { color: #E0E0E0; }
+                QPushButton {
+                    background-color: #2A2A2A;
+                    color: #FFFFFF;
+                    border: 1px solid #444444;
+                    border-radius: 6px;
+                    padding: 6px 12px;
+                    font-weight: 600;
+                }
+                QPushButton:hover {
+                    background-color: #383838;
+                    border-color: #666666;
+                }
+            """)
+
+        def log(self, msg: str):
+            t_str = time.strftime("%H:%M:%S")
+            self.txt_log.append(f"[{t_str}] {msg}")
+            self.txt_log.verticalScrollBar().setValue(self.txt_log.verticalScrollBar().maximum())
+
+        def refresh_status(self):
+            try:
+                st = self.ctrl.get_full_status()
+                # Process State
+                if st.pids:
+                    self.lbl_state.setText(f"RUNNING ({len(st.pids)} PIDs)")
+                    self.lbl_state.setStyleSheet("color: #03DAC6; font-weight: bold; border: none;")
+                    self.lbl_pids.setText(", ".join(str(p) for p in st.pids))
+                else:
+                    self.lbl_state.setText("DEAD / STOPPED")
+                    self.lbl_state.setStyleSheet("color: #CF6679; font-weight: bold; border: none;")
+                    self.lbl_pids.setText("None")
+
+                # Whitelist
+                if st.is_whitelisted:
+                    self.lbl_whitelist.setText("EXEMPT (Whitelisted)")
+                    self.lbl_whitelist.setStyleSheet("color: #03DAC6; font-weight: bold; border: none;")
+                else:
+                    self.lbl_whitelist.setText("OPTIMIZED (Subject to kills)")
+                    self.lbl_whitelist.setStyleSheet("color: #FFB74D; font-weight: bold; border: none;")
+
+                # Permissions
+                loc = "LOC: OK" if st.location_granted else "LOC: REVOKED"
+                notif = "NOTIF: OK" if st.notification_granted else "NOTIF: OFF"
+                self.lbl_perms.setText(f"{loc} | {notif}")
+
+                # Escalation
+                c = st.battery_kill_count
+                stage_desc = "Clean" if c == 0 else f"Stage {min(c, 3)}"
+                self.lbl_escalation.setText(f"Count: {c} ({stage_desc})")
+
+                # Exit Info
+                if st.latest_exit:
+                    self.lbl_exit.setText(f"{st.latest_exit.reason_name} ({st.latest_exit.reason_code})")
+                else:
+                    self.lbl_exit.setText("None recorded")
+            except Exception as e:
+                self.log(f"Status refresh error: {e}")
+
+        def on_kill_lmk(self):
+            pids = self.ctrl.kill_lmk_simulation()
+            self.log(f"Simulated LMK on PIDs: {pids} (injected LOW_MEMORY)")
+            self.refresh_status()
+
+        def on_kill_battery(self):
+            pids, _ = self.ctrl.kill_battery_simulation()
+            self.log(f"Simulated Battery Kill on PIDs: {pids} (injected BATTERY_KILL)")
+            self.refresh_status()
+
+        def on_kill_permission(self):
+            killed, perm = self.ctrl.kill_permission_simulation()
+            self.log(f"Simulated Permission Kill on {perm} (injected PERMISSION_REVOKED)")
+            self.refresh_status()
+
+        def on_kill_sigkill(self):
+            pids = self.ctrl.kill_process_sigkill()
+            self.log(f"Executed raw SIGKILL on PIDs: {pids}")
+            self.refresh_status()
+
+        def on_toggle_whitelist(self):
+            st = self.ctrl.toggle_battery_whitelist()
+            self.log(f"Battery whitelist toggled -> {'Whitelisted' if st else 'Optimized'}")
+            self.refresh_status()
+
+        def on_toggle_permission(self):
+            if self.ctrl.is_permission_granted(LOCATION_PERMISSION):
+                self.ctrl.revoke_location_permission()
+                self.log("Location permission revoked")
+            else:
+                self.ctrl.grant_permissions()
+                self.log("Location permissions granted")
+            self.refresh_status()
+
+        def on_set_stage(self, stage: int):
+            self.ctrl.set_kill_count(stage)
+            self.log(f"pref_battery_kill_count set to {stage}")
+            self.refresh_status()
+
+        def on_launch_app(self):
+            self.ctrl.launch_app()
+            self.log("Launched MainActivity")
+            self.refresh_status()
+
+        def on_reset(self):
+            self.ctrl.set_battery_whitelist(True)
+            self.ctrl.grant_permissions()
+            self.ctrl.reset_kill_counter()
+            self.log("Reset Complete: Whitelist ON, Perms Granted, Count 0")
+            self.refresh_status()
+else:
+    class KillSimulatorWindow:
+        pass
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Process Kill & Exit Reason Simulator for Desk Testing (ATT-2469 / ATT-2079)"
+        description="Process Kill & Exit Reason Simulator for Desk Testing (ATT-2469 / ATT-2079 / ATT-3377)"
     )
     parser.add_argument("--device", "-s", help="Specific ADB device serial (optional)")
     parser.add_argument("--package", "-p", help="Target package name (default: auto-detected com.atrainingtracker.debug)")
-    parser.add_argument("--gui", action="store_true", help="Launch sleek Web GUI dashboard in browser")
+    parser.add_argument("--gui", action="store_true", help="Launch native PyQt6 Desktop GUI (falls back to terminal)")
+    parser.add_argument("--web-gui", action="store_true", help="Launch browser Web GUI dashboard")
     parser.add_argument("--port", type=int, default=8088, help="Port for Web GUI (default: 8088)")
     parser.add_argument("--status", action="store_true", help="Print live diagnostic status and exit")
     parser.add_argument("--kill", choices=["battery", "permission", "lmk", "sigkill"], help="Execute specific simulated process kill")
+    parser.add_argument("--inject-reason", choices=["LOW_MEMORY", "PERMISSION_REVOKED", "BATTERY_KILL", "GENERIC"], help="Inject simulated process exit reason into SharedPreferences")
     parser.add_argument("--whitelist", choices=["on", "off", "toggle"], help="Set or toggle battery optimization whitelist")
     parser.add_argument("--permission", choices=["grant", "revoke"], help="Grant or revoke location/notification permissions")
     parser.add_argument("--set-count", type=int, help="Directly set pref_battery_kill_count (0, 1, 2, 3)")
@@ -952,12 +1292,28 @@ def main():
         print(f"\033[1;31mError initializing ADB controller:\033[0m {e}", file=sys.stderr)
         sys.exit(1)
 
-    if args.gui:
+    if args.web_gui:
         start_web_gui(ctrl, port=args.port, auto_open=True)
         return
 
+    if args.gui:
+        if HAS_PYQT6:
+            app = QApplication(sys.argv)
+            window = KillSimulatorWindow(ctrl)
+            window.show()
+            sys.exit(app.exec())
+        else:
+            print("[WARN] PyQt6 is not installed on this system. Falling back to interactive terminal menu.")
+            run_interactive_menu(ctrl)
+            return
+
     # CLI one-shot execution
     has_action = False
+
+    if args.inject_reason:
+        has_action = True
+        ctrl.inject_simulated_kill_reason(args.inject_reason)
+        print(f"Injected pref_debug_simulated_kill_reason = '{args.inject_reason}'")
 
     if args.status:
         has_action = True

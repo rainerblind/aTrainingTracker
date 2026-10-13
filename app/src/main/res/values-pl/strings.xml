@@ -911,6 +911,10 @@
     <string name="edit_my_location">Edytuj lokalizację</string>
     <string name="calc_map_polyline">Obliczanie polilinii mapy.</string>
     <string name="config_tracking__showElevationProfile">Profil wysokości</string>
+    <string name="config_tracking__elevation_profile_scope">Zakres</string>
+    <string name="config_tracking__elevation_profile_scope_full_route">Cała trasa</string>
+    <string name="config_tracking__elevation_profile_scope_rolling_window">Płynne okno</string>
+    <string name="config_tracking__elevation_profile_lookahead">Wyprzedzenie</string>
     <string name="Description">Opis:</string>
     <string name="ExportName">Nazwa eksportu:</string>
     <string name="Goal">Cel:</string>
@@ -1445,13 +1449,11 @@
     <string name="tuning_cat_sensors_gps">Czujniki, GPS i filtrowanie</string>
     <string name="tuning_cat_workout_masks_cards">Karty i szczegóły treningu</string>
     <string name="tuning_cat_navigation">Nawigacja</string>
+    <string name="tuning_cat_route_clustering">Grupowanie tras i treningów</string>
     <string name="tuning_route_selection_radius_title">Promień wyboru trasy</string>
     <string name="tuning_route_selection_radius_desc">Maksymalna odległość do punktu początkowego trasy przy wyborze tras w pobliżu</string>
-    <string name="tuning_nav_cue_transparency_title">Przezroczystość wskazówek nawigacji</string>
-    <string name="tuning_nav_cue_transparency_desc">Przezroczystość komunikatów manewrów i nakładek nawigacji</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Czas wyświetlania wskazówek</string>
     <string name="tuning_nav_cue_dismiss_duration_desc">Czas automatycznego ukrywania wskazówek manewrów</string>
-    <string name="tuning_nav_cue_dismiss_persistent">Trwały</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 kart</string>
     <string name="tuning_matrix_col_list">Lista</string>
     <string name="tuning_matrix_col_details">Szczegóły</string>
@@ -1595,6 +1597,8 @@
     <string name="google_drive_error_folder_hierarchy">Nie udało się rozwiązać hierarchii folderów Google Drive</string>
     <string name="google_drive_connect_prompt">Połącz konto Google, aby automatycznie eksportować treningi i synchronizować kopie zapasowe bazy danych z Google Drive.</string>
     <string name="scan_google_drive">Skanuj Dysk Google</string>
+    <string name="google_drive_scan_empty_diagnostic">Nie znaleziono dostępnych plików treningowych. Pliki skopiowane zewnętrznie na Dysk Google nie są widoczne przez interfejs API Dysku Google ze względów bezpieczeństwa. Stuknij „Wybierz plik(i) lokalne” na karcie formatu i wybierz pliki z Dysku Google za pomocą selektora plików.</string>
+    <string name="import_workout_files_progress">Importowanie plików (%1$d z %2$d)…</string>
     <string name="legacy_import__downloading_google_drive">Pobieranie %1$s z Dysku Google…</string>
     <string name="gpx_enriching_elevation">Pobieranie danych wysokości…</string>
     <string name="gpx_elevation_enriched">Dane wysokości dodane pomyślnie</string>
@@ -1754,5 +1758,12 @@
     <!-- ATT-3220 / REQ-UI-353: Missing ANT adapter warning toggle -->
     <string name="tuning_show_ant_missing_adapter_warnings_title">Pokaż ostrzeżenia o braku adaptera ANT+</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">Pokaż okno dialogowe ostrzeżenia, gdy wyszukiwany jest czujnik ANT+, ale nie wykryto adaptera</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Automatycznie podążaj za unikalną trasą</string>
+    <string name="tuning_auto_follow_unique_route_desc">Automatycznie przełącz na trasę, gdy stanie się jedyną pasującą na rozwidleniu</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Odległość wskazówek nawigacyjnych</string>
+    <string name="tuning_nav_cue_distance_desc">Odległość przed manewrem, przy której wyświetlane są wskazówki</string>
 </resources>
 

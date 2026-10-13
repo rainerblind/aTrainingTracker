@@ -181,6 +181,7 @@ public class TrackerService extends Service {
     public static final int TRACKING_INTERRUPTED_NOTIFICATION_ID = 2;
     private boolean mTrackingInterrupted = false;
     private volatile long mWorkoutID;
+    private final Set<Long> mActiveSessionDeviceIds = Collections.synchronizedSet(new HashSet<>());
     private LiveWorkoutSession mLiveSession;
     private volatile CompletableFuture<Void> mTableInitializationFuture = CompletableFuture.completedFuture(null);
     private StartType mStartType;
@@ -506,6 +507,8 @@ public class TrackerService extends Service {
                 mDbExecutor.submit(() -> {
                     try {
                         mWorkoutID = createNewWorkout();
+                        mActiveSessionDeviceIds.clear();
+                        updateActiveSessionDevices();
                         if (mLiveSession != null) {
                             mLiveSession.setWorkoutId(mWorkoutID);
                         }
@@ -936,18 +939,14 @@ public class TrackerService extends Service {
             Log.e(TAG, "Error in createNewLap during endWorkout", t);
         }
 
-        // store the ANT Devices that were active during the workout
-        // TODO: store at very start and end of ANT (or BTLE) searching
+        // store the ANT and BTLE Devices that were active during the workout
         if (DEBUG) Log.d(TAG, "storing active device list");
         try {
-            SQLiteDatabase activeDevicesDb = new ActiveDevicesDbHelper(this).getWritableDatabase();
-            ContentValues values = new ContentValues();
-            values.put(ActiveDevices.WORKOUT_ID, mWorkoutID);
-            if (mBanalService != null) {
-                for (long deviceDbId : mBanalService.getDatabaseIdsOfActiveRemoteDevices()) {
-                    if (DEBUG) Log.d(TAG, "adding deviceId " + deviceDbId + " to list of active devices");
-                    values.put(ActiveDevices.DEVICE_DB_ID, deviceDbId);
-                    activeDevicesDb.insert(ActiveDevices.TABLE, null, values);
+            updateActiveSessionDevices();
+            ActiveDevicesDbHelper activeDevicesDbHelper = new ActiveDevicesDbHelper(this);
+            for (Long deviceDbId : mActiveSessionDeviceIds) {
+                if (deviceDbId != null && deviceDbId >= 0) {
+                    activeDevicesDbHelper.addActiveDevice(mWorkoutID, deviceDbId);
                 }
             }
         } catch (Throwable t) {
@@ -1017,10 +1016,30 @@ public class TrackerService extends Service {
         }
     }
 
+    /**
+     * Continuously records active session remote devices into ActiveDevicesDbHelper (REQ-CON-007, ATT-3312).
+     */
+    private void updateActiveSessionDevices() {
+        if (mBanalService != null && mWorkoutID > 0) {
+            try {
+                for (long deviceDbId : mBanalService.getDatabaseIdsOfActiveRemoteDevices()) {
+                    if (deviceDbId >= 0 && mActiveSessionDeviceIds.add(deviceDbId)) {
+                        if (DEBUG) Log.d(TAG, "New active session device detected: " + deviceDbId);
+                        new ActiveDevicesDbHelper(this).addActiveDevice(mWorkoutID, deviceDbId);
+                    }
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "Error updating active session devices", t);
+            }
+        }
+    }
+
     private void sampleAndWriteToDb() {
         if (DEBUG) Log.d(TAG, "sampleAndWriteToDb()");
 
         if (mBanalService == null) return;
+
+        updateActiveSessionDevices();
 
         // 1. Always capture Total Time (SCRUM-97: needs to update during pause)
         SensorData<Integer> totalTimeData = mBanalService.getBestSensorData(SensorType.TIME_TOTAL);

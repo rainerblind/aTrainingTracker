@@ -294,23 +294,27 @@ class AdvancedTuningAccordionTest {
         try {
             Locale.setDefault(Locale.US)
             val mockContext = mockk<Context>()
-            every { mockContext.getString(R.string.tuning_nav_cue_dismiss_persistent) } returns "Persistent"
 
             val subtitle1 = TuningSubtitleFormatter.formatNavigationSubtitle(
                 radiusKm = 1.0f,
-                transparency = 0.80f,
                 dismissSec = 4,
                 context = mockContext
             )
-            assertEquals("80%, 4s, 1.0 km", subtitle1)
+            assertEquals("4s, 1.0 km", subtitle1)
 
             val subtitle2 = TuningSubtitleFormatter.formatNavigationSubtitle(
                 radiusKm = 2.5f,
-                transparency = 0.50f,
+                dismissSec = 10,
+                context = mockContext
+            )
+            assertEquals("10s, 2.5 km", subtitle2)
+
+            val subtitle3 = TuningSubtitleFormatter.formatNavigationSubtitle(
+                radiusKm = 2.5f,
                 dismissSec = 0,
                 context = mockContext
             )
-            assertEquals("50%, Persistent, 2.5 km", subtitle2)
+            assertEquals("4s, 2.5 km", subtitle3)
         } finally {
             Locale.setDefault(defaultLocale)
         }
@@ -360,5 +364,52 @@ class AdvancedTuningAccordionTest {
             context = mockContext
         )
         assertEquals("2 search rounds, Active auto-search", subtitlePartial)
+    }
+
+    @Test
+    fun testClusterTuningSubtitle_formatting() {
+        Locale.setDefault(Locale.US)
+        val mockContext = mockk<Context>()
+        every { mockContext.getString(R.string.units_distance_metric) } returns "km"
+        every { mockContext.getString(R.string.units_distance_imperial) } returns "mi"
+
+        val metricSubtitle = TuningSubtitleFormatter.formatClusterTuningSubtitle(
+            endpointTolerance = 200f,
+            apexTolerance = 400f,
+            distanceTolerance = 0.20f,
+            altitudePositionTolerance = 400f,
+            useSportTypeForClustering = true,
+            useAltitudePosForClustering = true,
+            isImperial = false,
+            context = mockContext
+        )
+        assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20% · Alt: 0.400km", metricSubtitle)
+
+        val metricSubtitleNoAlt = TuningSubtitleFormatter.formatClusterTuningSubtitle(
+            endpointTolerance = 200f,
+            apexTolerance = 400f,
+            distanceTolerance = 0.20f,
+            altitudePositionTolerance = 400f,
+            useSportTypeForClustering = true,
+            useAltitudePosForClustering = false,
+            isImperial = false,
+            context = mockContext
+        )
+        assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20%", metricSubtitleNoAlt)
+    }
+
+    @Test
+    fun testTuningSectionEnum_canonicalLifecycleSequence() {
+        val expected = listOf(
+            TuningSection.NAVIGATION,
+            TuningSection.COCKPIT_TYPOGRAPHY,
+            TuningSection.BATTERY_SAVER,
+            TuningSection.SENSORS_GPS,
+            TuningSection.SENSOR_SEARCH,
+            TuningSection.WORKOUT_MASKS_CARDS,
+            TuningSection.ROUTE_CLUSTERING,
+            TuningSection.AFTERMATH_ANALYSIS
+        )
+        assertEquals(expected, TuningSection.values().toList())
     }
 }

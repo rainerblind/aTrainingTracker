@@ -44,8 +44,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -85,6 +88,14 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
             INSTANCE?.repositoryScope?.cancel()
             INSTANCE = newInstance
         }
+
+        private val _deviceBatteryUpdates = MutableSharedFlow<Pair<Long, Int>>(extraBufferCapacity = 64)
+        val deviceBatteryUpdates: SharedFlow<Pair<Long, Int>> = _deviceBatteryUpdates.asSharedFlow()
+
+        @JvmStatic
+        fun notifyBatteryUpdated(deviceId: Long, percentage: Int) {
+            _deviceBatteryUpdates.tryEmit(Pair(deviceId, percentage))
+        }
     }
 
     private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -115,6 +126,14 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                     refreshDeviceFromDb(affectedDeviceId)
                 } else {
                     loadAllDevices()
+                }
+            }
+        }
+        // Reactively observe battery level updates and refresh cached device data (REQ-CON-007, ATT-3312)
+        repositoryScope.launch {
+            deviceBatteryUpdates.collect { (deviceId, percentage) ->
+                _allDevices.value = _allDevices.value.map {
+                    if (it.id == deviceId) it.copy(batteryPercentage = percentage) else it
                 }
             }
         }

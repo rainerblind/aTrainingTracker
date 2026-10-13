@@ -1076,6 +1076,10 @@
     <string name="battery_level">Nível da bateria</string>
     <string name="calc_map_polyline">Calculando polilinha do mapa.</string>
     <string name="config_tracking__showElevationProfile">Perfil de elevação</string>
+    <string name="config_tracking__elevation_profile_scope">Escopo</string>
+    <string name="config_tracking__elevation_profile_scope_full_route">Rota completa</string>
+    <string name="config_tracking__elevation_profile_scope_rolling_window">Janela contínua</string>
+    <string name="config_tracking__elevation_profile_lookahead">Antecipação</string>
     <string name="current_value">Valor atual</string>
     <string name="editLocationName">Nome:</string>
     <string name="edit_my_location">Editar localização</string>
@@ -1443,13 +1447,11 @@
     <string name="tuning_cat_sensors_gps">Sensores, GPS e filtragem</string>
     <string name="tuning_cat_workout_masks_cards">Cartões e detalhes de treino</string>
     <string name="tuning_cat_navigation">Navegação</string>
+    <string name="tuning_cat_route_clustering">Agrupamento de percursos e treinos</string>
     <string name="tuning_route_selection_radius_title">Raio de seleção de rota</string>
     <string name="tuning_route_selection_radius_desc">Distância máxima até o ponto de partida para seleção de rotas próximas</string>
-    <string name="tuning_nav_cue_transparency_title">Transparência das indicações de navegação</string>
-    <string name="tuning_nav_cue_transparency_desc">Opacidade dos avisos de mudança de direção e sobreposições</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Duração de exibição das indicações</string>
     <string name="tuning_nav_cue_dismiss_duration_desc">Tempo de ocultação automática dos avisos de mudança de direção</string>
-    <string name="tuning_nav_cue_dismiss_persistent">Persistente</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 cartões</string>
     <string name="tuning_matrix_col_list">Lista</string>
     <string name="tuning_matrix_col_details">Detalhes</string>
@@ -1593,6 +1595,8 @@
     <string name="google_drive_error_folder_hierarchy">Falha ao resolver a hierarquia de pastas do Google Drive</string>
     <string name="google_drive_connect_prompt">Conecte sua conta do Google para exportar treinos e sincronizar backups do banco de dados automaticamente no Google Drive.</string>
     <string name="scan_google_drive">Escanear Google Drive</string>
+    <string name="google_drive_scan_empty_diagnostic">Nenhum arquivo de treino acessível encontrado. Arquivos copiados externamente para o Google Drive não são visíveis via API do Google Drive devido a permissões de segurança. Toque em «Selecionar arquivo(s) local(is)» no cartão de formato e escolha seus arquivos do Google Drive usando o seletor de arquivos.</string>
+    <string name="import_workout_files_progress">Importando arquivos (%1$d de %2$d)…</string>
     <string name="legacy_import__downloading_google_drive">Baixando %1$s do Google Drive…</string>
     <string name="gpx_enriching_elevation">A obter dados de elevação…</string>
     <string name="gpx_elevation_enriched">Dados de elevação adicionados com sucesso</string>
@@ -1752,5 +1756,12 @@
     <!-- ATT-3220 / REQ-UI-353: Missing ANT adapter warning toggle -->
     <string name="tuning_show_ant_missing_adapter_warnings_title">Mostrar avisos de adaptador ANT+ em falta</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">Mostrar caixa de diálogo de alerta quando um sensor ANT+ é procurado mas nenhum adaptador é detetado</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Seguir automaticamente rota única</string>
+    <string name="tuning_auto_follow_unique_route_desc">Alternar automaticamente para seguir uma rota quando ela se tornar a única correspondente em uma bifurcação</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Distância das indicações de mudança de direção</string>
+    <string name="tuning_nav_cue_distance_desc">Distância antes da curva para exibir avisos de navegação</string>
 </resources>
 

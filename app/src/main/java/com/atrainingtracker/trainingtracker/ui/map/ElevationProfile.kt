@@ -301,10 +301,11 @@ fun ElevationProfile(
     val effectiveSigma = smoothingSigma ?: tuningConfig.elevationSmoothingSigmaMeters.toDouble()
     var showLegend by remember { mutableStateOf(false) }
 
+    val pathStartDist = pathPoints.firstOrNull()?.distance ?: 0.0
     var internalZoomScale by remember(pathPoints) { mutableFloatStateOf(1.0f) }
-    var internalStartDist by remember(pathPoints) { mutableDoubleStateOf(0.0) }
+    var internalStartDist by remember(pathPoints) { mutableDoubleStateOf(pathStartDist) }
     val currentZoomScale = if (onZoomChanged != null) zoomScale else internalZoomScale
-    val currentStartDist = if (onZoomChanged != null) startDist else internalStartDist
+    val currentStartDist = if (onZoomChanged != null) (if (startDist != 0.0 || pathStartDist == 0.0) startDist else pathStartDist) else internalStartDist
 
     val currentOnZoomChangedState by rememberUpdatedState(onZoomChanged)
     val currentStartDistState by rememberUpdatedState(currentStartDist)
@@ -333,8 +334,9 @@ fun ElevationProfile(
             pathPoints
         }
 
-        val totalDist = pathPointsDownsampled.last().distance
-        val totalTimeSec = pathPointsDownsampled.last().timeSec
+        val baseStartDist = pathPointsDownsampled.first().distance
+        val totalDist = (pathPointsDownsampled.last().distance - baseStartDist).coerceAtLeast(1.0)
+        val totalTimeSec = (pathPointsDownsampled.last().timeSec - pathPointsDownsampled.first().timeSec).coerceAtLeast(1L)
 
         val smoothedAltitudes = ElevationSmoothingMath.smoothAltitudes(pathPointsDownsampled, sigma = effectiveSigma)
 
@@ -618,7 +620,8 @@ fun ElevationProfile(
                 canvas.nativeCanvas.drawText(endLabel, width - endLabelWidth, height + 45f, highlightPaint)
 
                 val minSpacingPx = 24.dp.toPx()
-                val startLabelWidth = if (currentZoomScale > 1.01f) {
+                val isZoomedOrSliced = currentZoomScale > 1.01f || currentStartDist > 1.0
+                val startLabelWidth = if (isZoomedOrSliced) {
                     val startLabel = if (isTimeDomain) {
                         ElevationProfileZoomMath.formatTimeTick(currentStartDist.toLong())
                     } else {
@@ -630,9 +633,9 @@ fun ElevationProfile(
                     0f
                 }
 
-                val startClearanceThreshold = if (currentZoomScale > 1.01f) startLabelWidth + minSpacingPx else minSpacingPx
+                val startClearanceThreshold = if (isZoomedOrSliced) startLabelWidth + minSpacingPx else minSpacingPx
                 val endClearanceThreshold = width - endLabelWidth - minSpacingPx
-                var lastDrawnRightX = if (currentZoomScale > 1.01f) startLabelWidth else -1f
+                var lastDrawnRightX = if (currentZoomScale > 1.01f) startLabelWidth else if (isZoomedOrSliced) startLabelWidth else -1f
 
                 if (isTimeDomain) {
                     val adaptiveTimeStep = ElevationProfileZoomMath.calculateAdaptiveTimeStep(visibleSpan).toDouble()

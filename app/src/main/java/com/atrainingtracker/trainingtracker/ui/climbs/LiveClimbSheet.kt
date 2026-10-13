@@ -197,7 +197,6 @@ fun LiveClimbSheet(
             currentDistance = currentDistance,
             showZoomControls = false,
             climbGradientShading = true,
-            fixedHeight = 68.dp,
             modifier = Modifier.fillMaxWidth()
         )
     }

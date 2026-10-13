@@ -151,9 +151,9 @@ class SensorGridScreenRouteIntegrationTest {
             "SensorGridScreen must gate ForkDecisionCard behind state.showNavigationHints (REQ-UI-321.2 / ATT-2874)",
             content.contains("if (state.showNavigationHints)")
         )
-        assertTrue(
-            "SensorGridScreen must bind ForkDecisionCard overlayAlpha to tuningConfig.navigationCueTransparency (REQ-UI-321.3 / §5.7)",
-            content.contains("overlayAlpha = tuningConfig.navigationCueTransparency")
+        org.junit.Assert.assertFalse(
+            "SensorGridScreen must render ForkDecisionCard with solid opacity without passing overlayAlpha (REQ-UI-287 / ATT-3322)",
+            content.substringAfter("ForkDecisionCard(").substringBefore(")").contains("overlayAlpha")
         )
     }
 
@@ -165,12 +165,12 @@ class SensorGridScreenRouteIntegrationTest {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        val mainColumnSection = content.substringAfter("Column(\n                    modifier = Modifier.fillMaxSize()\n                ) {")
-            .substringBefore("Column(\n                        modifier = Modifier\n                            .fillMaxWidth()\n                            .verticalScroll")
+        val sensorGridSection = content.substringAfter("Column(\n                        modifier = sensorGridModifier")
+            .substringBefore("// 2. The Map")
 
         org.junit.Assert.assertFalse(
             "ReturnNavigationHud must not be rendered inside the in-flow sensor grid Column",
-            mainColumnSection.contains("ReturnNavigationHud(")
+            sensorGridSection.contains("ReturnNavigationHud(")
         )
 
         assertTrue(
@@ -178,9 +178,9 @@ class SensorGridScreenRouteIntegrationTest {
             content.contains("if (state.showNavigationHints)") && content.contains("ReturnNavigationHud(")
         )
 
-        assertTrue(
-            "ReturnNavigationHud must consume tuningConfig.navigationCueTransparency",
-            content.contains("overlayAlpha = tuningConfig.navigationCueTransparency")
+        org.junit.Assert.assertFalse(
+            "ReturnNavigationHud must render with solid opacity without consuming navigationCueTransparency (REQ-UI-287 / ATT-3322)",
+            content.substringAfter("ReturnNavigationHud(").substringBefore(")").contains("overlayAlpha")
         )
     }
 
@@ -192,12 +192,12 @@ class SensorGridScreenRouteIntegrationTest {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        val mainColumnSection = content.substringAfter("Column(\n                    modifier = Modifier.fillMaxSize()\n                ) {")
-            .substringBefore("Column(\n                        modifier = Modifier\n                            .fillMaxWidth()\n                            .verticalScroll")
+        val sensorGridSection = content.substringAfter("Column(\n                        modifier = sensorGridModifier")
+            .substringBefore("// 2. The Map")
 
         org.junit.Assert.assertFalse(
             "TurnPromptBanner must not be rendered inside the in-flow sensor grid Column",
-            mainColumnSection.contains("TurnPromptBanner(")
+            sensorGridSection.contains("TurnPromptBanner(")
         )
 
         assertTrue(
@@ -205,9 +205,9 @@ class SensorGridScreenRouteIntegrationTest {
             content.contains("if (state.showNavigationHints)") && content.contains("TurnPromptBanner(")
         )
 
-        assertTrue(
-            "TurnPromptBanner must consume tuningConfig.navigationCueTransparency",
-            content.contains("overlayAlpha = tuningConfig.navigationCueTransparency")
+        org.junit.Assert.assertFalse(
+            "TurnPromptBanner must render with solid opacity without consuming navigationCueTransparency (REQ-UI-287 / ATT-3322)",
+            content.substringAfter("TurnPromptBanner(").substringBefore(")").contains("overlayAlpha")
         )
 
         assertTrue(

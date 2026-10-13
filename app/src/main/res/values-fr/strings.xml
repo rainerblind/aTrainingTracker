@@ -1101,6 +1101,10 @@
     <string name="getting_my_locations">Recherche de lieux connus.</string>
     <string name="edit_my_location">Modifier le lieu</string>
     <string name="config_tracking__showElevationProfile">Profil d’altitude</string>
+    <string name="config_tracking__elevation_profile_scope">Portée</string>
+    <string name="config_tracking__elevation_profile_scope_full_route">Parcours complet</string>
+    <string name="config_tracking__elevation_profile_scope_rolling_window">Fenêtre glissante</string>
+    <string name="config_tracking__elevation_profile_lookahead">Anticipation</string>
     <string name="backup_restore">Backup \u0026 Restore</string>
     <string name="backup_restore_summary">Migrer les données ou effectuer une récupération</string>
     <string name="create_backup">Créer une sauvegarde</string>
@@ -1446,13 +1450,11 @@
     <string name="tuning_cat_sensors_gps">Capteurs, GPS et filtrage</string>
     <string name="tuning_cat_workout_masks_cards">Cartes et détails d\'entraînement</string>
     <string name="tuning_cat_navigation">Navigation</string>
+    <string name="tuning_cat_route_clustering">Regroupement des parcours et entraînements</string>
     <string name="tuning_route_selection_radius_title">Rayon de sélection d\'itinéraire</string>
     <string name="tuning_route_selection_radius_desc">Distance maximale au point de départ pour la sélection d\'itinéraires proches</string>
-    <string name="tuning_nav_cue_transparency_title">Transparence des indications</string>
-    <string name="tuning_nav_cue_transparency_desc">Opacité des invites de virage et des superpositions de navigation</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Durée d\'affichage des indications</string>
     <string name="tuning_nav_cue_dismiss_duration_desc">Durée de masquage automatique pour les invites de virage</string>
-    <string name="tuning_nav_cue_dismiss_persistent">Persistant</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 cartes</string>
     <string name="tuning_matrix_col_list">Liste</string>
     <string name="tuning_matrix_col_details">Détails</string>
@@ -1596,6 +1598,8 @@
     <string name="google_drive_error_folder_hierarchy">Échec de la résolution de la hiérarchie des dossiers Google Drive</string>
     <string name="google_drive_connect_prompt">Connectez votre compte Google pour exporter automatiquement vos entraînements et synchroniser vos sauvegardes vers Google Drive.</string>
     <string name="scan_google_drive">Scanner Google Drive</string>
+    <string name="google_drive_scan_empty_diagnostic">Aucun fichier d\'entraînement accessible trouvé. Les fichiers copiés de manière externe sur Google Drive ne sont pas visibles via l\'API Google Drive pour des raisons de sécurité. Veuillez appuyer sur « Sélectionner fichier(s) local(aux) » sur la carte de format et choisir vos fichiers depuis Google Drive à l\'aide du sélecteur de fichiers.</string>
+    <string name="import_workout_files_progress">Importation des fichiers (%1$d sur %2$d)…</string>
     <string name="legacy_import__downloading_google_drive">Téléchargement de %1$s depuis Google Drive…</string>
     <string name="gpx_enriching_elevation">Récupération des données d\'altitude…</string>
     <string name="gpx_elevation_enriched">Données d\'altitude ajoutées avec succès</string>
@@ -1751,4 +1755,11 @@
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NOUVEAU</string>
     <string name="devices_new_sensor_discovered">Nouveau capteur détecté : %1$s</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Suivre automatiquement un itinéraire unique</string>
+    <string name="tuning_auto_follow_unique_route_desc">Basculer automatiquement pour suivre un itinéraire lorsqu\'il devient le seul correspondant à une intersection</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Distance des indications de changement de direction</string>
+    <string name="tuning_nav_cue_distance_desc">Distance avant le virage pour afficher les invites de navigation</string>
 </resources>

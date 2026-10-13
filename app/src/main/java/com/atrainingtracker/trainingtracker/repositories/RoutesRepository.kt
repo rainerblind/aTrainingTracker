@@ -98,12 +98,18 @@ class RoutesRepository internal constructor(
     private val _activeNavigatedRouteId = MutableStateFlow<Long?>(null)
     val activeNavigatedRouteId: StateFlow<Long?> = _activeNavigatedRouteId.asStateFlow()
 
+    // StateFlow to track whether the active route was selected automatically (ATT-3326)
+    private val _isRouteAutoSelected = MutableStateFlow(false)
+    val isRouteAutoSelected: StateFlow<Boolean> = _isRouteAutoSelected.asStateFlow()
+
     /**
      * Sets or clears the actively navigated route.
      * When set, this route is visually highlighted with high prominence and directional chevrons.
+     * [isAutoSelected] indicates whether the route was bound automatically (e.g. at a trail fork).
      */
-    fun setActiveNavigatedRoute(routeId: Long?) {
+    fun setActiveNavigatedRoute(routeId: Long?, isAutoSelected: Boolean = false) {
         _activeNavigatedRouteId.value = routeId
+        _isRouteAutoSelected.value = if (routeId != null) isAutoSelected else false
     }
 
     init {

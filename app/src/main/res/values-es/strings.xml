@@ -1079,6 +1079,10 @@
     <string name="battery_level">Nivel de batería</string>
     <string name="calc_map_polyline">Calculando polilínea del mapa.</string>
     <string name="config_tracking__showElevationProfile">Perfil de elevación</string>
+    <string name="config_tracking__elevation_profile_scope">Ámbito</string>
+    <string name="config_tracking__elevation_profile_scope_full_route">Ruta completa</string>
+    <string name="config_tracking__elevation_profile_scope_rolling_window">Ventana continua</string>
+    <string name="config_tracking__elevation_profile_lookahead">Anticipación</string>
     <string name="current_value">Valor actual</string>
     <string name="editLocationName">Nombre:</string>
     <string name="edit_my_location">Editar ubicación</string>
@@ -1447,13 +1451,11 @@
     <string name="tuning_cat_sensors_gps">Sensores, GPS y filtrado</string>
     <string name="tuning_cat_workout_masks_cards">Tarjetas y detalles de entrenamiento</string>
     <string name="tuning_cat_navigation">Navegación</string>
+    <string name="tuning_cat_route_clustering">Agrupación de rutas y entrenamientos</string>
     <string name="tuning_route_selection_radius_title">Radio de selección de rutas</string>
     <string name="tuning_route_selection_radius_desc">Distancia máxima al punto de inicio para la selección de rutas cercanas</string>
-    <string name="tuning_nav_cue_transparency_title">Transparencia de indicaciones</string>
-    <string name="tuning_nav_cue_transparency_desc">Opacidad de avisos de giro y paneles de navegación</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Duración de avisos de navegación</string>
     <string name="tuning_nav_cue_dismiss_duration_desc">Duración de desaparición automática para avisos de giro</string>
-    <string name="tuning_nav_cue_dismiss_persistent">Persistente</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 tarjetas</string>
     <string name="tuning_matrix_col_list">Lista</string>
     <string name="tuning_matrix_col_details">Detalles</string>
@@ -1597,6 +1599,8 @@
     <string name="google_drive_error_folder_hierarchy">Error al resolver la jerarquía de carpetas de Google Drive</string>
     <string name="google_drive_connect_prompt">Conecte su cuenta de Google para exportar entrenamientos y sincronizar copias de seguridad de la base de datos automáticamente en Google Drive.</string>
     <string name="scan_google_drive">Escanear Google Drive</string>
+    <string name="google_drive_scan_empty_diagnostic">No se encontraron archivos de entrenamiento accesibles. Los archivos copiados externamente a Google Drive no son visibles a través de la API de Google Drive debido a permisos de seguridad. Toque «Seleccionar archivo(s) local(es)» en la tarjeta del formato y elija sus archivos de Google Drive usando el selector de archivos.</string>
+    <string name="import_workout_files_progress">Importando archivos (%1$d de %2$d)…</string>
     <string name="legacy_import__downloading_google_drive">Descargando %1$s de Google Drive…</string>
     <string name="gpx_enriching_elevation">Obteniendo datos de elevación…</string>
     <string name="gpx_elevation_enriched">Datos de elevación añadidos con éxito</string>
@@ -1752,4 +1756,11 @@
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NUEVO</string>
     <string name="devices_new_sensor_discovered">Nuevo sensor detectado: %1$s</string>
+
+    <!-- Advanced Navigation Settings: Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031) -->
+    <string name="tuning_auto_follow_unique_route_title">Seguir automáticamente ruta única</string>
+    <string name="tuning_auto_follow_unique_route_desc">Cambiar automáticamente para seguir una ruta cuando se convierte en la única coincidente en una bifurcación</string>
+    <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
+    <string name="tuning_nav_cue_distance_title">Distancia de indicaciones de giro</string>
+    <string name="tuning_nav_cue_distance_desc">Distancia antes del giro para mostrar avisos de navegación</string>
 </resources>

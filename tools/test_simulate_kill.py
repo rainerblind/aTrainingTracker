@@ -180,6 +180,90 @@ Last Timestamp of Persistence Into Persistent Storage: 2026-10-09 18:48:24.107
         self.assertIn("kill_battery", WEB_GUI_HTML)
         self.assertIn("kill_permission", WEB_GUI_HTML)
 
+    @patch("subprocess.run")
+    def test_inject_simulated_kill_reason(self, mock_run):
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="""<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <int name="pref_battery_kill_count" value="1" />
+</map>""",
+            stderr=""
+        )
+        ctrl = KillSimulatorController(device_serial=self.mock_device, package_name=self.mock_pkg)
+        ctrl.inject_simulated_kill_reason("LOW_MEMORY")
+
+        # Verify adb was called with run-as echo containing pref_debug_simulated_kill_reason and LOW_MEMORY
+        write_call = [call for call in mock_run.call_args_list if "echo" in str(call)]
+        self.assertTrue(len(write_call) > 0)
+        call_str = str(write_call[0])
+        self.assertIn("pref_debug_simulated_kill_reason", call_str)
+        self.assertIn("LOW_MEMORY", call_str)
+
+    @patch("subprocess.run")
+    def test_kill_lmk_simulation_injects_low_memory(self, mock_run):
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="12345\n",
+            stderr=""
+        )
+        ctrl = KillSimulatorController(device_serial=self.mock_device, package_name=self.mock_pkg)
+        with patch.object(ctrl, "inject_simulated_kill_reason") as mock_inject:
+            ctrl.kill_lmk_simulation()
+            mock_inject.assert_called_once_with("LOW_MEMORY")
+
+    @patch("subprocess.run")
+    def test_kill_battery_simulation_injects_battery_kill(self, mock_run):
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="12345\n",
+            stderr=""
+        )
+        ctrl = KillSimulatorController(device_serial=self.mock_device, package_name=self.mock_pkg)
+        with patch.object(ctrl, "inject_simulated_kill_reason") as mock_inject:
+            ctrl.kill_battery_simulation()
+            mock_inject.assert_called_once_with("BATTERY_KILL")
+
+    @patch("subprocess.run")
+    def test_kill_permission_simulation_injects_permission_revoked(self, mock_run):
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="",
+            stderr=""
+        )
+        ctrl = KillSimulatorController(device_serial=self.mock_device, package_name=self.mock_pkg)
+        with patch.object(ctrl, "inject_simulated_kill_reason") as mock_inject:
+            ctrl.kill_permission_simulation()
+            mock_inject.assert_called_once_with("PERMISSION_REVOKED")
+
+    @patch("subprocess.run")
+    def test_pyqt6_gui_instantiation(self, mock_run):
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="12345\n",
+            stderr=""
+        )
+        from tools.simulate_kill import HAS_PYQT6, KillSimulatorWindow
+        if HAS_PYQT6:
+            from PyQt6.QtWidgets import QApplication
+            app = QApplication.instance() or QApplication(["test", "-platform", "offscreen"])
+            ctrl = KillSimulatorController(device_serial=self.mock_device, package_name=self.mock_pkg)
+            win = KillSimulatorWindow(ctrl)
+            self.assertIsNotNone(win.btn_lmk)
+            self.assertIsNotNone(win.btn_battery)
+            self.assertIsNotNone(win.btn_perm)
+            self.assertIsNotNone(win.btn_sigkill)
+            self.assertIsNotNone(win.btn_launch)
+            self.assertIsNotNone(win.btn_reset)
+            self.assertIsNotNone(win.lbl_state)
+            self.assertIsNotNone(win.lbl_whitelist)
+            win.close()
+
 
 if __name__ == "__main__":
     unittest.main()

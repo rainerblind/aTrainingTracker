@@ -130,7 +130,7 @@ fun EditWorkoutDialog(
                     label = { Text(stringResource(R.string.cluster_naming__selected_route_label)) },
                     leadingIcon = {
                         Icon(
-                            painter = painterResource(id = R.drawable.my_locations),
+                            painter = painterResource(id = R.drawable.ic_favorite_route),
                             contentDescription = null,
                             tint = if (currentClusterId > 0) MaterialTheme.colorScheme.primary 
                                    else MaterialTheme.colorScheme.onSurfaceVariant

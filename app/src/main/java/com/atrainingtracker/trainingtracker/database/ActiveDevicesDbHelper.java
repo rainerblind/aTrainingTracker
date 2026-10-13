@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.database;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -90,6 +91,35 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
         cursor.close();
 
         return result;
+    }
+
+    /**
+     * Incrementally persists an active device ID for the given workout ID if not already present.
+     * Thread-safe and idempotent to support continuous tracking updates during active workouts.
+     */
+    public synchronized void addActiveDevice(long workoutId, long deviceDbId) {
+        if (workoutId <= 0 || deviceDbId < 0) {
+            return;
+        }
+        SQLiteDatabase db = getWritableDatabase();
+        Cursor cursor = db.query(ActiveDevices.TABLE,
+                new String[]{ActiveDevices.C_ID},
+                ActiveDevices.WORKOUT_ID + "=? AND " + ActiveDevices.DEVICE_DB_ID + "=?",
+                new String[]{String.valueOf(workoutId), String.valueOf(deviceDbId)},
+                null,
+                null,
+                null);
+        boolean exists = (cursor != null && cursor.moveToFirst());
+        if (cursor != null) {
+            cursor.close();
+        }
+        if (!exists) {
+            ContentValues values = new ContentValues();
+            values.put(ActiveDevices.WORKOUT_ID, workoutId);
+            values.put(ActiveDevices.DEVICE_DB_ID, deviceDbId);
+            db.insert(ActiveDevices.TABLE, null, values);
+            if (DEBUG) Log.d(TAG, "addActiveDevice: inserted workoutId=" + workoutId + ", deviceDbId=" + deviceDbId);
+        }
     }
 
 

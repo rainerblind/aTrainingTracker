@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
 import android.content.Context
+import com.atrainingtracker.banalservice.BANALService
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -51,16 +52,17 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Enumeration of the 5 canonical, semantic subsections of Advanced Settings.
+ * Enumeration of the canonical, semantic subsections of Advanced Settings in athletic lifecycle sequence (REQ-UI-357).
  */
 enum class TuningSection {
+    NAVIGATION,
     COCKPIT_TYPOGRAPHY,
     BATTERY_SAVER,
     SENSORS_GPS,
     SENSOR_SEARCH,
-    AFTERMATH_ANALYSIS,
     WORKOUT_MASKS_CARDS,
-    NAVIGATION
+    ROUTE_CLUSTERING,
+    AFTERMATH_ANALYSIS
 }
 
 /**
@@ -107,18 +109,17 @@ object TuningSubtitleFormatter {
 
     fun formatNavigationSubtitle(
         radiusKm: Float,
-        transparency: Float = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY,
         dismissSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
         context: Context? = null
     ): String {
-        val transPercent = (transparency * 100f).roundToInt()
-        val dismissStr = if (dismissSec == 0) {
-            context?.getString(R.string.tuning_nav_cue_dismiss_persistent) ?: "Persistent"
+        val effectiveDismiss = if (dismissSec in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) {
+            dismissSec
         } else {
-            "${dismissSec}s"
+            TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
         }
+        val dismissStr = "${effectiveDismiss}s"
         val radiusStr = String.format(Locale.getDefault(), "%.1f km", radiusKm)
-        return "$transPercent%, $dismissStr, $radiusStr"
+        return "$dismissStr, $radiusStr"
     }
 
     fun formatSensorsGpsSubtitle(
@@ -245,6 +246,37 @@ object TuningSubtitleFormatter {
         context: Context
     ): String {
         return formatWorkoutMasksSubtitle(cardPrefs, context)
+    }
+
+    fun formatClusterTuningSubtitle(
+        endpointTolerance: Float,
+        apexTolerance: Float,
+        distanceTolerance: Float,
+        altitudePositionTolerance: Float,
+        useSportTypeForClustering: Boolean,
+        useAltitudePosForClustering: Boolean,
+        isImperial: Boolean,
+        context: Context
+    ): String {
+        val locale = Locale.getDefault()
+        val distUnit = if (isImperial) {
+            context.getString(R.string.units_distance_imperial)
+        } else {
+            context.getString(R.string.units_distance_metric)
+        }
+        val multiplier = if (isImperial) (1.0 / BANALService.METER_PER_MILE).toFloat() else 0.001f
+        val decPlaces = 3
+
+        val endStr = String.format(locale, "%.${decPlaces}f%s", endpointTolerance * multiplier, distUnit)
+        val apexStr = String.format(locale, "%.${decPlaces}f%s", apexTolerance * multiplier, distUnit)
+        val distPctStr = "${(distanceTolerance * 100).roundToInt()}%"
+
+        return if (useAltitudePosForClustering) {
+            val altStr = String.format(locale, "%.${decPlaces}f%s", altitudePositionTolerance * multiplier, distUnit)
+            "End: $endStr · Apex: $apexStr · Dist: $distPctStr · Alt: $altStr"
+        } else {
+            "End: $endStr · Apex: $apexStr · Dist: $distPctStr"
+        }
     }
 }
 

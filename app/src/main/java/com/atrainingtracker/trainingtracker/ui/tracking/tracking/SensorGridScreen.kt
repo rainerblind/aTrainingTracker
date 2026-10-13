@@ -20,7 +20,10 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -31,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -52,11 +56,13 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
+import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
@@ -64,11 +70,15 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
@@ -134,6 +144,8 @@ interface GridActions {
 interface TabToggleActions {
     fun onToggleMap(enabled: Boolean) {}
     fun onToggleElevationProfile(enabled: Boolean) {}
+    fun onUpdateElevationProfileScope(scope: ElevationProfileScope) {}
+    fun onUpdateElevationProfileLookahead(lookaheadMeters: Int) {}
     fun onToggleLiveSegments(enabled: Boolean) {}
     fun onToggleLiveClimbs(enabled: Boolean) {}
     fun onToggleNavigationHints(enabled: Boolean) {}
@@ -217,6 +229,11 @@ fun SensorGridScreen(
     val showLiveClimbs = !showLiveSegments && state.showLiveClimbs && tuningConfig.showLiveClimbs && activeLiveClimb != null
 
     val shouldShowBottomSheet = isTabActive && (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING
+    val activeEntityKey = when {
+        showLiveSegments -> "segment_${activeSegment.staticData.summary.stravaId}"
+        showLiveClimbs -> "climb_${activeLiveClimb?.climb?.id}_${activeLiveClimb?.routeIndex}_${activeLiveClimb?.climb?.name}"
+        else -> null
+    }
 
     val navRepo = remember { TurnByTurnNavigationRepository.getInstance(context) }
     val navState by navRepo.navigationState.collectAsState()
@@ -228,6 +245,7 @@ fun SensorGridScreen(
     val forkDecisionState by forkNavRepo.forkDecisionState.collectAsState()
 
     val currentLocation by currentLocationFlow.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
 
     // Control the sheet state (REQ-UI-327, REQ-UI-343)
     val initialSheetValue = if (shouldShowBottomSheet) SheetValue.Expanded else SheetValue.Hidden
@@ -238,16 +256,15 @@ fun SensorGridScreen(
         )
     )
 
-    // Reactively drive SheetValue transitions when active tab or climb/segment state changes
-    LaunchedEffect(shouldShowBottomSheet) {
+    // Reactively drive SheetValue transitions when active tab or climb/segment state changes (REQ-UI-343)
+    LaunchedEffect(shouldShowBottomSheet, activeEntityKey) {
         if (!shouldShowBottomSheet) {
             if (scaffoldState.bottomSheetState.currentValue != SheetValue.Hidden) {
                 scaffoldState.bottomSheetState.hide()
             }
         } else {
-            if (scaffoldState.bottomSheetState.currentValue == SheetValue.Hidden) {
-                scaffoldState.bottomSheetState.expand()
-            }
+            // Unconditionally expand to full height when a sheet activates or a new entity appears (REQ-UI-343 / ATT-3319)
+            scaffoldState.bottomSheetState.expand()
         }
     }
 
@@ -271,6 +288,15 @@ fun SensorGridScreen(
                             .wrapContentHeight()
                             .sheetContour()
                             .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
+                            .then(
+                                if (scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded) {
+                                    Modifier.clickable {
+                                        coroutineScope.launch {
+                                            scaffoldState.bottomSheetState.expand()
+                                        }
+                                    }
+                                } else Modifier
+                            )
                     ) {
                         LiveSegmentSheet(
                             liveSegment = activeSegment
@@ -282,6 +308,15 @@ fun SensorGridScreen(
                             .fillMaxWidth()
                             .sheetContour()
                             .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
+                            .then(
+                                if (scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded) {
+                                    Modifier.clickable {
+                                        coroutineScope.launch {
+                                            scaffoldState.bottomSheetState.expand()
+                                        }
+                                    }
+                                } else Modifier
+                            )
                     ) {
                         LiveClimbSheet(
                             liveClimb = activeLiveClimb!!
@@ -448,6 +483,46 @@ fun SensorGridScreen(
                         icon = Icons.Default.ShowChart,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    if (state.showElevationProfile) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                FilterChip(
+                                    selected = state.elevationProfileScope == ElevationProfileScope.FULL_ROUTE,
+                                    onClick = { tabToggleActions.onUpdateElevationProfileScope(ElevationProfileScope.FULL_ROUTE) },
+                                    label = { Text(stringResource(R.string.config_tracking__elevation_profile_scope_full_route), style = MaterialTheme.typography.labelMedium) }
+                                )
+                                FilterChip(
+                                    selected = state.elevationProfileScope == ElevationProfileScope.ROLLING_WINDOW,
+                                    onClick = { tabToggleActions.onUpdateElevationProfileScope(ElevationProfileScope.ROLLING_WINDOW) },
+                                    label = { Text(stringResource(R.string.config_tracking__elevation_profile_scope_rolling_window), style = MaterialTheme.typography.labelMedium) }
+                                )
+                            }
+                            if (state.elevationProfileScope == ElevationProfileScope.ROLLING_WINDOW) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    listOf(500 to "500m", 1000 to "1km", 2000 to "2km", 5000 to "5km", 10000 to "10km").forEach { (meters, label) ->
+                                        FilterChip(
+                                            selected = state.elevationProfileLookahead == meters,
+                                            onClick = { tabToggleActions.onUpdateElevationProfileLookahead(meters) },
+                                            label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                     SpatialCockpitToggleCard(
                         title = stringResource(R.string.config_tracking__showLiveSegments),
                         isActive = state.showLiveSegments,
@@ -473,21 +548,31 @@ fun SensorGridScreen(
             }
         } else {
             // TRACKING & PREVIEW MODES (Top-level spatial Box overlay, independent inner sensor scroll, weighted map)
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = paddingValues.calculateTopPadding()) // Only pad the top
             ) {
+                val availableHeight = maxHeight
                 // Base Layer: Stationary Cockpit Content
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // 1. The Sensor Grid (Scrollable, flexibly constrained by weight to prevent crowding bottom cockpit views)
-                    Column(
-                        modifier = Modifier
+                    // 1. The Sensor Grid (Scrollable, capped at 50% available height when map visible, or unweighted when map hidden; REQ-UI-358)
+                    val sensorGridModifier = if (state.mapState.showMap) {
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = availableHeight * 0.5f)
+                            .verticalScroll(rememberScrollState())
+                    } else {
+                        Modifier
                             .fillMaxWidth()
                             .verticalScroll(rememberScrollState())
-                            .weight(1f, fill = false),
+                            .weight(1f, fill = false)
+                    }
+
+                    Column(
+                        modifier = sensorGridModifier,
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
                     ) {
@@ -520,12 +605,12 @@ fun SensorGridScreen(
                         }
                     }
 
-                    // 2. The Map (Expanded - Isolated Recomposition Barrier, REQ-UI-326 / ATT-2944)
+                    // 2. The Map (Expanded - Isolated Recomposition Barrier, REQ-UI-326 / ATT-2944 / REQ-UI-358 / ATT-3343)
                     if (state.mapState.showMap) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(1f) // Fills remaining space
+                                .weight(1f, fill = true) // Consumes all remaining vertical space (REQ-UI-358)
                         ) {
                             TrackingMapContainer(
                                 mapState = state.mapState,
@@ -537,11 +622,19 @@ fun SensorGridScreen(
 
                     // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199)
                     val activeNavigatedRoute = state.mapRoutes.firstOrNull { it.isActiveNavigation }
-                    val resolvedProfile = remember(activeNavigatedRoute, state.pathPoints, currentLocation) {
+                    val resolvedProfile = remember(
+                        activeNavigatedRoute,
+                        state.pathPoints,
+                        currentLocation,
+                        state.elevationProfileScope,
+                        state.elevationProfileLookahead
+                    ) {
                         TrackingElevationProfileResolver.resolve(
                             activeNavigatedRoute = activeNavigatedRoute,
                             recordedPathPoints = state.pathPoints,
-                            currentLocation = currentLocation
+                            currentLocation = currentLocation,
+                            scope = state.elevationProfileScope,
+                            lookaheadDistanceMeters = state.elevationProfileLookahead
                         )
                     }
 
@@ -575,6 +668,38 @@ fun SensorGridScreen(
                         modifier = Modifier.align(Alignment.TopCenter)
                     )
                 }
+
+                // Bottom swipe-up gesture detector & tap-to-expand strip (REQ-UI-359 / ATT-3341)
+                if (shouldShowBottomSheet && scaffoldState.bottomSheetState.currentValue != SheetValue.Expanded) {
+                    var totalDragY by remember { mutableFloatStateOf(0f) }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(BottomSheetDesign.PeekHeightLiveSegment + navBarHeight)
+                            .align(Alignment.BottomCenter)
+                            .pointerInput(shouldShowBottomSheet) {
+                                detectVerticalDragGestures(
+                                    onDragStart = { totalDragY = 0f },
+                                    onDragEnd = { totalDragY = 0f },
+                                    onDragCancel = { totalDragY = 0f },
+                                    onVerticalDrag = { change, dragAmount ->
+                                        totalDragY += dragAmount
+                                        if (totalDragY < -30f) {
+                                            change.consume()
+                                            coroutineScope.launch {
+                                                scaffoldState.bottomSheetState.expand()
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                            .clickable {
+                                coroutineScope.launch {
+                                    scaffoldState.bottomSheetState.expand()
+                                }
+                            }
+                    )
+                }
             }
         }
     }
@@ -605,19 +730,16 @@ fun NavigationHintsOverlay(
             TurnPromptBanner(
                 navigationState = navigationState,
                 promptsEnabled = state.showNavigationHints && tuningConfig.turnPromptsEnabled,
-                overlayAlpha = tuningConfig.navigationCueTransparency,
                 dismissDurationSec = tuningConfig.navigationCueDismissDurationSec
             )
 
             ReturnNavigationHud(
                 navigationState = returnNavigationState,
-                overlayAlpha = tuningConfig.navigationCueTransparency,
                 onDismiss = onDismissReturnNav
             )
 
             ForkDecisionCard(
                 decisionState = forkDecisionState,
-                overlayAlpha = tuningConfig.navigationCueTransparency,
                 onRouteSelected = onSelectForkRoute,
                 onDismiss = onDismissFork,
                 modifier = Modifier.align(Alignment.CenterHorizontally)

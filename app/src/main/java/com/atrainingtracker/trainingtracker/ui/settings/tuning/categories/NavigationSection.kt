@@ -53,8 +53,6 @@ import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 fun NavigationSection(
     routeSelectionRadiusKm: Float,
     onRadiusChange: (Float) -> Unit,
-    navigationCueTransparency: Float = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_TRANSPARENCY,
-    onTransparencyChange: (Float) -> Unit = {},
     navigationCueDismissDurationSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
     onDismissDurationChange: (Int) -> Unit = {},
     mapFollowMeInitialZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
@@ -70,7 +68,11 @@ fun NavigationSection(
     mapFollowMeSpeedSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
     onMapFollowMeSpeedSmoothingAlphaChange: (Float) -> Unit = {},
     mapFollowMeBearingSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
-    onMapFollowMeBearingSmoothingAlphaChange: (Float) -> Unit = {}
+    onMapFollowMeBearingSmoothingAlphaChange: (Float) -> Unit = {},
+    autoFollowUniqueRouteEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
+    onAutoFollowUniqueRouteEnabledChange: (Boolean) -> Unit = {},
+    turnCueCountdownDistanceMeters: Float = TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+    onTurnCueCountdownDistanceChange: (Float) -> Unit = {}
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -94,24 +96,6 @@ fun NavigationSection(
             steps = 18
         )
 
-        // Navigation Cue Transparency (20% - 100%, 5% increments)
-        TuningSliderItem(
-            title = stringResource(R.string.tuning_nav_cue_transparency_title),
-            valueText = "${(navigationCueTransparency * 100f).roundToInt()}%",
-            helperText = stringResource(R.string.tuning_nav_cue_transparency_desc),
-            defaultText = stringResource(R.string.tuning_default_format, "80%"),
-            value = navigationCueTransparency,
-            onValueChange = { snapped ->
-                val rounded = (snapped * 20f).roundToInt() / 20f
-                onTransparencyChange(rounded.coerceIn(
-                    TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY,
-                    TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY
-                ))
-            },
-            valueRange = TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY..TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY,
-            steps = 15
-        )
-
         // Navigation Cue Dismiss Duration (2s, 3s, 4s [default], 5s, 8s, Persistent)
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -129,11 +113,7 @@ fun NavigationSection(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = if (navigationCueDismissDurationSec == 0) {
-                        stringResource(R.string.tuning_nav_cue_dismiss_persistent)
-                    } else {
-                        "${navigationCueDismissDurationSec}s"
-                    },
+                    text = "${navigationCueDismissDurationSec}s",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -158,19 +138,40 @@ fun NavigationSection(
             ) {
                 TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS.forEach { sec ->
                     val isSelected = navigationCueDismissDurationSec == sec
-                    val chipText = if (sec == 0) {
-                        stringResource(R.string.tuning_nav_cue_dismiss_persistent)
-                    } else {
-                        "${sec}s"
-                    }
                     FilterChip(
                         selected = isSelected,
                         onClick = { onDismissDurationChange(sec) },
-                        label = { Text(chipText) }
+                        label = { Text("${sec}s") }
                     )
                 }
             }
         }
+
+        // Navigation Cue Countdown Distance (30m - 300m, 10m increments) (ATT-3321 / REQ-UI-287)
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_nav_cue_distance_title),
+            valueText = "${turnCueCountdownDistanceMeters.roundToInt()} m",
+            helperText = stringResource(R.string.tuning_nav_cue_distance_desc),
+            defaultText = stringResource(R.string.tuning_default_format, "100 m"),
+            value = turnCueCountdownDistanceMeters,
+            onValueChange = { snapped ->
+                val rounded = (snapped / 10f).roundToInt() * 10f
+                onTurnCueCountdownDistanceChange(rounded.coerceIn(
+                    TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+                    TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS
+                ))
+            },
+            valueRange = TuningPreferencesDefaults.MIN_TURN_CUE_COUNTDOWN_DISTANCE_METERS..TuningPreferencesDefaults.MAX_TURN_CUE_COUNTDOWN_DISTANCE_METERS,
+            steps = 26
+        )
+
+        // Auto-Follow Unique Route (ATT-3320 / REQ-MAP-031)
+        TuningToggleItem(
+            title = stringResource(R.string.tuning_auto_follow_unique_route_title),
+            isChecked = autoFollowUniqueRouteEnabled,
+            onCheckedChange = onAutoFollowUniqueRouteEnabledChange,
+            summary = stringResource(R.string.tuning_auto_follow_unique_route_desc)
+        )
 
         // Follow-Me Map Camera Heading / Divider
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))

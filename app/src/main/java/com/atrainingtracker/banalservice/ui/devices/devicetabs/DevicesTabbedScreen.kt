@@ -25,6 +25,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -320,11 +321,28 @@ fun DevicesTabbedScreen(
                                 divider = {}
                             ) {
                                 tabTitles.forEachIndexed { index, title ->
+                                    val isMatrixTab = index == 3 || index == 4
                                     Tab(
                                         selected = pagerState.currentPage == index,
                                         onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                                         text = {
-                                            Text(title)
+                                            if (isMatrixTab) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Link,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(16.dp),
+                                                        tint = LocalContentColor.current
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(title)
+                                                }
+                                            } else {
+                                                Text(title)
+                                            }
                                         }
                                     )
                                 }

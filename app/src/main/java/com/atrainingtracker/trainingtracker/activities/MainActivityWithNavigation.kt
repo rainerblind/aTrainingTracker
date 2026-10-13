@@ -110,7 +110,10 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSumm
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.util.Collections
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersFragment
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModel
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
@@ -217,6 +220,10 @@ class MainActivityWithNavigation :
     internal val mStartTrackingReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             mDrawerController.startTrackingTitleRes = R.string.Tracking
+            if (intent?.action == TrainingApplication.REQUEST_START_TRACKING) {
+                checkSensorBatteryOnStart()
+            }
+            startInRideBatteryMonitoring()
         }
     }
 
@@ -229,11 +236,15 @@ class MainActivityWithNavigation :
     internal val mStopTrackingReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             mDrawerController.startTrackingTitleRes = R.string.Start
+            stopInRideBatteryMonitoring()
+            mInRideAlertedSensorIds.clear()
         }
     }
 
     protected val mTrackingStoppedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            stopInRideBatteryMonitoring()
+            mInRideAlertedSensorIds.clear()
             mSelectedFragmentId = R.id.drawer_workouts
             navigateToDrawerItem(mSelectedFragmentId)
             val workoutId = intent?.getLongExtra(TrackerService.WORKOUT_ID, -1L) ?: -1L
@@ -643,6 +654,9 @@ class MainActivityWithNavigation :
         }
 
         checkUnfinishedWorkout()
+        if (TrainingApplication.isTracking()) {
+            startInRideBatteryMonitoring()
+        }
     }
 
     private fun checkUnfinishedWorkout() {
@@ -768,6 +782,8 @@ class MainActivityWithNavigation :
             unregisterReceiver(mAntAdapterMissingReceiver)
         } catch (ignored: IllegalArgumentException) {
         }
+
+        stopInRideBatteryMonitoring()
 
         if (!isChangingConfigurations) {
             mHandler.postDelayed(mDisconnectFromBANALServiceRunnable, WAITING_TIME_BEFORE_DISCONNECTING)
@@ -973,6 +989,69 @@ class MainActivityWithNavigation :
                 Log.e(TAG, "Error checking sensor battery after workout: ${e.message}", e)
             }
         }
+    }
+
+    private var mInRideBatteryMonitoringJob: Job? = null
+    internal val mInRideAlertedSensorIds: MutableSet<Long> = Collections.synchronizedSet(mutableSetOf())
+
+    internal fun checkSensorBatteryOnStart() {
+        mInRideAlertedSensorIds.clear()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
+                val allCritical = devDbManager.getCriticalBatteryDevices(CRITICAL_BATTERY_LEVEL)
+                val criticalDevices = allCritical.filter { devDbManager.isPaired(it.deviceId) }
+
+                if (criticalDevices.isNotEmpty()) {
+                    criticalDevices.forEach { mInRideAlertedSensorIds.add(it.deviceId) }
+                    val message = if (criticalDevices.size == 1) {
+                        val dev = criticalDevices[0]
+                        getString(R.string.sensor_battery_snackbar_single, dev.name, dev.batteryPercentage)
+                    } else {
+                        val names = criticalDevices.joinToString(", ") { "${it.name} (${it.batteryPercentage}%)" }
+                        getString(R.string.sensor_battery_snackbar_many, criticalDevices.size, names)
+                    }
+                    WorkoutNavigationEvents.triggerLowBatteryAlert(
+                        WorkoutNavigationEvents.LowBatteryAlert(
+                            message = message,
+                            deviceNames = criticalDevices.map { it.name }
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking sensor battery on start: ${e.message}", e)
+            }
+        }
+    }
+
+    internal fun startInRideBatteryMonitoring() {
+        if (mInRideBatteryMonitoringJob?.isActive == true) return
+        mInRideBatteryMonitoringJob = CoroutineScope(Dispatchers.IO).launch {
+            DeviceDataRepository.deviceBatteryUpdates.collect { (deviceId, percentage) ->
+                try {
+                    val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
+                    if (percentage in 0..CRITICAL_BATTERY_LEVEL && devDbManager.isPaired(deviceId)) {
+                        if (mInRideAlertedSensorIds.add(deviceId)) {
+                            val deviceName = devDbManager.getDeviceName(deviceId) ?: "Sensor"
+                            val message = getString(R.string.sensor_battery_snackbar_single, deviceName, percentage)
+                            WorkoutNavigationEvents.triggerLowBatteryAlert(
+                                WorkoutNavigationEvents.LowBatteryAlert(
+                                    message = message,
+                                    deviceNames = listOf(deviceName)
+                                )
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing in-ride battery update: ${e.message}", e)
+                }
+            }
+        }
+    }
+
+    internal fun stopInRideBatteryMonitoring() {
+        mInRideBatteryMonitoringJob?.cancel()
+        mInRideBatteryMonitoringJob = null
     }
 
     override fun onPreferenceStartScreen(preferenceFragmentCompat: PreferenceFragmentCompat, preferenceScreen: PreferenceScreen): Boolean {
