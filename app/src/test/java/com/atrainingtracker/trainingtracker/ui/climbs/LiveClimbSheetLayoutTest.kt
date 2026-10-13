@@ -183,12 +183,12 @@ class LiveClimbSheetLayoutTest {
     }
 
     @Test
-    fun testLiveClimbSheet_elevationProfileConfiguredWithRefinedHeightAndGradientShading() {
+    fun testLiveClimbSheet_elevationProfileConfiguredWithAdaptiveHeightAndGradientShading() {
         val content = liveClimbSheetFile.readText()
 
-        assertTrue(
-            "LiveClimbSheet must configure ElevationProfile with refined 68.dp fixed height (REQ-UI-341, REQ-UI-352)",
-            content.contains("fixedHeight = 68.dp")
+        assertFalse(
+            "LiveClimbSheet must not hardcode fixedHeight; it must scale adaptively based on climb elevation gain (REQ-UI-352, ATT-3316, Rule 36)",
+            content.contains("fixedHeight")
         )
         assertTrue(
             "LiveClimbSheet must configure ElevationProfile with climbGradientShading = true (REQ-UI-352)",
