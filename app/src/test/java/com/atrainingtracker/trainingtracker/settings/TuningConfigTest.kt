@@ -50,6 +50,18 @@ class TuningConfigTest {
         assertEquals(true, TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED)
         assertEquals(100.0f, config.turnCueCountdownDistanceMeters, 0.001f)
         assertEquals(100.0f, TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS, 0.001f)
+        assertEquals(200.0f, config.clusterTolEndpoints, 0.001f)
+        assertEquals(200.0f, TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS, 0.001f)
+        assertEquals(400.0f, config.clusterTolApex, 0.001f)
+        assertEquals(400.0f, TuningPreferencesDefaults.CLUSTER_TOL_APEX, 0.001f)
+        assertEquals(0.20f, config.clusterTolDistance, 0.001f)
+        assertEquals(0.20f, TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE, 0.001f)
+        assertEquals(400.0f, config.clusterTolAltitudePos, 0.001f)
+        assertEquals(400.0f, TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS, 0.001f)
+        assertEquals(true, config.clusterUseSportType)
+        assertEquals(true, TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE)
+        assertEquals(true, config.clusterUseAltitudePos)
+        assertEquals(true, TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS)
     }
 
     @Test

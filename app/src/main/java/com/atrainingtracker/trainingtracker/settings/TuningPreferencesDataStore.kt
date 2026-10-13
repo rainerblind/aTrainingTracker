@@ -28,6 +28,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
@@ -165,6 +166,25 @@ object TuningPreferencesDefaults {
 
     const val SUPPRESS_ANT_MISSING_ADAPTER_DIALOG = false
     const val DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED = true
+
+    const val CLUSTER_TOL_ENDPOINTS = 200.0f
+    const val MIN_CLUSTER_TOL_ENDPOINTS = 10.0f
+    const val MAX_CLUSTER_TOL_ENDPOINTS = 500.0f
+
+    const val CLUSTER_TOL_APEX = 400.0f
+    const val MIN_CLUSTER_TOL_APEX = 10.0f
+    const val MAX_CLUSTER_TOL_APEX = 500.0f
+
+    const val CLUSTER_TOL_DISTANCE = 0.20f
+    const val MIN_CLUSTER_TOL_DISTANCE = 0.01f
+    const val MAX_CLUSTER_TOL_DISTANCE = 0.20f
+
+    const val CLUSTER_TOL_ALTITUDE_POS = 400.0f
+    const val MIN_CLUSTER_TOL_ALTITUDE_POS = 10.0f
+    const val MAX_CLUSTER_TOL_ALTITUDE_POS = 500.0f
+
+    const val CLUSTER_USE_SPORT_TYPE = true
+    const val CLUSTER_USE_ALTITUDE_POS = true
 }
 
 /**
@@ -209,7 +229,13 @@ data class TuningConfig(
     val mapFollowMeSpeedSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
     val mapFollowMeBearingSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
     val suppressAntMissingAdapterDialog: Boolean = TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG,
-    val autoFollowUniqueRouteEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED
+    val autoFollowUniqueRouteEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
+    val clusterTolEndpoints: Float = TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS,
+    val clusterTolApex: Float = TuningPreferencesDefaults.CLUSTER_TOL_APEX,
+    val clusterTolDistance: Float = TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE,
+    val clusterTolAltitudePos: Float = TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS,
+    val clusterUseSportType: Boolean = TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE,
+    val clusterUseAltitudePos: Boolean = TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -301,6 +327,12 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_bearing_smoothing_alpha")
         val KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_suppress_ant_missing_adapter_dialog")
         val KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_follow_unique_route_enabled")
+        val KEY_CLUSTER_TOL_ENDPOINTS: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_tol_endpoints")
+        val KEY_CLUSTER_TOL_APEX: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_tol_apex")
+        val KEY_CLUSTER_TOL_DISTANCE: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_tol_distance")
+        val KEY_CLUSTER_TOL_ALTITUDE_POS: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_tol_altitude_pos")
+        val KEY_CLUSTER_USE_SPORT_TYPE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_sport_type")
+        val KEY_CLUSTER_USE_ALTITUDE_POS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_altitude_pos")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -341,7 +373,13 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
             KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
             KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG,
-            KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED
+            KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
+            KEY_CLUSTER_TOL_ENDPOINTS,
+            KEY_CLUSTER_TOL_APEX,
+            KEY_CLUSTER_TOL_DISTANCE,
+            KEY_CLUSTER_TOL_ALTITUDE_POS,
+            KEY_CLUSTER_USE_SPORT_TYPE,
+            KEY_CLUSTER_USE_ALTITUDE_POS
         )
     }
 
@@ -537,7 +575,25 @@ class TuningPreferencesDataStore(private val context: Context) {
                 TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
             ),
             suppressAntMissingAdapterDialog = prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] ?: TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG,
-            autoFollowUniqueRouteEnabled = prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED
+            autoFollowUniqueRouteEnabled = prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
+            clusterTolEndpoints = (prefs[KEY_CLUSTER_TOL_ENDPOINTS] ?: TrainingApplication.getClusterTolEndpoints()).coerceIn(
+                TuningPreferencesDefaults.MIN_CLUSTER_TOL_ENDPOINTS,
+                TuningPreferencesDefaults.MAX_CLUSTER_TOL_ENDPOINTS
+            ),
+            clusterTolApex = (prefs[KEY_CLUSTER_TOL_APEX] ?: TrainingApplication.getClusterTolApex()).coerceIn(
+                TuningPreferencesDefaults.MIN_CLUSTER_TOL_APEX,
+                TuningPreferencesDefaults.MAX_CLUSTER_TOL_APEX
+            ),
+            clusterTolDistance = (prefs[KEY_CLUSTER_TOL_DISTANCE] ?: TrainingApplication.getClusterTolDistance()).coerceIn(
+                TuningPreferencesDefaults.MIN_CLUSTER_TOL_DISTANCE,
+                TuningPreferencesDefaults.MAX_CLUSTER_TOL_DISTANCE
+            ),
+            clusterTolAltitudePos = (prefs[KEY_CLUSTER_TOL_ALTITUDE_POS] ?: TrainingApplication.getClusterTolAltitudePos()).coerceIn(
+                TuningPreferencesDefaults.MIN_CLUSTER_TOL_ALTITUDE_POS,
+                TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS
+            ),
+            clusterUseSportType = prefs[KEY_CLUSTER_USE_SPORT_TYPE] ?: TrainingApplication.useSportTypeForClustering(),
+            clusterUseAltitudePos = prefs[KEY_CLUSTER_USE_ALTITUDE_POS] ?: TrainingApplication.useAltitudePosForClustering()
         )
     }
 
@@ -597,6 +653,22 @@ class TuningPreferencesDataStore(private val context: Context) {
         val clampedRadiusKm = config.routeSelectionRadiusKm.coerceIn(
             TuningPreferencesDefaults.MIN_ROUTE_SELECTION_RADIUS_KM,
             TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
+        )
+        val clampedClusterTolEndpoints = config.clusterTolEndpoints.coerceIn(
+            TuningPreferencesDefaults.MIN_CLUSTER_TOL_ENDPOINTS,
+            TuningPreferencesDefaults.MAX_CLUSTER_TOL_ENDPOINTS
+        )
+        val clampedClusterTolApex = config.clusterTolApex.coerceIn(
+            TuningPreferencesDefaults.MIN_CLUSTER_TOL_APEX,
+            TuningPreferencesDefaults.MAX_CLUSTER_TOL_APEX
+        )
+        val clampedClusterTolDistance = config.clusterTolDistance.coerceIn(
+            TuningPreferencesDefaults.MIN_CLUSTER_TOL_DISTANCE,
+            TuningPreferencesDefaults.MAX_CLUSTER_TOL_DISTANCE
+        )
+        val clampedClusterTolAltitudePos = config.clusterTolAltitudePos.coerceIn(
+            TuningPreferencesDefaults.MIN_CLUSTER_TOL_ALTITUDE_POS,
+            TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS
         )
 
         context.dataStore.edit { prefs ->
@@ -673,7 +745,20 @@ class TuningPreferencesDataStore(private val context: Context) {
             )
             prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] = config.suppressAntMissingAdapterDialog
             prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] = config.autoFollowUniqueRouteEnabled
+            prefs[KEY_CLUSTER_TOL_ENDPOINTS] = clampedClusterTolEndpoints
+            prefs[KEY_CLUSTER_TOL_APEX] = clampedClusterTolApex
+            prefs[KEY_CLUSTER_TOL_DISTANCE] = clampedClusterTolDistance
+            prefs[KEY_CLUSTER_TOL_ALTITUDE_POS] = clampedClusterTolAltitudePos
+            prefs[KEY_CLUSTER_USE_SPORT_TYPE] = config.clusterUseSportType
+            prefs[KEY_CLUSTER_USE_ALTITUDE_POS] = config.clusterUseAltitudePos
         }
+
+        TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
+        TrainingApplication.setClusterTolApex(clampedClusterTolApex)
+        TrainingApplication.setClusterTolDistance(clampedClusterTolDistance)
+        TrainingApplication.setClusterTolAltitudePos(clampedClusterTolAltitudePos)
+        TrainingApplication.setUseSportTypeForClustering(config.clusterUseSportType)
+        TrainingApplication.setUseAltitudePosForClustering(config.clusterUseAltitudePos)
     }
 
 
@@ -809,5 +894,11 @@ class TuningPreferencesDataStore(private val context: Context) {
                 prefs.remove(key)
             }
         }
+        TrainingApplication.setClusterTolEndpoints(TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS)
+        TrainingApplication.setClusterTolApex(TuningPreferencesDefaults.CLUSTER_TOL_APEX)
+        TrainingApplication.setClusterTolDistance(TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE)
+        TrainingApplication.setClusterTolAltitudePos(TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS)
+        TrainingApplication.setUseSportTypeForClustering(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE)
+        TrainingApplication.setUseAltitudePosForClustering(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS)
     }
 }

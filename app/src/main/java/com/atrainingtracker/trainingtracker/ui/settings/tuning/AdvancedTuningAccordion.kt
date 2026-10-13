@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
 import android.content.Context
+import com.atrainingtracker.banalservice.BANALService
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -60,6 +61,7 @@ enum class TuningSection {
     SENSORS_GPS,
     SENSOR_SEARCH,
     WORKOUT_MASKS_CARDS,
+    ROUTE_CLUSTERING,
     AFTERMATH_ANALYSIS
 }
 
@@ -244,6 +246,37 @@ object TuningSubtitleFormatter {
         context: Context
     ): String {
         return formatWorkoutMasksSubtitle(cardPrefs, context)
+    }
+
+    fun formatClusterTuningSubtitle(
+        endpointTolerance: Float,
+        apexTolerance: Float,
+        distanceTolerance: Float,
+        altitudePositionTolerance: Float,
+        useSportTypeForClustering: Boolean,
+        useAltitudePosForClustering: Boolean,
+        isImperial: Boolean,
+        context: Context
+    ): String {
+        val locale = Locale.getDefault()
+        val distUnit = if (isImperial) {
+            context.getString(R.string.units_distance_imperial)
+        } else {
+            context.getString(R.string.units_distance_metric)
+        }
+        val multiplier = if (isImperial) (1.0 / BANALService.METER_PER_MILE).toFloat() else 0.001f
+        val decPlaces = 3
+
+        val endStr = String.format(locale, "%.${decPlaces}f%s", endpointTolerance * multiplier, distUnit)
+        val apexStr = String.format(locale, "%.${decPlaces}f%s", apexTolerance * multiplier, distUnit)
+        val distPctStr = "${(distanceTolerance * 100).roundToInt()}%"
+
+        return if (useAltitudePosForClustering) {
+            val altStr = String.format(locale, "%.${decPlaces}f%s", altitudePositionTolerance * multiplier, distUnit)
+            "End: $endStr · Apex: $apexStr · Dist: $distPctStr · Alt: $altStr"
+        } else {
+            "End: $endStr · Apex: $apexStr · Dist: $distPctStr"
+        }
     }
 }
 

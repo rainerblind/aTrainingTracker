@@ -1447,6 +1447,7 @@
     <string name="tuning_cat_sensors_gps">Sensori, GPS e filtri</string>
     <string name="tuning_cat_workout_masks_cards">Schede e dettagli allenamento</string>
     <string name="tuning_cat_navigation">Navigazione</string>
+    <string name="tuning_cat_route_clustering">Raggruppamento percorsi e allenamenti</string>
     <string name="tuning_route_selection_radius_title">Raggio di selezione percorso</string>
     <string name="tuning_route_selection_radius_desc">Distanza massima dal punto di partenza per la selezione dei percorsi vicini</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Durata visualizzazione indicazioni</string>

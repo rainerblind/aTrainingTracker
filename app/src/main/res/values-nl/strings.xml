@@ -1447,6 +1447,7 @@
     <string name="tuning_cat_sensors_gps">Sensoren, gps en filtering</string>
     <string name="tuning_cat_workout_masks_cards">Workout-kaarten en details</string>
     <string name="tuning_cat_navigation">Navigatie</string>
+    <string name="tuning_cat_route_clustering">Route- en workout-clustering</string>
     <string name="tuning_route_selection_radius_title">Straal voor routeselectie</string>
     <string name="tuning_route_selection_radius_desc">Maximale afstand tot het startpunt voor selectie van routes in de buurt</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Weergaveduur navigatieaanwijzingen</string>
