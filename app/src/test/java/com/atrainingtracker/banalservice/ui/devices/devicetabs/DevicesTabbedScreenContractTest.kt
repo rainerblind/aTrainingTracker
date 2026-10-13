@@ -124,4 +124,41 @@ class DevicesTabbedScreenContractTest {
             content.contains("isBike = false")
         )
     }
+
+    @Test
+    fun testDevicesTabbedScreen_matrixTabsLinkIconContract() {
+        val file = findFile("src/main/java/com/atrainingtracker/banalservice/ui/devices/devicetabs/DevicesTabbedScreen.kt")
+        val content = file.readText()
+
+        // 1. Must reference Icons.Default.Link
+        assertTrue(
+            "DevicesTabbedScreen must reference Icons.Default.Link (REQ-UI-284, ATT-3314)",
+            content.contains("Icons.Default.Link")
+        )
+
+        // 2. Must distinguish matrix tabs (index 3 and 4)
+        assertTrue(
+            "DevicesTabbedScreen must check for matrix tabs at indices 3 and 4",
+            content.contains("index == 3 || index == 4") || content.contains("isMatrixTab")
+        )
+
+        // 3. Must use 16.dp size for compact tab icon ergonomics
+        assertTrue(
+            "DevicesTabbedScreen must format link icon with 16.dp size",
+            content.contains("Modifier.size(16.dp)")
+        )
+
+        // 4. Must use 6.dp spacing between icon and text
+        assertTrue(
+            "DevicesTabbedScreen must format spacer with 6.dp width",
+            content.contains("Spacer(modifier = Modifier.width(6.dp))") ||
+            content.contains("Spacer(Modifier.width(6.dp))")
+        )
+
+        // 5. Must dynamically tint icon using LocalContentColor.current
+        assertTrue(
+            "DevicesTabbedScreen must tint link icon with LocalContentColor.current",
+            content.contains("tint = LocalContentColor.current")
+        )
+    }
 }
