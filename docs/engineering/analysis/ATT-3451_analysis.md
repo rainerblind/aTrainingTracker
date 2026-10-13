@@ -7,7 +7,7 @@
 **Active Sprint**: `Sprint 2026-42.2`  
 **Branch**: `feature/ATT-3451`  
 **Author**: AI Agent 1 (Implementer)  
-**Date**: 2026-10-13  
+**Date**: 2026-10-13 (Updated with Gate 1 Audit Revisions)  
 
 ---
 
@@ -62,13 +62,21 @@ Ticket **ATT-3451** resolves these deficiencies by introducing dedicated semanti
    - All three workflows use a single uniform threshold `CRITICAL_BATTERY_LEVEL = 20`.
    - In `startInRideBatteryMonitoring()`, `mInRideAlertedSensorIds` deduplicates alerts per sensor ID. If an alert fires when a sensor drops to $18\%$ (`Warning`), subsequent in-ride battery updates are suppressed, preventing the athlete from receiving a `Critical` escalation alert if the sensor further degrades to $\le 10\%$.
 
-### 2.2 Semantic Color Tokens in Material 3 Theme
+### 2.2 Semantic Color Tokens & WCAG Contrast Audit
 
 - `MaterialTheme.colorScheme` provides native tokens for errors:
   - Light: `LightErrorContainer` (`#FFDAD6`), `LightOnErrorContainer` (`#410002`), `LightError` (`#B00020`).
   - Dark: `DarkErrorContainer` (`#93000A`), `DarkOnErrorContainer` (`#FFDAD6`), `DarkError` (`#FFB4AB`).
 - However, Material 3 does not include built-in `warningContainer` tokens in `ColorScheme`.
-- To maintain WCAG AAA / AA contrast ratios ($\ge 7:1$ for large text / icons, $\ge 4.5:1$ for body text) across Light, Dark, and AMOLED themes, dedicated semantic warning tokens must be introduced in `Color.kt`.
+- To maintain WCAG AAA / AA contrast ratios ($\ge 7:1$ for large text / icons, $\ge 4.5:1$ for body and action text) across Light, Dark, and AMOLED themes, dedicated semantic warning tokens must be introduced in `Color.kt`.
+- Crucially, the **Action Color** for `WARNING` must NOT fall back to `primary` (blue), but must use a dedicated high-contrast action color:
+  - `LightWarningAction = Color(0xFF6D3B00)` (Deep Amber / Burnt Umber, contrast $> 7:1$ on `#FFE082`).
+  - `DarkWarningAction = Color(0xFFFFD54F)` (Bright Amber 300, contrast $> 7:1$ on `#4E2C00`).
+
+### 2.3 Snackbar Preemption Architecture
+
+In Material 3 `SnackbarHostState`, calling `showSnackbar()` while another snackbar is visible causes the new snackbar to wait until the current one dismisses, or requires explicitly dismissing `currentSnackbarData`.
+When an alert escalates from `WARNING` to `CRITICAL` (e.g. sensor drops to 8%), the critical alert MUST immediately preempt and dismiss any active warning snackbar so the urgent alert is visible without delay.
 
 ---
 
@@ -77,22 +85,27 @@ Ticket **ATT-3451** resolves these deficiencies by introducing dedicated semanti
 ### In-Scope Objectives:
 1. **Severity Classification Model**:
    - Define `enum class BatteryAlertSeverity { WARNING, CRITICAL }` in `WorkoutNavigationEvents.kt`.
-   - Enhance `LowBatteryAlert` with `val severity: BatteryAlertSeverity = BatteryAlertSeverity.WARNING` and optional `lowestBatteryPercentage: Int? = null`.
-   - Implement custom `BatterySnackbarVisuals : SnackbarVisuals` to carry `severity` through `SnackbarHostState.showSnackbar()`.
+   - Enhance `LowBatteryAlert` with `val severity: BatteryAlertSeverity = BatteryAlertSeverity.WARNING` and `val lowestBatteryPercentage: Int? = null`.
+   - Implement typed `BatterySnackbarVisuals : SnackbarVisuals` carrying `severity: BatteryAlertSeverity`.
 2. **Semantic Warning & Critical Color Palette (`Color.kt`)**:
    - Define accessible amber/yellow tokens for Light, Dark, and AMOLED modes:
-     - Light Warning Container: Warm amber (`#FFE082` / `#FFECB3`) with deep brown/black text (`#3E2723`, contrast $> 10:1$).
-     - Dark Warning Container: Warm dark amber (`#4E2C00` / `#5D3800`) with soft golden-amber text (`#FFE082`, contrast $> 9:1$).
-     - AMOLED Warning Container: Pure black/near-black amber border with high-visibility amber text.
+     - `LightWarningContainer = Color(0xFFFFE082)` (Warm Amber 200)
+     - `LightOnWarningContainer = Color(0xFF3E2723)` (Deep Brown / near black, contrast $> 10:1$)
+     - `LightWarningAction = Color(0xFF6D3B00)` (Deep Amber, contrast $> 7:1$)
+     - `DarkWarningContainer = Color(0xFF4E2C00)` (Deep warm amber-brown)
+     - `DarkOnWarningContainer = Color(0xFFFFE082)` (Soft pale amber, contrast $> 9:1$)
+     - `DarkWarningAction = Color(0xFFFFD54F)` (Vibrant Amber 300, contrast $> 8:1$)
    - Map `CRITICAL` severity directly to Material 3 `errorContainer`, `onErrorContainer`, and `error`.
-3. **Snackbar Presentation Update**:
-   - Update `TrackingTabsScreen.kt` and `WorkoutSummariesTabbedScreen.kt` to resolve container, content, and action colors dynamically based on `visuals.severity`.
+3. **Snackbar Presentation & Preemption Update**:
+   - In `TrackingTabsScreen.kt` and `WorkoutSummariesTabbedScreen.kt`, when a `CRITICAL` alert arrives while a snackbar is active, immediately dismiss `snackbarHostState.currentSnackbarData?.dismiss()` to ensure instantaneous preemption.
+   - Resolve container, content, and action colors dynamically based on `visuals.severity`, preserving standard Material 3 colors for any non-battery `SnackbarVisuals`.
 4. **Triggering & Escalation Logic (`MainActivityWithNavigation.kt`)**:
    - Establish `LOW_BATTERY_WARNING_LEVEL = 20` and `CRITICAL_BATTERY_LEVEL = 10`.
    - Classify alerts as `CRITICAL` if any alerted device has battery $\le 10\%$, otherwise `WARNING` if $\le 20\%$.
-   - In-ride monitoring: Allow alert escalation from `WARNING` to `CRITICAL` if an active sensor drops from $> 10\%$ to $\le 10\%$.
+   - In-ride monitoring: Track `mInRideAlertedSensorIds` and `mInRideCriticalAlertedSensorIds` to allow alert escalation from `WARNING` to `CRITICAL` if an active sensor drops from $> 10\%$ to $\le 10\%$.
 5. **Testing & Verification**:
-   - Expand `SensorBatteryAlertTest.kt` to verify threshold classification and in-ride critical escalation.
+   - Expand `SensorBatteryAlertTest.kt` to verify threshold classification, in-ride critical escalation, and deduplication.
+   - Add preemption test: verify that triggering a `CRITICAL` alert immediately dismisses an active `WARNING` snackbar.
    - Update `TrackingTabsScreenLayoutTest.kt` to verify dynamic warning/critical snackbar styling and absence of static blue `primaryContainer`.
 
 ### Out-of-Scope Non-Goals (Scope Bounding):
@@ -125,7 +138,7 @@ Ticket **ATT-3451** resolves these deficiencies by introducing dedicated semanti
 
 ## 5. Architectural Strategy & High-Level Solution
 
-### 5.1 Severity Model & Custom Visuals
+### 5.1 Severity Model & Typed Visuals
 ```kotlin
 // In WorkoutNavigationEvents.kt
 enum class BatteryAlertSeverity {
@@ -149,9 +162,17 @@ data class BatterySnackbarVisuals(
 ) : SnackbarVisuals
 ```
 
-### 5.2 Semantic Colors Helper
+### 5.2 Dedicated Semantic Warning Tokens (`Color.kt`)
 ```kotlin
-// In Color.kt or SensorBatteryAlertColors.kt
+// In Color.kt
+val LightWarningContainer = Color(0xFFFFE082)   // Amber 200
+val LightOnWarningContainer = Color(0xFF3E2723) // Deep Brown, contrast > 10:1
+val LightWarningAction = Color(0xFF6D3B00)      // Deep Amber, contrast > 7:1
+
+val DarkWarningContainer = Color(0xFF4E2C00)    // Deep warm amber-brown
+val DarkOnWarningContainer = Color(0xFFFFE082)  // Soft pale amber, contrast > 9:1
+val DarkWarningAction = Color(0xFFFFD54F)       // Vibrant Amber 300, contrast > 8:1
+
 @Composable
 fun getBatterySnackbarColors(severity: BatteryAlertSeverity): Triple<Color, Color, Color> {
     val isDark = isSystemInDarkTheme()
@@ -162,27 +183,49 @@ fun getBatterySnackbarColors(severity: BatteryAlertSeverity): Triple<Color, Colo
             MaterialTheme.colorScheme.error
         )
         BatteryAlertSeverity.WARNING -> if (isDark) {
-            Triple(DarkWarningContainer, DarkOnWarningContainer, DarkWarning)
+            Triple(DarkWarningContainer, DarkOnWarningContainer, DarkWarningAction)
         } else {
-            Triple(LightWarningContainer, LightOnWarningContainer, LightWarning)
+            Triple(LightWarningContainer, LightOnWarningContainer, LightWarningAction)
         }
     }
 }
 ```
 
-### 5.3 UI Integration
+### 5.3 Preemption & UI Presentation
 In `TrackingTabsScreen.kt` and `WorkoutSummariesTabbedScreen.kt`:
 ```kotlin
+LaunchedEffect(Unit) {
+    WorkoutNavigationEvents.lowBatteryAlert.collect { alert ->
+        if (alert != null) {
+            // Preemption: If incoming alert is CRITICAL and a snackbar is active, dismiss immediately
+            if (alert.severity == BatteryAlertSeverity.CRITICAL) {
+                snackbarHostState.currentSnackbarData?.dismiss()
+            }
+            val visuals = BatterySnackbarVisuals(
+                message = alert.message,
+                actionLabel = viewSensorsLabel,
+                duration = SnackbarDuration.Long,
+                severity = alert.severity
+            )
+            val result = snackbarHostState.showSnackbar(visuals)
+            if (result == SnackbarResult.ActionPerformed) {
+                (context as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors)
+            }
+            WorkoutNavigationEvents.consumeLowBatteryAlert()
+        }
+    }
+}
+
 SnackbarHost(
     hostState = snackbarHostState,
-    modifier = Modifier.navigationBarsPadding().padding(...)
+    modifier = Modifier.navigationBarsPadding().padding(bottom = if (shouldShowLapButton) 64.dp else 8.dp)
 ) { data ->
     val visuals = data.visuals as? BatterySnackbarVisuals
     val (containerColor, contentColor, actionColor) = visuals?.let {
         getBatterySnackbarColors(it.severity)
     } ?: Triple(
-        MaterialTheme.colorScheme.primaryContainer,
-        MaterialTheme.colorScheme.onPrimaryContainer,
+        MaterialTheme.colorScheme.inverseSurface,
+        MaterialTheme.colorScheme.inverseOnSurface,
         MaterialTheme.colorScheme.primary
     )
     Snackbar(
