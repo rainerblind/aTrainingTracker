@@ -55,6 +55,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
+import com.atrainingtracker.trainingtracker.ui.theme.getBatterySnackbarColors
 import com.atrainingtracker.trainingtracker.ui.aftermath.DeletionProgress
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
@@ -205,11 +206,16 @@ fun WorkoutSummariesTabbedScreen(
     LaunchedEffect(Unit) {
         WorkoutNavigationEvents.lowBatteryAlert.collect { alert ->
             if (alert != null) {
-                val result = snackbarHostState.showSnackbar(
+                if (alert.severity == WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL) {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                }
+                val visuals = WorkoutNavigationEvents.BatterySnackbarVisuals(
                     message = alert.message,
                     actionLabel = viewSensorsLabel,
-                    duration = SnackbarDuration.Long
+                    duration = SnackbarDuration.Long,
+                    severity = alert.severity
                 )
+                val result = snackbarHostState.showSnackbar(visuals)
                 if (result == SnackbarResult.ActionPerformed) {
                     (activity as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors)
                 }
@@ -241,12 +247,23 @@ fun WorkoutSummariesTabbedScreen(
                 hostState = snackbarHostState,
                 modifier = Modifier.navigationBarsPadding()
             ) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionColor = MaterialTheme.colorScheme.primary
-                )
+                val visuals = data.visuals as? WorkoutNavigationEvents.BatterySnackbarVisuals
+                if (visuals != null) {
+                    val colors = getBatterySnackbarColors(visuals.severity)
+                    Snackbar(
+                        snackbarData = data,
+                        containerColor = colors.containerColor,
+                        contentColor = colors.contentColor,
+                        actionColor = colors.actionColor
+                    )
+                } else {
+                    Snackbar(
+                        snackbarData = data,
+                        containerColor = MaterialTheme.colorScheme.inverseSurface,
+                        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                        actionColor = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         },
         contentWindowInsets = WindowInsets(0.dp)

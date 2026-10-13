@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui
 
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarVisuals
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import kotlinx.coroutines.channels.BufferOverflow
@@ -101,12 +103,33 @@ object WorkoutNavigationEvents {
     }
 
     /**
-     * Encapsulates low peripheral sensor battery warning data (ATT-2192).
+     * Severity tiers for low peripheral sensor battery alerts (REQ-UI-356, ATT-3451).
+     */
+    enum class BatteryAlertSeverity {
+        WARNING,  // <= 20% and > 10%
+        CRITICAL  // <= 10%
+    }
+
+    /**
+     * Encapsulates low peripheral sensor battery warning data (ATT-2192, ATT-3451).
      */
     data class LowBatteryAlert(
         val message: String,
-        val deviceNames: List<String> = emptyList()
+        val deviceNames: List<String> = emptyList(),
+        val severity: BatteryAlertSeverity = BatteryAlertSeverity.WARNING,
+        val lowestBatteryPercentage: Int? = null
     )
+
+    /**
+     * Typed Material 3 SnackbarVisuals implementation carrying battery alert severity (REQ-UI-356, ATT-3451).
+     */
+    data class BatterySnackbarVisuals(
+        override val message: String,
+        override val actionLabel: String?,
+        override val withDismissAction: Boolean = false,
+        override val duration: SnackbarDuration = SnackbarDuration.Long,
+        val severity: BatteryAlertSeverity = BatteryAlertSeverity.WARNING
+    ) : SnackbarVisuals
 
     private val _lowBatteryAlert = MutableSharedFlow<LowBatteryAlert?>(
         replay = 1, // Sticky event

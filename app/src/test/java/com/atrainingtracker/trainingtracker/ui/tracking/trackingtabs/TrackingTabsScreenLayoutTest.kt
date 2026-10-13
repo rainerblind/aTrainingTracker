@@ -87,4 +87,35 @@ class TrackingTabsScreenLayoutTest {
             content.contains("padding(bottom = if (shouldShowLapButton) 64.dp else 8.dp)")
         )
     }
+
+    @Test
+    fun testTrackingTabsScreen_snackbarHost_usesDynamicBatteryColorsAndPreemption() {
+        // [TST-UI-316.5]
+        assertTrue("TrackingTabsScreen.kt must exist", trackingTabsScreenFile.exists())
+        val content = trackingTabsScreenFile.readText()
+
+        // 1. Must use BatterySnackbarVisuals and preemption check
+        assertTrue(
+            "TrackingTabsScreen.kt must instantiate BatterySnackbarVisuals",
+            content.contains("WorkoutNavigationEvents.BatterySnackbarVisuals(")
+        )
+        assertTrue(
+            "TrackingTabsScreen.kt must check for critical alert preemption and dismiss active snackbar",
+            content.contains("alert.severity == WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL") &&
+                content.contains("snackbarHostState.currentSnackbarData?.dismiss()")
+        )
+
+        // 2. Must resolve colors dynamically using getBatterySnackbarColors
+        assertTrue(
+            "TrackingTabsScreen.kt must use getBatterySnackbarColors",
+            content.contains("getBatterySnackbarColors(visuals.severity)")
+        )
+
+        // 3. Must not statically hardcode primaryContainer for all snackbars
+        assertTrue(
+            "TrackingTabsScreen.kt must not use hardcoded primaryContainer for battery snackbar",
+            !content.contains("containerColor = MaterialTheme.colorScheme.primaryContainer,")
+        )
+    }
 }
+

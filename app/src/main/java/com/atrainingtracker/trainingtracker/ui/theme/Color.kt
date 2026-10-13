@@ -18,7 +18,11 @@
 
 package com.atrainingtracker.trainingtracker.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 
 object TTAlpha {
     const val High = 1.0f
@@ -108,6 +112,48 @@ val AmoledSurface = Color(0xFF000000)
 val AmoledOutlineVariant = Color(0xFF262626) // Subtle tile divider border (ATT-1264 / REQ-UI-171)
 val AmoledOutline = Color(0xFF38383A)
 val AmoledOnSurfaceVariant = Color(0xFF9E9E9E) // Muted grey for labels and units (ATT-1264 / REQ-UI-171)
+
+// Semantic Warning Colors (REQ-UI-356, ATT-3451)
+val LightWarning = Color(0xFFE65100)
+val LightWarningContainer = Color(0xFFFFE082)   // Warm Amber 200
+val LightOnWarningContainer = Color(0xFF3E2723) // Deep Brown (contrast > 10:1 on LightWarningContainer)
+val LightWarningAction = Color(0xFF6D3B00)      // Deep Amber (contrast > 7:1 on LightWarningContainer)
+
+val DarkWarning = Color(0xFFFFB74D)
+val DarkWarningContainer = Color(0xFF4E2C00)    // Deep warm amber-brown
+val DarkOnWarningContainer = Color(0xFFFFE082)  // Soft pale amber (contrast > 9:1 on DarkWarningContainer)
+val DarkWarningAction = Color(0xFFFFD54F)       // Vibrant Amber 300 (contrast > 8:1 on DarkWarningContainer)
+
+data class BatterySnackbarColors(
+    val containerColor: Color,
+    val contentColor: Color,
+    val actionColor: Color
+)
+
+@Composable
+fun getBatterySnackbarColors(severity: WorkoutNavigationEvents.BatteryAlertSeverity): BatterySnackbarColors {
+    val isDark = isSystemInDarkTheme()
+    return when (severity) {
+        WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL -> BatterySnackbarColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            actionColor = MaterialTheme.colorScheme.error
+        )
+        WorkoutNavigationEvents.BatteryAlertSeverity.WARNING -> if (isDark) {
+            BatterySnackbarColors(
+                containerColor = DarkWarningContainer,
+                contentColor = DarkOnWarningContainer,
+                actionColor = DarkWarningAction
+            )
+        } else {
+            BatterySnackbarColors(
+                containerColor = LightWarningContainer,
+                contentColor = LightOnWarningContainer,
+                actionColor = LightWarningAction
+            )
+        }
+    }
+}
 
 
 

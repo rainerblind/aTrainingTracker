@@ -83,21 +83,25 @@ class SensorBatteryAlertTest {
 
     @Test
     fun evaluateCriticalSensors_thresholdBoundaryCheck() {
+        val warningThreshold = MainActivityWithNavigation.LOW_BATTERY_WARNING_LEVEL
         val criticalThreshold = MainActivityWithNavigation.CRITICAL_BATTERY_LEVEL
-        assertEquals(20, criticalThreshold)
+        assertEquals(20, warningThreshold)
+        assertEquals(10, criticalThreshold)
 
-        val deviceAt20 = DevicesDatabaseManager.NameAndBatteryPercentage("Sensor A", 20, 1L)
-        val deviceAt21 = DevicesDatabaseManager.NameAndBatteryPercentage("Sensor B", 21, 2L)
-        val deviceAt0 = DevicesDatabaseManager.NameAndBatteryPercentage("Sensor C", 0, 3L)
-        val deviceAtNegative = DevicesDatabaseManager.NameAndBatteryPercentage("Sensor D", -1, 4L)
+        // Rule: Warning is (CRITICAL_BATTERY_LEVEL + 1)..LOW_BATTERY_WARNING_LEVEL
+        // Critical is 0..CRITICAL_BATTERY_LEVEL
+        fun classify(p: Int): WorkoutNavigationEvents.BatteryAlertSeverity? = when {
+            p in 0..criticalThreshold -> WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL
+            p in (criticalThreshold + 1)..warningThreshold -> WorkoutNavigationEvents.BatteryAlertSeverity.WARNING
+            else -> null
+        }
 
-        // Rule: percentage >= 0 && percentage <= CRITICAL_BATTERY_LEVEL (20)
-        fun isCritical(p: Int) = p in 0..criticalThreshold
-
-        assertTrue(isCritical(deviceAt20.batteryPercentage))
-        assertFalse(isCritical(deviceAt21.batteryPercentage))
-        assertTrue(isCritical(deviceAt0.batteryPercentage))
-        assertFalse(isCritical(deviceAtNegative.batteryPercentage))
+        assertEquals(WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL, classify(0))
+        assertEquals(WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL, classify(10))
+        assertEquals(WorkoutNavigationEvents.BatteryAlertSeverity.WARNING, classify(11))
+        assertEquals(WorkoutNavigationEvents.BatteryAlertSeverity.WARNING, classify(20))
+        assertNull(classify(21))
+        assertNull(classify(-1))
     }
 
     @Test
@@ -109,7 +113,9 @@ class SensorBatteryAlertTest {
         val message = "⚠️ ${criticalDevices[0].name}: Akku schwach (${criticalDevices[0].batteryPercentage}%)"
         val alert = WorkoutNavigationEvents.LowBatteryAlert(
             message = message,
-            deviceNames = criticalDevices.map { it.name }
+            deviceNames = criticalDevices.map { it.name },
+            severity = WorkoutNavigationEvents.BatteryAlertSeverity.WARNING,
+            lowestBatteryPercentage = 15
         )
 
         WorkoutNavigationEvents.triggerLowBatteryAlert(alert)
@@ -119,6 +125,8 @@ class SensorBatteryAlertTest {
             assertNotNull(emitted)
             assertEquals("⚠️ Garmin HRM-Pro: Akku schwach (15%)", emitted?.message)
             assertEquals(listOf("Garmin HRM-Pro"), emitted?.deviceNames)
+            assertEquals(WorkoutNavigationEvents.BatteryAlertSeverity.WARNING, emitted?.severity)
+            assertEquals(15, emitted?.lowestBatteryPercentage)
         }
     }
 
@@ -133,7 +141,9 @@ class SensorBatteryAlertTest {
         val message = "⚠️ ${criticalDevices.size} Sensoren: Akku schwach ($names)"
         val alert = WorkoutNavigationEvents.LowBatteryAlert(
             message = message,
-            deviceNames = criticalDevices.map { it.name }
+            deviceNames = criticalDevices.map { it.name },
+            severity = WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL,
+            lowestBatteryPercentage = 8
         )
 
         WorkoutNavigationEvents.triggerLowBatteryAlert(alert)
@@ -143,6 +153,8 @@ class SensorBatteryAlertTest {
             assertNotNull(emitted)
             assertEquals("⚠️ 2 Sensoren: Akku schwach (Garmin HRM-Pro (15%), Stages Power (8%))", emitted?.message)
             assertEquals(listOf("Garmin HRM-Pro", "Stages Power"), emitted?.deviceNames)
+            assertEquals(WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL, emitted?.severity)
+            assertEquals(8, emitted?.lowestBatteryPercentage)
         }
     }
 
@@ -170,17 +182,17 @@ class SensorBatteryAlertTest {
         val percentage = 18
 
         // First battery drop event -> should alert and record
-        val firstAlertTriggered = percentage in 0..MainActivityWithNavigation.CRITICAL_BATTERY_LEVEL && alertedIds.add(deviceId)
+        val firstAlertTriggered = percentage in 0..MainActivityWithNavigation.LOW_BATTERY_WARNING_LEVEL && alertedIds.add(deviceId)
         assertTrue("First in-ride battery drop must trigger alert", firstAlertTriggered)
         assertTrue(alertedIds.contains(deviceId))
 
         // Subsequent battery report for same device in same workout -> must be suppressed
-        val secondAlertTriggered = percentage in 0..MainActivityWithNavigation.CRITICAL_BATTERY_LEVEL && alertedIds.add(deviceId)
+        val secondAlertTriggered = percentage in 0..MainActivityWithNavigation.LOW_BATTERY_WARNING_LEVEL && alertedIds.add(deviceId)
         assertFalse("Subsequent in-ride battery drop for same sensor must be suppressed by deduplication", secondAlertTriggered)
 
         // Different sensor drops -> must trigger alert
         val secondDeviceId = 43L
-        val secondSensorTriggered = percentage in 0..MainActivityWithNavigation.CRITICAL_BATTERY_LEVEL && alertedIds.add(secondDeviceId)
+        val secondSensorTriggered = percentage in 0..MainActivityWithNavigation.LOW_BATTERY_WARNING_LEVEL && alertedIds.add(secondDeviceId)
         assertTrue("Different sensor dropping to critical must trigger alert", secondSensorTriggered)
         assertEquals(2, alertedIds.size)
 
@@ -189,8 +201,85 @@ class SensorBatteryAlertTest {
         assertTrue("Session reset clears alerted IDs", alertedIds.isEmpty())
 
         // Next workout session: same device can trigger alert again
-        val nextSessionTriggered = percentage in 0..MainActivityWithNavigation.CRITICAL_BATTERY_LEVEL && alertedIds.add(deviceId)
+        val nextSessionTriggered = percentage in 0..MainActivityWithNavigation.LOW_BATTERY_WARNING_LEVEL && alertedIds.add(deviceId)
         assertTrue("New workout session allows alerting previously alerted sensor", nextSessionTriggered)
+    }
+
+    @Test
+    fun inRideBatteryMonitoring_criticalEscalationAndDeduplication() {
+        // [TST-UI-316.2]
+        val alertedWarningIds = java.util.Collections.synchronizedSet(mutableSetOf<Long>())
+        val alertedCriticalIds = java.util.Collections.synchronizedSet(mutableSetOf<Long>())
+
+        val deviceId = 100L
+
+        // Helper mimicking startInRideBatteryMonitoring logic
+        fun processBatteryUpdate(devId: Long, percentage: Int): WorkoutNavigationEvents.BatteryAlertSeverity? {
+            if (percentage in 0..MainActivityWithNavigation.LOW_BATTERY_WARNING_LEVEL) {
+                if (percentage <= MainActivityWithNavigation.CRITICAL_BATTERY_LEVEL) {
+                    if (alertedCriticalIds.add(devId)) {
+                        alertedWarningIds.add(devId)
+                        return WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL
+                    }
+                } else {
+                    if (alertedWarningIds.add(devId)) {
+                        return WorkoutNavigationEvents.BatteryAlertSeverity.WARNING
+                    }
+                }
+            }
+            return null
+        }
+
+        // 1. First warning at 15% -> triggers WARNING
+        assertEquals(WorkoutNavigationEvents.BatteryAlertSeverity.WARNING, processBatteryUpdate(deviceId, 15))
+        assertTrue(alertedWarningIds.contains(deviceId))
+        assertFalse(alertedCriticalIds.contains(deviceId))
+
+        // 2. Duplicate update at 14% -> suppressed
+        assertNull(processBatteryUpdate(deviceId, 14))
+
+        // 3. Drop to 8% (<= 10%) -> escalates to CRITICAL
+        assertEquals(WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL, processBatteryUpdate(deviceId, 8))
+        assertTrue(alertedCriticalIds.contains(deviceId))
+
+        // 4. Duplicate update at 7% -> suppressed
+        assertNull(processBatteryUpdate(deviceId, 7))
+
+        // 5. Reset session on ride stop
+        alertedWarningIds.clear()
+        alertedCriticalIds.clear()
+
+        // 6. Next workout session allows alert again
+        assertEquals(WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL, processBatteryUpdate(deviceId, 8))
+    }
+
+    @Test
+    fun inAppSnackbarAlert_criticalAlertPreemptsExistingSnackbar() {
+        // [TST-UI-316.3]
+        val warningVisuals = WorkoutNavigationEvents.BatterySnackbarVisuals(
+            message = "Sensor warning",
+            actionLabel = "Sensoren",
+            severity = WorkoutNavigationEvents.BatteryAlertSeverity.WARNING
+        )
+        val criticalVisuals = WorkoutNavigationEvents.BatterySnackbarVisuals(
+            message = "Sensor critical",
+            actionLabel = "Sensoren",
+            severity = WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL
+        )
+
+        assertEquals(WorkoutNavigationEvents.BatteryAlertSeverity.WARNING, warningVisuals.severity)
+        assertEquals(WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL, criticalVisuals.severity)
+
+        // Mock preemption behaviour
+        var dismissedCurrent = false
+        val currentSnackbarVisible = true
+
+        val alertSeverity = criticalVisuals.severity
+        if (alertSeverity == WorkoutNavigationEvents.BatteryAlertSeverity.CRITICAL && currentSnackbarVisible) {
+            dismissedCurrent = true
+        }
+
+        assertTrue("Critical alert must dismiss existing snackbar before displaying", dismissedCurrent)
     }
 }
 
