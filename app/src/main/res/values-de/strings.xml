@@ -1536,7 +1536,6 @@
     <string name="tuning_route_selection_radius_desc">Maximale Entfernung zum Routenstartpunkt für die Routenauswahl</string>
     <string name="tuning_nav_cue_dismiss_duration_title">Anzeigedauer der Navigationshinweise</string>
     <string name="tuning_nav_cue_dismiss_duration_desc">Automatische Anzeigedauer für Abbiegehinweise</string>
-    <string name="tuning_nav_cue_dismiss_persistent">Dauerhaft</string>
     <string name="tuning_summary_masks_cards_format">%1$d/8 Karten</string>
     <string name="tuning_matrix_col_list">Liste</string>
     <string name="tuning_matrix_col_details">Details</string>

@@ -113,11 +113,7 @@ fun NavigationSection(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = if (navigationCueDismissDurationSec == 0) {
-                        stringResource(R.string.tuning_nav_cue_dismiss_persistent)
-                    } else {
-                        "${navigationCueDismissDurationSec}s"
-                    },
+                    text = "${navigationCueDismissDurationSec}s",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -142,15 +138,10 @@ fun NavigationSection(
             ) {
                 TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS.forEach { sec ->
                     val isSelected = navigationCueDismissDurationSec == sec
-                    val chipText = if (sec == 0) {
-                        stringResource(R.string.tuning_nav_cue_dismiss_persistent)
-                    } else {
-                        "${sec}s"
-                    }
                     FilterChip(
                         selected = isSelected,
                         onClick = { onDismissDurationChange(sec) },
-                        label = { Text(chipText) }
+                        label = { Text("${sec}s") }
                     )
                 }
             }

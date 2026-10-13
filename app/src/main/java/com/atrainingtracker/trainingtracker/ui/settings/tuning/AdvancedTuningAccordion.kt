@@ -110,11 +110,12 @@ object TuningSubtitleFormatter {
         dismissSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
         context: Context? = null
     ): String {
-        val dismissStr = if (dismissSec == 0) {
-            context?.getString(R.string.tuning_nav_cue_dismiss_persistent) ?: "Persistent"
+        val effectiveDismiss = if (dismissSec in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) {
+            dismissSec
         } else {
-            "${dismissSec}s"
+            TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
         }
+        val dismissStr = "${effectiveDismiss}s"
         val radiusStr = String.format(Locale.getDefault(), "%.1f km", radiusKm)
         return "$dismissStr, $radiusStr"
     }
