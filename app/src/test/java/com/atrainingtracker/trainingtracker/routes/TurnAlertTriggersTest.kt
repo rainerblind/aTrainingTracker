@@ -49,6 +49,7 @@ class TurnAlertTriggersTest {
     private val mockAudioAlertManager = mockk<NavigationAudioAlertManager>(relaxed = true)
 
     private val activeRouteIdFlow = MutableStateFlow<Long?>(null)
+    private val isRouteAutoSelectedFlow = MutableStateFlow(false)
     private val allRoutesFlow = MutableStateFlow<List<RouteWithPath>>(emptyList())
     private val currentLocationFlow = MutableStateFlow<LatLng?>(null)
     private val tuningConfigFlow = MutableStateFlow(TuningConfig())
@@ -72,6 +73,7 @@ class TurnAlertTriggersTest {
         }
 
         every { mockRoutesRepo.activeNavigatedRouteId } returns activeRouteIdFlow
+        every { mockRoutesRepo.isRouteAutoSelected } returns isRouteAutoSelectedFlow
         every { mockRoutesRepo.allRoutes } returns allRoutesFlow
         every { mockBanalRepo.currentLocation } returns currentLocationFlow
         every { mockBanalRepo.currentSpeed } returns MutableStateFlow(5.0)
@@ -198,6 +200,92 @@ class TurnAlertTriggersTest {
 
         // Verify audio alert was suppressed
         verify(exactly = 0) { mockAudioAlertManager.playApproachAlert() }
+
+        repository.release()
+    }
+
+    @Test
+    fun testOffRoute_whenRouteIsAutoSelected_automaticallyUnselectsRoute() = runTest(testDispatcher) {
+        val summary = RouteSummary(
+            id = 77L,
+            externalId = "route_77",
+            name = "Auto Selected Route",
+            description = "Route for testing auto-unselection",
+            isSelected = true,
+            distance = 1000.0,
+            elevationGain = 0.0,
+            bSportType = BSportType.RUN,
+            source = RouteSource.LOCAL_GPX
+        )
+        val path = listOf(
+            PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.0), altitude = 0.0),
+            PathPoint(distance = 1000.0, latLng = LatLng(48.009, 11.0), altitude = 0.0)
+        )
+        val route = RouteWithPath(summary, path, emptyList())
+        allRoutesFlow.value = listOf(route)
+        activeRouteIdFlow.value = 77L
+        isRouteAutoSelectedFlow.value = true
+
+        val repository = TurnByTurnNavigationRepository(
+            context = mockContext,
+            routesRepository = mockRoutesRepo,
+            banalRepository = mockBanalRepo,
+            tuningDataStore = mockTuningDataStore,
+            audioAlertManager = mockAudioAlertManager,
+            navigationEngine = TurnByTurnNavigationEngine(),
+            scope = testScope
+        )
+
+        // 3 consecutive fixes > 50m off route trigger isOffRoute
+        currentLocationFlow.value = LatLng(48.0045, 11.0020)
+        currentLocationFlow.value = LatLng(48.0045, 11.0021)
+        currentLocationFlow.value = LatLng(48.0045, 11.0022)
+
+        // Verify route was automatically unselected
+        verify(exactly = 1) { mockRoutesRepo.setActiveNavigatedRoute(null) }
+
+        repository.release()
+    }
+
+    @Test
+    fun testOffRoute_whenRouteIsManuallySelected_retainsRoute() = runTest(testDispatcher) {
+        val summary = RouteSummary(
+            id = 88L,
+            externalId = "route_88",
+            name = "Manual Selected Route",
+            description = "Route for testing manual retention",
+            isSelected = true,
+            distance = 1000.0,
+            elevationGain = 0.0,
+            bSportType = BSportType.RUN,
+            source = RouteSource.LOCAL_GPX
+        )
+        val path = listOf(
+            PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.0), altitude = 0.0),
+            PathPoint(distance = 1000.0, latLng = LatLng(48.009, 11.0), altitude = 0.0)
+        )
+        val route = RouteWithPath(summary, path, emptyList())
+        allRoutesFlow.value = listOf(route)
+        activeRouteIdFlow.value = 88L
+        isRouteAutoSelectedFlow.value = false
+
+        val repository = TurnByTurnNavigationRepository(
+            context = mockContext,
+            routesRepository = mockRoutesRepo,
+            banalRepository = mockBanalRepo,
+            tuningDataStore = mockTuningDataStore,
+            audioAlertManager = mockAudioAlertManager,
+            navigationEngine = TurnByTurnNavigationEngine(),
+            scope = testScope
+        )
+
+        // 3 consecutive fixes > 50m off route trigger isOffRoute
+        currentLocationFlow.value = LatLng(48.0045, 11.0020)
+        currentLocationFlow.value = LatLng(48.0045, 11.0021)
+        currentLocationFlow.value = LatLng(48.0045, 11.0022)
+
+        // Verify route was NOT unselected
+        verify(exactly = 0) { mockRoutesRepo.setActiveNavigatedRoute(null) }
 
         repository.release()
     }

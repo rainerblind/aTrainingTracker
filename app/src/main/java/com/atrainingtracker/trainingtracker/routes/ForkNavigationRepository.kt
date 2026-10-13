@@ -158,7 +158,7 @@ class ForkNavigationRepository internal constructor(
 
                 if (alternativesFar) {
                     if (autoFollowUniqueRouteEnabled) {
-                        routesRepository.setActiveNavigatedRoute(chosenRoute.summary.id)
+                        routesRepository.setActiveNavigatedRoute(chosenRoute.summary.id, isAutoSelected = true)
                     }
                     _forkDecisionState.value = null
                     return
@@ -190,7 +190,7 @@ class ForkNavigationRepository internal constructor(
      * Manually binds a route choice selected by the athlete and dismisses the alert.
      */
     fun selectRouteManually(routeId: Long) {
-        routesRepository.setActiveNavigatedRoute(routeId)
+        routesRepository.setActiveNavigatedRoute(routeId, isAutoSelected = false)
         _forkDecisionState.value = null
         isDismissed = false
     }
