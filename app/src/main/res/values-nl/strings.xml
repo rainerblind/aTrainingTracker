@@ -1076,6 +1076,10 @@
     <string name="battery_level">Batterijniveau</string>
     <string name="calc_map_polyline">Kaartpolyline berekenen.</string>
     <string name="config_tracking__showElevationProfile">Hoogteprofiel</string>
+    <string name="config_tracking__elevation_profile_scope">Bereik</string>
+    <string name="config_tracking__elevation_profile_scope_full_route">Volledige route</string>
+    <string name="config_tracking__elevation_profile_scope_rolling_window">Rollend venster</string>
+    <string name="config_tracking__elevation_profile_lookahead">Vooruitkijken</string>
     <string name="current_value">Huidige waarde</string>
     <string name="editLocationName">Naam:</string>
     <string name="edit_my_location">Locatie bewerken</string>

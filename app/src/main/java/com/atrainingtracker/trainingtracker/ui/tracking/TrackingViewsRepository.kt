@@ -36,6 +36,16 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
+enum class ElevationProfileScope(val dbValue: Int) {
+    FULL_ROUTE(0),
+    ROLLING_WINDOW(1);
+
+    companion object {
+        fun fromDbValue(value: Int): ElevationProfileScope =
+            entries.firstOrNull { it.dbValue == value } ?: FULL_ROUTE
+    }
+}
+
 data class TrackingViewInfo(
     val tabViewId: Long,
     val name: String,
@@ -44,7 +54,9 @@ data class TrackingViewInfo(
     val showLiveSegments: Boolean,
     val showElevationProfile: Boolean,
     val showLiveClimbs: Boolean = true,
-    val showNavigationHints: Boolean = true
+    val showNavigationHints: Boolean = true,
+    val elevationProfileScope: ElevationProfileScope = ElevationProfileScope.FULL_ROUTE,
+    val elevationProfileLookahead: Int = 2000
 )
 
 
@@ -124,7 +136,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD
             ),
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
             arrayOf(tabViewId.toString()),
@@ -143,7 +157,11 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 val showLiveClimbs = if (liveClimbsIndex != -1) it.getInt(liveClimbsIndex) == 1 else true
                 val navHintsIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS)
                 val showNavigationHints = if (navHintsIndex != -1) it.getInt(navHintsIndex) == 1 else true
-                return TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints)
+                val scopeIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE)
+                val elevationProfileScope = if (scopeIndex != -1) ElevationProfileScope.fromDbValue(it.getInt(scopeIndex)) else ElevationProfileScope.FULL_ROUTE
+                val lookaheadIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD)
+                val elevationProfileLookahead = if (lookaheadIndex != -1) it.getInt(lookaheadIndex).coerceAtLeast(500) else 2000
+                return TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints, elevationProfileScope, elevationProfileLookahead)
             }
         }
         return null
@@ -177,7 +195,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD
             ),
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE}=?",
             arrayOf(activityType.name),
@@ -199,8 +219,12 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     val showLiveClimbs = if (liveClimbsIndex != -1) it.getInt(liveClimbsIndex) == 1 else true
                     val navHintsIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS)
                     val showNavigationHints = if (navHintsIndex != -1) it.getInt(navHintsIndex) == 1 else true
+                    val scopeIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE)
+                    val elevationProfileScope = if (scopeIndex != -1) ElevationProfileScope.fromDbValue(it.getInt(scopeIndex)) else ElevationProfileScope.FULL_ROUTE
+                    val lookaheadIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD)
+                    val elevationProfileLookahead = if (lookaheadIndex != -1) it.getInt(lookaheadIndex).coerceAtLeast(500) else 2000
 
-                    viewList.add(TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints))
+                    viewList.add(TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints, elevationProfileScope, elevationProfileLookahead))
                 } while (it.moveToNext())
             }
         }
@@ -516,6 +540,28 @@ class TrackingViewsRepository private constructor(private val context: Context) 
     suspend fun updateShowNavigationHints(tabViewId: Long, showNavigationHints: Boolean) {
         withContext(Dispatchers.IO) {
             viewsDbManager.updateShowNavigationHints(tabViewId, showNavigationHints)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun updateElevationProfileScope(tabViewId: Long, scope: ElevationProfileScope) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateElevationProfileScope(tabViewId, scope.dbValue)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun updateElevationProfileLookahead(tabViewId: Long, lookaheadMeters: Int) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateElevationProfileLookahead(tabViewId, lookaheadMeters)
         }
 
         // trigger recreation of UI

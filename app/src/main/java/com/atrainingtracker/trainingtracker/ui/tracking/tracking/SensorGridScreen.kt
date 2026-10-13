@@ -52,11 +52,13 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
+import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
@@ -134,6 +136,8 @@ interface GridActions {
 interface TabToggleActions {
     fun onToggleMap(enabled: Boolean) {}
     fun onToggleElevationProfile(enabled: Boolean) {}
+    fun onUpdateElevationProfileScope(scope: ElevationProfileScope) {}
+    fun onUpdateElevationProfileLookahead(lookaheadMeters: Int) {}
     fun onToggleLiveSegments(enabled: Boolean) {}
     fun onToggleLiveClimbs(enabled: Boolean) {}
     fun onToggleNavigationHints(enabled: Boolean) {}
@@ -452,6 +456,46 @@ fun SensorGridScreen(
                         icon = Icons.Default.ShowChart,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    if (state.showElevationProfile) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                FilterChip(
+                                    selected = state.elevationProfileScope == ElevationProfileScope.FULL_ROUTE,
+                                    onClick = { tabToggleActions.onUpdateElevationProfileScope(ElevationProfileScope.FULL_ROUTE) },
+                                    label = { Text(stringResource(R.string.config_tracking__elevation_profile_scope_full_route), style = MaterialTheme.typography.labelMedium) }
+                                )
+                                FilterChip(
+                                    selected = state.elevationProfileScope == ElevationProfileScope.ROLLING_WINDOW,
+                                    onClick = { tabToggleActions.onUpdateElevationProfileScope(ElevationProfileScope.ROLLING_WINDOW) },
+                                    label = { Text(stringResource(R.string.config_tracking__elevation_profile_scope_rolling_window), style = MaterialTheme.typography.labelMedium) }
+                                )
+                            }
+                            if (state.elevationProfileScope == ElevationProfileScope.ROLLING_WINDOW) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    listOf(500 to "500m", 1000 to "1km", 2000 to "2km", 5000 to "5km", 10000 to "10km").forEach { (meters, label) ->
+                                        FilterChip(
+                                            selected = state.elevationProfileLookahead == meters,
+                                            onClick = { tabToggleActions.onUpdateElevationProfileLookahead(meters) },
+                                            label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                     SpatialCockpitToggleCard(
                         title = stringResource(R.string.config_tracking__showLiveSegments),
                         isActive = state.showLiveSegments,
@@ -541,11 +585,19 @@ fun SensorGridScreen(
 
                     // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199)
                     val activeNavigatedRoute = state.mapRoutes.firstOrNull { it.isActiveNavigation }
-                    val resolvedProfile = remember(activeNavigatedRoute, state.pathPoints, currentLocation) {
+                    val resolvedProfile = remember(
+                        activeNavigatedRoute,
+                        state.pathPoints,
+                        currentLocation,
+                        state.elevationProfileScope,
+                        state.elevationProfileLookahead
+                    ) {
                         TrackingElevationProfileResolver.resolve(
                             activeNavigatedRoute = activeNavigatedRoute,
                             recordedPathPoints = state.pathPoints,
-                            currentLocation = currentLocation
+                            currentLocation = currentLocation,
+                            scope = state.elevationProfileScope,
+                            lookaheadDistanceMeters = state.elevationProfileLookahead
                         )
                     }
 

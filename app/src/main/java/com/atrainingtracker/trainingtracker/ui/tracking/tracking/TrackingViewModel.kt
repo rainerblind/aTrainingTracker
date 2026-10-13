@@ -48,6 +48,7 @@ import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
 import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
@@ -72,6 +73,8 @@ data class TrackingScreenState(
     val showLiveClimbs: Boolean = true,
     val showNavigationHints: Boolean = true,
     val showLapButton: Boolean = true,
+    val elevationProfileScope: ElevationProfileScope = ElevationProfileScope.FULL_ROUTE,
+    val elevationProfileLookahead: Int = 2000,
     val fields: List<SensorFieldState> = emptyList(),
     val pathPoints: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint> = emptyList(),
     val mapState: TrackingMapState = TrackingMapState(showMap = showMap),
@@ -356,6 +359,8 @@ class TrackingViewModel(
                     showLiveClimbs = viewInfo?.showLiveClimbs ?: true,
                     showNavigationHints = viewInfo?.showNavigationHints ?: true,
                     showLapButton = viewInfo?.showLapButton ?: true,
+                    elevationProfileScope = viewInfo?.elevationProfileScope ?: ElevationProfileScope.FULL_ROUTE,
+                    elevationProfileLookahead = viewInfo?.elevationProfileLookahead ?: 2000,
                     pathPoints = livePathPoints,
                     mapState = currentMap,
                     zoomFocus = currentMap.zoomFocus,
@@ -530,6 +535,18 @@ class TrackingViewModel(
     fun onUpdateShowElevationProfile(show: Boolean) {
         viewModelScope.launch {
             trackingViewsRepository.updateShowElevationProfile(viewId, show)
+        }
+    }
+
+    fun onUpdateElevationProfileScope(scope: ElevationProfileScope) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateElevationProfileScope(viewId, scope)
+        }
+    }
+
+    fun onUpdateElevationProfileLookahead(lookaheadMeters: Int) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateElevationProfileLookahead(viewId, lookaheadMeters)
         }
     }
 
