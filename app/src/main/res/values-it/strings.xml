@@ -1659,6 +1659,7 @@
     <string name="turn_cue_sharp_right">Svolta decisa a destra</string>
     <string name="turn_cue_straight">Dritto</string>
     <string name="turn_cue_u_turn">Inversione a U</string>
+    <string name="turn_cue_gallery_title">Icone delle indicazioni di svolta</string>
     <string name="turn_cue_now">ORA</string>
     <string name="turn_cue_off_route">Fuori percorso (%1$d m)</string>
     <string name="turn_cue_back_on_route">Di nuovo sul percorso</string>

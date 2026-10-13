@@ -1639,6 +1639,7 @@
     <string name="turn_cue_sharp_right">右へ急カーブ</string>
     <string name="turn_cue_straight">直進</string>
     <string name="turn_cue_u_turn">Uターン</string>
+    <string name="turn_cue_gallery_title">方向転換指示アイコン</string>
     <string name="turn_cue_now">今すぐ</string>
     <string name="turn_cue_off_route">コースアウト (%1$d m)</string>
     <string name="turn_cue_back_on_route">コース復帰</string>

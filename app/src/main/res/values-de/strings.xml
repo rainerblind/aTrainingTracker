@@ -1748,6 +1748,7 @@
     <string name="turn_cue_sharp_right">Scharf rechts</string>
     <string name="turn_cue_straight">Geradeaus</string>
     <string name="turn_cue_u_turn">Wenden</string>
+    <string name="turn_cue_gallery_title">Abbiegehinweis-Symbole</string>
     <string name="turn_cue_now">JETZT</string>
     <string name="turn_cue_off_route">Route verlassen (%1$d m)</string>
     <string name="turn_cue_back_on_route">Zurück auf der Strecke</string>
