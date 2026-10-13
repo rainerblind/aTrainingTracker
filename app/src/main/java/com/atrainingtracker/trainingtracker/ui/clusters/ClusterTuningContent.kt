@@ -53,7 +53,8 @@ fun ClusterTuningContent(
     useAltitudePosForClustering: Boolean = true,
     onUseAltitudePosChange: (Boolean) -> Unit = {},
     onValueChangeFinished: () -> Unit = {},
-    isDialog: Boolean = false
+    isDialog: Boolean = false,
+    enabled: Boolean = true
 ) {
     var showDetails by remember { mutableStateOf(false) }
 
@@ -98,7 +99,8 @@ fun ClusterTuningContent(
                     }
                 },
                 onValueChangeFinished = onValueChangeFinished,
-                valueRange = 0f..1f
+                valueRange = 0f..1f,
+                enabled = enabled
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -118,7 +120,8 @@ fun ClusterTuningContent(
             Text(stringResource(R.string.cluster_tuning_show_details), style = MaterialTheme.typography.bodyMedium)
             Switch(
                 checked = showDetails,
-                onCheckedChange = { showDetails = it }
+                onCheckedChange = { showDetails = it },
+                enabled = enabled
             )
         }
 
@@ -148,7 +151,8 @@ fun ClusterTuningContent(
                 }
                 Switch(
                     checked = useSportTypeForClustering,
-                    onCheckedChange = onUseSportTypeChange
+                    onCheckedChange = onUseSportTypeChange,
+                    enabled = enabled
                 )
             }
 
@@ -171,7 +175,8 @@ fun ClusterTuningContent(
                 }
                 Switch(
                     checked = useAltitudePosForClustering,
-                    onCheckedChange = onUseAltitudePosChange
+                    onCheckedChange = onUseAltitudePosChange,
+                    enabled = enabled
                 )
             }
 
@@ -184,7 +189,8 @@ fun ClusterTuningContent(
                 valueRange = endRange,
                 unit = lengthUnit,
                 displayMultiplier = lengthMultiplier,
-                decimalPlaces = 3
+                decimalPlaces = 3,
+                enabled = enabled
             )
 
             TuningSlider(
@@ -195,7 +201,8 @@ fun ClusterTuningContent(
                 valueRange = apexRange,
                 unit = lengthUnit,
                 displayMultiplier = lengthMultiplier,
-                decimalPlaces = 3
+                decimalPlaces = 3,
+                enabled = enabled
             )
 
             TuningSlider(
@@ -206,7 +213,8 @@ fun ClusterTuningContent(
                 valueRange = distRange,
                 unit = stringResource(R.string.units_percent),
                 displayMultiplier = 100f,
-                decimalPlaces = 0
+                decimalPlaces = 0,
+                enabled = enabled
             )
 
             TuningSlider(
@@ -218,7 +226,7 @@ fun ClusterTuningContent(
                 unit = lengthUnit,
                 displayMultiplier = lengthMultiplier,
                 decimalPlaces = 3,
-                enabled = useAltitudePosForClustering
+                enabled = enabled && useAltitudePosForClustering
             )
         }
     }

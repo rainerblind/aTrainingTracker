@@ -37,10 +37,12 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.banalservice.BANALService
@@ -425,9 +427,27 @@ fun ElevationProfile(
     }
 
     val topPadding = if (showZoomControls) 44.dp else 16.dp
-    val effectiveTopPadding = if (fixedHeight != null) 8.dp else topPadding
     val bottomPadding = if (fixedHeight != null) 18.dp else 24.dp
     val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight
+
+    val density = LocalDensity.current
+    val badgeTextSizeDp: Dp = with(density) { 10.sp.toDp() }
+    val requiredClimbTopClearance: Dp = ElevationProfileZoomMath.calculateRequiredClimbTopClearance(
+        badgeTextSizeDp = badgeTextSizeDp.value
+    ).dp
+    val climbBadgeTopPadding: Dp = if (!isTimeDomain && climbs.isNotEmpty()) {
+        (requiredClimbTopClearance - topPadding).coerceAtLeast(0.dp)
+    } else {
+        0.dp
+    }
+    val effectiveTopPadding: Dp = ElevationProfileZoomMath.calculateEffectiveTopPadding(
+        fixedHeightDp = fixedHeight?.value,
+        baseTopPaddingDp = topPadding.value,
+        bottomPaddingDp = bottomPadding.value,
+        requiredClearanceDp = requiredClimbTopClearance.value,
+        isTimeDomain = isTimeDomain,
+        hasClimbs = climbs.isNotEmpty()
+    ).dp
 
     Box(modifier = modifier.fillMaxWidth()) {
         val baseCanvasModifier = if (fillParentHeight) {
@@ -743,9 +763,21 @@ fun ElevationProfile(
                             val pillPaddingV = 2.dp.toPx()
                             val pillHeight = badgePaint.textSize + pillPaddingV * 2
                             val pillWidth = textWidth + pillPaddingH * 2
-                            val pillBottom = summitY - 8.dp.toPx()
-                            val pillTop = pillBottom - pillHeight
-                            val pillLeft = (summitX - pillWidth / 2f).coerceIn(0f, width - pillWidth)
+                            val minAllowedPillTop = -(effectiveTopPadding.toPx()) + 2.dp.toPx()
+                            val unconstrainedPillBottom = summitY - 8.dp.toPx()
+                            val unconstrainedPillTop = unconstrainedPillBottom - pillHeight
+                            val pillTop = ElevationProfileZoomMath.calculateClampedPillTop(
+                                unconstrainedPillTop = unconstrainedPillTop,
+                                effectiveTopPaddingPx = effectiveTopPadding.toPx(),
+                                safetyMarginPx = 2.dp.toPx()
+                            )
+                            val pillBottom = pillTop + pillHeight
+                            val pillLeft = ElevationProfileZoomMath.calculateClampedPillLeft(
+                                summitXPx = summitX,
+                                pillWidthPx = pillWidth,
+                                canvasWidthPx = width,
+                                safetyMarginPx = 2.dp.toPx()
+                            )
                             val pillRight = pillLeft + pillWidth
 
                             // Pin stem to the summit

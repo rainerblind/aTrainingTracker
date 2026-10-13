@@ -125,7 +125,10 @@ object TuningPreferencesDefaults {
     const val STEP_NAVIGATION_CUE_TRANSPARENCY = 0.05f
 
     const val DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC = 4
-    val NAVIGATION_CUE_DISMISS_OPTIONS = listOf(2, 3, 4, 5, 8, 10)
+    const val MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC = 1
+    const val MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC = 10
+    const val STEP_NAVIGATION_CUE_DISMISS_DURATION_SEC = 1
+    val NAVIGATION_CUE_DISMISS_OPTIONS = (MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC..MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC).toList()
 
     const val DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS = 21.0f
     const val MIN_ELEVATION_SMOOTHING_SIGMA_METERS = 10.0f
@@ -543,7 +546,14 @@ class TuningPreferencesDataStore(private val context: Context) {
                 TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY
             ),
             navigationCueDismissDurationSec = (prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] ?: TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC).let {
-                if (it in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) it else TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+                if (it == 0) {
+                    TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+                } else {
+                    it.coerceIn(
+                        TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+                        TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
+                    )
+                }
             },
             elevationSmoothingSigmaMeters = (prefs[KEY_ELEVATION_SMOOTHING_SIGMA_METERS] ?: TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS).coerceIn(
                 TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
@@ -709,10 +719,13 @@ class TuningPreferencesDataStore(private val context: Context) {
                 TuningPreferencesDefaults.MIN_NAVIGATION_CUE_TRANSPARENCY,
                 TuningPreferencesDefaults.MAX_NAVIGATION_CUE_TRANSPARENCY
             )
-            prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] = if (config.navigationCueDismissDurationSec in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) {
-                config.navigationCueDismissDurationSec
-            } else {
+            prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] = if (config.navigationCueDismissDurationSec == 0) {
                 TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+            } else {
+                config.navigationCueDismissDurationSec.coerceIn(
+                    TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+                    TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
+                )
             }
             prefs[KEY_ELEVATION_SMOOTHING_SIGMA_METERS] = config.elevationSmoothingSigmaMeters.coerceIn(
                 TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
@@ -796,10 +809,13 @@ class TuningPreferencesDataStore(private val context: Context) {
     }
 
     suspend fun updateNavigationCueDismissDurationSec(durationSec: Int) {
-        val valid = if (durationSec in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) {
-            durationSec
-        } else {
+        val valid = if (durationSec == 0) {
             TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+        } else {
+            durationSec.coerceIn(
+                TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+                TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
+            )
         }
         context.dataStore.edit { prefs ->
             prefs[KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC] = valid

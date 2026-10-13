@@ -39,6 +39,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -94,6 +95,11 @@ class KnownLocationsRepositoryTest {
 
     @After
     fun tearDown() {
+        runBlocking {
+            withContext(testDispatcher) {
+                // Drain any pending coroutine tasks on single-threaded dispatcher before clearing mocks
+            }
+        }
         clearAllMocks()
         unmockkStatic(Log::class)
         KnownLocationsRepository.resetForTesting(null)

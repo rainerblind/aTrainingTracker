@@ -290,9 +290,7 @@ fun AdvancedTuningDialog(
                 SensorsGpsFilterSection(
                     gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
                     altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
-                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it },
-                    showAntMissingAdapterWarnings = showAntMissingAdapterWarnings,
-                    onShowAntMissingAdapterWarningsChange = { showAntMissingAdapterWarnings = it }
+                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it }
                 )
             }
 
@@ -312,8 +310,9 @@ fun AdvancedTuningDialog(
                 onToggle = { toggleSection(TuningSection.SENSOR_SEARCH) }
             ) {
                 SensorSearchTuningSection(
-                    prefs = sensorSearchPrefs,
-                    onPrefsChange = { sensorSearchPrefs = it }
+                    prefs = sensorSearchPrefs, onPrefsChange = { sensorSearchPrefs = it },
+                    showAntMissingAdapterWarnings = showAntMissingAdapterWarnings,
+                    onShowAntMissingAdapterWarningsChange = { showAntMissingAdapterWarnings = it }
                 )
             }
 

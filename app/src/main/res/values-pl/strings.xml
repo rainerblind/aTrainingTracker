@@ -1661,6 +1661,7 @@
     <string name="turn_cue_sharp_right">Ostro w prawo</string>
     <string name="turn_cue_straight">Prosto</string>
     <string name="turn_cue_u_turn">Zawróć</string>
+    <string name="turn_cue_gallery_title">Ikony wskazówek manewrów</string>
     <string name="turn_cue_now">TERAZ</string>
     <string name="turn_cue_off_route">Poza trasą (%1$d m)</string>
     <string name="turn_cue_back_on_route">Powrót na trasę</string>

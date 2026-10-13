@@ -201,6 +201,13 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Semantic Category Icon Tinting (Rule 23)**: When rendering paired or symmetric category items across lists, tables, or tabbed views (e.g. equipment categories like bikes and shoes in `EquipmentSensorMatrixScreen`):
   * **Unified Active Role**: All active entities across categories MUST use the same unified brand color token (`MaterialTheme.colorScheme.primary`). Do NOT assign disparate color roles (e.g. `primary` to bikes and `secondary` to shoes) to differentiate categories; visual distinction is provided by the vector drawables themselves (`ic_equipment_bike` vs `ic_equipment_shoe`) and section/tab titles.
   * **Status Tinting**: Use `MaterialTheme.colorScheme.outline` for retired/inactive entities, and `MaterialTheme.colorScheme.error` for failed/unhealthy states.
+* **Directional & Navigation Iconography Family Harmony (ATT-3455 & ATT-3493)**:
+  * All directional vector drawables representing an enum family (e.g. `TurnDirection` — straight, slight, normal, sharp, u-turn) must adhere to identical geometric constraints:
+    * Standard 24x24 viewport.
+    * Base stem rising from a consistent bottom baseline (`y=19..20`) with 2dp uniform stroke width.
+    * Symmetric, canonical Material Design arrowheads across complementary directions (left / right).
+    * True geometric angle transitions: gentle 45° for slight turns, 90° for normal turns, acute ~135° for sharp turns, 180° loop for u-turns.
+  * Any modification to directional iconography **MUST** be verified side-by-side across all enum variants in both Light and Dark themes via a dedicated Compose `@Preview` gallery (e.g. `TurnCueIconsGalleryPreview`) before release.
 
 ### 5.6 Placement & Entry Points
 * New features are entered from the screen where the athlete expects them (e.g. route selection on the Control Tracking screen, ATT-2458) using the same button/chip style as neighbouring actions — not via new floating or branded elements.

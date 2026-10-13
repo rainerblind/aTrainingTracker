@@ -18,11 +18,13 @@
 
 package com.atrainingtracker.trainingtracker.ui.routes
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,8 +43,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.routes.TurnDirection
 import com.atrainingtracker.trainingtracker.routes.TurnNavigationState
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -204,5 +208,91 @@ private fun OffRouteCard(
                 )
             }
         }
+    }
+}
+
+/**
+ * Visual gallery displaying all 8 [TurnDirection] navigation symbols (REQ-UI-360 / TST-UI-323).
+ * Provides interactive Android Studio Preview validation in Light and Dark themes.
+ * Scoped as private to ensure complete R8 stripping from release builds.
+ */
+@Composable
+private fun TurnCueIconsGallery(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.padding(16.dp),
+        color = MaterialTheme.colorScheme.background,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = stringResource(R.string.turn_cue_gallery_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            val directions = TurnDirection.values().toList()
+            val chunked = directions.chunked(4)
+
+            for (row in chunked) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    for (direction in row) {
+                        Card(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(4.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = direction.iconResId),
+                                    contentDescription = stringResource(id = direction.displayNameResId),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = stringResource(id = direction.displayNameResId),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+        }
+    }
+}
+
+@Preview(name = "Turn Cue Icons Gallery - Light", showBackground = true)
+@Preview(
+    name = "Turn Cue Icons Gallery - Dark",
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+private fun TurnCueIconsGalleryPreview() {
+    ATrainingTrackerTheme {
+        TurnCueIconsGallery()
     }
 }
