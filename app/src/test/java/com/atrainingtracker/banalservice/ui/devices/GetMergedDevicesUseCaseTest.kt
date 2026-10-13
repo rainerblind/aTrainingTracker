@@ -137,4 +137,46 @@ class GetMergedDevicesUseCaseTest {
         assertTrue("Device with telemetry and in newlyFound must have isNewlyDiscovered = true", result[0].isNewlyDiscovered)
         assertTrue("Device must be marked connected", result[0].isConnected)
     }
+
+    @Test
+    fun testLiveBatteryMerging_withValidTelemetryBattery_updatesBatteryPercentage() = runTest {
+        val device = createDevice(id = 301L, name = "Stryd Footpod").copy(batteryPercentage = 90)
+
+        allDevicesFlow.value = listOf(device)
+        telemetryFlow.value = listOf(
+            DeviceTelemetry(
+                deviceId = 301L,
+                mainValue = null,
+                allValues = emptyList(),
+                batteryPercentage = 45
+            )
+        )
+
+        val useCase = GetMergedDevicesUseCase(mockDbRepo, mockServiceRepo, mockApplication)
+        val result = useCase.mergedDevices.first()
+
+        assertEquals(1, result.size)
+        assertEquals("Telemetry battery level must override static database value", 45, result[0].batteryPercentage)
+    }
+
+    @Test
+    fun testLiveBatteryMerging_withNegativeTelemetryBattery_retainsStaticDbBattery() = runTest {
+        val device = createDevice(id = 302L, name = "Garmin Vector").copy(batteryPercentage = 75)
+
+        allDevicesFlow.value = listOf(device)
+        telemetryFlow.value = listOf(
+            DeviceTelemetry(
+                deviceId = 302L,
+                mainValue = null,
+                allValues = emptyList(),
+                batteryPercentage = -1
+            )
+        )
+
+        val useCase = GetMergedDevicesUseCase(mockDbRepo, mockServiceRepo, mockApplication)
+        val result = useCase.mergedDevices.first()
+
+        assertEquals(1, result.size)
+        assertEquals("Static db battery percentage must be retained when telemetry is -1", 75, result[0].batteryPercentage)
+    }
 }
