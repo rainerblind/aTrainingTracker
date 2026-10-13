@@ -76,6 +76,30 @@ class RoutesRepositoryActiveNavigationTest {
         assertNull(repository.activeNavigatedRouteId.value)
     }
 
+    @Test
+    fun testIsRouteAutoSelected_defaultsToFalse() {
+        assertEquals(false, repository.isRouteAutoSelected.value)
+    }
+
+    @Test
+    fun testSetActiveNavigatedRoute_withAutoSelectedTrue_updatesProvenance() {
+        repository.setActiveNavigatedRoute(42L, isAutoSelected = true)
+        assertEquals(42L, repository.activeNavigatedRouteId.value)
+        assertEquals(true, repository.isRouteAutoSelected.value)
+
+        // Manual selection overrides to false
+        repository.setActiveNavigatedRoute(100L, isAutoSelected = false)
+        assertEquals(100L, repository.activeNavigatedRouteId.value)
+        assertEquals(false, repository.isRouteAutoSelected.value)
+
+        // Clearing route resets provenance to false
+        repository.setActiveNavigatedRoute(42L, isAutoSelected = true)
+        assertEquals(true, repository.isRouteAutoSelected.value)
+        repository.setActiveNavigatedRoute(null)
+        assertNull(repository.activeNavigatedRouteId.value)
+        assertEquals(false, repository.isRouteAutoSelected.value)
+    }
+
     @After
     fun tearDown() {
         repository.cancelScope()
