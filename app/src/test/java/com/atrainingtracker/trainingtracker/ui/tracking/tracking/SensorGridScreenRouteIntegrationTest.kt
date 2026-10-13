@@ -165,12 +165,12 @@ class SensorGridScreenRouteIntegrationTest {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        val mainColumnSection = content.substringAfter("Column(\n                    modifier = Modifier.fillMaxSize()\n                ) {")
-            .substringBefore("Column(\n                        modifier = Modifier\n                            .fillMaxWidth()\n                            .verticalScroll")
+        val sensorGridSection = content.substringAfter("Column(\n                        modifier = sensorGridModifier")
+            .substringBefore("// 2. The Map")
 
         org.junit.Assert.assertFalse(
             "ReturnNavigationHud must not be rendered inside the in-flow sensor grid Column",
-            mainColumnSection.contains("ReturnNavigationHud(")
+            sensorGridSection.contains("ReturnNavigationHud(")
         )
 
         assertTrue(
@@ -192,12 +192,12 @@ class SensorGridScreenRouteIntegrationTest {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        val mainColumnSection = content.substringAfter("Column(\n                    modifier = Modifier.fillMaxSize()\n                ) {")
-            .substringBefore("Column(\n                        modifier = Modifier\n                            .fillMaxWidth()\n                            .verticalScroll")
+        val sensorGridSection = content.substringAfter("Column(\n                        modifier = sensorGridModifier")
+            .substringBefore("// 2. The Map")
 
         org.junit.Assert.assertFalse(
             "TurnPromptBanner must not be rendered inside the in-flow sensor grid Column",
-            mainColumnSection.contains("TurnPromptBanner(")
+            sensorGridSection.contains("TurnPromptBanner(")
         )
 
         assertTrue(

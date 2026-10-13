@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -521,21 +523,31 @@ fun SensorGridScreen(
             }
         } else {
             // TRACKING & PREVIEW MODES (Top-level spatial Box overlay, independent inner sensor scroll, weighted map)
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = paddingValues.calculateTopPadding()) // Only pad the top
             ) {
+                val availableHeight = maxHeight
                 // Base Layer: Stationary Cockpit Content
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // 1. The Sensor Grid (Scrollable, flexibly constrained by weight to prevent crowding bottom cockpit views)
-                    Column(
-                        modifier = Modifier
+                    // 1. The Sensor Grid (Scrollable, capped at 50% available height when map visible, or unweighted when map hidden; REQ-UI-358)
+                    val sensorGridModifier = if (state.mapState.showMap) {
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = availableHeight * 0.5f)
+                            .verticalScroll(rememberScrollState())
+                    } else {
+                        Modifier
                             .fillMaxWidth()
                             .verticalScroll(rememberScrollState())
-                            .weight(1f, fill = false),
+                            .weight(1f, fill = false)
+                    }
+
+                    Column(
+                        modifier = sensorGridModifier,
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
                     ) {
@@ -568,12 +580,12 @@ fun SensorGridScreen(
                         }
                     }
 
-                    // 2. The Map (Expanded - Isolated Recomposition Barrier, REQ-UI-326 / ATT-2944)
+                    // 2. The Map (Expanded - Isolated Recomposition Barrier, REQ-UI-326 / ATT-2944 / REQ-UI-358 / ATT-3343)
                     if (state.mapState.showMap) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(1f) // Fills remaining space
+                                .weight(1f, fill = true) // Consumes all remaining vertical space (REQ-UI-358)
                         ) {
                             TrackingMapContainer(
                                 mapState = state.mapState,
