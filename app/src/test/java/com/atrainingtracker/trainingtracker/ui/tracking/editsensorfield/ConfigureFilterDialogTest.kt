@@ -167,13 +167,21 @@ class ConfigureFilterDialogTest {
         assertEquals(1.0, state.filterConstant, 0.001)
         assertEquals(FilterPreset.DIRECT, state.activePreset)
 
-        // Speed
-        viewModel.onSensorTypeChanged(SensorType.SPEED_mps)
+        // Distance (Accumulator remains instantaneous)
+        viewModel.onSensorTypeChanged(SensorType.DISTANCE_m)
         testDispatcher.scheduler.advanceUntilIdle()
         state = viewModel.uiState.value
         assertEquals(FilterType.INSTANTANEOUS, state.selectedFilterType)
         assertEquals(1.0, state.filterConstant, 0.001)
         assertEquals(FilterPreset.DIRECT, state.activePreset)
+
+        // Speed (defaults to 2s moving average per ATT-3310)
+        viewModel.onSensorTypeChanged(SensorType.SPEED_mps)
+        testDispatcher.scheduler.advanceUntilIdle()
+        state = viewModel.uiState.value
+        assertEquals(FilterType.MOVING_AVERAGE_TIME, state.selectedFilterType)
+        assertEquals(2.0, state.filterConstant, 0.001)
+        assertEquals(FilterPreset.CUSTOM, state.activePreset)
     }
 
     @Test
