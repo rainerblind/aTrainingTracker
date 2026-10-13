@@ -307,9 +307,7 @@ fun AdvancedTuningScreen(
                 SensorsGpsFilterSection(
                     gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
                     altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
-                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it },
-                    showAntMissingAdapterWarnings = showAntMissingAdapterWarnings,
-                    onShowAntMissingAdapterWarningsChange = { showAntMissingAdapterWarnings = it }
+                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it }
                 )
             }
 
@@ -325,7 +323,12 @@ fun AdvancedTuningScreen(
                 isExpanded = isSectionExpanded(TuningSection.SENSOR_SEARCH),
                 onToggle = { toggleSection(TuningSection.SENSOR_SEARCH) }
             ) {
-                SensorSearchTuningSection(prefs = sensorSearchPrefs, onPrefsChange = { sensorSearchPrefs = it })
+                SensorSearchTuningSection(
+                    prefs = sensorSearchPrefs,
+                    onPrefsChange = { sensorSearchPrefs = it },
+                    showAntMissingAdapterWarnings = showAntMissingAdapterWarnings,
+                    onShowAntMissingAdapterWarningsChange = { showAntMissingAdapterWarnings = it }
+                )
             }
 
             // Section 6: Workout-Masken & Detailkarten

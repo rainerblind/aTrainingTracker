@@ -85,13 +85,16 @@ data class SensorSearchPreferences(
 }
 
 /**
- * Sensor Search & Behavior tuning category composable (REQ-UI-2780).
- * Encapsulates search round attempts, auto-search triggers, and sensor discovery behaviors.
+ * Sensor Search & Behavior tuning category composable (REQ-UI-2780, REQ-UI-353, ATT-3454).
+ * Encapsulates search round attempts, auto-search triggers, sensor discovery behaviors,
+ * and missing ANT+ adapter warning toggle.
  */
 @Composable
 fun SensorSearchTuningSection(
     prefs: SensorSearchPreferences,
-    onPrefsChange: (SensorSearchPreferences) -> Unit
+    onPrefsChange: (SensorSearchPreferences) -> Unit,
+    showAntMissingAdapterWarnings: Boolean = true,
+    onShowAntMissingAdapterWarningsChange: (Boolean) -> Unit = {}
 ) {
     SensorSearchTuningSection(
         numberOfSearchTries = prefs.numberOfSearchTries,
@@ -107,7 +110,9 @@ fun SensorSearchTuningSection(
         searchOnlyForSportSpecificDevices = prefs.searchOnlyForSportSpecificDevices,
         onSearchOnlyForSportSpecificDevicesChange = { onPrefsChange(prefs.copy(searchOnlyForSportSpecificDevices = it)) },
         changeSportWhenDeviceGetsLost = prefs.changeSportWhenDeviceGetsLost,
-        onChangeSportWhenDeviceGetsLostChange = { onPrefsChange(prefs.copy(changeSportWhenDeviceGetsLost = it)) }
+        onChangeSportWhenDeviceGetsLostChange = { onPrefsChange(prefs.copy(changeSportWhenDeviceGetsLost = it)) },
+        showAntMissingAdapterWarnings = showAntMissingAdapterWarnings,
+        onShowAntMissingAdapterWarningsChange = onShowAntMissingAdapterWarningsChange
     )
 }
 
@@ -126,7 +131,9 @@ fun SensorSearchTuningSection(
     searchOnlyForSportSpecificDevices: Boolean,
     onSearchOnlyForSportSpecificDevicesChange: (Boolean) -> Unit,
     changeSportWhenDeviceGetsLost: Boolean,
-    onChangeSportWhenDeviceGetsLostChange: (Boolean) -> Unit
+    onChangeSportWhenDeviceGetsLostChange: (Boolean) -> Unit,
+    showAntMissingAdapterWarnings: Boolean = true,
+    onShowAntMissingAdapterWarningsChange: (Boolean) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -200,6 +207,13 @@ fun SensorSearchTuningSection(
             isChecked = changeSportWhenDeviceGetsLost,
             onCheckedChange = onChangeSportWhenDeviceGetsLostChange,
             summary = stringResource(R.string.prefsChangeSportWhenDeviceGetsLostSummary)
+        )
+
+        TuningToggleItem(
+            title = stringResource(R.string.tuning_show_ant_missing_adapter_warnings_title),
+            isChecked = showAntMissingAdapterWarnings,
+            onCheckedChange = onShowAntMissingAdapterWarningsChange,
+            summary = stringResource(R.string.tuning_show_ant_missing_adapter_warnings_desc)
         )
     }
 }
