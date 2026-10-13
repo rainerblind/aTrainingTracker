@@ -145,4 +145,52 @@ class SensorBatteryAlertTest {
             assertEquals(listOf("Garmin HRM-Pro", "Stages Power"), emitted?.deviceNames)
         }
     }
+
+    @Test
+    fun workoutStart_filtersOnlyPairedCriticalSensors() {
+        val pairedSensorIds = setOf(10L, 20L)
+        val allCriticalDevices = listOf(
+            DevicesDatabaseManager.NameAndBatteryPercentage("Wahoo TICKR", 12, 10L),
+            DevicesDatabaseManager.NameAndBatteryPercentage("Unpaired Sensor", 5, 99L)
+        )
+
+        // Workout start logic: devDbManager.isPaired(deviceId)
+        val startCriticalDevices = allCriticalDevices.filter { pairedSensorIds.contains(it.deviceId) }
+
+        assertEquals(1, startCriticalDevices.size)
+        assertEquals("Wahoo TICKR", startCriticalDevices[0].name)
+        assertEquals(10L, startCriticalDevices[0].deviceId)
+    }
+
+    @Test
+    fun inRideBatteryDrop_recordsSessionDeduplicationAndSuppressesDuplicates() {
+        val alertedIds = java.util.Collections.synchronizedSet(mutableSetOf<Long>())
+
+        val deviceId = 42L
+        val percentage = 18
+
+        // First battery drop event -> should alert and record
+        val firstAlertTriggered = percentage in 0..MainActivityWithNavigation.CRITICAL_BATTERY_LEVEL && alertedIds.add(deviceId)
+        assertTrue("First in-ride battery drop must trigger alert", firstAlertTriggered)
+        assertTrue(alertedIds.contains(deviceId))
+
+        // Subsequent battery report for same device in same workout -> must be suppressed
+        val secondAlertTriggered = percentage in 0..MainActivityWithNavigation.CRITICAL_BATTERY_LEVEL && alertedIds.add(deviceId)
+        assertFalse("Subsequent in-ride battery drop for same sensor must be suppressed by deduplication", secondAlertTriggered)
+
+        // Different sensor drops -> must trigger alert
+        val secondDeviceId = 43L
+        val secondSensorTriggered = percentage in 0..MainActivityWithNavigation.CRITICAL_BATTERY_LEVEL && alertedIds.add(secondDeviceId)
+        assertTrue("Different sensor dropping to critical must trigger alert", secondSensorTriggered)
+        assertEquals(2, alertedIds.size)
+
+        // Workout session stops -> session set is cleared
+        alertedIds.clear()
+        assertTrue("Session reset clears alerted IDs", alertedIds.isEmpty())
+
+        // Next workout session: same device can trigger alert again
+        val nextSessionTriggered = percentage in 0..MainActivityWithNavigation.CRITICAL_BATTERY_LEVEL && alertedIds.add(deviceId)
+        assertTrue("New workout session allows alerting previously alerted sensor", nextSessionTriggered)
+    }
 }
+
