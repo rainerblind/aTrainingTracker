@@ -36,6 +36,7 @@ import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
+@Deprecated("Centralized in Advanced Settings via ClusterTuningSection (ATT-3452, REQ-SET-075)")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClusterTuningScreen(

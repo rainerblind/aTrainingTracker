@@ -30,10 +30,14 @@ import com.atrainingtracker.trainingtracker.ui.util.ProgressPhase
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.google.maps.android.PolyUtil
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class WorkoutClusterRepository private constructor(private val context: Context) {
@@ -42,6 +46,8 @@ class WorkoutClusterRepository private constructor(private val context: Context)
     private val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
     private val DEBUG = com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true)
     private val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+    private val isRecalculatingLock = AtomicBoolean(false)
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     
     private val mapper by lazy {
         WorkoutDataMapper(
@@ -309,6 +315,28 @@ class WorkoutClusterRepository private constructor(private val context: Context)
         
         refreshClusters()
         _migrationStatus.value = null
+    }
+
+    /**
+     * Triggers asynchronous recalculation of clusters from history on the persistent repository scope (ATT-3452, REQ-SET-075).
+     * Enforces a domain-layer lock via [AtomicBoolean] to reject concurrent recalculations.
+     * Decoupled from transient UI scopes to prevent cancellation if the user navigates away.
+     */
+    fun recalculateClustersAsync() {
+        if (!isRecalculatingLock.compareAndSet(false, true)) {
+            if (DEBUG) android.util.Log.w("WorkoutClusterRepo", "Recalculation already active. Rejecting concurrent trigger.")
+            return
+        }
+        repositoryScope.launch {
+            try {
+                recalculateClustersWithProgress()
+            } catch (t: Throwable) {
+                android.util.Log.e("WorkoutClusterRepo", "Error during cluster recalculation", t)
+            } finally {
+                isRecalculatingLock.set(false)
+                _migrationStatus.value = null
+            }
+        }
     }
 
     suspend fun deleteCluster(clusterId: Long) = withContext(Dispatchers.IO) {
