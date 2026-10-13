@@ -20,16 +20,11 @@ package com.atrainingtracker.trainingtracker.ui.settings.tuning.categories
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -48,7 +43,6 @@ import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
  * Encapsulates pre-ride route selection proximity radius, cue overlay transparency, auto-dismiss duration,
  * and Follow-Me map camera parameters (base zoom, speed zoom, tilt, lookahead padding).
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NavigationSection(
     routeSelectionRadiusKm: Float,
@@ -96,56 +90,27 @@ fun NavigationSection(
             steps = 18
         )
 
-        // Navigation Cue Dismiss Duration (2s, 3s, 4s [default], 5s, 8s, Persistent)
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.tuning_nav_cue_dismiss_duration_title),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "${navigationCueDismissDurationSec}s",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            Text(
-                text = stringResource(R.string.tuning_nav_cue_dismiss_duration_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = stringResource(R.string.tuning_default_format, "4s"),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
-            )
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS.forEach { sec ->
-                    val isSelected = navigationCueDismissDurationSec == sec
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { onDismissDurationChange(sec) },
-                        label = { Text("${sec}s") }
+        // Navigation Cue Dismiss Duration (1s - 10s, 1s increments) (ATT-3450 / REQ-UI-287)
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_nav_cue_dismiss_duration_title),
+            valueText = "${navigationCueDismissDurationSec}s",
+            helperText = stringResource(R.string.tuning_nav_cue_dismiss_duration_desc),
+            defaultText = stringResource(
+                R.string.tuning_default_format,
+                "${TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC}s"
+            ),
+            value = navigationCueDismissDurationSec.toFloat(),
+            onValueChange = { snapped ->
+                onDismissDurationChange(
+                    snapped.roundToInt().coerceIn(
+                        TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC,
+                        TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC
                     )
-                }
-            }
-        }
+                )
+            },
+            valueRange = TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC.toFloat()..TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC.toFloat(),
+            steps = 8
+        )
 
         // Navigation Cue Countdown Distance (30m - 300m, 10m increments) (ATT-3321 / REQ-UI-287)
         TuningSliderItem(

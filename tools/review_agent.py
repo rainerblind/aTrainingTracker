@@ -137,15 +137,13 @@ def call_gemini_api(prompt, system_instruction=None, explicit_model=None):
         raise ValueError("GEMINI_API_KEY not found in .env.gemini")
 
     default_candidates = [
-        "gemini-3.5-flash-lite",
         "gemini-3.1-flash-lite",
-        "gemini-flash-lite-latest",
+        "gemini-flash-latest",
+        "gemini-3.5-flash",
         "gemini-3.8-flash",
         "gemini-3.7-flash",
         "gemini-3.6-flash",
-        "gemini-3.5-flash",
-        "gemini-3-flash-preview",
-        "gemini-flash-latest"
+        "gemini-flash-lite-latest"
     ]
     if explicit_model:
         candidate_models = [explicit_model] + [m for m in default_candidates if m != explicit_model]
@@ -290,30 +288,31 @@ def detect_gate(summary):
 
 
 def get_git_diff():
-    """Returns complete ticket diff against sprint or develop merge-base, including uncommitted changes."""
+    """Returns complete ticket diff against sprint or develop merge-base, excluding oversized docs/*."""
+    exclude_args = ["--", ".", ":(exclude)docs/*"]
     try:
         branches = subprocess.check_output(["git", "branch", "--list", "sprint/*"], stderr=subprocess.DEVNULL).decode("utf-8").strip().splitlines()
         branches = sorted([b.replace("*", "").strip() for b in branches if b.strip()], reverse=True)
         for clean_b in branches:
             if clean_b:
                 base = subprocess.check_output(["git", "merge-base", clean_b, "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
-                diff = subprocess.check_output(["git", "diff", base], stderr=subprocess.DEVNULL).decode("utf-8")
+                diff = subprocess.check_output(["git", "diff", base] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
                 if diff.strip():
-                    return diff[:100000]
+                    return diff[:60000]
     except Exception:
         pass
     try:
         base = subprocess.check_output(["git", "merge-base", "develop", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
-        diff = subprocess.check_output(["git", "diff", base], stderr=subprocess.DEVNULL).decode("utf-8")
+        diff = subprocess.check_output(["git", "diff", base] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
         if diff.strip():
-            return diff[:100000]
+            return diff[:60000]
     except Exception:
         pass
     try:
-        diff = subprocess.check_output(["git", "diff", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
+        diff = subprocess.check_output(["git", "diff", "HEAD"] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
         if not diff.strip():
-            diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8")
-        return diff[:100000]
+            diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD"] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
+        return diff[:60000]
     except Exception:
         return ""
 
