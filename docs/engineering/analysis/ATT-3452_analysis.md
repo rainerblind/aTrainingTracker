@@ -6,7 +6,7 @@
 **Target Release**: `Sprint 2026-42.2`  
 **Active Sprint**: `Sprint 2026-42.2`  
 **Author**: AI Agent 1 (Analyst)  
-**Date**: 2026-10-13 (Revised)  
+**Date**: 2026-10-13 (Revised 2)  
 
 ---
 
@@ -61,15 +61,24 @@ This fragmented the user experience: athletes configuring cluster sensitivity in
 * Retaining Info (`Icons.Outlined.Info`), Sort (`Icons.AutoMirrored.Filled.Sort`), and Filter buttons in `WorkoutClustersTabsScreen.kt`.
 * Deprecating `ClusterTuningScreen.kt`.
 
-### 3.2 State Management & Service Layer Architecture
-* **Direct Repository Integration**: Instead of routing through `WorkoutClustersViewModel` (which is scoped to the `WorkoutClustersScreen` lifecycle), recalculation in Advanced Settings interacts directly with the singleton `WorkoutClusterRepository.getInstance(context)`.
-* **Parameter Persistence Pre-Condition**: Prior to starting cluster recalculation, active slider tolerances (`endpointTolerance`, `apexTolerance`, `distanceTolerance`, `altitudePositionTolerance`, `useSportTypeForClustering`, `useAltitudePosForClustering`) MUST be immediately committed to `TrainingApplication` and `TuningPreferencesDataStore`. This guarantees that `WorkoutClusterEngine.recalculateHistory()` reads the exact newly configured parameters.
-* **Global Progress State Synchronization**: `WorkoutClusterRepository` maintains `migrationStatus: StateFlow<MigrationStatus?>`. `ClusterTuningSection` collects `migrationStatus`:
-  * When `migrationStatus != null`, a recalculation is actively executing.
-  * If the user leaves `AdvancedTuningScreen` and returns while recalculation is in progress, the UI automatically observes the active `migrationStatus` and restores progress state.
-  * The recalculation job is executed on `Dispatchers.Default` / `Dispatchers.IO` via the repository, ensuring that navigating away from `AdvancedTuningScreen` does not prematurely kill or corrupt the atomic recalculation process.
+### 3.2 State Management, Concurrency & Lifecycle Decoupling
+1. **Application/Repository-Level Lifecycle Scope**:
+   * Recalculation is an asynchronous, computation-heavy process executed on `Dispatchers.Default` (algorithm) and `Dispatchers.IO` (SQLite queries).
+   * It MUST NOT be tethered to a transient UI Composable scope that cancels upon back navigation. Instead, it is triggered via the application-context singleton `WorkoutClusterRepository.getInstance(context.applicationContext)`.
+   * When triggered, the repository executes `recalculateClustersWithProgress()` within its persistent coroutine scope, guaranteeing that if the user exits `AdvancedTuningScreen` while recalculation is underway, the task runs to completion without interruption or data corruption.
+2. **Encapsulated Read-Only State Synchronization**:
+   * `WorkoutClusterRepository` strictly encapsulates `private val _migrationStatus = MutableStateFlow<MigrationStatus?>(null)` and exposes `val migrationStatus: StateFlow<MigrationStatus?> = _migrationStatus.asStateFlow()` as a public read-only contract.
+   * `ClusterTuningSection` collects `migrationStatus` with lifecycle awareness. If recalculation is active (`migrationStatus != null`), the UI reactively reflects the progress state.
+   * If the user leaves `AdvancedTuningScreen` and returns, or navigates to `WorkoutClustersScreen`, the active `migrationStatus` is immediately picked up without losing progress visibility.
+3. **Data Integrity & Concurrency Isolation**:
+   * During recalculation, read queries against `allClusters` continue to observe the last consistent in-memory state until `refreshClusters()` finishes and atomically updates `_allClusters.value`.
+   * Write operations (e.g. background workout saving or manual clustering) are safely serialized by SQLite database transaction locks in `WorkoutClusterDatabaseManager`.
+   * While `migrationStatus != null`, the Recalculate button and all tolerance sliders in `ClusterTuningSection` are disabled (`enabled = false`), eliminating any possibility of double-tap triggers, concurrent recalculation runs, or modifying tolerances while the algorithm is executing.
+4. **Process-Death Recovery & Self-Healing Bootstrap**:
+   * If the application process is terminated by the OS (e.g. low memory killer) midway through recalculation, the database state might be left empty or partial.
+   * `WorkoutClusterRepository.refreshClusters()` already implements an established, verified self-healing bootstrapper (ATT-392 / lines 88–92 of `WorkoutClusterRepository.kt`): upon subsequent repository access, if `clusterDb.getAllClusters().isEmpty() && _migrationStatus.value == null`, it automatically detects the incomplete state and triggers a self-healing background recalculation from history.
 
-### 3.3 Confirmation Dialog Specification (Material 3 Guard)
+### 3.3 Confirmation Dialog Specification (Material 3 Blocking Guard)
 * **Dialog Trigger**: Tapping the "Recalculate All Clusters" button opens a modal `AlertDialog`.
 * **Blocking Guard**: The confirmation dialog is a mandatory blocking decision gate. It does NOT provide a "Don't ask again" option, because cluster recalculation is inherently destructive (clearing all user-defined cluster names, custom boundaries, and manual workout associations).
 * **Visual Styling & Contract Compliance (Rule 23)**:
@@ -79,16 +88,12 @@ This fragmented the user experience: athletes configuring cluster sensitivity in
   * Message: `R.string.cluster_tuning_warning` (*Warning: Recalculating will wipe all learned cluster names and grouping, then rebuild them from history using these new parameters.*)
   * Confirm Button: Text button with `R.string.cluster_tuning_recalculate_button`, styled in high-contrast `MaterialTheme.colorScheme.error`.
   * Dismiss Button: Text button with `R.string.cancel`.
+* **Execution Sequence upon Confirmation**:
+  1. Dismiss confirmation dialog.
+  2. Immediately persist active tolerances (`endpointTolerance`, `apexTolerance`, `distanceTolerance`, `altitudePositionTolerance`, `useSportTypeForClustering`, `useAltitudePosForClustering`) to `TrainingApplication` and `TuningPreferencesDataStore`.
+  3. Launch `WorkoutClusterRepository.getInstance(context).recalculateClustersWithProgress()`.
 
-### 3.4 Concurrency Control & Double-Tap Prevention
-* When recalculation starts:
-  1. Local `isRecalculating` is set to `true`, and the repository's `migrationStatus` transitions to non-null.
-  2. The Recalculate button is disabled (`enabled = false`), preventing duplicate clicks or race conditions.
-  3. A `CircularProgressIndicator` (size 18.dp, stroke 2.dp) is displayed inside the button with text `R.string.cluster_tuning_recalculating`.
-  4. Sliders in `ClusterTuningContent` are disabled while recalculating (`enabled = !isRecalculating`) to prevent mutating parameters while the clustering algorithm is running.
-  5. Upon completion: `isRecalculating` returns to `false`, `migrationStatus` resets to `null`, and a `Toast` or localized message confirms completion.
-
-### 3.5 Modularity & File Size Invariant
+### 3.4 Modularity & File Size Invariant Protection
 * `ClusterTuningSection.kt` currently contains 69 lines. Incorporating the button, confirmation dialog, and state observation will increase it to ~130-150 lines, strictly complying with the `< 400` lines limit enforced by `AdvancedTuningModularityTest.kt`.
 * `AdvancedTuningScreen.kt` (389 lines) remains untouched or gains zero net lines, preserving its critical modularity constraint.
 
@@ -99,8 +104,8 @@ This fragmented the user experience: athletes configuring cluster sensitivity in
 * **AC-1 (Header Cleanup)**: `WorkoutClustersTabsScreen.kt` contains zero cluster tuning settings buttons or `onTuneClick` invocations.
 * **AC-2 (Recalculate Action in Advanced Settings)**: `ClusterTuningSection.kt` contains a dedicated recalculate action button (`R.string.cluster_tuning_recalculate_button`).
 * **AC-3 (Confirmation Guard Dialog)**: Clicking the recalculate button opens an `AlertDialog` warning the user of cluster wiping before any recalculation starts.
-* **AC-4 (Concurrency & Disabling)**: While recalculating, the button and controls are disabled, displaying progress indicators and preventing duplicate triggers.
-* **AC-5 (State Persistence & Parity)**: Parameters are persisted before recalculation; 100% 9-language parity across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+* **AC-4 (Concurrency & Disabling)**: While recalculating (`migrationStatus != null`), the button and controls are disabled, displaying progress indicators and preventing duplicate triggers.
+* **AC-5 (Lifecycle Decoupling & Recovery)**: Recalculation runs asynchronously without blocking navigation; self-healing bootstrap protects against process death; 100% 9-language parity across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 * **AC-6 (Modularity & Clean-Room Suite)**: All files in `ui/settings/tuning` remain strictly `< 400` lines; full test suite passes 100% with zero regressions.
 
 ---
@@ -110,6 +115,6 @@ This fragmented the user experience: athletes configuring cluster sensitivity in
 * **Risk 1: Accidental Data Wiping during Settings Browsing**:
   * *Mitigation*: Solved via mandatory modal confirmation `AlertDialog` requiring deliberate user confirmation.
 * **Risk 2: Process Interruption on Screen Navigation**:
-  * *Mitigation*: Recalculation runs in `WorkoutClusterRepository` background coroutines, reporting progress via global `migrationStatus` StateFlow.
+  * *Mitigation*: Recalculation runs in `WorkoutClusterRepository` background coroutines, reporting progress via global `migrationStatus` StateFlow. If killed by OS, `refreshClusters()` self-heals on next launch.
 * **Risk 3: Modularity Violation in `ui/settings/tuning`**:
   * *Mitigation*: Logic encapsulated within `ClusterTuningSection.kt` (69 lines -> ~140 lines), leaving `AdvancedTuningScreen.kt` (389 lines) unaffected.
