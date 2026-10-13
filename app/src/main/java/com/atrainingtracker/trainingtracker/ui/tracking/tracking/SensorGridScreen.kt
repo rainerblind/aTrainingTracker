@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -68,11 +70,15 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
@@ -239,6 +245,7 @@ fun SensorGridScreen(
     val forkDecisionState by forkNavRepo.forkDecisionState.collectAsState()
 
     val currentLocation by currentLocationFlow.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
 
     // Control the sheet state (REQ-UI-327, REQ-UI-343)
     val initialSheetValue = if (shouldShowBottomSheet) SheetValue.Expanded else SheetValue.Hidden
@@ -281,6 +288,15 @@ fun SensorGridScreen(
                             .wrapContentHeight()
                             .sheetContour()
                             .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
+                            .then(
+                                if (scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded) {
+                                    Modifier.clickable {
+                                        coroutineScope.launch {
+                                            scaffoldState.bottomSheetState.expand()
+                                        }
+                                    }
+                                } else Modifier
+                            )
                     ) {
                         LiveSegmentSheet(
                             liveSegment = activeSegment
@@ -292,6 +308,15 @@ fun SensorGridScreen(
                             .fillMaxWidth()
                             .sheetContour()
                             .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
+                            .then(
+                                if (scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded) {
+                                    Modifier.clickable {
+                                        coroutineScope.launch {
+                                            scaffoldState.bottomSheetState.expand()
+                                        }
+                                    }
+                                } else Modifier
+                            )
                     ) {
                         LiveClimbSheet(
                             liveClimb = activeLiveClimb!!
@@ -641,6 +666,38 @@ fun SensorGridScreen(
                         onSelectForkRoute = { routeId -> forkNavRepo.selectRouteManually(routeId) },
                         onDismissFork = { forkNavRepo.dismissPrompt() },
                         modifier = Modifier.align(Alignment.TopCenter)
+                    )
+                }
+
+                // Bottom swipe-up gesture detector & tap-to-expand strip (REQ-UI-359 / ATT-3341)
+                if (shouldShowBottomSheet && scaffoldState.bottomSheetState.currentValue != SheetValue.Expanded) {
+                    var totalDragY by remember { mutableFloatStateOf(0f) }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(BottomSheetDesign.PeekHeightLiveSegment + navBarHeight)
+                            .align(Alignment.BottomCenter)
+                            .pointerInput(shouldShowBottomSheet) {
+                                detectVerticalDragGestures(
+                                    onDragStart = { totalDragY = 0f },
+                                    onDragEnd = { totalDragY = 0f },
+                                    onDragCancel = { totalDragY = 0f },
+                                    onVerticalDrag = { change, dragAmount ->
+                                        totalDragY += dragAmount
+                                        if (totalDragY < -30f) {
+                                            change.consume()
+                                            coroutineScope.launch {
+                                                scaffoldState.bottomSheetState.expand()
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                            .clickable {
+                                coroutineScope.launch {
+                                    scaffoldState.bottomSheetState.expand()
+                                }
+                            }
                     )
                 }
             }
