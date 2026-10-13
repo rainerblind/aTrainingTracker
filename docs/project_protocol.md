@@ -144,18 +144,26 @@ The detailed procedural rules, quality checklists, and templates are encapsulate
 
 ---
 
-## 4. UI & Software Engineering Standards
+## 4. UI & Software Engineering Standards (The Document Triad)
 
-### A. Jetpack Compose UI Fast Iteration, Previews & Prototyping
-* Prioritize `@Preview` composables with light/dark theme wrappers (`AppTheme`) and isolated JVM screenshot/unit tests during development.
-* Visual decisions: Present visual variants side-by-side to the user for instant alignment.
-* Hardware validation: Physical Google Pixel 10 remains the mandatory verification gate in Stage 5.
+Detailed standards for design and implementation are codified in dedicated companion documents:
+* **UI & Interaction Design Guidelines**: [`docs/design_guidelines.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/design_guidelines.md)
+  * Visual consistency baseline (Section 5)
+  * Settings sliders explanatory hints (Section 3.1)
+  * Sub-entity chart coordinate normalization (Section 2.1)
+  * Unified viewport anchor authority for maps (Section 6.1)
+  * Jetpack Compose multi-state `@Preview` tooling, 9-language localization parity, and positional format specifiers (`%1$s`) (Section 4)
+* **Technical Architecture & Coding Standards**: [`docs/coding_standards.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/coding_standards.md)
+  * Single Source of Truth & DRY — Shared Code Over Duplication (canonical formatters & unit math) (Section 1.1)
+  * Database & DTO mapping symmetry (`fromCursor`) (Section 2.1)
+  * Specific direct platform intents over generic app settings (Section 3.1)
+  * Defensive service lifecycle finalization & FGS permission gating (Section 3.2)
+  * Developer tool host pre-flight diagnostics (Section 4.1)
+  * Chesterton's Fence for empty callback lambdas & gesture contract tests (Section 1.2)
+  * Clean hardware teardown and orphan defense on persistence deletion (Section 3.3)
+  * Testing standards & prohibition of `returnDefaultValues = true` (Section 5)
 
-### B. Localization & String Resource Hardening
-* **9-Language Parity**: All user-facing strings must be defined across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
-* **Positional Specifiers**: String placeholders MUST use positional specifiers with type characters (e.g. `%1$s`, `%2$d`). Bare specifiers (`%s`, `%d`) are strictly forbidden.
-
-### C. Internal Documentation & Code Quality
+### Internal Documentation & Code Quality
 * Every class and public method must have KDoc/JavaDoc headers describing purpose, architectural role, and threading constraints (`REQ-PRO-011`).
 
 ---
