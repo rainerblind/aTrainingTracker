@@ -28,14 +28,34 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterTuningContent
 
 /**
  * Workout route clustering tuning category composable (REQ-SET-075, Rule 36, ATT-3452).
- * Single Source of Truth for algorithmic route matching preferences embedded in Advanced Settings,
- * featuring direct cluster recalculation with a Material 3 confirmation guard.
+ * Single Source of Truth for algorithmic route matching preferences embedded in Advanced Settings.
+ *
+ * Provides:
+ * - Direct route clustering tuning controls via [ClusterTuningContent].
+ * - Recalculate action button guarded by a high-contrast Material 3 [AlertDialog] confirmation.
+ * - Architectural decoupling: persists parameters and executes background recalculation via
+ *   [WorkoutClusterRepository.recalculateClustersAsync] on the persistent repository CoroutineScope.
+ * - Reactive UI state observation: disables sliders and action button during active calculation,
+ *   rendering an inline indeterminate progress indicator.
+ *
+ * @param endpointTolerance Active endpoint tolerance in meters.
+ * @param onEndpointToleranceChange Callback when endpoint tolerance changes.
+ * @param apexTolerance Active apex/shape tolerance in meters.
+ * @param onApexToleranceChange Callback when apex tolerance changes.
+ * @param distanceTolerance Active total distance tolerance in percent.
+ * @param onDistanceToleranceChange Callback when distance tolerance changes.
+ * @param altitudePositionTolerance Active elevation/ascent tolerance in percent.
+ * @param onAltitudePositionToleranceChange Callback when altitude tolerance changes.
+ * @param useSportTypeForClustering Flag indicating whether sport type partition is enforced.
+ * @param onUseSportTypeChange Callback when sport type partition toggle changes.
+ * @param useAltitudePosForClustering Flag indicating whether altitude position is compared.
+ * @param onUseAltitudePosChange Callback when altitude position toggle changes.
+ * @param onValueChangeFinished Optional callback when slider adjustment finishes.
  */
 @Composable
 fun ClusterTuningSection(
@@ -116,16 +136,19 @@ fun ClusterTuningSection(
                 TextButton(
                     onClick = {
                         showConfirmDialog = false
-                        // Persist active parameters to TrainingApplication / DataStore
-                        TrainingApplication.setClusterTolEndpoints(endpointTolerance)
-                        TrainingApplication.setClusterTolApex(apexTolerance)
-                        TrainingApplication.setClusterTolDistance(distanceTolerance)
-                        TrainingApplication.setClusterTolAltitudePos(altitudePositionTolerance)
-                        TrainingApplication.setUseSportTypeForClustering(useSportTypeForClustering)
-                        TrainingApplication.setUseAltitudePosForClustering(useAltitudePosForClustering)
+                        repository.recalculateClustersAsync(
+                            endpointTol = endpointTolerance,
+                            apexTol = apexTolerance,
+                            distTol = distanceTolerance,
+                            altPosTol = altitudePositionTolerance,
+                            useSport = useSportTypeForClustering,
+                            useAlt = useAltitudePosForClustering
+                        )
                         onValueChangeFinished()
-                        repository.recalculateClustersAsync()
-                    }
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
                 ) {
                     Text(
                         text = stringResource(R.string.cluster_tuning_recalculate_button),

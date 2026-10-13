@@ -62,7 +62,7 @@ class ClusterTuningContractTest {
         )
         assertTrue(
             "Confirm action must invoke asynchronous repository recalculation",
-            content.contains("repository.recalculateClustersAsync()")
+            content.contains("repository.recalculateClustersAsync(")
         )
     }
 
@@ -106,12 +106,12 @@ class ClusterTuningContractTest {
             content.contains("isRecalculatingLock")
         )
         assertTrue(
-            "WorkoutClusterRepository must declare dedicated repository CoroutineScope",
-            content.contains("repositoryScope")
+            "WorkoutClusterRepository must support CoroutineScope dependency injection",
+            content.contains("repositoryScope: CoroutineScope")
         )
         assertTrue(
             "WorkoutClusterRepository must declare recalculateClustersAsync()",
-            content.contains("fun recalculateClustersAsync()")
+            content.contains("fun recalculateClustersAsync(")
         )
     }
 

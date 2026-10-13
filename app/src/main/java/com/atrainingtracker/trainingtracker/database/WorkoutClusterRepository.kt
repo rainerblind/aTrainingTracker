@@ -40,14 +40,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class WorkoutClusterRepository private constructor(private val context: Context) {
+class WorkoutClusterRepository internal constructor(
+    private val context: Context,
+    private val repositoryScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+) {
 
     private val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
     private val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
     private val DEBUG = com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true)
     private val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
     private val isRecalculatingLock = AtomicBoolean(false)
-    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     
     private val mapper by lazy {
         WorkoutDataMapper(
@@ -74,9 +76,12 @@ class WorkoutClusterRepository private constructor(private val context: Context)
         private var instance: WorkoutClusterRepository? = null
 
         @JvmStatic
-        fun getInstance(context: Context): WorkoutClusterRepository {
+        fun getInstance(
+            context: Context,
+            scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        ): WorkoutClusterRepository {
             return instance ?: synchronized(this) {
-                instance ?: WorkoutClusterRepository(context.applicationContext).also { instance = it }
+                instance ?: WorkoutClusterRepository(context.applicationContext, scope).also { instance = it }
             }
         }
 
@@ -319,16 +324,30 @@ class WorkoutClusterRepository private constructor(private val context: Context)
 
     /**
      * Triggers asynchronous recalculation of clusters from history on the persistent repository scope (ATT-3452, REQ-SET-075).
+     * Optionally updates and persists cluster tuning preferences prior to execution.
      * Enforces a domain-layer lock via [AtomicBoolean] to reject concurrent recalculations.
      * Decoupled from transient UI scopes to prevent cancellation if the user navigates away.
      */
-    fun recalculateClustersAsync() {
+    fun recalculateClustersAsync(
+        endpointTol: Float? = null,
+        apexTol: Float? = null,
+        distTol: Float? = null,
+        altPosTol: Float? = null,
+        useSport: Boolean? = null,
+        useAlt: Boolean? = null
+    ) {
         if (!isRecalculatingLock.compareAndSet(false, true)) {
             if (DEBUG) android.util.Log.w("WorkoutClusterRepo", "Recalculation already active. Rejecting concurrent trigger.")
             return
         }
         repositoryScope.launch {
             try {
+                endpointTol?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterTolEndpoints(it) }
+                apexTol?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterTolApex(it) }
+                distTol?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterTolDistance(it) }
+                altPosTol?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterTolAltitudePos(it) }
+                useSport?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setUseSportTypeForClustering(it) }
+                useAlt?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setUseAltitudePosForClustering(it) }
                 recalculateClustersWithProgress()
             } catch (t: Throwable) {
                 android.util.Log.e("WorkoutClusterRepo", "Error during cluster recalculation", t)
