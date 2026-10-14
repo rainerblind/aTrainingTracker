@@ -856,9 +856,9 @@ public class TrainingApplication extends Application {
     @NonNull
     public static String getLastUpdateTimeOfStravaEquipment() {
         if (cSharedPreferences == null) {
-            return cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfEquipmentNever) : "Never";
+            return cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfEquipmentNever) : "";
         }
-        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfEquipmentNever) : "Never");
+        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfEquipmentNever) : "");
     }
 
     public static void setLastUpdateTimeOfStravaEquipment(String updateTime) {
@@ -917,9 +917,9 @@ public class TrainingApplication extends Application {
     @NonNull
     public static String getLastUpdateTimeOfStravaRoutes() {
         if (cSharedPreferences == null) {
-            return cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfRoutesNever) : "Never";
+            return cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfRoutesNever) : "";
         }
-        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfRoutesNever) : "Never");
+        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfRoutesNever) : "");
     }
 
     public static void setLastUpdateTimeOfStravaRoutes(String updateTime) {
@@ -978,9 +978,9 @@ public class TrainingApplication extends Application {
     @NonNull
     public static String getLastUpdateTimeOfStravaSegments() {
         if (cSharedPreferences == null) {
-            return cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfSegmentsNever) : "Never";
+            return cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfSegmentsNever) : "";
         }
-        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfSegmentsNever) : "Never");
+        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfSegmentsNever) : "");
     }
 
     public static void setLastUpdateTimeOfStravaSegments(String updateTime) {

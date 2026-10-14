@@ -53,21 +53,23 @@ class StravaEquipmentSyncWorker(
             return Result.success()
         }
 
-        return try {
-            val syncThread = StravaEquipmentSynchronizeThread(applicationContext)
-            syncThread.run()
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val syncThread = StravaEquipmentSynchronizeThread(applicationContext)
+                syncThread.run()
 
-            val lastUpdate = TrainingApplication.getLastUpdateTimeOfStravaEquipment()
-            if (lastUpdate.equals("updating failed", ignoreCase = true)) {
-                Log.w(TAG, "Strava equipment synchronization reported failure; scheduling retry.")
+                val lastUpdate = TrainingApplication.getLastUpdateTimeOfStravaEquipment()
+                if (lastUpdate.equals("updating failed", ignoreCase = true)) {
+                    Log.w(TAG, "Strava equipment synchronization reported failure; scheduling retry.")
+                    Result.retry()
+                } else {
+                    Log.i(TAG, "Periodic automated Strava equipment sync completed successfully.")
+                    Result.success()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during periodic Strava equipment sync", e)
                 Result.retry()
-            } else {
-                Log.i(TAG, "Periodic automated Strava equipment sync completed successfully.")
-                Result.success()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error during periodic Strava equipment sync", e)
-            Result.retry()
         }
     }
 
