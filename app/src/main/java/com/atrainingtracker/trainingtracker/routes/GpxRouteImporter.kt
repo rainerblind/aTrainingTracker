@@ -33,8 +33,7 @@ import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-import io.ticofab.androidgpxparser.parser.GPXParser
-import io.ticofab.androidgpxparser.parser.domain.Gpx
+import com.atrainingtracker.trainingtracker.routes.parsers.GpxTrackpointParser
 
 /**
  * Result data class for route file imports (GPX / TCX).
@@ -84,14 +83,12 @@ class GpxRouteImporter @JvmOverloads constructor(
             }
 
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                val parser = GPXParser()
-                val parsedGpx: Gpx? = try {
-                    parser.parse(inputStream)
-                } catch (e: Exception) {
-                    null
-                }
+                val gpxResult = GpxTrackpointParser.parse(inputStream)
+                val parsedGpx = gpxResult.getOrNull()
 
-                if (parsedGpx == null || (parsedGpx.tracks.isEmpty() && parsedGpx.routes.isEmpty())) {
+                val trackPoints = parsedGpx?.laps?.flatMap { it.trackpoints } ?: emptyList()
+
+                if (parsedGpx == null || trackPoints.isEmpty()) {
                     // Fallback attempt to TCX course parser
                     val tcxResult = context.contentResolver.openInputStream(uri)?.use { tcxStream ->
                         TcxCourseParser.parse(tcxStream, uri.lastPathSegment ?: "course")
@@ -102,25 +99,14 @@ class GpxRouteImporter @JvmOverloads constructor(
                     return@withContext Result.failure(Exception("No tracks or routes found"))
                 }
 
-                // GPX can have multiple tracks; we'll take the first one or combine them
-                // Most GPX files use <trk>, but some older ones use <rte>
-                val firstTrack = parsedGpx.tracks.firstOrNull()
-                val trackPoints = firstTrack?.trackSegments?.flatMap { it.trackPoints }
-                    ?: parsedGpx.routes.firstOrNull()?.routePoints
-                    ?: emptyList()
-
-                if (trackPoints.isEmpty()) {
-                    return@withContext Result.failure(Exception("Track contains no points"))
-                }
-
                 // Check whether valid non-zero altitude data is present
-                val hasExistingElevation = trackPoints.any { it.elevation != null && it.elevation != 0.0 }
+                val hasExistingElevation = trackPoints.any { it.altitude != null && it.altitude != 0.0 }
 
-                // Convert library points to PathPoint
+                // Convert points to PathPoint
                 val pathPoints = trackPoints.map { pt ->
                     PathPoint(
-                        latLng = LatLng(pt.latitude, pt.longitude),
-                        altitude = pt.elevation ?: 0.0,
+                        latLng = LatLng(pt.lat, pt.lng),
+                        altitude = pt.altitude ?: 0.0,
                         distance = 0.0 // We calculate this below
                     )
                 }.toMutableList()
@@ -142,13 +128,13 @@ class GpxRouteImporter @JvmOverloads constructor(
                 }
 
                 // Parse waypoints (<wpt>) if present (REQ-MAP-026)
-                val rawWaypoints = (parsedGpx.wayPoints ?: emptyList()).map { wpt ->
+                val rawWaypoints = parsedGpx.waypoints.map { wpt ->
                     RouteWaypoint(
-                        latLng = LatLng(wpt.latitude, wpt.longitude),
-                        altitude = wpt.elevation ?: 0.0,
-                        name = wpt.name ?: "",
-                        description = wpt.desc ?: wpt.cmt ?: "",
-                        type = WaypointType.fromGpx(wpt.sym, wpt.type, wpt.name, wpt.desc ?: wpt.cmt)
+                        latLng = LatLng(wpt.lat, wpt.lng),
+                        altitude = wpt.altitude ?: 0.0,
+                        name = wpt.name,
+                        description = wpt.notes ?: "",
+                        type = WaypointType.fromGpx(wpt.sym, wpt.type, wpt.name, wpt.notes)
                     )
                 }
                 val waypoints = WaypointDistanceCalculator.projectWaypoints(rawWaypoints, pathPoints)
@@ -156,9 +142,9 @@ class GpxRouteImporter @JvmOverloads constructor(
                 val summary = RouteSummary(
                     id = 0,
                     externalId = uri.lastPathSegment ?: "unknown",
-                    name = firstTrack?.trackName ?: parsedGpx.metadata?.name ?: "Imported Route",
+                    name = parsedGpx.trackName ?: parsedGpx.name ?: "Imported Route",
                     // Extract description from track or global metadata
-                    description = firstTrack?.trackDesc ?: parsedGpx.metadata?.desc ?: "",
+                    description = parsedGpx.trackDesc ?: parsedGpx.description ?: "",
                     isSelected = false,
                     distance = totalDist,
                     elevationGain = calculateElevationGain(pathPoints),

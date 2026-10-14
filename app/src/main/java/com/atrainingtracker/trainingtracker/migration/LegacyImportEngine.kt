@@ -20,6 +20,8 @@ import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.routes.parsers.GpxTrackpointParser
+import com.atrainingtracker.trainingtracker.routes.parsers.TcxTrackpointParser
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
@@ -529,305 +531,110 @@ object LegacyImportEngine {
             val foundSensors = mutableSetOf<SensorType>()
             val bufferedSamples = mutableListOf<ContentValues>()
 
-            FileInputStream(tcxFile).use { fis ->
-                val parser = Xml.newPullParser()
-                parser.setInput(fis, "UTF-8")
-                
-                var eventType = parser.eventType
-                var values = ContentValues()
-                var inActivity = false
-                var inLap = false
-                var inTrackpoint = false
-                var inCreator = false
-                var inAuthor = false
-                var currentLat: Double? = null
-                var currentLng: Double? = null
-                var currentAlt: Double? = null
-                var currentDist: Double? = null
+            val parseResult = FileInputStream(tcxFile).use { fis ->
+                TcxTrackpointParser.parse(fis)
+            }
+            if (parseResult.isFailure) {
+                Log.e(TAG, "Failed to parse TCX: ${parseResult.exceptionOrNull()?.message}")
+                return ImportResult(ImportStatus.FAILED)
+            }
+            val parsedTcx = parseResult.getOrThrow()
 
-                while (eventType != XmlPullParser.END_DOCUMENT) {
-                    val rawName = parser.name
-                    val name = rawName?.substringAfterLast(':')
-                    when (eventType) {
-                        XmlPullParser.START_TAG -> {
-                            when (name) {
-                                "Activity" -> {
-                                    inActivity = true
-                                    sportName = parser.getAttributeValue(null, "Sport")
-                                    if (sportName == null) {
-                                        for (i in 0 until parser.attributeCount) {
-                                            if (parser.getAttributeName(i).equals("Sport", ignoreCase = true)) {
-                                                sportName = parser.getAttributeValue(i)
-                                                break
-                                            }
-                                        }
-                                    }
-                                }
-                                "Creator" -> inCreator = true
-                                "Author" -> inAuthor = true
-                                "Lap" -> {
-                                    inLap = true
-                                    val rawStartTime = parser.getAttributeValue(null, "StartTime") ?: run {
-                                        for (i in 0 until parser.attributeCount) {
-                                            if (parser.getAttributeName(i).equals("StartTime", ignoreCase = true)) {
-                                                return@run parser.getAttributeValue(i)
-                                            }
-                                        }
-                                        null
-                                    }
-                                    val formattedStartTime = rawStartTime?.let { raw ->
-                                        try {
-                                            val date = tcxTimeFormat.parse(raw.substring(0, 19))
-                                            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
-                                        } catch (_: Exception) { raw }
-                                    }
-                                    val lap = ParsedLap(
-                                        lapNr = parsedLaps.size.toLong(),
-                                        startTime = formattedStartTime
-                                    )
-                                    parsedLaps.add(lap)
-                                    currentLap = lap
-                                }
-                                "TotalTimeSeconds" -> if (!inTrackpoint) {
-                                    currentLap?.totalTimeSeconds = parser.nextText().toDoubleOrNull() ?: 0.0
-                                }
-                                "MaximumSpeed" -> if (!inTrackpoint) {
-                                    currentLap?.maxSpeed = parser.nextText().toDoubleOrNull()
-                                }
-                                "Calories" -> if (!inTrackpoint) {
-                                    currentLap?.calories = parser.nextText().toIntOrNull()
-                                }
-                                "Notes" -> if (!inTrackpoint) {
-                                    val text = parser.nextText()
-                                    if (!text.isNullOrBlank()) {
-                                        if (inLap && currentLap != null) {
-                                            val trimmed = text.trim()
-                                            val bracketMatch = Regex("""^\[(.*?)\](?:\s*(.*))?$""", RegexOption.DOT_MATCHES_ALL).find(trimmed)
-                                            if (bracketMatch != null) {
-                                                val extractedName = bracketMatch.groupValues[1].trim()
-                                                val extractedDesc = bracketMatch.groupValues.getOrNull(2)?.trim()
-                                                if (currentLap.name.isNullOrBlank() && extractedName.isNotEmpty()) {
-                                                    currentLap.name = extractedName
-                                                }
-                                                if (currentLap.description.isNullOrBlank() && !extractedDesc.isNullOrEmpty()) {
-                                                    currentLap.description = extractedDesc
-                                                }
-                                            } else {
-                                                val lines = trimmed.lines()
-                                                if (lines.size > 1) {
-                                                    val firstLine = lines.first().trim()
-                                                    if (currentLap.name.isNullOrBlank() && firstLine.length <= 40) {
-                                                        currentLap.name = firstLine
-                                                        if (currentLap.description.isNullOrBlank()) {
-                                                            val remaining = lines.drop(1).joinToString("\n").trim()
-                                                            if (remaining.isNotEmpty()) {
-                                                                currentLap.description = remaining
-                                                            }
-                                                        }
-                                                    } else if (currentLap.description.isNullOrBlank()) {
-                                                        currentLap.description = trimmed
-                                                    }
-                                                } else {
-                                                    if (trimmed.length <= 40 && currentLap.name.isNullOrBlank()) {
-                                                        currentLap.name = trimmed
-                                                    } else if (currentLap.description.isNullOrBlank()) {
-                                                        currentLap.description = trimmed
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            val trimmed = text.trim()
-                                            val bracketMatch = Regex("""^\[(.*?)\](?:\s*(.*))?$""", RegexOption.DOT_MATCHES_ALL).find(trimmed)
-                                            if (bracketMatch != null) {
-                                                val extractedName = bracketMatch.groupValues[1].trim()
-                                                val extractedDesc = bracketMatch.groupValues.getOrNull(2)?.trim()
-                                                if (workoutName.isNullOrBlank() && extractedName.isNotEmpty()) {
-                                                    workoutName = extractedName
-                                                }
-                                                if (workoutNotes.isNullOrBlank() && !extractedDesc.isNullOrEmpty()) {
-                                                    workoutNotes = extractedDesc
-                                                }
-                                            } else {
-                                                val lines = trimmed.lines()
-                                                if (lines.size > 1) {
-                                                    val firstLine = lines.first().trim()
-                                                    if (workoutName.isNullOrBlank() && firstLine.length <= 60) {
-                                                        workoutName = firstLine
-                                                        if (workoutNotes.isNullOrBlank()) {
-                                                            val remaining = lines.drop(1).joinToString("\n").trim()
-                                                            if (remaining.isNotEmpty()) {
-                                                                workoutNotes = remaining
-                                                            }
-                                                        }
-                                                    } else if (workoutNotes.isNullOrBlank()) {
-                                                        workoutNotes = trimmed
-                                                    }
-                                                } else {
-                                                    if (workoutNotes.isNullOrBlank()) {
-                                                        workoutNotes = trimmed
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                "Name" -> if (!inTrackpoint) {
-                                    val text = parser.nextText()
-                                    if (!text.isNullOrBlank()) {
-                                        if (inLap && currentLap != null) {
-                                            currentLap.name = text.trim()
-                                        } else if (inActivity && !inLap && !inCreator && !inAuthor) {
-                                            workoutName = text.trim()
-                                        }
-                                    }
-                                }
-                                "Description" -> if (!inTrackpoint) {
-                                    val text = parser.nextText()
-                                    if (!text.isNullOrBlank()) {
-                                        if (inLap && currentLap != null) {
-                                            currentLap.description = text.trim()
-                                        } else if (inActivity && !inLap && !inCreator && !inAuthor) {
-                                            workoutNotes = text.trim()
-                                        }
-                                    }
-                                }
-                                "Trackpoint" -> {
-                                    inTrackpoint = true
-                                    val lapNr = (parsedLaps.size - 1).coerceAtLeast(0).toLong()
-                                    values = ContentValues().apply {
-                                        put(SensorType.LAP_NR.name, lapNr)
-                                    }
-                                    currentLat = null
-                                    currentLng = null
-                                    currentAlt = null
-                                    currentDist = null
-                                }
-                                "Time" -> if (inTrackpoint) {
-                                    val rawTime = parser.nextText()
-                                    val formatted = try { 
-                                        val date = tcxTimeFormat.parse(rawTime.substring(0, 19))
-                                        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
-                                    } catch (e: Exception) { rawTime }
-                                    values.put("time", formatted)
-                                    if (firstTime == null) firstTime = formatted
-                                    lastTime = formatted
-                                }
-                                "LatitudeDegrees" -> if (inTrackpoint) {
-                                    val lat = parser.nextText().toDoubleOrNull()
-                                    if (lat != null) {
-                                        values.put(SensorType.LATITUDE.name, lat)
-                                        currentLat = lat
-                                        foundSensors.add(SensorType.LATITUDE)
-                                    }
-                                }
-                                "LongitudeDegrees" -> if (inTrackpoint) {
-                                    val lng = parser.nextText().toDoubleOrNull()
-                                    if (lng != null) {
-                                        values.put(SensorType.LONGITUDE.name, lng)
-                                        currentLng = lng
-                                        foundSensors.add(SensorType.LONGITUDE)
-                                    }
-                                }
-                                "AltitudeMeters" -> if (inTrackpoint) {
-                                    currentAlt = parser.nextText().toDoubleOrNull()
-                                    if (currentAlt != null) {
-                                        values.put(SensorType.ALTITUDE.name, currentAlt)
-                                        foundSensors.add(SensorType.ALTITUDE)
-                                    }
-                                }
-                                "DistanceMeters" -> if (inTrackpoint) {
-                                    currentDist = parser.nextText().toDoubleOrNull()
-                                    if (currentDist != null) {
-                                        values.put(SensorType.DISTANCE_m.name, currentDist)
-                                        foundSensors.add(SensorType.DISTANCE_m)
-                                    }
-                                } else {
-                                    currentLap?.distanceMeters = parser.nextText().toDoubleOrNull() ?: 0.0
-                                }
-                                "Value" -> {
-                                    if (inTrackpoint && parser.getAttributeValue(null, "xsi:type") == null) {
-                                        val hr = parser.nextText().toIntOrNull()
-                                        if (hr != null) {
-                                            values.put(SensorType.HR.name, hr)
-                                            foundSensors.add(SensorType.HR)
-                                        }
-                                    } else if (!inTrackpoint) {
-                                        val hr = parser.nextText().toIntOrNull()
-                                        if (hr != null && currentLap != null && currentLap.avgHeartRate == null) {
-                                            currentLap.avgHeartRate = hr
-                                        }
-                                    }
-                                }
-                                "Cadence" -> if (inTrackpoint) {
-                                    val cad = parser.nextText().toIntOrNull()
-                                    if (cad != null) {
-                                        values.put(SensorType.CADENCE.name, cad)
-                                        foundSensors.add(SensorType.CADENCE)
-                                    }
-                                }
-                                "Watts" -> if (inTrackpoint) {
-                                    val pwr = parser.nextText().toIntOrNull()
-                                    if (pwr != null) {
-                                        values.put(SensorType.POWER.name, pwr)
-                                        foundSensors.add(SensorType.POWER)
-                                    }
-                                }
-                                "Speed" -> if (inTrackpoint) {
-                                    val spd = parser.nextText().toDoubleOrNull()
-                                    if (spd != null) {
-                                        values.put(SensorType.SPEED_mps.name, spd)
-                                        foundSensors.add(SensorType.SPEED_mps)
-                                    }
-                                }
-                                "RunCadence" -> if (inTrackpoint) {
-                                    val cad = parser.nextText().toIntOrNull()
-                                    if (cad != null) {
-                                        values.put(SensorType.CADENCE.name, cad)
-                                        foundSensors.add(SensorType.CADENCE)
-                                    }
-                                }
-                            }
+            sportName = parsedTcx.sport
+            if (!parsedTcx.name.isNullOrBlank() && workoutName.isNullOrBlank()) {
+                workoutName = parsedTcx.name
+            }
+            if (!parsedTcx.notes.isNullOrBlank() && workoutNotes.isNullOrBlank()) {
+                workoutNotes = parsedTcx.notes
+            }
+
+            for (lap in parsedTcx.laps) {
+                val formattedStartTime = lap.startTime?.let { raw ->
+                    try {
+                        val date = tcxTimeFormat.parse(raw.substring(0, 19))
+                        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
+                    } catch (_: Exception) { raw }
+                }
+
+                val parsedLap = ParsedLap(
+                    lapNr = lap.lapNr,
+                    startTime = formattedStartTime,
+                    totalTimeSeconds = lap.totalTimeSeconds ?: 0.0,
+                    distanceMeters = lap.distanceMeters ?: 0.0,
+                    maxSpeed = lap.maxSpeed,
+                    calories = lap.calories,
+                    avgHeartRate = lap.avgHeartRate,
+                    name = lap.name,
+                    description = lap.description
+                )
+                parsedLaps.add(parsedLap)
+
+                for (pt in lap.trackpoints) {
+                    val values = ContentValues().apply {
+                        put(SensorType.LAP_NR.name, lap.lapNr)
+                    }
+
+                    pt.time?.let { rawTime ->
+                        val formatted = try {
+                            val date = tcxTimeFormat.parse(rawTime.substring(0, 19))
+                            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
+                        } catch (_: Exception) { rawTime }
+                        values.put("time", formatted)
+                        if (firstTime == null) firstTime = formatted
+                        lastTime = formatted
+                    }
+
+                    values.put(SensorType.LATITUDE.name, pt.lat)
+                    values.put(SensorType.LONGITUDE.name, pt.lng)
+                    foundSensors.add(SensorType.LATITUDE)
+                    foundSensors.add(SensorType.LONGITUDE)
+
+                    val pos = LatLng(pt.lat, pt.lng)
+                    points.add(pos)
+
+                    pt.altitude?.let { alt ->
+                        values.put(SensorType.ALTITUDE.name, alt)
+                        foundSensors.add(SensorType.ALTITUDE)
+                        altitudes.add(alt)
+                        if (alt < minAltVal) {
+                            minAltVal = alt
+                            minAltPos = pos
                         }
-                        XmlPullParser.END_TAG -> {
-                            if (name == "Activity") {
-                                inActivity = false
-                            }
-                            if (name == "Creator") {
-                                inCreator = false
-                            }
-                            if (name == "Author") {
-                                inAuthor = false
-                            }
-                            if (name == "Lap") {
-                                inLap = false
-                                currentLap = null
-                            }
-                            if (name == "Trackpoint") {
-                                if (values.containsKey("time")) {
-                                    bufferedSamples.add(values)
-                                }
-
-                                if (currentLat != null && currentLng != null) {
-                                    val pos = LatLng(currentLat!!, currentLng!!)
-                                    points.add(pos)
-                                    if (currentAlt != null) {
-                                        if (currentAlt!! < minAltVal) {
-                                            minAltVal = currentAlt!!
-                                            minAltPos = pos
-                                        }
-                                        if (currentAlt!! > maxAltVal) {
-                                            maxAltVal = currentAlt!!
-                                            maxAltPos = pos
-                                        }
-                                    }
-                                }
-                                currentAlt?.let { altitudes.add(it) }
-                                currentDist?.let { distances.add(it) }
-                                inTrackpoint = false
-                            }
+                        if (alt > maxAltVal) {
+                            maxAltVal = alt
+                            maxAltPos = pos
                         }
                     }
-                    eventType = parser.next()
+
+                    pt.distanceMeters?.let { dist ->
+                        values.put(SensorType.DISTANCE_m.name, dist)
+                        foundSensors.add(SensorType.DISTANCE_m)
+                        distances.add(dist)
+                    }
+
+                    pt.hr?.let { hr ->
+                        values.put(SensorType.HR.name, hr)
+                        foundSensors.add(SensorType.HR)
+                    }
+
+                    pt.cadence?.let { cad ->
+                        values.put(SensorType.CADENCE.name, cad)
+                        foundSensors.add(SensorType.CADENCE)
+                    }
+
+                    pt.power?.let { pwr ->
+                        values.put(SensorType.POWER.name, pwr)
+                        foundSensors.add(SensorType.POWER)
+                    }
+
+                    pt.speedMps?.let { spd ->
+                        values.put(SensorType.SPEED_mps.name, spd)
+                        foundSensors.add(SensorType.SPEED_mps)
+                    }
+
+                    if (values.containsKey("time")) {
+                        bufferedSamples.add(values)
+                    }
                 }
             }
 
@@ -1008,10 +815,6 @@ object LegacyImportEngine {
             val altitudes = mutableListOf<Double>()
             val distances = mutableListOf<Double>()
             val parsedLaps = mutableListOf<ParsedLap>()
-            var currentLap: ParsedLap? = null
-            var lapFirstTime: String? = null
-            var lapLastTime: String? = null
-            var lapStartDistance = 0.0
 
             var minAltVal = Double.MAX_VALUE
             var minAltPos: LatLng? = null
@@ -1025,226 +828,133 @@ object LegacyImportEngine {
             var prevLng: Double? = null
             var cumDist = 0.0
 
-            FileInputStream(gpxFile).use { fis ->
-                val parser = Xml.newPullParser()
-                parser.setInput(fis, "UTF-8")
+            val parseResult = FileInputStream(gpxFile).use { fis ->
+                GpxTrackpointParser.parse(fis)
+            }
+            if (parseResult.isFailure) {
+                Log.e(TAG, "Failed to parse GPX XML: ${parseResult.exceptionOrNull()?.message}")
+                return ImportResult(ImportStatus.FAILED)
+            }
+            val parsedGpx = parseResult.getOrThrow()
 
-                var eventType = parser.eventType
-                var values = ContentValues()
-                var inMetadata = false
-                var inTrk = false
-                var inTrackpoint = false
-                var currentLat: Double? = null
-                var currentLng: Double? = null
-                var currentAlt: Double? = null
-
-                while (eventType != XmlPullParser.END_DOCUMENT) {
-                    val rawName = parser.name
-                    val name = rawName?.substringAfterLast(':')
-                    when (eventType) {
-                        XmlPullParser.START_TAG -> {
-                            when (name) {
-                                "metadata" -> inMetadata = true
-                                "trk" -> inTrk = true
-                                "trkseg" -> {
-                                    lapStartDistance = cumDist
-                                    lapFirstTime = null
-                                    lapLastTime = null
-                                    val lap = ParsedLap(
-                                        lapNr = parsedLaps.size.toLong()
-                                    )
-                                    parsedLaps.add(lap)
-                                    currentLap = lap
-                                }
-                                "trkpt", "rtept" -> {
-                                    inTrackpoint = true
-                                    currentLat = parser.getAttributeValue(null, "lat")?.toDoubleOrNull()
-                                        ?: parser.getAttributeValue("", "lat")?.toDoubleOrNull()
-                                    currentLng = parser.getAttributeValue(null, "lon")?.toDoubleOrNull()
-                                        ?: parser.getAttributeValue("", "lon")?.toDoubleOrNull()
-                                    if (currentLat == null || currentLng == null) {
-                                        for (i in 0 until parser.attributeCount) {
-                                            if (parser.getAttributeName(i).equals("lat", ignoreCase = true)) {
-                                                currentLat = parser.getAttributeValue(i).toDoubleOrNull()
-                                            } else if (parser.getAttributeName(i).equals("lon", ignoreCase = true)) {
-                                                currentLng = parser.getAttributeValue(i).toDoubleOrNull()
-                                            }
-                                        }
-                                    }
-
-                                    if (currentLap == null && parsedLaps.isEmpty()) {
-                                        val lap = ParsedLap(lapNr = 0L)
-                                        parsedLaps.add(lap)
-                                        currentLap = lap
-                                        lapStartDistance = cumDist
-                                    }
-
-                                    val lapNr = (parsedLaps.size - 1).coerceAtLeast(0).toLong()
-                                    values = ContentValues().apply {
-                                        put(SensorType.LAP_NR.name, lapNr)
-                                    }
-
-                                    if (currentLat != null && currentLng != null) {
-                                        if (prevLat != null && prevLng != null) {
-                                            val results = FloatArray(1)
-                                            Location.distanceBetween(prevLat!!, prevLng!!, currentLat!!, currentLng!!, results)
-                                            cumDist += results[0].toDouble()
-                                        }
-                                        prevLat = currentLat
-                                        prevLng = currentLng
-
-                                        values.put(SensorType.LATITUDE.name, currentLat)
-                                        values.put(SensorType.LONGITUDE.name, currentLng)
-                                        values.put(SensorType.DISTANCE_m.name, cumDist)
-                                        foundSensors.add(SensorType.LATITUDE)
-                                        foundSensors.add(SensorType.LONGITUDE)
-                                        foundSensors.add(SensorType.DISTANCE_m)
-                                    }
-                                    currentAlt = null
-                                }
-                                "ele" -> if (inTrackpoint) {
-                                    currentAlt = parser.nextText().toDoubleOrNull()
-                                    if (currentAlt != null) {
-                                        values.put(SensorType.ALTITUDE.name, currentAlt)
-                                        foundSensors.add(SensorType.ALTITUDE)
-                                    }
-                                }
-                                "time" -> {
-                                    val rawTime = parser.nextText()
-                                    val formatted = try {
-                                        val date = tcxTimeFormat.parse(rawTime.substring(0, 19))
-                                        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
-                                    } catch (_: Exception) { rawTime }
-
-                                    if (inTrackpoint) {
-                                        values.put("time", formatted)
-                                        if (firstTime == null) firstTime = formatted
-                                        lastTime = formatted
-                                        if (lapFirstTime == null) lapFirstTime = formatted
-                                        lapLastTime = formatted
-                                        if (currentLap?.startTime == null) currentLap?.startTime = formatted
-                                    } else if (inMetadata && firstTime == null) {
-                                        firstTime = formatted
-                                    }
-                                }
-                                "speed" -> if (inTrackpoint) {
-                                    val spd = parser.nextText().toDoubleOrNull()
-                                    if (spd != null) {
-                                        values.put(SensorType.SPEED_mps.name, spd)
-                                        foundSensors.add(SensorType.SPEED_mps)
-                                    }
-                                }
-                                "hr", "heartrate" -> if (inTrackpoint) {
-                                    val hr = parser.nextText().toIntOrNull()
-                                    if (hr != null) {
-                                        values.put(SensorType.HR.name, hr)
-                                        foundSensors.add(SensorType.HR)
-                                    }
-                                }
-                                "cad", "cadence" -> if (inTrackpoint) {
-                                    val cad = parser.nextText().toIntOrNull()
-                                    if (cad != null) {
-                                        values.put(SensorType.CADENCE.name, cad)
-                                        foundSensors.add(SensorType.CADENCE)
-                                    }
-                                }
-                                "atemp", "temp" -> if (inTrackpoint) {
-                                    val temp = parser.nextText().toDoubleOrNull()
-                                    if (temp != null) {
-                                        values.put(SensorType.TEMPERATURE.name, temp)
-                                        foundSensors.add(SensorType.TEMPERATURE)
-                                    }
-                                }
-                                "power", "watts" -> if (inTrackpoint) {
-                                    val pwr = parser.nextText().toIntOrNull()
-                                    if (pwr != null) {
-                                        values.put(SensorType.POWER.name, pwr)
-                                        foundSensors.add(SensorType.POWER)
-                                    }
-                                }
-                                "name" -> if (!inTrackpoint) {
-                                    val text = parser.nextText()
-                                    if (!text.isNullOrBlank() && workoutName.isNullOrBlank()) {
-                                        workoutName = text.trim()
-                                    }
-                                }
-                                "desc", "description" -> if (!inTrackpoint) {
-                                    val text = parser.nextText()
-                                    if (!text.isNullOrBlank() && workoutNotes.isNullOrBlank()) {
-                                        workoutNotes = text.trim()
-                                    }
-                                }
-                                "type", "activity", "sport" -> if (!inTrackpoint) {
-                                    val text = parser.nextText()
-                                    if (!text.isNullOrBlank() && sportName.isNullOrBlank()) {
-                                        sportName = text.trim()
-                                    }
-                                }
-                            }
-                        }
-                        XmlPullParser.END_TAG -> {
-                            when (name) {
-                                "metadata" -> inMetadata = false
-                                "trk" -> inTrk = false
-                                "trkseg" -> {
-                                    currentLap?.let { lap ->
-                                        lap.distanceMeters = (cumDist - lapStartDistance).coerceAtLeast(0.0)
-                                        if (lapFirstTime != null && lapLastTime != null) {
-                                            try {
-                                                val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
-                                                val t1 = format.parse(lapFirstTime!!)?.time ?: 0L
-                                                val t2 = format.parse(lapLastTime!!)?.time ?: 0L
-                                                val duration = ((t2 - t1) / 1000.0).coerceAtLeast(0.0)
-                                                lap.totalTimeSeconds = duration
-                                                if (duration > 0) {
-                                                    lap.maxSpeed = lap.distanceMeters / duration
-                                                }
-                                            } catch (_: Exception) {}
-                                        }
-                                    }
-                                    currentLap = null
-                                }
-                                "trkpt", "rtept" -> {
-                                    if (values.containsKey("time")) {
-                                        bufferedSamples.add(values)
-                                    }
-
-                                    if (currentLat != null && currentLng != null) {
-                                        val pos = LatLng(currentLat!!, currentLng!!)
-                                        points.add(pos)
-                                        if (currentAlt != null) {
-                                            if (currentAlt!! < minAltVal) {
-                                                minAltVal = currentAlt!!
-                                                minAltPos = pos
-                                            }
-                                            if (currentAlt!! > maxAltVal) {
-                                                maxAltVal = currentAlt!!
-                                                maxAltPos = pos
-                                            }
-                                        }
-                                    }
-                                    currentAlt?.let { altitudes.add(it) }
-                                    distances.add(cumDist)
-                                    inTrackpoint = false
-                                }
-                            }
-                        }
-                    }
-                    eventType = parser.next()
-                }
+            if (!parsedGpx.name.isNullOrBlank() && workoutName.isNullOrBlank()) {
+                workoutName = parsedGpx.name
+            }
+            if (!parsedGpx.trackName.isNullOrBlank()) {
+                workoutName = parsedGpx.trackName
+            }
+            if (!parsedGpx.description.isNullOrBlank() && workoutNotes.isNullOrBlank()) {
+                workoutNotes = parsedGpx.description
+            }
+            if (!parsedGpx.trackDesc.isNullOrBlank()) {
+                workoutNotes = parsedGpx.trackDesc
+            }
+            if (!parsedGpx.sport.isNullOrBlank() && sportName.isNullOrBlank()) {
+                sportName = parsedGpx.sport
             }
 
-            // Finalize any unfinished lap
-            currentLap?.let { lap ->
-                if (lap.distanceMeters <= 0.0 && cumDist > lapStartDistance) {
-                    lap.distanceMeters = (cumDist - lapStartDistance).coerceAtLeast(0.0)
+            for (lap in parsedGpx.laps) {
+                var lapFirstTime: String? = null
+                var lapLastTime: String? = null
+                val lapStartDistance = cumDist
+
+                val parsedLap = ParsedLap(
+                    lapNr = lap.lapNr
+                )
+                parsedLaps.add(parsedLap)
+
+                for (pt in lap.trackpoints) {
+                    val lapNr = lap.lapNr
+                    val values = ContentValues().apply {
+                        put(SensorType.LAP_NR.name, lapNr)
+                    }
+
+                    if (prevLat != null && prevLng != null) {
+                        val results = FloatArray(1)
+                        Location.distanceBetween(prevLat, prevLng, pt.lat, pt.lng, results)
+                        cumDist += results[0].toDouble()
+                    }
+                    prevLat = pt.lat
+                    prevLng = pt.lng
+
+                    values.put(SensorType.LATITUDE.name, pt.lat)
+                    values.put(SensorType.LONGITUDE.name, pt.lng)
+                    values.put(SensorType.DISTANCE_m.name, cumDist)
+                    foundSensors.add(SensorType.LATITUDE)
+                    foundSensors.add(SensorType.LONGITUDE)
+                    foundSensors.add(SensorType.DISTANCE_m)
+
+                    val pos = LatLng(pt.lat, pt.lng)
+                    points.add(pos)
+
+                    pt.altitude?.let { alt ->
+                        values.put(SensorType.ALTITUDE.name, alt)
+                        foundSensors.add(SensorType.ALTITUDE)
+                        altitudes.add(alt)
+                        if (alt < minAltVal) {
+                            minAltVal = alt
+                            minAltPos = pos
+                        }
+                        if (alt > maxAltVal) {
+                            maxAltVal = alt
+                            maxAltPos = pos
+                        }
+                    }
+
+                    pt.time?.let { rawTime ->
+                        val formatted = try {
+                            val date = tcxTimeFormat.parse(rawTime.substring(0, 19))
+                            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
+                        } catch (_: Exception) { rawTime }
+
+                        values.put("time", formatted)
+                        if (firstTime == null) firstTime = formatted
+                        lastTime = formatted
+                        if (lapFirstTime == null) lapFirstTime = formatted
+                        lapLastTime = formatted
+                        if (parsedLap.startTime == null) parsedLap.startTime = formatted
+                    }
+
+                    pt.speedMps?.let { spd ->
+                        values.put(SensorType.SPEED_mps.name, spd)
+                        foundSensors.add(SensorType.SPEED_mps)
+                    }
+                    pt.hr?.let { hr ->
+                        values.put(SensorType.HR.name, hr)
+                        foundSensors.add(SensorType.HR)
+                    }
+                    pt.cadence?.let { cad ->
+                        values.put(SensorType.CADENCE.name, cad)
+                        foundSensors.add(SensorType.CADENCE)
+                    }
+                    pt.temperature?.let { temp ->
+                        values.put(SensorType.TEMPERATURE.name, temp)
+                        foundSensors.add(SensorType.TEMPERATURE)
+                    }
+                    pt.power?.let { pwr ->
+                        values.put(SensorType.POWER.name, pwr)
+                        foundSensors.add(SensorType.POWER)
+                    }
+
+                    distances.add(cumDist)
+
+                    if (values.containsKey("time")) {
+                        bufferedSamples.add(values)
+                    }
                 }
-                if (lapFirstTime != null && lapLastTime != null && lap.totalTimeSeconds <= 0.0) {
+
+                // Finalize lap stats
+                parsedLap.distanceMeters = (cumDist - lapStartDistance).coerceAtLeast(0.0)
+                if (lapFirstTime != null && lapLastTime != null) {
                     try {
                         val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
-                        val t1 = format.parse(lapFirstTime!!)?.time ?: 0L
-                        val t2 = format.parse(lapLastTime!!)?.time ?: 0L
-                        lap.totalTimeSeconds = ((t2 - t1) / 1000.0).coerceAtLeast(0.0)
+                        val t1 = format.parse(lapFirstTime)?.time ?: 0L
+                        val t2 = format.parse(lapLastTime)?.time ?: 0L
+                        val duration = ((t2 - t1) / 1000.0).coerceAtLeast(0.0)
+                        parsedLap.totalTimeSeconds = duration
+                        if (duration > 0) {
+                            parsedLap.maxSpeed = parsedLap.distanceMeters / duration
+                        }
                     } catch (_: Exception) {}
                 }
             }
