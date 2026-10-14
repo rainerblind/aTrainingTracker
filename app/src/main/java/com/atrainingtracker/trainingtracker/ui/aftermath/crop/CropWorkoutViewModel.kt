@@ -139,10 +139,9 @@ class CropWorkoutViewModel(
                     onSuccess()
                 },
                 onFailure = { error ->
-                    val errorRes = if (error.message == "crop_insufficient_storage") {
-                        R.string.crop_insufficient_storage
-                    } else {
-                        R.string.crop_export_failed_retry
+                    val errorRes = when (error) {
+                        is CropStorageException -> error.stringResId
+                        else -> R.string.crop_export_failed_retry
                     }
                     _uiState.update { it.copy(errorMessageResId = errorRes) }
                     onError(errorRes)

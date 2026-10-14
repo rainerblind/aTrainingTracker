@@ -298,7 +298,7 @@ def get_git_diff():
                 base = subprocess.check_output(["git", "merge-base", clean_b, "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
                 diff = subprocess.check_output(["git", "diff", base] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
                 if diff.strip():
-                    return diff[:60000]
+                    return diff[:250000]
                 else:
                     return "(No implementation code diff yet; Stage 1-3 design phase)"
     except Exception:
@@ -307,7 +307,7 @@ def get_git_diff():
         base = subprocess.check_output(["git", "merge-base", "develop", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
         diff = subprocess.check_output(["git", "diff", base] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
         if diff.strip():
-            return diff[:60000]
+            return diff[:250000]
         else:
             return "(No implementation code diff yet; Stage 1-3 design phase)"
     except Exception:
@@ -316,7 +316,7 @@ def get_git_diff():
         diff = subprocess.check_output(["git", "diff", "HEAD"] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
         if not diff.strip():
             diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD"] + exclude_args, stderr=subprocess.DEVNULL).decode("utf-8")
-        return diff[:60000]
+        return diff[:250000]
     except Exception:
         return ""
 

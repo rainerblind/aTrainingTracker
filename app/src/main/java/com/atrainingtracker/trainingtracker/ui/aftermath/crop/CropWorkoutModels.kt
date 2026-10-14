@@ -57,3 +57,10 @@ data class CropWorkoutUiState(
     val points: List<CropSamplePoint> = emptyList(),
     val isValid: Boolean = false
 )
+
+/**
+ * Exception thrown when device storage is insufficient for safe transactional cropping.
+ */
+class CropStorageException(val stringResId: Int = com.atrainingtracker.R.string.crop_insufficient_storage) :
+    IllegalStateException("Insufficient storage to crop workout")
+

@@ -75,6 +75,7 @@ import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -724,9 +725,10 @@ class WorkoutRepository private constructor(private val application: Application
     /**
      * Checks and removes any orphaned ephemeral crop snapshots left behind by an aborted process,
      * verifying database integrity and reloading workout data before deletion.
+     *
+     * @return [Job] representing the background recovery task.
      */
-    fun reconcilePendingCropRecovery() {
-        launch(Dispatchers.IO) {
+    fun reconcilePendingCropRecovery(): Job = launch(Dispatchers.IO) {
             try {
                 val backupFiles = application.cacheDir.listFiles { file ->
                     file.name.startsWith("crop_backup_") && file.name.endsWith(".json")
@@ -750,7 +752,6 @@ class WorkoutRepository private constructor(private val application: Application
                 Log.e(TAG, "Error in reconcilePendingCropRecovery", e)
             }
         }
-    }
 
     /**
      * Retrieves lightweight ordered sample points for crop visualization and boundary calculation.
@@ -823,6 +824,8 @@ class WorkoutRepository private constructor(private val application: Application
      * @param workoutId The database ID of the workout.
      * @param startIndex 0-based sample start index to retain.
      * @param endIndex 0-based sample end index to retain.
+     * @throws IllegalStateException If samples table does not exist or database integrity verification fails.
+     * @throws com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropStorageException If insufficient storage space exists.
      * @return Result.success on success, Result.failure on storage or validation errors.
      */
     suspend fun cropWorkout(workoutId: Long, startIndex: Int, endIndex: Int): Result<Unit> = withContext(Dispatchers.IO) {
@@ -841,7 +844,7 @@ class WorkoutRepository private constructor(private val application: Application
             val stat = android.os.StatFs(application.filesDir.path)
             if (stat.availableBytes < requiredBytes) {
                 Log.e(TAG, "Insufficient storage for crop: available=${stat.availableBytes}, required=$requiredBytes")
-                return@withContext Result.failure(IllegalStateException("crop_insufficient_storage"))
+                return@withContext Result.failure(com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropStorageException())
             }
 
             val samples = getCropSamplePoints(workoutId)
