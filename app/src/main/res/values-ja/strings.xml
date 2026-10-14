@@ -1750,5 +1750,9 @@
     <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
     <string name="tuning_nav_cue_distance_title">ナビゲーション案内の距離</string>
     <string name="tuning_nav_cue_distance_desc">右左折案内を表示する手前の距離</string>
+    <!-- First-Time Stop Tracking Coachmark (ATT-3387 / REQ-UI-367) -->
+    <string name="coachmark_stop_tracking_hint">右にスワイプするか左端のタブをタップすると、ワークアウトを一時停止または終了できます。</string>
+    <string name="coachmark_stop_tracking_show_tab">操作タブを表示</string>
+    <string name="coachmark_stop_tracking_dismiss">了解</string>
 </resources>
 

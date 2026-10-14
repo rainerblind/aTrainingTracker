@@ -188,6 +188,9 @@ object TuningPreferencesDefaults {
 
     const val CLUSTER_USE_SPORT_TYPE = true
     const val CLUSTER_USE_ALTITUDE_POS = true
+
+    /** First-time stop tracking coachmark banner acknowledgement default (REQ-UI-367 / ATT-3387). */
+    const val DEFAULT_HAS_SEEN_STOP_TRACKING_HINT = false
 }
 
 /**
@@ -336,6 +339,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_CLUSTER_TOL_ALTITUDE_POS: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_tol_altitude_pos")
         val KEY_CLUSTER_USE_SPORT_TYPE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_sport_type")
         val KEY_CLUSTER_USE_ALTITUDE_POS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_altitude_pos")
+        val KEY_HAS_SEEN_STOP_TRACKING_HINT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_has_seen_stop_tracking_hint")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -382,7 +386,8 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_CLUSTER_TOL_DISTANCE,
             KEY_CLUSTER_TOL_ALTITUDE_POS,
             KEY_CLUSTER_USE_SPORT_TYPE,
-            KEY_CLUSTER_USE_ALTITUDE_POS
+            KEY_CLUSTER_USE_ALTITUDE_POS,
+            KEY_HAS_SEEN_STOP_TRACKING_HINT
         )
     }
 
@@ -901,6 +906,23 @@ class TuningPreferencesDataStore(private val context: Context) {
         )
         context.dataStore.edit { prefs ->
             prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] = clamped
+        }
+    }
+
+    /**
+     * Reactive flow emitting whether the first-time stop tracking coachmark hint on the cockpit screen
+     * has already been seen/dismissed by the user (REQ-UI-367 / ATT-3387).
+     */
+    val hasSeenStopTrackingHintFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_HAS_SEEN_STOP_TRACKING_HINT] ?: TuningPreferencesDefaults.DEFAULT_HAS_SEEN_STOP_TRACKING_HINT
+    }
+
+    /**
+     * Atomically persists whether the first-time stop tracking coachmark hint has been acknowledged (REQ-UI-367 / ATT-3387).
+     */
+    suspend fun setHasSeenStopTrackingHint(seen: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_HAS_SEEN_STOP_TRACKING_HINT] = seen
         }
     }
 
