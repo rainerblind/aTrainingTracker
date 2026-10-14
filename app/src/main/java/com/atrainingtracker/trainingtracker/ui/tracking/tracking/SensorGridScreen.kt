@@ -117,6 +117,7 @@ import com.atrainingtracker.trainingtracker.ui.routes.ReturnNavigationHud
 import com.atrainingtracker.trainingtracker.ui.routes.TurnPromptBanner
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
+import com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingSheetContainer
 import com.atrainingtracker.trainingtracker.ui.components.core.sheetContour
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -281,46 +282,27 @@ fun SensorGridScreen(
             sheetPeekHeight = if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
             sheetSwipeEnabled = (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING && isTabActive,
             sheetContent = {
-                if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveSegments && activeSegment != null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                            .sheetContour()
-                            .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
-                            .then(
-                                if (scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded) {
-                                    Modifier.clickable {
-                                        coroutineScope.launch {
-                                            scaffoldState.bottomSheetState.expand()
-                                        }
-                                    }
-                                } else Modifier
-                            )
+                val showSegment = shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveSegments && activeSegment != null
+                val showClimb = shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveClimbs && activeLiveClimb != null
+                if (showSegment || showClimb) {
+                    // LiveTrackingSheetContainer encapsulates sheetContour(), surface styling, and click-to-expand (REQ-UI-366)
+                    LiveTrackingSheetContainer(
+                        isPartiallyExpanded = scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded,
+                        onExpand = {
+                            coroutineScope.launch {
+                                scaffoldState.bottomSheetState.expand()
+                            }
+                        }
                     ) {
-                        LiveSegmentSheet(
-                            liveSegment = activeSegment
-                        )
-                    }
-                } else if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveClimbs && activeLiveClimb != null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .sheetContour()
-                            .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
-                            .then(
-                                if (scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded) {
-                                    Modifier.clickable {
-                                        coroutineScope.launch {
-                                            scaffoldState.bottomSheetState.expand()
-                                        }
-                                    }
-                                } else Modifier
+                        if (showSegment) {
+                            LiveSegmentSheet(
+                                liveSegment = activeSegment
                             )
-                    ) {
-                        LiveClimbSheet(
-                            liveClimb = activeLiveClimb!!
-                        )
+                        } else if (showClimb) {
+                            LiveClimbSheet(
+                                liveClimb = activeLiveClimb!!
+                            )
+                        }
                     }
                 }
             }
