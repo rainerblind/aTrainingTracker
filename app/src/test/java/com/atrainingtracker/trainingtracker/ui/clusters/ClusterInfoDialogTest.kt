@@ -38,6 +38,7 @@ class ClusterInfoDialogTest {
         "cluster_info_sports_desc",
         "cluster_info_tuning_title",
         "cluster_info_tuning_desc",
+        "cluster_info_open_advanced_tuning",
         "cluster_info_close"
     )
 

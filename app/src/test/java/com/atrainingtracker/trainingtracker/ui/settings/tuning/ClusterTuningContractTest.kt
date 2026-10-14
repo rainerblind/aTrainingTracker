@@ -125,4 +125,34 @@ class ClusterTuningContractTest {
         assertTrue("ClusterTuningContent must support enabled parameter", content.contains("enabled: Boolean = true"))
         assertTrue("Must declare TuningSlider composable", content.contains("fun TuningSlider("))
     }
+
+    @Test
+    fun clusterTuningSection_recalculateButtonStyledInErrorColorsWithAccessibleProgress() {
+        val sectionFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/ClusterTuningSection.kt")
+        assertTrue("ClusterTuningSection.kt must exist", sectionFile.exists())
+
+        val content = sectionFile.readText()
+        assertTrue(
+            "Recalculate button must configure containerColor to error token (REQ-SET-076, ATT-3492)",
+            content.contains("containerColor = MaterialTheme.colorScheme.error")
+        )
+        assertTrue(
+            "Recalculate button must configure contentColor to onError token (REQ-SET-076, ATT-3492)",
+            content.contains("contentColor = MaterialTheme.colorScheme.onError")
+        )
+        assertTrue(
+            "Recalculate button must configure disabledContainerColor (REQ-SET-076, ATT-3492)",
+            content.contains("disabledContainerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.6f)")
+        )
+        assertTrue(
+            "Recalculate button must configure disabledContentColor to onError (REQ-SET-076, ATT-3492)",
+            content.contains("disabledContentColor = MaterialTheme.colorScheme.onError")
+        )
+        assertTrue(
+            "CircularProgressIndicator must use onError color for WCAG 2.1 accessible contrast (REQ-SET-076, ATT-3492)",
+            content.contains("CircularProgressIndicator(") &&
+                    content.contains("color = MaterialTheme.colorScheme.onError")
+        )
+    }
 }
+

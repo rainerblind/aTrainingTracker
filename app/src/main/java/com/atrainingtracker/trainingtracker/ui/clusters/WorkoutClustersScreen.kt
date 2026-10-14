@@ -73,6 +73,7 @@ fun WorkoutClustersScreen(
     trackOnMapViewModel: TrackOnMapAftermathViewModel = viewModel(),
     initialClusterId: Long? = null,
     onBackToNav: (() -> Unit)? = null,
+    onNavigateToAdvancedSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -275,7 +276,8 @@ fun WorkoutClustersScreen(
                 onHitCountClick = { viewingWorkoutsForCluster = it },
                 onAddClick = { isAdding = true },
                 onDeleteRequest = { clusterToDelete = it },
-                migrationStatus = migrationStatus
+                migrationStatus = migrationStatus,
+                onNavigateToAdvancedSettings = onNavigateToAdvancedSettings
             )
 
             if (workoutToCluster != null) {
