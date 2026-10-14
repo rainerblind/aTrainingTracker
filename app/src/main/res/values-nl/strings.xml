@@ -324,6 +324,9 @@
     <string name="automated_strava_routes_sync">Automatische routesynchronisatie</string>
     <string name="automated_strava_routes_sync_summary">Regelmatig routes ophalen van Strava</string>
     <string name="strava_routes_sync_interval">Synchronisatie-interval</string>
+    <string name="automated_strava_equipment_sync">Automatische materiaalsynchronisatie</string>
+    <string name="automated_strava_equipment_sync_summary">Regelmatig fietsen en schoenen ophalen van Strava</string>
+    <string name="strava_equipment_sync_interval">Synchronisatie-interval</string>
 
     <string name="strava_success_but_must_check">geüpload naar Strava, resultaat controleren …</string>
     <string name="strava_success_waiting_for_result">geüpload naar Strava, even wachten …</string>

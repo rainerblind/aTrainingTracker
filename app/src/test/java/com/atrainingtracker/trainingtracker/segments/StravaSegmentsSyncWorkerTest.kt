@@ -73,7 +73,12 @@ class StravaSegmentsSyncWorkerTest {
         mockkStatic(TrainingApplication::class)
         every { TrainingApplication.isWorkManagerAvailable() } returns true
         every { TrainingApplication.getStravaAccessToken() } returns "valid_test_token"
+        every { TrainingApplication.isAutomatedStravaSegmentsSyncEnabled() } returns true
+        every { TrainingApplication.getStravaSegmentsSyncIntervalDays() } returns "1"
         every { TrainingApplication.setLastUpdateTimeOfStravaSegments(any()) } just Runs
+
+        mockkStatic(com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper::class)
+        every { com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper.getRefreshedAccessToken() } returns "valid_refreshed_token"
 
         mockkObject(SegmentsRepository.Companion)
         every { SegmentsRepository.getInstance(any()) } returns mockSegmentsRepository
@@ -187,5 +192,68 @@ class StravaSegmentsSyncWorkerTest {
         assertEquals(Result.retry(), result)
         verify(exactly = 1) { mockSegmentsRepository.pruneExpiredSegments() }
         coVerify(exactly = 1) { mockSegmentsRepository.syncStarredSegments(BSportType.UNKNOWN) }
+    }
+
+    @Test
+    fun testScheduleWhenAutomatedSyncDisabledCancelsWork() {
+        every { TrainingApplication.getStravaAccessToken() } returns "valid_token"
+        every { TrainingApplication.isAutomatedStravaSegmentsSyncEnabled() } returns false
+
+        StravaSegmentsSyncWorker.schedule(mockContext)
+
+        verify(exactly = 1) { mockWorkManager.cancelUniqueWork(StravaSegmentsSyncWorker.WORK_NAME) }
+        verify(exactly = 0) { mockWorkManager.enqueueUniquePeriodicWork(any(), any(), any()) }
+    }
+
+    @Test
+    fun testScheduleRespectsCustomIntervalDays() {
+        every { TrainingApplication.getStravaAccessToken() } returns "valid_token"
+        every { TrainingApplication.isAutomatedStravaSegmentsSyncEnabled() } returns true
+        every { TrainingApplication.getStravaSegmentsSyncIntervalDays() } returns "7"
+
+        StravaSegmentsSyncWorker.schedule(mockContext)
+
+        val workRequestSlot = slot<PeriodicWorkRequest>()
+        verify(exactly = 1) {
+            mockWorkManager.enqueueUniquePeriodicWork(
+                eq(StravaSegmentsSyncWorker.WORK_NAME),
+                eq(ExistingPeriodicWorkPolicy.UPDATE),
+                capture(workRequestSlot)
+            )
+        }
+
+        val capturedWorkSpec = workRequestSlot.captured.workSpec
+        assertEquals(1000L * 60 * 60 * 24 * 7, capturedWorkSpec.intervalDuration)
+    }
+
+    @Test
+    fun testDoWorkWhenAutomatedSyncDisabledReturnsSuccessWithoutSyncing() = runBlocking {
+        every { TrainingApplication.getStravaAccessToken() } returns "valid_token"
+        every { TrainingApplication.isAutomatedStravaSegmentsSyncEnabled() } returns false
+
+        val workerParams = mockk<WorkerParameters>(relaxed = true)
+        val worker = StravaSegmentsSyncWorker(mockContext, workerParams)
+
+        val result = worker.doWork()
+
+        assertEquals(Result.success(), result)
+        verify(exactly = 1) { mockSegmentsRepository.pruneExpiredSegments() }
+        coVerify(exactly = 0) { mockSegmentsRepository.syncStarredSegments(any()) }
+    }
+
+    @Test
+    fun testDoWorkWhenTokenRefreshReturnsNullReturnsSuccessWithoutSyncing() = runBlocking {
+        every { TrainingApplication.getStravaAccessToken() } returns "valid_token"
+        every { TrainingApplication.isAutomatedStravaSegmentsSyncEnabled() } returns true
+        every { com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper.getRefreshedAccessToken() } returns null
+
+        val workerParams = mockk<WorkerParameters>(relaxed = true)
+        val worker = StravaSegmentsSyncWorker(mockContext, workerParams)
+
+        val result = worker.doWork()
+
+        assertEquals(Result.success(), result)
+        verify(exactly = 1) { mockSegmentsRepository.pruneExpiredSegments() }
+        coVerify(exactly = 0) { mockSegmentsRepository.syncStarredSegments(any()) }
     }
 }

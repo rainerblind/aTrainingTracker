@@ -48,8 +48,15 @@ class StravaSegmentsSyncWorker(
         SegmentsRepository.getInstance(applicationContext).pruneExpiredSegments()
 
         val stravaConnected = TrainingApplication.getStravaAccessToken() != null
-        if (!stravaConnected) {
-            Log.d(TAG, "Strava disconnected. Skipping periodic sync.")
+        val enabled = TrainingApplication.isAutomatedStravaSegmentsSyncEnabled()
+        if (!stravaConnected || !enabled) {
+            Log.d(TAG, "Strava disconnected or automated sync disabled. Skipping periodic sync.")
+            return Result.success()
+        }
+
+        val refreshedToken = com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper.getRefreshedAccessToken()
+        if (refreshedToken.isNullOrBlank()) {
+            Log.w(TAG, "Strava access token refresh returned null or empty. Skipping periodic segments sync.")
             return Result.success()
         }
 
@@ -74,7 +81,7 @@ class StravaSegmentsSyncWorker(
 
         /**
          * Schedules or cancels the periodic Strava segments synchronization worker.
-         * Runs every 1 day whenever authenticated with Strava (ATT-1178).
+         * Runs periodically according to athlete preference whenever authenticated with Strava.
          *
          * @param context Application or activity context.
          */
@@ -86,19 +93,22 @@ class StravaSegmentsSyncWorker(
                 }
 
                 val stravaConnected = TrainingApplication.getStravaAccessToken() != null
+                val enabled = TrainingApplication.isAutomatedStravaSegmentsSyncEnabled()
 
-                if (!stravaConnected) {
+                if (!stravaConnected || !enabled) {
                     WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
-                    Log.d(TAG, "Automated Strava segments sync cancelled (connected=false).")
+                    Log.d(TAG, "Automated Strava segments sync cancelled (connected=$stravaConnected, enabled=$enabled).")
                     return
                 }
+
+                val intervalDays = TrainingApplication.getStravaSegmentsSyncIntervalDays().toLongOrNull() ?: 1L
 
                 val constraints = Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
                     .setRequiresBatteryNotLow(true)
                     .build()
 
-                val workRequest = PeriodicWorkRequestBuilder<StravaSegmentsSyncWorker>(1, TimeUnit.DAYS)
+                val workRequest = PeriodicWorkRequestBuilder<StravaSegmentsSyncWorker>(intervalDays, TimeUnit.DAYS)
                     .setConstraints(constraints)
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
                     .build()
@@ -108,7 +118,7 @@ class StravaSegmentsSyncWorker(
                     ExistingPeriodicWorkPolicy.UPDATE,
                     workRequest
                 )
-                Log.i(TAG, "Periodic Strava segments sync scheduled every 1 day.")
+                Log.i(TAG, "Periodic Strava segments sync scheduled every $intervalDays day(s).")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to schedule periodic Strava segments sync", e)
             }

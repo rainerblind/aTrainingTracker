@@ -413,6 +413,9 @@
     <string name="automated_strava_routes_sync">Automated Route Sync</string>
     <string name="automated_strava_routes_sync_summary">Regularly fetch routes from Strava</string>
     <string name="strava_routes_sync_interval">Sync Interval</string>
+    <string name="automated_strava_equipment_sync">Automated Equipment Sync</string>
+    <string name="automated_strava_equipment_sync_summary">Regularly fetch bikes and shoes from Strava</string>
+    <string name="strava_equipment_sync_interval">Sync Interval</string>
 
     <string name="strava_success_but_must_check">uploaded to Strava, checking result …</string>
     <string name="strava_success_waiting_for_result">uploaded to Strava, waiting for result …</string>
