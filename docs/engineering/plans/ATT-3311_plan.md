@@ -16,12 +16,12 @@
 ## 1. Problem Description & Background
 
 During Sprint Review `2026-41.10` on Google Pixel 10 (`ATT-3173`), the reviewer reported that the sole elevation profile on tracking tabs without a map was no longer shown at all. Forensic analysis identified that:
-1. `BoxWithConstraints` in `SensorGridScreen.kt` historically omitted `paddingValues.calculateBottomPadding()` to allow the Google Map to draw under the bottom sheet.
+1. `BoxWithConstraints` in `SensorGridScreen.kt` intentionally discarded `paddingValues.calculateBottomPadding()` to allow the Google Map to draw under the bottom sheet.
 2. In `ATT-3173`, `Modifier.weight(1f)` was removed from the elevation profile to restore its canonical adaptive height ($70\text{dp} \dots 200\text{dp}$).
 3. When the elevation profile renders at its canonical adaptive height at the bottom of the screen, the $\approx 104\text{dp}$ Bottom Sheet Peek Bar sits directly on top of it, completely occluding the elevation path, baseline, and labels.
 4. On map-less tabs, the unweighted elevation profile is pushed into this occluded zone. On map tabs with elevation profiles, only empty top headroom is visible while the ink/baseline is buried behind the sheet.
 
-This implementation plan defines the exact modifications to `SensorGridScreen.kt` and `SensorGridScreenLayoutTest.kt` to ensure complete bottom sheet clearance and 100% chart visibility.
+This implementation plan defines the exact modifications to `SensorGridScreen.kt` and `SensorGridScreenLayoutTest.kt` to ensure complete bottom sheet clearance and 100% chart visibility while strictly preventing modifier churn, layout jitter, and dead space.
 
 ---
 
@@ -31,50 +31,41 @@ This implementation plan defines the exact modifications to `SensorGridScreen.kt
   - Amends `REQ-UI-346` (*Canonical Adaptive Height & Weight Decoupling for Sole Elevation Profile on Tracking Screen*)
   - Aligns with `REQ-UI-358` (*Dynamic Cockpit Viewport Allocation, Asymmetric Map Weight Expansion & Bounded Sensor Grid Containment*)
 * **Test Mapping**: `TST-UI-332` (*Cockpit Layout Bottom Inset Padding & Elevation Profile Bottom Sheet Clearance Verification*)
-  - `TST-UI-332.1`: Non-map cockpit Column bottom inset padding contract verification.
-  - `TST-UI-332.2`: Map-enabled elevation profile Surface bottom inset padding contract verification.
-  - `TST-UI-332.3`: Layout geometry and bottom sheet clearance simulation.
-  - `TST-UI-332.4`: Zero sheet peek height boundary verification.
-  - `TST-UI-332.5`: Full clean-room regression test suite.
+  - `TST-UI-332.1`: Elevation profile Surface bottom inset padding contract verification (`bottom = paddingValues.calculateBottomPadding()`).
+  - `TST-UI-332.2`: Layout geometry and bottom sheet clearance simulation across map and non-map views.
+  - `TST-UI-332.3`: Zero sheet peek height boundary verification (`sheetPeekHeight == 0.dp`).
+  - `TST-UI-332.4`: Negative test & Zero Dead Space verification when `showElevationProfile == false`.
+  - `TST-UI-332.5`: Full clean-room regression test suite (`./gradlew testDebugUnitTest`).
 
 ---
 
 ## 3. System Invariants & Preserved Behavior
 
-1. **Canonical Adaptive Height Preservation (`REQ-UI-346`)**: `ElevationProfile` continues to use `calculateElevationProfileHeight(range)` ($70\text{dp} \dots 200\text{dp}$) without artificial `Modifier.weight(1f)` or `fillParentHeight = true`.
-2. **Sensor Grid Scrollability & Containment (`REQ-UI-358`)**: Sensor grid preserves `.weight(1f, fill = false)` when map is hidden and `.heightIn(max = availableHeight * 0.5f)` when map is visible.
-3. **Map Flexible Expansion (`REQ-UI-358`)**: When the map is visible, it retains `.weight(1f, fill = true)` to consume all vertical space remaining between the sensor grid and the elevation profile.
-4. **Recomposition Barrier Isolation (`REQ-UI-326`)**: `TrackingMapContainer` remains an `@Immutable` recomposition barrier skipping redundant recompositions.
-5. **Zero Dead Space**: When `sheetPeekHeight == 0.dp`, `paddingValues.calculateBottomPadding()` is $0\text{dp}$, introducing zero redundant padding or negative layout shifts.
-6. **Subtask & Gate Invariance**: Subtasks transition directly to `Erledigt` upon passing Gate audit via `freigabe`. Parent ticket terminates at `Final Review (Human)`.
+1. **Zero Modifier Churn & Separation of Concerns (SWE.2)**: 
+   The parent cockpit `Column` modifier remains completely stationary and unconditional (`Modifier.fillMaxSize()`). Bottom inset handling is encapsulated strictly within the elevation profile `Surface` modifier, eliminating conditional branching on the parent container and preventing full-screen recomposition churn.
+2. **Zero Dead Space when Profile is Disabled or Lacks Points**: 
+   When `state.showElevationProfile == false` or `resolvedProfile.pathPoints.size < 2`, the elevation profile `Surface` is not composed. Because the parent `Column` has no unconditional bottom padding, the sensor grid and map expand edge-to-edge down to the screen boundary with $0\text{dp}$ residual whitespace.
+3. **Animation & Transition Stability**: 
+   In Compose Material 3 `BottomSheetScaffold`, `paddingValues.calculateBottomPadding()` is a constant value equal to `sheetPeekHeight`. It does not fluctuate during sheet drag gestures or expanding/collapsing animations, guaranteeing zero layout shift or visual jitter during bottom sheet interactions.
+4. **Canonical Adaptive Height Preservation (`REQ-UI-346`)**: 
+   `ElevationProfile` continues to use `calculateElevationProfileHeight(range)` ($70\text{dp} \dots 200\text{dp}$) without artificial `Modifier.weight(1f)` or `fillParentHeight = true`.
+5. **Sensor Grid Scrollability & Containment (`REQ-UI-358`)**: 
+   Sensor grid preserves `.weight(1f, fill = false)` when map is hidden and `.heightIn(max = availableHeight * 0.5f)` when map is visible.
+6. **Map Flexible Expansion (`REQ-UI-358`)**: 
+   When the map is visible, it retains `.weight(1f, fill = true)` to consume all vertical space remaining between the sensor grid and the elevation profile.
+7. **Recomposition Barrier Isolation (`REQ-UI-326`)**: 
+   `TrackingMapContainer` remains an `@Immutable` recomposition barrier skipping redundant recompositions.
+8. **Subtask & Gate Invariance**: 
+   Subtasks transition directly to `Erledigt` upon passing Gate audit via `freigabe`. Parent ticket terminates at `Final Review (Human)`.
 
 ---
 
 ## 4. Proposed Architectural Changes
 
-### Component 1: Non-Map Cockpit Layout Bottom Inset in `SensorGridScreen.kt`
+### Component 1: Encapsulated Elevation Profile Surface Inset in `SensorGridScreen.kt`
 * **File**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt`
-* **Target Line**: $\approx 540$
-* **Modification**: Apply conditional bottom padding to the stationary cockpit `Column`:
-  ```kotlin
-  Column(
-      modifier = Modifier
-          .fillMaxSize()
-          .then(
-              if (!state.mapState.showMap) {
-                  Modifier.padding(bottom = paddingValues.calculateBottomPadding())
-              } else {
-                  Modifier
-              }
-          )
-  )
-  ```
-* **Rationale**: Because no map exists on map-less tabs, applying `paddingValues.calculateBottomPadding()` to the `Column` ensures that both multi-row sensor grids and the sole elevation profile are lifted above the bottom sheet peek bar.
-
-### Component 2: Elevation Profile Surface Inset Under Map in `SensorGridScreen.kt`
-* **File**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt`
-* **Target Line**: $\approx 625$
-* **Modification**: Apply bottom padding to the elevation profile `Surface` when `state.mapState.showMap == true`:
+* **Target Line**: $\approx 624$
+* **Implementation**:
   ```kotlin
   if (state.showElevationProfile && resolvedProfile.pathPoints.size >= 2) {
       Surface(
@@ -82,7 +73,7 @@ This implementation plan defines the exact modifications to `SensorGridScreen.kt
               .fillMaxWidth()
               .padding(
                   top = 8.dp,
-                  bottom = if (state.mapState.showMap) paddingValues.calculateBottomPadding() else 0.dp
+                  bottom = paddingValues.calculateBottomPadding()
               )
       ) {
           ElevationProfile(
@@ -94,15 +85,19 @@ This implementation plan defines the exact modifications to `SensorGridScreen.kt
       }
   }
   ```
-* **Rationale**: Symmetrical coordination: on map tabs, the `Column` has no bottom padding so the map can expand under `weight(1f, fill = true)` while the elevation profile below it is padded above the bottom sheet peek bar. On non-map tabs, the `Column` already has bottom padding, so the `Surface` uses `bottom = 0.dp` to prevent duplicate padding.
+* **Architectural Rationale**:
+  1. *Decoupled Container Invariant*: The parent `Column` remains `Modifier.fillMaxSize()` without modifier mutation.
+  2. *Universal Sheet Clearance*: Applying `bottom = paddingValues.calculateBottomPadding()` directly to the `Surface` lifts the elevation profile by exactly `sheetPeekHeight` (e.g. $104\text{dp}$) both when rendered alone on a map-less tab and when anchored below the map on a map tab.
+  3. *Zero Dead Space Guarantee*: If `state.showElevationProfile == false` (or `pathPoints.size < 2`), the `Surface` is omitted entirely. The parent `Column` has no residual bottom padding, allowing the map (or sensor grid) to utilize 100% of the screen.
+  4. *Zero Peek Inactive Invariant*: When `sheetPeekHeight == 0.dp`, `calculateBottomPadding()` returns `0.dp`, adding $0\text{dp}$ padding.
 
-### Component 3: Unit Tests in `SensorGridScreenLayoutTest.kt`
+### Component 2: Unit Tests in `SensorGridScreenLayoutTest.kt`
 * **File**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreenLayoutTest.kt`
 * **Modifications**:
-  1. Add `testLayoutStructure_nonMapCockpitAppliesBottomPadding()` asserting `Column` applies `padding(bottom = paddingValues.calculateBottomPadding())` when `!state.mapState.showMap`.
-  2. Add `testLayoutStructure_elevationProfileSurfaceAppliesBottomPadding()` asserting `Surface` applies bottom padding when `state.mapState.showMap`.
-  3. Add `testLayoutGeometry_elevationProfileClearsBottomSheet()` verifying geometric non-occlusion ($y_{\text{profile\_bottom}} \le y_{\text{sheet\_top}}$) across both map-less and map-enabled configurations.
-  4. Add `testLayoutGeometry_zeroSheetPeekHeightBoundaryVerification()` verifying zero dead space when peek height is $0\text{dp}$.
+  1. `testElevationProfileSurface_appliesScaffoldBottomPadding()`: Verify `Surface` modifier includes `bottom = paddingValues.calculateBottomPadding()`.
+  2. `testLayoutGeometry_elevationProfileClearsBottomSheet_mapAndNonMap()`: Mathematically verify that for both map and non-map configurations, $y_{\text{profile\_bottom}} \le y_{\text{sheet\_top}}$.
+  3. `testLayoutGeometry_zeroSheetPeekHeightBoundaryVerification()`: Verify that when `sheetPeekHeight == 0f`, `bottomPadding == 0f`, total consumed height equals `availableHeight`, and `deadSpace == 0f`.
+  4. `testLayoutGeometry_elevationProfileDisabled_zeroDeadSpace()`: Negative test verifying that when `showElevationProfile == false`, no bottom padding is applied to the layout, and map consumes 100% remaining space with $0\text{dp}$ dead space.
 
 ### UI Consistency (Rule 23)
 * **Reference screen / component**: `SensorGridScreen.kt` / `ElevationProfile.kt`
@@ -114,19 +109,17 @@ This implementation plan defines the exact modifications to `SensorGridScreen.kt
 
 ## 5. Step-by-Step Implementation Sequence (Stage 4 Construction)
 
-### Step 1: Update `SensorGridScreen.kt` Cockpit Layout Insets
-* Files: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt`
-* Changes:
-  1. Apply `Modifier.then(if (!state.mapState.showMap) Modifier.padding(bottom = paddingValues.calculateBottomPadding()) else Modifier)` to the cockpit `Column`.
-  2. Apply `bottom = if (state.mapState.showMap) paddingValues.calculateBottomPadding() else 0.dp` to the elevation profile `Surface`.
+### Step 1: Apply Bottom Inset to Elevation Profile Surface in `SensorGridScreen.kt`
+* File: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt`
+* Change: Update the `Surface` modifier for `ElevationProfile` to include `bottom = paddingValues.calculateBottomPadding()`.
 
-### Step 2: Implement Unit Tests in `SensorGridScreenLayoutTest.kt`
-* Files: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreenLayoutTest.kt`
+### Step 2: Implement Test Cases in `SensorGridScreenLayoutTest.kt`
+* File: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreenLayoutTest.kt`
 * Changes:
-  1. Implement `testLayoutStructure_nonMapCockpitAppliesBottomPadding` (`TST-UI-332.1`).
-  2. Implement `testLayoutStructure_elevationProfileSurfaceAppliesBottomPadding` (`TST-UI-332.2`).
-  3. Implement `testLayoutGeometry_elevationProfileClearsBottomSheet` (`TST-UI-332.3`).
-  4. Implement `testLayoutGeometry_zeroSheetPeekHeightBoundaryVerification` (`TST-UI-332.4`).
+  1. Implement `testElevationProfileSurface_appliesScaffoldBottomPadding` (`TST-UI-332.1`).
+  2. Implement `testLayoutGeometry_elevationProfileClearsBottomSheet_mapAndNonMap` (`TST-UI-332.2`).
+  3. Implement `testLayoutGeometry_zeroSheetPeekHeightBoundaryVerification` (`TST-UI-332.3`).
+  4. Implement `testLayoutGeometry_elevationProfileDisabled_zeroDeadSpace` (`TST-UI-332.4`).
 
 ### Step 3: Run Targeted Unit Tests
 * Command: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenLayoutTest"`
