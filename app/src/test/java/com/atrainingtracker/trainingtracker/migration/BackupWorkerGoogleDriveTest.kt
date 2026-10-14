@@ -94,26 +94,33 @@ class BackupWorkerGoogleDriveTest {
     }
 
     @Test
-    fun testDoWork_whenNeitherCloudConnected_skipsBackup() = runBlocking {
-        every { mockPrefs.getBoolean("automated_backups", false) } returns true
+    fun testDoWork_whenNeitherCloudConnected_createsLocalBackupAndSavesStatus() = runBlocking {
+        every { mockPrefs.getBoolean("automated_backups", any()) } returns true
         every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_DROPBOX, false) } returns false
         every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns false
+
+        val dummyBackupFile = tempFolder.newFile("test.attbackup")
+        mockkObject(BackupManager)
+        every { BackupManager.acquireLock(any()) } returns mockk(relaxed = true)
+        every { BackupManager.createBackup(any()) } returns dummyBackupFile
 
         val worker = BackupWorker(mockContext, mockParams)
         val result = worker.doWork()
 
         assertEquals(ListenableWorker.Result.success(), result)
+        verify { mockEditor.putString("last_backup_status", "LOCAL_SUCCESS") }
     }
 
     @Test
     fun testDoWork_whenGoogleDriveConnected_triggersUpload() = runBlocking {
-        every { mockPrefs.getBoolean("automated_backups", false) } returns true
+        every { mockPrefs.getBoolean("automated_backups", any()) } returns true
         every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_DROPBOX, false) } returns false
         every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
         every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_BACKUP_TO_GOOGLE_DRIVE, true) } returns true
 
         val dummyBackupFile = tempFolder.newFile("test.attbackup")
         mockkObject(BackupManager)
+        every { BackupManager.acquireLock(any()) } returns mockk(relaxed = true)
         every { BackupManager.createBackup(any()) } returns dummyBackupFile
 
         mockkObject(GoogleDriveBackupManager)

@@ -1190,6 +1190,11 @@ public class TrainingApplication extends Application {
 
         cAppContext = getApplicationContext();
 
+        PreferenceManager.setDefaultValues(this, R.xml.prefs_search, false);
+        PreferenceManager.setDefaultValues(this, R.xml.prefs_strava, false);
+        PreferenceManager.setDefaultValues(this, R.xml.prefs_dropbox, false);
+        cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
         // ATT-3163 / REQ-UI-342: Intercept missing platform SelectGesture on Android 14+ OEM devices
         com.atrainingtracker.trainingtracker.ui.common.ComposeHandwritingResilience.install();
 
@@ -1205,12 +1210,6 @@ public class TrainingApplication extends Application {
         trackOnMapHelper = new TrackOnMapHelper();
 
         mNotificationSummary = getString(R.string.searching);
-
-
-        PreferenceManager.setDefaultValues(this, R.xml.prefs_search, false);
-        PreferenceManager.setDefaultValues(this, R.xml.prefs_strava, false);
-        PreferenceManager.setDefaultValues(this, R.xml.prefs_dropbox, false);
-        cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         // cSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferencesChangeListener);
         // setPowerSmoothing(0.5);
 

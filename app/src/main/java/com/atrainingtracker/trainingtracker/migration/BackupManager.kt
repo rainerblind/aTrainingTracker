@@ -31,7 +31,61 @@ import java.util.zip.ZipOutputStream
  */
 object BackupManager {
     private const val TAG = "BackupManager"
-    private const val BACKUP_FILENAME = "aTrainingTracker_backup.attbackup"
+    const val BACKUP_FILENAME = "aTrainingTracker_backup.attbackup"
+
+    val jvmLock = java.util.concurrent.locks.ReentrantLock()
+
+    class BackupLock(
+        private val jvmLock: java.util.concurrent.locks.ReentrantLock,
+        private val fileLock: java.nio.channels.FileLock?,
+        private val raf: java.io.RandomAccessFile?
+    ) : AutoCloseable {
+        override fun close() {
+            try {
+                fileLock?.release()
+            } catch (_: Exception) {}
+            try {
+                raf?.close()
+            } catch (_: Exception) {}
+            if (jvmLock.isHeldByCurrentThread) {
+                jvmLock.unlock()
+            }
+        }
+    }
+
+    fun getBackupDir(context: Context): File {
+        val dir = File(context.filesDir, "backups")
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
+        return dir
+    }
+
+    fun acquireLock(context: Context): BackupLock? {
+        if (!jvmLock.tryLock()) {
+            return null
+        }
+        val lockFile = File(getBackupDir(context), "backup.lock")
+        var raf: java.io.RandomAccessFile? = null
+        var fileLock: java.nio.channels.FileLock? = null
+        try {
+            raf = java.io.RandomAccessFile(lockFile, "rw")
+            fileLock = raf.channel.tryLock()
+            if (fileLock == null) {
+                raf.close()
+                jvmLock.unlock()
+                return null
+            }
+            return BackupLock(jvmLock, fileLock, raf)
+        } catch (e: Exception) {
+            try { fileLock?.release() } catch (_: Exception) {}
+            try { raf?.close() } catch (_: Exception) {}
+            if (jvmLock.isHeldByCurrentThread) {
+                jvmLock.unlock()
+            }
+            return null
+        }
+    }
 
     interface ProgressListener {
         fun onProgress(message: String)
@@ -39,72 +93,114 @@ object BackupManager {
 
     fun createBackup(context: Context, listener: ProgressListener? = null): File? {
         Log.i(TAG, "Starting state bundling process...")
-        
-        try {
-            // 1. Checkpoint all databases to ensure file consistency (merge WAL)
-            listener?.onProgress("Checkpointing databases...")
-            checkpointAndCloseAllDatabases(context)
 
-            // 2. Define source directories
-            val dataDir = context.applicationInfo.dataDir
-            val databasesDir = File(dataDir, "databases")
-            val sharedPrefsDir = File(dataDir, "shared_prefs")
-            val datastoreDir = File(context.filesDir, "datastore")
-
-            // 3. Create destination file in cache
-            val backupFile = File(context.cacheDir, BACKUP_FILENAME)
-            if (backupFile.exists()) backupFile.delete()
-
-            // 4. Zip everything
-            listener?.onProgress("Bundling files...")
-            ZipOutputStream(BufferedOutputStream(FileOutputStream(backupFile))).use { zos ->
-                if (databasesDir.exists()) zipFolder(databasesDir, "databases", zos)
-                if (sharedPrefsDir.exists()) zipFolder(sharedPrefsDir, "shared_prefs", zos)
-                if (datastoreDir.exists()) zipFolder(datastoreDir, "datastore", zos)
-            }
-
-            Log.i(TAG, "Backup created successfully: ${backupFile.absolutePath}")
-            return backupFile
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to create backup", e)
+        val lockHeld = jvmLock.isHeldByCurrentThread
+        val lock = if (!lockHeld) acquireLock(context) else null
+        if (!lockHeld && lock == null) {
+            Log.w(TAG, "Backup already in progress; lock could not be acquired.")
             return null
+        }
+
+        try {
+            val backupDir = getBackupDir(context)
+            val tempBackupFile = File(backupDir, "$BACKUP_FILENAME.tmp")
+            val canonicalBackupFile = File(backupDir, BACKUP_FILENAME)
+
+            try {
+                // 1. Stale staging file cleanup
+                if (tempBackupFile.exists()) {
+                    tempBackupFile.delete()
+                }
+
+                // 2. Checkpoint all databases to ensure file consistency (merge WAL)
+                listener?.onProgress("Checkpointing databases...")
+                checkpointAndCloseAllDatabases(context)
+
+                // 3. Define source directories
+                val dataDir = context.applicationInfo.dataDir
+                val databasesDir = File(dataDir, "databases")
+                val sharedPrefsDir = File(dataDir, "shared_prefs")
+                val datastoreDir = File(context.filesDir, "datastore")
+
+                // 4. Zip everything into co-located temporary staging file
+                listener?.onProgress("Bundling files...")
+                ZipOutputStream(BufferedOutputStream(FileOutputStream(tempBackupFile))).use { zos ->
+                    if (databasesDir.exists()) zipFolder(databasesDir, "databases", zos)
+                    if (sharedPrefsDir.exists()) zipFolder(sharedPrefsDir, "shared_prefs", zos)
+                    if (datastoreDir.exists()) zipFolder(datastoreDir, "datastore", zos)
+                }
+
+                // 5. Co-located atomic move to canonical destination file
+                try {
+                    java.nio.file.Files.move(
+                        tempBackupFile.toPath(),
+                        canonicalBackupFile.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "ATOMIC_MOVE failed, falling back to REPLACE_EXISTING move", e)
+                    java.nio.file.Files.move(
+                        tempBackupFile.toPath(),
+                        canonicalBackupFile.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                    )
+                }
+
+                Log.i(TAG, "Backup created successfully: ${canonicalBackupFile.absolutePath}")
+                return canonicalBackupFile
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create backup", e)
+                return null
+            } finally {
+                // Guarantee cleanup of temporary staging file on any exit or crash
+                if (tempBackupFile.exists()) {
+                    tempBackupFile.delete()
+                }
+            }
+        } finally {
+            lock?.close()
         }
     }
 
     private fun checkpointAndCloseAllDatabases(context: Context) {
-        // Handle Java and Kotlin database access nuances
-        // Use TRUNCATE to flush everything to disk and clear WAL files without a hard close (ATT-289)
-        val databases = listOfNotNull(
-            WorkoutSummariesDatabaseManager.getInstance(context).getDatabase(),
-            WorkoutSamplesDatabaseManager.getInstance(context).getDatabase(),
-            LapsDatabaseManager.getInstance(context).getDatabase(),
-            RoutesDatabaseManager.getInstance(context).getDatabase(),
-            WorkoutClusterDatabaseManager.getInstance(context).getDatabase(),
-            KnownLocationsDatabaseManager.getInstance(context).getDatabase(),
-            SportTypeEquipmentLinkManager.getInstance(context).getDatabase(),
-            TrackingViewsDatabaseManager.getInstance(context).getDatabase(),
-            DevicesDatabaseManager.getInstance(context).getDatabase(),
-            SportTypeDatabaseManager.getInstance(context).getDatabase(),
-            StravaUploadDbHelper(context).writableDatabase,
-            ExportStatusDatabaseManager.getInstance(context).getDatabase(),
-            SegmentsDatabaseManager.getInstance(context).getDatabase(),
-            EquipmentDbHelper(context).writableDatabase,
-            ActiveDevicesDbHelper(context).writableDatabase
-        )
+        try {
+            // Handle Java and Kotlin database access nuances safely
+            // Use TRUNCATE to flush everything to disk and clear WAL files without a hard close (ATT-289)
+            val databases = listOfNotNull(
+                try { WorkoutSummariesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
+                try { WorkoutSamplesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
+                try { LapsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
+                try { RoutesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
+                try { WorkoutClusterDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
+                try { KnownLocationsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
+                try { SportTypeEquipmentLinkManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
+                try { TrackingViewsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
+                try { DevicesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
+                try { SportTypeDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
+                try { StravaUploadDbHelper(context).writableDatabase } catch (_: Throwable) { null },
+                try { ExportStatusDatabaseManager.getInstance(context)?.getDatabase() } catch (_: Throwable) { null },
+                try { SegmentsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
+                try { EquipmentDbHelper(context).writableDatabase } catch (_: Throwable) { null },
+                try { ActiveDevicesDbHelper(context).writableDatabase } catch (_: Throwable) { null }
+            )
 
-        databases.forEach { db ->
-            try {
-                if (db.isOpen) {
-                    // Checkpoint WAL to main file and truncate log
-                    db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE);", null).use { 
-                        if (it.moveToFirst()) {
-                            Log.v(TAG, "Checkpoint TRUNCATE result: ${it.getInt(0)}")
+            databases.forEach { db ->
+                try {
+                    if (db.isOpen) {
+                        // Checkpoint WAL to main file and truncate log
+                        db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE);", null).use { 
+                            if (it.moveToFirst()) {
+                                Log.v(TAG, "Checkpoint TRUNCATE result: ${it.getInt(0)}")
+                            }
                         }
                     }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error checkpointing database", e)
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "Error checkpointing database", e)
             }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to checkpoint databases", t)
         }
     }
 
