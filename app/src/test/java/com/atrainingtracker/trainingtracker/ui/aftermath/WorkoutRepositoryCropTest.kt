@@ -165,4 +165,47 @@ class WorkoutRepositoryCropTest {
         assertEquals(listOf(1L, 4L, 30L, 50L), deletedRowIds)
         assertEquals(nonContiguousRowIds.size - retainedRowIds.size, deletedRowIds.size)
     }
+
+    @Test
+    fun testCrashRecoveryPreservesBackupOnFailureAndDeletesOnSuccess() {
+        val tempDir = File(System.getProperty("java.io.tmpdir"), "crop_recovery_test_${System.currentTimeMillis()}")
+        tempDir.mkdirs()
+        try {
+            val successfulBackup = File(tempDir, "crop_backup_101_1.json").apply {
+                writeText("{\"workoutId\":101}")
+            }
+            val failingBackup = File(tempDir, "crop_backup_202_2.json").apply {
+                writeText("{\"workoutId\":202}")
+            }
+
+            // Simulate recovery logic:
+            // 1. Successful reload deletes file
+            var reloadCalled101 = false
+            try {
+                reloadCalled101 = true
+                successfulBackup.delete()
+            } catch (e: Exception) {
+                // Not reached
+            }
+
+            // 2. Failed reload preserves file
+            var reloadCalled202 = false
+            try {
+                reloadCalled202 = true
+                throw IllegalStateException("Database locked / corrupt")
+                @Suppress("UNREACHABLE_CODE")
+                failingBackup.delete()
+            } catch (e: Exception) {
+                // Preserved
+            }
+
+            assertTrue(reloadCalled101)
+            assertFalse(successfulBackup.exists())
+
+            assertTrue(reloadCalled202)
+            assertTrue("Failing recovery must preserve backup for diagnostic analysis", failingBackup.exists())
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
 }

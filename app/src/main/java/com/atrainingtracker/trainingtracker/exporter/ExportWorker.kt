@@ -25,8 +25,8 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.domain.crop.CropCoordinator
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
-import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportNotificationManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.withLock
@@ -69,7 +69,7 @@ class ExportWorker(
         informOthersStarted()
 
         Log.i(TAG, "Starting export execution for $mExportInfo")
-        val result = WorkoutRepository.cropMutex.withLock {
+        val result = CropCoordinator.mutex.withLock {
             if (isStopped) {
                 Log.w(TAG, "ExportWorker stopped while awaiting cropMutex lock: $mExportInfo")
                 return Result.failure()

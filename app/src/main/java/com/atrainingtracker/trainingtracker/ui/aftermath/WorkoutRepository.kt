@@ -106,7 +106,7 @@ class WorkoutRepository private constructor(private val application: Application
         private val DEBUG = TrainingApplication.getDebug(true)
 
         @JvmStatic
-        val cropMutex = Mutex()
+        val cropMutex get() = com.atrainingtracker.trainingtracker.domain.crop.CropCoordinator.mutex
 
         const val MIN_FREE_STORAGE_MB: Long = 50L
 
@@ -741,10 +741,9 @@ class WorkoutRepository private constructor(private val application: Application
                             Log.i(TAG, "reconcilePendingCropRecovery: Verifying integrity and reloading workoutId=$workoutId")
                             reloadWorkoutData(workoutId)
                         }
-                    } catch (ex: Exception) {
-                        Log.w(TAG, "reconcilePendingCropRecovery: Failed to parse backup file ${file.name}", ex)
-                    } finally {
                         file.delete()
+                    } catch (ex: Exception) {
+                        Log.e(TAG, "reconcilePendingCropRecovery: Failed to verify/recover for ${file.name}. Preserving backup file.", ex)
                     }
                 }
             } catch (e: Exception) {
@@ -1080,10 +1079,6 @@ class WorkoutRepository private constructor(private val application: Application
                 Log.e(TAG, "Unexpected error during crop operation for workout $workoutId", t)
                 reloadWorkoutData(workoutId)
                 Result.failure(t)
-            } finally {
-                if (backupFile.exists()) {
-                    backupFile.delete()
-                }
             }
         }
     }
