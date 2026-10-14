@@ -31,9 +31,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
 /**
- * Reusable slider form control for advanced tuning options (REQ-UI-262).
+ * Reusable slider form control for advanced tuning options (REQ-UI-262, REQ-SET-077).
  */
 @Composable
 fun TuningSliderItem(
@@ -44,8 +45,11 @@ fun TuningSliderItem(
     value: Float,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
-    steps: Int = 0
+    steps: Int = 0,
+    enabled: Boolean = true,
+    onValueChangeFinished: (() -> Unit)? = null
 ) {
+    val contentAlpha = if (enabled) 1f else TTAlpha.Disabled
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -59,32 +63,36 @@ fun TuningSliderItem(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
             )
             Text(
                 text = valueText,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
             )
         }
         if (helperText.isNotEmpty()) {
             Text(
                 text = helperText,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
             )
         }
-        Text(
-            text = defaultText,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline
-        )
+        if (defaultText.isNotEmpty()) {
+            Text(
+                text = defaultText,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = contentAlpha)
+            )
+        }
         Slider(
             value = value,
             onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
             valueRange = valueRange,
             steps = steps,
+            enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 2.dp)
@@ -93,18 +101,21 @@ fun TuningSliderItem(
 }
 
 /**
- * Reusable toggle switch form control for advanced tuning options (REQ-UI-262).
+ * Reusable toggle switch form control for advanced tuning options (REQ-UI-262, REQ-SET-077).
  */
 @Composable
 fun TuningToggleItem(
     title: String,
     isChecked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    summary: String? = null
+    summary: String? = null,
+    enabled: Boolean = true
 ) {
+    val contentAlpha = if (enabled) 1f else TTAlpha.Disabled
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp)
             .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -117,19 +128,20 @@ fun TuningToggleItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
             )
             if (!summary.isNullOrEmpty()) {
                 Text(
                     text = summary,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
                 )
             }
         }
         Switch(
             checked = isChecked,
             onCheckedChange = onCheckedChange,
+            enabled = enabled,
             modifier = Modifier.scale(0.8f)
         )
     }
