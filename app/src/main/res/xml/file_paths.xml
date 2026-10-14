@@ -20,4 +20,5 @@
 <paths>
     <cache-path name="my_cache_images" path="images/" />
     <cache-path name="backups" path="." />
+    <files-path name="internal_backups" path="backups/" />
 </paths>

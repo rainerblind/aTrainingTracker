@@ -35,55 +35,72 @@ class BackupWorker(
         Log.i(TAG, "Starting periodic automated backup...")
         
         val prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val automatedEnabled = prefs.getBoolean("automated_backups", false)
+        val automatedEnabled = prefs.getBoolean("automated_backups", true)
         val dropboxConnected = TrainingApplication.uploadToDropbox()
         val googleDriveConnected = TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
 
-        if (!automatedEnabled || (!dropboxConnected && !googleDriveConnected)) {
-            Log.d(TAG, "Automated backups disabled or no cloud provider connected. Skipping.")
+        if (!automatedEnabled) {
+            Log.d(TAG, "Automated backups disabled. Skipping.")
             return Result.success()
         }
 
-        val backupFile = BackupManager.createBackup(applicationContext)
-        return if (backupFile != null) {
-            var anyUploadSuccess = false
-            var anyUploadFailed = false
+        val lock = BackupManager.acquireLock(applicationContext)
+        if (lock == null) {
+            Log.w(TAG, "Backup already in progress by manual operation; yielding with retry.")
+            return Result.retry()
+        }
 
-            if (dropboxConnected) {
-                val dbxSuccess = DropboxBackupManager.uploadBackup(applicationContext, backupFile)
-                if (dbxSuccess) {
-                    anyUploadSuccess = true
+        return lock.use {
+            val backupFile = BackupManager.createBackup(applicationContext)
+            if (backupFile != null) {
+                if (!dropboxConnected && !googleDriveConnected) {
+                    Log.i(TAG, "Local backup created successfully without cloud providers.")
+                    prefs.edit(commit = true) {
+                        putLong("last_backup_timestamp", System.currentTimeMillis())
+                        putString("last_backup_status", "LOCAL_SUCCESS")
+                    }
+                    return@use Result.success()
+                }
+
+                var anyUploadSuccess = false
+                var anyUploadFailed = false
+
+                if (dropboxConnected) {
+                    val dbxSuccess = DropboxBackupManager.uploadBackup(applicationContext, backupFile)
+                    if (dbxSuccess) {
+                        anyUploadSuccess = true
+                    } else {
+                        anyUploadFailed = true
+                    }
+                }
+
+                if (googleDriveConnected) {
+                    val gdSuccess = GoogleDriveBackupManager.uploadBackup(applicationContext, backupFile)
+                    if (gdSuccess) {
+                        anyUploadSuccess = true
+                    } else {
+                        anyUploadFailed = true
+                    }
+                }
+
+                if (anyUploadSuccess) {
+                    prefs.edit(commit = true) {
+                        putLong("last_backup_timestamp", System.currentTimeMillis())
+                        putString("last_backup_status", if (anyUploadFailed) "PARTIAL_SUCCESS" else "SUCCESS")
+                    }
+                    Result.success()
                 } else {
-                    anyUploadFailed = true
+                    prefs.edit(commit = true) {
+                        putString("last_backup_status", "Upload failed")
+                    }
+                    Result.retry()
                 }
-            }
-
-            if (googleDriveConnected) {
-                val gdSuccess = GoogleDriveBackupManager.uploadBackup(applicationContext, backupFile)
-                if (gdSuccess) {
-                    anyUploadSuccess = true
-                } else {
-                    anyUploadFailed = true
-                }
-            }
-
-            if (anyUploadSuccess) {
-                prefs.edit(commit = true) {
-                    putLong("last_backup_timestamp", System.currentTimeMillis())
-                    putString("last_backup_status", if (anyUploadFailed) "PARTIAL_SUCCESS" else "SUCCESS")
-                }
-                Result.success()
             } else {
                 prefs.edit(commit = true) {
-                    putString("last_backup_status", "Upload failed")
+                    putString("last_backup_status", "Local backup creation failed")
                 }
                 Result.retry()
             }
-        } else {
-            prefs.edit(commit = true) {
-                putString("last_backup_status", "Local backup creation failed")
-            }
-            Result.failure()
         }
     }
 
@@ -102,6 +119,13 @@ class BackupWorker(
                 val automatedEnabled = prefs.getBoolean("automated_backups", true)
                 val intervalDays = prefs.getString("backup_interval_days", "1")?.toLong() ?: 1L
 
+                // ATT-3472: One-time queue sanitization to break legacy REPLACE loop for existing installations
+                val isQueueMigrated = prefs.getBoolean("workmanager_backup_policy_migrated_v1", false)
+                if (!isQueueMigrated) {
+                    WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+                    prefs.edit().putBoolean("workmanager_backup_policy_migrated_v1", true).apply()
+                }
+
                 if (!automatedEnabled) {
                     WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
                     return
@@ -119,7 +143,7 @@ class BackupWorker(
 
                 WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                     WORK_NAME,
-                    ExistingPeriodicWorkPolicy.REPLACE, // REPLACE to ensure interval change is applied
+                    ExistingPeriodicWorkPolicy.UPDATE,
                     workRequest
                 )
             } catch (t: Throwable) {
