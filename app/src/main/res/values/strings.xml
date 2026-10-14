@@ -1738,6 +1738,7 @@
     <string name="import_fit_title">Import FIT files</string>
     <string name="import_fit_description">Import workouts from Garmin, Wahoo, Hammerhead, or smartwatches (.fit).</string>
     <string name="import_fit_button">Select FIT Files</string>
+    <string name="import_fit_folder_button">Scan Folder (FIT)</string>
     <string name="import_fit_dropbox_button">Scan Dropbox (FIT)</string>
     <string name="import_fit_progress">Importing FIT files (%1$d of %2$d)…</string>
     <string name="import_fit_summary_success">Successfully imported %1$d workouts (%2$d duplicates skipped).</string>
@@ -1746,11 +1747,15 @@
     <string name="import_tcx_title">Import TCX files</string>
     <string name="import_tcx_description">Import workouts from Training Center XML files (.tcx).</string>
     <string name="import_tcx_button">Select TCX File</string>
+    <string name="import_tcx_folder_button">Scan Folder (TCX)</string>
     <string name="import_tcx_dropbox_button">Scan Dropbox (TCX)</string>
     <string name="import_gpx_title">Import GPX files</string>
     <string name="import_gpx_description">Import tracks and activities from GPS Exchange Format files (.gpx).</string>
     <string name="import_gpx_button">Select GPX File</string>
+    <string name="import_gpx_folder_button">Scan Folder (GPX)</string>
     <string name="import_gpx_dropbox_button">Scan Dropbox (GPX)</string>
+    <string name="import_directory_scanning">Scanning folder for workouts…</string>
+    <string name="import_directory_no_files_found">No compatible %1$s workout files found in selected folder.</string>
     <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
     <string name="invalid_workout_file_format">Invalid file format. Please select a %1$s file.</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->

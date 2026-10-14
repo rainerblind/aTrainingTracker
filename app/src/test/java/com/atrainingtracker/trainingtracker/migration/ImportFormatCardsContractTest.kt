@@ -57,10 +57,14 @@ class ImportFormatCardsContractTest {
             content.contains("R.string.import_gpx_title")
         )
 
-        // 3. Action dyad buttons exist for each format (Local and Dropbox)
+        // 3. Action triad buttons exist for each format (Local, Folder, Dropbox)
         assertTrue(
             "FIT block must contain local file button",
             content.contains("R.string.import_fit_button")
+        )
+        assertTrue(
+            "FIT block must contain folder scan button",
+            content.contains("R.string.import_fit_folder_button")
         )
         assertTrue(
             "FIT block must contain Dropbox scan button",
@@ -71,6 +75,10 @@ class ImportFormatCardsContractTest {
             content.contains("R.string.import_tcx_button")
         )
         assertTrue(
+            "TCX block must contain folder scan button",
+            content.contains("R.string.import_tcx_folder_button")
+        )
+        assertTrue(
             "TCX block must contain Dropbox scan button",
             content.contains("R.string.import_tcx_dropbox_button")
         )
@@ -79,11 +87,33 @@ class ImportFormatCardsContractTest {
             content.contains("R.string.import_gpx_button")
         )
         assertTrue(
+            "GPX block must contain folder scan button",
+            content.contains("R.string.import_gpx_folder_button")
+        )
+        assertTrue(
             "GPX block must contain Dropbox scan button",
             content.contains("R.string.import_gpx_dropbox_button")
         )
 
-        // 4. Google Drive scan buttons and state must be absent (REQ-UI-362 / ATT-3489)
+        // 4. Folder scan integration & launcher contract
+        assertTrue(
+            "FormatImportCard must define folderButtonText parameter",
+            content.contains("folderButtonText: String")
+        )
+        assertTrue(
+            "FormatImportCard must define onFolderClick parameter",
+            content.contains("onFolderClick: () -> Unit")
+        )
+        assertTrue(
+            "ImportTabContent must define onFolderImportClick parameter",
+            content.contains("onFolderImportClick: (format: String) -> Unit")
+        )
+        assertTrue(
+            "Screen must trigger viewModel.importWorkoutDirectory",
+            content.contains("viewModel.importWorkoutDirectory(context, uri, pendingDirectoryFormat)")
+        )
+
+        // 5. Google Drive scan buttons and state must be absent (REQ-UI-362 / ATT-3489)
         assertFalse(
             "FIT block must NOT contain Google Drive scan button",
             content.contains("R.string.import_fit_gdrive_button")
@@ -109,7 +139,7 @@ class ImportFormatCardsContractTest {
             content.contains("showGoogleDriveDisconnectedDialog")
         )
 
-        // 5. Cloud recovery confirmation passes scoped format for Dropbox and single legacy
+        // 6. Cloud recovery confirmation passes scoped format for Dropbox and single legacy
         assertTrue(
             "Bulk recovery from Dropbox must pass pendingDropboxFormat",
             content.contains("viewModel.bulkRecoverLegacyData(context, pendingDropboxFormat)")

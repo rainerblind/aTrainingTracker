@@ -37,15 +37,20 @@ class ImportFormatLocalizationTest {
         "import_fit_title",
         "import_fit_description",
         "import_fit_button",
+        "import_fit_folder_button",
         "import_fit_dropbox_button",
         "import_tcx_title",
         "import_tcx_description",
         "import_tcx_button",
+        "import_tcx_folder_button",
         "import_tcx_dropbox_button",
         "import_gpx_title",
         "import_gpx_description",
         "import_gpx_button",
-        "import_gpx_dropbox_button"
+        "import_gpx_folder_button",
+        "import_gpx_dropbox_button",
+        "import_directory_scanning",
+        "import_directory_no_files_found"
     )
 
     private val removedKeys = listOf(

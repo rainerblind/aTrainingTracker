@@ -1546,6 +1546,7 @@
     <string name="import_fit_title">Importer des fichiers FIT</string>
     <string name="import_fit_description">Importer des entraînements depuis Garmin, Wahoo, Hammerhead ou montres connectées (.fit).</string>
     <string name="import_fit_button">Sélectionner des fichiers FIT</string>
+    <string name="import_fit_folder_button">Analyser le dossier (FIT)</string>
     <string name="import_fit_dropbox_button">Scanner Dropbox (FIT)</string>
     <string name="import_fit_progress">Importation des fichiers FIT (%1$d sur %2$d)…</string>
     <string name="import_fit_summary_success">%1$d entraînements importés avec succès (%2$d doublons ignorés).</string>
@@ -1554,11 +1555,15 @@
     <string name="import_tcx_title">Importer des fichiers TCX</string>
     <string name="import_tcx_description">Importer des entraînements à partir de fichiers Training Center XML (.tcx).</string>
     <string name="import_tcx_button">Sélectionner un fichier TCX local</string>
+    <string name="import_tcx_folder_button">Analyser le dossier (TCX)</string>
     <string name="import_tcx_dropbox_button">Scanner Dropbox (TCX)</string>
     <string name="import_gpx_title">Importer des fichiers GPX</string>
     <string name="import_gpx_description">Importer des parcours et activités à partir de fichiers GPS Exchange Format (.gpx).</string>
     <string name="import_gpx_button">Sélectionner un fichier GPX local</string>
+    <string name="import_gpx_folder_button">Analyser le dossier (GPX)</string>
     <string name="import_gpx_dropbox_button">Scanner Dropbox (GPX)</string>
+    <string name="import_directory_scanning">Analyse du dossier à la recherche d\'entraînements…</string>
+    <string name="import_directory_no_files_found">Aucun fichier d\'entraînement %1$s compatible trouvé dans le dossier sélectionné.</string>
     <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
     <string name="invalid_workout_file_format">Format de fichier non valide. Veuillez sélectionner un fichier %1$s.</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
