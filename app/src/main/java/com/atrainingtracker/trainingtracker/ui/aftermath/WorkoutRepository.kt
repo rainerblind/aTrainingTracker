@@ -108,12 +108,6 @@ class WorkoutRepository private constructor(private val application: Application
         @JvmStatic
         val cropMutex = Mutex()
 
-        @JvmStatic
-        fun <T> runWithCropMutex(block: java.util.concurrent.Callable<T>): T = kotlinx.coroutines.runBlocking {
-            cropMutex.withLock {
-                block.call()
-            }
-        }
 
         @Volatile
         private var INSTANCE: WorkoutRepository? = null

@@ -565,6 +565,9 @@ public class WorkoutSamplesDatabaseManager {
             }
 
             db.setTransactionSuccessful();
+        } catch (Exception e) {
+            Log.e(TAG, "Transaction aborted during pruneAndShiftSamples, rolling back cleanly: " + e.getMessage(), e);
+            throw e;
         } finally {
             db.endTransaction();
         }
@@ -573,14 +576,26 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     /**
-     * Reclaims SQLite storage via incremental vacuum if deleted rows exceed 20% of total rows.
+     * Reclaims SQLite storage via incremental vacuum if deleted rows exceed 20% of total rows
+     * and the database is configured for INCREMENTAL auto-vacuum (mode 2).
      */
     public void vacuumIfFragmented(int deletedRows, int totalRows) {
         if (totalRows > 0 && ((double) deletedRows / (double) totalRows) > 0.20) {
-            try {
-                getDatabase().execSQL("PRAGMA incremental_vacuum;");
+            SQLiteDatabase db = getDatabase();
+            try (Cursor cursor = db.rawQuery("PRAGMA auto_vacuum;", null)) {
+                int autoVacuumMode = 0;
+                if (cursor != null && cursor.moveToFirst()) {
+                    autoVacuumMode = cursor.getInt(0);
+                }
+                // Mode 2 is INCREMENTAL auto-vacuum in SQLite
+                if (autoVacuumMode == 2) {
+                    db.execSQL("PRAGMA incremental_vacuum;");
+                    if (DEBUG) Log.d(TAG, "Incremental vacuum executed successfully.");
+                } else {
+                    if (DEBUG) Log.d(TAG, "Incremental vacuum skipped: auto_vacuum mode is " + autoVacuumMode + " (requires mode 2 / INCREMENTAL).");
+                }
             } catch (Exception e) {
-                Log.w(TAG, "Incremental vacuum failed or not enabled: " + e.getMessage());
+                Log.w(TAG, "Incremental vacuum check/execution failed: " + e.getMessage());
             }
         }
     }

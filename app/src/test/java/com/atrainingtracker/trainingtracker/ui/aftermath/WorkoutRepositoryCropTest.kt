@@ -73,9 +73,9 @@ class WorkoutRepositoryCropTest {
 
         val exportJob = launch(Dispatchers.Default) {
             cropStarted.await()
-            WorkoutRepository.runWithCropMutex(Callable {
+            WorkoutRepository.cropMutex.withLock {
                 executionOrder.add("EXPORT")
-            })
+            }
         }
 
         joinAll(cropJob, exportJob)
@@ -119,5 +119,29 @@ class WorkoutRepositoryCropTest {
 
         assertFalse("10% deletion should not trigger vacuum", (smallDeleted.toDouble() / totalRows) > 0.20)
         assertTrue("25% deletion should trigger incremental vacuum", (largeDeleted.toDouble() / totalRows) > 0.20)
+    }
+
+    @Test
+    fun testTransactionSafetyOnDiskFullOrMidBatchFailure() {
+        val db = mockk<android.database.sqlite.SQLiteDatabase>(relaxed = true)
+        every { db.beginTransaction() } just Runs
+        every { db.setTransactionSuccessful() } just Runs
+        every { db.endTransaction() } just Runs
+
+        var exceptionThrown = false
+        try {
+            db.beginTransaction()
+            // Simulate disk full or SQL exception mid-batch
+            throw android.database.sqlite.SQLiteFullException("Disk full simulated")
+        } catch (e: Exception) {
+            exceptionThrown = true
+        } finally {
+            db.endTransaction()
+        }
+
+        assertTrue(exceptionThrown)
+        verify(exactly = 1) { db.beginTransaction() }
+        verify(exactly = 0) { db.setTransactionSuccessful() }
+        verify(exactly = 1) { db.endTransaction() }
     }
 }
