@@ -384,6 +384,36 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
+     * Recursively scans an Android Storage Access Framework (SAF) directory tree for workout files
+     * and bulk-imports them with duplicate skipping and reconciliation (REQ-UI-363, ATT-3491).
+     */
+    fun importWorkoutDirectory(
+        context: Context,
+        treeUri: Uri,
+        format: String,
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): Job {
+        saveClusteringTolerances()
+        return viewModelScope.launch(dispatcher) {
+            _uiState.value = UiState.Loading(context.getString(R.string.import_directory_scanning))
+
+            val discoveredUris = SafDirectoryScanner.scanDirectory(
+                context = context,
+                treeUri = treeUri,
+                targetFormat = format
+            )
+
+            if (discoveredUris.isEmpty()) {
+                val formatLabel = format.uppercase()
+                _uiState.value = UiState.Success(context.getString(R.string.import_directory_no_files_found, formatLabel), null)
+                return@launch
+            }
+
+            importWorkoutFilesInternal(context, discoveredUris, format)
+        }
+    }
+
+    /**
      * Ingests a batch of workout files (FIT, TCX, GPX) sequentially with duplicate skipping,
      * progress feedback, and post-import database reconciliation (REQ-DAT-019, REQ-UI-293, ATT-3315).
      */
@@ -396,102 +426,110 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         if (uris.isEmpty()) return Job().apply { complete() }
         saveClusteringTolerances()
         return viewModelScope.launch(dispatcher) {
-            val totalFiles = uris.size
-            var importedCount = 0
-            var skippedCount = 0
-            var failedCount = 0
-            var lastImportedWorkoutId: Long? = null
+            importWorkoutFilesInternal(context, uris, format)
+        }
+    }
 
-            val progressFormatString = if (format.lowercase() == "fit") {
-                context.getString(R.string.import_fit_progress, 0, totalFiles)
+    private suspend fun importWorkoutFilesInternal(
+        context: Context,
+        uris: List<Uri>,
+        format: String
+    ) {
+        val totalFiles = uris.size
+        var importedCount = 0
+        var skippedCount = 0
+        var failedCount = 0
+        var lastImportedWorkoutId: Long? = null
+
+        val progressFormatString = if (format.lowercase() == "fit") {
+            context.getString(R.string.import_fit_progress, 0, totalFiles)
+        } else {
+            context.getString(R.string.import_workout_files_progress, 0, totalFiles)
+        }
+        _uiState.value = UiState.Loading(progressFormatString)
+
+        uris.forEachIndexed { index, uri ->
+            val progressStepString = if (format.lowercase() == "fit") {
+                context.getString(R.string.import_fit_progress, index + 1, totalFiles)
             } else {
-                context.getString(R.string.import_workout_files_progress, 0, totalFiles)
+                context.getString(R.string.import_workout_files_progress, index + 1, totalFiles)
             }
-            _uiState.value = UiState.Loading(progressFormatString)
+            _uiState.value = UiState.Loading(progressStepString)
 
-            uris.forEachIndexed { index, uri ->
-                val progressStepString = if (format.lowercase() == "fit") {
-                    context.getString(R.string.import_fit_progress, index + 1, totalFiles)
-                } else {
-                    context.getString(R.string.import_workout_files_progress, index + 1, totalFiles)
+            val displayName = try {
+                context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        if (idx != -1) cursor.getString(idx) else null
+                    } else null
                 }
-                _uiState.value = UiState.Loading(progressStepString)
-
-                val displayName = try {
-                    context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-                        if (cursor.moveToFirst()) {
-                            val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                            if (idx != -1) cursor.getString(idx) else null
-                        } else null
-                    }
-                } catch (e: Exception) {
-                    null
+            } catch (e: Exception) {
+                null
+            }
+            val fileName = displayName?.takeIf { it.isNotBlank() } ?: "import_${System.currentTimeMillis()}_$index.$format"
+            val tempFile = File(context.cacheDir, fileName)
+            try {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    tempFile.outputStream().use { output -> input.copyTo(output) }
                 }
-                val fileName = displayName?.takeIf { it.isNotBlank() } ?: "import_${System.currentTimeMillis()}_$index.$format"
-                val tempFile = File(context.cacheDir, fileName)
-                try {
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        tempFile.outputStream().use { output -> input.copyTo(output) }
-                    }
 
-                    val fileExt = if (fileName.contains('.')) fileName.substringAfterLast('.').lowercase() else format.lowercase()
-                    val result = when (fileExt) {
-                        "tcx" -> LegacyImportEngine.importFromTcxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                        "gpx" -> LegacyImportEngine.importFromGpxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                        "fit" -> LegacyImportEngine.importFromFitResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                        else -> LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.FAILED)
-                    }
+                val fileExt = if (fileName.contains('.')) fileName.substringAfterLast('.').lowercase() else format.lowercase()
+                val result = when (fileExt) {
+                    "tcx" -> LegacyImportEngine.importFromTcxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                    "gpx" -> LegacyImportEngine.importFromGpxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                    "fit" -> LegacyImportEngine.importFromFitResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                    else -> LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.FAILED)
+                }
 
-                    when (result.status) {
-                        LegacyImportEngine.ImportStatus.SUCCESS -> {
-                            importedCount++
-                            if (result.workoutId != null) {
-                                lastImportedWorkoutId = result.workoutId
-                            }
+                when (result.status) {
+                    LegacyImportEngine.ImportStatus.SUCCESS -> {
+                        importedCount++
+                        if (result.workoutId != null) {
+                            lastImportedWorkoutId = result.workoutId
                         }
-                        LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> skippedCount++
-                        LegacyImportEngine.ImportStatus.FAILED -> failedCount++
                     }
-                } catch (e: Exception) {
-                    Log.e("BackupRestoreVM", "Failed to import $format URI $uri: ${e.message}", e)
-                    failedCount++
-                } finally {
-                    tempFile.delete()
+                    LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> skippedCount++
+                    LegacyImportEngine.ImportStatus.FAILED -> failedCount++
                 }
+            } catch (e: Exception) {
+                Log.e("BackupRestoreVM", "Failed to import $format URI $uri: ${e.message}", e)
+                failedCount++
+            } finally {
+                tempFile.delete()
             }
+        }
 
+        if (importedCount > 0) {
+            try {
+                val app = getApplication<Application>()
+                WorkoutRepository.getInstance(app).loadAllWorkouts()
+                PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
+                WorkoutClusterRepository.getInstance(app).refreshClusters()
+            } catch (e: Exception) {
+                Log.w("BackupRestoreVM", "Post-import reconciliation failed: ${e.message}")
+            }
+        }
+
+        if (totalFiles == 1 && format.lowercase() != "fit") {
+            val fileExt = format.uppercase()
             if (importedCount > 0) {
-                try {
-                    val app = getApplication<Application>()
-                    WorkoutRepository.getInstance(app).loadAllWorkouts()
-                    PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
-                    WorkoutClusterRepository.getInstance(app).refreshClusters()
-                } catch (e: Exception) {
-                    Log.w("BackupRestoreVM", "Post-import reconciliation failed: ${e.message}")
-                }
+                _uiState.value = UiState.Success("Successfully imported workout from $fileExt file.", lastImportedWorkoutId)
+            } else if (skippedCount > 0) {
+                _uiState.value = UiState.Success(context.getString(R.string.import_fit_summary_success, 0, 1), null)
+            } else {
+                _uiState.value = UiState.Error("Failed to import workout. It might already exist or the file format is invalid.")
+            }
+        } else {
+            val resultMsg = if (failedCount > 0) {
+                context.getString(R.string.import_fit_summary_with_errors, importedCount, skippedCount, failedCount)
+            } else {
+                context.getString(R.string.import_fit_summary_success, importedCount, skippedCount)
             }
 
-            if (totalFiles == 1 && format.lowercase() != "fit") {
-                val fileExt = format.uppercase()
-                if (importedCount > 0) {
-                    _uiState.value = UiState.Success("Successfully imported workout from $fileExt file.", lastImportedWorkoutId)
-                } else if (skippedCount > 0) {
-                    _uiState.value = UiState.Success(context.getString(R.string.import_fit_summary_success, 0, 1), null)
-                } else {
-                    _uiState.value = UiState.Error("Failed to import workout. It might already exist or the file format is invalid.")
-                }
+            if (importedCount > 0 || skippedCount > 0) {
+                _uiState.value = UiState.Success(resultMsg, if (importedCount > 0) lastImportedWorkoutId else null)
             } else {
-                val resultMsg = if (failedCount > 0) {
-                    context.getString(R.string.import_fit_summary_with_errors, importedCount, skippedCount, failedCount)
-                } else {
-                    context.getString(R.string.import_fit_summary_success, importedCount, skippedCount)
-                }
-
-                if (importedCount > 0 || skippedCount > 0) {
-                    _uiState.value = UiState.Success(resultMsg, if (importedCount > 0) lastImportedWorkoutId else null)
-                } else {
-                    _uiState.value = UiState.Error(resultMsg)
-                }
+                _uiState.value = UiState.Error(resultMsg)
             }
         }
     }

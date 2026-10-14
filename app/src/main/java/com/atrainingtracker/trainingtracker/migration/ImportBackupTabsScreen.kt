@@ -120,6 +120,8 @@ fun ImportBackupTabsScreen(
     var pendingLegacyUris by remember { mutableStateOf<List<Uri>?>(null) }
     var pendingFitUris by remember { mutableStateOf<List<Uri>?>(null) }
     var pendingSingleLegacyFormat by remember { mutableStateOf("auto") }
+    var pendingDirectoryUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingDirectoryFormat by remember { mutableStateOf("fit") }
     var showDropboxDisconnectedDialog by remember { mutableStateOf(false) }
     val isDropboxConnected = remember(uiState) {
         TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
@@ -128,6 +130,22 @@ fun ImportBackupTabsScreen(
     val isBusy = uiState is BackupRestoreViewModel.UiState.Loading || uiState is BackupRestoreViewModel.UiState.Progress
 
     val createBackupChooserTitle = stringResource(R.string.create_backup)
+
+    val pickDirectoryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { treeUri ->
+        treeUri?.let { uri ->
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: Exception) {
+                // Ignore if provider doesn't support persistable permission
+            }
+            pendingDirectoryUri = uri
+        }
+    }
 
     val pickFullRestoreLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -266,6 +284,10 @@ fun ImportBackupTabsScreen(
                                     pickLegacyFileLauncher.launch(arrayOf("*/*"))
                                 }
                             }
+                        },
+                        onFolderImportClick = { format ->
+                            pendingDirectoryFormat = format
+                            pickDirectoryLauncher.launch(null)
                         },
                         onDropboxScanClick = { format ->
                             if (isDropboxConnected) {
@@ -455,6 +477,17 @@ fun ImportBackupTabsScreen(
                 pendingFitUris = null
             },
             onDismiss = { pendingFitUris = null }
+        )
+    }
+
+    pendingDirectoryUri?.let { uri ->
+        PreImportTuningBottomSheet(
+            viewModel = viewModel,
+            onConfirm = {
+                viewModel.importWorkoutDirectory(context, uri, pendingDirectoryFormat)
+                pendingDirectoryUri = null
+            },
+            onDismiss = { pendingDirectoryUri = null }
         )
     }
 }
@@ -1015,6 +1048,8 @@ private fun FormatImportCard(
     description: String,
     localButtonText: String,
     onLocalClick: () -> Unit,
+    folderButtonText: String,
+    onFolderClick: () -> Unit,
     dropboxButtonText: String,
     isDropboxConnected: Boolean,
     onDropboxClick: () -> Unit,
@@ -1062,6 +1097,16 @@ private fun FormatImportCard(
             }
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(
+                onClick = onFolderClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isBusy
+            ) {
+                Icon(Icons.Default.FolderOpen, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(folderButtonText)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
                 onClick = onDropboxClick,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isBusy,
@@ -1079,42 +1124,49 @@ private fun ImportTabContent(
     isBusy: Boolean,
     isDropboxConnected: Boolean,
     onLocalImportClick: (format: String) -> Unit,
+    onFolderImportClick: (format: String) -> Unit,
     onDropboxScanClick: (format: String) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- FIT Importer Card (REQ-DAT-019 / REQ-UI-293 / REQ-UI-362) ---
+        // --- FIT Importer Card (REQ-DAT-019 / REQ-UI-293 / REQ-UI-362 / REQ-UI-363) ---
         FormatImportCard(
             title = stringResource(R.string.import_fit_title),
             description = stringResource(R.string.import_fit_description),
             localButtonText = stringResource(R.string.import_fit_button),
             onLocalClick = { onLocalImportClick("fit") },
+            folderButtonText = stringResource(R.string.import_fit_folder_button),
+            onFolderClick = { onFolderImportClick("fit") },
             dropboxButtonText = stringResource(R.string.import_fit_dropbox_button),
             isDropboxConnected = isDropboxConnected,
             onDropboxClick = { onDropboxScanClick("fit") },
             isBusy = isBusy
         )
 
-        // --- TCX Importer Card (REQ-UI-293 / REQ-UI-362) ---
+        // --- TCX Importer Card (REQ-UI-293 / REQ-UI-362 / REQ-UI-363) ---
         FormatImportCard(
             title = stringResource(R.string.import_tcx_title),
             description = stringResource(R.string.import_tcx_description),
             localButtonText = stringResource(R.string.import_tcx_button),
             onLocalClick = { onLocalImportClick("tcx") },
+            folderButtonText = stringResource(R.string.import_tcx_folder_button),
+            onFolderClick = { onFolderImportClick("tcx") },
             dropboxButtonText = stringResource(R.string.import_tcx_dropbox_button),
             isDropboxConnected = isDropboxConnected,
             onDropboxClick = { onDropboxScanClick("tcx") },
             isBusy = isBusy
         )
 
-        // --- GPX Importer Card (REQ-MIG-030 / REQ-UI-293 / REQ-UI-362) ---
+        // --- GPX Importer Card (REQ-MIG-030 / REQ-UI-293 / REQ-UI-362 / REQ-UI-363) ---
         FormatImportCard(
             title = stringResource(R.string.import_gpx_title),
             description = stringResource(R.string.import_gpx_description),
             localButtonText = stringResource(R.string.import_gpx_button),
             onLocalClick = { onLocalImportClick("gpx") },
+            folderButtonText = stringResource(R.string.import_gpx_folder_button),
+            onFolderClick = { onFolderImportClick("gpx") },
             dropboxButtonText = stringResource(R.string.import_gpx_dropbox_button),
             isDropboxConnected = isDropboxConnected,
             onDropboxClick = { onDropboxScanClick("gpx") },
