@@ -24,10 +24,9 @@ import android.net.Uri
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
+import com.atrainingtracker.trainingtracker.routes.parsers.TcxTrackpointParser
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
-import org.xmlpull.v1.XmlPullParser
-import org.xmlpull.v1.XmlPullParserFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 
@@ -37,149 +36,44 @@ import java.io.InputStream
  *
  * Traceability:
  * - REQ-MAP-026: Support Waypoints, POIs (Benches, Water, Summits) and TCX Course Points.
+ * - REQ-MIG-037: Unified Streaming TCX and GPX XML Trackpoint Parsing Engine (Rule 36).
  * - TST-MAP-028: TCX course and course point extraction verification.
+ * - TST-MIG-034: Unified Streaming TCX and GPX XML Trackpoint Parsing Engine Verification.
  */
 object TcxCourseParser {
 
     /**
-     * Parses a TCX Course from an [InputStream].
+     * Parses a TCX Course from an [InputStream] using canonical [TcxTrackpointParser].
      */
     fun parse(inputStream: InputStream, defaultExternalId: String = "tcx_course"): Result<RouteImportResult> {
         return try {
-            val factory = XmlPullParserFactory.newInstance().apply {
-                isNamespaceAware = false
+            val parseResult = TcxTrackpointParser.parse(inputStream)
+            if (parseResult.isFailure) {
+                return Result.failure(parseResult.exceptionOrNull() ?: IllegalArgumentException("Failed to parse TCX course"))
             }
-            val parser = factory.newPullParser()
-            parser.setInput(inputStream, "UTF-8")
+            val data = parseResult.getOrThrow()
+            val rawPoints = data.laps.flatMap { it.trackpoints }
 
-            var courseName = ""
-            val trackPoints = mutableListOf<PathPoint>()
-            val rawCoursePoints = mutableListOf<RouteWaypoint>()
-
-            var inCourse = false
-            var inTrack = false
-            var inTrackpoint = false
-            var inPosition = false
-            var inCoursePoint = false
-
-            var currentLat: Double? = null
-            var currentLng: Double? = null
-            var currentAlt: Double? = null
-            var currentDist: Double? = null
-
-            var cpName: String? = null
-            var cpLat: Double? = null
-            var cpLng: Double? = null
-            var cpAlt: Double? = null
-            var cpType: String? = null
-            var cpNotes: String? = null
-
-            var currentTag = ""
-
-            var eventType = parser.eventType
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                val rawName = parser.name
-                val tag = rawName?.substringAfterLast(':') ?: ""
-
-                when (eventType) {
-                    XmlPullParser.START_TAG -> {
-                        currentTag = tag
-                        when (tag) {
-                            "Course" -> inCourse = true
-                            "Track" -> if (inCourse) inTrack = true
-                            "Trackpoint" -> {
-                                if (inTrack) {
-                                    inTrackpoint = true
-                                    currentLat = null
-                                    currentLng = null
-                                    currentAlt = null
-                                    currentDist = null
-                                }
-                            }
-                            "CoursePoint" -> {
-                                if (inCourse) {
-                                    inCoursePoint = true
-                                    cpName = null
-                                    cpLat = null
-                                    cpLng = null
-                                    cpAlt = null
-                                    cpType = null
-                                    cpNotes = null
-                                }
-                            }
-                            "Position" -> inPosition = true
-                        }
-                    }
-
-                    XmlPullParser.TEXT -> {
-                        val text = parser.text?.trim() ?: ""
-                        if (text.isNotEmpty()) {
-                            if (inCourse && !inTrack && !inCoursePoint && currentTag == "Name" && courseName.isEmpty()) {
-                                courseName = text
-                            } else if (inTrackpoint) {
-                                when (currentTag) {
-                                    "LatitudeDegrees" -> if (inPosition) currentLat = text.toDoubleOrNull()
-                                    "LongitudeDegrees" -> if (inPosition) currentLng = text.toDoubleOrNull()
-                                    "AltitudeMeters" -> currentAlt = text.toDoubleOrNull()
-                                    "DistanceMeters" -> currentDist = text.toDoubleOrNull()
-                                }
-                            } else if (inCoursePoint) {
-                                when (currentTag) {
-                                    "Name" -> cpName = text
-                                    "LatitudeDegrees" -> if (inPosition) cpLat = text.toDoubleOrNull()
-                                    "LongitudeDegrees" -> if (inPosition) cpLng = text.toDoubleOrNull()
-                                    "AltitudeMeters" -> cpAlt = text.toDoubleOrNull()
-                                    "PointType" -> cpType = text
-                                    "Notes" -> cpNotes = text
-                                }
-                            }
-                        }
-                    }
-
-                    XmlPullParser.END_TAG -> {
-                        currentTag = ""
-                        when (tag) {
-                            "Position" -> inPosition = false
-                            "Trackpoint" -> {
-                                if (inTrackpoint) {
-                                    if (currentLat != null && currentLng != null) {
-                                        trackPoints.add(
-                                            PathPoint(
-                                                latLng = LatLng(currentLat, currentLng),
-                                                altitude = currentAlt ?: 0.0,
-                                                distance = currentDist ?: 0.0
-                                            )
-                                        )
-                                    }
-                                    inTrackpoint = false
-                                }
-                            }
-                            "CoursePoint" -> {
-                                if (inCoursePoint) {
-                                    if (cpLat != null && cpLng != null) {
-                                        rawCoursePoints.add(
-                                            RouteWaypoint(
-                                                latLng = LatLng(cpLat, cpLng),
-                                                altitude = cpAlt ?: 0.0,
-                                                name = cpName ?: "",
-                                                description = cpNotes ?: "",
-                                                type = WaypointType.fromTcx(cpType)
-                                            )
-                                        )
-                                    }
-                                    inCoursePoint = false
-                                }
-                            }
-                            "Track" -> inTrack = false
-                            "Course" -> inCourse = false
-                        }
-                    }
-                }
-                eventType = parser.next()
-            }
-
-            if (trackPoints.isEmpty()) {
+            if (rawPoints.isEmpty()) {
                 return Result.failure(IllegalArgumentException("No valid trackpoints found in TCX course"))
+            }
+
+            val trackPoints = rawPoints.map { pt ->
+                PathPoint(
+                    latLng = LatLng(pt.lat, pt.lng),
+                    altitude = pt.altitude ?: 0.0,
+                    distance = pt.distanceMeters ?: 0.0
+                )
+            }.toMutableList()
+
+            val rawCoursePoints = data.coursePoints.map { cp ->
+                RouteWaypoint(
+                    latLng = LatLng(cp.lat, cp.lng),
+                    altitude = cp.altitude ?: 0.0,
+                    name = cp.name,
+                    description = cp.notes ?: "",
+                    type = WaypointType.fromTcx(cp.type)
+                )
             }
 
             // Calculate / normalize cumulative distances if missing or zero
@@ -199,11 +93,12 @@ object TcxCourseParser {
             // Project waypoints along track polyline
             val projectedWaypoints = WaypointDistanceCalculator.projectWaypoints(rawCoursePoints, trackPoints)
 
+            val courseName = data.name ?: ""
             val summary = RouteSummary(
                 id = 0,
                 externalId = defaultExternalId,
                 name = if (courseName.isNotBlank()) courseName else "TCX Course",
-                description = "",
+                description = data.notes ?: "",
                 isSelected = false,
                 distance = trackPoints.last().distance,
                 elevationGain = calculateElevationGain(trackPoints),
@@ -230,7 +125,7 @@ object TcxCourseParser {
     fun parse(context: Context, uri: Uri): Result<RouteImportResult> {
         return try {
             val stream = context.contentResolver.openInputStream(uri)
-                ?: return Result.failure(IllegalArgumentException("Unable to open input stream for URI: $uri"))
+                ?: return Result.failure(IllegalArgumentException("Unable to open input stream for URI: "))
             stream.use { parse(it, uri.lastPathSegment ?: "tcx_course") }
         } catch (e: Exception) {
             Result.failure(e)
