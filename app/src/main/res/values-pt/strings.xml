@@ -324,6 +324,9 @@
     <string name="automated_strava_routes_sync">Sincronização automática de rotas</string>
     <string name="automated_strava_routes_sync_summary">Obter regularmente rotas do Strava</string>
     <string name="strava_routes_sync_interval">Intervalo de sincronização</string>
+    <string name="automated_strava_equipment_sync">Sincronização automática de material</string>
+    <string name="automated_strava_equipment_sync_summary">Obter regularmente bicicletas e sapatos do Strava</string>
+    <string name="strava_equipment_sync_interval">Intervalo de sincronização</string>
 
     <string name="strava_success_but_must_check">carregado para Strava, verificando…</string>
     <string name="strava_success_waiting_for_result">carregado para Strava, aguardando…</string>

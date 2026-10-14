@@ -27,8 +27,10 @@ import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorker
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
+import com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -140,8 +142,9 @@ object StravaDataPurgeManager {
         // 6. WorkManager: Cancel periodic synchronization workers
         try {
             val workManager = WorkManager.getInstance(context)
-            workManager.cancelUniqueWork("automated_strava_segments_sync_work")
-            workManager.cancelUniqueWork("automated_strava_routes_sync_work")
+            workManager.cancelUniqueWork(StravaSegmentsSyncWorker.WORK_NAME)
+            workManager.cancelUniqueWork(StravaRoutesSyncWorker.WORK_NAME)
+            workManager.cancelUniqueWork(StravaEquipmentSyncWorker.WORK_NAME)
             Log.d(TAG, "Canceled Strava WorkManager tasks")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to cancel WorkManager tasks", e)

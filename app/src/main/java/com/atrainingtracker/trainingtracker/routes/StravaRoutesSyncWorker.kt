@@ -45,8 +45,15 @@ class StravaRoutesSyncWorker(
         RoutesRepository.getInstance(applicationContext).pruneExpiredRoutes()
 
         val stravaConnected = TrainingApplication.getStravaAccessToken() != null
-        if (!stravaConnected) {
-            Log.d(TAG, "Strava disconnected. Skipping periodic routes sync.")
+        val enabled = TrainingApplication.isAutomatedStravaRoutesSyncEnabled()
+        if (!stravaConnected || !enabled) {
+            Log.d(TAG, "Strava disconnected or automated sync disabled. Skipping periodic routes sync.")
+            return Result.success()
+        }
+
+        val refreshedToken = com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper.getRefreshedAccessToken()
+        if (refreshedToken.isNullOrBlank()) {
+            Log.w(TAG, "Strava access token refresh returned null or empty. Skipping periodic routes sync.")
             return Result.success()
         }
 
@@ -73,7 +80,7 @@ class StravaRoutesSyncWorker(
 
         /**
          * Schedules or cancels the periodic Strava routes synchronization worker.
-         * Runs every 1 day whenever authenticated with Strava (ATT-1178).
+         * Runs periodically according to athlete preference whenever authenticated with Strava.
          *
          * @param context Application or activity context.
          */
@@ -85,19 +92,22 @@ class StravaRoutesSyncWorker(
                 }
 
                 val stravaConnected = TrainingApplication.getStravaAccessToken() != null
+                val enabled = TrainingApplication.isAutomatedStravaRoutesSyncEnabled()
 
-                if (!stravaConnected) {
+                if (!stravaConnected || !enabled) {
                     WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
-                    Log.d(TAG, "Automated Strava routes sync cancelled (connected=false).")
+                    Log.d(TAG, "Automated Strava routes sync cancelled (connected=$stravaConnected, enabled=$enabled).")
                     return
                 }
+
+                val intervalDays = TrainingApplication.getStravaRoutesSyncIntervalDays().toLongOrNull() ?: 1L
 
                 val constraints = Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
                     .setRequiresBatteryNotLow(true)
                     .build()
 
-                val workRequest = PeriodicWorkRequestBuilder<StravaRoutesSyncWorker>(1, TimeUnit.DAYS)
+                val workRequest = PeriodicWorkRequestBuilder<StravaRoutesSyncWorker>(intervalDays, TimeUnit.DAYS)
                     .setConstraints(constraints)
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
                     .build()
@@ -107,7 +117,7 @@ class StravaRoutesSyncWorker(
                     ExistingPeriodicWorkPolicy.UPDATE,
                     workRequest
                 )
-                Log.i(TAG, "Periodic Strava routes sync scheduled every 1 day.")
+                Log.i(TAG, "Periodic Strava routes sync scheduled every $intervalDays day(s).")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to schedule periodic Strava routes sync", e)
             }

@@ -324,6 +324,9 @@
     <string name="automated_strava_routes_sync">ルートの自動同期</string>
     <string name="automated_strava_routes_sync_summary">Strava から定期的にルートを取得</string>
     <string name="strava_routes_sync_interval">同期の間隔</string>
+    <string name="automated_strava_equipment_sync">装備の自動同期</string>
+    <string name="automated_strava_equipment_sync_summary">Strava から定期的にバイクとシューズを取得</string>
+    <string name="strava_equipment_sync_interval">同期の間隔</string>
 
     <string name="strava_success_but_must_check">Strava アップロード完了、結果を確認中 …</string>
     <string name="strava_success_waiting_for_result">Strava アップロード完了、結果待ち …</string>

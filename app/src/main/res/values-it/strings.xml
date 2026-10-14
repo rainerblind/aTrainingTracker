@@ -324,6 +324,9 @@
     <string name="automated_strava_routes_sync">Sincronizzazione automatica percorsi</string>
     <string name="automated_strava_routes_sync_summary">Recupera regolarmente i percorsi da Strava</string>
     <string name="strava_routes_sync_interval">Intervallo di sincronizzazione</string>
+    <string name="automated_strava_equipment_sync">Sincronizzazione automatica attrezzatura</string>
+    <string name="automated_strava_equipment_sync_summary">Recupera regolarmente bici e scarpe da Strava</string>
+    <string name="strava_equipment_sync_interval">Intervallo di sincronizzazione</string>
 
     <string name="strava_success_but_must_check">caricato su Strava, verifica…</string>
     <string name="strava_success_waiting_for_result">caricato su Strava, attesa…</string>
