@@ -1773,4 +1773,16 @@
     <string name="coachmark_stop_tracking_hint">Balayez vers la droite ou appuyez sur le premier onglet à gauche pour mettre en pause ou arrêter votre activité.</string>
     <string name="coachmark_stop_tracking_show_tab">Afficher le contrôle</string>
     <string name="coachmark_stop_tracking_dismiss">Compris</string>
+
+    <!-- Crop Start and End Points of Recorded Workout (ATT-3274 / REQ-UI-368) -->
+    <string name="crop_workout_title">Rogner l\'entraînement</string>
+    <string name="crop_workout_action">Rogner</string>
+    <string name="crop_workout_confirm_title">Rogner définitivement l\'entraînement ?</string>
+    <string name="crop_workout_confirm_message">Voulez-vous vraiment rogner cet entraînement ? Les données en dehors de la plage sélectionnée seront définitivement supprimées. Cette action est irréversible.</string>
+    <string name="crop_workout_confirm_action">Rogner définitivement</string>
+    <string name="crop_workout_progress">Rognage de l\'entraînement…</string>
+    <string name="crop_workout_success">Entraînement rogné avec succès</string>
+    <string name="crop_insufficient_storage">Espace de stockage insuffisant pour rogner l\'entraînement (au moins %d Mo requis).</string>
+    <string name="crop_export_failed_retry">Échec de la recréation des fichiers d\'exportation. Veuillez réessayer.</string>
+    <string name="crop_force_reexport">Forcer la réexportation</string>
 </resources>

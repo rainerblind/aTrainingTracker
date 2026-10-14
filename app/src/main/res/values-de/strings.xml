@@ -1859,4 +1859,16 @@
     <string name="coachmark_stop_tracking_hint">Wische nach rechts oder tippe auf den ersten Reiter links, um die Aufzeichnung zu pausieren oder zu beenden.</string>
     <string name="coachmark_stop_tracking_show_tab">Steuerung anzeigen</string>
     <string name="coachmark_stop_tracking_dismiss">Verstanden</string>
+
+    <!-- Crop Start and End Points of Recorded Workout (ATT-3274 / REQ-UI-368) -->
+    <string name="crop_workout_title">Track zuschneiden</string>
+    <string name="crop_workout_action">Zuschneiden</string>
+    <string name="crop_workout_confirm_title">Track dauerhaft zuschneiden?</string>
+    <string name="crop_workout_confirm_message">Möchtest du den Track wirklich zuschneiden? Die Daten außerhalb des gewählten Bereichs werden dauerhaft gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.</string>
+    <string name="crop_workout_confirm_action">Unwiderruflich zuschneiden</string>
+    <string name="crop_workout_progress">Track wird zugeschnitten…</string>
+    <string name="crop_workout_success">Track erfolgreich zugeschnitten</string>
+    <string name="crop_insufficient_storage">Nicht genügend freier Speicherplatz zum Zuschneiden (mindestens %d MB erforderlich).</string>
+    <string name="crop_export_failed_retry">Neuerstellung der Exportdateien fehlgeschlagen. Bitte erneut versuchen.</string>
+    <string name="crop_force_reexport">Export wiederholen</string>
 </resources>

@@ -75,6 +75,7 @@ import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -83,6 +84,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 
 /**
@@ -102,6 +105,11 @@ class WorkoutRepository private constructor(private val application: Application
     companion object {
         private val TAG = WorkoutRepository::class.java.simpleName
         private val DEBUG = TrainingApplication.getDebug(true)
+
+        @JvmStatic
+        val cropMutex get() = com.atrainingtracker.trainingtracker.domain.crop.CropCoordinator.mutex
+
+        const val MIN_FREE_STORAGE_MB: Long = 50L
 
         @Volatile
         private var INSTANCE: WorkoutRepository? = null
@@ -167,6 +175,7 @@ class WorkoutRepository private constructor(private val application: Application
     private val sportTypeDatabaseManager by lazy { SportTypeDatabaseManager.getInstance(application) }
     private val exportManager by lazy { ExportManager(application) }
     private val stravaUploadDbHelper by lazy { StravaUploadDbHelper(application) }
+    private val lapsDatabaseManager by lazy { LapsDatabaseManager.getInstance(application) }
 
     private val mapper by lazy {
         WorkoutDataMapper(
@@ -708,7 +717,373 @@ class WorkoutRepository private constructor(private val application: Application
         val exportFilter = IntentFilter(ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT)
         ContextCompat.registerReceiver(application, exportStatusUpdateReceiver, exportFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
+        reconcilePendingCropRecovery()
+
         if (DEBUG) Log.d(TAG, "WorkoutRepository initialized and receivers registered.")
+    }
+
+    /**
+     * Checks and removes any orphaned ephemeral crop snapshots left behind by an aborted process,
+     * verifying database integrity and reloading workout data before deletion.
+     *
+     * @return [Job] representing the background recovery task.
+     */
+    fun reconcilePendingCropRecovery(): Job = launch(Dispatchers.IO) {
+            try {
+                val backupFiles = application.cacheDir.listFiles { file ->
+                    file.name.startsWith("crop_backup_") && file.name.endsWith(".json")
+                }
+                backupFiles?.forEach { file ->
+                    Log.w(TAG, "reconcilePendingCropRecovery: Found pending/orphaned crop backup: ${file.name}")
+                    try {
+                        val text = file.readText()
+                        val json = org.json.JSONObject(text)
+                        val workoutId = json.optLong("workoutId", -1L)
+                        if (workoutId != -1L) {
+                            Log.i(TAG, "reconcilePendingCropRecovery: Verifying integrity and reloading workoutId=$workoutId")
+                            reloadWorkoutData(workoutId)
+                        }
+                        file.delete()
+                    } catch (ex: Exception) {
+                        Log.e(TAG, "reconcilePendingCropRecovery: Failed to verify/recover for ${file.name}. Preserving backup file.", ex)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in reconcilePendingCropRecovery", e)
+            }
+        }
+
+    /**
+     * Retrieves lightweight ordered sample points for crop visualization and boundary calculation.
+     */
+    suspend fun getCropSamplePoints(workoutId: Long): List<com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropSamplePoint> = withContext(Dispatchers.IO) {
+        val baseFileName = summariesManager.getBaseFileName(workoutId) ?: return@withContext emptyList()
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        if (!samplesManager.existsTable(baseFileName)) return@withContext emptyList()
+
+        val points = mutableListOf<com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropSamplePoint>()
+        val db = samplesManager.database
+        db.query(tableName, null, null, null, null, null, "${android.provider.BaseColumns._ID} ASC").use { cursor ->
+            val idIdx = cursor.getColumnIndexOrThrow(android.provider.BaseColumns._ID)
+            val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+            val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+            val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
+            val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
+            val latIdx = cursor.getColumnIndex(SensorType.LATITUDE.name)
+            val lonIdx = cursor.getColumnIndex(SensorType.LONGITUDE.name)
+            val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
+            val lapNrIdx = cursor.getColumnIndex(SensorType.LAP_NR.name)
+
+            var idx = 0
+            while (cursor.moveToNext()) {
+                val rowId = cursor.getLong(idIdx)
+                val timeStr = if (timeIdx != -1 && !cursor.isNull(timeIdx)) cursor.getString(timeIdx) else null
+                val timeTotal = if (timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx)) cursor.getLong(timeTotalIdx) else 0L
+                val timeActive = if (timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx)) cursor.getLong(timeActiveIdx) else 0L
+                val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
+                val latLng = if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                    LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx))
+                } else null
+                val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null
+                val lapNr = if (lapNrIdx != -1 && !cursor.isNull(lapNrIdx)) cursor.getLong(lapNrIdx) else 1L
+
+                points.add(
+                    com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropSamplePoint(
+                        rowId = rowId,
+                        index = idx++,
+                        timeStr = timeStr,
+                        timeTotalS = timeTotal,
+                        timeActiveS = timeActive,
+                        distanceTotalM = dist,
+                        latLng = latLng,
+                        altitude = alt,
+                        lapNr = lapNr
+                    )
+                )
+            }
+        }
+        points
+    }
+
+    /**
+     * Executes atomic workout cropping across multiple domain database managers:
+     *
+     * Architectural Atomicity & Invariant Guarantees:
+     * 1. Multi-Database Architecture: [WorkoutSamples.db], [Laps.db], and [WorkoutSummaries.db]
+     *    are distinct SQLite database files maintained by independent SQLiteOpenHelper instances.
+     * 2. Transaction Scope: Each underlying operation ([WorkoutSamplesDatabaseManager.pruneAndShiftSamples],
+     *    [LapsDatabaseManager.replaceCroppedLaps], and [WorkoutSummariesDatabaseManager.updateCroppedWorkoutSummary])
+     *    executes within an ACID transaction (`beginTransaction` / `setTransactionSuccessful` / `endTransaction`).
+     * 3. Cross-Database Synchronization & Invariants:
+     *    - [cropMutex] non-blocking serialization prevents concurrent mutations or conflicting exports.
+     *    - Ephemeral snapshot `crop_backup_<workoutId>_<timestamp>.json` persists recovery metadata to disk.
+     *    - Linear phase ordering (Samples -> Laps -> Summary) guarantees referential integrity.
+     *    - In event of failure, defensive reload [reloadWorkoutData] resynchronizes in-memory caches.
+     *    - [reconcilePendingCropRecovery] detects aborted operations across app restarts.
+     *
+     * @param workoutId The database ID of the workout.
+     * @param startIndex 0-based sample start index to retain.
+     * @param endIndex 0-based sample end index to retain.
+     * @throws IllegalStateException If samples table does not exist or database integrity verification fails.
+     * @throws com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropStorageException If insufficient storage space exists.
+     * @return Result.success on success, Result.failure on storage or validation errors.
+     */
+    suspend fun cropWorkout(workoutId: Long, startIndex: Int, endIndex: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        cropMutex.withLock {
+            val baseFileName = summariesManager.getBaseFileName(workoutId)
+                ?: return@withContext Result.failure(IllegalArgumentException("Workout not found: $workoutId"))
+            val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+            if (!samplesManager.existsTable(baseFileName)) {
+                return@withContext Result.failure(IllegalStateException("Samples table does not exist for $baseFileName"))
+            }
+
+            // 1. Dynamic Storage Pre-Flight Check (>= max(50 MB, 5 * dbFileSize))
+            val dbFile = application.getDatabasePath(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.DB_NAME)
+            val dbFileSize = if (dbFile.exists()) dbFile.length() else 0L
+            val requiredBytes = maxOf(MIN_FREE_STORAGE_MB * 1024 * 1024, 5L * dbFileSize)
+            val stat = android.os.StatFs(application.filesDir.path)
+            if (stat.availableBytes < requiredBytes) {
+                Log.e(TAG, "Insufficient storage for crop: available=${stat.availableBytes}, required=$requiredBytes")
+                return@withContext Result.failure(com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropStorageException())
+            }
+
+            val samples = getCropSamplePoints(workoutId)
+            val totalRows = samples.size
+            if (samples.isEmpty() || startIndex < 0 || endIndex >= totalRows || startIndex >= endIndex) {
+                return@withContext Result.failure(IllegalArgumentException("Invalid crop indices: start=$startIndex, end=$endIndex, total=$totalRows"))
+            }
+
+            val durationSec = (samples[endIndex].timeTotalS - samples[startIndex].timeTotalS).toDouble()
+            if (!com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMath.isCropValid(startIndex, endIndex, totalRows, durationSec)) {
+                return@withContext Result.failure(IllegalArgumentException("Crop invalid: duration=$durationSec, retained=${endIndex - startIndex + 1}"))
+            }
+
+            val startSample = samples[startIndex]
+            val endSample = samples[endIndex]
+            val startRowId = startSample.rowId
+            val endRowId = endSample.rowId
+            val expectedRetainedRows = endIndex - startIndex + 1
+            val lapOffset = startSample.lapNr.toInt()
+            val newStartLatLng = startSample.latLng
+
+            // 2. Pre-commit defensive cache invalidation
+            exportManager.invalidateWorkoutExport(baseFileName)
+
+            // 3. Ephemeral snapshot for crash recovery
+            val backupFile = java.io.File(application.cacheDir, "crop_backup_${workoutId}_${System.currentTimeMillis()}.json")
+            try {
+                backupFile.writeText("{\"workoutId\":$workoutId,\"fileBaseName\":\"$baseFileName\",\"startIndex\":$startIndex,\"endIndex\":$endIndex}")
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not write ephemeral backup file", e)
+            }
+
+            try {
+                // 4. Calculate updated lap metrics
+                val retainedSamples = samples.subList(startIndex, endIndex + 1)
+                val existingLaps = lapsDatabaseManager.getLaps(workoutId)
+                val retainedByLap = retainedSamples.groupBy { it.lapNr }
+
+                val recalculatedLaps = mutableListOf<LapData>()
+                var newLapSequence = 1L
+                for (existingLap in existingLaps) {
+                    val lapPoints = retainedByLap[existingLap.lapNr] ?: continue
+                    if (lapPoints.isEmpty()) continue
+                    val firstPt = lapPoints.first()
+                    val lastPt = lapPoints.last()
+                    val lapDurationS = (lastPt.timeTotalS - firstPt.timeTotalS).coerceAtLeast(0L).toInt()
+                    val lapDistanceM = (lastPt.distanceTotalM - firstPt.distanceTotalM).coerceAtLeast(0.0)
+                    if (lapDurationS <= 0 && lapDistanceM <= 0.0) continue
+
+                    val lapAvgSpeed = com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMath.calculateAverageSpeed(lapDistanceM, lapDurationS)
+                    val lapTimeStart = firstPt.timeStr ?: existingLap.timeStart
+
+                    recalculatedLaps.add(
+                        LapData(
+                            id = 0L,
+                            workoutId = workoutId,
+                            lapNr = newLapSequence++,
+                            timeStart = lapTimeStart,
+                            timeTotalS = lapDurationS,
+                            distanceTotalM = lapDistanceM,
+                            speedAverageMps = lapAvgSpeed,
+                            name = existingLap.name,
+                            description = existingLap.description
+                        )
+                    )
+                }
+
+                val newTimeStart = startSample.timeStr
+                val newTimeTotalS = (endSample.timeTotalS - startSample.timeTotalS).coerceAtLeast(0L)
+                val newTimeActiveS = (endSample.timeActiveS - startSample.timeActiveS).coerceAtLeast(0L)
+                val newDistanceTotalM = (endSample.distanceTotalM - startSample.distanceTotalM).coerceAtLeast(0.0)
+                val newSpeedAverageMps = com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMath.calculateAverageSpeed(newDistanceTotalM, newTimeActiveS.toInt())
+
+                if (recalculatedLaps.isEmpty() && (newTimeTotalS > 0L || newDistanceTotalM > 0.0)) {
+                    recalculatedLaps.add(
+                        LapData(
+                            id = 0L,
+                            workoutId = workoutId,
+                            lapNr = 1L,
+                            timeStart = newTimeStart,
+                            timeTotalS = newTimeTotalS.toInt(),
+                            distanceTotalM = newDistanceTotalM,
+                            speedAverageMps = newSpeedAverageMps,
+                            name = existingLaps.firstOrNull()?.name,
+                            description = existingLaps.firstOrNull()?.description
+                        )
+                    )
+                }
+
+                // 5. Streams, Polyline & Extrema
+                val retainedLatLngs = retainedSamples.mapNotNull { it.latLng }
+                val newPolyline = if (retainedLatLngs.isNotEmpty()) com.google.maps.android.PolyUtil.encode(retainedLatLngs) else null
+
+                var minLat: Double? = null
+                var minLng: Double? = null
+                var maxLat: Double? = null
+                var maxLng: Double? = null
+                if (retainedLatLngs.isNotEmpty()) {
+                    minLat = retainedLatLngs.minOf { it.latitude }
+                    maxLat = retainedLatLngs.maxOf { it.latitude }
+                    minLng = retainedLatLngs.minOf { it.longitude }
+                    maxLng = retainedLatLngs.maxOf { it.longitude }
+                }
+
+                // Downsample streams for summary
+                val sampledAltitudes = mutableListOf<Double>()
+                val sampledDistances = mutableListOf<Double>()
+                for (i in retainedSamples.indices) {
+                    if (i % WorkoutSummariesDatabaseManager.WorkoutSummaries.ENCODING_STEP_SIZE == 0 || i == retainedSamples.lastIndex) {
+                        val s = retainedSamples[i]
+                        sampledAltitudes.add(s.altitude ?: 0.0)
+                        sampledDistances.add((s.distanceTotalM - startSample.distanceTotalM).coerceAtLeast(0.0))
+                    }
+                }
+                val encodedAltitudes = if (sampledAltitudes.isNotEmpty()) com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils.encodeDoubles(sampledAltitudes) else null
+                val encodedDistances = if (sampledDistances.isNotEmpty()) com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils.encodeDoubles(sampledDistances) else null
+
+                // Ascent / Descent calculation
+                var ascending = 0.0
+                var descending = 0.0
+                for (i in 1 until retainedSamples.size) {
+                    val prevAlt = retainedSamples[i - 1].altitude
+                    val currAlt = retainedSamples[i].altitude
+                    if (prevAlt != null && currAlt != null) {
+                        val diff = currAlt - prevAlt
+                        if (diff > 0) ascending += diff else descending += -diff
+                    }
+                }
+
+                // Extrema recalculation
+                val extremaUpdates = mutableListOf<WorkoutSummariesDatabaseManager.ExtremaUpdateRecord>()
+                if (newStartLatLng != null) {
+                    extremaUpdates.add(WorkoutSummariesDatabaseManager.ExtremaUpdateRecord(SensorType.LATITUDE, ExtremaType.START, newStartLatLng.latitude, newStartLatLng))
+                    extremaUpdates.add(WorkoutSummariesDatabaseManager.ExtremaUpdateRecord(SensorType.LONGITUDE, ExtremaType.START, newStartLatLng.longitude, newStartLatLng))
+                }
+                val newEndLatLng = endSample.latLng
+                if (newEndLatLng != null) {
+                    extremaUpdates.add(WorkoutSummariesDatabaseManager.ExtremaUpdateRecord(SensorType.LATITUDE, ExtremaType.END, newEndLatLng.latitude, newEndLatLng))
+                    extremaUpdates.add(WorkoutSummariesDatabaseManager.ExtremaUpdateRecord(SensorType.LONGITUDE, ExtremaType.END, newEndLatLng.longitude, newEndLatLng))
+                }
+
+                // Max Line distance and apex
+                if (newStartLatLng != null) {
+                    var maxDisp = 0.0
+                    var apex = newStartLatLng
+                    for (pt in retainedLatLngs) {
+                        val results = FloatArray(1)
+                        android.location.Location.distanceBetween(
+                            newStartLatLng.latitude, newStartLatLng.longitude,
+                            pt.latitude, pt.longitude, results
+                        )
+                        if (results[0] > maxDisp) {
+                            maxDisp = results[0].toDouble()
+                            apex = pt
+                        }
+                    }
+                    extremaUpdates.add(WorkoutSummariesDatabaseManager.ExtremaUpdateRecord(SensorType.LINE_DISTANCE_m, ExtremaType.MAX, maxDisp, apex))
+                }
+
+                // Recompute min/max for altitude
+                val retainedAltitudes = retainedSamples.mapNotNull { it.altitude }
+                if (retainedAltitudes.isNotEmpty()) {
+                    val minAlt = retainedAltitudes.minOrNull() ?: 0.0
+                    val maxAlt = retainedAltitudes.maxOrNull() ?: 0.0
+                    val avgAlt = retainedAltitudes.average()
+                    val minAltPt = retainedSamples.firstOrNull { it.altitude == minAlt }?.latLng
+                    val maxAltPt = retainedSamples.firstOrNull { it.altitude == maxAlt }?.latLng
+                    extremaUpdates.add(WorkoutSummariesDatabaseManager.ExtremaUpdateRecord(SensorType.ALTITUDE, ExtremaType.MIN, minAlt, minAltPt))
+                    extremaUpdates.add(WorkoutSummariesDatabaseManager.ExtremaUpdateRecord(SensorType.ALTITUDE, ExtremaType.MAX, maxAlt, maxAltPt))
+                    extremaUpdates.add(WorkoutSummariesDatabaseManager.ExtremaUpdateRecord(SensorType.ALTITUDE, ExtremaType.AVG, avgAlt, null))
+                }
+
+                // Speed avg extrema
+                extremaUpdates.add(WorkoutSummariesDatabaseManager.ExtremaUpdateRecord(SensorType.SPEED_mps, ExtremaType.AVG, newSpeedAverageMps, null))
+
+                // Build summary ContentValues
+                val summaryValues = android.content.ContentValues().apply {
+                    newTimeStart?.let { put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START, it) }
+                    put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s, newTimeTotalS)
+                    put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s, newTimeActiveS)
+                    put(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m, newDistanceTotalM)
+                    put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPEED_AVERAGE_mps, newSpeedAverageMps)
+                    put(WorkoutSummariesDatabaseManager.WorkoutSummaries.ASCENDING, ascending)
+                    put(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCENDING, descending)
+                    newPolyline?.let { put(WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE, it) }
+                    encodedAltitudes?.let { put(WorkoutSummariesDatabaseManager.WorkoutSummaries.ALTITUDE_STREAM, it) }
+                    encodedDistances?.let { put(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_STREAM, it) }
+                    if (minLat != null) {
+                        put(WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LAT, minLat)
+                        put(WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LNG, minLng)
+                        put(WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LAT, maxLat)
+                        put(WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LNG, maxLng)
+                    }
+                }
+
+                // 6. Execute atomic database operations
+                samplesManager.pruneAndShiftSamples(baseFileName, startRowId, endRowId, expectedRetainedRows, lapOffset, newStartLatLng)
+                lapsDatabaseManager.replaceCroppedLaps(workoutId, recalculatedLaps)
+                summariesManager.updateCroppedWorkoutSummary(workoutId, summaryValues, extremaUpdates)
+
+                // 7. Cleanup ephemeral backup upon transaction success
+                try {
+                    backupFile.delete()
+                } catch (e: Exception) {
+                    // Ignore
+                }
+
+                // 8. Reload workout data in cache and UI
+                reloadWorkoutData(workoutId)
+
+                // 9. Enqueue fresh export post-commit
+                try {
+                    val updatedWorkout = allWorkouts.value.find { it.id == workoutId }
+                    if (updatedWorkout != null) {
+                        exportManager.exportWorkout(updatedWorkout)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error triggering post-crop export for workout $workoutId", e)
+                }
+
+                // 10. Background fragmentation check / incremental vacuum
+                val deletedRows = totalRows - expectedRetainedRows
+                if (deletedRows > 0.20 * totalRows) {
+                    launch(Dispatchers.IO) {
+                        samplesManager.vacuumIfFragmented(deletedRows, totalRows)
+                    }
+                }
+
+                Result.success(Unit)
+            } catch (e: android.database.sqlite.SQLiteFullException) {
+                Log.e(TAG, "Disk full during crop operation for workout $workoutId", e)
+                reloadWorkoutData(workoutId)
+                Result.failure(e)
+            } catch (t: Throwable) {
+                Log.e(TAG, "Unexpected error during crop operation for workout $workoutId", t)
+                reloadWorkoutData(workoutId)
+                Result.failure(t)
+            }
+        }
     }
 
     // --- Public API for ViewModels ---

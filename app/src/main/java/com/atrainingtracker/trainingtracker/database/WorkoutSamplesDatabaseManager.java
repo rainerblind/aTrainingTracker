@@ -18,12 +18,16 @@
 
 package com.atrainingtracker.trainingtracker.database;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteFullException;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteStatement;
 import android.location.Location;
 import android.provider.BaseColumns;
+import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -32,9 +36,12 @@ import androidx.annotation.Nullable;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+import com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMath;
 import com.google.android.gms.maps.model.LatLng;
 
+import java.util.ArrayList;
 import java.util.List;
+
 
 public class WorkoutSamplesDatabaseManager {
     private static final String TAG = WorkoutSamplesDatabaseManager.class.getName();
@@ -417,6 +424,162 @@ public class WorkoutSamplesDatabaseManager {
     public void deleteWorkout(String baseFileName) {
         getDatabase().execSQL("drop table if exists " + getTableName(baseFileName));
     }
+
+    /**
+     * Prunes unselected sample rows and updates cumulative and spatial fields
+     * within a native SQLite transaction (ATT-3274 / REQ-UI-368).
+     *
+     * @param fileBaseName The workout table name.
+     * @param startRowId The _id of the first retained sample row.
+     * @param endRowId The _id of the last retained sample row.
+     * @param expectedRetainedRows The expected number of rows after pruning.
+     * @param lapOffset The lap number offset to subtract (original start lap - 1).
+     * @param newStartLatLng The coordinate at startRowId for Haversine recalculation (null if indoor).
+     * @return The number of rows deleted.
+     */
+    public int pruneAndShiftSamples(@NonNull String fileBaseName, long startRowId, long endRowId,
+                                    int expectedRetainedRows, int lapOffset, @Nullable LatLng newStartLatLng) {
+        SQLiteDatabase db = getDatabase();
+        String table = getTableName(fileBaseName);
+        db.beginTransaction();
+        int deletedRows = 0;
+        try {
+            // 1. Delete rows outside [startRowId, endRowId]
+            deletedRows = db.delete(table, "_id < ? OR _id > ?", new String[]{String.valueOf(startRowId), String.valueOf(endRowId)});
+
+            // 2. Query baseline cumulative values at startRowId
+            double baseDist = 0.0;
+            long baseTimeTotal = 0L;
+            long baseTimeActive = 0L;
+            double baseAscent = 0.0;
+            double baseDescent = 0.0;
+            long baseCalories = 0L;
+
+            boolean hasDist = existsColumnInTable(db, table, SensorType.DISTANCE_m.name());
+            boolean hasTimeTotal = existsColumnInTable(db, table, SensorType.TIME_TOTAL.name());
+            boolean hasTimeActive = existsColumnInTable(db, table, SensorType.TIME_ACTIVE.name());
+            boolean hasAscent = existsColumnInTable(db, table, SensorType.ASCENT.name());
+            boolean hasDescent = existsColumnInTable(db, table, SensorType.DESCENT.name());
+            boolean hasCalories = existsColumnInTable(db, table, SensorType.CALORIES.name());
+            boolean hasLineDist = existsColumnInTable(db, table, SensorType.LINE_DISTANCE_m.name());
+            boolean hasLapNr = existsColumnInTable(db, table, SensorType.LAP_NR.name());
+            boolean hasLat = existsColumnInTable(db, table, SensorType.LATITUDE.name());
+            boolean hasLon = existsColumnInTable(db, table, SensorType.LONGITUDE.name());
+
+            try (Cursor baselineCursor = db.query(table, null, "_id = ?", new String[]{String.valueOf(startRowId)}, null, null, null)) {
+                if (baselineCursor != null && baselineCursor.moveToFirst()) {
+                    if (hasDist) baseDist = baselineCursor.getDouble(baselineCursor.getColumnIndexOrThrow(SensorType.DISTANCE_m.name()));
+                    if (hasTimeTotal) baseTimeTotal = baselineCursor.getLong(baselineCursor.getColumnIndexOrThrow(SensorType.TIME_TOTAL.name()));
+                    if (hasTimeActive) baseTimeActive = baselineCursor.getLong(baselineCursor.getColumnIndexOrThrow(SensorType.TIME_ACTIVE.name()));
+                    if (hasAscent) baseAscent = baselineCursor.getDouble(baselineCursor.getColumnIndexOrThrow(SensorType.ASCENT.name()));
+                    if (hasDescent) baseDescent = baselineCursor.getDouble(baselineCursor.getColumnIndexOrThrow(SensorType.DESCENT.name()));
+                    if (hasCalories) baseCalories = baselineCursor.getLong(baselineCursor.getColumnIndexOrThrow(SensorType.CALORIES.name()));
+                }
+            }
+
+            // 3. Vectorized bulk update for retained rows:
+            // Shift cumulative fields (DISTANCE_m, TIME_TOTAL, TIME_ACTIVE, ASCENT, DESCENT, CALORIES, LAP_NR) in a single atomic SQL statement
+            List<String> setClauses = new ArrayList<>();
+            if (hasDist) setClauses.add(SensorType.DISTANCE_m.name() + " = MAX(0.0, " + SensorType.DISTANCE_m.name() + " - " + baseDist + ")");
+            if (hasTimeTotal) setClauses.add(SensorType.TIME_TOTAL.name() + " = MAX(0, " + SensorType.TIME_TOTAL.name() + " - " + baseTimeTotal + ")");
+            if (hasTimeActive) setClauses.add(SensorType.TIME_ACTIVE.name() + " = MAX(0, " + SensorType.TIME_ACTIVE.name() + " - " + baseTimeActive + ")");
+            if (hasAscent) setClauses.add(SensorType.ASCENT.name() + " = MAX(0.0, " + SensorType.ASCENT.name() + " - " + baseAscent + ")");
+            if (hasDescent) setClauses.add(SensorType.DESCENT.name() + " = MAX(0.0, " + SensorType.DESCENT.name() + " - " + baseDescent + ")");
+            if (hasCalories) setClauses.add(SensorType.CALORIES.name() + " = MAX(0, " + SensorType.CALORIES.name() + " - " + baseCalories + ")");
+            if (hasLapNr && lapOffset > 0) setClauses.add(SensorType.LAP_NR.name() + " = MAX(1, " + SensorType.LAP_NR.name() + " - " + lapOffset + ")");
+
+            if (!setClauses.isEmpty()) {
+                String bulkUpdateSql = "UPDATE " + table + " SET " + TextUtils.join(", ", setClauses)
+                        + " WHERE _id >= ? AND _id <= ?";
+                db.execSQL(bulkUpdateSql, new Object[]{startRowId, endRowId});
+            }
+
+            // Recalculate LINE_DISTANCE_m: 0.0 at startRowId, and Haversine distance from newStartLatLng if GPS is available
+            if (hasLineDist) {
+                if (newStartLatLng != null && hasLat && hasLon) {
+                    db.execSQL("UPDATE " + table + " SET " + SensorType.LINE_DISTANCE_m.name() + " = 0.0 WHERE _id = ?",
+                            new Object[]{startRowId});
+                    SQLiteStatement stmt = db.compileStatement(
+                            "UPDATE " + table + " SET " + SensorType.LINE_DISTANCE_m.name() + " = ? WHERE _id = ?");
+                    try (Cursor cursor = db.query(table, new String[]{"_id", SensorType.LATITUDE.name(), SensorType.LONGITUDE.name()},
+                            "_id > ? AND _id <= ?", new String[]{String.valueOf(startRowId), String.valueOf(endRowId)},
+                            null, null, "_id ASC")) {
+                        if (cursor != null && cursor.moveToFirst()) {
+                            int idIdx = cursor.getColumnIndexOrThrow("_id");
+                            int latIdx = cursor.getColumnIndexOrThrow(SensorType.LATITUDE.name());
+                            int lonIdx = cursor.getColumnIndexOrThrow(SensorType.LONGITUDE.name());
+                            do {
+                                if (!cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                                    double rowLat = cursor.getDouble(latIdx);
+                                    double rowLon = cursor.getDouble(lonIdx);
+                                    double lineDist = CropWorkoutMath.INSTANCE.haversineDistanceMeters(newStartLatLng, new LatLng(rowLat, rowLon));
+                                    stmt.bindDouble(1, lineDist);
+                                    stmt.bindLong(2, cursor.getLong(idIdx));
+                                    stmt.executeUpdateDelete();
+                                }
+                            } while (cursor.moveToNext());
+                        }
+                    } finally {
+                        stmt.close();
+                    }
+                } else {
+                    db.execSQL("UPDATE " + table + " SET " + SensorType.LINE_DISTANCE_m.name() + " = 0.0 WHERE _id >= ? AND _id <= ?",
+                            new Object[]{startRowId, endRowId});
+                }
+            }
+
+            // 4. Verify post-op checksum
+            int remainingRows = 0;
+            try (Cursor countCursor = db.rawQuery("SELECT COUNT(*) FROM " + table, null)) {
+                if (countCursor != null && countCursor.moveToFirst()) {
+                    remainingRows = countCursor.getInt(0);
+                }
+            }
+
+            if (remainingRows != expectedRetainedRows || remainingRows < 2) {
+                throw new IllegalStateException("Crop checksum failure: expected " + expectedRetainedRows
+                        + " remaining rows, but found " + remainingRows);
+            }
+
+            db.setTransactionSuccessful();
+        } catch (SQLiteFullException e) {
+            Log.e(TAG, "Disk full during pruneAndShiftSamples, rolling back cleanly: " + e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            Log.e(TAG, "Transaction aborted during pruneAndShiftSamples, rolling back cleanly: " + e.getMessage(), e);
+            throw e;
+        } finally {
+            db.endTransaction();
+        }
+
+        return deletedRows;
+    }
+
+    /**
+     * Reclaims SQLite storage via incremental vacuum if deleted rows exceed 20% of total rows
+     * and the database is configured for INCREMENTAL auto-vacuum (mode 2).
+     */
+    public void vacuumIfFragmented(int deletedRows, int totalRows) {
+        if (totalRows > 0 && ((double) deletedRows / (double) totalRows) > 0.20) {
+            SQLiteDatabase db = getDatabase();
+            try (Cursor cursor = db.rawQuery("PRAGMA auto_vacuum;", null)) {
+                int autoVacuumMode = 0;
+                if (cursor != null && cursor.moveToFirst()) {
+                    autoVacuumMode = cursor.getInt(0);
+                }
+                // Mode 2 is INCREMENTAL auto-vacuum in SQLite
+                if (autoVacuumMode == 2) {
+                    db.execSQL("PRAGMA incremental_vacuum;");
+                    if (DEBUG) Log.d(TAG, "Incremental vacuum executed successfully.");
+                } else {
+                    if (DEBUG) Log.d(TAG, "Incremental vacuum skipped: auto_vacuum mode is " + autoVacuumMode + " (requires mode 2 / INCREMENTAL).");
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Incremental vacuum check/execution failed: " + e.getMessage());
+            }
+        }
+    }
+
 
     public boolean existsTable(String baseFileName) {
         if (baseFileName == null) return false;
