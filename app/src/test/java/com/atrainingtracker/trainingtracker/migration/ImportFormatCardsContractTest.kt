@@ -10,13 +10,14 @@
 
 package com.atrainingtracker.trainingtracker.migration
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 /**
  * Structural contract test verifying that [ImportBackupTabsScreen.kt] adheres to the
- * format-partitioned card architecture and uniform action triad specifications (REQ-UI-293, TST-UI-253, ATT-2623).
+ * format-partitioned card architecture without Google Drive scan buttons (REQ-UI-293, REQ-UI-362, TST-UI-253, TST-UI-325, ATT-2623, ATT-3489).
  */
 class ImportFormatCardsContractTest {
 
@@ -32,7 +33,7 @@ class ImportFormatCardsContractTest {
     }
 
     @Test
-    fun testImportTabContent_containsThreeFormatBlocksWithUniformActionTriad() {
+    fun testImportTabContent_containsThreeFormatBlocksWithoutGoogleDriveScan() {
         val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt")
         val content = file.readText()
 
@@ -56,14 +57,14 @@ class ImportFormatCardsContractTest {
             content.contains("R.string.import_gpx_title")
         )
 
-        // 3. Action triad buttons exist for each format
+        // 3. Action dyad buttons exist for each format (Local and Dropbox)
+        assertTrue(
+            "FIT block must contain local file button",
+            content.contains("R.string.import_fit_button")
+        )
         assertTrue(
             "FIT block must contain Dropbox scan button",
             content.contains("R.string.import_fit_dropbox_button")
-        )
-        assertTrue(
-            "FIT block must contain Google Drive scan button",
-            content.contains("R.string.import_fit_gdrive_button")
         )
         assertTrue(
             "TCX block must contain local file button",
@@ -74,10 +75,6 @@ class ImportFormatCardsContractTest {
             content.contains("R.string.import_tcx_dropbox_button")
         )
         assertTrue(
-            "TCX block must contain Google Drive scan button",
-            content.contains("R.string.import_tcx_gdrive_button")
-        )
-        assertTrue(
             "GPX block must contain local file button",
             content.contains("R.string.import_gpx_button")
         )
@@ -85,19 +82,37 @@ class ImportFormatCardsContractTest {
             "GPX block must contain Dropbox scan button",
             content.contains("R.string.import_gpx_dropbox_button")
         )
-        assertTrue(
-            "GPX block must contain Google Drive scan button",
+
+        // 4. Google Drive scan buttons and state must be absent (REQ-UI-362 / ATT-3489)
+        assertFalse(
+            "FIT block must NOT contain Google Drive scan button",
+            content.contains("R.string.import_fit_gdrive_button")
+        )
+        assertFalse(
+            "TCX block must NOT contain Google Drive scan button",
+            content.contains("R.string.import_tcx_gdrive_button")
+        )
+        assertFalse(
+            "GPX block must NOT contain Google Drive scan button",
             content.contains("R.string.import_gpx_gdrive_button")
         )
+        assertFalse(
+            "Screen must NOT maintain pendingGoogleDriveFormat",
+            content.contains("pendingGoogleDriveFormat")
+        )
+        assertFalse(
+            "Screen must NOT maintain showTuningDialogForGoogleDrive",
+            content.contains("showTuningDialogForGoogleDrive")
+        )
+        assertFalse(
+            "Screen must NOT maintain showGoogleDriveDisconnectedDialog",
+            content.contains("showGoogleDriveDisconnectedDialog")
+        )
 
-        // 4. Cloud recovery confirmation passes scoped format
+        // 5. Cloud recovery confirmation passes scoped format for Dropbox and single legacy
         assertTrue(
             "Bulk recovery from Dropbox must pass pendingDropboxFormat",
             content.contains("viewModel.bulkRecoverLegacyData(context, pendingDropboxFormat)")
-        )
-        assertTrue(
-            "Bulk recovery from Google Drive must pass pendingGoogleDriveFormat",
-            content.contains("viewModel.bulkRecoverGoogleDriveData(context, pendingGoogleDriveFormat)")
         )
         assertTrue(
             "Single legacy file import must pass pendingSingleLegacyFormat",

@@ -116,19 +116,13 @@ fun ImportBackupTabsScreen(
     // ATT-315 / ATT-2623: Pre-import Tuning & Format Scoping state
     var showTuningDialogForBulk by remember { mutableStateOf(false) }
     var pendingDropboxFormat by remember { mutableStateOf("all") }
-    var showTuningDialogForGoogleDrive by remember { mutableStateOf(false) }
-    var pendingGoogleDriveFormat by remember { mutableStateOf("all") }
     var pendingSingleLegacyUri by remember { mutableStateOf<Uri?>(null) }
     var pendingLegacyUris by remember { mutableStateOf<List<Uri>?>(null) }
     var pendingFitUris by remember { mutableStateOf<List<Uri>?>(null) }
     var pendingSingleLegacyFormat by remember { mutableStateOf("auto") }
     var showDropboxDisconnectedDialog by remember { mutableStateOf(false) }
-    var showGoogleDriveDisconnectedDialog by remember { mutableStateOf(false) }
     val isDropboxConnected = remember(uiState) {
         TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
-    }
-    val isGoogleDriveConnected = remember(uiState) {
-        TrainingApplication.uploadToGoogleDrive() && !TrainingApplication.getGoogleDriveAuthToken().isNullOrBlank()
     }
     
     val isBusy = uiState is BackupRestoreViewModel.UiState.Loading || uiState is BackupRestoreViewModel.UiState.Progress
@@ -256,7 +250,6 @@ fun ImportBackupTabsScreen(
                     0 -> ImportTabContent(
                         isBusy = isBusy,
                         isDropboxConnected = isDropboxConnected,
-                        isGoogleDriveConnected = isGoogleDriveConnected,
                         onLocalImportClick = { format ->
                             when (format) {
                                 "fit" -> pickFitFilesLauncher.launch(FIT_MIME_TYPES)
@@ -280,14 +273,6 @@ fun ImportBackupTabsScreen(
                                 showTuningDialogForBulk = true
                             } else {
                                 showDropboxDisconnectedDialog = true
-                            }
-                        },
-                        onGoogleDriveScanClick = { format ->
-                            if (isGoogleDriveConnected) {
-                                pendingGoogleDriveFormat = format
-                                showTuningDialogForGoogleDrive = true
-                            } else {
-                                showGoogleDriveDisconnectedDialog = true
                             }
                         }
                     )
@@ -432,32 +417,6 @@ fun ImportBackupTabsScreen(
                 viewModel.bulkRecoverLegacyData(context, pendingDropboxFormat)
             },
             onDismiss = { showTuningDialogForBulk = false }
-        )
-    }
-
-    if (showTuningDialogForGoogleDrive) {
-        PreImportTuningBottomSheet(
-            viewModel = viewModel,
-            onConfirm = {
-                showTuningDialogForGoogleDrive = false
-                viewModel.bulkRecoverGoogleDriveData(context, pendingGoogleDriveFormat)
-            },
-            onDismiss = { showTuningDialogForGoogleDrive = false }
-        )
-    }
-
-    if (showGoogleDriveDisconnectedDialog) {
-        AlertDialog(
-            onDismissRequest = { showGoogleDriveDisconnectedDialog = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 0.dp,
-            title = { Text(stringResource(R.string.upload_to_google_drive)) },
-            text = { Text(stringResource(R.string.google_drive_disconnected_status)) },
-            confirmButton = {
-                TextButton(onClick = { showGoogleDriveDisconnectedDialog = false }) {
-                    Text(stringResource(R.string.OK))
-                }
-            }
         )
     }
 
@@ -1059,9 +1018,6 @@ private fun FormatImportCard(
     dropboxButtonText: String,
     isDropboxConnected: Boolean,
     onDropboxClick: () -> Unit,
-    googleDriveButtonText: String,
-    isGoogleDriveConnected: Boolean,
-    onGoogleDriveClick: () -> Unit,
     isBusy: Boolean
 ) {
     val scanButtonColors = if (isDropboxConnected) {
@@ -1072,19 +1028,6 @@ private fun FormatImportCard(
         )
     }
     val scanBorder = if (isDropboxConnected) {
-        ButtonDefaults.outlinedButtonBorder(enabled = !isBusy)
-    } else {
-        BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
-    }
-
-    val googleDriveButtonColors = if (isGoogleDriveConnected) {
-        ButtonDefaults.outlinedButtonColors()
-    } else {
-        ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-        )
-    }
-    val googleDriveBorder = if (isGoogleDriveConnected) {
         ButtonDefaults.outlinedButtonBorder(enabled = !isBusy)
     } else {
         BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
@@ -1127,16 +1070,6 @@ private fun FormatImportCard(
             ) {
                 Text(dropboxButtonText)
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onGoogleDriveClick,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isBusy,
-                colors = googleDriveButtonColors,
-                border = googleDriveBorder
-            ) {
-                Text(googleDriveButtonText)
-            }
         }
     }
 }
@@ -1145,16 +1078,14 @@ private fun FormatImportCard(
 private fun ImportTabContent(
     isBusy: Boolean,
     isDropboxConnected: Boolean,
-    isGoogleDriveConnected: Boolean,
     onLocalImportClick: (format: String) -> Unit,
-    onDropboxScanClick: (format: String) -> Unit,
-    onGoogleDriveScanClick: (format: String) -> Unit
+    onDropboxScanClick: (format: String) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- FIT Importer Card (REQ-DAT-019 / REQ-UI-293) ---
+        // --- FIT Importer Card (REQ-DAT-019 / REQ-UI-293 / REQ-UI-362) ---
         FormatImportCard(
             title = stringResource(R.string.import_fit_title),
             description = stringResource(R.string.import_fit_description),
@@ -1163,13 +1094,10 @@ private fun ImportTabContent(
             dropboxButtonText = stringResource(R.string.import_fit_dropbox_button),
             isDropboxConnected = isDropboxConnected,
             onDropboxClick = { onDropboxScanClick("fit") },
-            googleDriveButtonText = stringResource(R.string.import_fit_gdrive_button),
-            isGoogleDriveConnected = isGoogleDriveConnected,
-            onGoogleDriveClick = { onGoogleDriveScanClick("fit") },
             isBusy = isBusy
         )
 
-        // --- TCX Importer Card (REQ-UI-293) ---
+        // --- TCX Importer Card (REQ-UI-293 / REQ-UI-362) ---
         FormatImportCard(
             title = stringResource(R.string.import_tcx_title),
             description = stringResource(R.string.import_tcx_description),
@@ -1178,13 +1106,10 @@ private fun ImportTabContent(
             dropboxButtonText = stringResource(R.string.import_tcx_dropbox_button),
             isDropboxConnected = isDropboxConnected,
             onDropboxClick = { onDropboxScanClick("tcx") },
-            googleDriveButtonText = stringResource(R.string.import_tcx_gdrive_button),
-            isGoogleDriveConnected = isGoogleDriveConnected,
-            onGoogleDriveClick = { onGoogleDriveScanClick("tcx") },
             isBusy = isBusy
         )
 
-        // --- GPX Importer Card (REQ-MIG-030 / REQ-UI-293) ---
+        // --- GPX Importer Card (REQ-MIG-030 / REQ-UI-293 / REQ-UI-362) ---
         FormatImportCard(
             title = stringResource(R.string.import_gpx_title),
             description = stringResource(R.string.import_gpx_description),
@@ -1193,9 +1118,6 @@ private fun ImportTabContent(
             dropboxButtonText = stringResource(R.string.import_gpx_dropbox_button),
             isDropboxConnected = isDropboxConnected,
             onDropboxClick = { onDropboxScanClick("gpx") },
-            googleDriveButtonText = stringResource(R.string.import_gpx_gdrive_button),
-            isGoogleDriveConnected = isGoogleDriveConnected,
-            onGoogleDriveClick = { onGoogleDriveScanClick("gpx") },
             isBusy = isBusy
         )
     }

@@ -1633,7 +1633,6 @@
     <string name="import_fit_description">Aktivitäten von Garmin, Wahoo, Hammerhead oder Smartwatches importieren (.fit).</string>
     <string name="import_fit_button">FIT-Dateien wählen</string>
     <string name="import_fit_dropbox_button">Dropbox scannen (FIT)</string>
-    <string name="import_fit_gdrive_button">Google Drive scannen (FIT)</string>
     <string name="import_fit_progress">Importiere FIT-Dateien (%1$d von %2$d)…</string>
     <string name="import_fit_summary_success">%1$d Aktivitäten erfolgreich importiert (%2$d Duplikate übersprungen).</string>
     <string name="import_fit_summary_with_errors">%1$d Aktivitäten importiert, %2$d Duplikate übersprungen, %3$d fehlgeschlagen.</string>
@@ -1642,12 +1641,10 @@
     <string name="import_tcx_description">Aktivitäten aus Training Center XML-Dateien importieren (.tcx).</string>
     <string name="import_tcx_button">Lokale TCX-Datei wählen</string>
     <string name="import_tcx_dropbox_button">Dropbox scannen (TCX)</string>
-    <string name="import_tcx_gdrive_button">Google Drive scannen (TCX)</string>
     <string name="import_gpx_title">GPX-Dateien importieren</string>
     <string name="import_gpx_description">Strecken und Aktivitäten aus GPS Exchange Format importieren (.gpx).</string>
     <string name="import_gpx_button">Lokale GPX-Datei wählen</string>
     <string name="import_gpx_dropbox_button">Dropbox scannen (GPX)</string>
-    <string name="import_gpx_gdrive_button">Google Drive scannen (GPX)</string>
     <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
     <string name="invalid_workout_file_format">Ungültiges Dateiformat. Bitte wählen Sie eine %1$s-Datei aus.</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
