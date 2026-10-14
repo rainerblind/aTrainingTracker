@@ -1763,7 +1763,7 @@
     <string name="crop_workout_confirm_action">完全にトリミング</string>
     <string name="crop_workout_progress">ワークアウトをトリミング中…</string>
     <string name="crop_workout_success">ワークアウトが正常にトリミングされました</string>
-    <string name="crop_insufficient_storage">ワークアウトをトリミングするための空き容量が不足しています（少なくとも50 MB必要です）。</string>
+    <string name="crop_insufficient_storage">ワークアウトをトリミングするための空き容量が不足しています（少なくとも%d MB必要です）。</string>
     <string name="crop_export_failed_retry">エクスポートファイルの再作成に失敗しました。再試行してください。</string>
     <string name="crop_force_reexport">再エクスポートを強制</string>
 </resources>

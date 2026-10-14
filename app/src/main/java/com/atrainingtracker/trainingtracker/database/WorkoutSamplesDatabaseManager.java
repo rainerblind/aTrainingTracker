@@ -23,8 +23,10 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteStatement;
 import android.location.Location;
 import android.provider.BaseColumns;
+import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -36,6 +38,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMath;
 import com.google.android.gms.maps.model.LatLng;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -473,81 +476,54 @@ public class WorkoutSamplesDatabaseManager {
                 }
             }
 
-            // 3. Update retained rows: zero-anchor startRowId, shift cumulative fields with EPSILON clamping,
-            // recalculate LINE_DISTANCE_m, and update LAP_NR in chunked batches
-            try (Cursor cursor = db.query(table, null, "_id >= ?", new String[]{String.valueOf(startRowId)}, null, null, "_id ASC")) {
-                if (cursor != null && cursor.moveToFirst()) {
-                    int idIdx = cursor.getColumnIndexOrThrow("_id");
-                    int distIdx = hasDist ? cursor.getColumnIndex(SensorType.DISTANCE_m.name()) : -1;
-                    int timeTotalIdx = hasTimeTotal ? cursor.getColumnIndex(SensorType.TIME_TOTAL.name()) : -1;
-                    int timeActiveIdx = hasTimeActive ? cursor.getColumnIndex(SensorType.TIME_ACTIVE.name()) : -1;
-                    int ascentIdx = hasAscent ? cursor.getColumnIndex(SensorType.ASCENT.name()) : -1;
-                    int descentIdx = hasDescent ? cursor.getColumnIndex(SensorType.DESCENT.name()) : -1;
-                    int calIdx = hasCalories ? cursor.getColumnIndex(SensorType.CALORIES.name()) : -1;
-                    int lapIdx = hasLapNr ? cursor.getColumnIndex(SensorType.LAP_NR.name()) : -1;
-                    int latIdx = hasLat ? cursor.getColumnIndex(SensorType.LATITUDE.name()) : -1;
-                    int lonIdx = hasLon ? cursor.getColumnIndex(SensorType.LONGITUDE.name()) : -1;
+            // 3. Vectorized bulk update for retained rows:
+            // Shift cumulative fields (DISTANCE_m, TIME_TOTAL, TIME_ACTIVE, ASCENT, DESCENT, CALORIES, LAP_NR) in a single atomic SQL statement
+            List<String> setClauses = new ArrayList<>();
+            if (hasDist) setClauses.add(SensorType.DISTANCE_m.name() + " = MAX(0.0, " + SensorType.DISTANCE_m.name() + " - " + baseDist + ")");
+            if (hasTimeTotal) setClauses.add(SensorType.TIME_TOTAL.name() + " = MAX(0, " + SensorType.TIME_TOTAL.name() + " - " + baseTimeTotal + ")");
+            if (hasTimeActive) setClauses.add(SensorType.TIME_ACTIVE.name() + " = MAX(0, " + SensorType.TIME_ACTIVE.name() + " - " + baseTimeActive + ")");
+            if (hasAscent) setClauses.add(SensorType.ASCENT.name() + " = MAX(0.0, " + SensorType.ASCENT.name() + " - " + baseAscent + ")");
+            if (hasDescent) setClauses.add(SensorType.DESCENT.name() + " = MAX(0.0, " + SensorType.DESCENT.name() + " - " + baseDescent + ")");
+            if (hasCalories) setClauses.add(SensorType.CALORIES.name() + " = MAX(0, " + SensorType.CALORIES.name() + " - " + baseCalories + ")");
+            if (hasLapNr && lapOffset > 0) setClauses.add(SensorType.LAP_NR.name() + " = MAX(1, " + SensorType.LAP_NR.name() + " - " + lapOffset + ")");
 
-                    double epsilon = CropWorkoutMath.EPSILON;
+            if (!setClauses.isEmpty()) {
+                String bulkUpdateSql = "UPDATE " + table + " SET " + TextUtils.join(", ", setClauses)
+                        + " WHERE _id >= ? AND _id <= ?";
+                db.execSQL(bulkUpdateSql, new Object[]{startRowId, endRowId});
+            }
 
-                    do {
-                        long rowId = cursor.getLong(idIdx);
-                        ContentValues values = new ContentValues();
-
-                        if (rowId == startRowId) {
-                            if (hasDist) values.put(SensorType.DISTANCE_m.name(), 0.0);
-                            if (hasTimeTotal) values.put(SensorType.TIME_TOTAL.name(), 0L);
-                            if (hasTimeActive) values.put(SensorType.TIME_ACTIVE.name(), 0L);
-                            if (hasAscent) values.put(SensorType.ASCENT.name(), 0.0);
-                            if (hasDescent) values.put(SensorType.DESCENT.name(), 0.0);
-                            if (hasCalories) values.put(SensorType.CALORIES.name(), 0L);
-                            if (hasLineDist) values.put(SensorType.LINE_DISTANCE_m.name(), 0.0);
-                        } else {
-                            if (hasDist && distIdx != -1 && !cursor.isNull(distIdx)) {
-                                double shiftedDist = cursor.getDouble(distIdx) - baseDist;
-                                values.put(SensorType.DISTANCE_m.name(), (shiftedDist < 0.0 || Math.abs(shiftedDist) < epsilon) ? 0.0 : shiftedDist);
-                            }
-                            if (hasTimeTotal && timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx)) {
-                                long shiftedTotal = cursor.getLong(timeTotalIdx) - baseTimeTotal;
-                                values.put(SensorType.TIME_TOTAL.name(), Math.max(0L, shiftedTotal));
-                            }
-                            if (hasTimeActive && timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx)) {
-                                long shiftedActive = cursor.getLong(timeActiveIdx) - baseTimeActive;
-                                values.put(SensorType.TIME_ACTIVE.name(), Math.max(0L, shiftedActive));
-                            }
-                            if (hasAscent && ascentIdx != -1 && !cursor.isNull(ascentIdx)) {
-                                double shiftedAscent = cursor.getDouble(ascentIdx) - baseAscent;
-                                values.put(SensorType.ASCENT.name(), (shiftedAscent < 0.0 || Math.abs(shiftedAscent) < epsilon) ? 0.0 : shiftedAscent);
-                            }
-                            if (hasDescent && descentIdx != -1 && !cursor.isNull(descentIdx)) {
-                                double shiftedDescent = cursor.getDouble(descentIdx) - baseDescent;
-                                values.put(SensorType.DESCENT.name(), (shiftedDescent < 0.0 || Math.abs(shiftedDescent) < epsilon) ? 0.0 : shiftedDescent);
-                            }
-                            if (hasCalories && calIdx != -1 && !cursor.isNull(calIdx)) {
-                                long shiftedCal = cursor.getLong(calIdx) - baseCalories;
-                                values.put(SensorType.CALORIES.name(), Math.max(0L, shiftedCal));
-                            }
-                            if (hasLineDist) {
-                                if (newStartLatLng != null && latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+            // Recalculate LINE_DISTANCE_m: 0.0 at startRowId, and Haversine distance from newStartLatLng if GPS is available
+            if (hasLineDist) {
+                if (newStartLatLng != null && hasLat && hasLon) {
+                    db.execSQL("UPDATE " + table + " SET " + SensorType.LINE_DISTANCE_m.name() + " = 0.0 WHERE _id = ?",
+                            new Object[]{startRowId});
+                    SQLiteStatement stmt = db.compileStatement(
+                            "UPDATE " + table + " SET " + SensorType.LINE_DISTANCE_m.name() + " = ? WHERE _id = ?");
+                    try (Cursor cursor = db.query(table, new String[]{"_id", SensorType.LATITUDE.name(), SensorType.LONGITUDE.name()},
+                            "_id > ? AND _id <= ?", new String[]{String.valueOf(startRowId), String.valueOf(endRowId)},
+                            null, null, "_id ASC")) {
+                        if (cursor != null && cursor.moveToFirst()) {
+                            int idIdx = cursor.getColumnIndexOrThrow("_id");
+                            int latIdx = cursor.getColumnIndexOrThrow(SensorType.LATITUDE.name());
+                            int lonIdx = cursor.getColumnIndexOrThrow(SensorType.LONGITUDE.name());
+                            do {
+                                if (!cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
                                     double rowLat = cursor.getDouble(latIdx);
                                     double rowLon = cursor.getDouble(lonIdx);
-                                    values.put(SensorType.LINE_DISTANCE_m.name(), CropWorkoutMath.INSTANCE.haversineDistanceMeters(newStartLatLng, new LatLng(rowLat, rowLon)));
-                                } else {
-                                    values.put(SensorType.LINE_DISTANCE_m.name(), 0.0);
+                                    double lineDist = CropWorkoutMath.INSTANCE.haversineDistanceMeters(newStartLatLng, new LatLng(rowLat, rowLon));
+                                    stmt.bindDouble(1, lineDist);
+                                    stmt.bindLong(2, cursor.getLong(idIdx));
+                                    stmt.executeUpdateDelete();
                                 }
-                            }
+                            } while (cursor.moveToNext());
                         }
-
-                        if (hasLapNr && lapIdx != -1 && !cursor.isNull(lapIdx) && lapOffset > 0) {
-                            int oldLap = cursor.getInt(lapIdx);
-                            int newLap = Math.max(1, oldLap - lapOffset);
-                            values.put(SensorType.LAP_NR.name(), newLap);
-                        }
-
-                        if (values.size() > 0) {
-                            db.update(table, values, "_id = ?", new String[]{String.valueOf(rowId)});
-                        }
-                    } while (cursor.moveToNext());
+                    } finally {
+                        stmt.close();
+                    }
+                } else {
+                    db.execSQL("UPDATE " + table + " SET " + SensorType.LINE_DISTANCE_m.name() + " = 0.0 WHERE _id >= ? AND _id <= ?",
+                            new Object[]{startRowId, endRowId});
                 }
             }
 

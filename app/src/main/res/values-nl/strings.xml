@@ -1783,7 +1783,7 @@
     <string name="crop_workout_confirm_action">Definitief bijsnijden</string>
     <string name="crop_workout_progress">Workout wordt bijgesneden…</string>
     <string name="crop_workout_success">Workout succesvol bijgesneden</string>
-    <string name="crop_insufficient_storage">Onvoldoende opslagruimte om workout bij te snijden (minstens 50 MB vereist).</string>
+    <string name="crop_insufficient_storage">Onvoldoende opslagruimte om workout bij te snijden (minstens %d MB vereist).</string>
     <string name="crop_export_failed_retry">Aanmaken van exportbestanden mislukt. Probeer het opnieuw.</string>
     <string name="crop_force_reexport">Her-exporteren forceren</string>
 </resources>

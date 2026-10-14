@@ -1785,7 +1785,7 @@
     <string name="crop_workout_confirm_action">Trwale przytnij</string>
     <string name="crop_workout_progress">Przycinanie treningu…</string>
     <string name="crop_workout_success">Pomyślnie przycięto trening</string>
-    <string name="crop_insufficient_storage">Niewystarczająca ilość pamięci do przycięcia treningu (wymagane co najmniej 50 MB).</string>
+    <string name="crop_insufficient_storage">Niewystarczająca ilość pamięci do przycięcia treningu (wymagane co najmniej %d MB).</string>
     <string name="crop_export_failed_retry">Nie udało się ponownie utworzyć plików eksportu. Spróbuj ponownie.</string>
     <string name="crop_force_reexport">Wymuś ponowny eksport</string>
 </resources>

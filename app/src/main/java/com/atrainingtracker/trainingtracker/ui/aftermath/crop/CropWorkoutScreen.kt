@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
@@ -123,8 +124,13 @@ fun CropWorkoutScreen(
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
+                val errorMessage = if (uiState.errorMessageResId == R.string.crop_insufficient_storage) {
+                    stringResource(R.string.crop_insufficient_storage, WorkoutRepository.MIN_FREE_STORAGE_MB)
+                } else {
+                    stringResource(uiState.errorMessageResId ?: R.string.crop_export_failed_retry)
+                }
                 Text(
-                    text = stringResource(uiState.errorMessageResId ?: R.string.crop_export_failed_retry),
+                    text = errorMessage,
                     color = MaterialTheme.colorScheme.error
                 )
             }

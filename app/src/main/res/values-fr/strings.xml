@@ -1782,7 +1782,7 @@
     <string name="crop_workout_confirm_action">Rogner définitivement</string>
     <string name="crop_workout_progress">Rognage de l\'entraînement…</string>
     <string name="crop_workout_success">Entraînement rogné avec succès</string>
-    <string name="crop_insufficient_storage">Espace de stockage insuffisant pour rogner l\'entraînement (au moins 50 Mo requis).</string>
+    <string name="crop_insufficient_storage">Espace de stockage insuffisant pour rogner l\'entraînement (au moins %d Mo requis).</string>
     <string name="crop_export_failed_retry">Échec de la recréation des fichiers d\'exportation. Veuillez réessayer.</string>
     <string name="crop_force_reexport">Forcer la réexportation</string>
 </resources>

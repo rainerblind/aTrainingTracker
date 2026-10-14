@@ -1974,7 +1974,7 @@
     <string name="crop_workout_confirm_action">Crop permanently</string>
     <string name="crop_workout_progress">Cropping workout…</string>
     <string name="crop_workout_success">Workout cropped successfully</string>
-    <string name="crop_insufficient_storage">Insufficient storage to crop workout (at least 50 MB required).</string>
+    <string name="crop_insufficient_storage">Insufficient storage to crop workout (at least %d MB required).</string>
     <string name="crop_export_failed_retry">Failed to recreate export files. Please retry.</string>
     <string name="crop_force_reexport">Force Re-Export</string>
 </resources>

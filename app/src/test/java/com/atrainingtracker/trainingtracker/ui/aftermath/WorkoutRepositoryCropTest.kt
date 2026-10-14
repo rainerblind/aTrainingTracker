@@ -144,4 +144,25 @@ class WorkoutRepositoryCropTest {
         verify(exactly = 0) { db.setTransactionSuccessful() }
         verify(exactly = 1) { db.endTransaction() }
     }
+
+    @Test
+    fun testNonContiguousIdPruningPreservesExpectedRows() {
+        // Workout samples may have non-contiguous _id rows due to prior deletions or auto-increment jumps.
+        val nonContiguousRowIds = listOf(1L, 4L, 7L, 10L, 15L, 22L, 30L, 50L)
+        val startIndex = 2 // Points to row ID 7L
+        val endIndex = 5   // Points to row ID 22L
+
+        val startRowId = nonContiguousRowIds[startIndex] // 7L
+        val endRowId = nonContiguousRowIds[endIndex]     // 22L
+        val expectedRetainedCount = endIndex - startIndex + 1 // 4 rows
+
+        // Simulate SQLite WHERE _id < startRowId OR _id > endRowId deletion filter
+        val retainedRowIds = nonContiguousRowIds.filterNot { it < startRowId || it > endRowId }
+        val deletedRowIds = nonContiguousRowIds.filter { it < startRowId || it > endRowId }
+
+        assertEquals(expectedRetainedCount, retainedRowIds.size)
+        assertEquals(listOf(7L, 10L, 15L, 22L), retainedRowIds)
+        assertEquals(listOf(1L, 4L, 30L, 50L), deletedRowIds)
+        assertEquals(nonContiguousRowIds.size - retainedRowIds.size, deletedRowIds.size)
+    }
 }

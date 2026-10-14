@@ -1783,7 +1783,7 @@
     <string name="crop_workout_confirm_action">Recortar permanentemente</string>
     <string name="crop_workout_progress">Recortando entrenamiento…</string>
     <string name="crop_workout_success">Entrenamiento recortado con éxito</string>
-    <string name="crop_insufficient_storage">Espacio de almacenamiento insuficiente para recortar el entrenamiento (se requieren al menos 50 MB).</string>
+    <string name="crop_insufficient_storage">Espacio de almacenamiento insuficiente para recortar el entrenamiento (se requieren al menos %d MB).</string>
     <string name="crop_export_failed_retry">Error al recrear los archivos de exportación. Inténtalo de nuevo.</string>
     <string name="crop_force_reexport">Forzar reexportación</string>
 </resources>

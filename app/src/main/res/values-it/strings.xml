@@ -1783,7 +1783,7 @@
     <string name="crop_workout_confirm_action">Ritaglia definitivamente</string>
     <string name="crop_workout_progress">Ritaglio dell\'allenamento in corso…</string>
     <string name="crop_workout_success">Allenamento ritagliato con successo</string>
-    <string name="crop_insufficient_storage">Spazio di archiviazione insufficiente per ritagliare l\'allenamento (richiesti almeno 50 MB).</string>
+    <string name="crop_insufficient_storage">Spazio di archiviazione insufficiente per ritagliare l\'allenamento (richiesti almeno %d MB).</string>
     <string name="crop_export_failed_retry">Impossibile ricreare i file di esportazione. Riprova.</string>
     <string name="crop_force_reexport">Forza riesportazione</string>
 </resources>

@@ -108,6 +108,7 @@ class WorkoutRepository private constructor(private val application: Application
         @JvmStatic
         val cropMutex = Mutex()
 
+        const val MIN_FREE_STORAGE_MB: Long = 50L
 
         @Volatile
         private var INSTANCE: WorkoutRepository? = null
@@ -721,19 +722,34 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
-     * Checks and removes any orphaned ephemeral crop snapshots left behind by an aborted process.
+     * Checks and removes any orphaned ephemeral crop snapshots left behind by an aborted process,
+     * verifying database integrity and reloading workout data before deletion.
      */
     fun reconcilePendingCropRecovery() {
-        try {
-            val backupFiles = application.cacheDir.listFiles { file ->
-                file.name.startsWith("crop_backup_") && file.name.endsWith(".json")
+        launch(Dispatchers.IO) {
+            try {
+                val backupFiles = application.cacheDir.listFiles { file ->
+                    file.name.startsWith("crop_backup_") && file.name.endsWith(".json")
+                }
+                backupFiles?.forEach { file ->
+                    Log.w(TAG, "reconcilePendingCropRecovery: Found pending/orphaned crop backup: ${file.name}")
+                    try {
+                        val text = file.readText()
+                        val json = org.json.JSONObject(text)
+                        val workoutId = json.optLong("workoutId", -1L)
+                        if (workoutId != -1L) {
+                            Log.i(TAG, "reconcilePendingCropRecovery: Verifying integrity and reloading workoutId=$workoutId")
+                            reloadWorkoutData(workoutId)
+                        }
+                    } catch (ex: Exception) {
+                        Log.w(TAG, "reconcilePendingCropRecovery: Failed to parse backup file ${file.name}", ex)
+                    } finally {
+                        file.delete()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in reconcilePendingCropRecovery", e)
             }
-            backupFiles?.forEach { file ->
-                Log.w(TAG, "reconcilePendingCropRecovery: Cleaning up orphaned crop backup: ${file.name}")
-                file.delete()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error in reconcilePendingCropRecovery", e)
         }
     }
 
@@ -813,7 +829,7 @@ class WorkoutRepository private constructor(private val application: Application
             // 1. Dynamic Storage Pre-Flight Check (>= max(50 MB, 5 * dbFileSize))
             val dbFile = application.getDatabasePath(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.DB_NAME)
             val dbFileSize = if (dbFile.exists()) dbFile.length() else 0L
-            val requiredBytes = maxOf(50L * 1024 * 1024, 5L * dbFileSize)
+            val requiredBytes = maxOf(MIN_FREE_STORAGE_MB * 1024 * 1024, 5L * dbFileSize)
             val stat = android.os.StatFs(application.filesDir.path)
             if (stat.availableBytes < requiredBytes) {
                 Log.e(TAG, "Insufficient storage for crop: available=${stat.availableBytes}, required=$requiredBytes")

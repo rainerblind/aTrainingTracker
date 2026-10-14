@@ -61,10 +61,19 @@ class ExportWorker(
         mExporter = ExportManager.getExporter(applicationContext, mExportInfo)
         Log.i(TAG, "Resolved exporter: ${mExporter.javaClass.simpleName} for $mExportInfo")
 
+        if (isStopped) {
+            Log.w(TAG, "ExportWorker stopped before starting: $mExportInfo")
+            return Result.failure()
+        }
+
         informOthersStarted()
 
         Log.i(TAG, "Starting export execution for $mExportInfo")
         val result = WorkoutRepository.cropMutex.withLock {
+            if (isStopped) {
+                Log.w(TAG, "ExportWorker stopped while awaiting cropMutex lock: $mExportInfo")
+                return Result.failure()
+            }
             withContext(Dispatchers.IO) {
                 mExporter.export(mExportInfo)
             }

@@ -1868,7 +1868,7 @@
     <string name="crop_workout_confirm_action">Unwiderruflich zuschneiden</string>
     <string name="crop_workout_progress">Track wird zugeschnitten…</string>
     <string name="crop_workout_success">Track erfolgreich zugeschnitten</string>
-    <string name="crop_insufficient_storage">Nicht genügend freier Speicherplatz zum Zuschneiden (mindestens 50 MB erforderlich).</string>
+    <string name="crop_insufficient_storage">Nicht genügend freier Speicherplatz zum Zuschneiden (mindestens %d MB erforderlich).</string>
     <string name="crop_export_failed_retry">Neuerstellung der Exportdateien fehlgeschlagen. Bitte erneut versuchen.</string>
     <string name="crop_force_reexport">Export wiederholen</string>
 </resources>
