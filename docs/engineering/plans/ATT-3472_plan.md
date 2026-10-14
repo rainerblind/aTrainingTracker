@@ -19,7 +19,7 @@ Automated background backups have failed to execute reliably in production on de
 1. **Periodic Timer Reset Storm (`ExistingPeriodicWorkPolicy.REPLACE`)**: In `BackupWorker.Companion.schedule(context)`, the unique periodic work request was scheduled using `ExistingPeriodicWorkPolicy.REPLACE`. Because `BackupWorker.schedule()` is invoked in `TrainingApplication.onCreate()` on every cold start, daily app launches cancelled the existing work and reset the 24-hour delay into the future, perpetually starving the backup job.
 2. **Default Preference Inconsistency**: `schedule()` and `prefs_dropbox.xml` default `"automated_backups"` to `true`. In contrast, `BackupWorker.doWork()` queried `prefs.getBoolean("automated_backups", false)`, defaulting to `false`. On devices where the user had not toggled the preference switch manually, the worker skipped execution.
 3. **Application Lifecycle Ordering**: In `TrainingApplication.onCreate()`, `BackupWorker.Companion.schedule(this)` was invoked *before* `PreferenceManager.setDefaultValues()` and `cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)`. As a result, default preferences were not loaded when scheduling occurred.
-4. **Cloud-Tethered Execution Trap & Unbounded/Unsafe File Creation**: `BackupWorker.doWork()` skipped backup creation entirely if neither Dropbox nor Google Drive was connected, providing zero on-device backups for offline athletes. Furthermore, `BackupManager.createBackup` previously deleted and rewrote directly to `aTrainingTracker_backup.attbackup` without atomic staging or synchronization, creating potential data corruption upon process death during zipping.
+4. **Cloud-Tethered Execution Trap & Unbounded/Unsafe File Creation**: `BackupWorker.doWork()` skipped backup creation entirely if neither Dropbox nor Google Drive was connected, providing zero on-device backups for offline athletes. Furthermore, `BackupManager.createBackup` previously deleted and rewrote directly to `aTrainingTracker_backup.attbackup` in `cacheDir` without atomic staging, process-safe locking, or immunity from OS cache evictions.
 
 ---
 
@@ -35,12 +35,15 @@ Automated background backups have failed to execute reliably in production on de
 
 ## 3. System Invariants & Preserved Behavior
 
-1. **Monotonic Schedule Preservation**: WorkManager periodic requests SHALL use `ExistingPeriodicWorkPolicy.UPDATE`, preserving elapsed execution timers across application cold starts.
-2. **WorkManager Constraint & Backoff Parity**: Periodic work constraints (`NetworkType.UNMETERED`, `setRequiresBatteryNotLow(true)`) and exponential backoff (`BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS`) remain 100% identical.
-3. **Exception Safety**: `schedule()` catches and logs `Throwable` to prevent crashes on devices with broken WorkManager providers (`WorkManagerResilienceTest`).
-4. **Bounded Storage ($O(1)$ Disk Invariant)**: Local backup generation maintains strictly one canonical `.attbackup` archive (`aTrainingTracker_backup.attbackup`). No unbounded rolling history is permitted on disk.
-5. **Atomic File Replacement**: Staging is written to `aTrainingTracker_backup.tmp` in the same directory (`context.cacheDir`) and moved atomically via `Files.move(..., ATOMIC_MOVE, REPLACE_EXISTING)`, falling back defensively to `REPLACE_EXISTING`. Stale `.tmp` files are purged before bundling.
-6. **Concurrency Safety & Lock Contention**: `BackupManager.backupLock` (`ReentrantLock`) synchronizes backup operations. If held by a concurrent manual backup, `BackupWorker.doWork()` yields immediately and returns `Result.retry()`.
+1. **Monotonic Schedule Preservation & Queue Sanitization**: WorkManager periodic requests SHALL use `ExistingPeriodicWorkPolicy.UPDATE`, preserving elapsed execution timers across application cold starts. To guarantee immediate relief for existing devices stuck in legacy reset loops, a one-time queue sanitization (`cancelUniqueWork(WORK_NAME)`) is executed upon migrating to `UPDATE`.
+2. **Persistent Storage in `context.filesDir`**: To ensure true local data sovereignty immune from OS cache purging under memory pressure, backups SHALL reside in persistent internal storage (`File(context.filesDir, "backups")`).
+3. **Co-located Atomic Staging & Guaranteed Temp Cleanup**:
+   - The staging file (`aTrainingTracker_backup.tmp`) resides in the exact same directory (`filesDir/backups`), guaranteeing identical mount point/partition for `StandardCopyOption.ATOMIC_MOVE`.
+   - Any stale `.tmp` file is purged prior to zipping.
+   - Staging is wrapped in a `try-finally` block: if an exception or `IOException` occurs during bundling or moving, the `.tmp` file is immediately deleted, preventing orphaned storage accumulation.
+4. **Multi-Process Safe Concurrency (`FileLock` + `ReentrantLock`)**: Concurrency is guarded by a dual-layer synchronization mechanism: an in-memory `ReentrantLock` for threads within the process and an inter-process `FileLock` (`RandomAccessFile.channel.tryLock()`) on `backup.lock`. If either lock is held by a manual user operation, `BackupWorker.doWork()` yields cleanly and returns `Result.retry()`.
+5. **Storage Boundedness ($O(1)$ Invariant)**: Exactly one canonical `.attbackup` archive (`aTrainingTracker_backup.attbackup`) is maintained.
+6. **Decoupled Cloud Upload & Controlled Retry**: Local backup is created first. If cloud accounts are unlinked, status is `"LOCAL_SUCCESS"` and returns `Result.success()`. If cloud uploads fail, local backup remains intact and `Result.retry()` is scheduled via exponential backoff (`1 hour`).
 7. **Clean-Room Full Suite Regression**: 100% unit test pass rate (`./gradlew testDebugUnitTest`).
 
 ---
@@ -51,11 +54,12 @@ Automated background backups have failed to execute reliably in production on de
 * Path: `app/src/main/java/com/atrainingtracker/trainingtracker/migration/BackupWorker.kt`
 * **Changes**:
   1. In `Companion.schedule(context)`:
-     - Replace `ExistingPeriodicWorkPolicy.REPLACE` with `ExistingPeriodicWorkPolicy.UPDATE`.
+     - Check one-time migration preference `"workmanager_backup_policy_migrated_v1"`. If false, invoke `cancelUniqueWork(WORK_NAME)` to clear stale legacy `REPLACE` queues, then set flag to `true`.
+     - Register `enqueueUniquePeriodicWork` with `ExistingPeriodicWorkPolicy.UPDATE`.
   2. In `doWork()`:
      - Change `prefs.getBoolean("automated_backups", false)` to `prefs.getBoolean("automated_backups", true)`.
      - Remove cloud requirement guard: if `!automatedEnabled`, return `Result.success()`.
-     - Acquire `BackupManager.backupLock.tryLock()`. If locked, log warning and return `Result.retry()`.
+     - Try acquiring lock via `BackupManager.acquireLock(applicationContext)`. If unavailable, log warning and return `Result.retry()`.
      - Call `val backupFile = BackupManager.createBackup(applicationContext)`. If null, update status to `"Local backup creation failed"` and return `Result.retry()`.
      - If neither Dropbox nor Google Drive is connected:
        - Update `last_backup_timestamp` and `last_backup_status = "LOCAL_SUCCESS"`.
@@ -68,14 +72,18 @@ Automated background backups have failed to execute reliably in production on de
 ### 4.2 Component 2: `BackupManager.kt`
 * Path: `app/src/main/java/com/atrainingtracker/trainingtracker/migration/BackupManager.kt`
 * **Changes**:
-  1. Add `val backupLock = java.util.concurrent.locks.ReentrantLock()`.
-  2. In `createBackup(context, listener)`:
-     - Enclose execution in `backupLock.withLock` (or synchronized).
-     - Define `tempBackupFile = File(context.cacheDir, "$BACKUP_FILENAME.tmp")`.
-     - Stale cleanup: `if (tempBackupFile.exists()) tempBackupFile.delete()`.
-     - Zip databases, shared_prefs, and datastore into `tempBackupFile`.
-     - Atomic move to destination `canonicalBackupFile = File(context.cacheDir, BACKUP_FILENAME)` using `Files.move(tempBackupFile.toPath(), canonicalBackupFile.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)`, with fallback to `StandardCopyOption.REPLACE_EXISTING`.
-     - Return `canonicalBackupFile`.
+  1. Storage Directory: `fun getBackupDir(context: Context): File = File(context.filesDir, "backups").apply { mkdirs() }`.
+  2. Process-Safe Lock Management:
+     - `val jvmLock = ReentrantLock()`
+     - `fun acquireLock(context: Context): AutoCloseable?` attempting both `jvmLock.tryLock()` and `FileChannel.tryLock()` on `File(getBackupDir(context), "backup.lock")`.
+  3. In `createBackup(context, listener)`:
+     - Wrap execution in lock.
+     - `val backupDir = getBackupDir(context)`
+     - `val tempFile = File(backupDir, "$BACKUP_FILENAME.tmp")`
+     - `val canonicalFile = File(backupDir, BACKUP_FILENAME)`
+     - `try { ... } finally { if (tempFile.exists()) tempFile.delete() }`
+     - Move via `Files.move(tempFile.toPath(), canonicalFile.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)` (falling back defensively to `StandardCopyOption.REPLACE_EXISTING`).
+     - Return `canonicalFile`.
 
 ### 4.3 Component 3: `TrainingApplication.java`
 * Path: `app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java`
@@ -87,7 +95,7 @@ Automated background backups have failed to execute reliably in production on de
 
 ## 5. UI Consistency (Rule 23)
 
-* **UI Impact**: None. This is a background daemon scheduling, concurrency synchronization, and storage integrity ticket. No UI views, composables, or layouts are modified.
+* **UI Impact**: None. This is a background daemon scheduling, multi-process concurrency synchronization, and storage integrity ticket. No UI views, composables, or layouts are modified.
 
 ---
 
@@ -98,16 +106,18 @@ Automated background backups have failed to execute reliably in production on de
 * Target: `app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java`.
 * Verification: Compile check and `TrainingApplicationTest.kt`.
 
-### Step 2: Atomic Staging & Concurrency in `BackupManager.kt`
-* Add `backupLock = ReentrantLock()`.
-* Add stale `.tmp` file purge, staging to `aTrainingTracker_backup.tmp`, and atomic same-directory move via `Files.move` with `StandardCopyOption.ATOMIC_MOVE`.
+### Step 2: Persistent Storage, Atomic Staging & Process-Safe Lock in `BackupManager.kt`
+* Add `getBackupDir(context)` targeting `context.filesDir/backups`.
+* Add `acquireLock(context)` providing dual JVM `ReentrantLock` and inter-process `FileLock`.
+* Add stale `.tmp` purge, `try-finally` cleanup guarantee, and atomic same-partition move via `Files.move(..., ATOMIC_MOVE)`.
 * Target: `app/src/main/java/com/atrainingtracker/trainingtracker/migration/BackupManager.kt`.
-* Verification: Create `BackupManagerTest.kt` asserting atomic move, stale file purge, and $O(1)$ storage bounds.
+* Verification: Create `BackupManagerTest.kt` asserting atomic move, stale file purge, `try-finally` error cleanup on failed move, and $O(1)$ storage bounds.
 
-### Step 3: Monotonic WorkManager Scheduling & Decoupled Local Backup in `BackupWorker.kt`
+### Step 3: Monotonic WorkManager Scheduling, Queue Sanitization & Local Backup in `BackupWorker.kt`
+* Add one-time migration queue sanitization (`cancelUniqueWork`).
 * Switch `ExistingPeriodicWorkPolicy` to `UPDATE`.
 * Align default preference value to `true`.
-* Add `backupLock.tryLock()` contention handling returning `Result.retry()`.
+* Add `BackupManager.acquireLock()` contention handling returning `Result.retry()`.
 * Decouple local backup creation from cloud connection (record `"LOCAL_SUCCESS"`).
 * On cloud upload failure, preserve local backup and return `Result.retry()`.
 * Target: `app/src/main/java/com/atrainingtracker/trainingtracker/migration/BackupWorker.kt`.
@@ -127,10 +137,10 @@ Automated background backups have failed to execute reliably in production on de
 
 | Verification Scope | Target File | Test Class | Status |
 | :--- | :--- | :--- | :--- |
-| WorkManager Scheduling Policy (`UPDATE`) | `BackupWorker.kt` | `BackupWorkerTest.kt` | Planned |
+| WorkManager Scheduling Policy (`UPDATE`) & Sanitization | `BackupWorker.kt` | `BackupWorkerTest.kt` | Planned |
 | Preference Default Parity (`true`) | `BackupWorker.kt` | `BackupWorkerTest.kt` | Planned |
-| Local Backup Without Cloud | `BackupWorker.kt` | `BackupWorkerTest.kt` | Planned |
-| Lock Contention Handling | `BackupWorker.kt` | `BackupWorkerTest.kt` | Planned |
-| Co-located Atomic Move & Stale Cleanup | `BackupManager.kt` | `BackupManagerTest.kt` | Planned |
+| Local Backup in Persistent `filesDir` | `BackupWorker.kt` | `BackupWorkerTest.kt` | Planned |
+| Multi-Process Safe Lock Contention (`FileLock`) | `BackupWorker.kt` | `BackupWorkerTest.kt` | Planned |
+| Co-located Atomic Move, Stale Purge & Error Cleanup | `BackupManager.kt` | `BackupManagerTest.kt` | Planned |
 | Lifecycle Ordering | `TrainingApplication.java` | `TrainingApplicationTest.kt` | Planned |
 | Clean-Room Regression | Entire Codebase | Full Suite | Planned |
