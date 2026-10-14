@@ -41,21 +41,30 @@ This implementation plan defines the exact modifications to `SensorGridScreen.kt
 
 ## 3. System Invariants & Preserved Behavior
 
-1. **Zero Modifier Churn & Separation of Concerns (SWE.2)**: 
+1. **Inset Stacking & Single Source of Truth (Rule 36)**:
+   In `SensorGridScreen.kt`, line 282:
+   ```kotlin
+   sheetPeekHeight = if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING) 
+       BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp
+   ```
+   In Material 3 `BottomSheetScaffold`, `paddingValues.calculateBottomPadding()` is equal to `sheetPeekHeight`. Because `sheetPeekHeight` explicitly incorporates `navBarHeight` (`PeekHeightLiveSegment + navBarHeight`), `calculateBottomPadding()` already provides the unified maximum inset encompassing both system bars and the sheet peek bar. In tracking mode, the stationary cockpit does not apply `.navigationBarsPadding()`. Applying `paddingValues.calculateBottomPadding()` directly to `Surface` guarantees zero double-padding and zero inset stacking conflicts.
+2. **Jitter Mitigation & Static Sheet Peek Invariance**:
+   In Compose Material 3 `BottomSheetScaffold`, `paddingValues.calculateBottomPadding()` represents the static scaffold peek height reservation. It remains constant during user drag gestures, touch interactions, or partial/full sheet expansion animations (the sheet slides in an independent overlay layer above the content). Consequently, `Surface(modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding()))` maintains a fixed, stable baseline throughout all sheet animations, eliminating layout jumps and UI jitter.
+3. **Zero Modifier Churn & Separation of Concerns (SWE.2)**: 
    The parent cockpit `Column` modifier remains completely stationary and unconditional (`Modifier.fillMaxSize()`). Bottom inset handling is encapsulated strictly within the elevation profile `Surface` modifier, eliminating conditional branching on the parent container and preventing full-screen recomposition churn.
-2. **Zero Dead Space when Profile is Disabled or Lacks Points**: 
+4. **Zero Dead Space when Profile is Disabled or Lacks Points**: 
    When `state.showElevationProfile == false` or `resolvedProfile.pathPoints.size < 2`, the elevation profile `Surface` is not composed. Because the parent `Column` has no unconditional bottom padding, the sensor grid and map expand edge-to-edge down to the screen boundary with $0\text{dp}$ residual whitespace.
-3. **Animation & Transition Stability**: 
-   In Compose Material 3 `BottomSheetScaffold`, `paddingValues.calculateBottomPadding()` is a constant value equal to `sheetPeekHeight`. It does not fluctuate during sheet drag gestures or expanding/collapsing animations, guaranteeing zero layout shift or visual jitter during bottom sheet interactions.
-4. **Canonical Adaptive Height Preservation (`REQ-UI-346`)**: 
+5. **Fallback Safety & Robustness**:
+   `paddingValues.calculateBottomPadding()` is a non-null `Dp` value guaranteed by Compose Material 3 `PaddingValues`. If the sheet is disabled or absent (e.g. landscape mode or preview), it safely evaluates to `0.dp`, introducing zero margin.
+6. **Canonical Adaptive Height Preservation (`REQ-UI-346`)**: 
    `ElevationProfile` continues to use `calculateElevationProfileHeight(range)` ($70\text{dp} \dots 200\text{dp}$) without artificial `Modifier.weight(1f)` or `fillParentHeight = true`.
-5. **Sensor Grid Scrollability & Containment (`REQ-UI-358`)**: 
+7. **Sensor Grid Scrollability & Containment (`REQ-UI-358`)**: 
    Sensor grid preserves `.weight(1f, fill = false)` when map is hidden and `.heightIn(max = availableHeight * 0.5f)` when map is visible.
-6. **Map Flexible Expansion (`REQ-UI-358`)**: 
+8. **Map Flexible Expansion (`REQ-UI-358`)**: 
    When the map is visible, it retains `.weight(1f, fill = true)` to consume all vertical space remaining between the sensor grid and the elevation profile.
-7. **Recomposition Barrier Isolation (`REQ-UI-326`)**: 
+9. **Recomposition Barrier Isolation (`REQ-UI-326`)**: 
    `TrackingMapContainer` remains an `@Immutable` recomposition barrier skipping redundant recompositions.
-8. **Subtask & Gate Invariance**: 
+10. **Subtask & Gate Invariance**: 
    Subtasks transition directly to `Erledigt` upon passing Gate audit via `freigabe`. Parent ticket terminates at `Final Review (Human)`.
 
 ---
@@ -91,7 +100,7 @@ This implementation plan defines the exact modifications to `SensorGridScreen.kt
   3. *Zero Dead Space Guarantee*: If `state.showElevationProfile == false` (or `pathPoints.size < 2`), the `Surface` is omitted entirely. The parent `Column` has no residual bottom padding, allowing the map (or sensor grid) to utilize 100% of the screen.
   4. *Zero Peek Inactive Invariant*: When `sheetPeekHeight == 0.dp`, `calculateBottomPadding()` returns `0.dp`, adding $0\text{dp}$ padding.
 
-### Component 2: Unit Tests in `SensorGridScreenLayoutTest.kt`
+### Component 2: Unit & Geometry Simulation Tests in `SensorGridScreenLayoutTest.kt`
 * **File**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreenLayoutTest.kt`
 * **Modifications**:
   1. `testElevationProfileSurface_appliesScaffoldBottomPadding()`: Verify `Surface` modifier includes `bottom = paddingValues.calculateBottomPadding()`.
