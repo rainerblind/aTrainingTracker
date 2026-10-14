@@ -30,12 +30,15 @@ Forensic analysis revealed that automated periodic backups have silently failed 
    - `BackupWorker.doWork()` SHALL query `prefs.getBoolean("automated_backups", true)`, guaranteeing strict parity with `schedule()`, `DropboxSettingsDialog.kt`, and `prefs_dropbox.xml`.
 3. **Configuration Availability Before Worker Scheduling**:
    - The system SHALL guarantee that application preferences (`SharedPreferences`) are fully initialized and accessible prior to invoking WorkManager background worker scheduling, ensuring background tasks read valid configuration parameters without encountering uninitialized state.
-4. **Bounded Local Backup Creation, Atomic File Replacement & Concurrency Safety (`BackupWorker.kt` & `BackupManager.kt`)**:
+4. **Bounded Local Backup Creation, Atomic Same-Directory Replacement & Stale Temp Cleanup (`BackupWorker.kt` & `BackupManager.kt`)**:
    - When automated backups are enabled (`automated_backups == true`), `BackupWorker.doWork()` SHALL generate a valid local `.attbackup` archive using `BackupManager.createBackup(context)` regardless of whether cloud providers are connected.
-   - **Atomic File Replacement Mechanism**: To eliminate partial file corruption from unexpected process death during zipping, `BackupManager.createBackup` SHALL write to a temporary staging file (`aTrainingTracker_backup.tmp`) and replace the canonical destination file (`aTrainingTracker_backup.attbackup`) via an atomic rename operation (`renameTo()` / atomic move).
+   - **Stale Temp File Cleanup**: Prior to initiating a new backup bundling cycle, `BackupManager` SHALL purge any orphaned staging files (`aTrainingTracker_backup.tmp`) remaining from previous aborted attempts or process termination, preventing disk storage leakage.
+   - **Same-Directory Atomic File Replacement**: The temporary staging file (`aTrainingTracker_backup.tmp`) SHALL reside in the exact same directory (`context.cacheDir`) as the destination file (`aTrainingTracker_backup.attbackup`), guaranteeing co-location on the identical filesystem mount point. Replacement SHALL execute via `java.nio.file.Files.move` with `StandardCopyOption.ATOMIC_MOVE` (falling back defensively to `StandardCopyOption.REPLACE_EXISTING`), eliminating partial file corruption from process death during zipping.
    - **Storage Boundedness**: Local backup generation SHALL be strictly bounded to $O(1)$ storage space by maintaining only the single canonical archive. No unbounded file accumulation is permitted on device disk.
-   - **Concurrency Safety**: Backup creation SHALL be guarded by a mutex/lock (`BackupManager.backupMutex`) to synchronize background worker execution with any concurrent manual backup initiated by the user.
-5. **Decoupled Cloud Upload & Controlled Retry Policy**:
+5. **Concurrency Synchronization & Lock Failure Policy**:
+   - Backup bundling SHALL be guarded by an in-process synchronization lock (`BackupManager.backupMutex`) and file lock (`aTrainingTracker_backup.lock`) to prevent race conditions with concurrent manual backups.
+   - If the lock is actively held by a user-initiated manual backup, `BackupWorker` SHALL NOT block indefinitely; it SHALL safely yield and return `Result.retry()` with exponential backoff to allow subsequent execution.
+6. **Decoupled Cloud Upload & Controlled Retry Policy**:
    - If no cloud provider (Dropbox or Google Drive) is connected, `BackupWorker` SHALL record `last_backup_timestamp = System.currentTimeMillis()`, update `last_backup_status = "LOCAL_SUCCESS"`, and return `Result.success()`.
    - If cloud provider(s) are connected, `BackupWorker` SHALL attempt upload. If any connected upload succeeds, it SHALL update `last_backup_timestamp` and set `last_backup_status` to `"SUCCESS"` (or `"PARTIAL_SUCCESS"`). If all connected uploads fail, the atomic local backup remains safely preserved on disk, `last_backup_status` is updated to `"Upload failed"`, and the worker returns `Result.retry()`.
    - WorkManager's exponential backoff policy (`BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS`) controls retries without tight-loop churning or redundant local file re-zipping when the canonical backup is already valid.
@@ -47,7 +50,7 @@ Forensic analysis revealed that automated periodic backups have silently failed 
   - `WORK_NAME = "automated_backup_work"` remains identical.
   - Work constraints (`NetworkType.UNMETERED`, `setRequiresBatteryNotLow(true)`) remain identical.
   - Exponential backoff policy (`1 hour`) remains identical.
-  - Storage bounds: Single canonical archive with atomic temp-to-final rename prevents disk exhaustion and partial reads.
+  - Storage bounds: Single canonical archive with co-located atomic move and stale temp cleanup prevents disk exhaustion and partial reads.
   - Exception safety: `schedule()` catches and logs `Throwable` to ensure non-crashing behavior on devices with missing or broken WorkManager providers (`WorkManagerResilienceTest`).
 
 ---
@@ -67,19 +70,24 @@ Forensic analysis revealed that automated periodic backups have silently failed 
 ### Criterion 3: Bounded Local Backup Creation Without Cloud Provider
 * **Given** an athlete with automated backups enabled and neither Dropbox nor Google Drive connected,
 * **When** `BackupWorker.doWork()` executes,
-* **Then** `BackupManager.createBackup(context)` creates a valid local archive bounded to $O(1)$ space via atomic temp-to-final rename, `last_backup_timestamp` is updated, `last_backup_status` is set to `"LOCAL_SUCCESS"`, and the worker returns `Result.success()`.
+* **Then** `BackupManager.createBackup(context)` creates a valid local archive bounded to $O(1)$ space via atomic same-mount move, `last_backup_timestamp` is updated, `last_backup_status` is set to `"LOCAL_SUCCESS"`, and the worker returns `Result.success()`.
 
-### Criterion 4: Atomic Rename & Corruption Guard
-* **Given** a backup process in progress,
-* **When** the archive is created,
-* **Then** data is staged in a temporary file and atomically moved to `aTrainingTracker_backup.attbackup`, ensuring the canonical file is never partially written.
+### Criterion 4: Atomic Co-Located Move & Stale Cleanup
+* **Given** a backup process in progress or previous crash leaving a `.tmp` file,
+* **When** `BackupManager.createBackup(context)` executes,
+* **Then** any stale `.tmp` file is purged prior to zipping, staging is performed in `cacheDir`, and co-located atomic move guarantees the canonical `.attbackup` is never partially written.
 
-### Criterion 5: Cloud Upload Execution When Connected & Controlled Retry
+### Criterion 5: Concurrency Safety & Mutex Contention Handling
+* **Given** a manual backup actively executing,
+* **When** `BackupWorker.doWork()` executes simultaneously,
+* **Then** the worker detects lock contention without hanging, yields cleanly, and returns `Result.retry()`.
+
+### Criterion 6: Cloud Upload Execution When Connected & Controlled Retry
 * **Given** an athlete with Dropbox or Google Drive connected,
 * **When** `BackupWorker.doWork()` executes,
 * **Then** local backup is created and dispatched to the connected cloud providers. If all connected uploads fail, local backup remains intact and `Result.retry()` is scheduled via exponential backoff.
 
-### Criterion 6: WorkManager Exception Resilience
+### Criterion 7: WorkManager Exception Resilience
 * **Given** an environment or test harness where `WorkManager.getInstance()` throws an exception,
 * **When** `BackupWorker.schedule(context)` is invoked,
 * **Then** the exception is caught, logged to Logcat, and the application does not crash.
@@ -93,10 +101,11 @@ Forensic analysis revealed that automated periodic backups have silently failed 
 | `TST-MIG-033.1` | Static/AST Contract | `BackupWorker.kt` | Asserts `ExistingPeriodicWorkPolicy.UPDATE` is used in `enqueueUniquePeriodicWork` |
 | `TST-MIG-033.2` | Unit Test | `BackupWorkerTest.kt` | Asserts `doWork()` defaults `"automated_backups"` to `true` when preference key is unset |
 | `TST-MIG-033.3` | Unit Test | `BackupWorkerTest.kt` | Asserts `doWork()` creates local backup and returns `Result.success()` with `LOCAL_SUCCESS` when no cloud provider is connected |
-| `TST-MIG-033.4` | Atomicity & Storage Bounds | `BackupManagerTest.kt` | Asserts backup creation uses atomic temp-file rename (`.tmp` -> `.attbackup`) and bounds storage to $O(1)$ canonical file |
-| `TST-MIG-033.5` | Ordering Contract | `TrainingApplication.java` | Asserts `cSharedPreferences` is initialized before `initWorkManager()` and `BackupWorker.schedule()` |
-| `TST-MIG-033.6` | Retry & Backoff Contract | `BackupWorkerTest.kt` | Asserts failed cloud upload returns `Result.retry()` with exponential backoff while preserving local backup |
-| `TST-MIG-033.7` | Clean-Room Suite | All test modules | `./gradlew testDebugUnitTest` runs with 100% pass rate and zero regressions |
+| `TST-MIG-033.4` | Atomicity & Stale Cleanup | `BackupManagerTest.kt` | Asserts co-located atomic move (`.tmp` -> `.attbackup`) and stale `.tmp` purge on new run |
+| `TST-MIG-033.5` | Ordering Contract | `TrainingApplication.java` | Asserts preferences are initialized before `initWorkManager()` and `BackupWorker.schedule()` |
+| `TST-MIG-033.6` | Concurrency & Contention | `BackupWorkerTest.kt` | Asserts mutex/lock contention returns `Result.retry()` without deadlock or partial overwrite |
+| `TST-MIG-033.7` | Retry & Backoff Contract | `BackupWorkerTest.kt` | Asserts failed cloud upload returns `Result.retry()` with exponential backoff while preserving local backup |
+| `TST-MIG-033.8` | Clean-Room Suite | All test modules | `./gradlew testDebugUnitTest` runs with 100% pass rate and zero regressions |
 
 ---
 
@@ -107,6 +116,7 @@ Forensic analysis revealed that automated periodic backups have silently failed 
 | `REQ-MIG-036.1` (Monotonic Scheduling) | `TST-MIG-033.1` | `BackupWorker.kt` | `BackupWorkerTest.kt` | Specified |
 | `REQ-MIG-036.2` (Default Parity) | `TST-MIG-033.2` | `BackupWorker.kt` | `BackupWorkerTest.kt` | Specified |
 | `REQ-MIG-036.3` (Configuration Availability) | `TST-MIG-033.5` | `TrainingApplication.java` | `TrainingApplicationTest.kt` | Specified |
-| `REQ-MIG-036.4` (Atomic & Bounded Local Backup) | `TST-MIG-033.3`, `TST-MIG-033.4` | `BackupWorker.kt` / `BackupManager.kt` | `BackupWorkerTest.kt`, `BackupManagerTest.kt` | Specified |
-| `REQ-MIG-036.5` (Decoupled Cloud & Controlled Retry) | `TST-MIG-033.6` | `BackupWorker.kt` | `BackupWorkerTest.kt` | Specified |
-| `REQ-PRO-001` (Clean-Room Zero Regressions) | `TST-MIG-033.7` | Entire Codebase | `./gradlew testDebugUnitTest` | Specified |
+| `REQ-MIG-036.4` (Atomic Co-Located Move & Cleanup) | `TST-MIG-033.3`, `TST-MIG-033.4` | `BackupWorker.kt` / `BackupManager.kt` | `BackupWorkerTest.kt`, `BackupManagerTest.kt` | Specified |
+| `REQ-MIG-036.5` (Concurrency Safety & Contention) | `TST-MIG-033.6` | `BackupWorker.kt` / `BackupManager.kt` | `BackupWorkerTest.kt` | Specified |
+| `REQ-MIG-036.6` (Decoupled Cloud & Controlled Retry) | `TST-MIG-033.7` | `BackupWorker.kt` | `BackupWorkerTest.kt` | Specified |
+| `REQ-PRO-001` (Clean-Room Zero Regressions) | `TST-MIG-033.8` | Entire Codebase | `./gradlew testDebugUnitTest` | Specified |
