@@ -61,6 +61,10 @@ data class WorkoutCluster(
 ) {
     val minAltLatLng: LatLng? get() = if (minAltLat != null && minAltLng != null) LatLng(minAltLat, minAltLng) else null
     val maxAltLatLng: LatLng? get() = if (maxAltLat != null && maxAltLng != null) LatLng(maxAltLat, maxAltLng) else null
+
+    companion object {
+        fun fromCursor(cursor: Cursor): WorkoutCluster = WorkoutClusterDatabaseManager.mapCursorToCluster(cursor)
+    }
 }
 
 class WorkoutClusterDatabaseManager private constructor(context: Context) {
@@ -83,6 +87,84 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         fun resetForTesting(newInstance: WorkoutClusterDatabaseManager? = null) {
             instance = newInstance
         }
+
+        @JvmStatic
+        fun deserializePreviewPaths(serialized: String): List<String> {
+            if (serialized.isEmpty()) return emptyList()
+            return try {
+                val array = JSONArray(serialized)
+                val list = mutableListOf<String>()
+                for (i in 0 until array.length()) {
+                    list.add(array.getString(i))
+                }
+                list
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+
+        /**
+         * Authoritative row-level mapper from a positioned [Cursor] to a [WorkoutCluster].
+         * Adheres to REQ-DAT-025: Does not advance or close the cursor.
+         */
+        @JvmStatic
+        fun mapCursorToCluster(cursor: Cursor): WorkoutCluster {
+            val minLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MIN_LAT)
+            val minLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MIN_LNG)
+            val maxLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MAX_LAT)
+            val maxLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MAX_LNG)
+            val previewIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_PREVIEW_PATHS)
+            val routeIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_ROUTE_POLYLINE)
+
+            val minAltLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MIN_ALT_LAT)
+            val minAltLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MIN_ALT_LNG)
+            val maxAltLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MAX_ALT_LAT)
+            val maxAltLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MAX_ALT_LNG)
+            val hasCounterIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_HAS_COUNTER)
+
+            return WorkoutCluster(
+                id = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID)),
+                name = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_NAME)),
+                probableSportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_PROBABLE_SPORT_ID)),
+                startLat = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_START_LAT)),
+                startLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_START_LNG)),
+                endLat = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_END_LAT)),
+                endLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_END_LNG)),
+                maxDispLat = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_MAX_DISP_LAT)),
+                maxDispLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_MAX_DISP_LNG)),
+                refDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_REF_DISTANCE)),
+                hitCount = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_HIT_COUNT)),
+                bSportType = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_SPORT_TYPE))),
+                previewPaths = if (previewIdx != -1 && !cursor.isNull(previewIdx)) deserializePreviewPaths(cursor.getString(previewIdx)) else emptyList(),
+                routePolyline = if (routeIdx != -1 && !cursor.isNull(routeIdx)) cursor.getString(routeIdx) else null,
+                minLat = if (minLatIdx != -1 && !cursor.isNull(minLatIdx)) cursor.getDouble(minLatIdx) else null,
+                minLng = if (minLngIdx != -1 && !cursor.isNull(minLngIdx)) cursor.getDouble(minLngIdx) else null,
+                maxLat = if (maxLatIdx != -1 && !cursor.isNull(maxLatIdx)) cursor.getDouble(maxLatIdx) else null,
+                maxLng = if (maxLngIdx != -1 && !cursor.isNull(maxLngIdx)) cursor.getDouble(maxLngIdx) else null,
+                minAltLat = if (minAltLatIdx != -1 && !cursor.isNull(minAltLatIdx)) cursor.getDouble(minAltLatIdx) else null,
+                minAltLng = if (minAltLngIdx != -1 && !cursor.isNull(minAltLngIdx)) cursor.getDouble(minAltLngIdx) else null,
+                maxAltLat = if (maxAltLatIdx != -1 && !cursor.isNull(maxAltLatIdx)) cursor.getDouble(maxAltLatIdx) else null,
+                maxAltLng = if (maxAltLngIdx != -1 && !cursor.isNull(maxAltLngIdx)) cursor.getDouble(maxAltLngIdx) else null,
+                hasCounter = if (hasCounterIdx != -1 && !cursor.isNull(hasCounterIdx)) cursor.getInt(hasCounterIdx) == 1 else true
+            )
+        }
+    }
+
+    /**
+     * Maps a single cursor row positioned at a cluster record to a [WorkoutCluster].
+     * Adheres to REQ-DAT-025: Does not advance or close the cursor.
+     */
+    fun fromCursor(cursor: Cursor): WorkoutCluster = mapCursorToCluster(cursor)
+
+    /**
+     * Maps an open cursor to a list of [WorkoutCluster] items.
+     */
+    fun fromCursorBatch(cursor: Cursor): List<WorkoutCluster> {
+        val clusters = mutableListOf<WorkoutCluster>()
+        while (cursor.moveToNext()) {
+            clusters.add(mapCursorToCluster(cursor))
+        }
+        return clusters
     }
 
     /**
@@ -109,15 +191,11 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
     }
 
     fun getAllClusters(): List<WorkoutCluster> {
-        val clusters = mutableListOf<WorkoutCluster>()
-        getDatabase().query(
+        return getDatabase().query(
             WorkoutClusterContract.TABLE_NAME, null, null, null, null, null, null
         ).use { cursor ->
-            while (cursor.moveToNext()) {
-                clusters.add(mapCursorToCluster(cursor))
-            }
+            fromCursorBatch(cursor)
         }
-        return clusters
     }
 
     /**
@@ -143,15 +221,11 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
             (distance - distToleranceMeters).toString(), (distance + distToleranceMeters).toString()
         )
 
-        val candidates = mutableListOf<WorkoutCluster>()
-        getDatabase().query(
+        return getDatabase().query(
             WorkoutClusterContract.TABLE_NAME, null, selection, args, null, null, null
         ).use { cursor ->
-            while (cursor.moveToNext()) {
-                candidates.add(mapCursorToCluster(cursor))
-            }
+            fromCursorBatch(cursor)
         }
-        return candidates
     }
 
     fun insertCluster(cluster: WorkoutCluster): Long {
@@ -182,7 +256,7 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
             WorkoutClusterContract.TABLE_NAME, null, selection, args, null, null, null
         ).use { cursor ->
             if (cursor.moveToFirst()) {
-                return mapCursorToCluster(cursor)
+                return fromCursor(cursor)
             }
         }
         return null
@@ -200,7 +274,7 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
             WorkoutClusterContract.TABLE_NAME, null, selection, args, null, null, null
         ).use { cursor ->
             if (cursor.moveToFirst()) {
-                return mapCursorToCluster(cursor)
+                return fromCursor(cursor)
             }
         }
         return null
@@ -266,47 +340,6 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         }
     }
 
-    private fun mapCursorToCluster(cursor: Cursor): WorkoutCluster {
-        val minLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MIN_LAT)
-        val minLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MIN_LNG)
-        val maxLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MAX_LAT)
-        val maxLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MAX_LNG)
-        val previewIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_PREVIEW_PATHS)
-        val routeIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_ROUTE_POLYLINE)
-
-        val minAltLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MIN_ALT_LAT)
-        val minAltLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MIN_ALT_LNG)
-        val maxAltLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MAX_ALT_LAT)
-        val maxAltLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MAX_ALT_LNG)
-        val hasCounterIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_HAS_COUNTER)
-
-        return WorkoutCluster(
-            id = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID)),
-            name = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_NAME)),
-            probableSportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_PROBABLE_SPORT_ID)),
-            startLat = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_START_LAT)),
-            startLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_START_LNG)),
-            endLat = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_END_LAT)),
-            endLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_END_LNG)),
-            maxDispLat = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_MAX_DISP_LAT)),
-            maxDispLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_MAX_DISP_LNG)),
-            refDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_REF_DISTANCE)),
-            hitCount = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_HIT_COUNT)),
-            bSportType = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_SPORT_TYPE))),
-            previewPaths = if (previewIdx != -1 && !cursor.isNull(previewIdx)) deserializePreviewPaths(cursor.getString(previewIdx)) else emptyList(),
-            routePolyline = if (routeIdx != -1 && !cursor.isNull(routeIdx)) cursor.getString(routeIdx) else null,
-            minLat = if (minLatIdx != -1 && !cursor.isNull(minLatIdx)) cursor.getDouble(minLatIdx) else null,
-            minLng = if (minLngIdx != -1 && !cursor.isNull(minLngIdx)) cursor.getDouble(minLngIdx) else null,
-            maxLat = if (maxLatIdx != -1 && !cursor.isNull(maxLatIdx)) cursor.getDouble(maxLatIdx) else null,
-            maxLng = if (maxLngIdx != -1 && !cursor.isNull(maxLngIdx)) cursor.getDouble(maxLngIdx) else null,
-            minAltLat = if (minAltLatIdx != -1 && !cursor.isNull(minAltLatIdx)) cursor.getDouble(minAltLatIdx) else null,
-            minAltLng = if (minAltLngIdx != -1 && !cursor.isNull(minAltLngIdx)) cursor.getDouble(minAltLngIdx) else null,
-            maxAltLat = if (maxAltLatIdx != -1 && !cursor.isNull(maxAltLatIdx)) cursor.getDouble(maxAltLatIdx) else null,
-            maxAltLng = if (maxAltLngIdx != -1 && !cursor.isNull(maxAltLngIdx)) cursor.getDouble(maxAltLngIdx) else null,
-            hasCounter = if (hasCounterIdx != -1 && !cursor.isNull(hasCounterIdx)) cursor.getInt(hasCounterIdx) == 1 else true
-        )
-    }
-
     private fun createContentValues(cluster: WorkoutCluster) = ContentValues().apply {
         put(WorkoutClusterContract.COLUMN_NAME, cluster.name)
         put(WorkoutClusterContract.COLUMN_PROBABLE_SPORT_ID, cluster.probableSportId)
@@ -340,20 +373,6 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         val array = JSONArray()
         paths.forEach { array.put(it) }
         return array.toString()
-    }
-
-    private fun deserializePreviewPaths(serialized: String): List<String> {
-        if (serialized.isEmpty()) return emptyList()
-        return try {
-            val array = JSONArray(serialized)
-            val list = mutableListOf<String>()
-            for (i in 0 until array.length()) {
-                list.add(array.getString(i))
-            }
-            list
-        } catch (e: Exception) {
-            emptyList()
-        }
     }
 
     object WorkoutClusterContract {
