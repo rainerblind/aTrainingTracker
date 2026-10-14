@@ -1770,5 +1770,9 @@
     <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
     <string name="tuning_nav_cue_distance_title">Distanza indicazioni di svolta</string>
     <string name="tuning_nav_cue_distance_desc">Distanza prima della svolta per visualizzare gli avvisi di navigazione</string>
+    <!-- First-Time Stop Tracking Coachmark (ATT-3387 / REQ-UI-367) -->
+    <string name="coachmark_stop_tracking_hint">Scorri a destra o tocca la prima scheda a sinistra per mettere in pausa o terminare l\'allenamento.</string>
+    <string name="coachmark_stop_tracking_show_tab">Mostra controllo</string>
+    <string name="coachmark_stop_tracking_dismiss">Ho capito</string>
 </resources>
 

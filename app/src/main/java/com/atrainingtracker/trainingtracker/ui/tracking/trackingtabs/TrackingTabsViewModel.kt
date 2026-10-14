@@ -105,6 +105,40 @@ class TrackingTabsViewModel(
     private val _screenMode = MutableStateFlow(ScreenMode.TRACKING)
     val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
 
+    // Session state tracking whether the first-time stop tracking coachmark banner has been rendered
+    // in the current workout session, surviving configuration changes (REQ-UI-367 / ATT-3387).
+    private val _hasRenderedCoachmarkInSession = MutableStateFlow(false)
+    val hasRenderedCoachmarkInSession: StateFlow<Boolean> = _hasRenderedCoachmarkInSession.asStateFlow()
+
+    // Synchronous optimistic dismissal flag preventing single-frame flicker while DataStore I/O completes (REQ-UI-367 / ATT-3387).
+    private val _isCoachmarkDismissPending = MutableStateFlow(false)
+    val isCoachmarkDismissPending: StateFlow<Boolean> = _isCoachmarkDismissPending.asStateFlow()
+
+    /**
+     * Marks that the stop tracking coachmark banner has been displayed on a telemetry tab (Page >= 1)
+     * during the active workout session (REQ-UI-367 / ATT-3387).
+     */
+    fun markCoachmarkRenderedInSession() {
+        _hasRenderedCoachmarkInSession.value = true
+    }
+
+    /**
+     * Synchronously marks the stop tracking coachmark as dismissed in local ViewModel state before
+     * the asynchronous DataStore write completes, eliminating persistence latency flicker (REQ-UI-367 / ATT-3387).
+     */
+    fun markCoachmarkDismissPending() {
+        _isCoachmarkDismissPending.value = true
+    }
+
+    /**
+     * Resets the in-session coachmark rendering and optimistic dismissal state (e.g. when returning to READY mode
+     * or when factory defaults are restored) (REQ-UI-367 / ATT-3387).
+     */
+    fun resetCoachmarkSessionState() {
+        _hasRenderedCoachmarkInSession.value = false
+        _isCoachmarkDismissPending.value = false
+    }
+
     private val knownLocationsRepo: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository? = knownLocationsRepository
     private var lastCalibratedLocationId: Long? = null
 
@@ -196,6 +230,9 @@ class TrackingTabsViewModel(
         viewModelScope.launch {
             var previousMode: TrackingMode? = null
             banalServiceRepository.trackingMode.asFlow().collect { mode ->
+                if (mode == TrackingMode.READY) {
+                    _hasRenderedCoachmarkInSession.value = false
+                }
                 if (mode == TrackingMode.TRACKING &&
                     previousMode != null &&
                     previousMode != TrackingMode.TRACKING
@@ -205,6 +242,48 @@ class TrackingTabsViewModel(
                 }
                 previousMode = mode
             }
+        }
+    }
+
+    companion object {
+        /**
+         * Pure domain predicate determining whether the first-time stop tracking coachmark banner
+         * should be displayed on the cockpit screen (REQ-UI-367 / ATT-3387).
+         *
+         * @param trackingMode Current [TrackingMode].
+         * @param currentPage Current pager page index (`0` = Control Tab, `>= 1` = Telemetry Data Tabs).
+         * @param screenMode Current [ScreenMode].
+         * @param hasSeenHint Nullable flag from [com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.hasSeenStopTrackingHintFlow] (`null` while DataStore is still loading).
+         * @param isDismissPending Synchronous optimistic dismissal flag set immediately on user interaction.
+         */
+        fun shouldShowStopTrackingCoachmark(
+            trackingMode: TrackingMode,
+            currentPage: Int,
+            screenMode: ScreenMode,
+            hasSeenHint: Boolean?,
+            isDismissPending: Boolean = false
+        ): Boolean {
+            if (hasSeenHint != false || isDismissPending) return false
+            val isActiveWorkout = trackingMode == TrackingMode.TRACKING || trackingMode == TrackingMode.PAUSED
+            return isActiveWorkout && currentPage > 0 && screenMode == ScreenMode.TRACKING
+        }
+
+        /**
+         * Pure domain predicate determining whether settling on `Page 0` (`Control` tab) should
+         * automatically acknowledge and permanently dismiss the stop tracking coachmark (REQ-UI-367 / ATT-3387).
+         * Requires [hasRenderedCoachmarkInSession] to be `true` so the initial `READY -> TRACKING` transition
+         * while still on `Page 0` never prematurely dismisses the coachmark before the user sees it.
+         */
+        fun shouldAutoAcknowledgeStopTrackingCoachmark(
+            trackingMode: TrackingMode,
+            settledPage: Int,
+            hasSeenHint: Boolean?,
+            hasRenderedCoachmarkInSession: Boolean,
+            isDismissPending: Boolean = false
+        ): Boolean {
+            if (hasSeenHint != false || !hasRenderedCoachmarkInSession || isDismissPending) return false
+            val isActiveWorkout = trackingMode == TrackingMode.TRACKING || trackingMode == TrackingMode.PAUSED
+            return isActiveWorkout && settledPage == 0
         }
     }
 

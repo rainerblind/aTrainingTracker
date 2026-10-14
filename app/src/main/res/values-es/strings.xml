@@ -1770,4 +1770,8 @@
     <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
     <string name="tuning_nav_cue_distance_title">Distancia de indicaciones de giro</string>
     <string name="tuning_nav_cue_distance_desc">Distancia antes del giro para mostrar avisos de navegación</string>
+    <!-- First-Time Stop Tracking Coachmark (ATT-3387 / REQ-UI-367) -->
+    <string name="coachmark_stop_tracking_hint">Desliza a la derecha o toca la primera pestaña a la izquierda para pausar o detener tu entrenamiento.</string>
+    <string name="coachmark_stop_tracking_show_tab">Mostrar control</string>
+    <string name="coachmark_stop_tracking_dismiss">Entendido</string>
 </resources>
