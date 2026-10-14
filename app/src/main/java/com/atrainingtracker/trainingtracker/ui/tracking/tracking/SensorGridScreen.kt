@@ -620,11 +620,15 @@ fun SensorGridScreen(
                         )
                     }
 
+                    // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199 / REQ-UI-369 / ATT-3311)
                     if (state.showElevationProfile && resolvedProfile.pathPoints.size >= 2) {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 8.dp)
+                                .padding(
+                                    top = 8.dp,
+                                    bottom = paddingValues.calculateBottomPadding()
+                                )
                         ) {
                             ElevationProfile(
                                 pathPoints = resolvedProfile.pathPoints,

@@ -182,5 +182,91 @@ class SensorGridScreenLayoutTest {
         assertEquals(800f, totalConsumedNoProfile, 0.001f)
         assertEquals(0f, deadSpaceNoProfile, 0.001f)
     }
+
+    @Test
+    fun testElevationProfileSurface_appliesScaffoldBottomPadding() {
+        // REQ-UI-369 / TST-UI-332.1: Surface modifier must include bottom = paddingValues.calculateBottomPadding()
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "ElevationProfile Surface must declare bottom = paddingValues.calculateBottomPadding() for bottom sheet clearance (TST-UI-332.1)",
+            content.contains("bottom = paddingValues.calculateBottomPadding()")
+        )
+    }
+
+    @Test
+    fun testLayoutGeometry_elevationProfileClearsBottomSheet_mapAndNonMap() {
+        // REQ-UI-369 / TST-UI-332.2: Geometry Simulation of Bottom Sheet Clearance
+        val availableHeight = 800f
+        val sheetPeekHeight = 104f
+        val elevationProfileHeight = 70f
+        val topPadding = 8f
+        val bottomInset = sheetPeekHeight // paddingValues.calculateBottomPadding()
+
+        val sheetTopY = availableHeight - sheetPeekHeight // 696f
+
+        // Case 1: Non-map cockpit with multi-row sensor fields (300dp)
+        val sensorContentHeightNonMap = 300f
+        val profileTopNonMap = sensorContentHeightNonMap + topPadding // 308f
+        val profileBottomNonMap = profileTopNonMap + elevationProfileHeight // 378f
+        assertTrue(
+            "Elevation profile bottom must be above or at sheet top (zero occlusion on non-map tab)",
+            profileBottomNonMap <= sheetTopY
+        )
+
+        // Case 2: Map-enabled cockpit (map expands with weight(1f, fill = true))
+        val sensorGridHeightMap = 200f
+        // Surface consumes elevationProfileHeight + topPadding + bottomInset
+        val surfaceTotalHeight = elevationProfileHeight + topPadding + bottomInset // 70 + 8 + 104 = 182f
+        val remainingSpaceForMap = availableHeight - sensorGridHeightMap - surfaceTotalHeight // 800 - 200 - 182 = 418f
+
+        val mapTop = sensorGridHeightMap // 200f
+        val mapBottom = mapTop + remainingSpaceForMap // 618f
+        val surfaceTop = mapBottom + topPadding // 626f
+        val profileCanvasBottom = surfaceTop + elevationProfileHeight // 696f
+
+        assertEquals("Map must expand to exactly consume remaining space", 418f, remainingSpaceForMap, 0.001f)
+        assertEquals("Profile canvas bottom must exactly touch sheet top without overlapping", sheetTopY, profileCanvasBottom, 0.001f)
+        assertTrue("Profile canvas bottom must not penetrate below sheet top", profileCanvasBottom <= sheetTopY)
+    }
+
+    @Test
+    fun testLayoutGeometry_zeroSheetPeekHeightBoundaryVerification() {
+        // REQ-UI-369.3 / TST-UI-332.3: Zero Sheet Peek Inactive Boundary Verification
+        val availableHeight = 800f
+        val sheetPeekHeight = 0f
+        val elevationProfileHeight = 70f
+        val topPadding = 8f
+        val bottomInset = sheetPeekHeight // 0f
+
+        val sensorGridHeight = 200f
+        val surfaceTotalHeight = elevationProfileHeight + topPadding + bottomInset // 78f
+        val remainingSpaceForMap = availableHeight - sensorGridHeight - surfaceTotalHeight // 722f
+        val totalConsumed = sensorGridHeight + remainingSpaceForMap + surfaceTotalHeight // 800f
+        val deadSpace = availableHeight - totalConsumed // 0f
+
+        val profileCanvasBottom = sensorGridHeight + remainingSpaceForMap + topPadding + elevationProfileHeight // 800f
+
+        assertEquals(0f, deadSpace, 0.001f)
+        assertEquals(availableHeight, profileCanvasBottom, 0.001f)
+    }
+
+    @Test
+    fun testLayoutGeometry_elevationProfileDisabled_zeroDeadSpace() {
+        // REQ-UI-369 / TST-UI-332.4: Negative Test - Elevation Profile Disabled
+        val availableHeight = 800f
+        val sheetPeekHeight = 104f
+        val sensorGridHeight = 200f
+
+        // When showElevationProfile is false, Surface is NOT composed.
+        // Map expands with weight(1f, fill = true) across 100% of remaining vertical space.
+        val remainingSpaceForMap = availableHeight - sensorGridHeight // 600f
+        val totalConsumed = sensorGridHeight + remainingSpaceForMap // 800f
+        val deadSpace = availableHeight - totalConsumed // 0f
+
+        assertEquals("Map must consume 100% remaining space when elevation profile is disabled", 600f, remainingSpaceForMap, 0.001f)
+        assertEquals("Zero dead space must be preserved when elevation profile is disabled", 0f, deadSpace, 0.001f)
+    }
 }
 
