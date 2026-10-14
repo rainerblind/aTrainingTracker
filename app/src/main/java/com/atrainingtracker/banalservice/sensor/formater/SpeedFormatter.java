@@ -20,6 +20,7 @@ package com.atrainingtracker.banalservice.sensor.formater;
 
 // import java.text.NumberFormat;
 
+import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.Locale;
@@ -31,16 +32,7 @@ public class SpeedFormatter implements MyFormatter<Number> {
             return "--";
         }
 
-        double speed = 0;
-        switch (TrainingApplication.getUnit()) {
-            case METRIC:
-                speed = speed_mps.doubleValue() * 3.6;
-                break;
-
-            case IMPERIAL:
-                speed = speed_mps.doubleValue() * 2.23693629;
-                break;
-        }
+        double speed = MyHelper.mps2userUnit(speed_mps.doubleValue());
         return String.format(Locale.getDefault(), "%.1f", speed);
     }
 
