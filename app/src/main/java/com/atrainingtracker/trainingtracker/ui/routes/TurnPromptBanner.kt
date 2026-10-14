@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 import com.atrainingtracker.trainingtracker.routes.TurnDirection
 import com.atrainingtracker.trainingtracker.routes.TurnNavigationState
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
@@ -139,7 +140,7 @@ private fun TurnCueCard(
                     text = if (isTurnNow) {
                         stringResource(R.string.turn_cue_now)
                     } else {
-                        "${distanceRemaining} m"
+                        LocalMetricFormatter.current.distance.format_with_units(distanceRemaining)
                     },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,

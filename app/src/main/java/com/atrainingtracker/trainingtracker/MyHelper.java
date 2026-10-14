@@ -167,7 +167,11 @@ public class MyHelper {
     }
 
     public static double UserUnit2mps(double speed) {
-        return switch (TrainingApplication.getUnit()) {
+        return UserUnit2mps(speed, TrainingApplication.getUnit());
+    }
+
+    public static double UserUnit2mps(double speed, @NonNull MyUnits myUnits) {
+        return switch (myUnits) {
             case METRIC -> speed / 3.6;
             case IMPERIAL -> speed / 2.23693629;
         };

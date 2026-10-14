@@ -276,7 +276,7 @@ fun ClimbDetails(
 
             MetricItem(
                 iconRes = R.drawable.ic_ascent,
-                value = "+${formatters.altitude.format_with_units(climb.elevationGainMeters) ?: "${climb.elevationGainMeters.roundToInt()} m"}",
+                value = "+${formatters.altitude.format_with_units(climb.elevationGainMeters)}",
                 isPrimary = true
             )
 

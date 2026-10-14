@@ -132,6 +132,7 @@ class StravaDataPurgeManagerTest {
         // 6. WorkManager periodic sync workers canceled
         verify { mockWorkManager.cancelUniqueWork("automated_strava_segments_sync_work") }
         verify { mockWorkManager.cancelUniqueWork("automated_strava_routes_sync_work") }
+        verify { mockWorkManager.cancelUniqueWork("automated_strava_equipment_sync_work") }
 
         // 7. Auth state reset
         verify { mockAuthRepo.resetState() }

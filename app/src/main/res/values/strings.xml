@@ -413,6 +413,9 @@
     <string name="automated_strava_routes_sync">Automated Route Sync</string>
     <string name="automated_strava_routes_sync_summary">Regularly fetch routes from Strava</string>
     <string name="strava_routes_sync_interval">Sync Interval</string>
+    <string name="automated_strava_equipment_sync">Automated Equipment Sync</string>
+    <string name="automated_strava_equipment_sync_summary">Regularly fetch bikes and shoes from Strava</string>
+    <string name="strava_equipment_sync_interval">Sync Interval</string>
 
     <string name="strava_success_but_must_check">uploaded to Strava, checking result …</string>
     <string name="strava_success_waiting_for_result">uploaded to Strava, waiting for result …</string>
@@ -1441,7 +1444,8 @@
     <string name="cluster_info_sports_title">Sport Awareness &amp; Adaptive Centroid</string>
     <string name="cluster_info_sports_desc">Favorite Tracks can enforce sport-type matching, ensuring bike rides and runs along the same trail are kept in distinct clusters. As you record more workouts on a route, the cluster automatically refines its reference coordinates by computing a weighted running average (centroid).</string>
     <string name="cluster_info_tuning_title">Sensitivity &amp; Parameter Tuning</string>
-    <string name="cluster_info_tuning_desc">Use the Master Sensitivity Slider to adjust how strictly routes must match. Move towards \"Strict\" to separate slight route variations into distinct clusters, or towards \"Relaxed\" to group workouts with varied start points or minor detours. You can also fine-tune individual parameter tolerances below.</string>
+    <string name="cluster_info_tuning_desc">Matching tolerances and cluster recalculation are configured in Advanced Settings. Move towards \"Strict\" to separate slight route variations, or towards \"Relaxed\" to group workouts with varied start points.</string>
+    <string name="cluster_info_open_advanced_tuning">Open Advanced Settings</string>
     <string name="cluster_info_close">Got it</string>
 
     <!-- Workout Cluster Stats -->
@@ -1734,8 +1738,8 @@
     <string name="import_fit_title">Import FIT files</string>
     <string name="import_fit_description">Import workouts from Garmin, Wahoo, Hammerhead, or smartwatches (.fit).</string>
     <string name="import_fit_button">Select FIT Files</string>
+    <string name="import_fit_folder_button">Scan Folder (FIT)</string>
     <string name="import_fit_dropbox_button">Scan Dropbox (FIT)</string>
-    <string name="import_fit_gdrive_button">Scan Google Drive (FIT)</string>
     <string name="import_fit_progress">Importing FIT files (%1$d of %2$d)…</string>
     <string name="import_fit_summary_success">Successfully imported %1$d workouts (%2$d duplicates skipped).</string>
     <string name="import_fit_summary_with_errors">Imported %1$d workouts, %2$d duplicates skipped, %3$d failed.</string>
@@ -1743,13 +1747,15 @@
     <string name="import_tcx_title">Import TCX files</string>
     <string name="import_tcx_description">Import workouts from Training Center XML files (.tcx).</string>
     <string name="import_tcx_button">Select TCX File</string>
+    <string name="import_tcx_folder_button">Scan Folder (TCX)</string>
     <string name="import_tcx_dropbox_button">Scan Dropbox (TCX)</string>
-    <string name="import_tcx_gdrive_button">Scan Google Drive (TCX)</string>
     <string name="import_gpx_title">Import GPX files</string>
     <string name="import_gpx_description">Import tracks and activities from GPS Exchange Format files (.gpx).</string>
     <string name="import_gpx_button">Select GPX File</string>
+    <string name="import_gpx_folder_button">Scan Folder (GPX)</string>
     <string name="import_gpx_dropbox_button">Scan Dropbox (GPX)</string>
-    <string name="import_gpx_gdrive_button">Scan Google Drive (GPX)</string>
+    <string name="import_directory_scanning">Scanning folder for workouts…</string>
+    <string name="import_directory_no_files_found">No compatible %1$s workout files found in selected folder.</string>
     <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
     <string name="invalid_workout_file_format">Invalid file format. Please select a %1$s file.</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->

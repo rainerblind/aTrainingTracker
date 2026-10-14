@@ -328,6 +328,9 @@
     <string name="automated_strava_routes_sync">Automatischer Routen-Abruf</string>
     <string name="automated_strava_routes_sync_summary">Regelmäßig Routen von Strava abrufen</string>
     <string name="strava_routes_sync_interval">Abrufintervall</string>
+    <string name="automated_strava_equipment_sync">Automatischer Ausrüstungs-Abruf</string>
+    <string name="automated_strava_equipment_sync_summary">Regelmäßig Fahrräder und Schuhe von Strava abrufen</string>
+    <string name="strava_equipment_sync_interval">Abrufintervall</string>
 
     <string name="strava_success_but_must_check">zu Strava hochgeladen, überprüfe die Rückmeldung …</string>
     <string name="strava_success_waiting_for_result">zu Strava hochgeladen, warte auf Rückmeldung …</string>
@@ -1335,7 +1338,8 @@
     <string name="cluster_info_sports_title">Sportart-Trennung &amp; lernender Schwerpunkt</string>
     <string name="cluster_info_sports_desc">Lieblingsstrecken können nach Sportarten getrennt werden, sodass Radfahrten und Läufe auf demselben Weg separate Cluster bilden. Mit jedem weiteren Training auf einer Strecke passt das Cluster seine Referenzkoordinaten über einen gleitenden Schwerpunkt (Centroid) dynamisch an.</string>
     <string name="cluster_info_tuning_title">Empfindlichkeit &amp; Feinabstimmung</string>
-    <string name="cluster_info_tuning_desc">Über den Master-Schieberegler stellst du ein, wie streng Routen übereinstimmen müssen: „Streng“ trennt minimale Routenabweichungen in eigene Cluster; „Locker“ fasst auch Einheiten mit versetzten Startpunkten oder kleinen Umwegen zusammen. Weiter unten kannst du die einzelnen Toleranzen individuell anpassen.</string>
+    <string name="cluster_info_tuning_desc">In den erweiterten Einstellungen können Matching-Toleranzen und die Cluster-Neuberechnung angepasst werden. „Streng“ trennt minimale Routenabweichungen, während „Locker“ auch versetzte Startpunkte zusammenfasst.</string>
+    <string name="cluster_info_open_advanced_tuning">Zu den erweiterten Einstellungen</string>
     <string name="cluster_info_close">Verstanden</string>
 
     <!-- Workout Cluster Stats -->
@@ -1628,8 +1632,8 @@
     <string name="import_fit_title">FIT-Dateien importieren</string>
     <string name="import_fit_description">Aktivitäten von Garmin, Wahoo, Hammerhead oder Smartwatches importieren (.fit).</string>
     <string name="import_fit_button">FIT-Dateien wählen</string>
+    <string name="import_fit_folder_button">Ordner scannen (FIT)</string>
     <string name="import_fit_dropbox_button">Dropbox scannen (FIT)</string>
-    <string name="import_fit_gdrive_button">Google Drive scannen (FIT)</string>
     <string name="import_fit_progress">Importiere FIT-Dateien (%1$d von %2$d)…</string>
     <string name="import_fit_summary_success">%1$d Aktivitäten erfolgreich importiert (%2$d Duplikate übersprungen).</string>
     <string name="import_fit_summary_with_errors">%1$d Aktivitäten importiert, %2$d Duplikate übersprungen, %3$d fehlgeschlagen.</string>
@@ -1637,13 +1641,15 @@
     <string name="import_tcx_title">TCX-Dateien importieren</string>
     <string name="import_tcx_description">Aktivitäten aus Training Center XML-Dateien importieren (.tcx).</string>
     <string name="import_tcx_button">Lokale TCX-Datei wählen</string>
+    <string name="import_tcx_folder_button">Ordner scannen (TCX)</string>
     <string name="import_tcx_dropbox_button">Dropbox scannen (TCX)</string>
-    <string name="import_tcx_gdrive_button">Google Drive scannen (TCX)</string>
     <string name="import_gpx_title">GPX-Dateien importieren</string>
     <string name="import_gpx_description">Strecken und Aktivitäten aus GPS Exchange Format importieren (.gpx).</string>
     <string name="import_gpx_button">Lokale GPX-Datei wählen</string>
+    <string name="import_gpx_folder_button">Ordner scannen (GPX)</string>
     <string name="import_gpx_dropbox_button">Dropbox scannen (GPX)</string>
-    <string name="import_gpx_gdrive_button">Google Drive scannen (GPX)</string>
+    <string name="import_directory_scanning">Ordner wird nach Trainings durchsucht…</string>
+    <string name="import_directory_no_files_found">Keine kompatiblen %1$s-Trainingsdateien im ausgewählten Ordner gefunden.</string>
     <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
     <string name="invalid_workout_file_format">Ungültiges Dateiformat. Bitte wählen Sie eine %1$s-Datei aus.</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->

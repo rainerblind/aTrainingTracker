@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.splits
 
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -273,11 +274,7 @@ fun LapSplitVisualizerCard(
 }
 
 private fun formatSplitDistance(distanceM: Double): String {
-    return if (distanceM >= 1000.0) {
-        String.format(Locale.US, "%.2f km", distanceM / 1000.0)
-    } else {
-        String.format(Locale.US, "%.0f m", distanceM)
-    }
+    return DistanceFormatter().format_with_units(distanceM)
 }
 
 private fun formatSplitDuration(durationSec: Int): String {

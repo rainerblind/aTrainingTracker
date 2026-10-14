@@ -33,8 +33,8 @@ class LiveSegmentSheetLayoutTest {
 
     @Test
     fun testLiveSegmentSheet_composableExistsAndIsPublic() {
-        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.segments.LIveSegmentSheetKt")
-        assertNotNull("LIveSegmentSheetKt class must exist", clazz)
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetKt")
+        assertNotNull("LiveSegmentSheetKt class must exist", clazz)
 
         val methods = clazz.declaredMethods
         val sheetMethod = methods.find { it.name.startsWith("LiveSegmentSheet") && Modifier.isPublic(it.modifiers) }
@@ -65,8 +65,8 @@ class LiveSegmentSheetLayoutTest {
         while (!java.io.File(dir, "app").exists() && dir.parentFile != null) {
             dir = dir.parentFile!!
         }
-        val file = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LIveSegmentSheet.kt")
-        assertTrue("LIveSegmentSheet.kt must exist", file.exists())
+        val file = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LiveSegmentSheet.kt")
+        assertTrue("LiveSegmentSheet.kt must exist", file.exists())
         val content = file.readText()
         assertTrue(
             "LiveSegmentSheet must pass showZoomControls = false to MapDetailLayout (REQ-UI-197, ATT-1736)",
@@ -81,7 +81,7 @@ class LiveSegmentSheetLayoutTest {
             dir = dir.parentFile!!
         }
 
-        // 1. Verify SensorGridScreen.kt configures sheetContainerColor and Box background
+        // 1. Verify SensorGridScreen.kt configures sheetContainerColor and mounts LiveTrackingSheetContainer
         val sensorGridFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         assertTrue("SensorGridScreen.kt must exist", sensorGridFile.exists())
         val sensorGridContent = sensorGridFile.readText()
@@ -90,8 +90,16 @@ class LiveSegmentSheetLayoutTest {
             sensorGridContent.contains("sheetContainerColor = MaterialTheme.colorScheme.surface")
         )
         assertTrue(
-            "SensorGridScreen sheet content Box must apply background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape) (REQ-UI-196, ATT-1735)",
-            sensorGridContent.contains(".background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)")
+            "SensorGridScreen must mount live sheets inside LiveTrackingSheetContainer (REQ-UI-196, ATT-1735, REQ-UI-366)",
+            sensorGridContent.contains("LiveTrackingSheetContainer")
+        )
+
+        val containerFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/core/LiveTrackingSheetContainer.kt")
+        assertTrue("LiveTrackingSheetContainer.kt must exist", containerFile.exists())
+        val containerContent = containerFile.readText()
+        assertTrue(
+            "LiveTrackingSheetContainer must apply background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape) (REQ-UI-196, ATT-1735, REQ-UI-366)",
+            containerContent.contains(".background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)")
         )
 
         // 2. Verify MapDetailLayout.kt applies background(surface) in sheet mode (!useStatusBarsPadding)
@@ -103,12 +111,12 @@ class LiveSegmentSheetLayoutTest {
             mapDetailContent.contains("if (!useStatusBarsPadding) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier")
         )
 
-        // 3. Verify LIveSegmentSheet.kt header applies background(surface)
-        val liveSheetFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LIveSegmentSheet.kt")
-        assertTrue("LIveSegmentSheet.kt must exist", liveSheetFile.exists())
+        // 3. Verify LiveSegmentSheet.kt header applies background(surface)
+        val liveSheetFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LiveSegmentSheet.kt")
+        assertTrue("LiveSegmentSheet.kt must exist", liveSheetFile.exists())
         val liveSheetContent = liveSheetFile.readText()
         assertTrue(
-            "LIveSegmentSheet header must apply background(MaterialTheme.colorScheme.surface) (REQ-UI-196, ATT-1735)",
+            "LiveSegmentSheet header must apply background(MaterialTheme.colorScheme.surface) (REQ-UI-196, ATT-1735)",
             liveSheetContent.contains(".background(MaterialTheme.colorScheme.surface)")
         )
     }

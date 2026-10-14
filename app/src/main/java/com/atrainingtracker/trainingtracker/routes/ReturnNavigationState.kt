@@ -18,7 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.routes
 
-import java.util.Locale
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 
 /**
  * State representing return navigation and dynamic elevation-aware arrival metrics (REQ-MAP-029).
@@ -38,16 +39,10 @@ data class ReturnNavigationState(
     val isDismissed: Boolean = false
 ) {
     val formattedRemainingDistance: String
-        get() {
-            val km = remainingDistanceMeters / 1000.0
-            return String.format(Locale.US, "%.1f km", km)
-        }
+        get() = DistanceFormatter().format_with_units(remainingDistanceMeters)
 
     val formattedRemainingClimb: String
-        get() {
-            val climb = remainingElevationGainMeters.toInt()
-            return "+$climb m"
-        }
+        get() = "+${AltitudeFormatter().format_with_units(remainingElevationGainMeters)}"
 
     val hasRemainingMetrics: Boolean
         get() = isActive && remainingDistanceMeters > 0.0 && !isDismissed

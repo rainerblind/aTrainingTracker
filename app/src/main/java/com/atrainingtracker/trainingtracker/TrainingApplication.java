@@ -142,6 +142,8 @@ public class TrainingApplication extends Application {
     public static final String SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS = "strava_segments_sync_interval_days";
     public static final String SP_AUTOMATED_STRAVA_ROUTES_SYNC = "automated_strava_routes_sync";
     public static final String SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS = "strava_routes_sync_interval_days";
+    public static final String SP_AUTOMATED_STRAVA_EQUIPMENT_SYNC = "automated_strava_equipment_sync";
+    public static final String SP_STRAVA_EQUIPMENT_SYNC_INTERVAL_DAYS = "strava_equipment_sync_interval_days";
     public static final String SP_STRAVA_ATHLETE_ID = "stravaAthleteId";
     public static final String PREFERENCE_SCREEN_RUNKEEPER = "psUploadToRunkeeper";
     public static final String SP_UPLOAD_TO_RUNKEEPER = "uploadToRunkeeper";
@@ -445,8 +447,21 @@ public class TrainingApplication extends Application {
         return false;
     }
 
+    private static MyUnits sTestUnit = null;
+
+    @androidx.annotation.VisibleForTesting
+    public static void setUnitForTesting(@androidx.annotation.Nullable MyUnits unit) {
+        sTestUnit = unit;
+    }
+
     @NonNull
     public static MyUnits getUnit() {
+        if (sTestUnit != null) {
+            return sTestUnit;
+        }
+        if (cSharedPreferences == null) {
+            return MyUnits.METRIC;
+        }
         return MyUnits.valueOf(cSharedPreferences.getString(SP_UNITS, MyUnits.METRIC.name()));
     }
 
@@ -853,63 +868,185 @@ public class TrainingApplication extends Application {
 
     @NonNull
     public static String getLastUpdateTimeOfStravaEquipment() {
-        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, cAppContext.getString(R.string.lastUpdateOfEquipmentNever));
+        if (cSharedPreferences == null) {
+            return cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfEquipmentNever) : "";
+        }
+        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfEquipmentNever) : "");
     }
 
     public static void setLastUpdateTimeOfStravaEquipment(String updateTime) {
-        cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, updateTime).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, updateTime).apply();
+        }
+    }
+
+    /**
+     * Checks whether automated periodic synchronization of Strava equipment is enabled.
+     *
+     * @return true if enabled or SharedPreferences is not yet initialized, false otherwise.
+     */
+    public static boolean isAutomatedStravaEquipmentSyncEnabled() {
+        if (cSharedPreferences == null) {
+            return true;
+        }
+        return cSharedPreferences.getBoolean(SP_AUTOMATED_STRAVA_EQUIPMENT_SYNC, true);
+    }
+
+    /**
+     * Sets whether automated periodic synchronization of Strava equipment is enabled.
+     *
+     * @param enabled true to enable automated equipment sync.
+     */
+    public static void setAutomatedStravaEquipmentSyncEnabled(boolean enabled) {
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_EQUIPMENT_SYNC, enabled).apply();
+        }
+    }
+
+    /**
+     * Gets the configured interval in days for automated Strava equipment synchronization.
+     *
+     * @return interval in days as a string (default "1").
+     */
+    @NonNull
+    public static String getStravaEquipmentSyncIntervalDays() {
+        if (cSharedPreferences == null) {
+            return "1";
+        }
+        return cSharedPreferences.getString(SP_STRAVA_EQUIPMENT_SYNC_INTERVAL_DAYS, "1");
+    }
+
+    /**
+     * Sets the configured interval in days for automated Strava equipment synchronization.
+     *
+     * @param intervalDays interval in days.
+     */
+    public static void setStravaEquipmentSyncIntervalDays(String intervalDays) {
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_STRAVA_EQUIPMENT_SYNC_INTERVAL_DAYS, intervalDays).apply();
+        }
     }
 
     @NonNull
     public static String getLastUpdateTimeOfStravaRoutes() {
-        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, cAppContext.getString(R.string.lastUpdateOfRoutesNever));
+        if (cSharedPreferences == null) {
+            return cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfRoutesNever) : "";
+        }
+        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfRoutesNever) : "");
     }
 
     public static void setLastUpdateTimeOfStravaRoutes(String updateTime) {
-        cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, updateTime).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, updateTime).apply();
+        }
     }
 
+    /**
+     * Checks whether automated periodic synchronization of Strava routes is enabled.
+     *
+     * @return true if enabled or SharedPreferences is not yet initialized, false otherwise.
+     */
     public static boolean isAutomatedStravaRoutesSyncEnabled() {
-        return true;
+        if (cSharedPreferences == null) {
+            return true;
+        }
+        return cSharedPreferences.getBoolean(SP_AUTOMATED_STRAVA_ROUTES_SYNC, true);
     }
 
+    /**
+     * Sets whether automated periodic synchronization of Strava routes is enabled.
+     *
+     * @param enabled true to enable automated routes sync.
+     */
     public static void setAutomatedStravaRoutesSyncEnabled(boolean enabled) {
-        cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_ROUTES_SYNC, enabled).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_ROUTES_SYNC, enabled).apply();
+        }
     }
 
+    /**
+     * Gets the configured interval in days for automated Strava routes synchronization.
+     *
+     * @return interval in days as a string (default "1").
+     */
     @NonNull
     public static String getStravaRoutesSyncIntervalDays() {
-        return "1";
+        if (cSharedPreferences == null) {
+            return "1";
+        }
+        return cSharedPreferences.getString(SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, "1");
     }
 
+    /**
+     * Sets the configured interval in days for automated Strava routes synchronization.
+     *
+     * @param intervalDays interval in days.
+     */
     public static void setStravaRoutesSyncIntervalDays(String intervalDays) {
-        cSharedPreferences.edit().putString(SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, intervalDays).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, intervalDays).apply();
+        }
     }
 
     @NonNull
     public static String getLastUpdateTimeOfStravaSegments() {
-        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, cAppContext.getString(R.string.lastUpdateOfSegmentsNever));
+        if (cSharedPreferences == null) {
+            return cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfSegmentsNever) : "";
+        }
+        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfSegmentsNever) : "");
     }
 
     public static void setLastUpdateTimeOfStravaSegments(String updateTime) {
-        cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, updateTime).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, updateTime).apply();
+        }
     }
 
+    /**
+     * Checks whether automated periodic synchronization of Strava segments is enabled.
+     *
+     * @return true if enabled or SharedPreferences is not yet initialized, false otherwise.
+     */
     public static boolean isAutomatedStravaSegmentsSyncEnabled() {
-        return true;
+        if (cSharedPreferences == null) {
+            return true;
+        }
+        return cSharedPreferences.getBoolean(SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true);
     }
 
+    /**
+     * Sets whether automated periodic synchronization of Strava segments is enabled.
+     *
+     * @param enabled true to enable automated segments sync.
+     */
     public static void setAutomatedStravaSegmentsSyncEnabled(boolean enabled) {
-        cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, enabled).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, enabled).apply();
+        }
     }
 
+    /**
+     * Gets the configured interval in days for automated Strava segments synchronization.
+     *
+     * @return interval in days as a string (default "1").
+     */
     @NonNull
     public static String getStravaSegmentsSyncIntervalDays() {
-        return "1";
+        if (cSharedPreferences == null) {
+            return "1";
+        }
+        return cSharedPreferences.getString(SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, "1");
     }
 
+    /**
+     * Sets the configured interval in days for automated Strava segments synchronization.
+     *
+     * @param intervalDays interval in days.
+     */
     public static void setStravaSegmentsSyncIntervalDays(String intervalDays) {
-        cSharedPreferences.edit().putString(SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, intervalDays).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, intervalDays).apply();
+        }
     }
 
     public static int getStravaAthleteId() {
@@ -1190,6 +1327,11 @@ public class TrainingApplication extends Application {
 
         cAppContext = getApplicationContext();
 
+        PreferenceManager.setDefaultValues(this, R.xml.prefs_search, false);
+        PreferenceManager.setDefaultValues(this, R.xml.prefs_strava, false);
+        PreferenceManager.setDefaultValues(this, R.xml.prefs_dropbox, false);
+        cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
         // ATT-3163 / REQ-UI-342: Intercept missing platform SelectGesture on Android 14+ OEM devices
         com.atrainingtracker.trainingtracker.ui.common.ComposeHandwritingResilience.install();
 
@@ -1198,6 +1340,7 @@ public class TrainingApplication extends Application {
             com.atrainingtracker.trainingtracker.migration.BackupWorker.Companion.schedule(this);
             com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorker.Companion.schedule(this);
             com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorker.Companion.schedule(this);
+            com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorker.Companion.schedule(this);
         } else {
             Log.w(TAG, "Skipping BackupWorker scheduling because WorkManager is unavailable on this device.");
         }
@@ -1205,12 +1348,6 @@ public class TrainingApplication extends Application {
         trackOnMapHelper = new TrackOnMapHelper();
 
         mNotificationSummary = getString(R.string.searching);
-
-
-        PreferenceManager.setDefaultValues(this, R.xml.prefs_search, false);
-        PreferenceManager.setDefaultValues(this, R.xml.prefs_strava, false);
-        PreferenceManager.setDefaultValues(this, R.xml.prefs_dropbox, false);
-        cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         // cSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferencesChangeListener);
         // setPowerSmoothing(0.5);
 

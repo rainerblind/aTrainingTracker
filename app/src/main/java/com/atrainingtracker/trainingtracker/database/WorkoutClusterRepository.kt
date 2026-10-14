@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.database
 
 import android.content.Context
+import android.database.Cursor
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper
@@ -39,6 +40,28 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+data class WorkoutBatchKey(
+    val id: Long,
+    val fileName: String?,
+    val clusterId: Long
+) {
+    companion object {
+        fun fromCursor(cursor: Cursor): WorkoutBatchKey {
+            val id = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID))
+            val fileIdx = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
+            val fileName = if (!cursor.isNull(fileIdx)) cursor.getString(fileIdx) else null
+            val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID))
+            return WorkoutBatchKey(id, fileName, clusterId)
+        }
+    }
+}
+
+data class WorkoutBatchKeys(
+    val idList: List<Long>,
+    val fileNameList: List<String>,
+    val clusterIdList: Set<Long>
+)
 
 class WorkoutClusterRepository internal constructor(
     private val context: Context,
@@ -90,6 +113,34 @@ class WorkoutClusterRepository internal constructor(
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(testInstance: WorkoutClusterRepository? = null) {
             instance = testInstance
+        }
+
+        /**
+         * Authoritative batch key extraction mapping open cursor to [WorkoutBatchKeys].
+         * Pre-resolves column indices once before iteration (REQ-DAT-025, TST-DAT-020).
+         * Leaves cursor closure to the caller's `.use { ... }` block.
+         */
+        @JvmStatic
+        fun fromCursorBatchKeys(cursor: Cursor): WorkoutBatchKeys {
+            val idList = mutableListOf<Long>()
+            val fileNameList = mutableListOf<String>()
+            val clusterIdList = mutableSetOf<Long>()
+
+            val idIdx = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)
+            val fileIdx = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
+            val clusterIdx = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID)
+
+            while (cursor.moveToNext()) {
+                idList.add(cursor.getLong(idIdx))
+                if (!cursor.isNull(fileIdx)) {
+                    cursor.getString(fileIdx)?.let { fileNameList.add(it) }
+                }
+                val clusterId = cursor.getLong(clusterIdx)
+                if (clusterId != -1L) {
+                    clusterIdList.add(clusterId)
+                }
+            }
+            return WorkoutBatchKeys(idList, fileNameList, clusterIdList)
         }
     }
 
@@ -399,27 +450,14 @@ class WorkoutClusterRepository internal constructor(
             null, selection, args, null, null, 
             "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} DESC"
         ).use { cursor ->
-            if (!cursor.moveToFirst()) return@withContext emptyList<WorkoutData>()
-
-            // 1. Gather IDs, FileNames, and Cluster IDs for the batch
-            val idList = mutableListOf<Long>()
-            val fileNameList = mutableListOf<String>()
-            val clusterIdList = mutableSetOf<Long>()
-            do {
-                idList.add(cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)))
-                cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME))?.let {
-                    fileNameList.add(it)
-                }
-                val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID))
-                if (clusterId != -1L) {
-                    clusterIdList.add(clusterId)
-                }
-            } while (cursor.moveToNext())
+            // 1. Gather IDs, FileNames, and Cluster IDs for the batch using index-cached mapper
+            val batchKeys = fromCursorBatchKeys(cursor)
+            if (batchKeys.idList.isEmpty()) return@withContext emptyList<WorkoutData>()
 
             // 2. Perform Batch Metadata Lookups (ATT-359/388)
-            val extremaList = summariesManager.getExtremaForWorkouts(idList)
-            val stravaDataMap = StravaUploadDbHelper(context).getStravaActivityDataForWorkouts(fileNameList)
-            val clusterNamesMap = clusterDb.getClusterNamesForIds(clusterIdList)
+            val extremaList = summariesManager.getExtremaForWorkouts(batchKeys.idList)
+            val stravaDataMap = StravaUploadDbHelper(context).getStravaActivityDataForWorkouts(batchKeys.fileNameList)
+            val clusterNamesMap = clusterDb.getClusterNamesForIds(batchKeys.clusterIdList)
             
             val batchMetadata = WorkoutDataMapper.BatchMetadata(
                 extrema = extremaList.groupBy { it.workoutId },

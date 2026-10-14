@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.map
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
+import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
@@ -127,7 +128,7 @@ object TelemetryMetricUtils {
             }
             TelemetryMetricType.SPEED -> {
                 point.speedMps?.takeIf { it > 0.0 }?.let { mps ->
-                    if (unit == MyUnits.METRIC) mps * 3.6 else mps * 2.236936
+                    MyHelper.mps2userUnit(mps, unit)
                 }
             }
             TelemetryMetricType.PACE -> {
@@ -187,7 +188,7 @@ object TelemetryMetricUtils {
                 }
             }
             TelemetryMetricType.SPEED -> {
-                val mps = if (unit == MyUnits.METRIC) value / 3.6 else value / 2.236936
+                val mps = MyHelper.UserUnit2mps(value, unit)
                 speedFormatter.format_with_units(mps)
             }
             TelemetryMetricType.PACE -> {

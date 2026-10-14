@@ -324,6 +324,9 @@
     <string name="automated_strava_routes_sync">Sincronizzazione automatica percorsi</string>
     <string name="automated_strava_routes_sync_summary">Recupera regolarmente i percorsi da Strava</string>
     <string name="strava_routes_sync_interval">Intervallo di sincronizzazione</string>
+    <string name="automated_strava_equipment_sync">Sincronizzazione automatica attrezzatura</string>
+    <string name="automated_strava_equipment_sync_summary">Recupera regolarmente bici e scarpe da Strava</string>
+    <string name="strava_equipment_sync_interval">Intervallo di sincronizzazione</string>
 
     <string name="strava_success_but_must_check">caricato su Strava, verifica…</string>
     <string name="strava_success_waiting_for_result">caricato su Strava, attesa…</string>
@@ -1248,7 +1251,8 @@
     <string name="cluster_info_sports_title">Separazione per sport e baricentro adattivo</string>
     <string name="cluster_info_sports_desc">I percorsi preferiti possono filtrare per tipo di sport, evitando di unire pedalate e corse a piedi sullo stesso sentiero. Con ogni nuovo allenamento, il cluster aggiorna dinamicamente le proprie coordinate di riferimento calcolando un baricentro ponderato.</string>
     <string name="cluster_info_tuning_title">Sensibilità e regolazione dei parametri</string>
-    <string name="cluster_info_tuning_desc">Usa il cursore principale per regolare la rigidità del confronto: «Rigoroso» suddivide piccole variazioni in percorsi distinti ; «Rilassato» raggruppa anche sessioni con brevi deviazioni o partenze sfasate. Più in basso puoi personalizzare le singole tolleranze.</string>
+    <string name="cluster_info_tuning_desc">Le tolleranze e il ricalcolo dei percorsi si configurano nelle impostazioni avanzate: «Rigoroso» suddivide piccole variazioni e «Rilassato» raggruppa sessioni con brevi deviazioni.</string>
+    <string name="cluster_info_open_advanced_tuning">Apri impostazioni avanzate</string>
     <string name="cluster_info_close">Ho capito</string>
 
     <!-- Workout Cluster Stats -->
@@ -1539,8 +1543,8 @@
     <string name="import_fit_title">Importa file FIT</string>
     <string name="import_fit_description">Importa allenamenti da Garmin, Wahoo, Hammerhead o smartwatch (.fit).</string>
     <string name="import_fit_button">Seleziona file FIT</string>
+    <string name="import_fit_folder_button">Scansiona cartella (FIT)</string>
     <string name="import_fit_dropbox_button">Scansiona Dropbox (FIT)</string>
-    <string name="import_fit_gdrive_button">Scansiona Google Drive (FIT)</string>
     <string name="import_fit_progress">Importazione dei file FIT (%1$d di %2$d)…</string>
     <string name="import_fit_summary_success">%1$d allenamenti importati con successo (%2$d duplicati ignorati).</string>
     <string name="import_fit_summary_with_errors">%1$d allenamenti importati, %2$d duplicati ignorati, %3$d non riusciti.</string>
@@ -1548,13 +1552,15 @@
     <string name="import_tcx_title">Importa file TCX</string>
     <string name="import_tcx_description">Importa allenamenti da file Training Center XML (.tcx).</string>
     <string name="import_tcx_button">Seleziona file TCX locale</string>
+    <string name="import_tcx_folder_button">Scansiona cartella (TCX)</string>
     <string name="import_tcx_dropbox_button">Scansiona Dropbox (TCX)</string>
-    <string name="import_tcx_gdrive_button">Scansiona Google Drive (TCX)</string>
     <string name="import_gpx_title">Importa file GPX</string>
     <string name="import_gpx_description">Importa percorsi e attività da file GPS Exchange Format (.gpx).</string>
     <string name="import_gpx_button">Seleziona file GPX locale</string>
+    <string name="import_gpx_folder_button">Scansiona cartella (GPX)</string>
     <string name="import_gpx_dropbox_button">Scansiona Dropbox (GPX)</string>
-    <string name="import_gpx_gdrive_button">Scansiona Google Drive (GPX)</string>
+    <string name="import_directory_scanning">Scansione della cartella alla ricerca di allenamenti…</string>
+    <string name="import_directory_no_files_found">Nessun file di allenamento %1$s compatibile trovato nella cartella selezionata.</string>
     <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
     <string name="invalid_workout_file_format">Formato file non valido. Seleziona un file %1$s.</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->

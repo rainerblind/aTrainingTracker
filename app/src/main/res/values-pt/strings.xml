@@ -324,6 +324,9 @@
     <string name="automated_strava_routes_sync">Sincronização automática de rotas</string>
     <string name="automated_strava_routes_sync_summary">Obter regularmente rotas do Strava</string>
     <string name="strava_routes_sync_interval">Intervalo de sincronização</string>
+    <string name="automated_strava_equipment_sync">Sincronização automática de material</string>
+    <string name="automated_strava_equipment_sync_summary">Obter regularmente bicicletas e sapatos do Strava</string>
+    <string name="strava_equipment_sync_interval">Intervalo de sincronização</string>
 
     <string name="strava_success_but_must_check">carregado para Strava, verificando…</string>
     <string name="strava_success_waiting_for_result">carregado para Strava, aguardando…</string>
@@ -1248,7 +1251,8 @@
     <string name="cluster_info_sports_title">Separação por desporto e centroide adaptativo</string>
     <string name="cluster_info_sports_desc">As rotas favoritas podem ser separadas por tipo de desporto, garantindo que passeios de bicicleta e corridas não se misturem. À medida que novos treinos são registados, o cluster atualiza dinamicamente as suas coordenadas através de um centroide ponderado.</string>
     <string name="cluster_info_tuning_title">Sensibilidade e ajuste de parâmetros</string>
-    <string name="cluster_info_tuning_desc">Use o controle deslizante principal para ajustar o rigor: «Rigoroso» divide pequenas variações em clusters distintos; «Relaxado» agrupa treinos com desvios ou partidas deslocadas. Também pode ajustar tolerâncias individuais abaixo.</string>
+    <string name="cluster_info_tuning_desc">As tolerâncias e o recálculo de clusters configuram-se nas configurações avançadas: «Rigoroso» divide pequenas variações e «Relaxado» agrupa treinos com partidas deslocadas.</string>
+    <string name="cluster_info_open_advanced_tuning">Abrir configurações avançadas</string>
     <string name="cluster_info_close">Entendido</string>
 
     <!-- Workout Cluster Stats -->
@@ -1539,8 +1543,8 @@
     <string name="import_fit_title">Importar ficheiros FIT</string>
     <string name="import_fit_description">Importar treinos de Garmin, Wahoo, Hammerhead ou smartwatches (.fit).</string>
     <string name="import_fit_button">Selecionar ficheiros FIT</string>
+    <string name="import_fit_folder_button">Escanear pasta (FIT)</string>
     <string name="import_fit_dropbox_button">Examinar Dropbox (FIT)</string>
-    <string name="import_fit_gdrive_button">Examinar Google Drive (FIT)</string>
     <string name="import_fit_progress">A importar ficheiros FIT (%1$d de %2$d)…</string>
     <string name="import_fit_summary_success">%1$d treinos importados com sucesso (%2$d duplicados ignorados).</string>
     <string name="import_fit_summary_with_errors">%1$d treinos importados, %2$d duplicados ignorados, %3$d falhados.</string>
@@ -1548,13 +1552,15 @@
     <string name="import_tcx_title">Importar arquivos TCX</string>
     <string name="import_tcx_description">Importar treinos de arquivos Training Center XML (.tcx).</string>
     <string name="import_tcx_button">Selecionar arquivo TCX local</string>
+    <string name="import_tcx_folder_button">Escanear pasta (TCX)</string>
     <string name="import_tcx_dropbox_button">Examinar Dropbox (TCX)</string>
-    <string name="import_tcx_gdrive_button">Examinar Google Drive (TCX)</string>
     <string name="import_gpx_title">Importar arquivos GPX</string>
     <string name="import_gpx_description">Importar percursos e atividades de arquivos GPS Exchange Format (.gpx).</string>
     <string name="import_gpx_button">Selecionar arquivo GPX local</string>
+    <string name="import_gpx_folder_button">Escanear pasta (GPX)</string>
     <string name="import_gpx_dropbox_button">Examinar Dropbox (GPX)</string>
-    <string name="import_gpx_gdrive_button">Examinar Google Drive (GPX)</string>
+    <string name="import_directory_scanning">Escaneando pasta em busca de treinos…</string>
+    <string name="import_directory_no_files_found">Nenhum arquivo de treino %1$s compatível encontrado na pasta selecionada.</string>
     <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
     <string name="invalid_workout_file_format">Formato de arquivo inválido. Selecione um arquivo %1$s.</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->

@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.routes
 
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.routes.ReturnNavigationState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -44,8 +46,8 @@ class ReturnNavigationHudContractTest {
         )
 
         assertTrue(state.hasRemainingMetrics)
-        assertEquals("12.4 km", state.formattedRemainingDistance)
-        assertEquals("+180 m", state.formattedRemainingClimb)
+        assertEquals(DistanceFormatter().format_with_units(12400.0), state.formattedRemainingDistance)
+        assertEquals("+${AltitudeFormatter().format_with_units(180.0)}", state.formattedRemainingClimb)
         assertEquals("18:42", state.formattedClockTime)
         assertEquals("~34 min", state.formattedDuration)
     }
@@ -95,8 +97,8 @@ class ReturnNavigationHudContractTest {
         )
 
         assertTrue(state.isHomeDestination)
-        assertEquals("3.5 km", state.formattedRemainingDistance)
-        assertEquals("+45 m", state.formattedRemainingClimb)
+        assertEquals(DistanceFormatter().format_with_units(3500.0), state.formattedRemainingDistance)
+        assertEquals("+${AltitudeFormatter().format_with_units(45.0)}", state.formattedRemainingClimb)
     }
 
     @Test

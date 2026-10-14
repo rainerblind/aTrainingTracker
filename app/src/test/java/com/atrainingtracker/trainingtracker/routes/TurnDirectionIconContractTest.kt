@@ -191,6 +191,91 @@ class TurnDirectionIconContractTest {
         )
     }
 
+    @Test
+    fun testSharpTurnIconsHaveStandardColorAndSafetyHeader() {
+        val sharpRightFile = File(resDrawableDir, "ic_turn_sharp_right.xml")
+        val sharpLeftFile = File(resDrawableDir, "ic_turn_sharp_left.xml")
+
+        for (file in listOf(sharpRightFile, sharpLeftFile)) {
+            val content = file.readText()
+            assertTrue(
+                "${file.name} must contain contract safety header comment",
+                content.contains("DO NOT MODIFY PATH DATA WITHOUT UPDATING TST-UI-324")
+            )
+
+            val dbFactory = DocumentBuilderFactory.newInstance()
+            val doc = dbFactory.newDocumentBuilder().parse(file)
+            val path = doc.documentElement.getElementsByTagName("path").item(0) as Element
+            val fillColor = path.getAttribute("android:fillColor")
+
+            assertEquals(
+                "${file.name} must use standard fillColor #FF1976D2",
+                "#FF1976D2",
+                fillColor
+            )
+        }
+    }
+
+    @Test
+    fun testSharpTurnIconsGroundingAndStemWidth() {
+        val rightFile = File(resDrawableDir, "ic_turn_sharp_right.xml")
+        val leftFile = File(resDrawableDir, "ic_turn_sharp_left.xml")
+
+        val rightContent = rightFile.readText()
+        val leftContent = leftFile.readText()
+
+        // Stem must be grounded at baseline y = 20
+        assertTrue("Right turn sharp icon must start stem at y=20 (M6,20)", rightContent.contains("M6,20"))
+        assertTrue("Right turn sharp icon must close stem at y=20 (V20z)", rightContent.contains("V20z"))
+        assertTrue("Left turn sharp icon must start stem at y=20 (M18,20)", leftContent.contains("M18,20"))
+        assertTrue("Left turn sharp icon must close stem at y=20 (V20z)", leftContent.contains("V20z"))
+
+        // Stem width must be 2dp at baseline
+        assertTrue("Right turn sharp icon must have 2dp stem baseline cut h2", rightContent.contains("h2"))
+        assertTrue("Left turn sharp icon must have 2dp stem baseline cut h-2", leftContent.contains("h-2"))
+    }
+
+    @Test
+    fun testTurnSharpLeftIsExactHorizontalReflectionOfTurnSharpRight() {
+        val rightFile = File(resDrawableDir, "ic_turn_sharp_right.xml")
+        val leftFile = File(resDrawableDir, "ic_turn_sharp_left.xml")
+
+        val dbFactory = DocumentBuilderFactory.newInstance()
+        val rightPath = (dbFactory.newDocumentBuilder().parse(rightFile)
+            .documentElement.getElementsByTagName("path").item(0) as Element)
+            .getAttribute("android:pathData")
+
+        val leftPath = (dbFactory.newDocumentBuilder().parse(leftFile)
+            .documentElement.getElementsByTagName("path").item(0) as Element)
+            .getAttribute("android:pathData")
+
+        val ptsRight = evaluateAbsoluteMilestones(rightPath)
+        val ptsLeft = evaluateAbsoluteMilestones(leftPath)
+
+        assertEquals("Both paths must have identical milestone vertex count", ptsRight.size, ptsLeft.size)
+
+        for (i in ptsRight.indices) {
+            val r = ptsRight[i]
+            val l = ptsLeft[i]
+
+            val sumX = r.first + l.first
+            val diffY = kotlin.math.abs(r.second - l.second)
+
+            assertEquals(
+                "Milestone $i: x_R (${r.first}) + x_L (${l.first}) must equal 24.0 (midline reflection across x=12)",
+                24.0,
+                sumX,
+                0.01
+            )
+            assertEquals(
+                "Milestone $i: y_R (${r.second}) must equal y_L (${l.second})",
+                0.0,
+                diffY,
+                0.01
+            )
+        }
+    }
+
     private fun evaluateAbsoluteMilestones(pathData: String): List<Pair<Double, Double>> {
         val pattern = Pattern.compile("([A-Za-z]|[-+]?[0-9]*\\.?[0-9]+)")
         val matcher = pattern.matcher(pathData)
@@ -230,6 +315,11 @@ class TurnDirectionIconContractTest {
                 "l" -> {
                     x += tokens[i++].toDouble()
                     y += tokens[i++].toDouble()
+                    milestones.add(Pair(x, y))
+                }
+                "L" -> {
+                    x = tokens[i++].toDouble()
+                    y = tokens[i++].toDouble()
                     milestones.add(Pair(x, y))
                 }
                 "c" -> {

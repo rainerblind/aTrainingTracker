@@ -39,6 +39,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
@@ -67,6 +68,7 @@ fun LiveClimbSheet(
 ) {
     val climb = liveClimb.climb
     val distanceFormatter = remember { DistanceFormatter() }
+    val altitudeFormatter = remember { AltitudeFormatter() }
 
     Column(
         modifier = modifier
@@ -115,7 +117,7 @@ fun LiveClimbSheet(
             val counterText = if (liveClimb.routeIndex != null && liveClimb.totalRouteClimbs != null) {
                 stringResource(R.string.climb_route_counter, liveClimb.routeIndex, liveClimb.totalRouteClimbs)
             } else {
-                "${climb.elevationGainMeters.roundToInt()} m"
+                altitudeFormatter.format_with_units(climb.elevationGainMeters)
             }
             Text(
                 text = counterText,
@@ -136,14 +138,14 @@ fun LiveClimbSheet(
 
         // --- 4. Live Telemetry HUD (Harmonized with SegmentLiveDetails) ---
         val remDistStr = if (liveClimb.status == LiveClimbStatus.FINISHED) {
-            "0 m"
+            distanceFormatter.format_with_units(0)
         } else {
-            distanceFormatter.format_with_units(liveClimb.distanceToSummit) ?: "${liveClimb.distanceToSummit.roundToInt()} m"
+            distanceFormatter.format_with_units(liveClimb.distanceToSummit)
         }
         val remElevStr = if (liveClimb.status == LiveClimbStatus.FINISHED) {
-            "0 m"
+            altitudeFormatter.format_with_units(0)
         } else {
-            "${liveClimb.remainingElevationGain.roundToInt()} m"
+            altitudeFormatter.format_with_units(liveClimb.remainingElevationGain)
         }
         val gradeStr = String.format(Locale.getDefault(), "%.1f%%", liveClimb.currentGradePercent)
 
@@ -237,7 +239,7 @@ private fun ClimbStatusBadge(
 ) {
     val (label, containerColor, contentColor) = when (status) {
         LiveClimbStatus.APPROACHING -> {
-            val dist = distanceFormatter.format_with_units(distanceToStart) ?: "${distanceToStart.roundToInt()} m"
+            val dist = distanceFormatter.format_with_units(distanceToStart)
             Triple(
                 "${stringResource(R.string.climb_approaching)} ($dist)",
                 MaterialTheme.colorScheme.secondaryContainer,

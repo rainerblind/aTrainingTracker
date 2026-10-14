@@ -58,6 +58,7 @@ import com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModel
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.map.toMapTrack
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.runtime.saveable.rememberSaveable
 
@@ -103,7 +104,10 @@ class WorkoutClustersFragment : Fragment() {
                         summariesViewModel = summariesViewModel,
                         trackOnMapViewModel = trackOnMapViewModel,
                         initialClusterId = initialClusterId,
-                        onBackToNav = { parentFragmentManager.popBackStack() }
+                        onBackToNav = { parentFragmentManager.popBackStack() },
+                        onNavigateToAdvancedSettings = {
+                            (activity as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_advanced_tuning)
+                        }
                     )
                 }
             }

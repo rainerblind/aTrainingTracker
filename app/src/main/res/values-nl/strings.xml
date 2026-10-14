@@ -324,6 +324,9 @@
     <string name="automated_strava_routes_sync">Automatische routesynchronisatie</string>
     <string name="automated_strava_routes_sync_summary">Regelmatig routes ophalen van Strava</string>
     <string name="strava_routes_sync_interval">Synchronisatie-interval</string>
+    <string name="automated_strava_equipment_sync">Automatische materiaalsynchronisatie</string>
+    <string name="automated_strava_equipment_sync_summary">Regelmatig fietsen en schoenen ophalen van Strava</string>
+    <string name="strava_equipment_sync_interval">Synchronisatie-interval</string>
 
     <string name="strava_success_but_must_check">geüpload naar Strava, resultaat controleren …</string>
     <string name="strava_success_waiting_for_result">geüpload naar Strava, even wachten …</string>
@@ -1248,7 +1251,8 @@
     <string name="cluster_info_sports_title">Sportonderscheid &amp; Lerend zwaartepunt</string>
     <string name="cluster_info_sports_desc">Favoriete routes kunnen sporttypes scheiden, zodat fietstochten en hardloopsessies op hetzelfde pad niet worden samengevoegd. Naarmate er meer trainingen worden toegevoegd, past het cluster zijn referentiecoördinaten dynamisch aan via een gewogen zwaartepunt (centroid).</string>
     <string name="cluster_info_tuning_title">Gevoeligheid &amp; Parameterinstellingen</string>
-    <string name="cluster_info_tuning_desc">Gebruik de hoofdschuifregelaar om de overeenkomststerkte te bepalen: „Strikt” scheidt kleine routewijzigingen in aparte clusters; „Ontspannen” combineert sessies met afwijkende startpunten of omwegen. Daaronder kun je individuele toleranties afstemmen.</string>
+    <string name="cluster_info_tuning_desc">Toleranties en clusterherberekening worden geconfigureerd in de geavanceerde instellingen: „Strikt” scheidt kleine routewijzigingen en „Ontspannen” combineert sessies met afwijkende startpunten.</string>
+    <string name="cluster_info_open_advanced_tuning">Geavanceerde instellingen openen</string>
     <string name="cluster_info_close">Begrepen</string>
 
     <!-- Workout Cluster Stats -->
@@ -1539,8 +1543,8 @@
     <string name="import_fit_title">FIT-bestanden importeren</string>
     <string name="import_fit_description">Importeer trainingen van Garmin, Wahoo, Hammerhead of smartwatches (.fit).</string>
     <string name="import_fit_button">Selecteer FIT-bestanden</string>
+    <string name="import_fit_folder_button">Map scannen (FIT)</string>
     <string name="import_fit_dropbox_button">Dropbox scannen (FIT)</string>
-    <string name="import_fit_gdrive_button">Google Drive scannen (FIT)</string>
     <string name="import_fit_progress">FIT-bestanden importeren (%1$d van %2$d)…</string>
     <string name="import_fit_summary_success">Succesvol %1$d trainingen geïmporteerd (%2$d duplicaten overgeslagen).</string>
     <string name="import_fit_summary_with_errors">%1$d trainingen geïmporteerd, %2$d duplicaten overgeslagen, %3$d mislukt.</string>
@@ -1548,13 +1552,15 @@
     <string name="import_tcx_title">TCX-bestanden importeren</string>
     <string name="import_tcx_description">Workouts importeren uit Training Center XML-bestanden (.tcx).</string>
     <string name="import_tcx_button">Lokaal TCX-bestand selecteren</string>
+    <string name="import_tcx_folder_button">Map scannen (TCX)</string>
     <string name="import_tcx_dropbox_button">Dropbox scannen (TCX)</string>
-    <string name="import_tcx_gdrive_button">Google Drive scannen (TCX)</string>
     <string name="import_gpx_title">GPX-bestanden importeren</string>
     <string name="import_gpx_description">Routes en activiteiten importeren uit GPS Exchange Format-bestanden (.gpx).</string>
     <string name="import_gpx_button">Lokaal GPX-bestand selecteren</string>
+    <string name="import_gpx_folder_button">Map scannen (GPX)</string>
     <string name="import_gpx_dropbox_button">Dropbox scannen (GPX)</string>
-    <string name="import_gpx_gdrive_button">Google Drive scannen (GPX)</string>
+    <string name="import_directory_scanning">Map scannen op workouts…</string>
+    <string name="import_directory_no_files_found">Geen compatibele %1$s workout-bestanden gevonden in de geselecteerde map.</string>
     <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
     <string name="invalid_workout_file_format">Ongeldig bestandsformaat. Selecteer een %1$s-bestand.</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->

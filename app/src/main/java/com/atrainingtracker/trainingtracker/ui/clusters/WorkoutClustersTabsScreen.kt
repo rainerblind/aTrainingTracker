@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
-
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,7 +42,6 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
-
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 
@@ -62,7 +60,8 @@ fun WorkoutClustersTabsScreen(
     onHitCountClick: (WorkoutCluster) -> Unit,
     onAddClick: () -> Unit,
     onDeleteRequest: (WorkoutCluster) -> Unit,
-    migrationStatus: com.atrainingtracker.trainingtracker.ui.util.MigrationStatus? = null
+    migrationStatus: com.atrainingtracker.trainingtracker.ui.util.MigrationStatus? = null,
+    onNavigateToAdvancedSettings: () -> Unit = {}
 ) {
     val clusters by viewModel.allClusters.collectAsState()
     val unclusteredWorkouts by viewModel.unclusteredWorkouts.collectAsState()
@@ -77,7 +76,10 @@ fun WorkoutClustersTabsScreen(
     var showInfoDialog by rememberSaveable { mutableStateOf(false) }
 
     if (showInfoDialog) {
-        ClusterInfoDialog(onDismissRequest = { showInfoDialog = false })
+        ClusterInfoDialog(
+            onDismissRequest = { showInfoDialog = false },
+            onNavigateToAdvancedSettings = { showInfoDialog = false; onNavigateToAdvancedSettings() }
+        )
     }
 
     if (showFilterBottomSheet) {

@@ -324,6 +324,9 @@
     <string name="automated_strava_routes_sync">ルートの自動同期</string>
     <string name="automated_strava_routes_sync_summary">Strava から定期的にルートを取得</string>
     <string name="strava_routes_sync_interval">同期の間隔</string>
+    <string name="automated_strava_equipment_sync">装備の自動同期</string>
+    <string name="automated_strava_equipment_sync_summary">Strava から定期的にバイクとシューズを取得</string>
+    <string name="strava_equipment_sync_interval">同期の間隔</string>
 
     <string name="strava_success_but_must_check">Strava アップロード完了、結果を確認中 …</string>
     <string name="strava_success_waiting_for_result">Strava アップロード完了、結果待ち …</string>
@@ -1230,7 +1233,8 @@
     <string name="cluster_info_sports_title">スポーツ種別の分離と適応重心</string>
     <string name="cluster_info_sports_desc">お気に入りルートはスポーツ種別ごとに分離できるため、同じ道でのサイクリングとランニングが混ざりません。ワークアウトが追加されるたびに、加重移動平均（重心）によって参照座標が自動的に微調整されます。</string>
     <string name="cluster_info_tuning_title">感度とパラメータ調整</string>
-    <string name="cluster_info_tuning_desc">マスタースライダーでルートの一致基準を調整します。「厳格」にするとわずかなルートの違いを別クラスタに分け、「緩和」にするとスタート位置のズレや小さな回り道があっても同じクラスタにまとめます。個別の許容値も下部で微調整できます。</string>
+    <string name="cluster_info_tuning_desc">許容値と全クラスタの再計算は高度な設定で構成できます。「厳格」はわずかなルートの違いを分け、「緩和」はスタート位置のズレがあっても同じクラスタにまとめます。</string>
+    <string name="cluster_info_open_advanced_tuning">高度な設定を開く</string>
     <string name="cluster_info_close">了解</string>
 
     <!-- Workout Cluster Stats -->
@@ -1519,8 +1523,8 @@
     <string name="import_fit_title">FITファイルをインポート</string>
     <string name="import_fit_description">Garmin、Wahoo、Hammerhead、スマートウォッチからワークアウトをインポート (.fit)。</string>
     <string name="import_fit_button">FITファイルを選択</string>
+    <string name="import_fit_folder_button">フォルダをスキャン (FIT)</string>
     <string name="import_fit_dropbox_button">Dropboxをスキャン (FIT)</string>
-    <string name="import_fit_gdrive_button">Google ドライブをスキャン (FIT)</string>
     <string name="import_fit_progress">FITファイルをインポート中 (%1$d / %2$d)…</string>
     <string name="import_fit_summary_success">%1$d 件のワークアウトを正常にインポートしました (%2$d 件の重複をスキップ)。</string>
     <string name="import_fit_summary_with_errors">%1$d 件のワークアウトをインポート、%2$d 件の重複をスキップ、%3$d 件失敗。</string>
@@ -1528,13 +1532,15 @@
     <string name="import_tcx_title">TCXファイルをインポート</string>
     <string name="import_tcx_description">Training Center XMLファイル（.tcx）からワークアウトをインポートします。</string>
     <string name="import_tcx_button">ローカルTCXファイルを選択</string>
+    <string name="import_tcx_folder_button">フォルダをスキャン (TCX)</string>
     <string name="import_tcx_dropbox_button">Dropboxをスキャン (TCX)</string>
-    <string name="import_tcx_gdrive_button">Google ドライブをスキャン (TCX)</string>
     <string name="import_gpx_title">GPXファイルをインポート</string>
     <string name="import_gpx_description">GPS Exchange Formatファイル（.gpx）からルートとアクティビティをインポートします。</string>
     <string name="import_gpx_button">ローカルGPXファイルを選択</string>
+    <string name="import_gpx_folder_button">フォルダをスキャン (GPX)</string>
     <string name="import_gpx_dropbox_button">Dropboxをスキャン (GPX)</string>
-    <string name="import_gpx_gdrive_button">Google ドライブをスキャン (GPX)</string>
+    <string name="import_directory_scanning">フォルダ内のワークアウトをスキャン中…</string>
+    <string name="import_directory_no_files_found">選択したフォルダ内に互換性のある%1$sワークアウトファイルが見つかりませんでした。</string>
     <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
     <string name="invalid_workout_file_format">無効なファイル形式です。%1$s ファイルを選択してください。</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
