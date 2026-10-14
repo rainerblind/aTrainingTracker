@@ -1774,5 +1774,17 @@
     <string name="coachmark_stop_tracking_hint">Scorri a destra o tocca la prima scheda a sinistra per mettere in pausa o terminare l\'allenamento.</string>
     <string name="coachmark_stop_tracking_show_tab">Mostra controllo</string>
     <string name="coachmark_stop_tracking_dismiss">Ho capito</string>
+
+    <!-- Crop Start and End Points of Recorded Workout (ATT-3274 / REQ-UI-368) -->
+    <string name="crop_workout_title">Ritaglia allenamento</string>
+    <string name="crop_workout_action">Ritaglia</string>
+    <string name="crop_workout_confirm_title">Ritagliare permanentemente l\'allenamento?</string>
+    <string name="crop_workout_confirm_message">Vuoi davvero ritagliare questo allenamento? I dati esterni all\'intervallo selezionato verranno eliminati permanentemente. Questa azione non può essere annullata.</string>
+    <string name="crop_workout_confirm_action">Ritaglia definitivamente</string>
+    <string name="crop_workout_progress">Ritaglio dell\'allenamento in corso…</string>
+    <string name="crop_workout_success">Allenamento ritagliato con successo</string>
+    <string name="crop_insufficient_storage">Spazio di archiviazione insufficiente per ritagliare l\'allenamento (richiesti almeno 50 MB).</string>
+    <string name="crop_export_failed_retry">Impossibile ricreare i file di esportazione. Riprova.</string>
+    <string name="crop_force_reexport">Forza riesportazione</string>
 </resources>
 

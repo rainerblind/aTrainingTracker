@@ -1754,5 +1754,17 @@
     <string name="coachmark_stop_tracking_hint">右にスワイプするか左端のタブをタップすると、ワークアウトを一時停止または終了できます。</string>
     <string name="coachmark_stop_tracking_show_tab">操作タブを表示</string>
     <string name="coachmark_stop_tracking_dismiss">了解</string>
+
+    <!-- Crop Start and End Points of Recorded Workout (ATT-3274 / REQ-UI-368) -->
+    <string name="crop_workout_title">ワークアウトをトリミング</string>
+    <string name="crop_workout_action">トリミング</string>
+    <string name="crop_workout_confirm_title">ワークアウトを完全にトリミングしますか？</string>
+    <string name="crop_workout_confirm_message">このワークアウトを本当にトリミングしますか？選択範囲外のデータは完全に削除されます。この操作は元に戻せません。</string>
+    <string name="crop_workout_confirm_action">完全にトリミング</string>
+    <string name="crop_workout_progress">ワークアウトをトリミング中…</string>
+    <string name="crop_workout_success">ワークアウトが正常にトリミングされました</string>
+    <string name="crop_insufficient_storage">ワークアウトをトリミングするための空き容量が不足しています（少なくとも50 MB必要です）。</string>
+    <string name="crop_export_failed_retry">エクスポートファイルの再作成に失敗しました。再試行してください。</string>
+    <string name="crop_force_reexport">再エクスポートを強制</string>
 </resources>
 

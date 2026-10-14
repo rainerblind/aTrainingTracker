@@ -930,6 +930,50 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Data holder representing an extrema record to persist or update.
+     */
+    public static class ExtremaUpdateRecord {
+        @NonNull public final SensorType sensorType;
+        @NonNull public final ExtremaType extremaType;
+        public final double value;
+        @Nullable public final LatLng position;
+
+        public ExtremaUpdateRecord(@NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position) {
+            this.sensorType = sensorType;
+            this.extremaType = extremaType;
+            this.value = value;
+            this.position = position;
+        }
+    }
+
+    /**
+     * Atomically updates summary scalars, encoded streams, bounding boxes, and replaces extrema values
+     * for a cropped workout session within a single SQLite transaction.
+     *
+     * @param workoutId The ID of the workout.
+     * @param summaryValues The updated summary columns (e.g. distance, active time, streams, bounds).
+     * @param extremaUpdates Optional list of updated extrema values to replace existing extrema.
+     */
+    public void updateCroppedWorkoutSummary(long workoutId, @NonNull ContentValues summaryValues, @Nullable java.util.List<ExtremaUpdateRecord> extremaUpdates) {
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            if (summaryValues.size() > 0) {
+                db.update(WorkoutSummaries.TABLE, summaryValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+            }
+            if (extremaUpdates != null) {
+                db.delete(WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
+                for (ExtremaUpdateRecord record : extremaUpdates) {
+                    updateExtremaValue(db, workoutId, record.sensorType, record.extremaType, record.value, record.position);
+                }
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
      * Concatenates new data segments to existing map and data streams.
      * Use this during live tracking for incremental persistence.
      */

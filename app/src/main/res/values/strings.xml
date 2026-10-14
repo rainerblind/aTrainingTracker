@@ -1965,6 +1965,18 @@
     <string name="coachmark_stop_tracking_hint">Swipe right or tap the leftmost tab to pause or stop your workout.</string>
     <string name="coachmark_stop_tracking_show_tab">Show Control Tab</string>
     <string name="coachmark_stop_tracking_dismiss">Got it</string>
+
+    <!-- Crop Start and End Points of Recorded Workout (ATT-3274 / REQ-UI-368) -->
+    <string name="crop_workout_title">Crop workout</string>
+    <string name="crop_workout_action">Crop</string>
+    <string name="crop_workout_confirm_title">Permanently crop workout?</string>
+    <string name="crop_workout_confirm_message">Are you sure you want to crop this workout? Data outside the selected range will be permanently deleted. This action cannot be undone.</string>
+    <string name="crop_workout_confirm_action">Crop permanently</string>
+    <string name="crop_workout_progress">Cropping workout…</string>
+    <string name="crop_workout_success">Workout cropped successfully</string>
+    <string name="crop_insufficient_storage">Insufficient storage to crop workout (at least 50 MB required).</string>
+    <string name="crop_export_failed_retry">Failed to recreate export files. Please retry.</string>
+    <string name="crop_force_reexport">Force Re-Export</string>
 </resources>
 
 

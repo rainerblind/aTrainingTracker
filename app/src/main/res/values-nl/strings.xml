@@ -1774,5 +1774,17 @@
     <string name="coachmark_stop_tracking_hint">Veeg naar rechts of tik op het eerste tabblad links om je training te pauzeren of te stoppen.</string>
     <string name="coachmark_stop_tracking_show_tab">Bediening tonen</string>
     <string name="coachmark_stop_tracking_dismiss">Begrepen</string>
+
+    <!-- Crop Start and End Points of Recorded Workout (ATT-3274 / REQ-UI-368) -->
+    <string name="crop_workout_title">Workout bijsnijden</string>
+    <string name="crop_workout_action">Bijsnijden</string>
+    <string name="crop_workout_confirm_title">Workout definitief bijsnijden?</string>
+    <string name="crop_workout_confirm_message">Weet je zeker dat je deze workout wilt bijsnijden? Gegevens buiten het geselecteerde bereik worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</string>
+    <string name="crop_workout_confirm_action">Definitief bijsnijden</string>
+    <string name="crop_workout_progress">Workout wordt bijgesneden…</string>
+    <string name="crop_workout_success">Workout succesvol bijgesneden</string>
+    <string name="crop_insufficient_storage">Onvoldoende opslagruimte om workout bij te snijden (minstens 50 MB vereist).</string>
+    <string name="crop_export_failed_retry">Aanmaken van exportbestanden mislukt. Probeer het opnieuw.</string>
+    <string name="crop_force_reexport">Her-exporteren forceren</string>
 </resources>
 

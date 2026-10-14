@@ -32,6 +32,7 @@ import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager;
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportNotificationManager;
 
 import org.json.JSONException;
@@ -83,7 +84,7 @@ public class ExportWorker extends Worker  {
 
         // and start the export
         Log.i(TAG, "Starting export execution for " + mExportInfo);
-        BaseExporter.ExportResult result = mExporter.export(mExportInfo);
+        BaseExporter.ExportResult result = WorkoutRepository.runWithCropMutex(() -> mExporter.export(mExportInfo));
         Log.i(TAG, "Export execution finished for " + mExportInfo + ": success=" + result.success() + ", retry=" + result.shallRetry() + ", answer=" + result.answer());
 
         // done :)

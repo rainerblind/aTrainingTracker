@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.database;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -32,9 +33,11 @@ import androidx.annotation.Nullable;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+import com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMath;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.List;
+
 
 public class WorkoutSamplesDatabaseManager {
     private static final String TAG = WorkoutSamplesDatabaseManager.class.getName();
@@ -417,6 +420,171 @@ public class WorkoutSamplesDatabaseManager {
     public void deleteWorkout(String baseFileName) {
         getDatabase().execSQL("drop table if exists " + getTableName(baseFileName));
     }
+
+    /**
+     * Prunes unselected sample rows and updates cumulative and spatial fields
+     * within a native SQLite transaction (ATT-3274 / REQ-UI-368).
+     *
+     * @param fileBaseName The workout table name.
+     * @param startRowId The _id of the first retained sample row.
+     * @param endRowId The _id of the last retained sample row.
+     * @param expectedRetainedRows The expected number of rows after pruning.
+     * @param lapOffset The lap number offset to subtract (original start lap - 1).
+     * @param newStartLatLng The coordinate at startRowId for Haversine recalculation (null if indoor).
+     * @return The number of rows deleted.
+     */
+    public int pruneAndShiftSamples(@NonNull String fileBaseName, long startRowId, long endRowId,
+                                    int expectedRetainedRows, int lapOffset, @Nullable LatLng newStartLatLng) {
+        SQLiteDatabase db = getDatabase();
+        String table = getTableName(fileBaseName);
+        db.beginTransaction();
+        int deletedRows = 0;
+        try {
+            // 1. Delete rows outside [startRowId, endRowId]
+            deletedRows = db.delete(table, "_id < ? OR _id > ?", new String[]{String.valueOf(startRowId), String.valueOf(endRowId)});
+
+            // 2. Query baseline cumulative values at startRowId
+            double baseDist = 0.0;
+            long baseTimeTotal = 0L;
+            long baseTimeActive = 0L;
+            double baseAscent = 0.0;
+            double baseDescent = 0.0;
+            long baseCalories = 0L;
+
+            boolean hasDist = existsColumnInTable(db, table, SensorType.DISTANCE_m.name());
+            boolean hasTimeTotal = existsColumnInTable(db, table, SensorType.TIME_TOTAL.name());
+            boolean hasTimeActive = existsColumnInTable(db, table, SensorType.TIME_ACTIVE.name());
+            boolean hasAscent = existsColumnInTable(db, table, SensorType.ASCENT.name());
+            boolean hasDescent = existsColumnInTable(db, table, SensorType.DESCENT.name());
+            boolean hasCalories = existsColumnInTable(db, table, SensorType.CALORIES.name());
+            boolean hasLineDist = existsColumnInTable(db, table, SensorType.LINE_DISTANCE_m.name());
+            boolean hasLapNr = existsColumnInTable(db, table, SensorType.LAP_NR.name());
+            boolean hasLat = existsColumnInTable(db, table, SensorType.LATITUDE.name());
+            boolean hasLon = existsColumnInTable(db, table, SensorType.LONGITUDE.name());
+
+            try (Cursor baselineCursor = db.query(table, null, "_id = ?", new String[]{String.valueOf(startRowId)}, null, null, null)) {
+                if (baselineCursor != null && baselineCursor.moveToFirst()) {
+                    if (hasDist) baseDist = baselineCursor.getDouble(baselineCursor.getColumnIndexOrThrow(SensorType.DISTANCE_m.name()));
+                    if (hasTimeTotal) baseTimeTotal = baselineCursor.getLong(baselineCursor.getColumnIndexOrThrow(SensorType.TIME_TOTAL.name()));
+                    if (hasTimeActive) baseTimeActive = baselineCursor.getLong(baselineCursor.getColumnIndexOrThrow(SensorType.TIME_ACTIVE.name()));
+                    if (hasAscent) baseAscent = baselineCursor.getDouble(baselineCursor.getColumnIndexOrThrow(SensorType.ASCENT.name()));
+                    if (hasDescent) baseDescent = baselineCursor.getDouble(baselineCursor.getColumnIndexOrThrow(SensorType.DESCENT.name()));
+                    if (hasCalories) baseCalories = baselineCursor.getLong(baselineCursor.getColumnIndexOrThrow(SensorType.CALORIES.name()));
+                }
+            }
+
+            // 3. Update retained rows: zero-anchor startRowId, shift cumulative fields with EPSILON clamping,
+            // recalculate LINE_DISTANCE_m, and update LAP_NR in chunked batches
+            try (Cursor cursor = db.query(table, null, "_id >= ?", new String[]{String.valueOf(startRowId)}, null, null, "_id ASC")) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int idIdx = cursor.getColumnIndexOrThrow("_id");
+                    int distIdx = hasDist ? cursor.getColumnIndex(SensorType.DISTANCE_m.name()) : -1;
+                    int timeTotalIdx = hasTimeTotal ? cursor.getColumnIndex(SensorType.TIME_TOTAL.name()) : -1;
+                    int timeActiveIdx = hasTimeActive ? cursor.getColumnIndex(SensorType.TIME_ACTIVE.name()) : -1;
+                    int ascentIdx = hasAscent ? cursor.getColumnIndex(SensorType.ASCENT.name()) : -1;
+                    int descentIdx = hasDescent ? cursor.getColumnIndex(SensorType.DESCENT.name()) : -1;
+                    int calIdx = hasCalories ? cursor.getColumnIndex(SensorType.CALORIES.name()) : -1;
+                    int lapIdx = hasLapNr ? cursor.getColumnIndex(SensorType.LAP_NR.name()) : -1;
+                    int latIdx = hasLat ? cursor.getColumnIndex(SensorType.LATITUDE.name()) : -1;
+                    int lonIdx = hasLon ? cursor.getColumnIndex(SensorType.LONGITUDE.name()) : -1;
+
+                    double epsilon = CropWorkoutMath.EPSILON;
+
+                    do {
+                        long rowId = cursor.getLong(idIdx);
+                        ContentValues values = new ContentValues();
+
+                        if (rowId == startRowId) {
+                            if (hasDist) values.put(SensorType.DISTANCE_m.name(), 0.0);
+                            if (hasTimeTotal) values.put(SensorType.TIME_TOTAL.name(), 0L);
+                            if (hasTimeActive) values.put(SensorType.TIME_ACTIVE.name(), 0L);
+                            if (hasAscent) values.put(SensorType.ASCENT.name(), 0.0);
+                            if (hasDescent) values.put(SensorType.DESCENT.name(), 0.0);
+                            if (hasCalories) values.put(SensorType.CALORIES.name(), 0L);
+                            if (hasLineDist) values.put(SensorType.LINE_DISTANCE_m.name(), 0.0);
+                        } else {
+                            if (hasDist && distIdx != -1 && !cursor.isNull(distIdx)) {
+                                double shiftedDist = cursor.getDouble(distIdx) - baseDist;
+                                values.put(SensorType.DISTANCE_m.name(), (shiftedDist < 0.0 || Math.abs(shiftedDist) < epsilon) ? 0.0 : shiftedDist);
+                            }
+                            if (hasTimeTotal && timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx)) {
+                                long shiftedTotal = cursor.getLong(timeTotalIdx) - baseTimeTotal;
+                                values.put(SensorType.TIME_TOTAL.name(), Math.max(0L, shiftedTotal));
+                            }
+                            if (hasTimeActive && timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx)) {
+                                long shiftedActive = cursor.getLong(timeActiveIdx) - baseTimeActive;
+                                values.put(SensorType.TIME_ACTIVE.name(), Math.max(0L, shiftedActive));
+                            }
+                            if (hasAscent && ascentIdx != -1 && !cursor.isNull(ascentIdx)) {
+                                double shiftedAscent = cursor.getDouble(ascentIdx) - baseAscent;
+                                values.put(SensorType.ASCENT.name(), (shiftedAscent < 0.0 || Math.abs(shiftedAscent) < epsilon) ? 0.0 : shiftedAscent);
+                            }
+                            if (hasDescent && descentIdx != -1 && !cursor.isNull(descentIdx)) {
+                                double shiftedDescent = cursor.getDouble(descentIdx) - baseDescent;
+                                values.put(SensorType.DESCENT.name(), (shiftedDescent < 0.0 || Math.abs(shiftedDescent) < epsilon) ? 0.0 : shiftedDescent);
+                            }
+                            if (hasCalories && calIdx != -1 && !cursor.isNull(calIdx)) {
+                                long shiftedCal = cursor.getLong(calIdx) - baseCalories;
+                                values.put(SensorType.CALORIES.name(), Math.max(0L, shiftedCal));
+                            }
+                            if (hasLineDist) {
+                                if (newStartLatLng != null && latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                                    double rowLat = cursor.getDouble(latIdx);
+                                    double rowLon = cursor.getDouble(lonIdx);
+                                    values.put(SensorType.LINE_DISTANCE_m.name(), CropWorkoutMath.INSTANCE.haversineDistanceMeters(newStartLatLng, new LatLng(rowLat, rowLon)));
+                                } else {
+                                    values.put(SensorType.LINE_DISTANCE_m.name(), 0.0);
+                                }
+                            }
+                        }
+
+                        if (hasLapNr && lapIdx != -1 && !cursor.isNull(lapIdx) && lapOffset > 0) {
+                            int oldLap = cursor.getInt(lapIdx);
+                            int newLap = Math.max(1, oldLap - lapOffset);
+                            values.put(SensorType.LAP_NR.name(), newLap);
+                        }
+
+                        if (values.size() > 0) {
+                            db.update(table, values, "_id = ?", new String[]{String.valueOf(rowId)});
+                        }
+                    } while (cursor.moveToNext());
+                }
+            }
+
+            // 4. Verify post-op checksum
+            int remainingRows = 0;
+            try (Cursor countCursor = db.rawQuery("SELECT COUNT(*) FROM " + table, null)) {
+                if (countCursor != null && countCursor.moveToFirst()) {
+                    remainingRows = countCursor.getInt(0);
+                }
+            }
+
+            if (remainingRows != expectedRetainedRows || remainingRows < 2) {
+                throw new IllegalStateException("Crop checksum failure: expected " + expectedRetainedRows
+                        + " remaining rows, but found " + remainingRows);
+            }
+
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+
+        return deletedRows;
+    }
+
+    /**
+     * Reclaims SQLite storage via incremental vacuum if deleted rows exceed 20% of total rows.
+     */
+    public void vacuumIfFragmented(int deletedRows, int totalRows) {
+        if (totalRows > 0 && ((double) deletedRows / (double) totalRows) > 0.20) {
+            try {
+                getDatabase().execSQL("PRAGMA incremental_vacuum;");
+            } catch (Exception e) {
+                Log.w(TAG, "Incremental vacuum failed or not enabled: " + e.getMessage());
+            }
+        }
+    }
+
 
     public boolean existsTable(String baseFileName) {
         if (baseFileName == null) return false;

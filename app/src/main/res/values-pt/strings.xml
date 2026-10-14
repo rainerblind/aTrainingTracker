@@ -1774,5 +1774,17 @@
     <string name="coachmark_stop_tracking_hint">Deslize para a direita ou toque na primeira aba à esquerda para pausar ou encerrar seu treino.</string>
     <string name="coachmark_stop_tracking_show_tab">Mostrar controle</string>
     <string name="coachmark_stop_tracking_dismiss">Entendi</string>
+
+    <!-- Crop Start and End Points of Recorded Workout (ATT-3274 / REQ-UI-368) -->
+    <string name="crop_workout_title">Cortar treino</string>
+    <string name="crop_workout_action">Cortar</string>
+    <string name="crop_workout_confirm_title">Cortar treino permanentemente?</string>
+    <string name="crop_workout_confirm_message">Tens a certeza de que desejas cortar este treino? Os dados fora do intervalo selecionado serão eliminados permanentemente. Esta ação não pode ser anulada.</string>
+    <string name="crop_workout_confirm_action">Cortar permanentemente</string>
+    <string name="crop_workout_progress">A cortar treino…</string>
+    <string name="crop_workout_success">Treino cortado com sucesso</string>
+    <string name="crop_insufficient_storage">Armazenamento insuficiente para cortar o treino (são necessários pelo menos 50 MB).</string>
+    <string name="crop_export_failed_retry">Falha ao recriar os ficheiros de exportação. Tenta novamente.</string>
+    <string name="crop_force_reexport">Forçar reexportação</string>
 </resources>
 
