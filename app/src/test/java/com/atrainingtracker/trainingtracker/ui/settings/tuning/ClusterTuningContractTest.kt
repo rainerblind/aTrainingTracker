@@ -127,6 +127,75 @@ class ClusterTuningContractTest {
     }
 
     @Test
+    fun clusterTuningContent_delegatesToTuningFormControls() {
+        val contentFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterTuningContent.kt")
+        assertTrue("ClusterTuningContent.kt must exist", contentFile.exists())
+
+        val content = contentFile.readText()
+        assertTrue(
+            "ClusterTuningContent must delegate toggles to TuningToggleItem (REQ-SET-077)",
+            content.contains("TuningToggleItem(")
+        )
+        assertTrue(
+            "ClusterTuningContent must delegate sliders to TuningSliderItem (REQ-SET-077)",
+            content.contains("TuningSliderItem(")
+        )
+
+        // Verify that raw Switch calls within ClusterTuningContent have been eliminated
+        val bodyBeforeTuningSlider = content.substringBefore("fun TuningSlider(")
+        assertFalse(
+            "ClusterTuningContent must not instantiate raw Switch directly; use TuningToggleItem (REQ-SET-077)",
+            bodyBeforeTuningSlider.contains("Switch(")
+        )
+    }
+
+    @Test
+    fun clusterTuningContent_truthTableAltitudeGating() {
+        val contentFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterTuningContent.kt")
+        assertTrue("ClusterTuningContent.kt must exist", contentFile.exists())
+
+        val content = contentFile.readText()
+        assertTrue(
+            "Altitude position slider must be gated with enabled && useAltitudePosForClustering (REQ-SET-077)",
+            content.contains("enabled = enabled && useAltitudePosForClustering")
+        )
+
+        // Formal truth-table verification
+        val truthTable = listOf(
+            Triple(false, false, false),
+            Triple(false, true, false),
+            Triple(true, false, false),
+            Triple(true, true, true)
+        )
+
+        for ((enabled, useAltitude, expected) in truthTable) {
+            val result = enabled && useAltitude
+            org.junit.Assert.assertEquals(
+                "Gating truth table failed for ($enabled, $useAltitude)",
+                expected,
+                result
+            )
+        }
+    }
+
+    @Test
+    fun clusterTuningContent_tuningSliderIsDeprecatedWithFullyQualifiedReplaceWith() {
+        val contentFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterTuningContent.kt")
+        assertTrue("ClusterTuningContent.kt must exist", contentFile.exists())
+
+        val content = contentFile.readText()
+        assertTrue(
+            "TuningSlider must be annotated with @Deprecated",
+            content.contains("@Deprecated(")
+        )
+        assertTrue(
+            "Deprecated annotation must include fully qualified ReplaceWith import",
+            content.contains("ReplaceWith(") &&
+                    content.contains("\"com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem\"")
+        )
+    }
+
+    @Test
     fun clusterTuningSection_recalculateButtonStyledInErrorColorsWithAccessibleProgress() {
         val sectionFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/ClusterTuningSection.kt")
         assertTrue("ClusterTuningSection.kt must exist", sectionFile.exists())
