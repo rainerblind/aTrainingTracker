@@ -22,6 +22,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteFullException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
@@ -384,7 +385,25 @@ public class LapsDatabaseManager {
                 }
                 db.insertOrThrow(Laps.TABLE, null, values);
             }
+
+            // Invariant: Retained workout must never have zero laps (prevents UI crash)
+            if (newLapNr == 1) {
+                ContentValues fallbackLap = new ContentValues();
+                fallbackLap.put(Laps.WORKOUT_ID, workoutId);
+                fallbackLap.put(Laps.LAP_NR, 1);
+                fallbackLap.put(Laps.TIME_TOTAL_s, 1);
+                fallbackLap.put(Laps.DISTANCE_TOTAL_m, 0.0);
+                fallbackLap.put(Laps.SPEED_AVERAGE_mps, 0.0);
+                db.insertOrThrow(Laps.TABLE, null, fallbackLap);
+            }
+
             db.setTransactionSuccessful();
+        } catch (SQLiteFullException e) {
+            Log.e(TAG, "Disk full during replaceCroppedLaps, rolling back cleanly: " + e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            Log.e(TAG, "Transaction aborted during replaceCroppedLaps, rolling back cleanly: " + e.getMessage(), e);
+            throw e;
         } finally {
             db.endTransaction();
         }

@@ -806,11 +806,20 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
-     * Executes atomic workout cropping:
-     * - Prunes samples outside [startIndex, endIndex]
-     * - Recalculates contiguous laps (preserving user notes)
-     * - Updates summaries, polyline, streams and extrema
-     * - Re-enqueues exports
+     * Executes atomic workout cropping across multiple domain database managers:
+     *
+     * Architectural Atomicity & Invariant Guarantees:
+     * 1. Multi-Database Architecture: [WorkoutSamples.db], [Laps.db], and [WorkoutSummaries.db]
+     *    are distinct SQLite database files maintained by independent SQLiteOpenHelper instances.
+     * 2. Transaction Scope: Each underlying operation ([WorkoutSamplesDatabaseManager.pruneAndShiftSamples],
+     *    [LapsDatabaseManager.replaceCroppedLaps], and [WorkoutSummariesDatabaseManager.updateCroppedWorkoutSummary])
+     *    executes within an ACID transaction (`beginTransaction` / `setTransactionSuccessful` / `endTransaction`).
+     * 3. Cross-Database Synchronization & Invariants:
+     *    - [cropMutex] non-blocking serialization prevents concurrent mutations or conflicting exports.
+     *    - Ephemeral snapshot `crop_backup_<workoutId>_<timestamp>.json` persists recovery metadata to disk.
+     *    - Linear phase ordering (Samples -> Laps -> Summary) guarantees referential integrity.
+     *    - In event of failure, defensive reload [reloadWorkoutData] resynchronizes in-memory caches.
+     *    - [reconcilePendingCropRecovery] detects aborted operations across app restarts.
      *
      * @param workoutId The database ID of the workout.
      * @param startIndex 0-based sample start index to retain.
@@ -1065,9 +1074,11 @@ class WorkoutRepository private constructor(private val application: Application
                 Result.success(Unit)
             } catch (e: android.database.sqlite.SQLiteFullException) {
                 Log.e(TAG, "Disk full during crop operation for workout $workoutId", e)
+                reloadWorkoutData(workoutId)
                 Result.failure(e)
             } catch (t: Throwable) {
                 Log.e(TAG, "Unexpected error during crop operation for workout $workoutId", t)
+                reloadWorkoutData(workoutId)
                 Result.failure(t)
             } finally {
                 if (backupFile.exists()) {

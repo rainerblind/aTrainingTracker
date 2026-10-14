@@ -252,7 +252,7 @@ fun CropWorkoutScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = String.format("%.2f km", uiState.croppedDistanceM / 1000.0),
+                            text = String.format(java.util.Locale.getDefault(), "%.2f km", uiState.croppedDistanceM / 1000.0),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -280,7 +280,7 @@ fun CropWorkoutScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = String.format("%.1f km/h", uiState.croppedAvgSpeedMps * 3.6),
+                            text = String.format(java.util.Locale.getDefault(), "%.1f km/h", uiState.croppedAvgSpeedMps * 3.6),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )

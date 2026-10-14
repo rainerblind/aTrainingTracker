@@ -22,6 +22,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteFullException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteStatement;
 import android.location.Location;
@@ -541,6 +542,9 @@ public class WorkoutSamplesDatabaseManager {
             }
 
             db.setTransactionSuccessful();
+        } catch (SQLiteFullException e) {
+            Log.e(TAG, "Disk full during pruneAndShiftSamples, rolling back cleanly: " + e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
             Log.e(TAG, "Transaction aborted during pruneAndShiftSamples, rolling back cleanly: " + e.getMessage(), e);
             throw e;
