@@ -280,9 +280,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
      * Retrieves all waypoints for a specific route ID, ordered by distance along route.
      */
     fun getWaypointsForRoute(routeId: Long): List<RouteWaypoint> {
-        val waypoints = mutableListOf<RouteWaypoint>()
         val db = getDatabase()
-
         db.query(
             RouteContract.TABLE_ROUTE_WAYPOINTS,
             null,
@@ -292,38 +290,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
             null,
             "${RouteContract.COLUMN_WAYPOINT_DIST_FROM_START} ASC, ${RouteContract.COLUMN_WAYPOINT_ID} ASC"
         ).use { cursor ->
-            val idIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_ID)
-            val routeIdIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_ROUTE_ID_FK)
-            val nameIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_NAME)
-            val descIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_DESCRIPTION)
-            val latIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_LAT)
-            val lngIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_LNG)
-            val elevIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_ELEVATION)
-            val distIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_DIST_FROM_START)
-            val typeIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_TYPE)
-
-            while (cursor.moveToNext()) {
-                val typeStr = cursor.getString(typeIdx)
-                val type = try {
-                    WaypointType.valueOf(typeStr)
-                } catch (e: Exception) {
-                    WaypointType.GENERIC
-                }
-                waypoints.add(
-                    RouteWaypoint(
-                        id = cursor.getLong(idIdx),
-                        routeId = cursor.getLong(routeIdIdx),
-                        latLng = LatLng(cursor.getDouble(latIdx), cursor.getDouble(lngIdx)),
-                        altitude = if (cursor.isNull(elevIdx)) 0.0 else cursor.getDouble(elevIdx),
-                        name = cursor.getString(nameIdx) ?: "",
-                        description = cursor.getString(descIdx) ?: "",
-                        type = type,
-                        distanceFromStart = cursor.getDouble(distIdx)
-                    )
-                )
-            }
+            return mapCursorToRouteWaypoints(cursor)
         }
-        return waypoints
     }
 
     /**
@@ -570,9 +538,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
      * Retrieves only the path points for a specific route ID.
      */
     fun getRoutePath(routeId: Long): List<PathPoint> {
-        val pathPoints = mutableListOf<PathPoint>()
         val db = getDatabase()
-
         db.query(
             RouteContract.TABLE_ROUTE_POINTS,
             null,
@@ -582,31 +548,30 @@ class RoutesDatabaseManager private constructor(context: Context) {
             null,
             "${RouteContract.COLUMN_POINT_ID} ASC" // Maintain sequence
         ).use { cursor ->
-            val latIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_LAT)
-            val lngIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_LNG)
-            val distIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_DIST_FROM_START)
-            val altIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ALTITUDE)
-
-            while (cursor.moveToNext()) {
-                pathPoints.add(
-                    PathPoint(
-                        latLng = com.google.android.gms.maps.model.LatLng(
-                            cursor.getDouble(latIdx),
-                            cursor.getDouble(lngIdx)
-                        ),
-                        distance = cursor.getDouble(distIdx),
-                        altitude = cursor.getDouble(altIdx)
-                    )
-                )
-            }
+            return mapCursorToPathPoints(cursor)
         }
-        return pathPoints
     }
 
-    /**
-     * Private helper to map a cursor row to a RouteSummary object.
-     */
-    private fun mapCursorToRouteSummary(cursor: android.database.Cursor): RouteSummary {
+    internal class WaypointIndices(cursor: android.database.Cursor) {
+        val idIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_ID)
+        val routeIdIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_ROUTE_ID_FK)
+        val nameIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_NAME)
+        val descIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_DESCRIPTION)
+        val latIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_LAT)
+        val lngIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_LNG)
+        val elevIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_ELEVATION)
+        val distIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_DIST_FROM_START)
+        val typeIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_WAYPOINT_TYPE)
+    }
+
+    internal class PathPointIndices(cursor: android.database.Cursor) {
+        val latIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_LAT)
+        val lngIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_LNG)
+        val distIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_DIST_FROM_START)
+        val altIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ALTITUDE)
+    }
+
+    internal class RouteSummaryIndices(cursor: android.database.Cursor) {
         val idIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ID)
         val extIdIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_EXTERNAL_ID)
         val nameIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_NAME)
@@ -622,32 +587,125 @@ class RoutesDatabaseManager private constructor(context: Context) {
         val maxLatIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_BOUND_MAX_LAT)
         val maxLngIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_BOUND_MAX_LNG)
         val syncedAtIdx = cursor.getColumnIndex(RouteContract.COLUMN_SYNCED_AT)
-        val syncedAt = if (syncedAtIdx != -1 && !cursor.isNull(syncedAtIdx)) cursor.getLong(syncedAtIdx) else 0L
+    }
 
-        val sportString = cursor.getString(sportIdx)
+    /**
+     * Maps a single cursor row positioned at a waypoint record to a [RouteWaypoint].
+     * Adheres to REQ-DAT-025: Does not advance or close the cursor.
+     */
+    fun mapCursorToRouteWaypoint(cursor: android.database.Cursor): RouteWaypoint {
+        return mapCursorToRouteWaypoint(cursor, WaypointIndices(cursor))
+    }
+
+    internal fun mapCursorToRouteWaypoint(cursor: android.database.Cursor, indices: WaypointIndices): RouteWaypoint {
+        val typeStr = cursor.getString(indices.typeIdx)
+        val type = try {
+            WaypointType.valueOf(typeStr)
+        } catch (_: Exception) {
+            WaypointType.GENERIC
+        }
+        return RouteWaypoint(
+            id = cursor.getLong(indices.idIdx),
+            routeId = cursor.getLong(indices.routeIdIdx),
+            latLng = LatLng(cursor.getDouble(indices.latIdx), cursor.getDouble(indices.lngIdx)),
+            altitude = if (cursor.isNull(indices.elevIdx)) 0.0 else cursor.getDouble(indices.elevIdx),
+            name = cursor.getString(indices.nameIdx) ?: "",
+            description = cursor.getString(indices.descIdx) ?: "",
+            type = type,
+            distanceFromStart = cursor.getDouble(indices.distIdx)
+        )
+    }
+
+    /**
+     * Maps an open cursor to a list of [RouteWaypoint] items using single-pass index caching.
+     */
+    fun mapCursorToRouteWaypoints(cursor: android.database.Cursor): List<RouteWaypoint> {
+        val waypoints = mutableListOf<RouteWaypoint>()
+        val indices = WaypointIndices(cursor)
+        while (cursor.moveToNext()) {
+            waypoints.add(mapCursorToRouteWaypoint(cursor, indices))
+        }
+        return waypoints
+    }
+
+    /**
+     * Maps a single cursor row positioned at a path point record to a [PathPoint].
+     * Adheres to REQ-DAT-025: Does not advance or close the cursor.
+     */
+    fun mapCursorToPathPoint(cursor: android.database.Cursor): PathPoint {
+        return mapCursorToPathPoint(cursor, PathPointIndices(cursor))
+    }
+
+    internal fun mapCursorToPathPoint(cursor: android.database.Cursor, indices: PathPointIndices): PathPoint {
+        return PathPoint(
+            latLng = com.google.android.gms.maps.model.LatLng(
+                cursor.getDouble(indices.latIdx),
+                cursor.getDouble(indices.lngIdx)
+            ),
+            distance = cursor.getDouble(indices.distIdx),
+            altitude = cursor.getDouble(indices.altIdx)
+        )
+    }
+
+    /**
+     * Maps an open cursor to a list of [PathPoint] items using single-pass index caching.
+     */
+    fun mapCursorToPathPoints(cursor: android.database.Cursor): List<PathPoint> {
+        val pathPoints = mutableListOf<PathPoint>()
+        val indices = PathPointIndices(cursor)
+        while (cursor.moveToNext()) {
+            pathPoints.add(mapCursorToPathPoint(cursor, indices))
+        }
+        return pathPoints
+    }
+
+    /**
+     * Helper to map a cursor row to a [RouteSummary] object.
+     * Adheres to REQ-DAT-025: Does not advance or close the cursor.
+     */
+    internal fun mapCursorToRouteSummary(cursor: android.database.Cursor): RouteSummary {
+        return mapCursorToRouteSummary(cursor, RouteSummaryIndices(cursor))
+    }
+
+    internal fun mapCursorToRouteSummary(cursor: android.database.Cursor, indices: RouteSummaryIndices): RouteSummary {
+        val syncedAt = if (indices.syncedAtIdx != -1 && !cursor.isNull(indices.syncedAtIdx)) cursor.getLong(indices.syncedAtIdx) else 0L
+
+        val sportString = cursor.getString(indices.sportIdx)
         val sportType = try {
             BSportType.valueOf(sportString)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             BSportType.UNKNOWN
         }
 
         return RouteSummary(
-            id = cursor.getLong(idIdx),
-            externalId = cursor.getString(extIdIdx) ?: "",
-            name = cursor.getString(nameIdx) ?: "Unknown Route",
-            description = cursor.getString(descIdx) ?: "",
-            isSelected = cursor.getInt(isSelectedIdx) == 1,
-            distance = cursor.getDouble(distIdx),
-            elevationGain = cursor.getDouble(elevIdx),
+            id = cursor.getLong(indices.idIdx),
+            externalId = cursor.getString(indices.extIdIdx) ?: "",
+            name = cursor.getString(indices.nameIdx) ?: "Unknown Route",
+            description = cursor.getString(indices.descIdx) ?: "",
+            isSelected = cursor.getInt(indices.isSelectedIdx) == 1,
+            distance = cursor.getDouble(indices.distIdx),
+            elevationGain = cursor.getDouble(indices.elevIdx),
             bSportType = sportType,
-            source = RouteSource.fromString(cursor.getString(sourceIdx)),
-            clusterId = cursor.getLong(clusterIdIdx),
-            minLat = if (cursor.isNull(minLatIdx)) null else cursor.getDouble(minLatIdx),
-            minLng = if (cursor.isNull(minLngIdx)) null else cursor.getDouble(minLngIdx),
-            maxLat = if (cursor.isNull(maxLatIdx)) null else cursor.getDouble(maxLatIdx),
-            maxLng = if (cursor.isNull(maxLngIdx)) null else cursor.getDouble(maxLngIdx),
+            source = RouteSource.fromString(cursor.getString(indices.sourceIdx)),
+            clusterId = cursor.getLong(indices.clusterIdIdx),
+            minLat = if (cursor.isNull(indices.minLatIdx)) null else cursor.getDouble(indices.minLatIdx),
+            minLng = if (cursor.isNull(indices.minLngIdx)) null else cursor.getDouble(indices.minLngIdx),
+            maxLat = if (cursor.isNull(indices.maxLatIdx)) null else cursor.getDouble(indices.maxLatIdx),
+            maxLng = if (cursor.isNull(indices.maxLngIdx)) null else cursor.getDouble(indices.maxLngIdx),
             syncedAt = syncedAt
         )
+    }
+
+    /**
+     * Maps an open cursor to a list of [RouteSummary] items using single-pass index caching.
+     */
+    fun mapCursorToRouteSummaries(cursor: android.database.Cursor): List<RouteSummary> {
+        val summaries = mutableListOf<RouteSummary>()
+        val indices = RouteSummaryIndices(cursor)
+        while (cursor.moveToNext()) {
+            summaries.add(mapCursorToRouteSummary(cursor, indices))
+        }
+        return summaries
     }
 
     /**
