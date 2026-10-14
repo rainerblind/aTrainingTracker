@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.routes
 
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -316,8 +318,9 @@ fun RouteCard(
 
 
 private fun formatDistanceAndElevation(distanceMeters: Double, elevationMeters: Double): String {
-    val km = distanceMeters / 1000.0
-    return String.format(Locale.getDefault(), "%.1f km  •  +%.0f m", km, elevationMeters)
+    val dist = DistanceFormatter().format_with_units(distanceMeters)
+    val ele = AltitudeFormatter().format_with_units(elevationMeters)
+    return "$dist  •  +$ele"
 }
 
 /**

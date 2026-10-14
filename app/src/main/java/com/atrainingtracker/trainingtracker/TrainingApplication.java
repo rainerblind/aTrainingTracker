@@ -447,8 +447,21 @@ public class TrainingApplication extends Application {
         return false;
     }
 
+    private static MyUnits sTestUnit = null;
+
+    @androidx.annotation.VisibleForTesting
+    public static void setUnitForTesting(@androidx.annotation.Nullable MyUnits unit) {
+        sTestUnit = unit;
+    }
+
     @NonNull
     public static MyUnits getUnit() {
+        if (sTestUnit != null) {
+            return sTestUnit;
+        }
+        if (cSharedPreferences == null) {
+            return MyUnits.METRIC;
+        }
         return MyUnits.valueOf(cSharedPreferences.getString(SP_UNITS, MyUnits.METRIC.name()));
     }
 
