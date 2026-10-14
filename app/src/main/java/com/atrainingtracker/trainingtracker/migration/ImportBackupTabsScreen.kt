@@ -511,7 +511,10 @@ fun PreImportTuningBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     if (showInfoDialog) {
-        ClusterInfoDialog(onDismissRequest = { showInfoDialog = false })
+        ClusterInfoDialog(
+            onDismissRequest = { showInfoDialog = false },
+            onNavigateToAdvancedSettings = { showInfoDialog = false }
+        )
     }
 
     AppModalBottomSheet(

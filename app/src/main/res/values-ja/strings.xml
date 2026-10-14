@@ -1230,7 +1230,8 @@
     <string name="cluster_info_sports_title">スポーツ種別の分離と適応重心</string>
     <string name="cluster_info_sports_desc">お気に入りルートはスポーツ種別ごとに分離できるため、同じ道でのサイクリングとランニングが混ざりません。ワークアウトが追加されるたびに、加重移動平均（重心）によって参照座標が自動的に微調整されます。</string>
     <string name="cluster_info_tuning_title">感度とパラメータ調整</string>
-    <string name="cluster_info_tuning_desc">マスタースライダーでルートの一致基準を調整します。「厳格」にするとわずかなルートの違いを別クラスタに分け、「緩和」にするとスタート位置のズレや小さな回り道があっても同じクラスタにまとめます。個別の許容値も下部で微調整できます。</string>
+    <string name="cluster_info_tuning_desc">許容値と全クラスタの再計算は高度な設定で構成できます。「厳格」はわずかなルートの違いを分け、「緩和」はスタート位置のズレがあっても同じクラスタにまとめます。</string>
+    <string name="cluster_info_open_advanced_tuning">高度な設定を開く</string>
     <string name="cluster_info_close">了解</string>
 
     <!-- Workout Cluster Stats -->

@@ -1248,7 +1248,8 @@
     <string name="cluster_info_sports_title">Separação por desporto e centroide adaptativo</string>
     <string name="cluster_info_sports_desc">As rotas favoritas podem ser separadas por tipo de desporto, garantindo que passeios de bicicleta e corridas não se misturem. À medida que novos treinos são registados, o cluster atualiza dinamicamente as suas coordenadas através de um centroide ponderado.</string>
     <string name="cluster_info_tuning_title">Sensibilidade e ajuste de parâmetros</string>
-    <string name="cluster_info_tuning_desc">Use o controle deslizante principal para ajustar o rigor: «Rigoroso» divide pequenas variações em clusters distintos; «Relaxado» agrupa treinos com desvios ou partidas deslocadas. Também pode ajustar tolerâncias individuais abaixo.</string>
+    <string name="cluster_info_tuning_desc">As tolerâncias e o recálculo de clusters configuram-se nas configurações avançadas: «Rigoroso» divide pequenas variações e «Relaxado» agrupa treinos com partidas deslocadas.</string>
+    <string name="cluster_info_open_advanced_tuning">Abrir configurações avançadas</string>
     <string name="cluster_info_close">Entendido</string>
 
     <!-- Workout Cluster Stats -->

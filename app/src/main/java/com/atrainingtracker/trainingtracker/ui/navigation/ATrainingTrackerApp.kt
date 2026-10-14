@@ -394,6 +394,9 @@ fun ATrainingTrackerApp(
                         onBackToNav = {
                             clustersViewModel.selectCluster(null)
                             navController.popBackStack()
+                        },
+                        onNavigateToAdvancedSettings = {
+                            navController.navigate(NavRoutes.ADVANCED_SETTINGS)
                         }
                     )
                 }

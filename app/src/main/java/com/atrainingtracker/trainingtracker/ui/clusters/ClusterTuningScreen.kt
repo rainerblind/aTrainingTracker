@@ -83,7 +83,10 @@ fun ClusterTuningScreen(
         }
     ) { padding ->
         if (showInfoDialog) {
-            ClusterInfoDialog(onDismissRequest = { showInfoDialog = false })
+            ClusterInfoDialog(
+                onDismissRequest = { showInfoDialog = false },
+                onNavigateToAdvancedSettings = { showInfoDialog = false }
+            )
         }
         if (isRecalculating) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

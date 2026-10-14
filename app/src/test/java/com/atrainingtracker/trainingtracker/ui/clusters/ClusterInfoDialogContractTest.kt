@@ -128,4 +128,89 @@ class ClusterInfoDialogContractTest {
             content.contains("R.string.cluster_info_fingerprint_title")
         )
     }
+
+    @Test
+    fun testClusterInfoDialog_hasDirectAdvancedSettingsDeepLinkAndStrictOrdering() {
+        val candidates = listOf(
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterInfoDialog.kt"),
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterInfoDialog.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterInfoDialog.kt")
+        )
+        val file = candidates.firstOrNull { it.exists() }
+            ?: error("ClusterInfoDialog.kt not found in candidate paths: $candidates")
+
+        val content = file.readText()
+
+        // 1. Parameter contract
+        assertTrue(
+            "ClusterInfoDialog must require onNavigateToAdvancedSettings: () -> Unit parameter (REQ-SET-076, ATT-3492)",
+            content.contains("onNavigateToAdvancedSettings: () -> Unit")
+        )
+
+        // 2. Button and icon
+        assertTrue(
+            "ClusterInfoDialog must reference R.string.cluster_info_open_advanced_tuning (REQ-SET-076, ATT-3492)",
+            content.contains("R.string.cluster_info_open_advanced_tuning")
+        )
+        assertTrue(
+            "ClusterInfoDialog must render Tune icon for Advanced Settings (REQ-SET-076, ATT-3492)",
+            content.contains("Icons.Default.Tune")
+        )
+
+        // 3. Strict ordering: onDismissRequest() must be called BEFORE onNavigateToAdvancedSettings()
+        val dismissIndex = content.indexOf("onDismissRequest()")
+        val navigateIndex = content.indexOf("onNavigateToAdvancedSettings()")
+        assertTrue("onDismissRequest() must be present in click action", dismissIndex != -1)
+        assertTrue("onNavigateToAdvancedSettings() must be present in click action", navigateIndex != -1)
+        assertTrue(
+            "onDismissRequest() must precede onNavigateToAdvancedSettings() to ensure tear-down before navigation (REQ-SET-076)",
+            dismissIndex < navigateIndex
+        )
+
+        // 4. Architectural purity: zero activity or context casts
+        assertFalse(
+            "ClusterInfoDialog must not cast context or activity directly (REQ-SET-076)",
+            content.contains("MainActivityWithNavigation") || content.contains("as? Activity")
+        )
+    }
+
+    @Test
+    fun testWorkoutClusters_forwardsNavigationCallback() {
+        val tabsCandidates = listOf(
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersTabsScreen.kt"),
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersTabsScreen.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersTabsScreen.kt")
+        )
+        val tabsFile = tabsCandidates.firstOrNull { it.exists() }
+            ?: error("WorkoutClustersTabsScreen.kt not found in candidate paths: $tabsCandidates")
+        val tabsContent = tabsFile.readText()
+
+        assertTrue(
+            "WorkoutClustersTabsScreen must accept onNavigateToAdvancedSettings parameter (REQ-SET-076)",
+            tabsContent.contains("onNavigateToAdvancedSettings: () -> Unit")
+        )
+        assertTrue(
+            "WorkoutClustersTabsScreen must forward onNavigateToAdvancedSettings to ClusterInfoDialog (REQ-SET-076)",
+            tabsContent.contains("onNavigateToAdvancedSettings =")
+        )
+
+        val screenCandidates = listOf(
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersScreen.kt"),
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersScreen.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersScreen.kt")
+        )
+        val screenFile = screenCandidates.firstOrNull { it.exists() }
+            ?: error("WorkoutClustersScreen.kt not found in candidate paths: $screenCandidates")
+        val screenContent = screenFile.readText()
+
+        assertTrue(
+            "WorkoutClustersScreen must accept onNavigateToAdvancedSettings parameter (REQ-SET-076)",
+            screenContent.contains("onNavigateToAdvancedSettings: () -> Unit")
+        )
+        assertTrue(
+            "WorkoutClustersScreen must forward onNavigateToAdvancedSettings to WorkoutClustersTabsScreen (REQ-SET-076)",
+            screenContent.contains("onNavigateToAdvancedSettings = onNavigateToAdvancedSettings")
+        )
+    }
 }
+
