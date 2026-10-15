@@ -42,11 +42,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.RestartAlt
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -233,13 +237,16 @@ fun ZoneSettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(
+                            modifier = Modifier.weight(1f, fill = false),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
                                 text = stringResource(R.string.title_edit_zones),
                                 style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             SuggestionChip(
                                 onClick = {},
@@ -256,16 +263,20 @@ fun ZoneSettingsScreen(
                             )
                         }
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            IconButton(
                                 onClick = { showCalculatorDialog = true }
                             ) {
-                                Text(
-                                    text = stringResource(R.string.zone_calc_button),
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                Icon(
+                                    imageVector = Icons.Default.Calculate,
+                                    contentDescription = stringResource(R.string.zone_calc_button),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
-                            TextButton(
+                            IconButton(
                                 onClick = {
                                     scope.launch(Dispatchers.IO) {
                                         dataStore.resetToDefaults(currentType)
@@ -273,9 +284,10 @@ fun ZoneSettingsScreen(
                                     }
                                 }
                             ) {
-                                Text(
-                                    text = stringResource(R.string.reset_to_defaults),
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                Icon(
+                                    imageVector = Icons.Default.RestartAlt,
+                                    contentDescription = stringResource(R.string.reset_to_defaults),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }
