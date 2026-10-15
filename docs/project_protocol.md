@@ -148,7 +148,7 @@ The detailed procedural rules, quality checklists, and templates are encapsulate
 
 Detailed standards for design and implementation are codified in dedicated companion documents:
 * **UI & Interaction Design Guidelines**: [`docs/design_guidelines.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/design_guidelines.md)
-  * Visual consistency baseline and component reuse (Section 5)
+  * Visual consistency baseline, 1:1 vectorization fidelity, compact header icon actions, and bottom sheet scroll rules (Section 5)
   * Discrete scalar ranges & durations ($\ge 5$ numeric values) — sliders over wrapping chips (Section 1.4)
   * Sub-entity chart coordinate normalization (Section 2.1)
   * Adaptive elevation profile scaling and fixed heights prohibition (Section 2.3)
