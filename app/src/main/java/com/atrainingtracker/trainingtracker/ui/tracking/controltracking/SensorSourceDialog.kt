@@ -31,8 +31,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.ui.res.stringResource
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -82,7 +84,7 @@ fun SensorSourceDialog(
 
     AppModalBottomSheet(
         title = sensorType.getFullName(context),
-        iconPainter = painterResource(id = sensorType.getIconResId()),
+        iconPainter = safePainterResource(id = sensorType.getIconResId(), fallback = Icons.Default.Sensors),
         iconTint = MaterialTheme.colorScheme.onSurface,
         onDismissRequest = onDismiss,
         actions = {
@@ -209,7 +211,7 @@ private fun DeviceIdentityBlock(
         modifier = modifier
     ) {
         Icon(
-            painter = painterResource(id = device.deviceTypeIconRes),
+            painter = safePainterResource(id = device.deviceTypeIconRes, fallback = Icons.Default.Sensors),
             contentDescription = null,
             modifier = Modifier
                 .size(if (device.protocol == Protocol.SMARTPHONE) 32.dp else 44.dp)

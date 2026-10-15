@@ -65,4 +65,36 @@ class DrawableDensityFallbackAuditTest {
 
         assertTrue(errorMessage, missingInRoot.isEmpty())
     }
+
+    companion object {
+        val CORE_DENSITY_ASSETS = listOf(
+            "ant_logo",
+            "logo_protocol_bluetooth",
+            "dropbox_logo_blue",
+            "logo"
+        )
+    }
+
+    @Test
+    fun testCoreDrawablesHaveFullHighDensityCoverage() {
+        val currentDir = File(System.getProperty("user.dir") ?: ".")
+        val resDir = when {
+            File(currentDir, "src/main/res").exists() -> File(currentDir, "src/main/res")
+            File(currentDir, "app/src/main/res").exists() -> File(currentDir, "app/src/main/res")
+            else -> File(currentDir, "../app/src/main/res")
+        }
+        assertTrue("Resource directory must exist: ${resDir.absolutePath}", resDir.exists() && resDir.isDirectory)
+
+        val targetDensities = listOf("drawable-xxhdpi", "drawable-xxxhdpi", "drawable-nodpi")
+        for (density in targetDensities) {
+            val dir = File(resDir, density)
+            assertTrue("Directory $density must exist: ${dir.absolutePath}", dir.exists() && dir.isDirectory)
+            val filesInDir = dir.listFiles()?.map { it.nameWithoutExtension }?.toSet() ?: emptySet()
+            for (asset in CORE_DENSITY_ASSETS) {
+                assertTrue("Asset $asset must exist in $density to prevent density-split crashes (REQ-UI-380)", asset in filesInDir)
+                val assetFile = dir.listFiles()?.firstOrNull { it.nameWithoutExtension == asset }
+                assertTrue("Asset file $asset in $density must not be null and must not be empty", assetFile != null && assetFile.length() > 0)
+            }
+        }
+    }
 }

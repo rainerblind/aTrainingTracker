@@ -29,8 +29,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.ui.res.stringResource
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
@@ -67,7 +68,7 @@ fun ActivityTypeSelectionDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        painter = painterResource(id = type.logoId),
+                        painter = safePainterResource(id = type.logoId, fallback = Icons.Default.FitnessCenter),
                         contentDescription = null,
                         modifier = Modifier.size(32.dp),
                         tint = Color.Unspecified

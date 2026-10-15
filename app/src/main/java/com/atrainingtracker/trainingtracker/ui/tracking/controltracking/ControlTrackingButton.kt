@@ -36,10 +36,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Color
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -132,7 +135,7 @@ private fun ControlItem(
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
-                painter = painterResource(id = iconRes),
+                painter = safePainterResource(id = iconRes, fallback = Icons.Default.PlayArrow),
                 contentDescription = null,
                 modifier = Modifier.size(iconSize),
                 // Apply alpha to the tint
@@ -148,7 +151,7 @@ private fun ControlItem(
                         .padding(top = 4.dp, end = 4.dp)
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_place),
+                        painter = safePainterResource(id = R.drawable.ic_place, fallback = Icons.Default.Place),
                         contentDescription = stringResource(id = R.string.permission_warning_badge_desc),
                         tint = Color.White,
                         modifier = Modifier

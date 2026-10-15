@@ -28,8 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.filled.Sensors
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -104,7 +104,7 @@ fun SensorStatus(
                     val iconAlpha = if (isAvailable) 1f else INACTIVE_SENSOR_ALPHA
 
                     Icon(
-                        painter = painterResource(id = type.iconResId),
+                        painter = safePainterResource(id = type.iconResId, fallback = Icons.Default.Sensors),
                         contentDescription = type.name,
                         modifier = Modifier
                             .padding(horizontal = 6.dp)
