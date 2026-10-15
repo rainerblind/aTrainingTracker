@@ -393,4 +393,54 @@ class CyclingPowerMetricsDeviceTest {
 
         device.shutDown()
     }
+
+    @Test
+    fun testCalculateMetrics_longPause_flushesRollingWindowAndRetainsNpContinuity() {
+        every { powerSensorData.value } returns 200.0
+        var isSuspended = false
+        var currentTime = 1_000_000L
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { isSuspended },
+            { 75.0f },
+            { 200 },
+            { currentTime }
+        )
+
+        // Warm up and fill initial 30s window
+        for (i in 1..30) {
+            currentTime += 1000L
+            device.calculateMetrics()
+        }
+        assertEquals(200.0, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+        val prePauseNp = device.normalizedPowerSensor.sensorData.value as Double
+
+        // Pause for 45 seconds (> 30s threshold)
+        isSuspended = true
+        device.calculateMetrics() // marks mSuspendedStartMs = currentTime
+        currentTime += 45_000L
+        device.calculateMetrics() // still paused
+
+        // Resume after 45s pause: window must be flushed, but pre-pause NP retained during post-pause refill
+        isSuspended = false
+        currentTime += 1000L
+        device.calculateMetrics() // tick 1 after resume: window flushed, window.size == 1
+        assertEquals(prePauseNp, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+
+        // Ticks 2..29 after resume: window still filling (< 30) -> NP retained
+        for (i in 2..29) {
+            currentTime += 1000L
+            device.calculateMetrics()
+            assertEquals(prePauseNp, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+        }
+
+        // Tick 30 after resume: window has 30 fresh samples, rolling mean resumes update
+        currentTime += 1000L
+        device.calculateMetrics()
+        assertEquals(200.0, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+
+        device.shutDown()
+    }
 }

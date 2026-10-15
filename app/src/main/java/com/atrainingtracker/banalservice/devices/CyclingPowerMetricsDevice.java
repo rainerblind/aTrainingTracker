@@ -38,8 +38,15 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Computed metrics device that calculates real-time power-to-weight ratio (W/kg),
- * Dr. Andrew Coggan's Normalized Power (NP), and Intensity Factor (IF = NP / FTP)
- * at 1Hz based on active cycling power, athlete weight, and FTP (REQ-TRK-019, REQ-TRK-020, TST-TRK-011, TST-TRK-012).
+ * Dr. Andrew Coggan's Normalized Power (NP), Intensity Factor (IF = NP / FTP),
+ * Mechanical Work (kJ), and Training Stress Score (TSS) at 1Hz based on active cycling power,
+ * athlete weight, and FTP (REQ-TRK-019, REQ-TRK-020, REQ-TRK-021, TST-TRK-011, TST-TRK-012, TST-TRK-013).
+ *
+ * <p>State consistency & pause handling:
+ * NP and TSS are cumulative session metrics computed via Welford's online running mean of 4th powers.
+ * Pauses gate metric accumulation. When an active pause exceeds 30 seconds, the 30-sample rolling buffer
+ * is flushed to decouple physiological efforts and prevent blending pre-pause samples across long stops,
+ * while retaining cumulative session accumulators (mean and active seconds) to maintain session continuity.</p>
  */
 public class CyclingPowerMetricsDevice extends MyDevice {
 
