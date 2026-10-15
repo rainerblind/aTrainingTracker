@@ -27,6 +27,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.atrainingtracker.database.DatabaseConstants;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
@@ -87,27 +88,28 @@ public class TrainingPeaksUploader extends BaseExporter {
 
         WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
         SQLiteDatabase db = databaseManager.getDatabase();
-        Cursor cursor = db.query(WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+
+        long sportId = DatabaseConstants.INVALID_ID;
+        String name = "";
+        String sportName = "";
+        String description = "";
+
+        try (Cursor cursor = db.query(WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
                 null,
                 WorkoutSummaries.FILE_BASE_NAME + "=?",
                 new String[]{exportInfo.getFileBaseName()},
                 null,
                 null,
-                null);
+                null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int sportIdx = cursor.getColumnIndex(WorkoutSummaries.SPORT_ID);
+                sportId = sportIdx >= 0 ? cursor.getLong(sportIdx) : DatabaseConstants.INVALID_ID;
+                name = myGetStringFromCursor(cursor, WorkoutSummaries.WORKOUT_NAME);
+                description = myGetStringFromCursor(cursor, WorkoutSummaries.DESCRIPTION);
+            }
+        }
 
-        cursor.moveToFirst();
-
-        long sportId;
-        String name, sportName, description;
-        boolean isPrivate;
-
-        sportId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.SPORT_ID));
         sportName = SportTypeDatabaseManager.getInstance(mContext).getTrainingPeaksName(sportId);
-
-        name = myGetStringFromCursor(cursor, WorkoutSummaries.WORKOUT_NAME);
-        description = myGetStringFromCursor(cursor, WorkoutSummaries.DESCRIPTION);
-
-        cursor.close();
 
 
         HttpClient httpClient = new DefaultHttpClient();

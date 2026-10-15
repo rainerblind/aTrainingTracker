@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -99,5 +100,14 @@ class WorkoutCardSectionPreferencesTest {
         assertEquals(prefs1, prefs2)
         assertEquals(prefs1.hashCode(), prefs2.hashCode())
         assertFalse(prefs1 == prefs3)
+    }
+
+    @Test
+    fun zoneCardDisplayMode_defaultAndCopy() {
+        val prefs = WorkoutCardSectionPreferences()
+        assertEquals(ZoneCardDisplayMode.COLUMNS, prefs.zoneCardDisplayMode)
+
+        val modified = prefs.copy(zoneCardDisplayMode = ZoneCardDisplayMode.STACKED_BAR)
+        assertEquals(ZoneCardDisplayMode.STACKED_BAR, modified.zoneCardDisplayMode)
     }
 }

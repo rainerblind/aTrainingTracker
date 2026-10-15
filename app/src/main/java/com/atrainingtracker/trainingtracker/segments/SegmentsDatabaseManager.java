@@ -39,6 +39,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelpe
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSegment;
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment;
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint;
+import com.atrainingtracker.util.CursorUtils;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.PolyUtil;
 
@@ -111,28 +112,30 @@ public class SegmentsDatabaseManager {
     public List<PathPoint> getSegmentPath(long segmentId) {
         List<PathPoint> points = new ArrayList<>();
         SQLiteDatabase db = getDatabase();
-        Cursor c = db.query(Segments.TABLE_SEGMENT_STREAMS,
+        try (Cursor c = db.query(Segments.TABLE_SEGMENT_STREAMS,
                 new String[]{Segments.DISTANCE, Segments.LATITUDE, Segments.LONGITUDE, Segments.ALTITUDE},
                 Segments.STRAVA_SEGMENT_ID + "=?", new String[]{String.valueOf(segmentId)},
-                null, null, Segments.C_ID + " ASC");
+                null, null, Segments.C_ID + " ASC")) {
 
-        int dist_index = c.getColumnIndexOrThrow(Segments.DISTANCE);
-        int lat_index = c.getColumnIndexOrThrow(Segments.LATITUDE);
-        int lon_index = c.getColumnIndexOrThrow(Segments.LONGITUDE);
-        int alt_index = c.getColumnIndexOrThrow(Segments.ALTITUDE);
+            if (c != null) {
+                int dist_index = c.getColumnIndexOrThrow(Segments.DISTANCE);
+                int lat_index = c.getColumnIndexOrThrow(Segments.LATITUDE);
+                int lon_index = c.getColumnIndexOrThrow(Segments.LONGITUDE);
+                int alt_index = c.getColumnIndexOrThrow(Segments.ALTITUDE);
 
-        while (c.moveToNext()) {
-            points.add(
-                    new PathPoint(
-                            c.getFloat(dist_index),
-                            new LatLng(
-                                    c.getDouble(lat_index),
-                                    c.getDouble(lon_index)),
-                            c.getFloat(alt_index)
-                    )
-            );
+                while (c.moveToNext()) {
+                    points.add(
+                            new PathPoint(
+                                    c.getFloat(dist_index),
+                                    new LatLng(
+                                            c.getDouble(lat_index),
+                                            c.getDouble(lon_index)),
+                                    c.getFloat(alt_index)
+                            )
+                    );
+                }
+            }
         }
-        c.close();
         return points;
     }
 
@@ -142,162 +145,160 @@ public class SegmentsDatabaseManager {
      */
     public SegmentSummary getSegmentSummary(long segmentId) {
         SQLiteDatabase db = getDatabase();
-        SegmentSummary summary = null;
 
-        Cursor cursor = db.query(
+        try (Cursor cursor = db.query(
                 Segments.TABLE_STARRED_SEGMENTS,
                 null, // Fetch all columns defined in your projection
                 Segments.STRAVA_SEGMENT_ID + "=?",
                 new String[]{String.valueOf(segmentId)},
-                null, null, null
-        );
+                null, null, null)) {
 
-        if (cursor.moveToFirst()) {
-            // 1. Get Activity Type/Sport
-            SportTypeDatabaseManager sportTypeMgr = SportTypeDatabaseManager.getInstance(mContext);
-            String activityType = cursor.getString(cursor.getColumnIndexOrThrow(Segments.ACTIVITY_TYPE));
-            BSportType sportType = sportTypeMgr.getBSportTypeFromStravaName(activityType);
+            return CursorUtils.mapFirst(cursor, c -> {
+                // 1. Get Activity Type/Sport
+                SportTypeDatabaseManager sportTypeMgr = SportTypeDatabaseManager.getInstance(mContext);
+                String activityType = c.getString(c.getColumnIndexOrThrow(Segments.ACTIVITY_TYPE));
+                BSportType sportType = sportTypeMgr.getBSportTypeFromStravaName(activityType);
 
-            // 2. Extract raw values
-            double distance = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.DISTANCE));
-            double avgGrade = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.AVERAGE_GRADE));
-            double maxGrade = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.MAXIMUM_GRADE));
-            double elevationGain = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.TOTAL_ELEVATION_GAIN));
-            double elevLow = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.ELEVATION_LOW));
-            double elevHigh = cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.ELEVATION_HIGH));
-            int prTimeSeconds = cursor.getInt(cursor.getColumnIndexOrThrow(Segments.PR_TIME));
-            int climbCategory = cursor.getInt(cursor.getColumnIndexOrThrow(Segments.CLIMB_CATEGORY));
-            String city = cursor.getString(cursor.getColumnIndexOrThrow(Segments.CITY));
-            String name = cursor.getString(cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME));
-            String polyline = cursor.getString(cursor.getColumnIndexOrThrow(Segments.MAP_POLYLINE));
-            
-            Double minLat = cursor.isNull(cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LAT)) ? null : cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LAT));
-            Double minLng = cursor.isNull(cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LNG)) ? null : cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LNG));
-            Double maxLat = cursor.isNull(cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LAT)) ? null : cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LAT));
-            Double maxLng = cursor.isNull(cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LNG)) ? null : cursor.getDouble(cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LNG));
+                // 2. Extract raw values
+                double distance = c.getDouble(c.getColumnIndexOrThrow(Segments.DISTANCE));
+                double avgGrade = c.getDouble(c.getColumnIndexOrThrow(Segments.AVERAGE_GRADE));
+                double maxGrade = c.getDouble(c.getColumnIndexOrThrow(Segments.MAXIMUM_GRADE));
+                double elevationGain = c.getDouble(c.getColumnIndexOrThrow(Segments.TOTAL_ELEVATION_GAIN));
+                double elevLow = c.getDouble(c.getColumnIndexOrThrow(Segments.ELEVATION_LOW));
+                double elevHigh = c.getDouble(c.getColumnIndexOrThrow(Segments.ELEVATION_HIGH));
+                int prTimeSeconds = c.getInt(c.getColumnIndexOrThrow(Segments.PR_TIME));
+                int climbCategory = c.getInt(c.getColumnIndexOrThrow(Segments.CLIMB_CATEGORY));
+                String city = c.getString(c.getColumnIndexOrThrow(Segments.CITY));
+                String name = c.getString(c.getColumnIndexOrThrow(Segments.SEGMENT_NAME));
+                String polyline = c.getString(c.getColumnIndexOrThrow(Segments.MAP_POLYLINE));
 
-            // 3. Format strings
-            DistanceFormatter df = new DistanceFormatter();
-            TimeFormatter tf = new TimeFormatter();
-            AltitudeFormatter af = new AltitudeFormatter();
+                Double minLat = c.isNull(c.getColumnIndexOrThrow(Segments.BOUND_MIN_LAT)) ? null : c.getDouble(c.getColumnIndexOrThrow(Segments.BOUND_MIN_LAT));
+                Double minLng = c.isNull(c.getColumnIndexOrThrow(Segments.BOUND_MIN_LNG)) ? null : c.getDouble(c.getColumnIndexOrThrow(Segments.BOUND_MIN_LNG));
+                Double maxLat = c.isNull(c.getColumnIndexOrThrow(Segments.BOUND_MAX_LAT)) ? null : c.getDouble(c.getColumnIndexOrThrow(Segments.BOUND_MAX_LAT));
+                Double maxLng = c.isNull(c.getColumnIndexOrThrow(Segments.BOUND_MAX_LNG)) ? null : c.getDouble(c.getColumnIndexOrThrow(Segments.BOUND_MAX_LNG));
 
-            summary = new SegmentSummary(
-                    segmentId,
-                    name,
-                    sportType,
-                    climbCategory,
-                    climbCategory > 0 ? StravaHelper.translateClimbCategory(climbCategory) : "",
-                    prTimeSeconds,
-                    prTimeSeconds > 0 ? tf.format(prTimeSeconds) : "",
-                    (city != null && !city.isEmpty()) ? city : "",
-                    df.format_with_units(distance),
-                    distance,
-                    avgGrade,
-                    String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
-                    String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
-                    elevationGain,
-                    af.format_with_units(elevationGain),
-                    af.format_with_units(elevLow),
-                    af.format_with_units(elevHigh),
-                    polyline,
-                    minLat,
-                    minLng,
-                    maxLat,
-                    maxLng
-            );
+                // 3. Format strings
+                DistanceFormatter df = new DistanceFormatter();
+                TimeFormatter tf = new TimeFormatter();
+                AltitudeFormatter af = new AltitudeFormatter();
+
+                return new SegmentSummary(
+                        segmentId,
+                        name,
+                        sportType,
+                        climbCategory,
+                        climbCategory > 0 ? StravaHelper.translateClimbCategory(climbCategory) : "",
+                        prTimeSeconds,
+                        prTimeSeconds > 0 ? tf.format(prTimeSeconds) : "",
+                        (city != null && !city.isEmpty()) ? city : "",
+                        df.format_with_units(distance),
+                        distance,
+                        avgGrade,
+                        String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
+                        String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
+                        elevationGain,
+                        af.format_with_units(elevationGain),
+                        af.format_with_units(elevLow),
+                        af.format_with_units(elevHigh),
+                        polyline,
+                        minLat,
+                        minLng,
+                        maxLat,
+                        maxLng
+                );
+            });
         }
-        cursor.close();
-
-        return summary;
     }
 
     public List<SegmentSummary> getAllSegmentSummaries() {
         List<SegmentSummary> summaries = new ArrayList<>();
         Set<Long> seenIds = new HashSet<>();
         SQLiteDatabase db = getDatabase();
-        Cursor cursor = db.query(Segments.TABLE_STARRED_SEGMENTS, null, null, null, null, null, null);
-
-        SportTypeDatabaseManager sportTypeMgr = SportTypeDatabaseManager.getInstance(mContext);
-        DistanceFormatter df = new DistanceFormatter();
-        TimeFormatter tf = new TimeFormatter();
-        AltitudeFormatter af = new AltitudeFormatter();
-
-        int strava_id_index = cursor.getColumnIndexOrThrow(Segments.STRAVA_SEGMENT_ID);
-        int activity_type_index = cursor.getColumnIndexOrThrow(Segments.ACTIVITY_TYPE);
-        int dist_index = cursor.getColumnIndexOrThrow(Segments.DISTANCE);
-        int avg_grade_index = cursor.getColumnIndexOrThrow(Segments.AVERAGE_GRADE);
-        int max_grade_index = cursor.getColumnIndexOrThrow(Segments.MAXIMUM_GRADE);
-        int elev_gain_index = cursor.getColumnIndexOrThrow(Segments.TOTAL_ELEVATION_GAIN);
-        int elev_low_index = cursor.getColumnIndexOrThrow(Segments.ELEVATION_LOW);
-        int elev_high_index = cursor.getColumnIndexOrThrow(Segments.ELEVATION_HIGH);
-        int pr_time_index = cursor.getColumnIndexOrThrow(Segments.PR_TIME);
-        int climb_category_index = cursor.getColumnIndexOrThrow(Segments.CLIMB_CATEGORY);
-        int city_index = cursor.getColumnIndexOrThrow(Segments.CITY);
-        int name_index = cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME);
-        int map_polyline_index = cursor.getColumnIndexOrThrow(Segments.MAP_POLYLINE);
-        int min_lat_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LAT);
-        int min_lng_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LNG);
-        int max_lat_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LAT);
-        int max_lng_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LNG);
-        int synced_at_index = cursor.getColumnIndex(Segments.SYNCED_AT);
-
-
-        while (cursor.moveToNext()) {
-            long segmentId = cursor.getLong(strava_id_index);
-            if (!seenIds.add(segmentId)) {
-                continue; // Skip duplicate records
-            }
-            String activityType = cursor.getString(activity_type_index);
-            BSportType sportType = sportTypeMgr.getBSportTypeFromStravaName(activityType);
-            double distance = cursor.getDouble(dist_index);
-            double avgGrade = cursor.getDouble(avg_grade_index);
-            double maxGrade = cursor.getDouble(max_grade_index);
-            double elevation_gain = cursor.getDouble(elev_gain_index);
-            double elevLow = cursor.getDouble(elev_low_index);
-            double elevHigh = cursor.getDouble(elev_high_index);
-            int prTimeSeconds = cursor.getInt(pr_time_index);
-            int climbCategory = cursor.getInt(climb_category_index);
-            String city = cursor.getString(city_index);
-            String name = cursor.getString(name_index);
-            String polyline = cursor.getString(map_polyline_index);
-            if (polyline == null) {
-                polyline = "";
+        try (Cursor cursor = db.query(Segments.TABLE_STARRED_SEGMENTS, null, null, null, null, null, null)) {
+            if (cursor == null) {
+                return summaries;
             }
 
-            Double minLat = cursor.isNull(min_lat_index) ? null : cursor.getDouble(min_lat_index);
-            Double minLng = cursor.isNull(min_lng_index) ? null : cursor.getDouble(min_lng_index);
-            Double maxLat = cursor.isNull(max_lat_index) ? null : cursor.getDouble(max_lat_index);
-            Double maxLng = cursor.isNull(max_lng_index) ? null : cursor.getDouble(max_lng_index);
-            long syncedAt = (synced_at_index != -1 && !cursor.isNull(synced_at_index)) ? cursor.getLong(synced_at_index) : 0L;
+            SportTypeDatabaseManager sportTypeMgr = SportTypeDatabaseManager.getInstance(mContext);
+            DistanceFormatter df = new DistanceFormatter();
+            TimeFormatter tf = new TimeFormatter();
+            AltitudeFormatter af = new AltitudeFormatter();
 
-            summaries.add(new SegmentSummary(
-                            segmentId,
-                            name,
-                            sportType,
-                            climbCategory,
-                            StravaHelper.translateClimbCategory(climbCategory),
-                            prTimeSeconds,
-                            prTimeSeconds > 0 ? tf.format(prTimeSeconds) : "",
-                            (city != null && !city.isEmpty()) ? city : "",
-                            df.format_with_units(distance),
-                            distance,
-                            avgGrade,
-                            String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
-                            String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
-                            elevation_gain,
-                            af.format_with_units(elevation_gain),
-                            af.format_with_units(elevLow),
-                            af.format_with_units(elevHigh),
-                            polyline,
-                            minLat,
-                            minLng,
-                            maxLat,
-                            maxLng,
-                            syncedAt
-                    )
-            );
+            int strava_id_index = cursor.getColumnIndexOrThrow(Segments.STRAVA_SEGMENT_ID);
+            int activity_type_index = cursor.getColumnIndexOrThrow(Segments.ACTIVITY_TYPE);
+            int dist_index = cursor.getColumnIndexOrThrow(Segments.DISTANCE);
+            int avg_grade_index = cursor.getColumnIndexOrThrow(Segments.AVERAGE_GRADE);
+            int max_grade_index = cursor.getColumnIndexOrThrow(Segments.MAXIMUM_GRADE);
+            int elev_gain_index = cursor.getColumnIndexOrThrow(Segments.TOTAL_ELEVATION_GAIN);
+            int elev_low_index = cursor.getColumnIndexOrThrow(Segments.ELEVATION_LOW);
+            int elev_high_index = cursor.getColumnIndexOrThrow(Segments.ELEVATION_HIGH);
+            int pr_time_index = cursor.getColumnIndexOrThrow(Segments.PR_TIME);
+            int climb_category_index = cursor.getColumnIndexOrThrow(Segments.CLIMB_CATEGORY);
+            int city_index = cursor.getColumnIndexOrThrow(Segments.CITY);
+            int name_index = cursor.getColumnIndexOrThrow(Segments.SEGMENT_NAME);
+            int map_polyline_index = cursor.getColumnIndexOrThrow(Segments.MAP_POLYLINE);
+            int min_lat_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LAT);
+            int min_lng_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MIN_LNG);
+            int max_lat_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LAT);
+            int max_lng_index = cursor.getColumnIndexOrThrow(Segments.BOUND_MAX_LNG);
+            int synced_at_index = cursor.getColumnIndex(Segments.SYNCED_AT);
+
+            while (cursor.moveToNext()) {
+                long segmentId = cursor.getLong(strava_id_index);
+                if (!seenIds.add(segmentId)) {
+                    continue; // Skip duplicate records
+                }
+                String activityType = cursor.getString(activity_type_index);
+                BSportType sportType = sportTypeMgr.getBSportTypeFromStravaName(activityType);
+                double distance = cursor.getDouble(dist_index);
+                double avgGrade = cursor.getDouble(avg_grade_index);
+                double maxGrade = cursor.getDouble(max_grade_index);
+                double elevation_gain = cursor.getDouble(elev_gain_index);
+                double elevLow = cursor.getDouble(elev_low_index);
+                double elevHigh = cursor.getDouble(elev_high_index);
+                int prTimeSeconds = cursor.getInt(pr_time_index);
+                int climbCategory = cursor.getInt(climb_category_index);
+                String city = cursor.getString(city_index);
+                String name = cursor.getString(name_index);
+                String polyline = cursor.getString(map_polyline_index);
+                if (polyline == null) {
+                    polyline = "";
+                }
+
+                Double minLat = cursor.isNull(min_lat_index) ? null : cursor.getDouble(min_lat_index);
+                Double minLng = cursor.isNull(min_lng_index) ? null : cursor.getDouble(min_lng_index);
+                Double maxLat = cursor.isNull(max_lat_index) ? null : cursor.getDouble(max_lat_index);
+                Double maxLng = cursor.isNull(max_lng_index) ? null : cursor.getDouble(max_lng_index);
+                long syncedAt = (synced_at_index != -1 && !cursor.isNull(synced_at_index)) ? cursor.getLong(synced_at_index) : 0L;
+
+                summaries.add(new SegmentSummary(
+                                segmentId,
+                                name,
+                                sportType,
+                                climbCategory,
+                                StravaHelper.translateClimbCategory(climbCategory),
+                                prTimeSeconds,
+                                prTimeSeconds > 0 ? tf.format(prTimeSeconds) : "",
+                                (city != null && !city.isEmpty()) ? city : "",
+                                df.format_with_units(distance),
+                                distance,
+                                avgGrade,
+                                String.format(Locale.getDefault(), "Ø %.1f%%", avgGrade),
+                                String.format(Locale.getDefault(), "%.1f%% Max", maxGrade),
+                                elevation_gain,
+                                af.format_with_units(elevation_gain),
+                                af.format_with_units(elevLow),
+                                af.format_with_units(elevHigh),
+                                polyline,
+                                minLat,
+                                minLng,
+                                maxLat,
+                                maxLng,
+                                syncedAt
+                        )
+                );
+            }
         }
-        cursor.close();
 
         return summaries;
     }
@@ -415,18 +416,14 @@ public class SegmentsDatabaseManager {
             return false;
         }
         SQLiteDatabase db = getDatabase();
-        Cursor cursor = db.query(
+        try (Cursor cursor = db.query(
                 Segments.TABLE_STARRED_SEGMENTS,
                 new String[]{Segments.PR_TIME},
                 Segments.STRAVA_SEGMENT_ID + "=?",
                 new String[]{String.valueOf(stravaSegmentId)},
-                null, null, null
-        );
-        if (cursor == null) {
-            return false;
-        }
-        try {
-            if (!cursor.moveToFirst()) {
+                null, null, null)) {
+
+            if (cursor == null || !cursor.moveToFirst()) {
                 return false; // Segment not in StarredSegmentsTable
             }
             int currentPrTime = cursor.getInt(cursor.getColumnIndexOrThrow(Segments.PR_TIME));
@@ -445,8 +442,6 @@ public class SegmentsDatabaseManager {
                 return rows > 0;
             }
             return false;
-        } finally {
-            cursor.close();
         }
     }
 

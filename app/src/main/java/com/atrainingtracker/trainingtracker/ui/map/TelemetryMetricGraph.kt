@@ -428,7 +428,7 @@ fun TelemetryMetricGraph(
                 val stripStartPx = startPaddingPx + chartWidthPx + 3.dp.toPx()
                 val stripWidthPx = (endPaddingPx - 5.dp.toPx()).coerceAtLeast(10.dp.toPx())
 
-                if (zoneDisplayMode == ZoneCardDisplayMode.FIVE_ZONES) {
+                if (zoneDisplayMode == ZoneCardDisplayMode.FIVE_ZONES || zoneDisplayMode == ZoneCardDisplayMode.COLUMNS || zoneDisplayMode == ZoneCardDisplayMode.STACKED_BAR) {
                     // 5-Zones mode: horizontal bars aligned with zone threshold boundaries
                     for (entry in zoneDistribution.entries) {
                         val band = zoneBands.getOrNull(entry.zoneIndex - 1)

@@ -28,6 +28,7 @@ import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -78,7 +79,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     val enabledMarkerTypes: StateFlow<Set<PeriodMarkerType>> = prefManager.enabledPeriodMarkerTypesFlow
         .map { strings -> 
             strings.mapNotNull { 
-                try { PeriodMarkerType.valueOf(it) } catch(_: Exception) { null } 
+                safeEnumValueOfOrNull<PeriodMarkerType>(it)
             }.toSet()
         }
         .stateIn(

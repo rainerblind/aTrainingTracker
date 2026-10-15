@@ -51,6 +51,10 @@ import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
+import com.atrainingtracker.trainingtracker.ui.tracking.PedalBalanceState
+import com.atrainingtracker.trainingtracker.ui.tracking.PedalPowerBalanceMath
+import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMath
+import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -193,7 +197,9 @@ class TrackingViewModel(
         Color(ContextCompat.getColor(application, R.color.zone_2)),
         Color(ContextCompat.getColor(application, R.color.zone_3)),
         Color(ContextCompat.getColor(application, R.color.zone_4)),
-        Color(ContextCompat.getColor(application, R.color.zone_5))
+        Color(ContextCompat.getColor(application, R.color.zone_5)),
+        Color(ContextCompat.getColor(application, R.color.zone_6)),
+        Color(ContextCompat.getColor(application, R.color.zone_7))
     )
 
     init {
@@ -331,6 +337,16 @@ class TrackingViewModel(
                     val zoneType = getZoneType(config.sensorType, currentActivity.sportType)
                     val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
 
+                    val isPedalBalance = (config.sensorType == SensorType.PEDAL_POWER_BALANCE)
+                    val initialPedalBalanceState = if (isPedalBalance) {
+                        PedalPowerBalanceMath.calculateBalanceState(null)
+                    } else null
+                    val initialValue = if (isPedalBalance && initialPedalBalanceState != null) {
+                        PedalPowerBalanceMath.formatBalanceString(initialPedalBalanceState)
+                    } else {
+                        "--"
+                    }
+
                     SensorFieldState(
                         configHash = uniqueHash,
                         sensorFieldId = config.sensorFieldId,
@@ -339,10 +355,12 @@ class TrackingViewModel(
                         viewSize = config.viewSize,
                         label = application.getString(config.sensorType.shortNameId),
                         filterDescription = filterDescription,
-                        value = "--",
+                        value = initialValue,
                         units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
                         zoneColor = defaultZoneColor,
-                        zoneDisplayOptions = displayOptions
+                        zoneDisplayOptions = displayOptions,
+                        zoneGaugeState = calculateZoneGaugeState(zoneType, displayOptions, null),
+                        pedalBalanceState = initialPedalBalanceState
                     )
                 }
 
@@ -399,23 +417,37 @@ class TrackingViewModel(
             val fieldsToUpdate = fieldsByHash[uniqueHash]
 
             if (fieldsToUpdate != null) {
-                val newFormattedValue = sensorData.stringValue
+                val isPedalBalance = (sensorData.sensorType == SensorType.PEDAL_POWER_BALANCE)
+                val newPedalBalanceState = if (isPedalBalance) {
+                    PedalPowerBalanceMath.calculateBalanceState(sensorData.value as? Number)
+                } else null
+                val newFormattedValue = if (isPedalBalance && newPedalBalanceState != null) {
+                    PedalPowerBalanceMath.formatBalanceString(newPedalBalanceState)
+                } else {
+                    sensorData.stringValue
+                }
                 val newZoneColor = calculateZoneColor(sensorData, activityType)
                 val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
                 val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
+                val numericValue = (sensorData.value as? Number)?.toDouble()
+                val newZoneGaugeState = calculateZoneGaugeState(zoneType, displayOptions, numericValue)
 
                 // 3. Iterate through every field that needs this update.
                 for (fieldToUpdate in fieldsToUpdate) {
                     // Check if this specific instance needs an update to avoid unnecessary changes.
                     if (fieldToUpdate.value != newFormattedValue ||
                         fieldToUpdate.zoneColor != newZoneColor ||
-                        fieldToUpdate.zoneDisplayOptions != displayOptions) {
+                        fieldToUpdate.zoneDisplayOptions != displayOptions ||
+                        fieldToUpdate.zoneGaugeState != newZoneGaugeState ||
+                        fieldToUpdate.pedalBalanceState != newPedalBalanceState) {
                         val index = updatedFields.indexOf(fieldToUpdate)
                         if (index != -1) {
                             updatedFields[index] = fieldToUpdate.copy(
                                 value = newFormattedValue,
                                 zoneColor = newZoneColor,
-                                zoneDisplayOptions = displayOptions
+                                zoneDisplayOptions = displayOptions,
+                                zoneGaugeState = newZoneGaugeState,
+                                pedalBalanceState = newPedalBalanceState
                             )
                             hasChanged = true
                         }
@@ -443,6 +475,20 @@ class TrackingViewModel(
             val z4Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
             val numericValue = currentValue.toDouble()
 
+            if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) {
+                val z5Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 5)
+                val z6Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6)
+                return when {
+                    numericValue <= z1Max -> zoneColors[0]
+                    numericValue <= z2Max -> zoneColors[1]
+                    numericValue <= z3Max -> zoneColors[2]
+                    numericValue <= z4Max -> zoneColors[3]
+                    numericValue <= z5Max -> zoneColors[4]
+                    numericValue <= z6Max -> zoneColors[5]
+                    else -> zoneColors[6]
+                }
+            }
+
             return when {
                 numericValue <= z1Max -> zoneColors[0]
                 numericValue <= z2Max -> zoneColors[1]
@@ -452,6 +498,33 @@ class TrackingViewModel(
             }
         }
         return defaultZoneColor
+    }
+
+    private fun calculateZoneGaugeState(
+        zoneType: SettingsDataStore.ZoneType?,
+        displayOptions: ZoneDisplayOptions,
+        numericValue: Double?
+    ): ZoneGaugeState? {
+        if (!displayOptions.showGauge || zoneType == null) return null
+
+        val z1Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
+        val z2Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
+        val z3Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
+        val z4Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+
+        val cutoffs = if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) {
+            val z5Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 5)
+            val z6Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6)
+            listOf(z1Max, z2Max, z3Max, z4Max, z5Max, z6Max)
+        } else {
+            listOf(z1Max, z2Max, z3Max, z4Max)
+        }
+
+        return ZoneGaugeMath.calculateZoneGaugeState(
+            value = numericValue,
+            zoneType = zoneType,
+            cutoffs = cutoffs
+        )
     }
 
     /**

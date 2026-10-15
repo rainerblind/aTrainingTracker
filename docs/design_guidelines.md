@@ -208,9 +208,13 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
     * Symmetric, canonical Material Design arrowheads across complementary directions (left / right).
     * True geometric angle transitions: gentle 45° for slight turns, 90° for normal turns, acute ~135° for sharp turns, 180° loop for u-turns.
   * Any modification to directional iconography **MUST** be verified side-by-side across all enum variants in both Light and Dark themes via a dedicated Compose `@Preview` gallery (e.g. `TurnCueIconsGalleryPreview`) before release.
+* **1:1 Visual Fidelity When Vectorizing Existing Raster Icons (ATT-2859 / ATT-3679)**:
+  * When migrating legacy multi-density raster PNG drawables (such as sport icons `bsport_bike`, `bsport_run`, `bsport_other` or ANT+/BLE sensor badges) to XML `VectorDrawable`s, the vector paths **MUST** faithfully redraw the exact visual design, multi-color geometry, and badge layout of the existing icons—never replace custom multi-color icons or protocol badges with generic monochrome Material Symbols.
 
-### 5.6 Placement & Entry Points
+### 5.6 Placement, Entry Points & Screen Headers
 * New features are entered from the screen where the athlete expects them (e.g. route selection on the Control Tracking screen, ATT-2458) using the same button/chip style as neighbouring actions — not via new floating or branded elements.
+* **Compact Icon Actions in Top Headers (ATT-3184, ATT-3188, ATT-3675)**:
+  * Top screen headers (`Row`) **MUST NOT** pack multiple multi-word `TextButton`s alongside a title and status chip on a single horizontal line. Across 9 localized languages (especially German, e.g. `"Auf Standardwerte zurücksetzen"`), horizontal text buttons starve the layout width and wrap vertically 1 character per line across the screen. Use compact `IconButton` symbol actions (with accessible `contentDescription` tooltips) or a wrapping `FlowRow`.
 
 ### 5.7 In-Ride Navigation Cues & HUD Overlays
 * **Top-Level Spatial Overlay**: In-ride navigation hints, turn-by-turn cues (e.g. ATT-1450), and fork-in-the-road decision prompts (e.g. ATT-1955) must float directly on top of the active tracking screen elements (cockpit tiles, map view) rather than displacing or squeezing the cockpit tile layout.
@@ -218,7 +222,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Transient Auto-Dismiss (3–5 Seconds)**: Navigation cues are time-sensitive and ephemeral. Upon being triggered (or once a maneuver instruction is issued), the cue must automatically vanish after a brief, configurable interval (3–5 seconds) via a smooth animation (fade or slide), promptly returning the screen to full telemetry focus without requiring manual dismissal while riding.
 * **Expert Settings Customization**: Auto-dismiss duration (e.g. 2–8 seconds or persistent until passed, default 4 seconds) and countdown distance (30–300 m, default 100 m) are exposed as configurable parameters in Expert Settings (*Experteneinstellungen*), allowing athletes to tailor cue timing to their riding speed and sport discipline (ATT-3321, ATT-3322).
 
-### 5.8 Live Tracking Bottom Sheets (Segments & Climbs)
+### 5.8 Bottom Sheets (`AppModalBottomSheet`, Live Segments & Climbs)
+* **No Nested `verticalScroll` Inside `AppModalBottomSheet` (ATT-3274 / ATT-3679)**:
+  * `AppModalBottomSheet` defaults to `scrollable = true`, which wraps its content slot in a `Column(Modifier.verticalScroll(rememberScrollState()))`. Child screens hosted inside `AppModalBottomSheet` **MUST NOT** apply a second `Modifier.verticalScroll` (which crashes Compose with `IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints`), or must explicitly pass `scrollable = false` to `AppModalBottomSheet`.
 * **Default Fully Expanded Presentation**:
   * Live Segment (`LiveSegmentSheet`) and Climb (`LiveClimbSheet`) bottom sheets during active tracking (`SensorGridScreen`) must pop up **fully expanded** (`SheetValue.Expanded`) by default instead of partially expanded (`SheetValue.PartiallyExpanded` / peek height).
   * This provides immediate visibility of the elevation profile graph, instantaneous gradient profile, and live pacing telemetry HUD without requiring manual touch interaction or swipe gestures while riding or running.

@@ -69,26 +69,25 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
 
         List<Long> result = new LinkedList<>();
         SQLiteDatabase db = getReadableDatabase();
-        Cursor cursor = db.query(ActiveDevices.TABLE,
+        try (Cursor cursor = db.query(ActiveDevices.TABLE,
                 null,
                 ActiveDevices.WORKOUT_ID + "=?",
                 new String[]{workoutId + ""},
                 null,
                 null,
-                null);
+                null)) {
 
-        if (cursor.moveToFirst()) {
-            int index = cursor.getColumnIndex(ActiveDevices.DEVICE_DB_ID);
-            if (index >= 0) {
-                do {
-                    if (DEBUG)
-                        Log.d(TAG, "adding " + cursor.getInt(index));
-                    result.add(cursor.getLong(index));
-                } while (cursor.moveToNext());
+            if (cursor != null && cursor.moveToFirst()) {
+                int index = cursor.getColumnIndex(ActiveDevices.DEVICE_DB_ID);
+                if (index >= 0) {
+                    do {
+                        if (DEBUG)
+                            Log.d(TAG, "adding " + cursor.getInt(index));
+                        result.add(cursor.getLong(index));
+                    } while (cursor.moveToNext());
+                }
             }
         }
-
-        cursor.close();
 
         return result;
     }
@@ -102,16 +101,15 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
             return;
         }
         SQLiteDatabase db = getWritableDatabase();
-        Cursor cursor = db.query(ActiveDevices.TABLE,
+        boolean exists;
+        try (Cursor cursor = db.query(ActiveDevices.TABLE,
                 new String[]{ActiveDevices.C_ID},
                 ActiveDevices.WORKOUT_ID + "=? AND " + ActiveDevices.DEVICE_DB_ID + "=?",
                 new String[]{String.valueOf(workoutId), String.valueOf(deviceDbId)},
                 null,
                 null,
-                null);
-        boolean exists = (cursor != null && cursor.moveToFirst());
-        if (cursor != null) {
-            cursor.close();
+                null)) {
+            exists = (cursor != null && cursor.moveToFirst());
         }
         if (!exists) {
             ContentValues values = new ContentValues();

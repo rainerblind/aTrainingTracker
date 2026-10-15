@@ -32,14 +32,16 @@ data class HeartRateZoneThresholds(
 )
 
 /**
- * Upper cycling power bounds in Watts for Zones 1 through 4.
- * Zone 5 corresponds to Power > z4Max.
+ * Upper cycling power bounds in Watts for Zones 1 through 6.
+ * Zone 7 corresponds to Power > z6Max (Neuromuscular Sprint Power).
  */
 data class PowerZoneThresholds(
     val z1Max: Int,
     val z2Max: Int,
     val z3Max: Int,
-    val z4Max: Int
+    val z4Max: Int,
+    val z5Max: Int,
+    val z6Max: Int
 )
 
 /**
@@ -86,11 +88,14 @@ data class TelemetryHistogramData(
 )
 
 /**
- * Display modes for zone distribution cards.
+ * Display modes for zone distribution cards (REQ-UI-372).
  */
 enum class ZoneCardDisplayMode {
-    FIVE_ZONES,
-    HISTOGRAM
+    STACKED_BAR,
+    COLUMNS,
+    HISTOGRAM,
+    @Deprecated("Legacy alias for COLUMNS", ReplaceWith("COLUMNS"))
+    FIVE_ZONES
 }
 
 /**

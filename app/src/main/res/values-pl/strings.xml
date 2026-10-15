@@ -188,6 +188,16 @@
     <string name="position_short">poz.</string>
     <string name="power">moc</string>
     <string name="power_short">moc</string>
+    <string name="power_to_weight">Stosunek mocy do masy</string>
+    <string name="power_to_weight_short">W/kg</string>
+    <string name="normalized_power">Znormalizowana moc</string>
+    <string name="normalized_power_short">NP</string>
+    <string name="intensity_factor">Współczynnik intensywności</string>
+    <string name="intensity_factor_short">IF</string>
+    <string name="work_kj">Praca mechaniczna</string>
+    <string name="work_kj_short">kJ</string>
+    <string name="tss">Wskaźnik obciążenia treningowego</string>
+    <string name="tss_short">TSS</string>
     <string name="speed">prędkość</string>
     <string name="speed_short">pręd</string>
     <string name="current_sensors">bieżące czujniki</string>
@@ -357,6 +367,8 @@
     <string name="zone_3_label">Strefa 3 (Tempo)</string>
     <string name="zone_4_label">Strefa 4 (Próg)</string>
     <string name="zone_5_label">Strefa 5 (Beztlenowa)</string>
+    <string name="zone_6_label">Strefa 6 (Wydolność beztlenowa)</string>
+    <string name="zone_7_label">Strefa 7 (Moc nerwowo-mięśniowa)</string>
 
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>
@@ -366,6 +378,9 @@
     <string name="zone_display_left_bar">Lewy pasek</string>
     <string name="zone_display_right_bar">Prawy pasek</string>
     <string name="zone_display_text_color">Kolor tekstu</string>
+    <string name="zone_display_gauge">Wskaźnik strefy</string>
+    <string name="pedal_balance_left_marker">L</string>
+    <string name="pedal_balance_right_marker">R</string>
     <string name="zone_display_preview_title">Podgląd</string>
 
     <string name="prefEmailExport">e-Mail</string>
@@ -1474,8 +1489,10 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Strefy mocy</string>
-    <!-- Telemetry Frequency Histogram (ATT-1845 / REQ-UI-231) -->
+    <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 stref</string>
+    <string name="zone_mode_columns">Kolumny</string>
+    <string name="zone_mode_stacked_bar">Pasek skumulowany</string>
     <string name="zone_mode_histogram">Histogram</string>
     <string name="aftermath_laps_splits_title">Okrążenia i międzyczasy</string>
     <string name="split_badge_best">Najlepszy</string>
@@ -1772,5 +1789,82 @@
     <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
     <string name="tuning_nav_cue_distance_title">Odległość wskazówek nawigacyjnych</string>
     <string name="tuning_nav_cue_distance_desc">Odległość przed manewrem, przy której wyświetlane są wskazówki</string>
+    <!-- First-Time Stop Tracking Coachmark (ATT-3387 / REQ-UI-367) -->
+    <string name="coachmark_stop_tracking_hint">Przesuń w prawo lub dotknij pierwszej karty po lewej stronie, aby wstrzymać lub zakończyć trening.</string>
+    <string name="coachmark_stop_tracking_show_tab">Pokaż sterowanie</string>
+    <string name="coachmark_stop_tracking_dismiss">Rozumiem</string>
+
+    <!-- Crop Start and End Points of Recorded Workout (ATT-3274 / REQ-UI-368) -->
+    <string name="crop_workout_title">Przytnij trening</string>
+    <string name="crop_workout_action">Przytnij</string>
+    <string name="crop_workout_confirm_title">Czy na stałe przyciąć trening?</string>
+    <string name="crop_workout_confirm_message">Czy na pewno chcesz przyciąć ten trening? Dane poza wybranym zakresem zostaną trwale usunięte. Tej operacji nie można cofnąć.</string>
+    <string name="crop_workout_confirm_action">Trwale przytnij</string>
+    <string name="crop_workout_progress">Przycinanie treningu…</string>
+    <string name="crop_workout_success">Pomyślnie przycięto trening</string>
+    <string name="crop_insufficient_storage">Niewystarczająca ilość pamięci do przycięcia treningu (wymagane co najmniej %d MB).</string>
+    <string name="crop_export_failed_retry">Nie udało się ponownie utworzyć plików eksportu. Spróbuj ponownie.</string>
+    <string name="crop_force_reexport">Wymuś ponowny eksport</string>
+    <!-- Grade Legend (ATT-3391 / REQ-UI-371) -->
+    <string name="grade_legend_under_2">&lt; 2%</string>
+    <string name="grade_legend_2_to_5">2 – 5%</string>
+    <string name="grade_legend_5_to_10">5 – 10%</string>
+    <string name="grade_legend_10_to_15">10 – 15%</string>
+    <string name="grade_legend_15_to_20">15 – 20%</string>
+    <string name="grade_legend_20_to_25">20 – 25%</string>
+    <string name="grade_legend_over_25">&gt; 25%</string>
+    <!-- Automated Zone Calculation (ATT-3188) -->
+    <string name="zone_calc_button">Oblicz strefy</string>
+    <string name="zone_calc_dialog_title_power">Oblicz strefy mocy kolarskiej</string>
+    <string name="zone_calc_dialog_title_hr">Oblicz strefy tętna</string>
+    <string name="zone_calc_ftp_label">Funkcjonalna Moc Progowa (FTP)</string>
+    <string name="zone_calc_hr_max_label">Tętno maksymalne (HRmax)</string>
+    <string name="zone_calc_hr_rest_label">Tętno spoczynkowe (HRspocz)</string>
+    <string name="zone_calc_method_label">Metoda obliczania</string>
+    <string name="zone_calc_method_max_hr">% HRmax</string>
+    <string name="zone_calc_method_karvonen">Karvonen (HRR)</string>
+    <string name="zone_calc_preview_title">Podgląd obliczonych stref</string>
+    <string name="zone_calc_apply_button">Zastosuj</string>
+    <string name="zone_calc_cancel_button">Anuluj</string>
+    <string name="zone_calc_status_calculated">Obliczone</string>
+    <string name="zone_calc_status_customized">Własne</string>
+    <string name="zone_calc_calibration_recommended">Zalecana kalibracja</string>
+    <string name="zone_calc_last_updated">Ostatnia aktualizacja: %s</string>
+    <string name="zone_calc_overwrite_warning_title">Zastąpić własne strefy?</string>
+    <string name="zone_calc_overwrite_warning_message">Ostrzeżenie: Spowoduje to zastąpienie wszystkich ręcznie skonfigurowanych stref standardowymi strefami dla FTP %d W. Czy chcesz kontynuować?</string>
+    <string name="zone_calc_error_ftp_range">FTP musi wynosić od %1$d W do %2$d W</string>
+    <string name="zone_calc_error_hr_max_range">HRmax musi wynosić od %1$d bpm do %2$d bpm</string>
+    <string name="zone_calc_error_hr_rest_range">HRspocz musi wynosić od %1$d bpm do %2$d bpm</string>
+    <string name="zone_calc_error_hr_max_greater_rest">HRmax musi być większe niż HRspocz</string>
+    <string name="zone_calc_error_karvonen_delta">HRmax musi być o co najmniej 20 bpm wyższe niż HRspocz</string>
+    <string name="zone_calc_error_monotonicity">Wartość musi wynosić od %1$d do %2$d</string>
+    <string name="zone_onboarding_hr_banner">Sparowano nowy czujnik tętna. Skonfiguruj strefy tętna, aby uzyskać spersonalizowaną analizę treningu.</string>
+    <string name="zone_onboarding_pwr_banner">Sparowano nowy miernik mocy. Skonfiguruj strefy mocy lub oblicz je na podstawie swojego FTP.</string>
+    <string name="zone_onboarding_dismiss">Rozumiem</string>
+    <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="tuning_auto_pause_title">Autopauza</string>
+    <string name="tuning_auto_pause_desc">Automatyczne wstrzymywanie nagrywania podczas postoju</string>
+    <string name="tuning_auto_pause_bike_title">Jazda na rowerze</string>
+    <string name="tuning_auto_pause_run_title">Bieganie</string>
+    <string name="tuning_auto_pause_other_title">Inne sporty</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Próg prędkości pauzy</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Prędkość, poniżej której rejestracja jest wstrzymywana</string>
+    <string name="tuning_auto_pause_debounce_title">Opóźnienie pauzy</string>
+    <string name="tuning_auto_pause_debounce_desc">Czas poniżej progu przed wstrzymaniem</string>
+    <string name="cockpit_auto_pause_badge">Autopauza</string>
+    <string name="cockpit_auto_pause_resume">Wznów teraz</string>
+    <string name="cockpit_speed_sensor_lost">Utracono czujnik prędkości</string>
+
+    <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
+    <string name="athlete_weight_title">Waga sportowca</string>
+    <string name="athlete_weight_label">Waga</string>
+    <string name="athlete_weight_dialog_title">Skonfiguruj wagę sportowca</string>
+    <string name="athlete_weight_save">Zapisz</string>
+    <string name="athlete_weight_unconfigured">Nieskonfigurowane</string>
+    <string name="athlete_weight_invalid">Wprowadź prawidłową wagę</string>
+    <string name="athlete_weight_card_description">Wymagane do obliczania stosunku mocy do masy w czasie rzeczywistym (W/kg).</string>
+    <string name="athlete_weight_clear">Wyczyść</string>
+    <string name="athlete_weight_edit">Edytuj</string>
+
 </resources>
 

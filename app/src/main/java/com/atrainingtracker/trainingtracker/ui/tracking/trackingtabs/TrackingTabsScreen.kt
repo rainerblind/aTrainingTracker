@@ -20,6 +20,11 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +67,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -652,109 +658,175 @@ fun TrackingTabsScreen(
                     }
                 }
 
-                // The Main content
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .navigationBarsPadding(), // do not draw under the navigation bar
-                    userScrollEnabled = true,
-                    beyondViewportPageCount = if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size  // keep them all
-                ) { page ->
-                    if (screenMode == ScreenMode.TRACKING && page == 0) {
+                // First-time Stop Tracking Coachmark state & auto-acknowledgement (REQ-UI-367 / ATT-3387)
+                val hasSeenStopTrackingHint: Boolean? by tuningDataStore.hasSeenStopTrackingHintFlow.collectAsState(initial = null)
+                val hasRenderedCoachmarkInSession by trackingTabsViewModel.hasRenderedCoachmarkInSession.collectAsState()
+                val isCoachmarkDismissPending by trackingTabsViewModel.isCoachmarkDismissPending.collectAsState()
 
-                        // --- CONTROL TAB (Page 0) ---
-                        LaunchedEffect(Unit) {
-                            controlViewModel.navigationEvent.collect { navigation ->
-                                when (navigation) {
-                                    is ControlNavigation.ToPairing -> {
-                                        (context as? MainActivityWithNavigation)?.startPairing(
-                                            navigation.protocol,
-                                            navigation.deviceType
-                                        )
-                                    }
+                val showStopTrackingCoachmark = TrackingTabsViewModel.shouldShowStopTrackingCoachmark(
+                    trackingMode = trackingMode,
+                    currentPage = pagerState.currentPage,
+                    screenMode = screenMode,
+                    hasSeenHint = hasSeenStopTrackingHint,
+                    isDismissPending = isCoachmarkDismissPending
+                )
 
-                                    is ControlNavigation.ToEditDevice -> {
-                                        val editDeviceDialog =
-                                            EditDeviceFragmentFactory.create(
-                                                deviceId = navigation.deviceId,
-                                                deviceType = navigation.deviceType
+                LaunchedEffect(showStopTrackingCoachmark) {
+                    if (showStopTrackingCoachmark) {
+                        trackingTabsViewModel.markCoachmarkRenderedInSession()
+                    }
+                }
+
+                LaunchedEffect(
+                    pagerState.settledPage,
+                    trackingMode,
+                    hasSeenStopTrackingHint,
+                    hasRenderedCoachmarkInSession,
+                    isCoachmarkDismissPending
+                ) {
+                    if (TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(
+                            trackingMode = trackingMode,
+                            settledPage = pagerState.settledPage,
+                            hasSeenHint = hasSeenStopTrackingHint,
+                            hasRenderedCoachmarkInSession = hasRenderedCoachmarkInSession,
+                            isDismissPending = isCoachmarkDismissPending
+                        )
+                    ) {
+                        trackingTabsViewModel.markCoachmarkDismissPending()
+                        tuningDataStore.setHasSeenStopTrackingHint(true)
+                    }
+                }
+
+                // The Main content hosted inside a constant-weight Box so coachmark overlay never shifts or resizes HorizontalPager
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .navigationBarsPadding(), // do not draw under the navigation bar
+                        userScrollEnabled = true,
+                        beyondViewportPageCount = if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size  // keep them all
+                    ) { page ->
+                        if (screenMode == ScreenMode.TRACKING && page == 0) {
+
+                            // --- CONTROL TAB (Page 0) ---
+                            LaunchedEffect(Unit) {
+                                controlViewModel.navigationEvent.collect { navigation ->
+                                    when (navigation) {
+                                        is ControlNavigation.ToPairing -> {
+                                            (context as? MainActivityWithNavigation)?.startPairing(
+                                                navigation.protocol,
+                                                navigation.deviceType
                                             )
-                                        editDeviceDialog.show(
-                                            context.supportFragmentManager,
-                                            "EditDeviceDialog"
-                                        )
-                                    }
+                                        }
 
-                                    is ControlNavigation.ShowRecoveryDialog -> {
-                                        val recoveryHandler = context as? StartOrResumeInterface
-                                        if (recoveryHandler != null) {
-                                            recoveryHandler.showStartOrResumeDialog()
-                                        } else if (context.supportFragmentManager.findFragmentByTag(StartOrResumeDialog.TAG) == null) {
-                                            StartOrResumeDialog().show(
+                                        is ControlNavigation.ToEditDevice -> {
+                                            val editDeviceDialog =
+                                                EditDeviceFragmentFactory.create(
+                                                    deviceId = navigation.deviceId,
+                                                    deviceType = navigation.deviceType
+                                                )
+                                            editDeviceDialog.show(
                                                 context.supportFragmentManager,
-                                                StartOrResumeDialog.TAG
+                                                "EditDeviceDialog"
                                             )
+                                        }
+
+                                        is ControlNavigation.ShowRecoveryDialog -> {
+                                            val recoveryHandler = context as? StartOrResumeInterface
+                                            if (recoveryHandler != null) {
+                                                recoveryHandler.showStartOrResumeDialog()
+                                            } else if (context.supportFragmentManager.findFragmentByTag(StartOrResumeDialog.TAG) == null) {
+                                                StartOrResumeDialog().show(
+                                                    context.supportFragmentManager,
+                                                    StartOrResumeDialog.TAG
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        ControlTrackingScreen(
-                            trackingMode = trackingMode,
-                            searchingFor = searchingFor,
-                            devices = devices,
-                            currentSport = bSportType,
-                            isAntSupported = controlViewModel.isAntProperlyInstalled(),
-                            isBluetoothSupported = controlViewModel.isBluetoothSupported(),
-                            onSearch = { controlViewModel.onSearchClicked() },
-                            onDeviceClick = { controlViewModel.onDeviceClicked(it) },
-                            onSportSelected = { controlViewModel.setSport(it) },
-                            onStart = { controlViewModel.onStartTracking() },
-                            onPause = { controlViewModel.onPauseTracking() },
-                            onResume = { controlViewModel.onResumeTracking() },
-                            onStop = { controlViewModel.onStopTracking() },
-                            onPairingClicked = { controlViewModel.onPairingClicked(it) },
-                            selectingProtocol = selectingProtocol,
-                            onDeviceTypeSelected = { controlViewModel.onDeviceTypeSelected(it) },
-                            onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() },
-                            showResearchButton = hasPairedRemoteDevices,
-                            locationCalibrationStatus = locationCalibrationStatus,
-                            bottomContent = {
-                                val isDimmed = routeSelectorUiState.activeRoute == null && routeSelectorUiState.routes.isEmpty()
-                                val emptySubtitleRes = if (isDimmed) {
-                                    routeSelectorUiState.contextEmptyHintRes
-                                } else {
-                                    R.string.route_action_select_desc
+                            ControlTrackingScreen(
+                                trackingMode = trackingMode,
+                                searchingFor = searchingFor,
+                                devices = devices,
+                                currentSport = bSportType,
+                                isAntSupported = controlViewModel.isAntProperlyInstalled(),
+                                isBluetoothSupported = controlViewModel.isBluetoothSupported(),
+                                onSearch = { controlViewModel.onSearchClicked() },
+                                onDeviceClick = { controlViewModel.onDeviceClicked(it) },
+                                onSportSelected = { controlViewModel.setSport(it) },
+                                onStart = { controlViewModel.onStartTracking() },
+                                onPause = { controlViewModel.onPauseTracking() },
+                                onResume = { controlViewModel.onResumeTracking() },
+                                onStop = { controlViewModel.onStopTracking() },
+                                onPairingClicked = { controlViewModel.onPairingClicked(it) },
+                                selectingProtocol = selectingProtocol,
+                                onDeviceTypeSelected = { controlViewModel.onDeviceTypeSelected(it) },
+                                onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() },
+                                showResearchButton = hasPairedRemoteDevices,
+                                locationCalibrationStatus = locationCalibrationStatus,
+                                bottomContent = {
+                                    val isDimmed = routeSelectorUiState.activeRoute == null && routeSelectorUiState.routes.isEmpty()
+                                    val emptySubtitleRes = if (isDimmed) {
+                                        routeSelectorUiState.contextEmptyHintRes
+                                    } else {
+                                        R.string.route_action_select_desc
+                                    }
+                                    RouteSelectionButton(
+                                        activeRoute = routeSelectorUiState.activeRoute,
+                                        isDimmed = isDimmed,
+                                        emptySubtitleRes = emptySubtitleRes,
+                                        returnNavState = returnNavState,
+                                        onClick = { showRouteSelectorSheet = true },
+                                        onClearRoute = { routeSelectorViewModel.clearRoute() }
+                                    )
                                 }
-                                RouteSelectionButton(
-                                    activeRoute = routeSelectorUiState.activeRoute,
-                                    isDimmed = isDimmed,
-                                    emptySubtitleRes = emptySubtitleRes,
-                                    returnNavState = returnNavState,
-                                    onClick = { showRouteSelectorSheet = true },
-                                    onClearRoute = { routeSelectorViewModel.clearRoute() }
-                                )
-                            }
-                        )
-                    } else {
-                        val viewIndex =
-                            if (screenMode == ScreenMode.TRACKING) page - 1 else page
-
-                        // Safely get the viewInfo
-                        val viewInfo = trackingViews.getOrNull(viewIndex)
-
-                        if (viewInfo != null) {
-                            TrackingTabGridContent(
-                                tabViewId = viewInfo.tabViewId,
-                                screenMode = screenMode,
-                                isTabActive = pagerState.currentPage == page,
                             )
                         } else {
-                            // Optional: Show a placeholder or empty box while loading
-                            Box(Modifier.fillMaxSize())
+                            val viewIndex =
+                                if (screenMode == ScreenMode.TRACKING) page - 1 else page
+
+                            // Safely get the viewInfo
+                            val viewInfo = trackingViews.getOrNull(viewIndex)
+
+                            if (viewInfo != null) {
+                                TrackingTabGridContent(
+                                    tabViewId = viewInfo.tabViewId,
+                                    screenMode = screenMode,
+                                    isTabActive = pagerState.currentPage == page,
+                                )
+                            } else {
+                                // Optional: Show a placeholder or empty box while loading
+                                Box(Modifier.fillMaxSize())
+                            }
                         }
+                    }
+
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = showStopTrackingCoachmark,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .zIndex(2f),
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        StopTrackingCoachmarkBanner(
+                            onShowControlTab = {
+                                trackingTabsViewModel.markCoachmarkDismissPending()
+                                scope.launch {
+                                    tuningDataStore.setHasSeenStopTrackingHint(true)
+                                    pagerState.animateScrollToPage(0)
+                                }
+                            },
+                            onDismiss = {
+                                trackingTabsViewModel.markCoachmarkDismissPending()
+                                scope.launch {
+                                    tuningDataStore.setHasSeenStopTrackingHint(true)
+                                }
+                            }
+                        )
                     }
                 }
             }

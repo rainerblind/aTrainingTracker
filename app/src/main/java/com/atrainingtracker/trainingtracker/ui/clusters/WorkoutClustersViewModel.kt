@@ -28,6 +28,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
@@ -128,7 +129,7 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     val enabledMarkerTypes: StateFlow<Set<ClusterMarkerType>> = preferenceManager.enabledClusterMarkerTypesFlow
         .map { strings ->
             strings.mapNotNull {
-                try { ClusterMarkerType.valueOf(it) } catch (e: Exception) { null }
+                safeEnumValueOfOrNull<ClusterMarkerType>(it)
             }.toSet()
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ClusterMarkerType.entries.toSet())

@@ -103,6 +103,9 @@ fun AdvancedTuningDialog(
     var clusterTolEndpoints by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS) }; var clusterTolApex by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_APEX) }
     var clusterTolDistance by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE) }; var clusterTolAltitudePos by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS) }
     var clusterUseSportType by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE) }; var clusterUseAltitudePos by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS) }
+    var autoPauseBikeEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED) }; var autoPauseRunEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED) }
+    var autoPauseOtherEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED) }; var autoPauseSpeedThresholdKmh by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_SPEED_THRESHOLD_KMH) }
+    var autoPauseDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_DEBOUNCE_SEC) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -151,6 +154,9 @@ fun AdvancedTuningDialog(
         clusterTolEndpoints = config.clusterTolEndpoints; clusterTolApex = config.clusterTolApex
         clusterTolDistance = config.clusterTolDistance; clusterTolAltitudePos = config.clusterTolAltitudePos
         clusterUseSportType = config.clusterUseSportType; clusterUseAltitudePos = config.clusterUseAltitudePos
+        autoPauseBikeEnabled = config.autoPauseBikeEnabled; autoPauseRunEnabled = config.autoPauseRunEnabled
+        autoPauseOtherEnabled = config.autoPauseOtherEnabled; autoPauseSpeedThresholdKmh = config.autoPauseSpeedThresholdKmh
+        autoPauseDebounceSec = config.autoPauseDebounceSec
     }
 
     LaunchedEffect(persistedConfig) {
@@ -165,26 +171,20 @@ fun AdvancedTuningDialog(
             AppDialogActions.SaveCancel(
                 onSave = {
                     val newConfig = TuningConfig(
-                        elevationXAxisDomain = elevationXAxisDomain, telemetryXAxisDomain = telemetryXAxisDomain,
-                        cockpitFontFamily = cockpitFontFamily, cockpitFontWeight = cockpitFontWeight,
-                        sensorFieldVariant = sensorFieldVariant, sensorFieldCornerRadius = sensorFieldCornerRadius,
-                        sensorFieldBorderThickness = sensorFieldBorderThickness, sensorFieldBorderContrast = sensorFieldBorderContrast,
-                        fullDimFactor = fullDimFactor, mediumDimFactor = mediumDimFactor,
-                        slopeFlatThreshold = slopeFlat, slopeSteepThreshold = slopeSteep,
-                        wakeupDurationSec = wakeupSec, downwardDelaySec = downwardDelaySec,
-                        gpsAccuracyThresholdMeters = gpsAccuracy, altitudeFilterWindowSec = altitudeWindowSec,
-                        slopeMinSpeedMps = slopeMinSpeed, paceCeilingMinKm = paceCeilingMinKm,
-                        routeSelectionRadiusKm = routeSelectionRadiusKm,
+                        elevationXAxisDomain = elevationXAxisDomain, telemetryXAxisDomain = telemetryXAxisDomain, cockpitFontFamily = cockpitFontFamily, cockpitFontWeight = cockpitFontWeight,
+                        sensorFieldVariant = sensorFieldVariant, sensorFieldCornerRadius = sensorFieldCornerRadius, sensorFieldBorderThickness = sensorFieldBorderThickness, sensorFieldBorderContrast = sensorFieldBorderContrast,
+                        fullDimFactor = fullDimFactor, mediumDimFactor = mediumDimFactor, slopeFlatThreshold = slopeFlat, slopeSteepThreshold = slopeSteep,
+                        wakeupDurationSec = wakeupSec, downwardDelaySec = downwardDelaySec, gpsAccuracyThresholdMeters = gpsAccuracy, altitudeFilterWindowSec = altitudeWindowSec,
+                        slopeMinSpeedMps = slopeMinSpeed, paceCeilingMinKm = paceCeilingMinKm, routeSelectionRadiusKm = routeSelectionRadiusKm,
                         navigationCueDismissDurationSec = navigationCueDismissDurationSec, elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
-                        mapFollowMeInitialZoom = mapFollowMeInitialZoom, mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled,
-                        mapFollowMeCruisingZoom = mapFollowMeCruisingZoom, mapFollowMeTiltAngle = mapFollowMeTiltAngle,
-                        mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent,
-                        mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha, mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
+                        mapFollowMeInitialZoom = mapFollowMeInitialZoom, mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled, mapFollowMeCruisingZoom = mapFollowMeCruisingZoom, mapFollowMeTiltAngle = mapFollowMeTiltAngle,
+                        mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent, mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha, mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
                         suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings, autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
-                        turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters,
-                        clusterTolEndpoints = clusterTolEndpoints, clusterTolApex = clusterTolApex,
+                        turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters, clusterTolEndpoints = clusterTolEndpoints, clusterTolApex = clusterTolApex,
                         clusterTolDistance = clusterTolDistance, clusterTolAltitudePos = clusterTolAltitudePos,
-                        clusterUseSportType = clusterUseSportType, clusterUseAltitudePos = clusterUseAltitudePos
+                        clusterUseSportType = clusterUseSportType, clusterUseAltitudePos = clusterUseAltitudePos,
+                        autoPauseBikeEnabled = autoPauseBikeEnabled, autoPauseRunEnabled = autoPauseRunEnabled,
+                        autoPauseOtherEnabled = autoPauseOtherEnabled, autoPauseSpeedThresholdKmh = autoPauseSpeedThresholdKmh, autoPauseDebounceSec = autoPauseDebounceSec
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
@@ -290,7 +290,10 @@ fun AdvancedTuningDialog(
                 SensorsGpsFilterSection(
                     gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
                     altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
-                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it }
+                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it },
+                    autoPauseBikeEnabled = autoPauseBikeEnabled, onAutoPauseBikeEnabledChange = { autoPauseBikeEnabled = it }, autoPauseRunEnabled = autoPauseRunEnabled, onAutoPauseRunEnabledChange = { autoPauseRunEnabled = it },
+                    autoPauseOtherEnabled = autoPauseOtherEnabled, onAutoPauseOtherEnabledChange = { autoPauseOtherEnabled = it },
+                    autoPauseSpeedThresholdKmh = autoPauseSpeedThresholdKmh, onAutoPauseSpeedThresholdKmhChange = { autoPauseSpeedThresholdKmh = it }, autoPauseDebounceSec = autoPauseDebounceSec, onAutoPauseDebounceSecChange = { autoPauseDebounceSec = it }
                 )
             }
 

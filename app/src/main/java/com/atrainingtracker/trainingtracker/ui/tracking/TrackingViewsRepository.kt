@@ -27,6 +27,7 @@ import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
+import com.atrainingtracker.util.safeEnumValueOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -275,7 +276,7 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 val deviceIdIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SOURCE_DEVICE_ID)
 
                 do {
-                    val viewSize = safeValueOf(c.getString(viewSizeIndex), ViewSize.NORMAL)
+                    val viewSize = safeEnumValueOf(c.getString(viewSizeIndex), ViewSize.NORMAL)
 
                     val sourceDeviceId = c.getLong(deviceIdIndex)
                     val deviceName = if (sourceDeviceId > 0) {
@@ -285,8 +286,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                         null
                     }
 
-                    val sensorType = safeValueOf(c.getString(sensorTypeIndex), SensorType.TIME_ACTIVE)
-                    val filterType = safeValueOf(c.getString(filterTypeIndex), FilterType.INSTANTANEOUS)
+                    val sensorType = safeEnumValueOf(c.getString(sensorTypeIndex), SensorType.TIME_ACTIVE)
+                    val filterType = safeEnumValueOf(c.getString(filterTypeIndex), FilterType.INSTANTANEOUS)
 
                     fieldList.add(
                         SensorFieldConfig(
@@ -327,13 +328,13 @@ class TrackingViewsRepository private constructor(private val context: Context) 
             cursor.use { c ->
                 if (c.moveToFirst()) {
                     val sizeString = c.getString(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEW_SIZE))
-                    val viewSize = safeValueOf(sizeString, ViewSize.NORMAL)
+                    val viewSize = safeEnumValueOf(sizeString, ViewSize.NORMAL)
                     val sourceDeviceId = c.getLong(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SOURCE_DEVICE_ID))
                     val deviceName = if (sourceDeviceId > 0) devicesDbManager.getDeviceName(sourceDeviceId) else null
                     val sensorTypeString = c.getString(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SENSOR_TYPE))
-                    val sensorType = safeValueOf(sensorTypeString, SensorType.TIME_ACTIVE)
+                    val sensorType = safeEnumValueOf(sensorTypeString, SensorType.TIME_ACTIVE)
                     val filterTypeString = c.getString(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_TYPE))
-                    val filterType = safeValueOf(filterTypeString, FilterType.INSTANTANEOUS)
+                    val filterType = safeEnumValueOf(filterTypeString, FilterType.INSTANTANEOUS)
                     return@withContext SensorFieldConfig(
                         sensorFieldId = sensorFieldId,
                         rowNr = c.getInt(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_NR)),
@@ -349,15 +350,6 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     return@withContext null // Return null if not found
                 }
             }
-        }
-    }
-
-    private inline fun <reified T : Enum<T>> safeValueOf(name: String?, default: T): T {
-        if (name == null) return default
-        return try {
-            java.lang.Enum.valueOf(T::class.java, name)
-        } catch (e: IllegalArgumentException) {
-            default
         }
     }
 

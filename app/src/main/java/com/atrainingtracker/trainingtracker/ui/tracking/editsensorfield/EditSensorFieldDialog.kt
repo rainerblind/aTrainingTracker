@@ -31,9 +31,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.settings.AthleteWeightDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.getDisplayName
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Modernized bottom sheet dialog for configuring a tracking grid sensor field (REQ-UI-149, TST-UI-102).
@@ -118,6 +126,74 @@ fun EditSensorFieldDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("${stringResource(R.string.filter)}: ${uiState.filterSummary}")
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // Athlete Weight Configuration for Power-to-Weight (ATT-1289, REQ-TRK-019)
+            if (uiState.selectedSensorType == SensorType.POWER_TO_WEIGHT) {
+                val dataStore = remember { SettingsDataStore.getInstance(context) }
+                val athleteWeight by dataStore.athleteWeightKgFlow.collectAsState(initial = 0f)
+                val coroutineScope = rememberCoroutineScope()
+                var showWeightDialog by remember { mutableStateOf(false) }
+                val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
+                val weightStr = if (athleteWeight > 0f) {
+                    val displayWeight = if (isImperial) athleteWeight * SettingsDataStore.LBS_PER_KG else athleteWeight
+                    val unitStr = if (isImperial) "lbs" else "kg"
+                    String.format(java.util.Locale.US, "%.1f %s", displayWeight, unitStr)
+                } else {
+                    stringResource(R.string.athlete_weight_unconfigured)
+                }
+
+                OutlinedButton(
+                    onClick = { showWeightDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("${stringResource(R.string.athlete_weight_title)}: $weightStr")
+                }
+                Spacer(Modifier.height(8.dp))
+
+                if (showWeightDialog) {
+                    AthleteWeightDialog(
+                        initialWeightKg = athleteWeight,
+                        onDismiss = { showWeightDialog = false },
+                        onSaveWeightKg = { newWeight ->
+                            coroutineScope.launch(Dispatchers.IO) {
+                                dataStore.setAthleteWeightKg(newWeight)
+                            }
+                        }
+                    )
+                }
+            }
+
+            // Intensity Factor & TSS FTP Baseline Display (ATT-1290, ATT-1291, REQ-TRK-020, REQ-TRK-021)
+            if (uiState.selectedSensorType == SensorType.INTENSITY_FACTOR || uiState.selectedSensorType == SensorType.TSS) {
+                val dataStore = remember { SettingsDataStore.getInstance(context) }
+                val storedFtp by dataStore.ftpFlow.collectAsState(initial = null)
+                val ftpStr = if (storedFtp != null && storedFtp!! > 0) {
+                    "$storedFtp W"
+                } else {
+                    stringResource(R.string.athlete_weight_unconfigured)
+                }
+
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "FTP: $ftpStr",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
             }

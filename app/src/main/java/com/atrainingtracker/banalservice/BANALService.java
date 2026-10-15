@@ -30,6 +30,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import com.atrainingtracker.BuildConfig;
+import com.atrainingtracker.util.LifecycleUtils;
 import com.atrainingtracker.banalservice.devices.DeviceManager;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.MyDevice;
@@ -499,6 +500,7 @@ public class BANALService
 
         // when there is a FilterManager, we can create the devices that need filtered data.
         cDeviceManager.createVerticalSpeedAndSlopeDevice();
+        cDeviceManager.createCyclingPowerMetricsDevice();
 
         ContextCompat.registerReceiver(this, mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP), ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -517,8 +519,8 @@ public class BANALService
         cSensorManager.shutDown();
         cFilterManager.shutDown();
 
-        unregisterReceiver(mNewLapReceiver);
-        unregisterReceiver(mStartSearchForPairedDevices);
+        LifecycleUtils.safeUnregisterReceiver(this, mNewLapReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mStartSearchForPairedDevices, TAG);
     }
 
     /***********************************************************************************************/

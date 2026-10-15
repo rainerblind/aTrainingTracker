@@ -70,8 +70,14 @@ fun DevicesTabbedScreen(
     equipmentViewModel: EquipmentViewModel = viewModel(),
     initialTab: Int = 0,
     onCheckAntInstallation: () -> Unit = {},
+    onNavigateToZones: ((initialTab: Int, promptReason: String?) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    LaunchedEffect(listViewModel) {
+        listViewModel.zoneNavigationEvent.collect { event ->
+            onNavigateToZones?.invoke(event.initialTab, event.promptReason)
+        }
+    }
     val uiState by tabViewModel.uiState.observeAsState()
     val isSearchingForNewDevices by tabViewModel.isSearchingForNewDevices.collectAsState()
     val scanningProtocol by tabViewModel.scanningProtocol.collectAsState()

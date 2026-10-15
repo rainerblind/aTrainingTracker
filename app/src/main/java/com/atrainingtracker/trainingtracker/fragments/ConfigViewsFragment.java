@@ -29,6 +29,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 
 import androidx.core.content.ContextCompat;
+import com.atrainingtracker.util.LifecycleUtils;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
@@ -43,6 +44,7 @@ import android.widget.Button;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivityClassic;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
@@ -150,8 +152,10 @@ public abstract class ConfigViewsFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        mActivityType = ActivityType.valueOf(getArguments().getString(ConfigViewsActivityClassic.ACTIVITY_TYPE));
-        mViewId = getArguments().getLong(ConfigViewsActivityClassic.VIEW_ID);
+        Bundle args = getArguments();
+        String activityTypeStr = args != null ? args.getString(ConfigViewsActivityClassic.ACTIVITY_TYPE) : null;
+        mActivityType = EnumUtils.safeValueOf(ActivityType.class, activityTypeStr, ActivityType.getDefaultActivityType(), TAG);
+        mViewId = args != null ? args.getLong(ConfigViewsActivityClassic.VIEW_ID) : 0L;
         if (savedInstanceState != null && savedInstanceState.containsKey(CURRENT_ITEM)) {
             mCurrentItem = savedInstanceState.getInt(CURRENT_ITEM);
         }
@@ -251,10 +255,7 @@ public abstract class ConfigViewsFragment extends Fragment {
 
         mCurrentItem = mViewPager.getCurrentItem();
 
-        try {
-            getActivity().unregisterReceiver(mNameChangedReceiver);
-        } catch (Exception e) {
-        }
+        LifecycleUtils.safeUnregisterReceiver(getActivity(), mNameChangedReceiver, TAG);
     }
 
     @Override

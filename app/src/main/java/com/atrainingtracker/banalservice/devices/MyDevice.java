@@ -27,6 +27,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import com.atrainingtracker.util.LifecycleUtils;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
@@ -233,7 +234,7 @@ public abstract class MyDevice {
 
         unregisterSensors();
 
-        mContext.unregisterReceiver(resetAccumulatorsReceiver);
+        LifecycleUtils.safeUnregisterReceiver(mContext, resetAccumulatorsReceiver, TAG);
     }
 
     public final DeviceType getDeviceType() {

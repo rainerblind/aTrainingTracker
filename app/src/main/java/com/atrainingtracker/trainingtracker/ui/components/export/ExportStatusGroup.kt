@@ -147,6 +147,18 @@ fun ExportDetailsDialog(
                     }
                 }
             }
+            val hasFailures = remember(data.details) {
+                data.details.any { it.status == "FINISHED_FAILED" }
+            }
+            if (hasFailures) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.crop_force_reexport))
+                }
+            }
             Spacer(Modifier.height(8.dp))
         }
     }

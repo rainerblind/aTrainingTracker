@@ -40,6 +40,10 @@ import com.atrainingtracker.banalservice.devices.Manufacturer;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikePowerDevice;
 import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.database.CursorProvider;
+import com.atrainingtracker.database.DatabaseConstants;
+import com.atrainingtracker.util.CursorUtils;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -124,8 +128,12 @@ public class DevicesDatabaseManager {
             while (cursor.moveToNext()) {
                 long id = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
                 String name = cursor.getString(cursor.getColumnIndex(DevicesDbHelper.NAME));
-                DeviceType deviceType = DeviceType.valueOf(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)));
-                Protocol protocol = Protocol.valueOf(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.PROTOCOL)));
+                DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)), TAG);
+                Protocol protocol = EnumUtils.safeValueOfOrNull(Protocol.class, cursor.getString(cursor.getColumnIndex(DevicesDbHelper.PROTOCOL)), TAG);
+                if (deviceType == null || protocol == null) {
+                    Log.w(TAG, "Skipping device with invalid DeviceType or Protocol at id " + id);
+                    continue;
+                }
                 list.add(new RemoteDeviceUIDataCacheItem(id, name, deviceType, protocol));
             }
             cursor.close();
@@ -135,6 +143,7 @@ public class DevicesDatabaseManager {
 
 
 
+    @CursorProvider
     public Cursor getDeviceCursor(long deviceId) {
         return getDatabase().query(DevicesDbHelper.DEVICES,
                 null,
@@ -145,6 +154,7 @@ public class DevicesDatabaseManager {
                 null);
     }
 
+    @CursorProvider
     public Cursor getCursorForAllDevices() {
         return getDatabase().query(
                 DevicesDbHelper.DEVICES,
@@ -159,101 +169,78 @@ public class DevicesDatabaseManager {
 
     public boolean isANTDeviceInDB(DeviceType deviceType, int antDeviceNumber) {
         if (DEBUG) Log.d(TAG, "isANTDeviceInDB");
-        boolean result = false;
 
-        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+        try (Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
                 DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=? AND " + DevicesDbHelper.ANT_DEVICE_NUMBER + "=?",
                 new String[]{Protocol.ANT_PLUS.name(), deviceType.name(), Integer.toString(antDeviceNumber)},
                 null,
                 null,
-                null);
-        // device already known
-        result = cursor.getCount() > 0;
-
-        cursor.close();
-
-        return result;
+                null)) {
+            return cursor != null && cursor.getCount() > 0;
+        }
     }
 
     public boolean haveTemperatureDevice() {
         if (DEBUG) Log.i(TAG, "haveTemperatureDevice");
 
-        boolean result = false;
-
-        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+        try (Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
                 DevicesDbHelper.DEVICE_TYPE + "=?",
                 new String[]{DeviceType.ENVIRONMENT.name()},
                 null,
                 null,
-                null);
-        // there is at least one environment/temperature device
-        result = cursor.getCount() > 0;
-
-        cursor.close();
-
-        return result;
+                null)) {
+            return cursor != null && cursor.getCount() > 0;
+        }
     }
 
     public long getDeviceId(DeviceType deviceType, int antDeviceNumber) {
         if (DEBUG) Log.d(TAG, "getDeviceId");
 
-        long deviceId = -1;
-
-        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+        try (Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
                 DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=? AND " + DevicesDbHelper.ANT_DEVICE_NUMBER + "=?",
                 new String[]{Protocol.ANT_PLUS.name(), deviceType.name(), Integer.toString(antDeviceNumber)},
                 null,
                 null,
-                null);
-        if (cursor.getCount() > 0) {
-            // device already known
-            cursor.moveToFirst();
-            deviceId = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
+                null)) {
+            return CursorUtils.mapFirst(cursor, DatabaseConstants.INVALID_ID, c -> {
+                int colIdx = c.getColumnIndex(DevicesDbHelper.C_ID);
+                return colIdx >= 0 ? c.getLong(colIdx) : DatabaseConstants.INVALID_ID;
+            });
         }
-        cursor.close();
-
-        return deviceId;
     }
 
     public boolean isBluetoothDeviceInDB(DeviceType deviceType, String bluetooth_address) {
         if (DEBUG) Log.d(TAG, "isBluetoothDeviceInDB");
-        boolean result = false;
 
-        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+        try (Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
                 DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=? AND " + DevicesDbHelper.BT_ADDRESS + "=?",
                 new String[]{Protocol.BLUETOOTH_LE.name(), deviceType.name(), bluetooth_address},
                 null,
                 null,
-                null);
-        // device already known
-        result = cursor.getCount() > 0;
-
-        cursor.close();
-
-        return result;
+                null)) {
+            return cursor != null && cursor.getCount() > 0;
+        }
     }
 
     public long getDeviceId(DeviceType deviceType, String bluetooth_address) {
         if (DEBUG) Log.d(TAG, "getDeviceId");
-        long result = -1;
 
-        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+        try (Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
                 DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=? AND " + DevicesDbHelper.BT_ADDRESS + "=?",
                 new String[]{Protocol.BLUETOOTH_LE.name(), deviceType.name(), bluetooth_address},
                 null,
                 null,
-                null);
-        if (cursor.moveToFirst()) {
-            result = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
+                null)) {
+            return CursorUtils.mapFirst(cursor, DatabaseConstants.INVALID_ID, c -> {
+                int colIdx = c.getColumnIndex(DevicesDbHelper.C_ID);
+                return colIdx >= 0 ? c.getLong(colIdx) : DatabaseConstants.INVALID_ID;
+            });
         }
-        cursor.close();
-
-        return result;
     }
 
     /**
@@ -297,82 +284,88 @@ public class DevicesDatabaseManager {
         LinkedList<Long> deviceIdsList = new LinkedList<>();
         LinkedList<String> namesList = new LinkedList<>();
 
-        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+        try (Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 null,
                 null,
                 null,
                 null,
                 null,
-                null);
-        while (cursor.moveToNext()) {
-            DeviceType deviceType = DeviceType.valueOf(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)));
-            long deviceId = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
+                null)) {
+            if (cursor != null) {
+                while (cursor.moveToNext()) {
+                    DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)), TAG);
+                    if (deviceType == null) {
+                        continue;
+                    }
+                    long deviceId = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
 
-            if (deviceTypeSet.contains(deviceType)) {
-                if (DEBUG) Log.i(TAG, "checking " + deviceType);
+                    if (deviceTypeSet.contains(deviceType)) {
+                        if (DEBUG) Log.i(TAG, "checking " + deviceType);
 
-                if (deviceType == DeviceType.BIKE_POWER) {  // Ok, a Bike Power Sensor.  Here, we have to check the flags
-                    int sensorFlags = getBikePowerSensorFlags(deviceId);
-                    switch (sensorType) {
-                        case CADENCE:
-                            if (!BikePowerSensorsHelper.isCrankRevolutionDataSupported(sensorFlags)) {
-                                continue;
+                        if (deviceType == DeviceType.BIKE_POWER) {  // Ok, a Bike Power Sensor.  Here, we have to check the flags
+                            int sensorFlags = getBikePowerSensorFlags(deviceId);
+                            switch (sensorType) {
+                                case CADENCE:
+                                    if (!BikePowerSensorsHelper.isCrankRevolutionDataSupported(sensorFlags)) {
+                                        continue;
+                                    }
+                                    break;
+
+                                case DISTANCE_m:
+                                case DISTANCE_m_LAP:
+                                    if (!(BikePowerSensorsHelper.isWheelDistanceDataSupported(sensorFlags)
+                                            || BikePowerSensorsHelper.isWheelRevolutionDataSupported(sensorFlags))) {
+                                        continue;
+                                    }
+                                    break;
+
+                                case PACE_spm:
+                                case SPEED_mps:
+                                    if (!(BikePowerSensorsHelper.isWheelSpeedDataSupported(sensorFlags)
+                                            || BikePowerSensorsHelper.isWheelRevolutionDataSupported(sensorFlags))) {
+                                        continue;
+                                    }
+                                    break;
+
+                                case PEDAL_POWER_BALANCE:
+                                    if (!BikePowerSensorsHelper.isPowerBalanceSupported(sensorFlags)) {
+                                        continue;
+                                    }
+                                    break;
+
+                                case PEDAL_SMOOTHNESS_L:
+                                case PEDAL_SMOOTHNESS_R:
+                                case PEDAL_SMOOTHNESS:
+                                    if (!BikePowerSensorsHelper.isPedalSmoothnessSupported(sensorFlags)) {
+                                        continue;
+                                    }
+                                    break;
+
+                                case TORQUE:
+                                    if (!BikePowerSensorsHelper.isTorqueDataSupported(sensorFlags)) {
+                                        continue;
+                                    }
+                                    break;
+
+                                case TORQUE_EFFECTIVENESS_L:
+                                case TORQUE_EFFECTIVENESS_R:
+                                    if (!BikePowerSensorsHelper.isTorqueEffectivenessSupported(sensorFlags)) {
+                                        continue;
+                                    }
+                                    break;
+
+                                case POWER:
+                                    break; // always add
                             }
-                            break;
+                        }
 
-                        case DISTANCE_m:
-                        case DISTANCE_m_LAP:
-                            if (!(BikePowerSensorsHelper.isWheelDistanceDataSupported(sensorFlags)
-                                    || BikePowerSensorsHelper.isWheelRevolutionDataSupported(sensorFlags))) {
-                                continue;
-                            }
-                            break;
-
-                        case PACE_spm:
-                        case SPEED_mps:
-                            if (!(BikePowerSensorsHelper.isWheelSpeedDataSupported(sensorFlags)
-                                    || BikePowerSensorsHelper.isWheelRevolutionDataSupported(sensorFlags))) {
-                                continue;
-                            }
-                            break;
-
-                        case PEDAL_POWER_BALANCE:
-                            if (!BikePowerSensorsHelper.isPowerBalanceSupported(sensorFlags)) {
-                                continue;
-                            }
-                            break;
-
-                        case PEDAL_SMOOTHNESS_L:
-                        case PEDAL_SMOOTHNESS_R:
-                        case PEDAL_SMOOTHNESS:
-                            if (!BikePowerSensorsHelper.isPedalSmoothnessSupported(sensorFlags)) {
-                                continue;
-                            }
-                            break;
-
-                        case TORQUE:
-                            if (!BikePowerSensorsHelper.isTorqueDataSupported(sensorFlags)) {
-                                continue;
-                            }
-                            break;
-
-                        case TORQUE_EFFECTIVENESS_L:
-                        case TORQUE_EFFECTIVENESS_R:
-                            if (!BikePowerSensorsHelper.isTorqueEffectivenessSupported(sensorFlags)) {
-                                continue;
-                            }
-                            break;
-
-                        case POWER:
-                            break; // always add
+                        // now, add the deviceId and the name of the device
+                        if (DEBUG)
+                            Log.i(TAG, "adding deviceId: " + deviceId + ", name: " + cursor.getString(cursor.getColumnIndex(DevicesDbHelper.NAME)));
+                        deviceIdsList.add(deviceId);
+                        namesList.add(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.NAME)));
                     }
                 }
-
-                // now, add the deviceId and the name of the device
-                if (DEBUG)
-                    Log.i(TAG, "adding deviceId: " + deviceId + ", name: " + cursor.getString(cursor.getColumnIndex(DevicesDbHelper.NAME)));
-                deviceIdsList.add(deviceId);
-                namesList.add(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.NAME)));
             }
         }
 
@@ -391,40 +384,39 @@ public class DevicesDatabaseManager {
         SQLiteDatabase db = getDatabase();
 
         // first, check whether device is already in database
-        Cursor cursor = db.query(DevicesDbHelper.DEVICES,
+        try (Cursor cursor = db.query(DevicesDbHelper.DEVICES,
                 null,
                 DevicesDbHelper.DEVICE_TYPE + "=? AND " + DevicesDbHelper.ANT_DEVICE_NUMBER + "=?",
                 new String[]{deviceType.name(), Integer.toString(antDeviceNumber)},
                 null,
                 null,
-                null);
+                null)) {
 
-        if (cursor.getCount() > 0) {
-            // device already known
-            // => do nothing
-            if (DEBUG) Log.d(TAG, "initDB: device already known");
-            result = -1;
-        } else {  // device not yet known (that should be the case)
-            try {
-                ContentValues values = new ContentValues();
-                values.put(DevicesDbHelper.PROTOCOL, Protocol.ANT_PLUS.name());
-                values.put(DevicesDbHelper.ANT_DEVICE_NUMBER, antDeviceNumber);
-                values.put(DevicesDbHelper.DEVICE_TYPE, deviceType.name());
-                values.put(DevicesDbHelper.PAIRED, paired);
-                values.put(DevicesDbHelper.NAME, name);
-                values.put(DevicesDbHelper.MANUFACTURER_NAME, manufacturer);
-                values.put(DevicesDbHelper.CALIBRATION_FACTOR, deviceType.getDefaultCalibrationFactor());
-                values.put(DevicesDbHelper.LAST_ACTIVE, getLastActiveString());
-                values.put(DevicesDbHelper.LAST_BATTERY_PERCENTAGE, batteryPercentage);
+            if (cursor != null && cursor.getCount() > 0) {
+                // device already known
+                // => do nothing
+                if (DEBUG) Log.d(TAG, "initDB: device already known");
+                result = -1;
+            } else {  // device not yet known (that should be the case)
+                try {
+                    ContentValues values = new ContentValues();
+                    values.put(DevicesDbHelper.PROTOCOL, Protocol.ANT_PLUS.name());
+                    values.put(DevicesDbHelper.ANT_DEVICE_NUMBER, antDeviceNumber);
+                    values.put(DevicesDbHelper.DEVICE_TYPE, deviceType.name());
+                    values.put(DevicesDbHelper.PAIRED, paired);
+                    values.put(DevicesDbHelper.NAME, name);
+                    values.put(DevicesDbHelper.MANUFACTURER_NAME, manufacturer);
+                    values.put(DevicesDbHelper.CALIBRATION_FACTOR, deviceType.getDefaultCalibrationFactor());
+                    values.put(DevicesDbHelper.LAST_ACTIVE, getLastActiveString());
+                    values.put(DevicesDbHelper.LAST_BATTERY_PERCENTAGE, batteryPercentage);
 
-                result = db.insert(DevicesDbHelper.DEVICES, null, values);
-            } catch (SQLException e) {
-                Log.e(TAG, "Error while writing" + e);
-                result = -2;
+                    result = db.insert(DevicesDbHelper.DEVICES, null, values);
+                } catch (SQLException e) {
+                    Log.e(TAG, "Error while writing" + e);
+                    result = -2;
+                }
             }
         }
-
-        cursor.close();
 
         return result;
     }
@@ -443,41 +435,41 @@ public class DevicesDatabaseManager {
         SQLiteDatabase db = getDatabase();
 
         // first, check whether device is already in database
-        Cursor cursor = db.query(DevicesDbHelper.DEVICES,
+        try (Cursor cursor = db.query(DevicesDbHelper.DEVICES,
                 null,
                 DevicesDbHelper.DEVICE_TYPE + "=? AND " + DevicesDbHelper.BT_ADDRESS + "=?",
                 new String[]{deviceType.name(), bluetoothMACAddress},
                 null,
                 null,
-                null);
+                null)) {
 
-        if (cursor.getCount() > 0) {
-            // device already known
-            // => do nothing
-            if (DEBUG) Log.d(TAG, "initDB: device already known");
-            result = -1;
-        } else {  // device not yet known (that should be the case)
-            try {
-                ContentValues values = new ContentValues();
-                values.put(DevicesDbHelper.PROTOCOL, Protocol.BLUETOOTH_LE.name());
-                values.put(DevicesDbHelper.BT_ADDRESS, bluetoothMACAddress);
-                values.put(DevicesDbHelper.DEVICE_TYPE, deviceType.name());
-                values.put(DevicesDbHelper.PAIRED, paired);
-                values.put(DevicesDbHelper.NAME, name);
-                values.put(DevicesDbHelper.MANUFACTURER_NAME, manufacturer);
-                values.put(DevicesDbHelper.CALIBRATION_FACTOR, deviceType.getDefaultCalibrationFactor());
-                values.put(DevicesDbHelper.LAST_ACTIVE, getLastActiveString());
-                if (batteryPercentage >= 0) {
-                    values.put(DevicesDbHelper.LAST_BATTERY_PERCENTAGE, batteryPercentage);
+            if (cursor != null && cursor.getCount() > 0) {
+                // device already known
+                // => do nothing
+                if (DEBUG) Log.d(TAG, "initDB: device already known");
+                result = -1;
+            } else {  // device not yet known (that should be the case)
+                try {
+                    ContentValues values = new ContentValues();
+                    values.put(DevicesDbHelper.PROTOCOL, Protocol.BLUETOOTH_LE.name());
+                    values.put(DevicesDbHelper.BT_ADDRESS, bluetoothMACAddress);
+                    values.put(DevicesDbHelper.DEVICE_TYPE, deviceType.name());
+                    values.put(DevicesDbHelper.PAIRED, paired);
+                    values.put(DevicesDbHelper.NAME, name);
+                    values.put(DevicesDbHelper.MANUFACTURER_NAME, manufacturer);
+                    values.put(DevicesDbHelper.CALIBRATION_FACTOR, deviceType.getDefaultCalibrationFactor());
+                    values.put(DevicesDbHelper.LAST_ACTIVE, getLastActiveString());
+                    if (batteryPercentage >= 0) {
+                        values.put(DevicesDbHelper.LAST_BATTERY_PERCENTAGE, batteryPercentage);
+                    }
+
+                    result = db.insert(DevicesDbHelper.DEVICES, null, values);
+                } catch (SQLException e) {
+                    Log.e(TAG, "Error while writing" + e);
+                    result = -2;
                 }
-
-                result = db.insert(DevicesDbHelper.DEVICES, null, values);
-            } catch (SQLException e) {
-                Log.e(TAG, "Error while writing" + e);
-                result = -2;
             }
         }
-        cursor.close();
 
         return result;
     }
@@ -501,8 +493,10 @@ public class DevicesDatabaseManager {
             cursor = getCursor(db, deviceID, DevicesDbHelper.DEVICE_TYPE);
             if (cursor.getCount() > 0) {
                 cursor.moveToFirst();
-                DeviceType deviceType = DeviceType.valueOf(cursor.getString(0));
-                calibrationFactor = deviceType.getDefaultCalibrationFactor();
+                DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(0), TAG);
+                if (deviceType != null) {
+                    calibrationFactor = deviceType.getDefaultCalibrationFactor();
+                }
             }
         }
 
@@ -527,7 +521,7 @@ public class DevicesDatabaseManager {
     }
 
     public DeviceType getDeviceType(long deviceId) {
-        return DeviceType.valueOf(getString(deviceId, DevicesDbHelper.DEVICE_TYPE));
+        return EnumUtils.safeValueOf(DeviceType.class, getString(deviceId, DevicesDbHelper.DEVICE_TYPE), DeviceType.DUMMY, TAG);
     }
 
     @Nullable
@@ -549,7 +543,7 @@ public class DevicesDatabaseManager {
     }
 
     public Protocol getProtocol(long deviceId) {
-        return Protocol.valueOf(getString(deviceId, DevicesDbHelper.PROTOCOL));
+        return EnumUtils.safeValueOf(Protocol.class, getString(deviceId, DevicesDbHelper.PROTOCOL), Protocol.ALL, TAG);
     }
 
     public void setManufacturerName(long deviceId, String manufacturerName) {
@@ -592,71 +586,46 @@ public class DevicesDatabaseManager {
     public int getBikePowerSensorFlags(long deviceId) {
         if (DEBUG) Log.i(TAG, "getBikePowerSensorFlags: deviceId=" + deviceId);
 
-        int result = 0;
-
-        Cursor cursor = getDatabase().query(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS_TABLE,
+        try (Cursor cursor = getDatabase().query(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS_TABLE,
                 null,
                 DevicesDbHelper.DEVICE_ID + "=?",
                 new String[]{deviceId + ""},
-                null, null, null);
-        if (cursor.moveToFirst()) {
-            result = cursor.getInt(cursor.getColumnIndex(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS));
+                null, null, null)) {
+            return CursorUtils.mapFirst(cursor, DatabaseConstants.EMPTY_COUNT, c -> {
+                int colIdx = c.getColumnIndex(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS);
+                return colIdx >= 0 ? c.getInt(colIdx) : DatabaseConstants.EMPTY_COUNT;
+            });
         }
-        cursor.close();
-
-        return result;
     }
 
     @Nullable
     private String getString(long deviceID, String key) {
         if (DEBUG) Log.i(TAG, "getString: deviceID=" + deviceID + ", key=" + key);
 
-        // TODO: list with allowed/valid keys
-        String result = null;
-
-        Cursor cursor = getCursor(getDatabase(), deviceID, key);
-        if (cursor.getCount() > 0) {
-            cursor.moveToFirst();
-            result = cursor.getString(0);
+        try (Cursor cursor = getCursor(getDatabase(), deviceID, key)) {
+            return CursorUtils.mapFirst(cursor, null, c -> c.getString(0));
         }
-        cursor.close();
-
-        return result;
     }
 
     private int getInt(long deviceID, String key) {
         if (DEBUG) Log.i(TAG, "getInt: deviceID=" + deviceID + ", key=" + key);
 
-        int result = 0;
-
-        // TODO: check list with allowed/valid keys?
-
-        Cursor cursor = getCursor(getDatabase(), deviceID, key);
-        if (cursor.getCount() > 0) {
-            cursor.moveToFirst();
-            result = cursor.getInt(0);
+        try (Cursor cursor = getCursor(getDatabase(), deviceID, key)) {
+            return CursorUtils.mapFirst(cursor, DatabaseConstants.EMPTY_COUNT, c -> c.getInt(0));
         }
-        cursor.close();
-
-        return result;
     }
 
     public List<NameAndBatteryPercentage> getCriticalBatteryDevices(int batteryPercentage) {
-        LinkedList<NameAndBatteryPercentage> result = new LinkedList<>();
-
-        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+        try (Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 null,
                 DevicesDbHelper.LAST_BATTERY_PERCENTAGE + " >= 0 AND " + DevicesDbHelper.LAST_BATTERY_PERCENTAGE + " <= ?",
                 new String[]{batteryPercentage + ""},
-                null, null, null);
-        while (cursor.moveToNext()) {
-            result.add(new NameAndBatteryPercentage(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.NAME)),
-                    cursor.getInt(cursor.getColumnIndex(DevicesDbHelper.LAST_BATTERY_PERCENTAGE)),
-                    cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID))));
+                null, null, null)) {
+            return CursorUtils.mapList(cursor, c -> new NameAndBatteryPercentage(
+                    c.getString(c.getColumnIndex(DevicesDbHelper.NAME)),
+                    c.getInt(c.getColumnIndex(DevicesDbHelper.LAST_BATTERY_PERCENTAGE)),
+                    c.getLong(c.getColumnIndex(DevicesDbHelper.C_ID))));
         }
-        cursor.close();
-
-        return result;
     }
 
     private void setString(long deviceID, String key, String value) {
@@ -707,6 +676,7 @@ public class DevicesDatabaseManager {
         // return (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)).format(new Date());  // TODO: localize?
     }
 
+    @CursorProvider
     protected static Cursor getCursor(SQLiteDatabase db, long deviceID, String column) {
         if (DEBUG) Log.d(TAG, "deviceID=" + deviceID + ", column=" + column);
         return db.query(DevicesDbHelper.DEVICES,
@@ -783,30 +753,27 @@ public class DevicesDatabaseManager {
             selection += " AND (" + DevicesDbHelper.DEVICE_TYPE + " LIKE 'RUN%' OR " + DevicesDbHelper.DEVICE_TYPE + " = 'HRM' OR " + DevicesDbHelper.DEVICE_TYPE + " = 'ENVIRONMENT')";
         }
 
-        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+        try (Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID, DevicesDbHelper.NAME, DevicesDbHelper.DEVICE_TYPE},
                 selection,
-                null, null, null, DevicesDbHelper.NAME + " COLLATE NOCASE ASC");
+                null, null, null, DevicesDbHelper.NAME + " COLLATE NOCASE ASC")) {
 
-        if (cursor != null) {
-            int idCol = cursor.getColumnIndex(DevicesDbHelper.C_ID);
-            int nameCol = cursor.getColumnIndex(DevicesDbHelper.NAME);
-            int typeCol = cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE);
+            if (cursor != null) {
+                int idCol = cursor.getColumnIndex(DevicesDbHelper.C_ID);
+                int nameCol = cursor.getColumnIndex(DevicesDbHelper.NAME);
+                int typeCol = cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE);
 
-            while (cursor.moveToNext()) {
-                DeviceType dt = null;
-                if (typeCol != -1 && !cursor.isNull(typeCol)) {
-                    try {
-                        dt = DeviceType.valueOf(cursor.getString(typeCol));
-                    } catch (Exception ignored) {}
+                while (cursor.moveToNext()) {
+                    DeviceType dt = (typeCol != -1 && !cursor.isNull(typeCol))
+                            ? EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(typeCol), TAG)
+                            : null;
+                    sensors.add(new SimpleSensorInfo(
+                            cursor.getLong(idCol),
+                            cursor.getString(nameCol),
+                            dt
+                    ));
                 }
-                sensors.add(new SimpleSensorInfo(
-                        cursor.getLong(idCol),
-                        cursor.getString(nameCol),
-                        dt
-                ));
             }
-            cursor.close();
         }
 
         sensors.sort(com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrdering.getComparator(sportType));
@@ -826,30 +793,27 @@ public class DevicesDatabaseManager {
                 + " OR " + DevicesDbHelper.DEVICE_TYPE + " LIKE 'BIKE%' OR " + DevicesDbHelper.DEVICE_TYPE + " LIKE 'RUN%'"
                 + " OR " + DevicesDbHelper.DEVICE_TYPE + " = 'HRM' OR " + DevicesDbHelper.DEVICE_TYPE + " = 'ENVIRONMENT')";
 
-        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+        try (Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID, DevicesDbHelper.NAME, DevicesDbHelper.DEVICE_TYPE},
                 selection,
-                null, null, null, DevicesDbHelper.NAME + " COLLATE NOCASE ASC");
+                null, null, null, DevicesDbHelper.NAME + " COLLATE NOCASE ASC")) {
 
-        if (cursor != null) {
-            int idCol = cursor.getColumnIndex(DevicesDbHelper.C_ID);
-            int nameCol = cursor.getColumnIndex(DevicesDbHelper.NAME);
-            int typeCol = cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE);
+            if (cursor != null) {
+                int idCol = cursor.getColumnIndex(DevicesDbHelper.C_ID);
+                int nameCol = cursor.getColumnIndex(DevicesDbHelper.NAME);
+                int typeCol = cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE);
 
-            while (cursor.moveToNext()) {
-                DeviceType dt = null;
-                if (typeCol != -1 && !cursor.isNull(typeCol)) {
-                    try {
-                        dt = DeviceType.valueOf(cursor.getString(typeCol));
-                    } catch (Exception ignored) {}
+                while (cursor.moveToNext()) {
+                    DeviceType dt = (typeCol != -1 && !cursor.isNull(typeCol))
+                            ? EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(typeCol), TAG)
+                            : null;
+                    sensors.add(new SimpleSensorInfo(
+                            cursor.getLong(idCol),
+                            cursor.getString(nameCol),
+                            dt
+                    ));
                 }
-                sensors.add(new SimpleSensorInfo(
-                        cursor.getLong(idCol),
-                        cursor.getString(nameCol),
-                        dt
-                ));
             }
-            cursor.close();
         }
 
         return sensors;
@@ -868,20 +832,18 @@ public class DevicesDatabaseManager {
     }
 
     public long getSmartphoneDeviceId(DeviceType deviceType) {
-        Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+        try (Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
                 DevicesDbHelper.PROTOCOL + "=? AND " + DevicesDbHelper.DEVICE_TYPE + "=?",
                 new String[]{Protocol.SMARTPHONE.name(), deviceType.name()},
                 null,
                 null,
-                null);
-        long deviceId = -1;
-        if (cursor.moveToFirst()) {
-            deviceId = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
+                null)) {
+            return CursorUtils.mapFirst(cursor, DatabaseConstants.INVALID_ID, c -> {
+                int colIdx = c.getColumnIndex(DevicesDbHelper.C_ID);
+                return colIdx >= 0 ? c.getLong(colIdx) : DatabaseConstants.INVALID_ID;
+            });
         }
-        cursor.close();
-
-        return  deviceId;
     }
 
     /**
@@ -1085,42 +1047,44 @@ public class DevicesDatabaseManager {
 
                 // copy the old data to the new one
                 // thereby, change the manufacturer, battery status, and device type to the new format
-                Cursor cursor = db.query(DEVICES_V3, null, null, null, null, null, null);
-                ContentValues contentValues = new ContentValues();
-                while (cursor.moveToNext()) {
+                try (Cursor cursor = db.query(DEVICES_V3, null, null, null, null, null, null)) {
+                    ContentValues contentValues = new ContentValues();
+                    if (cursor != null) {
+                        while (cursor.moveToNext()) {
 
-                    contentValues.clear();
+                            contentValues.clear();
 
-                    String name = cursor.getString(cursor.getColumnIndex(NAME));
-                    contentValues.put(NAME, name);
-                    Log.i(TAG, "onUpgrade: upgrade device: " + name);
+                            String name = cursor.getString(cursor.getColumnIndex(NAME));
+                            contentValues.put(NAME, name);
+                            Log.i(TAG, "onUpgrade: upgrade device: " + name);
 
-                    contentValues.put(PROTOCOL, Protocol.ANT_PLUS.name());
-                    contentValues.put(ANT_DEVICE_NUMBER, cursor.getInt(cursor.getColumnIndex(ANT_DEVICE_NUMBER)));
-                    contentValues.put(PAIRED, cursor.getInt(cursor.getColumnIndex(PAIRED)));
-                    contentValues.put(CALIBRATION_FACTOR, cursor.getDouble(cursor.getColumnIndex(CALIBRATION_FACTOR)));
-                    contentValues.put(LAST_ACTIVE, cursor.getString(cursor.getColumnIndex(LAST_ACTIVE)));
+                            contentValues.put(PROTOCOL, Protocol.ANT_PLUS.name());
+                            contentValues.put(ANT_DEVICE_NUMBER, cursor.getInt(cursor.getColumnIndex(ANT_DEVICE_NUMBER)));
+                            contentValues.put(PAIRED, cursor.getInt(cursor.getColumnIndex(PAIRED)));
+                            contentValues.put(CALIBRATION_FACTOR, cursor.getDouble(cursor.getColumnIndex(CALIBRATION_FACTOR)));
+                            contentValues.put(LAST_ACTIVE, cursor.getString(cursor.getColumnIndex(LAST_ACTIVE)));
 
-                    // get manufacturer name from ANT+ id
-                    int manufacturerId = cursor.getInt(cursor.getColumnIndex(MANUFACTURER_ID));
-                    String manufacturerName = Manufacturer.getName(manufacturerId);
-                    contentValues.put(MANUFACTURER_NAME, manufacturerName);
-                    Log.i(TAG, "onUpgrade: manufacturer id -> name: " + manufacturerId + " -> " + manufacturerName);
+                            // get manufacturer name from ANT+ id
+                            int manufacturerId = cursor.getInt(cursor.getColumnIndex(MANUFACTURER_ID));
+                            String manufacturerName = Manufacturer.getName(manufacturerId);
+                            contentValues.put(MANUFACTURER_NAME, manufacturerName);
+                            Log.i(TAG, "onUpgrade: manufacturer id -> name: " + manufacturerId + " -> " + manufacturerName);
 
-                    // get battery percentage from ANT+ battery status
-                    BatteryStatus batteryStatus = BatteryStatus.getValueFromInt(cursor.getInt(cursor.getColumnIndexOrThrow(LAST_BATTERY_STATUS)));
-                    int batteryPercentage = BatteryStatusHelper.getBatterPercentage(batteryStatus);
-                    contentValues.put(LAST_BATTERY_PERCENTAGE, batteryPercentage);
-                    Log.i(TAG, "onUpgrade: batteryStatus -> percentage: " + batteryStatus.name() + " -> " + batteryPercentage);
+                            // get battery percentage from ANT+ battery status
+                            BatteryStatus batteryStatus = BatteryStatus.getValueFromInt(cursor.getInt(cursor.getColumnIndexOrThrow(LAST_BATTERY_STATUS)));
+                            int batteryPercentage = BatteryStatusHelper.getBatterPercentage(batteryStatus);
+                            contentValues.put(LAST_BATTERY_PERCENTAGE, batteryPercentage);
+                            Log.i(TAG, "onUpgrade: batteryStatus -> percentage: " + batteryStatus.name() + " -> " + batteryPercentage);
 
-                    // get device type from ant device type
-                    byte antDeviceTypeByte = (byte) cursor.getInt(cursor.getColumnIndex(ANT_DEVICE_TYPE_BYTE));
-                    DeviceType deviceType = getDeviceTypeFromANTDeviceTypeByte(antDeviceTypeByte);
-                    contentValues.put(DEVICE_TYPE, deviceType.name());  // TODO: deviceType might be null?
+                            // get device type from ant device type
+                            byte antDeviceTypeByte = (byte) cursor.getInt(cursor.getColumnIndex(ANT_DEVICE_TYPE_BYTE));
+                            DeviceType deviceType = getDeviceTypeFromANTDeviceTypeByte(antDeviceTypeByte);
+                            contentValues.put(DEVICE_TYPE, deviceType.name());  // TODO: deviceType might be null?
 
-                    db.insert(DEVICES, null, contentValues);
+                            db.insert(DEVICES, null, contentValues);
+                        }
+                    }
                 }
-                cursor.close();
             }
 
             if (oldVersion <= 4) {
@@ -1136,43 +1100,46 @@ public class DevicesDatabaseManager {
                 // copy stuff form the old Bluetooth specific features table to the new bike power specific one...'
 
                 // get a cursor with all rows
-                Cursor cursor = db.query(TABLE_BT_SPECIFIC,
+                try (Cursor cursor = db.query(TABLE_BT_SPECIFIC,
                         null,
                         null,
                         null,
                         null,
                         null,
                         null
-                );
-                while (cursor.moveToNext()) {
-                    String btAddress = cursor.getString(cursor.getColumnIndex(BT_ADDRESS));
-                    int btFeature = cursor.getInt(cursor.getColumnIndex(BT_FEATURE));
-                    int sensorFlags = BTLEBikePowerDevice.btFeature2BikePowerSensorFlags(btFeature);  // translate BT feature to new Bike Power sensors flag
+                )) {
+                    if (cursor != null) {
+                        while (cursor.moveToNext()) {
+                            String btAddress = cursor.getString(cursor.getColumnIndex(BT_ADDRESS));
+                            int btFeature = cursor.getInt(cursor.getColumnIndex(BT_FEATURE));
+                            int sensorFlags = BTLEBikePowerDevice.btFeature2BikePowerSensorFlags(btFeature);  // translate BT feature to new Bike Power sensors flag
 
-                    if (DEBUG)
-                        Log.i(TAG, "migrating btAddress=" + btAddress + ", btFeature=" + btFeature + ", flags=" + sensorFlags);
+                            if (DEBUG)
+                                Log.i(TAG, "migrating btAddress=" + btAddress + ", btFeature=" + btFeature + ", flags=" + sensorFlags);
 
-                    Cursor cursor1 = db.query(DEVICES,
-                            null,
-                            BT_ADDRESS + " = ?",
-                            new String[]{btAddress},
-                            null, null, null);
-                    if (cursor1.moveToFirst()) {
-                        int deviceId = cursor1.getInt(cursor.getColumnIndex(C_ID));
+                            try (Cursor cursor1 = db.query(DEVICES,
+                                    null,
+                                    BT_ADDRESS + " = ?",
+                                    new String[]{btAddress},
+                                    null, null, null)) {
+                                if (cursor1 != null && cursor1.moveToFirst()) {
+                                    int cIdIdx = cursor1.getColumnIndex(C_ID);
+                                    int deviceId = cIdIdx >= 0 ? cursor1.getInt(cIdIdx) : -1;
 
-                        if (DEBUG) Log.i(TAG, "migrating deviceId=" + deviceId);
+                                    if (DEBUG) Log.i(TAG, "migrating deviceId=" + deviceId);
 
-                        ContentValues values = new ContentValues();
-                        values.put(DevicesDbHelper.DEVICE_ID, deviceId);
-                        values.put(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS, sensorFlags);
+                                    ContentValues values = new ContentValues();
+                                    values.put(DevicesDbHelper.DEVICE_ID, deviceId);
+                                    values.put(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS, sensorFlags);
 
-                        db.insert(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS_TABLE,
-                                null,
-                                values);
+                                    db.insert(DevicesDbHelper.BIKE_POWER_SENSOR_FLAGS_TABLE,
+                                            null,
+                                            values);
+                                }
+                            }
+                        }
                     }
-                    cursor1.close();
                 }
-                cursor.close();
 
                 // finally, remove the unnecessary table
                 db.execSQL("DROP TABLE IF EXISTS " + TABLE_BT_SPECIFIC);

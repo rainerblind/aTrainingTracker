@@ -37,9 +37,12 @@ import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 import java.util.concurrent.CompletableFuture;
+import com.atrainingtracker.util.EnumUtils;
+import com.atrainingtracker.util.LifecycleUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -75,6 +78,12 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManager;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseState;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseTransition;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
+import com.atrainingtracker.trainingtracker.settings.TuningConfig;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.PolyUtil;
 
@@ -167,6 +176,12 @@ public class TrackerService extends Service {
     private TrainingApplication mTrainingApplication;
     private WorkoutRepository mWorkoutRepository;
     private ScheduledFuture mTrackerHandle;
+
+    private final AutoPauseManager mAutoPauseManager = new AutoPauseManager();
+
+    public AutoPauseManager getAutoPauseManager() {
+        return mAutoPauseManager;
+    }
 
     private int mExtremaDbUpdateCounter = 0;
     private static final int EXTREMA_DB_UPDATE_INTERVAL = 10; // Update Avg in DB every 10 seconds
@@ -489,7 +504,7 @@ public class TrackerService extends Service {
         if (intent == null) {
             startType = StartType.RESUME_SERVICE_RECREATION;
         } else {
-            startType = StartType.valueOf(intent.getStringExtra(START_TYPE));
+            startType = EnumUtils.safeValueOf(StartType.class, intent.getStringExtra(START_TYPE), StartType.START_NORMAL, TAG);
         }
         mStartType = startType;
         mWorkoutStartLocationRecorded = (startType != StartType.START_NORMAL);
@@ -544,9 +559,27 @@ public class TrackerService extends Service {
             case RESUME_SERVICE_RECREATION:
                 Log.d(TAG, "resuming after killed service");
                 mTableInitializationFuture = CompletableFuture.completedFuture(null);
-                if (mTrainingApplication != null) {
-                    mTrainingApplication.setTracking();
+                // 3-Tier Startup State-Recovery Hierarchy (REQ-TRK-018):
+                if (TrainingApplication.isManualPauseLocked()) {
+                    Log.i(TAG, "Startup recovery Tier 1: restoring MANUAL_PAUSED");
+                    if (mTrainingApplication != null) {
+                        mTrainingApplication.pauseTracking(false);
+                    }
+                    mAutoPauseManager.setState(AutoPauseState.MANUAL_PAUSED);
+                } else if (TrainingApplication.isAutoPaused()) {
+                    Log.i(TAG, "Startup recovery Tier 2: restoring AUTO_PAUSED");
+                    if (mTrainingApplication != null) {
+                        mTrainingApplication.pauseTracking(true);
+                    }
+                    mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
+                } else {
+                    Log.i(TAG, "Startup recovery Tier 3: restoring TRACKING");
+                    if (mTrainingApplication != null) {
+                        mTrainingApplication.setTracking();
+                    }
+                    mAutoPauseManager.setState(AutoPauseState.TRACKING);
                 }
+                mAutoPauseManager.resetDebounceCounter();
                 if (mBanalService != null) {
                     recreateValuesWhenResuming();
                     // mBanalService.resumeTracking(); already started by broadcast?
@@ -699,43 +732,136 @@ public class TrackerService extends Service {
         mBanalService = null;
 
 
-        unregisterReceiver(mSearchingFinishedReceiver);
-        unregisterReceiver(mAltitudeCorrectionReceiver);
-        unregisterReceiver(mLapSummaryReceiver);
-        unregisterReceiver(mUserSelectedSportTypeChangedReceiver);
+        LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mUserSelectedSportTypeChangedReceiver, TAG);
 
         releaseWakeLock();
     }
 
-    private void recreateValuesWhenResuming() {
+    private static final String[] RESUME_WORKOUT_PROJECTION = new String[] {
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m
+    };
 
+    @VisibleForTesting
+    static final class ResumedWorkoutState {
+        final String baseFileName;
+        final long workoutId;
+        final int timeTotal_s;
+        final int timeActive_s;
+        final int calories;
+        final int lapNr;
+        final double distanceTotal_m;
+
+        ResumedWorkoutState(@NonNull String baseFileName, long workoutId, int timeTotal_s, int timeActive_s, int calories, int lapNr, double distanceTotal_m) {
+            this.baseFileName = baseFileName;
+            this.workoutId = workoutId;
+            this.timeTotal_s = timeTotal_s;
+            this.timeActive_s = timeActive_s;
+            this.calories = calories;
+            this.lapNr = lapNr;
+            this.distanceTotal_m = distanceTotal_m;
+        }
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void recreateValuesWhenResuming() {
         SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(this).getDatabase();
-        Cursor cursor = db.query(WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, null, null, null, null, null, null);
-        cursor.moveToLast();
+        ResumedWorkoutState state = null;
 
-        mBaseFileName = cursor.getString(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME));
-        mWorkoutID = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID));
-        mTimeTotal_s = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s));
-        mTimeActive_s = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s));
-        int calories = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES));
-        int lapNr = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS));
-        mDistanceTotal_m = cursor.getDouble(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m));
+        try (Cursor cursor = db.query(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                RESUME_WORKOUT_PROJECTION,
+                null,
+                null,
+                null,
+                null,
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID + " DESC",
+                "1")) {
 
-        cursor.close();
+            if (cursor != null && cursor.moveToFirst()) {
+                int baseFileNameCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME);
+                int idCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID);
+                int timeTotalCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s);
+                int timeActiveCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s);
+                int caloriesCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES);
+                int lapsCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS);
+                int distanceCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m);
+
+                state = new ResumedWorkoutState(
+                        cursor.getString(baseFileNameCol),
+                        cursor.getLong(idCol),
+                        cursor.getInt(timeTotalCol),
+                        cursor.getInt(timeActiveCol),
+                        cursor.getInt(caloriesCol),
+                        cursor.getInt(lapsCol),
+                        cursor.getDouble(distanceCol)
+                );
+            } else {
+                Log.w(TAG, "recreateValuesWhenResuming: No workout summary record found to resume.");
+                return;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "recreateValuesWhenResuming: Failed to extract resume record from database", e);
+            return;
+        }
+
+        applyResumedState(state);
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void applyResumedState(@NonNull ResumedWorkoutState state) {
+        mBaseFileName = state.baseFileName;
+        mWorkoutID = state.workoutId;
+        mTimeTotal_s = state.timeTotal_s;
+        mTimeActive_s = state.timeActive_s;
+        mDistanceTotal_m = state.distanceTotal_m;
 
         Log.d(TAG, "resuming with mBaseFileName=" + mBaseFileName
                 + ", mWorkoutId=" + mWorkoutID
                 + ", time_total_s=" + mTimeTotal_s
                 + ", time_active_s=" + mTimeActive_s
-                + ", calories=" + calories
-                + ", lapNr=" + lapNr
+                + ", calories=" + state.calories
+                + ", lapNr=" + state.lapNr
                 + ", distance_m=" + mDistanceTotal_m);
 
         BANALService.setInitialSensorValue(SensorType.TIME_TOTAL, mTimeTotal_s);
         BANALService.setInitialSensorValue(SensorType.TIME_ACTIVE, mTimeActive_s);
-        BANALService.setInitialSensorValue(SensorType.CALORIES, calories);
-        BANALService.setInitialSensorValue(SensorType.LAP_NR, lapNr);
+        BANALService.setInitialSensorValue(SensorType.CALORIES, state.calories);
+        BANALService.setInitialSensorValue(SensorType.LAP_NR, state.lapNr);
         BANALService.setInitialSensorValue(SensorType.DISTANCE_m, mDistanceTotal_m);
+    }
+
+    @VisibleForTesting
+    long getWorkoutID() {
+        return mWorkoutID;
+    }
+
+    @VisibleForTesting
+    String getBaseFileName() {
+        return mBaseFileName;
+    }
+
+    @VisibleForTesting
+    int getTimeTotal_s() {
+        return mTimeTotal_s;
+    }
+
+    @VisibleForTesting
+    int getTimeActive_s() {
+        return mTimeActive_s;
+    }
+
+    @VisibleForTesting
+    double getDistanceTotal_m() {
+        return mDistanceTotal_m;
     }
 
     /**
@@ -1047,7 +1173,14 @@ public class TrackerService extends Service {
             mTimeTotal_s = totalTimeData.getValue();
         }
 
+        final AutoPauseTransition autoPauseTransition = evaluateAutoPauseTick();
+
         if (TrainingApplication.isPaused()) {
+            if (autoPauseTransition != null && autoPauseTransition.getTriggerResume()) {
+                sendBroadcast(new Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED)
+                        .setPackage(getPackageName()));
+            }
+
             final long workoutId = mWorkoutID;
             final int timeTotal = mTimeTotal_s;
             
@@ -1271,6 +1404,48 @@ public class TrackerService extends Service {
             Log.e(TAG, "Sample write skipped due to initialization failure: " + ex.getMessage());
             return null;
         });
+
+        // REQ-TRK-018: Strict FIFO flush ordering: final stationary sample is inserted before pause broadcast
+        if (autoPauseTransition != null && autoPauseTransition.getTriggerPause()) {
+            mDbExecutor.execute(() -> {
+                sendBroadcast(new Intent(TrainingApplication.REQUEST_PAUSE_TRACKING)
+                        .putExtra(TrainingApplication.EXTRA_IS_AUTO_PAUSE, true)
+                        .setPackage(getPackageName()));
+            });
+        }
+    }
+
+    private AutoPauseTransition evaluateAutoPauseTick() {
+        if (mBanalService == null) return null;
+
+        SensorData<Number> speedData = mBanalService.getBestSensorData(SensorType.SPEED_mps);
+        Double speedMps = (speedData != null && speedData.getValue() != null) ? speedData.getValue().doubleValue() : null;
+        long packetTimestamp = (speedData != null) ? speedData.getTimestamp() : 0L;
+        long nowMs = System.currentTimeMillis();
+
+        BSportType sportType = mBanalService.getBSportType();
+        if (sportType == null) {
+            sportType = BSportType.UNKNOWN;
+        }
+
+        TuningConfig tuningConfig = SettingsDataStoreJavaHelper.getTuningConfig(this);
+        AutoPauseConfig config = new AutoPauseConfig(
+                tuningConfig.getAutoPauseBikeEnabled(),
+                tuningConfig.getAutoPauseRunEnabled(),
+                tuningConfig.getAutoPauseOtherEnabled(),
+                tuningConfig.getAutoPauseSpeedThresholdKmh(),
+                tuningConfig.getAutoPauseDebounceSec()
+        );
+        boolean manualPauseLocked = TrainingApplication.isManualPauseLocked();
+
+        return mAutoPauseManager.evaluateTick(
+                speedMps,
+                packetTimestamp,
+                nowMs,
+                sportType,
+                config,
+                manualPauseLocked
+        );
     }
 
     private void handleMissingColumns(SQLiteDatabase samplesDb, String tableName, ContentValues values, Map<String, SensorValueType> name2Type) {

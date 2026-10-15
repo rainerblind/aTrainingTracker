@@ -48,6 +48,7 @@ import com.atrainingtracker.trainingtracker.climbs.LiveClimbStatus
 import com.atrainingtracker.trainingtracker.ui.components.MetricBadge
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
+import com.atrainingtracker.trainingtracker.ui.map.getElevationGradeColor
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.google.android.gms.maps.model.LatLng
 import java.util.Locale
@@ -273,24 +274,10 @@ private fun ClimbStatusBadge(
 }
 
 /**
- * Resolves standard slope gradient color bands (REQ-MAP-027, REQ-UI-352):
- * - < 3%: Green
- * - 3% - 6%: Yellow-Green
- * - 6% - 9%: Amber/Yellow
- * - 9% - 12%: Orange
- * - 12% - 20%: Red
- * - >= 20%: Dark Red / Black
+ * Resolves standard 7-zone slope gradient color bands (REQ-MAP-027, REQ-UI-352, REQ-UI-371):
+ * Harmonized to consume the unified 7-color scale via [getElevationGradeColor].
  */
-fun getClimbGradeColor(gradePercent: Double): Color {
-    return when {
-        gradePercent < 3.0 -> Color(0xFF4CAF50)
-        gradePercent < 6.0 -> Color(0xFF8BC34A)
-        gradePercent < 9.0 -> Color(0xFFFFC107)
-        gradePercent < 12.0 -> Color(0xFFFF9800)
-        gradePercent < 20.0 -> Color(0xFFE53935)
-        else -> Color(0xFF212121)
-    }
-}
+fun getClimbGradeColor(gradePercent: Double): Color = getElevationGradeColor(gradePercent)
 
 @Composable
 private fun ClimbHudMetric(

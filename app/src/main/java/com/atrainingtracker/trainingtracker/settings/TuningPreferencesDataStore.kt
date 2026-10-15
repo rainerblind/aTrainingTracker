@@ -32,6 +32,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
+import com.atrainingtracker.util.safeEnumValueOf
 
 /**
  * Selectable horizontal X-axis domain for Aftermath elevation profile and scrubbing.
@@ -188,6 +189,21 @@ object TuningPreferencesDefaults {
 
     const val CLUSTER_USE_SPORT_TYPE = true
     const val CLUSTER_USE_ALTITUDE_POS = true
+
+    /** First-time stop tracking coachmark banner acknowledgement default (REQ-UI-367 / ATT-3387). */
+    const val DEFAULT_HAS_SEEN_STOP_TRACKING_HINT = false
+
+    const val DEFAULT_AUTO_PAUSE_BIKE_ENABLED = true
+    const val DEFAULT_AUTO_PAUSE_RUN_ENABLED = false
+    const val DEFAULT_AUTO_PAUSE_OTHER_ENABLED = false
+    const val DEFAULT_AUTO_PAUSE_SPEED_THRESHOLD_KMH = 1.5f
+    const val MIN_AUTO_PAUSE_SPEED_THRESHOLD_KMH = 0.5f
+    const val MAX_AUTO_PAUSE_SPEED_THRESHOLD_KMH = 5.0f
+    const val STEP_AUTO_PAUSE_SPEED_THRESHOLD_KMH = 0.1f
+    const val DEFAULT_AUTO_PAUSE_DEBOUNCE_SEC = 2
+    const val MIN_AUTO_PAUSE_DEBOUNCE_SEC = 1
+    const val MAX_AUTO_PAUSE_DEBOUNCE_SEC = 5
+    const val STEP_AUTO_PAUSE_DEBOUNCE_SEC = 1
 }
 
 /**
@@ -238,7 +254,12 @@ data class TuningConfig(
     val clusterTolDistance: Float = TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE,
     val clusterTolAltitudePos: Float = TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS,
     val clusterUseSportType: Boolean = TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE,
-    val clusterUseAltitudePos: Boolean = TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS
+    val clusterUseAltitudePos: Boolean = TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS,
+    val autoPauseBikeEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED,
+    val autoPauseRunEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED,
+    val autoPauseOtherEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED,
+    val autoPauseSpeedThresholdKmh: Float = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
+    val autoPauseDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_DEBOUNCE_SEC
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -336,6 +357,12 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_CLUSTER_TOL_ALTITUDE_POS: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_tol_altitude_pos")
         val KEY_CLUSTER_USE_SPORT_TYPE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_sport_type")
         val KEY_CLUSTER_USE_ALTITUDE_POS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_altitude_pos")
+        val KEY_HAS_SEEN_STOP_TRACKING_HINT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_has_seen_stop_tracking_hint")
+        val KEY_AUTO_PAUSE_BIKE_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_bike_enabled")
+        val KEY_AUTO_PAUSE_RUN_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_run_enabled")
+        val KEY_AUTO_PAUSE_OTHER_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_other_enabled")
+        val KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH: Preferences.Key<Float> = floatPreferencesKey("tuning_auto_pause_speed_threshold_kmh")
+        val KEY_AUTO_PAUSE_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_debounce_sec")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -382,41 +409,31 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_CLUSTER_TOL_DISTANCE,
             KEY_CLUSTER_TOL_ALTITUDE_POS,
             KEY_CLUSTER_USE_SPORT_TYPE,
-            KEY_CLUSTER_USE_ALTITUDE_POS
+            KEY_CLUSTER_USE_ALTITUDE_POS,
+            KEY_HAS_SEEN_STOP_TRACKING_HINT,
+            KEY_AUTO_PAUSE_BIKE_ENABLED,
+            KEY_AUTO_PAUSE_RUN_ENABLED,
+            KEY_AUTO_PAUSE_OTHER_ENABLED,
+            KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
+            KEY_AUTO_PAUSE_DEBOUNCE_SEC
         )
     }
 
     val tuningConfigFlow: Flow<TuningConfig> = context.dataStore.data.map { prefs ->
         val rawElevationDomainStr = prefs[KEY_ELEVATION_X_AXIS_DOMAIN] ?: prefs[KEY_PROFILE_X_AXIS_DOMAIN]
-        val elevationDomain = try {
-            if (rawElevationDomainStr != null) ProfileXAxisDomain.valueOf(rawElevationDomainStr) else TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN
-        } catch (e: Exception) {
-            TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN
-        }
+        val elevationDomain = safeEnumValueOf(rawElevationDomainStr, TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN)
 
         val rawTelemetryDomainStr = prefs[KEY_TELEMETRY_X_AXIS_DOMAIN]
-        val telemetryDomain = try {
-            if (rawTelemetryDomainStr != null) ProfileXAxisDomain.valueOf(rawTelemetryDomainStr) else TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN
-        } catch (e: Exception) {
-            TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN
-        }
+        val telemetryDomain = safeEnumValueOf(rawTelemetryDomainStr, TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN)
 
         val rawFontFamilyStr = prefs[KEY_COCKPIT_FONT_FAMILY]
-        val cockpitFontFamily = try {
-            if (rawFontFamilyStr != null) CockpitFontFamily.valueOf(rawFontFamilyStr) else TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
-        } catch (e: Exception) {
-            TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
-        }
+        val cockpitFontFamily = safeEnumValueOf(rawFontFamilyStr, TuningPreferencesDefaults.COCKPIT_FONT_FAMILY)
 
         val rawVariantStr = prefs[KEY_SENSOR_FIELD_VARIANT]
         val sensorFieldVariant = SensorFieldVariant.fromStorage(rawVariantStr)
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
-        val cockpitFontWeight = try {
-            if (rawFontWeightStr != null) CockpitFontWeight.valueOf(rawFontWeightStr) else TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT
-        } catch (e: Exception) {
-            TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT
-        }
+        val cockpitFontWeight = safeEnumValueOf(rawFontWeightStr, TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT)
         val rawFullDim = prefs[KEY_FULL_DIM_FACTOR] ?: TuningPreferencesDefaults.FULL_DIM_FACTOR
         val rawMediumDim = prefs[KEY_MEDIUM_DIM_FACTOR] ?: TuningPreferencesDefaults.MEDIUM_DIM_FACTOR
         val clampedFullDim = rawFullDim.coerceIn(
@@ -603,7 +620,18 @@ class TuningPreferencesDataStore(private val context: Context) {
                 TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS
             ),
             clusterUseSportType = prefs[KEY_CLUSTER_USE_SPORT_TYPE] ?: TrainingApplication.useSportTypeForClustering(),
-            clusterUseAltitudePos = prefs[KEY_CLUSTER_USE_ALTITUDE_POS] ?: TrainingApplication.useAltitudePosForClustering()
+            clusterUseAltitudePos = prefs[KEY_CLUSTER_USE_ALTITUDE_POS] ?: TrainingApplication.useAltitudePosForClustering(),
+            autoPauseBikeEnabled = prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED,
+            autoPauseRunEnabled = prefs[KEY_AUTO_PAUSE_RUN_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED,
+            autoPauseOtherEnabled = prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED,
+            autoPauseSpeedThresholdKmh = (prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_SPEED_THRESHOLD_KMH).coerceIn(
+                TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
+                TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD_KMH
+            ),
+            autoPauseDebounceSec = (prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_DEBOUNCE_SEC).coerceIn(
+                TuningPreferencesDefaults.MIN_AUTO_PAUSE_DEBOUNCE_SEC,
+                TuningPreferencesDefaults.MAX_AUTO_PAUSE_DEBOUNCE_SEC
+            )
         )
     }
 
@@ -679,6 +707,14 @@ class TuningPreferencesDataStore(private val context: Context) {
         val clampedClusterTolAltitudePos = config.clusterTolAltitudePos.coerceIn(
             TuningPreferencesDefaults.MIN_CLUSTER_TOL_ALTITUDE_POS,
             TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS
+        )
+        val clampedAutoPauseSpeedThreshold = config.autoPauseSpeedThresholdKmh.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD_KMH
+        )
+        val clampedAutoPauseDebounce = config.autoPauseDebounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_DEBOUNCE_SEC
         )
 
         context.dataStore.edit { prefs ->
@@ -764,6 +800,11 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_CLUSTER_TOL_ALTITUDE_POS] = clampedClusterTolAltitudePos
             prefs[KEY_CLUSTER_USE_SPORT_TYPE] = config.clusterUseSportType
             prefs[KEY_CLUSTER_USE_ALTITUDE_POS] = config.clusterUseAltitudePos
+            prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] = config.autoPauseBikeEnabled
+            prefs[KEY_AUTO_PAUSE_RUN_ENABLED] = config.autoPauseRunEnabled
+            prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] = config.autoPauseOtherEnabled
+            prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clampedAutoPauseSpeedThreshold
+            prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clampedAutoPauseDebounce
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
@@ -901,6 +942,61 @@ class TuningPreferencesDataStore(private val context: Context) {
         )
         context.dataStore.edit { prefs ->
             prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] = clamped
+        }
+    }
+
+    /**
+     * Reactive flow emitting whether the first-time stop tracking coachmark hint on the cockpit screen
+     * has already been seen/dismissed by the user (REQ-UI-367 / ATT-3387).
+     */
+    val hasSeenStopTrackingHintFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_HAS_SEEN_STOP_TRACKING_HINT] ?: TuningPreferencesDefaults.DEFAULT_HAS_SEEN_STOP_TRACKING_HINT
+    }
+
+    /**
+     * Atomically persists whether the first-time stop tracking coachmark hint has been acknowledged (REQ-UI-367 / ATT-3387).
+     */
+    suspend fun setHasSeenStopTrackingHint(seen: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_HAS_SEEN_STOP_TRACKING_HINT] = seen
+        }
+    }
+
+    suspend fun updateAutoPauseBikeEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateAutoPauseRunEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_RUN_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateAutoPauseOtherEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateAutoPauseSpeedThresholdKmh(thresholdKmh: Float) {
+        val clamped = thresholdKmh.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD_KMH
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clamped
+        }
+    }
+
+    suspend fun updateAutoPauseDebounceSec(debounceSec: Int) {
+        val clamped = debounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_DEBOUNCE_SEC
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clamped
         }
     }
 

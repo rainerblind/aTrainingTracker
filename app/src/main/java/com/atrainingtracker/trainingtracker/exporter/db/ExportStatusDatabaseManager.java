@@ -28,11 +28,14 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.atrainingtracker.database.DatabaseConstants;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import com.atrainingtracker.trainingtracker.exporter.ExportStatus;
 import com.atrainingtracker.trainingtracker.exporter.ExportType;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
+import com.atrainingtracker.util.CursorUtils;
+import com.atrainingtracker.util.EnumUtils;
 
 import java.util.EnumMap;
 
@@ -181,24 +184,25 @@ public class ExportStatusDatabaseManager {
         }
 
         EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>> result = new EnumMap<>(ExportType.class);
-        Cursor cursor;
 
         for (ExportType exportType : ExportType.values()) {
-
             EnumMap<FileFormat, ExportStatus> enumMap = new EnumMap<>(FileFormat.class);
             for (FileFormat fileFormat : FileFormat.values()) {
-                cursor = db.query(ExportStatusDbHelper.TABLE,
+                try (Cursor cursor = db.query(ExportStatusDbHelper.TABLE,
                         new String[]{EXPORT_STATUS},
                         WorkoutSummaries.FILE_BASE_NAME + "=? AND " + TYPE + "=? AND " + FORMAT + "=?",
                         new String[]{fileBaseName, exportType.name(), fileFormat.name()},
                         null,
                         null,
-                        null);
-                if (cursor.getCount() > 0) {
-                    cursor.moveToFirst();
-                    enumMap.put(fileFormat, ExportStatus.valueOf(cursor.getString(cursor.getColumnIndex(EXPORT_STATUS))));
+                        null)) {
+                    ExportStatus status = CursorUtils.mapFirst(cursor, null, c -> {
+                        int colIdx = c.getColumnIndex(EXPORT_STATUS);
+                        return colIdx >= 0 ? EnumUtils.safeValueOfOrNull(ExportStatus.class, c.getString(colIdx), TAG) : null;
+                    });
+                    if (status != null) {
+                        enumMap.put(fileFormat, status);
+                    }
                 }
-                cursor.close();
             }
             result.put(exportType, enumMap);
         }
@@ -231,15 +235,15 @@ public class ExportStatusDatabaseManager {
                 new String[]{fileBaseName},
                 null, null, null)) {
             while (cursor.moveToNext()) {
-                try {
-                    ExportType type = ExportType.valueOf(cursor.getString(0));
-                    FileFormat format = FileFormat.valueOf(cursor.getString(1));
-                    ExportStatus status = ExportStatus.valueOf(cursor.getString(2));
-                    String answer = cursor.getString(3);
-                    result.add(new ExportRow(type, format, status, answer));
-                } catch (IllegalArgumentException e) {
-                    Log.w(TAG, "Invalid enum value in DB", e);
+                ExportType type = EnumUtils.safeValueOfOrNull(ExportType.class, cursor.getString(0), TAG);
+                FileFormat format = EnumUtils.safeValueOfOrNull(FileFormat.class, cursor.getString(1), TAG);
+                ExportStatus status = EnumUtils.safeValueOfOrNull(ExportStatus.class, cursor.getString(2), TAG);
+                if (type == null || format == null || status == null) {
+                    Log.w(TAG, "Skipping corrupted or unrecognized export row");
+                    continue;
                 }
+                String answer = cursor.getString(3);
+                result.add(new ExportRow(type, format, status, answer));
             }
         }
         return result;
@@ -255,21 +259,23 @@ public class ExportStatusDatabaseManager {
         }
 
         EnumMap<FileFormat, ExportStatus> result = new EnumMap<>(FileFormat.class);
-        Cursor cursor;
 
         for (FileFormat fileFormat : FileFormat.values()) {
-            cursor = db.query(ExportStatusDbHelper.TABLE,
+            try (Cursor cursor = db.query(ExportStatusDbHelper.TABLE,
                     new String[]{EXPORT_STATUS},
                     WorkoutSummaries.FILE_BASE_NAME + "=? AND " + TYPE + "=? AND " + FORMAT + "=?",
                     new String[]{fileBaseName, exportType.name(), fileFormat.name()},
                     null,
                     null,
-                    null);
-            if (cursor.getCount() > 0) {
-                cursor.moveToFirst();
-                result.put(fileFormat, ExportStatus.valueOf(cursor.getString(cursor.getColumnIndex(EXPORT_STATUS))));
+                    null)) {
+                ExportStatus status = CursorUtils.mapFirst(cursor, null, c -> {
+                    int colIdx = c.getColumnIndex(EXPORT_STATUS);
+                    return colIdx >= 0 ? EnumUtils.safeValueOfOrNull(ExportStatus.class, c.getString(colIdx), TAG) : null;
+                });
+                if (status != null) {
+                    result.put(fileFormat, status);
+                }
             }
-            cursor.close();
         }
 
         if (DEBUG) Log.d(TAG, "getExportStatus finished");
@@ -287,22 +293,18 @@ public class ExportStatusDatabaseManager {
             return null;
         }
 
-        ExportStatus exportStatus = null;
-
-        Cursor cursor = db.query(ExportStatusDbHelper.TABLE,
+        try (Cursor cursor = db.query(ExportStatusDbHelper.TABLE,
                 new String[]{EXPORT_STATUS},
                 WorkoutSummaries.FILE_BASE_NAME + "=? AND " + TYPE + "=? AND " + FORMAT + "=?",
                 new String[]{exportInfo.getFileBaseName(), exportInfo.getExportType().name(), exportInfo.getFileFormat().name()},
                 null,
                 null,
-                null);
-        if (cursor.getCount() > 0) {
-            cursor.moveToFirst();
-            exportStatus = ExportStatus.valueOf(cursor.getString(cursor.getColumnIndex(EXPORT_STATUS)));
+                null)) {
+            return CursorUtils.mapFirst(cursor, null, c -> {
+                int colIdx = c.getColumnIndex(EXPORT_STATUS);
+                return colIdx >= 0 ? EnumUtils.safeValueOfOrNull(ExportStatus.class, c.getString(colIdx), TAG) : null;
+            });
         }
-        cursor.close();
-
-        return exportStatus;
     }
 
 
@@ -315,22 +317,18 @@ public class ExportStatusDatabaseManager {
             return null;
         }
 
-        String exportAnswer = null;
-
-        Cursor cursor = db.query(ExportStatusDbHelper.TABLE,
+        try (Cursor cursor = db.query(ExportStatusDbHelper.TABLE,
                 new String[]{ANSWER},
                 WorkoutSummaries.FILE_BASE_NAME + "=? AND " + TYPE + "=? AND " + FORMAT + "=?",
                 new String[]{exportInfo.getFileBaseName(), exportInfo.getExportType().name(), exportInfo.getFileFormat().name()},
                 null,
                 null,
-                null);
-        if (cursor.getCount() > 0) {
-            cursor.moveToFirst();
-            exportAnswer = cursor.getString(cursor.getColumnIndex(ANSWER));
+                null)) {
+            return CursorUtils.mapFirst(cursor, null, c -> {
+                int colIdx = c.getColumnIndex(ANSWER);
+                return colIdx >= 0 ? c.getString(colIdx) : null;
+            });
         }
-        cursor.close();
-
-        return exportAnswer;
     }
 
     public void deleteWorkout(String baseFileName) {

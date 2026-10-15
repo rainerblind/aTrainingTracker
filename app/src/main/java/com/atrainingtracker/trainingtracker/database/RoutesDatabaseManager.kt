@@ -26,6 +26,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
@@ -599,11 +600,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
 
     internal fun mapCursorToRouteWaypoint(cursor: android.database.Cursor, indices: WaypointIndices): RouteWaypoint {
         val typeStr = cursor.getString(indices.typeIdx)
-        val type = try {
-            WaypointType.valueOf(typeStr)
-        } catch (_: Exception) {
-            WaypointType.GENERIC
-        }
+        val type = safeEnumValueOf(typeStr, WaypointType.GENERIC)
         return RouteWaypoint(
             id = cursor.getLong(indices.idIdx),
             routeId = cursor.getLong(indices.routeIdIdx),
@@ -671,11 +668,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         val syncedAt = if (indices.syncedAtIdx != -1 && !cursor.isNull(indices.syncedAtIdx)) cursor.getLong(indices.syncedAtIdx) else 0L
 
         val sportString = cursor.getString(indices.sportIdx)
-        val sportType = try {
-            BSportType.valueOf(sportString)
-        } catch (_: Exception) {
-            BSportType.UNKNOWN
-        }
+        val sportType = safeEnumValueOf(sportString, BSportType.UNKNOWN)
 
         return RouteSummary(
             id = cursor.getLong(indices.idIdx),

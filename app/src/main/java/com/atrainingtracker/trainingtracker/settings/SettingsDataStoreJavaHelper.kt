@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
+import com.atrainingtracker.banalservice.BSportType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -47,7 +48,9 @@ object SettingsDataStoreJavaHelper {
                 2 -> dataStore.getZone2MaxFlow(zoneType).first()
                 3 -> dataStore.getZone3MaxFlow(zoneType).first()
                 4 -> dataStore.getZone4MaxFlow(zoneType).first()
-                else -> 0 // Fallback
+                5 -> if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) dataStore.getZone5MaxFlow(zoneType).first() else 0
+                6 -> if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) dataStore.getZone6MaxFlow(zoneType).first() else 0
+                else -> 0 // Fallback for open-ended or out-of-bounds zones
             }
         }
     }
@@ -69,9 +72,13 @@ object SettingsDataStoreJavaHelper {
      */
     @JvmStatic
     fun getTuningConfig(context: Context): TuningConfig {
-        val tuningDataStore = TuningPreferencesDataStore(context)
-        return runBlocking(Dispatchers.IO) {
-            tuningDataStore.tuningConfigFlow.first()
+        return try {
+            val tuningDataStore = TuningPreferencesDataStore(context)
+            runBlocking(Dispatchers.IO) {
+                tuningDataStore.tuningConfigFlow.first()
+            }
+        } catch (t: Throwable) {
+            TuningConfig()
         }
     }
 
@@ -97,5 +104,81 @@ object SettingsDataStoreJavaHelper {
     @JvmStatic
     fun getSlopeMinSpeed(context: Context): Float {
         return getTuningConfig(context).slopeMinSpeedMps
+    }
+
+    /**
+     * Synchronous bridge to fetch athlete Functional Threshold Power (FTP) in Watts.
+     * Returns null if unconfigured or <= 0.
+     */
+    @JvmStatic
+    fun getFtp(context: Context): Int? {
+        return try {
+            val dataStore = SettingsDataStore(context)
+            runBlocking(Dispatchers.IO) {
+                dataStore.ftpFlow.first()
+            }
+        } catch (t: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * Synchronous bridge to determine if auto-pause is enabled for the specified sport type.
+     */
+    @JvmStatic
+    fun isAutoPauseEnabled(context: Context, sportType: BSportType): Boolean {
+        val config = getTuningConfig(context)
+        return when (sportType) {
+            BSportType.BIKE -> config.autoPauseBikeEnabled
+            BSportType.RUN -> config.autoPauseRunEnabled
+            else -> config.autoPauseOtherEnabled
+        }
+    }
+
+    /**
+     * Synchronous bridge to fetch the auto-pause speed threshold in km/h.
+     */
+    @JvmStatic
+    fun getAutoPauseSpeedThresholdKmh(context: Context): Float {
+        return getTuningConfig(context).autoPauseSpeedThresholdKmh
+    }
+
+    /**
+     * Synchronous bridge to fetch the auto-pause debounce window in seconds.
+     */
+    @JvmStatic
+    fun getAutoPauseDebounceSec(context: Context): Int {
+        return getTuningConfig(context).autoPauseDebounceSec
+    }
+
+    /**
+     * Synchronous bridge to fetch athlete body weight in kilograms (REQ-TRK-019).
+     * Returns 0.0f if unconfigured or <= 0.
+     */
+    @JvmStatic
+    fun getAthleteWeightKg(context: Context): Float {
+        return try {
+            val dataStore = SettingsDataStore.getInstance(context)
+            runBlocking(Dispatchers.IO) {
+                dataStore.athleteWeightKgFlow.first()
+            }
+        } catch (t: Throwable) {
+            0.0f
+        }
+    }
+
+    /**
+     * Synchronous bridge to persist athlete body weight in kilograms (REQ-TRK-019).
+     */
+    @JvmStatic
+    fun setAthleteWeightKg(context: Context, weightKg: Float) {
+        try {
+            val dataStore = SettingsDataStore.getInstance(context)
+            runBlocking(Dispatchers.IO) {
+                dataStore.setAthleteWeightKg(weightKg)
+            }
+        } catch (t: Throwable) {
+            // ignore in tests or headless contexts
+        }
     }
 }

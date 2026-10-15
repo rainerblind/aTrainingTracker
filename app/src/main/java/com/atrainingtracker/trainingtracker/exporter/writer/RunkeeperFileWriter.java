@@ -109,15 +109,15 @@ public class RunkeeperFileWriter extends BaseFileWriter {
 
         WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
         SQLiteDatabase db = databaseManager.getDatabase();
-        Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
+        try (Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
                 null,
                 null,
                 null,
                 null,
                 null,
-                null);
+                null)) {
 
-        int lines = cursor.getCount();
+        int lines = cursor != null ? cursor.getCount() : 0;
         int count = 0;
         boolean isFirst = true;
 
@@ -200,8 +200,7 @@ public class RunkeeperFileWriter extends BaseFileWriter {
 
         bufferedWriter.write("}\n");
         bufferedWriter.close();
-
-        cursor.close();
+        }
 
         return new ExportResult(true, false, "successfully exported a Runkeeper file");
 

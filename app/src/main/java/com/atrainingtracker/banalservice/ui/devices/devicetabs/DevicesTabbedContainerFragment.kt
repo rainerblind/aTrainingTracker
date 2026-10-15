@@ -33,6 +33,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
@@ -49,7 +50,7 @@ class DevicesTabbedContainerFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 val startTab = arguments?.getInt(STARTING_TAB, 0) ?: 0
-                val deviceType = arguments?.getString(BANALService.DEVICE_TYPE)?.let { DeviceType.valueOf(it) } ?: DeviceType.ALL
+                val deviceType = safeEnumValueOf(arguments?.getString(BANALService.DEVICE_TYPE), DeviceType.ALL)
                 
                 // If only a protocol is specified (all device types), default to the "Known" tab (index 2)
                 val finalInitialTab = if (deviceType == DeviceType.ALL && startTab == 0) 2 else startTab

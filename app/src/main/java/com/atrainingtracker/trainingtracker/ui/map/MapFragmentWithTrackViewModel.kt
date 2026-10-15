@@ -23,6 +23,7 @@ import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
@@ -65,7 +66,7 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
         val saved = sharedPreferences.getStringSet(PREF_GENERAL_MAP_ENABLED_LAYERS, null)
             ?: return GeneralMapLayer.entries.toSet()
         return saved.mapNotNull { name ->
-            runCatching { GeneralMapLayer.valueOf(name) }.getOrNull()
+            safeEnumValueOfOrNull<GeneralMapLayer>(name)
         }.toSet()
     }
 

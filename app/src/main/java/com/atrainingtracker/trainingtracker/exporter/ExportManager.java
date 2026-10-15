@@ -43,6 +43,7 @@ import com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploader;
 import com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploader;
 import com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploader;
 import com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriter;
+import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriter;
@@ -51,6 +52,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData;
 
 import org.json.JSONException;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -238,6 +240,52 @@ public class ExportManager {
         broadcastExportStatusChanged(mContext, fileBaseName);
     }
 
+    /**
+     * Defensive pre-crop cache invalidation: cancels running export tasks and deletes cached export files.
+     * Marks export status as WAITING so that post-crop export refreshes cleanly.
+     *
+     * @param fileBaseName The unique workout base name.
+     */
+    public void invalidateWorkoutExport(@NonNull String fileBaseName) {
+        if (DEBUG) Log.d(TAG, "invalidateWorkoutExport: " + fileBaseName);
+        if (mContext == null) return;
+
+        // 1. Cancel running / scheduled WorkManager tasks for this workout
+        try {
+            WorkManager.getInstance(mContext).cancelAllWorkByTag(fileBaseName);
+            WorkManager.getInstance(mContext).cancelUniqueWork("export_" + fileBaseName);
+        } catch (Throwable t) {
+            Log.w(TAG, "Could not cancel WorkManager tasks for " + fileBaseName, t);
+        }
+
+        // 2. Delete cached files defensively
+        File baseDir = BaseExporter.getBaseDirFile(mContext);
+        for (FileFormat format : FileFormat.values()) {
+            try {
+                File targetFile = new File(baseDir, format.getDirName() + File.separator + fileBaseName + format.getFileEnding());
+                if (targetFile.exists()) {
+                    boolean deleted = targetFile.delete();
+                    if (DEBUG) Log.d(TAG, "Deleted export file: " + targetFile.getAbsolutePath() + " (success=" + deleted + ")");
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "Failed deleting cached export file for " + format + ": " + fileBaseName, t);
+            }
+        }
+
+        // 3. Mark export status as WAITING in DB
+        try {
+            ContentValues values = new ContentValues();
+            values.put(ExportStatusDatabaseManager.EXPORT_STATUS, ExportStatus.WAITING.name());
+            values.put(ExportStatusDatabaseManager.ANSWER, "");
+            for (FileFormat format : FileFormat.values()) {
+                exportStatusDatabaseManager.updateExportStatus(values, fileBaseName, null, format);
+            }
+            broadcastExportStatusChanged(mContext, fileBaseName);
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed resetting export status in database for " + fileBaseName, t);
+        }
+    }
+
     /***********************************************************************************************
      * non-public stuff
      **********************************************************************************************/
@@ -382,18 +430,14 @@ public class ExportManager {
     private String getFileBaseName(long workoutId) {
         SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(mContext).getDatabase();
 
-        Cursor cursor = db.query(WorkoutSummaries.TABLE,
+        try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
                 new String[]{WorkoutSummaries.FILE_BASE_NAME},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
                 null,
                 null,
-                null);
-
-        cursor.moveToFirst();
-        String fileBaseName = cursor.getString(0);
-        cursor.close();
-
-        return fileBaseName;
+                null)) {
+            return CursorUtils.mapFirst(cursor, null, c -> c.getString(0));
+        }
     }
 }

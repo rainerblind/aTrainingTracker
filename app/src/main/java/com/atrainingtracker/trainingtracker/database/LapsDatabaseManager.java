@@ -22,6 +22,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteFullException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.util.Log;
@@ -340,6 +341,71 @@ public class LapsDatabaseManager {
         } catch (Exception e) {
             Log.e(TAG, "Error updating lap details: workoutId=" + workoutId + ", lapNr=" + lapNr, e);
             return false;
+        }
+    }
+
+    /**
+     * Replaces existing laps for a cropped workout with the recalculated laps.
+     * Preserves name and description notes, updates sequential contiguous lapNr (1..K),
+     * and strictly removes phantom / zero-duration laps.
+     *
+     * @param workoutId The ID of the workout.
+     * @param recalculatedLaps The list of updated LapData objects.
+     */
+    public void replaceCroppedLaps(long workoutId, @NonNull java.util.List<com.atrainingtracker.trainingtracker.ui.aftermath.LapData> recalculatedLaps) {
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            db.delete(Laps.TABLE, Laps.WORKOUT_ID + " = ?", new String[]{String.valueOf(workoutId)});
+            long newLapNr = 1;
+            for (com.atrainingtracker.trainingtracker.ui.aftermath.LapData lap : recalculatedLaps) {
+                // Reject zero-duration/zero-distance phantom laps (REQ-TRK-002 / ATT-896)
+                if (lap.getTimeTotalS() <= 0 && lap.getDistanceTotalM() <= 0.0) {
+                    continue;
+                }
+                double avgSpeed = lap.getSpeedAverageMps();
+                double safeAverageSpeed = (Double.isNaN(avgSpeed) || Double.isInfinite(avgSpeed))
+                        ? ((lap.getTimeTotalS() > 0) ? (lap.getDistanceTotalM() / lap.getTimeTotalS()) : 0.0)
+                        : avgSpeed;
+
+                ContentValues values = new ContentValues();
+                values.put(Laps.WORKOUT_ID, workoutId);
+                values.put(Laps.LAP_NR, newLapNr++);
+                if (lap.getTimeStart() != null) {
+                    values.put(Laps.TIME_START, lap.getTimeStart());
+                }
+                values.put(Laps.TIME_TOTAL_s, lap.getTimeTotalS());
+                values.put(Laps.DISTANCE_TOTAL_m, lap.getDistanceTotalM());
+                values.put(Laps.SPEED_AVERAGE_mps, safeAverageSpeed);
+                if (lap.getName() != null) {
+                    values.put(Laps.NAME, lap.getName());
+                }
+                if (lap.getDescription() != null) {
+                    values.put(Laps.DESCRIPTION, lap.getDescription());
+                }
+                db.insertOrThrow(Laps.TABLE, null, values);
+            }
+
+            // Invariant: Retained workout must never have zero laps (prevents UI crash)
+            if (newLapNr == 1) {
+                ContentValues fallbackLap = new ContentValues();
+                fallbackLap.put(Laps.WORKOUT_ID, workoutId);
+                fallbackLap.put(Laps.LAP_NR, 1);
+                fallbackLap.put(Laps.TIME_TOTAL_s, 1);
+                fallbackLap.put(Laps.DISTANCE_TOTAL_m, 0.0);
+                fallbackLap.put(Laps.SPEED_AVERAGE_mps, 0.0);
+                db.insertOrThrow(Laps.TABLE, null, fallbackLap);
+            }
+
+            db.setTransactionSuccessful();
+        } catch (SQLiteFullException e) {
+            Log.e(TAG, "Disk full during replaceCroppedLaps, rolling back cleanly: " + e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            Log.e(TAG, "Transaction aborted during replaceCroppedLaps, rolling back cleanly: " + e.getMessage(), e);
+            throw e;
+        } finally {
+            db.endTransaction();
         }
     }
 

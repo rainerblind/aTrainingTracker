@@ -35,6 +35,9 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData;
+import com.atrainingtracker.database.CursorProvider;
+import com.atrainingtracker.util.CursorUtils;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.PolyUtil;
@@ -400,6 +403,7 @@ public class WorkoutSummariesDatabaseManager {
     /**
      * Retrieves a cursor for a specific workout ID.
      */
+    @CursorProvider
     public Cursor getWorkoutCursor(long workoutId) {
         return getDatabase().query(WorkoutSummaries.TABLE,
                 null,
@@ -411,6 +415,7 @@ public class WorkoutSummariesDatabaseManager {
     /**
      * Returns a cursor for all workouts sorted descending (newest first).
      */
+    @CursorProvider
     public Cursor getCursorForAllWorkouts() {
         return getDatabase().query(
                 WorkoutSummaries.TABLE,
@@ -422,6 +427,7 @@ public class WorkoutSummariesDatabaseManager {
     /**
      * Returns a cursor for all workouts sorted ascending (oldest first).
      */
+    @CursorProvider
     public Cursor getCursorForAllWorkoutsAsc() {
         return getDatabase().query(
                 WorkoutSummaries.TABLE,
@@ -452,6 +458,7 @@ public class WorkoutSummariesDatabaseManager {
      * @param endTimeS End of range in seconds.
      * @return A cursor sorted by start time ascending.
      */
+    @CursorProvider
     public Cursor getWorkoutsInRangeCursor(long startTimeS, long endTimeS) {
         String selection = "strftime('%s', " + WorkoutSummaries.TIME_START + ") >= ? AND " +
                 "strftime('%s', " + WorkoutSummaries.TIME_START + ") <= ? AND " +
@@ -791,10 +798,16 @@ public class WorkoutSummariesDatabaseManager {
                 if (!cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
                     pos = new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx));
                 }
+                SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, cursor.getString(sensorIdx), TAG);
+                ExtremaType extremaType = EnumUtils.safeValueOfOrNull(ExtremaType.class, cursor.getString(typeIdx), TAG);
+                if (sensorType == null || extremaType == null) {
+                    Log.w(TAG, "Skipping corrupted or unrecognized extrema record at cursor pos " + cursor.getPosition());
+                    continue;
+                }
                 records.add(new ExtremaRecord(
                         cursor.getLong(wIdIdx),
-                        SensorType.valueOf(cursor.getString(sensorIdx)),
-                        ExtremaType.valueOf(cursor.getString(typeIdx)),
+                        sensorType,
+                        extremaType,
                         cursor.getDouble(valIdx),
                         pos
                 ));
@@ -927,6 +940,50 @@ public class WorkoutSummariesDatabaseManager {
         }
 
         getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+    }
+
+    /**
+     * Data holder representing an extrema record to persist or update.
+     */
+    public static class ExtremaUpdateRecord {
+        @NonNull public final SensorType sensorType;
+        @NonNull public final ExtremaType extremaType;
+        public final double value;
+        @Nullable public final LatLng position;
+
+        public ExtremaUpdateRecord(@NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position) {
+            this.sensorType = sensorType;
+            this.extremaType = extremaType;
+            this.value = value;
+            this.position = position;
+        }
+    }
+
+    /**
+     * Atomically updates summary scalars, encoded streams, bounding boxes, and replaces extrema values
+     * for a cropped workout session within a single SQLite transaction.
+     *
+     * @param workoutId The ID of the workout.
+     * @param summaryValues The updated summary columns (e.g. distance, active time, streams, bounds).
+     * @param extremaUpdates Optional list of updated extrema values to replace existing extrema.
+     */
+    public void updateCroppedWorkoutSummary(long workoutId, @NonNull ContentValues summaryValues, @Nullable java.util.List<ExtremaUpdateRecord> extremaUpdates) {
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            if (summaryValues.size() > 0) {
+                db.update(WorkoutSummaries.TABLE, summaryValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+            }
+            if (extremaUpdates != null) {
+                db.delete(WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
+                for (ExtremaUpdateRecord record : extremaUpdates) {
+                    updateExtremaValue(db, workoutId, record.sensorType, record.extremaType, record.value, record.position);
+                }
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
     }
 
     /**
@@ -1117,7 +1174,12 @@ public class WorkoutSummariesDatabaseManager {
             while (cursor.moveToNext()) {
                 String sensorTypeName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.SENSOR_TYPE));
                 if (DEBUG) Log.i(TAG, "got sensor: " + sensorTypeName);
-                accumulatedSensorTypesSet.add(SensorType.valueOf(sensorTypeName));
+                SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, sensorTypeName, TAG);
+                if (sensorType != null) {
+                    accumulatedSensorTypesSet.add(sensorType);
+                } else {
+                    Log.w(TAG, "Skipping unrecognized accumulated sensor type: " + sensorTypeName);
+                }
             }
         }
 
@@ -1224,22 +1286,21 @@ public class WorkoutSummariesDatabaseManager {
                 "COUNT(*)" // count of workouts
         };
 
-        Cursor cursor = db.query(
+        try (Cursor cursor = db.query(
                 WorkoutSummaries.TABLE,
                 columns,
                 column + "=?",
                 new String[]{String.valueOf(id)},
-                null, null, null
-        );
+                null, null, null)) {
 
-        if (cursor != null && cursor.moveToFirst()) {
-            stats.totalDistanceM = cursor.getDouble(0);
-            stats.totalActiveTimeS = cursor.getLong(1);
-            stats.totalAscentM = cursor.getInt(2);
-            stats.firstUsage = cursor.getString(3);
-            stats.lastUsage = cursor.getString(4);
-            stats.count = cursor.getInt(5); // Extract count
-            cursor.close();
+            if (cursor != null && cursor.moveToFirst()) {
+                stats.totalDistanceM = cursor.getDouble(0);
+                stats.totalActiveTimeS = cursor.getLong(1);
+                stats.totalAscentM = cursor.getInt(2);
+                stats.firstUsage = cursor.getString(3);
+                stats.lastUsage = cursor.getString(4);
+                stats.count = cursor.getInt(5); // Extract count
+            }
         }
 
         return stats;
@@ -1610,37 +1671,46 @@ public class WorkoutSummariesDatabaseManager {
                 addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.SPORT_ID, "int", "0");
                 // addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.B_SPORT,  "text");
 
-                Cursor cursor = db.query(WorkoutSummaries.TABLE,
+                ContentValues contentValues = new ContentValues();
+                try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
                         new String[]{WorkoutSummaries.C_ID, "sport"},
                         null, null,
-                        null, null, null);
-                ContentValues contentValues = new ContentValues();
-                while (cursor.moveToNext()) {
-                    contentValues.clear();
-                    long id = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-                    String sport = cursor.getString(cursor.getColumnIndex("sport"));
-                    contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
-                    contentValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sport).name());
-                    db.update(WorkoutSummaries.TABLE, contentValues,
-                            WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
-                }
-                cursor.close();
+                        null, null, null)) {
 
+                    if (cursor != null) {
+                        int idCol = cursor.getColumnIndex(WorkoutSummaries.C_ID);
+                        int sportCol = cursor.getColumnIndex("sport");
+                        while (cursor.moveToNext()) {
+                            contentValues.clear();
+                            long id = idCol != -1 ? cursor.getLong(idCol) : -1L;
+                            String sport = sportCol != -1 ? cursor.getString(sportCol) : "";
+                            contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
+                            contentValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sport).name());
+                            db.update(WorkoutSummaries.TABLE, contentValues,
+                                    WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                        }
+                    }
+                }
 
                 addColumn(db, "WorkoutNamePatterns", "sportId", "text", "???");
 
-                cursor = db.query("WorkoutNamePatterns",
+                try (Cursor cursor = db.query("WorkoutNamePatterns",
                         new String[]{WorkoutSummaries.C_ID, "sport"},
                         null, null,
-                        null, null, null);
-                while (cursor.moveToNext()) {
-                    long id = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-                    String sport = cursor.getString(cursor.getColumnIndex("sport"));
-                    contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
-                    db.update("WorkoutNamePatterns", contentValues,
-                            WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                        null, null, null)) {
+
+                    if (cursor != null) {
+                        int idCol = cursor.getColumnIndex(WorkoutSummaries.C_ID);
+                        int sportCol = cursor.getColumnIndex("sport");
+                        while (cursor.moveToNext()) {
+                            long id = idCol != -1 ? cursor.getLong(idCol) : -1L;
+                            String sport = sportCol != -1 ? cursor.getString(sportCol) : "";
+                            contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
+                            db.update("WorkoutNamePatterns", contentValues,
+                                    WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                        }
+                    }
                 }
-                cursor.close();
             }
 
             if (oldVersion < 12) {
@@ -1774,8 +1844,12 @@ public class WorkoutSummariesDatabaseManager {
                     double value = extremaCursor.getDouble(valueIdx);
 
                     try {
-                        SensorType sensorType = SensorType.valueOf(sensorTypeName);
-                        ExtremaType extremaType = ExtremaType.valueOf(extremaTypeName);
+                        SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, sensorTypeName, TAG);
+                        ExtremaType extremaType = EnumUtils.safeValueOfOrNull(ExtremaType.class, extremaTypeName, TAG);
+                        if (sensorType == null || extremaType == null) {
+                            Log.w(TAG, "Skipping legacy position migration for unrecognized enum: " + sensorTypeName + " " + extremaTypeName);
+                            continue;
+                        }
 
                         // Use the shared logic in WorkoutSamplesDatabaseManager to find the location
                         // Pass the database currently being upgraded to avoid recursion

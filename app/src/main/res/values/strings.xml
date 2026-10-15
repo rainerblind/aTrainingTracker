@@ -154,6 +154,8 @@
     <string name="units_calories" translatable="false">kcal</string>
     <string name="units_heart_rate" translatable="false">bpm</string>
     <string name="units_power" translatable="false">W</string>
+    <string name="units_power_to_weight" translatable="false">W/kg</string>
+    <string name="units_work_kj" translatable="false">kJ</string>
     <string name="units_temperature" translatable="false">°C</string>
     <string name="units_time_basic" translatable="false">s</string>
     <string name="units_torque" translatable="false">Nm</string>
@@ -255,6 +257,16 @@
     <string name="position_short">pos.</string>
     <string name="power">power</string>
     <string name="power_short">power</string>
+    <string name="power_to_weight">Power-to-weight ratio</string>
+    <string name="power_to_weight_short">W/kg</string>
+    <string name="normalized_power">Normalized Power</string>
+    <string name="normalized_power_short" translatable="false">NP</string>
+    <string name="intensity_factor">Intensity Factor</string>
+    <string name="intensity_factor_short" translatable="false">IF</string>
+    <string name="work_kj">Mechanical Work</string>
+    <string name="work_kj_short" translatable="false">kJ</string>
+    <string name="tss">Training Stress Score</string>
+    <string name="tss_short" translatable="false">TSS</string>
     <string name="speed">speed</string>
     <string name="speed_short">spd</string>
     <string name="current_sensors">current sensors</string>
@@ -777,6 +789,8 @@
     <string name="zone_3_label">Zone 3 (Tempo)</string>
     <string name="zone_4_label">Zone 4 (Threshold)</string>
     <string name="zone_5_label">Zone 5 (Anaerobic)</string>
+    <string name="zone_6_label">Zone 6 (Anaerobic Capacity)</string>
+    <string name="zone_7_label">Zone 7 (Neuromuscular Power)</string>
 
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>
@@ -786,6 +800,9 @@
     <string name="zone_display_left_bar">Left bar</string>
     <string name="zone_display_right_bar">Right bar</string>
     <string name="zone_display_text_color">Text color</string>
+    <string name="zone_display_gauge">Zone gauge bar</string>
+    <string name="pedal_balance_left_marker">L</string>
+    <string name="pedal_balance_right_marker">R</string>
     <string name="zone_display_preview_title">Preview</string>
 
     <string name="url_privacy">https://github.com/rainerblind/aTrainingTracker/blob/develop/privacy.md</string> <!-- TODO: replace develop with master -->
@@ -1667,8 +1684,10 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Power Zones</string>
-    <!-- Telemetry Frequency Histogram (ATT-1845 / REQ-UI-231) -->
+    <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 Zones</string>
+    <string name="zone_mode_columns">Columns</string>
+    <string name="zone_mode_stacked_bar">Stacked Bar</string>
     <string name="zone_mode_histogram">Histogram</string>
     <string name="aftermath_laps_splits_title">Laps &amp; Splits</string>
     <string name="split_badge_best">Best</string>
@@ -1961,6 +1980,84 @@
     <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
     <string name="tuning_nav_cue_distance_title">Navigation Cue Distance</string>
     <string name="tuning_nav_cue_distance_desc">Distance before upcoming turn to display navigation cue prompts</string>
+    <!-- First-Time Stop Tracking Coachmark (ATT-3387 / REQ-UI-367) -->
+    <string name="coachmark_stop_tracking_hint">Swipe right or tap the leftmost tab to pause or stop your workout.</string>
+    <string name="coachmark_stop_tracking_show_tab">Show Control Tab</string>
+    <string name="coachmark_stop_tracking_dismiss">Got it</string>
+
+    <!-- Crop Start and End Points of Recorded Workout (ATT-3274 / REQ-UI-368) -->
+    <string name="crop_workout_title">Crop workout</string>
+    <string name="crop_workout_action">Crop</string>
+    <string name="crop_workout_confirm_title">Permanently crop workout?</string>
+    <string name="crop_workout_confirm_message">Are you sure you want to crop this workout? Data outside the selected range will be permanently deleted. This action cannot be undone.</string>
+    <string name="crop_workout_confirm_action">Crop permanently</string>
+    <string name="crop_workout_progress">Cropping workout…</string>
+    <string name="crop_workout_success">Workout cropped successfully</string>
+    <string name="crop_insufficient_storage">Insufficient storage to crop workout (at least %d MB required).</string>
+    <string name="crop_export_failed_retry">Failed to recreate export files. Please retry.</string>
+    <string name="crop_force_reexport">Force Re-Export</string>
+    <!-- Grade Legend (ATT-3391 / REQ-UI-371) -->
+    <string name="grade_legend_under_2">&lt; 2%</string>
+    <string name="grade_legend_2_to_5">2 – 5%</string>
+    <string name="grade_legend_5_to_10">5 – 10%</string>
+    <string name="grade_legend_10_to_15">10 – 15%</string>
+    <string name="grade_legend_15_to_20">15 – 20%</string>
+    <string name="grade_legend_20_to_25">20 – 25%</string>
+    <string name="grade_legend_over_25">&gt; 25%</string>
+    <!-- Automated Zone Calculation (ATT-3188) -->
+    <string name="zone_calc_button">Calculate Zones</string>
+    <string name="zone_calc_dialog_title_power">Calculate Cycling Power Zones</string>
+    <string name="zone_calc_dialog_title_hr">Calculate Heart Rate Zones</string>
+    <string name="zone_calc_ftp_label">Functional Threshold Power (FTP)</string>
+    <string name="zone_calc_hr_max_label">Maximum Heart Rate (HRmax)</string>
+    <string name="zone_calc_hr_rest_label">Resting Heart Rate (HRrest)</string>
+    <string name="zone_calc_method_label">Calculation Method</string>
+    <string name="zone_calc_method_max_hr">% HRmax</string>
+    <string name="zone_calc_method_karvonen">Karvonen (HRR)</string>
+    <string name="zone_calc_preview_title">Calculated Zones Preview</string>
+    <string name="zone_calc_apply_button">Apply</string>
+    <string name="zone_calc_cancel_button">Cancel</string>
+    <string name="zone_calc_status_calculated">Calculated</string>
+    <string name="zone_calc_status_customized">Customized</string>
+    <string name="zone_calc_calibration_recommended">Calibration recommended</string>
+    <string name="zone_calc_last_updated">Last updated: %s</string>
+    <string name="zone_calc_overwrite_warning_title">Overwrite custom zones?</string>
+    <string name="zone_calc_overwrite_warning_message">Warning: This will overwrite all manually configured zones with standard zones for FTP %d W. Do you want to proceed?</string>
+    <string name="zone_calc_error_ftp_range">FTP must be between %1$d W and %2$d W</string>
+    <string name="zone_calc_error_hr_max_range">HRmax must be between %1$d bpm and %2$d bpm</string>
+    <string name="zone_calc_error_hr_rest_range">HRrest must be between %1$d bpm and %2$d bpm</string>
+    <string name="zone_calc_error_hr_max_greater_rest">HRmax must be greater than HRrest</string>
+    <string name="zone_calc_error_karvonen_delta">HRmax must be at least 20 bpm higher than HRrest</string>
+    <string name="zone_calc_error_monotonicity">Value must be between %1$d and %2$d</string>
+    <string name="zone_onboarding_hr_banner">New heart rate sensor paired. Set your heart rate zones for personalized training feedback.</string>
+    <string name="zone_onboarding_pwr_banner">New power meter paired. Set your power zones or calculate them from your FTP.</string>
+    <string name="zone_onboarding_dismiss">Dismiss</string>
+
+    <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="tuning_auto_pause_title">Auto-Pause</string>
+    <string name="tuning_auto_pause_desc">Automatically pause recording when stationary</string>
+    <string name="tuning_auto_pause_bike_title">Cycling</string>
+    <string name="tuning_auto_pause_run_title">Running</string>
+    <string name="tuning_auto_pause_other_title">Other Sports</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Pause Speed Threshold</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Speed below which recording is paused</string>
+    <string name="tuning_auto_pause_debounce_title">Pause Debounce Delay</string>
+    <string name="tuning_auto_pause_debounce_desc">Duration below threshold before pausing</string>
+    <string name="cockpit_auto_pause_badge">Auto-Pause</string>
+    <string name="cockpit_auto_pause_resume">Resume Now</string>
+    <string name="cockpit_speed_sensor_lost">Speed Sensor Lost</string>
+
+    <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
+    <string name="athlete_weight_title">Athlete Weight</string>
+    <string name="athlete_weight_label">Weight</string>
+    <string name="athlete_weight_dialog_title">Configure Athlete Weight</string>
+    <string name="athlete_weight_save">Save</string>
+    <string name="athlete_weight_unconfigured">Not configured</string>
+    <string name="athlete_weight_invalid">Please enter a valid weight</string>
+    <string name="athlete_weight_card_description">Required to calculate real-time power-to-weight ratio (W/kg).</string>
+    <string name="athlete_weight_clear">Clear</string>
+    <string name="athlete_weight_edit">Edit</string>
+
 </resources>
 
 

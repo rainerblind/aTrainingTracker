@@ -35,6 +35,9 @@ import androidx.core.content.res.ResourcesCompat;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
+import com.atrainingtracker.database.DatabaseConstants;
+import com.atrainingtracker.util.CursorUtils;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.ArrayList;
@@ -104,35 +107,23 @@ public class SportTypeDatabaseManager {
     public List<Long> getSportTypesIdList() {
         if (DEBUG) Log.i(TAG, "getSportTypesIdList");
 
-        LinkedList<Long> result = new LinkedList<>();
-
-        Cursor cursor = getDatabase().query(SportType.TABLE,
+        try (Cursor cursor = getDatabase().query(SportType.TABLE,
                 null,
                 null, null,
-                null, null, null);
-        while (cursor.moveToNext()) {
-            result.add(cursor.getLong(cursor.getColumnIndex(SportType.C_ID)));
+                null, null, null)) {
+            return CursorUtils.mapList(cursor, c -> c.getLong(c.getColumnIndex(SportType.C_ID)));
         }
-        cursor.close();
-
-        return result;
     }
 
     public List<String> getSportTypesUiNameList() {
         if (DEBUG) Log.i(TAG, "getSportTypesUiNameList");
 
-        LinkedList<String> result = new LinkedList<>();
-
-        Cursor cursor = getDatabase().query(SportType.TABLE,
+        try (Cursor cursor = getDatabase().query(SportType.TABLE,
                 null,
                 null, null,
-                null, null, null);
-        while (cursor.moveToNext()) {
-            result.add(cursor.getString(cursor.getColumnIndex(SportType.UI_NAME)));
+                null, null, null)) {
+            return CursorUtils.mapList(cursor, c -> c.getString(c.getColumnIndex(SportType.UI_NAME)));
         }
-        cursor.close();
-
-        return result;
     }
 
     public List<Long> getSportTypesIdList(BSportType bSportType, double avgSpd) {
@@ -140,34 +131,29 @@ public class SportTypeDatabaseManager {
             Log.i(TAG, "getSportTypesIdList, bSportType=" + bSportType.name() + ", avgSpd=" + avgSpd);
 
         List<Long> result = new LinkedList<>();
-
         SQLiteDatabase db = getDatabase();
-        Cursor cursor;
+
+        String selection;
+        String[] selectionArgs;
         if (bSportType == BSportType.UNKNOWN) {
-            cursor = db.query(SportType.TABLE,
-                    null,
-                    SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
-                    new String[]{Double.toString(avgSpd), Double.toString(avgSpd)},
-                    null, null, null);
+            selection = SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?";
+            selectionArgs = new String[]{Double.toString(avgSpd), Double.toString(avgSpd)};
         } else {
-            cursor = db.query(SportType.TABLE,
-                    null,
-                    SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
-                    new String[]{bSportType.name(), Double.toString(avgSpd), Double.toString(avgSpd)},
-                    null, null, null);
+            selection = SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?";
+            selectionArgs = new String[]{bSportType.name(), Double.toString(avgSpd), Double.toString(avgSpd)};
         }
 
-        if (cursor.getCount() != 0) {
-            while (cursor.moveToNext()) {
-                if (DEBUG)
-                    Log.i(TAG, "adding " + cursor.getString(cursor.getColumnIndex(SportType.UI_NAME)));
-                result.add(cursor.getLong(cursor.getColumnIndex(SportType.C_ID)));
+        try (Cursor cursor = db.query(SportType.TABLE, null, selection, selectionArgs, null, null, null)) {
+            if (cursor != null && cursor.getCount() != 0) {
+                while (cursor.moveToNext()) {
+                    if (DEBUG)
+                        Log.i(TAG, "adding " + cursor.getString(cursor.getColumnIndex(SportType.UI_NAME)));
+                    result.add(cursor.getLong(cursor.getColumnIndex(SportType.C_ID)));
+                }
+            } else {
+                result = getSportTypesIdList(bSportType);
             }
-        } else {
-            result = getSportTypesIdList(bSportType);
         }
-
-        cursor.close();
 
         return result;
     }
@@ -177,32 +163,27 @@ public class SportTypeDatabaseManager {
             Log.i(TAG, "getSportTypesUiNameList, bSportType=" + bSportType.name() + ", avgSpd=" + avgSpd);
 
         List<String> result = new LinkedList<>();
-
         SQLiteDatabase db = getDatabase();
-        Cursor cursor;
+
+        String selection;
+        String[] selectionArgs;
         if (bSportType == BSportType.UNKNOWN) {
-            cursor = db.query(SportType.TABLE,
-                    null,
-                    SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
-                    new String[]{Double.toString(avgSpd), Double.toString(avgSpd)},
-                    null, null, null);
+            selection = SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?";
+            selectionArgs = new String[]{Double.toString(avgSpd), Double.toString(avgSpd)};
         } else {
-            cursor = db.query(SportType.TABLE,
-                    null,
-                    SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?",
-                    new String[]{bSportType.name(), Double.toString(avgSpd), Double.toString(avgSpd)},
-                    null, null, null);
+            selection = SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?";
+            selectionArgs = new String[]{bSportType.name(), Double.toString(avgSpd), Double.toString(avgSpd)};
         }
 
-        if (cursor.getCount() != 0) {
-            while (cursor.moveToNext()) {
-                result.add(cursor.getString(cursor.getColumnIndex(SportType.UI_NAME)));
+        try (Cursor cursor = db.query(SportType.TABLE, null, selection, selectionArgs, null, null, null)) {
+            if (cursor != null && cursor.getCount() != 0) {
+                while (cursor.moveToNext()) {
+                    result.add(cursor.getString(cursor.getColumnIndex(SportType.UI_NAME)));
+                }
+            } else {
+                result = getSportTypesUiNameList(bSportType);
             }
-        } else {
-            result = getSportTypesUiNameList(bSportType);
         }
-
-        cursor.close();
 
         return result;
     }
@@ -211,25 +192,24 @@ public class SportTypeDatabaseManager {
         if (DEBUG) Log.i(TAG, "getSportTypesIdList, bSportType=" + bSportType.name());
 
         List<Long> result = new LinkedList<>();
-
         SQLiteDatabase db = getDatabase();
-        Cursor cursor = db.query(SportType.TABLE,
+
+        try (Cursor cursor = db.query(SportType.TABLE,
                 null,
                 SportType.BASE_SPORT_TYPE + "=?",
                 new String[]{bSportType.name()},
-                null, null, null);
+                null, null, null)) {
 
-        if (cursor.getCount() != 0) {
-            while (cursor.moveToNext()) {
-                if (DEBUG)
-                    Log.i(TAG, "adding " + cursor.getString(cursor.getColumnIndex(SportType.UI_NAME)));
-                result.add(cursor.getLong(cursor.getColumnIndex(SportType.C_ID)));
+            if (cursor != null && cursor.getCount() != 0) {
+                while (cursor.moveToNext()) {
+                    if (DEBUG)
+                        Log.i(TAG, "adding " + cursor.getString(cursor.getColumnIndex(SportType.UI_NAME)));
+                    result.add(cursor.getLong(cursor.getColumnIndex(SportType.C_ID)));
+                }
+            } else {
+                result.add(getSportTypeId(bSportType));
             }
-        } else {
-            result.add(getSportTypeId(bSportType));
         }
-
-        cursor.close();
 
         return result;
     }
@@ -239,21 +219,20 @@ public class SportTypeDatabaseManager {
 
         LinkedList<String> result = new LinkedList<>();
 
-        Cursor cursor = getDatabase().query(SportType.TABLE,
+        try (Cursor cursor = getDatabase().query(SportType.TABLE,
                 null,
                 SportType.BASE_SPORT_TYPE + "=?",
                 new String[]{bSportType.name()},
-                null, null, null);
+                null, null, null)) {
 
-        if (cursor.getCount() != 0) {
-            while (cursor.moveToNext()) {
-                result.add(cursor.getString(cursor.getColumnIndex(SportType.UI_NAME)));
+            if (cursor != null && cursor.getCount() != 0) {
+                while (cursor.moveToNext()) {
+                    result.add(cursor.getString(cursor.getColumnIndex(SportType.UI_NAME)));
+                }
+            } else {
+                result.add(getUIName(getSportTypeId(bSportType)));
             }
-        } else {
-            result.add(getUIName(getSportTypeId(bSportType)));
         }
-
-        cursor.close();
 
         return result;
     }
@@ -261,15 +240,7 @@ public class SportTypeDatabaseManager {
     @NonNull
     public BSportType getBSportType(long id) {
         if (DEBUG) Log.i(TAG, "getBsportType: id=" + id);
-
-        BSportType result = BSportType.UNKNOWN;
-        String bSportType = getString(id, SportType.BASE_SPORT_TYPE);
-        try {
-            result = BSportType.valueOf(bSportType);
-        } catch (Exception e) {
-        }
-
-        return result;
+        return EnumUtils.safeValueOf(BSportType.class, getString(id, SportType.BASE_SPORT_TYPE), BSportType.UNKNOWN, TAG);
     }
 
     public String getUIName(long id) {
@@ -308,35 +279,29 @@ public class SportTypeDatabaseManager {
     }
 
     public long getSportTypeIdFromUIName(String UIName) {
-        long result = -1;
-
-        Cursor cursor = getDatabase().query(SportType.TABLE,
+        try (Cursor cursor = getDatabase().query(SportType.TABLE,
                 null,
                 SportType.UI_NAME + "=?", new String[]{UIName},
-                null, null, null);
-        if (cursor.moveToNext()) {
-            result = cursor.getLong(cursor.getColumnIndex(SportType.C_ID));
+                null, null, null)) {
+            return CursorUtils.mapFirst(cursor, DatabaseConstants.INVALID_ID, c -> {
+                int colIdx = c.getColumnIndex(SportType.C_ID);
+                return colIdx >= 0 ? c.getLong(colIdx) : DatabaseConstants.INVALID_ID;
+            });
         }
-
-        return result;
     }
 
     public long getSportTypeIdFromTcxName(String tcxName) {
-        long result = -1;
+        long result = DatabaseConstants.INVALID_ID;
         if (tcxName == null) return result;
 
-        Cursor cursor = getDatabase().query(SportType.TABLE,
+        try (Cursor cursor = getDatabase().query(SportType.TABLE,
                 new String[]{SportType.C_ID},
                 SportType.TCX_NAME + "=? COLLATE NOCASE", new String[]{tcxName},
-                null, null, null);
-        if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                result = cursor.getLong(0);
-            }
-            cursor.close();
+                null, null, null)) {
+            result = CursorUtils.mapFirst(cursor, DatabaseConstants.INVALID_ID, c -> c.getLong(0));
         }
 
-        if (result == -1) {
+        if (result == -1L) {
             if (tcxName.equalsIgnoreCase("Cycling") || tcxName.equalsIgnoreCase("Ride")) {
                 return getSportTypeIdFromTcxName("Biking");
             }
@@ -346,68 +311,68 @@ public class SportTypeDatabaseManager {
     }
 
     private String getString(long id, String col) {
-        String result = null;
-
         SQLiteDatabase db = getDatabase();
-        Cursor cursor = db.query(SportType.TABLE,
+        try (Cursor cursor = db.query(SportType.TABLE,
                 null,
                 SportType.C_ID + "=?",
                 new String[]{Long.toString(id)},
-                null, null, null);
-        if (cursor.moveToNext()) {
-            result = cursor.getString(cursor.getColumnIndex(col));
-        } else {  // try to find the corresponding row of the 'other' sport type
-            cursor = db.query(SportType.TABLE,
-                    null,
-                    SportType.C_ID + "=?",
-                    new String[]{Long.toString(1)},
-                    null, null, null);
-            if (cursor.moveToNext()) {
-                result = cursor.getString(cursor.getColumnIndex(col));
+                null, null, null)) {
+            if (cursor != null && cursor.moveToNext()) {
+                int colIdx = cursor.getColumnIndex(col);
+                return colIdx >= 0 ? cursor.getString(colIdx) : null;
             }
         }
-        cursor.close();
 
-        return result;
+        // try to find the corresponding row of the 'other' sport type
+        try (Cursor cursor = db.query(SportType.TABLE,
+                null,
+                SportType.C_ID + "=?",
+                new String[]{Long.toString(1)},
+                null, null, null)) {
+            if (cursor != null && cursor.moveToNext()) {
+                int colIdx = cursor.getColumnIndex(col);
+                return colIdx >= 0 ? cursor.getString(colIdx) : null;
+            }
+        }
+
+        return null;
     }
 
     private double getDouble(long id, String col) {
-        double result = 0.0;
-
         SQLiteDatabase db = getDatabase();
-        Cursor cursor = db.query(SportType.TABLE,
+        try (Cursor cursor = db.query(SportType.TABLE,
                 null,
                 SportType.C_ID + "=?",
                 new String[]{Long.toString(id)},
-                null, null, null);
-        if (cursor.moveToNext()) {
-            result = cursor.getDouble(cursor.getColumnIndex(col));
-        } else {  // try to find the corresponding row of the 'other' sport type
-            cursor = db.query(SportType.TABLE,
-                    null,
-                    SportType.C_ID + "=?",
-                    new String[]{Long.toString(1)},
-                    null, null, null);
-            if (cursor.moveToNext()) {
-                result = cursor.getDouble(cursor.getColumnIndex(col));
+                null, null, null)) {
+            if (cursor != null && cursor.moveToNext()) {
+                int colIdx = cursor.getColumnIndex(col);
+                return colIdx >= 0 ? cursor.getDouble(colIdx) : DatabaseConstants.EMPTY_METRIC;
             }
         }
 
-        return result;
+        // try to find the corresponding row of the 'other' sport type
+        try (Cursor cursor = db.query(SportType.TABLE,
+                null,
+                SportType.C_ID + "=?",
+                new String[]{Long.toString(1)},
+                null, null, null)) {
+            if (cursor != null && cursor.moveToNext()) {
+                int colIdx = cursor.getColumnIndex(col);
+                return colIdx >= 0 ? cursor.getDouble(colIdx) : DatabaseConstants.EMPTY_METRIC;
+            }
+        }
+
+        return DatabaseConstants.EMPTY_METRIC;
     }
 
     public List<String> getSportTypesList() {
-        List<String> result = new LinkedList<>();
-
-        Cursor cursor = getDatabase().query(SportType.TABLE,
+        try (Cursor cursor = getDatabase().query(SportType.TABLE,
                 null,
                 null, null,
-                null, null, null);
-        while (cursor.moveToNext()) {
-            result.add(cursor.getString(cursor.getColumnIndex(SportType.UI_NAME)));
+                null, null, null)) {
+            return CursorUtils.mapList(cursor, c -> c.getString(c.getColumnIndex(SportType.UI_NAME)));
         }
-
-        return result;
     }
 
     public long updateSportType(long id, String name, BSportType bSportType, Double minSpeed, Double maxSpeed, String stravaName, String tcxName, String gcName) {
@@ -472,23 +437,25 @@ public class SportTypeDatabaseManager {
             selection += " AND (" + SportType.BASE_SPORT_TYPE + " = '" + BSportType.RUN + "')";
         }
 
-        Cursor cursor = getDatabase().query(SportType.TABLE,
+        try (Cursor cursor = getDatabase().query(SportType.TABLE,
                 new String[]{SportType.C_ID, SportType.UI_NAME, SportType.BASE_SPORT_TYPE},
                 selection,
-                null, null, null, SportType.UI_NAME + " ASC");
+                null, null, null, SportType.UI_NAME + " ASC")) {
 
-        int idCol = cursor.getColumnIndex(SportType.C_ID);
-        int nameCol = cursor.getColumnIndex(SportType.UI_NAME);
-        int bSportTypeCol = cursor.getColumnIndexOrThrow(SportType.BASE_SPORT_TYPE);
+            if (cursor != null) {
+                int idCol = cursor.getColumnIndex(SportType.C_ID);
+                int nameCol = cursor.getColumnIndex(SportType.UI_NAME);
+                int bSportTypeCol = cursor.getColumnIndexOrThrow(SportType.BASE_SPORT_TYPE);
 
-        while (cursor.moveToNext()) {
-            sensors.add(new SimpleSportTypeInfo(
-                    cursor.getLong(idCol),
-                    cursor.getString(nameCol),
-                    BSportType.valueOf(cursor.getString(bSportTypeCol))
-            ));
+                while (cursor.moveToNext()) {
+                    sensors.add(new SimpleSportTypeInfo(
+                            cursor.getLong(idCol),
+                            cursor.getString(nameCol),
+                            EnumUtils.safeValueOf(BSportType.class, cursor.getString(bSportTypeCol), BSportType.UNKNOWN, TAG)
+                    ));
+                }
+            }
         }
-        cursor.close();
 
         return sensors;
     }
@@ -511,21 +478,17 @@ public class SportTypeDatabaseManager {
 
         // Query the table for a row where the Strava name matches
         // We use BASE_SPORT_TYPE to find the enum mapping
-        Cursor cursor = db.query(SportType.TABLE,
+        try (Cursor cursor = db.query(SportType.TABLE,
                 new String[]{SportType.BASE_SPORT_TYPE},
                 SportType.STRAVA_NAME + "=? COLLATE NOCASE",
                 new String[]{stravaName},
-                null, null, null);
+                null, null, null)) {
 
-        if (cursor.moveToFirst()) {
-            String bSportTypeName = cursor.getString(cursor.getColumnIndexOrThrow(SportType.BASE_SPORT_TYPE));
-            try {
-                result = BSportType.valueOf(bSportTypeName);
-            } catch (IllegalArgumentException e) {
-                Log.e(TAG, "Invalid BSportType in database: " + bSportTypeName);
+            if (cursor != null && cursor.moveToFirst()) {
+                String bSportTypeName = cursor.getString(cursor.getColumnIndexOrThrow(SportType.BASE_SPORT_TYPE));
+                result = EnumUtils.safeValueOfOrNull(BSportType.class, bSportTypeName, TAG);
             }
         }
-        cursor.close();
 
         // Not found in the database. Use the hardcoded TTSportType mapping as a fallback
         if (result == null) {
@@ -595,7 +558,7 @@ public class SportTypeDatabaseManager {
     }
 
     public static BSportType getBSportType(String ttSportTypeName) {
-        TTSportType ttSportType = TTSportType.valueOf(ttSportTypeName);
+        TTSportType ttSportType = EnumUtils.safeValueOf(TTSportType.class, ttSportTypeName, TTSportType.OTHER, TAG);
         return ttSportType.getBSportType();
     }
 
@@ -609,7 +572,7 @@ public class SportTypeDatabaseManager {
     }
 
     public static long getSportTypeIdFromTTSportTypeName(String ttSportTypeName) {
-        TTSportType ttSportType = TTSportType.valueOf(ttSportTypeName);
+        TTSportType ttSportType = EnumUtils.safeValueOf(TTSportType.class, ttSportTypeName, TTSportType.OTHER, TAG);
         return switch (ttSportType) {
             case OTHER -> 1;
             case RUN -> 2;

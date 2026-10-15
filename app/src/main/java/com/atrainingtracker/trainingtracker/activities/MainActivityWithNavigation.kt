@@ -58,6 +58,8 @@ import com.atrainingtracker.trainingtracker.ui.ant.AntDialogState
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.atrainingtracker.util.safeStartService
+import com.atrainingtracker.util.safeUnregisterReceiver
 import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -626,7 +628,7 @@ class MainActivityWithNavigation :
         if (DEBUG) Log.d(TAG, "onResume")
 
         val banalServiceIntent = Intent(this, BANALService::class.java)
-        startService(banalServiceIntent)
+        safeStartService(banalServiceIntent, TAG)
 
         if (mBanalServiceComm == null) {
             bindService(banalServiceIntent, mBanalConnection, Context.BIND_AUTO_CREATE)
@@ -760,31 +762,12 @@ class MainActivityWithNavigation :
         super.onPause()
         if (DEBUG) Log.d(TAG, "onPause")
 
-        try {
-            unregisterReceiver(mStartTrackingReceiver)
-        } catch (ignored: IllegalArgumentException) {
-        }
-        try {
-            unregisterReceiver(mPauseTrackingReceiver)
-        } catch (ignored: IllegalArgumentException) {
-        }
-        try {
-            unregisterReceiver(mStopTrackingReceiver)
-        } catch (ignored: IllegalArgumentException) {
-        }
-        try {
-            unregisterReceiver(mTrackingStoppedReceiver)
-        } catch (ignored: IllegalArgumentException) {
-        }
-
-        try {
-            unregisterReceiver(mAntDependencyReceiver)
-        } catch (ignored: IllegalArgumentException) {
-        }
-        try {
-            unregisterReceiver(mAntAdapterMissingReceiver)
-        } catch (ignored: IllegalArgumentException) {
-        }
+        safeUnregisterReceiver(mStartTrackingReceiver, TAG)
+        safeUnregisterReceiver(mPauseTrackingReceiver, TAG)
+        safeUnregisterReceiver(mStopTrackingReceiver, TAG)
+        safeUnregisterReceiver(mTrackingStoppedReceiver, TAG)
+        safeUnregisterReceiver(mAntDependencyReceiver, TAG)
+        safeUnregisterReceiver(mAntAdapterMissingReceiver, TAG)
 
         stopInRideBatteryMonitoring()
 

@@ -33,12 +33,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -285,6 +287,33 @@ fun EditWorkoutDialog(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+
+            // 9. Crop workout action
+            var showCropScreen by remember { mutableStateOf(false) }
+            OutlinedButton(
+                onClick = { showCropScreen = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentCut,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(R.string.crop_workout_title))
+            }
+
+            if (showCropScreen) {
+                workoutData?.id?.let { wId ->
+                    com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropWorkoutScreen(
+                        workoutId = wId,
+                        onDismiss = {
+                            showCropScreen = false
+                            onDismiss()
+                        }
+                    )
+                }
+            }
         }
     }
 }

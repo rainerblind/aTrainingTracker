@@ -101,8 +101,8 @@ Jointly review all completed sprint tickets with the human user against expectat
    * **Rule (Strict Rank Order)**: Review tickets strictly in backlog rank order (`ORDER BY rank ASC`) (`"During the sprint planning and the sprint review, always respect the rank of the tickets."`). No ticket may jump ahead of a higher-ranked ticket.
    * **Rule (Single-Ticket Focus)**: Evaluate tickets **strictly one-by-one** (`"Please make one ticket after the other. Please also keep this in mind for the retro."`). Never batch or present multiple tickets simultaneously. Complete verification and human acceptance for the current ticket before proceeding to the next.
    For each ticket in `Final Review (Human)`:
-   * Present the walkthrough deliverable (`docs/engineering/walkthroughs/<KEY>_walkthrough.md`) and summary of changes.
-   * User verifies on-device behavior (Pixel 10 APK built from `sprint/<SPRINT_NAME>`) and inspects code diffs.
+   * Present the walkthrough deliverable (`docs/engineering/walkthroughs/<KEY>_walkthrough.md`), a summary of changes, and a concise **Code Review of the actual git diff** (`git show` / key modified files, verifying edge-case handling, resource safety, and adherence to architectural invariants) (`"Within the last tickets, you also did a review of the code-changes. I would like to keep this."` — Sprint Retro 2026-42.4 / ATT-3679).
+   * User verifies on-device behavior (Pixel 10 APK built from `sprint/<SPRINT_NAME>`) and inspects the code review.
    * **Evaluation Decision**:
      * **In Ordnung (i.O. / Accepted)**:
        1. Human user transitions ticket from `Final Review (Human)` to `Erledigt` in Jira.

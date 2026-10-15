@@ -28,13 +28,19 @@ public class SensorData<T> {
     private final SensorType mSensorType;
     private final T mValue;
     private final String mStringValue;
+    private final long mTimestamp;
 
 
     public SensorData(SensorType sensorType, T value, String stringValue, String deviceName) {
+        this(sensorType, value, stringValue, deviceName, System.currentTimeMillis());
+    }
+
+    public SensorData(SensorType sensorType, T value, String stringValue, String deviceName, long timestamp) {
         mSensorType = sensorType;
         mValue = value;
         mStringValue = stringValue;
         mDeviceName = deviceName;
+        mTimestamp = timestamp;
     }
 
 
@@ -52,6 +58,10 @@ public class SensorData<T> {
 
     public String getDeviceName() {
         return mDeviceName;
+    }
+
+    public long getTimestamp() {
+        return mTimestamp;
     }
 
 }

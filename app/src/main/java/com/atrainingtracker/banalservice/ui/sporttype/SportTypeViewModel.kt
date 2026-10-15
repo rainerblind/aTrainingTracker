@@ -22,6 +22,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import kotlinx.coroutines.Dispatchers
@@ -96,11 +97,11 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
                     list.add(SportTypeItem(
                         id = id,
                         name = sportTypeName,
-                        bSportType = try {
-                            BSportType.valueOf(it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.BASE_SPORT_TYPE)))
-                        } catch (e: Exception) {
-                            BSportType.UNKNOWN
-                        },
+                        bSportType = safeEnumValueOf(
+                            it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.BASE_SPORT_TYPE)),
+                            BSportType.UNKNOWN,
+                            "SportTypeViewModel"
+                        ),
                         minSpeed = it.getDouble(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.MIN_AVG_SPEED)),
                         maxSpeed = it.getDouble(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.MAX_AVG_SPEED)),
                         stravaName = it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.STRAVA_NAME)),

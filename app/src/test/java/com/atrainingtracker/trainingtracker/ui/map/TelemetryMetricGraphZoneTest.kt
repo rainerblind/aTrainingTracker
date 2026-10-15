@@ -121,7 +121,7 @@ class TelemetryMetricGraphZoneTest {
     fun testScrubbingReadout_includesZoneTag_forPower() {
         val speedFormatter = SpeedFormatter()
         val paceFormatter = PaceFormatter()
-        val thresholds = PowerZoneThresholds(z1Max = 150, z2Max = 200, z3Max = 250, z4Max = 300)
+        val thresholds = PowerZoneThresholds(z1Max = 150, z2Max = 200, z3Max = 250, z4Max = 300, z5Max = 350, z6Max = 450)
 
         // Without thresholds: plain format
         val plainFormat = TelemetryMetricUtils.formatValue(
@@ -155,14 +155,34 @@ class TelemetryMetricGraphZoneTest {
         assertEquals("280 W • Z4", zone4)
 
         val zone5 = TelemetryMetricUtils.formatValue(
-            value = 350.0,
+            value = 330.0,
             metricType = TelemetryMetricType.POWER,
             unit = MyUnits.METRIC,
             speedFormatter = speedFormatter,
             paceFormatter = paceFormatter,
             powerZoneThresholds = thresholds
         )
-        assertEquals("350 W • Z5", zone5)
+        assertEquals("330 W • Z5", zone5)
+
+        val zone6 = TelemetryMetricUtils.formatValue(
+            value = 400.0,
+            metricType = TelemetryMetricType.POWER,
+            unit = MyUnits.METRIC,
+            speedFormatter = speedFormatter,
+            paceFormatter = paceFormatter,
+            powerZoneThresholds = thresholds
+        )
+        assertEquals("400 W • Z6", zone6)
+
+        val zone7 = TelemetryMetricUtils.formatValue(
+            value = 500.0,
+            metricType = TelemetryMetricType.POWER,
+            unit = MyUnits.METRIC,
+            speedFormatter = speedFormatter,
+            paceFormatter = paceFormatter,
+            powerZoneThresholds = thresholds
+        )
+        assertEquals("500 W • Z7", zone7)
     }
 
     @Test
@@ -170,7 +190,7 @@ class TelemetryMetricGraphZoneTest {
         val speedFormatter = SpeedFormatter()
         val paceFormatter = PaceFormatter()
         val hrThresholds = HeartRateZoneThresholds(120, 140, 160, 180)
-        val powerThresholds = PowerZoneThresholds(150, 200, 250, 300)
+        val powerThresholds = PowerZoneThresholds(150, 200, 250, 300, 350, 450)
 
         val speedResult = TelemetryMetricUtils.formatValue(
             value = 25.0,
@@ -201,9 +221,9 @@ class TelemetryMetricGraphZoneTest {
         val hrBands = TelemetryZoneMath.calculateHeartRateZoneBands(hrThresholds, 100.0, 190.0)
         assertEquals(5, hrBands.size)
 
-        val powerThresholds = PowerZoneThresholds(150, 200, 250, 300)
-        val powerBands = TelemetryZoneMath.calculatePowerZoneBands(powerThresholds, 100.0, 350.0)
-        assertEquals(5, powerBands.size)
+        val powerThresholds = PowerZoneThresholds(150, 200, 250, 300, 350, 450)
+        val powerBands = TelemetryZoneMath.calculatePowerZoneBands(powerThresholds, 100.0, 500.0)
+        assertEquals(7, powerBands.size)
 
         // Threshold boundary guidelines
         val hrDashes = TelemetryZoneMath.calculateThresholdDashes(

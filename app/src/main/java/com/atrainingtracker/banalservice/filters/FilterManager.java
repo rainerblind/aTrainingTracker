@@ -37,6 +37,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import androidx.core.content.ContextCompat;
+import com.atrainingtracker.util.LifecycleUtils;
 
 public class FilterManager {
     private static final String TAG = FilterType.class.getSimpleName();
@@ -165,17 +166,8 @@ public class FilterManager {
             mMapFilter2Sensor.get(myFilter).removeSensorListener(myFilter);
         }
 
-        try {
-            mContext.unregisterReceiver(mSensorsChangedReceiver);
-        } catch (IllegalArgumentException e) {
-            if (DEBUG) Log.w(TAG, "mSensorsChangedReceiver already unregistered", e);
-        }
-
-        try {
-            mContext.unregisterReceiver(mResetAccumulatorsReceiver);
-        } catch (IllegalArgumentException e) {
-            if (DEBUG) Log.w(TAG, "mResetAccumulatorsReceiver already unregistered", e);
-        }
+        LifecycleUtils.safeUnregisterReceiver(mContext, mSensorsChangedReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(mContext, mResetAccumulatorsReceiver, TAG);
     }
 
     /**

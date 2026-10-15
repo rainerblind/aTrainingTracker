@@ -188,6 +188,16 @@
     <string name="position_short">位置</string>
     <string name="power">パワー</string>
     <string name="power_short">power</string>
+    <string name="power_to_weight">パワーウェイトレシオ</string>
+    <string name="power_to_weight_short">W/kg</string>
+    <string name="normalized_power">標準化パワー</string>
+    <string name="normalized_power_short">NP</string>
+    <string name="intensity_factor">強度係数</string>
+    <string name="intensity_factor_short">IF</string>
+    <string name="work_kj">機械的仕事</string>
+    <string name="work_kj_short">kJ</string>
+    <string name="tss">トレーニングストレススコア</string>
+    <string name="tss_short">TSS</string>
     <string name="speed">速度</string>
     <string name="speed_short">速度</string>
     <string name="current_sensors">現在のセンサー</string>
@@ -617,6 +627,8 @@
     <string name="zone_3_label">ゾーン 3 (テンポ)</string>
     <string name="zone_4_label">ゾーン 4 (閾値)</string>
     <string name="zone_5_label">ゾーン 5 (無酸素)</string>
+    <string name="zone_6_label">ゾーン 6 (無酸素運動容量)</string>
+    <string name="zone_7_label">ゾーン 7 (神経筋パワー)</string>
 
     <string name="label_min">最小</string>
     <string name="label_max">最大</string>
@@ -626,6 +638,9 @@
     <string name="zone_display_left_bar">左バー</string>
     <string name="zone_display_right_bar">右バー</string>
     <string name="zone_display_text_color">文字色</string>
+    <string name="zone_display_gauge">ゾーンゲージバー</string>
+    <string name="pedal_balance_left_marker">L</string>
+    <string name="pedal_balance_right_marker">R</string>
     <string name="zone_display_preview_title">プレビュー</string>
 
     <string name="prefEmailExport">eメール</string>
@@ -1452,8 +1467,10 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">パワーゾーン</string>
-    <!-- Telemetry Frequency Histogram (ATT-1845 / REQ-UI-231) -->
+    <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5ゾーン</string>
+    <string name="zone_mode_columns">カラム</string>
+    <string name="zone_mode_stacked_bar">スタックバー</string>
     <string name="zone_mode_histogram">ヒストグラム</string>
     <string name="aftermath_laps_splits_title">ラップとスプリット</string>
     <string name="split_badge_best">ベスト</string>
@@ -1750,5 +1767,83 @@
     <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
     <string name="tuning_nav_cue_distance_title">ナビゲーション案内の距離</string>
     <string name="tuning_nav_cue_distance_desc">右左折案内を表示する手前の距離</string>
+    <!-- First-Time Stop Tracking Coachmark (ATT-3387 / REQ-UI-367) -->
+    <string name="coachmark_stop_tracking_hint">右にスワイプするか左端のタブをタップすると、ワークアウトを一時停止または終了できます。</string>
+    <string name="coachmark_stop_tracking_show_tab">操作タブを表示</string>
+    <string name="coachmark_stop_tracking_dismiss">了解</string>
+
+    <!-- Crop Start and End Points of Recorded Workout (ATT-3274 / REQ-UI-368) -->
+    <string name="crop_workout_title">ワークアウトをトリミング</string>
+    <string name="crop_workout_action">トリミング</string>
+    <string name="crop_workout_confirm_title">ワークアウトを完全にトリミングしますか？</string>
+    <string name="crop_workout_confirm_message">このワークアウトを本当にトリミングしますか？選択範囲外のデータは完全に削除されます。この操作は元に戻せません。</string>
+    <string name="crop_workout_confirm_action">完全にトリミング</string>
+    <string name="crop_workout_progress">ワークアウトをトリミング中…</string>
+    <string name="crop_workout_success">ワークアウトが正常にトリミングされました</string>
+    <string name="crop_insufficient_storage">ワークアウトをトリミングするための空き容量が不足しています（少なくとも%d MB必要です）。</string>
+    <string name="crop_export_failed_retry">エクスポートファイルの再作成に失敗しました。再試行してください。</string>
+    <string name="crop_force_reexport">再エクスポートを強制</string>
+    <!-- Grade Legend (ATT-3391 / REQ-UI-371) -->
+    <string name="grade_legend_under_2">&lt; 2%</string>
+    <string name="grade_legend_2_to_5">2 – 5%</string>
+    <string name="grade_legend_5_to_10">5 – 10%</string>
+    <string name="grade_legend_10_to_15">10 – 15%</string>
+    <string name="grade_legend_15_to_20">15 – 20%</string>
+    <string name="grade_legend_20_to_25">20 – 25%</string>
+    <string name="grade_legend_over_25">&gt; 25%</string>
+    <!-- Automated Zone Calculation (ATT-3188) -->
+    <string name="zone_calc_button">ゾーンを計算</string>
+    <string name="zone_calc_dialog_title_power">サイクリングパワーゾーンを計算</string>
+    <string name="zone_calc_dialog_title_hr">心拍ゾーンを計算</string>
+    <string name="zone_calc_ftp_label">機能的作業閾値パワー (FTP)</string>
+    <string name="zone_calc_hr_max_label">最大心拍数 (HRmax)</string>
+    <string name="zone_calc_hr_rest_label">安静時心拍数 (HRrest)</string>
+    <string name="zone_calc_method_label">計算方法</string>
+    <string name="zone_calc_method_max_hr">% HRmax</string>
+    <string name="zone_calc_method_karvonen">カルボーネン (HRR)</string>
+    <string name="zone_calc_preview_title">計算されたゾーンのプレビュー</string>
+    <string name="zone_calc_apply_button">適用</string>
+    <string name="zone_calc_cancel_button">キャンセル</string>
+    <string name="zone_calc_status_calculated">計算済み</string>
+    <string name="zone_calc_status_customized">カスタム</string>
+    <string name="zone_calc_calibration_recommended">キャリブレーション推奨</string>
+    <string name="zone_calc_last_updated">最終更新: %s</string>
+    <string name="zone_calc_overwrite_warning_title">カスタムゾーンを上書きしますか？</string>
+    <string name="zone_calc_overwrite_warning_message">警告: これにより手動で設定されたすべてのゾーンが FTP %d W の標準ゾーンで上書きされます。続行しますか？</string>
+    <string name="zone_calc_error_ftp_range">FTPは %1$d W から %2$d W の間である必要があります</string>
+    <string name="zone_calc_error_hr_max_range">HRmaxは %1$d bpm から %2$d bpm の間である必要があります</string>
+    <string name="zone_calc_error_hr_rest_range">HRrestは %1$d bpm から %2$d bpm の間である必要があります</string>
+    <string name="zone_calc_error_hr_max_greater_rest">HRmaxはHRrestより大きくなければなりません</string>
+    <string name="zone_calc_error_karvonen_delta">HRmaxはHRrestより少なくとも20 bpm高くなければなりません</string>
+    <string name="zone_calc_error_monotonicity">値は %1$d から %2$d の間である必要があります</string>
+    <string name="zone_onboarding_hr_banner">新しい心拍数センサーがペアリングされました。パーソナライズされたトレーニングフィードバックのために心拍ゾーンを設定してください。</string>
+    <string name="zone_onboarding_pwr_banner">新しいパワーメーターがペアリングされました。パワーゾーンを設定するか、FTPから計算してください。</string>
+    <string name="zone_onboarding_dismiss">了解</string>
+
+    <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="tuning_auto_pause_title">オートポーズ</string>
+    <string name="tuning_auto_pause_desc">停止時に記録を自動的に一時停止します</string>
+    <string name="tuning_auto_pause_bike_title">サイクリング</string>
+    <string name="tuning_auto_pause_run_title">ランニング</string>
+    <string name="tuning_auto_pause_other_title">その他のスポーツ</string>
+    <string name="tuning_auto_pause_speed_threshold_title">一時停止速度しきい値</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">記録が一時停止される速度のしきい値</string>
+    <string name="tuning_auto_pause_debounce_title">一時停止遅延時間</string>
+    <string name="tuning_auto_pause_debounce_desc">一時停止するまでのしきい値以下の継続時間</string>
+    <string name="cockpit_auto_pause_badge">オートポーズ</string>
+    <string name="cockpit_auto_pause_resume">今すぐ再開</string>
+    <string name="cockpit_speed_sensor_lost">スピードセンサー喪失</string>
+
+    <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
+    <string name="athlete_weight_title">アスリートの体重</string>
+    <string name="athlete_weight_label">体重</string>
+    <string name="athlete_weight_dialog_title">アスリートの体重を設定</string>
+    <string name="athlete_weight_save">保存</string>
+    <string name="athlete_weight_unconfigured">未設定</string>
+    <string name="athlete_weight_invalid">有効な体重を入力してください</string>
+    <string name="athlete_weight_card_description">リアルタイムのパワーウェイトレシオ（W/kg）の計算に必要です。</string>
+    <string name="athlete_weight_clear">クリア</string>
+    <string name="athlete_weight_edit">編集</string>
+
 </resources>
 
