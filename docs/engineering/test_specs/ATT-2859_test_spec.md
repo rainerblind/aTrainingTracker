@@ -17,12 +17,12 @@
 
 | Requirement ID | Test Case ID | Test Class / Verification Target | Scope of Verification | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| `REQ-UI-375.1` | `TST-UI-338.1` | `VectorAssetResolutionContractTest` | Multi-color sport vector inflation, geometry preservation (`bsport_bike`: black wheels, red frame, blue rider; `bsport_run`: blue runner; `bsport_other`: gold ring, red/green/blue buttons) | Draft |
-| `REQ-UI-375.2` | `TST-UI-338.2` | `VectorAssetResolutionContractTest` | ANT+ badge vector inflation, black rounded-square background, white glyph, white bottom label ("HR", "SPD", "CAD", "S & C", "PWR", "SPD", "TEMP") | Draft |
-| `REQ-UI-375.3` | `TST-UI-338.3` | `VectorAssetResolutionContractTest` | BLE badge vector inflation, Bluetooth blue (`#0A3D91`) rounded-square background, white glyph, white bottom label ("speed", "cadence", "s & c", "power") | Draft |
-| `REQ-UI-375.4` | `TST-UI-338.4` | `DrawableDensityFallbackAuditTest` | Deletion of 16 superseded PNGs across density folders, deletion of dead `_gray.png` and `btle_hr.png`, root fallback audit | Draft |
-| `REQ-UI-375.5` | `TST-UI-338.5` | `SportTypeSelectorContractTest` | UI presentation contract test asserting updated `.xml` vector resolution without legacy `.png` or dead `_gray` checks | Draft |
-| `REQ-UI-375` | `TST-UI-338.6` | `./gradlew testDebugUnitTest` | Full clean-room unit test suite execution with 100% pass rate and zero regressions | Draft |
+| `REQ-UI-375.1` | `TST-UI-338.1` | `VectorAssetResolutionContractTest` | Multi-color sport vector inflation, geometry preservation (`bsport_bike`: black wheels, red frame, blue rider; `bsport_run`: blue runner; `bsport_other`: gold ring, red/green/blue buttons) | Verified |
+| `REQ-UI-375.2` | `TST-UI-338.2` | `VectorAssetResolutionContractTest` | ANT+ badge vector inflation, black rounded-square background, white glyph, white bottom label ("HR", "SPD", "CAD", "S & C", "PWR", "SPD", "TEMP") | Verified |
+| `REQ-UI-375.3` | `TST-UI-338.3` | `VectorAssetResolutionContractTest` | BLE badge vector inflation, Bluetooth blue (`#0A3D91`) rounded-square background, white glyph, white bottom label ("speed", "cadence", "s & c", "power") | Verified |
+| `REQ-UI-375.4` | `TST-UI-338.4` | `DrawableDensityFallbackAuditTest` | Deletion of 16 superseded PNGs across density folders, deletion of dead `_gray.png` and `btle_hr.png`, root fallback audit | Verified |
+| `REQ-UI-375.5` | `TST-UI-338.5` | `SportTypeSelectorContractTest` | UI presentation contract test asserting updated `.xml` vector resolution without legacy `.png` or dead `_gray` checks | Verified |
+| `REQ-UI-375` | `TST-UI-338.6` | `./gradlew testDebugUnitTest` | Full clean-room unit test suite execution with 100% pass rate and zero regressions | Verified |
 
 ---
 
