@@ -30,6 +30,7 @@ import androidx.annotation.NonNull;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.database.DatabaseConstants;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter;
@@ -61,30 +62,43 @@ public abstract class BaseFileWriter extends BaseExporter {
         WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
         SQLiteDatabase db = databaseManager.getDatabase();
 
-        Cursor cursor = db.query(WorkoutSummaries.TABLE,
+        try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
                 null,
                 WorkoutSummaries.FILE_BASE_NAME + "=?",
                 new String[]{exportInfo.getFileBaseName()},
                 null,
                 null,
-                null);
-        cursor.moveToFirst();
-
-        // get the data for the header
-        startTime = myGet(cursor, WorkoutSummaries.TIME_START, "");
-        totalTime = myGet(cursor, WorkoutSummaries.TIME_TOTAL_s, "0");
-        data = myGet(cursor, WorkoutSummaries.GC_DATA, "--------");
-        goal = myGet(cursor, WorkoutSummaries.GOAL, "");
-        method = myGet(cursor, WorkoutSummaries.METHOD, "");
-        totalDistance = myGet(cursor, WorkoutSummaries.DISTANCE_TOTAL_m, "0");
-        description = myGet(cursor, WorkoutSummaries.DESCRIPTION, "");
-        workoutName = myGet(cursor, WorkoutSummaries.WORKOUT_NAME, "");
-        workoutID = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-        sportTypeId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.SPORT_ID));
-        indoorTrainerSession = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.TRAINER)) > 0;
-
-        // now, that we have all the data, we close the mCursor
-        cursor.close();
+                null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                // get the data for the header
+                startTime = myGet(cursor, WorkoutSummaries.TIME_START, "");
+                totalTime = myGet(cursor, WorkoutSummaries.TIME_TOTAL_s, "0");
+                data = myGet(cursor, WorkoutSummaries.GC_DATA, "--------");
+                goal = myGet(cursor, WorkoutSummaries.GOAL, "");
+                method = myGet(cursor, WorkoutSummaries.METHOD, "");
+                totalDistance = myGet(cursor, WorkoutSummaries.DISTANCE_TOTAL_m, "0");
+                description = myGet(cursor, WorkoutSummaries.DESCRIPTION, "");
+                workoutName = myGet(cursor, WorkoutSummaries.WORKOUT_NAME, "");
+                int idIdx = cursor.getColumnIndex(WorkoutSummaries.C_ID);
+                workoutID = idIdx >= 0 ? cursor.getLong(idIdx) : DatabaseConstants.INVALID_ID;
+                int sportIdx = cursor.getColumnIndex(WorkoutSummaries.SPORT_ID);
+                sportTypeId = sportIdx >= 0 ? cursor.getLong(sportIdx) : DatabaseConstants.INVALID_ID;
+                int trainerIdx = cursor.getColumnIndex(WorkoutSummaries.TRAINER);
+                indoorTrainerSession = trainerIdx >= 0 && cursor.getInt(trainerIdx) > 0;
+            } else {
+                startTime = "";
+                totalTime = "0";
+                data = "--------";
+                goal = "";
+                method = "";
+                totalDistance = "0";
+                description = "";
+                workoutName = "";
+                workoutID = DatabaseConstants.INVALID_ID;
+                sportTypeId = DatabaseConstants.INVALID_ID;
+                indoorTrainerSession = false;
+            }
+        }
 
         haveDistance = data.indexOf('D') > 0;
         haveSpeed = data.indexOf('S') > 0;

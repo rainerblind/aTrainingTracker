@@ -35,6 +35,8 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData;
+import com.atrainingtracker.database.CursorProvider;
+import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.google.android.gms.maps.model.LatLng;
@@ -401,6 +403,7 @@ public class WorkoutSummariesDatabaseManager {
     /**
      * Retrieves a cursor for a specific workout ID.
      */
+    @CursorProvider
     public Cursor getWorkoutCursor(long workoutId) {
         return getDatabase().query(WorkoutSummaries.TABLE,
                 null,
@@ -412,6 +415,7 @@ public class WorkoutSummariesDatabaseManager {
     /**
      * Returns a cursor for all workouts sorted descending (newest first).
      */
+    @CursorProvider
     public Cursor getCursorForAllWorkouts() {
         return getDatabase().query(
                 WorkoutSummaries.TABLE,
@@ -423,6 +427,7 @@ public class WorkoutSummariesDatabaseManager {
     /**
      * Returns a cursor for all workouts sorted ascending (oldest first).
      */
+    @CursorProvider
     public Cursor getCursorForAllWorkoutsAsc() {
         return getDatabase().query(
                 WorkoutSummaries.TABLE,
@@ -453,6 +458,7 @@ public class WorkoutSummariesDatabaseManager {
      * @param endTimeS End of range in seconds.
      * @return A cursor sorted by start time ascending.
      */
+    @CursorProvider
     public Cursor getWorkoutsInRangeCursor(long startTimeS, long endTimeS) {
         String selection = "strftime('%s', " + WorkoutSummaries.TIME_START + ") >= ? AND " +
                 "strftime('%s', " + WorkoutSummaries.TIME_START + ") <= ? AND " +
@@ -1280,22 +1286,21 @@ public class WorkoutSummariesDatabaseManager {
                 "COUNT(*)" // count of workouts
         };
 
-        Cursor cursor = db.query(
+        try (Cursor cursor = db.query(
                 WorkoutSummaries.TABLE,
                 columns,
                 column + "=?",
                 new String[]{String.valueOf(id)},
-                null, null, null
-        );
+                null, null, null)) {
 
-        if (cursor != null && cursor.moveToFirst()) {
-            stats.totalDistanceM = cursor.getDouble(0);
-            stats.totalActiveTimeS = cursor.getLong(1);
-            stats.totalAscentM = cursor.getInt(2);
-            stats.firstUsage = cursor.getString(3);
-            stats.lastUsage = cursor.getString(4);
-            stats.count = cursor.getInt(5); // Extract count
-            cursor.close();
+            if (cursor != null && cursor.moveToFirst()) {
+                stats.totalDistanceM = cursor.getDouble(0);
+                stats.totalActiveTimeS = cursor.getLong(1);
+                stats.totalAscentM = cursor.getInt(2);
+                stats.firstUsage = cursor.getString(3);
+                stats.lastUsage = cursor.getString(4);
+                stats.count = cursor.getInt(5); // Extract count
+            }
         }
 
         return stats;
@@ -1666,37 +1671,46 @@ public class WorkoutSummariesDatabaseManager {
                 addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.SPORT_ID, "int", "0");
                 // addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.B_SPORT,  "text");
 
-                Cursor cursor = db.query(WorkoutSummaries.TABLE,
+                ContentValues contentValues = new ContentValues();
+                try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
                         new String[]{WorkoutSummaries.C_ID, "sport"},
                         null, null,
-                        null, null, null);
-                ContentValues contentValues = new ContentValues();
-                while (cursor.moveToNext()) {
-                    contentValues.clear();
-                    long id = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-                    String sport = cursor.getString(cursor.getColumnIndex("sport"));
-                    contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
-                    contentValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sport).name());
-                    db.update(WorkoutSummaries.TABLE, contentValues,
-                            WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
-                }
-                cursor.close();
+                        null, null, null)) {
 
+                    if (cursor != null) {
+                        int idCol = cursor.getColumnIndex(WorkoutSummaries.C_ID);
+                        int sportCol = cursor.getColumnIndex("sport");
+                        while (cursor.moveToNext()) {
+                            contentValues.clear();
+                            long id = idCol != -1 ? cursor.getLong(idCol) : -1L;
+                            String sport = sportCol != -1 ? cursor.getString(sportCol) : "";
+                            contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
+                            contentValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sport).name());
+                            db.update(WorkoutSummaries.TABLE, contentValues,
+                                    WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                        }
+                    }
+                }
 
                 addColumn(db, "WorkoutNamePatterns", "sportId", "text", "???");
 
-                cursor = db.query("WorkoutNamePatterns",
+                try (Cursor cursor = db.query("WorkoutNamePatterns",
                         new String[]{WorkoutSummaries.C_ID, "sport"},
                         null, null,
-                        null, null, null);
-                while (cursor.moveToNext()) {
-                    long id = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-                    String sport = cursor.getString(cursor.getColumnIndex("sport"));
-                    contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
-                    db.update("WorkoutNamePatterns", contentValues,
-                            WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                        null, null, null)) {
+
+                    if (cursor != null) {
+                        int idCol = cursor.getColumnIndex(WorkoutSummaries.C_ID);
+                        int sportCol = cursor.getColumnIndex("sport");
+                        while (cursor.moveToNext()) {
+                            long id = idCol != -1 ? cursor.getLong(idCol) : -1L;
+                            String sport = sportCol != -1 ? cursor.getString(sportCol) : "";
+                            contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
+                            db.update("WorkoutNamePatterns", contentValues,
+                                    WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                        }
+                    }
                 }
-                cursor.close();
             }
 
             if (oldVersion < 12) {

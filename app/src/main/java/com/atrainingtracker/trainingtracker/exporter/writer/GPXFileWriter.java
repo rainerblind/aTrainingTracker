@@ -88,59 +88,61 @@ public class GPXFileWriter extends BaseFileWriter {
 
         WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
         SQLiteDatabase db = databaseManager.getDatabase();
-        Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
+        try (Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
                 null,
                 null,
                 null,
                 null,
                 null,
-                null);
+                null)) {
 
-        double altitude;
-        double latitude = 0.0;
-        double longitude = 0.0;
-        double latitudeOld;
-        double longitudeOld;
+            double altitude;
+            double latitude = 0.0;
+            double longitude = 0.0;
+            double latitudeOld;
+            double longitudeOld;
 
-        long prevLineLap = BANALService.INIT_LAP_NR - 1;
+            long prevLineLap = BANALService.INIT_LAP_NR - 1;
 
-        int lines = cursor.getCount();
+            int lines = cursor != null ? cursor.getCount() : 0;
 
-        int count = 0;
-        while (cursor.moveToNext()) {
+            int count = 0;
+            while (cursor != null && cursor.moveToNext()) {
 
-            int lap = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.LAP_NR.name()));
-            if (prevLineLap != lap) { // new lap
+                int lap = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.LAP_NR.name()));
+                if (prevLineLap != lap) { // new lap
 
-                if (lap != BANALService.INIT_LAP_NR) { // finish previous lap
-                    bufferedWriter.write("  </trkseg>\n");
+                    if (lap != BANALService.INIT_LAP_NR) { // finish previous lap
+                        bufferedWriter.write("  </trkseg>\n");
+                    }
+
+                    // get the lap data
+                    SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(mContext).getDatabase();
+
+                    try (Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
+                            null,
+                            LapsDatabaseManager.Laps.WORKOUT_ID + "=? AND " + LapsDatabaseManager.Laps.LAP_NR + "=?",
+                            new String[]{workoutID + "", lap + ""},
+                            null,
+                            null,
+                            null)) {
+                        if (DEBUG)
+                            Log.d(TAG, "getting lap data: workoutID: " + workoutID + ", lapNr: " + lap + " found: "
+                                    + (lapCursor != null ? lapCursor.getCount() : 0) + ", " + (lapCursor != null ? lapCursor.getColumnCount() : 0));
+
+                        if (lapCursor != null && lapCursor.moveToFirst()) {
+                            // get the data for the lap
+                            totalTime = myGet(lapCursor, LapsDatabaseManager.Laps.TIME_TOTAL_s, "0");
+                            totalDistance = myGet(lapCursor, LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, "0");
+                        } else {
+                            totalTime = "0";
+                            totalDistance = "0";
+                        }
+                    }
+
+                    bufferedWriter.write("  <trkseg>\n");
+
                 }
-
-                // get the lap data
-                SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(mContext).getDatabase();
-
-                Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
-                        null,
-                        LapsDatabaseManager.Laps.WORKOUT_ID + "=? AND " + LapsDatabaseManager.Laps.LAP_NR + "=?",
-                        new String[]{workoutID + "", lap + ""},
-                        null,
-                        null,
-                        null);
-                if (DEBUG)
-                    Log.d(TAG, "getting lap data: workoutID: " + workoutID + ", lapNr: " + lap + " found: "
-                            + lapCursor.getCount() + ", " + lapCursor.getColumnCount());
-
-                lapCursor.moveToFirst();
-
-                // get the data for the lap
-                totalTime = myGet(lapCursor, LapsDatabaseManager.Laps.TIME_TOTAL_s, "0");
-                totalDistance = myGet(lapCursor, LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, "0");
-
-                lapCursor.close();
-
-                bufferedWriter.write("  <trkseg>\n");
-
-            }
             prevLineLap = lap;
 
 
@@ -178,8 +180,7 @@ public class GPXFileWriter extends BaseFileWriter {
         bufferedWriter.write("</gpx>\n");
 
         bufferedWriter.close();
-
-        cursor.close();
+        }
 
         return new ExportResult(true, false, "Successfully exported to GPX File");
     }

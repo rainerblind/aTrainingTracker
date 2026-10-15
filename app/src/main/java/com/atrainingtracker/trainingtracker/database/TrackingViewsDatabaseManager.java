@@ -40,6 +40,7 @@ import com.atrainingtracker.banalservice.filters.SensorFilterDefaults;
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize;
+import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.util.EnumUtils;
 
 import java.util.EnumMap;
@@ -232,23 +233,19 @@ public class TrackingViewsDatabaseManager {
         if (DEBUG) Log.i(TAG, "deleteSensorField(" + sensorFieldId + ")");
 
         SQLiteDatabase db = getDatabase();
-        Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+        Long tabViewId = null;
+        try (Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
                 new String[]{TrackingViewsDbHelper.VIEW_ID},
                 TrackingViewsDbHelper.ROW_ID + "=?",
-                new String[]{String.valueOf(sensorFieldId)}, null, null, null);
-        long tabViewId = -1;
-        if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                tabViewId = cursor.getLong(0);
-            }
-            cursor.close();
+                new String[]{String.valueOf(sensorFieldId)}, null, null, null)) {
+            tabViewId = CursorUtils.mapFirst(cursor, c -> c.getLong(0));
         }
 
         db.delete(TrackingViewsDbHelper.ROWS_TABLE,
                 TrackingViewsDbHelper.ROW_ID + "=?", // note that due to historic reasons, whe ID of a sensor field is called ROW_ID :(
                 new String[]{sensorFieldId + ""});
 
-        if (tabViewId != -1) {
+        if (tabViewId != null) {
             normalizeGrid(tabViewId);
         }
     }
@@ -262,43 +259,46 @@ public class TrackingViewsDatabaseManager {
         }
         SQLiteDatabase db = getDatabase();
         db.beginTransaction();
-        Cursor cursorA = null;
-        Cursor cursorB = null;
         try {
-            cursorA = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+            int rowA;
+            int colA;
+            int rowB;
+            int colB;
+            try (Cursor cursorA = db.query(TrackingViewsDbHelper.ROWS_TABLE,
                     new String[]{TrackingViewsDbHelper.ROW_NR, TrackingViewsDbHelper.COL_NR},
                     TrackingViewsDbHelper.ROW_ID + "=?",
                     new String[]{String.valueOf(fieldIdA)}, null, null, null);
-            cursorB = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+                 Cursor cursorB = db.query(TrackingViewsDbHelper.ROWS_TABLE,
                     new String[]{TrackingViewsDbHelper.ROW_NR, TrackingViewsDbHelper.COL_NR},
                     TrackingViewsDbHelper.ROW_ID + "=?",
-                    new String[]{String.valueOf(fieldIdB)}, null, null, null);
+                    new String[]{String.valueOf(fieldIdB)}, null, null, null)) {
 
-            if (cursorA != null && cursorB != null && cursorA.moveToFirst() && cursorB.moveToFirst()) {
-                int rowA = cursorA.getInt(0);
-                int colA = cursorA.getInt(1);
-                int rowB = cursorB.getInt(0);
-                int colB = cursorB.getInt(1);
-
-                ContentValues valA = new ContentValues();
-                valA.put(TrackingViewsDbHelper.ROW_NR, rowB);
-                valA.put(TrackingViewsDbHelper.COL_NR, colB);
-                db.update(TrackingViewsDbHelper.ROWS_TABLE, valA,
-                        TrackingViewsDbHelper.ROW_ID + "=?",
-                        new String[]{String.valueOf(fieldIdA)});
-
-                ContentValues valB = new ContentValues();
-                valB.put(TrackingViewsDbHelper.ROW_NR, rowA);
-                valB.put(TrackingViewsDbHelper.COL_NR, colA);
-                db.update(TrackingViewsDbHelper.ROWS_TABLE, valB,
-                        TrackingViewsDbHelper.ROW_ID + "=?",
-                        new String[]{String.valueOf(fieldIdB)});
-
-                db.setTransactionSuccessful();
+                if (cursorA != null && cursorB != null && cursorA.moveToFirst() && cursorB.moveToFirst()) {
+                    rowA = cursorA.getInt(0);
+                    colA = cursorA.getInt(1);
+                    rowB = cursorB.getInt(0);
+                    colB = cursorB.getInt(1);
+                } else {
+                    return;
+                }
             }
+
+            ContentValues valA = new ContentValues();
+            valA.put(TrackingViewsDbHelper.ROW_NR, rowB);
+            valA.put(TrackingViewsDbHelper.COL_NR, colB);
+            db.update(TrackingViewsDbHelper.ROWS_TABLE, valA,
+                    TrackingViewsDbHelper.ROW_ID + "=?",
+                    new String[]{String.valueOf(fieldIdA)});
+
+            ContentValues valB = new ContentValues();
+            valB.put(TrackingViewsDbHelper.ROW_NR, rowA);
+            valB.put(TrackingViewsDbHelper.COL_NR, colA);
+            db.update(TrackingViewsDbHelper.ROWS_TABLE, valB,
+                    TrackingViewsDbHelper.ROW_ID + "=?",
+                    new String[]{String.valueOf(fieldIdB)});
+
+            db.setTransactionSuccessful();
         } finally {
-            if (cursorA != null) cursorA.close();
-            if (cursorB != null) cursorB.close();
             db.endTransaction();
         }
     }
@@ -314,21 +314,21 @@ public class TrackingViewsDatabaseManager {
     public void moveSensorField(long sensorFieldId, int targetRow, int targetCol) {
         SQLiteDatabase db = getDatabase();
         db.beginTransaction();
-        Cursor cursor = null;
         try {
-            cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+            long tabViewId;
+            int oldRow;
+            int oldCol;
+            try (Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
                     new String[]{TrackingViewsDbHelper.VIEW_ID, TrackingViewsDbHelper.ROW_NR, TrackingViewsDbHelper.COL_NR},
                     TrackingViewsDbHelper.ROW_ID + "=?",
-                    new String[]{String.valueOf(sensorFieldId)}, null, null, null);
-            if (cursor == null || !cursor.moveToFirst()) {
-                if (cursor != null) cursor.close();
-                return;
+                    new String[]{String.valueOf(sensorFieldId)}, null, null, null)) {
+                if (cursor == null || !cursor.moveToFirst()) {
+                    return;
+                }
+                tabViewId = cursor.getLong(0);
+                oldRow = cursor.getInt(1);
+                oldCol = cursor.getInt(2);
             }
-            long tabViewId = cursor.getLong(0);
-            int oldRow = cursor.getInt(1);
-            int oldCol = cursor.getInt(2);
-            cursor.close();
-            cursor = null;
 
             // 1. Temporarily park the field out of the layout
             ContentValues parkVal = new ContentValues();
@@ -346,13 +346,14 @@ public class TrackingViewsDatabaseManager {
                     " AND " + TrackingViewsDbHelper.COL_NR + " > " + oldCol);
 
             // 3. Check if oldRow has 0 remaining fields
-            Cursor countCursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+            int remainingInOldRow = 0;
+            try (Cursor countCursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
                     new String[]{TrackingViewsDbHelper.ROW_ID},
                     TrackingViewsDbHelper.VIEW_ID + "=? AND " + TrackingViewsDbHelper.ROW_NR + "=?",
                     new String[]{String.valueOf(tabViewId), String.valueOf(oldRow)},
-                    null, null, null);
-            int remainingInOldRow = countCursor != null ? countCursor.getCount() : 0;
-            if (countCursor != null) countCursor.close();
+                    null, null, null)) {
+                remainingInOldRow = countCursor != null ? countCursor.getCount() : 0;
+            }
 
             if (remainingInOldRow == 0) {
                 // Shift all rows > oldRow down by 1
@@ -395,7 +396,6 @@ public class TrackingViewsDatabaseManager {
 
             db.setTransactionSuccessful();
         } finally {
-            if (cursor != null) cursor.close();
             db.endTransaction();
         }
     }
@@ -416,18 +416,17 @@ public class TrackingViewsDatabaseManager {
 
     private void normalizeGrid(SQLiteDatabase db, long tabViewId) {
         // Query distinct row numbers ordered ascending
-        Cursor rowCursor = db.query(true, TrackingViewsDbHelper.ROWS_TABLE,
+        java.util.List<Integer> distinctRows = new java.util.ArrayList<>();
+        try (Cursor rowCursor = db.query(true, TrackingViewsDbHelper.ROWS_TABLE,
                 new String[]{TrackingViewsDbHelper.ROW_NR},
                 TrackingViewsDbHelper.VIEW_ID + "=? AND " + TrackingViewsDbHelper.ROW_NR + " > 0",
                 new String[]{String.valueOf(tabViewId)},
-                null, null, TrackingViewsDbHelper.ROW_NR + " ASC", null);
-
-        java.util.List<Integer> distinctRows = new java.util.ArrayList<>();
-        if (rowCursor != null) {
-            while (rowCursor.moveToNext()) {
-                distinctRows.add(rowCursor.getInt(0));
+                null, null, TrackingViewsDbHelper.ROW_NR + " ASC", null)) {
+            if (rowCursor != null) {
+                while (rowCursor.moveToNext()) {
+                    distinctRows.add(rowCursor.getInt(0));
+                }
             }
-            rowCursor.close();
         }
 
         // 1. Assign temporary negative row indices to avoid collisions
@@ -449,67 +448,58 @@ public class TrackingViewsDatabaseManager {
 
         // 2. Re-index columns in each row to 1..C
         for (int r = 1; r <= distinctRows.size(); r++) {
-            Cursor colCursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
+            try (Cursor colCursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,
                     new String[]{TrackingViewsDbHelper.ROW_ID},
                     TrackingViewsDbHelper.VIEW_ID + "=? AND " + TrackingViewsDbHelper.ROW_NR + "=?",
                     new String[]{String.valueOf(tabViewId), String.valueOf(r)},
-                    null, null, TrackingViewsDbHelper.COL_NR + " ASC, " + TrackingViewsDbHelper.ROW_ID + " ASC");
+                    null, null, TrackingViewsDbHelper.COL_NR + " ASC, " + TrackingViewsDbHelper.ROW_ID + " ASC")) {
 
-            if (colCursor != null) {
-                int colIndex = 1;
-                while (colCursor.moveToNext()) {
-                    long fieldId = colCursor.getLong(0);
-                    ContentValues colVal = new ContentValues();
-                    colVal.put(TrackingViewsDbHelper.COL_NR, colIndex++);
-                    db.update(TrackingViewsDbHelper.ROWS_TABLE, colVal,
-                            TrackingViewsDbHelper.ROW_ID + "=?",
-                            new String[]{String.valueOf(fieldId)});
+                if (colCursor != null) {
+                    int colIndex = 1;
+                    while (colCursor.moveToNext()) {
+                        long fieldId = colCursor.getLong(0);
+                        ContentValues colVal = new ContentValues();
+                        colVal.put(TrackingViewsDbHelper.COL_NR, colIndex++);
+                        db.update(TrackingViewsDbHelper.ROWS_TABLE, colVal,
+                                TrackingViewsDbHelper.ROW_ID + "=?",
+                                new String[]{String.valueOf(fieldId)});
+                    }
                 }
-                colCursor.close();
             }
         }
     }
 
     @NonNull
     public ActivityType getActivityTypeForTab(long tabViewId) {
-
-        ActivityType activityType = ActivityType.getDefaultActivityType();
-
-        Cursor cursor = getDatabase().query(TrackingViewsDbHelper.VIEWS_TABLE,
+        try (Cursor cursor = getDatabase().query(TrackingViewsDbHelper.VIEWS_TABLE,
                 null,
                 TrackingViewsDbHelper.C_ID + "=?",
                 new String[]{tabViewId + ""},
                 null,
                 null,
-                null);
-
-        if (cursor.moveToFirst()) {
-            activityType = EnumUtils.safeValueOf(ActivityType.class, cursor.getString(cursor.getColumnIndex(TrackingViewsDbHelper.ACTIVITY_TYPE)), ActivityType.getDefaultActivityType(), TAG);
+                null)) {
+            ActivityType result = CursorUtils.mapFirst(cursor, c -> {
+                int colIdx = c.getColumnIndex(TrackingViewsDbHelper.ACTIVITY_TYPE);
+                return colIdx != -1 ? EnumUtils.safeValueOf(ActivityType.class, c.getString(colIdx), ActivityType.getDefaultActivityType(), TAG) : ActivityType.getDefaultActivityType();
+            });
+            return result != null ? result : ActivityType.getDefaultActivityType();
         }
-
-        cursor.close();
-
-        return activityType;
     }
 
     public int getLayoutNr(long viewId) {
-        int layoutNr = -1;
-
-        Cursor cursor = getDatabase().query(TrackingViewsDbHelper.VIEWS_TABLE,
+        try (Cursor cursor = getDatabase().query(TrackingViewsDbHelper.VIEWS_TABLE,
                 null,
                 TrackingViewsDbHelper.C_ID + "=?",
                 new String[]{viewId + ""},
                 null,
                 null,
-                null);
-
-        if (cursor.moveToFirst()) {
-            layoutNr = cursor.getInt(cursor.getColumnIndex(TrackingViewsDbHelper.LAYOUT_NR));
+                null)) {
+            Integer layoutNr = CursorUtils.mapFirst(cursor, c -> {
+                int colIdx = c.getColumnIndex(TrackingViewsDbHelper.LAYOUT_NR);
+                return colIdx != -1 ? c.getInt(colIdx) : -1;
+            });
+            return layoutNr != null ? layoutNr : -1;
         }
-
-        cursor.close();
-
-        return layoutNr;
     }
 
     public void deleteTabView(long viewId) {
@@ -567,31 +557,31 @@ public class TrackingViewsDatabaseManager {
     // TODO: create own helper class instad of passing a database manager.
     @NonNull
     public List<FilterData> getAllFilterData(DevicesDatabaseManager devicesDatabaseManager) {
-        LinkedList<FilterData> result = new LinkedList<>();
-
         SQLiteDatabase db = getDatabase();
-        Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,  // get cursor with all rows.  This is necessary, because the view and sport type and ... might change
+        try (Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE,  // get cursor with all rows.  This is necessary, because the view and sport type and ... might change
                 null,
                 null,
                 null,
-                null, null, null);
-        while (cursor.moveToNext()) {
-            String sensorTypeStr = cursor.getString(cursor.getColumnIndex(TrackingViewsDbHelper.SENSOR_TYPE));
-            SensorType sensorType = EnumUtils.safeValueOf(SensorType.class, sensorTypeStr, SensorType.TIME_ACTIVE, TAG);
+                null, null, null)) {
+            return CursorUtils.mapList(cursor, c -> {
+                int sensorTypeIdx = c.getColumnIndex(TrackingViewsDbHelper.SENSOR_TYPE);
+                String sensorTypeStr = sensorTypeIdx != -1 ? c.getString(sensorTypeIdx) : null;
+                SensorType sensorType = EnumUtils.safeValueOf(SensorType.class, sensorTypeStr, SensorType.TIME_ACTIVE, TAG);
 
-            int sourceDeviceId = cursor.getInt(cursor.getColumnIndex(TrackingViewsDbHelper.SOURCE_DEVICE_ID));
-            String deviceName = devicesDatabaseManager.getDeviceName(sourceDeviceId);
+                int sourceDeviceIdx = c.getColumnIndex(TrackingViewsDbHelper.SOURCE_DEVICE_ID);
+                int sourceDeviceId = sourceDeviceIdx != -1 ? c.getInt(sourceDeviceIdx) : -1;
+                String deviceName = devicesDatabaseManager.getDeviceName(sourceDeviceId);
 
-            String filterTypeStr = cursor.getString(cursor.getColumnIndex(TrackingViewsDbHelper.FILTER_TYPE));
-            FilterType filterType = EnumUtils.safeValueOf(FilterType.class, filterTypeStr, FilterType.INSTANTANEOUS, TAG);
+                int filterTypeIdx = c.getColumnIndex(TrackingViewsDbHelper.FILTER_TYPE);
+                String filterTypeStr = filterTypeIdx != -1 ? c.getString(filterTypeIdx) : null;
+                FilterType filterType = EnumUtils.safeValueOf(FilterType.class, filterTypeStr, FilterType.INSTANTANEOUS, TAG);
 
-            double filterConstant = cursor.getDouble(cursor.getColumnIndex(TrackingViewsDbHelper.FILTER_CONSTANT));
+                int filterConstIdx = c.getColumnIndex(TrackingViewsDbHelper.FILTER_CONSTANT);
+                double filterConstant = filterConstIdx != -1 ? c.getDouble(filterConstIdx) : 1.0;
 
-            result.add(new FilterData(deviceName, sensorType, filterType, filterConstant));
+                return new FilterData(deviceName, sensorType, filterType, filterConstant);
+            });
         }
-        cursor.close();
-
-        return result;
     }
 
 
@@ -957,15 +947,19 @@ public class TrackingViewsDatabaseManager {
                 addColumn(db, ROWS_TABLE, COL_NR, "int");
 
                 ContentValues contentValues = new ContentValues();
-                Cursor cursor = db.query(ROWS_TABLE, null, null, null, null, null, null);
-                int rowNr = 1;
-                while (cursor.moveToNext()) {
-                    long rowId = cursor.getLong(cursor.getColumnIndex(ROW_ID));
-                    contentValues.clear();
-                    contentValues.put(ROW_NR, rowNr++);
-                    contentValues.put(COL_NR, 1);
-                    db.update(ROWS_TABLE, contentValues, ROW_ID + "=?", new String[]{Long.toString(rowId)});
-                    db.insert(ROWS_TABLE, null, contentValues);
+                try (Cursor cursor = db.query(ROWS_TABLE, null, null, null, null, null, null)) {
+                    int rowNr = 1;
+                    if (cursor != null) {
+                        int rowIdCol = cursor.getColumnIndex(ROW_ID);
+                        while (cursor.moveToNext()) {
+                            long rowId = rowIdCol != -1 ? cursor.getLong(rowIdCol) : -1;
+                            contentValues.clear();
+                            contentValues.put(ROW_NR, rowNr++);
+                            contentValues.put(COL_NR, 1);
+                            db.update(ROWS_TABLE, contentValues, ROW_ID + "=?", new String[]{Long.toString(rowId)});
+                            db.insert(ROWS_TABLE, null, contentValues);
+                        }
+                    }
                 }
 
                 Log.i(TAG, "upgraded to db version 4");

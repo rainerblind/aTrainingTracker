@@ -32,10 +32,13 @@ import androidx.annotation.Nullable;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.database.CursorProvider;
+import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Created by rainer on 21.02.16.
@@ -75,6 +78,7 @@ public class PebbleDatabaseManager {
     // --- End of Singleton Pattern ---
 
     @NonNull
+    @CursorProvider
     private static Cursor getViewsCursor(@NonNull SQLiteDatabase db, long viewId) {
         return db.query(PebbleDbHelper.VIEWS_TABLE,
                 null,
@@ -87,17 +91,13 @@ public class PebbleDatabaseManager {
 
     @NonNull
     public ActivityType getActivityType(long viewId) {
-
-        ActivityType activityType = ActivityType.getDefaultActivityType();
-
-        Cursor cursor = getViewsCursor(getDatabase(), viewId);
-
-        if (cursor.moveToFirst()) {
-            activityType = EnumUtils.safeValueOf(ActivityType.class, cursor.getString(cursor.getColumnIndex(PebbleDbHelper.ACTIVITY_TYPE)), ActivityType.getDefaultActivityType(), TAG);
+        try (Cursor cursor = getViewsCursor(getDatabase(), viewId)) {
+            ActivityType result = CursorUtils.mapFirst(cursor, c -> {
+                int colIdx = c.getColumnIndex(PebbleDbHelper.ACTIVITY_TYPE);
+                return colIdx != -1 ? EnumUtils.safeValueOf(ActivityType.class, c.getString(colIdx), ActivityType.getDefaultActivityType(), TAG) : ActivityType.getDefaultActivityType();
+            });
+            return result != null ? result : ActivityType.getDefaultActivityType();
         }
-        cursor.close();
-
-        return activityType;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -106,15 +106,12 @@ public class PebbleDatabaseManager {
 
     @Nullable
     public String getName(long viewId) {
-        String name = null;
-
-        Cursor cursor = getViewsCursor(getDatabase(), viewId);
-
-        if (cursor.moveToFirst()) {
-            name = cursor.getString(cursor.getColumnIndex(PebbleDbHelper.NAME));
+        try (Cursor cursor = getViewsCursor(getDatabase(), viewId)) {
+            return CursorUtils.mapFirst(cursor, c -> {
+                int colIdx = c.getColumnIndex(PebbleDbHelper.NAME);
+                return colIdx != -1 ? c.getString(colIdx) : null;
+            });
         }
-
-        return name;
     }
 
     public void updateSensorType(long viewId, int rowNr, @NonNull SensorType sensorType) {
@@ -140,46 +137,38 @@ public class PebbleDatabaseManager {
 
     public long getFirstViewId(@NonNull ActivityType activityType) // the first view is the one with a negative value for PREV_VIEW_ID
     {
-        long viewId = -1;
-
-        Cursor cursor = getDatabase().query(PebbleDbHelper.VIEWS_TABLE,
+        try (Cursor cursor = getDatabase().query(PebbleDbHelper.VIEWS_TABLE,
                 null,
                 PebbleDbHelper.ACTIVITY_TYPE + "=? AND " + PebbleDbHelper.PREV_VIEW_ID + "<0",
                 new String[]{activityType.name()},
-                null, null, null);
+                null, null, null)) {
 
-        if (cursor.moveToFirst()) {
-            viewId = cursor.getInt(cursor.getColumnIndex(PebbleDbHelper.C_ID));
+            Long viewId = CursorUtils.mapFirst(cursor, c -> {
+                int colIdx = c.getColumnIndex(PebbleDbHelper.C_ID);
+                return colIdx != -1 ? c.getLong(colIdx) : -1L;
+            });
+            return viewId != null ? viewId : -1L;
         }
-        cursor.close();
-
-        return viewId;
     }
 
     public long getNextViewId(long viewId) {
-        long nextViewId = -1;
-
-        Cursor cursor = getViewsCursor(getDatabase(), viewId);
-
-        if (cursor.moveToFirst()) {
-            nextViewId = cursor.getInt(cursor.getColumnIndex(PebbleDbHelper.NEXT_VIEW_ID));
+        try (Cursor cursor = getViewsCursor(getDatabase(), viewId)) {
+            Long nextViewId = CursorUtils.mapFirst(cursor, c -> {
+                int colIdx = c.getColumnIndex(PebbleDbHelper.NEXT_VIEW_ID);
+                return colIdx != -1 ? c.getLong(colIdx) : -1L;
+            });
+            return nextViewId != null ? nextViewId : -1L;
         }
-        cursor.close();
-
-        return nextViewId;
     }
 
     public long getPrevViewId(long viewId) {
-        long nextViewId = -1;
-
-        Cursor cursor = getViewsCursor(getDatabase(), viewId);
-
-        if (cursor.moveToFirst()) {
-            nextViewId = cursor.getInt(cursor.getColumnIndex(PebbleDbHelper.PREV_VIEW_ID));
+        try (Cursor cursor = getViewsCursor(getDatabase(), viewId)) {
+            Long prevViewId = CursorUtils.mapFirst(cursor, c -> {
+                int colIdx = c.getColumnIndex(PebbleDbHelper.PREV_VIEW_ID);
+                return colIdx != -1 ? c.getLong(colIdx) : -1L;
+            });
+            return prevViewId != null ? prevViewId : -1L;
         }
-        cursor.close();
-
-        return nextViewId;
     }
 
     public void ensureEntryForActivityTypeExists(@NonNull Context context, @NonNull ActivityType activityType) {
@@ -217,24 +206,26 @@ public class PebbleDatabaseManager {
     public LinkedList<SensorType> getSensorTypeList(long viewId) {
         LinkedList<SensorType> result = new LinkedList<>();
 
-        Cursor cursor = getDatabase().query(PebbleDbHelper.ROWS_TABLE,
+        try (Cursor cursor = getDatabase().query(PebbleDbHelper.ROWS_TABLE,
                 null,
                 PebbleDbHelper.VIEW_ID + "=?",
                 new String[]{viewId + ""},
                 null,
                 null,
-                PebbleDbHelper.ROW_NR + " ASC");
+                PebbleDbHelper.ROW_NR + " ASC")) {
 
-        while (cursor.moveToNext()) {
-            SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, cursor.getString(cursor.getColumnIndex(PebbleDbHelper.SENSOR_TYPE)), TAG);
-            if (sensorType != null) {
-                result.add(sensorType);
-            } else {
-                Log.w(TAG, "Skipping unrecognized Pebble sensor row");
+            List<SensorType> types = CursorUtils.mapList(cursor, c -> {
+                int colIdx = c.getColumnIndex(PebbleDbHelper.SENSOR_TYPE);
+                return colIdx != -1 ? EnumUtils.safeValueOfOrNull(SensorType.class, c.getString(colIdx), TAG) : null;
+            });
+            for (SensorType sensorType : types) {
+                if (sensorType != null) {
+                    result.add(sensorType);
+                } else {
+                    Log.w(TAG, "Skipping unrecognized Pebble sensor row");
+                }
             }
         }
-
-        cursor.close();
 
         return result;
     }
@@ -394,14 +385,18 @@ public class PebbleDatabaseManager {
         public static long insertDefaultViewToDb(@NonNull Context context, @NonNull SQLiteDatabase db, @NonNull ActivityType activityType, long prevViewId, long nextViewId) {
             String name = context.getString(R.string.text_default);
 
-            Cursor cursor = db.query(VIEWS_TABLE,
+            int numberOfDefaults = 0;
+            try (Cursor cursor = db.query(VIEWS_TABLE,
                     null,
                     ACTIVITY_TYPE + "=?",
                     new String[]{activityType.name()},
                     null,
                     null,
-                    null);
-            int numberOfDefaults = cursor.getCount();
+                    null)) {
+                if (cursor != null) {
+                    numberOfDefaults = cursor.getCount();
+                }
+            }
             if (numberOfDefaults > 0) {
                 name = context.getString(R.string.string_and_number_format, name, numberOfDefaults + 1);
             }
@@ -496,41 +491,45 @@ public class PebbleDatabaseManager {
                 addColumn(db, VIEWS_TABLE, PREV_VIEW_ID, "int");
                 addColumn(db, VIEWS_TABLE, NEXT_VIEW_ID, "int");
 
-                Cursor cursor = null;
                 for (ActivityType activityType : ActivityType.values()) {
                     int viewId, prevViewId = -1, nextViewId = -1;
                     ContentValues values = new ContentValues();
 
                     // reconstruct and insert prev view ids
-                    cursor = db.query(VIEWS_TABLE, null,
+                    try (Cursor cursor = db.query(VIEWS_TABLE, null,
                             ACTIVITY_TYPE + "=?", new String[]{activityType.name()},
                             null, null,
-                            LAYOUT_NR + " ASC"); // order by
+                            LAYOUT_NR + " ASC")) { // order by
 
-                    while (cursor.moveToNext()) {
-                        viewId = cursor.getInt(cursor.getColumnIndex(C_ID));
-                        values.clear();
-                        values.put(PREV_VIEW_ID, prevViewId);
-                        db.update(VIEWS_TABLE, values, C_ID + "=?", new String[]{viewId + ""});
-                        prevViewId = viewId;
+                        if (cursor != null) {
+                            int idCol = cursor.getColumnIndex(C_ID);
+                            while (cursor.moveToNext()) {
+                                viewId = idCol != -1 ? cursor.getInt(idCol) : -1;
+                                values.clear();
+                                values.put(PREV_VIEW_ID, prevViewId);
+                                db.update(VIEWS_TABLE, values, C_ID + "=?", new String[]{viewId + ""});
+                                prevViewId = viewId;
+                            }
+                        }
                     }
 
                     // reconstruct and insert next view ids
-                    cursor = db.query(VIEWS_TABLE, null,
+                    try (Cursor cursor = db.query(VIEWS_TABLE, null,
                             ACTIVITY_TYPE + "=?", new String[]{activityType.name()},
                             null, null,
-                            LAYOUT_NR + " DESC"); // order by
+                            LAYOUT_NR + " DESC")) { // order by
 
-                    while (cursor.moveToNext()) {
-                        viewId = cursor.getInt(cursor.getColumnIndex(C_ID));
-                        values.clear();
-                        values.put(NEXT_VIEW_ID, nextViewId);
-                        db.update(VIEWS_TABLE, values, C_ID + "=?", new String[]{viewId + ""});
-                        nextViewId = viewId;
+                        if (cursor != null) {
+                            int idCol = cursor.getColumnIndex(C_ID);
+                            while (cursor.moveToNext()) {
+                                viewId = idCol != -1 ? cursor.getInt(idCol) : -1;
+                                values.clear();
+                                values.put(NEXT_VIEW_ID, nextViewId);
+                                db.update(VIEWS_TABLE, values, C_ID + "=?", new String[]{viewId + ""});
+                                nextViewId = viewId;
+                            }
+                        }
                     }
-                }
-                if (cursor != null && !cursor.isClosed()) {
-                    cursor.close();
                 }
             }
 
