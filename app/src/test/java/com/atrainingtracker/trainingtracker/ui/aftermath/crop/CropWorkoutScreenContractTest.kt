@@ -98,4 +98,18 @@ class CropWorkoutScreenContractTest {
         assertFalse(CropWorkoutMath.isCropValid(-1, 3, total, 10.0))
         assertFalse(CropWorkoutMath.isCropValid(2, 10, total, 10.0))
     }
+
+    @Test
+    fun testCropWorkoutScreen_doesNotDeclareNestedVerticalScroll_preventingInfinityHeightConstraintCrash() {
+        val file = java.io.File("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/crop/CropWorkoutScreen.kt")
+        val altFile = java.io.File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/crop/CropWorkoutScreen.kt")
+        val targetFile = if (file.exists()) file else altFile
+        assertTrue("CropWorkoutScreen.kt source file must exist", targetFile.exists())
+
+        val source = targetFile.readText()
+        assertFalse(
+            "CropWorkoutScreen must NOT contain verticalScroll to prevent nested scroll crashes inside AppModalBottomSheet",
+            source.contains(".verticalScroll(") || source.contains("rememberScrollState")
+        )
+    }
 }
