@@ -194,6 +194,10 @@
     <string name="normalized_power_short">NP</string>
     <string name="intensity_factor">強度係数</string>
     <string name="intensity_factor_short">IF</string>
+    <string name="work_kj">機械的仕事</string>
+    <string name="work_kj_short">kJ</string>
+    <string name="tss">トレーニングストレススコア</string>
+    <string name="tss_short">TSS</string>
     <string name="speed">速度</string>
     <string name="speed_short">速度</string>
     <string name="current_sensors">現在のセンサー</string>

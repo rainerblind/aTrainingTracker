@@ -166,8 +166,8 @@ fun EditSensorFieldDialog(
                 }
             }
 
-            // Intensity Factor FTP Baseline Display (ATT-1290, REQ-TRK-020)
-            if (uiState.selectedSensorType == SensorType.INTENSITY_FACTOR) {
+            // Intensity Factor & TSS FTP Baseline Display (ATT-1290, ATT-1291, REQ-TRK-020, REQ-TRK-021)
+            if (uiState.selectedSensorType == SensorType.INTENSITY_FACTOR || uiState.selectedSensorType == SensorType.TSS) {
                 val dataStore = remember { SettingsDataStore.getInstance(context) }
                 val storedFtp by dataStore.ftpFlow.collectAsState(initial = null)
                 val ftpStr = if (storedFtp != null && storedFtp!! > 0) {
