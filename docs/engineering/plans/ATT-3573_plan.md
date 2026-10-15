@@ -85,7 +85,7 @@ In accordance with Governance Rule 23 and `docs/design_guidelines.md` (Section 5
     android:viewportHeight="24">
     <path
         android:fillColor="#FF1976D2"
-        android:pathData="M6,20h2V8.5c0,-1.38 1.12,-2.5 2.5,-2.5c0.66,0 1.3,0.26 1.77,0.73l2.5,2.5l-2.5,2.5l6.71,0.3l-0.3,-6.71l-2.5,2.5l-2.5,-2.5c-0.84,-0.84 -1.99,-1.32 -3.18,-1.32c-2.49,0 -4.5,2.01 -4.5,4.5V20z" />
+        android:pathData="M6,20h2V8.5c0,-1.38 1.12,-2.5 2.5,-2.5c0.66,0 1.3,0.26 1.77,0.73l2.5,2.5l-1.41,1.41l4.24,0l0,-4.24l-1.41,1.41l-2.5,-2.5c-0.84,-0.84 -1.99,-1.32 -3.18,-1.32c-2.49,0 -4.5,2.01 -4.5,4.5V20z" />
 </vector>
 ```
 
@@ -99,11 +99,30 @@ In accordance with Governance Rule 23 and `docs/design_guidelines.md` (Section 5
     android:viewportHeight="24">
     <path
         android:fillColor="#FF1976D2"
-        android:pathData="M18,20h-2V8.5c0,-1.38 -1.12,-2.5 -2.5,-2.5c-0.66,0 -1.3,0.26 -1.77,0.73l-2.5,2.5l2.5,2.5l-6.71,0.3l0.3,-6.71l2.5,2.5l2.5,-2.5c0.84,-0.84 1.99,-1.32 3.18,-1.32c2.49,0 4.5,2.01 4.5,4.5V20z" />
+        android:pathData="M18,20h-2V8.5c0,-1.38 -1.12,-2.5 -2.5,-2.5c-0.66,0 -1.3,0.26 -1.77,0.73l-2.5,2.5l1.41,1.41l-4.24,0l0,-4.24l1.41,1.41l2.5,-2.5c0.84,-0.84 1.99,-1.32 3.18,-1.32c2.49,0 4.5,2.01 4.5,4.5V20z" />
 </vector>
 ```
 
-### 5.2 Mathematical Reflection Symmetry Proof Table ($x_R + x_L = 24.00, y_R = y_L$)
+### 5.2 Trigonometric Derivation & Coordinate Justification
+
+To eliminate arbitrary "magic numbers", all vector primitives are derived from standard geometric and trigonometric relationships:
+1. **Curvature Center & Radii**:
+   - Arc center: $(c_x, c_y) = (10.5, 8.5)$
+   - Inner radius $r_{in} = 2.5$, outer radius $r_{out} = 4.5 \implies$ uniform 2.0dp stem thickness ($4.5 - 2.5 = 2.0$).
+2. **Deflection Arc ($135^\circ$ deflection)**:
+   - Primary $90^\circ$ circular curve (`c0,-1.38 1.12,-2.5 2.5,-2.5`) ending at $(10.5, 6.0)$.
+   - Intermediate $45^\circ$ deflection transition (`c0.66,0 1.3,0.26 1.77,0.73`) tangent to the diagonal vector $(+1/\sqrt{2}, +1/\sqrt{2})$ (South-East).
+3. **Diagonal Shaft**:
+   - Shaft diagonal displacement: $\Delta x = +2.5, \Delta y = +2.5$ (`l2.5,2.5`), length $2.5\sqrt{2} \approx 3.54\,\text{dp}$.
+4. **Arrowhead Chevron**:
+   - Outward barb perpendicular to diagonal $(\Delta x = -\sqrt{2}, \Delta y = +\sqrt{2}) \approx (-1.41, +1.41)$ (`l-1.41,1.41`).
+   - Arrowhead apex tip with axis-aligned edges of length $3\sqrt{2} \approx 4.24\,\text{dp}$: horizontal edge `l4.24,0` meeting vertical edge `l0,-4.24` at sharp corner tip $(17.60, 10.64)$.
+   - Inward returning barb: $(\Delta x = -\sqrt{2}, \Delta y = +\sqrt{2}) \approx (-1.41, +1.41)$ (`l-1.41,1.41`).
+   - Shaft return: $\Delta x = -2.5, \Delta y = -2.5$ (`l-2.5,-2.5`).
+5. **Outer Return Arc & Stem Grounding**:
+   - Outer arc returns via smooth cubic beziers to grounded baseline at $y = 20.0\,\text{dp}$ (`V20z`), preserving 2.0dp stem width ($x \in [6.0, 8.0]$).
+
+### 5.3 Mathematical Reflection Symmetry Proof Table ($x_R + x_L = 24.00, y_R = y_L$)
 
 | Step | Right Command & End $(x_R, y_R)$ | Left Command & End $(x_L, y_L)$ | $x_R + x_L$ | $y_R - y_L$ | Status |
 | :---: | :--- | :--- | :---: | :---: | :---: |
@@ -113,13 +132,13 @@ In accordance with Governance Rule 23 and `docs/design_guidelines.md` (Section 5
 | 3-5 | `c0,-1.38 1.12,-2.5 2.5,-2.5` $\to (10.50, 6.00)$ | `c0,-1.38 -1.12,-2.5 -2.5,-2.5` $\to (13.50, 6.00)$ | **24.00** | **0.00** | Validated |
 | 6-8 | `c0.66,0 1.3,0.26 1.77,0.73` $\to (12.27, 6.73)$ | `c-0.66,0 -1.3,0.26 -1.77,0.73` $\to (11.73, 6.73)$ | **24.00** | **0.00** | Validated |
 | 9 | `l2.5,2.5` $\to (14.77, 9.23)$ | `l-2.5,2.5` $\to (9.23, 9.23)$ | **24.00** | **0.00** | Validated |
-| 10 | `l-2.5,2.5` $\to (12.27, 11.73)$ | `l2.5,2.5` $\to (11.73, 11.73)$ | **24.00** | **0.00** | Validated |
-| 11 | `l6.71,0.3` $\to (18.98, 12.03)$ | `l-6.71,0.3` $\to (5.02, 12.03)$ | **24.00** | **0.00** | Validated |
-| 12 | `l-0.3,-6.71` $\to (18.68, 5.32)$ | `l0.3,-6.71` $\to (5.32, 5.32)$ | **24.00** | **0.00** | Validated |
-| 13 | `l-2.5,2.5` $\to (16.18, 7.82)$ | `l2.5,2.5` $\to (7.82, 7.82)$ | **24.00** | **0.00** | Validated |
-| 14 | `l-2.5,-2.5` $\to (13.68, 5.32)$ | `l2.5,-2.5` $\to (10.32, 5.32)$ | **24.00** | **0.00** | Validated |
-| 15-17 | `c-0.84,-0.84 -1.99,-1.32 -3.18,-1.32` $\to (10.50, 4.00)$ | `c0.84,-0.84 1.99,-1.32 3.18,-1.32` $\to (13.50, 4.00)$ | **24.00** | **0.00** | Validated |
-| 18-20 | `c-2.49,0 -4.5,2.01 -4.5,4.5` $\to (6.00, 8.50)$ | `c2.49,0 4.5,2.01 4.5,4.5` $\to (18.00, 8.50)$ | **24.00** | **0.00** | Validated |
+| 10 | `l-1.41,1.41` $\to (13.36, 10.64)$ | `l1.41,1.41` $\to (10.64, 10.64)$ | **24.00** | **0.00** | Validated |
+| 11 | `l4.24,0` $\to (17.60, 10.64)$ | `l-4.24,0` $\to (6.40, 10.64)$ | **24.00** | **0.00** | Validated |
+| 12 | `l0,-4.24` $\to (17.60, 6.40)$ | `l0,-4.24` $\to (6.40, 6.40)$ | **24.00** | **0.00** | Validated |
+| 13 | `l-1.41,1.41` $\to (16.19, 7.81)$ | `l1.41,1.41` $\to (7.81, 7.81)$ | **24.00** | **0.00** | Validated |
+| 14 | `l-2.5,-2.5` $\to (13.69, 5.31)$ | `l2.5,-2.5` $\to (10.31, 5.31)$ | **24.00** | **0.00** | Validated |
+| 15-17 | `c-0.84,-0.84 -1.99,-1.32 -3.18,-1.32` $\to (10.51, 3.99)$ | `c0.84,-0.84 1.99,-1.32 3.18,-1.32` $\to (13.49, 3.99)$ | **24.00** | **0.00** | Validated |
+| 18-20 | `c-2.49,0 -4.5,2.01 -4.5,4.5` $\to (6.01, 8.49)$ | `c2.49,0 4.5,2.01 4.5,4.5` $\to (17.99, 8.49)$ | **24.00** | **0.00** | Validated |
 | 21 | `V20z` $\to (6.00, 20.00)$ | `V20z` $\to (18.00, 20.00)$ | **24.00** | **0.00** | Validated |
 
 All 22 milestone vertices evaluate with $x_R + x_L = 24.00 \pm 0.00$ and $y_R = y_L \pm 0.00$.
