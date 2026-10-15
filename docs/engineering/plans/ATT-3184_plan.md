@@ -35,8 +35,8 @@ The application currently binds Heart Rate and Cycling Power to a shared 5-zone 
       - Default $z5Max = \max(z4Max + 10, \text{round}(\text{Estimated FTP} \times 1.20))$
       - Default $z6Max = \max(z5Max + 10, \text{round}(\text{Estimated FTP} \times 1.50))$
     - If `z4Max` is absent or malformed (fresh install or corrupted prefs): canonical defaults: $Z1=150, Z2=200, Z3=250, Z4=300, Z5=350, Z6=450$.
-  - Atomic migration: Write both migrated values into DataStore inside a single atomic `edit` block. If reading occurs before migration is persisted, `getZoneMaxFlow` returns the calculated fallback dynamically, ensuring zero uninitialized state or race condition windows.
-  - Reset to Defaults: Add `resetToDefaults(zoneType)` function in `SettingsDataStore` providing clean recovery to canonical defaults.
+  - Atomic migration & Sanity Check: Write both migrated values into DataStore inside a single atomic `edit` block. Immediately post-migration, run a validation pass `validatePowerZones(z1, z2, z3, z4, z5, z6)`: if existing legacy data was corrupted or non-monotonic ($z_{n} \le z_{n-1}$), the migration automatically falls back to canonical defaults ($150, 200, 250, 300, 350, 450$) to ensure zero corrupt state enters production.
+  - Reset to Defaults: Add `resetToDefaults(zoneType)` function in `SettingsDataStore` providing clean recovery to canonical defaults in case the user has corrupted legacy data.
 - **Strict Monotonic Ascending Validation**:
   - `validatePowerZones(z1, z2, z3, z4, z5, z6)` enforces $0 < z1 < z2 < z3 < z4 < z5 < z6$.
 - **Zone 7 Upper Boundary Semantics**:
@@ -46,6 +46,7 @@ The application currently binds Heart Rate and Cycling Power to a shared 5-zone 
   - `getZoneMax(context, zoneType, zoneIndex)` returns an integer threshold for valid indices:
     - For `HR_RUN` and `HR_BIKE`: valid indices are `1..4`. If queried for index `>= 5` or `<= 0`, it returns `0` (indicating no upper boundary / open-ended zone, conforming to existing callers).
     - For `PWR_BIKE`: valid indices are `1..6`. For index `>= 7` or `<= 0`, it returns `0` (indicating Zone 7 is open-ended).
+    - Array Bounds Guarantee: `SettingsDataStoreJavaHelper` uses a safe `when (zoneIndex)` construct without internal arrays or indexing, strictly guaranteeing zero `ArrayIndexOutOfBoundsException` or crashes regardless of what integer index a caller passes.
     - Downstream safety: Callers (`loadPowerThresholds`, `loadHeartRateThresholds`) check `z > 0 && z_{n} > z_{n-1}` and gracefully return `null` if any boundary is 0, completely eliminating silent failure or division-by-zero risks.
 - **UI Conflict Resolution & Monotonic Guard in `ZonesSettingsActivity`**:
   - Behavior on input violation: When a user enters a value breaking strict monotonicity ($z_n < z_{n-1} + 1$ or $z_n > z_{n+1} - 1$), the UI displays an inline validation error state (red border / helper text) and **blocks saving** (Save / Auto-save is inhibited while the input is invalid).
@@ -58,7 +59,7 @@ The application currently binds Heart Rate and Cycling Power to a shared 5-zone 
   - `calculatePowerZoneBands()`:
     - Generates 7 candidate bands clamped to $[dataMin, dataMax]$.
     - Only bands where $clampedMin < clampedMax$ are returned (if $dataMax \le z6Max$, Zone 7 has $clampedMin = clampedMax = dataMax$, which is filtered out by `clampedMin < clampedMax`, so Zone 7 is omitted for sub-threshold rides).
-  - `determinePowerZone()`: Returns 1..7 (1 for $\le z1Max$ up to 7 for $> z6Max$).
+  - `determinePowerZone()`: Returns 1..7 (for all values $\le z1Max$ including zero and negative values, it strictly returns `1`, preventing any Zone 0 or negative zone indices; and returns 7 for $> z6Max$).
   - `loadPowerThresholds()`: Loads all 6 thresholds from DataStore via `SettingsDataStoreJavaHelper` and validates $0 < z1 < z2 < z3 < z4 < z5 < z6$. Returns null if any threshold is $\le 0$ or non-monotonic.
 - Update `BatterySaverModel.calculateZoneIndex`:
   - When `zoneType == ZoneType.PWR_BIKE`, load all 6 boundaries and return zone 1..7.
