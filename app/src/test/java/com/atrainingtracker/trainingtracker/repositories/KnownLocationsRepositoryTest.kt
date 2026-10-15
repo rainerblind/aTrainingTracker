@@ -95,6 +95,9 @@ class KnownLocationsRepositoryTest {
 
     @After
     fun tearDown() {
+        if (::repository.isInitialized) {
+            repository.cancelScopeForTesting()
+        }
         runBlocking {
             withContext(testDispatcher) {
                 // Drain any pending coroutine tasks on single-threaded dispatcher before clearing mocks
