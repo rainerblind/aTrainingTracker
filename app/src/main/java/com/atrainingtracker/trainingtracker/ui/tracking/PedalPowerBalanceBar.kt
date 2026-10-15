@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,15 +43,22 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import kotlin.math.abs
 import kotlin.math.min
+
+private val NEEDLE_OVERHANG_DP: Dp = 2.dp
+private val NEEDLE_TOTAL_EXTRA_HEIGHT: Dp = NEEDLE_OVERHANG_DP * 2
 
 /**
  * Compact, high-visibility visual pedal power balance indicator bar (REQ-UI-377).
@@ -60,6 +68,8 @@ import kotlin.math.min
  * color coding (Optimal Green, Mild Amber, Severe Red).
  *
  * Adheres strictly to True-Black AMOLED contrast guidelines (REQ-UI-190, REQ-UI-220, Rule 23).
+ * Explicitly forces LTR layout direction to guarantee Left/Right physical pedal spatial alignment
+ * invariant of device locale.
  *
  * @param state Immutable state containing Left/Right percentages, deviation, tier color, and indicator fraction.
  * @param modifier Composable modifier for layout customization.
@@ -78,128 +88,131 @@ fun PedalPowerBalanceBar(
         width = 0.5.dp,
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
     )
-    val totalBarHeight = trackHeight + 4.dp // 2dp needle overhang top & bottom
+    val totalBarHeight = trackHeight + NEEDLE_TOTAL_EXTRA_HEIGHT
 
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Peripheral Left Marker
-        Text(
-            text = "L",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            ),
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = trackAlpha),
-            modifier = Modifier
-                .padding(end = 4.dp)
-                .testTag("pedal_balance_label_l")
-        )
-
-        // Main Balance Track + Deviation Fill + Needle Overlay
-        BoxWithConstraints(
-            modifier = Modifier
-                .weight(1f)
-                .height(totalBarHeight)
-                .testTag("pedal_balance_bar_container"),
-            contentAlignment = Alignment.Center
+    // Explicitly enforce LTR so mechanical left/right bicycle pedal geometry is preserved regardless of locale
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Row(
+            modifier = modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            val totalWidthPx = constraints.maxWidth.toFloat()
-            val totalHeightPx = constraints.maxHeight.toFloat()
-
-            // 1. Horizontal Balance Track with Center Anchor & Deviation Fill
-            Box(
+            // Peripheral Left Marker
+            Text(
+                text = stringResource(R.string.pedal_balance_left_marker),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = trackAlpha),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(trackHeight)
-                    .clip(barShape)
-                    .border(outlineBorder, barShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                    .padding(end = 4.dp)
+                    .testTag("pedal_balance_label_l")
+            )
+
+            // Main Balance Track + Deviation Fill + Needle Overlay
+            BoxWithConstraints(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(totalBarHeight)
+                    .testTag("pedal_balance_bar_container"),
+                contentAlignment = Alignment.Center
             ) {
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag("pedal_balance_track_canvas")
-                ) {
-                    val width = size.width
-                    val height = size.height
-                    val centerX = width / 2f
+                val totalWidthPx = constraints.maxWidth.toFloat()
+                val totalHeightPx = constraints.maxHeight.toFloat()
 
-                    // Draw deviation fill from center (50%) towards needle position
-                    if (!isStale) {
-                        val needleX = (state.indicatorFraction * width).coerceIn(0f, width)
-                        val leftFill = min(centerX, needleX)
-                        val fillWidth = abs(needleX - centerX)
-                        if (fillWidth > 0f) {
-                            drawRect(
-                                color = state.tierColor.copy(alpha = trackAlpha),
-                                topLeft = Offset(leftFill, 0f),
-                                size = Size(fillWidth, height)
-                            )
+                // 1. Horizontal Balance Track with Center Anchor & Deviation Fill
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(trackHeight)
+                        .clip(barShape)
+                        .border(outlineBorder, barShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                ) {
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag("pedal_balance_track_canvas")
+                    ) {
+                        val width = size.width
+                        val height = size.height
+                        val centerX = width / 2f
+
+                        // Draw deviation fill from center (50%) towards needle position
+                        if (!isStale) {
+                            val needleX = (state.indicatorFraction * width).coerceIn(0f, width)
+                            val leftFill = min(centerX, needleX)
+                            val fillWidth = abs(needleX - centerX)
+                            if (fillWidth > 0f) {
+                                drawRect(
+                                    color = state.tierColor.copy(alpha = trackAlpha),
+                                    topLeft = Offset(leftFill, 0f),
+                                    size = Size(fillWidth, height)
+                                )
+                            }
                         }
+
+                        // Center 50/50 anchor divider
+                        val dividerWidthPx = 1.5.dp.toPx()
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.7f * trackAlpha),
+                            start = Offset(centerX, 0f),
+                            end = Offset(centerX, height),
+                            strokeWidth = dividerWidthPx
+                        )
                     }
+                }
 
-                    // Center 50/50 anchor divider
-                    val dividerWidthPx = 1.5.dp.toPx()
-                    drawLine(
-                        color = Color.White.copy(alpha = 0.7f * trackAlpha),
-                        start = Offset(centerX, 0f),
-                        end = Offset(centerX, height),
-                        strokeWidth = dividerWidthPx
-                    )
+                // 2. High-Contrast Needle Overlay
+                if (!isStale && totalWidthPx > 0f) {
+                    val needleFraction = state.indicatorFraction.coerceIn(0.0f, 1.0f)
+                    val needleWidthPx = 3.dp.value * (totalHeightPx / totalBarHeight.value)
+                    val halfNeedleWidth = needleWidthPx / 2f
+                    val clampedCenterX = (needleFraction * totalWidthPx).coerceIn(halfNeedleWidth, totalWidthPx - halfNeedleWidth)
+
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag("pedal_balance_needle")
+                    ) {
+                        val needleLeft = clampedCenterX - halfNeedleWidth
+                        val needleTop = 0f
+                        val needleHeight = size.height
+                        val cornerRadius = CornerRadius(1.5.dp.toPx(), 1.5.dp.toPx())
+
+                        // Dark shadow / outline (ensures > 12:1 contrast against bright fills)
+                        drawRoundRect(
+                            color = Color(0xFF1B1B1F),
+                            topLeft = Offset(needleLeft - 0.75.dp.toPx(), needleTop),
+                            size = Size(needleWidthPx + 1.5.dp.toPx(), needleHeight),
+                            cornerRadius = cornerRadius,
+                            style = Stroke(width = 1.dp.toPx())
+                        )
+
+                        // Pure White Fill
+                        drawRoundRect(
+                            color = Color.White,
+                            topLeft = Offset(needleLeft, needleTop),
+                            size = Size(needleWidthPx, needleHeight),
+                            cornerRadius = cornerRadius
+                        )
+                    }
                 }
             }
 
-            // 2. High-Contrast Needle Overlay
-            if (!isStale && totalWidthPx > 0f) {
-                val needleFraction = state.indicatorFraction.coerceIn(0.0f, 1.0f)
-                val needleWidthPx = 3.dp.value * (totalHeightPx / totalBarHeight.value)
-                val halfNeedleWidth = needleWidthPx / 2f
-                val clampedCenterX = (needleFraction * totalWidthPx).coerceIn(halfNeedleWidth, totalWidthPx - halfNeedleWidth)
-
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag("pedal_balance_needle")
-                ) {
-                    val needleLeft = clampedCenterX - halfNeedleWidth
-                    val needleTop = 0f
-                    val needleHeight = size.height
-                    val cornerRadius = CornerRadius(1.5.dp.toPx(), 1.5.dp.toPx())
-
-                    // Dark shadow / outline (ensures > 12:1 contrast against bright fills)
-                    drawRoundRect(
-                        color = Color(0xFF1B1B1F),
-                        topLeft = Offset(needleLeft - 0.75.dp.toPx(), needleTop),
-                        size = Size(needleWidthPx + 1.5.dp.toPx(), needleHeight),
-                        cornerRadius = cornerRadius,
-                        style = Stroke(width = 1.dp.toPx())
-                    )
-
-                    // Pure White Fill
-                    drawRoundRect(
-                        color = Color.White,
-                        topLeft = Offset(needleLeft, needleTop),
-                        size = Size(needleWidthPx, needleHeight),
-                        cornerRadius = cornerRadius
-                    )
-                }
-            }
+            // Peripheral Right Marker
+            Text(
+                text = stringResource(R.string.pedal_balance_right_marker),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = trackAlpha),
+                modifier = Modifier
+                    .padding(start = 4.dp)
+                    .testTag("pedal_balance_label_r")
+            )
         }
-
-        // Peripheral Right Marker
-        Text(
-            text = "R",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            ),
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = trackAlpha),
-            modifier = Modifier
-                .padding(start = 4.dp)
-                .testTag("pedal_balance_label_r")
-        )
     }
 }
 

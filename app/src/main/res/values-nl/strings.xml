@@ -641,6 +641,8 @@
     <string name="zone_display_right_bar">Balk rechts</string>
     <string name="zone_display_text_color">Tekstkleur</string>
     <string name="zone_display_gauge">Zonemeterbalk</string>
+    <string name="pedal_balance_left_marker">L</string>
+    <string name="pedal_balance_right_marker">R</string>
     <string name="zone_display_preview_title">Voorbeeld</string>
 
     <string name="prefEmailExport">e-Mail</string>
