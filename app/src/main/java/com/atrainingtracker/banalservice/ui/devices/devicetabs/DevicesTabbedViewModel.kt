@@ -28,6 +28,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
@@ -135,7 +136,7 @@ class DevicesTabbedViewModel(
 
     // Protocol is retrieved once from SavedStateHandle with defensive fallback (REQ-STB-011)
     var protocol: Protocol = savedStateHandle.get<String>(BANALService.PROTOCOL)?.let { raw ->
-        runCatching { Protocol.valueOf(raw) }.getOrNull()
+        safeEnumValueOfOrNull<Protocol>(raw)
     } ?: Protocol.ALL.also { savedStateHandle[BANALService.PROTOCOL] = it.name }
         private set
 
@@ -154,7 +155,7 @@ class DevicesTabbedViewModel(
 
         // Check if deviceType was already saved or provide safe fallback to ALL (REQ-STB-011)
         val savedDeviceType: DeviceType = savedStateHandle.get<String>(BANALService.DEVICE_TYPE)?.let { raw ->
-            runCatching { DeviceType.valueOf(raw) }.getOrNull()
+            safeEnumValueOfOrNull<DeviceType>(raw)
         } ?: DeviceType.ALL.also { savedStateHandle[BANALService.DEVICE_TYPE] = it.name }
 
         _uiState.value = UiState.DisplayingTabs(savedDeviceType)

@@ -26,6 +26,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.provider.BaseColumns
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.google.android.gms.maps.model.LatLng
@@ -134,7 +135,7 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
                 maxDispLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_MAX_DISP_LNG)),
                 refDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_REF_DISTANCE)),
                 hitCount = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_HIT_COUNT)),
-                bSportType = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_SPORT_TYPE))),
+                bSportType = safeEnumValueOf(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_SPORT_TYPE)), BSportType.UNKNOWN),
                 previewPaths = if (previewIdx != -1 && !cursor.isNull(previewIdx)) deserializePreviewPaths(cursor.getString(previewIdx)) else emptyList(),
                 routePolyline = if (routeIdx != -1 && !cursor.isNull(routeIdx)) cursor.getString(routeIdx) else null,
                 minLat = if (minLatIdx != -1 && !cursor.isNull(minLatIdx)) cursor.getDouble(minLatIdx) else null,

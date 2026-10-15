@@ -22,6 +22,7 @@ import android.database.Cursor
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 
@@ -34,18 +35,10 @@ class RawDeviceDataProvider(
         val id = cursor.getLong(cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.C_ID))
         
         val typeString = getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE)
-        val deviceType = try {
-            DeviceType.valueOf(typeString)
-        } catch (e: Exception) {
-            DeviceType.DUMMY
-        }
+        val deviceType = safeEnumValueOf(typeString, DeviceType.DUMMY, "RawDeviceDataProvider")
 
         val protocolString = getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.PROTOCOL)
-        val protocol = try {
-            Protocol.valueOf(protocolString)
-        } catch (e: Exception) {
-            Protocol.ALL
-        }
+        val protocol = safeEnumValueOf(protocolString, Protocol.ALL, "RawDeviceDataProvider")
 
         val lastSeen = getSafeString(cursor, DevicesDatabaseManager.DevicesDbHelper.LAST_ACTIVE)
         val batteryPercentage = getSafeInt(cursor, DevicesDatabaseManager.DevicesDbHelper.LAST_BATTERY_PERCENTAGE)

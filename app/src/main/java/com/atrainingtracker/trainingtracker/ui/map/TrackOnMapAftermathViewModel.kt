@@ -28,6 +28,7 @@ import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
@@ -75,7 +76,7 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
     val enabledTrackTypes: StateFlow<Set<TrackType>> = prefManager.enabledTrackTypesFlow
         .map { strings ->
             strings.mapNotNull {
-                try { TrackType.valueOf(it) } catch(e: Exception) { null }
+                safeEnumValueOfOrNull<TrackType>(it)
             }.toSet()
         }
         .stateIn(

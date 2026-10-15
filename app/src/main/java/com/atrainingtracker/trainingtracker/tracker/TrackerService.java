@@ -37,6 +37,7 @@ import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 import java.util.concurrent.CompletableFuture;
+import com.atrainingtracker.util.EnumUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -501,7 +502,7 @@ public class TrackerService extends Service {
         if (intent == null) {
             startType = StartType.RESUME_SERVICE_RECREATION;
         } else {
-            startType = StartType.valueOf(intent.getStringExtra(START_TYPE));
+            startType = EnumUtils.safeValueOf(StartType.class, intent.getStringExtra(START_TYPE), StartType.START_NORMAL, TAG);
         }
         mStartType = startType;
         mWorkoutStartLocationRecorded = (startType != StartType.START_NORMAL);

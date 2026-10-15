@@ -29,6 +29,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
@@ -51,7 +52,7 @@ class TrackingTabsFragment : Fragment() {
         arguments?.let {
             val activityTypeName = it.getString(ARG_ACTIVITY_TYPE)
             if (activityTypeName != null) {
-                viewModel.setExplicitActivityType(ActivityType.valueOf(activityTypeName))
+                viewModel.setExplicitActivityType(safeEnumValueOf(activityTypeName, ActivityType.getDefaultActivityType()))
                 viewModel.setScreenMode(ScreenMode.CONFIGURATION)
             }
         }

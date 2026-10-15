@@ -32,6 +32,7 @@ import androidx.annotation.Nullable;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.LinkedList;
@@ -92,7 +93,7 @@ public class PebbleDatabaseManager {
         Cursor cursor = getViewsCursor(getDatabase(), viewId);
 
         if (cursor.moveToFirst()) {
-            activityType = ActivityType.valueOf(cursor.getString(cursor.getColumnIndex(PebbleDbHelper.ACTIVITY_TYPE)));
+            activityType = EnumUtils.safeValueOf(ActivityType.class, cursor.getString(cursor.getColumnIndex(PebbleDbHelper.ACTIVITY_TYPE)), ActivityType.getDefaultActivityType(), TAG);
         }
         cursor.close();
 
@@ -225,7 +226,12 @@ public class PebbleDatabaseManager {
                 PebbleDbHelper.ROW_NR + " ASC");
 
         while (cursor.moveToNext()) {
-            result.add(SensorType.valueOf(cursor.getString(cursor.getColumnIndex(PebbleDbHelper.SENSOR_TYPE))));
+            SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, cursor.getString(cursor.getColumnIndex(PebbleDbHelper.SENSOR_TYPE)), TAG);
+            if (sensorType != null) {
+                result.add(sensorType);
+            } else {
+                Log.w(TAG, "Skipping unrecognized Pebble sensor row");
+            }
         }
 
         cursor.close();

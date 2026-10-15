@@ -31,6 +31,7 @@ import android.widget.ArrayAdapter;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 
 import java.util.List;
@@ -82,7 +83,9 @@ public class SelectSportTypeDialog extends DialogFragment {
         super.onCreate(savedInstanceState);
         if (DEBUG) Log.d(TAG, "onCreate");
 
-        mBSportType = BSportType.valueOf(getArguments().getString(B_SPORT_TYPE));
+        Bundle args = getArguments();
+        String sportStr = args != null ? args.getString(B_SPORT_TYPE) : null;
+        mBSportType = EnumUtils.safeValueOf(BSportType.class, sportStr, BSportType.UNKNOWN, TAG);
     }
 
 

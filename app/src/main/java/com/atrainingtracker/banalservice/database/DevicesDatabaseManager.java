@@ -40,6 +40,7 @@ import com.atrainingtracker.banalservice.devices.Manufacturer;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikePowerDevice;
 import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -124,8 +125,12 @@ public class DevicesDatabaseManager {
             while (cursor.moveToNext()) {
                 long id = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
                 String name = cursor.getString(cursor.getColumnIndex(DevicesDbHelper.NAME));
-                DeviceType deviceType = DeviceType.valueOf(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)));
-                Protocol protocol = Protocol.valueOf(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.PROTOCOL)));
+                DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)), TAG);
+                Protocol protocol = EnumUtils.safeValueOfOrNull(Protocol.class, cursor.getString(cursor.getColumnIndex(DevicesDbHelper.PROTOCOL)), TAG);
+                if (deviceType == null || protocol == null) {
+                    Log.w(TAG, "Skipping device with invalid DeviceType or Protocol at id " + id);
+                    continue;
+                }
                 list.add(new RemoteDeviceUIDataCacheItem(id, name, deviceType, protocol));
             }
             cursor.close();
@@ -305,7 +310,10 @@ public class DevicesDatabaseManager {
                 null,
                 null);
         while (cursor.moveToNext()) {
-            DeviceType deviceType = DeviceType.valueOf(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)));
+            DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)), TAG);
+            if (deviceType == null) {
+                continue;
+            }
             long deviceId = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
 
             if (deviceTypeSet.contains(deviceType)) {
@@ -501,8 +509,10 @@ public class DevicesDatabaseManager {
             cursor = getCursor(db, deviceID, DevicesDbHelper.DEVICE_TYPE);
             if (cursor.getCount() > 0) {
                 cursor.moveToFirst();
-                DeviceType deviceType = DeviceType.valueOf(cursor.getString(0));
-                calibrationFactor = deviceType.getDefaultCalibrationFactor();
+                DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(0), TAG);
+                if (deviceType != null) {
+                    calibrationFactor = deviceType.getDefaultCalibrationFactor();
+                }
             }
         }
 
@@ -527,7 +537,7 @@ public class DevicesDatabaseManager {
     }
 
     public DeviceType getDeviceType(long deviceId) {
-        return DeviceType.valueOf(getString(deviceId, DevicesDbHelper.DEVICE_TYPE));
+        return EnumUtils.safeValueOf(DeviceType.class, getString(deviceId, DevicesDbHelper.DEVICE_TYPE), DeviceType.DUMMY, TAG);
     }
 
     @Nullable
@@ -549,7 +559,7 @@ public class DevicesDatabaseManager {
     }
 
     public Protocol getProtocol(long deviceId) {
-        return Protocol.valueOf(getString(deviceId, DevicesDbHelper.PROTOCOL));
+        return EnumUtils.safeValueOf(Protocol.class, getString(deviceId, DevicesDbHelper.PROTOCOL), Protocol.ALL, TAG);
     }
 
     public void setManufacturerName(long deviceId, String manufacturerName) {
@@ -794,12 +804,9 @@ public class DevicesDatabaseManager {
             int typeCol = cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE);
 
             while (cursor.moveToNext()) {
-                DeviceType dt = null;
-                if (typeCol != -1 && !cursor.isNull(typeCol)) {
-                    try {
-                        dt = DeviceType.valueOf(cursor.getString(typeCol));
-                    } catch (Exception ignored) {}
-                }
+                DeviceType dt = (typeCol != -1 && !cursor.isNull(typeCol))
+                        ? EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(typeCol), TAG)
+                        : null;
                 sensors.add(new SimpleSensorInfo(
                         cursor.getLong(idCol),
                         cursor.getString(nameCol),
@@ -837,12 +844,9 @@ public class DevicesDatabaseManager {
             int typeCol = cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE);
 
             while (cursor.moveToNext()) {
-                DeviceType dt = null;
-                if (typeCol != -1 && !cursor.isNull(typeCol)) {
-                    try {
-                        dt = DeviceType.valueOf(cursor.getString(typeCol));
-                    } catch (Exception ignored) {}
-                }
+                DeviceType dt = (typeCol != -1 && !cursor.isNull(typeCol))
+                        ? EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(typeCol), TAG)
+                        : null;
                 sensors.add(new SimpleSensorInfo(
                         cursor.getLong(idCol),
                         cursor.getString(nameCol),

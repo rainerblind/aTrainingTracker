@@ -32,6 +32,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
+import com.atrainingtracker.util.safeEnumValueOf
 
 /**
  * Selectable horizontal X-axis domain for Aftermath elevation profile and scrubbing.
@@ -420,35 +421,19 @@ class TuningPreferencesDataStore(private val context: Context) {
 
     val tuningConfigFlow: Flow<TuningConfig> = context.dataStore.data.map { prefs ->
         val rawElevationDomainStr = prefs[KEY_ELEVATION_X_AXIS_DOMAIN] ?: prefs[KEY_PROFILE_X_AXIS_DOMAIN]
-        val elevationDomain = try {
-            if (rawElevationDomainStr != null) ProfileXAxisDomain.valueOf(rawElevationDomainStr) else TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN
-        } catch (e: Exception) {
-            TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN
-        }
+        val elevationDomain = safeEnumValueOf(rawElevationDomainStr, TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN)
 
         val rawTelemetryDomainStr = prefs[KEY_TELEMETRY_X_AXIS_DOMAIN]
-        val telemetryDomain = try {
-            if (rawTelemetryDomainStr != null) ProfileXAxisDomain.valueOf(rawTelemetryDomainStr) else TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN
-        } catch (e: Exception) {
-            TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN
-        }
+        val telemetryDomain = safeEnumValueOf(rawTelemetryDomainStr, TuningPreferencesDefaults.TELEMETRY_X_AXIS_DOMAIN)
 
         val rawFontFamilyStr = prefs[KEY_COCKPIT_FONT_FAMILY]
-        val cockpitFontFamily = try {
-            if (rawFontFamilyStr != null) CockpitFontFamily.valueOf(rawFontFamilyStr) else TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
-        } catch (e: Exception) {
-            TuningPreferencesDefaults.COCKPIT_FONT_FAMILY
-        }
+        val cockpitFontFamily = safeEnumValueOf(rawFontFamilyStr, TuningPreferencesDefaults.COCKPIT_FONT_FAMILY)
 
         val rawVariantStr = prefs[KEY_SENSOR_FIELD_VARIANT]
         val sensorFieldVariant = SensorFieldVariant.fromStorage(rawVariantStr)
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
-        val cockpitFontWeight = try {
-            if (rawFontWeightStr != null) CockpitFontWeight.valueOf(rawFontWeightStr) else TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT
-        } catch (e: Exception) {
-            TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT
-        }
+        val cockpitFontWeight = safeEnumValueOf(rawFontWeightStr, TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT)
         val rawFullDim = prefs[KEY_FULL_DIM_FACTOR] ?: TuningPreferencesDefaults.FULL_DIM_FACTOR
         val rawMediumDim = prefs[KEY_MEDIUM_DIM_FACTOR] ?: TuningPreferencesDefaults.MEDIUM_DIM_FACTOR
         val clampedFullDim = rawFullDim.coerceIn(

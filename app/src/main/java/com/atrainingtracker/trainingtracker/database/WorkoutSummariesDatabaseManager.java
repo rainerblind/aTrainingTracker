@@ -35,6 +35,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.PolyUtil;
@@ -791,10 +792,16 @@ public class WorkoutSummariesDatabaseManager {
                 if (!cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
                     pos = new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx));
                 }
+                SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, cursor.getString(sensorIdx), TAG);
+                ExtremaType extremaType = EnumUtils.safeValueOfOrNull(ExtremaType.class, cursor.getString(typeIdx), TAG);
+                if (sensorType == null || extremaType == null) {
+                    Log.w(TAG, "Skipping corrupted or unrecognized extrema record at cursor pos " + cursor.getPosition());
+                    continue;
+                }
                 records.add(new ExtremaRecord(
                         cursor.getLong(wIdIdx),
-                        SensorType.valueOf(cursor.getString(sensorIdx)),
-                        ExtremaType.valueOf(cursor.getString(typeIdx)),
+                        sensorType,
+                        extremaType,
                         cursor.getDouble(valIdx),
                         pos
                 ));
@@ -1161,7 +1168,12 @@ public class WorkoutSummariesDatabaseManager {
             while (cursor.moveToNext()) {
                 String sensorTypeName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.SENSOR_TYPE));
                 if (DEBUG) Log.i(TAG, "got sensor: " + sensorTypeName);
-                accumulatedSensorTypesSet.add(SensorType.valueOf(sensorTypeName));
+                SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, sensorTypeName, TAG);
+                if (sensorType != null) {
+                    accumulatedSensorTypesSet.add(sensorType);
+                } else {
+                    Log.w(TAG, "Skipping unrecognized accumulated sensor type: " + sensorTypeName);
+                }
             }
         }
 
@@ -1818,8 +1830,12 @@ public class WorkoutSummariesDatabaseManager {
                     double value = extremaCursor.getDouble(valueIdx);
 
                     try {
-                        SensorType sensorType = SensorType.valueOf(sensorTypeName);
-                        ExtremaType extremaType = ExtremaType.valueOf(extremaTypeName);
+                        SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, sensorTypeName, TAG);
+                        ExtremaType extremaType = EnumUtils.safeValueOfOrNull(ExtremaType.class, extremaTypeName, TAG);
+                        if (sensorType == null || extremaType == null) {
+                            Log.w(TAG, "Skipping legacy position migration for unrecognized enum: " + sensorTypeName + " " + extremaTypeName);
+                            continue;
+                        }
 
                         // Use the shared logic in WorkoutSamplesDatabaseManager to find the location
                         // Pass the database currently being upgraded to avoid recursion

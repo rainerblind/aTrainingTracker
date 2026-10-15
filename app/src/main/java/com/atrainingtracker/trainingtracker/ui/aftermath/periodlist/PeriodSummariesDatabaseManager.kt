@@ -18,6 +18,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.provider.BaseColumns
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.util.safeEnumValueOf
 
 /**
  * Manages the persistent storage for period-level summaries using a normalized relational schema.
@@ -183,7 +184,7 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
             while (cursor.moveToNext()) {
                 val pId = cursor.getLong(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_PERIOD_ID))
                 val sId = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID))
-                val bType = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_BSPORT_TYPE)))
+                val bType = safeEnumValueOf(cursor.getString(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_BSPORT_TYPE)), BSportType.UNKNOWN, TAG)
                 
                 val stats = mapCursorToSportStats(cursor, mutableMapOf())
                 idToSportStatsMap.getOrPut(pId) { mutableMapOf() }[bType] = stats
@@ -270,7 +271,7 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         db.query(SportStatsContract.TABLE_NAME, null, selection, arrayOf(periodId.toString()), null, null, null).use { cursor ->
             while (cursor.moveToNext()) {
                 val statsId = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID))
-                val type = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_BSPORT_TYPE)))
+                val type = safeEnumValueOf(cursor.getString(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_BSPORT_TYPE)), BSportType.UNKNOWN, TAG)
                 val longestId = cursor.getLong(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_LONGEST_WORKOUT_ID))
                 val longestDuration = cursor.getLong(cursor.getColumnIndexOrThrow(SportStatsContract.COLUMN_LONGEST_DURATION))
                 statsMap[type] = mapCursorToSportStats(cursor, getDetailedStatsForSport(db, statsId)).apply {
@@ -344,7 +345,7 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
         return PeriodSummary(
             periodLabel = cursor.getString(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_LABEL)),
             periodDateRange = cursor.getString(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_DATE_RANGE)),
-            periodType = PeriodType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_PERIOD_TYPE))),
+            periodType = safeEnumValueOf(cursor.getString(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_PERIOD_TYPE)), PeriodType.WEEK, TAG),
             startTimestampS = cursor.getLong(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_START_TIMESTAMP)),
             endTimestampS = cursor.getLong(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_END_TIMESTAMP)),
             totalWorkouts = cursor.getInt(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_TOTAL_WORKOUTS)),

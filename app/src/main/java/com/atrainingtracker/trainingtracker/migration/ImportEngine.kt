@@ -22,6 +22,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.util.safeEnumValueOf
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -98,7 +99,7 @@ object ImportEngine {
                 srcSportDb.query("SportTypes", arrayOf("UIName", "baseSportType"), "_id = ?", arrayOf(id.toString()), null, null, null).use { cursor ->
                     if (cursor.moveToFirst()) {
                         val name = cursor.getString(0)
-                        val bSport = try { BSportType.valueOf(cursor.getString(1)) } catch (e: Exception) { BSportType.UNKNOWN }
+                        val bSport = safeEnumValueOf(cursor.getString(1), BSportType.UNKNOWN, TAG)
                         sportTypes[id] = SportTypeInfo(id, name, bSport)
                     }
                 }
@@ -110,7 +111,7 @@ object ImportEngine {
                     srcEquipDb.query("Equipment", arrayOf("Name", "SportType"), "_id = ?", arrayOf(id.toString()), null, null, null).use { cursor ->
                         if (cursor.moveToFirst()) {
                             val name = cursor.getString(0)
-                            val bSport = try { BSportType.valueOf(cursor.getString(1)) } catch (e: Exception) { BSportType.UNKNOWN }
+                            val bSport = safeEnumValueOf(cursor.getString(1), BSportType.UNKNOWN, TAG)
                             equipment[id] = EquipmentInfo(id, name, bSport)
                         }
                     }
