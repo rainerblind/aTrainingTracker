@@ -42,7 +42,9 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import com.atrainingtracker.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.banalservice.BANALService
@@ -1139,21 +1141,24 @@ private fun GradeLegend(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            GradeLegendItem(TTColor.Zone1, "< 2%")
-            GradeLegendItem(TTColor.Zone2, "2 - 5%")
-            GradeLegendItem(TTColor.Zone3, "5 - 10%")
-            GradeLegendItem(TTColor.Zone4, "10 - 15%")
-            GradeLegendItem(TTColor.Zone5, "15 - 20%")
-            GradeLegendItem(TTColor.Zone6, "20 - 25%")
-            GradeLegendItem(TTColor.Zone7, "> 25%")
+            GradeLegendItem(TTColor.Zone1, stringResource(R.string.grade_legend_under_2))
+            GradeLegendItem(TTColor.Zone2, stringResource(R.string.grade_legend_2_to_5))
+            GradeLegendItem(TTColor.Zone3, stringResource(R.string.grade_legend_5_to_10))
+            GradeLegendItem(TTColor.Zone4, stringResource(R.string.grade_legend_10_to_15))
+            GradeLegendItem(TTColor.Zone5, stringResource(R.string.grade_legend_15_to_20))
+            GradeLegendItem(TTColor.Zone6, stringResource(R.string.grade_legend_20_to_25))
+            GradeLegendItem(TTColor.Zone7, stringResource(R.string.grade_legend_over_25))
         }
     }
 }
 
 @Composable
-private fun GradeLegendItem(color: Color, label: String) {
+private fun GradeLegendItem(
+    color: Color,
+    label: String,
+    hasOutline: Boolean = color == TTColor.Zone6 || color == TTColor.Zone7
+) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        val hasOutline = color == TTColor.Zone6 || color == TTColor.Zone7 || color == Color.Black
         Surface(
             modifier = Modifier.size(12.dp),
             color = color,

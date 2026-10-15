@@ -114,19 +114,42 @@ class ElevationProfileGradeColorTest {
             content.contains("getElevationGradeColor(grade)")
         )
 
-        // GradeLegend contract: all 7 labels must exist
-        assertTrue("Legend must contain '< 2%'", content.contains("\"< 2%\""))
-        assertTrue("Legend must contain '2 - 5%'", content.contains("\"2 - 5%\""))
-        assertTrue("Legend must contain '5 - 10%'", content.contains("\"5 - 10%\""))
-        assertTrue("Legend must contain '10 - 15%'", content.contains("\"10 - 15%\""))
-        assertTrue("Legend must contain '15 - 20%'", content.contains("\"15 - 20%\""))
-        assertTrue("Legend must contain '20 - 25%'", content.contains("\"20 - 25%\""))
-        assertTrue("Legend must contain '> 25%'", content.contains("\"> 25%\""))
+        // GradeLegend contract: all 7 string resources must be referenced
+        assertTrue("Legend must reference grade_legend_under_2", content.contains("R.string.grade_legend_under_2"))
+        assertTrue("Legend must reference grade_legend_2_to_5", content.contains("R.string.grade_legend_2_to_5"))
+        assertTrue("Legend must reference grade_legend_5_to_10", content.contains("R.string.grade_legend_5_to_10"))
+        assertTrue("Legend must reference grade_legend_10_to_15", content.contains("R.string.grade_legend_10_to_15"))
+        assertTrue("Legend must reference grade_legend_15_to_20", content.contains("R.string.grade_legend_15_to_20"))
+        assertTrue("Legend must reference grade_legend_20_to_25", content.contains("R.string.grade_legend_20_to_25"))
+        assertTrue("Legend must reference grade_legend_over_25", content.contains("R.string.grade_legend_over_25"))
 
         // WCAG accessibility: outline border declared on GradeLegendItem for dark swatches
         assertTrue(
             "GradeLegendItem must declare border outline for dark swatches",
-            content.contains("val hasOutline = color == TTColor.Zone6 || color == TTColor.Zone7 || color == Color.Black")
+            content.contains("hasOutline: Boolean = color == TTColor.Zone6 || color == TTColor.Zone7")
         )
+    }
+
+    @Test
+    fun testGradeLegendLocalization_allNineLocalesExist() {
+        val locales = listOf("", "-de", "-es", "-fr", "-it", "-ja", "-nl", "-pl", "-pt")
+        val requiredKeys = listOf(
+            "grade_legend_under_2",
+            "grade_legend_2_to_5",
+            "grade_legend_5_to_10",
+            "grade_legend_10_to_15",
+            "grade_legend_15_to_20",
+            "grade_legend_20_to_25",
+            "grade_legend_over_25"
+        )
+
+        for (loc in locales) {
+            val file = File(projectRoot, "app/src/main/res/values$loc/strings.xml")
+            assertTrue("Locale file $file must exist", file.exists())
+            val text = file.readText()
+            for (key in requiredKeys) {
+                assertTrue("File $file must contain string name=\"$key\"", text.contains("name=\"$key\""))
+            }
+        }
     }
 }
