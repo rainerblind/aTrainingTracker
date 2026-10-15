@@ -15,11 +15,11 @@
 
 | Requirement ID | Test Case ID | Test Target | Verification Description | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| `REQ-TRK-022.1` | `TST-TRK-014.1` | `MergedManifestAuditTest` / Manifest Inspection | Verify `<uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />` is absent from merged manifest | Draft |
-| `REQ-TRK-022.2` | `TST-TRK-014.2` | `MergedManifestAuditTest` / Manifest Inspection | Verify `TrackerService` and `BANALService` specify `android:foregroundServiceType="location\|health"` without `connectedDevice` | Draft |
-| `REQ-TRK-022.3` | `TST-TRK-014.3` | `TrackerServiceFGSTypeTest.kt` | Verify `determineForegroundServiceType()` returns `LOCATION` (health not granted) or `LOCATION \| HEALTH` (health granted), and NEVER returns `CONNECTED_DEVICE` | Draft |
-| `REQ-TRK-022.4` | `TST-TRK-014.4` | `TrackerServiceFinalizationTest.kt` | Verify `determineForegroundServiceType()` omits health type without permission and expects strictly `FOREGROUND_SERVICE_TYPE_LOCATION` | Draft |
-| `REQ-TRK-022` | `TST-TRK-014.5` | `./gradlew testDebugUnitTest` | Full clean-room test suite execution with 100% pass rate and zero regressions | Draft |
+| `REQ-TRK-022.1` | `TST-TRK-014.1` | `MergedManifestAuditTest` / Manifest Inspection | Verify `<uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />` is absent from merged manifest | Verified |
+| `REQ-TRK-022.2` | `TST-TRK-014.2` | `MergedManifestAuditTest` / Manifest Inspection | Verify `TrackerService` and `BANALService` specify `android:foregroundServiceType="location\|health"` without `connectedDevice` | Verified |
+| `REQ-TRK-022.3` | `TST-TRK-014.3` | `TrackerServiceFGSTypeTest.kt` | Verify `determineForegroundServiceType()` returns `LOCATION` (health not granted) or `LOCATION \| HEALTH` (health granted), and NEVER returns `CONNECTED_DEVICE` | Verified |
+| `REQ-TRK-022.4` | `TST-TRK-014.4` | `TrackerServiceFinalizationTest.kt` | Verify `determineForegroundServiceType()` omits health type without permission and expects strictly `FOREGROUND_SERVICE_TYPE_LOCATION` | Verified |
+| `REQ-TRK-022` | `TST-TRK-014.5` | `./gradlew testDebugUnitTest` | Full clean-room test suite execution with 100% pass rate and zero regressions | Verified |
 
 ---
 
