@@ -138,4 +138,23 @@ class MapCameraTuningPreferencesTest {
         assertEquals(0.15f, mapped.bearingSmoothingAlpha, 0.001f)
         assertEquals(16.0f, mapped.minZoom, 0.001f)
     }
+
+    @Test
+    fun purgeLegacyMapCameraKeys_removesAllSevenLegacyKeys() {
+        val mutablePrefs = androidx.datastore.preferences.core.mutablePreferencesOf(
+            TuningPreferencesDataStore.KEY_MAP_FOLLOW_ME_INITIAL_ZOOM to 17.0f,
+            TuningPreferencesDataStore.KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED to false,
+            TuningPreferencesDataStore.KEY_MAP_FOLLOW_ME_CRUISING_ZOOM to 14.5f,
+            TuningPreferencesDataStore.KEY_MAP_FOLLOW_ME_TILT_ANGLE to 30.0f,
+            TuningPreferencesDataStore.KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT to 15.0f,
+            TuningPreferencesDataStore.KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA to 0.40f,
+            TuningPreferencesDataStore.KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA to 0.35f,
+            TuningPreferencesDataStore.KEY_CLIMB_MIN_LENGTH_METERS to 500.0f
+        )
+        TuningPreferencesDataStore.purgeLegacyMapCameraKeys(mutablePrefs)
+        for (key in TuningPreferencesDataStore.LEGACY_MAP_CAMERA_KEYS) {
+            assertFalse("Legacy key ${key.name} must be purged", mutablePrefs.contains(key))
+        }
+        assertTrue("Non-legacy keys must be retained", mutablePrefs.contains(TuningPreferencesDataStore.KEY_CLIMB_MIN_LENGTH_METERS))
+    }
 }

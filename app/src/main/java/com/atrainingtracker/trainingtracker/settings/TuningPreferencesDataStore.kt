@@ -19,14 +19,18 @@
 package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -537,6 +541,25 @@ class TuningPreferencesDataStore(private val context: Context) {
                 minZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_MIN_ZOOM
             )
         }
+
+        /**
+         * Purges legacy map camera keys from a [MutablePreferences] instance (ATT-3581 / REQ-MAP-050).
+         */
+        fun purgeLegacyMapCameraKeys(prefs: MutablePreferences) {
+            for (key in LEGACY_MAP_CAMERA_KEYS) {
+                prefs.remove(key)
+            }
+        }
+    }
+
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                purgeLegacyMapCameraPreferences()
+            } catch (_: Exception) {
+                // Best-effort legacy key purge on startup
+            }
+        }
     }
 
 /**
@@ -1012,9 +1035,7 @@ data class AutoPausePreferences(
      */
     suspend fun purgeLegacyMapCameraPreferences() {
         context.dataStore.edit { prefs ->
-            for (key in LEGACY_MAP_CAMERA_KEYS) {
-                prefs.remove(key)
-            }
+            purgeLegacyMapCameraKeys(prefs)
         }
     }
 

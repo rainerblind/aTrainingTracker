@@ -126,6 +126,9 @@ fun AdvancedTuningScreen(
         val order = persistedWorkoutSectionsOrder
         if (!isSectionsOrderInitialized && order != null) { workoutSectionsOrder = order; isSectionsOrderInitialized = true }
     }
+    LaunchedEffect(Unit) {
+        tuningDataStore.purgeLegacyMapCameraPreferences()
+    }
 
     fun applyConfig(config: TuningConfig) {
         elevationXAxisDomain = config.elevationXAxisDomain; telemetryXAxisDomain = config.telemetryXAxisDomain
