@@ -28,11 +28,11 @@ Currently, configuring zone boundaries is entirely manual. Athletes must calcula
    - Runners and cyclists lack standard Heart Rate calculation models:
      - **Model A (% HRmax)**: Standard percent of maximum heart rate.
      - **Model B (Karvonen HR Reserve)**: Heart rate reserve accounting for resting heart rate ($HR_{\text{target}} = HR_{\text{rest}} + \% \times (HR_{\text{max}} - HR_{\text{rest}})$).
-4. **Absence of Baseline Synchronization & State Tracking**:
-   - Previously, there was no way to track whether current zone thresholds reflect calculated values from the athlete's baseline or custom user overrides.
-   - Without explicit state tracking (`is_zones_synced_to_baseline`), updating a baseline metric leaves zone thresholds in an ambiguous state.
+4. **Risk of State Drift & Stale Configuration**:
+   - If an athlete manually adjusts a threshold card or updates their FTP baseline in the future, the system must clearly distinguish whether the active zone thresholds match the calculated baseline or represent custom manual fine-tuning.
+   - An ad-hoc boolean flag is prone to state-drift; synchronization status must instead be derived deterministically by comparing active zone boundaries against the calculated baseline values.
 
-This ticket introduces an interactive, contextual Zone Calculator assistant directly accessible from `ZoneSettingsScreen`, creates a pure mathematical calculation engine `ZoneCalculationMath.kt`, establishes persistent preferences in `SettingsDataStore.kt` (`cycling_ftp`, `athlete_hr_max`, `athlete_hr_rest`, and `is_zones_synced`), establishes a centralized validation gate `ZoneValidator.kt`, automatically populates zone threshold cards upon confirmation while preserving manual fine-tuning, and provides 100% translation parity across all 9 supported application locales.
+This ticket introduces an interactive, contextual Zone Calculator assistant directly accessible from `ZoneSettingsScreen`, creates a pure mathematical calculation engine `ZoneCalculationMath.kt`, establishes persistent preferences in `SettingsDataStore.kt` (`cycling_ftp`, `athlete_hr_max`, `athlete_hr_rest`) with atomic transaction writers, establishes a centralized blocking validation gate `ZoneValidator.kt`, bounds open-ended Zone 7 to prevent integer overflow ($3000\text{W}$ max), and provides 100% translation parity across all 9 supported application locales.
 
 ---
 
@@ -44,22 +44,21 @@ This ticket introduces an interactive, contextual Zone Calculator assistant dire
    - There is no calculation trigger or action icon in the TopAppBar or header row.
 2. **Absence of Athlete Baseline Preference Keys in `SettingsDataStore.kt`**:
    - `SettingsDataStore.kt` defines threshold keys (`HR_RUN_ZONE1_MAX..HR_RUN_ZONE4_MAX`, `HR_BIKE_ZONE1_MAX..HR_BIKE_ZONE4_MAX`, `PWR_BIKE_ZONE1_MAX..PWR_BIKE_ZONE6_MAX`) and display options keys.
-   - There are **no keys** for `cycling_ftp`, `athlete_hr_max`, `athlete_hr_rest`, or baseline sync state.
+   - There are **no keys** for `cycling_ftp`, `athlete_hr_max`, or `athlete_hr_rest`.
    - Downstream consumers in ATT-1290 and ATT-1291 have no authoritative repository or flow to query for the athlete's FTP.
-3. **Validation Coupling in UI Layer**:
+3. **Validation Coupling & Lack of Blocking Gate**:
    - Monotonic validation (`isProfileMonotonic`) currently resides solely as a private helper inside `ZonesSettingsActivity.kt`.
-   - DataStore mutators and background services lack access to a centralized `ZoneValidator`, creating potential data corruption risks if invalid values are passed programmatically.
+   - DataStore mutators lack internal validation enforcement. A centralized `ZoneValidator` is required to act as a strict blocking validator for UI inputs and DataStore mutators.
 4. **No Pure Math Engine for Zone Bracket Computation**:
-   - There is currently no component in `com.atrainingtracker.trainingtracker.settings` that calculates zone brackets from physiological baselines.
-   - Calculations must be encapsulated in a dedicated, side-effect-free math engine (`ZoneCalculationMath.kt`) to ensure testability without Android runtime dependencies.
+   - Calculations must be encapsulated in a dedicated, side-effect-free math engine (`ZoneCalculationMath.kt`) with deterministic arithmetic rounding to ensure testability without Android runtime dependencies.
 5. **Lack of Synchronous Bridges for Java Services**:
    - `SettingsDataStoreJavaHelper.kt` exposes `getZoneMax()` and `getZoneDisplayOptions()`, but lacks methods to read `getCyclingFtp()`, `getAthleteHrMax()`, or `getAthleteHrRest()`.
 
-### 2.2 Mathematical Model Analysis & Rounding Policy
+### 2.2 Mathematical Model Analysis, Rounding Policy & Zone 7 Capping
 
 #### 2.2.1 Deterministic Rounding Policy
 To guarantee consistency across different CPU architectures, Android OS versions, and locales:
-- All zone boundaries are computed on positive integers ($FTP \ge 50$, $HR_{\text{max}} \ge 100$, $HR_{\text{rest}} \ge 30$).
+- All zone boundaries are computed on positive integers ($FTP \in [50, 600]$, $HR_{\text{max}} \in [100, 240]$, $HR_{\text{rest}} \in [30, 100]$).
 - Standard arithmetic half-up rounding is enforced via:
   $$\text{roundCutoff}(val) = \lfloor val + 0.5 \rfloor = \text{kotlin.math.round}(val).\text{toInt()}$$
 - This eliminates floating-point representation drift and ensures deterministic, reproducible integer boundaries.
@@ -72,10 +71,10 @@ Given athlete Functional Threshold Power $FTP \in [50, 600]\text{ Watts}$:
 - **Zone 4 (Threshold)**: $91 - 105\% \implies Z_{4\text{max}} = \text{round}(FTP \times 1.05)$
 - **Zone 5 (VO2 Max)**: $106 - 120\% \implies Z_{5\text{max}} = \text{round}(FTP \times 1.20)$
 - **Zone 6 (Anaerobic Capacity)**: $121 - 150\% \implies Z_{6\text{max}} = \text{round}(FTP \times 1.50)$
-- **Zone 7 (Neuromuscular)**: $> 150\% \implies \text{Min} = Z_{6\text{max}} + 1$ (open-ended upper bound)
+- **Zone 7 (Neuromuscular)**: $> 150\% \implies \text{Min} = Z_{6\text{max}} + 1$, capped at physical ceiling $Z_{7\text{max}} = 3000\text{ Watts}$ (preventing downstream arithmetic overflow).
 
 *Monotonic Guarantee*: Because $0.55 < 0.75 < 0.90 < 1.05 < 1.20 < 1.50$, for any valid $FTP \ge 50$, the calculated upper bounds are strictly monotonic:
-$$0 < Z_1 < Z_2 < Z_3 < Z_4 < Z_5 < Z_6$$
+$$0 < Z_1 < Z_2 < Z_3 < Z_4 < Z_5 < Z_6 < 3000$$
 To guard against boundary collisions due to integer rounding at low FTP values ($FTP < 50$), `ZoneCalculationMath` strictly enforces $Z_i \ge Z_{i-1} + 1$.
 
 #### 2.2.3 Heart Rate Model A (% of HRmax)
@@ -84,7 +83,7 @@ Given athlete maximum heart rate $HR_{\text{max}} \in [100, 240]\text{ bpm}$:
 - **Zone 2 (Easy / Aerobic)**: $60 - 70\% \implies Z_{2\text{max}} = \text{round}(HR_{\text{max}} \times 0.70)$
 - **Zone 3 (Aerobic / Tempo)**: $70 - 80\% \implies Z_{3\text{max}} = \text{round}(HR_{\text{max}} \times 0.80)$
 - **Zone 4 (Threshold)**: $80 - 90\% \implies Z_{4\text{max}} = \text{round}(HR_{\text{max}} \times 0.90)$
-- **Zone 5 (Maximum / Anaerobic)**: $> 90\% \implies \text{Min} = Z_{4\text{max}} + 1$ (up to $HR_{\text{max}}$)
+- **Zone 5 (Maximum / Anaerobic)**: $> 90\% \implies \text{Min} = Z_{4\text{max}} + 1$, capped at physical ceiling $HR_{\text{max}}$ (or $250\text{ bpm}$).
 
 *Monotonic Guarantee*: $0.60 < 0.70 < 0.80 < 0.90$ guarantees $Z_1 < Z_2 < Z_3 < Z_4$ for all valid $HR_{\text{max}} \ge 100$.
 
@@ -96,41 +95,69 @@ $$\text{Target } HR(\%) = HR_{\text{rest}} + \% \times HRR$$
 - **Zone 2**: $Z_{2\text{max}} = \text{round}(HR_{\text{rest}} + 0.70 \times HRR)$
 - **Zone 3**: $Z_{3\text{max}} = \text{round}(HR_{\text{rest}} + 0.80 \times HRR)$
 - **Zone 4**: $Z_{4\text{max}} = \text{round}(HR_{\text{rest}} + 0.90 \times HRR)$
-- **Zone 5**: $> Z_{4\text{max}}$
+- **Zone 5**: $> Z_{4\text{max}}$, capped at $HR_{\text{max}}$ (or $250\text{ bpm}$).
 
 *Monotonic Guarantee*: Since $HRR \ge 20$ and $0.60 < 0.70 < 0.80 < 0.90$, $Z_1 < Z_2 < Z_3 < Z_4$ is mathematically guaranteed.
 
 ---
 
-## 3. Single Source of Truth (SSoT) & Baseline Synchronization Lifecycle
+## 3. Atomic Transaction Boundaries & State Synchronization
 
-### 3.1 Distinction Between Baseline Metrics and Zone Thresholds
-To eliminate any ambiguity or data integrity risks between persistent physiological baselines and mutable zone thresholds:
-1. **Authoritative SSoT for Downstream Telemetry Engines**:
-   - `SettingsDataStore.KEY_CYCLING_FTP` (`cycling_ftp`) is the permanent single source of truth for all power normalization metrics (Live IF in ATT-1290, live TSS in ATT-1291).
-   - This baseline is NEVER altered by manual threshold card edits.
-2. **State Tracking: Synced vs. Customized**:
-   - `SettingsDataStore` tracks synchronization state per zone profile via:
-     - `pwr_bike_zones_synced: Boolean` (default `true`)
-     - `hr_run_zones_synced: Boolean` (default `true`)
-     - `hr_bike_zones_synced: Boolean` (default `true`)
-   - When the athlete calculates and applies zones from the Zone Calculator dialog, `is_zones_synced` is set to `true`.
-   - If the athlete subsequently manually edits any zone card threshold, `is_zones_synced` transitions to `false` (Customized).
-   - The UI displays a clear indicator badge ("Synced with FTP: 250W" vs "Customized") and provides a one-tap "Re-sync to Baseline" action to instantly restore the standard physiological brackets without re-entering values.
-3. **Explicit Baseline Update & Re-Calculation Trigger**:
-   - Baseline updates occur exclusively via the Zone Calculator dialog upon tapping "Apply" ("Übernehmen").
-   - When "Apply" is tapped:
-     1. The new baseline value (e.g. updated FTP from 250W to 300W) is saved to DataStore.
-     2. New zone thresholds are computed immediately.
-     3. Active tab zone profile is updated and persisted atomically.
-     4. `is_zones_synced` is set to `true`.
-   - If the athlete cancels the dialog, neither the baseline nor the zone thresholds are modified.
+### 3.1 Single Source of Truth (SSoT) for Background Services
+- `SettingsDataStore.KEY_CYCLING_FTP` (`cycling_ftp`) is the permanent single source of truth for all power normalization metrics (Live IF in ATT-1290, live TSS in ATT-1291).
+- Background services and Java callers query `SettingsDataStoreJavaHelper.getCyclingFtp(context)` which returns an immutable, consistent integer snapshot.
+
+### 3.2 Atomic "Apply" Transaction
+To eliminate race conditions, partial writes, or split-brain states between baseline metrics and zone thresholds, the "Apply" operation executes within a single atomic `dataStore.edit { }` transaction block:
+```kotlin
+suspend fun applyCalculatedPowerZones(ftp: Int, zones: List<Int>) {
+    require(ZoneValidator.validatePowerZones(zones[0], zones[1], zones[2], zones[3], zones[4], zones[5])) {
+        "Cannot persist invalid non-monotonic power zones"
+    }
+    dataStore.edit { prefs ->
+        prefs[KEY_CYCLING_FTP] = ftp
+        prefs[PWR_BIKE_ZONE1_MAX] = zones[0]
+        prefs[PWR_BIKE_ZONE2_MAX] = zones[1]
+        prefs[PWR_BIKE_ZONE3_MAX] = zones[2]
+        prefs[PWR_BIKE_ZONE4_MAX] = zones[3]
+        prefs[PWR_BIKE_ZONE5_MAX] = zones[4]
+        prefs[PWR_BIKE_ZONE6_MAX] = zones[5]
+    }
+}
+```
+Because DataStore writes are transactional and file-backed (`user_settings.preferences_pb`), background services will never observe an intermediate torn state (either all previous values or all new values are visible).
+
+### 3.3 State Synchronization Without Fragile Boolean Flags
+Rather than maintaining an ad-hoc boolean flag (`is_synced`) that can drift or get corrupted, synchronization status is **derived deterministically on-the-fly**:
+- For Cycling Power: Active zones are in sync with baseline if and only if:
+  $$[z_1, z_2, z_3, z_4, z_5, z_6] == \text{calculateCogganPowerZones}(\text{cyclingFtp})$$
+- If the athlete manually edits any zone card threshold or updates FTP, the equality naturally evaluates to `false`.
+- The UI dynamically displays:
+  - If synced: localized status badge *"Abgestimmt auf FTP: %d W"* (*"Synced with FTP: %d W"*).
+  - If customized / out of sync: localized status badge *"Benutzerdefiniert"* (*"Customized"*), along with an action button *"Auf FTP zurücksetzen"* (*"Re-sync to FTP"*).
+- This functional derivation eliminates all synchronization drift bugs.
 
 ---
 
-## 4. Chesterton's Fence Archaeological Review (`REQ-PRO-022`)
+## 4. Centralized Blocking Validation Architecture (`ZoneValidator.kt`)
 
-### 4.1 Historical Precedent & Existing Commit Trace
+`ZoneValidator.kt` is a pure Kotlin singleton providing strict, blocking validation:
+
+1. **Input Baseline Validation**:
+   - `validateFtp(ftp: Int): ValidationResult`: Validates $FTP \in [50, 600]\text{ Watts}$.
+   - `validateHeartRateBaselines(hrMax: Int, hrRest: Int? = null): ValidationResult`: Validates $HR_{\text{max}} \in [100, 240]\text{ bpm}$, and if $HR_{\text{rest}}$ is provided, validates $HR_{\text{rest}} \in [30, 100]\text{ bpm}$ and $HR_{\text{max}} - HR_{\text{rest}} \ge 20$.
+2. **Zone Threshold Monotonicity Validation**:
+   - `validatePowerZones(z1, z2, z3, z4, z5, z6): Boolean`: Asserts $0 < z_1 < z_2 < z_3 < z_4 < z_5 < z_6 \le 3000$.
+   - `validateHeartRateZones(z1, z2, z3, z4): Boolean`: Asserts $30 < z_1 < z_2 < z_3 < z_4 \le 250$.
+3. **Blocking Enforcement**:
+   - **UI Layer**: The "Apply" button in `ZoneCalculatorDialog` is disabled whenever `validateFtp` or `validateHeartRateBaselines` returns invalid, showing clear inline helper error messages.
+   - **Persistence Layer**: `SettingsDataStore` transactional mutators invoke `ZoneValidator` and throw `IllegalArgumentException` on invalid boundaries, guaranteeing zero data corruption from background callers.
+
+---
+
+## 5. Chesterton's Fence Archaeological Review (`REQ-PRO-022`)
+
+### 5.1 Historical Precedent & Existing Commit Trace
 1. **ATT-132 (Sprint 2026-38.1)**:
    - Initial implementation of `ZonesSettingsActivity` with 5 heart rate zones (`HR_RUN`, `HR_BIKE`) and 5 cycling power zones (`PWR_BIKE`).
 2. **ATT-2031 (Sprint 2026-40.16, Commit `8a7b9c12`)**:
@@ -140,7 +167,7 @@ To eliminate any ambiguity or data integrity risks between persistent physiologi
    - Decoupled HR (5 zones) from Cycling Power (7-zone Coggan model) under `REQ-UI-370`.
    - Added `PWR_BIKE_ZONE5_MAX` and `PWR_BIKE_ZONE6_MAX` in `SettingsDataStore.kt` with dynamic proportional migration and strict monotonic validation ($0 < z1 < z2 < z3 < z4 < z5 < z6$).
 
-### 4.2 Chesterton's Fence Archaeological 4-Field Audit
+### 5.2 Chesterton's Fence Archaeological 4-Field Audit
 1. **Original Requirement ID & Target**:
    - Extends `REQ-UI-370` (*7-Zone Coggan Cycling Power Model & Dynamic DataStore Migration*) and `REQ-UI-260` (*Centralized Zone Threshold Resolution*).
    - Formulates net-new requirement: `REQ-UI-373` (*Automatic Training Zone Calculation from FTP and Heart Rate Baselines*).
@@ -158,24 +185,22 @@ To eliminate any ambiguity or data integrity risks between persistent physiologi
 
 ---
 
-## 5. Scope Bounding (`ATT-1250`)
+## 6. Scope Bounding (`ATT-1250`)
 
-### 5.1 In-Scope Deliverables
-1. **Centralized Validation Layer (`ZoneValidator.kt`)**:
+### 6.1 In-Scope Deliverables
+1. **Centralized Blocking Validation Layer (`ZoneValidator.kt`)**:
    - Pure Kotlin object in `com.atrainingtracker.trainingtracker.settings`.
-   - Methods: `validatePowerZones(z1, z2, z3, z4, z5, z6): Boolean`, `validateHeartRateZones(z1, z2, z3, z4): Boolean`, `validateBaselines(ftp, hrMax, hrRest): Boolean`.
-   - Used by UI and DataStore mutators as an invariant enforcement barrier.
+   - Methods: `validatePowerZones(z1, z2, z3, z4, z5, z6): Boolean`, `validateHeartRateZones(z1, z2, z3, z4): Boolean`, `validateFtp(ftp): Boolean`, `validateHeartRateBaselines(hrMax, hrRest): Boolean`.
 2. **Pure Math Engine (`ZoneCalculationMath.kt`)**:
    - Pure Kotlin object in `com.atrainingtracker.trainingtracker.settings`.
    - Functions: `calculateCogganPowerZones(ftp: Int): List<Int>`, `calculateHrmaxHeartRateZones(hrMax: Int): List<Int>`, `calculateKarvonenHeartRateZones(hrMax: Int, hrRest: Int): List<Int>`.
-   - Boundary clamping, input validation, and monotonic enforcement ($Z_i \ge Z_{i-1} + 1$).
+   - Half-up rounding policy and upper capping for Zone 7 ($3000\text{W}$).
 3. **Persistent Preferences in `SettingsDataStore.kt`**:
    - `KEY_CYCLING_FTP = intPreferencesKey("cycling_ftp")` (default 200W).
    - `KEY_ATHLETE_HR_MAX = intPreferencesKey("athlete_hr_max")` (default 190 bpm).
    - `KEY_ATHLETE_HR_REST = intPreferencesKey("athlete_hr_rest")` (default 60 bpm).
-   - `KEY_PWR_BIKE_ZONES_SYNCED`, `KEY_HR_RUN_ZONES_SYNCED`, `KEY_HR_BIKE_ZONES_SYNCED` (default `true`).
-   - Reactive flows: `cyclingFtpFlow`, `athleteHrMaxFlow`, `athleteHrRestFlow`, `getZonesSyncedFlow(zoneType)`.
-   - Suspend mutators: `saveCyclingFtp(ftp: Int)`, `saveAthleteHrMax(hrMax: Int)`, `saveAthleteHrRest(hrRest: Int)`, `saveZonesSynced(zoneType: ZoneType, synced: Boolean)`.
+   - Reactive flows: `cyclingFtpFlow`, `athleteHrMaxFlow`, `athleteHrRestFlow`.
+   - Atomic transaction mutators: `applyCalculatedPowerZones(ftp, zones)`, `applyCalculatedHeartRateZones(type, hrMax, hrRest, zones)`.
 4. **Synchronous Accessors in `SettingsDataStoreJavaHelper.kt`**:
    - `@JvmStatic fun getCyclingFtp(context: Context): Int`
    - `@JvmStatic fun getAthleteHrMax(context: Context): Int`
@@ -186,24 +211,24 @@ To eliminate any ambiguity or data integrity risks between persistent physiologi
    - For `PWR_BIKE`: Numerical input for FTP with live preview table showing all 7 zones and calculated cutoffs in Watts.
    - For `HR_RUN` / `HR_BIKE`: Segmented button switcher ("% HRmax" vs "Karvonen HRR"), inputs for Max HR (and Resting HR when Karvonen is selected), and live preview table showing all 5 zones and calculated cutoffs in bpm.
    - Pre-populates inputs from currently stored DataStore baseline values.
-   - "Apply" ("Übernehmen") button: persists entered baselines, updates active tab zone profile, marks profile synced (`is_synced = true`), saves to DataStore, and dismisses dialog.
+   - "Apply" ("Übernehmen") button: atomic commit of baseline and calculated zones, updating UI state.
    - "Cancel" ("Abbrechen") button: dismisses without changes.
 6. **Localization Parity Across All 9 Supported Locales**:
    - Localize all calculator strings across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
 7. **Comprehensive Unit Test Suite**:
    - Pure math tests: `ZoneCalculationMathTest.kt` (Coggan FTP brackets, % HRmax, Karvonen HRR, bounds clamping, edge cases).
    - Centralized validator tests: `ZoneValidatorTest.kt`.
-   - DataStore persistence tests: `SettingsDataStoreBaselinesTest.kt` (saving, loading, flow emission, defaults, sync flags).
+   - DataStore persistence & atomic transaction tests: `SettingsDataStoreBaselinesTest.kt`.
    - Localization parity tests: `ZoneCalculatorLocalizationTest.kt`.
 
-### 5.2 Out-of-Scope
+### 6.2 Out-of-Scope
 - No implementation of Live IF (ATT-1290) or Live TSS (ATT-1291); this ticket establishes the authoritative DataStore infrastructure and baseline persistence required by those downstream tickets.
 - No modifications to SQLite workout databases or telemetry recording pipelines.
 - No automatic overwrite of user zones without explicit user confirmation ("Apply").
 
 ---
 
-## 6. Target Architectural Design (SWE.2 Preview)
+## 7. Target Architectural Design (SWE.2 Preview)
 
 ```mermaid
 flowchart TD
@@ -218,20 +243,20 @@ flowchart TD
     end
 
     subgraph Domain ["Pure Mathematical & Validation Engine"]
-        Validator["ZoneValidator.kt (Centralized Invariant Enforcement)"]
-        Math["ZoneCalculationMath.kt (Deterministic Rounding)"]
+        Validator["ZoneValidator.kt (Blocking Invariant Enforcement)"]
+        Math["ZoneCalculationMath.kt (Deterministic Half-Up Rounding)"]
         Coggan["calculateCogganPowerZones(ftp)"]
         Hrmax["calculateHrmaxHeartRateZones(hrMax)"]
         Karvonen["calculateKarvonenHeartRateZones(hrMax, hrRest)"]
     end
 
-    subgraph DataStore ["SettingsDataStore.kt"]
+    subgraph DataStore ["SettingsDataStore.kt (Atomic Transaction)"]
+        AtomicCommit["dataStore.edit { prefs[FTP] = ftp; prefs[Z1..Z6] = zones }"]
         PrefFTP["cycling_ftp (Int)"]
         PrefHRMax["athlete_hr_max (Int)"]
         PrefHRRest["athlete_hr_rest (Int)"]
-        PrefSync["*_zones_synced (Boolean)"]
         PrefZones["Thresholds (z1..z6)"]
-        Flows["cyclingFtpFlow, athleteHrMaxFlow, athleteHrRestFlow, getZonesSyncedFlow"]
+        Flows["cyclingFtpFlow, athleteHrMaxFlow, athleteHrRestFlow"]
     end
 
     subgraph Downstream ["Downstream Consumers (ATT-1290 / ATT-1291)"]
@@ -249,30 +274,31 @@ flowchart TD
     Hrmax --> Preview
     Karvonen --> Preview
     Dialog --> ApplyBtn
-    ApplyBtn --> Validator
-    Validator -->|Valid| DataStore
-    ApplyBtn -->|Persist Baselines & Synced=true| DataStore
+    ApplyBtn -->|Validate Inputs| Validator
+    Validator -->|Valid| AtomicCommit
+    AtomicCommit --> PrefFTP
+    AtomicCommit --> PrefZones
     ApplyBtn -->|Populate Zones| UI
-    ManualEdit -->|Set Synced=false| DataStore
-    DataStore --> SyncBadge
+    PrefFTP & PrefZones --> SyncBadge
     Flows --> Downstream
 ```
 
 ---
 
-## 7. Risk Assessment & Mitigation Strategy
+## 8. Risk Assessment & Mitigation Strategy
 
 | Risk ID | Risk Description | Severity | Probability | Mitigation Strategy |
 |:---|:---|:---:|:---:|:---|
 | **RSK-01** | Integer rounding collisions at very low FTP ($< 50\text{W}$) producing non-monotonic zone thresholds ($z_i \le z_{i-1}$). | Medium | Low | `ZoneCalculationMath` clamps minimum FTP to 50W and enforces strict monotonic step increment ($Z_i \ge Z_{i-1} + 1$). |
-| **RSK-02** | User inputs Resting HR $\ge$ Max HR in Karvonen model, causing division by zero or negative heart rate reserve ($HRR \le 0$). | High | Medium | UI input validation disables "Apply" button and shows error message whenever $HR_{\text{max}} \le HR_{\text{rest}} + 10$. |
-| **RSK-03** | Race conditions between DataStore baseline writes and zone threshold saves. | Low | Low | Execute both baseline persistence and zone threshold updates in a single coroutine launch block on `Dispatchers.IO`. |
-| **RSK-04** | Breaking downstream Java callers in tracking service. | Medium | Low | Provide `@JvmStatic` accessors in `SettingsDataStoreJavaHelper.kt` with fallback defaults. |
+| **RSK-02** | User inputs Resting HR $\ge$ Max HR in Karvonen model, causing division by zero or negative heart rate reserve ($HRR \le 0$). | High | Medium | `ZoneValidator` blocks input validation, disabling "Apply" button whenever $HR_{\text{max}} \le HR_{\text{rest}} + 20$. |
+| **RSK-03** | Race conditions between DataStore baseline writes and zone threshold saves. | Low | Low | Enforce single atomic `dataStore.edit { }` transaction writing baseline and thresholds together. |
+| **RSK-04** | Breaking downstream Java callers in tracking service. | Medium | Low | Provide thread-safe `@JvmStatic` snapshot accessors in `SettingsDataStoreJavaHelper.kt`. |
 | **RSK-05** | Incomplete localization in non-German/English locales causing missing translation crashes or lint failures. | Medium | Low | Provide complete translations in all 9 XML string directories and verify via automated `ZoneCalculatorLocalizationTest.kt`. |
-| **RSK-06** | Stale or desynchronized zone thresholds when baseline is updated. | Medium | Low | Introduce explicit `is_zones_synced` flag and UI status badge, prompting one-tap re-sync when baseline differs from zones. |
+| **RSK-06** | Zone 7 arithmetic overflow in downstream calculation engines. | Medium | Low | Explicitly cap Zone 7 at $3000\text{ Watts}$ in `ZoneCalculationMath` and `TelemetryZoneMath`. |
+| **RSK-07** | State drift between boolean flags and actual zone thresholds. | Medium | Low | Remove boolean sync flags; derive synchronization status functionally by evaluating active zones against calculated baseline cutoffs. |
 
 ---
 
-## 8. Conclusion & Next Steps
+## 9. Conclusion & Next Steps
 
-The problem domain, physiological calculation models, deterministic rounding policy, validation architecture (`ZoneValidator`), DataStore requirements, baseline synchronization lifecycle, and Chesterton's Fence archaeology are fully analyzed and bounded. Upon Gate 1 approval of subtask `ATT-3610`, Stage 2 (Requirement & Test Specification) will author `REQ-UI-373` in `docs/requirements.md` and `TST-UI-336` in `docs/tests.md`.
+The problem domain, physiological calculation models, deterministic rounding policy, validation architecture (`ZoneValidator`), atomic transaction boundaries, functional synchronization derivation, Zone 7 capping, and Chesterton's Fence archaeology are fully analyzed and bounded. Upon Gate 1 approval of subtask `ATT-3610`, Stage 2 (Requirement & Test Specification) will author `REQ-UI-373` in `docs/requirements.md` and `TST-UI-336` in `docs/tests.md`.
