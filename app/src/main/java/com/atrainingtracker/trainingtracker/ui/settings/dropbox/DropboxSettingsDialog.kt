@@ -27,9 +27,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -93,7 +95,7 @@ fun DropboxSettingsDialog(
 
     AppBottomSheetContent(
         title = stringResource(R.string.Dropbox),
-        iconPainter = painterResource(id = R.drawable.dropbox_logo_blue),
+        iconPainter = safePainterResource(id = R.drawable.dropbox_logo_blue, fallback = Icons.Default.Cloud),
         iconTint = Color.Unspecified,
         onDismissRequest = onDismiss,
         actions = {

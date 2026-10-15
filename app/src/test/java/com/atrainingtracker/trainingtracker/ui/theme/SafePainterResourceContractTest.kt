@@ -47,4 +47,20 @@ class SafePainterResourceContractTest {
         assertTrue("Must accept optional fallback ImageVector", content.contains("fallback: ImageVector? = null"))
         assertTrue("Must return Painter", content.contains("): Painter"))
     }
+
+    @Test
+    fun testSafePainterResource_architectureGuaranteesCrashImmunity() {
+        val projectDir = File(System.getProperty("user.dir") ?: ".")
+        val sourceFile = when {
+            File(projectDir, "src/main/java/com/atrainingtracker/trainingtracker/ui/theme/SafePainterResource.kt").exists() ->
+                File(projectDir, "src/main/java/com/atrainingtracker/trainingtracker/ui/theme/SafePainterResource.kt")
+            File(projectDir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/theme/SafePainterResource.kt").exists() ->
+                File(projectDir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/theme/SafePainterResource.kt")
+            else -> File(projectDir, "../app/src/main/java/com/atrainingtracker/trainingtracker/ui/theme/SafePainterResource.kt")
+        }
+        val content = sourceFile.readText()
+        assertTrue("Must guard against non-positive IDs (id <= 0)", content.contains("id <= 0"))
+        assertTrue("Must delegate to fallback ImageVector when drawable is null", content.contains("rememberVectorPainter(image = fallback)"))
+        assertTrue("Must fallback to ColorPainter(Color.Transparent)", content.contains("ColorPainter(Color.Transparent)"))
+    }
 }

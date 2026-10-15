@@ -30,7 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -40,6 +41,7 @@ import android.content.res.Configuration
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 
 @Composable
 fun PairingButtons(
@@ -89,7 +91,7 @@ private fun PairingItem(
             .padding(12.dp)
     ) {
         Icon(
-            painter = painterResource(id = iconRes),
+            painter = safePainterResource(id = iconRes, fallback = Icons.Default.Sensors),
             contentDescription = null,
             modifier = Modifier
                 .size(48.dp)

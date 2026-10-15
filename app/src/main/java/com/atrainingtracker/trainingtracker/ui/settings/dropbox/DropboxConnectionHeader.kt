@@ -26,8 +26,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.ui.res.stringResource
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -76,7 +78,7 @@ fun DropboxConnectionHeader(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.dropbox_logo_blue),
+                            painter = safePainterResource(id = R.drawable.dropbox_logo_blue, fallback = Icons.Default.Cloud),
                             contentDescription = null,
                             modifier = Modifier.size(20.dp)
                         )
