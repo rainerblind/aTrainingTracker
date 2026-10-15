@@ -210,45 +210,39 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
     public String getActivityId(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "getActivityId: " + fileBaseName);
 
-        String activityId = null;
-
         SQLiteDatabase db = getReadableDatabase();
-        Cursor cursor = db.query(TABLE, null, WorkoutSummaries.FILE_BASE_NAME + "=?", new String[]{fileBaseName}, null, null, null);
-
-        if (cursor.moveToFirst()) {
-            int idx = cursor.getColumnIndex(ACTIVITY_ID);
-            if (idx != -1 && !cursor.isNull(idx)) {
-                activityId = cursor.getString(idx);
+        try (Cursor cursor = db.query(TABLE, null, WorkoutSummaries.FILE_BASE_NAME + "=?", new String[]{fileBaseName}, null, null, null)) {
+            String activityId = null;
+            if (cursor != null && cursor.moveToFirst()) {
+                int idx = cursor.getColumnIndex(ACTIVITY_ID);
+                if (idx != -1 && !cursor.isNull(idx)) {
+                    activityId = cursor.getString(idx);
+                }
+            } else {
+                Log.e(TAG, "in getActivityId: no entry or invalid entry for " + fileBaseName);
             }
-        } else {
-            Log.e(TAG, "in getActivityId: no entry or invalid entry for " + fileBaseName);
+
+            if (DEBUG) Log.d(TAG, "ActivityId: " + activityId);
+            return activityId;
         }
-
-        cursor.close();
-
-        if (DEBUG) Log.d(TAG, "ActivityId: " + activityId);
-        return activityId;
     }
 
     @Nullable
     public String getStravaActivityData(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "getStravaActivityData: " + fileBaseName);
 
-        String activityData = null;
-
         SQLiteDatabase db = getReadableDatabase();
-        Cursor cursor = db.query(TABLE, null, WorkoutSummaries.FILE_BASE_NAME + "=?", new String[]{fileBaseName}, null, null, null);
-
-        if (cursor.moveToFirst()) {
-            int idx = cursor.getColumnIndex(STRAVA_ACTIVITY_DATA);
-            if (idx != -1 && !cursor.isNull(idx)) {
-                activityData = cursor.getString(idx);
+        try (Cursor cursor = db.query(TABLE, null, WorkoutSummaries.FILE_BASE_NAME + "=?", new String[]{fileBaseName}, null, null, null)) {
+            String activityData = null;
+            if (cursor != null && cursor.moveToFirst()) {
+                int idx = cursor.getColumnIndex(STRAVA_ACTIVITY_DATA);
+                if (idx != -1 && !cursor.isNull(idx)) {
+                    activityData = cursor.getString(idx);
+                }
             }
+
+            return activityData;
         }
-
-        cursor.close();
-
-        return activityData;
     }
 
     /**

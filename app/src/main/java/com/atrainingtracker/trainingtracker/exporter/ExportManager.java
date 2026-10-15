@@ -43,6 +43,7 @@ import com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploader;
 import com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploader;
 import com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploader;
 import com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriter;
+import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriter;
@@ -429,18 +430,14 @@ public class ExportManager {
     private String getFileBaseName(long workoutId) {
         SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(mContext).getDatabase();
 
-        Cursor cursor = db.query(WorkoutSummaries.TABLE,
+        try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
                 new String[]{WorkoutSummaries.FILE_BASE_NAME},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
                 null,
                 null,
-                null);
-
-        cursor.moveToFirst();
-        String fileBaseName = cursor.getString(0);
-        cursor.close();
-
-        return fileBaseName;
+                null)) {
+            return CursorUtils.mapFirst(cursor, null, c -> c.getString(0));
+        }
     }
 }

@@ -35,6 +35,7 @@ import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.trainingtracker.elevation.ElevationResult;
 import com.atrainingtracker.trainingtracker.elevation.ElevationService;
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource;
+import com.atrainingtracker.util.CursorUtils;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.LinkedList;
@@ -173,14 +174,22 @@ public class KnownLocationsDatabaseManager {
         int isHomeIndex = cursor.getColumnIndex(KnownLocationsDbHelper.IS_HOME);
         boolean isHome = isHomeIndex != -1 && cursor.getInt(isHomeIndex) == 1;
 
+        int idIdx = cursor.getColumnIndex(KnownLocationsDbHelper.C_ID);
+        int latIdx = cursor.getColumnIndex(KnownLocationsDbHelper.LATITUDE);
+        int lonIdx = cursor.getColumnIndex(KnownLocationsDbHelper.LONGITUDE);
+        int nameIdx = cursor.getColumnIndex(KnownLocationsDbHelper.NAME);
+        int altIdx = cursor.getColumnIndex(KnownLocationsDbHelper.ALTITUDE);
+        int radIdx = cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS);
+        int hitIdx = cursor.getColumnIndex(KnownLocationsDbHelper.HIT_COUNT);
+
         return new MyLocation(
-                cursor.getLong(cursor.getColumnIndex(KnownLocationsDbHelper.C_ID)),
-                cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LATITUDE)),
-                cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LONGITUDE)),
-                cursor.getString(cursor.getColumnIndex(KnownLocationsDbHelper.NAME)),
-                cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.ALTITUDE)),
-                cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS)),
-                cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.HIT_COUNT)),
+                idIdx != -1 ? cursor.getLong(idIdx) : -1L,
+                latIdx != -1 ? cursor.getDouble(latIdx) : 0.0,
+                lonIdx != -1 ? cursor.getDouble(lonIdx) : 0.0,
+                nameIdx != -1 ? cursor.getString(nameIdx) : "",
+                altIdx != -1 ? cursor.getDouble(altIdx) : 0.0,
+                radIdx != -1 ? cursor.getInt(radIdx) : DEFAULT_RADIUS,
+                hitIdx != -1 ? cursor.getInt(hitIdx) : 0,
                 isLocked,
                 source,
                 isHome);
@@ -195,33 +204,40 @@ public class KnownLocationsDatabaseManager {
         currentLocation.setLatitude(latLng.latitude);
         currentLocation.setLongitude(latLng.longitude);
 
-        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
+        try (Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 null,
                 null,
                 null,
                 null,
-                null);  // sorting
+                null)) {  // sorting
 
-        Location startLocation = new Location("");
-        double minDistance = Double.MAX_VALUE;
-        while (cursor.moveToNext()) {
-            int radius = cursor.getInt(cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS));
+            Location startLocation = new Location("");
+            double minDistance = Double.MAX_VALUE;
+            if (cursor != null) {
+                while (cursor.moveToNext()) {
+                    int radIdx = cursor.getColumnIndex(KnownLocationsDbHelper.RADIUS);
+                    int latIdx = cursor.getColumnIndex(KnownLocationsDbHelper.LATITUDE);
+                    int lonIdx = cursor.getColumnIndex(KnownLocationsDbHelper.LONGITUDE);
+                    if (radIdx == -1 || latIdx == -1 || lonIdx == -1) {
+                        continue;
+                    }
 
-            startLocation.setLatitude(cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LATITUDE)));
-            startLocation.setLongitude(cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LONGITUDE)));
-            float distance = currentLocation.distanceTo(startLocation);
-            if (DEBUG) Log.d(TAG, "distance to current location:" + distance);
+                    int radius = cursor.getInt(radIdx);
+                    startLocation.setLatitude(cursor.getDouble(latIdx));
+                    startLocation.setLongitude(cursor.getDouble(lonIdx));
+                    float distance = currentLocation.distanceTo(startLocation);
+                    if (DEBUG) Log.d(TAG, "distance to current location:" + distance);
 
-            if (distance < radius) { // acceptable start location
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    myLocation = cursorToMyLocation(cursor);
+                    if (distance < radius) { // acceptable start location
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            myLocation = cursorToMyLocation(cursor);
+                        }
+                    }
                 }
             }
         }
-
-        cursor.close();
 
         return myLocation;
     }
@@ -293,18 +309,12 @@ public class KnownLocationsDatabaseManager {
      */
     @Nullable
     public MyLocation getHomeLocation() {
-        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
+        try (Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 KnownLocationsDbHelper.IS_HOME + "=1",
-                null, null, null, null, "1");
-        MyLocation loc = null;
-        if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                loc = cursorToMyLocation(cursor);
-            }
-            cursor.close();
+                null, null, null, null, "1")) {
+            return CursorUtils.mapFirst(cursor, this::cursorToMyLocation);
         }
-        return loc;
     }
 
     public void updateLocation(long id, @NonNull String name, double altitude, @NonNull ElevationSource source, boolean isLocked) {
@@ -337,24 +347,16 @@ public class KnownLocationsDatabaseManager {
 
     @Nullable
     public MyLocation getMyLocation(long myLocationId) {
-        MyLocation myLocation = null;
-
-        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
+        try (Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 KnownLocationsDbHelper.C_ID + "=?",
                 new String[]{Long.toString(myLocationId)},
                 null,
                 null,
                 null,
-                null);  // sorting
-
-        if (cursor.moveToFirst()) {
-            myLocation = cursorToMyLocation(cursor);
+                null)) {
+            return CursorUtils.mapFirst(cursor, this::cursorToMyLocation);
         }
-
-        cursor.close();
-
-        return myLocation;
     }
 
     /**
@@ -543,24 +545,19 @@ public class KnownLocationsDatabaseManager {
      */
     @NonNull
     public List<MyLocation> getLegacyLocations() {
-        List<MyLocation> legacyLocations = new LinkedList<>();
         String whereClause = KnownLocationsDbHelper.IS_LOCKED + "=0 AND ("
                 + KnownLocationsDbHelper.SOURCE + "=? OR "
                 + KnownLocationsDbHelper.SOURCE + "=? OR "
                 + KnownLocationsDbHelper.SOURCE + " IS NULL)";
-        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
+        try (Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 whereClause,
                 new String[]{ElevationSource.LEGACY_RAW.name(), ElevationSource.AUTO_LEARNED.name()},
                 null,
                 null,
-                null);
-
-        while (cursor.moveToNext()) {
-            legacyLocations.add(cursorToMyLocation(cursor));
+                null)) {
+            return CursorUtils.mapList(cursor, this::cursorToMyLocation);
         }
-        cursor.close();
-        return legacyLocations;
     }
 
     /**
@@ -643,68 +640,54 @@ public class KnownLocationsDatabaseManager {
 
     @NonNull
     public List<MyLocation> getAllLocations() {
-        List<MyLocation> locations = new LinkedList<>();
-        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
+        try (Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 null,
                 null,
                 null,
                 null,
-                KnownLocationsDbHelper.HIT_COUNT + " DESC, " + KnownLocationsDbHelper.NAME + " ASC");
-
-        while (cursor.moveToNext()) {
-            locations.add(cursorToMyLocation(cursor));
+                KnownLocationsDbHelper.HIT_COUNT + " DESC, " + KnownLocationsDbHelper.NAME + " ASC")) {
+            return CursorUtils.mapList(cursor, this::cursorToMyLocation);
         }
-        cursor.close();
-        return locations;
     }
 
     @NonNull
     public List<String> getMyLocationNameList() {
-        List<String> result = new LinkedList<>();
-
-        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
+        try (Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 null,
                 null,
                 null,
                 null,
                 null,
-                null);
-
-        while (cursor.moveToNext()) {
-            result.add(cursor.getString(cursor.getColumnIndex(KnownLocationsDbHelper.NAME)));
+                null)) {
+            return CursorUtils.mapList(cursor, c -> {
+                int colIdx = c.getColumnIndex(KnownLocationsDbHelper.NAME);
+                return colIdx != -1 ? c.getString(colIdx) : "";
+            });
         }
-
-        cursor.close();
-
-        return result;
     }
 
     @NonNull
     public List<NamedLatLng> getLocationsList(@NonNull ExtremaType extremaType) {
-        List<NamedLatLng> startLocations = new LinkedList<>();
-
-        Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
+        try (Cursor cursor = getDatabase().query(KnownLocationsDbHelper.TABLE,
                 null,
                 KnownLocationsDbHelper.EXTREMA_TYPE + "=?",
                 new String[]{extremaType.name()},
                 null,
                 null,
                 null,
-                null);  // sorting
-
-        while (cursor.moveToNext()) {
-            double latitude = cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LATITUDE));
-            double longitude = cursor.getDouble(cursor.getColumnIndex(KnownLocationsDbHelper.LONGITUDE));
-            String name = cursor.getString(cursor.getColumnIndex(KnownLocationsDbHelper.NAME));
-
-            startLocations.add(new NamedLatLng(new LatLng(latitude, longitude), name));
+                null)) {
+            return CursorUtils.mapList(cursor, c -> {
+                int latIdx = c.getColumnIndex(KnownLocationsDbHelper.LATITUDE);
+                int lonIdx = c.getColumnIndex(KnownLocationsDbHelper.LONGITUDE);
+                int nameIdx = c.getColumnIndex(KnownLocationsDbHelper.NAME);
+                double latitude = latIdx != -1 ? c.getDouble(latIdx) : 0.0;
+                double longitude = lonIdx != -1 ? c.getDouble(lonIdx) : 0.0;
+                String name = nameIdx != -1 ? c.getString(nameIdx) : "";
+                return new NamedLatLng(new LatLng(latitude, longitude), name);
+            });
         }
-
-        cursor.close();
-
-        return startLocations;
     }
 
     public static class MyLocation {

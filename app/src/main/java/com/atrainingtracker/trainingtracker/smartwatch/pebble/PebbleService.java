@@ -311,26 +311,29 @@ public class PebbleService extends Service {
         List<SensorType> result = new LinkedList<>();
 
         SQLiteDatabase db = (new PebbleDbHelper(this)).getReadableDatabase();
-        Cursor cursor = db.query(PebbleDbHelper.ROWS_TABLE,
+        try (Cursor cursor = db.query(PebbleDbHelper.ROWS_TABLE,
                 null,
                 PebbleDbHelper.VIEW_ID + "=?",
                 new String[]{mViewId + ""},
                 null,
                 null,
-                PebbleDbHelper.ROW_NR + " ASC"); // sorting
+                PebbleDbHelper.ROW_NR + " ASC")) { // sorting
 
-        mRows = cursor.getCount();
-
-        while (cursor.moveToNext()) {
-            SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, cursor.getString(cursor.getColumnIndex(PebbleDbHelper.SENSOR_TYPE)), TAG);
-            if (sensorType != null) {
-                result.add(sensorType);
+            if (cursor != null) {
+                mRows = cursor.getCount();
+                int colIdx = cursor.getColumnIndex(PebbleDbHelper.SENSOR_TYPE);
+                while (cursor.moveToNext()) {
+                    SensorType sensorType = colIdx != -1 ? EnumUtils.safeValueOfOrNull(SensorType.class, cursor.getString(colIdx), TAG) : null;
+                    if (sensorType != null) {
+                        result.add(sensorType);
+                    } else {
+                        Log.w(TAG, "Skipping unrecognized sensor type for Pebble view");
+                    }
+                }
             } else {
-                Log.w(TAG, "Skipping unrecognized sensor type for Pebble view");
+                mRows = 0;
             }
         }
-
-        cursor.close();
 
         mSensorTypeList = result;
     }
