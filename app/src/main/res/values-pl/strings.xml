@@ -378,6 +378,7 @@
     <string name="zone_display_left_bar">Lewy pasek</string>
     <string name="zone_display_right_bar">Prawy pasek</string>
     <string name="zone_display_text_color">Kolor tekstu</string>
+    <string name="zone_display_gauge">Wskaźnik strefy</string>
     <string name="zone_display_preview_title">Podgląd</string>
 
     <string name="prefEmailExport">e-Mail</string>

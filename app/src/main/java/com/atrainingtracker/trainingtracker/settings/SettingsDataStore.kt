@@ -97,21 +97,23 @@ class SettingsDataStore(
         private val PWR_BIKE_ZONE5_MAX = intPreferencesKey("pwr_bike_zone5_max")
         private val PWR_BIKE_ZONE6_MAX = intPreferencesKey("pwr_bike_zone6_max")
 
-        // Zone Display Options
         private val HR_RUN_ZONE_SHOW_BACKGROUND = booleanPreferencesKey("hr_run_zone_show_background")
         private val HR_RUN_ZONE_SHOW_LEFT_BAR = booleanPreferencesKey("hr_run_zone_show_left_bar")
         private val HR_RUN_ZONE_SHOW_RIGHT_BAR = booleanPreferencesKey("hr_run_zone_show_right_bar")
         private val HR_RUN_ZONE_SHOW_TEXT_COLOR = booleanPreferencesKey("hr_run_zone_show_text_color")
+        private val HR_RUN_ZONE_SHOW_GAUGE = booleanPreferencesKey("hr_run_zone_show_gauge")
 
         private val HR_BIKE_ZONE_SHOW_BACKGROUND = booleanPreferencesKey("hr_bike_zone_show_background")
         private val HR_BIKE_ZONE_SHOW_LEFT_BAR = booleanPreferencesKey("hr_bike_zone_show_left_bar")
         private val HR_BIKE_ZONE_SHOW_RIGHT_BAR = booleanPreferencesKey("hr_bike_zone_show_right_bar")
         private val HR_BIKE_ZONE_SHOW_TEXT_COLOR = booleanPreferencesKey("hr_bike_zone_show_text_color")
+        private val HR_BIKE_ZONE_SHOW_GAUGE = booleanPreferencesKey("hr_bike_zone_show_gauge")
 
         private val PWR_BIKE_ZONE_SHOW_BACKGROUND = booleanPreferencesKey("pwr_bike_zone_show_background")
         private val PWR_BIKE_ZONE_SHOW_LEFT_BAR = booleanPreferencesKey("pwr_bike_zone_show_left_bar")
         private val PWR_BIKE_ZONE_SHOW_RIGHT_BAR = booleanPreferencesKey("pwr_bike_zone_show_right_bar")
         private val PWR_BIKE_ZONE_SHOW_TEXT_COLOR = booleanPreferencesKey("pwr_bike_zone_show_text_color")
+        private val PWR_BIKE_ZONE_SHOW_GAUGE = booleanPreferencesKey("pwr_bike_zone_show_gauge")
 
         // Automated Zone Calculation (ATT-3188, REQ-UI-373)
         const val CURRENT_ZONE_CALC_VERSION = 1
@@ -520,7 +522,8 @@ class SettingsDataStore(
         val bgKey: Preferences.Key<Boolean>,
         val leftBarKey: Preferences.Key<Boolean>,
         val rightBarKey: Preferences.Key<Boolean>,
-        val textColorKey: Preferences.Key<Boolean>
+        val textColorKey: Preferences.Key<Boolean>,
+        val gaugeKey: Preferences.Key<Boolean>
     )
 
     private fun getZoneDisplayKeys(zoneType: ZoneType): ZoneDisplayKeys {
@@ -529,19 +532,22 @@ class SettingsDataStore(
                 HR_RUN_ZONE_SHOW_BACKGROUND,
                 HR_RUN_ZONE_SHOW_LEFT_BAR,
                 HR_RUN_ZONE_SHOW_RIGHT_BAR,
-                HR_RUN_ZONE_SHOW_TEXT_COLOR
+                HR_RUN_ZONE_SHOW_TEXT_COLOR,
+                HR_RUN_ZONE_SHOW_GAUGE
             )
             ZoneType.HR_BIKE -> ZoneDisplayKeys(
                 HR_BIKE_ZONE_SHOW_BACKGROUND,
                 HR_BIKE_ZONE_SHOW_LEFT_BAR,
                 HR_BIKE_ZONE_SHOW_RIGHT_BAR,
-                HR_BIKE_ZONE_SHOW_TEXT_COLOR
+                HR_BIKE_ZONE_SHOW_TEXT_COLOR,
+                HR_BIKE_ZONE_SHOW_GAUGE
             )
             ZoneType.PWR_BIKE -> ZoneDisplayKeys(
                 PWR_BIKE_ZONE_SHOW_BACKGROUND,
                 PWR_BIKE_ZONE_SHOW_LEFT_BAR,
                 PWR_BIKE_ZONE_SHOW_RIGHT_BAR,
-                PWR_BIKE_ZONE_SHOW_TEXT_COLOR
+                PWR_BIKE_ZONE_SHOW_TEXT_COLOR,
+                PWR_BIKE_ZONE_SHOW_GAUGE
             )
         }
     }
@@ -553,7 +559,8 @@ class SettingsDataStore(
                 showBackground = prefs[keys.bgKey] ?: true,
                 showLeftBar = prefs[keys.leftBarKey] ?: true,
                 showRightBar = prefs[keys.rightBarKey] ?: false,
-                showTextColor = prefs[keys.textColorKey] ?: false
+                showTextColor = prefs[keys.textColorKey] ?: false,
+                showGauge = prefs[keys.gaugeKey] ?: false
             )
         }
     }
@@ -565,6 +572,7 @@ class SettingsDataStore(
             prefs[keys.leftBarKey] = options.showLeftBar
             prefs[keys.rightBarKey] = options.showRightBar
             prefs[keys.textColorKey] = options.showTextColor
+            prefs[keys.gaugeKey] = options.showGauge
         }
     }
 }

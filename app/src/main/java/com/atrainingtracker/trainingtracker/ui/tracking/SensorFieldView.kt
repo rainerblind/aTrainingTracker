@@ -288,6 +288,18 @@ fun SensorFieldView(
                     )
                 }
 
+                // Optional Zone Gauge Bar (REQ-UI-376)
+                if (fieldState.zoneDisplayOptions.showGauge && fieldState.zoneGaugeState != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    ZoneGaugeBar(
+                        state = fieldState.zoneGaugeState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
+                        showBadge = (fieldState.viewSize >= ViewSize.NORMAL)
+                    )
+                }
+
                 // Conditionally add the action buttons at the bottom in configuration mode
                 if (screenMode == ScreenMode.CONFIGURATION) {
                     Spacer(modifier = Modifier.height(8.dp))

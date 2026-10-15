@@ -638,6 +638,7 @@
     <string name="zone_display_left_bar">左バー</string>
     <string name="zone_display_right_bar">右バー</string>
     <string name="zone_display_text_color">文字色</string>
+    <string name="zone_display_gauge">ゾーンゲージバー</string>
     <string name="zone_display_preview_title">プレビュー</string>
 
     <string name="prefEmailExport">eメール</string>

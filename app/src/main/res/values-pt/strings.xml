@@ -640,6 +640,7 @@
     <string name="zone_display_left_bar">Barra esquerda</string>
     <string name="zone_display_right_bar">Barra direita</string>
     <string name="zone_display_text_color">Cor do texto</string>
+    <string name="zone_display_gauge">Barra de zona</string>
     <string name="zone_display_preview_title">Pré-visualização</string>
 
     <string name="prefEmailExport">e-Mail</string>
