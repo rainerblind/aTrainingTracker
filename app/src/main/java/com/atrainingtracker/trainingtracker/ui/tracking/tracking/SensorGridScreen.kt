@@ -645,15 +645,16 @@ fun SensorGridScreen(
                         )
                     }
 
-                    // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199 / REQ-UI-369 / ATT-3311)
+                    // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199)
+                    // NOTE (ATT-3311 Post-Review Revert / Fence): Do NOT apply scaffold bottom padding from paddingValues
+                    // here! Material 3 BottomSheetScaffold passes static sheetPeekHeight (~174dp) in paddingValues even when
+                    // the user swipes the Live Segment / Climb sheet down to SheetValue.Hidden (skipHiddenState = false),
+                    // which creates a permanent 174dp blank whitespace below the ElevationProfile.
                     if (state.showElevationProfile && resolvedProfile.pathPoints.size >= 2) {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(
-                                    top = 8.dp,
-                                    bottom = paddingValues.calculateBottomPadding()
-                                )
+                                .padding(top = 8.dp)
                         ) {
                             ElevationProfile(
                                 pathPoints = resolvedProfile.pathPoints,

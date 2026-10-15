@@ -138,5 +138,22 @@ This encapsulated approach:
 
 ## 5. Living Documentation Synchronization & Traceability
 
-- **Requirement `REQ-UI-369`**: Advanced from `In Progress` to `Verified` in [docs/requirements.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/requirements.md).
-- **Test Specification `TST-UI-332`**: Advanced from `In Progress` to `Verified` in [docs/tests.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/tests.md).
+- **Requirement `REQ-UI-369`**: Updated to `Reverted (Fence Verified)` in [docs/requirements.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/requirements.md).
+- **Test Specification `TST-UI-332`**: Updated to `Reverted (Fence Verified)` in [docs/tests.md](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/tests.md).
+
+---
+
+## 6. Post-Review Revert & Architectural Post-Mortem (Documented Deviation — 2026-10-15)
+
+### Observed On-Device Regression
+During post-sprint exploratory testing on Google Pixel 10 (`66020DLCR002FL`), the human reviewer observed that whenever a Live Segment bottom sheet popup appeared on the tracking map screen and was swiped down (`SheetValue.Hidden`), a large ($\approx 174\text{dp}$) blank white area remained permanently below the `ElevationProfile` (pushing the elevation profile up and compressing the Google Map). When no segment popup was active, this whitespace did not exist.
+
+### Root Cause of the Regression
+1. In `SensorGridScreen.kt`, `sheetPeekHeight` evaluates to `BottomSheetDesign.PeekHeightLiveSegment + navBarHeight` ($\approx 174\text{dp}$) whenever `shouldShowBottomSheet == true`, and `rememberStandardBottomSheetState` is configured with `skipHiddenState = false` so the athlete can swipe the sheet completely down to `SheetValue.Hidden`.
+2. Material 3's `BottomSheetScaffold` passes `paddingValues = PaddingValues(bottom = sheetPeekHeight)` **statically** to its body content regardless of whether the sheet is currently in `SheetValue.PartiallyExpanded` or swiped down to `SheetValue.Hidden`.
+3. Consequently, adding `bottom = paddingValues.calculateBottomPadding()` to the `ElevationProfile` `Surface` in commit `f3edad51` (`ATT-3311`) reserved a permanent $174\text{dp}$ blank box beneath the `ElevationProfile` whenever a Live Segment or Live Climb sheet was swiped down.
+4. Furthermore, forensic inspection of the original `ATT-3311` screenshot (`docs/attachments/screencap_elevation_missing.png` from Sprint `2026-41.10`) revealed it was captured at `0:00:00 s` / `0,00 km` on a navigated route before `ATT-3199` (`e0197e08`, route elevation profile fallback when `recordedPathPoints.size < 2`) and `ATT-3343` (`92a7393a`, asymmetric map `weight(1f, fill = true)`) were implemented. Those two tickets had already solved the underlying missing-profile symptom.
+
+### Authorized Process Exception (Agile Agentic ASPICE — Documented Deviation)
+Per the **Constructive Resistance & Documented Deviations** governance principle, the agent flagged that a direct hotfix revert on `develop` bypasses the standard 5-stage ticket ceremony, and the human project lead explicitly authorized a **Documented Deviation** (*"Das ist eine begründete Ausnahme. Bitte dokumentiere die Änderung/Ausnahme im zugehörigen Ticket."*) to immediately revert commit `f3edad51` on `develop` and replace `TST-UI-332` with an architectural regression fence (`testElevationProfileSurface_doesNotApplyStaticScaffoldBottomPadding`).
+
