@@ -6,7 +6,7 @@
 **Target Release**: `V4.9.40`  
 **Active Sprint**: `Sprint 2026-42.4`  
 **Branch**: `feature/ATT-3562`  
-**Requirement Mapping**: `REQ-ARC-001` (*Safe Enum Deserialization & Crash Immunity*)  
+**Requirement Mapping**: `REQ-ARC-001` (*Safe Enum Deserialization, Observability & Crash Immunity*)  
 **Test Mapping**: `TST-ARC-001`  
 **Author**: AI Agent 1 (Implementer)  
 **Reviewer / Auditor**: AI Agent 2 (Auditor)  
@@ -17,14 +17,20 @@
 ## 1. Problem Statement & Root Cause Analysis
 
 ### 1.1 Forensic Root Cause
-In production Android applications, database tables (SQLite), IPC extras (`Intent` / `Bundle`), JSON payloads, and `SharedPreferences` are external string serialization boundaries.
+In production Android applications, database tables (SQLite), IPC extras (`Intent` / `Bundle`), JSON payloads, and `SharedPreferences` represent external string serialization boundaries.
 Under standard Java/Kotlin runtime semantics:
 1. `Enum.valueOf(String)` throws a `NullPointerException` immediately if the passed argument is `null` (e.g. SQLite column contains `NULL`, `cursor.getString(...)` returns `null`, or `intent.getStringExtra(...)` is missing).
 2. `Enum.valueOf(String)` throws an uncaught `IllegalArgumentException` if the string does not match an existing enum constant (e.g. database schema migrations, deprecated enum values, corrupted settings, or cross-version data backups).
 
 In ticket **ATT-2179**, a crash occurred in `TrackingViewsRepository.fetchSensorFieldConfigs` when a database column contained `NULL`. While `TrackingViewsRepository` resolved that specific instance locally using a private `safeValueOf` function, a static forensic audit of the entire codebase revealed **over 35 additional unguarded `Enum.valueOf(...)` call sites** scattered across SQLite database managers, intent receivers, and preference loaders.
 
-### 1.2 Identified Vulnerable Call Sites
+### 1.2 The Risk of Silent Failure vs. Crash (ASPICE Assessment)
+As identified during the Gate 1 audit:
+- Blindly swallowing exceptions with silent defaults across the board creates a **Data Integrity Risk** (silent data corruption or schema drift), potentially masking hardware communication errors or corrupting historical telemetry.
+- An ASPICE-compliant architecture must balance **Crash Immunity** with **Data Correctness & Observability**.
+- Therefore, each call site must be categorized by criticality, with structured logging / breadcrumb telemetry and distinct handling strategies (fail-safe abort, record skipping, or sensible fallback with logging).
+
+### 1.3 Identified Vulnerable Call Sites
 1. **SQLite Cursor Deserialization (Java & Kotlin)**:
    - `WorkoutSummariesDatabaseManager.java`: `SensorType.valueOf(cursor.getString(sensorIdx))`, `ExtremaType.valueOf(cursor.getString(typeIdx))`, `SensorType.valueOf(sensorTypeName)`, `ExtremaType.valueOf(extremaTypeName)`
    - `PeriodSummariesDatabaseManager.kt`: `BSportType.valueOf(...)`, `PeriodType.valueOf(...)`
@@ -52,82 +58,138 @@ In ticket **ATT-2179**, a crash occurred in `TrackingViewsRepository.fetchSensor
 
 ---
 
-## 2. Chesterton's Fence Forensics & Historical Traceability
+## 2. Chesterton's Fence Forensics & Criticality Classification
 
-1. **Original Intent**:
-   - `Enum.valueOf(String)` was originally written as standard Java boilerplate when creating database models and intent passing.
-   - Developers assumed the database and intent extras would always contain valid, non-null enum names matching the current codebase constants.
-2. **Why Was It Kept Unchecked?**:
-   - In happy-path unit and instrumented tests, valid enums are passed.
-   - However, in real-world scenarios (OS process death, memory low restarts, database migrations from earlier versions, third-party backup restore, or manual preference editing), strings can become null or unknown.
-3. **Core Invariants to Preserve**:
-   - **Zero Crash Invariant**: No external string deserialization may ever throw uncaught runtime exceptions (`NullPointerException` or `IllegalArgumentException`).
-   - **Deterministic Fallback Semantics**: Every enum domain has a natural, deterministic fallback (e.g. `BSportType.UNKNOWN`, `SensorType.TIME_ACTIVE`, `DeviceType.ALL`, `Protocol.UNKNOWN` or null).
-   - **Exporters and Database Schema Unchanged**: Existing database tables, column names, and serialized enum string representations remain 100% backward compatible.
+### 2.1 Criticality Tiers
+
+| Tier | Category | Call Site Characteristics | Mitigation Strategy |
+| :--- | :--- | :--- | :--- |
+| **Tier A** | **Critical Hardware & State Transitions** | Hardware protocol dispatch (`Protocol`, `DeviceType` in `DeviceManager`), service lifecycle (`StartType` in `TrackerService`). | **Strict Validation & Graceful Abort**: If invalid/null, log high-priority error (`Log.e`) with context and abort the operation (e.g. reject device search rather than dispatching BLE scanner to ANT+ driver). |
+| **Tier B** | **Database Collection Queries** | Multi-record queries in SQLite (`ExtremaRecord`, `ExportStatus`, `Pebble` view rows). | **Record Skipping & Warning**: Log a diagnostic warning (`Log.w`) and skip the corrupt row rather than injecting ghost records with synthetic default values into user statistics. |
+| **Tier C** | **UI Configuration & Preferences** | User preferences (`CockpitFontFamily`, `ViewSize`, `PeriodType`, `MyUnits`). | **Safe Fallback with Logging**: Default to canonical values (`ViewSize.NORMAL`, `PeriodType.WEEK`, `MyUnits.METRIC`) while logging a warning (`Log.w`) to detect migration or settings corruption in telemetry. |
+
+### 2.2 Core Invariants to Preserve:
+1. **Zero Uncaught Exception Invariant**: Deserialization of external strings must never terminate the process via uncaught `NullPointerException` or `IllegalArgumentException`.
+2. **Hardware State Safety Invariant**: Critical hardware drivers (ANT+/BLE) must never receive arbitrary fallback device types or protocols that cause radio communication failure.
+3. **Observability Invariant**: Every fallback or skipped record must emit a structured diagnostic log with the tag, invalid string value, and expected target enum class.
+4. **Schema Backward Compatibility**: SQLite database schemas, table definitions, and stored string representations remain 100% backward compatible.
 
 ---
 
 ## 3. Architectural Scope & Boundaries
 
 ### 3.1 What is In-Scope:
-1. Creating a shared, universal enum deserialization utility in `com.atrainingtracker.util`:
-   - `EnumUtils.safeValueOf(Class<T> enumClass, String name, T defaultValue): T`
-   - `EnumUtils.safeValueOfOrNull(Class<T> enumClass, String name): T?`
-   - `inline fun <reified T : Enum<T>> safeEnumValueOf(name: String?, default: T): T`
-   - `inline fun <reified T : Enum<T>> safeEnumValueOfOrNull(name: String?): T?`
-2. Refactoring all identified call sites across database managers, services, dialogs, and preference stores to utilize `EnumUtils`.
-3. Authoring comprehensive unit tests:
-   - `EnumUtilsTest.kt`: verifying null, empty, whitespace, valid, invalid, and case-sensitive parsing.
-   - `SafeEnumDeserializationAuditTest.kt`: static source code scan ensuring no new unguarded `.valueOf(` calls on cursors, intents, or preferences are introduced.
+1. **Canonical Utility (`EnumUtils.kt`) in `com.atrainingtracker.util`**:
+   - `EnumUtils.safeValueOf(Class<T> enumClass, String name, T defaultValue, String tag): T`
+   - `EnumUtils.safeValueOfOrNull(Class<T> enumClass, String name, String tag): T?`
+   - `inline fun <reified T : Enum<T>> safeEnumValueOf(name: String?, default: T, tag: String = "EnumUtils"): T`
+   - `inline fun <reified T : Enum<T>> safeEnumValueOfOrNull(name: String?, tag: String = "EnumUtils"): T?`
+   - Built-in warning and error logging on invalid/null input using Android `Log.w` / `Log.e`.
+2. **Systematic Refactoring of Identified Call Sites**:
+   - Applying Tier A (validation + abort), Tier B (skip corrupt record), or Tier C (safe fallback + log) based on domain criticality.
+3. **Automated Verification & Architectural Guard**:
+   - `EnumUtilsTest.kt`: Thorough unit testing covering nulls, empty strings, whitespace, valid entries, unknown values, and logging hooks.
+   - `SafeEnumDeserializationAuditTest.kt`: Static source code audit scanning production Java and Kotlin files for unguarded `.valueOf(cursor.getString...)`, `.valueOf(intent.getStringExtra...)`, etc.
 
 ### 3.2 What is Out-of-Scope:
-- Altering SQLite database schemas, table definitions, or database migrations.
-- Changing enum constant names or adding/removing enum entries.
+- Modifying SQLite table column schemas or database migration versions.
+- Altering existing enum member names.
 
 ---
 
-## 4. Proposed Solution Strategy & Design
+## 4. Proposed Solution Strategy & SWE.2 Design
 
 ### 4.1 Canonical Utility (`EnumUtils.kt`)
 Located in `app/src/main/java/com/atrainingtracker/util/EnumUtils.kt`:
 ```kotlin
 package com.atrainingtracker.util
 
+import android.util.Log
+
 object EnumUtils {
+    private const val DEFAULT_TAG = "EnumUtils"
+
     @JvmStatic
-    fun <T : Enum<T>> safeValueOf(enumClass: Class<T>, name: String?, defaultValue: T): T {
-        if (name.isNullOrBlank()) return defaultValue
+    @JvmOverloads
+    fun <T : Enum<T>> safeValueOf(
+        enumClass: Class<T>,
+        name: String?,
+        defaultValue: T,
+        tag: String = DEFAULT_TAG
+    ): T {
+        if (name.isNullOrBlank()) {
+            Log.w(tag, "Enum string is null or blank for ${enumClass.simpleName}; defaulting to $defaultValue")
+            return defaultValue
+        }
+        val trimmed = name.trim()
         return try {
-            java.lang.Enum.valueOf(enumClass, name.trim())
+            java.lang.Enum.valueOf(enumClass, trimmed)
         } catch (e: IllegalArgumentException) {
+            Log.w(tag, "Unrecognized enum constant '$trimmed' for ${enumClass.simpleName}; defaulting to $defaultValue", e)
             defaultValue
         }
     }
 
     @JvmStatic
-    fun <T : Enum<T>> safeValueOfOrNull(enumClass: Class<T>, name: String?): T? {
+    @JvmOverloads
+    fun <T : Enum<T>> safeValueOfOrNull(
+        enumClass: Class<T>,
+        name: String?,
+        tag: String = DEFAULT_TAG
+    ): T? {
         if (name.isNullOrBlank()) return null
+        val trimmed = name.trim()
         return try {
-            java.lang.Enum.valueOf(enumClass, name.trim())
+            java.lang.Enum.valueOf(enumClass, trimmed)
         } catch (e: IllegalArgumentException) {
+            Log.w(tag, "Unrecognized enum constant '$trimmed' for ${enumClass.simpleName}; returning null", e)
             null
         }
     }
 }
 
-inline fun <reified T : Enum<T>> safeEnumValueOf(name: String?, default: T): T {
-    return EnumUtils.safeValueOf(T::class.java, name, default)
+inline fun <reified T : Enum<T>> safeEnumValueOf(
+    name: String?,
+    default: T,
+    tag: String = "EnumUtils"
+): T {
+    return EnumUtils.safeValueOf(T::class.java, name, default, tag)
 }
 
-inline fun <reified T : Enum<T>> safeEnumValueOfOrNull(name: String?): T? {
-    return EnumUtils.safeValueOfOrNull(T::class.java, name)
+inline fun <reified T : Enum<T>> safeEnumValueOfOrNull(
+    name: String?,
+    tag: String = "EnumUtils"
+): T? {
+    return EnumUtils.safeValueOfOrNull(T::class.java, name, tag)
 }
 ```
 
-### 4.2 Systematic Caller Refactoring
-Every caller will replace unguarded `Type.valueOf(...)` with:
-- Java: `EnumUtils.safeValueOf(Type.class, rawString, Fallback)`
-- Kotlin: `safeEnumValueOf(rawString, Fallback)` or `safeEnumValueOfOrNull<Type>(rawString)`
+### 4.2 Application Across Tiers:
+- **Tier A (Critical / Hardware)**:
+  ```java
+  // In DeviceManager.java
+  Protocol protocol = EnumUtils.safeValueOfOrNull(Protocol.class, intent.getStringExtra(BANALService.PROTOCOL), TAG);
+  DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, intent.getStringExtra(BANALService.DEVICE_TYPE), TAG);
+  if (protocol == null || deviceType == null) {
+      Log.e(TAG, "Cannot start device search: invalid protocol or device type in intent");
+      return; // Safe abort, prevents hardware driver corruption
+  }
+  ```
+- **Tier B (Database Multi-Record Queries)**:
+  ```java
+  // In WorkoutSummariesDatabaseManager.java
+  SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, cursor.getString(sensorIdx), TAG);
+  ExtremaType extremaType = EnumUtils.safeValueOfOrNull(ExtremaType.class, cursor.getString(typeIdx), TAG);
+  if (sensorType == null || extremaType == null) {
+      Log.w(TAG, "Skipping corrupted extrema record at row " + cursor.getPosition());
+      continue; // Skip corrupted record rather than creating ghost data
+  }
+  ```
+- **Tier C (UI Configuration & Preferences)**:
+  ```kotlin
+  // In PeriodSummariesDatabaseManager.kt
+  periodType = safeEnumValueOf(cursor.getString(...), PeriodType.WEEK, TAG)
+  ```
 
 ---
 
@@ -135,6 +197,8 @@ Every caller will replace unguarded `Type.valueOf(...)` with:
 
 - [x] Forensic root cause established (NPE and IAE on untrusted external/persisted strings).
 - [x] Comprehensive call site audit performed across all production packages.
+- [x] Criticality classification defined: Tier A (Critical Abort), Tier B (Record Skip), Tier C (Fallback).
+- [x] Observability and structured logging integrated into `EnumUtils`.
 - [x] Chesterton's Fence historical analysis completed.
 - [x] Canonical dual-language (Java/Kotlin) architecture designed.
 - [x] Scope bounded to avoid unnecessary schema or migration churn.
