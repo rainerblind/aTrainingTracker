@@ -88,11 +88,14 @@ data class TelemetryHistogramData(
 )
 
 /**
- * Display modes for zone distribution cards.
+ * Display modes for zone distribution cards (REQ-UI-372).
  */
 enum class ZoneCardDisplayMode {
-    FIVE_ZONES,
-    HISTOGRAM
+    STACKED_BAR,
+    COLUMNS,
+    HISTOGRAM,
+    @Deprecated("Legacy alias for COLUMNS", ReplaceWith("COLUMNS"))
+    FIVE_ZONES
 }
 
 /**

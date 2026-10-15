@@ -85,7 +85,9 @@ class TelemetryHistogramCardTest {
     @Test
     fun testZoneCardDisplayMode_values() {
         val modes = ZoneCardDisplayMode.values()
-        assertEquals(2, modes.size)
+        assertEquals(4, modes.size)
+        assertTrue(modes.contains(ZoneCardDisplayMode.STACKED_BAR))
+        assertTrue(modes.contains(ZoneCardDisplayMode.COLUMNS))
         assertTrue(modes.contains(ZoneCardDisplayMode.FIVE_ZONES))
         assertTrue(modes.contains(ZoneCardDisplayMode.HISTOGRAM))
     }

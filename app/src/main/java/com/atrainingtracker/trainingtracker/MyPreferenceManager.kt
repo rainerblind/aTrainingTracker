@@ -30,6 +30,7 @@ import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.routes.RouteFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.SegmentFilterCriteria
 import kotlinx.coroutines.CoroutineScope
@@ -56,7 +57,8 @@ data class WorkoutCardSectionPreferences(
     val showTelemetryCharts: Boolean = false,
     val showZoneAnalysis: Boolean = true,
     val showExportStatus: Boolean = true,
-    val lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY
+    val lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY,
+    val zoneCardDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.COLUMNS
 )
 
 /**
@@ -111,6 +113,7 @@ class MyPreferenceManager(context: Context) {
         val WORKOUT_CARD_SHOW_ZONES = booleanPreferencesKey("workout_card_show_zones")
         val WORKOUT_CARD_SHOW_EXPORT_STATUS = booleanPreferencesKey("workout_card_show_export_status")
         val WORKOUT_CARD_LAP_DISPLAY_MODE = stringPreferencesKey("workout_card_lap_display_mode")
+        val WORKOUT_CARD_ZONE_DISPLAY_MODE = stringPreferencesKey("workout_card_zone_display_mode")
 
         val WORKOUT_DETAIL_SHOW_DESCRIPTION = booleanPreferencesKey("workout_detail_show_description")
         val WORKOUT_DETAIL_SHOW_EXTREMA = booleanPreferencesKey("workout_detail_show_extrema")
@@ -148,6 +151,17 @@ class MyPreferenceManager(context: Context) {
                 if (rawMode != null && rawMode != "BOTH") LapDisplayMode.valueOf(rawMode) else LapDisplayMode.VISUALIZER_ONLY
             } catch (e: Exception) {
                 LapDisplayMode.VISUALIZER_ONLY
+            },
+            zoneCardDisplayMode = try {
+                val rawMode = preferences[WORKOUT_CARD_ZONE_DISPLAY_MODE]
+                if (rawMode != null) {
+                    if (rawMode == "FIVE_ZONES") ZoneCardDisplayMode.COLUMNS
+                    else ZoneCardDisplayMode.valueOf(rawMode)
+                } else {
+                    ZoneCardDisplayMode.COLUMNS
+                }
+            } catch (e: Exception) {
+                ZoneCardDisplayMode.COLUMNS
             }
         )
     }
@@ -164,6 +178,7 @@ class MyPreferenceManager(context: Context) {
             preferences[WORKOUT_CARD_SHOW_ZONES] = prefs.showZoneAnalysis
             preferences[WORKOUT_CARD_SHOW_EXPORT_STATUS] = prefs.showExportStatus
             preferences[WORKOUT_CARD_LAP_DISPLAY_MODE] = prefs.lapDisplayMode.name
+            preferences[WORKOUT_CARD_ZONE_DISPLAY_MODE] = prefs.zoneCardDisplayMode.name
         }
     }
 

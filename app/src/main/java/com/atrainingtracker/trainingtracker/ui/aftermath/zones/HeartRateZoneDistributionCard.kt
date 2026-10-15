@@ -91,9 +91,15 @@ fun HeartRateZoneDistributionCard(
                 )
             }
 
-            // Body: 5-Column Vertical Histogram or Fine-Grained Telemetry Frequency Histogram
+            // Body: Stacked Horizontal Bar, Vertical Column Chart, or Fine-Grained Telemetry Frequency Histogram
             when (effectiveDisplayMode) {
-                ZoneCardDisplayMode.FIVE_ZONES -> {
+                ZoneCardDisplayMode.STACKED_BAR -> {
+                    ZoneDistributionStackedBar(
+                        distribution = distribution,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                ZoneCardDisplayMode.COLUMNS, ZoneCardDisplayMode.FIVE_ZONES -> {
                     ZoneDistributionColumnChart(
                         distribution = distribution,
                         modifier = Modifier.fillMaxWidth()
@@ -108,8 +114,11 @@ fun HeartRateZoneDistributionCard(
                 }
             }
 
-            // Bottom Mode Switcher: Centered below chart for ample breathing room (ATT-1959)
-            if (distribution.histogram != null) {
+            // Bottom Mode Switcher: Centered below chart for ample breathing room (ATT-1959 / ATT-3390)
+            val hasHistogram = distribution.histogram != null
+            val buttonCount = if (hasHistogram) 3 else 2
+
+            if (distribution.entries.isNotEmpty()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
@@ -118,28 +127,42 @@ fun HeartRateZoneDistributionCard(
                         modifier = Modifier.height(28.dp)
                     ) {
                         SegmentedButton(
-                            selected = effectiveDisplayMode == ZoneCardDisplayMode.FIVE_ZONES,
-                            onClick = { setDisplayMode(ZoneCardDisplayMode.FIVE_ZONES) },
-                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            selected = effectiveDisplayMode == ZoneCardDisplayMode.STACKED_BAR,
+                            onClick = { setDisplayMode(ZoneCardDisplayMode.STACKED_BAR) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = buttonCount),
                             icon = {},
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                         ) {
                             Text(
-                                text = stringResource(R.string.zone_mode_5_zones),
+                                text = stringResource(R.string.zone_mode_stacked_bar),
                                 style = MaterialTheme.typography.labelSmall
                             )
                         }
                         SegmentedButton(
-                            selected = effectiveDisplayMode == ZoneCardDisplayMode.HISTOGRAM,
-                            onClick = { setDisplayMode(ZoneCardDisplayMode.HISTOGRAM) },
-                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            selected = effectiveDisplayMode == ZoneCardDisplayMode.COLUMNS || effectiveDisplayMode == ZoneCardDisplayMode.FIVE_ZONES,
+                            onClick = { setDisplayMode(ZoneCardDisplayMode.COLUMNS) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = buttonCount),
                             icon = {},
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                         ) {
                             Text(
-                                text = stringResource(R.string.zone_mode_histogram),
+                                text = stringResource(R.string.zone_mode_columns),
                                 style = MaterialTheme.typography.labelSmall
                             )
+                        }
+                        if (hasHistogram) {
+                            SegmentedButton(
+                                selected = effectiveDisplayMode == ZoneCardDisplayMode.HISTOGRAM,
+                                onClick = { setDisplayMode(ZoneCardDisplayMode.HISTOGRAM) },
+                                shape = SegmentedButtonDefaults.itemShape(index = 2, count = buttonCount),
+                                icon = {},
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.zone_mode_histogram),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
                         }
                     }
                 }

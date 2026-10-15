@@ -1669,8 +1669,10 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Power Zones</string>
-    <!-- Telemetry Frequency Histogram (ATT-1845 / REQ-UI-231) -->
+    <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 Zones</string>
+    <string name="zone_mode_columns">Columns</string>
+    <string name="zone_mode_stacked_bar">Stacked Bar</string>
     <string name="zone_mode_histogram">Histogram</string>
     <string name="aftermath_laps_splits_title">Laps &amp; Splits</string>
     <string name="split_badge_best">Best</string>
