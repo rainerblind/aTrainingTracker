@@ -1778,5 +1778,31 @@
     <string name="grade_legend_15_to_20">15 – 20%</string>
     <string name="grade_legend_20_to_25">20 – 25%</string>
     <string name="grade_legend_over_25">&gt; 25%</string>
+    <!-- Automated Zone Calculation (ATT-3188) -->
+    <string name="zone_calc_button">ゾーンを計算</string>
+    <string name="zone_calc_dialog_title_power">サイクリングパワーゾーンを計算</string>
+    <string name="zone_calc_dialog_title_hr">心拍ゾーンを計算</string>
+    <string name="zone_calc_ftp_label">機能的作業閾値パワー (FTP)</string>
+    <string name="zone_calc_hr_max_label">最大心拍数 (HRmax)</string>
+    <string name="zone_calc_hr_rest_label">安静時心拍数 (HRrest)</string>
+    <string name="zone_calc_method_label">計算方法</string>
+    <string name="zone_calc_method_max_hr">% HRmax</string>
+    <string name="zone_calc_method_karvonen">カルボーネン (HRR)</string>
+    <string name="zone_calc_preview_title">計算されたゾーンのプレビュー</string>
+    <string name="zone_calc_apply_button">適用</string>
+    <string name="zone_calc_cancel_button">キャンセル</string>
+    <string name="zone_calc_status_calculated">計算済み</string>
+    <string name="zone_calc_status_customized">カスタム</string>
+    <string name="zone_calc_calibration_recommended">キャリブレーション推奨</string>
+    <string name="zone_calc_last_updated">最終更新: %s</string>
+    <string name="zone_calc_overwrite_warning_title">カスタムゾーンを上書きしますか？</string>
+    <string name="zone_calc_overwrite_warning_message">警告: これにより手動で設定されたすべてのゾーンが FTP %d W の標準ゾーンで上書きされます。続行しますか？</string>
+    <string name="zone_calc_error_ftp_range">FTPは %1$d W から %2$d W の間である必要があります</string>
+    <string name="zone_calc_error_hr_max_range">HRmaxは %1$d bpm から %2$d bpm の間である必要があります</string>
+    <string name="zone_calc_error_hr_rest_range">HRrestは %1$d bpm から %2$d bpm の間である必要があります</string>
+    <string name="zone_calc_error_hr_max_greater_rest">HRmaxはHRrestより大きくなければなりません</string>
+    <string name="zone_calc_error_karvonen_delta">HRmaxはHRrestより少なくとも20 bpm高くなければなりません</string>
+    <string name="zone_calc_error_monotonicity">値は %1$d から %2$d の間である必要があります</string>
+
 </resources>
 

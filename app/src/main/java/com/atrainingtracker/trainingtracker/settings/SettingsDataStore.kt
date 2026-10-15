@@ -24,7 +24,11 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.atrainingtracker.trainingtracker.zones.ValidationResult
+import com.atrainingtracker.trainingtracker.zones.ZoneValidator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -97,6 +101,19 @@ class SettingsDataStore(
         private val PWR_BIKE_ZONE_SHOW_LEFT_BAR = booleanPreferencesKey("pwr_bike_zone_show_left_bar")
         private val PWR_BIKE_ZONE_SHOW_RIGHT_BAR = booleanPreferencesKey("pwr_bike_zone_show_right_bar")
         private val PWR_BIKE_ZONE_SHOW_TEXT_COLOR = booleanPreferencesKey("pwr_bike_zone_show_text_color")
+
+        // Automated Zone Calculation (ATT-3188, REQ-UI-373)
+        const val CURRENT_ZONE_CALC_VERSION = 1
+
+        val KEY_ZONE_CALC_VERSION = intPreferencesKey("zone_calc_version")
+        val KEY_CYCLING_FTP = intPreferencesKey("cycling_ftp")
+        val KEY_CYCLING_FTP_UPDATED_AT = longPreferencesKey("cycling_ftp_updated_at")
+        val KEY_PWR_BIKE_ZONES_CUSTOMIZED = booleanPreferencesKey("pwr_bike_zones_customized")
+        val KEY_HR_RUN_ZONES_CUSTOMIZED = booleanPreferencesKey("hr_run_zones_customized")
+        val KEY_HR_BIKE_ZONES_CUSTOMIZED = booleanPreferencesKey("hr_bike_zones_customized")
+        val KEY_HR_MAX = intPreferencesKey("hr_max")
+        val KEY_HR_REST = intPreferencesKey("hr_rest")
+        val KEY_HR_CALC_METHOD = stringPreferencesKey("hr_calc_method")
     }
 
     // --- HELPER: Map Enums to Keys ---
@@ -210,6 +227,42 @@ class SettingsDataStore(
     fun getZone5MaxFlow(zoneType: ZoneType) = getZoneMaxFlow(zoneType, Zone.ZONE_5)
     fun getZone6MaxFlow(zoneType: ZoneType) = getZoneMaxFlow(zoneType, Zone.ZONE_6)
 
+    fun getCustomizedKey(zoneType: ZoneType): Preferences.Key<Boolean> {
+        return when (zoneType) {
+            ZoneType.HR_RUN -> KEY_HR_RUN_ZONES_CUSTOMIZED
+            ZoneType.HR_BIKE -> KEY_HR_BIKE_ZONES_CUSTOMIZED
+            ZoneType.PWR_BIKE -> KEY_PWR_BIKE_ZONES_CUSTOMIZED
+        }
+    }
+
+    val ftpFlow: Flow<Int?> = dataStore.data.map { prefs ->
+        prefs[KEY_CYCLING_FTP]?.takeIf { it > 0 }
+    }
+
+    val ftpUpdatedAtFlow: Flow<Long?> = dataStore.data.map { prefs ->
+        prefs[KEY_CYCLING_FTP_UPDATED_AT]?.takeIf { it > 0L }
+    }
+
+    val hrMaxFlow: Flow<Int?> = dataStore.data.map { prefs ->
+        prefs[KEY_HR_MAX]?.takeIf { it > 0 }
+    }
+
+    val hrRestFlow: Flow<Int?> = dataStore.data.map { prefs ->
+        prefs[KEY_HR_REST]?.takeIf { it > 0 }
+    }
+
+    val hrCalcMethodFlow: Flow<String?> = dataStore.data.map { prefs ->
+        prefs[KEY_HR_CALC_METHOD]
+    }
+
+    fun isZoneCustomizedFlow(zoneType: ZoneType): Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[getCustomizedKey(zoneType)] ?: false
+    }
+
+    val zoneCalcVersionFlow: Flow<Int> = dataStore.data.map { prefs ->
+        prefs[KEY_ZONE_CALC_VERSION] ?: CURRENT_ZONE_CALC_VERSION
+    }
+
     // -- Helper: getSummary
     fun getSummary(zoneType: ZoneType): String = runBlocking {
         val z1Max = getZone1MaxFlow(zoneType).first()
@@ -229,8 +282,77 @@ class SettingsDataStore(
 
     suspend fun saveHrZoneMax(zoneType: ZoneType, zone: Zone, value: Int) {
         val key = getKey(zoneType, zone) ?: return
+        val customizedKey = getCustomizedKey(zoneType)
         dataStore.edit { prefs ->
             prefs[key] = value
+            prefs[customizedKey] = true
+        }
+    }
+
+    /**
+     * Atomically saves calculated cycling power zones and FTP baseline conforming to REQ-UI-373.1, REQ-UI-373.5.
+     * All writes occur within a single dataStore.edit { } ACID transaction.
+     */
+    suspend fun saveCalculatedPowerZones(ftp: Int, cutoffs: List<Int>) {
+        require(ZoneValidator.validateFtp(ftp) is ValidationResult.Valid) {
+            "FTP must be between ${com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MIN_FTP} and ${com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MAX_FTP} W, received: $ftp"
+        }
+        ZoneValidator.validatePowerZoneStack(cutoffs)
+
+        dataStore.edit { prefs ->
+            prefs[KEY_CYCLING_FTP] = ftp
+            prefs[KEY_CYCLING_FTP_UPDATED_AT] = System.currentTimeMillis()
+            prefs[KEY_PWR_BIKE_ZONES_CUSTOMIZED] = false
+            prefs[KEY_ZONE_CALC_VERSION] = CURRENT_ZONE_CALC_VERSION
+
+            prefs[PWR_BIKE_ZONE1_MAX] = cutoffs[0]
+            prefs[PWR_BIKE_ZONE2_MAX] = cutoffs[1]
+            prefs[PWR_BIKE_ZONE3_MAX] = cutoffs[2]
+            prefs[PWR_BIKE_ZONE4_MAX] = cutoffs[3]
+            prefs[PWR_BIKE_ZONE5_MAX] = cutoffs[4]
+            prefs[PWR_BIKE_ZONE6_MAX] = cutoffs[5]
+        }
+    }
+
+    /**
+     * Atomically saves calculated heart rate zones and baselines conforming to REQ-UI-373.2, REQ-UI-373.5.
+     * All writes occur within a single dataStore.edit { } ACID transaction.
+     */
+    suspend fun saveCalculatedHeartRateZones(
+        zoneType: ZoneType,
+        hrMax: Int,
+        hrRest: Int?,
+        method: String,
+        cutoffs: List<Int>
+    ) {
+        require(zoneType != ZoneType.PWR_BIKE) {
+            "Heart rate calculation cannot be applied to PWR_BIKE profile"
+        }
+        require(ZoneValidator.validateHrBaselines(hrMax, hrRest) is ValidationResult.Valid) {
+            "Invalid HR baselines: hrMax=$hrMax, hrRest=$hrRest"
+        }
+        ZoneValidator.validateHeartRateZoneStack(cutoffs)
+
+        val customizedKey = getCustomizedKey(zoneType)
+        val (k1, k2, k3, k4) = if (zoneType == ZoneType.HR_BIKE) {
+            listOf(HR_BIKE_ZONE1_MAX, HR_BIKE_ZONE2_MAX, HR_BIKE_ZONE3_MAX, HR_BIKE_ZONE4_MAX)
+        } else {
+            listOf(HR_RUN_ZONE1_MAX, HR_RUN_ZONE2_MAX, HR_RUN_ZONE3_MAX, HR_RUN_ZONE4_MAX)
+        }
+
+        dataStore.edit { prefs ->
+            prefs[KEY_HR_MAX] = hrMax
+            if (hrRest != null && hrRest > 0) {
+                prefs[KEY_HR_REST] = hrRest
+            }
+            prefs[KEY_HR_CALC_METHOD] = method
+            prefs[customizedKey] = false
+            prefs[KEY_ZONE_CALC_VERSION] = CURRENT_ZONE_CALC_VERSION
+
+            prefs[k1] = cutoffs[0]
+            prefs[k2] = cutoffs[1]
+            prefs[k3] = cutoffs[2]
+            prefs[k4] = cutoffs[3]
         }
     }
 
@@ -271,6 +393,7 @@ class SettingsDataStore(
      */
     suspend fun resetToDefaults(zoneType: ZoneType) {
         dataStore.edit { prefs ->
+            prefs[getCustomizedKey(zoneType)] = false
             when (zoneType) {
                 ZoneType.HR_RUN -> {
                     prefs[HR_RUN_ZONE1_MAX] = 135
