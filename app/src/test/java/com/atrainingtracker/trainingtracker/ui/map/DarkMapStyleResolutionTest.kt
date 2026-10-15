@@ -154,8 +154,8 @@ class DarkMapStyleResolutionTest {
 
             // 3. Ensure anti-flash background protection is present
             assertTrue(
-                "File ${file.name} must define anti-flash background protection (0xFF121212)",
-                content.contains("0xFF121212")
+                "File ${file.name} must define anti-flash background protection (0xFF121212 or DarkMapCanvas)",
+                content.contains("0xFF121212") || content.contains("DarkMapCanvas")
             )
         }
     }
