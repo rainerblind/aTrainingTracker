@@ -95,7 +95,14 @@ enum class ZoneCardDisplayMode {
     COLUMNS,
     HISTOGRAM,
     @Deprecated("Legacy alias for COLUMNS", ReplaceWith("COLUMNS"))
-    FIVE_ZONES
+    FIVE_ZONES;
+
+    /**
+     * Resolves the effective display mode enforcing Tier 3 domain fallback (REQ-UI-372.8):
+     * If HISTOGRAM is requested but fine-grained histogram telemetry is unavailable, falls back to COLUMNS.
+     */
+    fun resolveWithHistogramFallback(hasHistogram: Boolean): ZoneCardDisplayMode =
+        if (this == HISTOGRAM && !hasHistogram) COLUMNS else this
 }
 
 /**
