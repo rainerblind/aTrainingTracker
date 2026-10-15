@@ -49,9 +49,12 @@ Because cycling power is mechanical, instantaneous, and spans an extreme dynamic
    * `Zone` enum SHALL define `ZONE_1(1)`, `ZONE_2(2)`, `ZONE_3(3)`, `ZONE_4(4)`, `ZONE_5(5)`, `ZONE_6(6)`.
    * The system SHALL define integer preference keys `pwr_bike_zone5_max` and `pwr_bike_zone6_max`.
    * For existing installations upgrading with missing Z5/Z6 keys, the system SHALL calculate proportional defaults based on the athlete's existing `PWR_BIKE_ZONE4_MAX`:
-     $$\text{Estimated FTP} = \max\left(50, \text{round}\left(\frac{\text{z4Max}}{1.05}\right)\right)$$
-     $$\text{Default z5Max (VO2 Max, 120\% FTP)} = \max\left(\text{z4Max} + 10, \text{round}(\text{Estimated FTP} \times 1.20)\right)$$
-     $$\text{Default z6Max (Anaerobic Capacity, 150\% FTP)} = \max\left(\text{z5Max} + 10, \text{round}(\text{Estimated FTP} \times 1.50)\right)$$
+     - If `z4Max` is invalid ($\le 0$ or non-numeric), fallback to canonical 300W baseline.
+     - Priority & Precedence: The proportional Coggan threshold ($\text{round}(\text{Estimated FTP} \times 1.20)$ for Z5, $\text{round}(\text{Estimated FTP} \times 1.50)$ for Z6) is evaluated first. To guarantee strict monotonicity in all cases (including ultra-low FTPs where rounding or low values could compress intervals), the floor constraint ($\max(\text{z4Max} + 10, \dots)$ for Z5, $\max(\text{z5Max} + 10, \dots)$ for Z6) acts as a hard monotonic lower bound.
+     - Deterministic formula:
+       $$\text{Estimated FTP} = \max\left(50, \text{round}\left(\frac{\text{z4Max}}{1.05}\right)\right)$$
+       $$\text{Default z5Max} = \max\left(\text{z4Max} + 10, \text{round}(\text{Estimated FTP} \times 1.20)\right)$$
+       $$\text{Default z6Max} = \max\left(\text{z5Max} + 10, \text{round}(\text{Estimated FTP} \times 1.50)\right)$$
    * If `PWR_BIKE_ZONE4_MAX` is not configured either (fresh install), the system SHALL use canonical 300W FTP defaults:
      $\text{Z1}=150\text{W}, \text{Z2}=200\text{W}, \text{Z3}=250\text{W}, \text{Z4}=300\text{W}, \text{Z5}=350\text{W}, \text{Z6}=450\text{W}$.
    * The migration check and preference initialization SHALL execute inside a single atomic `dataStore.edit` transaction block.
@@ -74,6 +77,7 @@ Because cycling power is mechanical, instantaneous, and spans an extreme dynamic
 6. **Settings UI (`ZonesSettingsActivity.kt`)**:
    * `ZoneSettingsContent` SHALL dynamically render 5 boundary cards for Heart Rate (`HR_RUN`, `HR_BIKE`) and 7 boundary cards for Cycling Power (`PWR_BIKE`).
    * Linked min/max boundary editing SHALL maintain $z_n \ge z_{n-1} + 1$ across all 7 power cards.
+   * Real-time UI validation: If any boundary breaks the monotonic rule ($z_n < z_{n-1} + 1$), the affected input field SHALL display an error indicator (border/message) and the Save action SHALL be disabled to prevent corrupt DataStore writes.
    * The live theme-aware preview section SHALL display 7 interactive chips (`Z1..Z7`) when configuring Power and 5 chips (`Z1..Z5`) when configuring Heart Rate.
 
 7. **Post-Workout Aftermath Analytics & Histograms (`ZoneDistributionCalculator.kt`, `TelemetryHistogramCalculator.kt`)**:
@@ -183,6 +187,13 @@ Because cycling power is mechanical, instantaneous, and spans an extreme dynamic
 * **Command**: `./gradlew testDebugUnitTest`
 * **Goal**: Verify 100% pass rate across the full test suite with zero regressions.
 
+### Test Case 9: `testSettingsDataStore_lowBoundFtpMigration` (`TST-UI-333.9`)
+* **Scope**: Unit Test
+* **Target File**: `app/src/test/java/com/atrainingtracker/trainingtracker/settings/SettingsDataStorePowerZonesTest.kt`
+* **Preconditions**: Stored `z4Max = 50` (or edge low value $\le 55\text{W}$).
+* **Action**: Trigger migration and verify calculated `z5Max` and `z6Max`.
+* **Expected Result**: Assert `z5Max >= 60`, `z6Max >= 70`, maintaining strict monotonicity and non-zero positive bandwidths under floor precedence.
+
 ---
 
 ## 3. Traceability Matrix
@@ -197,3 +208,4 @@ Because cycling power is mechanical, instantaneous, and spans an extreme dynamic
 | `TST-UI-333.6` | Unit | `TrackingViewModel.calculateZoneColor` | `REQ-UI-370.5` | Specified |
 | `TST-UI-333.7` | Localization | `PowerZoneLocalizationTest` (all 9 locales) | `REQ-UI-370.8` | Specified |
 | `TST-UI-333.8` | Regression | `./gradlew testDebugUnitTest` | `REQ-PRO-001` | Specified |
+| `TST-UI-333.9` | Unit | `SettingsDataStore.getZone5MaxFlow` (low bound) | `REQ-UI-370.2` | Specified |
