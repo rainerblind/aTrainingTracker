@@ -61,12 +61,9 @@ class SportTypeSelectorContractTest {
 
         val rootDrawables = resDir.listFiles()?.map { it.name }?.toSet() ?: emptySet()
         val requiredDrawables = listOf(
-            "bsport_run.png",
-            "bsport_run_gray.png",
-            "bsport_bike.png",
-            "bsport_bike_gray.png",
-            "bsport_other.png",
-            "bsport_other_gray.png"
+            "bsport_run.xml",
+            "bsport_bike.xml",
+            "bsport_other.xml"
         )
 
         for (drawable in requiredDrawables) {
