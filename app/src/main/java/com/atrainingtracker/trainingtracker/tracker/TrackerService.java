@@ -42,6 +42,7 @@ import com.atrainingtracker.util.LifecycleUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -739,35 +740,128 @@ public class TrackerService extends Service {
         releaseWakeLock();
     }
 
-    private void recreateValuesWhenResuming() {
+    private static final String[] RESUME_WORKOUT_PROJECTION = new String[] {
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m
+    };
 
+    @VisibleForTesting
+    static final class ResumedWorkoutState {
+        final String baseFileName;
+        final long workoutId;
+        final int timeTotal_s;
+        final int timeActive_s;
+        final int calories;
+        final int lapNr;
+        final double distanceTotal_m;
+
+        ResumedWorkoutState(@NonNull String baseFileName, long workoutId, int timeTotal_s, int timeActive_s, int calories, int lapNr, double distanceTotal_m) {
+            this.baseFileName = baseFileName;
+            this.workoutId = workoutId;
+            this.timeTotal_s = timeTotal_s;
+            this.timeActive_s = timeActive_s;
+            this.calories = calories;
+            this.lapNr = lapNr;
+            this.distanceTotal_m = distanceTotal_m;
+        }
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void recreateValuesWhenResuming() {
         SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(this).getDatabase();
-        Cursor cursor = db.query(WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, null, null, null, null, null, null);
-        cursor.moveToLast();
+        ResumedWorkoutState state = null;
 
-        mBaseFileName = cursor.getString(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME));
-        mWorkoutID = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID));
-        mTimeTotal_s = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s));
-        mTimeActive_s = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s));
-        int calories = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES));
-        int lapNr = cursor.getInt(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS));
-        mDistanceTotal_m = cursor.getDouble(cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m));
+        try (Cursor cursor = db.query(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                RESUME_WORKOUT_PROJECTION,
+                null,
+                null,
+                null,
+                null,
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID + " DESC",
+                "1")) {
 
-        cursor.close();
+            if (cursor != null && cursor.moveToFirst()) {
+                int baseFileNameCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME);
+                int idCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID);
+                int timeTotalCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s);
+                int timeActiveCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s);
+                int caloriesCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES);
+                int lapsCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS);
+                int distanceCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m);
+
+                state = new ResumedWorkoutState(
+                        cursor.getString(baseFileNameCol),
+                        cursor.getLong(idCol),
+                        cursor.getInt(timeTotalCol),
+                        cursor.getInt(timeActiveCol),
+                        cursor.getInt(caloriesCol),
+                        cursor.getInt(lapsCol),
+                        cursor.getDouble(distanceCol)
+                );
+            } else {
+                Log.w(TAG, "recreateValuesWhenResuming: No workout summary record found to resume.");
+                return;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "recreateValuesWhenResuming: Failed to extract resume record from database", e);
+            return;
+        }
+
+        applyResumedState(state);
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void applyResumedState(@NonNull ResumedWorkoutState state) {
+        mBaseFileName = state.baseFileName;
+        mWorkoutID = state.workoutId;
+        mTimeTotal_s = state.timeTotal_s;
+        mTimeActive_s = state.timeActive_s;
+        mDistanceTotal_m = state.distanceTotal_m;
 
         Log.d(TAG, "resuming with mBaseFileName=" + mBaseFileName
                 + ", mWorkoutId=" + mWorkoutID
                 + ", time_total_s=" + mTimeTotal_s
                 + ", time_active_s=" + mTimeActive_s
-                + ", calories=" + calories
-                + ", lapNr=" + lapNr
+                + ", calories=" + state.calories
+                + ", lapNr=" + state.lapNr
                 + ", distance_m=" + mDistanceTotal_m);
 
         BANALService.setInitialSensorValue(SensorType.TIME_TOTAL, mTimeTotal_s);
         BANALService.setInitialSensorValue(SensorType.TIME_ACTIVE, mTimeActive_s);
-        BANALService.setInitialSensorValue(SensorType.CALORIES, calories);
-        BANALService.setInitialSensorValue(SensorType.LAP_NR, lapNr);
+        BANALService.setInitialSensorValue(SensorType.CALORIES, state.calories);
+        BANALService.setInitialSensorValue(SensorType.LAP_NR, state.lapNr);
         BANALService.setInitialSensorValue(SensorType.DISTANCE_m, mDistanceTotal_m);
+    }
+
+    @VisibleForTesting
+    long getWorkoutID() {
+        return mWorkoutID;
+    }
+
+    @VisibleForTesting
+    String getBaseFileName() {
+        return mBaseFileName;
+    }
+
+    @VisibleForTesting
+    int getTimeTotal_s() {
+        return mTimeTotal_s;
+    }
+
+    @VisibleForTesting
+    int getTimeActive_s() {
+        return mTimeActive_s;
+    }
+
+    @VisibleForTesting
+    double getDistanceTotal_m() {
+        return mDistanceTotal_m;
     }
 
     /**
