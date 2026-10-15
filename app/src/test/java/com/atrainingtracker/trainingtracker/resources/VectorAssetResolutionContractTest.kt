@@ -205,4 +205,25 @@ class VectorAssetResolutionContractTest {
                 colors.contains("#FFFFFFFF") || colors.contains("#FFFFFF"))
         }
     }
+
+    @Test
+    fun testAllVectorPaths_haveNonTrivialPathData() {
+        val factory = DocumentBuilderFactory.newInstance()
+        val builder = factory.newDocumentBuilder()
+        for (asset in targetAssets) {
+            val file = File(resDir, asset)
+            val doc = builder.parse(file)
+            val paths = doc.getElementsByTagName("path")
+            assertTrue("$asset must contain at least one path element", paths.length > 0)
+            for (i in 0 until paths.length) {
+                val node = paths.item(i)
+                if (node is Element) {
+                    val pathData = node.getAttribute("android:pathData")
+                    assertTrue("pathData in $asset must not be empty", pathData.isNotBlank())
+                    assertTrue("pathData in $asset must contain move command 'M'", pathData.contains("M"))
+                    assertTrue("pathData in $asset must be non-degenerate (length >= 10)", pathData.length >= 10)
+                }
+            }
+        }
+    }
 }
