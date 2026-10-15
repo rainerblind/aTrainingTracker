@@ -344,10 +344,28 @@ def build_audit_prompt(gate_key, gate_info, subtask, parent_issue):
         parent_fix_version = f"{parent_fix_version} (Confirmed active unreleased fix version assigned to parent)"
 
     diff_context = ""
-    if gate_key in ["Gate 2", "Gate 3", "Gate 4", "Gate 5"]:
-        diff = get_git_diff()
-        commits = get_recent_commits()
+    diff = get_git_diff()
+    commits = get_recent_commits()
+    if diff or commits:
         diff_context = f"\n\n--- Git Context ---\nRecent Commits:\n{commits}\n\nGit Diff:\n{diff}\n"
+
+    stage_file_context = ""
+    gate_to_files = {
+        "Gate 1": [f"docs/engineering/analysis/{parent_key}_analysis.md"],
+        "Gate 2": [f"docs/engineering/test_specs/{parent_key}_test_spec.md", "docs/requirements.md", "docs/tests.md"],
+        "Gate 3": [f"docs/engineering/plans/{parent_key}_plan.md"],
+        "Gate 4": [],
+        "Gate 5": [f"docs/engineering/walkthroughs/{parent_key}_walkthrough.md", "docs/requirements.md", "docs/tests.md"]
+    }
+    for file_path in gate_to_files.get(gate_key, []):
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    if content.strip():
+                        stage_file_context += f"\n\n--- Engineering File Deliverable ({file_path}) ---\n{content}\n"
+            except Exception:
+                pass
 
     system_instruction = (
         "You are Agent 2, the Senior Independent ASPICE Quality & Safety Auditor for the aTrainingTracker project. "
@@ -376,6 +394,7 @@ def build_audit_prompt(gate_key, gate_info, subtask, parent_issue):
         f"{gate_info['checklist']}\n\n"
         f"--- Stage Deliverable (Sub-task Description) ---\n"
         f"{subtask_desc}\n\n"
+        f"{stage_file_context}\n\n"
         f"--- Parent Issue Description ---\n"
         f"{parent_desc}\n"
         f"{diff_context}\n\n"
