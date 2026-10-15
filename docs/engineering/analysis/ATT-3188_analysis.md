@@ -174,6 +174,11 @@ Existing athletes upgrading from prior versions have custom or default zones, bu
        Bounded to $[50, 1000]\text{W}$. If $Z_{4\text{max}}$ is unconfigured or zero, fallback default is $200\text{W}$.
      - For Heart Rate (`HR_RUN` / `HR_BIKE`): Pre-fills Max HR with $\text{round}(Z_{4\text{max}} / 0.90)$ bounded to $[100, 240]\text{ bpm}$ (fallback default $190\text{ bpm}$), and Resting HR with $60\text{ bpm}$.
    - This provides a frictionless onboarding experience while guaranteeing athlete agency and explicit confirmation before persisting.
+4. **Destructive Overwrite Documentation & Blocking Confirmation Modal**:
+   - For existing athletes who have customized zones, applying auto-calculated boundaries is explicitly a **destructive action**: it overwrites all custom boundaries across the entire profile with standard percentage brackets.
+   - To eliminate accidental data loss, the UI enforces a blocking confirmation dialog if `is_customized == true`:
+     *"Achtung: Dies überschreibt alle manuell festgelegten Zonen mit den Standard-Coggan-Zonen für FTP %d W. Möchtest du fortfahren?"* (*"Warning: This will overwrite all manually configured zones with standard Coggan zones for FTP %d W. Do you want to proceed?"*).
+   - If the user cancels the confirmation, no DataStore writes occur and all custom zones remain 100% untouched.
 
 ### 3.5 Interactive Preview State & Full-Profile Recalibration
 - When the athlete taps the Calculate icon, `ZoneCalculatorDialog` opens in an **interactive Preview State**:
@@ -183,8 +188,17 @@ Existing athletes upgrading from prior versions have custom or default zones, bu
   - Tapping "Cancel" dismisses the preview with zero modifications to stored preferences.
 
 ### 3.6 Reactive UDF State Management & Single ACID Transaction Batch Commit
-- Replace manual callback-driven local state copying with reactive Unidirectional Data Flow (UDF):
-  `ZoneSettingsScreen` observes DataStore flows directly via `collectAsState()`.
+- **Unidirectional Data Flow (UDF) & Elimination of UI-DataStore Split-Brain**:
+  - The UI (`ZoneSettingsScreen`) **never** maintains independent local copies of zone thresholds or baselines that require rollback.
+  - The UI state is coupled to DataStore via a sealed calculation commit command dispatched to a single repository method:
+```kotlin
+sealed class CalculationCommitCommand {
+    data class CommitPower(val ftp: Int, val zones: List<Int>) : CalculationCommitCommand()
+    data class CommitHeartRate(val isCycling: Boolean, val hrMax: Int, val hrRest: Int?, val zones: List<Int>) : CalculationCommitCommand()
+}
+```
+  - When the athlete confirms "Apply", `ZoneSettingsViewModel.commitCalculation(command)` invokes `SettingsDataStore.applyCalculatedPowerZones()` (or `applyCalculatedHeartRateZones()`) in a single atomic invocation.
+  - There are never two separate mutations (one for UI and one for DataStore). If the DataStore write fails, no state changes occur and the UI continues to observe the unaltered flow. If the DataStore write succeeds, the `StateFlow` automatically emits the new state to the UI. This eliminates split-brain conditions and manual rollback complexity.
 - The "Apply" operation commits baseline, timestamp, customization flag (`false`), and all zone thresholds inside a single atomic `dataStore.edit { }` block:
 ```kotlin
 suspend fun applyCalculatedPowerZones(ftp: Int, zones: List<Int>) {
@@ -292,7 +306,7 @@ data class AthletePowerSnapshot(
     val isCustomized: Boolean
 )
 ```
-2. The snapshot is exposed as a single combined reactive flow:
+2. The snapshot is exposed as a single combined reactive flow, converted into a lifecycle-aware `StateFlow` using `SharingStarted.WhileSubscribed(5000)`:
 ```kotlin
 val athletePowerSnapshotFlow: Flow<AthletePowerSnapshot> = combine(
     cyclingFtpFlow,
@@ -305,8 +319,17 @@ val athletePowerSnapshotFlow: Flow<AthletePowerSnapshot> = combine(
         isCustomized = customized
     )
 }
+
+val athletePowerSnapshotState: StateFlow<AthletePowerSnapshot> = athletePowerSnapshotFlow
+    .stateIn(
+        scope = coroutineScope,
+        started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000),
+        initialValue = AthletePowerSnapshot.EMPTY
+    )
 ```
-3. The background telemetry aggregator samples `athletePowerSnapshotFlow` at interval ticks, guaranteeing that downstream metric evaluators (IF, TSS) always consume an internally consistent, atomic view of baseline and zones.
+3. **Lifecycle Safety & Anti-Leak Policy for Downstream Services**:
+   - In background tracking services (`TrackerService`, `LiveWorkoutSession`), using `SharingStarted.WhileSubscribed(5000)` guarantees that upstream DataStore subscriptions are automatically paused when no collectors are active (e.g. tracking paused, or screen turned off without active workout), eliminating memory leaks and stale CPU processing.
+   - When active telemetry processing resumes, the service instantly consumes the cached immutable snapshot with zero latency and zero torn reads.
 
 ### 3.9 Locale-Aware Number Formatting & Parsing Architecture
 To eliminate `NumberFormatException` risks in European locales (German, Spanish, French, Italian, Polish) where `,` (comma) is the standard decimal separator and `.` (dot) or whitespace is used for thousands grouping:
@@ -347,14 +370,15 @@ object ZoneNumberParser {
 
 ### 4.1 Strict Domain Exception Enforcement in `ZoneCalculationMath.kt`
 Rather than silently failing, returning empty lists, or returning `null`, all mathematical calculation functions throw descriptive, explicit `IllegalArgumentException`s if invoked with invalid physiological domain parameters:
-- **FTP Bounds Violation**:
-  $$\text{ftp} \notin [50, 1000] \implies \text{throw } IllegalArgumentException("FTP must be between 50W and 1000W, received: $ftp")$$
-- **Max HR Bounds Violation**:
-  $$hrMax \notin [100, 240] \implies \text{throw } IllegalArgumentException("HR max must be between 100 and 240 bpm, received: $hrMax")$$
+- **Primary Karvonen Invariant Check ($HR_{\text{max}} > HR_{\text{rest}}$)**:
+  $$\text{If } hrMax \le hrRest \implies \text{throw } IllegalArgumentException("HR max ($hrMax) must be strictly greater than Resting HR ($hrRest)") \quad \text{[CRITICAL INVARIANT]}$$
+  $$\text{If } hrMax - hrRest < 20 \implies \text{throw } IllegalArgumentException("Heart rate reserve (HRmax - HRrest) must be at least 20 bpm, received: ${hrMax - hrRest}")$$
 - **Resting HR Bounds Violation**:
   $$hrRest < 30 \text{ or } hrRest > 100 \implies \text{throw } IllegalArgumentException("Resting HR must be between 30 and 100 bpm, received: $hrRest")$$
-- **Heart Rate Reserve Inversion or Insufficient Spread**:
-  $$hrMax \le hrRest \text{ or } hrMax - hrRest < 20 \implies \text{throw } IllegalArgumentException("Max HR must exceed Resting HR by at least 20 bpm, received max: $hrMax, rest: $hrRest")$$
+- **Max HR Bounds Violation**:
+  $$hrMax \notin [100, 240] \implies \text{throw } IllegalArgumentException("HR max must be between 100 and 240 bpm, received: $hrMax")$$
+- **FTP Bounds Violation**:
+  $$\text{ftp} \notin [50, 1000] \implies \text{throw } IllegalArgumentException("FTP must be between 50W and 1000W, received: $ftp")$$
 
 ```kotlin
 fun calculateKarvonenHeartRateZones(hrMax: Int, hrRest: Int): List<Int> {
@@ -376,11 +400,12 @@ fun calculateKarvonenHeartRateZones(hrMax: Int, hrRest: Int): List<Int> {
    - `validateFtp(ftp: Int): Boolean`: Validates $FTP \in [50, 1000]\text{ Watts}$. Rejects non-physiological inputs (e.g. 5W or 1200W).
    - `validateHeartRateBaselines(hrMax: Int, hrRest: Int? = null): Boolean`:
      - Asserts $HR_{\text{max}} \in [100, 240]\text{ bpm}$.
-     - If $HR_{\text{rest}}$ is provided: asserts physiological floor $HR_{\text{rest}} \in [30, 100]\text{ bpm}$ (strictly rejecting impossible values $< 30$).
-     - Strictly enforces cross-field constraint:
-       $$HR_{\text{max}} \ge HR_{\text{rest}} + 20$$
+     - If $HR_{\text{rest}}$ is provided:
+       - Asserts physiological floor $HR_{\text{rest}} \in [30, 100]\text{ bpm}$ (strictly rejecting impossible values $< 30$).
+       - Strictly asserts $HR_{\text{max}} > HR_{\text{rest}}$ (rejecting $HR_{\text{max}} \le HR_{\text{rest}}$).
+       - Strictly enforces cross-field constraint: $HR_{\text{max}} \ge HR_{\text{rest}} + 20$.
    - **User Error Feedback in `ZoneCalculatorDialog`**:
-     - If $HR_{\text{max}} < HR_{\text{rest}} + 20$ or $HR_{\text{rest}} < 30$, or $FTP < 50$ or $FTP > 1000$:
+     - If $HR_{\text{max}} \le HR_{\text{rest}}$ or $HR_{\text{max}} < HR_{\text{rest}} + 20$ or $HR_{\text{rest}} < 30$, or $FTP < 50$ or $FTP > 1000$:
      - "Apply" button is immediately disabled (`enabled = false`).
      - A localized, prominent Material 3 error message is displayed beneath the field (`supportingText` / `isError = true`):
        *"Maximale HF muss mindestens 20 bpm über der Ruhe-HF liegen (Ruhe-HF mind. 30 bpm)"*.
@@ -391,6 +416,7 @@ val isPowerValid: Boolean = ftpInput != null && ftpInput in 50..1000
 val isHrmaxValid: Boolean = hrMaxInput != null && hrMaxInput in 100..240
 val isKarvonenValid: Boolean = hrMaxInput != null && hrRestInput != null &&
     hrMaxInput in 100..240 && hrRestInput in 30..100 &&
+    (hrMaxInput > hrRestInput) &&
     (hrMaxInput - hrRestInput >= 20)
 
 val isApplyEnabled: Boolean = when (activeProfile) {
@@ -401,7 +427,11 @@ val isApplyEnabled: Boolean = when (activeProfile) {
    - The "Apply" action button binds directly to `enabled = isApplyEnabled`.
    - If any input is out-of-range or the Karvonen spread is $< 20\text{ bpm}$, the button is disabled and inline error messages are displayed.
    - Domain-level `require()` blocks in `ZoneCalculationMath` and `SettingsDataStore` act strictly as defensive assertion barriers; the UI state guarantees that invalid parameters can NEVER be dispatched, eliminating any crash risk.
-3. **Global Zone Stack Monotonicity Validation & Manual 2000W Ceiling Enforcement**:
+3. **Hardware Keyboard, Copy-Paste & Accessibility Input Defense**:
+   - If an athlete inputs text via an external physical keyboard, accessibility service, or copy-paste, `ZoneNumberParser.parseIntOrNull` sanitizes non-numeric characters and normalizes locale formatting.
+   - The reactive `isApplyEnabled` state re-evaluates synchronously on every keystroke.
+   - Even in edge cases (e.g. programmatically dispatched commands), `SettingsDataStore` asserts `ZoneValidator.validateFtp()` and `ZoneValidator.validateHeartRateBaselines()`, preventing any corrupted state from being saved.
+4. **Global Zone Stack Monotonicity Validation & Manual 2000W Ceiling Enforcement**:
    - `validatePowerZoneStack(z1, z2, z3, z4, z5, z6): Boolean`: Asserts the entire stack satisfies $0 < z_1 < z_2 < z_3 < z_4 < z_5 < z_6 \le 2000$.
    - `validateHeartRateZoneStack(z1, z2, z3, z4): Boolean`: Asserts $30 < z_1 < z_2 < z_3 < z_4 \le 250$.
    - **Manual Override 2000W Ceiling Enforcement**:
@@ -409,7 +439,7 @@ val isApplyEnabled: Boolean = when (activeProfile) {
      - When the athlete manually edits any threshold card in `ZoneSettingsScreen` (e.g. `z6Max`), manual values $> 2000\text{W}$ are strictly rejected.
      - `ZoneValidator.validatePowerThreshold(value: Int): Boolean` rejects $value > 2000$.
      - `SettingsDataStore.savePowerZoneMax(zoneIndex, value)` asserts `value in 1..2000`, throwing `IllegalArgumentException("Power zone threshold cannot exceed 2000W, received: $value")` on violation.
-3. **RTL (Right-to-Left) & Small-Screen Layout Compliance**:
+5. **RTL (Right-to-Left) & Small-Screen Layout Compliance**:
    - All dialog containers, preview tables, and text inputs utilize `LayoutDirection`-aware Compose modifiers (`Alignment.Start`, `Alignment.End`, `padding(start = ..., end = ...)`).
    - All labels use `Text(overflow = TextOverflow.Ellipsis, maxLines = 2)` and responsive `FlowRow` arrangements, preventing layout clipping or truncation in RTL languages or verbose European locales (German, Polish).
 
