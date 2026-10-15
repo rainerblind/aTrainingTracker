@@ -26,13 +26,11 @@ Currently, configuring zone boundaries is entirely manual. Athletes must calcula
 3. **Division-by-Zero Safety & Nullable Invalidation**:
    - Returning `0` for unconfigured FTP creates a catastrophic `ArithmeticException` (division-by-zero) risk in downstream $IF = NP / FTP$ calculations.
    - The system must enforce a strict `SafeDivision` pattern: unconfigured FTP returns `null` (NEVER `0`), and calculation engines explicitly check for positive non-null divisors before dividing, displaying placeholder dashes (`--`) when unconfigured.
-4. **Desynchronization Policy, Live Session Invalidation & Full-Profile Overwrite**:
-   - Zone thresholds are stored as absolute integer values (Watts or bpm).
-   - If an athlete modifies FTP mid-workout (or while paused), `LiveWorkoutSession` forces an immediate re-calculation of cumulative IF and TSS across the entire session using the new FTP baseline at the next aggregator tick.
-   - Tapping "Apply" in the Zone Calculator displays a two-column comparison preview ("Current" vs "Calculated") and executes an explicit full-profile recalibration, overwriting all zone thresholds to standard model brackets.
-   - The UI updates local state ONLY AFTER the atomic DataStore transaction completes successfully.
+4. **Intra-Session Historical Immutability & Reactive UDF Architecture**:
+   - If an athlete modifies FTP mid-workout, samples recorded prior to the change remain mathematically anchored to the FTP at their recording time; only subsequent ticks use the updated baseline.
+   - State management is purely reactive: `ZoneSettingsScreen` observes `StateFlow` from `SettingsDataStore`, eliminating fragile callback-driven state updates.
 
-This ticket introduces an interactive, contextual Zone Calculator assistant directly accessible from `ZoneSettingsScreen`, creates a pure mathematical calculation engine `ZoneCalculationMath.kt`, establishes persistent preferences in `SettingsDataStore.kt` (`cycling_ftp`, `athlete_hr_max`, `athlete_hr_rest`) with ACID atomic transaction writers, establishes a centralized blocking validation gate `ZoneValidator.kt` with cross-field validation, bounds open-ended Zone 7 to prevent integer overflow ($3000\text{W}$ max), defines non-destructive preview migration, and provides 100% translation and RTL parity across all 9 supported application locales.
+This ticket introduces an interactive, contextual Zone Calculator assistant directly accessible from `ZoneSettingsScreen`, creates a pure mathematical calculation engine `ZoneCalculationMath.kt`, establishes persistent preferences in `SettingsDataStore.kt` (`cycling_ftp`, `athlete_hr_max`, `athlete_hr_rest`) with ACID atomic transaction writers, establishes a centralized blocking validation gate `ZoneValidator.kt` with cross-field validation, bounds open-ended Zone 7 at $2000\text{W}$ max, defines non-destructive preview migration, and provides 100% translation and RTL parity across all 9 supported application locales.
 
 ---
 
@@ -45,12 +43,15 @@ This ticket introduces an interactive, contextual Zone Calculator assistant dire
 2. **Absence of Athlete Baseline Preference Keys in `SettingsDataStore.kt`**:
    - `SettingsDataStore.kt` defines threshold keys (`HR_RUN_ZONE1_MAX..HR_RUN_ZONE4_MAX`, `HR_BIKE_ZONE1_MAX..HR_BIKE_ZONE4_MAX`, `PWR_BIKE_ZONE1_MAX..PWR_BIKE_ZONE6_MAX`) and display options keys.
    - There are **no keys** for `cycling_ftp`, `cycling_ftp_updated_at`, `athlete_hr_max`, or `athlete_hr_rest`.
-3. **DataStore-Level Validation Gap & Cross-Field Invariance**:
+3. **Reactive State Management Gap**:
+   - `ZonesSettingsActivity.kt` holds local `allProfilesData` in ad-hoc `remember { mutableStateOf(...) }` and updates it via manual copy helpers.
+   - The architecture must transition to Unidirectional Data Flow (UDF) where `ZoneSettingsScreen` reactively observes DataStore `StateFlow` streams.
+4. **DataStore-Level Validation Gap & Cross-Field Invariance**:
    - Monotonic validation currently only checks adjacent local pairs in private UI methods.
-   - A centralized `ZoneValidator.validateZoneStack()` must be enforced directly inside `SettingsDataStore` write functions, including cross-field verification ($HR_{\text{max}} \ge HR_{\text{rest}} + 20$) and hard physiological bounds inside the transaction.
-4. **No Pure Math Engine for Zone Bracket Computation**:
+   - A centralized `ZoneValidator.validatePowerZoneStack()` and `validateHeartRateZoneStack()` must be enforced directly inside `SettingsDataStore` write functions, including cross-field verification ($HR_{\text{max}} \ge HR_{\text{rest}} + 20$) and hard physiological bounds inside the transaction.
+5. **No Pure Math Engine for Zone Bracket Computation**:
    - Calculations must be encapsulated in a dedicated, side-effect-free math engine (`ZoneCalculationMath.kt`) with deterministic arithmetic rounding to ensure testability without Android runtime dependencies.
-5. **Defensive Synchronous Bridges for Java Telemetry Services**:
+6. **Defensive Synchronous Bridges for Java Telemetry Services**:
    - `SettingsDataStoreJavaHelper.kt` exposes `getZoneMax()`, but lacks methods to read `getCyclingFtp()`, `getAthleteHrMax()`, or `getAthleteHrRest()`.
    - Any Java helper call must return `Integer?` (`null` when unconfigured), protected with `try-catch` exception shields to prevent ANRs or crashes during live tracking.
 
@@ -63,7 +64,7 @@ To guarantee consistency across different CPU architectures, Android OS versions
   $$\text{roundCutoff}(val) = \lfloor val + 0.5 \rfloor = \text{kotlin.math.round}(val).\text{toInt()}$$
 - This eliminates floating-point representation drift and ensures deterministic, reproducible integer boundaries.
 
-#### 2.2.2 Cycling Power (Coggan 7-Zone Model) & Zone 7 Floor Dependency
+#### 2.2.2 Cycling Power (Coggan 7-Zone Model) & Zone 7 Bound Definition
 Given athlete Functional Threshold Power $FTP \in [50, 1000]\text{ Watts}$:
 - **Zone 1 (Active Recovery)**: $< 55\% \implies Z_{1\text{max}} = \text{round}(FTP \times 0.55)$
 - **Zone 2 (Endurance)**: $56 - 75\% \implies Z_{2\text{max}} = \text{round}(FTP \times 0.75)$
@@ -74,10 +75,10 @@ Given athlete Functional Threshold Power $FTP \in [50, 1000]\text{ Watts}$:
 - **Zone 7 (Neuromuscular Power)**:
   - **Floor Dependency**: Zone 7 has no independent manual cutoff; its lower bound is strictly a dependent variable: $\text{Min} = Z_{6\text{max}} + 1$.
   - In `SettingsScreenContent`, Zone 7's minimum value is dynamically bound to `minValue = z6Max + 1` with manual editing disabled (`minEnabled = false`, `maxEnabled = false`). When the athlete adjusts `z6Max`, Zone 7's floor automatically and consistently cascades without breaking monotonicity.
-  - **Physical Ceiling**: To prevent integer overflow in downstream mathematical engines (kJ, TSS) and canvas coordinates, Zone 7 is capped at physical ceiling $Z_{7\text{max}} = 3000\text{ Watts}$ (substantially exceeding sprint world-record peak power $\approx 2500\text{W}$).
+  - **Physical Ceiling**: To prevent UI text clipping and integer overflow in downstream calculation engines (kJ, TSS), Zone 7 is capped at physical ceiling $Z_{7\text{max}} = 2000\text{ Watts}$ (standard maximum sprint wattage ceiling).
 
 *Monotonic Guarantee*: Because $0.55 < 0.75 < 0.90 < 1.05 < 1.20 < 1.50$, for any valid $FTP \ge 50$, the calculated upper bounds are strictly monotonic:
-$$0 < Z_1 < Z_2 < Z_3 < Z_4 < Z_5 < Z_6 < 3000$$
+$$0 < Z_1 < Z_2 < Z_3 < Z_4 < Z_5 < Z_6 < 2000$$
 
 #### 2.2.3 Heart Rate Model A (% of HRmax)
 Given athlete maximum heart rate $HR_{\text{max}} \in [100, 240]\text{ bpm}$:
@@ -117,48 +118,56 @@ fun calculateIntensityFactor(normalizedPower: Double, ftpWatts: Int?): Double? {
 ```
 - If FTP is unconfigured, cockpit metric displays safely render `--` instead of crashing with `ArithmeticException`.
 
-### 3.2 Active Workout Session Invalidation & Whole-Session Recalculation
+### 3.2 Intra-Session Historical Immutability & Future-Tick Alignment
 If an athlete updates their FTP baseline mid-workout (or while a workout is paused):
-1. `TrackerService` / `LiveWorkoutSession` observes `SettingsDataStore.cyclingFtpFlow`.
-2. When a new valid FTP is emitted:
-   - Instantaneous metrics (e.g. cockpit zone color indicator) adopt the new threshold boundaries from the very next sample tick.
-   - Cumulative metrics: The session **forces an immediate re-calculation of cumulative $IF = NP / FTP$ and real-time $TSS$ for the entire session** using the new FTP baseline at the next 1-second aggregator tick.
-   - This maintains 100% mathematical integrity across the entire session and eliminates any split-brain or "Multi-FTP" ambiguities between cockpit telemetry and the final saved activity summary.
+1. Historical data points, raw sensor samples, and accumulator slices recorded prior to the change remain **immutable**, retaining their original calculated stress values.
+2. From the moment the new FTP is committed onward:
+   - Instantaneous target power zone indicators immediately reflect the new threshold boundaries on the next incoming sensor sample.
+   - Future aggregator ticks calculate IF and TSS using the updated FTP baseline.
+3. This guarantees historical fidelity within the workout session and prevents retrospective data distortion.
 
-### 3.3 Prospective-Only Historical Policy
+### 3.3 Prospective-Only Historical Policy for Completed Activities
 - **Changing the FTP baseline is strictly PROSPECTIVE ONLY.**
 - Historical completed workouts in SQLite (`WorkoutSummaries.db`, `Extrema.db`) retain their immutable summary aggregates, NP, IF, and TSS calculated at the time of recording.
 - Changing FTP in Settings only affects active tracking and future workouts, preserving historical athletic records and eliminating heavy retrospective database re-processing.
 
-### 3.4 Non-Destructive Migration, Preview State & Full-Profile Overwrite
+### 3.4 Non-Destructive Migration for Existing Users without Stored FTP
 - Existing manual zones in `SettingsDataStore` are 100% preserved upon updating the app.
+- For athletes with existing zones but no stored FTP (`cycling_ftp == null` / `0`):
+  - The app does NOT launch an intrusive setup wizard or force a blocking modal dialog.
+  - On `ZoneSettingsScreen` (Power tab), an unobtrusive helper card informs the athlete:
+    *"Keine FTP hinterlegt. Tippe auf 'Berechnen' um wissenschaftliche Coggan-Zonen einzurichten"* (*"No FTP configured. Tap 'Calculate' to set up scientific Coggan zones"*).
+  - Existing manual zones remain active and untouched until the athlete explicitly chooses to calculate.
+
+### 3.5 Interactive Preview State & Full-Profile Recalibration
 - When the athlete taps the Calculate icon, `ZoneCalculatorDialog` opens in an **interactive Preview State**:
   - Displays side-by-side comparison: "Current Thresholds" vs "Proposed Calculated Thresholds". Any currently customized/divergent boundaries are highlighted with an amber tint.
   - **Explicit Full-Profile Overwrite Policy**: Tapping "Apply" ("Übernehmen") overwrites **ALL zones (Z1..Z6 for Power, Z1..Z4 for HR)** with the new standard model brackets. The dialog displays an explicit advisory note:
     *"Durch das Übernehmen werden alle Zonen auf das Standardmodell zurückgesetzt"* (*"Applying will recalibrate all zones to the standard model"*).
   - Tapping "Cancel" dismisses the preview with zero modifications to stored preferences.
 
-### 3.5 Atomic Batch Commit & Strict Callback-Driven UI Update
-To guarantee zero partial writes or torn preferences during unexpected process kills or crashes:
-- Jetpack `DataStore<Preferences>` executes the entire lambda passed to `dataStore.edit { }` in memory and writes the serialized protobuf to disk in a single write operation with an atomic rename (`user_settings.preferences_pb.tmp` -> `user_settings.preferences_pb`). It is impossible for partial keys to be committed; either ALL keys are committed or NONE are.
-- In our mutators, `ZoneValidator.validatePowerZoneStack()` validates the entire stack *before* writing.
-- **Strict Callback-Driven UI Update**: The UI state (`allProfilesData`) is updated ONLY AFTER the atomic DataStore transaction completes successfully:
+### 3.6 Reactive UDF State Management & Atomic Batch Commit
+- Replace manual callback-driven local state copying with reactive Unidirectional Data Flow (UDF):
+  `ZoneSettingsScreen` observes DataStore flows directly via `collectAsState()`.
+- The "Apply" operation commits baseline, timestamp, and all zone thresholds inside a single atomic `dataStore.edit { }` block:
 ```kotlin
-scope.launch(Dispatchers.IO) {
-    try {
-        dataStore.applyCalculatedPowerZones(ftp, calculatedZones)
-        withContext(Dispatchers.Main) {
-            // UI state updated ONLY after successful DataStore commit
-            reloadProfiles()
-            showDialog = false
-        }
-    } catch (e: Exception) {
-        withContext(Dispatchers.Main) {
-            errorMessage = e.localizedMessage
-        }
+suspend fun applyCalculatedPowerZones(ftp: Int, zones: List<Int>) {
+    require(ZoneValidator.validatePowerZoneStack(zones[0], zones[1], zones[2], zones[3], zones[4], zones[5])) {
+        "Cannot persist invalid non-monotonic power zones"
+    }
+    dataStore.edit { prefs ->
+        prefs[KEY_CYCLING_FTP] = ftp
+        prefs[KEY_CYCLING_FTP_UPDATED_AT] = System.currentTimeMillis()
+        prefs[PWR_BIKE_ZONE1_MAX] = zones[0]
+        prefs[PWR_BIKE_ZONE2_MAX] = zones[1]
+        prefs[PWR_BIKE_ZONE3_MAX] = zones[2]
+        prefs[PWR_BIKE_ZONE4_MAX] = zones[3]
+        prefs[PWR_BIKE_ZONE5_MAX] = zones[4]
+        prefs[PWR_BIKE_ZONE6_MAX] = zones[5]
     }
 }
 ```
+- Because Jetpack DataStore performs in-memory updates followed by an atomic filesystem rename, the UI reactively observes the new state automatically with zero lifecycle desynchronization risk.
 
 ---
 
@@ -178,7 +187,7 @@ scope.launch(Dispatchers.IO) {
      - A localized, prominent Material 3 error message is displayed beneath the field (`supportingText` / `isError = true`):
        *"Maximale HF muss mindestens 20 bpm über der Ruhe-HF liegen (Ruhe-HF mind. 30 bpm)"*.
 2. **Global Zone Stack Monotonicity Validation (Hardened DataStore Layer)**:
-   - `validatePowerZoneStack(z1, z2, z3, z4, z5, z6): Boolean`: Asserts the entire stack satisfies $0 < z_1 < z_2 < z_3 < z_4 < z_5 < z_6 \le 3000$.
+   - `validatePowerZoneStack(z1, z2, z3, z4, z5, z6): Boolean`: Asserts the entire stack satisfies $0 < z_1 < z_2 < z_3 < z_4 < z_5 < z_6 \le 2000$.
    - `validateHeartRateZoneStack(z1, z2, z3, z4): Boolean`: Asserts $30 < z_1 < z_2 < z_3 < z_4 \le 250$.
    - **Enforcement Barrier**: Validated both in the UI before dispatching save, and enforced directly inside `SettingsDataStore.applyCalculatedPowerZones()` and `saveHrZoneMax()` throwing `IllegalArgumentException` on violation, ensuring background processes cannot corrupt DataStore.
 3. **RTL (Right-to-Left) & Small-Screen Layout Compliance**:
@@ -227,7 +236,7 @@ scope.launch(Dispatchers.IO) {
 2. **Pure Math Engine (`ZoneCalculationMath.kt`)**:
    - Pure Kotlin object in `com.atrainingtracker.trainingtracker.settings`.
    - Functions: `calculateCogganPowerZones(ftp: Int): List<Int>`, `calculateHrmaxHeartRateZones(hrMax: Int): List<Int>`, `calculateKarvonenHeartRateZones(hrMax: Int, hrRest: Int): List<Int>`.
-   - Half-up rounding policy and upper capping for Zone 7 ($3000\text{W}$).
+   - Half-up rounding policy and upper capping for Zone 7 ($2000\text{W}$).
 3. **Persistent Preferences in `SettingsDataStore.kt`**:
    - `KEY_CYCLING_FTP = intPreferencesKey("cycling_ftp")` (default 0 / unconfigured).
    - `KEY_CYCLING_FTP_UPDATED_AT = longPreferencesKey("cycling_ftp_updated_at")` (version timestamp).
@@ -249,13 +258,19 @@ scope.launch(Dispatchers.IO) {
    - Pre-populates inputs from currently stored DataStore baseline values (or intelligent $Z_4$ estimate).
    - Displays clear inline error copy when inputs fail validation (e.g. $HR_{\text{max}} < HR_{\text{rest}} + 20$ or $HR_{\text{rest}} < 30$).
    - Full-profile recalibration advisory: "Applying will recalibrate all zones to the standard model".
-   - "Apply" ("Übernehmen") button: atomic batch commit of baseline, timestamp, and calculated zones, updating UI state ONLY after commit succeeds.
+   - "Apply" ("Übernehmen") button: atomic batch commit of baseline, timestamp, and calculated zones, updating UI state reactively.
    - "Cancel" ("Abbrechen") button: dismisses without changes.
 6. **Localization & RTL-Safe Layout Parity Across All 9 Supported Locales**:
    - Localize all calculator strings across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
    - Enforce `LayoutDirection`-aware modifiers and responsive wrapping to prevent text clipping in RTL or verbose locales.
-7. **Comprehensive Unit Test Suite**:
-   - Pure math tests: `ZoneCalculationMathTest.kt` (Coggan FTP brackets, % HRmax, Karvonen HRR, bounds clamping, edge cases).
+7. **Comprehensive Unit Test Suite & Matrix**:
+   - Pure math tests: `ZoneCalculationMathTest.kt` verifying boundary conditions:
+     - Minimum boundary: $FTP = 50\text{W}$
+     - Nominal values: $FTP = 200\text{W}, 250\text{W}, 300\text{W}$
+     - Maximum ceiling: $FTP = 1000\text{W}$
+     - HRmax boundary: $HR_{\text{max}} = 100, 190, 240\text{ bpm}$
+     - Karvonen boundary: $HR_{\text{rest}} = 30, 60, 100\text{ bpm}$ with $HR_{\text{max}} = 240$
+     - Edge cases: $HR_{\text{max}} - HR_{\text{rest}} < 20$ (rejected), $HR_{\text{rest}} > HR_{\text{max}}$ (rejected).
    - Centralized validator tests: `ZoneValidatorTest.kt` (global stack validation, cross-field validation, hard floors/ceilings, error messages).
    - DataStore persistence & atomic transaction tests: `SettingsDataStoreBaselinesTest.kt`.
    - Localization parity tests: `ZoneCalculatorLocalizationTest.kt`.
@@ -271,7 +286,7 @@ scope.launch(Dispatchers.IO) {
 
 ```mermaid
 flowchart TD
-    subgraph UI ["ZoneSettingsScreen (Compose, RTL-Aware)"]
+    subgraph UI ["ZoneSettingsScreen (Compose, RTL-Aware, Reactive UDF)"]
         TopBar["TopAppBar / Header Row"]
         CalcBtn["Calculate Icon (Icons.Default.Calculate)"]
         SyncBadge["Sync Status Badge ('Synced' vs 'Customized')"]
@@ -302,7 +317,7 @@ flowchart TD
     subgraph Downstream ["Downstream Consumers (ATT-1290 / ATT-1291)"]
         JavaHelper["SettingsDataStoreJavaHelper (Try-Catch, Nullable)"]
         SafeDiv["SafeDivision Pattern (np / ftp if ftp != null && ftp > 0)"]
-        LiveSession["LiveWorkoutSession (Whole-Session Recalculation on FTP Change)"]
+        LiveSession["LiveWorkoutSession (Future-Tick Alignment)"]
         IF["Live Intensity Factor (IF = NP / FTP, suppressed '--' if null)"]
         TSS["Real-Time TSS (s * NP * IF / FTP * 3600 * 100, suppressed '--' if null)"]
     end
@@ -322,10 +337,10 @@ flowchart TD
     AtomicCommit --> PrefFTP
     AtomicCommit --> PrefTS
     AtomicCommit --> PrefZones
-    AtomicCommit -->|On Success Callback| UI
+    PrefFTP & PrefZones -->|Reactive Flow Emission| UI
     PrefFTP & PrefZones --> SyncBadge
     Flows --> LiveSession
-    LiveSession -->|Whole Session Recalculate| SafeDiv
+    LiveSession -->|Future Ticks| SafeDiv
     JavaHelper --> SafeDiv
     SafeDiv --> IF & TSS
 ```
@@ -338,11 +353,11 @@ flowchart TD
 |:---|:---|:---:|:---:|:---|
 | **RSK-01** | Division by zero in downstream telemetry engines when FTP is unconfigured. | Critical | Low | Enforce `SafeDivision` pattern: unconfigured FTP returns `null` (never 0); calculation engines suppress metrics, rendering `--`. |
 | **RSK-02** | User inputs Resting HR $\ge$ Max HR in Karvonen model or impossible HRrest ($< 30$). | High | Medium | `ZoneValidator` enforces domain cross-field validation ($HR_{\text{max}} \ge HR_{\text{rest}} + 20$, $HR_{\text{rest}} \ge 30$), disabling "Apply" and showing prominent inline error copy. |
-| **RSK-03** | Split-brain telemetry when FTP is updated during active tracking. | Medium | Low | `LiveWorkoutSession` observes `cyclingFtpFlow` and forces immediate whole-session recalculation of cumulative IF and TSS at the next aggregator tick. |
-| **RSK-04** | Race conditions or partial writes between DataStore baseline and zone thresholds. | Low | Low | Enforce single atomic batch transaction in `dataStore.edit { }` writing baseline, timestamp, and thresholds together with filesystem ACID rename rollback, updating UI local state only on success. |
+| **RSK-03** | Split-brain telemetry when FTP is updated during active tracking. | Medium | Low | Historical samples retain recorded intensity; future aggregator ticks calculate with new FTP baseline, ensuring intra-session fidelity. |
+| **RSK-04** | Race conditions or partial writes between DataStore baseline and zone thresholds. | Low | Low | Enforce single atomic batch transaction in `dataStore.edit { }` writing baseline, timestamp, and thresholds together with filesystem ACID rename rollback, observed reactively via UDF. |
 | **RSK-05** | Breaking downstream Java callers in tracking service. | Medium | Low | Provide thread-safe `@JvmStatic` snapshot accessors in `SettingsDataStoreJavaHelper.kt` shielded with `try-catch` returning `null` on error/unconfigured. |
 | **RSK-06** | Incomplete localization or UI clipping in RTL/verbose locales. | Medium | Low | Provide complete translations in all 9 XML string directories with `LayoutDirection`-aware modifiers and ellipsis, verified via `ZoneCalculatorLocalizationTest.kt`. |
-| **RSK-07** | Zone 7 arithmetic overflow in downstream calculation engines. | Medium | Low | Explicitly cap Zone 7 at physical maximum $3000\text{ Watts}$ in `ZoneCalculationMath` and `TelemetryZoneMath`. |
+| **RSK-07** | Zone 7 arithmetic overflow in downstream calculation engines. | Medium | Low | Explicitly cap Zone 7 at physical maximum $2000\text{ Watts}$ in `ZoneCalculationMath` and `TelemetryZoneMath`. |
 | **RSK-08** | Inadvertent overwriting of existing athlete zone configurations upon update. | High | Low | Non-destructive migration: existing manual zones remain 100% untouched until explicit user calculation and confirmation. |
 | **RSK-09** | Retroactive corruption of historical workout analytics on baseline change. | High | Low | Explicit prospective-only policy: past completed workouts in SQLite remain immutable; new baseline applies strictly to future tracking sessions. |
 
@@ -350,4 +365,4 @@ flowchart TD
 
 ## 9. Conclusion & Next Steps
 
-The problem domain, physiological calculation models, deterministic rounding policy, validation architecture (`ZoneValidator.validateZoneStack` and cross-field check with hard floors/ceilings), single-transaction atomic batch commits with callback-driven UI updates, `SafeDivision` pattern eliminating division-by-zero, baseline versioning (`cycling_ftp_updated_at`), whole-session live invalidation dynamics, prospective-only historical invariant, full-profile overwrite policy with preview comparison, RTL layout compliance, Zone 7 capping, and Chesterton's Fence archaeology are fully analyzed and bounded. Upon Gate 1 approval of subtask `ATT-3610`, Stage 2 (Requirement & Test Specification) will author `REQ-UI-373` in `docs/requirements.md` and `TST-UI-336` in `docs/tests.md`.
+The problem domain, physiological calculation models, deterministic rounding policy, validation architecture (`ZoneValidator.validateZoneStack` and cross-field check with hard floors/ceilings), single-transaction atomic batch commits with reactive UDF StateFlow observation, `SafeDivision` pattern eliminating division-by-zero, baseline versioning (`cycling_ftp_updated_at`), intra-session historical immutability, prospective-only historical invariant, full-profile overwrite policy with preview comparison, RTL layout compliance, Zone 7 capping at 2000W, test matrix coverage, and Chesterton's Fence archaeology are fully analyzed and bounded. Upon Gate 1 approval of subtask `ATT-3610`, Stage 2 (Requirement & Test Specification) will author `REQ-UI-373` in `docs/requirements.md` and `TST-UI-336` in `docs/tests.md`.
