@@ -20,9 +20,10 @@ Ticket ATT-3581 addresses two interrelated usability and navigational camera pro
    - Replace the unbounded linear zoom slope above $20\text{ km/h}$ with a base-2 logarithmic scaling model ($\Delta \text{zoom} \propto \log_2(\text{speed} / 20)$) so that visible ground distance ahead grows linearly with velocity ($D \propto v$), preserving a constant lookahead time horizon ($T_{\text{lookahead}} = \text{const}$).
    - Set the minimum camera zoom level default to `minZoom = 16.0f` (`DEFAULT_MAP_FOLLOW_ME_MIN_ZOOM = 16.0f`), preventing excessive zoom-out and preserving turn-by-turn situational awareness even on rapid $80\text{+ km/h}$ alpine descents.
    - Preserve 100% of the proven linear progression between $0\text{ km/h}$ ($20.0f$) and $20\text{ km/h}$ ($18.0f$) for uphill climbing and relaxed cruising.
-2. **Autonomous Camera Wiring & Advanced Settings Simplification**:
+2. **Autonomous Camera Wiring, DataStore Migration & Advanced Settings Simplification**:
    - Wire `followMeController(...)` in `ATrainingTrackerMap.kt` to use the canonical constants in `TuningPreferencesDefaults` directly, preventing legacy persisted DataStore tweaks from corrupting calibrated physics.
    - Strip the 7 manual Follow-Me camera sliders/toggles from `NavigationSection.kt`, `AdvancedTuningScreen.kt`, and `AdvancedTuningDialog.kt` to eliminate UI clutter while keeping remaining navigation items intact.
+   - **DataStore Migration**: Provide `purgeLegacyMapCameraPreferences()` and map `tuningConfigFlow` to strictly return canonical defaults for camera parameters, purging legacy orphaned keys from persistent storage so no "ghost settings" can linger.
 
 ---
 
@@ -49,6 +50,18 @@ Ticket ATT-3581 addresses two interrelated usability and navigational camera pro
 |  |  (Camera sliders REMOVED) |                                                 |
 |  +---------------------------+                                                 |
 +--------------------------------------------------------------------------------+
+                                       ^
+                                       |
++--------------------------------------------------------------------------------+
+|                          Data / Persistence Layer                              |
+|                                                                                |
+|  +--------------------------------------------------------------------------+  |
+|  | TuningPreferencesDataStore                                               |  |
+|  |  - purgeLegacyMapCameraPreferences(): purges orphaned camera keys        |  |
+|  |  - tuningConfigFlow: returns canonical defaults directly for camera      |  |
+|  |  - resetToDefaults(): clears legacy camera keys                          |  |
+|  +--------------------------------------------------------------------------+  |
++--------------------------------------------------------------------------------+
 ```
 
 ### 2.2 Mathematical Model & Continuity ($C^0$)
@@ -72,12 +85,45 @@ Google Maps ground resolution scales inversely with power of two: $R(z) \propto 
    - At $80\text{ km/h}$: $18.0 - \log_2(4.0) = 18.0 - 2.0 = 16.00f$ ($4.0\times$ cruising distance).
    - At $\ge 80\text{ km/h}$: Clamped firmly to `minZoom = 16.0f`.
 
-3. **Speed Zoom Disabled**:
+3. **Boundary Condition & Floating-Point Precision ($20.0\text{ km/h}$)**:
+   - Branch condition uses `if (speedKmh <= 20.0f)`.
+   - At exact boundary $20.0f$, linear formula evaluates: $20.0 - 0.1 \times 20.0 = 18.0f$.
+   - For an epsilon deviation above boundary ($20.0001f$), $\ln(1.000005) \approx 0.000005 \implies 18.0 - 0.000005 = 18.0f$.
+   - Because $\lim_{v \to 20.0^-} z(v) = \lim_{v \to 20.0^+} z(v) = 18.0f$, floating-point evaluation is guaranteed stable, monotonic, and devoid of jitter or singularities.
+
+4. **Speed Zoom Disabled**:
    $$\text{targetZoom} = \text{baseZoom}.\text{coerceIn}(\text{minZoom}, \text{maxZoom}) = 20.0f$$
+
+5. **Canonical `baseZoom` Grounding**:
+   - `baseZoom` in `calculateFollowMeTargetZoom` and `followMeController` defaults to `TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM` ($20.0f$).
+   - `ATrainingTrackerMap.kt` invokes `followMeController` with default parameters, ensuring `baseZoom` is strictly grounded in canonical constants and never dependent on dynamic or legacy UI state.
 
 ---
 
-## 3. UI Consistency (Rule 23 & Design Guidelines §5)
+## 3. DataStore Migration & Legacy Purge Strategy
+
+To prevent orphaned or legacy user-customized camera preferences from persisting in `DataStore` or creating "ghost settings":
+1. **DataStore Read Decoupling**:
+   - In `TuningPreferencesDataStore.kt:679–703`, `tuningConfigFlow` maps the camera fields (`mapFollowMeInitialZoom`, `mapFollowMeSpeedZoomEnabled`, `mapFollowMeCruisingZoom`, `mapFollowMeTiltAngle`, `mapFollowMeLookaheadPaddingPercent`, `mapFollowMeSpeedSmoothingAlpha`, `mapFollowMeBearingSmoothingAlpha`) directly to `TuningPreferencesDefaults` constants, ignoring any persisted legacy values.
+2. **Explicit Legacy Key Purge**:
+   - Provide `suspend fun purgeLegacyMapCameraPreferences()` in `TuningPreferencesDataStore` that executes:
+     ```kotlin
+     dataStore.edit { prefs ->
+         prefs.remove(KEY_MAP_FOLLOW_ME_INITIAL_ZOOM)
+         prefs.remove(KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED)
+         prefs.remove(KEY_MAP_FOLLOW_ME_CRUISING_ZOOM)
+         prefs.remove(KEY_MAP_FOLLOW_ME_TILT_ANGLE)
+         prefs.remove(KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT)
+         prefs.remove(KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA)
+         prefs.remove(KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA)
+     }
+     ```
+   - In `TuningPreferencesDataStore.resetToDefaults()`, ensure the legacy keys are removed.
+   - Trigger `purgeLegacyMapCameraPreferences()` during application startup / DataStore initialization.
+
+---
+
+## 4. UI Consistency (Rule 23 & Design Guidelines §5)
 
 * **Reference Screen**: `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` mounted from Settings / Navigation.
 * **Component Pruning**:
@@ -88,29 +134,33 @@ Google Maps ground resolution scales inversely with power of two: $R(z) \propto 
 
 ---
 
-## 4. Invariants & Governance Protection
+## 5. Invariants & Governance Protection
 
 1. **Gate 3 Prerequisites Guard**: Gate 3 approval required before production file edits.
 2. **Zero Regressions to Non-Follow-Me Map Modes**: `FIT_ALL`, `EXPLICIT_BOUNDS`, and `FREE_PAN` camera handling in `ATrainingTrackerMap.kt` remain 100% untouched.
 3. **Continuity Invariant ($C^0$)**: Zoom function is continuous at the piecewise boundary $v = 20\text{ km/h}$ ($\lim_{v \to 20^-} z(v) = \lim_{v \to 20^+} z(v) = 18.0f$).
 4. **Street-Level Visibility Guard**: Minimum zoom clamped at $16.0f$, guaranteeing roads and upcoming junctions remain clearly visible on steep descents.
-5. **Living Documentation Synchronization**: `docs/requirements.md` (`REQ-MAP-050`) and `docs/tests.md` (`TST-MAP-052`) synchronized.
-6. **Clean-Room Regression Suite**: 100% pass rate across the full 2,964+ unit test suite.
-7. **Strategy A Integration**: Feature branch merges cleanly into `sprint/2026-42.5` (`--no-ff`).
-8. **Human Final Review Authority**: Parent ticket strictly transitioned to `Final Review (Human)`.
+5. **No Ghost Settings Invariant**: Legacy persisted DataStore keys are purged and completely bypassed by `tuningConfigFlow`.
+6. **Living Documentation Synchronization**: `docs/requirements.md` (`REQ-MAP-050`) and `docs/tests.md` (`TST-MAP-052`) synchronized.
+7. **Clean-Room Regression Suite**: 100% pass rate across the full 2,964+ unit test suite.
+8. **Strategy A Integration**: Feature branch merges cleanly into `sprint/2026-42.5` (`--no-ff`).
+9. **Human Final Review Authority**: Parent ticket strictly transitioned to `Final Review (Human)`.
 
 ---
 
-## 5. Step-by-Step Construction Plan (Atomic Steps)
+## 6. Step-by-Step Construction Plan (Atomic Steps)
 
-### Step 1: Default Constant in `TuningPreferencesDataStore.kt`
+### Step 1: Default Constant & Migration in `TuningPreferencesDataStore.kt`
 * In `app/src/main/java/com/atrainingtracker/trainingtracker/settings/TuningPreferencesDataStore.kt`:
   - Add `const val DEFAULT_MAP_FOLLOW_ME_MIN_ZOOM = 16.0f` to `TuningPreferencesDefaults`.
+  - Add `purgeLegacyMapCameraPreferences()` method to purge legacy keys.
+  - In `tuningConfigFlow`, map camera parameters directly from `TuningPreferencesDefaults`.
+  - In `resetToDefaults()`, remove legacy camera keys.
 
 ### Step 2: Piecewise Linear-to-Logarithmic Calculation in `MapBehaviors.kt`
 * In `app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapBehaviors.kt`:
   - Update `calculateFollowMeTargetZoom` signature default `minZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_MIN_ZOOM`.
-  - Implement piecewise branch:
+  - Implement piecewise branch with $C^0$ continuity:
     ```kotlin
     if (!speedZoomEnabled) {
         return baseZoom.coerceIn(minZoom, maxZoom)
@@ -140,28 +190,31 @@ Google Maps ground resolution scales inversely with power of two: $R(z) \propto 
 
 ### Step 5: Unit & Contract Tests
 * In `FollowMeCameraZoomTest.kt`:
-  - Update tests to assert new piecewise linear ($\le 20\text{ km/h}$) and logarithmic ($> 20\text{ km/h}$) values, $16.0f$ minimum clamp, and disabled speed zoom.
+  - Update tests to assert new piecewise linear ($\le 20\text{ km/h}$) and logarithmic ($> 20\text{ km/h}$) values, boundary at $20.0\text{ km/h}$, $16.0f$ minimum clamp, and disabled speed zoom.
 * In `AdvancedTuningVisualContractTest.kt`:
   - Assert `NavigationSection.kt` no longer references camera slider title strings.
 * In `FollowMePaddingContractTest.kt`:
   - Update `ATrainingTrackerMap.kt` invocation assertions.
+* In `MapCameraTuningPreferencesTest.kt`:
+  - Add migration test `testLegacyCameraPreferences_purgedAndIgnoredByCalibratedEngine` verifying that legacy keys are purged and ignored.
 
 ### Step 6: Full Clean-Room Regression Suite Execution
 * Run `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
 ---
 
-## 6. Verification & Rollback Strategy
+## 7. Verification & Rollback Strategy
 
 * **Targeted Verification Commands**:
   ```bash
   ./gradlew testDebugUnitTest --tests com.atrainingtracker.trainingtracker.ui.map.FollowMeCameraZoomTest
   ./gradlew testDebugUnitTest --tests com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningVisualContractTest
   ./gradlew testDebugUnitTest --tests com.atrainingtracker.trainingtracker.ui.map.FollowMePaddingContractTest
+  ./gradlew testDebugUnitTest --tests com.atrainingtracker.trainingtracker.settings.MapCameraTuningPreferencesTest
   ```
 * **Full Clean-Room Suite Command**:
   ```bash
   ./gradlew testDebugUnitTest
   ```
 * **Rollback Strategy**:
-  Changes are purely in map camera mathematics and Advanced Settings composables. Rollback can be performed cleanly via `git checkout origin/sprint/2026-42.5 -- <target_files>` with zero impact on database schemas or persistent user records.
+  Changes are purely in map camera mathematics, DataStore configuration mapping, and Advanced Settings composables. Rollback can be performed cleanly via `git checkout origin/sprint/2026-42.5 -- <target_files>` with zero impact on database schemas or persistent user records.
