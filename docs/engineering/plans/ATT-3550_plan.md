@@ -16,7 +16,7 @@
 
 ## 1. Executive Summary & SWE.2 Architecture
 
-To eliminate cursor resource leaks and `CursorIndexOutOfBoundsException` systematically across legacy Java database managers, ATT-3550 introduces a standardized architectural model combining centralized sentinel constants, functional cursor navigation helpers, hardened governance annotations, explicit exception propagation contracts, and automated blocking CI/CD guards.
+To eliminate cursor resource leaks and `CursorIndexOutOfBoundsException` systematically across legacy Java database managers, ATT-3550 introduces a production-grade architectural framework combining centralized sentinel constants, functional cursor navigation helpers, hardened governance annotations with expiration dates, chained-call detection, and automated negative-tested CI/CD blocking gates.
 
 ```mermaid
 classDiagram
@@ -33,12 +33,14 @@ classDiagram
     }
     class CursorProvider {
         <<annotation>>
-        +String reason
+        +Target(ElementType.METHOD)
+        +String transferContract
     }
     class SuppressCursorAudit {
         <<annotation>>
         +String ticketId
         +String reason
+        +String expiryDate
     }
     DatabaseConstants <.. CursorUtils : uses
     CursorProvider <.. CursorUtils : interacts
@@ -49,12 +51,12 @@ classDiagram
 
 1. **Centralized Sentinel Constants (`DatabaseConstants.java`)**:
    - Location: `app/src/main/java/com/atrainingtracker/database/DatabaseConstants.java`.
-   - Defines canonical empty-state sentinels (`INVALID_ID = -1L`, `EMPTY_STRING = ""`, `EMPTY_COUNT = 0`, `EMPTY_METRIC = 0.0`) to eliminate magic literals and prevent sentinel drift across managers.
+   - Defines canonical empty-state sentinels (`INVALID_ID = -1L`, `EMPTY_STRING = ""`, `EMPTY_COUNT = 0`, `EMPTY_METRIC = 0.0`) eliminating magic literals and preventing sentinel drift across managers.
 
 2. **Functional Cursor Helper (`CursorUtils.java`)**:
    - Location: `app/src/main/java/com/atrainingtracker/util/CursorUtils.java`.
    - Null-safe navigation primitives:
-     - `mapFirst(Cursor cursor, T defaultValue, CursorMapper<T> mapper)`: Safely checks `if (cursor != null && cursor.moveToFirst())`, extracts and returns `mapper.map(cursor)`, or returns `defaultValue` if empty, ensuring zero `CursorIndexOutOfBoundsException`.
+     - `mapFirst(Cursor cursor, T defaultValue, CursorMapper<T> mapper)`: Safely checks `if (cursor != null && cursor.moveToFirst())`, extracts and returns `mapper.map(cursor)`, or returns `defaultValue` if empty, guaranteeing zero `CursorIndexOutOfBoundsException`.
      - `mapList(Cursor cursor, CursorMapper<T> mapper)`: Safely iterates `while (cursor.moveToNext())`, returning an unmodifiable or empty list.
    - Operates inside standard Java `try (Cursor cursor = ...)` blocks.
 
@@ -65,28 +67,29 @@ classDiagram
 
 4. **Hardened Annotation Governance & Transfer of Ownership Contract**:
    - **`@CursorProvider`**:
-     - Strict contract: *Any method annotated with `@CursorProvider` transfers the responsibility of closing the `Cursor` to the caller. Callers consuming this method MUST close the cursor via `try-with-resources` or pass ownership to an Android framework lifecycle component (e.g. `CursorAdapter`, `Loader`).*
+     - Strict contract: *Targeted solely to methods (`@Target(ElementType.METHOD)`). Any method annotated with `@CursorProvider` transfers the responsibility of closing the `Cursor` to the caller. Callers consuming this method MUST close the cursor via `try-with-resources` or pass ownership to an Android framework lifecycle component (e.g. `CursorAdapter`, `Loader`). Fields and constructors are strictly prohibited from holding untracked cursor references.*
      - Location: `app/src/main/java/com/atrainingtracker/database/CursorProvider.java`.
-   - **`@SuppressCursorAudit`**:
-     - Hardened governance: Requires mandatory `ticketId` (validated by CI/linter to match Jira pattern `ATT-\\d+`) and descriptive `reason`:
+   - **`@SuppressCursorAudit` with Mandatory Expiration**:
+     - Hardened governance: Requires mandatory `ticketId`, `reason`, and ISO `expiryDate` (`YYYY-MM-DD`):
        ```java
+       @Target(ElementType.METHOD)
+       @Retention(RetentionPolicy.SOURCE)
        public @interface SuppressCursorAudit {
            String ticketId();
            String reason();
+           String expiryDate(); // e.g. "2026-12-31"
        }
        ```
-     - Prevents unreviewed "get-out-of-jail-free" bypassing of static checks.
+     - The CI/CD linter automatically validates that `ticketId` matches `ATT-\\d+` and that the current date does not exceed `expiryDate`, failing the build if a suppression has expired to prevent permanent technical debt.
 
-5. **Robust AST & Token-Based Static Analysis (`lint_cursor_safety.py`)**:
-   - Rather than simple variable regex matching, the static linter and JUnit architecture test inspect method bodies for any invocation of `.query(` or `.rawQuery(` on database objects.
-   - It asserts that every query invocation is either:
-     - Part of a `try (Cursor ... = db.query(...))` resource specification, OR
-     - The direct return expression of a method annotated with `@CursorProvider`, OR
-     - Explicitly annotated with a validated `@SuppressCursorAudit(ticketId="ATT-...", reason="...")`.
-   - Any unshielded invocation outside these contracts fails the build immediately.
+5. **AST & Token-Based Static Analysis & Chained-Call Detection**:
+   - `tools/lint_cursor_safety.py` and `TryWithResourcesCursorAuditTest.kt` inspect method bodies for:
+     1. Any unshielded invocation of `.query(` or `.rawQuery(` on database objects not enclosed in a `try (` header.
+     2. **Chained Calls**: Any occurrence of `db.query(...).` or `db.rawQuery(...).` (e.g., `db.query(...).moveToFirst()`) is flagged as a fatal violation, as chained calls instantiate anonymous cursors that leak native memory and file descriptors.
+     3. **Expired Suppressions**: Any `@SuppressCursorAudit` whose `expiryDate` has passed triggers a build failure.
 
-6. **Blocking CI/CD Gate Integration**:
-   - `TryWithResourcesCursorAuditTest.kt` is executed automatically on `./gradlew testDebugUnitTest`, serving as a non-bypassable blocking gate on pull requests and commits.
+6. **Negative Testing ("Poison Pill" Test)**:
+   - `TryWithResourcesCursorAuditTest.kt` includes an explicit negative test suite (`testPoisonPill_unshieldedAllocationFails`, `testPoisonPill_chainedCallFails`, `testPoisonPill_expiredSuppressionFails`) verifying that the static guard actively detects and blocks all prohibited patterns.
 
 ---
 
@@ -114,27 +117,27 @@ classDiagram
 ### Detection & Exclusion Rules
 1. **Scope Bounding**:
    - Strictly scans Java source files within database, helper, and exporter packages under `app/src/main/java`.
-2. **Identification of Query Invocations**:
-   - Detects all `.query(` and `.rawQuery(` calls.
+2. **Identification of Query Invocations & Chained Calls**:
+   - Matches any invocation of `.query(` or `.rawQuery(`.
    - Enforces that each call is either within a `try (...)` resource specification or in an authorized `@CursorProvider` method.
-3. **Governance & Exclusion Precedence**:
-   - Method is annotated with `@CursorProvider` (with documented Transfer of Ownership).
-   - Method is annotated with `@SuppressCursorAudit` with non-empty `ticketId` matching `ATT-\\d+` and `reason`.
+   - Detects chained calls (`.query(...).` or `.rawQuery(...).`) and rejects them unconditionally.
+3. **Governance & Expiration**:
+   - Rejects any `@SuppressCursorAudit` where `expiryDate` is before the current system date or missing.
 4. **CI/CD Integration**:
-   - `tools/lint_cursor_safety.py`: Python CLI tool enforcing query safety across `app/src/main`.
-   - `TryWithResourcesCursorAuditTest.kt`: JUnit test executed on every `./gradlew testDebugUnitTest` run.
+   - `tools/lint_cursor_safety.py`: Command-line script exiting with code 1 upon any violation.
+   - `TryWithResourcesCursorAuditTest.kt`: Blocking JUnit test executed on every `./gradlew testDebugUnitTest` run.
 
 ---
 
 ## 4. Atomic Implementation Steps
 
 ### Step 1: Centralized Architecture Infrastructure
-- Create `app/src/main/java/com/atrainingtracker/database/DatabaseConstants.java`.
-- Create `app/src/main/java/com/atrainingtracker/database/CursorProvider.java` (with Transfer of Ownership Javadoc).
-- Create `app/src/main/java/com/atrainingtracker/database/SuppressCursorAudit.java` (with mandatory `ticketId` and `reason`).
-- Create `app/src/main/java/com/atrainingtracker/util/CursorUtils.java` (`mapFirst`, `mapList`, `moveToFirstOrNull`).
+- Create `DatabaseConstants.java`.
+- Create `@CursorProvider` (annotated for methods only with Transfer of Ownership Javadoc).
+- Create `@SuppressCursorAudit` (with mandatory `ticketId`, `reason`, `expiryDate`).
+- Create `CursorUtils.java` (`mapFirst`, `mapList`, `moveToFirstOrNull`).
 - Create unit test `CursorUtilsTest.kt` verifying mapping, exception propagation, and sentinel fallbacks.
-- Create `tools/lint_cursor_safety.py` and `TryWithResourcesCursorAuditTest.kt`.
+- Create `tools/lint_cursor_safety.py` and `TryWithResourcesCursorAuditTest.kt` including negative poison pill test cases.
 
 ### Step 2: Migrate Exporter and Writer Classes
 - Refactor `ExportStatusDatabaseManager.java`, `ExportManager.java`, `BaseFileWriter.java`, `GPXFileWriter.java`.
@@ -155,6 +158,7 @@ classDiagram
 
 ### Step 6: Runtime & Static Verification
 - Author `DatabaseEmptyCursorSentinelTest.kt` verifying that database managers return canonical sentinels on empty tables and that `CursorUtils` propagates exceptions during iteration while closing cursors.
+- Run poison pill tests in `TryWithResourcesCursorAuditTest.kt` to verify that chained calls, unshielded allocations, and expired suppressions are actively blocked.
 - Run `python3 tools/lint_cursor_safety.py`.
 - Run `./gradlew testDebugUnitTest --tests "com.atrainingtracker.architecture.TryWithResourcesCursorAuditTest"` and `CursorUtilsTest`.
 
