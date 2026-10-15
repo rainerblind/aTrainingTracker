@@ -103,8 +103,13 @@ fun AdvancedTuningScreen(
     var clusterTolDistance by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE) }; var clusterTolAltitudePos by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS) }
     var clusterUseSportType by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE) }; var clusterUseAltitudePos by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS) }
     var autoPauseBikeEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED) }; var autoPauseRunEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED) }
-    var autoPauseOtherEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED) }; var autoPauseSpeedThresholdKmh by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_SPEED_THRESHOLD_KMH) }
-    var autoPauseDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_DEBOUNCE_SEC) }
+    var autoPauseOtherEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED) }
+    var autoPauseBikeSpeedThreshold by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC) }
+    var autoPauseBikeDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC) }
+    var autoPauseRunSpeedThreshold by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC) }
+    var autoPauseRunDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC) }
+    var autoPauseOtherSpeedThreshold by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC) }
+    var autoPauseOtherDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -155,8 +160,13 @@ fun AdvancedTuningScreen(
         clusterTolDistance = config.clusterTolDistance; clusterTolAltitudePos = config.clusterTolAltitudePos
         clusterUseSportType = config.clusterUseSportType; clusterUseAltitudePos = config.clusterUseAltitudePos
         autoPauseBikeEnabled = config.autoPauseBikeEnabled; autoPauseRunEnabled = config.autoPauseRunEnabled
-        autoPauseOtherEnabled = config.autoPauseOtherEnabled; autoPauseSpeedThresholdKmh = config.autoPauseSpeedThresholdKmh
-        autoPauseDebounceSec = config.autoPauseDebounceSec
+        autoPauseOtherEnabled = config.autoPauseOtherEnabled
+        autoPauseBikeSpeedThreshold = config.autoPauseBikeSpeedThreshold
+        autoPauseBikeDebounceSec = config.autoPauseBikeDebounceSec
+        autoPauseRunSpeedThreshold = config.autoPauseRunSpeedThreshold
+        autoPauseRunDebounceSec = config.autoPauseRunDebounceSec
+        autoPauseOtherSpeedThreshold = config.autoPauseOtherSpeedThreshold
+        autoPauseOtherDebounceSec = config.autoPauseOtherDebounceSec
     }
     LaunchedEffect(persistedConfig) { applyConfig(persistedConfig) }
 
@@ -199,8 +209,13 @@ fun AdvancedTuningScreen(
             clusterTolDistance = clusterTolDistance, clusterTolAltitudePos = clusterTolAltitudePos,
             clusterUseSportType = clusterUseSportType, clusterUseAltitudePos = clusterUseAltitudePos,
             autoPauseBikeEnabled = autoPauseBikeEnabled, autoPauseRunEnabled = autoPauseRunEnabled,
-            autoPauseOtherEnabled = autoPauseOtherEnabled, autoPauseSpeedThresholdKmh = autoPauseSpeedThresholdKmh,
-            autoPauseDebounceSec = autoPauseDebounceSec
+            autoPauseOtherEnabled = autoPauseOtherEnabled,
+            autoPauseBikeSpeedThreshold = autoPauseBikeSpeedThreshold,
+            autoPauseBikeDebounceSec = autoPauseBikeDebounceSec,
+            autoPauseRunSpeedThreshold = autoPauseRunSpeedThreshold,
+            autoPauseRunDebounceSec = autoPauseRunDebounceSec,
+            autoPauseOtherSpeedThreshold = autoPauseOtherSpeedThreshold,
+            autoPauseOtherDebounceSec = autoPauseOtherDebounceSec
         )
         scope.launch {
             tuningDataStore.saveTuningConfig(newConfig)
@@ -311,9 +326,15 @@ fun AdvancedTuningScreen(
                     gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
                     altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
                     slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it },
-                    autoPauseBikeEnabled = autoPauseBikeEnabled, onAutoPauseBikeEnabledChange = { autoPauseBikeEnabled = it }, autoPauseRunEnabled = autoPauseRunEnabled, onAutoPauseRunEnabledChange = { autoPauseRunEnabled = it },
+                    autoPauseBikeEnabled = autoPauseBikeEnabled, onAutoPauseBikeEnabledChange = { autoPauseBikeEnabled = it },
+                    autoPauseBikeSpeedThreshold = autoPauseBikeSpeedThreshold, onAutoPauseBikeSpeedThresholdChange = { autoPauseBikeSpeedThreshold = it },
+                    autoPauseBikeDebounceSec = autoPauseBikeDebounceSec, onAutoPauseBikeDebounceSecChange = { autoPauseBikeDebounceSec = it },
+                    autoPauseRunEnabled = autoPauseRunEnabled, onAutoPauseRunEnabledChange = { autoPauseRunEnabled = it },
+                    autoPauseRunSpeedThreshold = autoPauseRunSpeedThreshold, onAutoPauseRunSpeedThresholdChange = { autoPauseRunSpeedThreshold = it },
+                    autoPauseRunDebounceSec = autoPauseRunDebounceSec, onAutoPauseRunDebounceSecChange = { autoPauseRunDebounceSec = it },
                     autoPauseOtherEnabled = autoPauseOtherEnabled, onAutoPauseOtherEnabledChange = { autoPauseOtherEnabled = it },
-                    autoPauseSpeedThresholdKmh = autoPauseSpeedThresholdKmh, onAutoPauseSpeedThresholdKmhChange = { autoPauseSpeedThresholdKmh = it }, autoPauseDebounceSec = autoPauseDebounceSec, onAutoPauseDebounceSecChange = { autoPauseDebounceSec = it }
+                    autoPauseOtherSpeedThreshold = autoPauseOtherSpeedThreshold, onAutoPauseOtherSpeedThresholdChange = { autoPauseOtherSpeedThreshold = it },
+                    autoPauseOtherDebounceSec = autoPauseOtherDebounceSec, onAutoPauseOtherDebounceSecChange = { autoPauseOtherDebounceSec = it }
                 )
             }
 

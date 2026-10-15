@@ -183,6 +183,23 @@ public class TrackerService extends Service {
         return mAutoPauseManager;
     }
 
+    private volatile AutoPauseConfig mCachedAutoPauseConfig = null;
+    private long mLastAutoPauseConfigFetchMs = 0L;
+    private static final long AUTO_PAUSE_CONFIG_CACHE_TTL_MS = 5000L;
+
+    public AutoPauseConfig getAutoPauseConfig() {
+        long now = System.currentTimeMillis();
+        if (mCachedAutoPauseConfig == null || (now - mLastAutoPauseConfigFetchMs) > AUTO_PAUSE_CONFIG_CACHE_TTL_MS) {
+            mCachedAutoPauseConfig = SettingsDataStoreJavaHelper.getAutoPauseConfig(this);
+            mLastAutoPauseConfigFetchMs = now;
+        }
+        return mCachedAutoPauseConfig;
+    }
+
+    public void invalidateAutoPauseConfigCache() {
+        mCachedAutoPauseConfig = null;
+    }
+
     private int mExtremaDbUpdateCounter = 0;
     private static final int EXTREMA_DB_UPDATE_INTERVAL = 10; // Update Avg in DB every 10 seconds
     // int            mCalories        = 0;
@@ -1428,14 +1445,7 @@ public class TrackerService extends Service {
             sportType = BSportType.UNKNOWN;
         }
 
-        TuningConfig tuningConfig = SettingsDataStoreJavaHelper.getTuningConfig(this);
-        AutoPauseConfig config = new AutoPauseConfig(
-                tuningConfig.getAutoPauseBikeEnabled(),
-                tuningConfig.getAutoPauseRunEnabled(),
-                tuningConfig.getAutoPauseOtherEnabled(),
-                tuningConfig.getAutoPauseSpeedThresholdKmh(),
-                tuningConfig.getAutoPauseDebounceSec()
-        );
+        AutoPauseConfig config = getAutoPauseConfig();
         boolean manualPauseLocked = TrainingApplication.isManualPauseLocked();
 
         return mAutoPauseManager.evaluateTick(
