@@ -91,6 +91,20 @@ val (prDeltaSec, prDeltaFmt) = if (prRaw > 0) {
 }
 ```
 
+### 2.4 Race Condition & Concurrency Mitigation
+1. **Atomic Repository State Transitions**:
+   - `LiveSegmentsRepository.updateLiveSegments()` updates the `_liveSegments` flow within synchronous, single-threaded coroutine execution.
+   - When the finish line is crossed forward, the transition from `ON_SEGMENT_CLOSE_TO_FINISH` to `FINISHED` constructs a complete, immutable `LiveSegmentData` instance where `segmentStatus`, `timeOnSegment`, `distancePastFinish`, and `prDeltaFormatted` are assigned simultaneously.
+   - Because `StateFlow` emits the entire `List<LiveSegment>` atomically, partial or intermediate states can never be observed by Compose collectors, eliminating UI visual jitter or flicker.
+2. **Terminal State Invariant & Forward-Only Lifecycle**:
+   - `LiveSegmentStatus.FINISHED` acts as a terminal execution state for the segment effort.
+   - Once a segment enters `FINISHED`, subsequent GPS updates execute exclusively within the `LiveSegmentStatus.FINISHED` branch, updating only `distancePastFinish` during the 500m rollout window until `distanceToEnd > SEGMENT_POST_END_DISTANCE_THRESHOLD` triggers transition to `FAR_FAR_AWAY`.
+   - The engine is architecturally barred from transitioning backwards from `FINISHED` to `ON_SEGMENT` or `APPROACHING`, ensuring the UI cannot accidentally re-enter active tracking mode even if the user loiters or circles near the finish line.
+3. **Null-State Invariant for Missing / Unconfigured PR (`prTime_raw <= 0`)**:
+   - When an athlete rides a segment for the first time without an existing Personal Record, `prTime_raw` evaluates to `0` (or negative sentinel).
+   - In this state, `prDeltaSeconds` and `prDeltaFormatted` are strictly evaluated as `null`.
+   - In `SegmentLiveDetails`, the PR delta subtitle is enclosed in `if (liveSegmentData.segmentStatus == LiveSegmentStatus.FINISHED && liveSegmentData.prDeltaFormatted != null)`. When PR data is absent, the row is completely omitted from the composition tree, preventing any empty strings, visual whitespace gaps, or "0:00 vs. PR" false comparisons.
+
 ---
 
 ## 3. UI Consistency (Rule 23 & Design Guidelines §5)
@@ -115,11 +129,13 @@ In strict adherence to `docs/design_guidelines.md` and Rule 23:
 
 1. **Gate 3 Prerequisites Guard**: Gate 3 audit must be approved before modifying production source files.
 2. **Zero Regressions to Polyline Tracking Math**: Orthogonal projection in `PolylineProgressTracker.kt` and virtual gate crossing detection in `LiveSegmentsRepository.kt` must remain 100% untouched.
-3. **Living Documentation Synchronization**: `docs/requirements.md` (`REQ-UI-379`) and `docs/tests.md` (`TST-UI-342`) synchronized to `Specified`.
-4. **9-Language Translation Parity (Rule 29)**: All new and corrected string tokens verified across EN, DE, ES, FR, IT, JA, NL, PL, PT.
-5. **Clean-Room Regression Suite**: 100% test pass rate across the full 2,964+ unit test suite.
-6. **Strategy A Integration**: Feature branch merges cleanly into `sprint/2026-42.5` (`--no-ff`).
-7. **Human Final Review Authority**: AI agents never transition parent tickets to `Erledigt`.
+3. **Atomic State & Terminal Guard**: `FINISHED` status, `distancePastFinish`, and `prDeltaFormatted` emit atomically without partial states; `FINISHED` never transitions back to `ON_SEGMENT`.
+4. **Missing PR Null-Safety**: If `prTime_raw <= 0`, `prDeltaFormatted = null` and UI hides PR delta row completely.
+5. **Living Documentation Synchronization**: `docs/requirements.md` (`REQ-UI-379`) and `docs/tests.md` (`TST-UI-342`) synchronized to `Specified`.
+6. **9-Language Translation Parity (Rule 29)**: All new and corrected string tokens verified across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+7. **Clean-Room Regression Suite**: 100% test pass rate across the full 2,964+ unit test suite.
+8. **Strategy A Integration**: Feature branch merges cleanly into `sprint/2026-42.5` (`--no-ff`).
+9. **Human Final Review Authority**: AI agents never transition parent tickets to `Erledigt`.
 
 ---
 
@@ -142,8 +158,9 @@ In strict adherence to `docs/design_guidelines.md` and Rule 23:
 ### Step 2: Domain Model & Repository Logic
 * In `LiveSegmentsRepository.kt`:
   - Extend `LiveSegmentData` with `timeOnSegment_raw`, `distancePastFinish`, `distancePastFinish_raw`, `prDeltaSeconds`, and `prDeltaFormatted`.
-  - In `LiveSegmentStatus.FINISHED`, populate `distancePastFinish` and compute `prDeltaFormatted`. Do NOT overwrite `segmentOffset`.
+  - In `LiveSegmentStatus.FINISHED`, atomically populate `distancePastFinish` and compute `prDeltaFormatted`. Do NOT overwrite `segmentOffset`.
   - In subsequent `FINISHED` updates, update `distancePastFinish` instead of `segmentOffset`.
+  - Ensure null-safety: if `prTime_raw <= 0`, `prDeltaSeconds` and `prDeltaFormatted` remain `null`.
 * Target file:
   - `app/src/main/java/com/atrainingtracker/trainingtracker/segments/LiveSegmentsRepository.kt`
 
@@ -153,15 +170,24 @@ In strict adherence to `docs/design_guidelines.md` and Rule 23:
   - In `APPROACHING`: Render `distanceToStart` and `remainingDistance`. Omit `segmentOffset`.
   - In `FINISHED`: Render `distanceOnSegment` and `distancePastFinish`. Omit `remainingDistance` and `segmentOffset`.
   - In `ON_SEGMENT` / `ON_SEGMENT_CLOSE_TO_FINISH`: Render `distanceOnSegment`, `remainingDistance`, and `segmentOffset`.
-  - In right column: Below `timeOnSegment`, conditionally render `prDeltaFormatted` in `TTColor.Zone2` ($\le 0\text{L}$) or `onSurfaceVariant` ($> 0\text{L}$) when `FINISHED` and non-null.
+  - In right column: Below `timeOnSegment`, conditionally render `prDeltaFormatted` in `TTColor.Zone2` ($\le 0\text{L}$) or `onSurfaceVariant` ($> 0\text{L}$) when `FINISHED` and `prDeltaFormatted != null`.
 * Target file:
   - `app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/SegmentLiveDetails.kt`
 
-### Step 4: Unit & Contract Tests
+### Step 4: Unit & Contract Tests with Boundary Analysis
 * In `LiveSegmentsRepositoryTest.kt`:
-  - Add test `testFinished_populatesDistancePastFinishAndPrDelta_withoutOverloadingOffset`.
+  - Add test `testFinished_populatesDistancePastFinishAndPrDelta_withoutOverloadingOffset`:
+    - Faster than PR: `timeOnSegment = 219`, `prTime_raw = 229` -> `prDeltaSeconds = -10L`, `prDeltaFormatted = "-0:10"`.
+    - Exact tie with PR: `timeOnSegment = 229`, `prTime_raw = 229` -> `prDeltaSeconds = 0L`, `prDeltaFormatted = "-0:00"`.
+    - Slower than PR: `timeOnSegment = 234`, `prTime_raw = 229` -> `prDeltaSeconds = 5L`, `prDeltaFormatted = "+0:05"`.
+    - Extreme outlier: `timeOnSegment = 3829`, `prTime_raw = 229` -> `prDeltaSeconds = 3600L`, `prDeltaFormatted = "+60:00"`.
+    - Missing PR: `prTime_raw = 0` -> `prDeltaSeconds = null`, `prDeltaFormatted = null`.
 * In `LiveSegmentSheetLayoutTest.kt`:
-  - Add test verifying state-aware rendering in `SegmentLiveDetails`.
+  - Add test verifying state-aware rendering in `SegmentLiveDetails`:
+    - In `APPROACHING`: `segment_status_offset` is omitted.
+    - In `FINISHED`: `segment_status_past_finish` is rendered, while `segment_status_offset` and `segment_status_remaining` are omitted.
+    - In `FINISHED` with PR: `segment_status_pr_delta` is rendered and colored `TTColor.Zone2` for $\le 0\text{L}$.
+    - In `FINISHED` without PR: `segment_status_pr_delta` is omitted.
 * Create `SegmentLiveDetailsLocalizationTest.kt`:
   - Verify all 9 locales define required strings with matching `%1$s` specifiers and valid Japanese translations.
 * Target files:
