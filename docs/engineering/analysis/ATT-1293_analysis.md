@@ -16,7 +16,7 @@
 
 ## 1. Problem Statement & Motivation
 
-During high-intensity cardiovascular efforts (such as VO2 max cycling intervals or threshold running hill repeats), an athlete's cognitive capacity and visual acuity degrade significantly due to physical fatigue and rapid movement. Reading small numerical digits (e.g. `168 bpm` or `315 W`) requires excessive focal concentration and mental translation against memorized zone boundaries.
+During high-intensity cardiovascular efforts (such as VO2 max cycling intervals or threshold running hill repeats), an athlete's cognitive capacity and visual acuity degrade significantly due to physical fatigue, vibration, and rapid movement. Reading small numerical digits (e.g. `168 bpm` or `315 W`) requires excessive focal concentration and mental translation against memorized zone boundaries.
 
 To provide instantaneous peripheral comprehension, modern cycling computers and head units (Garmin Edge, Wahoo ELEMNT, Hammerhead Karoo) feature **visual zone gauge bars**. With a single glance, athletes can immediately determine:
 1. Which physiological zone they are currently training in (via established semantic zone colors).
@@ -40,26 +40,33 @@ In Sprint 2026-42.4, ATT-3184 migrated cycling power to the Hunter Allen & Dr. A
 - **Heart Rate (`HR_RUN`, `HR_BIKE`)**: Exactly 5 zones ($Z_1 \dots Z_5$), partitioned by 4 upper boundaries ($Z_{1\text{max}}, Z_{2\text{max}}, Z_{3\text{max}}, Z_{4\text{max}}$). Colors: `TTColor.Zone1` (`#7FFF00`), `TTColor.Zone2` (`#008000`), `TTColor.Zone3` (`#FFA500`), `TTColor.Zone4` (`#FF0000`), `TTColor.Zone5` (`#9400D3`).
 - **Cycling Power (`PWR_BIKE`)**: Exactly 7 zones ($Z_1 \dots Z_7$), partitioned by 6 upper boundaries ($Z_{1\text{max}} \dots Z_{6\text{max}}$). Colors: `TTColor.Zone1..Zone5` plus `TTColor.Zone6` (`#4E342E` Dark Chestnut Brown) and `TTColor.Zone7` (`#000000` Pure Black).
 
-The visual zone gauge must dynamically adapt its segmented track:
+The visual zone gauge dynamically adapts its segmented track:
 - When displaying Heart Rate: Renders exactly 5 contiguous zone segments.
 - When displaying Cycling Power: Renders exactly 7 contiguous zone segments.
 
-### 2.2 Mathematical Cursor / Needle Positioning
+### 2.2 Mathematical Cursor / Needle Positioning & Open-Ended Top Zone
 A visual zone gauge maps the instantaneous scalar reading $v$ into a normalized horizontal position $x \in [0.0, 1.0]$ across the gauge width:
-1. **Segment Geometry**:
+1. **Segment Geometry & Equal Visual Width UX Justification**:
    - The bar is partitioned into $K$ equal-width segments, where $K = 5$ for HR and $K = 7$ for Power. Each zone $i \in \{1 \dots K\}$ occupies a horizontal slice $[x_{i-1}, x_i] = [\frac{i-1}{K}, \frac{i}{K}]$.
-   - Alternatively, equal visual width per zone is optimal for peripheral recognition because physiological zones vary widely in numerical span (e.g. Zone 1 is large, Zone 5/6 narrow, Zone 7 unbounded). Equal width per zone ensures that each training zone has equal visual resolution and clear readability on screen.
+   - **UX Justification**: In cycling and running exercise physiology, numerical zone spans vary widely (e.g. Zone 1 might span 0–150W, Zone 5 spans 35W, and Zone 7 is open-ended). If segments were sized strictly proportional to raw Watt/bpm ranges, high-intensity target zones (Z4 Sweetspot, Z5 VO2max) would shrink to narrow, unreadable slivers on compact cockpit tiles, impairing interval pacing. Equal visual width per zone guarantees that each training intensity band offers uniform visual resolution and unambiguous needle target tracking at high exertion.
 2. **Intra-Zone Interpolation**:
-   - For zone $i$ with bounds $[L_i, U_i]$:
+   - For closed interior zone $i \in \{1 \dots K-1\}$ with bounds $[L_i, U_i]$ (where $L_1 = 0$ for Power and $L_1 = 30$ for HR):
      $$\text{fraction}_i = \frac{v - L_i}{U_i - L_i} \in [0.0, 1.0]$$
      $$x_{\text{needle}} = \frac{(i - 1) + \text{fraction}_i}{K}$$
-   - **Boundary Conditions & Invariants**:
-     - Below Zone 1 ($v \le L_1$): Clamped to $x = 0.0$ (needle rests at left edge of Z1).
-     - Open-ended top zone (Zone 5 for HR, Zone 7 for Power):
-       - For HR Zone 5, $L_5 = Z_{4\text{max}}$, nominal ceiling $U_5 = \max(H\!R_{\max}, Z_{4\text{max}} + 30)$.
-       - For Power Zone 7, $L_7 = Z_{6\text{max}}$, nominal ceiling $U_7 = \min(2500, \max(Z_{6\text{max}} \times 1.5, Z_{6\text{max}} + 200))$.
-       - Beyond nominal ceiling ($v \ge U_K$): Clamped to $x = 1.0$ (needle rests at right edge).
-     - Undefined or unconfigured metrics ($v = \text{null}$, unconfigured FTP/zones): Needle is omitted or hidden; gauge displays neutral segmented track.
+3. **Open-Ended Top Zone Dynamic Ceiling (Zone 5 for HR, Zone 7 for Power)**:
+   - Rather than relying on an arbitrary static multiplier, the top zone defines a dynamic, physiologically grounded ceiling $U_{\text{top}}$:
+     - **For HR Zone 5**: Lower bound $L_5 = Z_{4\text{max}}$. Nominal ceiling $U_5 = \max(H\!R_{\max}, Z_{4\text{max}} + 25\text{ bpm})$.
+     - **For Power Zone 7**: Lower bound $L_7 = Z_{6\text{max}}$. Nominal ceiling is defined dynamically:
+       $$U_7 = \min(2500\text{ W}, \max(Z_{6\text{max}} + 300\text{ W}, \text{FTP} \times 2.0))$$
+       where $2500\text{ W}$ is the strict physical maximum ceiling established in `REQ-UI-373.1`.
+     - Inside top zone ($v \ge L_{\text{top}}$):
+       $$\text{fraction}_{\text{top}} = \min\left(1.0, \frac{v - L_{\text{top}}}{U_{\text{top}} - L_{\text{top}}}\right)$$
+       $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
+     - If an extreme sprint exceeds $U_{\text{top}}$, the needle cleanly clamps to $x = 1.0$ without overflow.
+4. **Telemetry Stale / Disconnected / Null State**:
+   - When telemetry is absent, disconnected, unconfigured, or stale (`v == null`, `v.isNaN()`, `!v.isFinite()`, or stale packet TTL > 5s):
+     - The needle is completely **hidden** (or rendered with 0.0 alpha), avoiding confusing ghost pointers.
+     - The segmented zone track remains rendered with dimmed baseline opacity (alpha 0.35), clearly communicating available zone bands without active telemetry.
 
 ### 2.3 User Preferences & Presentation Options
 In `ZoneDisplayOptions.kt` and `ZonesSettingsActivity.kt`, athletes configure how zones are highlighted:
@@ -89,6 +96,7 @@ When `showGauge == true` and the field is `HR` or `POWER`:
    - `REQ-UI-172` provided binary full-card tinting and edge borders. Athletes noted that while background tinting indicates *which* zone is active, it does not reveal *where* within the zone the athlete is riding (e.g. sweet-spot vs redlining).
 4. **Preservation of Core Invariants**:
    - All 4 existing `ZoneDisplayOptions` flags (`showBackground`, `showLeftBar`, `showRightBar`, `showTextColor`) MUST continue to work with 100% backward compatibility.
+   - When both `showBackground` and `showGauge` are enabled simultaneously, the gauge maintains high contrast: the gauge container uses a subtle dark/light frame `outlineVariant` with solid inner zone fills, preventing background tint washout.
    - True-Black AMOLED Cockpit background compatibility (REQ-UI-190, REQ-UI-220) MUST be strictly preserved.
    - Battery Saver / Low CPU overhead: The gauge calculation must be pure lightweight math ($O(1)$) without heavy allocations or layout churn.
 
@@ -106,6 +114,17 @@ When `showGauge == true` and the field is `HR` or `POWER`:
 
 ---
 
-## 4. Architectural Risk Assessment
-- **Layout Overflow in Compact Tiles**: In small tiles (`ViewSize.XSMALL`, `ViewSize.SMALL`), vertical height is limited. The gauge height should be compact (4dp to 6dp track height, 2dp needle) and adapt cleanly without clipping label or value text.
-- **AMOLED Contrast for Dark Zones**: Zone 7 is `#000000` (Pure Black) and Zone 6 is `#4E342E` (Dark Brown). On True-Black AMOLED backgrounds, an outline border (`outlineVariant`) around the gauge track and segment dividers is required to keep Zone 6 and 7 distinct and visible.
+## 4. Architectural Risk Assessment & Non-Functional Constraints
+
+1. **Rendering Performance & Frame Budget (60 FPS)**:
+   - Power sensors (especially BLE power meters) can emit updates at 2Hz–4Hz.
+   - In `TrackingViewModel.kt`, UI state updates are already decoupled: `SensorFieldState` updates only when formatted value or zone color/needle changes.
+   - In Compose, `ZoneGaugeBar` consumes primitive `Float` needle progress (`needleFraction`), drawing directly via `Modifier.drawWithContent` or Canvas without triggering subtree recompositions or layout passes, comfortably satisfying the 16ms / 60 FPS frame budget.
+2. **AMOLED Contrast & WCAG 2.1 AA Compliance**:
+   - In dark and True-Black AMOLED modes (`#000000` background):
+     - Zone 7 is `#000000` (Pure Black) and Zone 6 is `#4E342E` (Dark Brown).
+     - To ensure non-text contrast ($\ge 3:1$ per WCAG 2.1 AA), the outer track and segment dividers are stroked with `MaterialTheme.colorScheme.outlineVariant` (`#2B3342` / `0xFF2B3342`), creating distinct visible boundaries.
+     - The needle is rendered in pure white (`Color.White` `#FFFFFF`) with a subtle 1dp dark shadow/border, achieving $> 12:1$ contrast against any zone segment color.
+3. **Layout Height Constraints in Compact Cockpit Tiles**:
+   - In compact sensor tiles (`ViewSize.XSMALL`, `ViewSize.SMALL`), vertical space is constrained.
+   - `ZoneGaugeBar` track height is set to `6.dp` with `2.dp` needle overhang, fitting seamlessly into the tile layout without displacing metric values or causing vertical clipping.
