@@ -193,7 +193,9 @@ class TrackingViewModel(
         Color(ContextCompat.getColor(application, R.color.zone_2)),
         Color(ContextCompat.getColor(application, R.color.zone_3)),
         Color(ContextCompat.getColor(application, R.color.zone_4)),
-        Color(ContextCompat.getColor(application, R.color.zone_5))
+        Color(ContextCompat.getColor(application, R.color.zone_5)),
+        Color(ContextCompat.getColor(application, R.color.zone_6)),
+        Color(ContextCompat.getColor(application, R.color.zone_7))
     )
 
     init {
@@ -442,6 +444,20 @@ class TrackingViewModel(
             val z3Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
             val z4Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
             val numericValue = currentValue.toDouble()
+
+            if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) {
+                val z5Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 5)
+                val z6Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6)
+                return when {
+                    numericValue <= z1Max -> zoneColors[0]
+                    numericValue <= z2Max -> zoneColors[1]
+                    numericValue <= z3Max -> zoneColors[2]
+                    numericValue <= z4Max -> zoneColors[3]
+                    numericValue <= z5Max -> zoneColors[4]
+                    numericValue <= z6Max -> zoneColors[5]
+                    else -> zoneColors[6]
+                }
+            }
 
             return when {
                 numericValue <= z1Max -> zoneColors[0]

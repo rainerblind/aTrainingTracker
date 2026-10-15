@@ -559,7 +559,9 @@ class WorkoutRepository private constructor(private val application: Application
         val z2 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
         val z3 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
         val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
-        val thresholds = PowerZoneThresholds(z1, z2, z3, z4)
+        val z5 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 5)
+        val z6 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6)
+        val thresholds = PowerZoneThresholds(z1, z2, z3, z4, z5, z6)
 
         val samples = mutableListOf<ZoneSample>()
         val db = samplesManager.database

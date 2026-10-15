@@ -91,7 +91,9 @@ object TelemetryHistogramCalculator {
                 pwr <= thresholds.z2Max -> 1
                 pwr <= thresholds.z3Max -> 2
                 pwr <= thresholds.z4Max -> 3
-                else -> 4
+                pwr <= thresholds.z5Max -> 4
+                pwr <= thresholds.z6Max -> 5
+                else -> 6
             }
         }
     }

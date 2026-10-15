@@ -617,6 +617,8 @@
     <string name="zone_3_label">ゾーン 3 (テンポ)</string>
     <string name="zone_4_label">ゾーン 4 (閾値)</string>
     <string name="zone_5_label">ゾーン 5 (無酸素)</string>
+    <string name="zone_6_label">ゾーン 6 (無酸素運動容量)</string>
+    <string name="zone_7_label">ゾーン 7 (神経筋パワー)</string>
 
     <string name="label_min">最小</string>
     <string name="label_max">最大</string>

@@ -47,7 +47,9 @@ object SettingsDataStoreJavaHelper {
                 2 -> dataStore.getZone2MaxFlow(zoneType).first()
                 3 -> dataStore.getZone3MaxFlow(zoneType).first()
                 4 -> dataStore.getZone4MaxFlow(zoneType).first()
-                else -> 0 // Fallback
+                5 -> if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) dataStore.getZone5MaxFlow(zoneType).first() else 0
+                6 -> if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) dataStore.getZone6MaxFlow(zoneType).first() else 0
+                else -> 0 // Fallback for open-ended or out-of-bounds zones
             }
         }
     }

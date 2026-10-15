@@ -89,6 +89,8 @@ data class ZoneProfileState(
     val z2: Int,
     val z3: Int,
     val z4: Int,
+    val z5: Int = 0,
+    val z6: Int = 0,
     val displayOptions: ZoneDisplayOptions = ZoneDisplayOptions()
 )
 
@@ -136,20 +138,45 @@ fun ZoneSettingsScreen(
             dataStore.saveHrZoneMax(profile.type, Zone.ZONE_2, profile.z2)
             dataStore.saveHrZoneMax(profile.type, Zone.ZONE_3, profile.z3)
             dataStore.saveHrZoneMax(profile.type, Zone.ZONE_4, profile.z4)
+            if (profile.type == ZoneType.PWR_BIKE) {
+                dataStore.saveHrZoneMax(profile.type, Zone.ZONE_5, profile.z5)
+                dataStore.saveHrZoneMax(profile.type, Zone.ZONE_6, profile.z6)
+            }
             dataStore.saveZoneDisplayOptions(profile.type, profile.displayOptions)
         }
     }
 
-    // Initial Load
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            val loadedData = zoneTypes.mapIndexed { index, type ->
+    val reloadProfiles = {
+        scope.launch(Dispatchers.IO) {
+            val loadedData = zoneTypes.mapIndexed { _, type ->
                 ZoneProfileState(
                     type = type,
                     z1 = dataStore.getZone1MaxFlow(type).first(),
                     z2 = dataStore.getZone2MaxFlow(type).first(),
                     z3 = dataStore.getZone3MaxFlow(type).first(),
                     z4 = dataStore.getZone4MaxFlow(type).first(),
+                    z5 = if (type == ZoneType.PWR_BIKE) dataStore.getZone5MaxFlow(type).first() else 0,
+                    z6 = if (type == ZoneType.PWR_BIKE) dataStore.getZone6MaxFlow(type).first() else 0,
+                    displayOptions = dataStore.getZoneDisplayOptionsFlow(type).first()
+                )
+            }
+            allProfilesData = loadedData
+        }
+    }
+
+    // Initial Load & Migration
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            dataStore.checkAndMigratePowerZones()
+            val loadedData = zoneTypes.mapIndexed { _, type ->
+                ZoneProfileState(
+                    type = type,
+                    z1 = dataStore.getZone1MaxFlow(type).first(),
+                    z2 = dataStore.getZone2MaxFlow(type).first(),
+                    z3 = dataStore.getZone3MaxFlow(type).first(),
+                    z4 = dataStore.getZone4MaxFlow(type).first(),
+                    z5 = if (type == ZoneType.PWR_BIKE) dataStore.getZone5MaxFlow(type).first() else 0,
+                    z6 = if (type == ZoneType.PWR_BIKE) dataStore.getZone6MaxFlow(type).first() else 0,
                     displayOptions = dataStore.getZoneDisplayOptionsFlow(type).first()
                 )
             }
@@ -183,6 +210,20 @@ fun ZoneSettingsScreen(
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
+                        TextButton(
+                            onClick = {
+                                val currentType = zoneTypes[pagerState.currentPage]
+                                scope.launch(Dispatchers.IO) {
+                                    dataStore.resetToDefaults(currentType)
+                                    reloadProfiles()
+                                }
+                            }
+                        ) {
+                            Text(
+                                text = stringResource(R.string.reset_to_defaults),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
 
                     PrimaryScrollableTabRow(
@@ -220,33 +261,57 @@ fun ZoneSettingsScreen(
                         z2Max = profileState.z2,
                         z3Max = profileState.z3,
                         z4Max = profileState.z4,
+                        z5Max = profileState.z5,
+                        z6Max = profileState.z6,
                         displayOptions = profileState.displayOptions,
                         zoneType = profileState.type,
 
                         onUpdateZone1Max = { new ->
                             val updated = updateProfile(allProfilesData, page) { it.copy(z1 = new) }
                             allProfilesData = updated
-                            saveProfile(updated[page]) // Save immediately on change
+                            if (isProfileMonotonic(updated[page])) {
+                                saveProfile(updated[page])
+                            }
                         },
                         onUpdateZone2Max = { new ->
                             val updated = updateProfile(allProfilesData, page) { it.copy(z2 = new) }
                             allProfilesData = updated
-                            saveProfile(updated[page]) // Save immediately on change
+                            if (isProfileMonotonic(updated[page])) {
+                                saveProfile(updated[page])
+                            }
                         },
                         onUpdateZone3Max = { new ->
                             val updated = updateProfile(allProfilesData, page) { it.copy(z3 = new) }
                             allProfilesData = updated
-                            saveProfile(updated[page]) // Save immediately on change
+                            if (isProfileMonotonic(updated[page])) {
+                                saveProfile(updated[page])
+                            }
                         },
                         onUpdateZone4Max = { new ->
                             val updated = updateProfile(allProfilesData, page) { it.copy(z4 = new) }
                             allProfilesData = updated
-                            saveProfile(updated[page]) // Save immediately on change
+                            if (isProfileMonotonic(updated[page])) {
+                                saveProfile(updated[page])
+                            }
+                        },
+                        onUpdateZone5Max = { new ->
+                            val updated = updateProfile(allProfilesData, page) { it.copy(z5 = new) }
+                            allProfilesData = updated
+                            if (isProfileMonotonic(updated[page])) {
+                                saveProfile(updated[page])
+                            }
+                        },
+                        onUpdateZone6Max = { new ->
+                            val updated = updateProfile(allProfilesData, page) { it.copy(z6 = new) }
+                            allProfilesData = updated
+                            if (isProfileMonotonic(updated[page])) {
+                                saveProfile(updated[page])
+                            }
                         },
                         onUpdateDisplayOptions = { newOptions ->
                             val updated = updateProfile(allProfilesData, page) { it.copy(displayOptions = newOptions) }
                             allProfilesData = updated
-                            saveProfile(updated[page]) // Save immediately on change
+                            saveProfile(updated[page])
                         }
                     )
                 }
@@ -254,6 +319,14 @@ fun ZoneSettingsScreen(
 
 
         }
+    }
+}
+
+private fun isProfileMonotonic(p: ZoneProfileState): Boolean {
+    return if (p.type == ZoneType.PWR_BIKE) {
+        p.z1 > 0 && p.z2 > p.z1 && p.z3 > p.z2 && p.z4 > p.z3 && p.z5 > p.z4 && p.z6 > p.z5
+    } else {
+        p.z1 > 0 && p.z2 > p.z1 && p.z3 > p.z2 && p.z4 > p.z3
     }
 }
 
@@ -265,19 +338,7 @@ private fun updateProfile(
 ): List<ZoneProfileState> {
     val mutable = list.toMutableList()
     val item = mutable[index]
-
-    // Apply update
-    var newItem = update(item)
-
-    // Apply Cascading Logic
-    newItem = newItem.copy(
-        z1 = newItem.z1,
-        z2 = newItem.z2,
-        z3 = newItem.z3,
-        z4 = newItem.z4
-    )
-
-    mutable[index] = newItem
+    mutable[index] = update(item)
     return mutable
 }
 
@@ -290,12 +351,16 @@ fun SettingsScreenContent(
     z2Max: Int,
     z3Max: Int,
     z4Max: Int,
+    z5Max: Int = 0,
+    z6Max: Int = 0,
     displayOptions: ZoneDisplayOptions = ZoneDisplayOptions(),
     zoneType: ZoneType = ZoneType.HR_RUN,
     onUpdateZone1Max: (Int) -> Unit,
     onUpdateZone2Max: (Int) -> Unit,
     onUpdateZone3Max: (Int) -> Unit,
     onUpdateZone4Max: (Int) -> Unit,
+    onUpdateZone5Max: (Int) -> Unit = {},
+    onUpdateZone6Max: (Int) -> Unit = {},
     onUpdateDisplayOptions: (ZoneDisplayOptions) -> Unit = {}
 ) {
     // Load Colors from resources
@@ -304,6 +369,8 @@ fun SettingsScreenContent(
     val zone3Color = colorResource(id = R.color.zone_3)
     val zone4Color = colorResource(id = R.color.zone_4)
     val zone5Color = colorResource(id = R.color.zone_5)
+    val zone6Color = colorResource(id = R.color.zone_6)
+    val zone7Color = colorResource(id = R.color.zone_7)
 
     val scrollState = rememberScrollState()
 
@@ -317,7 +384,7 @@ fun SettingsScreenContent(
         // Zone 1
         ZoneRow(
             zoneLabel = stringResource(R.string.zone_1_label),
-            minValue = 100,
+            minValue = if (zoneType == ZoneType.PWR_BIKE) 0 else 60,
             maxValue = z1Max,
             onMinChange = { },
             onMaxChange = { onUpdateZone1Max(it) },
@@ -355,16 +422,49 @@ fun SettingsScreenContent(
             containerColor = zone4Color
         )
 
-        // Zone 5
-        ZoneRow(
-            zoneLabel = stringResource(R.string.zone_5_label),
-            minValue = z4Max + 1,
-            maxValue = 210,
-            onMinChange = { onUpdateZone4Max(it - 1) },
-            onMaxChange = { },
-            maxEnabled = false,
-            containerColor = zone5Color
-        )
+        if (zoneType == ZoneType.PWR_BIKE) {
+            // Zone 5 (VO2 Max)
+            ZoneRow(
+                zoneLabel = stringResource(R.string.zone_5_label),
+                minValue = z4Max + 1,
+                maxValue = z5Max,
+                onMinChange = { onUpdateZone4Max(it - 1) },
+                onMaxChange = { onUpdateZone5Max(it) },
+                containerColor = zone5Color
+            )
+
+            // Zone 6 (Anaerobic Capacity)
+            ZoneRow(
+                zoneLabel = stringResource(R.string.zone_6_label),
+                minValue = z5Max + 1,
+                maxValue = z6Max,
+                onMinChange = { onUpdateZone5Max(it - 1) },
+                onMaxChange = { onUpdateZone6Max(it) },
+                containerColor = zone6Color
+            )
+
+            // Zone 7 (Neuromuscular Power, open-ended)
+            ZoneRow(
+                zoneLabel = stringResource(R.string.zone_7_label),
+                minValue = z6Max + 1,
+                maxValue = z6Max + 1,
+                onMinChange = { onUpdateZone6Max(it - 1) },
+                onMaxChange = { },
+                maxEnabled = false,
+                containerColor = zone7Color
+            )
+        } else {
+            // Zone 5 for Heart Rate (open-ended)
+            ZoneRow(
+                zoneLabel = stringResource(R.string.zone_5_label),
+                minValue = z4Max + 1,
+                maxValue = 210,
+                onMinChange = { onUpdateZone4Max(it - 1) },
+                onMaxChange = { },
+                maxEnabled = false,
+                containerColor = zone5Color
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -429,16 +529,21 @@ fun SettingsScreenContent(
             modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
         )
 
-        // Interactive Zone selector chips (Z1 to Z5)
-        var previewZone by remember { mutableStateOf(2) } // Default to Zone 2
-        val zoneLabels = listOf("Z1", "Z2", "Z3", "Z4", "Z5")
-        val zoneColorsList = listOf(zone1Color, zone2Color, zone3Color, zone4Color, zone5Color)
+        // Interactive Zone selector chips (Z1..Z5 for HR, Z1..Z7 for Power)
+        val zoneCount = if (zoneType == ZoneType.PWR_BIKE) 7 else 5
+        var previewZone by remember(zoneType) { mutableStateOf(2) } // Default to Zone 2
+        val zoneLabels = (1..zoneCount).map { "Z$it" }
+        val zoneColorsList = if (zoneType == ZoneType.PWR_BIKE) {
+            listOf(zone1Color, zone2Color, zone3Color, zone4Color, zone5Color, zone6Color, zone7Color)
+        } else {
+            listOf(zone1Color, zone2Color, zone3Color, zone4Color, zone5Color)
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            (1..5).forEach { zIndex ->
+            (1..zoneCount).forEach { zIndex ->
                 FilterChip(
                     selected = (previewZone == zIndex),
                     onClick = { previewZone = zIndex },
@@ -457,14 +562,17 @@ fun SettingsScreenContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Preview Tile: uses value within the athlete's configured interval (z1Max for Z1, min threshold for Z2..Z5)
-        val previewZoneColor = zoneColorsList[previewZone - 1]
-        val previewValue = when (previewZone) {
+        // Preview Tile: uses value within the athlete's configured interval
+        val safePreviewZone = previewZone.coerceIn(1, zoneCount)
+        val previewZoneColor = zoneColorsList[safePreviewZone - 1]
+        val previewValue = when (safePreviewZone) {
             1 -> z1Max.toString()
             2 -> (z1Max + 1).toString()
             3 -> (z2Max + 1).toString()
             4 -> (z3Max + 1).toString()
-            else -> (z4Max + 1).toString()
+            5 -> if (zoneType == ZoneType.PWR_BIKE) (z4Max + 1).toString() else (z4Max + 1).toString()
+            6 -> (z5Max + 1).toString()
+            else -> (z6Max + 1).toString()
         }
         val previewLabel = if (zoneType == ZoneType.PWR_BIKE) "Power" else "Heart Rate"
         val previewUnits = if (zoneType == ZoneType.PWR_BIKE) "W" else "bpm"

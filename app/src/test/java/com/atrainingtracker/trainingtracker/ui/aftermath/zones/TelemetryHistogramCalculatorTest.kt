@@ -35,7 +35,9 @@ class TelemetryHistogramCalculatorTest {
         z1Max = 150,
         z2Max = 200,
         z3Max = 250,
-        z4Max = 300
+        z4Max = 300,
+        z5Max = 350,
+        z6Max = 450
     )
 
     @Test
