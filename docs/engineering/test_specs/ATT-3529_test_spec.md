@@ -5,7 +5,7 @@
 **Active Sprint**: `2026-42.5` (Sprint ID `372`)  
 **Target Release**: `V4.9.40`  
 **Requirement Mapping**: `REQ-UI-380` (*Complete High-Density Asset Coverage & Defensive Compose Resource Resolution Architecture*)  
-**Test Spec ID**: `TST-UI-339` (*Complete High-Density Asset Coverage & Defensive Compose Resource Resolution Verification Suite*)  
+**Test Spec ID**: `TST-UI-343` (*Complete High-Density Asset Coverage & Defensive Compose Resource Resolution Verification Suite*)  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-16  
 
@@ -15,11 +15,11 @@
 
 | Requirement ID | Test Case ID | Test Target | Verification Description | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| `REQ-UI-380.1` | `TST-UI-339.1` | `DrawableDensityFallbackAuditTest` | Verify high-density asset coverage for `ant_logo.png`, `logo_protocol_bluetooth.png`, `dropbox_logo_blue.png`, and `logo.png` across `drawable-xxhdpi/` and `drawable-xxxhdpi/` | Draft |
-| `REQ-UI-380.2` | `TST-UI-339.2` | `ComposeSafePainterContractTest` | Verify that all 11 critical Compose UI components invoke `safePainterResource` rather than raw `painterResource` | Draft |
-| `REQ-UI-380.3` | `TST-UI-339.3` | `SafePainterResourceContractTest` | Verify `safePainterResource` catches `Resources.NotFoundException` and returns fallback `ImageVector` without throwing | Draft |
-| `REQ-UI-380.4` | `TST-UI-339.4` | `DrawableDensityFallbackAuditTest` | Verify that all density-specific drawables continue to have default fallbacks in root `res/drawable/` | Draft |
-| `REQ-UI-380` | `TST-UI-339.5` | `./gradlew testDebugUnitTest` | Full clean-room test suite execution with 100% pass rate and zero regressions | Draft |
+| `REQ-UI-380.1` | `TST-UI-343.1` | `DrawableDensityFallbackAuditTest` | Verify high-density asset coverage for `ant_logo.png`, `logo_protocol_bluetooth.png`, `dropbox_logo_blue.png`, and `logo.png` across `drawable-xxhdpi/` and `drawable-xxxhdpi/` | Verified |
+| `REQ-UI-380.2` | `TST-UI-343.2` | `ComposeSafePainterContractTest` | Verify that all 11 critical Compose UI components invoke `safePainterResource` rather than raw `painterResource` | Verified |
+| `REQ-UI-380.3` | `TST-UI-343.3` | `SafePainterResourceContractTest` | Verify `safePainterResource` catches `Resources.NotFoundException` and returns fallback `ImageVector` without throwing | Verified |
+| `REQ-UI-380.4` | `TST-UI-343.4` | `DrawableDensityFallbackAuditTest` | Verify that all density-specific drawables continue to have default fallbacks in root `res/drawable/` | Verified |
+| `REQ-UI-380` | `TST-UI-343.5` | `./gradlew testDebugUnitTest` | Full clean-room test suite execution with 100% pass rate and zero regressions | Verified |
 
 ---
 
@@ -63,36 +63,36 @@ The system SHALL eliminate `Resources$NotFoundException` crashes on density-spli
 
 ---
 
-## 3. Detailed Test Specification (`TST-UI-339`)
+## 3. Detailed Test Specification (`TST-UI-343`)
 
-### TST-UI-339.1: High-Density Resource Coverage Audit
+### TST-UI-343.1: High-Density Resource Coverage Audit
 - **Class**: `DrawableDensityFallbackAuditTest.kt`
 - **Method**: `testCoreDrawablesHaveFullHighDensityCoverage()`
 - **Given**: Resource directories `app/src/main/res/drawable-xxhdpi` and `app/src/main/res/drawable-xxxhdpi`.
 - **When**: Checking existence of `ant_logo.png`, `logo_protocol_bluetooth.png`, `dropbox_logo_blue.png`, and `logo.png`.
 - **Then**: All specified assets exist with non-zero file sizes and correct dimensions.
 
-### TST-UI-339.2: Compose SafePainter Contract Test
+### TST-UI-343.2: Compose SafePainter Contract Test
 - **Class**: `ComposeSafePainterContractTest.kt`
 - **Method**: `testTargetComposeComponents_useSafePainterResourceRatherThanRawPainterResource()`
 - **Given**: Source files for all 11 target components.
 - **When**: Inspecting painter invocation expressions.
 - **Then**: Zero instances of raw `painterResource` are used for dynamic drawable resource IDs; all call sites invoke `safePainterResource`.
 
-### TST-UI-339.3: SafePainter Defensive Exception Handling Contract Test
+### TST-UI-343.3: SafePainter Defensive Exception Handling Contract Test
 - **Class**: `SafePainterResourceContractTest.kt`
 - **Method**: `testSafePainterResourceFileExistsAndDefinesSafeFunction()`
 - **Given**: `SafePainterResource.kt`.
 - **When**: Inspecting error handling.
 - **Then**: Confirms `try / catch` handling for `Resources.NotFoundException` and fallback painter delegation.
 
-### TST-UI-339.4: Root Fallback Maintenance
+### TST-UI-343.4: Root Fallback Maintenance
 - **Class**: `DrawableDensityFallbackAuditTest.kt`
 - **Method**: `testAllDensityDrawablesHaveRootFallback()`
 - **Given**: All `drawable-*` directories.
 - **When**: Checking root `res/drawable/`.
 - **Then**: Zero missing root fallbacks.
 
-### TST-UI-339.5: Clean-Room Full Suite Regression
+### TST-UI-343.5: Clean-Room Full Suite Regression
 - **Command**: `./gradlew testDebugUnitTest`
 - **Assertion**: 100% pass rate across entire unit test suite.

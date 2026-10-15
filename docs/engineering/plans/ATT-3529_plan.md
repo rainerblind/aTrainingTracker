@@ -5,7 +5,7 @@
 **Active Sprint**: `2026-42.5` (Sprint ID `372`)  
 **Target Release**: `V4.9.40`  
 **Requirement Mapping**: `REQ-UI-380` (*Complete High-Density Asset Coverage & Defensive Compose Resource Resolution Architecture*)  
-**Test Spec ID**: `TST-UI-339` (*Complete High-Density Asset Coverage & Defensive Compose Resource Resolution Verification Suite*)  
+**Test Spec ID**: `TST-UI-343` (*Complete High-Density Asset Coverage & Defensive Compose Resource Resolution Verification Suite*)  
 **Branch**: `feature/ATT-3529`  
 **Author**: AI Agent 1 (Implementer)  
 **Date**: 2026-10-16  
