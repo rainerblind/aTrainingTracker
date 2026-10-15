@@ -1,86 +1,147 @@
-# Stage 5: Walkthrough & Verification - ATT-3274: Crop start and end points of a recorded workout
+# Stage 5 Walkthrough - ATT-3274: Fix Nested Scroll Infinite Height Constraint Crash in CropWorkoutScreen
 
-**Ticket**: [ATT-3274](https://rainerblind.atlassian.net/browse/ATT-3274)  
-**Sub-task**: [ATT-3589](https://rainerblind.atlassian.net/browse/ATT-3589) (`[Test]`)  
-**Parent Epic**: [ATT-1191](https://rainerblind.atlassian.net/browse/ATT-1191)  
-**Active Sprint**: `Sprint 2026-42.4` (Sprint ID `371`)  
-**Requirement Mapping**: `REQ-UI-368` (*Crop Workout Start and End Points*)  
-**Test Mapping**: `TST-UI-331` (*Crop Workout Start and End Points Verification*)  
+**Ticket**: [ATT-3274](https://atrainingtracker.atlassian.net/browse/ATT-3274)  
+**Parent Epic**: [ATT-3267](https://atrainingtracker.atlassian.net/browse/ATT-3267) (*Workout Analysis, Streams & Data Management*)  
+**Active Sprint**: `2026-42.5` (Sprint ID `372`)  
+**Target Release**: `V4.9.40`  
+**Requirement Mapping**: `REQ-UI-368` (*Interactive Start/End Workout Cropping with Destructive Sample Pruning and Full Metric Recalculation*)  
+**Test Spec ID**: `TST-UI-331` (*Interactive Start/End Workout Cropping with Destructive Sample Pruning and Full Metric Recalculation Verification*)  
 **Branch**: `feature/ATT-3274`  
-**Integration Branch**: `sprint/2026-42.4`  
 **Author**: AI Agent 1 (Implementer)  
-**Date**: 2026-10-14  
+**Date**: 2026-10-15  
 
 ---
 
-## 1. Executive Summary & Verification Overview
+## 1. Executive Summary
 
-Feature **ATT-3274** introduces the ability for users to crop unwanted start and end segments of recorded workouts directly from the workout details view. This enables trimming stationary prep time, post-workout delays, or erroneous GPS tracking intervals.
-
-### Architectural & Safety Implementations:
-1. **Interactive Dual-Thumb Range Slider UI**: `CropWorkoutScreen.kt` provides an intuitive Jetpack Compose dual-thumb range slider, interactive time/distance boundary previews, map polyline visualization, and a destructive confirmation dialog.
-2. **Vectorized Cumulative Recalculation**: `WorkoutSamplesDatabaseManager.java` uses vectorized SQL updates (`UPDATE <table> SET ... WHERE _id >= ? AND _id <= ?`) for all 7 cumulative sample metrics (`DISTANCE_TOTAL_m`, `DURATION_TOTAL_s`, `TOTAL_ENERGY_J`, `ASCENT_TOTAL_m`, `DESCENT_TOTAL_m`, `STEPS_TOTAL`, `REPS_TOTAL`) and compiled SQLite statements for `LINE_DISTANCE_m`, executing in under 20ms for 10,000 samples.
-3. **Decoupled Concurrency Coordination**: `CropCoordinator.kt` holds a mutex preventing concurrent crop mutations and background exports (`ExportWorker.kt`), eliminating circular dependencies and database lock contention.
-4. **Crash-Safe Ephemeral Backups & Storage Checks**: Verifies 50 MB minimum free storage before starting (`CropStorageException` with localized strings), creates ephemeral backup snapshots of databases, preserves snapshots upon failure for post-crash recovery, and only purges backups once changes are safely committed.
-5. **Full Lap Recalculation & Invariant Protection**: Trims or adjusts laps intersecting crop boundaries, renumbers remaining laps contiguously starting from 1, and synthesizes a fallback summary lap if all original laps are trimmed away, guaranteeing the workout never has zero laps.
-6. **Complete 9-Language Localization**: Full localization parity across all 9 canonical app locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with parameterized `%d MB` storage strings.
-
----
-
-## 2. Requirement & Test Verification Matrix
-
-| Requirement | Test Spec | Verification Method | Result | Status in Living Docs |
-| :--- | :--- | :--- | :--- | :--- |
-| `REQ-UI-368` (1: Slider & Crop Bounds) | `TST-UI-331.1` | `CropWorkoutMathTest.kt` | **PASSED** (10/10) | `Verified` |
-| `REQ-UI-368` (2: Vectorized Recalculation) | `TST-UI-331.2` | `WorkoutRepositoryCropTest.kt` | **PASSED** (4/4) | `Verified` |
-| `REQ-UI-368` (3: Laps Partitioning & Fallback) | `TST-UI-331.3` | `CropLapsRecalculationTest.kt` | **PASSED** (6/6) | `Verified` |
-| `REQ-UI-368` (4: Storage & Snapshot Rollback) | `TST-UI-331.4` | `WorkoutRepositoryCropTest.kt` | **PASSED** (3/3) | `Verified` |
-| `REQ-UI-368` (5: Mutex & Concurrency Safety) | `TST-UI-331.5` | `WorkoutRepositoryCropTest.kt` | **PASSED** (2/2) | `Verified` |
-| `REQ-UI-368` (6: UI Contract & Confirmation) | `TST-UI-331.6` | `CropWorkoutScreenContractTest.kt` | **PASSED** (5/5) | `Verified` |
-| `REQ-UI-368` (7: 9-Language Localization) | `TST-UI-331.7` | `CropWorkoutLocalizationTest.kt` | **PASSED** (100% 9 locales) | `Verified` |
-| `REQ-PRO-001` (Clean-Room Full Suite) | `TST-UI-331.8` | `./gradlew testDebugUnitTest` | **PASSED** (100% full project) | `Verified` |
+During Sprint 2026-42.4 review, opening `CropWorkoutScreen` on a physical device triggered a fatal Compose layout crash:
+```
+java.lang.IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints, which is disallowed.
+```
+Ticket **ATT-3274** (Sprint 2026-42.5 revision) identifies and eliminates the architectural root cause:
+1. **Root Cause**: `AppModalBottomSheet` already wraps bottom sheet content in a vertically scrollable container: `Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()))` while pinning modal action buttons (`actions`) to the bottom. In `CropWorkoutScreen.kt`, the root content `Column` redundantly applied `Modifier.verticalScroll(rememberScrollState())`. Because a scrollable container measures its children with infinite maximum height constraints, nesting another vertical scroll modifier inside it violates Compose layout contracts and immediately crashes with `IllegalStateException`.
+2. **Layout Fix**: Removed the redundant `.verticalScroll(rememberScrollState())` modifier from the inner `Column` in `CropWorkoutScreen.kt` and cleaned up unused scroll imports (`rememberScrollState`, `verticalScroll`).
+3. **Architecture Invariant KDoc**: Added extensive KDoc to `CropWorkoutScreen` documenting the `AppModalBottomSheet` parent hierarchy, scroll container delegation, and the invariant that the inner composable must never declare vertical scrolling.
+4. **ACID SQLite Rollback Test**: Enhanced `WorkoutRepositoryCropTest` with `testSQLiteTransactionRollback_guaranteesZeroPartialDeletionOnFailure`, asserting strict MockK SQLite transaction lifecycle semantics (`beginTransaction()`, failure prior to `setTransactionSuccessful()`, `endTransaction()`).
+5. **Portable Layout Contract Test**: Enhanced `CropWorkoutScreenContractTest` with multi-path source candidate discovery and comment-stripping regex to ensure continuous verification that `CropWorkoutScreen.kt` contains no inner vertical scrolling.
+6. **9-Language Localization**: Verified 100% translation parity across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with `CropWorkoutLocalizationTest`.
 
 ---
 
-## 3. Automated Test Evidence
+## 2. Changes Implemented
 
-### Full Clean-Room Test Suite Execution
+### 2.1 Layout Hierarchy Fix (`CropWorkoutScreen.kt`)
+In `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/crop/CropWorkoutScreen.kt`:
+* Removed redundant `Modifier.verticalScroll(rememberScrollState())` on the root content `Column`.
+* Removed unused imports `androidx.compose.foundation.rememberScrollState` and `androidx.compose.foundation.verticalScroll`.
+* Content (Map preview, Elevation profile, RangeSlider, summary metrics) now scrolls seamlessly within `AppModalBottomSheet`'s native scroll container, while the modal action bar ("Abbrechen" / "Track zuschneiden") remains pinned to the bottom.
+
+```kotlin
+Column(
+    modifier = modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp, vertical = 8.dp),
+    verticalArrangement = Arrangement.spacedBy(16.dp)
+) {
+    // Child composables measure bounded height within AppModalBottomSheet's scroll container
+    ...
+}
+```
+
+### 2.2 Comprehensive Architecture KDoc (`CropWorkoutScreen.kt`)
+Documented the layout hierarchy contract directly in `CropWorkoutScreen`:
+```kotlin
+/**
+ * Interactive bottom-sheet composable allowing athletes to trim leading and trailing GPS/sensor
+ * samples from a recorded workout.
+ *
+ * ### Layout & Constraint Architecture
+ * This screen is designed to be hosted exclusively inside [AppModalBottomSheet].
+ * [AppModalBottomSheet] wraps its content inside a scrollable body container:
+ * `Column(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()))`
+ * and pins its [AppModalBottomSheetDefaults.actions] row anchored at the bottom.
+ *
+ * **CRITICAL CONSTRAINT INVARIANT**:
+ * Because [AppModalBottomSheet] already provides the vertical scroll container, this composable's
+ * root [Column] **MUST NOT** apply `Modifier.verticalScroll(rememberScrollState())`. Nesting an inner
+ * vertically scrollable component inside an outer vertically scrollable container results in infinite
+ * maximum height constraints and triggers `IllegalStateException: Vertically scrollable component was
+ * measured with an infinity maximum height constraints, which is disallowed.`
+ *
+ * By delegating scroll behavior entirely to [AppModalBottomSheet], the body content (map preview,
+ * elevation profile, dual RangeSlider, and summary metrics) scrolls smoothly on small-screen or high-font-scaling
+ * displays while the primary action buttons remain pinned, anchored, and accessible at the bottom.
+ */
+```
+
+### 2.3 ACID SQLite Rollback Verification (`WorkoutRepositoryCropTest.kt`)
+Added `testSQLiteTransactionRollback_guaranteesZeroPartialDeletionOnFailure` verifying MockK SQLite transaction lifecycle:
+* `db.beginTransaction()` is called.
+* An intentional `IllegalStateException("Disk I/O error during sample deletion")` is thrown during transaction processing.
+* `db.setTransactionSuccessful()` is **never** called.
+* `db.endTransaction()` is guaranteed to execute in a `finally` block, ensuring zero partial row deletions or corrupted database state.
+
+### 2.4 Multi-Path Layout Contract Test (`CropWorkoutScreenContractTest.kt`)
+Added `testCropWorkoutScreen_doesNotDeclareNestedVerticalScroll_preventingInfinityHeightConstraintCrash`:
+* Tests `CropWorkoutScreen.kt` using portable path resolution (`candidatePaths`) supporting Gradle CLI, IDE runners, and CI container workspaces.
+* Strips block comments (`/* ... */`) and line comments (`// ...`) prior to scanning code tokens.
+* Asserts that `verticalScroll(` and `rememberScrollState` do not appear in active code.
+
+---
+
+## 3. Verification & Test Evidence
+
+### 3.1 Targeted Test Execution
+Command:
+```bash
+./gradlew testDebugUnitTest \
+  --tests com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropWorkoutScreenContractTest \
+  --tests com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropWorkoutLocalizationTest \
+  --tests com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCropTest \
+  --tests com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMathTest
+```
+Result: **21 tests completed, 0 failed, 0 skipped** (PASSED in 17s).
+
+Key targeted tests:
+1. `CropWorkoutScreenContractTest`:
+   - `testCropWorkoutScreen_doesNotDeclareNestedVerticalScroll_preventingInfinityHeightConstraintCrash`: PASSED
+   - `testCropPreconditions_buttonDisabledWhenUnderMinPointsOrDuration`: PASSED
+   - `testCropConfirmation_dialogWarnsPermanentDeletion`: PASSED
+   - `testBackHandler_blocksNavigationWhileCropping`: PASSED
+   - `testForceReExportButton_visibleWhenExportError`: PASSED
+2. `WorkoutRepositoryCropTest`:
+   - `testSQLiteTransactionRollback_guaranteesZeroPartialDeletionOnFailure`: PASSED
+   - `testCropWorkout_preFlightStorageCheck_failsWhenUnder10MB`: PASSED
+   - `testCropWorkout_ephemeralJsonBackupCreatedAndCleanedUp`: PASSED
+   - `testCropWorkout_postOpChecksumAssertion`: PASSED
+   - `testCropWorkout_concurrencyMutexSerialization`: PASSED
+   - `testCropWorkout_synchronousExportInvalidation`: PASSED
+   - `testCropWorkout_workManagerEnqueueFailure_setsExportStatusError`: PASSED
+3. `CropWorkoutLocalizationTest`:
+   - 10 required keys verified across 9 locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt-rBR`): PASSED
+4. `CropWorkoutMathTest`:
+   - Cumulative monotonic clamping (`EPSILON = 1e-6`), zero-anchoring, `LINE_DISTANCE_m` Haversine row recalculation, extrema re-derivation, `Double.isFinite` filtering: PASSED
+
+### 3.2 Clean-Room Full Regression Suite
+Command:
 ```bash
 ./gradlew testDebugUnitTest
 ```
-**Output**:
-```text
-BUILD SUCCESSFUL in 2m 41s
-32 actionable tasks: 7 executed, 25 up-to-date
-100% tests passed across all modules without regressions.
-```
-
-### Targeted Crop Feature Test Suite Execution
-```bash
-./gradlew testDebugUnitTest \
-  --tests "com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMathTest" \
-  --tests "com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropWorkoutLocalizationTest" \
-  --tests "com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropLapsRecalculationTest" \
-  --tests "com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropWorkoutScreenContractTest" \
-  --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCropTest"
-```
-**Output**:
-```text
-BUILD SUCCESSFUL in 5s
-32 actionable tasks: 1 executed, 31 up-to-date
-```
-- `CropWorkoutMathTest`: 10/10 passed (slider range validation, duration/distance boundary clamping, sample index resolution).
-- `CropWorkoutLocalizationTest`: All localized crop string keys (`crop_workout_title`, `crop_start_point`, `crop_end_point`, `crop_duration_retained`, `crop_confirm_title`, `crop_confirm_message`, `crop_action_button`, `crop_success_message`, `crop_error_message`, `crop_insufficient_storage`) verified in all 9 supported languages.
-- `CropLapsRecalculationTest`: 6/6 passed (start lap truncation, end lap truncation, interior lap retention, re-indexing 1..N, fallback lap generation).
-- `CropWorkoutScreenContractTest`: 5/5 passed (State and Intent contract, UI event emission, confirmation dialog visibility).
-- `WorkoutRepositoryCropTest`: All database transactions, vectorized recalculations, ephemeral backups, and mutex coordination verified.
+Result: **BUILD SUCCESSFUL** - 100% unit test pass rate with zero regressions across the entire codebase.
 
 ---
 
-## 4. Invariant & Governance Verification
+## 4. Visual Consistency & Layout Invariants (Rule 23)
 
-1. **Zero Regressions**: Clean-room test suite executed with 100% pass rate.
-2. **Living Documentation Synchronized**: `docs/requirements.md` (`REQ-UI-368`) and `docs/tests.md` (`TST-UI-331`) marked `Verified`.
-3. **ASPICE Governance**: Gate 4 passed with LOW risk. Stage 5 subtask `ATT-3589` reviewed and moved to `Erledigt` via `freigabe`.
-4. **Strategy A Integration**: `feature/ATT-3274` integrated into `sprint/2026-42.4` via `--no-ff`.
-5. **Human Gate Handover**: Parent ticket `ATT-3274` transitioned to `Final Review (Human)` for sprint-end review.
+* **Layout Host**: Hosted inside `AppModalBottomSheet`.
+* **Pinned Action Bar**: Cancel and Crop action buttons remain fixed at the bottom outside the scrollable body, providing immediate accessibility.
+* **Scroll Container**: The scroll container wraps map preview, elevation profile, dual RangeSlider, and summary metrics. On small screens or with accessibility font scaling ($2.0\times$), content scrolls freely between the title header and pinned actions.
+* **No Infinity Height Crash**: The inner `Column` has no scroll modifier, so its height is bounded by the outer scroll container's available height.
+
+---
+
+## 5. Requirement Governance & ASPICE Traceability
+
+* **Requirement**: `REQ-UI-368` -> **Status**: `Verified`
+* **Test Case**: `TST-UI-331` -> **Status**: `Verified`
+* **Verification Script**: `python3 tools/verify_requirement_governance.py --base-ref sprint/2026-42.5` -> **PASSED (0 errors)**.
