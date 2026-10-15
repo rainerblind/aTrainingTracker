@@ -190,6 +190,10 @@
     <string name="power_short">moc</string>
     <string name="power_to_weight">Stosunek mocy do masy</string>
     <string name="power_to_weight_short">W/kg</string>
+    <string name="normalized_power">Znormalizowana moc</string>
+    <string name="normalized_power_short">NP</string>
+    <string name="intensity_factor">Współczynnik intensywności</string>
+    <string name="intensity_factor_short">IF</string>
     <string name="speed">prędkość</string>
     <string name="speed_short">pręd</string>
     <string name="current_sensors">bieżące czujniki</string>

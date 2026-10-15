@@ -258,6 +258,10 @@
     <string name="power_short">power</string>
     <string name="power_to_weight">Power-to-weight ratio</string>
     <string name="power_to_weight_short">W/kg</string>
+    <string name="normalized_power">Normalized Power</string>
+    <string name="normalized_power_short" translatable="false">NP</string>
+    <string name="intensity_factor">Intensity Factor</string>
+    <string name="intensity_factor_short" translatable="false">IF</string>
     <string name="speed">speed</string>
     <string name="speed_short">spd</string>
     <string name="current_sensors">current sensors</string>

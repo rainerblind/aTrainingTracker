@@ -182,4 +182,109 @@ class CyclingPowerMetricsDeviceTest {
 
         device.shutDown()
     }
+
+    @Test
+    fun testCalculateMetrics_npWarmupWindow_emitsNull() {
+        every { powerSensorData.value } returns 250.0
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 }
+        )
+
+        for (i in 1..29) {
+            device.calculateMetrics()
+            assertNull(device.normalizedPowerSensor.sensorData.value)
+            assertNull(device.intensityFactorSensor.sensorData.value)
+        }
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_npAndIf_emitsValidValuesAfter30Seconds() {
+        every { powerSensorData.value } returns 200.0
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 }
+        )
+
+        for (i in 1..30) {
+            device.calculateMetrics()
+        }
+
+        val npSensor = device.normalizedPowerSensor
+        val ifSensor = device.intensityFactorSensor
+
+        assertEquals(200.0, npSensor.sensorData.value as Double, 0.001)
+        assertEquals(200.0 / 250.0, ifSensor.sensorData.value as Double, 0.001)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_unconfiguredFtp_emitsNullIf() {
+        every { powerSensorData.value } returns 200.0
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { null } // Unconfigured FTP
+        )
+
+        for (i in 1..30) {
+            device.calculateMetrics()
+        }
+
+        assertEquals(200.0, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+        assertNull(device.intensityFactorSensor.sensorData.value)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_pauseGating_freezesNpAndIf() {
+        every { powerSensorData.value } returns 200.0
+        var isSuspended = false
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { isSuspended },
+            { 75.0f },
+            { 200 }
+        )
+
+        // 10 active ticks
+        for (i in 1..10) {
+            device.calculateMetrics()
+        }
+
+        // Suspend recording for 30 ticks
+        isSuspended = true
+        for (i in 1..30) {
+            device.calculateMetrics()
+            assertNull(device.normalizedPowerSensor.sensorData.value)
+        }
+
+        // Resume: need another 20 active ticks to reach 30
+        isSuspended = false
+        for (i in 1..19) {
+            device.calculateMetrics()
+            assertNull(device.normalizedPowerSensor.sensorData.value)
+        }
+        device.calculateMetrics() // 30th active tick
+        assertEquals(200.0, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+
+        device.shutDown()
+    }
 }

@@ -191,6 +191,10 @@
     <string name="power_short">Leistung</string>
     <string name="power_to_weight">Leistungsgewicht</string>
     <string name="power_to_weight_short">W/kg</string>
+    <string name="normalized_power">Normalisierte Leistung</string>
+    <string name="normalized_power_short">NP</string>
+    <string name="intensity_factor">Intensitätsfaktor</string>
+    <string name="intensity_factor_short">IF</string>
     <string name="speed">Geschwindigkeit</string>
     <string name="speed_short">Geschw.</string>
     <string name="current_sensors">Aktuelle Sensoren</string>

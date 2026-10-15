@@ -190,6 +190,10 @@
     <string name="power_short">potencia</string>
     <string name="power_to_weight">Relación potencia-peso</string>
     <string name="power_to_weight_short">W/kg</string>
+    <string name="normalized_power">Potencia normalizada</string>
+    <string name="normalized_power_short">NP</string>
+    <string name="intensity_factor">Factor de intensidad</string>
+    <string name="intensity_factor_short">IF</string>
     <string name="speed">velocidad</string>
     <string name="speed_short">vel</string>
     <string name="current_sensors">sensores actuales</string>

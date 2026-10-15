@@ -57,6 +57,32 @@ class SensorFilterDefaultsTest {
     }
 
     @Test
+    fun testNormalizedPowerSensor_defaultsToInstantaneous() {
+        val config = SensorFilterDefaults.getDefaultFilterConfig(SensorType.NORMALIZED_POWER)
+        assertEquals(FilterType.INSTANTANEOUS, config.filterType)
+        assertEquals(1.0, config.filterConstant, 0.001)
+        assertEquals("sec", config.unit)
+
+        assertEquals(FilterType.INSTANTANEOUS, SensorFilterDefaults.getDefaultFilterType(SensorType.NORMALIZED_POWER))
+        assertEquals(1.0, SensorFilterDefaults.getDefaultFilterConstant(SensorType.NORMALIZED_POWER), 0.001)
+        assertEquals("sec", SensorFilterDefaults.getDefaultUnit(SensorType.NORMALIZED_POWER))
+        assertEquals(config, SensorType.NORMALIZED_POWER.getDefaultFilterConfig())
+    }
+
+    @Test
+    fun testIntensityFactorSensor_defaultsToInstantaneous() {
+        val config = SensorFilterDefaults.getDefaultFilterConfig(SensorType.INTENSITY_FACTOR)
+        assertEquals(FilterType.INSTANTANEOUS, config.filterType)
+        assertEquals(1.0, config.filterConstant, 0.001)
+        assertEquals("sec", config.unit)
+
+        assertEquals(FilterType.INSTANTANEOUS, SensorFilterDefaults.getDefaultFilterType(SensorType.INTENSITY_FACTOR))
+        assertEquals(1.0, SensorFilterDefaults.getDefaultFilterConstant(SensorType.INTENSITY_FACTOR), 0.001)
+        assertEquals("sec", SensorFilterDefaults.getDefaultUnit(SensorType.INTENSITY_FACTOR))
+        assertEquals(config, SensorType.INTENSITY_FACTOR.getDefaultFilterConfig())
+    }
+
+    @Test
     fun testSpeedSensor_defaultsToTwoSecondMovingAverage() {
         val config = SensorFilterDefaults.getDefaultFilterConfig(SensorType.SPEED_mps)
         assertEquals(FilterType.MOVING_AVERAGE_TIME, config.filterType)

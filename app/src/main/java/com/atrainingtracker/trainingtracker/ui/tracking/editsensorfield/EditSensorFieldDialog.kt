@@ -132,7 +132,7 @@ fun EditSensorFieldDialog(
 
             // Athlete Weight Configuration for Power-to-Weight (ATT-1289, REQ-TRK-019)
             if (uiState.selectedSensorType == SensorType.POWER_TO_WEIGHT) {
-                val dataStore = remember { SettingsDataStore(context) }
+                val dataStore = remember { SettingsDataStore.getInstance(context) }
                 val athleteWeight by dataStore.athleteWeightKgFlow.collectAsState(initial = 0f)
                 val coroutineScope = rememberCoroutineScope()
                 var showWeightDialog by remember { mutableStateOf(false) }
@@ -164,6 +164,38 @@ fun EditSensorFieldDialog(
                         }
                     )
                 }
+            }
+
+            // Intensity Factor FTP Baseline Display (ATT-1290, REQ-TRK-020)
+            if (uiState.selectedSensorType == SensorType.INTENSITY_FACTOR) {
+                val dataStore = remember { SettingsDataStore.getInstance(context) }
+                val storedFtp by dataStore.ftpFlow.collectAsState(initial = null)
+                val ftpStr = if (storedFtp != null && storedFtp!! > 0) {
+                    "$storedFtp W"
+                } else {
+                    stringResource(R.string.athlete_weight_unconfigured)
+                }
+
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "FTP: $ftpStr",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
             }
         }
     }
