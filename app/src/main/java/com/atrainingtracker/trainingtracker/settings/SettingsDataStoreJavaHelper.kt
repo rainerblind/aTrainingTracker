@@ -100,4 +100,16 @@ object SettingsDataStoreJavaHelper {
     fun getSlopeMinSpeed(context: Context): Float {
         return getTuningConfig(context).slopeMinSpeedMps
     }
+
+    /**
+     * Synchronous bridge to fetch athlete Functional Threshold Power (FTP) in Watts.
+     * Returns null if unconfigured or <= 0.
+     */
+    @JvmStatic
+    fun getFtp(context: Context): Int? {
+        val dataStore = SettingsDataStore(context)
+        return runBlocking(Dispatchers.IO) {
+            dataStore.ftpFlow.first()
+        }
+    }
 }

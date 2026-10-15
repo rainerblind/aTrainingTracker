@@ -1883,4 +1883,30 @@
     <string name="grade_legend_15_to_20">15 – 20%</string>
     <string name="grade_legend_20_to_25">20 – 25%</string>
     <string name="grade_legend_over_25">&gt; 25%</string>
+    <!-- Automated Zone Calculation (ATT-3188) -->
+    <string name="zone_calc_button">Zonen berechnen</string>
+    <string name="zone_calc_dialog_title_power">Rad-Leistungszonen berechnen</string>
+    <string name="zone_calc_dialog_title_hr">Herzfrequenz-Zonen berechnen</string>
+    <string name="zone_calc_ftp_label">Functional Threshold Power (FTP)</string>
+    <string name="zone_calc_hr_max_label">Maximale Herzfrequenz (HFmax)</string>
+    <string name="zone_calc_hr_rest_label">Ruheherzfrequenz (HFruhe)</string>
+    <string name="zone_calc_method_label">Berechnungsmethode</string>
+    <string name="zone_calc_method_max_hr">% HFmax</string>
+    <string name="zone_calc_method_karvonen">Karvonen (HRR)</string>
+    <string name="zone_calc_preview_title">Vorschau berechneter Zonen</string>
+    <string name="zone_calc_apply_button">Übernehmen</string>
+    <string name="zone_calc_cancel_button">Abbrechen</string>
+    <string name="zone_calc_status_calculated">Berechnet</string>
+    <string name="zone_calc_status_customized">Benutzerdefiniert</string>
+    <string name="zone_calc_calibration_recommended">Kalibrierung empfohlen</string>
+    <string name="zone_calc_last_updated">Zuletzt aktualisiert: %s</string>
+    <string name="zone_calc_overwrite_warning_title">Manuelle Zonen überschreiben?</string>
+    <string name="zone_calc_overwrite_warning_message">Achtung: Dies überschreibt alle manuell festgelegten Zonen mit den Standard-Zonen für FTP %d W. Möchtest du fortfahren?</string>
+    <string name="zone_calc_error_ftp_range">FTP muss zwischen %1$d W und %2$d W liegen</string>
+    <string name="zone_calc_error_hr_max_range">HFmax muss zwischen %1$d bpm und %2$d bpm liegen</string>
+    <string name="zone_calc_error_hr_rest_range">HFruhe muss zwischen %1$d bpm und %2$d bpm liegen</string>
+    <string name="zone_calc_error_hr_max_greater_rest">HFmax muss größer als HFruhe sein</string>
+    <string name="zone_calc_error_karvonen_delta">HFmax muss mindestens 20 bpm über HFruhe liegen</string>
+    <string name="zone_calc_error_monotonicity">Wert muss zwischen %1$d und %2$d liegen</string>
+
 </resources>

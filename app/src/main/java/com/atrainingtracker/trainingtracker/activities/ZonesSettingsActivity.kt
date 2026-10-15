@@ -60,7 +60,10 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
-import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
+import android.text.format.DateUtils
+import com.atrainingtracker.trainingtracker.ui.settings.HrMethod
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneCalculatorDialog
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneCalculatorStateHolder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -190,6 +193,16 @@ fun ZoneSettingsScreen(
         pageCount = { profileNameResIds.size }
     )
 
+    val currentType = zoneTypes[pagerState.currentPage]
+    val isCustomized by dataStore.isZoneCustomizedFlow(currentType).collectAsState(initial = false)
+    val storedFtp by dataStore.ftpFlow.collectAsState(initial = null)
+    val ftpUpdatedAt by dataStore.ftpUpdatedAtFlow.collectAsState(initial = null)
+    val storedHrMax by dataStore.hrMaxFlow.collectAsState(initial = null)
+    val storedHrRest by dataStore.hrRestFlow.collectAsState(initial = null)
+    val storedHrMethod by dataStore.hrCalcMethodFlow.collectAsState(initial = null)
+
+    var showCalculatorDialog by remember { mutableStateOf(false) }
+
     Surface(modifier = Modifier.fillMaxSize()) {
         Column {
 
@@ -205,24 +218,89 @@ fun ZoneSettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = stringResource(R.string.title_edit_zones),
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        TextButton(
-                            onClick = {
-                                val currentType = zoneTypes[pagerState.currentPage]
-                                scope.launch(Dispatchers.IO) {
-                                    dataStore.resetToDefaults(currentType)
-                                    reloadProfiles()
-                                }
-                            }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = stringResource(R.string.reset_to_defaults),
+                                text = stringResource(R.string.title_edit_zones),
+                                style = MaterialTheme.typography.headlineSmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
+                            SuggestionChip(
+                                onClick = {},
+                                label = {
+                                    Text(
+                                        text = stringResource(
+                                            if (isCustomized) R.string.zone_calc_status_customized
+                                            else R.string.zone_calc_status_calculated
+                                        ),
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                },
+                                shape = MaterialTheme.shapes.extraSmall
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(
+                                onClick = { showCalculatorDialog = true }
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.zone_calc_button),
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            TextButton(
+                                onClick = {
+                                    scope.launch(Dispatchers.IO) {
+                                        dataStore.resetToDefaults(currentType)
+                                        reloadProfiles()
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.reset_to_defaults),
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                    }
+
+                    if (currentType == ZoneType.PWR_BIKE && ftpUpdatedAt != null) {
+                        val dateStr = DateUtils.formatDateTime(
+                            context,
+                            ftpUpdatedAt!!,
+                            DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_YEAR
+                        )
+                        val isStale = (System.currentTimeMillis() - ftpUpdatedAt!!) > 180L * 24 * 60 * 60 * 1000
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.zone_calc_last_updated, dateStr),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            )
+                            if (isStale) {
+                                SuggestionChip(
+                                    onClick = {},
+                                    label = {
+                                        Text(
+                                            text = stringResource(R.string.zone_calc_calibration_recommended),
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    },
+                                    colors = SuggestionChipDefaults.suggestionChipColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                                        labelColor = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                )
+                            }
                         }
                     }
 
@@ -316,8 +394,55 @@ fun ZoneSettingsScreen(
                     )
                 }
             }
+        }
 
-
+        if (showCalculatorDialog) {
+            val holder = remember(currentType, isCustomized, storedFtp, storedHrMax, storedHrRest, storedHrMethod) {
+                ZoneCalculatorStateHolder(
+                    zoneType = currentType,
+                    initialCustomized = isCustomized,
+                    initialFtp = storedFtp,
+                    initialHrMax = storedHrMax,
+                    initialHrRest = storedHrRest,
+                    initialHrMethod = if (storedHrMethod == "MAX_HR") HrMethod.MAX_HR else HrMethod.KARVONEN
+                )
+            }
+            ZoneCalculatorDialog(
+                holder = holder,
+                onDismiss = { showCalculatorDialog = false },
+                onSavePower = { ftp, cutoffs ->
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            dataStore.saveCalculatedPowerZones(ftp, cutoffs)
+                            withContext(Dispatchers.Main) {
+                                holder.onSaveCompleted()
+                                showCalculatorDialog = false
+                            }
+                            reloadProfiles()
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                holder.onSaveFailed()
+                            }
+                        }
+                    }
+                },
+                onSaveHeartRate = { zType, hrMax, hrRest, method, cutoffs ->
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            dataStore.saveCalculatedHeartRateZones(zType, hrMax, hrRest, method, cutoffs)
+                            withContext(Dispatchers.Main) {
+                                holder.onSaveCompleted()
+                                showCalculatorDialog = false
+                            }
+                            reloadProfiles()
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                holder.onSaveFailed()
+                            }
+                        }
+                    }
+                }
+            )
         }
     }
 }
@@ -389,6 +514,8 @@ fun SettingsScreenContent(
             onMinChange = { },
             onMaxChange = { onUpdateZone1Max(it) },
             minEnabled = false,
+            minAllowed = if (zoneType == ZoneType.PWR_BIKE) 1 else 30,
+            maxAllowed = z2Max - 1,
             containerColor = zone1Color
         )
 
@@ -399,6 +526,8 @@ fun SettingsScreenContent(
             maxValue = z2Max,
             onMinChange = { onUpdateZone1Max(it - 1) },
             onMaxChange = { onUpdateZone2Max(it) },
+            minAllowed = z1Max + 1,
+            maxAllowed = z3Max - 1,
             containerColor = zone2Color
         )
 
@@ -409,6 +538,8 @@ fun SettingsScreenContent(
             maxValue = z3Max,
             onMinChange = { onUpdateZone2Max(it - 1) },
             onMaxChange = { onUpdateZone3Max(it) },
+            minAllowed = z2Max + 1,
+            maxAllowed = z4Max - 1,
             containerColor = zone3Color
         )
 
@@ -419,6 +550,8 @@ fun SettingsScreenContent(
             maxValue = z4Max,
             onMinChange = { onUpdateZone3Max(it - 1) },
             onMaxChange = { onUpdateZone4Max(it) },
+            minAllowed = z3Max + 1,
+            maxAllowed = if (zoneType == ZoneType.PWR_BIKE) z5Max - 1 else 240,
             containerColor = zone4Color
         )
 
@@ -430,6 +563,8 @@ fun SettingsScreenContent(
                 maxValue = z5Max,
                 onMinChange = { onUpdateZone4Max(it - 1) },
                 onMaxChange = { onUpdateZone5Max(it) },
+                minAllowed = z4Max + 1,
+                maxAllowed = z6Max - 1,
                 containerColor = zone5Color
             )
 
@@ -440,6 +575,8 @@ fun SettingsScreenContent(
                 maxValue = z6Max,
                 onMinChange = { onUpdateZone5Max(it - 1) },
                 onMaxChange = { onUpdateZone6Max(it) },
+                minAllowed = z5Max + 1,
+                maxAllowed = 2499,
                 containerColor = zone6Color
             )
 
@@ -663,6 +800,8 @@ fun ZoneRow(
     onMaxChange: (Int) -> Unit,
     minEnabled: Boolean = true,
     maxEnabled: Boolean = true,
+    minAllowed: Int? = null,
+    maxAllowed: Int? = null,
     containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface
 ) {
     Card(
@@ -713,7 +852,9 @@ fun ZoneRow(
                             label = stringResource(R.string.label_max),
                             currentValue = maxValue,
                             onValueChange = onMaxChange,
-                            enabled = maxEnabled
+                            enabled = maxEnabled,
+                            minAllowed = minAllowed,
+                            maxAllowed = maxAllowed
                         )
                     }
                 }
@@ -727,12 +868,15 @@ fun IntegerInputField(
     label: String,
     currentValue: Int,
     onValueChange: (Int) -> Unit,
-    enabled : Boolean = true
+    enabled: Boolean = true,
+    minAllowed: Int? = null,
+    maxAllowed: Int? = null
 ) {
     var textState by remember(currentValue) { mutableStateOf(currentValue.toString()) }
+    val isOutOfRange = (minAllowed != null && currentValue < minAllowed) || (maxAllowed != null && currentValue > maxAllowed)
 
     OutlinedTextField(
-        value = if (enabled) {textState} else {"--"},
+        value = if (enabled) textState else "--",
         onValueChange = { input ->
             if (input.all { it.isDigit() }) {
                 textState = input
@@ -748,6 +892,16 @@ fun IntegerInputField(
         label = { Text(label) },
         enabled = enabled,
         readOnly = !enabled,
+        isError = enabled && isOutOfRange,
+        supportingText = if (enabled && isOutOfRange && minAllowed != null && maxAllowed != null) {
+            {
+                Text(
+                    text = stringResource(R.string.zone_calc_error_monotonicity, minAllowed, maxAllowed),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        } else null,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
         modifier = Modifier.fillMaxWidth()

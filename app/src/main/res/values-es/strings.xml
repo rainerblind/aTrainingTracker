@@ -1798,4 +1798,30 @@
     <string name="grade_legend_15_to_20">15 – 20%</string>
     <string name="grade_legend_20_to_25">20 – 25%</string>
     <string name="grade_legend_over_25">&gt; 25%</string>
+    <!-- Automated Zone Calculation (ATT-3188) -->
+    <string name="zone_calc_button">Calcular zonas</string>
+    <string name="zone_calc_dialog_title_power">Calcular zonas de potencia ciclista</string>
+    <string name="zone_calc_dialog_title_hr">Calcular zonas de frecuencia cardíaca</string>
+    <string name="zone_calc_ftp_label">Potencia Umbral Funcional (FTP)</string>
+    <string name="zone_calc_hr_max_label">Frecuencia cardíaca máxima (FCmáx)</string>
+    <string name="zone_calc_hr_rest_label">Frecuencia cardíaca en reposo (FCreposo)</string>
+    <string name="zone_calc_method_label">Método de cálculo</string>
+    <string name="zone_calc_method_max_hr">% FCmáx</string>
+    <string name="zone_calc_method_karvonen">Karvonen (FCR)</string>
+    <string name="zone_calc_preview_title">Vista previa de zonas calculadas</string>
+    <string name="zone_calc_apply_button">Aplicar</string>
+    <string name="zone_calc_cancel_button">Cancelar</string>
+    <string name="zone_calc_status_calculated">Calculado</string>
+    <string name="zone_calc_status_customized">Personalizado</string>
+    <string name="zone_calc_calibration_recommended">Calibración recomendada</string>
+    <string name="zone_calc_last_updated">Última actualización: %s</string>
+    <string name="zone_calc_overwrite_warning_title">¿Sobrescribir zonas personalizadas?</string>
+    <string name="zone_calc_overwrite_warning_message">Advertencia: Esto sobrescribirá todas las zonas configuradas manualmente con las zonas estándar para FTP %d W. ¿Desea continuar?</string>
+    <string name="zone_calc_error_ftp_range">La FTP debe estar entre %1$d W y %2$d W</string>
+    <string name="zone_calc_error_hr_max_range">La FCmáx debe estar entre %1$d bpm y %2$d bpm</string>
+    <string name="zone_calc_error_hr_rest_range">La FCreposo debe estar entre %1$d bpm y %2$d bpm</string>
+    <string name="zone_calc_error_hr_max_greater_rest">La FCmáx debe ser mayor que la FCreposo</string>
+    <string name="zone_calc_error_karvonen_delta">La FCmáx debe ser al menos 20 bpm mayor que la FCreposo</string>
+    <string name="zone_calc_error_monotonicity">El valor debe estar entre %1$d y %2$d</string>
+
 </resources>
