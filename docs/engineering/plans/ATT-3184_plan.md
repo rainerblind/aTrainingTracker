@@ -43,16 +43,23 @@ The application currently binds Heart Rate and Cycling Power to a shared 5-zone 
   - Zone 7 represents neuromuscular sprint efforts and is open-ended ($P > z6Max$).
   - In telemetry band calculation (`TelemetryZoneMath`), Zone 7 is clamped to `dataMax` (the maximum observed power in the session) or `maxOf(dataMax, z6Max + 100.0)`. Never uses `Double.MAX_VALUE` directly to prevent rendering / coordinate overflow in Compose Canvas plots.
 - **Legacy Interface Stability (`SettingsDataStoreJavaHelper`)**:
-  - `getZoneMax(context, zoneType, zoneIndex)` gracefully handles any query:
-    - For `HR_RUN` and `HR_BIKE`: `zoneIndex in 1..4` returns threshold; `zoneIndex >= 5` returns 0 without throwing `IndexOutOfBoundsException` or crashing.
-    - For `PWR_BIKE`: `zoneIndex in 1..6` returns thresholds; `zoneIndex >= 7` or `< 1` returns 0 safely.
+  - `getZoneMax(context, zoneType, zoneIndex)` returns an integer threshold for valid indices:
+    - For `HR_RUN` and `HR_BIKE`: valid indices are `1..4`. If queried for index `>= 5` or `<= 0`, it returns `0` (indicating no upper boundary / open-ended zone, conforming to existing callers).
+    - For `PWR_BIKE`: valid indices are `1..6`. For index `>= 7` or `<= 0`, it returns `0` (indicating Zone 7 is open-ended).
+    - Downstream safety: Callers (`loadPowerThresholds`, `loadHeartRateThresholds`) check `z > 0 && z_{n} > z_{n-1}` and gracefully return `null` if any boundary is 0, completely eliminating silent failure or division-by-zero risks.
+- **UI Conflict Resolution & Monotonic Guard in `ZonesSettingsActivity`**:
+  - Behavior on input violation: When a user enters a value breaking strict monotonicity ($z_n < z_{n-1} + 1$ or $z_n > z_{n+1} - 1$), the UI displays an inline validation error state (red border / helper text) and **blocks saving** (Save / Auto-save is inhibited while the input is invalid).
+  - The UI does not silently mutate adjacent zones; the athlete has full explicit control and must correct the value.
+  - A "Reset to Defaults" button is provided to restore canonical defaults immediately if configuration becomes inconsistent.
 
 ### 1.4 Domain Models & Calculations
 - Update `PowerZoneThresholds(z1Max: Int, z2Max: Int, z3Max: Int, z4Max: Int, z5Max: Int, z6Max: Int)` in `ZoneDistributionModels.kt`.
 - Update `TelemetryZoneMath`:
-  - `calculatePowerZoneBands()`: Generates 7 bands with colors `Zone1..Zone7` and labels `Z1..Z7`.
-  - `determinePowerZone()`: Returns 1..7.
-  - `loadPowerThresholds()`: Loads 6 thresholds from DataStore via `SettingsDataStoreJavaHelper`.
+  - `calculatePowerZoneBands()`:
+    - Generates 7 candidate bands clamped to $[dataMin, dataMax]$.
+    - Only bands where $clampedMin < clampedMax$ are returned (if $dataMax \le z6Max$, Zone 7 has $clampedMin = clampedMax = dataMax$, which is filtered out by `clampedMin < clampedMax`, so Zone 7 is omitted for sub-threshold rides).
+  - `determinePowerZone()`: Returns 1..7 (1 for $\le z1Max$ up to 7 for $> z6Max$).
+  - `loadPowerThresholds()`: Loads all 6 thresholds from DataStore via `SettingsDataStoreJavaHelper` and validates $0 < z1 < z2 < z3 < z4 < z5 < z6$. Returns null if any threshold is $\le 0$ or non-monotonic.
 - Update `BatterySaverModel.calculateZoneIndex`:
   - When `zoneType == ZoneType.PWR_BIKE`, load all 6 boundaries and return zone 1..7.
 - Update `TrackingViewModel`:
@@ -126,9 +133,20 @@ The application currently binds Heart Rate and Cycling Power to a shared 5-zone 
 
 ### Step 7: Unit & Localization Tests
 - **Files**:
-  - `SettingsDataStorePowerZonesTest.kt` (new)
-  - `PowerZoneDistributionCalculatorTest.kt` (update to 7 zones)
-  - `TelemetryZoneMathTest.kt` (update for 7 zones)
-  - `SensorFieldZoneDisplayTest.kt` (update for 7 zones)
-  - `PowerZoneLocalizationTest.kt` (verify all 9 locales)
+  - `SettingsDataStorePowerZonesTest.kt` (new):
+    - Proportional migration from valid z4Max.
+    - Migration from low-bound FTP (50W).
+    - Migration from corrupted state (missing z3Max or non-monotonic initial state falling back to defaults).
+    - Monotonic validation negative test (saving $z4 > z5$ throws / is rejected).
+  - `PowerZoneDistributionCalculatorTest.kt` (update to 7 zones):
+    - 7-zone time-in-zone accumulation.
+    - 7-zone histogram binning.
+  - `TelemetryZoneMathTest.kt` (update for 7 zones):
+    - 7-zone band calculation clamped to data range.
+    - Data range with $dataMax \le z6Max$ (Zone 7 correctly omitted).
+    - Threshold dashes calculation for 6 boundaries.
+  - `SensorFieldZoneDisplayTest.kt` (update for 7 zones):
+    - Zone 6 and Zone 7 color resolution in Cockpit.
+  - `PowerZoneLocalizationTest.kt` (verify all 9 locales):
+    - Parity of `zone_6_label` and `zone_7_label` across all 9 locales.
 - **Action**: Run targeted test suite and clean-room full test suite.
