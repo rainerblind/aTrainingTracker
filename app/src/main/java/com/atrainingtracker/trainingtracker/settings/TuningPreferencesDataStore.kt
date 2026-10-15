@@ -27,8 +27,10 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlin.math.roundToInt
 
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
@@ -196,6 +198,30 @@ object TuningPreferencesDefaults {
     const val DEFAULT_AUTO_PAUSE_BIKE_ENABLED = true
     const val DEFAULT_AUTO_PAUSE_RUN_ENABLED = false
     const val DEFAULT_AUTO_PAUSE_OTHER_ENABLED = false
+
+    const val MIN_AUTO_PAUSE_SPEED_THRESHOLD = 1
+    const val MAX_AUTO_PAUSE_SPEED_THRESHOLD = 5
+    const val STEP_AUTO_PAUSE_SPEED_THRESHOLD = 1
+
+    const val DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC = 3
+    const val DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_IMPERIAL = 2
+    const val DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC = 2
+    const val MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC = 1
+    const val MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC = 10
+
+    const val DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC = 2
+    const val DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_IMPERIAL = 1
+    const val DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC = 5
+    const val MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC = 1
+    const val MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC = 20
+
+    const val DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC = 1
+    const val DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_IMPERIAL = 1
+    const val DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC = 10
+    const val MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC = 1
+    const val MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC = 60
+
+    // Legacy compatibility constants
     const val DEFAULT_AUTO_PAUSE_SPEED_THRESHOLD_KMH = 1.5f
     const val MIN_AUTO_PAUSE_SPEED_THRESHOLD_KMH = 0.5f
     const val MAX_AUTO_PAUSE_SPEED_THRESHOLD_KMH = 5.0f
@@ -258,8 +284,14 @@ data class TuningConfig(
     val autoPauseBikeEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED,
     val autoPauseRunEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED,
     val autoPauseOtherEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED,
-    val autoPauseSpeedThresholdKmh: Float = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
-    val autoPauseDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_DEBOUNCE_SEC
+    val autoPauseBikeSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC,
+    val autoPauseBikeDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+    val autoPauseRunSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC,
+    val autoPauseRunDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+    val autoPauseOtherSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC,
+    val autoPauseOtherDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
+    val autoPauseSpeedThresholdKmh: Float = autoPauseBikeSpeedThreshold.toFloat(),
+    val autoPauseDebounceSec: Int = autoPauseBikeDebounceSec
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -361,6 +393,12 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_AUTO_PAUSE_BIKE_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_bike_enabled")
         val KEY_AUTO_PAUSE_RUN_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_run_enabled")
         val KEY_AUTO_PAUSE_OTHER_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_other_enabled")
+        val KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_bike_speed_threshold")
+        val KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_bike_debounce_sec")
+        val KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_run_speed_threshold")
+        val KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_run_debounce_sec")
+        val KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_other_speed_threshold")
+        val KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_other_debounce_sec")
         val KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH: Preferences.Key<Float> = floatPreferencesKey("tuning_auto_pause_speed_threshold_kmh")
         val KEY_AUTO_PAUSE_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_debounce_sec")
 
@@ -414,10 +452,70 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_AUTO_PAUSE_BIKE_ENABLED,
             KEY_AUTO_PAUSE_RUN_ENABLED,
             KEY_AUTO_PAUSE_OTHER_ENABLED,
+            KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD,
+            KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+            KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD,
+            KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+            KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD,
+            KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
             KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
             KEY_AUTO_PAUSE_DEBOUNCE_SEC
         )
+
+        /**
+         * Resolves and maps sport-specific auto-pause preferences with fallback to legacy keys and default values.
+         */
+        fun mapAutoPausePreferences(prefs: Preferences): AutoPausePreferences {
+            val bikeEnabled = prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED
+            val runEnabled = prefs[KEY_AUTO_PAUSE_RUN_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED
+            val otherEnabled = prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED
+
+            val legacyThreshold = prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH]?.roundToInt()
+            val legacyDebounce = prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC]
+
+            val bikeThreshold = (prefs[KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD] ?: legacyThreshold ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC)
+                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD)
+            val bikeDebounce = (prefs[KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC] ?: legacyDebounce ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
+                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
+
+            val runThreshold = (prefs[KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD] ?: legacyThreshold ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC)
+                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD)
+            val runDebounce = (prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] ?: legacyDebounce ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC)
+                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC)
+
+            val otherThreshold = (prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] ?: legacyThreshold ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC)
+                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD)
+            val otherDebounce = (prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] ?: legacyDebounce ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC)
+                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC)
+
+            return AutoPausePreferences(
+                bikeEnabled = bikeEnabled,
+                runEnabled = runEnabled,
+                otherEnabled = otherEnabled,
+                bikeSpeedThreshold = bikeThreshold,
+                bikeDebounceSec = bikeDebounce,
+                runSpeedThreshold = runThreshold,
+                runDebounceSec = runDebounce,
+                otherSpeedThreshold = otherThreshold,
+                otherDebounceSec = otherDebounce
+            )
+        }
     }
+
+/**
+ * Resolved sport-specific auto-pause preferences slice.
+ */
+data class AutoPausePreferences(
+    val bikeEnabled: Boolean,
+    val runEnabled: Boolean,
+    val otherEnabled: Boolean,
+    val bikeSpeedThreshold: Int,
+    val bikeDebounceSec: Int,
+    val runSpeedThreshold: Int,
+    val runDebounceSec: Int,
+    val otherSpeedThreshold: Int,
+    val otherDebounceSec: Int
+)
 
     val tuningConfigFlow: Flow<TuningConfig> = context.dataStore.data.map { prefs ->
         val rawElevationDomainStr = prefs[KEY_ELEVATION_X_AXIS_DOMAIN] ?: prefs[KEY_PROFILE_X_AXIS_DOMAIN]
@@ -531,6 +629,8 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
         )
 
+        val autoPausePrefs = mapAutoPausePreferences(prefs)
+
         TuningConfig(
             elevationXAxisDomain = elevationDomain,
             telemetryXAxisDomain = telemetryDomain,
@@ -621,17 +721,17 @@ class TuningPreferencesDataStore(private val context: Context) {
             ),
             clusterUseSportType = prefs[KEY_CLUSTER_USE_SPORT_TYPE] ?: TrainingApplication.useSportTypeForClustering(),
             clusterUseAltitudePos = prefs[KEY_CLUSTER_USE_ALTITUDE_POS] ?: TrainingApplication.useAltitudePosForClustering(),
-            autoPauseBikeEnabled = prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED,
-            autoPauseRunEnabled = prefs[KEY_AUTO_PAUSE_RUN_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED,
-            autoPauseOtherEnabled = prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED,
-            autoPauseSpeedThresholdKmh = (prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_SPEED_THRESHOLD_KMH).coerceIn(
-                TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
-                TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD_KMH
-            ),
-            autoPauseDebounceSec = (prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_DEBOUNCE_SEC).coerceIn(
-                TuningPreferencesDefaults.MIN_AUTO_PAUSE_DEBOUNCE_SEC,
-                TuningPreferencesDefaults.MAX_AUTO_PAUSE_DEBOUNCE_SEC
-            )
+            autoPauseBikeEnabled = autoPausePrefs.bikeEnabled,
+            autoPauseRunEnabled = autoPausePrefs.runEnabled,
+            autoPauseOtherEnabled = autoPausePrefs.otherEnabled,
+            autoPauseBikeSpeedThreshold = autoPausePrefs.bikeSpeedThreshold,
+            autoPauseBikeDebounceSec = autoPausePrefs.bikeDebounceSec,
+            autoPauseRunSpeedThreshold = autoPausePrefs.runSpeedThreshold,
+            autoPauseRunDebounceSec = autoPausePrefs.runDebounceSec,
+            autoPauseOtherSpeedThreshold = autoPausePrefs.otherSpeedThreshold,
+            autoPauseOtherDebounceSec = autoPausePrefs.otherDebounceSec,
+            autoPauseSpeedThresholdKmh = autoPausePrefs.bikeSpeedThreshold.toFloat(),
+            autoPauseDebounceSec = autoPausePrefs.bikeDebounceSec
         )
     }
 
@@ -708,13 +808,29 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MIN_CLUSTER_TOL_ALTITUDE_POS,
             TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS
         )
-        val clampedAutoPauseSpeedThreshold = config.autoPauseSpeedThresholdKmh.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD_KMH
+        val clampedBikeSpeedThreshold = config.autoPauseBikeSpeedThreshold.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
         )
-        val clampedAutoPauseDebounce = config.autoPauseDebounceSec.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_DEBOUNCE_SEC,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_DEBOUNCE_SEC
+        val clampedBikeDebounce = config.autoPauseBikeDebounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC
+        )
+        val clampedRunSpeedThreshold = config.autoPauseRunSpeedThreshold.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
+        )
+        val clampedRunDebounce = config.autoPauseRunDebounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC
+        )
+        val clampedOtherSpeedThreshold = config.autoPauseOtherSpeedThreshold.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
+        )
+        val clampedOtherDebounce = config.autoPauseOtherDebounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC
         )
 
         context.dataStore.edit { prefs ->
@@ -803,8 +919,12 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] = config.autoPauseBikeEnabled
             prefs[KEY_AUTO_PAUSE_RUN_ENABLED] = config.autoPauseRunEnabled
             prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] = config.autoPauseOtherEnabled
-            prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clampedAutoPauseSpeedThreshold
-            prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clampedAutoPauseDebounce
+            prefs[KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD] = clampedBikeSpeedThreshold
+            prefs[KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC] = clampedBikeDebounce
+            prefs[KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD] = clampedRunSpeedThreshold
+            prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] = clampedRunDebounce
+            prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] = clampedOtherSpeedThreshold
+            prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] = clampedOtherDebounce
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
@@ -813,6 +933,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         TrainingApplication.setClusterTolAltitudePos(clampedClusterTolAltitudePos)
         TrainingApplication.setUseSportTypeForClustering(config.clusterUseSportType)
         TrainingApplication.setUseAltitudePosForClustering(config.clusterUseAltitudePos)
+        TrackerService.invalidateAutoPauseCache()
     }
 
 
@@ -988,6 +1109,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clamped
         }
+        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseDebounceSec(debounceSec: Int) {
@@ -998,6 +1120,75 @@ class TuningPreferencesDataStore(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clamped
         }
+        TrackerService.invalidateAutoPauseCache()
+    }
+
+    suspend fun updateAutoPauseBikeSpeedThreshold(threshold: Int) {
+        val clamped = threshold.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD] = clamped
+            prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clamped.toFloat()
+        }
+        TrackerService.invalidateAutoPauseCache()
+    }
+
+    suspend fun updateAutoPauseBikeDebounceSec(debounceSec: Int) {
+        val clamped = debounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC] = clamped
+            prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clamped
+        }
+        TrackerService.invalidateAutoPauseCache()
+    }
+
+    suspend fun updateAutoPauseRunSpeedThreshold(threshold: Int) {
+        val clamped = threshold.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD] = clamped
+        }
+        TrackerService.invalidateAutoPauseCache()
+    }
+
+    suspend fun updateAutoPauseRunDebounceSec(debounceSec: Int) {
+        val clamped = debounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] = clamped
+        }
+        TrackerService.invalidateAutoPauseCache()
+    }
+
+    suspend fun updateAutoPauseOtherSpeedThreshold(threshold: Int) {
+        val clamped = threshold.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] = clamped
+        }
+        TrackerService.invalidateAutoPauseCache()
+    }
+
+    suspend fun updateAutoPauseOtherDebounceSec(debounceSec: Int) {
+        val clamped = debounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] = clamped
+        }
+        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun resetToDefaults() {

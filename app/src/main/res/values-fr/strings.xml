@@ -1849,6 +1849,8 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Vitesse en dessous de laquelle l\'enregistrement est mis en pause</string>
     <string name="tuning_auto_pause_debounce_title">Délai avant pause</string>
     <string name="tuning_auto_pause_debounce_desc">Durée sous le seuil avant de mettre en pause</string>
+    <string name="tuning_speed_value_format">%1 %2</string>
+    <string name="tuning_seconds_value_format">%1 s</string>
     <string name="cockpit_auto_pause_badge">Pause automatique</string>
     <string name="cockpit_auto_pause_resume">Reprendre maintenant</string>
     <string name="cockpit_speed_sensor_lost">Capteur de vitesse perdu</string>

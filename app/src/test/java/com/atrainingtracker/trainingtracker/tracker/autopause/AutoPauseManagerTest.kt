@@ -318,4 +318,148 @@ class AutoPauseManagerTest {
         assertEquals(AutoPauseState.SENSOR_LOST, nanTick.newState)
         assertEquals(0, autoPauseManager.debounceCounter)
     }
+
+    @Test
+    fun `TST-TRK-010_12 resume speed threshold user unit calculation and ceiling`() {
+        // Metric: offset 0.5 km/h, ceiling 6.0 km/h
+        assertEquals(1.5, AutoPauseManager.calculateResumeSpeedThresholdUserUnit(1.0, true), 0.001)
+        assertEquals(3.5, AutoPauseManager.calculateResumeSpeedThresholdUserUnit(3.0, true), 0.001)
+        assertEquals(5.5, AutoPauseManager.calculateResumeSpeedThresholdUserUnit(5.0, true), 0.001)
+        assertEquals(6.0, AutoPauseManager.calculateResumeSpeedThresholdUserUnit(5.8, true), 0.001)
+
+        // Imperial: offset 0.5 mph, ceiling 6.0 mph
+        assertEquals(1.5, AutoPauseManager.calculateResumeSpeedThresholdUserUnit(1.0, false), 0.001)
+        assertEquals(2.5, AutoPauseManager.calculateResumeSpeedThresholdUserUnit(2.0, false), 0.001)
+        assertEquals(5.5, AutoPauseManager.calculateResumeSpeedThresholdUserUnit(5.0, false), 0.001)
+        assertEquals(6.0, AutoPauseManager.calculateResumeSpeedThresholdUserUnit(5.8, false), 0.001)
+    }
+
+    @Test
+    fun `TST-TRK-010_13 sport specific decoupling for run and other`() {
+        val config = AutoPauseConfig(
+            bikeEnabled = true,
+            runEnabled = true,
+            otherEnabled = true,
+            bikeSpeedThreshold = 3,
+            bikeDebounceSec = 2,
+            runSpeedThreshold = 2,
+            runDebounceSec = 5,
+            otherSpeedThreshold = 1,
+            otherDebounceSec = 10,
+            isMetric = true
+        )
+        val now = 100000L
+
+        // Run profile: 1.5 km/h is below 2.0 km/h threshold
+        val runSpeedMps = 1.5 / 3.6
+
+        // Ticks 1 to 4: in PAUSE_DEBOUNCE_PENDING
+        for (i in 1..4) {
+            val trans = autoPauseManager.evaluateTick(
+                currentSpeedMps = runSpeedMps,
+                packetTimestampMs = now + (i * 1000L),
+                currentTimestampMs = now + (i * 1000L),
+                sportType = BSportType.RUN,
+                config = config,
+                manualPauseLocked = false
+            )
+            assertEquals(AutoPauseState.PAUSE_DEBOUNCE_PENDING, trans.newState)
+            assertFalse(trans.triggerPause)
+            assertEquals(i, autoPauseManager.debounceCounter)
+        }
+
+        // Tick 5: reaches debounceSec=5 -> transitions to AUTO_PAUSED
+        val trans5 = autoPauseManager.evaluateTick(
+            currentSpeedMps = runSpeedMps,
+            packetTimestampMs = now + 5000L,
+            currentTimestampMs = now + 5000L,
+            sportType = BSportType.RUN,
+            config = config,
+            manualPauseLocked = false
+        )
+        assertEquals(AutoPauseState.AUTO_PAUSED, trans5.newState)
+        assertTrue(trans5.triggerPause)
+
+        // Hysteresis deadband: 2.2 km/h is > 2.0 km/h but <= 2.5 km/h resume threshold -> stays AUTO_PAUSED
+        val deadbandTick = autoPauseManager.evaluateTick(
+            currentSpeedMps = 2.2 / 3.6,
+            packetTimestampMs = now + 6000L,
+            currentTimestampMs = now + 6000L,
+            sportType = BSportType.RUN,
+            config = config,
+            manualPauseLocked = false
+        )
+        assertEquals(AutoPauseState.AUTO_PAUSED, deadbandTick.newState)
+        assertFalse(deadbandTick.triggerResume)
+
+        // Resume: 2.6 km/h is > 2.5 km/h resume threshold -> resumes
+        val resumeTick = autoPauseManager.evaluateTick(
+            currentSpeedMps = 2.6 / 3.6,
+            packetTimestampMs = now + 7000L,
+            currentTimestampMs = now + 7000L,
+            sportType = BSportType.RUN,
+            config = config,
+            manualPauseLocked = false
+        )
+        assertEquals(AutoPauseState.TRACKING, resumeTick.newState)
+        assertTrue(resumeTick.triggerResume)
+    }
+
+    @Test
+    fun `TST-TRK-010_14 imperial unit conversion evaluateTick`() {
+        val config = AutoPauseConfig(
+            bikeEnabled = true,
+            bikeSpeedThreshold = 2, // 2 mph = 0.89408 m/s
+            bikeDebounceSec = 2,
+            isMetric = false
+        )
+        val now = 100000L
+
+        // Speed 0.8 m/s is < 2 mph (0.894 m/s)
+        val tick1 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 0.8,
+            packetTimestampMs = now,
+            currentTimestampMs = now,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false
+        )
+        assertEquals(AutoPauseState.PAUSE_DEBOUNCE_PENDING, tick1.newState)
+
+        val tick2 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 0.8,
+            packetTimestampMs = now + 1000L,
+            currentTimestampMs = now + 1000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false
+        )
+        assertEquals(AutoPauseState.AUTO_PAUSED, tick2.newState)
+        assertTrue(tick2.triggerPause)
+
+        // Speed 1.0 m/s is > 2.0 mph (0.894 m/s) but < 2.5 mph (1.1176 m/s) -> deadband, stays paused
+        val tick3 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 1.0,
+            packetTimestampMs = now + 2000L,
+            currentTimestampMs = now + 2000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false
+        )
+        assertEquals(AutoPauseState.AUTO_PAUSED, tick3.newState)
+        assertFalse(tick3.triggerResume)
+
+        // Speed 1.2 m/s is > 2.5 mph (1.1176 m/s) -> triggers resume
+        val tick4 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 1.2,
+            packetTimestampMs = now + 3000L,
+            currentTimestampMs = now + 3000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false
+        )
+        assertEquals(AutoPauseState.TRACKING, tick4.newState)
+        assertTrue(tick4.triggerResume)
+    }
 }
+
