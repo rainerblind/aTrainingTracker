@@ -19,6 +19,16 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
+import androidx.compose.material.icons.filled.PauseCircle
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.runtime.DisposableEffect
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -26,6 +36,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -181,6 +192,21 @@ fun SensorGridScreen(
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
         initial = TuningConfig()
     )
+    var isAutoPaused by remember { mutableStateOf(TrainingApplication.isAutoPaused()) }
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context?, intent: Intent?) {
+                isAutoPaused = TrainingApplication.isAutoPaused()
+            }
+        }
+        val filter = IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED)
+        ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        onDispose {
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (ignored: Exception) {}
+        }
+    }
     val activeVariantStyle = remember(tuningConfig.sensorFieldVariant) {
         SensorFieldStyle.forVariant(tuningConfig.sensorFieldVariant)
     }
@@ -640,19 +666,36 @@ fun SensorGridScreen(
                     }
                 }
 
-                // Ambient Navigation Overlays floating at top of tracking tab across all views (REQ-UI-348 / ATT-3170)
-                if (state.showNavigationHints) {
-                    NavigationHintsOverlay(
-                        state = state,
-                        tuningConfig = tuningConfig,
-                        navigationState = navState,
-                        returnNavigationState = returnNavState,
-                        forkDecisionState = forkDecisionState,
-                        onDismissReturnNav = { returnNavRepo.dismissHud() },
-                        onSelectForkRoute = { routeId -> forkNavRepo.selectRouteManually(routeId) },
-                        onDismissFork = { forkNavRepo.dismissPrompt() },
-                        modifier = Modifier.align(Alignment.TopCenter)
-                    )
+                // Ambient Navigation Overlays & Auto-Pause Pill floating at top of tracking tab (REQ-UI-348 / REQ-TRK-018)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (state.showNavigationHints) {
+                        NavigationHintsOverlay(
+                            state = state,
+                            tuningConfig = tuningConfig,
+                            navigationState = navState,
+                            returnNavigationState = returnNavState,
+                            forkDecisionState = forkDecisionState,
+                            onDismissReturnNav = { returnNavRepo.dismissHud() },
+                            onSelectForkRoute = { routeId -> forkNavRepo.selectRouteManually(routeId) },
+                            onDismissFork = { forkNavRepo.dismissPrompt() }
+                        )
+                    }
+
+                    if (isAutoPaused) {
+                        AutoPauseHudBanner(
+                            onManualResume = {
+                                val intent = Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED).apply {
+                                    `package` = context.packageName
+                                }
+                                context.sendBroadcast(intent)
+                            }
+                        )
+                    }
                 }
 
                 // Bottom swipe-up gesture detector & tap-to-expand strip (REQ-UI-359 / ATT-3341)
@@ -690,6 +733,67 @@ fun SensorGridScreen(
         }
     }
 
+    }
+}
+
+/**
+ * Ambient amber pill HUD banner displayed when tracking is auto-paused (REQ-TRK-018 / ATT-45).
+ * Features high-contrast amber styling and a "Resume Now" manual override button.
+ */
+@Composable
+fun AutoPauseHudBanner(
+    onManualResume: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val containerColor = if (isDark) Color(0xFF4E2C00) else Color(0xFFFFE082)
+    val contentColor = if (isDark) Color(0xFFFFE082) else Color(0xFF3E2723)
+    val actionColor = if (isDark) Color(0xFFFFD54F) else Color(0xFF6D3B00)
+    val borderColor = if (isDark) Color(0xFFFFB74D) else Color(0xFFFFA000)
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = containerColor,
+        contentColor = contentColor,
+        border = BorderStroke(1.5.dp, borderColor),
+        tonalElevation = 4.dp,
+        modifier = modifier
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.PauseCircle,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = stringResource(R.string.cockpit_auto_pause_badge),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = contentColor
+            )
+            FilledTonalButton(
+                onClick = onManualResume,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = actionColor,
+                    contentColor = if (isDark) Color.Black else Color.White
+                ),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier.height(32.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.cockpit_auto_pause_resume),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     }
 }
 

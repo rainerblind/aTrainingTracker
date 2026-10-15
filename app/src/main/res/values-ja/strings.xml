@@ -1807,5 +1807,19 @@
     <string name="zone_onboarding_pwr_banner">新しいパワーメーターがペアリングされました。パワーゾーンを設定するか、FTPから計算してください。</string>
     <string name="zone_onboarding_dismiss">了解</string>
 
+    <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="tuning_auto_pause_title">オートポーズ</string>
+    <string name="tuning_auto_pause_desc">停止時に記録を自動的に一時停止します</string>
+    <string name="tuning_auto_pause_bike_title">サイクリング</string>
+    <string name="tuning_auto_pause_run_title">ランニング</string>
+    <string name="tuning_auto_pause_other_title">その他のスポーツ</string>
+    <string name="tuning_auto_pause_speed_threshold_title">一時停止速度しきい値</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">記録が一時停止される速度のしきい値</string>
+    <string name="tuning_auto_pause_debounce_title">一時停止遅延時間</string>
+    <string name="tuning_auto_pause_debounce_desc">一時停止するまでのしきい値以下の継続時間</string>
+    <string name="cockpit_auto_pause_badge">オートポーズ</string>
+    <string name="cockpit_auto_pause_resume">今すぐ再開</string>
+    <string name="cockpit_speed_sensor_lost">スピードセンサー喪失</string>
+
 </resources>
 

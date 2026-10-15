@@ -2018,6 +2018,20 @@
     <string name="zone_onboarding_pwr_banner">New power meter paired. Set your power zones or calculate them from your FTP.</string>
     <string name="zone_onboarding_dismiss">Dismiss</string>
 
+    <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="tuning_auto_pause_title">Auto-Pause</string>
+    <string name="tuning_auto_pause_desc">Automatically pause recording when stationary</string>
+    <string name="tuning_auto_pause_bike_title">Cycling</string>
+    <string name="tuning_auto_pause_run_title">Running</string>
+    <string name="tuning_auto_pause_other_title">Other Sports</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Pause Speed Threshold</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Speed below which recording is paused</string>
+    <string name="tuning_auto_pause_debounce_title">Pause Debounce Delay</string>
+    <string name="tuning_auto_pause_debounce_desc">Duration below threshold before pausing</string>
+    <string name="cockpit_auto_pause_badge">Auto-Pause</string>
+    <string name="cockpit_auto_pause_resume">Resume Now</string>
+    <string name="cockpit_speed_sensor_lost">Speed Sensor Lost</string>
+
 </resources>
 
 

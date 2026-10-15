@@ -1826,6 +1826,19 @@
     <string name="zone_onboarding_hr_banner">Novo sensor de frequência cardíaca emparelhado. Configure suas zonas de FC para obter feedback personalizado.</string>
     <string name="zone_onboarding_pwr_banner">Novo medidor de potência emparelhado. Configure suas zonas de potência ou calcule-as a partir do seu FTP.</string>
     <string name="zone_onboarding_dismiss">Entendido</string>
+    <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="tuning_auto_pause_title">Pausa automática</string>
+    <string name="tuning_auto_pause_desc">Pausar gravação automaticamente quando parado</string>
+    <string name="tuning_auto_pause_bike_title">Ciclismo</string>
+    <string name="tuning_auto_pause_run_title">Corrida</string>
+    <string name="tuning_auto_pause_other_title">Outros esportes</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Limite de velocidade para pausa</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Velocidade abaixo da qual a gravação é pausada</string>
+    <string name="tuning_auto_pause_debounce_title">Atraso para pausa</string>
+    <string name="tuning_auto_pause_debounce_desc">Duração abaixo do limite antes de pausar</string>
+    <string name="cockpit_auto_pause_badge">Pausa automática</string>
+    <string name="cockpit_auto_pause_resume">Retomar agora</string>
+    <string name="cockpit_speed_sensor_lost">Sensor de velocidade perdido</string>
 
 </resources>
 

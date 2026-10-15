@@ -1912,4 +1912,18 @@
     <string name="zone_onboarding_pwr_banner">Neuer Leistungsmesser gekoppelt. Richten Sie Ihre Leistungszonen ein oder berechnen Sie diese aus Ihrer FTP.</string>
     <string name="zone_onboarding_dismiss">Verstanden</string>
 
+    <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="tuning_auto_pause_title">Auto-Pause</string>
+    <string name="tuning_auto_pause_desc">Aufzeichnung bei Stillstand automatisch pausieren</string>
+    <string name="tuning_auto_pause_bike_title">Radfahren</string>
+    <string name="tuning_auto_pause_run_title">Laufen</string>
+    <string name="tuning_auto_pause_other_title">Andere Sportarten</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Mindestgeschwindigkeit für Pause</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Geschwindigkeit, unter der die Aufzeichnung pausiert wird</string>
+    <string name="tuning_auto_pause_debounce_title">Verzögerung bis zur Pause</string>
+    <string name="tuning_auto_pause_debounce_desc">Dauer unterhalb der Schwelle, bevor pausiert wird</string>
+    <string name="cockpit_auto_pause_badge">Auto-Pause</string>
+    <string name="cockpit_auto_pause_resume">Jetzt fortsetzen</string>
+    <string name="cockpit_speed_sensor_lost">Geschwindigkeitssensor verloren</string>
+
 </resources>

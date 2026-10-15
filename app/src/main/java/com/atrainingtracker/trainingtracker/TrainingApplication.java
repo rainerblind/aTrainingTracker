@@ -79,12 +79,16 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TrainingApplication extends Application {
     private static final boolean DEBUG = BuildConfig.DEBUG;
     // some Strings to handle tracking globally
     public static final String REQUEST_START_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING";
     public static final String REQUEST_PAUSE_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_PAUSE_TRACKING";
+    public static final String EXTRA_IS_AUTO_PAUSE = "com.atrainingtracker.trainingapplication.EXTRA_IS_AUTO_PAUSE";
+    public static final String SP_MANUAL_PAUSE_LOCK = "manual_pause_lock";
+    public static final String SP_IS_AUTO_PAUSED = "is_auto_paused";
     public static final String REQUEST_RESUME_FROM_PAUSED = "com.atrainingtracker.trainingapplication.REQUEST_RESUME_FROM_PAUSED";
     public static final String REQUEST_STOP_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_STOP_TRACKING";
     public static final String TRACKING_STATE_CHANGED = "com.atrainingtracker.trainingapplication.TRACKING_STATE_CHANGED";
@@ -227,6 +231,8 @@ public class TrainingApplication extends Application {
     protected static Context cAppContext;
     @NonNull
     protected static TrackingMode cTrackingMode = TrackingMode.READY;
+    private static final AtomicBoolean mManualPauseLock = new AtomicBoolean(false);
+    private static final AtomicBoolean mIsAutoPaused = new AtomicBoolean(false);
     protected static boolean cResumeFromCrash = false;
     private static SharedPreferences cSharedPreferences;
     private final IntentFilter mSearchingFinishedFilter = new IntentFilter(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
@@ -280,7 +286,8 @@ public class TrainingApplication extends Application {
     protected final BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            pauseTracking();
+            boolean isAutoPause = (intent != null) && intent.getBooleanExtra(EXTRA_IS_AUTO_PAUSE, false);
+            pauseTracking(isAutoPause);
         }
     };
     protected final BroadcastReceiver mResumeFromPaused = new BroadcastReceiver() {
@@ -1260,6 +1267,38 @@ public class TrainingApplication extends Application {
         return cTrackingMode != TrackingMode.TRACKING;
     }
 
+    public static boolean isManualPauseLocked() {
+        return mManualPauseLock.get();
+    }
+
+    public static void setManualPauseLock(boolean locked, Context context) {
+        mManualPauseLock.set(locked);
+        if (context != null) {
+            PreferenceManager.getDefaultSharedPreferences(context)
+                    .edit()
+                    .putBoolean(SP_MANUAL_PAUSE_LOCK, locked)
+                    .apply();
+        }
+    }
+
+    public static boolean isAutoPaused() {
+        return mIsAutoPaused.get();
+    }
+
+    public static void setAutoPaused(boolean autoPaused, Context context) {
+        mIsAutoPaused.set(autoPaused);
+        if (context != null) {
+            PreferenceManager.getDefaultSharedPreferences(context)
+                    .edit()
+                    .putBoolean(SP_IS_AUTO_PAUSED, autoPaused)
+                    .apply();
+        }
+    }
+
+    public static boolean isRecordingSuspended() {
+        return isPaused() || isAutoPaused();
+    }
+
     public static boolean isTracking() {
         return cTrackingMode != TrackingMode.READY;
     }  // correct?
@@ -1331,6 +1370,8 @@ public class TrainingApplication extends Application {
         PreferenceManager.setDefaultValues(this, R.xml.prefs_strava, false);
         PreferenceManager.setDefaultValues(this, R.xml.prefs_dropbox, false);
         cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        mManualPauseLock.set(cSharedPreferences.getBoolean(SP_MANUAL_PAUSE_LOCK, false));
+        mIsAutoPaused.set(cSharedPreferences.getBoolean(SP_IS_AUTO_PAUSED, false));
 
         // ATT-3163 / REQ-UI-342: Intercept missing platform SelectGesture on Android 14+ OEM devices
         com.atrainingtracker.trainingtracker.ui.common.ComposeHandwritingResilience.install();
@@ -1608,8 +1649,19 @@ public class TrainingApplication extends Application {
      * of tracking rather than an athletic lap split. No {@link #REQUEST_NEW_LAP} broadcast is sent,
      * ensuring the active lap remains open across pauses.
      */
-    protected void pauseTracking() {
-        if (DEBUG) Log.d(TAG, "pause tracking");
+    public void pauseTracking() {
+        pauseTracking(false);
+    }
+
+    public void pauseTracking(boolean isAutoPause) {
+        if (DEBUG) Log.d(TAG, "pause tracking (isAutoPause=" + isAutoPause + ")");
+
+        if (isAutoPause) {
+            setAutoPaused(true, this);
+        } else {
+            setManualPauseLock(true, this);
+            setAutoPaused(false, this);
+        }
 
         cTrackingMode = TrackingMode.PAUSED;
         notifyTrackingStateChanged();
@@ -1624,8 +1676,11 @@ public class TrainingApplication extends Application {
      * <p>Implementation Logic: In accordance with {@code REQ-TRK-002}, resuming continues the
      * active lap seamlessly without sending {@link #REQUEST_NEW_LAP}.
      */
-    protected void resumeFromPaused() {
+    public void resumeFromPaused() {
         if (DEBUG) Log.d(TAG, "resume tracking");
+
+        setManualPauseLock(false, this);
+        setAutoPaused(false, this);
 
         if (TrainingApplication.startSearchWhenResumeFromPaused()) {
             sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
@@ -1637,6 +1692,9 @@ public class TrainingApplication extends Application {
     }
 
     protected void stopTracking() {
+        setManualPauseLock(false, this);
+        setAutoPaused(false, this);
+
         stopPebbleWatchapp();
 
         stopService(new Intent(this, TrackerService.class));

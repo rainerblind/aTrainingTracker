@@ -34,6 +34,7 @@ public class MySensor<T> {
     protected T mValue = null;
     protected boolean mActivated = true;
     protected LinkedList<SensorListener> mSensorListeners = new LinkedList<>();
+    protected long mLastUpdateTimestamp = 0L;
 
     public MySensor(MyDevice myDevice, SensorType sensorType) {
         mDevice = myDevice;
@@ -66,6 +67,7 @@ public class MySensor<T> {
         if (DEBUG) Log.i(TAG, "newValue for " + mDevice + ", " + mSensorType + ": " + value);
         if (mActivated) {
             mValue = value;
+            mLastUpdateTimestamp = System.currentTimeMillis();
 
             // inform all the listeners
             for (SensorListener sensorListener : mSensorListeners) {
@@ -106,7 +108,7 @@ public class MySensor<T> {
     }
 
     public SensorData<T> getSensorData() {
-        return new SensorData<T>(getSensorType(), getValue(), getStringValue(), getDeviceName());
+        return new SensorData<T>(getSensorType(), getValue(), getStringValue(), getDeviceName(), mLastUpdateTimestamp);
     }
 
     public interface SensorListener<T> {
