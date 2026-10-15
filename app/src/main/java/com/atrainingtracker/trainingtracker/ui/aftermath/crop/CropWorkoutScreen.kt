@@ -45,6 +45,24 @@ import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import kotlin.math.roundToInt
 
+/**
+ * Interactive bottom sheet composable for trimming extraneous start and end samples of a recorded workout (REQ-UI-368).
+ *
+ * ### Layout Architecture & Constraints:
+ * - **Sheet Container**: Hosted within [AppModalBottomSheet].
+ * - **Header**: Fixed at the top with localized title and dismiss button.
+ * - **Action Bar (`actions`)**: Fixed and pinned at the bottom above system navigation bars via [AppModalBottomSheet]'s
+ *   action slot, ensuring "Cancel" and "Crop" buttons remain permanently visible regardless of device viewport size.
+ * - **Content Body**: Constrained between header and action bar via [AppModalBottomSheet]'s native scrolling container
+ *   (`Modifier.weight(1f, fill = false).verticalScroll(...)`).
+ * - **Constraint Invariant**: The inner content [Column] must **never** declare `Modifier.verticalScroll` or nested
+ *   unbounded height modifiers. Doing so would violate Compose scroll container constraints and trigger a fatal
+ *   `IllegalStateException` ("Vertically scrollable component was measured with an infinity maximum height constraints").
+ *
+ * @param workoutId Unique database identifier of the completed workout to crop.
+ * @param onDismiss Callback invoked when the athlete dismisses or closes the bottom sheet.
+ * @param viewModel ViewModel managing sample point loading, range scrubbing state, and crop execution.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CropWorkoutScreen(

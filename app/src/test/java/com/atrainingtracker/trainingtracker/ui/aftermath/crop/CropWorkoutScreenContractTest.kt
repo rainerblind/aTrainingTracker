@@ -99,17 +99,33 @@ class CropWorkoutScreenContractTest {
         assertFalse(CropWorkoutMath.isCropValid(2, 10, total, 10.0))
     }
 
+    /**
+     * Verifies that [CropWorkoutScreen] does not declare an inner [Modifier.verticalScroll] on its content column.
+     * Hosting [CropWorkoutScreen] inside [AppModalBottomSheet] already wraps the body in a scrollable column;
+     * nesting an inner verticalScroll creates an unconstrained infinity height measurement that triggers a fatal
+     * [IllegalStateException] on Android runtime.
+     */
     @Test
     fun testCropWorkoutScreen_doesNotDeclareNestedVerticalScroll_preventingInfinityHeightConstraintCrash() {
-        val file = java.io.File("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/crop/CropWorkoutScreen.kt")
-        val altFile = java.io.File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/crop/CropWorkoutScreen.kt")
-        val targetFile = if (file.exists()) file else altFile
+        val targetFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/crop/CropWorkoutScreen.kt")
         assertTrue("CropWorkoutScreen.kt source file must exist", targetFile.exists())
 
         val source = targetFile.readText()
+        val codeWithoutComments = Regex("""/\*.*?\*/""", RegexOption.DOT_MATCHES_ALL).replace(source, "")
+            .replace(Regex("""//.*"""), "")
         assertFalse(
-            "CropWorkoutScreen must NOT contain verticalScroll to prevent nested scroll crashes inside AppModalBottomSheet",
-            source.contains(".verticalScroll(") || source.contains("rememberScrollState")
+            "CropWorkoutScreen code must NOT contain verticalScroll to prevent nested scroll crashes inside AppModalBottomSheet",
+            codeWithoutComments.contains(".verticalScroll(") || codeWithoutComments.contains("rememberScrollState")
         )
+    }
+
+    private fun findSourceFile(relativePath: String): java.io.File {
+        val candidates = listOf(
+            java.io.File(relativePath),
+            java.io.File("app/$relativePath"),
+            java.io.File("../app/$relativePath")
+        )
+        return candidates.firstOrNull { it.exists() }
+            ?: error("Target file '$relativePath' not found in candidates: $candidates")
     }
 }
