@@ -50,6 +50,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 
 @Composable
@@ -144,7 +145,7 @@ private fun ControlItem(
             if (hasPermissionWarning) {
                 Surface(
                     shape = CircleShape,
-                    color = Color(0xFFF59E0B),
+                    color = TTColor.PauseAmber,
                     contentColor = Color.White,
                     modifier = Modifier
                         .align(Alignment.TopEnd)

@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 /**
  * Design specifications and configurable styling variants for cockpit sensor fields (REQ-UI-258, ATT-2058, REQ-UI-276, ATT-2456).
@@ -148,12 +149,12 @@ data class SensorFieldStyle(
             isSelectedForMove: Boolean = false
         ): BorderStroke? {
             if (isSelectedForMove) {
-                return BorderStroke(2.dp, Color(0xFF2196F3))
+                return BorderStroke(2.dp, TTColor.SensorActiveBorder)
             }
             if (borderThickness <= 0.dp) {
                 return null
             }
-            val subtleColor = if (isDarkTheme) Color(0xFF383838) else Color(0xFFD6D6D6)
+            val subtleColor = if (isDarkTheme) TTColor.SensorBorderDark else TTColor.SensorBorderLight
             val maxContrastColor = if (isDarkTheme) Color.White else Color.Black
             val t = borderContrast.coerceIn(0f, 1f)
             val color = lerp(subtleColor, maxContrastColor, t)

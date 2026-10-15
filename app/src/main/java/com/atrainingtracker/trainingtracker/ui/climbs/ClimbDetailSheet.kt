@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.ui.components.core.EntityDetailSheetScaffold
@@ -116,13 +117,13 @@ fun ClimbDetailElevationProfile(
             drawPath(
                 path = rampPath,
                 brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFFEF6C00).copy(alpha = 0.5f), Color.Transparent),
+                    colors = listOf(TTColor.ClimbCategory2.copy(alpha = 0.5f), Color.Transparent),
                     startY = 0f,
                     endY = height
                 )
             )
             drawLine(
-                color = Color(0xFFEF6C00),
+                color = TTColor.ClimbCategory2,
                 start = Offset(0f, height),
                 end = Offset(width, 0f),
                 strokeWidth = 3.dp.toPx(),
@@ -153,14 +154,7 @@ fun ClimbDetailElevationProfile(
             val dAlt = p.altitude - pathPoints[i - 1].altitude
             val grade = if (dDist > 0) (dAlt / dDist) * 100.0 else 0.0
 
-            val segmentColor = when {
-                grade < 3.0 -> Color(0xFF4CAF50)
-                grade < 6.0 -> Color(0xFF8BC34A)
-                grade < 9.0 -> Color(0xFFFFC107)
-                grade < 12.0 -> Color(0xFFFF9800)
-                grade < 20.0 -> Color(0xFFE53935)
-                else -> Color(0xFF212121)
-            }
+            val segmentColor = TTColor.getClimbGradeColor(grade)
 
             val fillPath = Path().apply {
                 moveTo(prevX, height)

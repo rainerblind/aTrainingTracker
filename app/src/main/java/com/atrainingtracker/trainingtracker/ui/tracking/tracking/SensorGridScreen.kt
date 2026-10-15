@@ -132,6 +132,14 @@ import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingSheetContainer
 import com.atrainingtracker.trainingtracker.ui.components.core.sheetContour
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.theme.DarkOnWarningContainer
+import com.atrainingtracker.trainingtracker.ui.theme.DarkWarning
+import com.atrainingtracker.trainingtracker.ui.theme.DarkWarningAction
+import com.atrainingtracker.trainingtracker.ui.theme.DarkWarningContainer
+import com.atrainingtracker.trainingtracker.ui.theme.LightOnWarningContainer
+import com.atrainingtracker.trainingtracker.ui.theme.LightWarningAction
+import com.atrainingtracker.trainingtracker.ui.theme.LightWarningBorder
+import com.atrainingtracker.trainingtracker.ui.theme.LightWarningContainer
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
@@ -744,10 +752,10 @@ fun AutoPauseHudBanner(
     modifier: Modifier = Modifier
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val containerColor = if (isDark) Color(0xFF4E2C00) else Color(0xFFFFE082)
-    val contentColor = if (isDark) Color(0xFFFFE082) else Color(0xFF3E2723)
-    val actionColor = if (isDark) Color(0xFFFFD54F) else Color(0xFF6D3B00)
-    val borderColor = if (isDark) Color(0xFFFFB74D) else Color(0xFFFFA000)
+    val containerColor = if (isDark) DarkWarningContainer else LightWarningContainer
+    val contentColor = if (isDark) DarkOnWarningContainer else LightOnWarningContainer
+    val actionColor = if (isDark) DarkWarningAction else LightWarningAction
+    val borderColor = if (isDark) DarkWarning else LightWarningBorder
 
     Surface(
         shape = RoundedCornerShape(16.dp),

@@ -50,6 +50,7 @@ import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.getElevationGradeColor
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.LatLng
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -207,12 +208,12 @@ fun LiveClimbSheet(
 
 fun getClimbCategoryColors(category: ClimbCategory): Triple<Color, Color, Int> {
     return when (category) {
-        ClimbCategory.HC -> Triple(Color(0xFF880E4F), Color.White, R.string.climb_category_hc)
-        ClimbCategory.CAT_1 -> Triple(Color(0xFFC62828), Color.White, R.string.climb_category_cat1)
-        ClimbCategory.CAT_2 -> Triple(Color(0xFFEF6C00), Color.White, R.string.climb_category_cat2)
-        ClimbCategory.CAT_3 -> Triple(Color(0xFFF9A825), Color.Black, R.string.climb_category_cat3)
-        ClimbCategory.CAT_4 -> Triple(Color(0xFF2E7D32), Color.White, R.string.climb_category_cat4)
-        ClimbCategory.UNCATEGORIZED -> Triple(Color(0xFF757575), Color.White, R.string.climb_category_uc)
+        ClimbCategory.HC -> Triple(TTColor.ClimbCategoryHc, Color.White, R.string.climb_category_hc)
+        ClimbCategory.CAT_1 -> Triple(TTColor.ClimbCategory1, Color.White, R.string.climb_category_cat1)
+        ClimbCategory.CAT_2 -> Triple(TTColor.ClimbCategory2, Color.White, R.string.climb_category_cat2)
+        ClimbCategory.CAT_3 -> Triple(TTColor.ClimbCategory3, Color.Black, R.string.climb_category_cat3)
+        ClimbCategory.CAT_4 -> Triple(TTColor.ClimbCategory4, Color.White, R.string.climb_category_cat4)
+        ClimbCategory.UNCATEGORIZED -> Triple(TTColor.ClimbCategoryUncategorized, Color.White, R.string.climb_category_uc)
     }
 }
 
@@ -254,7 +255,7 @@ private fun ClimbStatusBadge(
         )
         LiveClimbStatus.FINISHED -> Triple(
             stringResource(R.string.climb_summit),
-            Color(0xFF2E7D32),
+            TTColor.ConnectionConnected,
             Color.White
         )
         LiveClimbStatus.FAR_FAR_AWAY -> Triple(

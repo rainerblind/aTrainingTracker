@@ -74,18 +74,18 @@ internal val DarkColorScheme = darkColorScheme(
 )
 
 internal val AmoledDarkColorScheme = DarkColorScheme.copy(
-    primaryContainer = Color(0xFF000000),
-    onPrimaryContainer = Color(0xFFFFFFFF),
+    primaryContainer = AmoledPrimaryContainer,
+    onPrimaryContainer = AmoledOnPrimaryContainer,
     background = AmoledBackground,
     surface = AmoledSurface,
     surfaceVariant = AmoledSurface,
     surfaceDim = AmoledSurface,
-    surfaceBright = Color(0xFF1A1A1A),
+    surfaceBright = AmoledSurfaceBright,
     surfaceContainerLowest = AmoledSurface,
     surfaceContainerLow = AmoledSurface,
     surfaceContainer = AmoledSurface,
-    surfaceContainerHigh = Color(0xFF121212),
-    surfaceContainerHighest = Color(0xFF000000),
+    surfaceContainerHigh = AmoledSurfaceContainerHigh,
+    surfaceContainerHighest = AmoledSurfaceContainerHighest,
     outline = AmoledOutline,
     outlineVariant = AmoledOutlineVariant,
     onSurface = Color.White,

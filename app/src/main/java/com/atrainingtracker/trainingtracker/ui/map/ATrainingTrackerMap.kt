@@ -28,6 +28,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -207,7 +208,7 @@ fun ATrainingTrackerMap(
             GoogleMap(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(if (isDark) Color(0xFF121212) else Color.White),
+                    .background(if (isDark) TTColor.DarkMapCanvas else Color.White),
                 cameraPositionState = cameraPositionState,
                 contentPadding = PaddingValues(top = topPadding),
                 onMapClick = { latLng -> onMapClick?.invoke(latLng) },

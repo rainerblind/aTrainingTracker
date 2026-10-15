@@ -857,7 +857,7 @@ fun WorkoutClusterDetailDashboard(
                         Icon(
                             imageVector = Icons.Filled.EmojiEvents,
                             contentDescription = null,
-                            tint = Color(0xFFFFD700),
+                            tint = TTColor.Gold,
                             modifier = Modifier.size(14.dp)
                         )
                         Text(

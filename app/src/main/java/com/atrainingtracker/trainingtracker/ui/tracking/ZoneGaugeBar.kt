@@ -152,7 +152,7 @@ fun ZoneGaugeBar(
 
                     // Dark shadow / outline (ensures > 12:1 contrast against bright zones like Chartreuse)
                     drawRoundRect(
-                        color = Color(0xFF1B1B1F),
+                        color = TTColor.ZoneGaugeTrack,
                         topLeft = Offset(needleLeft - 0.75.dp.toPx(), needleTop),
                         size = Size(needleWidthPx + 1.5.dp.toPx(), needleHeight),
                         cornerRadius = cornerRadius,
