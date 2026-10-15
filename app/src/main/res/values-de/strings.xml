@@ -1908,5 +1908,8 @@
     <string name="zone_calc_error_hr_max_greater_rest">HFmax muss größer als HFruhe sein</string>
     <string name="zone_calc_error_karvonen_delta">HFmax muss mindestens 20 bpm über HFruhe liegen</string>
     <string name="zone_calc_error_monotonicity">Wert muss zwischen %1$d und %2$d liegen</string>
+    <string name="zone_onboarding_hr_banner">Neuer Herzfrequenzsensor gekoppelt. Richten Sie Ihre Herzfrequenzzonen für personalisiertes Trainings-Feedback ein.</string>
+    <string name="zone_onboarding_pwr_banner">Neuer Leistungsmesser gekoppelt. Richten Sie Ihre Leistungszonen ein oder berechnen Sie diese aus Ihrer FTP.</string>
+    <string name="zone_onboarding_dismiss">Verstanden</string>
 
 </resources>

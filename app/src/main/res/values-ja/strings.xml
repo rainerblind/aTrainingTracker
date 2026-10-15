@@ -1803,6 +1803,9 @@
     <string name="zone_calc_error_hr_max_greater_rest">HRmaxはHRrestより大きくなければなりません</string>
     <string name="zone_calc_error_karvonen_delta">HRmaxはHRrestより少なくとも20 bpm高くなければなりません</string>
     <string name="zone_calc_error_monotonicity">値は %1$d から %2$d の間である必要があります</string>
+    <string name="zone_onboarding_hr_banner">新しい心拍数センサーがペアリングされました。パーソナライズされたトレーニングフィードバックのために心拍ゾーンを設定してください。</string>
+    <string name="zone_onboarding_pwr_banner">新しいパワーメーターがペアリングされました。パワーゾーンを設定するか、FTPから計算してください。</string>
+    <string name="zone_onboarding_dismiss">了解</string>
 
 </resources>
 

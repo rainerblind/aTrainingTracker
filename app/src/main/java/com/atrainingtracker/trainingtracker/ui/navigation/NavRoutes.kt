@@ -56,8 +56,22 @@ object NavRoutes {
     const val SHOES = "shoes"
     const val SPORT_TYPES = "sport_types"
     const val TRAINING_ZONES = "training_zones"
+    const val TRAINING_ZONES_PATTERN = "training_zones?initialTab={initialTab}&promptReason={promptReason}"
+    const val ARG_INITIAL_TAB = "initialTab"
+    const val ARG_PROMPT_REASON = "promptReason"
     const val BACKUP_RESTORE = "backup_restore"
     const val ADVANCED_SETTINGS = "advanced_settings"
+
+    /**
+     * Builds a navigation route to Training Zones, optionally parameterized with an initial tab and onboarding prompt reason (REQ-UI-374.3).
+     */
+    fun trainingZones(initialTab: Int = 0, promptReason: String? = null): String =
+        if (initialTab != 0 || promptReason != null) {
+            val reasonParam = promptReason?.let { "&promptReason=$it" } ?: ""
+            "training_zones?$ARG_INITIAL_TAB=$initialTab$reasonParam"
+        } else {
+            TRAINING_ZONES
+        }
 
     /**
      * Builds a navigation route to the central map, optionally parameterized with a target location ID.

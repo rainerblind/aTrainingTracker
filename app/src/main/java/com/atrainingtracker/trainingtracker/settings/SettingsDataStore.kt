@@ -114,6 +114,10 @@ class SettingsDataStore(
         val KEY_HR_MAX = intPreferencesKey("hr_max")
         val KEY_HR_REST = intPreferencesKey("hr_rest")
         val KEY_HR_CALC_METHOD = stringPreferencesKey("hr_calc_method")
+
+        // Zone Configuration Onboarding (ATT-3189, REQ-UI-374)
+        val KEY_IS_HR_ZONES_CONFIGURED = booleanPreferencesKey("is_hr_zones_configured")
+        val KEY_IS_PWR_ZONES_CONFIGURED = booleanPreferencesKey("is_pwr_zones_configured")
     }
 
     // --- HELPER: Map Enums to Keys ---
@@ -263,6 +267,49 @@ class SettingsDataStore(
         prefs[KEY_ZONE_CALC_VERSION] ?: CURRENT_ZONE_CALC_VERSION
     }
 
+    /**
+     * Flow emitting whether Heart Rate zones have been customized, calculated, or explicitly configured (REQ-UI-374.2).
+     * If unset in DataStore, uses migration fallback heuristic checking existing baselines or custom flags.
+     */
+    val isHrZonesConfigured: Flow<Boolean> = dataStore.data.map { prefs ->
+        val explicit = prefs[KEY_IS_HR_ZONES_CONFIGURED]
+        if (explicit != null) {
+            explicit
+        } else {
+            val hrMax = prefs[KEY_HR_MAX]
+            val hrRunCustomized = prefs[KEY_HR_RUN_ZONES_CUSTOMIZED] ?: false
+            val hrBikeCustomized = prefs[KEY_HR_BIKE_ZONES_CUSTOMIZED] ?: false
+            (hrMax != null && hrMax > 0) || hrRunCustomized || hrBikeCustomized
+        }
+    }
+
+    /**
+     * Flow emitting whether Cycling Power zones have been customized, calculated, or explicitly configured (REQ-UI-374.2).
+     * If unset in DataStore, uses migration fallback heuristic checking existing FTP or custom flags.
+     */
+    val isPwrZonesConfigured: Flow<Boolean> = dataStore.data.map { prefs ->
+        val explicit = prefs[KEY_IS_PWR_ZONES_CONFIGURED]
+        if (explicit != null) {
+            explicit
+        } else {
+            val ftp = prefs[KEY_CYCLING_FTP]
+            val pwrCustomized = prefs[KEY_PWR_BIKE_ZONES_CUSTOMIZED] ?: false
+            (ftp != null && ftp > 0) || pwrCustomized
+        }
+    }
+
+    suspend fun setHrZonesConfigured(configured: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_IS_HR_ZONES_CONFIGURED] = configured
+        }
+    }
+
+    suspend fun setPwrZonesConfigured(configured: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_IS_PWR_ZONES_CONFIGURED] = configured
+        }
+    }
+
     // -- Helper: getSummary
     fun getSummary(zoneType: ZoneType): String = runBlocking {
         val z1Max = getZone1MaxFlow(zoneType).first()
@@ -286,11 +333,16 @@ class SettingsDataStore(
         dataStore.edit { prefs ->
             prefs[key] = value
             prefs[customizedKey] = true
+            if (zoneType == ZoneType.PWR_BIKE) {
+                prefs[KEY_IS_PWR_ZONES_CONFIGURED] = true
+            } else {
+                prefs[KEY_IS_HR_ZONES_CONFIGURED] = true
+            }
         }
     }
 
     /**
-     * Atomically saves calculated cycling power zones and FTP baseline conforming to REQ-UI-373.1, REQ-UI-373.5.
+     * Atomically saves calculated cycling power zones and FTP baseline conforming to REQ-UI-373.1, REQ-UI-373.5, REQ-UI-374.2.
      * All writes occur within a single dataStore.edit { } ACID transaction.
      */
     suspend fun saveCalculatedPowerZones(ftp: Int, cutoffs: List<Int>) {
@@ -303,6 +355,7 @@ class SettingsDataStore(
             prefs[KEY_CYCLING_FTP] = ftp
             prefs[KEY_CYCLING_FTP_UPDATED_AT] = System.currentTimeMillis()
             prefs[KEY_PWR_BIKE_ZONES_CUSTOMIZED] = false
+            prefs[KEY_IS_PWR_ZONES_CONFIGURED] = true
             prefs[KEY_ZONE_CALC_VERSION] = CURRENT_ZONE_CALC_VERSION
 
             prefs[PWR_BIKE_ZONE1_MAX] = cutoffs[0]
@@ -315,7 +368,7 @@ class SettingsDataStore(
     }
 
     /**
-     * Atomically saves calculated heart rate zones and baselines conforming to REQ-UI-373.2, REQ-UI-373.5.
+     * Atomically saves calculated heart rate zones and baselines conforming to REQ-UI-373.2, REQ-UI-373.5, REQ-UI-374.2.
      * All writes occur within a single dataStore.edit { } ACID transaction.
      */
     suspend fun saveCalculatedHeartRateZones(
@@ -347,6 +400,7 @@ class SettingsDataStore(
             }
             prefs[KEY_HR_CALC_METHOD] = method
             prefs[customizedKey] = false
+            prefs[KEY_IS_HR_ZONES_CONFIGURED] = true
             prefs[KEY_ZONE_CALC_VERSION] = CURRENT_ZONE_CALC_VERSION
 
             prefs[k1] = cutoffs[0]
