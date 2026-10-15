@@ -29,38 +29,52 @@ The mandate for this implementation is to **faithfully redraw the existing icons
 
 ### 2.1 Vector Assets in `app/src/main/res/drawable/`
 1. **Sport Icons (3)**:
-   - `bsport_bike.xml` (Viewport 192×192, 24dp×24dp, `android:tintMode="src_in"`)
-   - `bsport_run.xml` (Viewport 192×192, 24dp×24dp, `android:tintMode="src_in"`)
-   - `bsport_other.xml` (Viewport 192×192, 24dp×24dp, `android:tintMode="src_in"`)
+   - `bsport_bike.xml` (Viewport 192×192, 24dp×24dp)
+   - `bsport_run.xml` (Viewport 192×192, 24dp×24dp)
+   - `bsport_other.xml` (Viewport 192×192, 24dp×24dp)
 2. **ANT+ Sensor Badges (7)**:
-   - `hr.xml` (Viewport 96×96, 24dp×24dp, `android:tintMode="src_in"`)
-   - `bike_spd.xml` (Viewport 96×96, 24dp×24dp, `android:tintMode="src_in"`)
-   - `bike_cad.xml` (Viewport 96×96, 24dp×24dp, `android:tintMode="src_in"`)
-   - `bike_speed_and_cadence.xml` (Viewport 96×96, 24dp×24dp, `android:tintMode="src_in"`)
-   - `bike_pwr.xml` (Viewport 96×96, 24dp×24dp, `android:tintMode="src_in"`)
-   - `run_spd.xml` (Viewport 96×96, 24dp×24dp, `android:tintMode="src_in"`)
-   - `temp.xml` (Viewport 96×96, 24dp×24dp, `android:tintMode="src_in"`)
+   - `hr.xml` (Viewport 96×96, 24dp×24dp)
+   - `bike_spd.xml` (Viewport 96×96, 24dp×24dp)
+   - `bike_cad.xml` (Viewport 96×96, 24dp×24dp)
+   - `bike_speed_and_cadence.xml` (Viewport 96×96, 24dp×24dp)
+   - `bike_pwr.xml` (Viewport 96×96, 24dp×24dp)
+   - `run_spd.xml` (Viewport 96×96, 24dp×24dp)
+   - `temp.xml` (Viewport 96×96, 24dp×24dp)
 3. **Bluetooth LE Sensor Badges (6)**:
-   - `bt_hr.xml` (Viewport 96×96, 24dp×24dp, `android:tintMode="src_in"`)
-   - `bt_bike_spd.xml` (Viewport 96×96, 24dp×24dp, `android:tintMode="src_in"`)
-   - `bt_bike_cad.xml` (Viewport 96×96, 24dp×24dp, `android:tintMode="src_in"`)
-   - `bt_bike_speed_and_cadence.xml` (Viewport 96×96, 24dp×24dp, `android:tintMode="src_in"`)
-   - `bt_bike_pwr.xml` (Viewport 96×96, 24dp×24dp, `android:tintMode="src_in"`)
-   - `bt_run.xml` (Viewport 96×96, 24dp×24dp, `android:tintMode="src_in"`)
+   - `bt_hr.xml` (Viewport 96×96, 24dp×24dp)
+   - `bt_bike_spd.xml` (Viewport 96×96, 24dp×24dp)
+   - `bt_bike_cad.xml` (Viewport 96×96, 24dp×24dp)
+   - `bt_bike_speed_and_cadence.xml` (Viewport 96×96, 24dp×24dp)
+   - `bt_bike_pwr.xml` (Viewport 96×96, 24dp×24dp)
+   - `bt_run.xml` (Viewport 96×96, 24dp×24dp)
 
-### 2.2 Tinting & Multi-Color Rendering Strategy
-- **Compose Tinting Preservation**: In Jetpack Compose, the `Icon` composable applies `tint = LocalContentColor.current` by default, which flattens multi-color drawables into a single monochrome silhouette. For multi-color sport assets (`bsport_bike`, `bsport_other`) and badge assets, consumers use `Image(painter = painterResource(...), contentDescription = ...)` without a tint filter (or with `Color.Unspecified`) to ensure the multi-color paths render with complete visual fidelity.
-- **`android:tintMode="src_in"`**: All XML `<vector>` definitions specify `android:tintMode="src_in"` to maintain predictable blending when legacy XML `ImageView` or Android framework tint attributes are applied.
+### 2.2 Tinting Strategy & Monochrome Flattening Prevention
+- **Multi-Color Assets (`bsport_bike`, `bsport_other`)**:
+  - **No XML Tint**: Must **NOT** define `android:tint` or `android:tintMode` at the vector root.
+  - **Compose Consumer Policy**: Consumers must use `Image(painter = painterResource(...), contentDescription = ...)` without a tint filter (or with `Color.Unspecified`). Calling Compose `Icon(..., tint = LocalContentColor.current)` is strictly prohibited on multi-color assets to prevent collapsing them into monochrome.
+- **Badges and Single-Color Assets**:
+  - ANT+ and BLE badges embed their own background and foreground colors directly in vector paths. No outer tint is applied.
 
-### 2.3 Files to Purge & Code Audit
-- **Code Audit on `_gray` assets**: A comprehensive scan reveals zero production code references to `bsport_bike_gray`, `bsport_run_gray`, or `bsport_other_gray` (only `SportTypeSelectorContractTest.kt` checked the files). `SportTypeSelector.kt` uses Compose alpha / selection state styling rather than separate gray bitmaps.
-- **Purge Plan**:
-  - Update `SportTypeSelectorContractTest.kt` first to decouple from `_gray` assertions.
-  - Delete all 16 migrated `.png` files across `drawable-ldpi/`, `drawable-mdpi/`, `drawable-hdpi/`, `drawable-xhdpi/`, `drawable-xxhdpi/`, `drawable-xxxhdpi/`, and root `drawable/`.
-  - Delete all 18 instances of `bsport_bike_gray.png`, `bsport_run_gray.png`, `bsport_other_gray.png`.
-  - Delete all instances of `btle_hr.png`.
+### 2.3 Color Space Invariant (Standard sRGB)
+All color literals across all vector paths are strictly defined in standard 8-digit hexadecimal ARGB (sRGB color space), guaranteeing zero color shift across diverse display panels (AMOLED, IPS LCD):
+- **Black**: `#FF000000` (wheels, saddle, ANT+ background)
+- **Red**: `#FFFF0000` (bicycle frame, stopwatch crown)
+- **Blue**: `#FF0000FF` (cyclist rider, runner silhouette)
+- **Gold**: `#FFFFC700` (stopwatch ring body)
+- **Green**: `#FF008F00` (stopwatch right button)
+- **Dark Blue**: `#FF00008F` (stopwatch left button)
+- **Bluetooth Blue**: `#FF0A3D91` (BLE badge background)
+- **White**: `#FFFFFFFF` (glyphs, labels)
+- **Transparent**: `#00000000` (outer corners, canvas background)
 
-### 2.4 Performance Budget & Path Node Limits
+### 2.4 Project-Wide Reference Audit & Ghost Reference Elimination
+Before deleting any raster asset, execute a project-wide search across `app/src/main/res/layout/`, `app/src/main/res/values/`, `app/src/main/res/styles/`, and all `.kt`/`.java` files for:
+- `bsport_bike_gray`, `bsport_run_gray`, `bsport_other_gray`
+- `btle_hr`
+- Any hardcoded `.png` filename extensions.
+Any references found in contract tests or XML must be safely updated prior to deleting the underlying PNG files to prevent compile-time or runtime `Resources$NotFoundException`.
+
+### 2.5 Performance Budget & Path Node Limits
 - Each vector drawable is hand-optimized with minimal control points:
   - Clean geometric primitives: circles, rectangles with `rx`/`ry`, linear strokes, and simplified cubic/quadratic beziers.
   - Path node budget: $\le 15$ commands per path, total file size $< 3\text{ KB}$ per XML.
@@ -70,15 +84,15 @@ The mandate for this implementation is to **faithfully redraw the existing icons
 
 ## 3. Atomic Step-by-Step Implementation Sequence
 
-### Step 1: Update `SportTypeSelectorContractTest.kt` (Decouple from `_gray`)
-- Remove obsolete assertions checking for `bsport_*_gray.png`.
-- Update assertions to check for `.xml` vector resources in `app/src/main/res/drawable/`.
+### Step 1: Project-Wide Reference Audit & Test Decoupling
+- Grep codebase for `bsport_*_gray` and `btle_hr`.
+- Update `SportTypeSelectorContractTest.kt` to decouple from obsolete `_gray` PNG checks and assert `.xml` vector resources in `app/src/main/res/drawable/`.
 
 ### Step 2: Author `VectorAssetResolutionContractTest.kt`
 - Create `app/src/test/java/com/atrainingtracker/trainingtracker/resources/VectorAssetResolutionContractTest.kt`.
 - Implement tests verifying:
   - XML existence and parser validity for all 16 target assets.
-  - `android:tintMode="src_in"` specification across all vector drawables.
+  - Absence of unwanted root `android:tint` on multi-color assets.
   - Multi-color fills in `bsport_bike.xml` (black `#000000`, red `#FF0000`, blue `#0000FF`).
   - Single-color fill in `bsport_run.xml` (blue `#0000FF`).
   - Multi-color fills in `bsport_other.xml` (gold `#FFC700`, red `#FF0000`, green `#008F00`, blue `#00008F`).
@@ -87,26 +101,26 @@ The mandate for this implementation is to **faithfully redraw the existing icons
 
 ### Step 3: Author Faithful Multi-Color Sport Type Vectors
 - Construct `bsport_bike.xml`:
-  - Path for black wheels and saddle.
-  - Path for red frame tubes.
-  - Path for blue aerodynamic cyclist.
+  - Path for black wheels and saddle (`#FF000000`).
+  - Path for red frame tubes (`#FFFF0000`).
+  - Path for blue aerodynamic cyclist (`#FF0000FF`).
 - Construct `bsport_run.xml`:
-  - Path for blue stick-figure runner.
+  - Path for blue stick-figure runner (`#FF0000FF`).
 - Construct `bsport_other.xml`:
-  - Path for gold stopwatch ring.
-  - Path for red top crown button.
-  - Path for green right angled button.
-  - Path for dark blue left angled button.
+  - Path for gold stopwatch ring (`#FFFFC700`).
+  - Path for red top crown button (`#FFFF0000`).
+  - Path for green right angled button (`#FF008F00`).
+  - Path for dark blue left angled button (`#FF00008F`).
 
 ### Step 4: Author Faithful ANT+ Sensor Badge Vectors
 - For `hr.xml`, `bike_spd.xml`, `bike_cad.xml`, `bike_speed_and_cadence.xml`, `bike_pwr.xml`, `run_spd.xml`, `temp.xml`:
-  - Background: Black (`#000000`) rounded rectangle with $r = 12$.
-  - Foreground: White (`#FFFFFF`) glyph and bottom label ("HR", "SPD", "CAD", "S & C", "PWR", "SPD", "TEMP").
+  - Background: Black (`#FF000000`) rounded rectangle with $r = 12$.
+  - Foreground: White (`#FFFFFFFF`) glyph and bottom label ("HR", "SPD", "CAD", "S & C", "PWR", "SPD", "TEMP").
 
 ### Step 5: Author Faithful BLE Sensor Badge Vectors
 - For `bt_hr.xml`, `bt_bike_spd.xml`, `bt_bike_cad.xml`, `bt_bike_speed_and_cadence.xml`, `bt_bike_pwr.xml`, `bt_run.xml`:
-  - Background: Bluetooth Blue (`#0A3D91`) rounded rectangle with $r = 12$.
-  - Foreground: White (`#FFFFFF`) glyphs and lowercase bold labels ("speed", "cadence", "s & c", "power").
+  - Background: Bluetooth Blue (`#FF0A3D91`) rounded rectangle with $r = 12$.
+  - Foreground: White (`#FFFFFFFF`) glyphs and lowercase bold labels ("speed", "cadence", "s & c", "power").
 
 ### Step 6: Purge Superseded Raster PNG Files
 - Delete the 16 migrated `.png` files across all density directories (`drawable-ldpi`, `drawable-mdpi`, `drawable-hdpi`, `drawable-xhdpi`, `drawable-xxhdpi`, `drawable-xxxhdpi`, `drawable`).
@@ -121,8 +135,12 @@ The mandate for this implementation is to **faithfully redraw the existing icons
     --tests com.atrainingtracker.trainingtracker.ui.resources.DrawableDensityFallbackAuditTest
   ```
 
-### Step 8: Visual Verification & On-Device Comparison (Rule 23)
-- Render new vectors side-by-side with original bitmaps using a contract/snapshot comparison script or on-device capture, confirming 1:1 geometry, proportions, colors, and absence of bounding box artifacts.
+### Step 8: Visual Regression Verification & Golden Image Comparison (Rule 23)
+- Render new vectors side-by-side with original bitmaps using a pixel comparison script / contract verification, confirming:
+  - 1:1 geometry match.
+  - Exact sRGB color fidelity.
+  - Elimination of the legacy `#FAFAFA` bounding box glitch in dark mode.
+- Embed visual evidence in the Stage 5 walkthrough (`docs/engineering/walkthroughs/ATT-2859_walkthrough.md`).
 
 ### Step 9: Full Clean-Room Regression Suite Execution
 - Run `./gradlew testDebugUnitTest`.
