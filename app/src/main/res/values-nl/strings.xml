@@ -640,6 +640,7 @@
     <string name="zone_display_left_bar">Balk links</string>
     <string name="zone_display_right_bar">Balk rechts</string>
     <string name="zone_display_text_color">Tekstkleur</string>
+    <string name="zone_display_gauge">Zonemeterbalk</string>
     <string name="zone_display_preview_title">Voorbeeld</string>
 
     <string name="prefEmailExport">e-Mail</string>

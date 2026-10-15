@@ -60,6 +60,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
+import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMath
 import android.text.format.DateUtils
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.ui.settings.AthleteWeightDialog
@@ -730,6 +731,14 @@ fun SettingsScreenContent(
                     checked = displayOptions.showTextColor,
                     onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showTextColor = it)) }
                 )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // Toggle: Zone gauge bar (REQ-UI-376)
+                ZoneDisplayToggleRow(
+                    label = stringResource(R.string.zone_display_gauge),
+                    checked = displayOptions.showGauge,
+                    onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showGauge = it)) }
+                )
             }
         }
 
@@ -791,6 +800,19 @@ fun SettingsScreenContent(
         val previewLabel = if (zoneType == ZoneType.PWR_BIKE) "Power" else "Heart Rate"
         val previewUnits = if (zoneType == ZoneType.PWR_BIKE) "W" else "bpm"
 
+        val previewCutoffs = if (zoneType == ZoneType.PWR_BIKE) {
+            listOf(z1Max, z2Max, z3Max, z4Max, z5Max, z6Max)
+        } else {
+            listOf(z1Max, z2Max, z3Max, z4Max)
+        }
+        val previewGaugeState = if (displayOptions.showGauge) {
+            ZoneGaugeMath.calculateZoneGaugeState(
+                value = previewValue.toDoubleOrNull(),
+                zoneType = zoneType,
+                cutoffs = previewCutoffs
+            )
+        } else null
+
         val previewFieldState = SensorFieldState(
             configHash = 0,
             sensorFieldId = 0,
@@ -802,7 +824,8 @@ fun SettingsScreenContent(
             value = previewValue,
             units = previewUnits,
             zoneColor = previewZoneColor,
-            zoneDisplayOptions = displayOptions
+            zoneDisplayOptions = displayOptions,
+            zoneGaugeState = previewGaugeState
         )
 
         val isSystemDark = isSystemInDarkTheme()

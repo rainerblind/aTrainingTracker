@@ -679,6 +679,7 @@
     <string name="zone_display_left_bar">Balken links</string>
     <string name="zone_display_right_bar">Balken rechts</string>
     <string name="zone_display_text_color">Textfarbe</string>
+    <string name="zone_display_gauge">Zonen-Balken</string>
     <string name="zone_display_preview_title">Vorschau</string>
     <string name="prefEmailExport">e-Mail</string>
 

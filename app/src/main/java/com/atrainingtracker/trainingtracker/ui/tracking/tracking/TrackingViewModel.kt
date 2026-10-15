@@ -51,6 +51,8 @@ import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
+import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMath
+import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -344,7 +346,8 @@ class TrackingViewModel(
                         value = "--",
                         units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
                         zoneColor = defaultZoneColor,
-                        zoneDisplayOptions = displayOptions
+                        zoneDisplayOptions = displayOptions,
+                        zoneGaugeState = calculateZoneGaugeState(zoneType, displayOptions, null)
                     )
                 }
 
@@ -405,19 +408,23 @@ class TrackingViewModel(
                 val newZoneColor = calculateZoneColor(sensorData, activityType)
                 val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
                 val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
+                val numericValue = (sensorData.value as? Number)?.toDouble()
+                val newZoneGaugeState = calculateZoneGaugeState(zoneType, displayOptions, numericValue)
 
                 // 3. Iterate through every field that needs this update.
                 for (fieldToUpdate in fieldsToUpdate) {
                     // Check if this specific instance needs an update to avoid unnecessary changes.
                     if (fieldToUpdate.value != newFormattedValue ||
                         fieldToUpdate.zoneColor != newZoneColor ||
-                        fieldToUpdate.zoneDisplayOptions != displayOptions) {
+                        fieldToUpdate.zoneDisplayOptions != displayOptions ||
+                        fieldToUpdate.zoneGaugeState != newZoneGaugeState) {
                         val index = updatedFields.indexOf(fieldToUpdate)
                         if (index != -1) {
                             updatedFields[index] = fieldToUpdate.copy(
                                 value = newFormattedValue,
                                 zoneColor = newZoneColor,
-                                zoneDisplayOptions = displayOptions
+                                zoneDisplayOptions = displayOptions,
+                                zoneGaugeState = newZoneGaugeState
                             )
                             hasChanged = true
                         }
@@ -468,6 +475,33 @@ class TrackingViewModel(
             }
         }
         return defaultZoneColor
+    }
+
+    private fun calculateZoneGaugeState(
+        zoneType: SettingsDataStore.ZoneType?,
+        displayOptions: ZoneDisplayOptions,
+        numericValue: Double?
+    ): ZoneGaugeState? {
+        if (!displayOptions.showGauge || zoneType == null) return null
+
+        val z1Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
+        val z2Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
+        val z3Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
+        val z4Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+
+        val cutoffs = if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) {
+            val z5Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 5)
+            val z6Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6)
+            listOf(z1Max, z2Max, z3Max, z4Max, z5Max, z6Max)
+        } else {
+            listOf(z1Max, z2Max, z3Max, z4Max)
+        }
+
+        return ZoneGaugeMath.calculateZoneGaugeState(
+            value = numericValue,
+            zoneType = zoneType,
+            cutoffs = cutoffs
+        )
     }
 
     /**
