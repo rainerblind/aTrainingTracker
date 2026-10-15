@@ -43,15 +43,18 @@ This ticket introduces an interactive, contextual Zone Calculator assistant dire
 2. **Absence of Athlete Baseline Preference Keys in `SettingsDataStore.kt`**:
    - `SettingsDataStore.kt` defines threshold keys (`HR_RUN_ZONE1_MAX..HR_RUN_ZONE4_MAX`, `HR_BIKE_ZONE1_MAX..HR_BIKE_ZONE4_MAX`, `PWR_BIKE_ZONE1_MAX..PWR_BIKE_ZONE6_MAX`) and display options keys.
    - There are **no keys** for `cycling_ftp`, `cycling_ftp_updated_at`, `athlete_hr_max`, or `athlete_hr_rest`.
-3. **Reactive State Management Gap**:
+3. **Missing Profile Customization Tracking Flag**:
+   - There are no persistent flags (`pwr_bike_zones_customized`, `hr_run_zones_customized`, `hr_bike_zones_customized`) indicating whether thresholds match a calculated standard model or represent manual overrides.
+   - Without this, the UI cannot inform athletes whether displayed thresholds are aligned with their baseline or manually altered.
+4. **Reactive State Management Gap**:
    - `ZonesSettingsActivity.kt` holds local `allProfilesData` in ad-hoc `remember { mutableStateOf(...) }` and updates it via manual copy helpers.
    - The architecture must transition to Unidirectional Data Flow (UDF) where `ZoneSettingsScreen` reactively observes DataStore `StateFlow` streams.
-4. **DataStore-Level Validation Gap & Cross-Field Invariance**:
+5. **DataStore-Level Validation Gap & Cross-Field Invariance**:
    - Monotonic validation currently only checks adjacent local pairs in private UI methods.
    - A centralized `ZoneValidator.validatePowerZoneStack()` and `validateHeartRateZoneStack()` must be enforced directly inside `SettingsDataStore` write functions, including cross-field verification ($HR_{\text{max}} \ge HR_{\text{rest}} + 20$) and hard physiological bounds inside the transaction.
-5. **No Pure Math Engine for Zone Bracket Computation**:
+6. **No Pure Math Engine for Zone Bracket Computation**:
    - Calculations must be encapsulated in a dedicated, side-effect-free math engine (`ZoneCalculationMath.kt`) with deterministic arithmetic rounding to ensure testability without Android runtime dependencies.
-6. **Defensive Synchronous Bridges for Java Telemetry Services**:
+7. **Defensive Synchronous Bridges for Java Telemetry Services**:
    - `SettingsDataStoreJavaHelper.kt` exposes `getZoneMax()`, but lacks methods to read `getCyclingFtp()`, `getAthleteHrMax()`, or `getAthleteHrRest()`.
    - Any Java helper call must return `Integer?` (`null` when unconfigured), protected with `try-catch` exception shields to prevent ANRs or crashes during live tracking.
 
@@ -146,18 +149,22 @@ If an athlete updates their FTP baseline mid-workout (or while a workout is paus
     *"Durch das Übernehmen werden alle Zonen auf das Standardmodell zurückgesetzt"* (*"Applying will recalibrate all zones to the standard model"*).
   - Tapping "Cancel" dismisses the preview with zero modifications to stored preferences.
 
-### 3.6 Reactive UDF State Management & Atomic Batch Commit
+### 3.6 Reactive UDF State Management & Single ACID Transaction Batch Commit
 - Replace manual callback-driven local state copying with reactive Unidirectional Data Flow (UDF):
   `ZoneSettingsScreen` observes DataStore flows directly via `collectAsState()`.
-- The "Apply" operation commits baseline, timestamp, and all zone thresholds inside a single atomic `dataStore.edit { }` block:
+- The "Apply" operation commits baseline, timestamp, customization flag (`false`), and all zone thresholds inside a single atomic `dataStore.edit { }` block:
 ```kotlin
 suspend fun applyCalculatedPowerZones(ftp: Int, zones: List<Int>) {
+    require(ZoneValidator.validateFtp(ftp)) {
+        "FTP must be between 50W and 1000W, received: $ftp"
+    }
     require(ZoneValidator.validatePowerZoneStack(zones[0], zones[1], zones[2], zones[3], zones[4], zones[5])) {
         "Cannot persist invalid non-monotonic power zones"
     }
     dataStore.edit { prefs ->
         prefs[KEY_CYCLING_FTP] = ftp
         prefs[KEY_CYCLING_FTP_UPDATED_AT] = System.currentTimeMillis()
+        prefs[KEY_PWR_BIKE_ZONES_CUSTOMIZED] = false
         prefs[PWR_BIKE_ZONE1_MAX] = zones[0]
         prefs[PWR_BIKE_ZONE2_MAX] = zones[1]
         prefs[PWR_BIKE_ZONE3_MAX] = zones[2]
@@ -166,30 +173,119 @@ suspend fun applyCalculatedPowerZones(ftp: Int, zones: List<Int>) {
         prefs[PWR_BIKE_ZONE6_MAX] = zones[5]
     }
 }
+
+suspend fun applyCalculatedHeartRateZones(
+    isCycling: Boolean, // false = HR_RUN, true = HR_BIKE
+    hrMax: Int,
+    hrRest: Int?,
+    zones: List<Int>
+) {
+    require(ZoneValidator.validateHeartRateBaselines(hrMax, hrRest)) {
+        "Invalid heart rate baselines: hrMax=$hrMax, hrRest=$hrRest"
+    }
+    require(ZoneValidator.validateHeartRateZoneStack(zones[0], zones[1], zones[2], zones[3])) {
+        "Cannot persist invalid non-monotonic heart rate zones"
+    }
+    val customizedKey = if (isCycling) KEY_HR_BIKE_ZONES_CUSTOMIZED else KEY_HR_RUN_ZONES_CUSTOMIZED
+    val (k1, k2, k3, k4) = if (isCycling) {
+        listOf(HR_BIKE_ZONE1_MAX, HR_BIKE_ZONE2_MAX, HR_BIKE_ZONE3_MAX, HR_BIKE_ZONE4_MAX)
+    } else {
+        listOf(HR_RUN_ZONE1_MAX, HR_RUN_ZONE2_MAX, HR_RUN_ZONE3_MAX, HR_RUN_ZONE4_MAX)
+    }
+    dataStore.edit { prefs ->
+        prefs[KEY_ATHLETE_HR_MAX] = hrMax
+        if (hrRest != null) {
+            prefs[KEY_ATHLETE_HR_REST] = hrRest
+        }
+        prefs[customizedKey] = false
+        prefs[k1] = zones[0]
+        prefs[k2] = zones[1]
+        prefs[k3] = zones[2]
+        prefs[k4] = zones[3]
+    }
+}
 ```
 - Because Jetpack DataStore performs in-memory updates followed by an atomic filesystem rename, the UI reactively observes the new state automatically with zero lifecycle desynchronization risk.
 
+### 3.7 Explicit `is_customized` Consistency Flag & UI Sync Status Badge
+To prevent misleading the athlete that manually altered zones are scientifically derived:
+1. **Persistent Boolean Preferences**:
+   - `KEY_PWR_BIKE_ZONES_CUSTOMIZED = booleanPreferencesKey("pwr_bike_zones_customized")` (default: `false`).
+   - `KEY_HR_RUN_ZONES_CUSTOMIZED = booleanPreferencesKey("hr_run_zones_customized")` (default: `false`).
+   - `KEY_HR_BIKE_ZONES_CUSTOMIZED = booleanPreferencesKey("hr_bike_zones_customized")` (default: `false`).
+2. **State Transition Lifecycle**:
+   - When auto-calculated zones are applied via `applyCalculatedPowerZones` or `applyCalculatedHeartRateZones`, the corresponding `customized` flag is set to `false`.
+   - Whenever the user manually adjusts any individual zone threshold card (`savePowerZoneMax` or `saveHrZoneMax`), the corresponding flag automatically transitions to `true`.
+3. **UI Status Badge & Invariant Indication**:
+   - On `ZoneSettingsScreen`, each profile tab header displays an explicit status pill / badge:
+     - When `!is_customized && ftp > 0`: Displays `"Abgestimmt auf FTP: %d W"` (*"Synced with FTP: %d W"*), or `"Abgestimmt auf HFmax: %d bpm"`.
+     - When `is_customized`: Displays `"Benutzerdefiniert"` (*"Customized"*), informing the athlete that individual card thresholds differ from the baseline calculation model.
+
+### 3.8 Telemetry Engine Atomic Snapshot Consumption via Flow Combine Pattern
+In background telemetry aggregation services (`LiveWorkoutSession`, `TrackerService`), observing baseline FTP and zone thresholds independently introduces a race condition ("torn read") where a tick might calculate TSS using a freshly updated FTP but old threshold brackets (or vice versa).
+To guarantee atomic consumption:
+1. Telemetry consumers observe an immutable snapshot data class:
+```kotlin
+data class AthletePowerSnapshot(
+    val ftpWatts: Int?,
+    val thresholds: List<Int>,
+    val isCustomized: Boolean
+)
+```
+2. The snapshot is exposed as a single combined reactive flow:
+```kotlin
+val athletePowerSnapshotFlow: Flow<AthletePowerSnapshot> = combine(
+    cyclingFtpFlow,
+    powerZoneThresholdsFlow,
+    powerZonesCustomizedFlow
+) { ftp, thresholds, customized ->
+    AthletePowerSnapshot(
+        ftpWatts = if (ftp > 0) ftp else null,
+        thresholds = thresholds,
+        isCustomized = customized
+    )
+}
+```
+3. The background telemetry aggregator samples `athletePowerSnapshotFlow` at interval ticks, guaranteeing that downstream metric evaluators (IF, TSS) always consume an internally consistent, atomic view of baseline and zones.
+
 ---
 
-## 4. Centralized Blocking Validation Architecture & RTL Compliance (`ZoneValidator.kt`)
+## 4. Centralized Blocking Validation Architecture & RTL Compliance (`ZoneValidator.kt` & `ZoneCalculationMath.kt`)
 
-`ZoneValidator.kt` is a pure Kotlin singleton providing strict, blocking validation:
+`ZoneValidator.kt` and `ZoneCalculationMath.kt` form a strict, layered validation and mathematical computation engine:
 
+### 4.1 Strict Domain Exception Enforcement in `ZoneCalculationMath.kt`
+Rather than silently failing, returning empty lists, or returning `null`, all mathematical calculation functions throw descriptive, explicit `IllegalArgumentException`s if invoked with invalid physiological domain parameters:
+- **FTP Bounds Violation**:
+  $$\text{ftp} \notin [50, 1000] \implies \text{throw } IllegalArgumentException("FTP must be between 50W and 1000W, received: $ftp")$$
+- **Max HR Bounds Violation**:
+  $$hrMax \notin [100, 240] \implies \text{throw } IllegalArgumentException("HR max must be between 100 and 240 bpm, received: $hrMax")$$
+- **Resting HR Bounds Violation**:
+  $$hrRest < 30 \text{ or } hrRest > 100 \implies \text{throw } IllegalArgumentException("Resting HR must be between 30 and 100 bpm, received: $hrRest")$$
+- **Heart Rate Reserve Inversion or Insufficient Spread**:
+  $$hrMax \le hrRest \text{ or } hrMax - hrRest < 20 \implies \text{throw } IllegalArgumentException("Max HR must exceed Resting HR by at least 20 bpm, received max: $hrMax, rest: $hrRest")$$
+
+### 4.2 Centralized Blocking Validation in `ZoneValidator.kt`
 1. **Input Baseline Validation & Cross-Field Enforcement**:
-   - `validateFtp(ftp: Int): ValidationResult`: Validates $FTP \in [50, 1000]\text{ Watts}$. Rejects non-physiological inputs (e.g. 5W or 1200W).
-   - `validateHeartRateBaselines(hrMax: Int, hrRest: Int? = null): ValidationResult`:
-     - Validates $HR_{\text{max}} \in [100, 240]\text{ bpm}$.
-     - If $HR_{\text{rest}}$ is provided: validates physiological floor $HR_{\text{rest}} \in [30, 100]\text{ bpm}$ (rejecting impossible values $< 30$).
+   - `validateFtp(ftp: Int): Boolean`: Validates $FTP \in [50, 1000]\text{ Watts}$. Rejects non-physiological inputs (e.g. 5W or 1200W).
+   - `validateHeartRateBaselines(hrMax: Int, hrRest: Int? = null): Boolean`:
+     - Asserts $HR_{\text{max}} \in [100, 240]\text{ bpm}$.
+     - If $HR_{\text{rest}}$ is provided: asserts physiological floor $HR_{\text{rest}} \in [30, 100]\text{ bpm}$ (strictly rejecting impossible values $< 30$).
      - Strictly enforces cross-field constraint:
        $$HR_{\text{max}} \ge HR_{\text{rest}} + 20$$
-   - **User Error Feedback**: In `ZoneCalculatorDialog`, if $HR_{\text{max}} < HR_{\text{rest}} + 20$ or $HR_{\text{rest}} < 30$:
+   - **User Error Feedback in `ZoneCalculatorDialog`**:
+     - If $HR_{\text{max}} < HR_{\text{rest}} + 20$ or $HR_{\text{rest}} < 30$, or $FTP < 50$ or $FTP > 1000$:
      - "Apply" button is immediately disabled (`enabled = false`).
      - A localized, prominent Material 3 error message is displayed beneath the field (`supportingText` / `isError = true`):
        *"Maximale HF muss mindestens 20 bpm über der Ruhe-HF liegen (Ruhe-HF mind. 30 bpm)"*.
-2. **Global Zone Stack Monotonicity Validation (Hardened DataStore Layer)**:
+2. **Global Zone Stack Monotonicity Validation & Manual 2000W Ceiling Enforcement**:
    - `validatePowerZoneStack(z1, z2, z3, z4, z5, z6): Boolean`: Asserts the entire stack satisfies $0 < z_1 < z_2 < z_3 < z_4 < z_5 < z_6 \le 2000$.
    - `validateHeartRateZoneStack(z1, z2, z3, z4): Boolean`: Asserts $30 < z_1 < z_2 < z_3 < z_4 \le 250$.
-   - **Enforcement Barrier**: Validated both in the UI before dispatching save, and enforced directly inside `SettingsDataStore.applyCalculatedPowerZones()` and `saveHrZoneMax()` throwing `IllegalArgumentException` on violation, ensuring background processes cannot corrupt DataStore.
+   - **Manual Override 2000W Ceiling Enforcement**:
+     - Both manual threshold card edits (`savePowerZoneMax`) and full stack validation enforce $z_i \le 2000$.
+     - When the athlete manually edits any threshold card in `ZoneSettingsScreen` (e.g. `z6Max`), manual values $> 2000\text{W}$ are strictly rejected.
+     - `ZoneValidator.validatePowerThreshold(value: Int): Boolean` rejects $value > 2000$.
+     - `SettingsDataStore.savePowerZoneMax(zoneIndex, value)` asserts `value in 1..2000`, throwing `IllegalArgumentException("Power zone threshold cannot exceed 2000W, received: $value")` on violation.
 3. **RTL (Right-to-Left) & Small-Screen Layout Compliance**:
    - All dialog containers, preview tables, and text inputs utilize `LayoutDirection`-aware Compose modifiers (`Alignment.Start`, `Alignment.End`, `padding(start = ..., end = ...)`).
    - All labels use `Text(overflow = TextOverflow.Ellipsis, maxLines = 2)` and responsive `FlowRow` arrangements, preventing layout clipping or truncation in RTL languages or verbose European locales (German, Polish).
@@ -231,20 +327,26 @@ suspend fun applyCalculatedPowerZones(ftp: Int, zones: List<Int>) {
 ### 6.1 In-Scope Deliverables
 1. **Centralized Blocking Validation Layer (`ZoneValidator.kt`)**:
    - Pure Kotlin object in `com.atrainingtracker.trainingtracker.settings`.
-   - Methods: `validatePowerZoneStack(z1, z2, z3, z4, z5, z6): Boolean`, `validateHeartRateZoneStack(z1, z2, z3, z4): Boolean`, `validateFtp(ftp): Boolean`, `validateHeartRateBaselines(hrMax, hrRest): Boolean`.
-   - Enforces $FTP \in [50, 1000]\text{W}$, $HR_{\text{rest}} \ge 30$, $HR_{\text{max}} \ge HR_{\text{rest}} + 20$.
+   - Methods: `validatePowerZoneStack(z1, z2, z3, z4, z5, z6): Boolean`, `validateHeartRateZoneStack(z1, z2, z3, z4): Boolean`, `validateFtp(ftp): Boolean`, `validateHeartRateBaselines(hrMax, hrRest): Boolean`, `validatePowerThreshold(value): Boolean`.
+   - Enforces $FTP \in [50, 1000]\text{W}$, $HR_{\text{rest}} \ge 30$, $HR_{\text{max}} \ge HR_{\text{rest}} + 20$, and power boundary ceiling $\le 2000\text{W}$ on both stack and manual override edits.
 2. **Pure Math Engine (`ZoneCalculationMath.kt`)**:
    - Pure Kotlin object in `com.atrainingtracker.trainingtracker.settings`.
    - Functions: `calculateCogganPowerZones(ftp: Int): List<Int>`, `calculateHrmaxHeartRateZones(hrMax: Int): List<Int>`, `calculateKarvonenHeartRateZones(hrMax: Int, hrRest: Int): List<Int>`.
+   - Explicit `IllegalArgumentException` throwing on out-of-bounds inputs.
    - Half-up rounding policy and upper capping for Zone 7 ($2000\text{W}$).
 3. **Persistent Preferences in `SettingsDataStore.kt`**:
    - `KEY_CYCLING_FTP = intPreferencesKey("cycling_ftp")` (default 0 / unconfigured).
    - `KEY_CYCLING_FTP_UPDATED_AT = longPreferencesKey("cycling_ftp_updated_at")` (version timestamp).
    - `KEY_ATHLETE_HR_MAX = intPreferencesKey("athlete_hr_max")` (default 0 / unconfigured).
    - `KEY_ATHLETE_HR_REST = intPreferencesKey("athlete_hr_rest")` (default 0 / unconfigured).
-   - Reactive flows: `cyclingFtpFlow`, `athleteHrMaxFlow`, `athleteHrRestFlow`.
+   - `KEY_PWR_BIKE_ZONES_CUSTOMIZED = booleanPreferencesKey("pwr_bike_zones_customized")`.
+   - `KEY_HR_RUN_ZONES_CUSTOMIZED = booleanPreferencesKey("hr_run_zones_customized")`.
+   - `KEY_HR_BIKE_ZONES_CUSTOMIZED = booleanPreferencesKey("hr_bike_zones_customized")`.
+   - Reactive flows: `cyclingFtpFlow`, `athleteHrMaxFlow`, `athleteHrRestFlow`, `powerZonesCustomizedFlow`.
+   - Combined atomic snapshot flow: `athletePowerSnapshotFlow = combine(cyclingFtpFlow, powerZoneThresholdsFlow, powerZonesCustomizedFlow) { ... }`.
    - Safe division invalidation support: `getCyclingFtpOrNull(): Flow<Int?>`.
-   - Single-transaction atomic batch mutators: `applyCalculatedPowerZones(ftp, zones)`, `applyCalculatedHeartRateZones(type, hrMax, hrRest, zones)` with internal `ZoneValidator` guards.
+   - Single-transaction atomic batch mutators: `applyCalculatedPowerZones(ftp, zones)` and `applyCalculatedHeartRateZones(isCycling, hrMax, hrRest, zones)` updating baseline, timestamp, customization flag (`false`), and all thresholds inside a single `dataStore.edit { }`.
+   - Individual manual mutators: `savePowerZoneMax(zoneIndex, value)` asserting `value in 1..2000` and setting `is_customized = true`.
 4. **Crash-Proof Synchronous Accessors in `SettingsDataStoreJavaHelper.kt`**:
    - `@JvmStatic fun getCyclingFtp(context: Context): Int?`
    - `@JvmStatic fun getAthleteHrMax(context: Context): Int?`
@@ -305,12 +407,14 @@ flowchart TD
     end
 
     subgraph DataStore ["SettingsDataStore.kt (Single ACID Transaction)"]
-        AtomicCommit["dataStore.edit { prefs[FTP] = ftp; prefs[TS] = now; prefs[Z1..Z6] = zones }"]
+        AtomicCommit["dataStore.edit { prefs[FTP] = ftp; prefs[TS] = now; prefs[CUSTOM] = false; prefs[Z1..Z6] = zones }"]
         PrefFTP["cycling_ftp (Int, 0/null=unconfigured)"]
         PrefTS["cycling_ftp_updated_at (Long timestamp)"]
+        PrefCustomized["pwr_bike_zones_customized (Boolean)"]
         PrefHRMax["athlete_hr_max (Int, 0/null=unconfigured)"]
         PrefHRRest["athlete_hr_rest (Int, 0/null=unconfigured)"]
         PrefZones["Thresholds (z1..z6)"]
+        CombineSnapshot["combine(ftp, thresholds, customized) -> AthletePowerSnapshot"]
         Flows["cyclingFtpFlow, athleteHrMaxFlow, athleteHrRestFlow, getCyclingFtpOrNull"]
     end
 
@@ -333,13 +437,16 @@ flowchart TD
     Karvonen --> Preview
     Dialog --> ApplyBtn
     ApplyBtn -->|Validate Inputs & Stack| Validator
-    Validator -->|Valid| AtomicCommit
+    ManualEdit -->|Validate Threshold <= 2000W| Validator
+    Validator -->|Valid Auto| AtomicCommit
     AtomicCommit --> PrefFTP
     AtomicCommit --> PrefTS
+    AtomicCommit --> PrefCustomized
     AtomicCommit --> PrefZones
-    PrefFTP & PrefZones -->|Reactive Flow Emission| UI
-    PrefFTP & PrefZones --> SyncBadge
-    Flows --> LiveSession
+    PrefFTP & PrefZones & PrefCustomized --> CombineSnapshot
+    CombineSnapshot -->|Atomic Snapshot Flow| LiveSession
+    PrefFTP & PrefZones & PrefCustomized -->|Reactive Flow Emission| UI
+    PrefCustomized --> SyncBadge
     LiveSession -->|Future Ticks| SafeDiv
     JavaHelper --> SafeDiv
     SafeDiv --> IF & TSS
@@ -352,7 +459,7 @@ flowchart TD
 | Risk ID | Risk Description | Severity | Probability | Mitigation Strategy |
 |:---|:---|:---:|:---:|:---|
 | **RSK-01** | Division by zero in downstream telemetry engines when FTP is unconfigured. | Critical | Low | Enforce `SafeDivision` pattern: unconfigured FTP returns `null` (never 0); calculation engines suppress metrics, rendering `--`. |
-| **RSK-02** | User inputs Resting HR $\ge$ Max HR in Karvonen model or impossible HRrest ($< 30$). | High | Medium | `ZoneValidator` enforces domain cross-field validation ($HR_{\text{max}} \ge HR_{\text{rest}} + 20$, $HR_{\text{rest}} \ge 30$), disabling "Apply" and showing prominent inline error copy. |
+| **RSK-02** | User inputs Resting HR $\ge$ Max HR in Karvonen model or impossible HRrest ($< 30$). | High | Medium | `ZoneValidator` enforces domain cross-field validation ($HR_{\text{max}} \ge HR_{\text{rest}} + 20$, $HR_{\text{rest}} \ge 30$), disabling "Apply" and showing prominent inline error copy. `ZoneCalculationMath` throws explicit `IllegalArgumentException`. |
 | **RSK-03** | Split-brain telemetry when FTP is updated during active tracking. | Medium | Low | Historical samples retain recorded intensity; future aggregator ticks calculate with new FTP baseline, ensuring intra-session fidelity. |
 | **RSK-04** | Race conditions or partial writes between DataStore baseline and zone thresholds. | Low | Low | Enforce single atomic batch transaction in `dataStore.edit { }` writing baseline, timestamp, and thresholds together with filesystem ACID rename rollback, observed reactively via UDF. |
 | **RSK-05** | Breaking downstream Java callers in tracking service. | Medium | Low | Provide thread-safe `@JvmStatic` snapshot accessors in `SettingsDataStoreJavaHelper.kt` shielded with `try-catch` returning `null` on error/unconfigured. |
@@ -360,6 +467,8 @@ flowchart TD
 | **RSK-07** | Zone 7 arithmetic overflow in downstream calculation engines. | Medium | Low | Explicitly cap Zone 7 at physical maximum $2000\text{ Watts}$ in `ZoneCalculationMath` and `TelemetryZoneMath`. |
 | **RSK-08** | Inadvertent overwriting of existing athlete zone configurations upon update. | High | Low | Non-destructive migration: existing manual zones remain 100% untouched until explicit user calculation and confirmation. |
 | **RSK-09** | Retroactive corruption of historical workout analytics on baseline change. | High | Low | Explicit prospective-only policy: past completed workouts in SQLite remain immutable; new baseline applies strictly to future tracking sessions. |
+| **RSK-10** | Torn/desynchronized reads in background telemetry engine during baseline/threshold update. | Medium | Low | Implement `combine(cyclingFtpFlow, powerZoneThresholdsFlow, powerZonesCustomizedFlow)` yielding immutable `AthletePowerSnapshot`, consumed atomically by `LiveWorkoutSession`. |
+| **RSK-11** | Manual threshold card edits exceeding physical power ceiling ($> 2000\text{W}$). | Medium | Low | Enforce 2000W ceiling on manual edit path via `ZoneValidator.validatePowerThreshold` and `SettingsDataStore.savePowerZoneMax` throwing `IllegalArgumentException`. |
 
 ---
 
