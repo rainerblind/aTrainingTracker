@@ -93,10 +93,6 @@ fun AdvancedTuningScreen(
     var sensorFieldBorderThickness by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS) }; var sensorFieldBorderContrast by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST) }
     var routeSelectionRadiusKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM) }; var navigationCueDismissDurationSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC) }
     var elevationSmoothingSigmaMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS) }
-    var mapFollowMeInitialZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM) }; var mapFollowMeSpeedZoomEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED) }
-    var mapFollowMeCruisingZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM) }; var mapFollowMeTiltAngle by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE) }
-    var mapFollowMeLookaheadPaddingPercent by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT) }
-    var mapFollowMeSpeedSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA) }; var mapFollowMeBearingSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA) }
     var showAntMissingAdapterWarnings by remember { mutableStateOf(!TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG) }; var autoFollowUniqueRouteEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED) }
     var turnCueCountdownDistanceMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS) }
     var clusterTolEndpoints by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS) }; var clusterTolApex by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_APEX) }
@@ -130,6 +126,9 @@ fun AdvancedTuningScreen(
         val order = persistedWorkoutSectionsOrder
         if (!isSectionsOrderInitialized && order != null) { workoutSectionsOrder = order; isSectionsOrderInitialized = true }
     }
+    LaunchedEffect(Unit) {
+        tuningDataStore.purgeLegacyMapCameraPreferences()
+    }
 
     fun applyConfig(config: TuningConfig) {
         elevationXAxisDomain = config.elevationXAxisDomain; telemetryXAxisDomain = config.telemetryXAxisDomain
@@ -144,11 +143,6 @@ fun AdvancedTuningScreen(
         routeSelectionRadiusKm = config.routeSelectionRadiusKm
         navigationCueDismissDurationSec = config.navigationCueDismissDurationSec
         elevationSmoothingSigmaMeters = config.elevationSmoothingSigmaMeters
-        mapFollowMeInitialZoom = config.mapFollowMeInitialZoom; mapFollowMeSpeedZoomEnabled = config.mapFollowMeSpeedZoomEnabled
-        mapFollowMeCruisingZoom = config.mapFollowMeCruisingZoom; mapFollowMeTiltAngle = config.mapFollowMeTiltAngle
-        mapFollowMeLookaheadPaddingPercent = config.mapFollowMeLookaheadPaddingPercent
-        mapFollowMeSpeedSmoothingAlpha = config.mapFollowMeSpeedSmoothingAlpha
-        mapFollowMeBearingSmoothingAlpha = config.mapFollowMeBearingSmoothingAlpha
         showAntMissingAdapterWarnings = config.showAntMissingAdapterWarnings
         autoFollowUniqueRouteEnabled = config.autoFollowUniqueRouteEnabled
         turnCueCountdownDistanceMeters = config.turnCueCountdownDistanceMeters
@@ -188,11 +182,6 @@ fun AdvancedTuningScreen(
             slopeMinSpeedMps = slopeMinSpeed, paceCeilingMinKm = paceCeilingMinKm,
             routeSelectionRadiusKm = routeSelectionRadiusKm, navigationCueDismissDurationSec = navigationCueDismissDurationSec,
             elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
-            mapFollowMeInitialZoom = mapFollowMeInitialZoom, mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled,
-            mapFollowMeCruisingZoom = mapFollowMeCruisingZoom, mapFollowMeTiltAngle = mapFollowMeTiltAngle,
-            mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent,
-            mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha,
-            mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
             suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings, autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
             turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters,
             clusterTolEndpoints = clusterTolEndpoints, clusterTolApex = clusterTolApex,
@@ -252,13 +241,6 @@ fun AdvancedTuningScreen(
                 NavigationSection(
                     routeSelectionRadiusKm = routeSelectionRadiusKm, onRadiusChange = { routeSelectionRadiusKm = it },
                     navigationCueDismissDurationSec = navigationCueDismissDurationSec, onDismissDurationChange = { navigationCueDismissDurationSec = it },
-                    mapFollowMeInitialZoom = mapFollowMeInitialZoom, onMapFollowMeInitialZoomChange = { mapFollowMeInitialZoom = it },
-                    mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled, onMapFollowMeSpeedZoomEnabledChange = { mapFollowMeSpeedZoomEnabled = it },
-                    mapFollowMeCruisingZoom = mapFollowMeCruisingZoom, onMapFollowMeCruisingZoomChange = { mapFollowMeCruisingZoom = it },
-                    mapFollowMeTiltAngle = mapFollowMeTiltAngle, onMapFollowMeTiltAngleChange = { mapFollowMeTiltAngle = it },
-                    mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent, onMapFollowMeLookaheadPaddingPercentChange = { mapFollowMeLookaheadPaddingPercent = it },
-                    mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha, onMapFollowMeSpeedSmoothingAlphaChange = { mapFollowMeSpeedSmoothingAlpha = it },
-                    mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha, onMapFollowMeBearingSmoothingAlphaChange = { mapFollowMeBearingSmoothingAlpha = it },
                     autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled, onAutoFollowUniqueRouteEnabledChange = { autoFollowUniqueRouteEnabled = it },
                     turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters, onTurnCueCountdownDistanceChange = { turnCueCountdownDistanceMeters = it }
                 )

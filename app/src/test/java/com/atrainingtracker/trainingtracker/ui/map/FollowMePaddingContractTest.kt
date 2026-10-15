@@ -64,34 +64,34 @@ class FollowMePaddingContractTest {
             content.contains("contentPadding = PaddingValues(top = topPadding)")
         )
         assertTrue(
-            "ATrainingTrackerMap must pass lookaheadPaddingPercent to followMeController",
-            content.contains("lookaheadPaddingPercent = tuningConfig.mapFollowMeLookaheadPaddingPercent")
-        )
-        assertTrue(
             "ATrainingTrackerMap must pass viewportHeightDp to followMeController",
             content.contains("viewportHeightDp = maxHeight.value")
         )
     }
 
     @Test
-    fun testATrainingTrackerMap_passesTuningParametersToFollowMeController() {
-        val content = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/ATrainingTrackerMap.kt").readText()
+    fun testFollowMeController_defaultsToCanonicalTuningParameters() {
+        val mapContent = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapBehaviors.kt").readText()
 
         assertTrue(
-            "ATrainingTrackerMap must pass baseZoom to followMeController",
-            content.contains("baseZoom = tuningConfig.mapFollowMeInitialZoom")
+            "followMeController must default baseZoom to TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM",
+            mapContent.contains("baseZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM")
         )
         assertTrue(
-            "ATrainingTrackerMap must pass speedZoomEnabled to followMeController",
-            content.contains("speedZoomEnabled = tuningConfig.mapFollowMeSpeedZoomEnabled")
+            "followMeController must default speedZoomEnabled to TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED",
+            mapContent.contains("speedZoomEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED")
         )
         assertTrue(
-            "ATrainingTrackerMap must pass cruisingZoom to followMeController",
-            content.contains("cruisingZoom = tuningConfig.mapFollowMeCruisingZoom")
+            "followMeController must default cruisingZoom to TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM",
+            mapContent.contains("cruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM")
         )
         assertTrue(
-            "ATrainingTrackerMap must pass tiltAngle to followMeController",
-            content.contains("tiltAngle = tuningConfig.mapFollowMeTiltAngle")
+            "followMeController must default tiltAngle to TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE",
+            mapContent.contains("tiltAngle: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE")
+        )
+        assertTrue(
+            "followMeController must default lookaheadPaddingPercent to TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT",
+            mapContent.contains("lookaheadPaddingPercent: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT")
         )
     }
 

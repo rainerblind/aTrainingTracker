@@ -52,16 +52,81 @@ class FollowMeCameraZoomTest {
     }
 
     @Test
-    fun testCalculateTargetZoom_highSpeed40Kmh_scalesLinearly() {
-        // 40 km/h = 40 / 3.6 m/s -> slope = (20 - 18) / 20 = 0.1 -> zoom = 20 - 0.1 * 40 = 16.0f
-        val speedMps = 40.0f / 3.6f
+    fun testCalculateTargetZoom_moderateSpeed10Kmh_scalesLinearly() {
+        // 10 km/h = 10 / 3.6 m/s -> linear slope: 20 - (2/20)*10 = 19.0f
+        val speedMps = 10.0f / 3.6f
         val zoom = calculateFollowMeTargetZoom(
             speedMps = speedMps,
             baseZoom = 20.0f,
             speedZoomEnabled = true,
             cruisingZoom = 18.0f
         )
-        assertEquals(16.0f, zoom, 0.001f)
+        assertEquals(19.0f, zoom, 0.001f)
+    }
+
+    @Test
+    fun testCalculateTargetZoom_highSpeed_scalesLogarithmically() {
+        // 30 km/h: 18.0 - log2(30/20) = 18.0 - 0.58496 = 17.415f
+        val speed30Mps = 30.0f / 3.6f
+        val zoom30 = calculateFollowMeTargetZoom(
+            speedMps = speed30Mps,
+            baseZoom = 20.0f,
+            speedZoomEnabled = true,
+            cruisingZoom = 18.0f
+        )
+        assertEquals(17.415f, zoom30, 0.01f)
+
+        // 40 km/h: 18.0 - log2(40/20) = 18.0 - 1.0 = 17.00f
+        val speed40Mps = 40.0f / 3.6f
+        val zoom40 = calculateFollowMeTargetZoom(
+            speedMps = speed40Mps,
+            baseZoom = 20.0f,
+            speedZoomEnabled = true,
+            cruisingZoom = 18.0f
+        )
+        assertEquals(17.00f, zoom40, 0.001f)
+
+        // 60 km/h: 18.0 - log2(60/20) = 18.0 - 1.58496 = 16.415f
+        val speed60Mps = 60.0f / 3.6f
+        val zoom60 = calculateFollowMeTargetZoom(
+            speedMps = speed60Mps,
+            baseZoom = 20.0f,
+            speedZoomEnabled = true,
+            cruisingZoom = 18.0f
+        )
+        assertEquals(16.415f, zoom60, 0.01f)
+
+        // 80 km/h: 18.0 - log2(80/20) = 18.0 - 2.0 = 16.00f
+        val speed80Mps = 80.0f / 3.6f
+        val zoom80 = calculateFollowMeTargetZoom(
+            speedMps = speed80Mps,
+            baseZoom = 20.0f,
+            speedZoomEnabled = true,
+            cruisingZoom = 18.0f
+        )
+        assertEquals(16.00f, zoom80, 0.001f)
+    }
+
+    @Test
+    fun testCalculateTargetZoom_clampedAtMinZoom16() {
+        // 100 km/h and 120 km/h exceed 80 km/h -> clamped at default minZoom = 16.0f
+        val speed100Mps = 100.0f / 3.6f
+        val zoom100 = calculateFollowMeTargetZoom(
+            speedMps = speed100Mps,
+            baseZoom = 20.0f,
+            speedZoomEnabled = true,
+            cruisingZoom = 18.0f
+        )
+        assertEquals(16.0f, zoom100, 0.001f)
+
+        val speed120Mps = 120.0f / 3.6f
+        val zoom120 = calculateFollowMeTargetZoom(
+            speedMps = speed120Mps,
+            baseZoom = 20.0f,
+            speedZoomEnabled = true,
+            cruisingZoom = 18.0f
+        )
+        assertEquals(16.0f, zoom120, 0.001f)
     }
 
     @Test
@@ -79,19 +144,7 @@ class FollowMeCameraZoomTest {
     }
 
     @Test
-    fun testCalculateTargetZoom_clampedToMinAndMax() {
-        // Extreme high speed (120 km/h = 33.33 m/s) -> 20 - 0.1 * 120 = 8.0f -> clamped to minZoom 12.0f
-        val extremeSpeedMps = 120.0f / 3.6f
-        val clampedMin = calculateFollowMeTargetZoom(
-            speedMps = extremeSpeedMps,
-            baseZoom = 20.0f,
-            speedZoomEnabled = true,
-            cruisingZoom = 18.0f,
-            minZoom = 12.0f,
-            maxZoom = 21.0f
-        )
-        assertEquals(12.0f, clampedMin, 0.001f)
-
+    fun testCalculateTargetZoom_negativeSpeed_coercedToZero() {
         // Negative speed -> coerced to 0 km/h -> baseZoom 20.0f
         val negativeSpeed = calculateFollowMeTargetZoom(
             speedMps = -5.0f,

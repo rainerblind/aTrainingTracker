@@ -1763,22 +1763,6 @@
     <string name="ant_dialog_view_status">Pokaż status ANT+</string>
     <string name="ant_dialog_dismiss">Rozumiem</string>
 
-    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
-    <string name="tuning_map_camera_section_title">Kamera mapy i nawigacja śledzenia</string>
-    <string name="tuning_map_base_zoom_title">Podstawowe przybliżenie śledzenia</string>
-    <string name="tuning_map_base_zoom_desc">Podstawowy poziom przybliżenia kamery podczas postoju (0 km/h) w trybie śledzenia (wyższa wartość = większe przybliżenie)</string>
-    <string name="tuning_map_speed_zoom_enabled_title">Przybliżenie zależne od prędkości</string>
-    <string name="tuning_map_speed_zoom_enabled_desc">Stopniowo oddala widok wraz ze wzrostem prędkości, aby poszerzyć pole widzenia trasy z przodu</string>
-    <string name="tuning_map_cruising_zoom_title">Przybliżenie przy prędkości przelotowej (przy 20 km/h)</string>
-    <string name="tuning_map_cruising_zoom_desc">Poziom przybliżenia kamery dopasowany do typowej prędkości jazdy na rowerze (20 km/h) (wyższa wartość = większe przybliżenie)</string>
-    <string name="tuning_map_tilt_angle_title">Kąt nachylenia kamery</string>
-    <string name="tuning_map_tilt_angle_desc">Kąt nachylenia perspektywy dla nawigacji 3D (0° to płaskie 2D, 70° to pełna perspektywa 3D)</string>
-    <string name="tuning_map_lookahead_padding_title">Margines pola widzenia z przodu</string>
-    <string name="tuning_map_lookahead_padding_desc">Procentowy margines widoku, aby umieścić rowerzystę w dolnej części i zmaksymalizować widoczność drogi z przodu (wyższa wartość = rowerzysta niżej / większa widoczność z przodu)</string>
-    <string name="tuning_map_follow_me_speed_smoothing_title">Wygładzanie zoomu prędkości</string>
-    <string name="tuning_map_follow_me_speed_smoothing_desc">Współczynnik tłumienia zmian prędkości w zoomie Śledź mnie (niższa wartość = płynniejszy, wyższa wartość = szybsza reakcja)</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_title">Wygładzanie kierunku</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_desc">Współczynnik tłumienia obrotu kamery w trybie Śledź mnie (niższa wartość = płynniejszy, wyższa wartość = szybsza reakcja)</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NOWY</string>
