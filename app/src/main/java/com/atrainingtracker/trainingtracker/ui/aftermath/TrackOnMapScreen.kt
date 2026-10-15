@@ -47,6 +47,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.map.*
 import androidx.compose.ui.platform.LocalContext
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
@@ -81,6 +82,7 @@ fun TrackOnMapScreen(
     val context = LocalContext.current
     val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
     val persistedDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = WorkoutDetailPreferences())
+    val persistedCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = WorkoutCardSectionPreferences())
     val activeDetailPrefs = detailPreferences ?: persistedDetailPrefs
     val persistedSectionsOrder by preferenceManager.workoutSectionsOrderFlow.collectAsState(initial = WorkoutSectionType.DEFAULT_ORDER)
     val activeSectionsOrder = sectionsOrder ?: persistedSectionsOrder
@@ -150,8 +152,10 @@ fun TrackOnMapScreen(
         }
     }
 
-    var hrZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
-    var powerZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
+    var hrZoneDisplayMode by rememberSaveable { mutableStateOf<ZoneCardDisplayMode?>(null) }
+    var powerZoneDisplayMode by rememberSaveable { mutableStateOf<ZoneCardDisplayMode?>(null) }
+    val effectiveHrZoneDisplayMode = hrZoneDisplayMode ?: persistedCardPrefs.zoneCardDisplayMode
+    val effectivePowerZoneDisplayMode = powerZoneDisplayMode ?: persistedCardPrefs.zoneCardDisplayMode
 
     val isElevationPostMap = postMapSections.contains(WorkoutSectionType.ELEVATION)
     val isChartsPostMap = postMapSections.contains(WorkoutSectionType.CHARTS)
@@ -171,8 +175,8 @@ fun TrackOnMapScreen(
         showTelemetryCharts = activeDetailPrefs.showTelemetryCharts && isChartsPostMap,
         hrZoneDistribution = hrZoneDistribution,
         powerZoneDistribution = powerZoneDistribution,
-        hrZoneDisplayMode = hrZoneDisplayMode,
-        powerZoneDisplayMode = powerZoneDisplayMode,
+        hrZoneDisplayMode = effectiveHrZoneDisplayMode,
+        powerZoneDisplayMode = effectivePowerZoneDisplayMode,
         header = {
             WorkoutHeader(
                 modifier = Modifier.fillMaxWidth(),
@@ -398,7 +402,7 @@ fun TrackOnMapScreen(
                                         bSportType = workoutData.bSportType,
                                         enableGestures = false,
                                         zoneDistribution = hrZoneDistribution,
-                                        zoneDisplayMode = hrZoneDisplayMode,
+                                        zoneDisplayMode = effectiveHrZoneDisplayMode,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -418,7 +422,7 @@ fun TrackOnMapScreen(
                                         bSportType = workoutData.bSportType,
                                         enableGestures = false,
                                         zoneDistribution = powerZoneDistribution,
-                                        zoneDisplayMode = powerZoneDisplayMode,
+                                        zoneDisplayMode = effectivePowerZoneDisplayMode,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -429,7 +433,7 @@ fun TrackOnMapScreen(
                                 hrZoneDistribution?.let { distribution ->
                                     HeartRateZoneDistributionCard(
                                         distribution = distribution,
-                                        displayMode = hrZoneDisplayMode,
+                                        displayMode = effectiveHrZoneDisplayMode,
                                         onDisplayModeChange = { hrZoneDisplayMode = it },
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -439,7 +443,7 @@ fun TrackOnMapScreen(
                                 powerZoneDistribution?.let { distribution ->
                                     PowerZoneDistributionCard(
                                         distribution = distribution,
-                                        displayMode = powerZoneDisplayMode,
+                                        displayMode = effectivePowerZoneDisplayMode,
                                         onDisplayModeChange = { powerZoneDisplayMode = it },
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -470,7 +474,7 @@ fun TrackOnMapScreen(
                                 hrZoneDistribution?.let { distribution ->
                                     HeartRateZoneDistributionCard(
                                         distribution = distribution,
-                                        displayMode = hrZoneDisplayMode,
+                                        displayMode = effectiveHrZoneDisplayMode,
                                         onDisplayModeChange = { hrZoneDisplayMode = it },
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -480,7 +484,7 @@ fun TrackOnMapScreen(
                                 powerZoneDistribution?.let { distribution ->
                                     PowerZoneDistributionCard(
                                         distribution = distribution,
-                                        displayMode = powerZoneDisplayMode,
+                                        displayMode = effectivePowerZoneDisplayMode,
                                         onDisplayModeChange = { powerZoneDisplayMode = it },
                                         modifier = Modifier
                                             .fillMaxWidth()

@@ -41,6 +41,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
 
 private data class MatrixFeatureRow(
@@ -330,6 +331,43 @@ fun WorkoutMasksAndCardsSection(
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
                     ) {
                         Text(stringResource(R.string.settings_lap_display_mode_visualizer))
+                    }
+                }
+            }
+        }
+
+        // Dedicated Zone Card Display Mode Sub-Setting Section (REQ-UI-372.8)
+        if (workoutCardPrefs.showZoneAnalysis || workoutDetailPrefs.showZoneAnalysis) {
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_zone_card_display_mode_title),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                val zoneModes = listOf(
+                    ZoneCardDisplayMode.STACKED_BAR to R.string.zone_mode_stacked_bar,
+                    ZoneCardDisplayMode.COLUMNS to R.string.zone_mode_columns,
+                    ZoneCardDisplayMode.HISTOGRAM to R.string.zone_mode_histogram
+                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    zoneModes.forEachIndexed { index, (mode, labelRes) ->
+                        SegmentedButton(
+                            selected = workoutCardPrefs.zoneCardDisplayMode == mode,
+                            onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(zoneCardDisplayMode = mode)) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = zoneModes.size)
+                        ) {
+                            Text(stringResource(labelRes))
+                        }
                     }
                 }
             }

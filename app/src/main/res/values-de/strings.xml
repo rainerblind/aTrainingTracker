@@ -1603,6 +1603,9 @@
     <string name="settings_lap_display_mode_visualizer">Visualizer</string>
     <string name="settings_lap_display_mode_both">Beide</string>
 
+    <!-- Configurable Default Zone Card Display Mode (ATT-3676 / REQ-UI-372.8) -->
+    <string name="settings_zone_card_display_mode_title">Zonenkarten-Anzeigemodus</string>
+
     <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
     <string name="workout_source_tracked">Aufgezeichnet</string>
     <string name="workout_source_tcx">TCX</string>
