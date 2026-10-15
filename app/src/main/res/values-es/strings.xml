@@ -1788,4 +1788,12 @@
     <string name="crop_insufficient_storage">Espacio de almacenamiento insuficiente para recortar el entrenamiento (se requieren al menos %d MB).</string>
     <string name="crop_export_failed_retry">Error al recrear los archivos de exportación. Inténtalo de nuevo.</string>
     <string name="crop_force_reexport">Forzar reexportación</string>
+    <!-- Grade Legend (ATT-3391 / REQ-UI-371) -->
+    <string name="grade_legend_under_2">&lt; 2%</string>
+    <string name="grade_legend_2_to_5">2 – 5%</string>
+    <string name="grade_legend_5_to_10">5 – 10%</string>
+    <string name="grade_legend_10_to_15">10 – 15%</string>
+    <string name="grade_legend_15_to_20">15 – 20%</string>
+    <string name="grade_legend_20_to_25">20 – 25%</string>
+    <string name="grade_legend_over_25">&gt; 25%</string>
 </resources>

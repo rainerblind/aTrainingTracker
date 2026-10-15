@@ -42,7 +42,9 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import com.atrainingtracker.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.banalservice.BANALService
@@ -197,6 +199,29 @@ fun calculateElevationProfileHeight(range: Double): androidx.compose.ui.unit.Dp 
     val curvedRange = normalizedRange.toDouble().pow(0.6).toFloat()
     val height = minH + curvedRange * (maxH - minH)
     return height.toInt().dp
+}
+
+/**
+ * Resolves standard 7-zone slope gradient color bands (REQ-UI-371):
+ * - < 2%: Zone 1 (Chartreuse) - flat, rolling, descents, non-finite values (NaN/Inf)
+ * - 2% - 5%: Zone 2 (Green) - gentle incline [2.0, 5.0)
+ * - 5% - 10%: Zone 3 (Orange) - moderate climb [5.0, 10.0)
+ * - 10% - 15%: Zone 4 (Red) - steep climb [10.0, 15.0)
+ * - 15% - 20%: Zone 5 (Dark Violet) - very steep climb [15.0, 20.0)
+ * - 20% - 25%: Zone 6 (Dark Chestnut Brown) - extreme ramp [20.0, 25.0)
+ * - >= 25%: Zone 7 (Black) - monster grade / wall [25.0, +inf)
+ */
+fun getElevationGradeColor(gradePercent: Double): Color {
+    if (!gradePercent.isFinite()) return TTColor.Zone1
+    return when {
+        gradePercent < 2.0 -> TTColor.Zone1
+        gradePercent < 5.0 -> TTColor.Zone2
+        gradePercent < 10.0 -> TTColor.Zone3
+        gradePercent < 15.0 -> TTColor.Zone4
+        gradePercent < 20.0 -> TTColor.Zone5
+        gradePercent < 25.0 -> TTColor.Zone6
+        else -> TTColor.Zone7
+    }
 }
 
 private data class ElevationSegment(
@@ -387,14 +412,7 @@ fun ElevationProfile(
             val color = if (climbGradientShading) {
                 segmentColorProvider?.invoke(grade) ?: getClimbGradeColor(grade)
             } else {
-                when {
-                    grade < 2.0 -> TTColor.Zone1
-                    grade < 5.0 -> TTColor.Zone2
-                    grade < 10.0 -> TTColor.Zone3
-                    grade < 15.0 -> TTColor.Zone4
-                    grade < 20.0 -> TTColor.Zone5
-                    else -> Color.Black
-                }
+                segmentColorProvider?.invoke(grade) ?: getElevationGradeColor(grade)
             }
             segments.add(ElevationSegment(p1.distance, p1.timeSec, a1, p2.distance, p2.timeSec, a2, color))
         }
@@ -1113,7 +1131,7 @@ fun ScrubbingTelemetryBadge(
 @Composable
 private fun GradeLegend(modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.widthIn(max = 280.dp),
+        modifier = modifier.widthIn(max = 300.dp),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
         shape = RoundedCornerShape(8.dp),
         shadowElevation = 4.dp
@@ -1123,20 +1141,30 @@ private fun GradeLegend(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            GradeLegendItem(TTColor.Zone1, "< 2%")
-            GradeLegendItem(TTColor.Zone2, "2 - 5%")
-            GradeLegendItem(TTColor.Zone3, "5 - 10%")
-            GradeLegendItem(TTColor.Zone4, "10 - 15%")
-            GradeLegendItem(TTColor.Zone5, "15 - 20%")
-            GradeLegendItem(Color.Black, "> 20%")
+            GradeLegendItem(TTColor.Zone1, stringResource(R.string.grade_legend_under_2))
+            GradeLegendItem(TTColor.Zone2, stringResource(R.string.grade_legend_2_to_5))
+            GradeLegendItem(TTColor.Zone3, stringResource(R.string.grade_legend_5_to_10))
+            GradeLegendItem(TTColor.Zone4, stringResource(R.string.grade_legend_10_to_15))
+            GradeLegendItem(TTColor.Zone5, stringResource(R.string.grade_legend_15_to_20))
+            GradeLegendItem(TTColor.Zone6, stringResource(R.string.grade_legend_20_to_25))
+            GradeLegendItem(TTColor.Zone7, stringResource(R.string.grade_legend_over_25))
         }
     }
 }
 
 @Composable
-private fun GradeLegendItem(color: Color, label: String) {
+private fun GradeLegendItem(
+    color: Color,
+    label: String,
+    hasOutline: Boolean = color == TTColor.Zone6 || color == TTColor.Zone7
+) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Surface(modifier = Modifier.size(12.dp), color = color, shape = RoundedCornerShape(2.dp)) {}
+        Surface(
+            modifier = Modifier.size(12.dp),
+            color = color,
+            shape = RoundedCornerShape(2.dp),
+            border = if (hasOutline) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null
+        ) {}
         Text(
             text = label, 
             style = MaterialTheme.typography.labelSmall, 

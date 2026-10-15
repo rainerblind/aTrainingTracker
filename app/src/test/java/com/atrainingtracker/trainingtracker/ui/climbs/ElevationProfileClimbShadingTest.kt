@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.climbs
 import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.calculateElevationBounds
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.LatLng
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -43,35 +44,39 @@ class ElevationProfileClimbShadingTest {
 
     @Test
     fun testGetClimbGradeColor_allBandsAndBoundaries() {
-        // Band 1: < 3% -> Green (0xFF4CAF50)
-        assertEquals(Color(0xFF4CAF50), getClimbGradeColor(-5.0))
-        assertEquals(Color(0xFF4CAF50), getClimbGradeColor(0.0))
-        assertEquals(Color(0xFF4CAF50), getClimbGradeColor(2.9))
+        // Band 1: < 2% -> TTColor.Zone1 (Chartreuse)
+        assertEquals(TTColor.Zone1, getClimbGradeColor(-5.0))
+        assertEquals(TTColor.Zone1, getClimbGradeColor(0.0))
+        assertEquals(TTColor.Zone1, getClimbGradeColor(1.99))
 
-        // Band 2: 3% - 6% -> Light Green (0xFF8BC34A)
-        assertEquals(Color(0xFF8BC34A), getClimbGradeColor(3.0))
-        assertEquals(Color(0xFF8BC34A), getClimbGradeColor(4.5))
-        assertEquals(Color(0xFF8BC34A), getClimbGradeColor(5.99))
+        // Band 2: 2% - 5% -> TTColor.Zone2 (Green)
+        assertEquals(TTColor.Zone2, getClimbGradeColor(2.0))
+        assertEquals(TTColor.Zone2, getClimbGradeColor(3.5))
+        assertEquals(TTColor.Zone2, getClimbGradeColor(4.99))
 
-        // Band 3: 6% - 9% -> Amber (0xFFFFC107)
-        assertEquals(Color(0xFFFFC107), getClimbGradeColor(6.0))
-        assertEquals(Color(0xFFFFC107), getClimbGradeColor(7.4))
-        assertEquals(Color(0xFFFFC107), getClimbGradeColor(8.99))
+        // Band 3: 5% - 10% -> TTColor.Zone3 (Orange)
+        assertEquals(TTColor.Zone3, getClimbGradeColor(5.0))
+        assertEquals(TTColor.Zone3, getClimbGradeColor(7.4))
+        assertEquals(TTColor.Zone3, getClimbGradeColor(9.99))
 
-        // Band 4: 9% - 12% -> Orange (0xFFFF9800)
-        assertEquals(Color(0xFFFF9800), getClimbGradeColor(9.0))
-        assertEquals(Color(0xFFFF9800), getClimbGradeColor(10.5))
-        assertEquals(Color(0xFFFF9800), getClimbGradeColor(11.99))
+        // Band 4: 10% - 15% -> TTColor.Zone4 (Red)
+        assertEquals(TTColor.Zone4, getClimbGradeColor(10.0))
+        assertEquals(TTColor.Zone4, getClimbGradeColor(12.5))
+        assertEquals(TTColor.Zone4, getClimbGradeColor(14.99))
 
-        // Band 5: 12% - 20% -> Red (0xFFE53935)
-        assertEquals(Color(0xFFE53935), getClimbGradeColor(12.0))
-        assertEquals(Color(0xFFE53935), getClimbGradeColor(15.0))
-        assertEquals(Color(0xFFE53935), getClimbGradeColor(19.99))
+        // Band 5: 15% - 20% -> TTColor.Zone5 (Dark Violet)
+        assertEquals(TTColor.Zone5, getClimbGradeColor(15.0))
+        assertEquals(TTColor.Zone5, getClimbGradeColor(17.5))
+        assertEquals(TTColor.Zone5, getClimbGradeColor(19.99))
 
-        // Band 6: >= 20% -> Dark Red / Near Black (0xFF212121)
-        assertEquals(Color(0xFF212121), getClimbGradeColor(20.0))
-        assertEquals(Color(0xFF212121), getClimbGradeColor(25.0))
-        assertEquals(Color(0xFF212121), getClimbGradeColor(35.0))
+        // Band 6: 20% - 25% -> TTColor.Zone6 (Dark Chestnut Brown)
+        assertEquals(TTColor.Zone6, getClimbGradeColor(20.0))
+        assertEquals(TTColor.Zone6, getClimbGradeColor(22.5))
+        assertEquals(TTColor.Zone6, getClimbGradeColor(24.99))
+
+        // Band 7: >= 25% -> TTColor.Zone7 (Black)
+        assertEquals(TTColor.Zone7, getClimbGradeColor(25.0))
+        assertEquals(TTColor.Zone7, getClimbGradeColor(35.0))
     }
 
     @Test
