@@ -30,6 +30,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.atrainingtracker.banalservice.BSportType;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository;
 
 import java.util.ArrayList;
@@ -414,7 +415,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
                 itemList.add(new EquipmentData(
                         cursor.getLong(idIdx),
                         cursor.getString(nameIdx),
-                        BSportType.valueOf(cursor.getString(sportIdx)),
+                        EnumUtils.safeValueOf(BSportType.class, cursor.getString(sportIdx), BSportType.UNKNOWN, TAG),
                         cursor.getInt(frameIdx),
                         cursor.getString(stravaNameIdx),
                         cursor.getString(stravaIdIdx),
@@ -461,7 +462,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
                 itemList.add(new EquipmentData(
                         cursor.getLong(idIdx),
                         cursor.getString(nameIdx),
-                        BSportType.valueOf(cursor.getString(sportIdx)),
+                        EnumUtils.safeValueOf(BSportType.class, cursor.getString(sportIdx), BSportType.UNKNOWN, TAG),
                         cursor.getInt(frameIdx),
                         cursor.getString(stravaNameIdx),
                         cursor.getString(stravaIdIdx),

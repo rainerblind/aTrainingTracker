@@ -20,6 +20,7 @@ import android.location.Location
 import android.util.Log
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -685,13 +686,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
         clusterDb.updateCluster(refreshedCluster)
 
         val sportStr = summariesManager.getString(workoutId, WorkoutSummaries.B_SPORT)
-        val currentBSport = if (!sportStr.isNullOrBlank()) {
-            try {
-                BSportType.valueOf(sportStr)
-            } catch (e: Exception) {
-                BSportType.UNKNOWN
-            }
-        } else BSportType.UNKNOWN
+        val currentBSport = safeEnumValueOf(sportStr, BSportType.UNKNOWN, TAG)
         val avgSpeed = summariesManager.getDouble(workoutId, WorkoutSummaries.SPEED_AVERAGE_mps) ?: 0.0
         val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(context)
         val hardwareIdentity = discoveryManager.resolveIdentity(workoutId, currentBSport, avgSpeed)

@@ -29,6 +29,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import com.atrainingtracker.R;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeCadenceDevice;
@@ -243,8 +244,14 @@ public class DeviceManager {
                 return;
             }
 
-            Protocol protocol = Protocol.valueOf(intent.getStringExtra(BANALService.PROTOCOL));
-            DeviceType deviceType = DeviceType.valueOf(intent.getStringExtra(BANALService.DEVICE_TYPE));
+            Protocol protocol = EnumUtils.safeValueOfOrNull(Protocol.class, intent.getStringExtra(BANALService.PROTOCOL), TAG);
+            DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, intent.getStringExtra(BANALService.DEVICE_TYPE), TAG);
+            if (protocol == null || deviceType == null) {
+                Log.e(TAG, "Cannot start device search: invalid or missing Protocol / DeviceType in intent extra");
+                Intent stoppedIntent = new Intent(BANALService.SEARCHING_STOPPED_FOR_ONE_INTENT);
+                mContext.sendBroadcast(stoppedIntent);
+                return;
+            }
             startSearchForNewRemoteDevices(protocol, deviceType);
         }
     };
@@ -981,7 +988,11 @@ public class DeviceManager {
                 }
                 if (DEBUG) Log.d(TAG, "create new device with ID: " + deviceID);
 
-                DeviceType deviceType = DeviceType.valueOf(cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)));
+                DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)), TAG);
+                if (deviceType == null) {
+                    Log.w(TAG, "Skipping paired device with invalid DeviceType at ID: " + deviceID);
+                    continue;
+                }
 
                 switch (protocol) {
                     case ANT_PLUS:

@@ -23,6 +23,7 @@ import android.content.Context
 import android.database.Cursor
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
@@ -421,11 +422,8 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         val commute = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE)
         val race = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.RACE)
         val bSportString = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT)
-        val bSportType = try {
-            bSportString?.let { BSportType.valueOf(it) } ?: BSportType.UNKNOWN
-        } catch (e: Exception) {
-            SportTypeDatabaseManager.getInstance(mContext).getBSportType(sportId)
-        }
+        val bSportType = safeEnumValueOfOrNull<BSportType>(bSportString, TAG)
+            ?: SportTypeDatabaseManager.getInstance(mContext).getBSportType(sportId)
 
         val eqIndex = cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID)
         val gearId: String? = if (!cursor.isNull(eqIndex)) {

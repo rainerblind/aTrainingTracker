@@ -33,6 +33,7 @@ import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import com.atrainingtracker.trainingtracker.exporter.ExportStatus;
 import com.atrainingtracker.trainingtracker.exporter.ExportType;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
+import com.atrainingtracker.util.EnumUtils;
 
 import java.util.EnumMap;
 
@@ -196,7 +197,10 @@ public class ExportStatusDatabaseManager {
                         null);
                 if (cursor.getCount() > 0) {
                     cursor.moveToFirst();
-                    enumMap.put(fileFormat, ExportStatus.valueOf(cursor.getString(cursor.getColumnIndex(EXPORT_STATUS))));
+                    ExportStatus status = EnumUtils.safeValueOfOrNull(ExportStatus.class, cursor.getString(cursor.getColumnIndex(EXPORT_STATUS)), TAG);
+                    if (status != null) {
+                        enumMap.put(fileFormat, status);
+                    }
                 }
                 cursor.close();
             }
@@ -231,15 +235,15 @@ public class ExportStatusDatabaseManager {
                 new String[]{fileBaseName},
                 null, null, null)) {
             while (cursor.moveToNext()) {
-                try {
-                    ExportType type = ExportType.valueOf(cursor.getString(0));
-                    FileFormat format = FileFormat.valueOf(cursor.getString(1));
-                    ExportStatus status = ExportStatus.valueOf(cursor.getString(2));
-                    String answer = cursor.getString(3);
-                    result.add(new ExportRow(type, format, status, answer));
-                } catch (IllegalArgumentException e) {
-                    Log.w(TAG, "Invalid enum value in DB", e);
+                ExportType type = EnumUtils.safeValueOfOrNull(ExportType.class, cursor.getString(0), TAG);
+                FileFormat format = EnumUtils.safeValueOfOrNull(FileFormat.class, cursor.getString(1), TAG);
+                ExportStatus status = EnumUtils.safeValueOfOrNull(ExportStatus.class, cursor.getString(2), TAG);
+                if (type == null || format == null || status == null) {
+                    Log.w(TAG, "Skipping corrupted or unrecognized export row");
+                    continue;
                 }
+                String answer = cursor.getString(3);
+                result.add(new ExportRow(type, format, status, answer));
             }
         }
         return result;
@@ -267,7 +271,10 @@ public class ExportStatusDatabaseManager {
                     null);
             if (cursor.getCount() > 0) {
                 cursor.moveToFirst();
-                result.put(fileFormat, ExportStatus.valueOf(cursor.getString(cursor.getColumnIndex(EXPORT_STATUS))));
+                ExportStatus status = EnumUtils.safeValueOfOrNull(ExportStatus.class, cursor.getString(cursor.getColumnIndex(EXPORT_STATUS)), TAG);
+                if (status != null) {
+                    result.put(fileFormat, status);
+                }
             }
             cursor.close();
         }
@@ -298,7 +305,7 @@ public class ExportStatusDatabaseManager {
                 null);
         if (cursor.getCount() > 0) {
             cursor.moveToFirst();
-            exportStatus = ExportStatus.valueOf(cursor.getString(cursor.getColumnIndex(EXPORT_STATUS)));
+            exportStatus = EnumUtils.safeValueOfOrNull(ExportStatus.class, cursor.getString(cursor.getColumnIndex(EXPORT_STATUS)), TAG);
         }
         cursor.close();
 

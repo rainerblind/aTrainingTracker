@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import com.atrainingtracker.util.safeEnumValueOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -146,22 +147,18 @@ class MyPreferenceManager(context: Context) {
             showTelemetryCharts = preferences[WORKOUT_CARD_SHOW_CHARTS] ?: false,
             showZoneAnalysis = preferences[WORKOUT_CARD_SHOW_ZONES] ?: true,
             showExportStatus = preferences[WORKOUT_CARD_SHOW_EXPORT_STATUS] ?: true,
-            lapDisplayMode = try {
+            lapDisplayMode = run {
                 val rawMode = preferences[WORKOUT_CARD_LAP_DISPLAY_MODE]
-                if (rawMode != null && rawMode != "BOTH") LapDisplayMode.valueOf(rawMode) else LapDisplayMode.VISUALIZER_ONLY
-            } catch (e: Exception) {
-                LapDisplayMode.VISUALIZER_ONLY
+                if (rawMode != null && rawMode != "BOTH") safeEnumValueOf(rawMode, LapDisplayMode.VISUALIZER_ONLY) else LapDisplayMode.VISUALIZER_ONLY
             },
-            zoneCardDisplayMode = try {
+            zoneCardDisplayMode = run {
                 val rawMode = preferences[WORKOUT_CARD_ZONE_DISPLAY_MODE]
                 if (rawMode != null) {
                     if (rawMode == "FIVE_ZONES") ZoneCardDisplayMode.COLUMNS
-                    else ZoneCardDisplayMode.valueOf(rawMode)
+                    else safeEnumValueOf(rawMode, ZoneCardDisplayMode.COLUMNS)
                 } else {
                     ZoneCardDisplayMode.COLUMNS
                 }
-            } catch (e: Exception) {
-                ZoneCardDisplayMode.COLUMNS
             }
         )
     }

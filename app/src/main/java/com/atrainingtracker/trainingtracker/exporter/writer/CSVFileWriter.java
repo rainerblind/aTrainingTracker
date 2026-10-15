@@ -32,6 +32,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
+import com.atrainingtracker.util.EnumUtils;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -101,11 +102,8 @@ public class CSVFileWriter extends BaseExporter {
                 sensorTypeName = columnName;
             }
 
-            try {
-                columnName2Type.put(columnName, SensorType.valueOf(sensorTypeName).getSensorValueType());
-            } catch (Exception e) {
-                columnName2Type.put(columnName, SensorValueType.STRING);
-            }
+            SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, sensorTypeName, TAG);
+            columnName2Type.put(columnName, sensorType != null ? sensorType.getSensorValueType() : SensorValueType.STRING);
         }
 
         // now, sort the ones with the source

@@ -35,6 +35,7 @@ import androidx.core.content.res.ResourcesCompat;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.ArrayList;
@@ -261,15 +262,7 @@ public class SportTypeDatabaseManager {
     @NonNull
     public BSportType getBSportType(long id) {
         if (DEBUG) Log.i(TAG, "getBsportType: id=" + id);
-
-        BSportType result = BSportType.UNKNOWN;
-        String bSportType = getString(id, SportType.BASE_SPORT_TYPE);
-        try {
-            result = BSportType.valueOf(bSportType);
-        } catch (Exception e) {
-        }
-
-        return result;
+        return EnumUtils.safeValueOf(BSportType.class, getString(id, SportType.BASE_SPORT_TYPE), BSportType.UNKNOWN, TAG);
     }
 
     public String getUIName(long id) {
@@ -485,7 +478,7 @@ public class SportTypeDatabaseManager {
             sensors.add(new SimpleSportTypeInfo(
                     cursor.getLong(idCol),
                     cursor.getString(nameCol),
-                    BSportType.valueOf(cursor.getString(bSportTypeCol))
+                    EnumUtils.safeValueOf(BSportType.class, cursor.getString(bSportTypeCol), BSportType.UNKNOWN, TAG)
             ));
         }
         cursor.close();
@@ -519,11 +512,7 @@ public class SportTypeDatabaseManager {
 
         if (cursor.moveToFirst()) {
             String bSportTypeName = cursor.getString(cursor.getColumnIndexOrThrow(SportType.BASE_SPORT_TYPE));
-            try {
-                result = BSportType.valueOf(bSportTypeName);
-            } catch (IllegalArgumentException e) {
-                Log.e(TAG, "Invalid BSportType in database: " + bSportTypeName);
-            }
+            result = EnumUtils.safeValueOfOrNull(BSportType.class, bSportTypeName, TAG);
         }
         cursor.close();
 
@@ -595,7 +584,7 @@ public class SportTypeDatabaseManager {
     }
 
     public static BSportType getBSportType(String ttSportTypeName) {
-        TTSportType ttSportType = TTSportType.valueOf(ttSportTypeName);
+        TTSportType ttSportType = EnumUtils.safeValueOf(TTSportType.class, ttSportTypeName, TTSportType.OTHER, TAG);
         return ttSportType.getBSportType();
     }
 
@@ -609,7 +598,7 @@ public class SportTypeDatabaseManager {
     }
 
     public static long getSportTypeIdFromTTSportTypeName(String ttSportTypeName) {
-        TTSportType ttSportType = TTSportType.valueOf(ttSportTypeName);
+        TTSportType ttSportType = EnumUtils.safeValueOf(TTSportType.class, ttSportTypeName, TTSportType.OTHER, TAG);
         return switch (ttSportType) {
             case OTHER -> 1;
             case RUN -> 2;

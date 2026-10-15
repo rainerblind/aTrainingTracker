@@ -43,6 +43,7 @@ import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
+import com.atrainingtracker.util.EnumUtils;
 
 import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode;
 import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode;
@@ -335,7 +336,7 @@ public class TrainingApplication extends Application {
 
     @NonNull
     public static Watchapp getPebbleWatchapp() {
-        return Watchapp.valueOf(cSharedPreferences.getString(SP_PEBBLE_WATCHAPP, Watchapp.BUILD_IN.name()));
+        return EnumUtils.safeValueOf(Watchapp.class, cSharedPreferences.getString(SP_PEBBLE_WATCHAPP, Watchapp.BUILD_IN.name()), Watchapp.BUILD_IN, TAG);
     }
 
     public static boolean showPebbleInstallDialog() {
@@ -469,7 +470,7 @@ public class TrainingApplication extends Application {
         if (cSharedPreferences == null) {
             return MyUnits.METRIC;
         }
-        return MyUnits.valueOf(cSharedPreferences.getString(SP_UNITS, MyUnits.METRIC.name()));
+        return EnumUtils.safeValueOf(MyUnits.class, cSharedPreferences.getString(SP_UNITS, MyUnits.METRIC.name()), MyUnits.METRIC, TAG);
     }
 
     // -- Display options

@@ -40,6 +40,7 @@ import com.atrainingtracker.banalservice.filters.SensorFilterDefaults;
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize;
+import com.atrainingtracker.util.EnumUtils;
 
 import java.util.EnumMap;
 import java.util.LinkedList;
@@ -483,7 +484,7 @@ public class TrackingViewsDatabaseManager {
                 null);
 
         if (cursor.moveToFirst()) {
-            activityType = ActivityType.valueOf(cursor.getString(cursor.getColumnIndex(TrackingViewsDbHelper.ACTIVITY_TYPE)));
+            activityType = EnumUtils.safeValueOf(ActivityType.class, cursor.getString(cursor.getColumnIndex(TrackingViewsDbHelper.ACTIVITY_TYPE)), ActivityType.getDefaultActivityType(), TAG);
         }
 
         cursor.close();
@@ -576,23 +577,13 @@ public class TrackingViewsDatabaseManager {
                 null, null, null);
         while (cursor.moveToNext()) {
             String sensorTypeStr = cursor.getString(cursor.getColumnIndex(TrackingViewsDbHelper.SENSOR_TYPE));
-            SensorType sensorType;
-            try {
-                sensorType = sensorTypeStr != null ? SensorType.valueOf(sensorTypeStr) : SensorType.TIME_ACTIVE;
-            } catch (IllegalArgumentException e) {
-                sensorType = SensorType.TIME_ACTIVE;
-            }
+            SensorType sensorType = EnumUtils.safeValueOf(SensorType.class, sensorTypeStr, SensorType.TIME_ACTIVE, TAG);
 
             int sourceDeviceId = cursor.getInt(cursor.getColumnIndex(TrackingViewsDbHelper.SOURCE_DEVICE_ID));
             String deviceName = devicesDatabaseManager.getDeviceName(sourceDeviceId);
 
             String filterTypeStr = cursor.getString(cursor.getColumnIndex(TrackingViewsDbHelper.FILTER_TYPE));
-            FilterType filterType;
-            try {
-                filterType = filterTypeStr != null ? FilterType.valueOf(filterTypeStr) : FilterType.INSTANTANEOUS;
-            } catch (IllegalArgumentException e) {
-                filterType = FilterType.INSTANTANEOUS;
-            }
+            FilterType filterType = EnumUtils.safeValueOf(FilterType.class, filterTypeStr, FilterType.INSTANTANEOUS, TAG);
 
             double filterConstant = cursor.getDouble(cursor.getColumnIndex(TrackingViewsDbHelper.FILTER_CONSTANT));
 

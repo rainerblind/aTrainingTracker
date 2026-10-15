@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 import androidx.compose.runtime.Immutable
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.google.android.gms.maps.model.LatLng
 import org.json.JSONObject
@@ -270,11 +271,7 @@ data class WorkoutFilterCriteria(
                     clusterId = if (json.has("clusterId")) json.optLong("clusterId") else null,
                     clusterName = if (json.has("clusterName")) json.optString("clusterName") else null,
                     source = if (json.has("source")) {
-                        try {
-                            WorkoutSource.valueOf(json.optString("source").trim().uppercase())
-                        } catch (_: IllegalArgumentException) {
-                            null
-                        }
+                        safeEnumValueOfOrNull<WorkoutSource>(json.optString("source").trim().uppercase(), "WorkoutFilterCriteria")
                     } else null
                 )
             } catch (e: Exception) {

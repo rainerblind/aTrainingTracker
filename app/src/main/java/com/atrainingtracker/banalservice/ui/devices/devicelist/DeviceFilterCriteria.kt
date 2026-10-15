@@ -21,6 +21,8 @@ package com.atrainingtracker.banalservice.ui.devices.devicelist
 import androidx.compose.runtime.Immutable
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.util.safeEnumValueOf
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import org.json.JSONArray
 import org.json.JSONObject
@@ -126,21 +128,21 @@ data class DeviceFilterCriteria(
             return try {
                 val json = JSONObject(jsonStr)
                 val proto = if (json.has("protocol")) {
-                    runCatching { Protocol.valueOf(json.getString("protocol")) }.getOrNull()
+                    safeEnumValueOfOrNull<Protocol>(json.getString("protocol"))
                 } else null
 
                 val types = mutableSetOf<DeviceType>()
                 if (json.has("deviceTypes")) {
                     val array = json.getJSONArray("deviceTypes")
                     for (i in 0 until array.length()) {
-                        runCatching { DeviceType.valueOf(array.getString(i)) }.getOrNull()?.let {
+                        safeEnumValueOfOrNull<DeviceType>(array.getString(i))?.let {
                             types.add(it)
                         }
                     }
                 }
 
                 val bat = if (json.has("batteryFilter")) {
-                    runCatching { BatteryFilter.valueOf(json.getString("batteryFilter")) }.getOrDefault(BatteryFilter.ALL)
+                    safeEnumValueOf(json.getString("batteryFilter"), BatteryFilter.ALL)
                 } else BatteryFilter.ALL
 
                 DeviceFilterCriteria(

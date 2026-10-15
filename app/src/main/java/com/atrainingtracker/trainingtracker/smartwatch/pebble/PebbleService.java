@@ -40,6 +40,7 @@ import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
 import com.atrainingtracker.banalservice.sensor.SensorData;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.MyUnits;
@@ -320,7 +321,12 @@ public class PebbleService extends Service {
         mRows = cursor.getCount();
 
         while (cursor.moveToNext()) {
-            result.add(SensorType.valueOf(cursor.getString(cursor.getColumnIndex(PebbleDbHelper.SENSOR_TYPE))));
+            SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, cursor.getString(cursor.getColumnIndex(PebbleDbHelper.SENSOR_TYPE)), TAG);
+            if (sensorType != null) {
+                result.add(sensorType);
+            } else {
+                Log.w(TAG, "Skipping unrecognized sensor type for Pebble view");
+            }
         }
 
         cursor.close();
