@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
@@ -798,8 +799,6 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
             TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC
         )
-        val clampedAutoPauseSpeedThreshold = clampedBikeSpeedThreshold.toFloat()
-        val clampedAutoPauseDebounce = clampedBikeDebounce
 
         context.dataStore.edit { prefs ->
             prefs[KEY_ELEVATION_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
@@ -893,8 +892,6 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] = clampedRunDebounce
             prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] = clampedOtherSpeedThreshold
             prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] = clampedOtherDebounce
-            prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clampedAutoPauseSpeedThreshold
-            prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clampedAutoPauseDebounce
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
@@ -903,6 +900,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         TrainingApplication.setClusterTolAltitudePos(clampedClusterTolAltitudePos)
         TrainingApplication.setUseSportTypeForClustering(config.clusterUseSportType)
         TrainingApplication.setUseAltitudePosForClustering(config.clusterUseAltitudePos)
+        TrackerService.invalidateAutoPauseCache()
     }
 
 
@@ -1078,6 +1076,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clamped
         }
+        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseDebounceSec(debounceSec: Int) {
@@ -1088,6 +1087,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clamped
         }
+        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseBikeSpeedThreshold(threshold: Int) {
@@ -1099,6 +1099,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD] = clamped
             prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clamped.toFloat()
         }
+        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseBikeDebounceSec(debounceSec: Int) {
@@ -1110,6 +1111,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC] = clamped
             prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clamped
         }
+        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseRunSpeedThreshold(threshold: Int) {
@@ -1120,6 +1122,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD] = clamped
         }
+        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseRunDebounceSec(debounceSec: Int) {
@@ -1130,6 +1133,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] = clamped
         }
+        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseOtherSpeedThreshold(threshold: Int) {
@@ -1140,6 +1144,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] = clamped
         }
+        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseOtherDebounceSec(debounceSec: Int) {
@@ -1150,6 +1155,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] = clamped
         }
+        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun resetToDefaults() {

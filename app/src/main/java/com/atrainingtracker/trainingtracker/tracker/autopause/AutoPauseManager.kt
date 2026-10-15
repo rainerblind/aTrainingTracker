@@ -145,6 +145,11 @@ class AutoPauseManager(
             return (pauseThresholdKmh + HYSTERESIS_OFFSET_KMH).coerceAtMost(RESUME_HARD_CEILING_KMH)
         }
 
+        /**
+         * Calculates the resume speed threshold in active user units with anti-chatter hysteresis deadband (+0.5).
+         * Parameterized physical ceiling (6.0 km/h Metric, 6.0 mph Imperial) prevents boundary inversion
+         * where resume speed could otherwise fall below pause speed under Imperial units.
+         */
         @JvmStatic
         fun calculateResumeSpeedThresholdUserUnit(pauseThreshold: Double, isMetric: Boolean): Double {
             val ceiling = if (isMetric) RESUME_HARD_CEILING_KMH.toDouble() else RESUME_HARD_CEILING_MPH.toDouble()

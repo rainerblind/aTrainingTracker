@@ -183,13 +183,25 @@ public class TrackerService extends Service {
         return mAutoPauseManager;
     }
 
+    private static volatile TrackerService sInstance = null;
+
+    public static void invalidateAutoPauseCache() {
+        TrackerService service = sInstance;
+        if (service != null) {
+            service.invalidateAutoPauseConfigCache();
+        }
+    }
+
     private volatile AutoPauseConfig mCachedAutoPauseConfig = null;
     private long mLastAutoPauseConfigFetchMs = 0L;
     private static final long AUTO_PAUSE_CONFIG_CACHE_TTL_MS = 5000L;
 
     public AutoPauseConfig getAutoPauseConfig() {
         long now = System.currentTimeMillis();
-        if (mCachedAutoPauseConfig == null || (now - mLastAutoPauseConfigFetchMs) > AUTO_PAUSE_CONFIG_CACHE_TTL_MS) {
+        boolean currentIsMetric = (TrainingApplication.getUnit() == com.atrainingtracker.trainingtracker.MyUnits.METRIC);
+        if (mCachedAutoPauseConfig == null 
+                || (now - mLastAutoPauseConfigFetchMs) > AUTO_PAUSE_CONFIG_CACHE_TTL_MS
+                || mCachedAutoPauseConfig.isMetric() != currentIsMetric) {
             mCachedAutoPauseConfig = SettingsDataStoreJavaHelper.getAutoPauseConfig(this);
             mLastAutoPauseConfigFetchMs = now;
         }
@@ -388,6 +400,7 @@ public class TrackerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        sInstance = this;
         if (DEBUG) {
             Log.d(TAG, "onCreate");
         }
@@ -725,6 +738,9 @@ public class TrackerService extends Service {
     @Override
     public void onDestroy() {
         performSuperOnDestroy();
+        if (sInstance == this) {
+            sInstance = null;
+        }
         if (DEBUG) Log.d(TAG, "onDestroy");
 
         // first of all, stop the trackerHandle
