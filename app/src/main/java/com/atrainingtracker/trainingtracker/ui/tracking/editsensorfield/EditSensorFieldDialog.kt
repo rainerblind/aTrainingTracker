@@ -40,6 +40,8 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.settings.AthleteWeightDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.getDisplayName
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Modernized bottom sheet dialog for configuring a tracking grid sensor field (REQ-UI-149, TST-UI-102).
@@ -130,8 +132,10 @@ fun EditSensorFieldDialog(
 
             // Athlete Weight Configuration for Power-to-Weight (ATT-1289, REQ-TRK-019)
             if (uiState.selectedSensorType == SensorType.POWER_TO_WEIGHT) {
+                val dataStore = remember { SettingsDataStore(context) }
+                val athleteWeight by dataStore.athleteWeightKgFlow.collectAsState(initial = 0f)
+                val coroutineScope = rememberCoroutineScope()
                 var showWeightDialog by remember { mutableStateOf(false) }
-                var athleteWeight by remember { mutableFloatStateOf(SettingsDataStoreJavaHelper.getAthleteWeightKg(context)) }
                 val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
                 val weightStr = if (athleteWeight > 0f) {
                     val displayWeight = if (isImperial) athleteWeight * SettingsDataStore.LBS_PER_KG else athleteWeight
@@ -154,8 +158,9 @@ fun EditSensorFieldDialog(
                         initialWeightKg = athleteWeight,
                         onDismiss = { showWeightDialog = false },
                         onSaveWeightKg = { newWeight ->
-                            SettingsDataStoreJavaHelper.setAthleteWeightKg(context, newWeight)
-                            athleteWeight = newWeight
+                            coroutineScope.launch(Dispatchers.IO) {
+                                dataStore.setAthleteWeightKg(newWeight)
+                            }
                         }
                     )
                 }

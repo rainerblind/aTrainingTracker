@@ -48,17 +48,11 @@ class CyclingPowerMetricsDeviceTest {
 
     @Before
     fun setUp() {
-        mockkStatic(TrainingApplication::class)
-        mockkStatic(SettingsDataStoreJavaHelper::class)
         mockkStatic(ContextCompat::class)
-
         every { ContextCompat.registerReceiver(any(), any(), any(), any()) } returns null
 
         mockkConstructor(Intent::class)
         every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
-        every { TrainingApplication.isRecordingSuspended() } returns false
-        every { TrainingApplication.isPaused() } returns false
-        every { TrainingApplication.isAutoPaused() } returns false
 
         context = mockk(relaxed = true)
         sensorManager = mockk(relaxed = true)
@@ -76,10 +70,14 @@ class CyclingPowerMetricsDeviceTest {
 
     @Test
     fun testCalculateMetrics_validPowerAndWeight_publishesCorrectWPerKg() {
-        every { SettingsDataStoreJavaHelper.getAthleteWeightKg(context) } returns 75.0f
         every { powerSensorData.value } returns 300.0
 
-        val device = CyclingPowerMetricsDevice(context, sensorManager)
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f }
+        )
         device.calculateMetrics()
 
         val ptwSensor = device.powerToWeightSensor
@@ -90,10 +88,14 @@ class CyclingPowerMetricsDeviceTest {
 
     @Test
     fun testCalculateMetrics_fractionalPowerAndWeight_publishesExactRatio() {
-        every { SettingsDataStoreJavaHelper.getAthleteWeightKg(context) } returns 65.0f
         every { powerSensorData.value } returns 250.0
 
-        val device = CyclingPowerMetricsDevice(context, sensorManager)
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 65.0f }
+        )
         device.calculateMetrics()
 
         val ptwSensor = device.powerToWeightSensor
@@ -104,10 +106,14 @@ class CyclingPowerMetricsDeviceTest {
 
     @Test
     fun testCalculateMetrics_zeroPower_publishesZeroWPerKg() {
-        every { SettingsDataStoreJavaHelper.getAthleteWeightKg(context) } returns 75.0f
         every { powerSensorData.value } returns 0.0
 
-        val device = CyclingPowerMetricsDevice(context, sensorManager)
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f }
+        )
         device.calculateMetrics()
 
         val ptwSensor = device.powerToWeightSensor
@@ -118,10 +124,14 @@ class CyclingPowerMetricsDeviceTest {
 
     @Test
     fun testCalculateMetrics_unconfiguredWeight_publishesNull() {
-        every { SettingsDataStoreJavaHelper.getAthleteWeightKg(context) } returns 0.0f
         every { powerSensorData.value } returns 300.0
 
-        val device = CyclingPowerMetricsDevice(context, sensorManager)
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 0.0f }
+        )
         device.calculateMetrics()
 
         val ptwSensor = device.powerToWeightSensor
@@ -132,11 +142,14 @@ class CyclingPowerMetricsDeviceTest {
 
     @Test
     fun testCalculateMetrics_recordingSuspended_skipsCalculation() {
-        every { TrainingApplication.isRecordingSuspended() } returns true
-        every { SettingsDataStoreJavaHelper.getAthleteWeightKg(context) } returns 75.0f
         every { powerSensorData.value } returns 300.0
 
-        val device = CyclingPowerMetricsDevice(context, sensorManager)
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { true }, // Suspended
+            { 75.0f }
+        )
         device.calculateMetrics()
 
         val ptwSensor = device.powerToWeightSensor
@@ -148,9 +161,12 @@ class CyclingPowerMetricsDeviceTest {
 
     @Test
     fun testCalculateMetrics_negativeOrInvalidPower_publishesNull() {
-        every { SettingsDataStoreJavaHelper.getAthleteWeightKg(context) } returns 75.0f
-
-        val device = CyclingPowerMetricsDevice(context, sensorManager)
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f }
+        )
 
         every { powerSensorData.value } returns -10.0
         device.calculateMetrics()

@@ -47,10 +47,29 @@ public class CyclingPowerMetricsDevice extends MyDevice {
     private final ScheduledExecutorService mScheduler = Executors.newSingleThreadScheduledExecutor();
     private MySensor<Double> mPowerToWeightSensor;
 
+    public interface RecordingStateProvider {
+        boolean isRecordingSuspended();
+    }
+
+    public interface AthleteWeightProvider {
+        float getAthleteWeightKg(Context context);
+    }
+
+    private final RecordingStateProvider mRecordingStateProvider;
+    private final AthleteWeightProvider mWeightProvider;
+
     private static final FilterData cPowerFilter = new FilterData(null, SensorType.POWER, FilterType.MOVING_AVERAGE_TIME, 3);
 
     public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager) {
+        this(context, mySensorManager, TrainingApplication::isRecordingSuspended, SettingsDataStoreJavaHelper::getAthleteWeightKg);
+    }
+
+    public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager,
+                                     RecordingStateProvider recordingStateProvider,
+                                     AthleteWeightProvider weightProvider) {
         super(context, mySensorManager, DeviceType.CYCLING_POWER_METRICS);
+        mRecordingStateProvider = recordingStateProvider != null ? recordingStateProvider : TrainingApplication::isRecordingSuspended;
+        mWeightProvider = weightProvider != null ? weightProvider : SettingsDataStoreJavaHelper::getAthleteWeightKg;
         if (DEBUG) Log.i(TAG, "CyclingPowerMetricsDevice initialized");
 
         try {
@@ -70,21 +89,21 @@ public class CyclingPowerMetricsDevice extends MyDevice {
     }
 
     @Override
-    public void shutDown() {
+    public synchronized void shutDown() {
         super.shutDown();
         if (mScheduler != null && !mScheduler.isShutdown()) {
-            mScheduler.shutdown();
+            mScheduler.shutdownNow();
         }
     }
 
     @Override
-    protected void addSensors() {
+    protected synchronized void addSensors() {
         if (DEBUG) Log.i(TAG, "addSensors()");
         mPowerToWeightSensor = new MySensor<>(this, SensorType.POWER_TO_WEIGHT);
         addSensor(mPowerToWeightSensor);
     }
 
-    public MySensor<Double> getPowerToWeightSensor() {
+    public synchronized MySensor<Double> getPowerToWeightSensor() {
         return mPowerToWeightSensor;
     }
 
@@ -93,16 +112,18 @@ public class CyclingPowerMetricsDevice extends MyDevice {
      * Gated by active recording suspension (paused / auto-paused).
      */
     public void calculateMetrics() {
-        if (TrainingApplication.isRecordingSuspended()) {
+        if (mRecordingStateProvider.isRecordingSuspended()) {
             if (DEBUG) Log.i(TAG, "calculateMetrics(): recording suspended -> skip");
             return;
         }
 
-        float athleteWeightKg = SettingsDataStoreJavaHelper.getAthleteWeightKg(mContext);
+        float athleteWeightKg = mWeightProvider.getAthleteWeightKg(mContext);
         if (athleteWeightKg <= 0.0f) {
             if (DEBUG) Log.i(TAG, "calculateMetrics(): athlete weight unconfigured");
-            if (mPowerToWeightSensor != null) {
-                mPowerToWeightSensor.newValue(null);
+            synchronized (this) {
+                if (mPowerToWeightSensor != null) {
+                    mPowerToWeightSensor.newValue(null);
+                }
             }
             return;
         }
@@ -128,15 +149,19 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         }
 
         if (power == null || Double.isNaN(power) || Double.isInfinite(power) || power < 0.0) {
-            if (mPowerToWeightSensor != null) {
-                mPowerToWeightSensor.newValue(null);
+            synchronized (this) {
+                if (mPowerToWeightSensor != null) {
+                    mPowerToWeightSensor.newValue(null);
+                }
             }
             return;
         }
 
         double wPerKg = power / athleteWeightKg;
-        if (mPowerToWeightSensor != null) {
-            mPowerToWeightSensor.newValue(wPerKg);
+        synchronized (this) {
+            if (mPowerToWeightSensor != null) {
+                mPowerToWeightSensor.newValue(wPerKg);
+            }
         }
     }
 }
