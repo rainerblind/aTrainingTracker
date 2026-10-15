@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.components.strava.ConnectWithStravaButton
 
 @Composable
@@ -65,7 +66,7 @@ fun StravaConnectionHeader(
                            else stringResource(R.string.strava_disconnected_status),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                    color = if (isConnected) TTColor.ConnectionConnected else MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center
                 )
 

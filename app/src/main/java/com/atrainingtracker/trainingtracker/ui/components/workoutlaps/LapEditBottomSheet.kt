@@ -570,7 +570,7 @@ fun LapEditBottomSheet(
 
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         GoogleMap(
-                                            modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
+                                            modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White),
                                             cameraPositionState = cameraPositionState,
                                             uiSettings = MapUiSettings(
                                                 zoomControlsEnabled = false,

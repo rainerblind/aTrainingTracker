@@ -146,7 +146,7 @@ fun WorkoutClusterMetadataBlock(
                     Icon(
                         imageVector = Icons.Filled.EmojiEvents,
                         contentDescription = stringResource(R.string.cluster_stats_best_time),
-                        tint = Color(0xFFFFD700), // Gold
+                        tint = TTColor.Gold, // Gold
                         modifier = Modifier.size(15.dp)
                     )
                     Text(
@@ -281,7 +281,7 @@ fun ClusterItem(
                             val mapProperties = remember(isDark, context) {
                                 DarkMapStyle.resolveMapProperties(isDark, context)
                             }
-                            Box(modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White)) {
+                            Box(modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {
                                 val start = LatLng(cluster.startLat, cluster.startLng)
                                 val end = LatLng(cluster.endLat, cluster.endLng)
                                 val apex = LatLng(cluster.maxDispLat, cluster.maxDispLng)
@@ -308,7 +308,7 @@ fun ClusterItem(
                                 }
 
                                 GoogleMap(
-                                    modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
+                                    modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White),
                                     cameraPositionState = cameraPositionState,
                                     googleMapOptionsFactory = {
                                         GoogleMapOptions().liteMode(true)
@@ -509,7 +509,7 @@ fun UnclusteredWorkoutItem(
                             val mapProperties = remember(isDark, context) {
                                 DarkMapStyle.resolveMapProperties(isDark, context)
                             }
-                            Box(modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White)) {
+                            Box(modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {
                                 val start = workout.startLatLng
                                 val end = workout.endLatLng
                                 val apex = workout.maxDisplacementLatLng
@@ -532,7 +532,7 @@ fun UnclusteredWorkoutItem(
                                 }
 
                                 GoogleMap(
-                                    modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
+                                    modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White),
                                     cameraPositionState = cameraPositionState,
                                     googleMapOptionsFactory = {
                                         GoogleMapOptions().liteMode(true)
