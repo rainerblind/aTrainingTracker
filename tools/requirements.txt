@@ -1,0 +1,3 @@
+# Python dependencies for repository developer tools in tools/
+# Used by tools/generate_all_vectors.py, tools/ble_power_simulator.py, etc.
+Pillow>=10.0.0
