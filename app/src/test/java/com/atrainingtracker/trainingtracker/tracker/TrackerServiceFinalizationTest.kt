@@ -47,11 +47,9 @@ class TrackerServiceFinalizationTest {
         var endWorkoutCalled = false
         var testPackageName = "com.atrainingtracker"
         var testSdkInt = Build.VERSION_CODES.UPSIDE_DOWN_CAKE
-        var bluetoothGranted = false
         var healthGranted = false
 
         override fun getBuildVersionSdkInt(): Int = testSdkInt
-        override fun hasBluetoothPermission(): Boolean = bluetoothGranted
         override fun hasHealthPermission(): Boolean = healthGranted
 
         override fun endWorkout() {
@@ -134,14 +132,15 @@ class TrackerServiceFinalizationTest {
 
     @Test
     fun testDetermineForegroundServiceType_WithoutHealthPermission_OmitsHealthType() {
-        service.bluetoothGranted = true
         service.healthGranted = false
 
         val fgsType = service.determineForegroundServiceType()
 
-        val expected = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+        val expected = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
         assertEquals(expected, fgsType)
         assertFalse("Health FGS type must NOT be requested without health permission to prevent SecurityException",
             (fgsType and ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH) != 0)
+        assertFalse("Connected device FGS type must NOT be present (REQ-TRK-022)",
+            (fgsType and ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) != 0)
     }
 }
