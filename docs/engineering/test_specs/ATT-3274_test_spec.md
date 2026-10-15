@@ -1,24 +1,27 @@
-# Stage 2: Requirement & Test Specification - ATT-3274: Crop start and end points of a recorded workout
+# Stage 2: Requirement & Test Specification - ATT-3274: Crop start and end points of a recorded workout (Revision: Nested Scroll Constraint Fix)
 
 **Ticket**: [ATT-3274](https://rainerblind.atlassian.net/browse/ATT-3274)  
-**Sub-task**: [ATT-3586](https://rainerblind.atlassian.net/browse/ATT-3586) (`[Req & Test Spec]`)  
-**Parent Epic**: [ATT-3267](https://rainerblind.atlassian.net/browse/ATT-3267)  
+**Sub-task**: [ATT-3721](https://rainerblind.atlassian.net/browse/ATT-3721) (`[Req & Test Spec]`)  
+**Parent Epic**: [ATT-3267](https://rainerblind.atlassian.net/browse/ATT-3267) (*Workout Analysis, Streams & Data Management*)  
 **Target Release**: `V4.9.40`  
-**Active Sprint**: `2026-42.4`  
+**Active Sprint**: `2026-42.5` (Sprint ID `372`)  
 **Requirement Mapping**: `REQ-UI-368` (*Interactive Start/End Workout Cropping with Destructive Sample Pruning and Full Metric Recalculation*), complementing `REQ-EXP-001`, `REQ-EXP-016`, `REQ-TRK-001`, and `REQ-TRK-002`  
 **Test Spec ID**: `TST-UI-331`  
 **Branch**: `feature/ATT-3274`  
 **Author**: AI Agent 1 (Implementer)  
-**Date**: 2026-10-14  
+**Date**: 2026-10-15  
 
 ---
 
 ## 1. Requirement Specification (REQ-UI-368)
 
 ### 1.1 Problem Statement & Rationale
-Athletes occasionally start workout tracking prematurely (e.g., waiting in a parking lot, stationary in a vehicle, or indoors with noisy cold-start GPS drift) or forget to stop tracking promptly upon finishing an activity (e.g., driving home with GPS recording active). Currently, **aTrainingTracker** lacks an in-app mechanism to trim these unwanted leading or trailing segments. Unwanted segments corrupt workout summary metrics (`TIME_TOTAL_s`, `TIME_ACTIVE_s`, `DISTANCE_TOTAL_m`, `ASCENDING`, `DESCENDING`, `SPEED_AVERAGE_mps`, `SPEED_MAX_mps`), distort sensor extrema (`ExtremumValues`), pollute track map bounding boxes (`BOUND_MIN_LAT..BOUND_MAX_LNG`), and contaminate export files (`.tcx`, `.fit`, `.gpx`, `.csv`, `.json`).
+Athletes occasionally start workout tracking prematurely (e.g., waiting in a parking lot, stationary in a vehicle, or indoors with noisy cold-start GPS drift) or forget to stop tracking promptly upon finishing an activity (e.g., driving home with GPS recording active). Currently, **aTrainingTracker** provides an interactive cropping subview (`CropWorkoutScreen.kt`) with dual-handle range scrubbing, coupled map and elevation previews, strict mathematical clamping, native SQLite transactional rollback, and synchronous export invalidation.
 
-Providing an interactive, synchronized cropping subview (`CropWorkoutScreen.kt`) with dual-handle range scrubbing, coupled map and elevation previews, strict mathematical clamping, native SQLite transactional rollback, and synchronous export invalidation enables athletes to permanently prune erroneous trackpoints and regenerate pristine metrics and exports directly within the application.
+However, during physical device verification on Google Pixel 10 in Sprint 2026-42.4 review, opening `CropWorkoutScreen` resulted in an immediate fatal crash as soon as workout sample points finished loading:
+`java.lang.IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints, which is disallowed.`
+
+Root Cause: `AppModalBottomSheet` defaults to `scrollable = true` (wrapping content in `Column(Modifier.verticalScroll(rememberScrollState()))` at `AppModalBottomSheet.kt:258`), while `CropWorkoutScreen.kt:140-143` adds a second nested `Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()))`.
 
 ### 1.2 Functional & Architectural Scope (`REQ-UI-368`)
 
@@ -72,8 +75,10 @@ Providing an interactive, synchronized cropping subview (`CropWorkoutScreen.kt`)
    - Post-commit: Enqueue fresh export work via `WorkManager.getInstance(context).enqueueUniqueWork("export_" + fileBaseName, ExistingWorkPolicy.REPLACE, exportRequest)`.
    - Failure Fallback: If `enqueueUniqueWork` throws or fails, committed database records remain intact, `ExportStatusDatabaseManager` marks the export as `ExportStatus.ERROR`, an error toast/message is displayed (`R.string.crop_export_failed_retry`), and a "Force Re-Export" button is displayed in the workout details menu (visible exclusively when `ExportStatus == ERROR`).
 
-6. **Interactive Crop Subview, Range Scrubber & Destructive Confirmation (`CropWorkoutScreen.kt`)**:
+6. **Interactive Crop Subview, Non-Conflicting Scrollable Sheet Layout & Destructive Confirmation (`CropWorkoutScreen.kt`)**:
    - Accessible via action button ("Track zuschneiden" / "Crop workout") in `EditWorkoutScreen.kt` (`EditWorkoutDialog`) for completed activities with $\ge 2$ samples.
+   - Embedded inside `AppModalBottomSheet`: The inner root `Column` containing map preview, dual-range slider, and telemetry summary cards SHALL NOT apply `Modifier.verticalScroll(rememberScrollState())`.
+   - `AppModalBottomSheet`'s native scroll container (`scrollable = true`) SHALL host the scrolling body, preventing nested scroll infinity height constraint violations (`java.lang.IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints`).
    - Dual-handle Material 3 `RangeSlider` with minimum handle distance constraint (`endIndex - startIndex >= minIndexStep`, where `minIndexStep` corresponds to $\ge 1\text{ s}$), preventing handles from colliding or collapsing.
    - Track Map preview (`PathPreviewMap.kt`): The retained track segment (`[startIndex..endIndex]`) SHALL render as a solid primary polyline; trimmed leading and trailing segments SHALL render as dimmed, dashed polylines (`Dash(15f), Gap(15f)`).
    - Elevation Profile preview (`ElevationProfile.kt`): Renders dynamically with adaptive height (`calculateElevationProfileHeight(range)`), highlighting the retained interval.
@@ -89,62 +94,66 @@ Providing an interactive, synchronized cropping subview (`CropWorkoutScreen.kt`)
 
 ## 2. Requirement Archaeology & Chesterton's Fence Audit
 
-1. **Original Requirement ID & Target**: Net-new requirement (`REQ-UI-368`). Targets `CropWorkoutScreen.kt`, `CropWorkoutMath.kt`, `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, and `ExportManager.java`. Complements `REQ-EXP-001` (*TCX/GPX/FIT Export*), `REQ-EXP-016` (*Export Queue Management*), `REQ-TRK-001` (*Tracking Session Storage*), and `REQ-TRK-002` (*Extremum Values Management*).
+1. **Original Requirement ID & Target**: `REQ-UI-368`. Targets `CropWorkoutScreen.kt`, `CropWorkoutMath.kt`, `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, and `ExportManager.java`. Complements `REQ-EXP-001` (*TCX/GPX/FIT Export*), `REQ-EXP-016` (*Export Queue Management*), `REQ-TRK-001` (*Tracking Session Storage*), and `REQ-TRK-002` (*Extremum Values Management*).
 2. **Historical Origin & Commit Trace**: Ticket `ATT-3274`, Sprint `2026-42.4`, Epic `ATT-3267`.
-3. **Root Reason for Existing Formulation**: Athletes frequently record extraneous track points prior to active movement or after arriving home. Currently, no in-app trimming tool exists, corrupting summary statistics, bounding boxes, and export files.
+3. **Root Reason for Existing Formulation**: Athletes frequently record extraneous track points prior to active movement or after arriving home. During initial prototype integration, redundant `.verticalScroll` in `CropWorkoutScreen.kt` collided with `AppModalBottomSheet`'s outer scroll container.
 4. **Preservation of Core Invariants**: Native SQLite rollback journal safety, zero-anchoring with universal `EPSILON = 1e-6` cumulative clamping, lap user note preservation, synchronous export invalidation with unique work replacement, `isCroppingInProgress` UI locking, and 100% clean-room test pass rate remain strictly preserved.
 
 ---
 
 ## 3. Acceptance Criteria (Given-When-Then)
 
-* **Criterion 1 (Live Preview & Synchronized Range Scrubbing)**:
+* **Criterion 1 (Non-Conflicting Scrollable Sheet Layout & Crash Prevention)**:
+  * *Given* a workout with loaded sample points opened in `CropWorkoutScreen` within `AppModalBottomSheet`,
+  * *When* the content body is measured and composed,
+  * *Then* the root content `Column` does not declare `Modifier.verticalScroll`, no `IllegalStateException` occurs, and content is smoothly scrollable via `AppModalBottomSheet`'s outer scrollable column.
+* **Criterion 2 (Live Preview & Synchronized Range Scrubbing)**:
   * *Given* an athlete opens a completed workout with $\ge 2$ samples in `CropWorkoutScreen`,
   * *When* dragging the start or end slider handles,
   * *Then* the map polyline highlights the retained range while dimming trimmed segments, the elevation profile highlights the active interval, and live preview values for trimmed offsets, new distance, and new duration update continuously.
-* **Criterion 2 (Hard Boundary Pre-Condition & Minimum Duration Guard)**:
+* **Criterion 3 (Hard Boundary Pre-Condition & Minimum Duration Guard)**:
   * *Given* an athlete adjusting the slider handles,
   * *When* the selected interval duration is $< 1.0\text{ s}$ or fewer than 2 points remain,
   * *Then* the "Crop" action button is visually disabled and cannot be tapped.
-* **Criterion 3 (Destructive Confirmation Dialog Affirmation)**:
+* **Criterion 4 (Destructive Confirmation Dialog Affirmation)**:
   * *Given* a valid crop range selected and the "Crop" button tapped,
   * *When* the confirmation dialog appears,
   * *Then* it displays an explicit irreversible warning informing the athlete that pruned trackpoints cannot be recovered and suggests *Save as Route* if an untrimmed backup is desired.
-* **Criterion 4 (Pre-Flight Storage Verification & Insufficient Space Rejection)**:
+* **Criterion 5 (Pre-Flight Storage Verification & Insufficient Space Rejection)**:
   * *Given* an athlete confirming the crop operation on a device with $< 10\text{ MB}$ internal storage available,
   * *When* `WorkoutRepository.cropWorkout` executes,
   * *Then* the operation is rejected immediately, returning an error message (`crop_insufficient_storage`), leaving all database tables unmodified.
-* **Criterion 5 (Universal `EPSILON = 1e-6` Cumulative Monotonic Clamping & Zero-Anchoring)**:
+* **Criterion 6 (Universal `EPSILON = 1e-6` Cumulative Monotonic Clamping & Zero-Anchoring)**:
   * *Given* a valid crop operation with new start sample `startRowId`,
   * *When* cumulative columns (`DISTANCE_m`, `TIME_TOTAL`, `TIME_ACTIVE`, `ASCENT`, `DESCENT`, `CALORIES`) are recalculated,
   * *Then* row `startRowId` is anchored to `0.0` / `0`, and for subsequent rows, any shifted value $v - v_0$ where $|v - v_0| < 10^{-6}$ or negative is clamped to `0.0` / `0`, eliminating floating-point subtraction drift.
-* **Criterion 6 (Row-by-Row `LINE_DISTANCE_m` Recalculation & GPS-less Session Fallback)**:
+* **Criterion 7 (Row-by-Row `LINE_DISTANCE_m` Recalculation & GPS-less Session Fallback)**:
   * *Given* an outdoor workout with GPS coordinates,
   * *When* `LINE_DISTANCE_m` is recalculated,
   * *Then* each retained row receives its Haversine distance from `newStartLatLng` with row `startRowId` set to `0.0`;
   * *Given* an indoor workout without GPS coordinates,
   * *Then* `LINE_DISTANCE_m` is set to `0.0` for all rows without null pointer exceptions.
-* **Criterion 7 (Deterministic Lap Mapping & User Note Preservation)**:
+* **Criterion 8 (Deterministic Lap Mapping & User Note Preservation)**:
   * *Given* a workout with multiple laps where the crop start falls in original Lap $M$ and crop end falls in original Lap $N$,
   * *When* laps are re-indexed to $1..K$,
   * *Then* each retained lap $k$ strictly preserves the exact user-authored `NAME` and `DESCRIPTION` from original Lap $M + k - 1$, boundary laps have their metrics recalculated from retained samples, and `LAP_NR` is updated in lockstep across `Laps.TABLE` and `WorkoutSamples`.
-* **Criterion 8 (Sanitized Extrema Re-derivation & Sparse Sensor Fallback)**:
+* **Criterion 9 (Sanitized Extrema Re-derivation & Sparse Sensor Fallback)**:
   * *Given* retained samples containing sensor readings,
   * *When* summary extrema (`ExtremumValues`) are re-derived,
   * *Then* all non-finite values (`Double.isFinite`) are discarded, and if a sensor has zero valid readings in the cropped window, its scalar extrema (`MIN`, `MAX`, `AVG`, `START`, `END`) are explicitly set to `0.0`, signaling `hasSensorData = false`.
-* **Criterion 9 (Native SQLite Transaction Rollback on Error)**:
+* **Criterion 10 (Native SQLite Transaction Rollback on Error)**:
   * *Given* an unexpected error or checksum failure during sample pruning or summary update,
   * *When* the transaction aborts,
   * *Then* SQLite rolls back all modifications cleanly, restoring pre-crop tables without orphan rows or corrupted state.
-* **Criterion 10 (Synchronous Export Invalidation & Post-Commit Work Replacement)**:
+* **Criterion 11 (Synchronous Export Invalidation & Post-Commit Work Replacement)**:
   * *Given* a successfully committed crop transaction,
   * *When* export processing triggers,
   * *Then* previous export files (`.tcx`, `.fit`, `.gpx`, `.csv`, `.json`) are deleted pre-commit, active work is cancelled, and fresh export jobs are enqueued post-commit via `WorkManager.enqueueUniqueWork(..., ExistingWorkPolicy.REPLACE)`.
-* **Criterion 11 (Export Enqueue Failure Fallback)**:
+* **Criterion 12 (Export Enqueue Failure Fallback)**:
   * *Given* a post-commit failure where `WorkManager` rejects the enqueue request,
   * *When* the failure is handled,
   * *Then* database modifications remain committed, `ExportStatus` is set to `ERROR`, and a "Force Re-Export" button is displayed in workout details.
-* **Criterion 12 (UI Concurrency Lock & Back-Navigation Interception)**:
+* **Criterion 13 (UI Concurrency Lock & Back-Navigation Interception)**:
   * *Given* a crop operation in progress (`isCroppingInProgress == true`),
   * *When* the user presses the system back button or attempts navigation,
   * *Then* `BackHandler` blocks navigation and interactive controls remain disabled until the transaction completes.
@@ -201,7 +210,7 @@ Providing an interactive, synchronized cropping subview (`CropWorkoutScreen.kt`)
    - Verify `cropMutex` serialization:
      - Concurrent crop calls execute sequentially without race conditions.
 
-4. **ViewModel & UI Pre-Condition Contract Tests (`CropWorkoutScreenContractTest.kt`)**:
+4. **ViewModel, UI Pre-Condition & Non-Conflicting Layout Contract Tests (`CropWorkoutScreenContractTest.kt`)**:
    - Verify "Crop" button enabled state:
      - Disabled when `isCroppingInProgress == true`.
      - Disabled when `isCropValid == false`.
@@ -214,9 +223,11 @@ Providing an interactive, synchronized cropping subview (`CropWorkoutScreen.kt`)
      - Enabled when `isCroppingInProgress == true`.
    - Verify "Force Re-Export" button:
      - Visible in workout details when `exportStatus == ExportStatus.ERROR`.
+   - **Non-Conflicting Layout Contract**:
+     - Verify that `CropWorkoutScreen` root content column does not declare nested `Modifier.verticalScroll`, ensuring compatibility with `AppModalBottomSheet`'s outer scroll container.
 
 5. **9-Language Localization Audit (`CropWorkoutLocalizationTest.kt`)**:
-   - Verify that all crop strings (`crop_workout_title`, `crop_workout_action`, `crop_workout_confirm_title`, `crop_workout_confirm_message`, `crop_workout_confirm_action`, `crop_workout_progress`, `crop_workout_success`, `crop_insufficient_storage`, `crop_export_failed_retry`, `crop_force_reexport`) exist, are non-empty, and maintain translation parity across:
+   - Verify that all crop strings exist, are non-empty, and maintain translation parity across:
      - `values/` (EN)
      - `values-de/` (DE)
      - `values-es/` (ES)
@@ -234,6 +245,6 @@ Providing an interactive, synchronized cropping subview (`CropWorkoutScreen.kt`)
 | `REQ-UI-368` | `TST-UI-331` | `CropWorkoutMathTest` | Cumulative zero-anchoring, universal `EPSILON = 1e-6` clamping, `LINE_DISTANCE_m` Haversine row recalculation & indoor fallback, non-linear extrema re-derivation, `Double.isFinite` filtering, sparse sensor stream $0.0$ fallback, duration $\ge 1.0\text{ s}$ & index step guards |
 | `REQ-UI-368` | `TST-UI-331` | `CropLapsRecalculationTest` | Deterministic lap mapping ($M \dots N$), user-authored `NAME` & `DESCRIPTION` verbatim preservation, boundary lap recalculation, lockstep `LAP_NR = 1..K` re-indexing, lap distance checksum |
 | `REQ-UI-368` | `TST-UI-331` | `WorkoutRepositoryCropTest` | Pre-flight `StatFs` $\ge 10\text{ MB}$ check, ephemeral JSON backup lifecycle in `try ... finally`, SQLite transaction rollback on exception, post-op checksum assert, `cropMutex` concurrency guard, synchronous export invalidation, `ExistingWorkPolicy.REPLACE` work enqueue, and export failure fallback |
-| `REQ-UI-368` | `TST-UI-331` | `CropWorkoutScreenContractTest` | UI precondition button enablement, dual `RangeSlider` min thumb distance, `BackHandler(isCroppingInProgress)` lock, destructive confirmation `AlertDialog` contract, and "Force Re-Export" button visibility |
+| `REQ-UI-368` | `TST-UI-331` | `CropWorkoutScreenContractTest` | UI precondition button enablement, dual `RangeSlider` min thumb distance, `BackHandler(isCroppingInProgress)` lock, destructive confirmation `AlertDialog` contract, non-conflicting layout contract without inner `.verticalScroll`, and "Force Re-Export" button visibility |
 | `REQ-UI-368` | `TST-UI-331` | `CropWorkoutLocalizationTest` | 9-language localization parity across all crop UI strings in `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/` |
 | `REQ-UI-368` | `TST-UI-331` | `TranslationParityTest` | Global project localization parity verification across all 9 locales |
