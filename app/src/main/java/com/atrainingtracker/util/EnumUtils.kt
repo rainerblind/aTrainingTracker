@@ -31,14 +31,14 @@ object EnumUtils {
         tag: String = DEFAULT_TAG
     ): T {
         if (name.isNullOrBlank()) {
-            Log.w(tag, "Enum string is null or blank for ${enumClass.simpleName}; defaulting to $defaultValue")
+            logWarning(tag, "Enum string is null or blank for ${enumClass.simpleName}; defaulting to ${defaultValue.name}")
             return defaultValue
         }
         val trimmed = name.trim()
         return try {
             java.lang.Enum.valueOf(enumClass, trimmed)
         } catch (t: Throwable) {
-            Log.w(tag, "Unrecognized or evolved enum constant '$trimmed' for ${enumClass.simpleName}; defaulting to $defaultValue", t)
+            logWarning(tag, "Unrecognized or evolved enum constant '$trimmed' for ${enumClass.simpleName}; defaulting to ${defaultValue.name}", t)
             defaultValue
         }
     }
@@ -59,8 +59,20 @@ object EnumUtils {
         return try {
             java.lang.Enum.valueOf(enumClass, trimmed)
         } catch (t: Throwable) {
-            Log.w(tag, "Unrecognized or evolved enum constant '$trimmed' for ${enumClass.simpleName}; returning null", t)
+            logWarning(tag, "Unrecognized or evolved enum constant '$trimmed' for ${enumClass.simpleName}; returning null", t)
             null
+        }
+    }
+
+    internal fun logWarning(tag: String, msg: String, tr: Throwable? = null) {
+        try {
+            if (tr != null) {
+                Log.w(tag, msg, tr)
+            } else {
+                Log.w(tag, msg)
+            }
+        } catch (_: Throwable) {
+            // Fallback for JVM unit tests where android.util.Log is not mocked
         }
     }
 }
