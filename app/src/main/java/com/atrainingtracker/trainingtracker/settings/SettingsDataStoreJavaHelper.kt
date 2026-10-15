@@ -158,7 +158,7 @@ object SettingsDataStoreJavaHelper {
     @JvmStatic
     fun getAthleteWeightKg(context: Context): Float {
         return try {
-            val dataStore = SettingsDataStore(context)
+            val dataStore = SettingsDataStore.getInstance(context)
             runBlocking(Dispatchers.IO) {
                 dataStore.athleteWeightKgFlow.first()
             }
@@ -173,7 +173,7 @@ object SettingsDataStoreJavaHelper {
     @JvmStatic
     fun setAthleteWeightKg(context: Context, weightKg: Float) {
         try {
-            val dataStore = SettingsDataStore(context)
+            val dataStore = SettingsDataStore.getInstance(context)
             runBlocking(Dispatchers.IO) {
                 dataStore.setAthleteWeightKg(weightKg)
             }

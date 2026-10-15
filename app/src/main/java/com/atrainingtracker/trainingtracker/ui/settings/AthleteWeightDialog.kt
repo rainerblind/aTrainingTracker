@@ -101,11 +101,17 @@ fun AthleteWeightDialog(
             TextButton(
                 onClick = {
                     val parsed = input.trim().replace(',', '.').toFloatOrNull()
-                    if (parsed == null || parsed !in minAllowed..maxAllowed) {
+                    val epsilon = 0.05f
+                    val validRange = (minAllowed - epsilon)..(maxAllowed + epsilon)
+                    if (parsed == null || parsed !in validRange) {
                         isError = true
                     } else {
-                        val savedKg = if (isImperial) parsed / SettingsDataStore.LBS_PER_KG else parsed
-                        onSaveWeightKg(savedKg)
+                        val convertedKg = if (isImperial) parsed / SettingsDataStore.LBS_PER_KG else parsed
+                        val clampedKg = convertedKg.coerceIn(
+                            SettingsDataStore.MIN_ATHLETE_WEIGHT_KG,
+                            SettingsDataStore.MAX_ATHLETE_WEIGHT_KG
+                        )
+                        onSaveWeightKg(clampedKg)
                         onDismiss()
                     }
                 }

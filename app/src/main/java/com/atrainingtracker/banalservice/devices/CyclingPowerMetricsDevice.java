@@ -111,7 +111,7 @@ public class CyclingPowerMetricsDevice extends MyDevice {
      * Periodic 1Hz computation of power-to-weight ratio (W/kg).
      * Gated by active recording suspension (paused / auto-paused).
      */
-    public void calculateMetrics() {
+    public synchronized void calculateMetrics() {
         if (mRecordingStateProvider.isRecordingSuspended()) {
             if (DEBUG) Log.i(TAG, "calculateMetrics(): recording suspended -> skip");
             return;

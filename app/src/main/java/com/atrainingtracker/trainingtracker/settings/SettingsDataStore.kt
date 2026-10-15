@@ -67,6 +67,16 @@ class SettingsDataStore(
     // Define integer keys
     companion object {
 
+        @Volatile
+        private var INSTANCE: SettingsDataStore? = null
+
+        @JvmStatic
+        fun getInstance(context: Context): SettingsDataStore {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: SettingsDataStore(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+
         // Zone Type HR Run
         private val HR_RUN_ZONE1_MAX = intPreferencesKey("hr_run_zone1_max")
         private val HR_RUN_ZONE2_MAX = intPreferencesKey("hr_run_zone2_max")
