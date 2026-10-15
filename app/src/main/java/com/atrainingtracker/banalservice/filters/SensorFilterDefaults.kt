@@ -54,6 +54,8 @@ object SensorFilterDefaults {
         return when (sensorType) {
             SensorType.POWER -> DefaultFilterConfig(FilterType.MOVING_AVERAGE_TIME, 3.0, "sec")
             SensorType.POWER_TO_WEIGHT -> DefaultFilterConfig(FilterType.MOVING_AVERAGE_TIME, 3.0, "sec")
+            SensorType.NORMALIZED_POWER -> DefaultFilterConfig(FilterType.INSTANTANEOUS, 1.0, "sec")
+            SensorType.INTENSITY_FACTOR -> DefaultFilterConfig(FilterType.INSTANTANEOUS, 1.0, "sec")
             SensorType.SPEED_mps -> DefaultFilterConfig(FilterType.MOVING_AVERAGE_TIME, 2.0, "sec")
             SensorType.CADENCE -> DefaultFilterConfig(FilterType.MOVING_AVERAGE_TIME, 2.0, "sec")
             SensorType.PACE_spm -> DefaultFilterConfig(FilterType.MOVING_AVERAGE_TIME, 5.0, "sec")
