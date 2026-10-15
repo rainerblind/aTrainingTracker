@@ -154,6 +154,7 @@
     <string name="units_calories" translatable="false">kcal</string>
     <string name="units_heart_rate" translatable="false">bpm</string>
     <string name="units_power" translatable="false">W</string>
+    <string name="units_power_to_weight" translatable="false">W/kg</string>
     <string name="units_temperature" translatable="false">°C</string>
     <string name="units_time_basic" translatable="false">s</string>
     <string name="units_torque" translatable="false">Nm</string>
@@ -255,6 +256,8 @@
     <string name="position_short">pos.</string>
     <string name="power">power</string>
     <string name="power_short">power</string>
+    <string name="power_to_weight">Power-to-weight ratio</string>
+    <string name="power_to_weight_short">W/kg</string>
     <string name="speed">speed</string>
     <string name="speed_short">spd</string>
     <string name="current_sensors">current sensors</string>
@@ -2031,6 +2034,17 @@
     <string name="cockpit_auto_pause_badge">Auto-Pause</string>
     <string name="cockpit_auto_pause_resume">Resume Now</string>
     <string name="cockpit_speed_sensor_lost">Speed Sensor Lost</string>
+
+    <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
+    <string name="athlete_weight_title">Athlete Weight</string>
+    <string name="athlete_weight_label">Weight</string>
+    <string name="athlete_weight_dialog_title">Configure Athlete Weight</string>
+    <string name="athlete_weight_save">Save</string>
+    <string name="athlete_weight_unconfigured">Not configured</string>
+    <string name="athlete_weight_invalid">Please enter a valid weight</string>
+    <string name="athlete_weight_card_description">Required to calculate real-time power-to-weight ratio (W/kg).</string>
+    <string name="athlete_weight_clear">Clear</string>
+    <string name="athlete_weight_edit">Edit</string>
 
 </resources>
 

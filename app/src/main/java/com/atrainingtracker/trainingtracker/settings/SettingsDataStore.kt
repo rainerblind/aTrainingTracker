@@ -23,6 +23,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -118,6 +119,15 @@ class SettingsDataStore(
         // Zone Configuration Onboarding (ATT-3189, REQ-UI-374)
         val KEY_IS_HR_ZONES_CONFIGURED = booleanPreferencesKey("is_hr_zones_configured")
         val KEY_IS_PWR_ZONES_CONFIGURED = booleanPreferencesKey("is_pwr_zones_configured")
+
+        // Athlete Baselines (ATT-1289, REQ-TRK-019)
+        val KEY_ATHLETE_WEIGHT_KG = floatPreferencesKey("athlete_weight_kg")
+        const val DEFAULT_ATHLETE_WEIGHT_KG = 0.0f
+        const val MIN_ATHLETE_WEIGHT_KG = 30.0f
+        const val MAX_ATHLETE_WEIGHT_KG = 300.0f
+        const val MIN_ATHLETE_WEIGHT_LBS = 66.0f
+        const val MAX_ATHLETE_WEIGHT_LBS = 660.0f
+        const val LBS_PER_KG = 2.20462262185f
     }
 
     // --- HELPER: Map Enums to Keys ---
@@ -265,6 +275,29 @@ class SettingsDataStore(
 
     val zoneCalcVersionFlow: Flow<Int> = dataStore.data.map { prefs ->
         prefs[KEY_ZONE_CALC_VERSION] ?: CURRENT_ZONE_CALC_VERSION
+    }
+
+    /**
+     * Flow emitting the athlete's body weight in kilograms (REQ-TRK-019).
+     * Defaults to 0.0f when unconfigured.
+     */
+    val athleteWeightKgFlow: Flow<Float> = dataStore.data.map { prefs ->
+        prefs[KEY_ATHLETE_WEIGHT_KG] ?: DEFAULT_ATHLETE_WEIGHT_KG
+    }
+
+    /**
+     * Sets the athlete's body weight in kilograms (REQ-TRK-019).
+     * Validates and clamps input between [MIN_ATHLETE_WEIGHT_KG] and [MAX_ATHLETE_WEIGHT_KG],
+     * or sets to 0.0f if non-positive.
+     */
+    suspend fun setAthleteWeightKg(weightKg: Float) {
+        dataStore.edit { prefs ->
+            if (weightKg <= 0.0f) {
+                prefs[KEY_ATHLETE_WEIGHT_KG] = DEFAULT_ATHLETE_WEIGHT_KG
+            } else {
+                prefs[KEY_ATHLETE_WEIGHT_KG] = weightKg.coerceIn(MIN_ATHLETE_WEIGHT_KG, MAX_ATHLETE_WEIGHT_KG)
+            }
+        }
     }
 
     /**

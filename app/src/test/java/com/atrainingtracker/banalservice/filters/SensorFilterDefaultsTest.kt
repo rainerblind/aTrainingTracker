@@ -44,6 +44,19 @@ class SensorFilterDefaultsTest {
     }
 
     @Test
+    fun testPowerToWeightSensor_defaultsToThreeSecondMovingAverage() {
+        val config = SensorFilterDefaults.getDefaultFilterConfig(SensorType.POWER_TO_WEIGHT)
+        assertEquals(FilterType.MOVING_AVERAGE_TIME, config.filterType)
+        assertEquals(3.0, config.filterConstant, 0.001)
+        assertEquals("sec", config.unit)
+
+        assertEquals(FilterType.MOVING_AVERAGE_TIME, SensorFilterDefaults.getDefaultFilterType(SensorType.POWER_TO_WEIGHT))
+        assertEquals(3.0, SensorFilterDefaults.getDefaultFilterConstant(SensorType.POWER_TO_WEIGHT), 0.001)
+        assertEquals("sec", SensorFilterDefaults.getDefaultUnit(SensorType.POWER_TO_WEIGHT))
+        assertEquals(config, SensorType.POWER_TO_WEIGHT.getDefaultFilterConfig())
+    }
+
+    @Test
     fun testSpeedSensor_defaultsToTwoSecondMovingAverage() {
         val config = SensorFilterDefaults.getDefaultFilterConfig(SensorType.SPEED_mps)
         assertEquals(FilterType.MOVING_AVERAGE_TIME, config.filterType)

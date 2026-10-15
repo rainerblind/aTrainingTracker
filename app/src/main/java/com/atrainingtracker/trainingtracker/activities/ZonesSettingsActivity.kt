@@ -61,6 +61,8 @@ import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import android.text.format.DateUtils
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.ui.settings.AthleteWeightDialog
 import com.atrainingtracker.trainingtracker.ui.settings.HrMethod
 import com.atrainingtracker.trainingtracker.ui.settings.ZoneCalculatorDialog
 import com.atrainingtracker.trainingtracker.ui.settings.ZoneCalculatorStateHolder
@@ -208,8 +210,10 @@ fun ZoneSettingsScreen(
     val storedHrMax by dataStore.hrMaxFlow.collectAsState(initial = null)
     val storedHrRest by dataStore.hrRestFlow.collectAsState(initial = null)
     val storedHrMethod by dataStore.hrCalcMethodFlow.collectAsState(initial = null)
+    val storedAthleteWeightKg by dataStore.athleteWeightKgFlow.collectAsState(initial = 0.0f)
 
     var showCalculatorDialog by remember { mutableStateOf(false) }
+    var showAthleteWeightDialog by remember { mutableStateOf(false) }
     var bannerVisible by rememberSaveable { mutableStateOf(promptReason != null) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -308,6 +312,41 @@ fun ZoneSettingsScreen(
                                         containerColor = MaterialTheme.colorScheme.errorContainer,
                                         labelColor = MaterialTheme.colorScheme.onErrorContainer
                                     )
+                                )
+                            }
+                        }
+                    }
+
+                    if (currentType == ZoneType.PWR_BIKE) {
+                        val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
+                        val weightText = if (storedAthleteWeightKg > 0f) {
+                            val displayWeight = if (isImperial) storedAthleteWeightKg * SettingsDataStore.LBS_PER_KG else storedAthleteWeightKg
+                            val unitStr = if (isImperial) "lbs" else "kg"
+                            String.format(java.util.Locale.US, "%.1f %s", displayWeight, unitStr)
+                        } else {
+                            stringResource(R.string.athlete_weight_unconfigured)
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "${stringResource(R.string.athlete_weight_title)}: $weightText",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
+                            )
+                            TextButton(
+                                onClick = { showAthleteWeightDialog = true },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.athlete_weight_edit),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }
@@ -466,6 +505,18 @@ fun ZoneSettingsScreen(
                                 holder.onSaveFailed()
                             }
                         }
+                    }
+                }
+            )
+        }
+
+        if (showAthleteWeightDialog) {
+            AthleteWeightDialog(
+                initialWeightKg = storedAthleteWeightKg,
+                onDismiss = { showAthleteWeightDialog = false },
+                onSaveWeightKg = { weightKg ->
+                    scope.launch(Dispatchers.IO) {
+                        dataStore.setAthleteWeightKg(weightKg)
                     }
                 }
             )

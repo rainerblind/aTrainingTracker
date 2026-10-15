@@ -189,6 +189,8 @@
     <string name="position_short">Pos.</string>
     <string name="power">Leistung</string>
     <string name="power_short">Leistung</string>
+    <string name="power_to_weight">Leistungsgewicht</string>
+    <string name="power_to_weight_short">W/kg</string>
     <string name="speed">Geschwindigkeit</string>
     <string name="speed_short">Geschw.</string>
     <string name="current_sensors">Aktuelle Sensoren</string>
@@ -1925,5 +1927,16 @@
     <string name="cockpit_auto_pause_badge">Auto-Pause</string>
     <string name="cockpit_auto_pause_resume">Jetzt fortsetzen</string>
     <string name="cockpit_speed_sensor_lost">Geschwindigkeitssensor verloren</string>
+
+    <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
+    <string name="athlete_weight_title">Athletengewicht</string>
+    <string name="athlete_weight_label">Gewicht</string>
+    <string name="athlete_weight_dialog_title">Athletengewicht konfigurieren</string>
+    <string name="athlete_weight_save">Speichern</string>
+    <string name="athlete_weight_unconfigured">Nicht konfiguriert</string>
+    <string name="athlete_weight_invalid">Bitte geben Sie ein gültiges Gewicht ein</string>
+    <string name="athlete_weight_card_description">Erforderlich zur Berechnung des Echtzeit-Leistungsgewichts (W/kg).</string>
+    <string name="athlete_weight_clear">Löschen</string>
+    <string name="athlete_weight_edit">Bearbeiten</string>
 
 </resources>

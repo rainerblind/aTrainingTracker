@@ -499,6 +499,7 @@ public class BANALService
 
         // when there is a FilterManager, we can create the devices that need filtered data.
         cDeviceManager.createVerticalSpeedAndSlopeDevice();
+        cDeviceManager.createCyclingPowerMetricsDevice();
 
         ContextCompat.registerReceiver(this, mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP), ContextCompat.RECEIVER_NOT_EXPORTED);

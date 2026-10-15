@@ -32,6 +32,7 @@ import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.IntegerFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.MyFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.PowerToWeightFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -78,6 +79,7 @@ public enum SensorType
     PEDAL_SMOOTHNESS_R(R.string.pedal_smoothness_r, R.string.pedal_smoothness_r_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
     PEDAL_SMOOTHNESS(R.string.pedal_smoothness, R.string.pedal_smoothness_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
     POWER(R.string.power, R.string.power_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), true),
+    POWER_TO_WEIGHT(R.string.power_to_weight, R.string.power_to_weight_short, R.string.units_power_to_weight, SensorValueType.DOUBLE, new PowerToWeightFormatter(), true),
     SPEED_mps(R.string.speed, R.string.speed_short, R.string.units_speed_basic, SensorValueType.DOUBLE, new SpeedFormatter(), true),
     // SPEED_mps_gps          (R.string.speed,                  R.string.speed_short,                  R.string.units_speed_basic,     SensorValueType.DOUBLE,  new SpeedFormatter()),
     // SPEED_mps_network      (R.string.speed,                  R.string.speed_short,                  R.string.units_speed_basic,     SensorValueType.DOUBLE,  new SpeedFormatter()),
@@ -144,7 +146,7 @@ public enum SensorType
             case SPEED_mps -> R.drawable.ic_speed;
             case CADENCE -> R.drawable.ic_cadence;
             case HR -> R.drawable.ic_heart_rate;
-            case POWER -> R.drawable.ic_power;
+            case POWER, POWER_TO_WEIGHT -> R.drawable.ic_power;
             case PHONE_BATTERY, BATTERY_REMAINING_TIME -> R.drawable.ic_battery_full;
             default -> R.drawable.ic_cross;
         };

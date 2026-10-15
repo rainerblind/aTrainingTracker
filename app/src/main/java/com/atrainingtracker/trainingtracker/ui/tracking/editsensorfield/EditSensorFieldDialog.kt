@@ -31,8 +31,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.settings.AthleteWeightDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.getDisplayName
 
 /**
@@ -120,6 +126,39 @@ fun EditSensorFieldDialog(
                     Text("${stringResource(R.string.filter)}: ${uiState.filterSummary}")
                 }
                 Spacer(Modifier.height(8.dp))
+            }
+
+            // Athlete Weight Configuration for Power-to-Weight (ATT-1289, REQ-TRK-019)
+            if (uiState.selectedSensorType == SensorType.POWER_TO_WEIGHT) {
+                var showWeightDialog by remember { mutableStateOf(false) }
+                var athleteWeight by remember { mutableFloatStateOf(SettingsDataStoreJavaHelper.getAthleteWeightKg(context)) }
+                val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
+                val weightStr = if (athleteWeight > 0f) {
+                    val displayWeight = if (isImperial) athleteWeight * SettingsDataStore.LBS_PER_KG else athleteWeight
+                    val unitStr = if (isImperial) "lbs" else "kg"
+                    String.format(java.util.Locale.US, "%.1f %s", displayWeight, unitStr)
+                } else {
+                    stringResource(R.string.athlete_weight_unconfigured)
+                }
+
+                OutlinedButton(
+                    onClick = { showWeightDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("${stringResource(R.string.athlete_weight_title)}: $weightStr")
+                }
+                Spacer(Modifier.height(8.dp))
+
+                if (showWeightDialog) {
+                    AthleteWeightDialog(
+                        initialWeightKg = athleteWeight,
+                        onDismiss = { showWeightDialog = false },
+                        onSaveWeightKg = { newWeight ->
+                            SettingsDataStoreJavaHelper.setAthleteWeightKg(context, newWeight)
+                            athleteWeight = newWeight
+                        }
+                    )
+                }
             }
         }
     }

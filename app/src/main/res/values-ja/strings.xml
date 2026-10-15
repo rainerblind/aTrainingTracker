@@ -188,6 +188,8 @@
     <string name="position_short">位置</string>
     <string name="power">パワー</string>
     <string name="power_short">power</string>
+    <string name="power_to_weight">パワーウェイトレシオ</string>
+    <string name="power_to_weight_short">W/kg</string>
     <string name="speed">速度</string>
     <string name="speed_short">速度</string>
     <string name="current_sensors">現在のセンサー</string>
@@ -1820,6 +1822,17 @@
     <string name="cockpit_auto_pause_badge">オートポーズ</string>
     <string name="cockpit_auto_pause_resume">今すぐ再開</string>
     <string name="cockpit_speed_sensor_lost">スピードセンサー喪失</string>
+
+    <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
+    <string name="athlete_weight_title">アスリートの体重</string>
+    <string name="athlete_weight_label">体重</string>
+    <string name="athlete_weight_dialog_title">アスリートの体重を設定</string>
+    <string name="athlete_weight_save">保存</string>
+    <string name="athlete_weight_unconfigured">未設定</string>
+    <string name="athlete_weight_invalid">有効な体重を入力してください</string>
+    <string name="athlete_weight_card_description">リアルタイムのパワーウェイトレシオ（W/kg）の計算に必要です。</string>
+    <string name="athlete_weight_clear">クリア</string>
+    <string name="athlete_weight_edit">編集</string>
 
 </resources>
 

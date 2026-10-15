@@ -150,4 +150,35 @@ object SettingsDataStoreJavaHelper {
     fun getAutoPauseDebounceSec(context: Context): Int {
         return getTuningConfig(context).autoPauseDebounceSec
     }
+
+    /**
+     * Synchronous bridge to fetch athlete body weight in kilograms (REQ-TRK-019).
+     * Returns 0.0f if unconfigured or <= 0.
+     */
+    @JvmStatic
+    fun getAthleteWeightKg(context: Context): Float {
+        return try {
+            val dataStore = SettingsDataStore(context)
+            runBlocking(Dispatchers.IO) {
+                dataStore.athleteWeightKgFlow.first()
+            }
+        } catch (t: Throwable) {
+            0.0f
+        }
+    }
+
+    /**
+     * Synchronous bridge to persist athlete body weight in kilograms (REQ-TRK-019).
+     */
+    @JvmStatic
+    fun setAthleteWeightKg(context: Context, weightKg: Float) {
+        try {
+            val dataStore = SettingsDataStore(context)
+            runBlocking(Dispatchers.IO) {
+                dataStore.setAthleteWeightKg(weightKg)
+            }
+        } catch (t: Throwable) {
+            // ignore in tests or headless contexts
+        }
+    }
 }
