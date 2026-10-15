@@ -75,6 +75,12 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManager;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseState;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseTransition;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
+import com.atrainingtracker.trainingtracker.settings.TuningConfig;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.PolyUtil;
 
@@ -167,6 +173,12 @@ public class TrackerService extends Service {
     private TrainingApplication mTrainingApplication;
     private WorkoutRepository mWorkoutRepository;
     private ScheduledFuture mTrackerHandle;
+
+    private final AutoPauseManager mAutoPauseManager = new AutoPauseManager();
+
+    public AutoPauseManager getAutoPauseManager() {
+        return mAutoPauseManager;
+    }
 
     private int mExtremaDbUpdateCounter = 0;
     private static final int EXTREMA_DB_UPDATE_INTERVAL = 10; // Update Avg in DB every 10 seconds
@@ -544,9 +556,27 @@ public class TrackerService extends Service {
             case RESUME_SERVICE_RECREATION:
                 Log.d(TAG, "resuming after killed service");
                 mTableInitializationFuture = CompletableFuture.completedFuture(null);
-                if (mTrainingApplication != null) {
-                    mTrainingApplication.setTracking();
+                // 3-Tier Startup State-Recovery Hierarchy (REQ-TRK-018):
+                if (TrainingApplication.isManualPauseLocked()) {
+                    Log.i(TAG, "Startup recovery Tier 1: restoring MANUAL_PAUSED");
+                    if (mTrainingApplication != null) {
+                        mTrainingApplication.pauseTracking(false);
+                    }
+                    mAutoPauseManager.setState(AutoPauseState.MANUAL_PAUSED);
+                } else if (TrainingApplication.isAutoPaused()) {
+                    Log.i(TAG, "Startup recovery Tier 2: restoring AUTO_PAUSED");
+                    if (mTrainingApplication != null) {
+                        mTrainingApplication.pauseTracking(true);
+                    }
+                    mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
+                } else {
+                    Log.i(TAG, "Startup recovery Tier 3: restoring TRACKING");
+                    if (mTrainingApplication != null) {
+                        mTrainingApplication.setTracking();
+                    }
+                    mAutoPauseManager.setState(AutoPauseState.TRACKING);
                 }
+                mAutoPauseManager.resetDebounceCounter();
                 if (mBanalService != null) {
                     recreateValuesWhenResuming();
                     // mBanalService.resumeTracking(); already started by broadcast?
@@ -1047,7 +1077,14 @@ public class TrackerService extends Service {
             mTimeTotal_s = totalTimeData.getValue();
         }
 
+        final AutoPauseTransition autoPauseTransition = evaluateAutoPauseTick();
+
         if (TrainingApplication.isPaused()) {
+            if (autoPauseTransition != null && autoPauseTransition.getTriggerResume()) {
+                sendBroadcast(new Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED)
+                        .setPackage(getPackageName()));
+            }
+
             final long workoutId = mWorkoutID;
             final int timeTotal = mTimeTotal_s;
             
@@ -1271,6 +1308,48 @@ public class TrackerService extends Service {
             Log.e(TAG, "Sample write skipped due to initialization failure: " + ex.getMessage());
             return null;
         });
+
+        // REQ-TRK-018: Strict FIFO flush ordering: final stationary sample is inserted before pause broadcast
+        if (autoPauseTransition != null && autoPauseTransition.getTriggerPause()) {
+            mDbExecutor.execute(() -> {
+                sendBroadcast(new Intent(TrainingApplication.REQUEST_PAUSE_TRACKING)
+                        .putExtra(TrainingApplication.EXTRA_IS_AUTO_PAUSE, true)
+                        .setPackage(getPackageName()));
+            });
+        }
+    }
+
+    private AutoPauseTransition evaluateAutoPauseTick() {
+        if (mBanalService == null) return null;
+
+        SensorData<Number> speedData = mBanalService.getBestSensorData(SensorType.SPEED_mps);
+        Double speedMps = (speedData != null && speedData.getValue() != null) ? speedData.getValue().doubleValue() : null;
+        long packetTimestamp = (speedData != null) ? speedData.getTimestamp() : 0L;
+        long nowMs = System.currentTimeMillis();
+
+        BSportType sportType = mBanalService.getBSportType();
+        if (sportType == null) {
+            sportType = BSportType.UNKNOWN;
+        }
+
+        TuningConfig tuningConfig = SettingsDataStoreJavaHelper.getTuningConfig(this);
+        AutoPauseConfig config = new AutoPauseConfig(
+                tuningConfig.getAutoPauseBikeEnabled(),
+                tuningConfig.getAutoPauseRunEnabled(),
+                tuningConfig.getAutoPauseOtherEnabled(),
+                tuningConfig.getAutoPauseSpeedThresholdKmh(),
+                tuningConfig.getAutoPauseDebounceSec()
+        );
+        boolean manualPauseLocked = TrainingApplication.isManualPauseLocked();
+
+        return mAutoPauseManager.evaluateTick(
+                speedMps,
+                packetTimestamp,
+                nowMs,
+                sportType,
+                config,
+                manualPauseLocked
+        );
     }
 
     private void handleMissingColumns(SQLiteDatabase samplesDb, String tableName, ContentValues values, Map<String, SensorValueType> name2Type) {

@@ -1827,5 +1827,19 @@
     <string name="zone_onboarding_pwr_banner">Nieuwe vermogensmeter gekoppeld. Stel je vermogenszones in of bereken ze op basis van je FTP.</string>
     <string name="zone_onboarding_dismiss">Begrepen</string>
 
+    <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="tuning_auto_pause_title">Automatisch pauzeren</string>
+    <string name="tuning_auto_pause_desc">Opname automatisch pauzeren bij stilstand</string>
+    <string name="tuning_auto_pause_bike_title">Fietsen</string>
+    <string name="tuning_auto_pause_run_title">Hardlopen</string>
+    <string name="tuning_auto_pause_other_title">Overige sporten</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Snelheidsdrempel voor pauzeren</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Snelheid waaronder de opname wordt gepauzeerd</string>
+    <string name="tuning_auto_pause_debounce_title">Pauzevertraging</string>
+    <string name="tuning_auto_pause_debounce_desc">Duur onder drempelwaarde alvorens te pauzeren</string>
+    <string name="cockpit_auto_pause_badge">Automatisch pauzeren</string>
+    <string name="cockpit_auto_pause_resume">Nu hervatten</string>
+    <string name="cockpit_speed_sensor_lost">Snelheidssensor verloren</string>
+
 </resources>
 

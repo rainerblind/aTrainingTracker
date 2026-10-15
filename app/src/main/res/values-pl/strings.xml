@@ -1828,6 +1828,19 @@
     <string name="zone_onboarding_hr_banner">Sparowano nowy czujnik tętna. Skonfiguruj strefy tętna, aby uzyskać spersonalizowaną analizę treningu.</string>
     <string name="zone_onboarding_pwr_banner">Sparowano nowy miernik mocy. Skonfiguruj strefy mocy lub oblicz je na podstawie swojego FTP.</string>
     <string name="zone_onboarding_dismiss">Rozumiem</string>
+    <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="tuning_auto_pause_title">Autopauza</string>
+    <string name="tuning_auto_pause_desc">Automatyczne wstrzymywanie nagrywania podczas postoju</string>
+    <string name="tuning_auto_pause_bike_title">Jazda na rowerze</string>
+    <string name="tuning_auto_pause_run_title">Bieganie</string>
+    <string name="tuning_auto_pause_other_title">Inne sporty</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Próg prędkości pauzy</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Prędkość, poniżej której rejestracja jest wstrzymywana</string>
+    <string name="tuning_auto_pause_debounce_title">Opóźnienie pauzy</string>
+    <string name="tuning_auto_pause_debounce_desc">Czas poniżej progu przed wstrzymaniem</string>
+    <string name="cockpit_auto_pause_badge">Autopauza</string>
+    <string name="cockpit_auto_pause_resume">Wznów teraz</string>
+    <string name="cockpit_speed_sensor_lost">Utracono czujnik prędkości</string>
 
 </resources>
 

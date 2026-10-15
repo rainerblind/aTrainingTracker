@@ -1827,5 +1827,19 @@
     <string name="zone_onboarding_pwr_banner">Nuovo misuratore di potenza associato. Imposta le tue zone di potenza o calcolale dal tuo FTP.</string>
     <string name="zone_onboarding_dismiss">Ho capito</string>
 
+    <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="tuning_auto_pause_title">Pausa automatica</string>
+    <string name="tuning_auto_pause_desc">Metti automaticamente in pausa la registrazione da fermo</string>
+    <string name="tuning_auto_pause_bike_title">Ciclismo</string>
+    <string name="tuning_auto_pause_run_title">Corsa</string>
+    <string name="tuning_auto_pause_other_title">Altri sport</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Soglia velocità per pausa</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Velocità al di sotto della quale la registrazione viene messa in pausa</string>
+    <string name="tuning_auto_pause_debounce_title">Ritardo prima della pausa</string>
+    <string name="tuning_auto_pause_debounce_desc">Tempo sotto la soglia prima di mettere in pausa</string>
+    <string name="cockpit_auto_pause_badge">Pausa automatica</string>
+    <string name="cockpit_auto_pause_resume">Riprendi ora</string>
+    <string name="cockpit_speed_sensor_lost">Sensore di velocità perso</string>
+
 </resources>
 

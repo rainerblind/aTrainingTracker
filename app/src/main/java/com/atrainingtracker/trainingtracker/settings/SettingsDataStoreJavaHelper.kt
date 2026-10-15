@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
+import com.atrainingtracker.banalservice.BSportType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -71,9 +72,13 @@ object SettingsDataStoreJavaHelper {
      */
     @JvmStatic
     fun getTuningConfig(context: Context): TuningConfig {
-        val tuningDataStore = TuningPreferencesDataStore(context)
-        return runBlocking(Dispatchers.IO) {
-            tuningDataStore.tuningConfigFlow.first()
+        return try {
+            val tuningDataStore = TuningPreferencesDataStore(context)
+            runBlocking(Dispatchers.IO) {
+                tuningDataStore.tuningConfigFlow.first()
+            }
+        } catch (t: Throwable) {
+            TuningConfig()
         }
     }
 
@@ -107,9 +112,42 @@ object SettingsDataStoreJavaHelper {
      */
     @JvmStatic
     fun getFtp(context: Context): Int? {
-        val dataStore = SettingsDataStore(context)
-        return runBlocking(Dispatchers.IO) {
-            dataStore.ftpFlow.first()
+        return try {
+            val dataStore = SettingsDataStore(context)
+            runBlocking(Dispatchers.IO) {
+                dataStore.ftpFlow.first()
+            }
+        } catch (t: Throwable) {
+            null
         }
+    }
+
+    /**
+     * Synchronous bridge to determine if auto-pause is enabled for the specified sport type.
+     */
+    @JvmStatic
+    fun isAutoPauseEnabled(context: Context, sportType: BSportType): Boolean {
+        val config = getTuningConfig(context)
+        return when (sportType) {
+            BSportType.BIKE -> config.autoPauseBikeEnabled
+            BSportType.RUN -> config.autoPauseRunEnabled
+            else -> config.autoPauseOtherEnabled
+        }
+    }
+
+    /**
+     * Synchronous bridge to fetch the auto-pause speed threshold in km/h.
+     */
+    @JvmStatic
+    fun getAutoPauseSpeedThresholdKmh(context: Context): Float {
+        return getTuningConfig(context).autoPauseSpeedThresholdKmh
+    }
+
+    /**
+     * Synchronous bridge to fetch the auto-pause debounce window in seconds.
+     */
+    @JvmStatic
+    fun getAutoPauseDebounceSec(context: Context): Int {
+        return getTuningConfig(context).autoPauseDebounceSec
     }
 }

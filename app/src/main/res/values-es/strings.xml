@@ -1827,4 +1827,18 @@
     <string name="zone_onboarding_pwr_banner">Nuevo potenciómetro vinculado. Configure sus zonas de potencia o calcúlelas a partir de su FTP.</string>
     <string name="zone_onboarding_dismiss">Entendido</string>
 
+    <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="tuning_auto_pause_title">Pausa automática</string>
+    <string name="tuning_auto_pause_desc">Pausar automáticamente la grabación al detenerse</string>
+    <string name="tuning_auto_pause_bike_title">Ciclismo</string>
+    <string name="tuning_auto_pause_run_title">Carrera</string>
+    <string name="tuning_auto_pause_other_title">Otros deportes</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Umbral de velocidad de pausa</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Velocidad por debajo de la cual se pausa la grabación</string>
+    <string name="tuning_auto_pause_debounce_title">Retardo para pausar</string>
+    <string name="tuning_auto_pause_debounce_desc">Duración por debajo del umbral antes de pausar</string>
+    <string name="cockpit_auto_pause_badge">Pausa automática</string>
+    <string name="cockpit_auto_pause_resume">Reanudar ahora</string>
+    <string name="cockpit_speed_sensor_lost">Sensor de velocidad perdido</string>
+
 </resources>

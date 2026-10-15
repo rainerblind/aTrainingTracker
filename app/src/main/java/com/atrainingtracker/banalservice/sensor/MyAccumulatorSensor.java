@@ -55,7 +55,7 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
 
 
     public void increment(N incrementBy) {
-        if (mRespectPause && TrainingApplication.isPaused()) {
+        if (mRespectPause && (TrainingApplication.isPaused() || TrainingApplication.isAutoPaused())) {
             // do nothing
         } else {
             newValue(add(mValue, incrementBy));
