@@ -349,13 +349,21 @@ def build_audit_prompt(gate_key, gate_info, subtask, parent_issue):
     if diff or commits:
         diff_context = f"\n\n--- Git Context ---\nRecent Commits:\n{commits}\n\nGit Diff:\n{diff}\n"
 
+    docs_diff = ""
+    try:
+        docs_diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD", "--", "docs/requirements.md", "docs/tests.md"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+    except Exception:
+        pass
+    if docs_diff:
+        diff_context += f"\n\n--- Requirements & Tests Git Diff ---\n{docs_diff}\n"
+
     stage_file_context = ""
     gate_to_files = {
         "Gate 1": [f"docs/engineering/analysis/{parent_key}_analysis.md"],
-        "Gate 2": [f"docs/engineering/test_specs/{parent_key}_test_spec.md", "docs/requirements.md", "docs/tests.md"],
+        "Gate 2": [f"docs/engineering/test_specs/{parent_key}_test_spec.md"],
         "Gate 3": [f"docs/engineering/plans/{parent_key}_plan.md"],
         "Gate 4": [],
-        "Gate 5": [f"docs/engineering/walkthroughs/{parent_key}_walkthrough.md", "docs/requirements.md", "docs/tests.md"]
+        "Gate 5": [f"docs/engineering/walkthroughs/{parent_key}_walkthrough.md"]
     }
     for file_path in gate_to_files.get(gate_key, []):
         if os.path.exists(file_path):
