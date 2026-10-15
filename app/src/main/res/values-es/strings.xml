@@ -1823,5 +1823,8 @@
     <string name="zone_calc_error_hr_max_greater_rest">La FCmáx debe ser mayor que la FCreposo</string>
     <string name="zone_calc_error_karvonen_delta">La FCmáx debe ser al menos 20 bpm mayor que la FCreposo</string>
     <string name="zone_calc_error_monotonicity">El valor debe estar entre %1$d y %2$d</string>
+    <string name="zone_onboarding_hr_banner">Nuevo sensor de frecuencia cardíaca vinculado. Configure sus zonas de FC para recibir información de entrenamiento personalizada.</string>
+    <string name="zone_onboarding_pwr_banner">Nuevo potenciómetro vinculado. Configure sus zonas de potencia o calcúlelas a partir de su FTP.</string>
+    <string name="zone_onboarding_dismiss">Entendido</string>
 
 </resources>

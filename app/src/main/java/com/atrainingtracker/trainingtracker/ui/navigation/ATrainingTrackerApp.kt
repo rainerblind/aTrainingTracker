@@ -407,7 +407,10 @@ fun ATrainingTrackerApp(
                     DevicesTabbedScreen(
                         tabViewModel = tabViewModel,
                         equipmentViewModel = equipmentViewModel,
-                        initialTab = 2
+                        initialTab = 2,
+                        onNavigateToZones = { initialTab, promptReason ->
+                            navController.navigate(NavRoutes.trainingZones(initialTab, promptReason))
+                        }
                     )
                 }
 
@@ -443,8 +446,27 @@ fun ATrainingTrackerApp(
                     )
                 }
 
-                composable(NavRoutes.TRAINING_ZONES) {
-                    ZoneSettingsScreen()
+                composable(
+                    route = NavRoutes.TRAINING_ZONES_PATTERN,
+                    arguments = listOf(
+                        navArgument(NavRoutes.ARG_INITIAL_TAB) {
+                            type = NavType.IntType
+                            defaultValue = 0
+                        },
+                        navArgument(NavRoutes.ARG_PROMPT_REASON) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { backStackEntry ->
+                    val initialTab = backStackEntry.arguments?.getInt(NavRoutes.ARG_INITIAL_TAB) ?: 0
+                    val promptReason = backStackEntry.arguments?.getString(NavRoutes.ARG_PROMPT_REASON)
+                    ZoneSettingsScreen(
+                        initialTab = initialTab,
+                        promptReason = promptReason,
+                        onFinish = { navController.popBackStack() }
+                    )
                 }
 
                 composable(NavRoutes.BACKUP_RESTORE) {

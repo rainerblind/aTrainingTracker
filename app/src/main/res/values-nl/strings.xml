@@ -1823,6 +1823,9 @@
     <string name="zone_calc_error_hr_max_greater_rest">HFmax moet groter zijn dan HFrust</string>
     <string name="zone_calc_error_karvonen_delta">HFmax moet minstens 20 bpm hoger zijn dan HFrust</string>
     <string name="zone_calc_error_monotonicity">Waarde moet tussen %1$d en %2$d liggen</string>
+    <string name="zone_onboarding_hr_banner">Nieuwe hartslagsensor gekoppeld. Stel je hartslagzones in voor gepersonaliseerde trainingsfeedback.</string>
+    <string name="zone_onboarding_pwr_banner">Nieuwe vermogensmeter gekoppeld. Stel je vermogenszones in of bereken ze op basis van je FTP.</string>
+    <string name="zone_onboarding_dismiss">Begrepen</string>
 
 </resources>
 

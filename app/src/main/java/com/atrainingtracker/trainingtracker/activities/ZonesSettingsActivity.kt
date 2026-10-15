@@ -64,6 +64,9 @@ import android.text.format.DateUtils
 import com.atrainingtracker.trainingtracker.ui.settings.HrMethod
 import com.atrainingtracker.trainingtracker.ui.settings.ZoneCalculatorDialog
 import com.atrainingtracker.trainingtracker.ui.settings.ZoneCalculatorStateHolder
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneOnboardingBanner
+import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModel
+import androidx.compose.runtime.saveable.rememberSaveable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -75,11 +78,15 @@ class ZonesSettingsActivity : ComponentActivity() {
 
         // Retrieve the target tab index from the intent, default to 0
         val targetTab = intent.getIntExtra("TARGET_ZONE_TAB", 0)
+        val promptReason = intent.getStringExtra("PROMPT_REASON")
 
         setContent {
             ATrainingTrackerTheme {
                 // Pass the initial tab to the route
-                ZoneSettingsScreen(initialTab = targetTab)
+                ZoneSettingsScreen(
+                    initialTab = targetTab,
+                    promptReason = promptReason
+                )
             }
         }
     }
@@ -102,6 +109,7 @@ data class ZoneProfileState(
 @Composable
 fun ZoneSettingsScreen(
     initialTab: Int = 0,
+    promptReason: String? = null,
     onFinish: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -202,6 +210,7 @@ fun ZoneSettingsScreen(
     val storedHrMethod by dataStore.hrCalcMethodFlow.collectAsState(initial = null)
 
     var showCalculatorDialog by remember { mutableStateOf(false) }
+    var bannerVisible by rememberSaveable { mutableStateOf(promptReason != null) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column {
@@ -320,6 +329,23 @@ fun ZoneSettingsScreen(
             }
 
             // 2. THE CONTENT (Pager)
+            if (bannerVisible && promptReason != null) {
+                ZoneOnboardingBanner(
+                    promptReason = promptReason,
+                    onDismiss = {
+                        bannerVisible = false
+                        scope.launch(Dispatchers.IO) {
+                            if (promptReason == DeviceListViewModel.PROMPT_REASON_HR_PAIRED) {
+                                dataStore.setHrZonesConfigured(true)
+                            } else if (promptReason == DeviceListViewModel.PROMPT_REASON_PWR_PAIRED) {
+                                dataStore.setPwrZonesConfigured(true)
+                            }
+                        }
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
             if (allProfilesData.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()

@@ -91,6 +91,12 @@ class KnownLocationsRepositoryTest {
             elevationService = mockElevationService,
             dbDispatcher = testDispatcher
         )
+
+        runBlocking {
+            withContext(testDispatcher) {
+                // Wait for init launch tasks (reconcileHitCounts, loadLocations, healLegacyNames) to complete on testDispatcher
+            }
+        }
     }
 
     @After
