@@ -41,6 +41,7 @@ import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
 import com.atrainingtracker.banalservice.sensor.SensorData;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.util.EnumUtils;
+import com.atrainingtracker.util.LifecycleUtils;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.MyUnits;
@@ -396,14 +397,14 @@ public class PebbleService extends Service {
         banalService = null;
 
         // unregisterReceiver(mSearchingFinishedReceiver);
-        unregisterReceiver(mConfigurePebbleWatchAppReceiver);
-        unregisterReceiver(mUpdatePebbleReceiver);
-        unregisterReceiver(mPebbleConnectedReceiver);
-        unregisterReceiver(mPauseReceiver);
-        unregisterReceiver(mResumeReceiver);
-        unregisterReceiver(mLapSummaryReceiver);
-        unregisterReceiver(mStartSearchingReceiver);
-        unregisterReceiver(mEndSearchingReceiver);
+        LifecycleUtils.safeUnregisterReceiver(this, mConfigurePebbleWatchAppReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mUpdatePebbleReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mPebbleConnectedReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mPauseReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mResumeReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mStartSearchingReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mEndSearchingReceiver, TAG);
 
         stopPebbleWatchApp();
     }
@@ -546,21 +547,9 @@ public class PebbleService extends Service {
         }
 
         if (mReceiversRegistered) {
-            try {
-                unregisterReceiver(mPebbleDataReceiver);
-            } catch (Exception e) {
-                Log.e(TAG, "failed to unregister Data receiver");
-            }
-            try {
-                unregisterReceiver(pebbleAckReceiver);
-            } catch (Exception e) {
-                Log.e(TAG, "failed to unregister ACK receiver");
-            }
-            try {
-                unregisterReceiver(pebbleNackReceiver);
-            } catch (Exception e) {
-                Log.e(TAG, "failed to unregister NACK receiver");
-            }
+            LifecycleUtils.safeUnregisterReceiver(this, mPebbleDataReceiver, TAG);
+            LifecycleUtils.safeUnregisterReceiver(this, pebbleAckReceiver, TAG);
+            LifecycleUtils.safeUnregisterReceiver(this, pebbleNackReceiver, TAG);
         }
     }
 

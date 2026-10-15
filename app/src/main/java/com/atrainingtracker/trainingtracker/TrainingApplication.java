@@ -44,6 +44,7 @@ import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 import com.atrainingtracker.util.EnumUtils;
+import com.atrainingtracker.util.LifecycleUtils;
 
 import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode;
 import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode;
@@ -353,12 +354,12 @@ public class TrainingApplication extends Application {
             switch (getPebbleWatchapp()) {
                 case BUILD_IN:
                     if (DEBUG) Log.d(TAG, "starting build in Pebble Watchapp Service");
-                    startService(new Intent(this, PebbleServiceBuildIn.class));
+                    LifecycleUtils.safeStartService(this, new Intent(this, PebbleServiceBuildIn.class), TAG);
                     break;
 
                 case TRAINING_TRACKER:
                     if (DEBUG) Log.d(TAG, "starting Training Tracker Pebble Watchapp Service");
-                    startService(new Intent(this, PebbleService.class));
+                    LifecycleUtils.safeStartService(this, new Intent(this, PebbleService.class), TAG);
                     break;
             }
             startedWatchapp = getPebbleWatchapp();
@@ -1557,13 +1558,13 @@ public class TrainingApplication extends Application {
         super.onTerminate();
         if (DEBUG) Log.i(TAG, "onTerminated");
 
-        unregisterReceiver(mStopTrackingReceiver);
-        unregisterReceiver(mStartTrackingReceiver);
-        unregisterReceiver(mTrackingStartedReceiver);
-        unregisterReceiver(mTrackingStoppedReceiver);
+        LifecycleUtils.safeUnregisterReceiver(this, mStopTrackingReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mStartTrackingReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mTrackingStartedReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mTrackingStoppedReceiver, TAG);
 
-        unregisterReceiver(mSearchingFinishedReceiver);
-        unregisterReceiver(mSearchingStartedReceiver);
+        LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mSearchingStartedReceiver, TAG);
 
     }
 

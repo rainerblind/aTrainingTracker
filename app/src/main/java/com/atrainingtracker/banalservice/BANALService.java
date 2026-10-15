@@ -30,6 +30,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import com.atrainingtracker.BuildConfig;
+import com.atrainingtracker.util.LifecycleUtils;
 import com.atrainingtracker.banalservice.devices.DeviceManager;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.MyDevice;
@@ -518,8 +519,8 @@ public class BANALService
         cSensorManager.shutDown();
         cFilterManager.shutDown();
 
-        unregisterReceiver(mNewLapReceiver);
-        unregisterReceiver(mStartSearchForPairedDevices);
+        LifecycleUtils.safeUnregisterReceiver(this, mNewLapReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mStartSearchForPairedDevices, TAG);
     }
 
     /***********************************************************************************************/

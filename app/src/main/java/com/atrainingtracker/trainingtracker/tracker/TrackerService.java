@@ -38,6 +38,7 @@ import android.os.IBinder;
 import android.util.Log;
 import java.util.concurrent.CompletableFuture;
 import com.atrainingtracker.util.EnumUtils;
+import com.atrainingtracker.util.LifecycleUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -730,10 +731,10 @@ public class TrackerService extends Service {
         mBanalService = null;
 
 
-        unregisterReceiver(mSearchingFinishedReceiver);
-        unregisterReceiver(mAltitudeCorrectionReceiver);
-        unregisterReceiver(mLapSummaryReceiver);
-        unregisterReceiver(mUserSelectedSportTypeChangedReceiver);
+        LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mUserSelectedSportTypeChangedReceiver, TAG);
 
         releaseWakeLock();
     }

@@ -30,6 +30,7 @@ import android.util.Log;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.util.EnumUtils;
+import com.atrainingtracker.util.LifecycleUtils;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeCadenceDevice;
@@ -442,11 +443,11 @@ public class DeviceManager {
         mSearchQueue = null;
         // TODO: also remove entries of the lists?
 
-        mContext.unregisterReceiver(mPairingChangedReceiver);
-        mContext.unregisterReceiver(mSearchingStoppedForOneReceiver);
+        LifecycleUtils.safeUnregisterReceiver(mContext, mPairingChangedReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(mContext, mSearchingStoppedForOneReceiver, TAG);
         // mContext.unregisterReceiver(mStartSearchingReceiver);
-        mContext.unregisterReceiver(mStartSearchingForNewDevicesReceiver);
-        mContext.unregisterReceiver(mStopSearchingForNewDevicesReceiver);
+        LifecycleUtils.safeUnregisterReceiver(mContext, mStartSearchingForNewDevicesReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(mContext, mStopSearchingForNewDevicesReceiver, TAG);
     }
 
     private void pairingChanged(long deviceId, boolean paired) {

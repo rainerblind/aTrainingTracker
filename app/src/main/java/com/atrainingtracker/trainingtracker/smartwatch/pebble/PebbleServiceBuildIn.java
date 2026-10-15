@@ -31,6 +31,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import com.atrainingtracker.util.LifecycleUtils;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
@@ -146,8 +147,8 @@ public class PebbleServiceBuildIn extends Service {
         unbindService(mBanalConnection);
         banalService = null;
 
-        unregisterReceiver(mUpdatePebbleReceiver);
-        unregisterReceiver(mSearchingFinishedReceiver);
+        LifecycleUtils.safeUnregisterReceiver(this, mUpdatePebbleReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
 
         stopPebbleWatchApp();
     }
