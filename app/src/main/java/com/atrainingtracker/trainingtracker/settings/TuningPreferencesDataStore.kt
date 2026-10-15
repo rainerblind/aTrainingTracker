@@ -146,6 +146,7 @@ object TuningPreferencesDefaults {
     const val DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED = true
 
     const val DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM = 18.0f
+    const val DEFAULT_MAP_FOLLOW_ME_MIN_ZOOM = 16.0f
     const val MIN_MAP_FOLLOW_ME_CRUISING_ZOOM = 14.0f
     const val MAX_MAP_FOLLOW_ME_CRUISING_ZOOM = 19.5f
     const val STEP_MAP_FOLLOW_ME_CRUISING_ZOOM = 0.5f
@@ -374,13 +375,33 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_navigation_cue_dismiss_duration_sec")
         val KEY_ELEVATION_SMOOTHING_SIGMA_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_elevation_smoothing_sigma_meters")
 
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_INITIAL_ZOOM: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_initial_zoom")
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_map_follow_me_speed_zoom_enabled")
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_CRUISING_ZOOM: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_cruising_zoom")
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_TILT_ANGLE: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_tilt_angle")
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_lookahead_padding_percent")
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_speed_smoothing_alpha")
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_bearing_smoothing_alpha")
+
+        /**
+         * List of legacy map camera tuning keys retained for migration cleanup and factory reset (REQ-MAP-050).
+         */
+        val LEGACY_MAP_CAMERA_KEYS = listOf(
+            KEY_MAP_FOLLOW_ME_INITIAL_ZOOM,
+            KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+            KEY_MAP_FOLLOW_ME_CRUISING_ZOOM,
+            KEY_MAP_FOLLOW_ME_TILT_ANGLE,
+            KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+            KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+            KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
+        )
         val KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_suppress_ant_missing_adapter_dialog")
         val KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_follow_unique_route_enabled")
         val KEY_CLUSTER_TOL_ENDPOINTS: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_tol_endpoints")
@@ -500,7 +521,37 @@ class TuningPreferencesDataStore(private val context: Context) {
                 otherDebounceSec = otherDebounce
             )
         }
+
+        /**
+         * Maps follow-me camera preferences to calibrated defaults, ignoring any legacy stored overrides (ATT-3581 / REQ-MAP-050).
+         */
+        fun mapFollowMePreferences(prefs: Preferences): FollowMeCameraPreferences {
+            return FollowMeCameraPreferences(
+                initialZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
+                speedZoomEnabled = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+                cruisingZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
+                tiltAngle = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE,
+                lookaheadPaddingPercent = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+                speedSmoothingAlpha = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+                bearingSmoothingAlpha = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+                minZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_MIN_ZOOM
+            )
+        }
     }
+
+/**
+ * Resolved follow-me camera preferences slice (REQ-MAP-050).
+ */
+data class FollowMeCameraPreferences(
+    val initialZoom: Float,
+    val speedZoomEnabled: Boolean,
+    val cruisingZoom: Float,
+    val tiltAngle: Float,
+    val lookaheadPaddingPercent: Float,
+    val speedSmoothingAlpha: Float,
+    val bearingSmoothingAlpha: Float,
+    val minZoom: Float
+)
 
 /**
  * Resolved sport-specific auto-pause preferences slice.
@@ -676,31 +727,13 @@ data class AutoPausePreferences(
                 TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
                 TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
             ),
-            mapFollowMeInitialZoom = (prefs[KEY_MAP_FOLLOW_ME_INITIAL_ZOOM] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM).coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM
-            ),
-            mapFollowMeSpeedZoomEnabled = prefs[KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
-            mapFollowMeCruisingZoom = (prefs[KEY_MAP_FOLLOW_ME_CRUISING_ZOOM] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM).coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM
-            ),
-            mapFollowMeTiltAngle = (prefs[KEY_MAP_FOLLOW_ME_TILT_ANGLE] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE).coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE
-            ),
-            mapFollowMeLookaheadPaddingPercent = (prefs[KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT).coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
-            ),
-            mapFollowMeSpeedSmoothingAlpha = (prefs[KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA).coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
-            ),
-            mapFollowMeBearingSmoothingAlpha = (prefs[KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA).coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
-            ),
+            mapFollowMeInitialZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
+            mapFollowMeSpeedZoomEnabled = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+            mapFollowMeCruisingZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
+            mapFollowMeTiltAngle = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE,
+            mapFollowMeLookaheadPaddingPercent = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+            mapFollowMeSpeedSmoothingAlpha = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+            mapFollowMeBearingSmoothingAlpha = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
             suppressAntMissingAdapterDialog = prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] ?: TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG,
             autoFollowUniqueRouteEnabled = prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
             clusterTolEndpoints = (prefs[KEY_CLUSTER_TOL_ENDPOINTS] ?: TrainingApplication.getClusterTolEndpoints()).coerceIn(
@@ -883,31 +916,10 @@ data class AutoPausePreferences(
                 TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
                 TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
             )
-            prefs[KEY_MAP_FOLLOW_ME_INITIAL_ZOOM] = config.mapFollowMeInitialZoom.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM
-            )
-            prefs[KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED] = config.mapFollowMeSpeedZoomEnabled
-            prefs[KEY_MAP_FOLLOW_ME_CRUISING_ZOOM] = config.mapFollowMeCruisingZoom.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM
-            )
-            prefs[KEY_MAP_FOLLOW_ME_TILT_ANGLE] = config.mapFollowMeTiltAngle.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE
-            )
-            prefs[KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT] = config.mapFollowMeLookaheadPaddingPercent.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
-            )
-            prefs[KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA] = config.mapFollowMeSpeedSmoothingAlpha.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
-            )
-            prefs[KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA] = config.mapFollowMeBearingSmoothingAlpha.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
-            )
+            // ATT-3581: Actively purge any legacy camera preferences to prevent stale override interference
+            for (legacyKey in LEGACY_MAP_CAMERA_KEYS) {
+                prefs.remove(legacyKey)
+            }
             prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] = config.suppressAntMissingAdapterDialog
             prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] = config.autoFollowUniqueRouteEnabled
             prefs[KEY_CLUSTER_TOL_ENDPOINTS] = clampedClusterTolEndpoints
@@ -994,49 +1006,50 @@ data class AutoPausePreferences(
         }
     }
 
-    suspend fun updateMapFollowMeInitialZoom(zoom: Float) {
-        val clamped = zoom.coerceIn(
-            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM,
-            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM
-        )
+    /**
+     * Purges legacy map camera tuning keys from Preferences DataStore so old stored values
+     * cannot persist or interfere with calibrated defaults (REQ-MAP-050 / ATT-3581).
+     */
+    suspend fun purgeLegacyMapCameraPreferences() {
         context.dataStore.edit { prefs ->
-            prefs[KEY_MAP_FOLLOW_ME_INITIAL_ZOOM] = clamped
+            for (key in LEGACY_MAP_CAMERA_KEYS) {
+                prefs.remove(key)
+            }
         }
     }
 
+    @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
+    suspend fun updateMapFollowMeInitialZoom(zoom: Float) {
+        context.dataStore.edit { prefs ->
+            prefs.remove(KEY_MAP_FOLLOW_ME_INITIAL_ZOOM)
+        }
+    }
+
+    @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
     suspend fun updateMapFollowMeSpeedZoomEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
-            prefs[KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED] = enabled
+            prefs.remove(KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED)
         }
     }
 
+    @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
     suspend fun updateMapFollowMeCruisingZoom(zoom: Float) {
-        val clamped = zoom.coerceIn(
-            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM,
-            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM
-        )
         context.dataStore.edit { prefs ->
-            prefs[KEY_MAP_FOLLOW_ME_CRUISING_ZOOM] = clamped
+            prefs.remove(KEY_MAP_FOLLOW_ME_CRUISING_ZOOM)
         }
     }
 
+    @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
     suspend fun updateMapFollowMeTiltAngle(angle: Float) {
-        val clamped = angle.coerceIn(
-            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE,
-            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE
-        )
         context.dataStore.edit { prefs ->
-            prefs[KEY_MAP_FOLLOW_ME_TILT_ANGLE] = clamped
+            prefs.remove(KEY_MAP_FOLLOW_ME_TILT_ANGLE)
         }
     }
 
+    @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
     suspend fun updateMapFollowMeLookaheadPaddingPercent(percent: Float) {
-        val clamped = percent.coerceIn(
-            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
-            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
-        )
         context.dataStore.edit { prefs ->
-            prefs[KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT] = clamped
+            prefs.remove(KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT)
         }
     }
 

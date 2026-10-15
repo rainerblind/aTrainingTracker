@@ -250,14 +250,7 @@ fun ATrainingTrackerMap(
                     speed = userSpeed,
                     currentLocation = currentLocation,
                     cameraPositionState = cameraPositionState,
-                    baseZoom = tuningConfig.mapFollowMeInitialZoom,
-                    speedZoomEnabled = tuningConfig.mapFollowMeSpeedZoomEnabled,
-                    cruisingZoom = tuningConfig.mapFollowMeCruisingZoom,
-                    tiltAngle = tuningConfig.mapFollowMeTiltAngle,
-                    lookaheadPaddingPercent = tuningConfig.mapFollowMeLookaheadPaddingPercent,
-                    viewportHeightDp = maxHeight.value,
-                    speedSmoothingAlpha = tuningConfig.mapFollowMeSpeedSmoothingAlpha,
-                    bearingSmoothingAlpha = tuningConfig.mapFollowMeBearingSmoothingAlpha
+                    viewportHeightDp = maxHeight.value
                 )
 
                 currentLocation?.let { loc ->

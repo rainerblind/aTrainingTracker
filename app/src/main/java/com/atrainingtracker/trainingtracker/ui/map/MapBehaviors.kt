@@ -184,8 +184,9 @@ fun MapBoundsController(
 }
 
 /**
- * Calculates the target camera zoom level for Follow-Me tracking mode based on speed and tuning preferences (REQ-MAP-042).
+ * Calculates the target camera zoom level for Follow-Me tracking mode based on speed and tuning preferences (REQ-MAP-042 / REQ-MAP-050).
  * Converts speed from m/s to km/h and scales linearly between [baseZoom] at 0 km/h and [cruisingZoom] at 20 km/h.
+ * Above 20 km/h, applies smooth base-2 logarithmic scaling per REQ-MAP-050, clamped at [minZoom].
  * When [speedZoomEnabled] is false, locks the camera firmly to [baseZoom].
  */
 fun calculateFollowMeTargetZoom(
@@ -193,15 +194,22 @@ fun calculateFollowMeTargetZoom(
     baseZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
     speedZoomEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
     cruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
-    minZoom: Float = 12.0f,
+    minZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_MIN_ZOOM,
     maxZoom: Float = 21.0f
 ): Float {
     if (!speedZoomEnabled) {
         return baseZoom.coerceIn(minZoom, maxZoom)
     }
     val speedKmh = (speedMps * 3.6f).coerceAtLeast(0.0f)
-    val zoomSlope = (baseZoom - cruisingZoom) / 20.0f
-    return (baseZoom - zoomSlope * speedKmh).coerceIn(minZoom, maxZoom)
+    if (speedKmh <= 20.0f) {
+        val zoomSlope = (baseZoom - cruisingZoom) / 20.0f
+        return (baseZoom - zoomSlope * speedKmh).coerceIn(minZoom, maxZoom)
+    } else {
+        val logScale = (baseZoom - cruisingZoom) / 2.0f
+        val logDelta = logScale * (kotlin.math.ln(speedKmh / 20.0f) / kotlin.math.ln(2.0f))
+        val rawZoom = cruisingZoom - logDelta
+        return rawZoom.coerceIn(minZoom, maxZoom)
+    }
 }
 
 /**
