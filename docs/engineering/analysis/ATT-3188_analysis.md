@@ -75,13 +75,20 @@ Given athlete Functional Threshold Power $FTP \in [50, 1000]\text{ Watts}$:
 - **Zone 4 (Threshold)**: $91 - 105\% \implies Z_{4\text{max}} = \text{round}(FTP \times 1.05)$
 - **Zone 5 (VO2 Max)**: $106 - 120\% \implies Z_{5\text{max}} = \text{round}(FTP \times 1.20)$
 - **Zone 6 (Anaerobic Capacity)**: $121 - 150\% \implies Z_{6\text{max}} = \text{round}(FTP \times 1.50)$
-- **Zone 7 (Neuromuscular Power)**:
-  - **Floor Dependency**: Zone 7 has no independent manual cutoff; its lower bound is strictly a dependent variable: $\text{Min} = Z_{6\text{max}} + 1$.
-  - In `SettingsScreenContent`, Zone 7's minimum value is dynamically bound to `minValue = z6Max + 1` with manual editing disabled (`minEnabled = false`, `maxEnabled = false`). When the athlete adjusts `z6Max`, Zone 7's floor automatically and consistently cascades without breaking monotonicity.
-  - **Physical Ceiling**: To prevent UI text clipping and integer overflow in downstream calculation engines (kJ, TSS), Zone 7 is capped at physical ceiling $Z_{7\text{max}} = 2000\text{ Watts}$ (standard maximum sprint wattage ceiling).
+- **Zone 7 (Neuromuscular Power) Transition & Non-Overlapping Invariant**:
+  - **Floor Dependency & Immediate Recalculation**: Zone 7 has no independently stored upper cutoff in `SettingsDataStore`. Its lower bound is strictly a dependent variable derived directly from Zone 6 upper boundary:
+    $$\text{Min}_{Z7} = Z_{6\text{max}} + 1 = \text{round}(FTP \times 1.50) + 1$$
+  - When FTP is updated (e.g. from 200W to 350W):
+    - Previous state: $FTP = 200\text{W} \implies Z_{6\text{max}} = 300\text{W} \implies Z_7 = [301, 2000]\text{W}$.
+    - Recalculated state: $FTP = 350\text{W} \implies Z_{6\text{max}} = 525\text{W} \implies Z_7 = [526, 2000]\text{W}$.
+  - Because $Z_{6\text{max}} = \text{round}(FTP \times 1.50) \le 1500\text{W}$ for all valid $FTP \le 1000\text{W}$, $\text{Min}_{Z7} \le 1501\text{W}$, which is strictly less than the physical ceiling $Z_{7\text{max}} = 2000\text{W}$.
+  - **UI & Telemetry Non-Overlap Invariant**:
+    - In `SettingsScreenContent`, Zone 7's minimum value dynamically observes `z6Max + 1` with manual editing disabled (`minEnabled = false`, `maxEnabled = false`).
+    - In `TelemetryZoneMath`, live wattage is mapped to Zone 7 whenever $\text{watts} > Z_{6\text{max}}$, capped at $2000\text{W}$.
+    - This mathematical coupling eliminates any possibility of overlapping boundaries, gaps, or range inversions when FTP changes.
 
 *Monotonic Guarantee*: Because $0.55 < 0.75 < 0.90 < 1.05 < 1.20 < 1.50$, for any valid $FTP \ge 50$, the calculated upper bounds are strictly monotonic:
-$$0 < Z_1 < Z_2 < Z_3 < Z_4 < Z_5 < Z_6 < 2000$$
+$$0 < Z_1 < Z_2 < Z_3 < Z_4 < Z_5 < Z_6 < \text{Min}_{Z7} \le 2000$$
 
 #### 2.2.3 Heart Rate Model A (% of HRmax)
 Given athlete maximum heart rate $HR_{\text{max}} \in [100, 240]\text{ bpm}$:
@@ -231,7 +238,9 @@ suspend fun applyCalculatedHeartRateZones(
     }
 }
 ```
-- Because Jetpack DataStore performs in-memory updates followed by an atomic filesystem rename, the UI reactively observes the new state automatically with zero lifecycle desynchronization risk.
+- Because Jetpack DataStore performs in-memory updates followed by an atomic filesystem rename, the UI reactively observes the new state automatically with zero lifecycle desynchronization risk:
+  - **ACID Transaction Guarantee**: Jetpack DataStore guarantees atomicity via temporary file writes (`.tmp`) and an atomic OS-level filesystem rename (`renameTo` syscall). Mutations in `dataStore.edit { }` either succeed completely or fail with zero disk modifications.
+  - If the Android OS kills the process or a device power failure occurs mid-transaction, the DataStore file remains in its prior consistent state. Partial updates (e.g. baseline updated without zones) are physically impossible.
 
 ### 3.7 State Machine: Zone Customization Lifecycle & Invalidation Logic
 To eliminate ambiguity regarding when thresholds represent a scientific baseline versus user customization, the zone lifecycle is formalized as a deterministic 3-state finite state machine:
@@ -250,18 +259,27 @@ To eliminate ambiguity regarding when thresholds represent a scientific baseline
    - One or more zone threshold cards have been manually fine-tuned by the athlete, or an external baseline change has invalidated mathematical synchronization.
    - UI Badge: `"Benutzerdefiniert"` (*"Customized"*).
 
-#### 3.7.2 State Transition Matrix & Invalidation Policy
-- **Transition 1 (`UNCONFIGURED_DEFAULT` or `CUSTOMIZED` $\to$ `CALCULATED_SYNCED`)**:
-  - **Trigger**: Athlete opens `ZoneCalculatorDialog`, inputs baseline, and confirms "Apply" ("Übernehmen").
-  - **Overwriting Guard**: If current state is `CUSTOMIZED`, the dialog surfaces an explicit amber warning prompt:
-    *"Achtung: Du hast benutzerdefinierte Zonen. Durch das Übernehmen werden deine manuellen Anpassungen mit den Standard-Coggan-Zonen überschrieben."* (*"Warning: You have customized zones. Applying will overwrite your manual adjustments with standard Coggan zones."*).
-  - **Action**: Single ACID DataStore transaction writes baseline, timestamp, calculated thresholds, and sets `is_customized = false`.
-- **Transition 2 (`CALCULATED_SYNCED` $\to$ `CUSTOMIZED`)**:
-  - **Trigger**: Athlete manually edits any individual threshold card in `ZoneSettingsScreen` (`savePowerZoneMax` / `saveHrZoneMax`).
-  - **Action**: Threshold is persisted, and `is_customized` immediately flips to `true`. The UI badge instantly updates to `"Benutzerdefiniert"`.
-- **Transition 3 (Baseline Mutation Invalidation Policy)**:
-  - **Policy**: Stored zone thresholds **NEVER silently mutate in the background**.
-  - If a baseline is altered outside the calculator dialog or updated via telemetry synchronization, zone thresholds remain static while `is_customized` flips to `true` (indicating stale / divergent boundaries), prompting the athlete to review and recalibrate explicitly via the Calculator assistant.
+#### 3.7.2 State Transition Matrix, Scoping & Invalidation Policy
+1. **Customization Scoping (Global Profile Flag with Granular UI Feedback)**:
+   - **Single Edit Invariant**: A manual adjustment to **any single zone threshold card** (e.g. altering only $Z_4$) immediately transitions the **entire profile** (`PWR_BIKE`, `HR_RUN`, or `HR_BIKE`) to `CUSTOMIZED` (`is_customized = true`).
+   - **Physiological Justification**: Coggan and Karvonen models define zones as an integrated continuous spectrum where the upper boundary of Zone $N$ dictates the lower boundary of Zone $N+1$ ($Z_{N+1\text{min}} = Z_{N\text{max}} + 1$). Altering even one boundary breaks mathematical conformity to the baseline model.
+   - **Granular Per-Zone UI Highlighting**: While the persistence flag is profile-wide (`is_customized = true`), the `ZoneCalculatorDialog` preview table compares each stored boundary against standard percentage formulas, highlighting specific diverging thresholds with an amber "Customized" tag (`CardIndicator`), giving the athlete granular visibility without persistent flag explosion.
+2. **Deterministic State Transitions**:
+   - **Transition 1 (`UNCONFIGURED_DEFAULT` or `CUSTOMIZED` $\to$ `CALCULATED_SYNCED`)**:
+     - **Trigger**: Athlete opens `ZoneCalculatorDialog`, inputs baseline, and confirms "Apply" ("Übernehmen").
+     - **Overwrite Confirmation Guard**: If current state is `CUSTOMIZED`, the UI displays a modal confirmation prompt:
+       *"Achtung: Du hast benutzerdefinierte Zonen. Durch das Übernehmen werden deine manuellen Anpassungen mit den Standard-Coggan-Zonen für FTP %d W überschrieben. Möchtest du fortfahren?"* (*"Warning: You have customized zones. Applying will overwrite your manual adjustments with standard Coggan zones for FTP %d W. Do you want to proceed?"*).
+     - **Action**: Upon confirmation, single atomic DataStore transaction commits the new baseline, timestamp, calculated thresholds, and sets `is_customized = false`.
+   - **Transition 2 (`CALCULATED_SYNCED` $\to$ `CUSTOMIZED`)**:
+     - **Trigger**: Athlete manually edits any individual threshold card in `ZoneSettingsScreen` (`savePowerZoneMax` / `saveHrZoneMax`).
+     - **Action**: Stored threshold is persisted, and `is_customized` immediately flips to `true`. UI badge updates to `"Benutzerdefiniert"`.
+3. **Explicit Baseline Invalidation & Recalculation Policy**:
+   - **Architectural Policy**: In `aTrainingTracker`, athlete baseline metrics ($FTP$, $HR_{\text{max}}$, $HR_{\text{rest}}$) are edited and maintained **exclusively through the `ZoneCalculatorDialog`**. There is no detached, secondary baseline input field that can mutate the baseline without user awareness.
+   - When an athlete opens the calculator to change FTP (e.g. from 200W to 300W):
+     - The preview table immediately renders proposed cutoffs side-by-side with current cutoffs.
+     - **If Confirmed ("Apply")**: Baseline and all zone thresholds are atomically updated together; zones are never left stale.
+     - **If Dismissed / Cancelled**: The edited baseline is discarded; existing custom zones remain completely untouched in `CUSTOMIZED` state.
+   - **Zero Background Silent Mutation Invariant**: Stored zone boundaries **NEVER silently mutate in the background**. Downstream telemetry services always consume the committed snapshot, preventing split-brain metrics.
 
 ### 3.8 Telemetry Engine Atomic Snapshot Consumption via Flow Combine Pattern
 In background telemetry aggregation services (`LiveWorkoutSession`, `TrackerService`), observing baseline FTP and zone thresholds independently introduces a race condition ("torn read") where a tick might calculate TSS using a freshly updated FTP but old threshold brackets (or vice versa).
@@ -366,7 +384,24 @@ fun calculateKarvonenHeartRateZones(hrMax: Int, hrRest: Int): List<Int> {
      - "Apply" button is immediately disabled (`enabled = false`).
      - A localized, prominent Material 3 error message is displayed beneath the field (`supportingText` / `isError = true`):
        *"Maximale HF muss mindestens 20 bpm über der Ruhe-HF liegen (Ruhe-HF mind. 30 bpm)"*.
-2. **Global Zone Stack Monotonicity Validation & Manual 2000W Ceiling Enforcement**:
+2. **UI-Level Reactive Validation State (`isApplyEnabled`) & Zero-Crash Invariant**:
+   - To guarantee zero runtime crashes (`IllegalArgumentException`), input validation is evaluated reactively within the Compose UI state of `ZoneCalculatorDialog`:
+```kotlin
+val isPowerValid: Boolean = ftpInput != null && ftpInput in 50..1000
+val isHrmaxValid: Boolean = hrMaxInput != null && hrMaxInput in 100..240
+val isKarvonenValid: Boolean = hrMaxInput != null && hrRestInput != null &&
+    hrMaxInput in 100..240 && hrRestInput in 30..100 &&
+    (hrMaxInput - hrRestInput >= 20)
+
+val isApplyEnabled: Boolean = when (activeProfile) {
+    ZoneProfile.PWR_BIKE -> isPowerValid
+    ZoneProfile.HR_RUN, ZoneProfile.HR_BIKE -> if (useKarvonen) isKarvonenValid else isHrmaxValid
+}
+```
+   - The "Apply" action button binds directly to `enabled = isApplyEnabled`.
+   - If any input is out-of-range or the Karvonen spread is $< 20\text{ bpm}$, the button is disabled and inline error messages are displayed.
+   - Domain-level `require()` blocks in `ZoneCalculationMath` and `SettingsDataStore` act strictly as defensive assertion barriers; the UI state guarantees that invalid parameters can NEVER be dispatched, eliminating any crash risk.
+3. **Global Zone Stack Monotonicity Validation & Manual 2000W Ceiling Enforcement**:
    - `validatePowerZoneStack(z1, z2, z3, z4, z5, z6): Boolean`: Asserts the entire stack satisfies $0 < z_1 < z_2 < z_3 < z_4 < z_5 < z_6 \le 2000$.
    - `validateHeartRateZoneStack(z1, z2, z3, z4): Boolean`: Asserts $30 < z_1 < z_2 < z_3 < z_4 \le 250$.
    - **Manual Override 2000W Ceiling Enforcement**:
