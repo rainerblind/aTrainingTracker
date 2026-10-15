@@ -30,7 +30,7 @@ Currently, configuring zone boundaries is entirely manual. Athletes must calcula
    - If an athlete modifies FTP mid-workout, samples recorded prior to the change remain mathematically anchored to the FTP at their recording time; only subsequent ticks use the updated baseline.
    - State management is purely reactive: `ZoneSettingsScreen` observes `StateFlow` from `SettingsDataStore`, eliminating fragile callback-driven state updates.
 
-This ticket introduces an interactive, contextual Zone Calculator assistant directly accessible from `ZoneSettingsScreen`, creates a pure mathematical calculation engine `ZoneCalculationMath.kt`, establishes persistent preferences in `SettingsDataStore.kt` (`cycling_ftp`, `athlete_hr_max`, `athlete_hr_rest`) with ACID atomic transaction writers, establishes a centralized blocking validation gate `ZoneValidator.kt` with cross-field validation, bounds open-ended Zone 7 at $2000\text{W}$ max, defines non-destructive preview migration, and provides 100% translation and RTL parity across all 9 supported application locales.
+This ticket introduces an interactive, contextual Zone Calculator assistant directly accessible from `ZoneSettingsScreen`, creates a pure mathematical calculation engine `ZoneCalculationMath.kt`, establishes persistent preferences in `SettingsDataStore.kt` (`cycling_ftp`, `athlete_hr_max`, `athlete_hr_rest`) with ACID atomic transaction writers, establishes a centralized blocking validation gate `ZoneValidator.kt` with cross-field validation, bounds open-ended Zone 7 at $2500\text{W}$ max, defines non-destructive preview migration, and provides 100% translation and RTL parity across all 9 supported application locales.
 
 ---
 
@@ -79,16 +79,16 @@ Given athlete Functional Threshold Power $FTP \in [50, 1000]\text{ Watts}$:
   - **Floor Dependency & Immediate Recalculation**: Zone 7 has no independently stored upper cutoff in `SettingsDataStore`. Its lower bound is strictly a dependent variable derived directly from Zone 6 upper boundary:
     $$\text{Min}_{Z7} = Z_{6\text{max}} + 1 = \text{round}(FTP \times 1.50) + 1$$
   - When FTP is updated (e.g. from 200W to 350W):
-    - Previous state: $FTP = 200\text{W} \implies Z_{6\text{max}} = 300\text{W} \implies Z_7 = [301, 2000]\text{W}$.
-    - Recalculated state: $FTP = 350\text{W} \implies Z_{6\text{max}} = 525\text{W} \implies Z_7 = [526, 2000]\text{W}$.
-  - Because $Z_{6\text{max}} = \text{round}(FTP \times 1.50) \le 1500\text{W}$ for all valid $FTP \le 1000\text{W}$, $\text{Min}_{Z7} \le 1501\text{W}$, which is strictly less than the physical ceiling $Z_{7\text{max}} = 2000\text{W}$.
+    - Previous state: $FTP = 200\text{W} \implies Z_{6\text{max}} = 300\text{W} \implies Z_7 = [301, 2500]\text{W}$.
+    - Recalculated state: $FTP = 350\text{W} \implies Z_{6\text{max}} = 525\text{W} \implies Z_7 = [526, 2500]\text{W}$.
+  - Because $Z_{6\text{max}} = \text{round}(FTP \times 1.50) \le 1500\text{W}$ for all valid $FTP \le 1000\text{W}$, $\text{Min}_{Z7} \le 1501\text{W}$, which is strictly less than the physical ceiling $Z_{7\text{max}} = 2500\text{W}$.
   - **UI & Telemetry Non-Overlap Invariant**:
     - In `SettingsScreenContent`, Zone 7's minimum value dynamically observes `z6Max + 1` with manual editing disabled (`minEnabled = false`, `maxEnabled = false`).
-    - In `TelemetryZoneMath`, live wattage is mapped to Zone 7 whenever $\text{watts} > Z_{6\text{max}}$, capped at $2000\text{W}$.
+    - In `TelemetryZoneMath`, live wattage is mapped to Zone 7 whenever $\text{watts} > Z_{6\text{max}}$, capped at $2500\text{W}$.
     - This mathematical coupling eliminates any possibility of overlapping boundaries, gaps, or range inversions when FTP changes.
 
 *Monotonic Guarantee*: Because $0.55 < 0.75 < 0.90 < 1.05 < 1.20 < 1.50$, for any valid $FTP \ge 50$, the calculated upper bounds are strictly monotonic:
-$$0 < Z_1 < Z_2 < Z_3 < Z_4 < Z_5 < Z_6 < \text{Min}_{Z7} \le 2000$$
+$$0 < Z_1 < Z_2 < Z_3 < Z_4 < Z_5 < Z_6 < \text{Min}_{Z7} \le 2500$$
 
 #### 2.2.3 Heart Rate Model A (% of HRmax)
 Given athlete maximum heart rate $HR_{\text{max}} \in [100, 240]\text{ bpm}$:
@@ -120,10 +120,10 @@ To prevent "split-brain" validation discrepancies between the calculator inputs 
    - **Athlete HRrest**: $HR_{\text{rest}} \in [30, 100]\text{ bpm}$.
    - **Cross-Field HR Invariant**: $HR_{\text{max}} \ge HR_{\text{rest}} + 20\text{ bpm}$ (guaranteeing positive Karvonen HRR spread).
 2. **Tier 2: Instantaneous Zone Cutoff Boundaries (Manual Cards & Calculator Outputs)**:
-   - **Cycling Power Thresholds**: Under Coggan's model, Zone 6 max is $150\% \times FTP$. At $FTP = 1000\text{W}$, $Z_{6\text{max}} = 1500\text{W}$, and Zone 7 sprint power extends above $Z_{6\text{max}}$ up to $2000\text{W}$ (instantaneous peak neuromuscular track sprint record ~1800-2200W).
+   - **Cycling Power Thresholds**: Under Coggan's model, Zone 6 max is $150\% \times FTP$. At $FTP = 1000\text{W}$, $Z_{6\text{max}} = 1500\text{W}$, and Zone 7 sprint power extends above $Z_{6\text{max}}$ up to physical ceiling $2500\text{W}$ (accommodating track cycling world sprint records up to 2400W with safety margin).
    - `ZoneValidator` unifies both manual card edits and calculator output verification under an identical ceiling:
-     $$0 < z_1 < z_2 < z_3 < z_4 < z_5 < z_6 \le 2000\text{ Watts}$$
-   - Any manual threshold edit above $2000\text{W}$ or non-monotonic sequence is rejected identically to an invalid calculated stack.
+     $$0 < z_1 < z_2 < z_3 < z_4 < z_5 < z_6 \le 2500\text{ Watts}$$
+   - Any manual threshold edit above $2500\text{W}$ or non-monotonic sequence is rejected identically to an invalid calculated stack.
    - **Heart Rate Thresholds**: Unanimously bounded by $30 < z_1 < z_2 < z_3 < z_4 \le 250\text{ bpm}$ across both manual and calculated paths.
 
 #### 2.2.6 Unit Safety & Storage Invariant (Canonical SI Units)
@@ -136,7 +136,7 @@ To prevent "split-brain" validation discrepancies between the calculator inputs 
   - UI display layers append the localized unit string (`" W"` / `" bpm"`), while the underlying domain model remains completely agnostic to UI locale settings.
 - **Finite Storage Invariant (No Infinity Values)**:
   - `SettingsDataStore` persistently stores only finite upper boundaries `PWR_BIKE_ZONE1_MAX..PWR_BIKE_ZONE6_MAX`.
-  - Zone 7 has no upper cutoff key in DataStore (open-ended neuromuscular sprint, capped at 2000W in calculations). No "Infinity" or unbounded values are ever passed or written to DataStore.
+  - Zone 7 has no upper cutoff key in DataStore (open-ended neuromuscular sprint, capped at 2500W in calculations). No "Infinity" or unbounded values are ever passed or written to DataStore.
 
 ---
 
@@ -374,6 +374,41 @@ object ZoneNumberParser {
    - If an athlete inadvertently enters `"250,5"` in German, the parser gracefully rounds to `251` rather than rejecting or crashing.
    - Text fields in `ZoneCalculatorDialog` enforce numerical input filters (`KeyboardType.Number`), rejecting non-digit characters upfront.
 
+### 3.10 Formal Data Integrity Policy & Historical Analytics Immutability
+To govern the lifecycle coupling between physiological baselines, active telemetry, and historical workout records, the following formal Data Integrity Policy is enforced:
+
+#### 3.10.1 Historical Data Immutability Guarantee
+1. **Prospective-Only Mutation Boundary**:
+   - Changing the Functional Threshold Power ($FTP$) or Heart Rate baseline in `SettingsDataStore` applies **strictly prospectively** to future tracking sessions and current live telemetry.
+   - Updating the baseline **MUST NEVER trigger a retroactive recalculation** of historical completed workouts stored in SQLite (`WorkoutSummaries.db`, `Extrema.db`, or historical raw tracks).
+2. **Athletic Record Fidelity**:
+   - Past completed workouts represent factual athletic achievements evaluated under the athlete's documented physiological capacity at that precise historical timestamp. Retroactively modifying historical Normalized Power ($NP$), Intensity Factor ($IF$), or Training Stress Score ($TSS$) would falsify training history, invalidate PMC (Performance Management Chart) tracking, and trigger catastrophic database thrashing.
+3. **Intra-Session Historical Slices**:
+   - In the rare event of a mid-workout baseline calibration, recorded data points prior to the commit timestamp remain anchored to the baseline active during their recording; only ticks occurring after the commit utilize the new baseline.
+
+#### 3.10.2 Single-Transaction ACID Atomicity Guarantee
+1. **Zero-Torn-Read Boundary**:
+   - Baseline metrics (`KEY_CYCLING_FTP`, `KEY_CYCLING_FTP_UPDATED_AT`), customization flags (`KEY_PWR_BIKE_ZONES_CUSTOMIZED`), and all 6 zone cutoffs (`PWR_BIKE_ZONE1_MAX..PWR_BIKE_ZONE6_MAX`) are persisted in a **single atomic `dataStore.edit { }` block**.
+   - Downstream telemetry engines (`LiveWorkoutSession`, `TrackerService`) observe `athletePowerSnapshotState` atomically. It is architecturally impossible for a background service to observe an updated FTP with stale zone boundaries or vice versa.
+2. **No Detached Baselines**:
+   - There are no separate, decoupled settings fields for FTP; baseline calibration is coupled directly with zone recalculation within `ZoneCalculatorDialog`.
+
+#### 3.10.3 UI Input Constraints & Keystroke-Level Monotonicity Enforcement
+1. **Soft Keyboard & Accessibility Input Sanitation**:
+   - All numerical inputs in `ZoneCalculatorDialog` and `ZoneSettingsScreen` enforce `KeyboardOptions(keyboardType = KeyboardType.Number)`.
+   - On every keystroke (`onValueChange`), `ZoneNumberParser.parseIntOrNull` strips non-numeric characters and normalizes localized decimal separators (e.g. `250,5` $\to$ `251`).
+2. **Keystroke-Level Monotonicity Evaluation**:
+   - Validation occurs synchronously on **every keystroke** rather than waiting for field focus loss or dialog commit.
+   - If an athlete manually adjusts Zone 4 Max below Zone 3 Max ($Z_4 \le Z_3$) or above Zone 5 Max ($Z_4 \ge Z_5$):
+     - The text field immediately flags `isError = true`.
+     - Prominent inline helper text displays localized error copy: *"Wert muss zwischen %d und %d liegen"*.
+     - The "Apply" button or blur commit is immediately disabled, preventing partial or inverted state application.
+
+#### 3.10.4 Zone 7 Physical Upper Ceiling ($2500\text{W}$)
+- While Coggan's model defines Zone 7 (Neuromuscular Power) as open-ended ($> Z_{6\text{max}}$), unbounded values present integer overflow risks in energy accumulation (kJ, TSS) and layout rendering truncation in UI cards.
+- Zone 7 is capped at an explicit physical maximum ceiling of **$2500\text{ Watts}$** (accommodating track cycling world sprint records up to 2400W with safety margin).
+- No "Infinity" or unbounded values are ever stored in `SettingsDataStore` or passed to downstream metric calculators.
+
 ---
 
 ## 4. Centralized Blocking Validation Architecture & RTL Compliance (`ZoneValidator.kt` & `ZoneCalculationMath.kt`)
@@ -446,7 +481,7 @@ val isApplyEnabled: Boolean = when (activeProfile) {
 4. **Two-Layer Monotonicity Validation & Inversion Prevention ($Z_n\text{max} < Z_{n+1}\text{min}$)**:
    - **Monotonic & Contiguous Invariant**:
      To prevent overlapping boundaries or inversions during post-calculation manual edits (e.g. setting $Z_2\text{max} < Z_1\text{max}$):
-     $$Z_1 < Z_2 < Z_3 < Z_4 < Z_5 < Z_6 < \text{Min}_{Z7} \le 2000\text{ Watts} \quad \text{where} \quad Z_{n\text{min}} = Z_{n-1\text{max}} + 1$$
+     $$Z_1 < Z_2 < Z_3 < Z_4 < Z_5 < Z_6 < \text{Min}_{Z7} \le 2500\text{ Watts} \quad \text{where} \quad Z_{n\text{min}} = Z_{n-1\text{max}} + 1$$
    - **Layer 1: UI-Level Reactive Barrier**:
      - In `ZoneSettingsScreen.kt`, each editable card validates its local upper bound against its immediate neighbors:
        $$Z_{n-1\text{max}} < Z_{n\text{max}} < Z_{n+1\text{max}}$$
@@ -455,14 +490,14 @@ val isApplyEnabled: Boolean = when (activeProfile) {
          *"Wert muss zwischen %d und %d liegen"* (*"Value must be between %d and %d"*).
        - The persistence action (`savePowerZoneMax` / `saveHrZoneMax`) is **blocked**; blur or focus loss does not write the invalid value.
    - **Layer 2: Domain-Level Blocking Guard**:
-     - `ZoneValidator.validatePowerZoneStack(z1, z2, z3, z4, z5, z6): Boolean`: Asserts the entire stack satisfies $0 < z_1 < z_2 < z_3 < z_4 < z_5 < z_6 \le 2000$.
+     - `ZoneValidator.validatePowerZoneStack(z1, z2, z3, z4, z5, z6): Boolean`: Asserts the entire stack satisfies $0 < z_1 < z_2 < z_3 < z_4 < z_5 < z_6 \le 2500$.
      - `ZoneValidator.validateHeartRateZoneStack(z1, z2, z3, z4): Boolean`: Asserts $30 < z_1 < z_2 < z_3 < z_4 \le 250$.
      - `SettingsDataStore.savePowerZoneMax()` and `saveHrZoneMax()` enforce this check, throwing `IllegalArgumentException("Cannot persist non-monotonic zone thresholds")`, guaranteeing that invalid, overlapping, or inverted zones can NEVER be written to disk.
-   - **Manual Override 2000W Ceiling Enforcement**:
-     - Both manual threshold card edits (`savePowerZoneMax`) and full stack validation enforce $z_i \le 2000$.
-     - When the athlete manually edits any threshold card in `ZoneSettingsScreen` (e.g. `z6Max`), manual values $> 2000\text{W}$ are strictly rejected.
-     - `ZoneValidator.validatePowerThreshold(value: Int): Boolean` rejects $value > 2000$.
-     - `SettingsDataStore.savePowerZoneMax(zoneIndex, value)` asserts `value in 1..2000`, throwing `IllegalArgumentException("Power zone threshold cannot exceed 2000W, received: $value")` on violation.
+   - **Manual Override 2500W Ceiling Enforcement**:
+     - Both manual threshold card edits (`savePowerZoneMax`) and full stack validation enforce $z_i \le 2500$.
+     - When the athlete manually edits any threshold card in `ZoneSettingsScreen` (e.g. `z6Max`), manual values $> 2500\text{W}$ are strictly rejected.
+     - `ZoneValidator.validatePowerThreshold(value: Int): Boolean` rejects $value > 2500$.
+     - `SettingsDataStore.savePowerZoneMax(zoneIndex, value)` asserts `value in 1..2500`, throwing `IllegalArgumentException("Power zone threshold cannot exceed 2500W, received: $value")` on violation.
 5. **RTL (Right-to-Left) & Small-Screen Layout Compliance**:
    - All dialog containers, preview tables, and text inputs utilize `LayoutDirection`-aware Compose modifiers (`Alignment.Start`, `Alignment.End`, `padding(start = ..., end = ...)`).
    - All labels use `Text(overflow = TextOverflow.Ellipsis, maxLines = 2)` and responsive `FlowRow` arrangements, preventing layout clipping or truncation in RTL languages or verbose European locales (German, Polish).
@@ -505,12 +540,12 @@ val isApplyEnabled: Boolean = when (activeProfile) {
 1. **Centralized Blocking Validation Layer (`ZoneValidator.kt`)**:
    - Pure Kotlin object in `com.atrainingtracker.trainingtracker.settings`.
    - Methods: `validatePowerZoneStack(z1, z2, z3, z4, z5, z6): Boolean`, `validateHeartRateZoneStack(z1, z2, z3, z4): Boolean`, `validateFtp(ftp): Boolean`, `validateHeartRateBaselines(hrMax, hrRest): Boolean`, `validatePowerThreshold(value): Boolean`.
-   - Enforces $FTP \in [50, 1000]\text{W}$, $HR_{\text{rest}} \ge 30$, $HR_{\text{max}} \ge HR_{\text{rest}} + 20$, and power boundary ceiling $\le 2000\text{W}$ on both stack and manual override edits.
+   - Enforces $FTP \in [50, 1000]\text{W}$, $HR_{\text{rest}} \ge 30$, $HR_{\text{max}} \ge HR_{\text{rest}} + 20$, and power boundary ceiling $\le 2500\text{W}$ on both stack and manual override edits.
 2. **Pure Math Engine (`ZoneCalculationMath.kt`)**:
    - Pure Kotlin object in `com.atrainingtracker.trainingtracker.settings`.
    - Functions: `calculateCogganPowerZones(ftp: Int): List<Int>`, `calculateHrmaxHeartRateZones(hrMax: Int): List<Int>`, `calculateKarvonenHeartRateZones(hrMax: Int, hrRest: Int): List<Int>`.
    - Explicit `IllegalArgumentException` throwing on out-of-bounds inputs.
-   - Half-up rounding policy and upper capping for Zone 7 ($2000\text{W}$).
+   - Half-up rounding policy and upper capping for Zone 7 ($2500\text{W}$).
 3. **Persistent Preferences in `SettingsDataStore.kt`**:
    - `KEY_CYCLING_FTP = intPreferencesKey("cycling_ftp")` (default 0 / unconfigured).
    - `KEY_CYCLING_FTP_UPDATED_AT = longPreferencesKey("cycling_ftp_updated_at")` (version timestamp).
@@ -523,7 +558,7 @@ val isApplyEnabled: Boolean = when (activeProfile) {
    - Combined atomic snapshot flow: `athletePowerSnapshotFlow = combine(cyclingFtpFlow, powerZoneThresholdsFlow, powerZonesCustomizedFlow) { ... }`.
    - Safe division invalidation support: `getCyclingFtpOrNull(): Flow<Int?>`.
    - Single-transaction atomic batch mutators: `applyCalculatedPowerZones(ftp, zones)` and `applyCalculatedHeartRateZones(isCycling, hrMax, hrRest, zones)` updating baseline, timestamp, customization flag (`false`), and all thresholds inside a single `dataStore.edit { }`.
-   - Individual manual mutators: `savePowerZoneMax(zoneIndex, value)` asserting `value in 1..2000` and setting `is_customized = true`.
+   - Individual manual mutators: `savePowerZoneMax(zoneIndex, value)` asserting `value in 1..2500` and setting `is_customized = true`.
 4. **Crash-Proof Synchronous Accessors in `SettingsDataStoreJavaHelper.kt`**:
    - `@JvmStatic fun getCyclingFtp(context: Context): Int?`
    - `@JvmStatic fun getAthleteHrMax(context: Context): Int?`
@@ -551,7 +586,7 @@ val isApplyEnabled: Boolean = when (activeProfile) {
      - HRmax boundary: $HR_{\text{max}} = 100, 190, 240\text{ bpm}$
      - Karvonen boundary: $HR_{\text{rest}} = 30, 60, 100\text{ bpm}$ with $HR_{\text{max}} = 240$
      - Edge cases: $HR_{\text{max}} - HR_{\text{rest}} < 20$ (throws `IllegalArgumentException`), $HR_{\text{rest}} \ge HR_{\text{max}}$ (throws `IllegalArgumentException`).
-   - Centralized validator tests: `ZoneValidatorTest.kt` (global stack validation, cross-field validation, hard floors/ceilings, error messages, manual 2000W ceiling).
+   - Centralized validator tests: `ZoneValidatorTest.kt` (global stack validation, cross-field validation, hard floors/ceilings, error messages, manual 2500W ceiling).
    - Locale parsing tests: `ZoneNumberParserTest.kt` verifying English, German, French, Spanish comma/dot/grouping handling.
    - DataStore persistence, state machine & atomic transaction tests: `SettingsDataStoreBaselinesTest.kt`.
    - Localization parity tests: `ZoneCalculatorLocalizationTest.kt`.
@@ -616,7 +651,7 @@ flowchart TD
     Karvonen --> Preview
     Dialog --> ApplyBtn
     ApplyBtn -->|Validate Inputs & Stack| Validator
-    ManualEdit -->|Validate Threshold <= 2000W| Validator
+    ManualEdit -->|Validate Threshold <= 2500W| Validator
     Validator -->|Valid Auto| AtomicCommit
     AtomicCommit --> PrefFTP
     AtomicCommit --> PrefTS
@@ -643,16 +678,16 @@ flowchart TD
 | **RSK-04** | Race conditions or partial writes between DataStore baseline and zone thresholds. | Low | Low | Enforce single atomic batch transaction in `dataStore.edit { }` writing baseline, timestamp, and thresholds together with filesystem ACID rename rollback, observed reactively via UDF. |
 | **RSK-05** | Breaking downstream Java callers in tracking service. | Medium | Low | Provide thread-safe `@JvmStatic` snapshot accessors in `SettingsDataStoreJavaHelper.kt` shielded with `try-catch` returning `null` on error/unconfigured. |
 | **RSK-06** | Incomplete localization or UI clipping in RTL/verbose locales. | Medium | Low | Provide complete translations in all 9 XML string directories with `LayoutDirection`-aware modifiers and ellipsis, verified via `ZoneCalculatorLocalizationTest.kt`. |
-| **RSK-07** | Zone 7 arithmetic overflow in downstream calculation engines. | Medium | Low | Explicitly cap Zone 7 at physical maximum $2000\text{ Watts}$ in `ZoneCalculationMath` and `TelemetryZoneMath`. |
+| **RSK-07** | Zone 7 arithmetic overflow in downstream calculation engines. | Medium | Low | Explicitly cap Zone 7 at physical maximum $2500\text{ Watts}$ in `ZoneCalculationMath` and `TelemetryZoneMath`. |
 | **RSK-08** | Inadvertent overwriting of existing athlete zone configurations upon update. | High | Low | Non-destructive migration: existing manual zones remain 100% untouched until explicit user calculation and confirmation. |
-| **RSK-09** | Retroactive corruption of historical workout analytics on baseline change. | High | Low | Explicit prospective-only policy: past completed workouts in SQLite remain immutable; new baseline applies strictly to future tracking sessions. |
-| **RSK-10** | Torn/desynchronized reads in background telemetry engine during baseline/threshold update. | Medium | Low | Implement `combine(cyclingFtpFlow, powerZoneThresholdsFlow, powerZonesCustomizedFlow)` yielding immutable `AthletePowerSnapshot`, consumed atomically by `LiveWorkoutSession`. |
-| **RSK-11** | Manual threshold card edits exceeding physical power ceiling ($> 2000\text{W}$). | Medium | Low | Enforce 2000W ceiling on manual edit path via `ZoneValidator.validatePowerThreshold` and `SettingsDataStore.savePowerZoneMax` throwing `IllegalArgumentException`. |
+| **RSK-09** | Retroactive corruption of historical workout analytics on baseline change. | High | Low | Enforce formal Data Integrity Policy: past completed workouts in SQLite remain immutable; new baseline applies strictly prospectively to future tracking sessions. |
+| **RSK-10** | Torn/desynchronized reads in background telemetry engine during baseline/threshold update. | Medium | Low | Implement `combine(cyclingFtpFlow, powerZoneThresholdsFlow, powerZonesCustomizedFlow)` yielding immutable `AthletePowerSnapshot`, consumed atomically by `LiveWorkoutSession` via `SharingStarted.WhileSubscribed(5000)`. |
+| **RSK-11** | Manual threshold card edits exceeding physical power ceiling ($> 2500\text{W}$). | Medium | Low | Enforce 2500W ceiling on manual edit path via `ZoneValidator.validatePowerThreshold` and `SettingsDataStore.savePowerZoneMax` throwing `IllegalArgumentException`. |
 | **RSK-12** | `NumberFormatException` in European locales with comma decimal separators or grouping whitespace. | Medium | Low | Centralize numerical text parsing in `ZoneNumberParser.parseIntOrNull()`, normalizing commas, dots, and non-breaking spaces, verified across 9 locales. |
-| **RSK-13** | Split-brain validation between calculator inputs and manual card editor. | Medium | Low | Formalize unified 2-tier validation matrix: Tier 1 sustained baseline inputs ($FTP \in [50, 1000]\text{W}$, $HR_{\text{max}} \in [100, 240]$, $HR_{\text{max}} \ge HR_{\text{rest}} + 20$) vs Tier 2 instantaneous zone cutoff ceiling ($2000\text{W}$ max across both calculator output and manual cards). |
+| **RSK-13** | Split-brain validation between calculator inputs and manual card editor. | Medium | Low | Formalize unified 2-tier validation matrix: Tier 1 sustained baseline inputs ($FTP \in [50, 1000]\text{W}$, $HR_{\text{max}} \in [100, 240]$, $HR_{\text{max}} \ge HR_{\text{rest}} + 20$) vs Tier 2 instantaneous zone cutoff ceiling ($2500\text{W}$ max across both calculator output and manual cards). |
 
 ---
 
 ## 9. Conclusion & Next Steps
 
-The problem domain, physiological calculation models, deterministic rounding policy, unified 2-tier validation architecture (`ZoneValidator.validateZoneStack` and cross-field Karvonen check with hard floors/ceilings), 3-state customization lifecycle machine (`UNCONFIGURED_DEFAULT`, `CALCULATED_SYNCED`, `CUSTOMIZED`), single-transaction atomic batch commits with reactive UDF StateFlow observation, `SafeDivision` pattern eliminating division-by-zero, baseline versioning (`cycling_ftp_updated_at`), intra-session historical immutability, prospective-only historical invariant, intelligent pre-fill migration strategy, full-profile overwrite policy with preview comparison, locale-aware number parsing (`ZoneNumberParser`), RTL layout compliance, Zone 7 capping at 2000W, test matrix coverage, and Chesterton's Fence archaeology are fully analyzed and bounded. Upon Gate 1 approval of subtask `ATT-3610`, Stage 2 (Requirement & Test Specification) will author `REQ-UI-373` in `docs/requirements.md` and `TST-UI-336` in `docs/tests.md`.
+The problem domain, physiological calculation models, deterministic rounding policy, unified 2-tier validation architecture (`ZoneValidator.validateZoneStack` and cross-field Karvonen check with hard floors/ceilings), 3-state customization lifecycle machine (`UNCONFIGURED_DEFAULT`, `CALCULATED_SYNCED`, `CUSTOMIZED`), single-transaction atomic batch commits with reactive UDF StateFlow observation, `SafeDivision` pattern eliminating division-by-zero, baseline versioning (`cycling_ftp_updated_at`), formal Data Integrity Policy guaranteeing historical analytics immutability and prospective-only calibration, intelligent pre-fill migration strategy, full-profile overwrite policy with preview comparison, locale-aware number parsing (`ZoneNumberParser`), keystroke-level monotonicity validation, RTL layout compliance, Zone 7 capping at 2500W, test matrix coverage, and Chesterton's Fence archaeology are fully analyzed and bounded. Upon Gate 1 approval of subtask `ATT-3610`, Stage 2 (Requirement & Test Specification) will author `REQ-UI-373` in `docs/requirements.md` and `TST-UI-336` in `docs/tests.md`.
