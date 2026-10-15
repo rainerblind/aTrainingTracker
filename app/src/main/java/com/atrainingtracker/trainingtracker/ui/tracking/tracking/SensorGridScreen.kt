@@ -666,36 +666,34 @@ fun SensorGridScreen(
                     }
                 }
 
-                // Ambient Navigation Overlays & Auto-Pause Pill floating at top of tracking tab (REQ-UI-348 / REQ-TRK-018)
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.TopCenter),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    if (state.showNavigationHints) {
-                        NavigationHintsOverlay(
-                            state = state,
-                            tuningConfig = tuningConfig,
-                            navigationState = navState,
-                            returnNavigationState = returnNavState,
-                            forkDecisionState = forkDecisionState,
-                            onDismissReturnNav = { returnNavRepo.dismissHud() },
-                            onSelectForkRoute = { routeId -> forkNavRepo.selectRouteManually(routeId) },
-                            onDismissFork = { forkNavRepo.dismissPrompt() }
-                        )
-                    }
+                // Ambient Navigation Overlays floating at top of tracking tab across all views (REQ-UI-348 / ATT-3170)
+                if (state.showNavigationHints) {
+                    NavigationHintsOverlay(
+                        state = state,
+                        tuningConfig = tuningConfig,
+                        navigationState = navState,
+                        returnNavigationState = returnNavState,
+                        forkDecisionState = forkDecisionState,
+                        onDismissReturnNav = { returnNavRepo.dismissHud() },
+                        onSelectForkRoute = { routeId -> forkNavRepo.selectRouteManually(routeId) },
+                        onDismissFork = { forkNavRepo.dismissPrompt() },
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
+                }
 
-                    if (isAutoPaused) {
-                        AutoPauseHudBanner(
-                            onManualResume = {
-                                val intent = Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED).apply {
-                                    `package` = context.packageName
-                                }
-                                context.sendBroadcast(intent)
+                // Auto-Pause HUD Banner (REQ-TRK-018 / ATT-45)
+                if (isAutoPaused) {
+                    AutoPauseHudBanner(
+                        onManualResume = {
+                            val intent = Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED).apply {
+                                `package` = context.packageName
                             }
-                        )
-                    }
+                            context.sendBroadcast(intent)
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = if (state.showNavigationHints) 64.dp else 8.dp)
+                    )
                 }
 
                 // Bottom swipe-up gesture detector & tap-to-expand strip (REQ-UI-359 / ATT-3341)

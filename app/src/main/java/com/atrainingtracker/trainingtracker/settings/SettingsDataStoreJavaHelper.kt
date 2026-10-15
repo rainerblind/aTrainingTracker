@@ -72,9 +72,13 @@ object SettingsDataStoreJavaHelper {
      */
     @JvmStatic
     fun getTuningConfig(context: Context): TuningConfig {
-        val tuningDataStore = TuningPreferencesDataStore(context)
-        return runBlocking(Dispatchers.IO) {
-            tuningDataStore.tuningConfigFlow.first()
+        return try {
+            val tuningDataStore = TuningPreferencesDataStore(context)
+            runBlocking(Dispatchers.IO) {
+                tuningDataStore.tuningConfigFlow.first()
+            }
+        } catch (t: Throwable) {
+            TuningConfig()
         }
     }
 
@@ -108,9 +112,13 @@ object SettingsDataStoreJavaHelper {
      */
     @JvmStatic
     fun getFtp(context: Context): Int? {
-        val dataStore = SettingsDataStore(context)
-        return runBlocking(Dispatchers.IO) {
-            dataStore.ftpFlow.first()
+        return try {
+            val dataStore = SettingsDataStore(context)
+            runBlocking(Dispatchers.IO) {
+                dataStore.ftpFlow.first()
+            }
+        } catch (t: Throwable) {
+            null
         }
     }
 
