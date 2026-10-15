@@ -962,6 +962,8 @@
     <string name="segment_status_start_in">Start in: %1$s</string>
     <string name="segment_status_remaining">Ziel in: %1$s</string>
     <string name="segment_status_offset">Daneben: %1$s</string>
+    <string name="segment_status_past_finish">Nach Ziel: %1$s</string>
+    <string name="segment_status_pr_delta">%1$s vs. PR</string>
 
     <!-- ANT(+) Plugins -->
     <string name="ant_general_explanation">Wenn alles korrekt installiert ist, kannst Du deine ANT+ Sensoren koppeln.  Dazu benötigst Du jedoch die richtige Hard- und Software.

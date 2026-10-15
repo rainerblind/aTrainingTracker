@@ -1098,6 +1098,8 @@
     <string name="segment_status_start_in">Start in: %1$s</string>
     <string name="segment_status_remaining">Remaining: %1$s</string>
     <string name="segment_status_offset">Offset: %1$s</string>
+    <string name="segment_status_past_finish">Past finish: %1$s</string>
+    <string name="segment_status_pr_delta">%1$s vs. PR</string>
 
     <!-- ANT(+) Plugins -->
     <string name="ant_general_explanation">When everything is properly installed, you can pair your ANT+ devices. For this, you need the compatible hardware and software.
