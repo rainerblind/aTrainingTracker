@@ -24,19 +24,28 @@ The application currently binds Heart Rate and Cycling Power to a shared 5-zone 
 - Add `TTColor.Zone6 = Color(0xFF4E342E)` (Dark Chestnut Brown) and `TTColor.Zone7 = Color(0xFF000000)` (Pure Black) in `Color.kt`.
 - Add XML resources in `res/values/color.xml`: `<color name="zone_6">#4E342E</color>`, `<color name="zone_7">#000000</color>`.
 
-### 1.3 DataStore Persistence & Migration
-- Extend `Zone` enum in `SettingsDataStore.kt` with `ZONE_5(5)` and `ZONE_6(6)`.
-- Declare `PWR_BIKE_ZONE5_MAX` and `PWR_BIKE_ZONE6_MAX` keys.
-- Implement dynamic migration in `getZoneMaxFlow` / `getDefaultValue`:
+### 1.3 DataStore Persistence, Boundary Semantics & Resilience
+- **DataStore Storage Model**:
+  - In alignment with existing `HR_RUN_ZONE1_MAX..HR_RUN_ZONE4_MAX` and `PWR_BIKE_ZONE1_MAX..PWR_BIKE_ZONE4_MAX`, explicit DataStore keys (`PWR_BIKE_ZONE5_MAX`, `PWR_BIKE_ZONE6_MAX`) are retained to preserve architectural symmetry and zero overhead without breaking existing DataStore schema paradigms.
+  - Extend `Zone` enum in `SettingsDataStore.kt` with `ZONE_5(5)` and `ZONE_6(6)`.
+- **Dynamic Proportional Migration & Failure Containment**:
   - When `pwr_bike_zone5_max` or `pwr_bike_zone6_max` is missing:
     - If `z4Max` is present and valid ($> 0$):
       - $\text{Estimated FTP} = \max(50, \text{round}(\text{z4Max} / 1.05))$
       - Default $z5Max = \max(z4Max + 10, \text{round}(\text{Estimated FTP} \times 1.20))$
       - Default $z6Max = \max(z5Max + 10, \text{round}(\text{Estimated FTP} \times 1.50))$
-    - If `z4Max` is absent (fresh install): canonical defaults: $Z1=150, Z2=200, Z3=250, Z4=300, Z5=350, Z6=450$.
-  - Atomic migration: Write both migrated values into DataStore inside a single atomic `edit` block when encountered.
-  - Strict monotonic validation: `validatePowerZones(z1, z2, z3, z4, z5, z6)` ensuring $0 < z1 < z2 < z3 < z4 < z5 < z6$.
-- Expose `getZone5MaxFlow` and `getZone6MaxFlow` and update `SettingsDataStoreJavaHelper.getZoneMax` for indices 5 and 6.
+    - If `z4Max` is absent or malformed (fresh install or corrupted prefs): canonical defaults: $Z1=150, Z2=200, Z3=250, Z4=300, Z5=350, Z6=450$.
+  - Atomic migration: Write both migrated values into DataStore inside a single atomic `edit` block. If reading occurs before migration is persisted, `getZoneMaxFlow` returns the calculated fallback dynamically, ensuring zero uninitialized state or race condition windows.
+  - Reset to Defaults: Add `resetToDefaults(zoneType)` function in `SettingsDataStore` providing clean recovery to canonical defaults.
+- **Strict Monotonic Ascending Validation**:
+  - `validatePowerZones(z1, z2, z3, z4, z5, z6)` enforces $0 < z1 < z2 < z3 < z4 < z5 < z6$.
+- **Zone 7 Upper Boundary Semantics**:
+  - Zone 7 represents neuromuscular sprint efforts and is open-ended ($P > z6Max$).
+  - In telemetry band calculation (`TelemetryZoneMath`), Zone 7 is clamped to `dataMax` (the maximum observed power in the session) or `maxOf(dataMax, z6Max + 100.0)`. Never uses `Double.MAX_VALUE` directly to prevent rendering / coordinate overflow in Compose Canvas plots.
+- **Legacy Interface Stability (`SettingsDataStoreJavaHelper`)**:
+  - `getZoneMax(context, zoneType, zoneIndex)` gracefully handles any query:
+    - For `HR_RUN` and `HR_BIKE`: `zoneIndex in 1..4` returns threshold; `zoneIndex >= 5` returns 0 without throwing `IndexOutOfBoundsException` or crashing.
+    - For `PWR_BIKE`: `zoneIndex in 1..6` returns thresholds; `zoneIndex >= 7` or `< 1` returns 0 safely.
 
 ### 1.4 Domain Models & Calculations
 - Update `PowerZoneThresholds(z1Max: Int, z2Max: Int, z3Max: Int, z4Max: Int, z5Max: Int, z6Max: Int)` in `ZoneDistributionModels.kt`.
@@ -58,9 +67,10 @@ The application currently binds Heart Rate and Cycling Power to a shared 5-zone 
   - Render 5 zone rows for `HR_RUN` / `HR_BIKE` and 7 zone rows for `PWR_BIKE`.
   - In `SettingsScreenContent`, if `zoneType == ZoneType.PWR_BIKE`, show Zone 5, Zone 6, and Zone 7 (open-ended).
   - Add real-time UI validation highlighting invalid inputs and disabling saving if non-monotonic.
+  - Add a "Reset to Defaults" option / icon button in the top app bar or below the zone list to allow instant recovery to standard defaults.
   - Live preview chips: Render 5 chips for HR and 7 chips for Power.
 
-### 1.5 9-Language Localization Parity
+### 1.5 9-Language Localization Parity & Fallbacks
 - Add `zone_6_label` and `zone_7_label` across all 9 `strings.xml` files:
   - `values/`: "Zone 6 (Anaerobic Capacity)", "Zone 7 (Neuromuscular Power)"
   - `values-de/`: "Zone 6 (Anaerobe Kapazität)", "Zone 7 (Neuromuskuläre Leistung)"
@@ -71,6 +81,7 @@ The application currently binds Heart Rate and Cycling Power to a shared 5-zone 
   - `values-nl/`: "Zone 6 (Anaerobe capaciteit)", "Zone 7 (Neuromusculair vermogen)"
   - `values-pl/`: "Strefa 6 (Wydolność beztlenowa)", "Strefa 7 (Moc nerwowo-mięśniowa)"
   - `values-pt/`: "Zona 6 (Capacidade anaeróbica)", "Zona 7 (Potência neuromuscular)"
+- Resilient string formatting fallback: If localized resources are not found or fail to resolve, `ZoneDistributionCalculator` and `TelemetryZoneMath` fallback safely to programmatic `"Zone $zoneIndex"` and `"Z$zoneIndex"`.
 
 ---
 
