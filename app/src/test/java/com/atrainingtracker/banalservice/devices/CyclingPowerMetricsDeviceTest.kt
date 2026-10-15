@@ -30,6 +30,7 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -283,6 +284,161 @@ class CyclingPowerMetricsDeviceTest {
             assertNull(device.normalizedPowerSensor.sensorData.value)
         }
         device.calculateMetrics() // 30th active tick
+        assertEquals(200.0, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_workKj_accumulatesCorrectly() {
+        every { powerSensorData.value } returns 200.0
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 200 }
+        )
+
+        for (i in 1..10) {
+            device.calculateMetrics()
+        }
+
+        // 10 ticks at 200W = 2000 Joules = 2.0 kJ
+        assertEquals(2.0, device.workKjSensor.sensorData.value as Double, 0.001)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_tss_calculatesCorrectly() {
+        every { powerSensorData.value } returns 200.0
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 200 }
+        )
+
+        // Warmup: first 29 ticks TSS is null
+        for (i in 1..29) {
+            device.calculateMetrics()
+            assertNull(device.tssSensor.sensorData.value)
+        }
+
+        // 30th tick: NP = 200, IF = 1.0, t = 30s
+        // TSS = (30 * 200 * 1.0) / (200 * 36) = 30 / 36 = 0.8333...
+        device.calculateMetrics()
+        assertNotNull(device.tssSensor.sensorData.value)
+        assertEquals(30.0 / 36.0, device.tssSensor.sensorData.value as Double, 0.01)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_tss_unconfiguredFtp_returnsNull() {
+        every { powerSensorData.value } returns 200.0
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { null } // Unconfigured FTP
+        )
+
+        for (i in 1..30) {
+            device.calculateMetrics()
+        }
+
+        assertNotNull(device.normalizedPowerSensor.sensorData.value)
+        assertNull(device.intensityFactorSensor.sensorData.value)
+        assertNull(device.tssSensor.sensorData.value)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_pauseGating_freezesWorkAndTss() {
+        every { powerSensorData.value } returns 200.0
+        var isSuspended = false
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { isSuspended },
+            { 75.0f },
+            { 200 }
+        )
+
+        for (i in 1..5) {
+            device.calculateMetrics()
+        }
+        assertEquals(1.0, device.workKjSensor.sensorData.value as Double, 0.001)
+
+        // Suspend
+        isSuspended = true
+        for (i in 1..10) {
+            device.calculateMetrics()
+            assertEquals(1.0, device.workKjSensor.sensorData.value as Double, 0.001)
+        }
+
+        // Resume
+        isSuspended = false
+        device.calculateMetrics()
+        assertEquals(1.2, device.workKjSensor.sensorData.value as Double, 0.001)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_longPause_flushesRollingWindowAndRetainsNpContinuity() {
+        every { powerSensorData.value } returns 200.0
+        var isSuspended = false
+        var currentTime = 1_000_000L
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { isSuspended },
+            { 75.0f },
+            { 200 },
+            { currentTime }
+        )
+
+        // Warm up and fill initial 30s window
+        for (i in 1..30) {
+            currentTime += 1000L
+            device.calculateMetrics()
+        }
+        assertEquals(200.0, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+        val prePauseNp = device.normalizedPowerSensor.sensorData.value as Double
+
+        // Pause for 45 seconds (> 30s threshold)
+        isSuspended = true
+        device.calculateMetrics() // marks mSuspendedStartMs = currentTime
+        currentTime += 45_000L
+        device.calculateMetrics() // still paused
+
+        // Resume after 45s pause: window must be flushed, but pre-pause NP retained during post-pause refill
+        isSuspended = false
+        currentTime += 1000L
+        device.calculateMetrics() // tick 1 after resume: window flushed, window.size == 1
+        assertEquals(prePauseNp, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+
+        // Ticks 2..29 after resume: window still filling (< 30) -> NP retained
+        for (i in 2..29) {
+            currentTime += 1000L
+            device.calculateMetrics()
+            assertEquals(prePauseNp, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+        }
+
+        // Tick 30 after resume: window has 30 fresh samples, rolling mean resumes update
+        currentTime += 1000L
+        device.calculateMetrics()
         assertEquals(200.0, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
 
         device.shutDown()

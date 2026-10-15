@@ -194,6 +194,10 @@
     <string name="normalized_power_short">NP</string>
     <string name="intensity_factor">Fator de intensidade</string>
     <string name="intensity_factor_short">IF</string>
+    <string name="work_kj">Trabalho mecânico</string>
+    <string name="work_kj_short">kJ</string>
+    <string name="tss">Pontuação de estresse de treino</string>
+    <string name="tss_short">TSS</string>
     <string name="speed">velocidade</string>
     <string name="speed_short">vel</string>
     <string name="current_sensors">sensores atuais</string>

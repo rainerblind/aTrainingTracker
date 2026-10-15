@@ -155,6 +155,7 @@
     <string name="units_heart_rate" translatable="false">bpm</string>
     <string name="units_power" translatable="false">W</string>
     <string name="units_power_to_weight" translatable="false">W/kg</string>
+    <string name="units_work_kj" translatable="false">kJ</string>
     <string name="units_temperature" translatable="false">°C</string>
     <string name="units_time_basic" translatable="false">s</string>
     <string name="units_torque" translatable="false">Nm</string>
@@ -262,6 +263,10 @@
     <string name="normalized_power_short" translatable="false">NP</string>
     <string name="intensity_factor">Intensity Factor</string>
     <string name="intensity_factor_short" translatable="false">IF</string>
+    <string name="work_kj">Mechanical Work</string>
+    <string name="work_kj_short" translatable="false">kJ</string>
+    <string name="tss">Training Stress Score</string>
+    <string name="tss_short" translatable="false">TSS</string>
     <string name="speed">speed</string>
     <string name="speed_short">spd</string>
     <string name="current_sensors">current sensors</string>

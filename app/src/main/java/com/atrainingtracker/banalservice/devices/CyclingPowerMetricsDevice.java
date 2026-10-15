@@ -38,8 +38,15 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Computed metrics device that calculates real-time power-to-weight ratio (W/kg),
- * Dr. Andrew Coggan's Normalized Power (NP), and Intensity Factor (IF = NP / FTP)
- * at 1Hz based on active cycling power, athlete weight, and FTP (REQ-TRK-019, REQ-TRK-020, TST-TRK-011, TST-TRK-012).
+ * Dr. Andrew Coggan's Normalized Power (NP), Intensity Factor (IF = NP / FTP),
+ * Mechanical Work (kJ), and Training Stress Score (TSS) at 1Hz based on active cycling power,
+ * athlete weight, and FTP (REQ-TRK-019, REQ-TRK-020, REQ-TRK-021, TST-TRK-011, TST-TRK-012, TST-TRK-013).
+ *
+ * <p>State consistency & pause handling:
+ * NP and TSS are cumulative session metrics computed via Welford's online running mean of 4th powers.
+ * Pauses gate metric accumulation. When an active pause exceeds 30 seconds, the 30-sample rolling buffer
+ * is flushed to decouple physiological efforts and prevent blending pre-pause samples across long stops,
+ * while retaining cumulative session accumulators (mean and active seconds) to maintain session continuity.</p>
  */
 public class CyclingPowerMetricsDevice extends MyDevice {
 
@@ -50,6 +57,8 @@ public class CyclingPowerMetricsDevice extends MyDevice {
     private MySensor<Double> mPowerToWeightSensor;
     private MySensor<Double> mNormalizedPowerSensor;
     private MySensor<Double> mIntensityFactorSensor;
+    private MySensor<Double> mWorkKjSensor;
+    private MySensor<Double> mTssSensor;
 
     public interface RecordingStateProvider {
         boolean isRecordingSuspended();
@@ -63,35 +72,58 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         Integer getFtp(Context context);
     }
 
+    public interface TimeProvider {
+        long currentTimeMillis();
+    }
+
     private final RecordingStateProvider mRecordingStateProvider;
     private final AthleteWeightProvider mWeightProvider;
     private final FtpProvider mFtpProvider;
+    private final TimeProvider mTimeProvider;
 
-    // Internal state for Normalized Power calculation
+    // Internal state for Normalized Power calculation (Welford's online running mean)
     private final ArrayDeque<Double> mPowerWindow30s = new ArrayDeque<>(30);
-    private double mSum4thPower = 0.0;
+    private double mMean4thPower = 0.0;
     private long mCount4thPower = 0L;
+    private Double mLastCalculatedNp = null;
+
+    // Internal state for Mechanical Work and TSS
+    private double mWorkJoules = 0.0;
+    private long mActivePowerDurationSec = 0L;
+
+    // Pause tracking for long-pause window flushing (> 30s)
+    private boolean mWasSuspended = false;
+    private long mSuspendedStartMs = 0L;
 
     private static final FilterData cPowerFilter = new FilterData(null, SensorType.POWER, FilterType.MOVING_AVERAGE_TIME, 3);
 
     public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager) {
-        this(context, mySensorManager, TrainingApplication::isRecordingSuspended, SettingsDataStoreJavaHelper::getAthleteWeightKg, SettingsDataStoreJavaHelper::getFtp);
+        this(context, mySensorManager, TrainingApplication::isRecordingSuspended, SettingsDataStoreJavaHelper::getAthleteWeightKg, SettingsDataStoreJavaHelper::getFtp, System::currentTimeMillis);
     }
 
     public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager,
                                      RecordingStateProvider recordingStateProvider,
                                      AthleteWeightProvider weightProvider) {
-        this(context, mySensorManager, recordingStateProvider, weightProvider, SettingsDataStoreJavaHelper::getFtp);
+        this(context, mySensorManager, recordingStateProvider, weightProvider, SettingsDataStoreJavaHelper::getFtp, System::currentTimeMillis);
     }
 
     public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager,
                                      RecordingStateProvider recordingStateProvider,
                                      AthleteWeightProvider weightProvider,
                                      FtpProvider ftpProvider) {
+        this(context, mySensorManager, recordingStateProvider, weightProvider, ftpProvider, System::currentTimeMillis);
+    }
+
+    public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager,
+                                     RecordingStateProvider recordingStateProvider,
+                                     AthleteWeightProvider weightProvider,
+                                     FtpProvider ftpProvider,
+                                     TimeProvider timeProvider) {
         super(context, mySensorManager, DeviceType.CYCLING_POWER_METRICS);
         mRecordingStateProvider = recordingStateProvider != null ? recordingStateProvider : TrainingApplication::isRecordingSuspended;
         mWeightProvider = weightProvider != null ? weightProvider : SettingsDataStoreJavaHelper::getAthleteWeightKg;
         mFtpProvider = ftpProvider != null ? ftpProvider : SettingsDataStoreJavaHelper::getFtp;
+        mTimeProvider = timeProvider != null ? timeProvider : System::currentTimeMillis;
         if (DEBUG) Log.i(TAG, "CyclingPowerMetricsDevice initialized");
 
         try {
@@ -129,6 +161,12 @@ public class CyclingPowerMetricsDevice extends MyDevice {
 
         mIntensityFactorSensor = new MySensor<>(this, SensorType.INTENSITY_FACTOR);
         addSensor(mIntensityFactorSensor);
+
+        mWorkKjSensor = new MySensor<>(this, SensorType.WORK_KJ);
+        addSensor(mWorkKjSensor);
+
+        mTssSensor = new MySensor<>(this, SensorType.TSS);
+        addSensor(mTssSensor);
     }
 
     public synchronized MySensor<Double> getPowerToWeightSensor() {
@@ -143,10 +181,23 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         return mIntensityFactorSensor;
     }
 
+    public synchronized MySensor<Double> getWorkKjSensor() {
+        return mWorkKjSensor;
+    }
+
+    public synchronized MySensor<Double> getTssSensor() {
+        return mTssSensor;
+    }
+
     public synchronized void resetSession() {
         mPowerWindow30s.clear();
-        mSum4thPower = 0.0;
+        mMean4thPower = 0.0;
         mCount4thPower = 0L;
+        mLastCalculatedNp = null;
+        mWorkJoules = 0.0;
+        mActivePowerDurationSec = 0L;
+        mWasSuspended = false;
+        mSuspendedStartMs = 0L;
         if (mPowerToWeightSensor != null) {
             mPowerToWeightSensor.newValue(null);
         }
@@ -156,17 +207,41 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         if (mIntensityFactorSensor != null) {
             mIntensityFactorSensor.newValue(null);
         }
+        if (mWorkKjSensor != null) {
+            mWorkKjSensor.newValue(null);
+        }
+        if (mTssSensor != null) {
+            mTssSensor.newValue(null);
+        }
     }
 
     /**
      * Periodic 1Hz computation of power-to-weight ratio (W/kg),
-     * Normalized Power (NP), and Intensity Factor (IF).
+     * Normalized Power (NP), Intensity Factor (IF), Mechanical Work (kJ),
+     * and Training Stress Score (TSS).
      * Gated by active recording suspension (paused / auto-paused).
      */
     public synchronized void calculateMetrics() {
-        if (mRecordingStateProvider.isRecordingSuspended()) {
+        boolean isSuspended = mRecordingStateProvider.isRecordingSuspended();
+        long now = mTimeProvider.currentTimeMillis();
+
+        if (isSuspended) {
+            if (!mWasSuspended) {
+                mWasSuspended = true;
+                mSuspendedStartMs = now;
+            }
             if (DEBUG) Log.i(TAG, "calculateMetrics(): recording suspended -> skip");
             return;
+        }
+
+        // Resumed or actively tracking
+        if (mWasSuspended) {
+            long pauseDurationMs = (mSuspendedStartMs > 0L) ? (now - mSuspendedStartMs) : 0L;
+            if (pauseDurationMs > 30000L) {
+                mPowerWindow30s.clear();
+            }
+            mWasSuspended = false;
+            mSuspendedStartMs = 0L;
         }
 
         // Query filtered power (3-second moving average)
@@ -202,7 +277,7 @@ public class CyclingPowerMetricsDevice extends MyDevice {
             }
         }
 
-        // 2. Normalized Power (NP) & Intensity Factor (IF) Calculations (REQ-TRK-020)
+        // 2. Power Validation for NP, IF, Mechanical Work & TSS
         if (power == null || Double.isNaN(power) || Double.isInfinite(power) || power < 0.0) {
             if (mNormalizedPowerSensor != null) {
                 mNormalizedPowerSensor.newValue(null);
@@ -210,52 +285,78 @@ public class CyclingPowerMetricsDevice extends MyDevice {
             if (mIntensityFactorSensor != null) {
                 mIntensityFactorSensor.newValue(null);
             }
+            if (mTssSensor != null) {
+                mTssSensor.newValue(null);
+            }
             return;
         }
 
-        // Ingest into 30-sample rolling FIFO window (coasting 0W is valid)
+        // 3. Mechanical Work Integration (1Hz) & Active Duration Tracking (REQ-TRK-021)
+        mWorkJoules += power * 1.0;
+        mActivePowerDurationSec++;
+        double workKj = mWorkJoules / 1000.0;
+        if (mWorkKjSensor != null) {
+            mWorkKjSensor.newValue(workKj);
+        }
+
+        // 4. Ingest into 30-sample rolling FIFO window (coasting 0W is valid)
         if (mPowerWindow30s.size() == 30) {
             mPowerWindow30s.pollFirst();
         }
         mPowerWindow30s.addLast(power);
 
         if (mPowerWindow30s.size() < 30) {
-            // Warm-up window: NP and IF are undefined until 30s have elapsed
-            if (mNormalizedPowerSensor != null) {
-                mNormalizedPowerSensor.newValue(null);
+            // Window is still filling
+            if (mLastCalculatedNp == null) {
+                // Initial lifetime warmup: NP, IF, and TSS are undefined
+                if (mNormalizedPowerSensor != null) {
+                    mNormalizedPowerSensor.newValue(null);
+                }
+                if (mIntensityFactorSensor != null) {
+                    mIntensityFactorSensor.newValue(null);
+                }
+                if (mTssSensor != null) {
+                    mTssSensor.newValue(null);
+                }
+                return;
             }
-            if (mIntensityFactorSensor != null) {
-                mIntensityFactorSensor.newValue(null);
+            // Post-long-pause window refill: retain prior calculated NP
+        } else {
+            // Calculate 30-second rolling average
+            double sum30 = 0.0;
+            for (double p : mPowerWindow30s) {
+                sum30 += p;
             }
-            return;
+            double p30s = sum30 / 30.0;
+            double p30sPow4 = Math.pow(p30s, 4.0);
+
+            // Welford's online running mean of 4th powers
+            mCount4thPower++;
+            mMean4thPower += (p30sPow4 - mMean4thPower) / (double) mCount4thPower;
+            mLastCalculatedNp = Math.pow(mMean4thPower, 0.25);
         }
 
-        // Calculate 30-second rolling average
-        double sum30 = 0.0;
-        for (double p : mPowerWindow30s) {
-            sum30 += p;
-        }
-        double p30s = sum30 / 30.0;
-        double p30sPow4 = Math.pow(p30s, 4.0);
-
-        mSum4thPower += p30sPow4;
-        mCount4thPower++;
-
-        double np = Math.pow(mSum4thPower / (double) mCount4thPower, 0.25);
         if (mNormalizedPowerSensor != null) {
-            mNormalizedPowerSensor.newValue(np);
+            mNormalizedPowerSensor.newValue(mLastCalculatedNp);
         }
 
-        // Calculate Intensity Factor (IF = NP / FTP)
+        // 5. Calculate Intensity Factor (IF = NP / FTP) & Training Stress Score (TSS)
         Integer ftp = mFtpProvider.getFtp(mContext);
-        if (ftp != null && ftp > 0) {
-            double ifVal = np / ftp.doubleValue();
+        if (ftp != null && ftp > 0 && mLastCalculatedNp != null) {
+            double ifVal = mLastCalculatedNp / ftp.doubleValue();
             if (mIntensityFactorSensor != null) {
                 mIntensityFactorSensor.newValue(ifVal);
+            }
+            double tss = (mActivePowerDurationSec * mLastCalculatedNp * ifVal) / (ftp.doubleValue() * 36.0);
+            if (mTssSensor != null) {
+                mTssSensor.newValue(tss);
             }
         } else {
             if (mIntensityFactorSensor != null) {
                 mIntensityFactorSensor.newValue(null);
+            }
+            if (mTssSensor != null) {
+                mTssSensor.newValue(null);
             }
         }
     }

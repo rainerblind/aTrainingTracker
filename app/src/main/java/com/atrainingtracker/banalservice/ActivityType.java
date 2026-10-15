@@ -156,6 +156,8 @@ public enum ActivityType {
                         SensorType.POWER_TO_WEIGHT,
                         SensorType.NORMALIZED_POWER,
                         SensorType.INTENSITY_FACTOR,
+                        SensorType.WORK_KJ,
+                        SensorType.TSS,
                         SensorType.DISTANCE_m,
                         SensorType.SPEED_mps,
                         SensorType.TIME_OF_DAY,
