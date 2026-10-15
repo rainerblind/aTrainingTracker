@@ -126,6 +126,18 @@ To prevent "split-brain" validation discrepancies between the calculator inputs 
    - Any manual threshold edit above $2000\text{W}$ or non-monotonic sequence is rejected identically to an invalid calculated stack.
    - **Heart Rate Thresholds**: Unanimously bounded by $30 < z_1 < z_2 < z_3 < z_4 \le 250\text{ bpm}$ across both manual and calculated paths.
 
+#### 2.2.6 Unit Safety & Storage Invariant (Canonical SI Units)
+- **Canonical Storage Standard**: In `SettingsDataStore`, all physiological metrics are stored exclusively in base scientific SI units:
+  - Cycling Power & FTP: strictly integer **Watts (W)** ($J/s$).
+  - Heart Rate: strictly integer **beats per minute (bpm)**.
+- **Locale & Unit Agnosticism**:
+  - Unlike distance (kilometers vs miles) or temperature (Celsius vs Fahrenheit), Functional Threshold Power and Heart Rate are universally standard across all countries and locales. There is no imperial or alternate unit for Watts.
+  - The computation engine (`ZoneCalculationMath`) and DataStore operate strictly on raw integer Watts and bpm.
+  - UI display layers append the localized unit string (`" W"` / `" bpm"`), while the underlying domain model remains completely agnostic to UI locale settings.
+- **Finite Storage Invariant (No Infinity Values)**:
+  - `SettingsDataStore` persistently stores only finite upper boundaries `PWR_BIKE_ZONE1_MAX..PWR_BIKE_ZONE6_MAX`.
+  - Zone 7 has no upper cutoff key in DataStore (open-ended neuromuscular sprint, capped at 2000W in calculations). No "Infinity" or unbounded values are ever passed or written to DataStore.
+
 ---
 
 ## 3. Desynchronization Policy, Invalidation Strategy & Session Dynamics
@@ -431,9 +443,21 @@ val isApplyEnabled: Boolean = when (activeProfile) {
    - If an athlete inputs text via an external physical keyboard, accessibility service, or copy-paste, `ZoneNumberParser.parseIntOrNull` sanitizes non-numeric characters and normalizes locale formatting.
    - The reactive `isApplyEnabled` state re-evaluates synchronously on every keystroke.
    - Even in edge cases (e.g. programmatically dispatched commands), `SettingsDataStore` asserts `ZoneValidator.validateFtp()` and `ZoneValidator.validateHeartRateBaselines()`, preventing any corrupted state from being saved.
-4. **Global Zone Stack Monotonicity Validation & Manual 2000W Ceiling Enforcement**:
-   - `validatePowerZoneStack(z1, z2, z3, z4, z5, z6): Boolean`: Asserts the entire stack satisfies $0 < z_1 < z_2 < z_3 < z_4 < z_5 < z_6 \le 2000$.
-   - `validateHeartRateZoneStack(z1, z2, z3, z4): Boolean`: Asserts $30 < z_1 < z_2 < z_3 < z_4 \le 250$.
+4. **Two-Layer Monotonicity Validation & Inversion Prevention ($Z_n\text{max} < Z_{n+1}\text{min}$)**:
+   - **Monotonic & Contiguous Invariant**:
+     To prevent overlapping boundaries or inversions during post-calculation manual edits (e.g. setting $Z_2\text{max} < Z_1\text{max}$):
+     $$Z_1 < Z_2 < Z_3 < Z_4 < Z_5 < Z_6 < \text{Min}_{Z7} \le 2000\text{ Watts} \quad \text{where} \quad Z_{n\text{min}} = Z_{n-1\text{max}} + 1$$
+   - **Layer 1: UI-Level Reactive Barrier**:
+     - In `ZoneSettingsScreen.kt`, each editable card validates its local upper bound against its immediate neighbors:
+       $$Z_{n-1\text{max}} < Z_{n\text{max}} < Z_{n+1\text{max}}$$
+     - If the athlete enters a value that violates monotonicity (e.g. entering 180W for Z2 when Z1 is 200W, or entering 350W for Z2 when Z3 is 300W):
+       - The field immediately displays an error indicator (`isError = true`) with localized copy:
+         *"Wert muss zwischen %d und %d liegen"* (*"Value must be between %d and %d"*).
+       - The persistence action (`savePowerZoneMax` / `saveHrZoneMax`) is **blocked**; blur or focus loss does not write the invalid value.
+   - **Layer 2: Domain-Level Blocking Guard**:
+     - `ZoneValidator.validatePowerZoneStack(z1, z2, z3, z4, z5, z6): Boolean`: Asserts the entire stack satisfies $0 < z_1 < z_2 < z_3 < z_4 < z_5 < z_6 \le 2000$.
+     - `ZoneValidator.validateHeartRateZoneStack(z1, z2, z3, z4): Boolean`: Asserts $30 < z_1 < z_2 < z_3 < z_4 \le 250$.
+     - `SettingsDataStore.savePowerZoneMax()` and `saveHrZoneMax()` enforce this check, throwing `IllegalArgumentException("Cannot persist non-monotonic zone thresholds")`, guaranteeing that invalid, overlapping, or inverted zones can NEVER be written to disk.
    - **Manual Override 2000W Ceiling Enforcement**:
      - Both manual threshold card edits (`savePowerZoneMax`) and full stack validation enforce $z_i \le 2000$.
      - When the athlete manually edits any threshold card in `ZoneSettingsScreen` (e.g. `z6Max`), manual values $> 2000\text{W}$ are strictly rejected.
