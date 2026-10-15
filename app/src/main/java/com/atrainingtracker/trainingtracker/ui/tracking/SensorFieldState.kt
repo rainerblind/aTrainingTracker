@@ -55,5 +55,8 @@ data class SensorFieldState(
     val zoneDisplayOptions: ZoneDisplayOptions = ZoneDisplayOptions(),
 
     // The optional state of the horizontal training zone gauge bar (REQ-UI-376).
-    val zoneGaugeState: ZoneGaugeState? = null
+    val zoneGaugeState: ZoneGaugeState? = null,
+
+    // The optional state of the visual pedal power balance indicator bar (REQ-UI-377).
+    val pedalBalanceState: PedalBalanceState? = null
 )

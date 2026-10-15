@@ -51,6 +51,8 @@ import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
+import com.atrainingtracker.trainingtracker.ui.tracking.PedalBalanceState
+import com.atrainingtracker.trainingtracker.ui.tracking.PedalPowerBalanceMath
 import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMath
 import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
@@ -335,6 +337,16 @@ class TrackingViewModel(
                     val zoneType = getZoneType(config.sensorType, currentActivity.sportType)
                     val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
 
+                    val isPedalBalance = (config.sensorType == SensorType.PEDAL_POWER_BALANCE)
+                    val initialPedalBalanceState = if (isPedalBalance) {
+                        PedalPowerBalanceMath.calculateBalanceState(null)
+                    } else null
+                    val initialValue = if (isPedalBalance && initialPedalBalanceState != null) {
+                        PedalPowerBalanceMath.formatBalanceString(initialPedalBalanceState)
+                    } else {
+                        "--"
+                    }
+
                     SensorFieldState(
                         configHash = uniqueHash,
                         sensorFieldId = config.sensorFieldId,
@@ -343,11 +355,12 @@ class TrackingViewModel(
                         viewSize = config.viewSize,
                         label = application.getString(config.sensorType.shortNameId),
                         filterDescription = filterDescription,
-                        value = "--",
+                        value = initialValue,
                         units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
                         zoneColor = defaultZoneColor,
                         zoneDisplayOptions = displayOptions,
-                        zoneGaugeState = calculateZoneGaugeState(zoneType, displayOptions, null)
+                        zoneGaugeState = calculateZoneGaugeState(zoneType, displayOptions, null),
+                        pedalBalanceState = initialPedalBalanceState
                     )
                 }
 
@@ -404,7 +417,15 @@ class TrackingViewModel(
             val fieldsToUpdate = fieldsByHash[uniqueHash]
 
             if (fieldsToUpdate != null) {
-                val newFormattedValue = sensorData.stringValue
+                val isPedalBalance = (sensorData.sensorType == SensorType.PEDAL_POWER_BALANCE)
+                val newPedalBalanceState = if (isPedalBalance) {
+                    PedalPowerBalanceMath.calculateBalanceState(sensorData.value as? Number)
+                } else null
+                val newFormattedValue = if (isPedalBalance && newPedalBalanceState != null) {
+                    PedalPowerBalanceMath.formatBalanceString(newPedalBalanceState)
+                } else {
+                    sensorData.stringValue
+                }
                 val newZoneColor = calculateZoneColor(sensorData, activityType)
                 val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
                 val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
@@ -417,14 +438,16 @@ class TrackingViewModel(
                     if (fieldToUpdate.value != newFormattedValue ||
                         fieldToUpdate.zoneColor != newZoneColor ||
                         fieldToUpdate.zoneDisplayOptions != displayOptions ||
-                        fieldToUpdate.zoneGaugeState != newZoneGaugeState) {
+                        fieldToUpdate.zoneGaugeState != newZoneGaugeState ||
+                        fieldToUpdate.pedalBalanceState != newPedalBalanceState) {
                         val index = updatedFields.indexOf(fieldToUpdate)
                         if (index != -1) {
                             updatedFields[index] = fieldToUpdate.copy(
                                 value = newFormattedValue,
                                 zoneColor = newZoneColor,
                                 zoneDisplayOptions = displayOptions,
-                                zoneGaugeState = newZoneGaugeState
+                                zoneGaugeState = newZoneGaugeState,
+                                pedalBalanceState = newPedalBalanceState
                             )
                             hasChanged = true
                         }

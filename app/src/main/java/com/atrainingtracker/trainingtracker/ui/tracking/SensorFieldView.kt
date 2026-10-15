@@ -300,6 +300,17 @@ fun SensorFieldView(
                     )
                 }
 
+                // Optional Pedal Power Balance Bar (REQ-UI-377)
+                if (fieldState.pedalBalanceState != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    PedalPowerBalanceBar(
+                        state = fieldState.pedalBalanceState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp)
+                    )
+                }
+
                 // Conditionally add the action buttons at the bottom in configuration mode
                 if (screenMode == ScreenMode.CONFIGURATION) {
                     Spacer(modifier = Modifier.height(8.dp))
