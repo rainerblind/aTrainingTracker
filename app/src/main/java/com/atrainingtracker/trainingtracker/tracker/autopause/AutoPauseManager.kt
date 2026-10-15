@@ -44,7 +44,9 @@ data class AutoPauseConfig(
     val otherDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
     val isMetric: Boolean = true,
     // Deprecated backward-compatibility bridges
+    @Deprecated(message = "Use sport-specific speed thresholds", replaceWith = ReplaceWith("bikeSpeedThreshold"))
     val speedThresholdKmh: Float? = null,
+    @Deprecated(message = "Use sport-specific debounces", replaceWith = ReplaceWith("bikeDebounceSec"))
     val debounceSec: Int? = null
 ) {
     fun isEnabledForSport(sportType: BSportType): Boolean {

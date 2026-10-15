@@ -10,6 +10,8 @@
 
 package com.atrainingtracker.trainingtracker.settings
 
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.preferencesOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -142,5 +144,53 @@ class TuningPreferencesDataStoreAutoPauseTest {
         assertTrue(TuningPreferencesDataStore.ALL_KEYS.contains(TuningPreferencesDataStore.KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC))
         assertTrue(TuningPreferencesDataStore.ALL_KEYS.contains(TuningPreferencesDataStore.KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD))
         assertTrue(TuningPreferencesDataStore.ALL_KEYS.contains(TuningPreferencesDataStore.KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC))
+    }
+
+    @Test
+    fun mapAutoPausePreferences_migratesLegacyKeysCorrectly() {
+        // Scenario 1: Legacy user with only legacy keys
+        val legacyPrefs = preferencesOf(
+            TuningPreferencesDataStore.KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH to 3.4f,
+            TuningPreferencesDataStore.KEY_AUTO_PAUSE_DEBOUNCE_SEC to 4
+        )
+        val migrated = TuningPreferencesDataStore.mapAutoPausePreferences(legacyPrefs)
+
+        // All sports should inherit the rounded legacy threshold (3) and debounce (4)
+        assertEquals(3, migrated.bikeSpeedThreshold)
+        assertEquals(4, migrated.bikeDebounceSec)
+        assertEquals(3, migrated.runSpeedThreshold)
+        assertEquals(4, migrated.runDebounceSec)
+        assertEquals(3, migrated.otherSpeedThreshold)
+        assertEquals(4, migrated.otherDebounceSec)
+        // Default enabled states preserved
+        assertTrue(migrated.bikeEnabled)
+        assertFalse(migrated.runEnabled)
+        assertFalse(migrated.otherEnabled)
+
+        // Scenario 2: Sport-specific overrides take precedence over legacy keys
+        val partialOverridePrefs = preferencesOf(
+            TuningPreferencesDataStore.KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH to 3.4f,
+            TuningPreferencesDataStore.KEY_AUTO_PAUSE_DEBOUNCE_SEC to 4,
+            TuningPreferencesDataStore.KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD to 5,
+            TuningPreferencesDataStore.KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC to 8
+        )
+        val overridden = TuningPreferencesDataStore.mapAutoPausePreferences(partialOverridePrefs)
+        assertEquals(5, overridden.bikeSpeedThreshold)
+        assertEquals(8, overridden.bikeDebounceSec)
+        // Run and Other still inherit legacy fallback
+        assertEquals(3, overridden.runSpeedThreshold)
+        assertEquals(4, overridden.runDebounceSec)
+        assertEquals(3, overridden.otherSpeedThreshold)
+        assertEquals(4, overridden.otherDebounceSec)
+
+        // Scenario 3: Clean installation (empty preferences) gets sport defaults
+        val cleanPrefs = emptyPreferences()
+        val defaults = TuningPreferencesDataStore.mapAutoPausePreferences(cleanPrefs)
+        assertEquals(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC, defaults.bikeSpeedThreshold)
+        assertEquals(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC, defaults.bikeDebounceSec)
+        assertEquals(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC, defaults.runSpeedThreshold)
+        assertEquals(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC, defaults.runDebounceSec)
+        assertEquals(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC, defaults.otherSpeedThreshold)
+        assertEquals(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC, defaults.otherDebounceSec)
     }
 }

@@ -147,11 +147,11 @@ fun SensorsGpsFilterSection(
             ) {
                 TuningSliderItem(
                     title = stringResource(R.string.tuning_auto_pause_speed_threshold_title),
-                    valueText = "$autoPauseBikeSpeedThreshold $speedUnit",
+                    valueText = stringResource(R.string.tuning_speed_value_format, autoPauseBikeSpeedThreshold, speedUnit),
                     helperText = stringResource(R.string.tuning_auto_pause_speed_threshold_desc),
                     defaultText = stringResource(
                         R.string.tuning_default_format,
-                        "$bikeDefThreshold $speedUnit"
+                        stringResource(R.string.tuning_speed_value_format, bikeDefThreshold, speedUnit)
                     ),
                     value = autoPauseBikeSpeedThreshold.toFloat(),
                     onValueChange = { onAutoPauseBikeSpeedThresholdChange?.invoke(it.roundToInt()) },
@@ -161,11 +161,11 @@ fun SensorsGpsFilterSection(
 
                 TuningSliderItem(
                     title = stringResource(R.string.tuning_auto_pause_debounce_title),
-                    valueText = "$autoPauseBikeDebounceSec s",
+                    valueText = stringResource(R.string.tuning_seconds_value_format, autoPauseBikeDebounceSec),
                     helperText = stringResource(R.string.tuning_auto_pause_debounce_desc),
                     defaultText = stringResource(
                         R.string.tuning_default_format,
-                        "${TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC} s"
+                        stringResource(R.string.tuning_seconds_value_format, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
                     ),
                     value = autoPauseBikeDebounceSec.toFloat(),
                     onValueChange = { onAutoPauseBikeDebounceSecChange?.invoke(it.roundToInt()) },
@@ -188,11 +188,11 @@ fun SensorsGpsFilterSection(
             ) {
                 TuningSliderItem(
                     title = stringResource(R.string.tuning_auto_pause_speed_threshold_title),
-                    valueText = "$autoPauseRunSpeedThreshold $speedUnit",
+                    valueText = stringResource(R.string.tuning_speed_value_format, autoPauseRunSpeedThreshold, speedUnit),
                     helperText = stringResource(R.string.tuning_auto_pause_speed_threshold_desc),
                     defaultText = stringResource(
                         R.string.tuning_default_format,
-                        "$runDefThreshold $speedUnit"
+                        stringResource(R.string.tuning_speed_value_format, runDefThreshold, speedUnit)
                     ),
                     value = autoPauseRunSpeedThreshold.toFloat(),
                     onValueChange = { onAutoPauseRunSpeedThresholdChange?.invoke(it.roundToInt()) },
@@ -202,11 +202,11 @@ fun SensorsGpsFilterSection(
 
                 TuningSliderItem(
                     title = stringResource(R.string.tuning_auto_pause_debounce_title),
-                    valueText = "$autoPauseRunDebounceSec s",
+                    valueText = stringResource(R.string.tuning_seconds_value_format, autoPauseRunDebounceSec),
                     helperText = stringResource(R.string.tuning_auto_pause_debounce_desc),
                     defaultText = stringResource(
                         R.string.tuning_default_format,
-                        "${TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC} s"
+                        stringResource(R.string.tuning_seconds_value_format, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC)
                     ),
                     value = autoPauseRunDebounceSec.toFloat(),
                     onValueChange = { onAutoPauseRunDebounceSecChange?.invoke(it.roundToInt()) },
@@ -229,11 +229,11 @@ fun SensorsGpsFilterSection(
             ) {
                 TuningSliderItem(
                     title = stringResource(R.string.tuning_auto_pause_speed_threshold_title),
-                    valueText = "$autoPauseOtherSpeedThreshold $speedUnit",
+                    valueText = stringResource(R.string.tuning_speed_value_format, autoPauseOtherSpeedThreshold, speedUnit),
                     helperText = stringResource(R.string.tuning_auto_pause_speed_threshold_desc),
                     defaultText = stringResource(
                         R.string.tuning_default_format,
-                        "$otherDefThreshold $speedUnit"
+                        stringResource(R.string.tuning_speed_value_format, otherDefThreshold, speedUnit)
                     ),
                     value = autoPauseOtherSpeedThreshold.toFloat(),
                     onValueChange = { onAutoPauseOtherSpeedThresholdChange?.invoke(it.roundToInt()) },
@@ -243,11 +243,11 @@ fun SensorsGpsFilterSection(
 
                 TuningSliderItem(
                     title = stringResource(R.string.tuning_auto_pause_debounce_title),
-                    valueText = "$autoPauseOtherDebounceSec s",
+                    valueText = stringResource(R.string.tuning_seconds_value_format, autoPauseOtherDebounceSec),
                     helperText = stringResource(R.string.tuning_auto_pause_debounce_desc),
                     defaultText = stringResource(
                         R.string.tuning_default_format,
-                        "${TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC} s"
+                        stringResource(R.string.tuning_seconds_value_format, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC)
                     ),
                     value = autoPauseOtherDebounceSec.toFloat(),
                     onValueChange = { onAutoPauseOtherDebounceSecChange?.invoke(it.roundToInt()) },
