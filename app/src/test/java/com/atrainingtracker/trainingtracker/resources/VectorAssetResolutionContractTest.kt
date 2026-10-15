@@ -104,49 +104,76 @@ class VectorAssetResolutionContractTest {
         }
     }
 
+    private fun getPathFillColors(file: File): Set<String> {
+        val factory = DocumentBuilderFactory.newInstance()
+        val builder = factory.newDocumentBuilder()
+        val doc = builder.parse(file)
+        val paths = doc.getElementsByTagName("path")
+        val colors = mutableSetOf<String>()
+        for (i in 0 until paths.length) {
+            val node = paths.item(i)
+            if (node is Element) {
+                val fill = node.getAttribute("android:fillColor")
+                if (fill.isNotEmpty()) {
+                    colors.add(fill.uppercase())
+                }
+            }
+        }
+        return colors
+    }
+
+    private fun getRootElement(file: File): Element {
+        val factory = DocumentBuilderFactory.newInstance()
+        val builder = factory.newDocumentBuilder()
+        val doc = builder.parse(file)
+        return doc.documentElement
+    }
+
     @Test
     fun testSportBike_containsBlackWheelsRedFrameBlueRider() {
         val file = File(resDir, "bsport_bike.xml")
-        val content = file.readText()
+        val colors = getPathFillColors(file)
+        val root = getRootElement(file)
 
         // Multi-color geometry preservation (REQ-UI-375.1)
         assertTrue("bsport_bike must contain black fill for wheels/saddle",
-            content.contains("#FF000000") || content.contains("#000000"))
+            colors.contains("#FF000000") || colors.contains("#000000"))
         assertTrue("bsport_bike must contain red fill for frame",
-            content.contains("#FFFF0000") || content.contains("#FF0000"))
+            colors.contains("#FFFF0000") || colors.contains("#FF0000"))
         assertTrue("bsport_bike must contain blue fill for rider",
-            content.contains("#FF0000FF") || content.contains("#0000FF"))
+            colors.contains("#FF0000FF") || colors.contains("#0000FF"))
 
         // Multi-color assets must not define root tint
         assertFalse("bsport_bike must not define root android:tint to prevent monochrome flattening",
-            content.contains("android:tint="))
+            root.hasAttribute("android:tint"))
     }
 
     @Test
     fun testSportRun_containsBlueRunner() {
         val file = File(resDir, "bsport_run.xml")
-        val content = file.readText()
+        val colors = getPathFillColors(file)
 
         assertTrue("bsport_run must contain blue fill for runner",
-            content.contains("#FF0000FF") || content.contains("#0000FF"))
+            colors.contains("#FF0000FF") || colors.contains("#0000FF"))
     }
 
     @Test
     fun testSportOther_containsMultiColorStopwatchPaths() {
         val file = File(resDir, "bsport_other.xml")
-        val content = file.readText()
+        val colors = getPathFillColors(file)
+        val root = getRootElement(file)
 
         assertTrue("bsport_other must contain gold ring fill",
-            content.contains("#FFFFC700") || content.contains("#FFC700"))
+            colors.contains("#FFFFC700") || colors.contains("#FFC700"))
         assertTrue("bsport_other must contain red crown button fill",
-            content.contains("#FFFF0000") || content.contains("#FF0000"))
+            colors.contains("#FFFF0000") || colors.contains("#FF0000"))
         assertTrue("bsport_other must contain green right button fill",
-            content.contains("#FF008F00") || content.contains("#008F00"))
+            colors.contains("#FF008F00") || colors.contains("#008F00"))
         assertTrue("bsport_other must contain dark blue left button fill",
-            content.contains("#FF00008F") || content.contains("#00008F"))
+            colors.contains("#FF00008F") || colors.contains("#00008F"))
 
         assertFalse("bsport_other must not define root android:tint to prevent monochrome flattening",
-            content.contains("android:tint="))
+            root.hasAttribute("android:tint"))
     }
 
     @Test
@@ -156,11 +183,11 @@ class VectorAssetResolutionContractTest {
             "bike_pwr.xml", "run_spd.xml", "temp.xml"
         )
         for (asset in antSensors) {
-            val content = File(resDir, asset).readText()
+            val colors = getPathFillColors(File(resDir, asset))
             assertTrue("$asset must contain black background path",
-                content.contains("#FF000000") || content.contains("#000000"))
+                colors.contains("#FF000000") || colors.contains("#000000"))
             assertTrue("$asset must contain white foreground path",
-                content.contains("#FFFFFFFF") || content.contains("#FFFFFF"))
+                colors.contains("#FFFFFFFF") || colors.contains("#FFFFFF"))
         }
     }
 
@@ -171,11 +198,11 @@ class VectorAssetResolutionContractTest {
             "bt_bike_pwr.xml", "bt_run.xml"
         )
         for (asset in bleSensors) {
-            val content = File(resDir, asset).readText()
+            val colors = getPathFillColors(File(resDir, asset))
             assertTrue("$asset must contain official Bluetooth blue background path",
-                content.contains("#FF0A3D91") || content.contains("#0A3D91"))
+                colors.contains("#FF0A3D91") || colors.contains("#0A3D91"))
             assertTrue("$asset must contain white foreground path",
-                content.contains("#FFFFFFFF") || content.contains("#FFFFFF"))
+                colors.contains("#FFFFFFFF") || colors.contains("#FFFFFF"))
         }
     }
 }

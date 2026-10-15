@@ -56,6 +56,21 @@ private data class SportItemSpec(
     val labelRes: Int
 )
 
+/**
+ * Renders the sport type selection control for tracking workouts.
+ *
+ * Technical Protocol Badge Emblem Invariant:
+ * The sport and sensor icons (such as [R.drawable.bsport_bike], [R.drawable.bsport_run],
+ * and sensor badges with acronyms like "HR", "SPD", "CAD") are technical emblems defined as
+ * density-independent vector drawables preserving exact visual multi-color geometry and badge designs.
+ * While user-facing descriptive labels are localized via [R.string] entries across all 9 supported languages,
+ * protocol and metric acronyms embedded directly in sensor badge emblems represent universal technical
+ * standards and must remain unlocalized.
+ *
+ * @param currentSport Currently selected sport type.
+ * @param onSportSelected Callback invoked when a sport type item is selected.
+ * @param modifier Optional modifier for styling and layout.
+ */
 @Composable
 fun SportTypeSelector(
     currentSport: BSportType,
