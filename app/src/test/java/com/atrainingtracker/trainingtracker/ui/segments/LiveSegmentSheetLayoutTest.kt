@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.segments
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -156,5 +157,53 @@ class LiveSegmentSheetLayoutTest {
         val localizedSummary = summary.copy(distance = "1,2 km", distance_raw = 1200.0)
         val localizedEvaluatedDistance = localizedSummary.distance_raw.coerceAtLeast(liveData.distanceOnSegment_raw)
         assertEquals(1200.0, localizedEvaluatedDistance, 0.001)
+    }
+
+    @Test
+    fun testSegmentLiveDetails_stateAwareVisibilityBranches() {
+        var dir = java.io.File(System.getProperty("user.dir") ?: ".")
+        while (!java.io.File(dir, "app").exists() && dir.parentFile != null) {
+            dir = dir.parentFile!!
+        }
+        val file = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/SegmentLiveDetails.kt")
+        assertTrue("SegmentLiveDetails.kt must exist", file.exists())
+        val content = file.readText()
+
+        // 1. Verify state-aware branching on LiveSegmentStatus
+        assertTrue(
+            "SegmentLiveDetails must branch using when (liveSegmentData.segmentStatus)",
+            content.contains("when (liveSegmentData.segmentStatus)")
+        )
+
+        // 2. In APPROACHING, verify segment_status_start_in is used and offset is not rendered
+        assertTrue(
+            "APPROACHING state branch must exist",
+            content.contains("LiveSegmentStatus.APPROACHING ->")
+        )
+        val approachingSection = content.substringAfter("LiveSegmentStatus.APPROACHING ->").substringBefore("LiveSegmentStatus.FINISHED ->")
+        assertTrue("APPROACHING branch must show start_in", approachingSection.contains("R.string.segment_status_start_in"))
+        assertTrue("APPROACHING branch must show remaining", approachingSection.contains("R.string.segment_status_remaining"))
+        assertFalse("APPROACHING branch must not render offset", approachingSection.contains("R.string.segment_status_offset"))
+
+        // 3. In FINISHED, verify segment_status_past_finish is rendered while remaining and offset are omitted
+        val finishedSection = content.substringAfter("LiveSegmentStatus.FINISHED ->").substringBefore("else ->")
+        assertTrue("FINISHED branch must show distanceOnSegment", finishedSection.contains("liveSegmentData.distanceOnSegment"))
+        assertTrue("FINISHED branch must show past_finish", finishedSection.contains("R.string.segment_status_past_finish"))
+        assertFalse("FINISHED branch must not render remaining", finishedSection.contains("R.string.segment_status_remaining"))
+        assertFalse("FINISHED branch must not render offset", finishedSection.contains("R.string.segment_status_offset"))
+
+        // 4. In FINISHED with PR delta, verify PR delta format and TTColor.Zone2 styling
+        assertTrue(
+            "FINISHED PR delta check must verify prDeltaFormatted != null",
+            content.contains("liveSegmentData.segmentStatus == LiveSegmentStatus.FINISHED && liveSegmentData.prDeltaFormatted != null")
+        )
+        assertTrue(
+            "PR delta must use string resource segment_status_pr_delta",
+            content.contains("R.string.segment_status_pr_delta")
+        )
+        assertTrue(
+            "PR delta <= 0 must use TTColor.Zone2",
+            content.contains("TTColor.Zone2")
+        )
     }
 }

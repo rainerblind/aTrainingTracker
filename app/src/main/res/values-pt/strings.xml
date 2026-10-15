@@ -888,7 +888,9 @@
     <string name="segment_status_finished">Finalizado</string>
     <string name="segment_status_start_in">Início em: %1$s</string>
     <string name="segment_status_remaining">Resta: %1$s</string>
-    <string name="segment_status_offset">Diferença: %1$s</string>
+    <string name="segment_status_offset">Desvio: %1$s</string>
+    <string name="segment_status_past_finish">Após a meta: %1$s</string>
+    <string name="segment_status_pr_delta">%1$s vs. RP</string>
 
     <!-- ANT(+) Plugins -->
     <string name="ant_general_explanation">Com hardware e software corretos, podes associar os teus dispositivos ANT+.</string>

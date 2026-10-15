@@ -887,7 +887,9 @@
     <string name="segment_status_finished">Terminé</string>
     <string name="segment_status_start_in">Départ dans : %1$s</string>
     <string name="segment_status_remaining">Reste : %1$s</string>
-    <string name="segment_status_offset">Écart : %1$s</string>
+    <string name="segment_status_offset">Écart latéral : %1$s</string>
+    <string name="segment_status_past_finish">Après l\'arrivée : %1$s</string>
+    <string name="segment_status_pr_delta">%1$s vs PR</string>
 
     <!-- ANT(+) Plugins -->
     <string name="ant_general_explanation">Avec le bon matériel/logiciel, vous pouvez coupler vos appareils ANT+.</string>

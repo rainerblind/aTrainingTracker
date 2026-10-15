@@ -891,7 +891,9 @@
     <string name="segment_status_finished">Finalizado</string>
     <string name="segment_status_start_in">Empieza en: %1$s</string>
     <string name="segment_status_remaining">Faltan: %1$s</string>
-    <string name="segment_status_offset">Diferencia: %1$s</string>
+    <string name="segment_status_offset">Desvío: %1$s</string>
+    <string name="segment_status_past_finish">Tras meta: %1$s</string>
+    <string name="segment_status_pr_delta">%1$s vs. PR</string>
 
     <!-- ANT(+) Plugins -->
     <string name="ant_general_explanation">Con el hardware y software adecuado, puedes vincular tus dispositivos ANT+.</string>

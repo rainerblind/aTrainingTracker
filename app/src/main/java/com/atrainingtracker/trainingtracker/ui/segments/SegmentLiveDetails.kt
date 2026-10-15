@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,56 +48,93 @@ fun SegmentLiveDetails(
         ) {
             // Left: Distance Progress
             Column {
-                Text(
-                    text = if (liveSegmentData.segmentStatus == LiveSegmentStatus.APPROACHING) {
-                        stringResource(id = R.string.segment_status_start_in, liveSegmentData.distanceToStart)
-                    } else {
-                        liveSegmentData.distanceOnSegment
-                    },
-                    style = if (liveSegmentData.segmentStatus != LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
-                        MaterialTheme.typography.titleLarge
-                    } else {
-                        MaterialTheme.typography.bodyLarge
-                    },
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = stringResource(id = R.string.segment_status_remaining, liveSegmentData.remainingDistance),
-                    style = if (liveSegmentData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
-                        MaterialTheme.typography.titleLarge
-                    } else {
-                        MaterialTheme.typography.bodyLarge
-                    },
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = stringResource(id = R.string.segment_status_offset, liveSegmentData.segmentOffset),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (liveSegmentData.segmentOffset_raw < LiveSegmentsRepository.SEGMENT_DISTANCE_THRESHOLD * 0.5f) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else if (liveSegmentData.segmentOffset_raw < LiveSegmentsRepository.SEGMENT_DISTANCE_THRESHOLD * 0.75f) {
-                        TTColor.Zone3
-                    } else {
-                        TTColor.Zone4
+                when (liveSegmentData.segmentStatus) {
+                    LiveSegmentStatus.APPROACHING -> {
+                        Text(
+                            text = stringResource(id = R.string.segment_status_start_in, liveSegmentData.distanceToStart),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = stringResource(id = R.string.segment_status_remaining, liveSegmentData.remainingDistance),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                )
+                    LiveSegmentStatus.FINISHED -> {
+                        Text(
+                            text = liveSegmentData.distanceOnSegment,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = stringResource(id = R.string.segment_status_past_finish, liveSegmentData.distancePastFinish),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    else -> {
+                        Text(
+                            text = liveSegmentData.distanceOnSegment,
+                            style = if (liveSegmentData.segmentStatus != LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
+                                MaterialTheme.typography.titleLarge
+                            } else {
+                                MaterialTheme.typography.bodyLarge
+                            },
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = stringResource(id = R.string.segment_status_remaining, liveSegmentData.remainingDistance),
+                            style = if (liveSegmentData.segmentStatus == LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH) {
+                                MaterialTheme.typography.titleLarge
+                            } else {
+                                MaterialTheme.typography.bodyLarge
+                            },
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = stringResource(id = R.string.segment_status_offset, liveSegmentData.segmentOffset),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (liveSegmentData.segmentOffset_raw < LiveSegmentsRepository.SEGMENT_DISTANCE_THRESHOLD * 0.5f) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else if (liveSegmentData.segmentOffset_raw < LiveSegmentsRepository.SEGMENT_DISTANCE_THRESHOLD * 0.75f) {
+                                TTColor.Zone3
+                            } else {
+                                TTColor.Zone4
+                            }
+                        )
+                    }
+                }
             }
 
-            // Right: Live Time
+            // Right: Live Time & PR Delta
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = liveSegmentData.timeOnSegment,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.primary
                 )
+                if (liveSegmentData.segmentStatus == LiveSegmentStatus.FINISHED && liveSegmentData.prDeltaFormatted != null) {
+                    val deltaSeconds = liveSegmentData.prDeltaSeconds ?: 0L
+                    Text(
+                        text = stringResource(id = R.string.segment_status_pr_delta, liveSegmentData.prDeltaFormatted),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (deltaSeconds <= 0L) {
+                            TTColor.Zone2
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                }
             }
         }
     }
 }
 
-@Preview(showBackground = true, name = "Live Segment Details")
+@Preview(showBackground = true, name = "Live Segment Details - On Segment")
 @Composable
 fun PreviewSegmentLiveDetails() {
     ATrainingTrackerTheme {
@@ -108,6 +146,29 @@ fun PreviewSegmentLiveDetails() {
                 remainingDistance = "1.8 km",
                 segmentOffset = "+5m",
                 segmentOffset_raw = 5.0
+            ),
+            modifier = Modifier.padding(16.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Live Segment Details - Finished PR Beat")
+@Composable
+fun PreviewSegmentLiveDetailsFinished() {
+    ATrainingTrackerTheme {
+        SegmentLiveDetails(
+            liveSegmentData = LiveSegmentData(
+                segmentStatus = LiveSegmentStatus.FINISHED,
+                timeOnSegment = "03:39",
+                timeOnSegment_raw = 219L,
+                distanceOnSegment = "1.2 km",
+                distanceOnSegment_raw = 1200.0,
+                remainingDistance = "0 m",
+                remainingDistance_raw = 0.0,
+                distancePastFinish = "210 m",
+                distancePastFinish_raw = 210.0,
+                prDeltaSeconds = -10L,
+                prDeltaFormatted = "-0:10"
             ),
             modifier = Modifier.padding(16.dp)
         )

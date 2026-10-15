@@ -50,6 +50,7 @@ enum class LiveSegmentStatus(val resId: Int) {
 data class LiveSegmentData(
     val segmentStatus: LiveSegmentStatus,
     val timeOnSegment: String = "--:--",
+    val timeOnSegment_raw: Long = 0L,
     val distanceToStart: String = "--",
     val distanceToStart_raw: Double = Double.MAX_VALUE,
     val distanceOnSegment: String = "--",
@@ -57,7 +58,11 @@ data class LiveSegmentData(
     val remainingDistance: String = "--",
     val remainingDistance_raw: Double = Double.MAX_VALUE,
     val segmentOffset: String = "--",
-    val segmentOffset_raw: Double = 0.0
+    val segmentOffset_raw: Double = 0.0,
+    val distancePastFinish: String = "--",
+    val distancePastFinish_raw: Double = 0.0,
+    val prDeltaSeconds: Long? = null,
+    val prDeltaFormatted: String? = null
 )
 
 data class LiveSegmentMath(
@@ -358,6 +363,7 @@ class LiveSegmentsRepository internal constructor(
                             liveData = LiveSegmentData(
                                 segmentStatus = newSegmentStatus,
                                 timeOnSegment = tf.format_with_units(timeOnSegment),
+                                timeOnSegment_raw = timeOnSegment,
                                 distanceOnSegment = df.format_with_units(distanceOnSegment),
                                 distanceOnSegment_raw = distanceOnSegment,
                                 remainingDistance = df.format_with_units(remainingDistance),
@@ -376,25 +382,44 @@ class LiveSegmentsRepository internal constructor(
                             (System.currentTimeMillis() - liveSegment.math.startTime_ms) / 1000
                         val projection = PolylineProgressTracker.projectLocation(liveSegment.staticData.path, currentLocation)
                         val distanceOnSegment = projection?.alongTrackDistance ?: (currentDistance - liveSegment.math.startDistance)
+
+                        val prRaw = liveSegment.staticData.summary.prTime_raw
+                        val (prDeltaSec, prDeltaFmt) = if (prRaw > 0) {
+                            val delta = timeOnSegment - prRaw.toLong()
+                            val sign = if (delta <= 0) "-" else "+"
+                            val absSec = kotlin.math.abs(delta)
+                            val mins = absSec / 60
+                            val secs = absSec % 60
+                            val formatted = String.format(java.util.Locale.US, "%s%d:%02d", sign, mins, secs)
+                            Pair(delta, formatted)
+                        } else {
+                            Pair(null, null)
+                        }
+
                         liveSegment.copy(
                             liveData = LiveSegmentData(
                                 segmentStatus = newSegmentStatus,
                                 timeOnSegment = tf.format_with_units(timeOnSegment),
+                                timeOnSegment_raw = timeOnSegment,
                                 distanceOnSegment = df.format_with_units(distanceOnSegment),
                                 distanceOnSegment_raw = distanceOnSegment,
                                 remainingDistance = df.format_with_units(0),
                                 remainingDistance_raw = 0.0,
                                 distanceToStart_raw = 0.0,
-                                segmentOffset = df.format_with_units(distanceToEnd),
-                                segmentOffset_raw = distanceToEnd
+                                segmentOffset = "--",
+                                segmentOffset_raw = 0.0,
+                                distancePastFinish = df.format_with_units(distanceToEnd),
+                                distancePastFinish_raw = distanceToEnd,
+                                prDeltaSeconds = prDeltaSec,
+                                prDeltaFormatted = prDeltaFmt
                             )
                         )
                     }
-                    else {  // finished some time ago -> only update the segmentOffset as the distance to the end.
+                    else {  // finished some time ago -> only update the distancePastFinish as the distance to the end.
                         liveSegment.copy(
                             liveData = liveSegment.liveData.copy(
-                                segmentOffset = df.format_with_units(distanceToEnd),
-                                segmentOffset_raw = distanceToEnd
+                                distancePastFinish = df.format_with_units(distanceToEnd),
+                                distancePastFinish_raw = distanceToEnd
                             )
                         )
                     }

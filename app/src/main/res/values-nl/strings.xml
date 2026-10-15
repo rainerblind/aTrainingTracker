@@ -888,7 +888,9 @@
     <string name="segment_status_finished">Gefinisht</string>
     <string name="segment_status_start_in">Start in: %1$s</string>
     <string name="segment_status_remaining">Nog: %1$s</string>
-    <string name="segment_status_offset">Verschil: %1$s</string>
+    <string name="segment_status_offset">Afwijking: %1$s</string>
+    <string name="segment_status_past_finish">Na finish: %1$s</string>
+    <string name="segment_status_pr_delta">%1$s vs. PR</string>
 
     <!-- ANT(+) Plugins -->
     <string name="ant_general_explanation">Met de juiste hardware/software kun je ANT+ apparaten koppelen.</string>
