@@ -29,6 +29,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import com.atrainingtracker.util.safeEnumValueOfOrNull
+import com.atrainingtracker.util.safeUnregisterReceiver
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
@@ -233,11 +234,7 @@ class DevicesTabbedViewModel(
     override fun onCleared() {
         super.onCleared()
         banalServiceRepository.unbindFromBANALService()
-        try {
-            getApplication<Application>().unregisterReceiver(deviceDiscoveryReceiver)
-        } catch (e: Exception) {
-            // Receiver might not be registered
-        }
+        getApplication<Application>().safeUnregisterReceiver(deviceDiscoveryReceiver, "DevicesTabbedViewModel")
     }
 
     companion object {

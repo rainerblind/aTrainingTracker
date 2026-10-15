@@ -26,6 +26,7 @@ import android.content.IntentFilter;
 import android.util.Log;
 
 import androidx.core.content.ContextCompat;
+import com.atrainingtracker.util.LifecycleUtils;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.Protocol;
@@ -101,7 +102,7 @@ public abstract class MyRemoteDevice extends MyDevice {
     public void shutDown() {
         if (DEBUG) Log.i(TAG, "shutDown()");
 
-        mContext.unregisterReceiver(mCalibrationFactorChangedReceiver);
+        LifecycleUtils.safeUnregisterReceiver(mContext, mCalibrationFactorChangedReceiver, TAG);
         super.shutDown();
     }
 

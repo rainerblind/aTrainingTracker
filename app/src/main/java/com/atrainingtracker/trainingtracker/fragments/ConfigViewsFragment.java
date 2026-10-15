@@ -29,6 +29,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 
 import androidx.core.content.ContextCompat;
+import com.atrainingtracker.util.LifecycleUtils;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
@@ -254,10 +255,7 @@ public abstract class ConfigViewsFragment extends Fragment {
 
         mCurrentItem = mViewPager.getCurrentItem();
 
-        try {
-            getActivity().unregisterReceiver(mNameChangedReceiver);
-        } catch (Exception e) {
-        }
+        LifecycleUtils.safeUnregisterReceiver(getActivity(), mNameChangedReceiver, TAG);
     }
 
     @Override

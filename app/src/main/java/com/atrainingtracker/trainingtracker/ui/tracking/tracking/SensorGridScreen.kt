@@ -24,6 +24,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
+import com.atrainingtracker.util.safeUnregisterReceiver
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -202,9 +203,7 @@ fun SensorGridScreen(
         val filter = IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED)
         ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         onDispose {
-            try {
-                context.unregisterReceiver(receiver)
-            } catch (ignored: Exception) {}
+            context.safeUnregisterReceiver(receiver, "SensorGridScreen")
         }
     }
     val activeVariantStyle = remember(tuningConfig.sensorFieldVariant) {
