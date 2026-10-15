@@ -39,10 +39,10 @@ To permanently resolve this defect while maintaining atomic sample pruning, math
    - All crop calculations and database operations execute strictly off the main thread on `Dispatchers.IO`.
    - `WorkoutSamplesDatabaseManager` executes updates using a pre-compiled `SQLiteStatement` in chunked batches of `1,000` rows (`BATCH_SIZE = 1000`), invoking coroutine `yield()` between batches.
 
-4. **Database Management & Maintenance Layer (`WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`)**:
-   - Executes inside native SQLite transactions (`beginTransaction()`) with standard rollback journals.
-   - Shifts cumulative columns, updates `LINE_DISTANCE_m` in chunked batches, and updates `LAP_NR` in lockstep.
-   - Validates post-op row checksum: `remainingRows == expectedRetainedRowCount && deletedRows == expectedDeletedRowCount && remainingRows >= 2`.
+4. **Database Management, Single SQLite Transaction & ACID Rollback (`WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`)**:
+   - **Single Atomic Transaction**: All mutating database operations (sample pruning, cumulative metric shifting, lap re-indexing, summary updates, extrema replacement) execute within a single atomic `SQLiteTransaction` via `beginTransaction()` / `setTransactionSuccessful()` / `endTransaction()`.
+   - **Zero Partial Deletion Invariant**: If any error, crash, power interruption, or assertion failure occurs before `setTransactionSuccessful()`, SQLite's rollback journal/WAL automatically aborts the entire transaction, restoring the database to its pristine pre-crop state. Partial sample deletions are strictly impossible.
+   - Validates post-op row checksum: `remainingRows == expectedRetainedRowCount && deletedRows == expectedDeletedRowCount && remainingRows >= 2`. Throws `IllegalStateException` on mismatch to abort transaction.
    - Strictly preserves user-authored `NAME` and `DESCRIPTION` notes verbatim from original parent laps without truncation or heuristic merging.
 
 5. **Repository & Transaction Orchestration Layer (`WorkoutRepository.kt`)**:
@@ -50,15 +50,24 @@ To permanently resolve this defect while maintaining atomic sample pruning, math
    - Requires available space $\ge \max(50\text{ MB}, 5 \times \text{dbFileSize})$ to safely accommodate SQLite rollback journals.
    - Writes an ephemeral versioned JSON snapshot in `context.cacheDir` inside a `try ... finally` block, purging the temporary file upon transaction commit.
 
-6. **Export Synchronization Layer (`ExportManager.java`)**:
-   - Integrates with `WorkoutRepository.cropMutex`: Background exports acquire or observe `cropMutex`.
-   - Pre-commit: Synchronously cancels running export work (`cancelUniqueWork("export_" + fileBaseName)`).
+6. **Export Synchronization & File-Lock Race Condition Prevention (`ExportManager.java`)**:
+   - Integrates with `WorkoutRepository.cropMutex`: Background exports acquire or observe `cropMutex`, preventing concurrent read/write collisions.
+   - **Cancellation & Active Handle Closure**:
+     - When `cancelUniqueWork("export_" + fileBaseName)` is dispatched, running export workers receive a cooperative cancellation signal (`CancellationException`).
+     - In `ExportManager`, export file writers are wrapped in strict `try-with-resources` / defensive `finally` blocks ensuring that file output streams (`FileOutputStream`, `ZipOutputStream`) are closed and flushed immediately upon cancellation, before file deletion begins.
+     - Pre-commit cache deletion verifies file accessibility; if a file is momentarily locked by an external reader, deletion retries with backoff (50ms, 100ms) or schedules overwrite on next export, preventing file-lock contention from blocking the crop transaction.
    - Marks `SyncStatusDatabaseManager` / `ExportStatusDatabaseManager` as `PENDING_UPDATE` / `WAITING`.
    - Post-commit: Enqueues fresh export tasks via `WorkManager.enqueueUniqueWork("export_" + fileBaseName, ExistingWorkPolicy.REPLACE, exportRequest)`.
 
 7. **UI Layer & Non-Conflicting Scrollable Sheet Layout (`CropWorkoutScreen.kt`)**:
-   - Embedded inside `AppModalBottomSheet`: The inner root `Column` containing map preview, dual-range slider, and telemetry summary cards SHALL NOT apply `Modifier.verticalScroll(rememberScrollState())`.
-   - `AppModalBottomSheet`'s native scroll container (`scrollable = true`) hosts the scrolling body, preventing nested scroll infinity height constraint violations (`java.lang.IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints`).
+   - **Strict Viewport Partitioning & Pinned Action Bar**:
+     - `AppModalBottomSheet` explicitly partitions its layout into three distinct structural components:
+       1. **Header**: Fixed at the top (title and close button).
+       2. **Body**: Wrapped in `Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp)`. This allocates all available vertical space between header and footer to the body and makes it scrollable.
+       3. **Footer (`actions`)**: Fixed at the bottom, pinned above system navigation and home indicators, containing "Cancel" and "Crop" buttons. The action bar never scrolls off screen regardless of content height.
+     - **Elimination of Nested Scroll Constraint Conflict**:
+       - Because `AppModalBottomSheet` already provides the scrolling container for the body via `.verticalScroll(...)`, the inner root `Column` inside `CropWorkoutScreen.kt:140-145` MUST NOT declare `Modifier.verticalScroll(rememberScrollState())`.
+       - Changing the inner `Column` to `Modifier.fillMaxWidth()` allows `AppModalBottomSheet`'s native scroll container to measure and scroll the map preview, dual-range slider, and telemetry summary cards cleanly, eliminating the `IllegalStateException` while keeping the action buttons permanently visible and pinned.
    - Dual-handle Material 3 `RangeSlider` with minimum handle separation (`endIndex - startIndex >= minIndexStep`).
    - Renders synchronized map preview (`PathPreviewMap` with solid retained line and dashed dimmed trimmed segments) and elevation profile preview.
    - Displays live preview of trimmed offsets, new distance, and new duration.
@@ -72,11 +81,11 @@ To permanently resolve this defect while maintaining atomic sample pruning, math
 * **Closest Existing Reference Screen / Component**:
   - `EditWorkoutScreen.kt` (`AppModalBottomSheet` hosting edit fields and actions).
 * **Reused Components (`ui/components/core/`)**:
-  - `AppModalBottomSheet.kt`: Standard modal bottom sheet component. By relying on its native `scrollable = true` implementation (`Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()))`), `CropWorkoutScreen` inherits standard edge padding, bottom-sheet drag handling, and consistent scroll physics.
+  - `AppModalBottomSheet.kt`: Standard modal bottom sheet component. By relying on its native `scrollable = true` implementation (`Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()))`), `CropWorkoutScreen` inherits standard edge padding, bottom-sheet drag handling, pinned bottom action row, and consistent scroll physics.
 * **Theme Tokens & Design System Alignment**:
   - Spacing: Standard `16.dp` vertical arrangement between content cards.
   - Colors: Primary polyline uses `MaterialTheme.colorScheme.primary`; trimmed preview uses dimmed dashed stroke.
-  - Buttons: Standard Material 3 `TextButton` and `Button` with error container color for destructive action confirmation.
+  - Buttons: Standard Material 3 `TextButton` and `Button` with error container color for destructive action confirmation, pinned in the bottom action bar.
 
 ---
 
@@ -84,11 +93,13 @@ To permanently resolve this defect while maintaining atomic sample pruning, math
 
 1. **Zero Nested Scroll Violations**:
    - The root content `Column` of `CropWorkoutScreen.kt` must never apply `Modifier.verticalScroll`, eliminating runtime `IllegalStateException` crashes.
-2. **Scrollability on Small Viewports**:
-   - Full content must remain smoothly scrollable on small screens ($360\text{ dp}$ width) via `AppModalBottomSheet`'s outer scroll container.
-3. **Database & Export Integrity**:
-   - Zero modifications to mathematical sample pruning, checksum validation, lap note preservation, or export invalidation routines.
-4. **Clean-Room Test Pass Rate**:
+2. **Scrollability & Pinned Action Bar**:
+   - Content scrolls smoothly between the top header and pinned bottom action buttons on small viewports ($360\text{ dp}$ width) via `AppModalBottomSheet`'s native scroll container.
+3. **Single Transaction ACID Guarantee**:
+   - All sample pruning, cumulative shifting, and summary updates execute in a single atomic transaction. No partial deletions can ever persist.
+4. **Export Worker Handle Safety**:
+   - Cancelled export tasks must close file streams before cache invalidation and re-export.
+5. **Clean-Room Test Pass Rate**:
    - 100% of existing tests must pass with zero failures.
 
 ---
@@ -97,31 +108,24 @@ To permanently resolve this defect while maintaining atomic sample pruning, math
 
 ### Step 1: Remove Redundant Inner `.verticalScroll` in `CropWorkoutScreen.kt`
 - Target file: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/crop/CropWorkoutScreen.kt`
-- Remove `.verticalScroll(rememberScrollState())` from line 143:
+- Change inner `Column` at line 140–145 from `Modifier.fillMaxWidth().verticalScroll(rememberScrollState())` to `Modifier.fillMaxWidth()`:
   ```kotlin
-  // Before:
-  Column(
-      modifier = Modifier
-          .fillMaxWidth()
-          .verticalScroll(rememberScrollState()),
-      verticalArrangement = Arrangement.spacedBy(16.dp)
-  )
-
-  // After:
   Column(
       modifier = Modifier.fillMaxWidth(),
       verticalArrangement = Arrangement.spacedBy(16.dp)
   )
   ```
 
-### Step 2: Add Non-Conflicting Layout Contract Test in `CropWorkoutScreenContractTest.kt`
+### Step 2: Add Non-Conflicting Layout & Process Death Test Cases
 - Target file: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/crop/CropWorkoutScreenContractTest.kt`
-- Add test verifying that `CropWorkoutScreen.kt` does not contain inner `Modifier.verticalScroll` calls on its content column.
+- Add test verifying that `CropWorkoutScreen.kt` content container does not declare inner `Modifier.verticalScroll`.
+- Target file: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepositoryCropTest.kt`
+- Add test verifying that an exception or process interruption mid-transaction rolls back all database modifications cleanly without partial deletions.
 
-### Step 3: Run Targeted Contract & Math Tests
+### Step 3: Run Targeted Contract & Transaction Tests
 - Command:
   ```bash
-  ./gradlew testDebugUnitTest --tests com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropWorkoutScreenContractTest --tests com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMathTest
+  ./gradlew testDebugUnitTest --tests com.atrainingtracker.trainingtracker.ui.aftermath.crop.CropWorkoutScreenContractTest --tests com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCropTest
   ```
 
 ### Step 4: Run Clean-Room Regression Suite
