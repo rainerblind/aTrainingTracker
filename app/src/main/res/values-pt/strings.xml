@@ -641,6 +641,8 @@
     <string name="zone_display_right_bar">Barra direita</string>
     <string name="zone_display_text_color">Cor do texto</string>
     <string name="zone_display_gauge">Barra de zona</string>
+    <string name="pedal_balance_left_marker">L</string>
+    <string name="pedal_balance_right_marker">R</string>
     <string name="zone_display_preview_title">Pré-visualização</string>
 
     <string name="prefEmailExport">e-Mail</string>

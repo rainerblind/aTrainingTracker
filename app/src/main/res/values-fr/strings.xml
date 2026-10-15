@@ -640,6 +640,8 @@
     <string name="zone_display_right_bar">Barre droite</string>
     <string name="zone_display_text_color">Couleur du texte</string>
     <string name="zone_display_gauge">Jauge visuelle de zone</string>
+    <string name="pedal_balance_left_marker">L</string>
+    <string name="pedal_balance_right_marker">R</string>
     <string name="zone_display_preview_title">Aperçu</string>
 
     <string name="prefEmailExport">e-Mail</string>
