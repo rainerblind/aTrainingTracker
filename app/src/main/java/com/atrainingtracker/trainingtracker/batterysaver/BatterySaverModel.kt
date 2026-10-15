@@ -54,6 +54,19 @@ fun calculateZoneIndex(context: Context, zoneType: SettingsDataStore.ZoneType, v
     val z2Max = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
     val z3Max = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
     val z4Max = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+    if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) {
+        val z5Max = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 5)
+        val z6Max = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 6)
+        return when {
+            value <= z1Max -> 1
+            value <= z2Max -> 2
+            value <= z3Max -> 3
+            value <= z4Max -> 4
+            value <= z5Max -> 5
+            value <= z6Max -> 6
+            else -> 7
+        }
+    }
     return when {
         value <= z1Max -> 1
         value <= z2Max -> 2

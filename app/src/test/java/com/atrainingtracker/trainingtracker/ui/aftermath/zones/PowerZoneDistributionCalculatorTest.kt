@@ -30,7 +30,9 @@ class PowerZoneDistributionCalculatorTest {
         z1Max = 150,
         z2Max = 200,
         z3Max = 250,
-        z4Max = 300
+        z4Max = 300,
+        z5Max = 350,
+        z6Max = 450
     )
 
     @Test
@@ -44,24 +46,22 @@ class PowerZoneDistributionCalculatorTest {
             ZoneSample(timeActiveSec = 50L, value = 250), // Z3: 201..250
             ZoneSample(timeActiveSec = 60L, value = 251), // Z4: 251..300
             ZoneSample(timeActiveSec = 70L, value = 300), // Z4: 251..300
-            ZoneSample(timeActiveSec = 80L, value = 301), // Z5: > 300
-            ZoneSample(timeActiveSec = 90L, value = 450), // Z5: > 300
-            ZoneSample(timeActiveSec = 91L, value = 450)
+            ZoneSample(timeActiveSec = 80L, value = 301), // Z5: 301..350
+            ZoneSample(timeActiveSec = 90L, value = 350), // Z5: 301..350
+            ZoneSample(timeActiveSec = 100L, value = 351), // Z6: 351..450
+            ZoneSample(timeActiveSec = 110L, value = 450), // Z6: 351..450
+            ZoneSample(timeActiveSec = 120L, value = 451), // Z7: > 450
+            ZoneSample(timeActiveSec = 130L, value = 600), // Z7: > 450
+            ZoneSample(timeActiveSec = 131L, value = 600)
         )
 
         val result = ZoneDistributionCalculator.calculatePowerDistribution(samples, thresholds)
         assertNotNull(result)
-        assertEquals(5, result!!.entries.size)
+        assertEquals(7, result!!.entries.size)
 
-        // All 5 zones should have duration > 0
-        assertTrue("Zone 1 should have duration > 0", result.entries[0].durationSec > 0)
-        assertTrue("Zone 2 should have duration > 0", result.entries[1].durationSec > 0)
-        assertTrue("Zone 3 should have duration > 0", result.entries[2].durationSec > 0)
-        assertTrue("Zone 4 should have duration > 0", result.entries[3].durationSec > 0)
-        assertTrue("Zone 5 should have duration > 0", result.entries[4].durationSec > 0)
-
-        // Verify zone indices 1..5
-        for (i in 0..4) {
+        // All 7 zones should have duration > 0
+        for (i in 0..6) {
+            assertTrue("Zone ${i + 1} should have duration > 0", result.entries[i].durationSec > 0)
             assertEquals(i + 1, result.entries[i].zoneIndex)
         }
     }
@@ -88,7 +88,7 @@ class PowerZoneDistributionCalculatorTest {
         assertEquals(100f, z2Entry.percentage, 0.01f)
 
         // Other zones should have 0s duration and 0%
-        for (i in listOf(0, 2, 3, 4)) {
+        for (i in listOf(0, 2, 3, 4, 5, 6)) {
             assertEquals(0L, result.entries[i].durationSec)
             assertEquals(0f, result.entries[i].percentage, 0.01f)
         }
@@ -114,8 +114,10 @@ class PowerZoneDistributionCalculatorTest {
             ZoneSample(timeActiveSec = 1L, value = 180), // Z2: 1s
             ZoneSample(timeActiveSec = 2L, value = 220), // Z3: 1s
             ZoneSample(timeActiveSec = 3L, value = 280), // Z4: 1s
-            ZoneSample(timeActiveSec = 4L, value = 350), // Z5: 1s
-            ZoneSample(timeActiveSec = 5L, value = 350)  // terminal: 1s
+            ZoneSample(timeActiveSec = 4L, value = 330), // Z5: 1s
+            ZoneSample(timeActiveSec = 5L, value = 400), // Z6: 1s
+            ZoneSample(timeActiveSec = 6L, value = 500), // Z7: 1s
+            ZoneSample(timeActiveSec = 7L, value = 500)  // terminal: 1s
         )
 
         val result = ZoneDistributionCalculator.calculatePowerDistribution(samples, thresholds)
@@ -143,6 +145,8 @@ class PowerZoneDistributionCalculatorTest {
         assertEquals(0L, result.entries[0].durationSec)  // Z1
         assertEquals(0L, result.entries[3].durationSec)  // Z4
         assertEquals(0L, result.entries[4].durationSec)  // Z5
+        assertEquals(0L, result.entries[5].durationSec)  // Z6
+        assertEquals(0L, result.entries[6].durationSec)  // Z7
     }
 }
 

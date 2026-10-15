@@ -191,6 +191,8 @@ object TTColor {
     val Zone3 = Color(0xFFFFA500) // Orange
     val Zone4 = Color(0xFFFF0000) // Red
     val Zone5 = Color(0xFF9400D3) // Dark Violet
+    val Zone6 = Color(0xFF4E342E) // Dark Chestnut Brown
+    val Zone7 = Color(0xFF000000) // Pure Black
 
     // Branding / Status
     val StravaOrange = Color(0xFFFC4C02)

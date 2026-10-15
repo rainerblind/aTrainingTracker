@@ -35,7 +35,9 @@ class PowerZoneLocalizationTest {
     private val locales = listOf("", "-de", "-es", "-fr", "-it", "-ja", "-nl", "-pl", "-pt")
 
     private val requiredKeys = listOf(
-        "aftermath_power_zones_title"
+        "aftermath_power_zones_title",
+        "zone_6_label",
+        "zone_7_label"
     )
 
     private fun findResDir(): File {

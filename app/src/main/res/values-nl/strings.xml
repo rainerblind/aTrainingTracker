@@ -619,6 +619,8 @@
     <string name="zone_3_label">Zone 3 (Tempo)</string>
     <string name="zone_4_label">Zone 4 (Drempel)</string>
     <string name="zone_5_label">Zone 5 (Anaerobic)</string>
+    <string name="zone_6_label">Zone 6 (Anaerobe capaciteit)</string>
+    <string name="zone_7_label">Zone 7 (Neuromusculair vermogen)</string>
 
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>

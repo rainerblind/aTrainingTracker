@@ -619,6 +619,8 @@
     <string name="zone_3_label">Zona 3 (Tempo)</string>
     <string name="zone_4_label">Zona 4 (Soglia)</string>
     <string name="zone_5_label">Zona 5 (Anaerobico)</string>
+    <string name="zone_6_label">Zona 6 (Capacità anaerobica)</string>
+    <string name="zone_7_label">Zona 7 (Potenza neuromuscolare)</string>
 
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>

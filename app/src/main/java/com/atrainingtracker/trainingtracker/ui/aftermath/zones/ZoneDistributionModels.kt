@@ -32,14 +32,16 @@ data class HeartRateZoneThresholds(
 )
 
 /**
- * Upper cycling power bounds in Watts for Zones 1 through 4.
- * Zone 5 corresponds to Power > z4Max.
+ * Upper cycling power bounds in Watts for Zones 1 through 6.
+ * Zone 7 corresponds to Power > z6Max (Neuromuscular Sprint Power).
  */
 data class PowerZoneThresholds(
     val z1Max: Int,
     val z2Max: Int,
     val z3Max: Int,
-    val z4Max: Int
+    val z4Max: Int,
+    val z5Max: Int,
+    val z6Max: Int
 )
 
 /**

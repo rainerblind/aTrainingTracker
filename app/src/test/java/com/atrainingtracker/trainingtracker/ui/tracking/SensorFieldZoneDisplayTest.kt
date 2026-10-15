@@ -98,4 +98,39 @@ class SensorFieldZoneDisplayTest {
 
         assertEquals(Color.Transparent, state.zoneColor)
     }
+
+    @Test
+    fun sensorFieldState_zone6AndZone7Colors_arePreserved() {
+        val zone6Color = com.atrainingtracker.trainingtracker.ui.theme.TTColor.Zone6
+        val zone7Color = com.atrainingtracker.trainingtracker.ui.theme.TTColor.Zone7
+
+        val stateZ6 = SensorFieldState(
+            configHash = 1,
+            sensorFieldId = 11,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = "Power",
+            filterDescription = "",
+            value = "400",
+            units = "W",
+            zoneColor = zone6Color
+        )
+
+        val stateZ7 = SensorFieldState(
+            configHash = 1,
+            sensorFieldId = 12,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = "Power",
+            filterDescription = "",
+            value = "600",
+            units = "W",
+            zoneColor = zone7Color
+        )
+
+        assertEquals(Color(0xFF4E342E), stateZ6.zoneColor)
+        assertEquals(Color(0xFF000000), stateZ7.zoneColor)
+    }
 }

@@ -357,6 +357,8 @@
     <string name="zone_3_label">Strefa 3 (Tempo)</string>
     <string name="zone_4_label">Strefa 4 (Próg)</string>
     <string name="zone_5_label">Strefa 5 (Beztlenowa)</string>
+    <string name="zone_6_label">Strefa 6 (Wydolność beztlenowa)</string>
+    <string name="zone_7_label">Strefa 7 (Moc nerwowo-mięśniowa)</string>
 
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>
