@@ -188,6 +188,8 @@
     <string name="position_short">poz.</string>
     <string name="power">moc</string>
     <string name="power_short">moc</string>
+    <string name="power_to_weight">Stosunek mocy do masy</string>
+    <string name="power_to_weight_short">W/kg</string>
     <string name="speed">prędkość</string>
     <string name="speed_short">pręd</string>
     <string name="current_sensors">bieżące czujniki</string>
@@ -1841,6 +1843,17 @@
     <string name="cockpit_auto_pause_badge">Autopauza</string>
     <string name="cockpit_auto_pause_resume">Wznów teraz</string>
     <string name="cockpit_speed_sensor_lost">Utracono czujnik prędkości</string>
+
+    <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
+    <string name="athlete_weight_title">Waga sportowca</string>
+    <string name="athlete_weight_label">Waga</string>
+    <string name="athlete_weight_dialog_title">Skonfiguruj wagę sportowca</string>
+    <string name="athlete_weight_save">Zapisz</string>
+    <string name="athlete_weight_unconfigured">Nieskonfigurowane</string>
+    <string name="athlete_weight_invalid">Wprowadź prawidłową wagę</string>
+    <string name="athlete_weight_card_description">Wymagane do obliczania stosunku mocy do masy w czasie rzeczywistym (W/kg).</string>
+    <string name="athlete_weight_clear">Wyczyść</string>
+    <string name="athlete_weight_edit">Edytuj</string>
 
 </resources>
 

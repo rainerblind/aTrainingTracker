@@ -87,6 +87,7 @@ public class DeviceManager {
     protected SpeedAndLocationDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_Network;
     protected AltitudeFromPressureDevice mAltitudeFromPressureDevice;
     protected VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
+    protected CyclingPowerMetricsDevice mCyclingPowerMetricsDevice;
     protected boolean mHavePressureSensor = false;
     protected IntentFilter mPairingChangedFilter = new IntentFilter(BANALService.PAIRING_CHANGED);
     // protected IntentFilter mRemoveDeviceFilter            = new IntentFilter(BANALService.REMOVE_DEVICE);
@@ -336,6 +337,14 @@ public class DeviceManager {
 
     public void createVerticalSpeedAndSlopeDevice() {
         mVerticalSpeedAndSlopeDevice = new VerticalSpeedAndSlopeDevice(mContext, mSensorManager);
+    }
+
+    public void createCyclingPowerMetricsDevice() {
+        mCyclingPowerMetricsDevice = new CyclingPowerMetricsDevice(mContext, mSensorManager);
+    }
+
+    public CyclingPowerMetricsDevice getCyclingPowerMetricsDevice() {
+        return mCyclingPowerMetricsDevice;
     }
 
     /**
@@ -750,6 +759,9 @@ public class DeviceManager {
             myDeviceList.add(mAltitudeFromPressureDevice);
         }
         myDeviceList.add(mVerticalSpeedAndSlopeDevice);
+        if (mCyclingPowerMetricsDevice != null) {
+            myDeviceList.add(mCyclingPowerMetricsDevice);
+        }
         myDeviceList.addAll(getRemoteDeviceList());
 
         return myDeviceList;

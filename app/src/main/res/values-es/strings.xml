@@ -188,6 +188,8 @@
     <string name="position_short">pos.</string>
     <string name="power">potencia</string>
     <string name="power_short">potencia</string>
+    <string name="power_to_weight">Relación potencia-peso</string>
+    <string name="power_to_weight_short">W/kg</string>
     <string name="speed">velocidad</string>
     <string name="speed_short">vel</string>
     <string name="current_sensors">sensores actuales</string>
@@ -1840,5 +1842,16 @@
     <string name="cockpit_auto_pause_badge">Pausa automática</string>
     <string name="cockpit_auto_pause_resume">Reanudar ahora</string>
     <string name="cockpit_speed_sensor_lost">Sensor de velocidad perdido</string>
+
+    <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
+    <string name="athlete_weight_title">Peso del deportista</string>
+    <string name="athlete_weight_label">Peso</string>
+    <string name="athlete_weight_dialog_title">Configurar peso del deportista</string>
+    <string name="athlete_weight_save">Guardar</string>
+    <string name="athlete_weight_unconfigured">No configurado</string>
+    <string name="athlete_weight_invalid">Por favor, introduzca un peso válido</string>
+    <string name="athlete_weight_card_description">Necesario para calcular la relación potencia-peso en tiempo real (W/kg).</string>
+    <string name="athlete_weight_clear">Borrar</string>
+    <string name="athlete_weight_edit">Editar</string>
 
 </resources>

@@ -188,6 +188,8 @@
     <string name="position_short">pos.</string>
     <string name="power">vermogen</string>
     <string name="power_short">pwr</string>
+    <string name="power_to_weight">Vermogen-gewichtsverhouding</string>
+    <string name="power_to_weight_short">W/kg</string>
     <string name="speed">snelheid</string>
     <string name="speed_short">snelh</string>
     <string name="current_sensors">huidige sensoren</string>
@@ -1840,6 +1842,17 @@
     <string name="cockpit_auto_pause_badge">Automatisch pauzeren</string>
     <string name="cockpit_auto_pause_resume">Nu hervatten</string>
     <string name="cockpit_speed_sensor_lost">Snelheidssensor verloren</string>
+
+    <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
+    <string name="athlete_weight_title">Gewicht van atleet</string>
+    <string name="athlete_weight_label">Gewicht</string>
+    <string name="athlete_weight_dialog_title">Gewicht van atleet instellen</string>
+    <string name="athlete_weight_save">Opslaan</string>
+    <string name="athlete_weight_unconfigured">Niet geconfigureerd</string>
+    <string name="athlete_weight_invalid">Voer een geldig gewicht in</string>
+    <string name="athlete_weight_card_description">Vereist voor het berekenen van de realtime vermogen-gewichtsverhouding (W/kg).</string>
+    <string name="athlete_weight_clear">Wissen</string>
+    <string name="athlete_weight_edit">Bewerken</string>
 
 </resources>
 
