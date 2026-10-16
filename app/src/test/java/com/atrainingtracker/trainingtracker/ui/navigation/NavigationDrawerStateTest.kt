@@ -90,12 +90,13 @@ class NavigationDrawerStateTest {
             R.id.drawer_routes,
             R.id.drawer_start_locations,
             R.id.drawer_my_locations,
-            // My Stuff / Equipment (5)
+            // My Stuff / Equipment (6)
             R.id.drawer_my_sensors,
             R.id.drawer_bikes,
             R.id.drawer_shoes,
             R.id.drawer_sport_types,
             R.id.drawer_training_zones,
+            R.id.drawer_athlete_profile,
             // Online Communities (3)
             R.id.drawer_strava,
             R.id.drawer_dropbox,
@@ -108,10 +109,10 @@ class NavigationDrawerStateTest {
             R.id.drawer_privacy_policy
         )
 
-        assertEquals("Navigation drawer must contain exactly 21 destinations", 21, expectedItems.size)
+        assertEquals("Navigation drawer must contain exactly 22 destinations", 22, expectedItems.size)
         // Ensure all IDs are unique non-zero resource integers
         val uniqueItems = expectedItems.toSet()
-        assertEquals("All 21 navigation items must have distinct IDs", 21, uniqueItems.size)
+        assertEquals("All 22 navigation items must have distinct IDs", 22, uniqueItems.size)
         org.junit.Assert.assertFalse(
             "drawer_search_settings must be removed from drawer destinations",
             uniqueItems.contains(R.id.drawer_search_settings)

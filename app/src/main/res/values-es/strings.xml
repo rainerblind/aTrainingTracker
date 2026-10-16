@@ -1857,4 +1857,28 @@
     <string name="athlete_weight_clear">Borrar</string>
     <string name="athlete_weight_edit">Editar</string>
 
+    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, REQ-UI-391) -->
+    <string name="drawer_athlete_profile">Perfil del deportista</string>
+    <string name="athlete_profile_title">Perfil del deportista</string>
+    <string name="athlete_profile_add_entry">Añadir medición</string>
+    <string name="athlete_profile_edit_entry">Editar medición</string>
+    <string name="athlete_profile_metric_weight">Peso</string>
+    <string name="athlete_profile_metric_hr_rest">FC reposo</string>
+    <string name="athlete_profile_metric_ftp">FTP</string>
+    <string name="athlete_profile_metric_w_per_kg">W/kg</string>
+    <string name="athlete_profile_chart_title">Evolución</string>
+    <string name="athlete_profile_range_1m">1M</string>
+    <string name="athlete_profile_range_3m">3M</string>
+    <string name="athlete_profile_range_6m">6M</string>
+    <string name="athlete_profile_range_1y">1A</string>
+    <string name="athlete_profile_range_all">Todo</string>
+    <string name="athlete_profile_history_title">Historial de mediciones</string>
+    <string name="athlete_profile_filter_all">Todo</string>
+    <string name="athlete_profile_empty_chart">No hay mediciones en el periodo seleccionado.</string>
+    <string name="athlete_profile_empty_history">Aún no hay mediciones registradas. Toca + para añadir peso, FC en reposo o FTP.</string>
+    <string name="athlete_profile_date_label">Fecha</string>
+    <string name="athlete_profile_value_label">Valor (%1$s)</string>
+    <string name="athlete_profile_delete_title">¿Eliminar medición?</string>
+    <string name="athlete_profile_delete_message">¿Eliminar %1$s (%2$s) del %3$s?</string>
+
 </resources>

@@ -385,6 +385,12 @@ fun ZoneSettingsScreen(
                     scope.launch(Dispatchers.IO) {
                         try {
                             dataStore.saveCalculatedPowerZones(ftp, cutoffs)
+                            com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
+                                .getInstance(context)
+                                .addEntry(
+                                    metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.FTP_WATTS,
+                                    value = ftp.toDouble()
+                                )
                             withContext(Dispatchers.Main) {
                                 holder.onSaveCompleted()
                                 showCalculatorDialog = false
@@ -401,6 +407,14 @@ fun ZoneSettingsScreen(
                     scope.launch(Dispatchers.IO) {
                         try {
                             dataStore.saveCalculatedHeartRateZones(zType, hrMax, hrRest, method, cutoffs)
+                            if (hrRest != null && hrRest > 0) {
+                                com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
+                                    .getInstance(context)
+                                    .addEntry(
+                                        metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.HR_REST_BPM,
+                                        value = hrRest.toDouble()
+                                    )
+                            }
                             withContext(Dispatchers.Main) {
                                 holder.onSaveCompleted()
                                 showCalculatorDialog = false

@@ -1856,5 +1856,29 @@
     <string name="athlete_weight_clear">Wissen</string>
     <string name="athlete_weight_edit">Bewerken</string>
 
+    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, REQ-UI-391) -->
+    <string name="drawer_athlete_profile">Atleetprofiel</string>
+    <string name="athlete_profile_title">Atleetprofiel</string>
+    <string name="athlete_profile_add_entry">Meting toevoegen</string>
+    <string name="athlete_profile_edit_entry">Meting bewerken</string>
+    <string name="athlete_profile_metric_weight">Gewicht</string>
+    <string name="athlete_profile_metric_hr_rest">Rust-HF</string>
+    <string name="athlete_profile_metric_ftp">FTP</string>
+    <string name="athlete_profile_metric_w_per_kg">W/kg</string>
+    <string name="athlete_profile_chart_title">Verloop</string>
+    <string name="athlete_profile_range_1m">1M</string>
+    <string name="athlete_profile_range_3m">3M</string>
+    <string name="athlete_profile_range_6m">6M</string>
+    <string name="athlete_profile_range_1y">1J</string>
+    <string name="athlete_profile_range_all">Alles</string>
+    <string name="athlete_profile_history_title">Metinggeschiedenis</string>
+    <string name="athlete_profile_filter_all">Alles</string>
+    <string name="athlete_profile_empty_chart">Geen metingen in de geselecteerde periode.</string>
+    <string name="athlete_profile_empty_history">Nog geen metingen vastgelegd. Tik op + om gewicht, rusthartslag of FTP in te voeren.</string>
+    <string name="athlete_profile_date_label">Datum</string>
+    <string name="athlete_profile_value_label">Waarde (%1$s)</string>
+    <string name="athlete_profile_delete_title">Meting verwijderen?</string>
+    <string name="athlete_profile_delete_message">%1$s (%2$s) van %3$s verwijderen?</string>
+
 </resources>
 

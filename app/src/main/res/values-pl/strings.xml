@@ -1857,5 +1857,29 @@
     <string name="athlete_weight_clear">Wyczyść</string>
     <string name="athlete_weight_edit">Edytuj</string>
 
+    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, REQ-UI-391) -->
+    <string name="drawer_athlete_profile">Profil sportowca</string>
+    <string name="athlete_profile_title">Profil sportowca</string>
+    <string name="athlete_profile_add_entry">Dodaj pomiar</string>
+    <string name="athlete_profile_edit_entry">Edytuj pomiar</string>
+    <string name="athlete_profile_metric_weight">Waga</string>
+    <string name="athlete_profile_metric_hr_rest">HR spocz.</string>
+    <string name="athlete_profile_metric_ftp">FTP</string>
+    <string name="athlete_profile_metric_w_per_kg">W/kg</string>
+    <string name="athlete_profile_chart_title">Przebieg</string>
+    <string name="athlete_profile_range_1m">1M</string>
+    <string name="athlete_profile_range_3m">3M</string>
+    <string name="athlete_profile_range_6m">6M</string>
+    <string name="athlete_profile_range_1y">1R</string>
+    <string name="athlete_profile_range_all">Wszystko</string>
+    <string name="athlete_profile_history_title">Historia pomiarów</string>
+    <string name="athlete_profile_filter_all">Wszystko</string>
+    <string name="athlete_profile_empty_chart">Brak pomiarów w wybranym okresie.</string>
+    <string name="athlete_profile_empty_history">Brak zapisanych pomiarów. Dotknij +, aby dodać wagę, tętno spoczynkowe lub FTP.</string>
+    <string name="athlete_profile_date_label">Data</string>
+    <string name="athlete_profile_value_label">Wartość (%1$s)</string>
+    <string name="athlete_profile_delete_title">Usunąć pomiar?</string>
+    <string name="athlete_profile_delete_message">Usunąć %1$s (%2$s) z %3$s?</string>
+
 </resources>
 

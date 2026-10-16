@@ -2050,6 +2050,30 @@
     <string name="athlete_weight_clear">Clear</string>
     <string name="athlete_weight_edit">Edit</string>
 
+    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, REQ-UI-391) -->
+    <string name="drawer_athlete_profile">Athlete Profile</string>
+    <string name="athlete_profile_title">Athlete Profile</string>
+    <string name="athlete_profile_add_entry">Add Measurement</string>
+    <string name="athlete_profile_edit_entry">Edit Measurement</string>
+    <string name="athlete_profile_metric_weight">Weight</string>
+    <string name="athlete_profile_metric_hr_rest">Resting HR</string>
+    <string name="athlete_profile_metric_ftp">FTP</string>
+    <string name="athlete_profile_metric_w_per_kg">W/kg</string>
+    <string name="athlete_profile_chart_title">Progression</string>
+    <string name="athlete_profile_range_1m">1M</string>
+    <string name="athlete_profile_range_3m">3M</string>
+    <string name="athlete_profile_range_6m">6M</string>
+    <string name="athlete_profile_range_1y">1Y</string>
+    <string name="athlete_profile_range_all">All</string>
+    <string name="athlete_profile_history_title">Measurement History</string>
+    <string name="athlete_profile_filter_all">All</string>
+    <string name="athlete_profile_empty_chart">No measurements in selected time range.</string>
+    <string name="athlete_profile_empty_history">No measurements recorded yet. Tap + to log Weight, Resting HR, or FTP.</string>
+    <string name="athlete_profile_date_label">Date</string>
+    <string name="athlete_profile_value_label">Value (%1$s)</string>
+    <string name="athlete_profile_delete_title">Delete measurement?</string>
+    <string name="athlete_profile_delete_message">Delete %1$s (%2$s) from %3$s?</string>
+
 </resources>
 
 

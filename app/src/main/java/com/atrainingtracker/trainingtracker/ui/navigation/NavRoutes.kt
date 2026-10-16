@@ -59,6 +59,7 @@ object NavRoutes {
     const val TRAINING_ZONES_PATTERN = "training_zones?initialTab={initialTab}&promptReason={promptReason}"
     const val ARG_INITIAL_TAB = "initialTab"
     const val ARG_PROMPT_REASON = "promptReason"
+    const val ATHLETE_PROFILE = "athlete_profile"
     const val BACKUP_RESTORE = "backup_restore"
     const val ADVANCED_SETTINGS = "advanced_settings"
 
@@ -103,6 +104,7 @@ object NavRoutes {
         R.id.drawer_shoes -> SHOES
         R.id.drawer_sport_types -> SPORT_TYPES
         R.id.drawer_training_zones -> TRAINING_ZONES
+        R.id.drawer_athlete_profile -> ATHLETE_PROFILE
         R.id.drawer_backup_restore -> BACKUP_RESTORE
         R.id.drawer_advanced_tuning -> ADVANCED_SETTINGS
         else -> null
@@ -125,6 +127,7 @@ object NavRoutes {
         SHOES -> R.id.drawer_shoes
         SPORT_TYPES -> R.id.drawer_sport_types
         TRAINING_ZONES -> R.id.drawer_training_zones
+        ATHLETE_PROFILE -> R.id.drawer_athlete_profile
         BACKUP_RESTORE -> R.id.drawer_backup_restore
         ADVANCED_SETTINGS -> R.id.drawer_advanced_tuning
         else -> R.id.drawer_start_tracking
