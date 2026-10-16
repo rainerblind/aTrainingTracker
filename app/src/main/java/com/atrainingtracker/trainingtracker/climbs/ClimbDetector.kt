@@ -18,6 +18,10 @@
 
 package com.atrainingtracker.trainingtracker.climbs
 
+import android.content.Context
+import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import java.util.Locale
 import kotlin.math.max
@@ -49,7 +53,8 @@ object ClimbDetector {
         minLengthMeters: Double = DEFAULT_MIN_LENGTH_METERS,
         minGradePercent: Double = DEFAULT_MIN_GRADE_PERCENT,
         minGainMeters: Double = DEFAULT_MIN_GAIN_METERS,
-        routeId: Long? = null
+        routeId: Long? = null,
+        context: Context? = null
     ): List<Climb> {
         if (points.size < 2) return emptyList()
 
@@ -107,7 +112,10 @@ object ClimbDetector {
                 val maxGrade = calculateMaxGrade(climbPoints)
                 val score = dist * avgGrade
                 val category = ClimbCategory.fromScore(score)
-                val name = String.format(Locale.US, "Anstieg %.1f km @ %.1f%%", dist / 1000.0, avgGrade)
+                val appContext = context ?: TrainingApplication.getAppContext()
+                val climbTitle = appContext?.getString(R.string.climb_title) ?: "Climb"
+                val formattedDistance = DistanceFormatter().format_with_units(dist)
+                val name = "$climbTitle $formattedDistance @ ${String.format(Locale.US, "%.1f%%", avgGrade)}"
 
                 climbs.add(
                     Climb(

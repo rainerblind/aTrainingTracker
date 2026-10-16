@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -109,7 +110,12 @@ fun SensorsGpsFilterSection(
 
         TuningSliderItem(
             title = stringResource(R.string.tuning_slope_min_speed_title),
-            valueText = String.format(Locale.getDefault(), "%.1f m/s (%.1f km/h)", slopeMinSpeed, slopeMinSpeed * 3.6f),
+            valueText = String.format(
+                Locale.getDefault(),
+                "%.1f m/s (%s)",
+                slopeMinSpeed,
+                SpeedFormatter().format_with_units(slopeMinSpeed.toDouble())
+            ),
             helperText = stringResource(R.string.tuning_slope_min_speed_desc),
             defaultText = stringResource(R.string.tuning_default_format, "0.5 m/s"),
             value = slopeMinSpeed,

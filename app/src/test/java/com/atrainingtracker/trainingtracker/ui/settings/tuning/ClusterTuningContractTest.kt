@@ -123,7 +123,6 @@ class ClusterTuningContractTest {
         val content = contentFile.readText()
         assertTrue("Must declare ClusterTuningContent composable", content.contains("fun ClusterTuningContent("))
         assertTrue("ClusterTuningContent must support enabled parameter", content.contains("enabled: Boolean = true"))
-        assertTrue("Must declare TuningSlider composable", content.contains("fun TuningSlider("))
     }
 
     @Test
@@ -142,10 +141,9 @@ class ClusterTuningContractTest {
         )
 
         // Verify that raw Switch calls within ClusterTuningContent have been eliminated
-        val bodyBeforeTuningSlider = content.substringBefore("fun TuningSlider(")
         assertFalse(
             "ClusterTuningContent must not instantiate raw Switch directly; use TuningToggleItem (REQ-SET-077)",
-            bodyBeforeTuningSlider.contains("Switch(")
+            content.contains("Switch(")
         )
     }
 
@@ -179,19 +177,50 @@ class ClusterTuningContractTest {
     }
 
     @Test
-    fun clusterTuningContent_tuningSliderIsDeprecatedWithFullyQualifiedReplaceWith() {
+    fun clusterTuningContent_deadTuningSliderIsCompletelyRemoved() {
         val contentFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterTuningContent.kt")
         assertTrue("ClusterTuningContent.kt must exist", contentFile.exists())
 
         val content = contentFile.readText()
-        assertTrue(
-            "TuningSlider must be annotated with @Deprecated",
-            content.contains("@Deprecated(")
+        assertFalse(
+            "ClusterTuningContent must NOT declare fun TuningSlider (ATT-3575, Rule 36)",
+            content.contains("fun TuningSlider(")
         )
+        assertFalse(
+            "ClusterTuningContent must NOT contain @Deprecated TuningSlider",
+            content.contains("Use TuningSliderItem from TuningFormControls.kt instead")
+        )
+    }
+
+    @Test
+    fun clusterTuning_noOrphanedTuningSliderReferencesInUiPackage() {
+        val uiDir = sequenceOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui")
+        ).firstOrNull { it.exists() } ?: File("app/src/main/java/com/atrainingtracker/trainingtracker/ui")
+
+        assertTrue("UI source directory must exist: ${uiDir.path}", uiDir.exists())
+
+        val orphanedReferences = mutableListOf<String>()
+        uiDir.walkTopDown()
+            .filter { it.isFile && (it.extension == "kt" || it.extension == "java") }
+            .forEach { file ->
+                file.useLines { lines ->
+                    lines.forEachIndexed { idx, line ->
+                        val trimmed = line.trim()
+                        if (!trimmed.startsWith("//") && !trimmed.startsWith("/*") && !trimmed.startsWith("*")) {
+                            if (trimmed.contains("TuningSlider(") && !trimmed.contains("TuningSliderItem(")) {
+                                orphanedReferences.add("${file.name}:${idx + 1}: $trimmed")
+                            }
+                        }
+                    }
+                }
+            }
+
         assertTrue(
-            "Deprecated annotation must include fully qualified ReplaceWith import",
-            content.contains("ReplaceWith(") &&
-                    content.contains("\"com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem\"")
+            "Found orphaned TuningSlider references in UI package:\n${orphanedReferences.joinToString("\n")}",
+            orphanedReferences.isEmpty()
         )
     }
 
