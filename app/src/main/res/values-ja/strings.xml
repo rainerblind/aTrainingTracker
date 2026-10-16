@@ -1836,9 +1836,10 @@
     <string name="athlete_weight_clear">クリア</string>
     <string name="athlete_weight_edit">編集</string>
 
-    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, REQ-UI-391) -->
-    <string name="drawer_athlete_profile">アスリートプロフィール</string>
-    <string name="athlete_profile_title">アスリートプロフィール</string>
+    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, ATT-3851, REQ-UI-391, REQ-UI-397) -->
+    <string name="drawer_athlete_profile">プロフィールとゾーン</string>
+    <string name="athlete_profile_title">プロフィールとゾーン</string>
+    <string name="athlete_profile_tab_profile">プロフィール</string>
     <string name="athlete_profile_add_entry">測定値を追加</string>
     <string name="athlete_profile_edit_entry">測定値を編集</string>
     <string name="athlete_profile_metric_weight">体重</string>

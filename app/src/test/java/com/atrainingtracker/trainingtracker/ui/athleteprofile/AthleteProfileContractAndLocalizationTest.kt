@@ -85,6 +85,7 @@ class AthleteProfileContractAndLocalizationTest {
         val requiredKeys = listOf(
             "drawer_athlete_profile",
             "athlete_profile_title",
+            "athlete_profile_tab_profile",
             "athlete_profile_add_entry",
             "athlete_profile_edit_entry",
             "athlete_profile_metric_weight",
@@ -130,7 +131,7 @@ class AthleteProfileContractAndLocalizationTest {
     }
 
     @Test
-    fun `AthleteProfileScreen applies WindowInsets navigationBars to LazyColumn bottom contentPadding (Rule 41)`() {
+    fun `AthleteProfileScreen applies WindowInsets navigationBars to LazyColumn bottom contentPadding and hosts 4 Profile and Zones tabs (Rule 41, REQ-UI-397)`() {
         val screenFile = File(
             resolveModuleRoot(),
             "src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileScreen.kt"
@@ -161,6 +162,24 @@ class AthleteProfileContractAndLocalizationTest {
         assertTrue(
             "AthleteProfileContent header row must retain .statusBarsPadding()",
             source.contains(".statusBarsPadding()")
+        )
+        assertTrue(
+            "AthleteProfileContent must host PrimaryScrollableTabRow and HorizontalPager for Profile & Zones tabs",
+            source.contains("PrimaryScrollableTabRow(") && source.contains("HorizontalPager(")
+        )
+        assertTrue(
+            "AthleteProfileContent must include all 4 tab titles (Profile, HR Run, HR Bike, Power Bike)",
+            source.contains("R.string.athlete_profile_tab_profile") &&
+                source.contains("R.string.tab_hr_run") &&
+                source.contains("R.string.tab_hr_bike") &&
+                source.contains("R.string.tab_pwr_bike")
+        )
+        assertTrue(
+            "AthleteProfileContent must embed ZoneProfileTabContent for HR_RUN, HR_BIKE, and PWR_BIKE",
+            source.contains("ZoneProfileTabContent(") &&
+                source.contains("ZoneType.HR_RUN") &&
+                source.contains("ZoneType.HR_BIKE") &&
+                source.contains("ZoneType.PWR_BIKE")
         )
     }
 }

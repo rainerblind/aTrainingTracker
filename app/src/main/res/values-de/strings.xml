@@ -1942,9 +1942,10 @@
     <string name="athlete_weight_clear">Löschen</string>
     <string name="athlete_weight_edit">Bearbeiten</string>
 
-    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, REQ-UI-391) -->
-    <string name="drawer_athlete_profile">Athleten-Profil</string>
-    <string name="athlete_profile_title">Athleten-Profil</string>
+    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, ATT-3851, REQ-UI-391, REQ-UI-397) -->
+    <string name="drawer_athlete_profile">Profil &amp; Zonen</string>
+    <string name="athlete_profile_title">Profil &amp; Zonen</string>
+    <string name="athlete_profile_tab_profile">Profil</string>
     <string name="athlete_profile_add_entry">Messwert hinzufügen</string>
     <string name="athlete_profile_edit_entry">Messwert bearbeiten</string>
     <string name="athlete_profile_metric_weight">Gewicht</string>

@@ -1857,9 +1857,10 @@
     <string name="athlete_weight_clear">Cancella</string>
     <string name="athlete_weight_edit">Modifica</string>
 
-    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, REQ-UI-391) -->
-    <string name="drawer_athlete_profile">Profilo atleta</string>
-    <string name="athlete_profile_title">Profilo atleta</string>
+    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, ATT-3851, REQ-UI-391, REQ-UI-397) -->
+    <string name="drawer_athlete_profile">Profilo e zone</string>
+    <string name="athlete_profile_title">Profilo e zone</string>
+    <string name="athlete_profile_tab_profile">Profilo</string>
     <string name="athlete_profile_add_entry">Aggiungi misurazione</string>
     <string name="athlete_profile_edit_entry">Modifica misurazione</string>
     <string name="athlete_profile_metric_weight">Peso</string>

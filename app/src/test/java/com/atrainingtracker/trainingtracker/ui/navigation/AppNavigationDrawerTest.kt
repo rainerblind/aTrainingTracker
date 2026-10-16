@@ -277,24 +277,30 @@ class AppNavigationDrawerTest {
         }
     }
 
-    // --- TST-SET-063: Expert Settings Drawer Grouping Verification (ATT-1646 / REQ-SET-074) ---
+    // --- TST-UI-360 / REQ-UI-397.1 (superseding ATT-1646): Advanced Tuning merged at bottom of Settings ---
 
     @Test
     fun testDrawerGroups_expertSettings_placedInDedicatedBottomGroup() {
         val groups = createDrawerGroups(R.string.tab_start)
         assertTrue("Drawer must define groups", groups.isNotEmpty())
+        assertFalse(
+            "Standalone Expert Settings group must be removed (ATT-3851 / REQ-UI-397.1)",
+            groups.any { it.titleRes == R.string.drawer__expert_settings }
+        )
 
         val lastGroup = groups.last()
         assertEquals(
-            "Final drawer group must be Expert Settings",
-            R.string.drawer__expert_settings,
+            "Final drawer group must be Settings",
+            R.string.drawer__settings,
             lastGroup.titleRes
         )
 
-        val advancedTuningItem = lastGroup.items.firstOrNull { it.id == R.id.drawer_advanced_tuning }
-        assertTrue(
-            "Expert Settings group must contain drawer_advanced_tuning",
-            advancedTuningItem != null
+        val advancedTuningItem = lastGroup.items.lastOrNull()
+        assertTrue("Settings group must have items", advancedTuningItem != null)
+        assertEquals(
+            "Final item of Settings group must be drawer_advanced_tuning",
+            R.id.drawer_advanced_tuning,
+            advancedTuningItem?.id
         )
         assertEquals(
             "Advanced tuning item must reference advanced_tuning_title",
@@ -310,8 +316,8 @@ class AppNavigationDrawerTest {
         assertTrue("General settings group must exist", settingsGroup != null)
 
         val hasAdvancedTuning = settingsGroup!!.items.any { it.id == R.id.drawer_advanced_tuning }
-        assertFalse(
-            "General settings group must not contain drawer_advanced_tuning (relocated to dedicated expert group)",
+        assertTrue(
+            "General settings group must contain drawer_advanced_tuning at the bottom (ATT-3851 / REQ-UI-397.1)",
             hasAdvancedTuning
         )
     }
