@@ -130,7 +130,16 @@ class SensorFieldZoneDisplayTest {
             zoneColor = zone7Color
         )
 
-        assertEquals(Color(0xFF4E342E), stateZ6.zoneColor)
+        assertEquals(Color(0xFF8B5A2B), stateZ6.zoneColor)
         assertEquals(Color(0xFF000000), stateZ7.zoneColor)
+
+        val contrastRatio = com.atrainingtracker.trainingtracker.ui.theme.TTColor.calculateContrastRatio(
+            zone6Color,
+            zone7Color
+        )
+        assertTrue(
+            "Zone 6 (#8B5A2B) vs Zone 7 (#000000) contrast ratio ($contrastRatio) must be >= 3.0:1",
+            contrastRatio >= 3.0
+        )
     }
 }

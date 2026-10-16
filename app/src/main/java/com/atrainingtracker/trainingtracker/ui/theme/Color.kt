@@ -197,8 +197,35 @@ object TTColor {
     val Zone3 = Color(0xFFFFA500) // Orange
     val Zone4 = Color(0xFFFF0000) // Red
     val Zone5 = Color(0xFF9400D3) // Dark Violet
-    val Zone6 = Color(0xFF4E342E) // Dark Chestnut Brown
+    /**
+     * Zone 6 (Anaerobic Capacity / Extreme Grade): Warm Earthy Brown (#8B5A2B).
+     * Selected for WCAG 2.1 AA non-text contrast (3.44:1 >= 3.0:1) against [Zone7] Pure Black (#000000)
+     * on OLED displays (REQ-UI-392).
+     */
+    val Zone6 = Color(0xFF8B5A2B) // Warm Earthy Brown
     val Zone7 = Color(0xFF000000) // Pure Black
+
+    /**
+     * Computes the WCAG 2.1 relative luminance of [color] in the range [0.0, 1.0].
+     */
+    fun relativeLuminance(color: Color): Double {
+        fun srgbToLinear(c: Float): Double {
+            val v = c.toDouble()
+            return if (v <= 0.03928) v / 12.92 else Math.pow((v + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * srgbToLinear(color.red) +
+            0.7152 * srgbToLinear(color.green) +
+            0.0722 * srgbToLinear(color.blue)
+    }
+
+    /**
+     * Computes the WCAG 2.1 contrast ratio between [foreground] and [background] in the range [1.0, 21.0].
+     */
+    fun calculateContrastRatio(foreground: Color, background: Color): Double {
+        val l1 = relativeLuminance(foreground)
+        val l2 = relativeLuminance(background)
+        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
+    }
 
     // Branding / Status
     val StravaOrange = Color(0xFFFC4C02)

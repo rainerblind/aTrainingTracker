@@ -99,7 +99,7 @@ class SensorFieldZoneGaugeTest {
             filterDescription = "3s avg",
             value = "410",
             units = "W",
-            zoneColor = Color(0xFF4E342E),
+            zoneColor = Color(0xFF8B5A2B),
             zoneDisplayOptions = ZoneDisplayOptions(showGauge = true),
             zoneGaugeState = gaugeState
         )
