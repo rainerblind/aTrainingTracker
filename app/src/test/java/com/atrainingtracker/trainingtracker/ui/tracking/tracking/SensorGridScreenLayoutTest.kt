@@ -102,9 +102,9 @@ class SensorGridScreenLayoutTest {
         val content = file.readText()
 
         assertTrue(
-            "ElevationProfile rendering must be guarded by path points size >= 2 to prevent empty canvas stretching (TST-UI-306.4 / TST-UI-315.3)",
-            content.contains("state.showElevationProfile && state.pathPoints.size >= 2") ||
-            content.contains("state.showElevationProfile && resolvedProfile.pathPoints.size >= 2")
+            "ElevationProfile rendering must be gated by state.showElevationProfile with showEmptyState = true for canonical 70.dp empty state (TST-UI-306.4 / REQ-UI-394 / ATT-3779)",
+            content.contains("if (state.showElevationProfile)") &&
+            content.contains("showEmptyState = true")
         )
     }
 

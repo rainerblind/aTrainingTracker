@@ -325,16 +325,15 @@ fun ElevationProfile(
     fixedHeight: androidx.compose.ui.unit.Dp? = null,
     showEmptyState: Boolean = false
 ) {
-    if (pathPoints.size < 2) {
-        if (showEmptyState) {
-            ElevationProfileEmptyState(
-                fixedHeight = fixedHeight,
-                fillParentHeight = fillParentHeight,
-                modifier = modifier
-            )
-        }
+    if (pathPoints.size < 2 && showEmptyState) {
+        ElevationProfileEmptyState(
+            fixedHeight = fixedHeight,
+            fillMaxContainerHeight = fillParentHeight,
+            modifier = modifier
+        )
         return
     }
+    if (pathPoints.size < 2) return
 
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
@@ -1201,7 +1200,7 @@ private fun GradeLegendItem(
 @Composable
 internal fun ElevationProfileEmptyState(
     fixedHeight: Dp? = null,
-    fillParentHeight: Boolean = false,
+    fillMaxContainerHeight: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val targetHeight = fixedHeight ?: calculateElevationProfileHeight(0.0)
@@ -1211,7 +1210,7 @@ internal fun ElevationProfileEmptyState(
         modifier = modifier
             .fillMaxWidth()
             .then(
-                if (fillParentHeight) Modifier.fillMaxHeight()
+                if (fillMaxContainerHeight) Modifier.fillMaxHeight()
                 else Modifier.height(targetHeight)
             ),
         contentAlignment = Alignment.Center

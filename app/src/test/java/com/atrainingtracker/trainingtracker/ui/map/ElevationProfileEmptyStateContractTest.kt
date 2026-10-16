@@ -61,7 +61,7 @@ class ElevationProfileEmptyStateContractTest {
         )
         assertTrue(
             "ElevationProfile must invoke ElevationProfileEmptyState when pathPoints.size < 2 && showEmptyState",
-            content.contains("if (showEmptyState)") && content.contains("ElevationProfileEmptyState(")
+            content.contains("if (pathPoints.size < 2 && showEmptyState)") && content.contains("ElevationProfileEmptyState(")
         )
         assertTrue(
             "ElevationProfileEmptyState must use canonical calculateElevationProfileHeight(0.0)",
