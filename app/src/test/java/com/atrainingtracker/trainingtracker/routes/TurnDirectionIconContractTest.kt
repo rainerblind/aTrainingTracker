@@ -70,6 +70,12 @@ class TurnDirectionIconContractTest {
             val file = File(resDrawableDir, fileName)
             assertTrue("Drawable file $fileName must exist for $direction", file.exists())
 
+            val rawContent = file.readText()
+            assertTrue(
+                "$fileName must contain TST-UI-352 contract safety header comment",
+                rawContent.contains("TST-UI-352")
+            )
+
             val doc = dBuilder.parse(file)
             val root = doc.documentElement
             assertEquals("Root element of $fileName must be vector", "vector", root.nodeName)
@@ -82,6 +88,11 @@ class TurnDirectionIconContractTest {
             val paths = root.getElementsByTagName("path")
             assertEquals("$fileName must contain exactly one path node", 1, paths.length)
             val pathElement = paths.item(0) as Element
+            assertEquals(
+                "$fileName must use standard #FF1976D2 fillColor for Layoutlib/Compose @Preview compatibility (runtime tint applied by Icon composable)",
+                "#FF1976D2",
+                pathElement.getAttribute("android:fillColor")
+            )
             val pathData = pathElement.getAttribute("android:pathData")
             assertNotNull("pathData must not be null in $fileName", pathData)
             assertTrue("pathData must not be empty in $fileName", pathData.isNotBlank())
@@ -423,8 +434,13 @@ class TurnDirectionIconContractTest {
         }
     }
 
+    /**
+     * Evaluates all absolute milestone coordinates (vertices and Bezier control points) along an SVG path.
+     * Supports M/m, L/l, H/h, V/v, C/c, S/s (with reflected first control point), Z/z, scientific notation,
+     * and implicit command repetition, failing fast on any unrecognized command token.
+     */
     private fun evaluateAbsoluteMilestones(pathData: String): List<Pair<Double, Double>> {
-        val pattern = Pattern.compile("([A-Za-z]|[-+]?[0-9]*\\.?[0-9]+)")
+        val pattern = Pattern.compile("([A-Za-z]|[-+]?[0-9]*\\.?[0-9]+(?:[eE][-+]?[0-9]+)?)")
         val matcher = pattern.matcher(pathData)
         val tokens = mutableListOf<String>()
         while (matcher.find()) {
@@ -434,39 +450,75 @@ class TurnDirectionIconContractTest {
         val milestones = mutableListOf<Pair<Double, Double>>()
         var x = 0.0
         var y = 0.0
+        var lastCtrlX = 0.0
+        var lastCtrlY = 0.0
+        var lastCmd = ""
         var i = 0
 
         while (i < tokens.size) {
-            when (tokens[i++]) {
+            val token = tokens[i]
+            val cmd = if (token.length == 1 && token[0].isLetter()) {
+                i++
+                token
+            } else {
+                when (lastCmd) {
+                    "M" -> "L"
+                    "m" -> "l"
+                    else -> lastCmd
+                }
+            }
+
+            when (cmd) {
                 "M" -> {
                     x = tokens[i++].toDouble()
                     y = tokens[i++].toDouble()
+                    lastCtrlX = x
+                    lastCtrlY = y
+                    milestones.add(Pair(x, y))
+                }
+                "m" -> {
+                    x += tokens[i++].toDouble()
+                    y += tokens[i++].toDouble()
+                    lastCtrlX = x
+                    lastCtrlY = y
                     milestones.add(Pair(x, y))
                 }
                 "V" -> {
                     y = tokens[i++].toDouble()
+                    lastCtrlX = x
+                    lastCtrlY = y
                     milestones.add(Pair(x, y))
                 }
                 "v" -> {
                     y += tokens[i++].toDouble()
+                    lastCtrlX = x
+                    lastCtrlY = y
                     milestones.add(Pair(x, y))
                 }
                 "H" -> {
                     x = tokens[i++].toDouble()
+                    lastCtrlX = x
+                    lastCtrlY = y
                     milestones.add(Pair(x, y))
                 }
                 "h" -> {
                     x += tokens[i++].toDouble()
+                    lastCtrlX = x
+                    lastCtrlY = y
                     milestones.add(Pair(x, y))
                 }
                 "l" -> {
                     x += tokens[i++].toDouble()
                     y += tokens[i++].toDouble()
+                    lastCtrlX = x
+                    lastCtrlY = y
                     milestones.add(Pair(x, y))
                 }
                 "L" -> {
                     x = tokens[i++].toDouble()
                     y = tokens[i++].toDouble()
+                    lastCtrlX = x
+                    lastCtrlY = y
                     milestones.add(Pair(x, y))
                 }
                 "c" -> {
@@ -477,11 +529,17 @@ class TurnDirectionIconContractTest {
                     val dx = tokens[i++].toDouble()
                     val dy = tokens[i++].toDouble()
 
-                    // Add both control points and curve endpoint
-                    milestones.add(Pair(x + dx1, y + dy1))
-                    milestones.add(Pair(x + dx2, y + dy2))
+                    val x1 = x + dx1
+                    val y1 = y + dy1
+                    val x2 = x + dx2
+                    val y2 = y + dy2
                     x += dx
                     y += dy
+                    lastCtrlX = x2
+                    lastCtrlY = y2
+
+                    milestones.add(Pair(x1, y1))
+                    milestones.add(Pair(x2, y2))
                     milestones.add(Pair(x, y))
                 }
                 "C" -> {
@@ -491,35 +549,52 @@ class TurnDirectionIconContractTest {
                     val y2 = tokens[i++].toDouble()
                     x = tokens[i++].toDouble()
                     y = tokens[i++].toDouble()
+                    lastCtrlX = x2
+                    lastCtrlY = y2
 
                     milestones.add(Pair(x1, y1))
                     milestones.add(Pair(x2, y2))
                     milestones.add(Pair(x, y))
                 }
                 "s" -> {
+                    val x1 = if (lastCmd in listOf("c", "C", "s", "S")) 2.0 * x - lastCtrlX else x
+                    val y1 = if (lastCmd in listOf("c", "C", "s", "S")) 2.0 * y - lastCtrlY else y
                     val dx2 = tokens[i++].toDouble()
                     val dy2 = tokens[i++].toDouble()
                     val dx = tokens[i++].toDouble()
                     val dy = tokens[i++].toDouble()
-
-                    milestones.add(Pair(x + dx2, y + dy2))
+                    val x2 = x + dx2
+                    val y2 = y + dy2
                     x += dx
                     y += dy
+                    lastCtrlX = x2
+                    lastCtrlY = y2
+
+                    milestones.add(Pair(x1, y1))
+                    milestones.add(Pair(x2, y2))
                     milestones.add(Pair(x, y))
                 }
                 "S" -> {
+                    val x1 = if (lastCmd in listOf("c", "C", "s", "S")) 2.0 * x - lastCtrlX else x
+                    val y1 = if (lastCmd in listOf("c", "C", "s", "S")) 2.0 * y - lastCtrlY else y
                     val x2 = tokens[i++].toDouble()
                     val y2 = tokens[i++].toDouble()
                     x = tokens[i++].toDouble()
                     y = tokens[i++].toDouble()
+                    lastCtrlX = x2
+                    lastCtrlY = y2
 
+                    milestones.add(Pair(x1, y1))
                     milestones.add(Pair(x2, y2))
                     milestones.add(Pair(x, y))
                 }
                 "z", "Z" -> {
-                    // Close loop
+                    lastCtrlX = x
+                    lastCtrlY = y
                 }
+                else -> throw IllegalArgumentException("Unsupported SVG path command: '$cmd' in pathData '$pathData'")
             }
+            lastCmd = cmd
         }
 
         return milestones
