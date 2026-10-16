@@ -43,7 +43,7 @@ class TuningPreferencesDataStoreAutoPauseTest {
         // Debounce ranges & defaults
         assertEquals(2, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
         assertEquals(1, TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
-        assertEquals(10, TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
+        assertEquals(20, TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
 
         assertEquals(5, TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC)
         assertEquals(1, TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC)
@@ -104,9 +104,9 @@ class TuningPreferencesDataStoreAutoPauseTest {
         assertEquals(5, 10.coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD))
         assertEquals(3, 3.coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD))
 
-        // Bike debounce 1..10
+        // Bike debounce 1..20
         assertEquals(1, 0.coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC))
-        assertEquals(10, 15.coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC))
+        assertEquals(20, 25.coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC))
 
         // Run debounce 1..20
         assertEquals(1, 0.coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC))

@@ -14,7 +14,7 @@
 ATT-3677 decouples the auto-pause speed thresholds and debounce delay windows so that athletes can independently configure Cycling, Running, and Other sports in Advanced Tuning. 
 
 Key technical accomplishments:
-- **Integer-Only Sliders**: Replaced fractional float stepping with strictly whole integer ranges aligned with the user product vision ($1..5\text{ user units}$ pause speed threshold; $1..10\text{ s}$ Bike, $1..20\text{ s}$ Run, $1..60\text{ s}$ Other debounce delay).
+- **Integer-Only Sliders**: Replaced fractional float stepping with strictly whole integer ranges aligned with the user product vision ($1..5\text{ user units}$ pause speed threshold; $1..20\text{ s}$ Bike, $1..20\text{ s}$ Run, $1..60\text{ s}$ Other debounce delay).
 - **Metric & Imperial Localization**: Unit-aware thresholds step in whole units ($1..5\text{ km/h}$ Metric, $1..5\text{ mph}$ Imperial) with tailored defaults (Bike: $3\text{ km/h}$ / $2\text{ mph}$; Run: $2\text{ km/h}$ / $1\text{ mph}$; Other: $1\text{ km/h}$ / $1\text{ mph}$).
 - **Anti-Chatter Hysteresis Invariance**: Parameterized physical ceiling ($6.0\text{ km/h}$ Metric, $6.0\text{ mph}$ Imperial) prevents boundary inversion where resume speed could otherwise fall below pause speed under Imperial units.
 - **1Hz Telemetry Loop Optimization**: Integrated a 5-second TTL in-memory cache with immediate reactive invalidation (`TrackerService.invalidateAutoPauseCache()`) on preference updates and global unit switches to prevent blocking DataStore reads on the 1Hz telemetry sampling tick.
@@ -39,7 +39,7 @@ Key technical accomplishments:
 - **`TuningPreferencesDataStore.kt`**:
   - Added 6 new integer keys:
     - `KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD` (1..5)
-    - `KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC` (1..10)
+    - `KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC` (1..20)
     - `KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD` (1..5)
     - `KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC` (1..20)
     - `KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD` (1..5)

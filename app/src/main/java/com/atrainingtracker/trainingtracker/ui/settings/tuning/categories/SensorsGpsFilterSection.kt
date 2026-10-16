@@ -176,7 +176,7 @@ fun SensorsGpsFilterSection(
                     value = autoPauseBikeDebounceSec.toFloat(),
                     onValueChange = { onAutoPauseBikeDebounceSecChange?.invoke(it.roundToInt()) },
                     valueRange = TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC.toFloat()..TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC.toFloat(),
-                    steps = 8
+                    steps = 18
                 )
             }
         }
