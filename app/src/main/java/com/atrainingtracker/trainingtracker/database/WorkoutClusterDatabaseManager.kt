@@ -29,8 +29,96 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.google.android.gms.maps.model.LatLng
 import org.json.JSONArray
+
+data class WorkoutBoundsDto(
+    val minLat: Double?,
+    val minLng: Double?,
+    val maxLat: Double?,
+    val maxLng: Double?
+) {
+    val hasPoints: Boolean
+        get() = minLat != null && minLng != null && maxLat != null && maxLng != null
+
+    companion object {
+        fun fromCursor(cursor: Cursor): WorkoutBoundsDto {
+            val minLatIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT)
+            val minLngIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG)
+            val maxLatIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LAT)
+            val maxLngIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG)
+
+            return WorkoutBoundsDto(
+                minLat = if (cursor.isNull(minLatIdx)) null else cursor.getDouble(minLatIdx),
+                minLng = if (cursor.isNull(minLngIdx)) null else cursor.getDouble(minLngIdx),
+                maxLat = if (cursor.isNull(maxLatIdx)) null else cursor.getDouble(maxLatIdx),
+                maxLng = if (cursor.isNull(maxLngIdx)) null else cursor.getDouble(maxLngIdx)
+            )
+        }
+    }
+}
+
+data class ClusterWorkoutCandidateDto(
+    val workoutId: Long,
+    val workoutName: String?,
+    val fileBaseName: String?,
+    val sportId: Long,
+    val distance: Double
+) {
+    companion object {
+        fun fromCursor(cursor: Cursor): ClusterWorkoutCandidateDto {
+            val idIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID)
+            val nameIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME)
+            val fileIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)
+            val sportIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID)
+            val distIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m)
+
+            return ClusterWorkoutCandidateDto(
+                workoutId = cursor.getLong(idIdx),
+                workoutName = if (!cursor.isNull(nameIdx)) cursor.getString(nameIdx) else null,
+                fileBaseName = if (!cursor.isNull(fileIdx)) cursor.getString(fileIdx) else null,
+                sportId = cursor.getLong(sportIdx),
+                distance = cursor.getDouble(distIdx)
+            )
+        }
+    }
+}
+
+data class WorkoutEquipmentDto(
+    val sportId: Long,
+    val equipmentId: Long
+) {
+    companion object {
+        fun fromCursor(cursor: Cursor): WorkoutEquipmentDto {
+            val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
+            val equipmentId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
+            return WorkoutEquipmentDto(sportId, equipmentId)
+        }
+    }
+}
+
+data class WorkoutBatchKey(
+    val id: Long,
+    val fileName: String?,
+    val clusterId: Long
+) {
+    companion object {
+        fun fromCursor(cursor: Cursor): WorkoutBatchKey {
+            val id = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID))
+            val fileIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)
+            val fileName = if (!cursor.isNull(fileIdx)) cursor.getString(fileIdx) else null
+            val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
+            return WorkoutBatchKey(id, fileName, clusterId)
+        }
+    }
+}
+
+data class WorkoutBatchKeys(
+    val idList: List<Long>,
+    val fileNameList: List<String>,
+    val clusterIdList: Set<Long>
+)
 
 data class WorkoutCluster(
     val id: Long = 0,
@@ -148,6 +236,34 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
                 maxAltLng = if (maxAltLngIdx != -1 && !cursor.isNull(maxAltLngIdx)) cursor.getDouble(maxAltLngIdx) else null,
                 hasCounter = if (hasCounterIdx != -1 && !cursor.isNull(hasCounterIdx)) cursor.getInt(hasCounterIdx) == 1 else true
             )
+        }
+
+        /**
+         * Authoritative batch key extraction mapping open cursor to [WorkoutBatchKeys].
+         * Pre-resolves column indices once before iteration (REQ-DAT-025, TST-DAT-020).
+         * Leaves cursor closure to the caller's `.use { ... }` block.
+         */
+        @JvmStatic
+        fun fromCursorBatchKeys(cursor: Cursor): WorkoutBatchKeys {
+            val idList = mutableListOf<Long>()
+            val fileNameList = mutableListOf<String>()
+            val clusterIdList = mutableSetOf<Long>()
+
+            val idIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID)
+            val fileIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)
+            val clusterIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID)
+
+            while (cursor.moveToNext()) {
+                idList.add(cursor.getLong(idIdx))
+                if (!cursor.isNull(fileIdx)) {
+                    cursor.getString(fileIdx)?.let { fileNameList.add(it) }
+                }
+                val clusterId = cursor.getLong(clusterIdx)
+                if (clusterId != -1L) {
+                    clusterIdList.add(clusterId)
+                }
+            }
+            return WorkoutBatchKeys(idList, fileNameList, clusterIdList)
         }
     }
 

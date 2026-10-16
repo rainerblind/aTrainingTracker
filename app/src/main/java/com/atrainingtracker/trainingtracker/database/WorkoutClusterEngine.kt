@@ -405,16 +405,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
         var hasPoints = false
 
         cursor.use { c ->
-            val minLatIdx = c.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT)
-            val minLngIdx = c.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG)
-            val maxLatIdx = c.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LAT)
-            val maxLngIdx = c.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG)
-
             while (c.moveToNext()) {
-                val wMinLat = if (c.isNull(minLatIdx)) null else c.getDouble(minLatIdx)
-                val wMinLng = if (c.isNull(minLngIdx)) null else c.getDouble(minLngIdx)
-                val wMaxLat = if (c.isNull(maxLatIdx)) null else c.getDouble(maxLatIdx)
-                val wMaxLng = if (c.isNull(maxLngIdx)) null else c.getDouble(maxLngIdx)
+                val bounds = WorkoutBoundsDto.fromCursor(c)
+                val wMinLat = bounds.minLat
+                val wMinLng = bounds.minLng
+                val wMaxLat = bounds.maxLat
+                val wMaxLng = bounds.maxLng
 
                 if (wMinLat != null && wMinLat < minLat) minLat = wMinLat
                 if (wMaxLat != null && wMaxLat > maxLat) maxLat = wMaxLat
@@ -510,12 +506,6 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
         cursor.use { c ->
             val total = c.count
-            val idIdx = c.getColumnIndexOrThrow(WorkoutSummaries.C_ID)
-            val nameIdx = c.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME)
-            val fileIdx = c.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)
-            val sportIdx = c.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID)
-            val distIdx = c.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m)
-
             var count = 0
             while (c.moveToNext()) {
                 count++
@@ -523,11 +513,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
                     listener?.onPhase2Progress(count, total)
                 }
 
-                val workoutId = c.getLong(idIdx)
-                val workoutName = c.getString(nameIdx)
-                val fileBaseName = c.getString(fileIdx)
-                val sportId = c.getLong(sportIdx)
-                val distance = c.getDouble(distIdx)
+                val candidate = ClusterWorkoutCandidateDto.fromCursor(c)
+                val workoutId = candidate.workoutId
+                val workoutName = candidate.workoutName
+                val fileBaseName = candidate.fileBaseName
+                val sportId = candidate.sportId
+                val distance = candidate.distance
 
                 val start = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START)
                 val end = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END)

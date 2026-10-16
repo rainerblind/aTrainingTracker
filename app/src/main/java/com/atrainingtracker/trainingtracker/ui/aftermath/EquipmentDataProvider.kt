@@ -21,7 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 import android.database.Cursor
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.database.WorkoutEquipmentDto
 
 class EquipmentDataProvider(
     private val equipmentDbHelper: EquipmentDbHelper,
@@ -29,15 +29,14 @@ class EquipmentDataProvider(
 ) {
 
     fun getEquipmentData(cursor: Cursor): EquipmentData {
-        val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
-        val equipmentId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
+        val equipmentKey = WorkoutEquipmentDto.fromCursor(cursor)
 
-        val bSportType = sportTypeDatabaseManager.getBSportType(sportId)
-        val equipmentName = if (equipmentId > 0) equipmentDbHelper.getEquipmentNameFromId(equipmentId) else null
+        val bSportType = sportTypeDatabaseManager.getBSportType(equipmentKey.sportId)
+        val equipmentName = if (equipmentKey.equipmentId > 0) equipmentDbHelper.getEquipmentNameFromId(equipmentKey.equipmentId) else null
 
         return EquipmentData(
             bSportType = bSportType,
-            equipmentId = equipmentId,
+            equipmentId = equipmentKey.equipmentId,
             equipmentName = equipmentName
         )
     }
