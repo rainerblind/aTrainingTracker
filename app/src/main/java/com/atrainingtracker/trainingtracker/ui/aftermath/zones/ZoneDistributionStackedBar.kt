@@ -23,6 +23,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -38,18 +39,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import java.util.Locale
 
 /**
- * Pure mathematical calculations and active entry filtering for stacked distribution bars (REQ-UI-372).
+ * Pure mathematical calculations, active entry filtering, and width-threshold evaluation
+ * for stacked distribution bars (REQ-UI-372 / REQ-UI-398).
  */
 object ZoneDistributionStackedBarMath {
+    const val DEFAULT_CHAR_WIDTH_DP = 6.5f
+    const val DEFAULT_HORIZONTAL_PADDING_DP = 4f
+
     /**
      * Filters and returns active zone entries with non-zero duration and positive percentage.
      */
@@ -63,13 +73,48 @@ object ZoneDistributionStackedBarMath {
     fun isAllZeroDuration(distribution: ZoneDistributionData): Boolean {
         return distribution.totalActiveTimeSec <= 0L || getActiveEntries(distribution.entries).isEmpty()
     }
+
+    /**
+     * Formats a zone segment time percentage as a compact whole-integer percentage string (e.g., "24%") (REQ-UI-398.1).
+     */
+    fun formatSegmentPercentage(percentage: Float, locale: Locale = Locale.getDefault()): String {
+        return String.format(locale, "%.0f%%", percentage)
+    }
+
+    /**
+     * Computes the minimum horizontal segment width in dp required to display [labelText] on a single line
+     * without clipping or crowding adjacent segment labels (REQ-UI-398.1).
+     */
+    fun minRequiredSegmentWidthDp(
+        labelText: String,
+        charWidthDp: Float = DEFAULT_CHAR_WIDTH_DP,
+        horizontalPaddingDp: Float = DEFAULT_HORIZONTAL_PADDING_DP
+    ): Float {
+        return labelText.length * charWidthDp + horizontalPaddingDp
+    }
+
+    /**
+     * Returns true if a stacked bar segment of width [segmentWidthDp] has sufficient horizontal space
+     * to render [labelText] cleanly on a single line (REQ-UI-398.1).
+     */
+    fun canFitPercentageLabel(
+        segmentWidthDp: Float,
+        labelText: String,
+        charWidthDp: Float = DEFAULT_CHAR_WIDTH_DP,
+        horizontalPaddingDp: Float = DEFAULT_HORIZONTAL_PADDING_DP
+    ): Boolean {
+        return labelText.isNotEmpty() &&
+            segmentWidthDp >= minRequiredSegmentWidthDp(labelText, charWidthDp, horizontalPaddingDp)
+    }
 }
 
 /**
- * Continuous horizontal stacked distribution bar for metabolic and physiological training zones (REQ-UI-372 / REQ-UI-387).
+ * Continuous horizontal stacked distribution bar for metabolic and physiological training zones (REQ-UI-372 / REQ-UI-387 / REQ-UI-398).
  *
  * - Renders a contiguous horizontal bar representing 100% of active workout time.
  * - Active zone segment widths are weighted strictly proportionally using Compose weight(entry.percentage).
+ * - Directly beneath the stacked bar, renders an aligned horizontal Row displaying each active segment's
+ *   formatted percentage (e.g. "24%") centered below the segment when sufficient horizontal space is available (REQ-UI-398).
  * - Uniform contour border around the bar container and circular legend swatches ensures WCAG 2.1 AA
  *   contrast (>= 3:1) across both light and dark themes.
  * - Zero-duration zones are omitted from the horizontal bar and rendered with dimmed alpha in the legend
@@ -101,34 +146,76 @@ fun ZoneDistributionStackedBar(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Continuous Horizontal Stacked Bar
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(barHeight)
-                .clip(barShape)
-                .border(outlineBorder, barShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            // Continuous Horizontal Stacked Bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(barHeight)
+                    .clip(barShape)
+                    .border(outlineBorder, barShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            ) {
+                if (activeEntries.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        activeEntries.forEachIndexed { index, entry ->
+                            Box(
+                                modifier = Modifier
+                                    .weight(entry.percentage)
+                                    .fillMaxHeight()
+                                    .background(entry.color)
+                            )
+                            if (index < activeEntries.lastIndex) {
+                                Spacer(
+                                    modifier = Modifier
+                                        .width(1.dp)
+                                        .fillMaxHeight()
+                                        .background(MaterialTheme.colorScheme.surface)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Aligned Per-Segment Percentage Labels (REQ-UI-398.2)
             if (activeEntries.isNotEmpty()) {
                 Row(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     activeEntries.forEachIndexed { index, entry ->
-                        Box(
-                            modifier = Modifier
-                                .weight(entry.percentage)
-                                .fillMaxHeight()
-                                .background(entry.color)
-                        )
+                        BoxWithConstraints(
+                            modifier = Modifier.weight(entry.percentage),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val label = ZoneDistributionStackedBarMath.formatSegmentPercentage(entry.percentage)
+                            var didOverflowWidth by remember(label, maxWidth) { mutableStateOf(false) }
+
+                            if (ZoneDistributionStackedBarMath.canFitPercentageLabel(maxWidth.value, label) && !didOverflowWidth) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Clip,
+                                    onTextLayout = { layoutResult ->
+                                        if (layoutResult.didOverflowWidth) {
+                                            didOverflowWidth = true
+                                        }
+                                    }
+                                )
+                            }
+                        }
                         if (index < activeEntries.lastIndex) {
-                            Spacer(
-                                modifier = Modifier
-                                    .width(1.dp)
-                                    .fillMaxHeight()
-                                    .background(MaterialTheme.colorScheme.surface)
-                            )
+                            Spacer(modifier = Modifier.width(1.dp))
                         }
                     }
                 }
