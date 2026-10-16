@@ -472,6 +472,47 @@ fun MapDetailLayout(
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
+
+                                    // W'bal Graph (REQ-UI-399.3)
+                                    if (TelemetryMetricUtils.hasWPrimeBalData(path)) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        val activeWPrimePoint = if (selectedDistance != null) {
+                                            TelemetryMetricUtils.findNearestPoint(
+                                                points = path,
+                                                targetValue = selectedDistance!!,
+                                                isTimeDomain = isTrackless
+                                            )
+                                        } else null
+                                        val activeWPrimeKj = activeWPrimePoint?.wPrimeBalKj
+                                        val wPrimeHeaderText = if (activeWPrimeKj != null) {
+                                            String.format(java.util.Locale.US, "%s: %.1f kJ", stringResource(R.string.w_prime_bal), activeWPrimeKj)
+                                        } else {
+                                            stringResource(R.string.w_prime_bal)
+                                        }
+                                        Text(
+                                            text = wPrimeHeaderText,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                        )
+                                        TelemetryMetricGraph(
+                                            pathPoints = path,
+                                            metricType = TelemetryMetricType.W_PRIME_BAL,
+                                            currentDistance = selectedDistance,
+                                            onDistanceSelected = { selectedDistance = it },
+                                            xAxisDomain = activeTelemetryDomain,
+                                            bSportType = bSportType,
+                                            zoomScale = profileZoomScale,
+                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
+                                            isPanMode = isPanMode,
+                                            onZoomChanged = { z, s ->
+                                                profileZoomScale = z
+                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
                                 }
                             }
                         }

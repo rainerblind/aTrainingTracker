@@ -224,4 +224,47 @@ class WorkoutDataMappingSymmetryTest {
         assertEquals("Trainer flag single vs batch", singleData.trainer, batchData.trainer)
         assertEquals("Finished flag single vs batch", singleData.finished, batchData.finished)
     }
+
+    @Test
+    fun testRule20_wPrimeBalSummary_symmetryAcrossSingleBatchAndSnapshot() {
+        val cursor = createMockCursor(sourceString = "FIT", raceInt = 0)
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.W_PRIME_BAL,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.MIN
+            )
+        } returns 1.5
+
+        val singleData = mapper.fromCursor(cursor)
+        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+            extrema = mapOf(
+                5023L to listOf(
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(
+                        5023L,
+                        com.atrainingtracker.banalservice.sensor.SensorType.W_PRIME_BAL,
+                        com.atrainingtracker.trainingtracker.database.ExtremaType.MIN,
+                        1.5,
+                        null
+                    )
+                )
+            ),
+            stravaData = emptyMap(),
+            clusterNames = mapOf(42L to "Test Cluster"),
+            laps = emptyMap()
+        )
+        val batchData = mapper.fromCursor(cursor, batchMetadata)
+        val snapshot = mapper.readCursorSnapshot(cursor)
+        val snapshotData = mapper.fromSnapshot(snapshot, batchMetadata)
+
+        assertEquals(1.5, singleData.minWPrimeBalKj!!, 1e-6)
+        assertEquals(singleData.minWPrimeBalKj, batchData.minWPrimeBalKj)
+        assertEquals(singleData.minWPrimeBalKj, snapshotData.minWPrimeBalKj)
+        assertEquals(singleData.minWPrimeBalPct, batchData.minWPrimeBalPct)
+        assertEquals(singleData.minWPrimeBalPct, snapshotData.minWPrimeBalPct)
+        assertEquals(singleData.isEmptyTankWarning, batchData.isEmptyTankWarning)
+        assertEquals(singleData.isEmptyTankWarning, snapshotData.isEmptyTankWarning)
+        assertEquals(singleData.detailsData.minWPrimeBalKj, batchData.detailsData.minWPrimeBalKj)
+        assertEquals(singleData.detailsData.minWPrimeBalKj, snapshotData.detailsData.minWPrimeBalKj)
+    }
 }

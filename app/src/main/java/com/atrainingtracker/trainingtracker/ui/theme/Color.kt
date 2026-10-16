@@ -302,4 +302,5 @@ object TTColor {
     val BalanceGaugeTrack = Color(0xFF1B1B1F)
     val ZoneGaugeTrack = Color(0xFF1B1B1F)
     val WarningBorderLight = Color(0xFFE0E0E0)
+    val WPrimeBalGreen = Color(0xFF10B981)
 }

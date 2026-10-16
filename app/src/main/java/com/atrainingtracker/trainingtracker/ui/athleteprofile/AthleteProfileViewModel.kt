@@ -39,6 +39,8 @@ data class AthleteProfileUiState(
     val latestWeightEntry: AthleteMetricEntry? = null,
     val latestHrRestEntry: AthleteMetricEntry? = null,
     val latestFtpEntry: AthleteMetricEntry? = null,
+    val latestCpEntry: AthleteMetricEntry? = null,
+    val latestWPrimeEntry: AthleteMetricEntry? = null,
     val currentPowerToWeight: Double? = null,
     val latestPowerToWeightTimestampMs: Long? = null,
     val selectedPlotMetric: PlotMetricType = PlotMetricType.WEIGHT,
@@ -50,7 +52,7 @@ data class AthleteProfileUiState(
 )
 
 /**
- * ViewModel driving [AthleteProfileScreen] (`REQ-UI-391.5`).
+ * ViewModel driving [AthleteProfileScreen] (`REQ-UI-391.5`, `REQ-UI-399.1`).
  */
 class AthleteProfileViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -75,6 +77,8 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
         val latestWeight = entries.firstOrNull { it.metricType == AthleteMetricType.WEIGHT_KG }
         val latestHrRest = entries.firstOrNull { it.metricType == AthleteMetricType.HR_REST_BPM }
         val latestFtp = entries.firstOrNull { it.metricType == AthleteMetricType.FTP_WATTS }
+        val latestCp = entries.firstOrNull { it.metricType == AthleteMetricType.CP_WATTS }
+        val latestWPrime = entries.firstOrNull { it.metricType == AthleteMetricType.W_PRIME_KJ }
 
         val currentWPerKg = AthleteMetricsPlotMath.computeCurrentPowerToWeight(
             latestFtpWatts = latestFtp?.value,
@@ -105,6 +109,8 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
             latestWeightEntry = latestWeight,
             latestHrRestEntry = latestHrRest,
             latestFtpEntry = latestFtp,
+            latestCpEntry = latestCp,
+            latestWPrimeEntry = latestWPrime,
             currentPowerToWeight = currentWPerKg,
             latestPowerToWeightTimestampMs = latestWPerKgTs,
             selectedPlotMetric = plotMetric,

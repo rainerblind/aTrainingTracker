@@ -215,6 +215,12 @@ class AthleteMetricsRepository(
                     updatedAtMillis = latest?.timestampMs ?: 0L
                 )
             }
+            AthleteMetricType.CP_WATTS -> {
+                settingsDataStore.setCpWatts(latest?.value?.roundToInt())
+            }
+            AthleteMetricType.W_PRIME_KJ -> {
+                settingsDataStore.setWPrimeKj(latest?.value?.toFloat())
+            }
         }
     }
 

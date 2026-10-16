@@ -92,6 +92,36 @@ fun WorkoutDetails(
             data.descentMeters,
             modifier = Modifier
         )
+
+        // --- Section 4: Anaerobic Battery (W'bal) Minimum & Empty-Tank Badge (REQ-UI-399.3) ---
+        if (data.minWPrimeBalKj != null && data.minWPrimeBalPct != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.workout_w_prime_bal_min_format, data.minWPrimeBalKj, data.minWPrimeBalPct),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (data.isEmptyTankWarning) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Text(
+                            text = stringResource(R.string.workout_w_prime_empty_tank),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

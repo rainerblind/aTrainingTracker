@@ -48,6 +48,14 @@ enum class AthleteMetricType(
     FTP_WATTS(
         minMetricValue = ZoneCalculationMath.MIN_FTP.toDouble(),
         maxMetricValue = ZoneCalculationMath.MAX_FTP.toDouble()
+    ),
+    CP_WATTS(
+        minMetricValue = 50.0,
+        maxMetricValue = 1000.0
+    ),
+    W_PRIME_KJ(
+        minMetricValue = 5.0,
+        maxMetricValue = 60.0
     );
 
     /**

@@ -105,7 +105,19 @@ class AthleteProfileContractAndLocalizationTest {
             "athlete_profile_date_label",
             "athlete_profile_value_label",
             "athlete_profile_delete_title",
-            "athlete_profile_delete_message"
+            "athlete_profile_delete_message",
+            "w_prime_bal",
+            "w_prime_bal_short",
+            "athlete_profile_metric_cp",
+            "athlete_profile_metric_w_prime",
+            "athlete_profile_cp_estimator_title",
+            "athlete_profile_cp_estimator_short_power",
+            "athlete_profile_cp_estimator_short_sec",
+            "athlete_profile_cp_estimator_long_power",
+            "athlete_profile_cp_estimator_long_sec",
+            "athlete_profile_cp_estimator_apply",
+            "workout_w_prime_bal_min_format",
+            "workout_w_prime_empty_tank"
         )
 
         val root = resolveModuleRoot()
@@ -127,6 +139,14 @@ class AthleteProfileContractAndLocalizationTest {
             assertTrue("$locale athlete_profile_delete_message must contain %1\$s", text.contains("%1\$s"))
             assertTrue("$locale athlete_profile_delete_message must contain %2\$s", text.contains("%2\$s"))
             assertTrue("$locale athlete_profile_delete_message must contain %3\$s", text.contains("%3\$s"))
+
+            // Verify positional specifiers in workout_w_prime_bal_min_format
+            val wPrimeFmtRegex = Regex("""<string name="workout_w_prime_bal_min_format">([^<]+)</string>""")
+            val wPrimeMatch = wPrimeFmtRegex.find(content)
+            assertTrue("workout_w_prime_bal_min_format not matched in $locale", wPrimeMatch != null)
+            val wPrimeText = wPrimeMatch!!.groupValues[1]
+            assertTrue("$locale workout_w_prime_bal_min_format must contain %1\$.1f", wPrimeText.contains("%1\$.1f"))
+            assertTrue("$locale workout_w_prime_bal_min_format must contain %2\$.0f", wPrimeText.contains("%2\$.0f"))
         }
     }
 

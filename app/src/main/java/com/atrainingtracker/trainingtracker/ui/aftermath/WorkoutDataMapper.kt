@@ -116,6 +116,9 @@ class WorkoutDataMapper(
         val startLocationName = resolveLocationName(startLatLng)
         val endLocationName = resolveLocationName(endLatLng)
 
+        val rawMinWPrimeBal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.MIN)
+        val (minWPrimeBalKj, minWPrimeBalPct, isEmptyTankWarning) = resolveWPrimeBalSummary(rawMinWPrimeBal)
+
         // The mapper is responsible for assembling the final object from its constituent parts.
         return WorkoutData(
             id = workoutId,
@@ -150,6 +153,10 @@ class WorkoutDataMapper(
             minLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG)),
             maxLat = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LAT))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LAT)),
             maxLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG)),
+
+            minWPrimeBalKj = minWPrimeBalKj,
+            minWPrimeBalPct = minWPrimeBalPct,
+            isEmptyTankWarning = isEmptyTankWarning,
 
             totalDistance = totalDistance,
             maxDisplacement = maxDisplacement,
@@ -206,6 +213,25 @@ class WorkoutDataMapper(
             exportStatuses = emptyList(), // will be added/merged by the viewModel
             laps = LapsDatabaseManager.getInstance(context).getLaps(workoutId)
         )
+    }
+
+    /**
+     * Resolves minimum $W'_{\text{bal}}$ (`kJ`), percentage of $W'$, and the $< 10\%$ empty-tank warning (`REQ-UI-399.3`).
+     */
+    internal fun resolveWPrimeBalSummary(
+        rawMinWPrimeBalKj: Double?,
+        effectiveWPrimeKj: Double = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getEffectiveWPrimeKj(context).toDouble()
+    ): Triple<Double?, Double?, Boolean> {
+        val validMinKj = rawMinWPrimeBalKj?.takeIf { !it.isNaN() && !it.isInfinite() && it >= 0.0 && it < Double.MAX_VALUE }
+            ?: return Triple(null, null, false)
+        val pct = if (effectiveWPrimeKj > 0.0) {
+            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateWPrimeBalancePct(
+                wPrimeBal = validMinKj,
+                wPrimeTotal = effectiveWPrimeKj
+            )
+        } else null
+        val isEmptyTank = pct != null && pct < com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.EMPTY_TANK_WARNING_THRESHOLD_PCT
+        return Triple(validMinKj, pct, isEmptyTank)
     }
 
     /**
@@ -364,6 +390,9 @@ class WorkoutDataMapper(
         val startLocationName = resolveLocationName(startLatLng)
         val endLocationName = resolveLocationName(endLatLng)
 
+        val rawMinWPrimeBal = getBatchVal(SensorType.W_PRIME_BAL, ExtremaType.MIN)
+        val (minWPrimeBalKj, minWPrimeBalPct, isEmptyTankWarning) = resolveWPrimeBalSummary(rawMinWPrimeBal)
+
         return WorkoutData(
             id = snapshot.workoutId,
             finished = snapshot.finished,
@@ -395,6 +424,10 @@ class WorkoutDataMapper(
             minLng = snapshot.minLng,
             maxLat = snapshot.maxLat,
             maxLng = snapshot.maxLng,
+
+            minWPrimeBalKj = minWPrimeBalKj,
+            minWPrimeBalPct = minWPrimeBalPct,
+            isEmptyTankWarning = isEmptyTankWarning,
 
             totalDistance = snapshot.totalDistance,
             maxDisplacement = maxDisplacement,

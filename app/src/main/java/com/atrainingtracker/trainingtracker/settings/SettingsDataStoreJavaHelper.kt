@@ -206,4 +206,52 @@ object SettingsDataStoreJavaHelper {
             // ignore in tests or headless contexts
         }
     }
+
+    /**
+     * Synchronous bridge to fetch configured Critical Power (CP) in Watts (`REQ-UI-399.1`), or `null` if unconfigured.
+     */
+    @JvmStatic
+    fun getCpWatts(context: Context): Int? {
+        return try {
+            val dataStore = SettingsDataStore.getInstance(context)
+            runBlocking(Dispatchers.IO) {
+                dataStore.cpWattsFlow.first()
+            }
+        } catch (t: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * Canonical resolver for effective Critical Power (CP) in Watts (`REQ-UI-399.1`):
+     * returns configured `cpWatts` if $> 0$, otherwise falls back to configured `getFtp(context)`.
+     */
+    @JvmStatic
+    fun getEffectiveCpWatts(context: Context): Int? {
+        return getCpWatts(context)?.takeIf { it > 0 } ?: getFtp(context)?.takeIf { it > 0 }
+    }
+
+    /**
+     * Synchronous bridge to fetch configured Anaerobic Work Capacity ($W'$) in kJ (`REQ-UI-399.1`), or `null` if unconfigured.
+     */
+    @JvmStatic
+    fun getWPrimeKj(context: Context): Float? {
+        return try {
+            val dataStore = SettingsDataStore.getInstance(context)
+            runBlocking(Dispatchers.IO) {
+                dataStore.wPrimeKjFlow.first()
+            }
+        } catch (t: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * Canonical resolver for effective Anaerobic Work Capacity ($W'$) in kJ (`REQ-UI-399.1`):
+     * returns configured `wPrimeKj` if $> 0$, otherwise defaults to `20.0f` kJ.
+     */
+    @JvmStatic
+    fun getEffectiveWPrimeKj(context: Context): Float {
+        return getWPrimeKj(context)?.takeIf { it > 0.0f } ?: SettingsDataStore.DEFAULT_W_PRIME_KJ
+    }
 }

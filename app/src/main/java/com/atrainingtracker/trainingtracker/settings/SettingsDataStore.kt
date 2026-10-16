@@ -132,15 +132,22 @@ class SettingsDataStore(
         val KEY_IS_HR_ZONES_CONFIGURED = booleanPreferencesKey("is_hr_zones_configured")
         val KEY_IS_PWR_ZONES_CONFIGURED = booleanPreferencesKey("is_pwr_zones_configured")
 
-        // Athlete Baselines (ATT-1289, REQ-TRK-019, ATT-3704, REQ-UI-391)
+        // Athlete Baselines (ATT-1289, REQ-TRK-019, ATT-3704, REQ-UI-391, ATT-3862, REQ-UI-399)
         val KEY_ATHLETE_WEIGHT_KG = floatPreferencesKey("athlete_weight_kg")
         val KEY_ATHLETE_METRICS_SEEDED = booleanPreferencesKey("athlete_metrics_seeded")
+        val KEY_CYCLING_CP_WATTS = intPreferencesKey("cycling_cp_watts")
+        val KEY_CYCLING_W_PRIME_KJ = floatPreferencesKey("cycling_w_prime_kj")
         const val DEFAULT_ATHLETE_WEIGHT_KG = 0.0f
         const val MIN_ATHLETE_WEIGHT_KG = 30.0f
         const val MAX_ATHLETE_WEIGHT_KG = 300.0f
         const val MIN_ATHLETE_WEIGHT_LBS = 66.0f
         const val MAX_ATHLETE_WEIGHT_LBS = 660.0f
         const val LBS_PER_KG = 2.20462262185f
+        const val MIN_CP_WATTS = 50
+        const val MAX_CP_WATTS = 1000
+        const val MIN_W_PRIME_KJ = 5.0f
+        const val MAX_W_PRIME_KJ = 60.0f
+        const val DEFAULT_W_PRIME_KJ = 20.0f
     }
 
     // --- HELPER: Map Enums to Keys ---
@@ -361,6 +368,46 @@ class SettingsDataStore(
                 if (updatedAtMillis > 0L) {
                     prefs[KEY_CYCLING_FTP_UPDATED_AT] = updatedAtMillis
                 }
+            }
+        }
+    }
+
+    /**
+     * Flow emitting the athlete's Critical Power (CP) in Watts (`REQ-UI-399.1`), or `null` when unconfigured.
+     */
+    val cpWattsFlow: Flow<Int?> = dataStore.data.map { prefs ->
+        prefs[KEY_CYCLING_CP_WATTS]?.takeIf { it > 0 }
+    }
+
+    /**
+     * Flow emitting the athlete's Anaerobic Work Capacity ($W'$) in kilojoules (`REQ-UI-399.1`), or `null` when unconfigured.
+     */
+    val wPrimeKjFlow: Flow<Float?> = dataStore.data.map { prefs ->
+        prefs[KEY_CYCLING_W_PRIME_KJ]?.takeIf { it > 0.0f }
+    }
+
+    /**
+     * Unidirectionally updates or clears the athlete's Critical Power (`KEY_CYCLING_CP_WATTS`) in DataStore (`REQ-UI-399.1`).
+     */
+    suspend fun setCpWatts(cpWatts: Int?) {
+        dataStore.edit { prefs ->
+            if (cpWatts == null || cpWatts <= 0) {
+                prefs.remove(KEY_CYCLING_CP_WATTS)
+            } else {
+                prefs[KEY_CYCLING_CP_WATTS] = cpWatts.coerceIn(MIN_CP_WATTS, MAX_CP_WATTS)
+            }
+        }
+    }
+
+    /**
+     * Unidirectionally updates or clears the athlete's Anaerobic Work Capacity $W'$ (`KEY_CYCLING_W_PRIME_KJ`) in DataStore (`REQ-UI-399.1`).
+     */
+    suspend fun setWPrimeKj(wPrimeKj: Float?) {
+        dataStore.edit { prefs ->
+            if (wPrimeKj == null || wPrimeKj <= 0.0f) {
+                prefs.remove(KEY_CYCLING_W_PRIME_KJ)
+            } else {
+                prefs[KEY_CYCLING_W_PRIME_KJ] = wPrimeKj.coerceIn(MIN_W_PRIME_KJ, MAX_W_PRIME_KJ)
             }
         }
     }

@@ -173,7 +173,8 @@ data class PathPoint @JvmOverloads constructor(
     val hr: Int? = null,
     val power: Int? = null,
     val speedMps: Double? = null,
-    val slope: Double? = null
+    val slope: Double? = null,
+    val wPrimeBalKj: Double? = null
 )
 
 /**

@@ -1895,4 +1895,18 @@
     <string name="sensor_type_search_hint">Rechercher une mesure ou une unité…</string>
     <string name="sensor_type_no_matches">Aucune mesure ne correspond à votre recherche</string>
 
+    <!-- ATT-3862: Critical Power (CP), W', and W'bal (REQ-UI-399) -->
+    <string name="w_prime_bal">Réserve W\' (Batterie anaérobie)</string>
+    <string name="w_prime_bal_short">W\'bal</string>
+    <string name="athlete_profile_metric_cp">CP</string>
+    <string name="athlete_profile_metric_w_prime">W\'</string>
+    <string name="athlete_profile_cp_estimator_title">Estimateur 2 points CP &amp; W\'</string>
+    <string name="athlete_profile_cp_estimator_short_power">Puissance effort court (W)</string>
+    <string name="athlete_profile_cp_estimator_short_sec">Durée courte (s)</string>
+    <string name="athlete_profile_cp_estimator_long_power">Puissance effort long (W)</string>
+    <string name="athlete_profile_cp_estimator_long_sec">Durée longue (s)</string>
+    <string name="athlete_profile_cp_estimator_apply">Appliquer l\'estimation (%1$d W / %2$.1f kJ)</string>
+    <string name="workout_w_prime_bal_min_format">W\'bal min : %1$.1f kJ (%2$.0f%%)</string>
+    <string name="workout_w_prime_empty_tank">Réservoir vide (&lt;10%%)</string>
+
 </resources>

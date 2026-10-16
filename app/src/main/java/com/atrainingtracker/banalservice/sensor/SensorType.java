@@ -85,6 +85,7 @@ public enum SensorType
     INTENSITY_FACTOR(SensorCategory.POWER_AND_PEDALING, R.string.intensity_factor, R.string.intensity_factor_short, R.string.units_none, SensorValueType.DOUBLE, new IntensityFactorFormatter(), true),
     WORK_KJ(SensorCategory.POWER_AND_PEDALING, R.string.work_kj, R.string.work_kj_short, R.string.units_work_kj, SensorValueType.DOUBLE, new IntegerFormatter(), false),
     TSS(SensorCategory.POWER_AND_PEDALING, R.string.tss, R.string.tss_short, R.string.units_none, SensorValueType.DOUBLE, new IntegerFormatter(), false),
+    W_PRIME_BAL(SensorCategory.POWER_AND_PEDALING, R.string.w_prime_bal, R.string.w_prime_bal_short, R.string.units_work_kj, SensorValueType.DOUBLE, new PowerToWeightFormatter(), false),
     SPEED_mps(SensorCategory.SPEED_PACE_AND_DISTANCE, R.string.speed, R.string.speed_short, R.string.units_speed_basic, SensorValueType.DOUBLE, new SpeedFormatter(), true),
     // SPEED_mps_gps          (R.string.speed,                  R.string.speed_short,                  R.string.units_speed_basic,     SensorValueType.DOUBLE,  new SpeedFormatter()),
     // SPEED_mps_network      (R.string.speed,                  R.string.speed_short,                  R.string.units_speed_basic,     SensorValueType.DOUBLE,  new SpeedFormatter()),

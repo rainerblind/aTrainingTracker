@@ -27,12 +27,14 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Selectable metrics in the Athlete Profile time-series plot (`REQ-UI-391.4`).
+ * Selectable metrics in the Athlete Profile time-series plot (`REQ-UI-391.4`, `REQ-UI-399.1`).
  */
 enum class PlotMetricType {
     WEIGHT,
     HR_REST,
     FTP,
+    CP,
+    W_PRIME,
     POWER_TO_WEIGHT
 }
 
@@ -58,7 +60,7 @@ data class MetricPlotPoint(
 )
 
 /**
- * Pure math and canonical formatting utilities for Athlete Profile time-series plots and derived `W/kg` (`REQ-UI-391.4`).
+ * Pure math and canonical formatting utilities for Athlete Profile time-series plots and derived `W/kg` (`REQ-UI-391.4`, `REQ-UI-399.1`).
  */
 object AthleteMetricsPlotMath {
 
@@ -149,6 +151,18 @@ object AthleteMetricsPlotMath {
                     .sortedWith(compareBy<AthleteMetricEntry> { it.timestampMs }.thenBy { it.id })
                     .map { MetricPlotPoint(it.timestampMs, it.value) }
             }
+            PlotMetricType.CP -> {
+                entries
+                    .filter { it.metricType == AthleteMetricType.CP_WATTS }
+                    .sortedWith(compareBy<AthleteMetricEntry> { it.timestampMs }.thenBy { it.id })
+                    .map { MetricPlotPoint(it.timestampMs, it.value) }
+            }
+            PlotMetricType.W_PRIME -> {
+                entries
+                    .filter { it.metricType == AthleteMetricType.W_PRIME_KJ }
+                    .sortedWith(compareBy<AthleteMetricEntry> { it.timestampMs }.thenBy { it.id })
+                    .map { MetricPlotPoint(it.timestampMs, it.value) }
+            }
             PlotMetricType.POWER_TO_WEIGHT -> computeDerivedPowerToWeightSeries(entries)
         }
 
@@ -179,9 +193,20 @@ object AthleteMetricsPlotMath {
     fun formatHrRestValue(bpm: Double): String = bpm.roundToInt().toString()
 
     /**
-     * Formats Functional Threshold Power in integer `W`.
+     * Formats Functional Threshold Power or Critical Power in integer `W`.
      */
     fun formatFtpValue(watts: Double): String = watts.roundToInt().toString()
+
+    /**
+     * Formats Critical Power in integer `W`.
+     */
+    fun formatCpValue(watts: Double): String = watts.roundToInt().toString()
+
+    /**
+     * Formats Anaerobic Work Capacity ($W'$) in `kJ` (`%.1f`).
+     */
+    fun formatWPrimeValue(wPrimeKj: Double, locale: Locale = Locale.US): String =
+        String.format(locale, "%.1f", wPrimeKj)
 
     /**
      * Formats derived Power-to-Weight (`W/kg`) to 2 decimal places (`%.2f`) per `REQ-TRK-019` and `REQ-UI-391.4`.

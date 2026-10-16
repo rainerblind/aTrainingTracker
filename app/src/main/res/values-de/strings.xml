@@ -1981,4 +1981,18 @@
     <string name="sensor_type_search_hint">Messwert oder Einheit suchen…</string>
     <string name="sensor_type_no_matches">Keine passenden Messwerte gefunden</string>
 
+    <!-- ATT-3862: Critical Power (CP), W', and W'bal (REQ-UI-399) -->
+    <string name="w_prime_bal">W\'-Bilanz (Anaerober Akku)</string>
+    <string name="w_prime_bal_short">W\'bal</string>
+    <string name="athlete_profile_metric_cp">CP</string>
+    <string name="athlete_profile_metric_w_prime">W\'</string>
+    <string name="athlete_profile_cp_estimator_title">2-Punkt CP- &amp; W\'-Rechner</string>
+    <string name="athlete_profile_cp_estimator_short_power">Kurze Leistung (W)</string>
+    <string name="athlete_profile_cp_estimator_short_sec">Kurze Dauer (s)</string>
+    <string name="athlete_profile_cp_estimator_long_power">Lange Leistung (W)</string>
+    <string name="athlete_profile_cp_estimator_long_sec">Lange Dauer (s)</string>
+    <string name="athlete_profile_cp_estimator_apply">Schätzung übernehmen (%1$d W / %2$.1f kJ)</string>
+    <string name="workout_w_prime_bal_min_format">Min. W\'bal: %1$.1f kJ (%2$.0f%%)</string>
+    <string name="workout_w_prime_empty_tank">Tank leer (&lt;10%%)</string>
+
 </resources>
