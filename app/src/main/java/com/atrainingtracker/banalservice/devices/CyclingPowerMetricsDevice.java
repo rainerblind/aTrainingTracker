@@ -333,17 +333,13 @@ public class CyclingPowerMetricsDevice extends MyDevice {
             }
         }
 
-        // 1. Power-to-Weight Ratio Calculation (REQ-TRK-019)
+        // 1. Power-to-Weight Ratio Calculation (REQ-TRK-019, REQ-MIG-039.1)
         float athleteWeightKg = mWeightProvider.getAthleteWeightKg(mContext);
-        if (athleteWeightKg <= 0.0f || power == null || Double.isNaN(power) || Double.isInfinite(power) || power < 0.0) {
-            if (mPowerToWeightSensor != null) {
-                mPowerToWeightSensor.newValue(null);
-            }
-        } else {
-            double wPerKg = power / athleteWeightKg;
-            if (mPowerToWeightSensor != null) {
-                mPowerToWeightSensor.newValue(wPerKg);
-            }
+        Double wPerKg = (power != null && athleteWeightKg > 0.0f)
+                ? PowerPhysiologyCalculator.calculatePowerToWeight(power, athleteWeightKg)
+                : null;
+        if (mPowerToWeightSensor != null) {
+            mPowerToWeightSensor.newValue(wPerKg);
         }
 
         // 2. Power Validation for NP, IF, Mechanical Work, TSS & W'bal
@@ -396,14 +392,16 @@ public class CyclingPowerMetricsDevice extends MyDevice {
             mNormalizedPowerSensor.newValue(mLastCalculatedNp);
         }
 
-        // 5. Calculate Intensity Factor (IF = NP / FTP) & Training Stress Score (TSS)
+        // 5. Calculate Intensity Factor (IF = NP / FTP) & Training Stress Score (TSS) (REQ-MIG-039.1)
         Integer ftp = mFtpProvider.getFtp(mContext);
         if (ftp != null && ftp > 0 && mLastCalculatedNp != null) {
-            double ifVal = mLastCalculatedNp / ftp.doubleValue();
+            Double ifVal = PowerPhysiologyCalculator.calculateIntensityFactor(mLastCalculatedNp, ftp.doubleValue());
             if (mIntensityFactorSensor != null) {
                 mIntensityFactorSensor.newValue(ifVal);
             }
-            double tss = (mActivePowerDurationSec * mLastCalculatedNp * ifVal) / (ftp.doubleValue() * 36.0);
+            Double tss = (ifVal != null)
+                    ? PowerPhysiologyCalculator.calculateTss((double) mActivePowerDurationSec, mLastCalculatedNp, ifVal, ftp.doubleValue())
+                    : null;
             if (mTssSensor != null) {
                 mTssSensor.newValue(tss);
             }

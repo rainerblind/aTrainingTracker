@@ -178,4 +178,97 @@ class PowerPhysiologyCalculatorTest {
         assertNull(noHr.decouplingPct)
         assertFalse(noHr.isHighDrift)
     }
+
+    @Test
+    fun computePowerTrainingMetrics_steadyAndVariablePower_matchesCogganFormulas() {
+        // TST-MIG-036 (REQ-MIG-039.1): 1 hour (3600s) steady at 250W, FTP = 250W, weight = 75.0kg
+        val steady1Hour = List(3600) { 250.0 }
+        val steadyResult = PowerPhysiologyCalculator.computePowerTrainingMetrics(
+            powerSamplesWatts = steady1Hour,
+            activeTimeSeconds = 3600,
+            ftpWatts = 250.0,
+            athleteWeightKg = 75.0
+        )
+        assertEquals(250.0, steadyResult.normalizedPowerWatts!!, 1e-4)
+        assertEquals(250.0, steadyResult.avgPowerWatts!!, 1e-4)
+        assertEquals(250.0, steadyResult.maxPowerWatts!!, 1e-4)
+        assertEquals(1.00, steadyResult.variabilityIndex!!, 1e-4)
+        assertEquals(1.00, steadyResult.intensityFactor!!, 1e-4)
+        assertEquals(100.0, steadyResult.tss!!, 1e-4)
+        assertEquals(900.0, steadyResult.workKj!!, 1e-4)
+        assertEquals(250.0 / 75.0, steadyResult.avgPowerToWeight!!, 1e-4)
+        assertEquals(250.0 / 75.0, steadyResult.maxPowerToWeight!!, 1e-4)
+        assertEquals(250.0 / 75.0, steadyResult.npPowerToWeight!!, 1e-4)
+
+        // Variable interval workout: 30s at 300W + 30s at 100W (Avg = 200W, NP > 200W, VI > 1.0)
+        val variableStream = List(30) { 300.0 } + List(30) { 100.0 }
+        val varResult = PowerPhysiologyCalculator.computePowerTrainingMetrics(
+            powerSamplesWatts = variableStream,
+            activeTimeSeconds = 60,
+            ftpWatts = 250.0,
+            athleteWeightKg = 70.0
+        )
+        assertEquals(200.0, varResult.avgPowerWatts!!, 1e-4)
+        assertEquals(300.0, varResult.maxPowerWatts!!, 1e-4)
+        assertTrue(varResult.normalizedPowerWatts!! > 200.0)
+        assertTrue(varResult.variabilityIndex!! > 1.0)
+        assertEquals(12.0, varResult.workKj!!, 1e-4) // (30*300 + 30*100) / 1000 = 12.0 kJ
+
+        // FIT session fallback seeds when sample stream is empty
+        val fallbackResult = PowerPhysiologyCalculator.computePowerTrainingMetrics(
+            powerSamplesWatts = emptyList(),
+            activeTimeSeconds = 1800,
+            ftpWatts = 250.0,
+            athleteWeightKg = 75.0,
+            fallbackNpWatts = 225.0,
+            fallbackIf = 0.90,
+            fallbackTss = 40.5,
+            fallbackWorkKj = 380.0
+        )
+        assertEquals(225.0, fallbackResult.normalizedPowerWatts!!, 1e-4)
+        assertEquals(0.90, fallbackResult.intensityFactor!!, 1e-4)
+        assertEquals(40.5, fallbackResult.tss!!, 1e-4)
+        assertEquals(380.0, fallbackResult.workKj!!, 1e-4)
+        assertEquals(225.0 / 75.0, fallbackResult.npPowerToWeight!!, 1e-4)
+
+        // Empty stream with no fallbacks returns null fields safely
+        val emptyResult = PowerPhysiologyCalculator.computePowerTrainingMetrics(
+            powerSamplesWatts = emptyList()
+        )
+        assertNull(emptyResult.normalizedPowerWatts)
+        assertNull(emptyResult.intensityFactor)
+        assertNull(emptyResult.tss)
+        assertNull(emptyResult.workKj)
+        assertNull(emptyResult.avgPowerToWeight)
+    }
+
+    @Test
+    fun importAndHistoricalThresholdResolution_sourceContractsArePresent() {
+        // TST-MIG-036 (REQ-MIG-039.2, REQ-MIG-039.3, REQ-MIG-039.4)
+        val projectRoot = java.io.File(System.getProperty("user.dir") ?: ".")
+        val baseDir = if (java.io.File(projectRoot, "app/src/main").exists()) {
+            java.io.File(projectRoot, "app/src/main/java/com/atrainingtracker")
+        } else {
+            java.io.File(projectRoot, "src/main/java/com/atrainingtracker")
+        }
+
+        val dbManagerSrc = java.io.File(baseDir, "trainingtracker/database/AthleteMetricsDatabaseManager.kt").readText()
+        assertTrue(dbManagerSrc.contains("fun getEntryEffectiveAt("))
+
+        val settingsHelperSrc = java.io.File(baseDir, "trainingtracker/settings/SettingsDataStoreJavaHelper.kt").readText()
+        assertTrue(settingsHelperSrc.contains("fun resolveEffectiveFtpAt("))
+        assertTrue(settingsHelperSrc.contains("fun resolveEffectiveWeightKgAt("))
+
+        val fitParserSrc = java.io.File(baseDir, "trainingtracker/migration/parsers/FitWorkoutParser.kt").readText()
+        assertTrue(fitParserSrc.contains("foundSensors.add(SensorType.POWER)"))
+        assertTrue(fitParserSrc.contains("sessionNormalizedPowerWatts = sessionNp"))
+
+        val importEngineSrc = java.io.File(baseDir, "trainingtracker/migration/LegacyImportEngine.kt").readText()
+        assertTrue(importEngineSrc.contains("computePowerTrainingMetrics("))
+        assertTrue(importEngineSrc.contains("SensorType.NORMALIZED_POWER"))
+        assertTrue(importEngineSrc.contains("SensorType.INTENSITY_FACTOR"))
+        assertTrue(importEngineSrc.contains("SensorType.TSS"))
+        assertTrue(importEngineSrc.contains("SensorType.WORK_KJ"))
+        assertTrue(importEngineSrc.contains("SensorType.POWER_TO_WEIGHT"))
+    }
 }

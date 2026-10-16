@@ -104,6 +104,7 @@ object FitWorkoutParser {
             val distances = mutableListOf<Double>()
             val bufferedSamples = mutableListOf<ContentValues>()
             val parsedLaps = mutableListOf<ParsedLap>()
+            val foundSensors = mutableSetOf<SensorType>()
 
             var minAltVal = Double.MAX_VALUE
             var maxAltVal = -Double.MAX_VALUE
@@ -155,6 +156,8 @@ object FitWorkoutParser {
                     val lngDeg = lngSemi * (180.0 / 2147483648.0)
                     values.put(SensorType.LATITUDE.name, latDeg)
                     values.put(SensorType.LONGITUDE.name, lngDeg)
+                    foundSensors.add(SensorType.LATITUDE)
+                    foundSensors.add(SensorType.LONGITUDE)
 
                     val pos = LatLng(latDeg, lngDeg)
                     points.add(pos)
@@ -173,39 +176,46 @@ object FitWorkoutParser {
 
                 altVal?.let { alt ->
                     values.put(SensorType.ALTITUDE.name, alt)
+                    foundSensors.add(SensorType.ALTITUDE)
                     altitudes.add(alt)
                 }
 
                 record.distance?.toDouble()?.let { dist ->
                     values.put(SensorType.DISTANCE_m.name, dist)
+                    foundSensors.add(SensorType.DISTANCE_m)
                     distances.add(dist)
                 }
 
                 val spdVal = (record.enhancedSpeed ?: record.speed)?.toDouble()
                 if (spdVal != null && spdVal in 0.0..100.0) {
                     values.put(SensorType.SPEED_mps.name, spdVal)
+                    foundSensors.add(SensorType.SPEED_mps)
                 }
 
                 record.heartRate?.toInt()?.let { hr ->
                     if (hr in 30..250) {
                         values.put(SensorType.HR.name, hr)
+                        foundSensors.add(SensorType.HR)
                     }
                 }
 
                 record.cadence?.toDouble()?.let { cad ->
                     if (cad >= 0) {
                         values.put(SensorType.CADENCE.name, cad)
+                        foundSensors.add(SensorType.CADENCE)
                     }
                 }
 
                 record.power?.toDouble()?.let { pwr ->
                     if (pwr >= 0) {
                         values.put(SensorType.POWER.name, pwr)
+                        foundSensors.add(SensorType.POWER)
                     }
                 }
 
                 record.temperature?.toDouble()?.let { temp ->
                     values.put(SensorType.TEMPERATURE.name, temp)
+                    foundSensors.add(SensorType.TEMPERATURE)
                 }
 
                 // Determine lapNr
@@ -237,8 +247,13 @@ object FitWorkoutParser {
                 parsedLaps.add(ParsedLap(lapNr = 0L, startTime = firstTime, distanceMeters = totalDist))
             }
 
-            // Sport resolution
+            // Sport resolution & optional FIT session power summaries (REQ-MIG-039.3)
             val primarySession = rawSessions.firstOrNull()
+            val sessionNp = primarySession?.normalizedPower?.toDouble()?.takeIf { it > 0.0 }
+            val sessionIf = primarySession?.intensityFactor?.toDouble()?.takeIf { it > 0.0 }
+            val sessionTss = primarySession?.trainingStressScore?.toDouble()?.takeIf { it > 0.0 }
+            val sessionWorkKj = primarySession?.totalWork?.toDouble()?.takeIf { it > 0.0 }?.let { it / 1000.0 }
+
             var bSportType = FitSportMapper.mapFitSport(primarySession?.sport, primarySession?.subSport)
             var resolvedSportId = if (bSportType != BSportType.UNKNOWN) {
                 SportTypeDatabaseManager.getSportTypeId(bSportType)
@@ -278,7 +293,11 @@ object FitWorkoutParser {
                     maxAltPos = maxAltPos,
                     parsedLaps = parsedLaps,
                     bufferedSamples = bufferedSamples,
-                    foundSensors = emptySet()
+                    foundSensors = foundSensors,
+                    sessionNormalizedPowerWatts = sessionNp,
+                    sessionIntensityFactor = sessionIf,
+                    sessionTss = sessionTss,
+                    sessionWorkKj = sessionWorkKj
                 )
             )
         } catch (e: Exception) {
