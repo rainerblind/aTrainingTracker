@@ -159,8 +159,8 @@ fun ATrainingTrackerMap(
     }
 
     // 3. Behavioral Controllers
-    // IMPORTANT: Removing zoom from remember key to allow manual zooming without reset
-    val scope = remember(content, zoomFocus, primaryColor, context, directionIcons, bSportType) {
+    // IMPORTANT: Removing zoom and content from remember key to preserve MapContentScopeImpl across 1-Hz live track updates (REQ-MAP-051.3)
+    val scope = remember(zoomFocus, primaryColor, context, directionIcons, bSportType) {
         MapContentScopeImpl(zoomFocus, primaryColor, context, directionIcons, bSportType)
     }
     scope.collect(content)

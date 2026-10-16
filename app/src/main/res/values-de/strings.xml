@@ -1942,4 +1942,31 @@
     <string name="athlete_weight_clear">Löschen</string>
     <string name="athlete_weight_edit">Bearbeiten</string>
 
+    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, REQ-UI-391) -->
+    <string name="drawer_athlete_profile">Athleten-Profil</string>
+    <string name="athlete_profile_title">Athleten-Profil</string>
+    <string name="athlete_profile_add_entry">Messwert hinzufügen</string>
+    <string name="athlete_profile_edit_entry">Messwert bearbeiten</string>
+    <string name="athlete_profile_metric_weight">Gewicht</string>
+    <string name="athlete_profile_metric_hr_rest">Ruhe-HF</string>
+    <string name="athlete_profile_metric_ftp">FTP</string>
+    <string name="athlete_profile_metric_w_per_kg">W/kg</string>
+    <string name="athlete_profile_chart_title">Verlauf</string>
+    <string name="athlete_profile_range_1m">1M</string>
+    <string name="athlete_profile_range_3m">3M</string>
+    <string name="athlete_profile_range_6m">6M</string>
+    <string name="athlete_profile_range_1y">1J</string>
+    <string name="athlete_profile_range_all">Alle</string>
+    <string name="athlete_profile_history_title">Messwert-Historie</string>
+    <string name="athlete_profile_filter_all">Alle</string>
+    <string name="athlete_profile_empty_chart">Keine Messwerte im gewählten Zeitraum.</string>
+    <string name="athlete_profile_empty_history">Noch keine Messwerte erfasst. Tippen Sie auf +, um Gewicht, Ruhe-HF oder FTP einzutragen.</string>
+    <string name="athlete_profile_date_label">Datum</string>
+    <string name="athlete_profile_value_label">Wert (%1$s)</string>
+    <string name="athlete_profile_delete_title">Messwert löschen?</string>
+    <string name="athlete_profile_delete_message">%1$s (%2$s) vom %3$s löschen?</string>
+
+    <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
+    <string name="elevation_profile_empty_state">Höhenprofil — wartet auf Strecke oder Aufzeichnung</string>
+
 </resources>

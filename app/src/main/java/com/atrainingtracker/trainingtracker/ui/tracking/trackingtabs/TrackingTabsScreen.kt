@@ -212,7 +212,6 @@ fun TrackingTabsScreen(
     val devices by controlViewModel.remoteDevices.collectAsState()
     val activeSensors by controlViewModel.activeSensors.collectAsState()
     val bSportType by controlViewModel.bSportType.collectAsState()
-    val selectingProtocol by controlViewModel.selectingProtocol.collectAsState()
     val hasPairedRemoteDevices by controlViewModel.hasPairedRemoteDevices.collectAsState()
     val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
 
@@ -713,13 +712,6 @@ fun TrackingTabsScreen(
                             LaunchedEffect(Unit) {
                                 controlViewModel.navigationEvent.collect { navigation ->
                                     when (navigation) {
-                                        is ControlNavigation.ToPairing -> {
-                                            (context as? MainActivityWithNavigation)?.startPairing(
-                                                navigation.protocol,
-                                                navigation.deviceType
-                                            )
-                                        }
-
                                         is ControlNavigation.ToEditDevice -> {
                                             val editDeviceDialog =
                                                 EditDeviceFragmentFactory.create(
@@ -752,8 +744,6 @@ fun TrackingTabsScreen(
                                 searchingFor = searchingFor,
                                 devices = devices,
                                 currentSport = bSportType,
-                                isAntSupported = controlViewModel.isAntProperlyInstalled(),
-                                isBluetoothSupported = controlViewModel.isBluetoothSupported(),
                                 onSearch = { controlViewModel.onSearchClicked() },
                                 onDeviceClick = { controlViewModel.onDeviceClicked(it) },
                                 onSportSelected = { controlViewModel.setSport(it) },
@@ -761,10 +751,6 @@ fun TrackingTabsScreen(
                                 onPause = { controlViewModel.onPauseTracking() },
                                 onResume = { controlViewModel.onResumeTracking() },
                                 onStop = { controlViewModel.onStopTracking() },
-                                onPairingClicked = { controlViewModel.onPairingClicked(it) },
-                                selectingProtocol = selectingProtocol,
-                                onDeviceTypeSelected = { controlViewModel.onDeviceTypeSelected(it) },
-                                onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() },
                                 showResearchButton = hasPairedRemoteDevices,
                                 locationCalibrationStatus = locationCalibrationStatus,
                                 bottomContent = {

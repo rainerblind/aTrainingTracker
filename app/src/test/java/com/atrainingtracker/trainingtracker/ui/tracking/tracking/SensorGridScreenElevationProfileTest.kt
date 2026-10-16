@@ -51,8 +51,8 @@ class SensorGridScreenElevationProfileTest {
             content.contains("TrackingElevationProfileResolver.resolve")
         )
         assertTrue(
-            "SensorGridScreen must guard elevation profile rendering using resolvedProfile.pathPoints (TST-UI-315.3)",
-            content.contains("state.showElevationProfile && resolvedProfile.pathPoints.size >= 2")
+            "SensorGridScreen must gate elevation profile rendering on state.showElevationProfile with showEmptyState = true (TST-UI-315.3 / REQ-UI-394 / ATT-3779)",
+            content.contains("if (state.showElevationProfile)") && content.contains("showEmptyState = true")
         )
     }
 

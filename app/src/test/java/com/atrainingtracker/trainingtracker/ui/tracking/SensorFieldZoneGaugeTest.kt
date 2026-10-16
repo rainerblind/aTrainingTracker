@@ -99,7 +99,7 @@ class SensorFieldZoneGaugeTest {
             filterDescription = "3s avg",
             value = "410",
             units = "W",
-            zoneColor = Color(0xFF4E342E),
+            zoneColor = Color(0xFF8B5A2B),
             zoneDisplayOptions = ZoneDisplayOptions(showGauge = true),
             zoneGaugeState = gaugeState
         )
@@ -183,5 +183,46 @@ class SensorFieldZoneGaugeTest {
         assertEquals("110", initial.value)
         assertEquals(0.20f, initial.zoneGaugeState?.needleFraction ?: -1f, 0.001f)
         assertEquals(1, initial.zoneGaugeState?.activeZoneIndex)
+    }
+
+    @Test
+    fun testZoneGaugeBar_usesProportionalWeightsUnderSegmentBadgeAndPrimaryBlueNeedle() {
+        val barFile = java.io.File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/ZoneGaugeBar.kt").let {
+            if (it.exists()) it else java.io.File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/ZoneGaugeBar.kt")
+        }
+        assertTrue("ZoneGaugeBar.kt must exist", barFile.exists())
+        val source = barFile.readText()
+
+        // 1. Outer vertical Column layout so track spans full width and badge sits underneath
+        assertTrue("ZoneGaugeBar must use an outer Column layout", source.contains("Column("))
+        assertTrue("ZoneGaugeBar must weight segments by state.segmentWeights", source.contains("state.segmentWeights.getOrElse(index)"))
+
+        // 2. Primary Blue needle (MaterialTheme.colorScheme.primary) with 4.dp width instead of 3.dp Color.White
+        assertTrue(
+            "ZoneGaugeBar needle must resolve MaterialTheme.colorScheme.primary",
+            source.contains("val primaryNeedleColor = MaterialTheme.colorScheme.primary")
+        )
+        assertTrue(
+            "ZoneGaugeBar needle must draw with primaryNeedleColor",
+            source.contains("color = primaryNeedleColor")
+        )
+        assertTrue(
+            "ZoneGaugeBar needle must use 4.dp width",
+            source.contains("4.dp.value * (totalHeightPx / totalBarHeight.value)")
+        )
+        assertFalse(
+            "ZoneGaugeBar needle must not draw with Color.White fill",
+            source.contains("color = Color.White,")
+        )
+
+        // 3. Active zone badge centered beneath active segment using MaterialTheme.colorScheme.onSurface
+        assertTrue(
+            "Active zone badge must render only under the active segment index (index == state.activeZoneIndex - 1)",
+            source.contains("if (index == state.activeZoneIndex - 1)")
+        )
+        assertTrue(
+            "Active zone badge must use MaterialTheme.colorScheme.onSurface for high-contrast legibility across all themes",
+            source.contains("color = MaterialTheme.colorScheme.onSurface")
+        )
     }
 }

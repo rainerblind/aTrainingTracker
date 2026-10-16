@@ -76,7 +76,8 @@ data class RouteWithPath(
     val summary: RouteSummary,
     val path: List<PathPoint>,
     val waypoints: List<RouteWaypoint> = emptyList(),
-    val climbs: List<Climb> = emptyList()
+    val climbs: List<Climb> = emptyList(),
+    val latLngs: List<LatLng> = path.map { it.latLng }
 )
 
 

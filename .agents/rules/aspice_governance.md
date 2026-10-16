@@ -177,4 +177,5 @@ This table maps every legacy rule number (Rules 1 through 36) from historical sp
 | **Rule 38** | No Wrapping in Dense Horizontal Chip Rows | **Migrated** | `docs/design_guidelines.md` **Sec 5.6** | UI & Layout: Use compact bordered/tinted pills over 7-chip M3 `FilterChip` rows. |
 | **Rule 39** | Reactive Flow Subscription Over Static `.value` Reads | **Migrated** | `docs/coding_standards.md` **Sec 1.5** | Software Engineering: Subscribe live flows in `combine(...)`; never read `.value` inside static observers. |
 | **Rule 40** | Growing Warm-Up Window for Rolling Telemetry | **Migrated** | `docs/coding_standards.md` **Sec 1.6** | Software Engineering: Emit rolling metrics from second 1 using growing $1..W-1$ window. |
+| **Rule 41** | System Navigation Bar Inset Clearance | **Migrated** | `docs/design_guidelines.md` **Sec 5.6** | UI & Layout: Apply `navigationBarsPadding()` / `WindowInsets.navigationBars` to scrollable screens so bottom content clears the system navigation bar. |
 

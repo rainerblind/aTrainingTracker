@@ -1,4 +1,4 @@
-<!-- DO NOT MODIFY PATH DATA WITHOUT UPDATING TST-UI-323 -->
+<!-- DO NOT MODIFY PATH DATA WITHOUT UPDATING TST-UI-323 / TST-UI-352 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -6,5 +6,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FF1976D2"
-        android:pathData="M12.34,6V4H18v5.66h-2V7.41l-5,5V20h-2v-7.58c0,-0.53 0.21,-1.04 0.59,-1.41l5,-5H12.34z" />
+        android:pathData="M11,20h-2v-7.58c0,-0.53 0.21,-1.04 0.59,-1.41l3.5,-3.5l-2.12,-2.12l5.66,0l0,5.66l-2.12,-2.12l-3.5,3.5V20z" />
 </vector>

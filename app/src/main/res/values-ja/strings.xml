@@ -1836,5 +1836,32 @@
     <string name="athlete_weight_clear">クリア</string>
     <string name="athlete_weight_edit">編集</string>
 
+    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, REQ-UI-391) -->
+    <string name="drawer_athlete_profile">アスリートプロフィール</string>
+    <string name="athlete_profile_title">アスリートプロフィール</string>
+    <string name="athlete_profile_add_entry">測定値を追加</string>
+    <string name="athlete_profile_edit_entry">測定値を編集</string>
+    <string name="athlete_profile_metric_weight">体重</string>
+    <string name="athlete_profile_metric_hr_rest">安静時心拍</string>
+    <string name="athlete_profile_metric_ftp">FTP</string>
+    <string name="athlete_profile_metric_w_per_kg">W/kg</string>
+    <string name="athlete_profile_chart_title">推移</string>
+    <string name="athlete_profile_range_1m">1ヶ月</string>
+    <string name="athlete_profile_range_3m">3ヶ月</string>
+    <string name="athlete_profile_range_6m">6ヶ月</string>
+    <string name="athlete_profile_range_1y">1年</string>
+    <string name="athlete_profile_range_all">すべて</string>
+    <string name="athlete_profile_history_title">測定履歴</string>
+    <string name="athlete_profile_filter_all">すべて</string>
+    <string name="athlete_profile_empty_chart">選択した期間に測定値がありません。</string>
+    <string name="athlete_profile_empty_history">測定値がまだ記録されていません。+ をタップして体重、安静時心拍数、またはFTPを追加してください。</string>
+    <string name="athlete_profile_date_label">日付</string>
+    <string name="athlete_profile_value_label">値 (%1$s)</string>
+    <string name="athlete_profile_delete_title">測定値を削除しますか？</string>
+    <string name="athlete_profile_delete_message">%3$s の %1$s (%2$s) を削除しますか？</string>
+
+    <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
+    <string name="elevation_profile_empty_state">標高プロファイル — ルートまたは記録の待機中</string>
+
 </resources>
 

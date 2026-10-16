@@ -1495,7 +1495,7 @@
     <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 zones</string>
     <string name="zone_mode_columns">Colonnes</string>
-    <string name="zone_mode_stacked_bar">Barre empilée</string>
+    <string name="zone_mode_stacked_bar">Barre</string>
     <string name="zone_mode_histogram">Histogramme</string>
     <string name="aftermath_laps_splits_title">Tours et intervalles</string>
     <string name="split_badge_best">Meilleur</string>
@@ -1855,5 +1855,32 @@
     <string name="athlete_weight_card_description">Requis pour calculer le rapport puissance/poids en temps réel (W/kg).</string>
     <string name="athlete_weight_clear">Effacer</string>
     <string name="athlete_weight_edit">Modifier</string>
+
+    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, REQ-UI-391) -->
+    <string name="drawer_athlete_profile">Profil de l\'athlète</string>
+    <string name="athlete_profile_title">Profil de l\'athlète</string>
+    <string name="athlete_profile_add_entry">Ajouter une mesure</string>
+    <string name="athlete_profile_edit_entry">Modifier la mesure</string>
+    <string name="athlete_profile_metric_weight">Poids</string>
+    <string name="athlete_profile_metric_hr_rest">FC repos</string>
+    <string name="athlete_profile_metric_ftp">FTP</string>
+    <string name="athlete_profile_metric_w_per_kg">W/kg</string>
+    <string name="athlete_profile_chart_title">Progression</string>
+    <string name="athlete_profile_range_1m">1M</string>
+    <string name="athlete_profile_range_3m">3M</string>
+    <string name="athlete_profile_range_6m">6M</string>
+    <string name="athlete_profile_range_1y">1A</string>
+    <string name="athlete_profile_range_all">Tout</string>
+    <string name="athlete_profile_history_title">Historique des mesures</string>
+    <string name="athlete_profile_filter_all">Tout</string>
+    <string name="athlete_profile_empty_chart">Aucune mesure sur la période sélectionnée.</string>
+    <string name="athlete_profile_empty_history">Aucune mesure enregistrée. Appuyez sur + pour saisir le poids, la FC au repos ou la FTP.</string>
+    <string name="athlete_profile_date_label">Date</string>
+    <string name="athlete_profile_value_label">Valeur (%1$s)</string>
+    <string name="athlete_profile_delete_title">Supprimer la mesure ?</string>
+    <string name="athlete_profile_delete_message">Supprimer %1$s (%2$s) du %3$s ?</string>
+
+    <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
+    <string name="elevation_profile_empty_state">Profil d\'altitude — en attente de parcours ou d\'activité</string>
 
 </resources>

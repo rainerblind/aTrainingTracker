@@ -185,7 +185,7 @@ class CyclingPowerMetricsDeviceTest {
     }
 
     @Test
-    fun testCalculateMetrics_npWarmupWindow_emitsNull() {
+    fun testCalculateMetrics_npWarmupWindow_emitsValidFromFirstSecond() {
         every { powerSensorData.value } returns 250.0
 
         val device = CyclingPowerMetricsDevice(
@@ -198,8 +198,8 @@ class CyclingPowerMetricsDeviceTest {
 
         for (i in 1..29) {
             device.calculateMetrics()
-            assertNull(device.normalizedPowerSensor.sensorData.value)
-            assertNull(device.intensityFactorSensor.sensorData.value)
+            assertEquals(250.0, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+            assertEquals(1.0, device.intensityFactorSensor.sensorData.value as Double, 0.001)
         }
 
         device.shutDown()
@@ -265,26 +265,30 @@ class CyclingPowerMetricsDeviceTest {
             { 200 }
         )
 
-        // 10 active ticks
+        // 10 active ticks at 200W -> NP = 200W, IF = 1.0
         for (i in 1..10) {
             device.calculateMetrics()
+            assertEquals(200.0, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+            assertEquals(1.0, device.intensityFactorSensor.sensorData.value as Double, 0.001)
         }
 
-        // Suspend recording for 30 ticks
+        // Suspend recording for 30 ticks with different raw power (400W): sensors must stay frozen at 200W / 1.0
+        every { powerSensorData.value } returns 400.0
         isSuspended = true
         for (i in 1..30) {
             device.calculateMetrics()
-            assertNull(device.normalizedPowerSensor.sensorData.value)
+            assertEquals(200.0, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+            assertEquals(1.0, device.intensityFactorSensor.sensorData.value as Double, 0.001)
         }
 
-        // Resume: need another 20 active ticks to reach 30
+        // Resume at 200W: NP and IF continue smoothly at 200W / 1.0
+        every { powerSensorData.value } returns 200.0
         isSuspended = false
-        for (i in 1..19) {
+        for (i in 1..20) {
             device.calculateMetrics()
-            assertNull(device.normalizedPowerSensor.sensorData.value)
+            assertEquals(200.0, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+            assertEquals(1.0, device.intensityFactorSensor.sensorData.value as Double, 0.001)
         }
-        device.calculateMetrics() // 30th active tick
-        assertEquals(200.0, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
 
         device.shutDown()
     }
@@ -323,10 +327,11 @@ class CyclingPowerMetricsDeviceTest {
             { 200 }
         )
 
-        // Warmup: first 29 ticks TSS is null
+        // Growing warm-up window: first 29 ticks emit live TSS = i / 36.0
         for (i in 1..29) {
             device.calculateMetrics()
-            assertNull(device.tssSensor.sensorData.value)
+            assertNotNull(device.tssSensor.sensorData.value)
+            assertEquals(i.toDouble() / 36.0, device.tssSensor.sensorData.value as Double, 0.01)
         }
 
         // 30th tick: NP = 200, IF = 1.0, t = 30s

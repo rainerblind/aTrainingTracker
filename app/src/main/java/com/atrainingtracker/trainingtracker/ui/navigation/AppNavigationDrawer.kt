@@ -178,7 +178,8 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
                 DrawerItemConfig(R.id.drawer_bikes, R.drawable.ic_equipment_bike, R.string.prefs_manage_bikes_title),
                 DrawerItemConfig(R.id.drawer_shoes, R.drawable.ic_equipment_shoe, R.string.prefs_manage_shoes_title),
                 DrawerItemConfig(R.id.drawer_sport_types, R.drawable.ic_sports_combined, R.string.sport_types),
-                DrawerItemConfig(R.id.drawer_training_zones, R.drawable.ic_zones_hr_run_combined, R.string.prefs_training_zones)
+                DrawerItemConfig(R.id.drawer_training_zones, R.drawable.ic_zones_hr_run_combined, R.string.prefs_training_zones),
+                DrawerItemConfig(R.id.drawer_athlete_profile, R.drawable.ic_athlete_profile, R.string.drawer_athlete_profile)
             )
         ),
         DrawerGroup(
