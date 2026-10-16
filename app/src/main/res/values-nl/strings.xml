@@ -1839,8 +1839,8 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Snelheid waaronder de opname wordt gepauzeerd</string>
     <string name="tuning_auto_pause_debounce_title">Pauzevertraging</string>
     <string name="tuning_auto_pause_debounce_desc">Duur onder drempelwaarde alvorens te pauzeren</string>
-    <string name="tuning_speed_value_format">%1 %2</string>
-    <string name="tuning_seconds_value_format">%1 s</string>
+    <string name="tuning_speed_value_format">%1$d %2$s</string>
+    <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Automatisch pauzeren</string>
     <string name="cockpit_auto_pause_resume">Nu hervatten</string>
     <string name="cockpit_speed_sensor_lost">Snelheidssensor verloren</string>

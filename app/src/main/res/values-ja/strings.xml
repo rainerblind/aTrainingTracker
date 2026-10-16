@@ -1819,8 +1819,8 @@
     <string name="tuning_auto_pause_speed_threshold_desc">記録が一時停止される速度のしきい値</string>
     <string name="tuning_auto_pause_debounce_title">一時停止遅延時間</string>
     <string name="tuning_auto_pause_debounce_desc">一時停止するまでのしきい値以下の継続時間</string>
-    <string name="tuning_speed_value_format">%1 %2</string>
-    <string name="tuning_seconds_value_format">%1 s</string>
+    <string name="tuning_speed_value_format">%1$d %2$s</string>
+    <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">オートポーズ</string>
     <string name="cockpit_auto_pause_resume">今すぐ再開</string>
     <string name="cockpit_speed_sensor_lost">スピードセンサー喪失</string>

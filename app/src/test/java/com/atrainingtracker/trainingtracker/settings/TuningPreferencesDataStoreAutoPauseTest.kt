@@ -193,4 +193,31 @@ class TuningPreferencesDataStoreAutoPauseTest {
         assertEquals(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC, defaults.otherSpeedThreshold)
         assertEquals(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC, defaults.otherDebounceSec)
     }
+
+    /**
+     * Regression test for ATT-3677: Verifies that `tuning_speed_value_format` and `tuning_seconds_value_format`
+     * across all 9 localized `strings.xml` files contain valid Java Formatter specifiers (`%1$d %2$s` and `%1$d s`)
+     * and do not throw `UnknownFormatConversionException` when formatted at runtime in `SensorsGpsFilterSection`.
+     */
+    @Test
+    fun testAutoPauseFormatStrings_allLocalesHaveValidJavaFormatSpecifiers() {
+        val locales = listOf("values", "values-de", "values-es", "values-fr", "values-it", "values-ja", "values-nl", "values-pl", "values-pt")
+        val speedRegex = Regex("""<string name="tuning_speed_value_format">([^<]+)</string>""")
+        val secondsRegex = Regex("""<string name="tuning_seconds_value_format">([^<]+)</string>""")
+
+        for (dir in locales) {
+            val file = java.io.File("src/main/res/$dir/strings.xml").let {
+                if (it.exists()) it else java.io.File("app/src/main/res/$dir/strings.xml")
+            }
+            val xml = file.readText()
+            val speedFmt = speedRegex.find(xml)?.groupValues?.get(1)
+                ?: throw AssertionError("Missing tuning_speed_value_format in $dir/strings.xml")
+            val secondsFmt = secondsRegex.find(xml)?.groupValues?.get(1)
+                ?: throw AssertionError("Missing tuning_seconds_value_format in $dir/strings.xml")
+
+            assertEquals("5 km/h", String.format(java.util.Locale.US, speedFmt, 5, "km/h"))
+            assertEquals("3 s", String.format(java.util.Locale.US, secondsFmt, 3))
+        }
+    }
 }
+

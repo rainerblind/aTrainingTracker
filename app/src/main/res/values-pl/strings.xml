@@ -1840,8 +1840,8 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Prędkość, poniżej której rejestracja jest wstrzymywana</string>
     <string name="tuning_auto_pause_debounce_title">Opóźnienie pauzy</string>
     <string name="tuning_auto_pause_debounce_desc">Czas poniżej progu przed wstrzymaniem</string>
-    <string name="tuning_speed_value_format">%1 %2</string>
-    <string name="tuning_seconds_value_format">%1 s</string>
+    <string name="tuning_speed_value_format">%1$d %2$s</string>
+    <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Autopauza</string>
     <string name="cockpit_auto_pause_resume">Wznów teraz</string>
     <string name="cockpit_speed_sensor_lost">Utracono czujnik prędkości</string>
