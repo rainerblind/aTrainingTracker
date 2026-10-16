@@ -119,16 +119,37 @@ class WorkoutDataMapper(
         val rawMinWPrimeBal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.MIN)
         val (minWPrimeBalKj, minWPrimeBalPct, isEmptyTankWarning) = resolveWPrimeBalSummary(rawMinWPrimeBal)
 
+        val activeTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s))
         val avgSpeedMpsVal = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps))
+        val avgPowerWattsVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.AVG)
+        val maxPowerWattsVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.MAX)
         val aerobicSummary = resolveAerobicEfficiencySummary(
             powerEf = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.EFFICIENCY_FACTOR),
             powerDecouplingPct = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.AEROBIC_DECOUPLING),
             speedEf = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.EFFICIENCY_FACTOR),
             speedDecouplingPct = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.AEROBIC_DECOUPLING),
             avgHrBpm = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HR, ExtremaType.AVG),
-            avgPowerWatts = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.AVG),
+            avgPowerWatts = avgPowerWattsVal,
             avgSpeedMps = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.AVG) ?: avgSpeedMpsVal,
             bSportType = bSportType
+        )
+        val powerSummary = resolvePowerTrainingSummary(
+            npEnd = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.END),
+            npAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.AVG),
+            ifEnd = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.END),
+            ifAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.AVG),
+            tssEnd = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.TSS, ExtremaType.END),
+            tssAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.TSS, ExtremaType.AVG),
+            tssMax = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.TSS, ExtremaType.MAX),
+            workEnd = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.END),
+            workAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.AVG),
+            workMax = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.MAX),
+            ptwAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG),
+            ptwMax = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX),
+            avgPowerWatts = avgPowerWattsVal,
+            maxPowerWatts = maxPowerWattsVal,
+            activeTimeSec = activeTimeSec,
+            startTimeS = dateTimeResult.timestampS
         )
 
         // The mapper is responsible for assembling the final object from its constituent parts.
@@ -173,10 +194,17 @@ class WorkoutDataMapper(
             aerobicDecouplingPct = aerobicSummary.aerobicDecouplingPct,
             isPowerBasedEfficiency = aerobicSummary.isPowerBasedEfficiency,
             isAerobicDecouplingHighDrift = aerobicSummary.isAerobicDecouplingHighDrift,
+            normalizedPowerWatts = powerSummary.normalizedPowerWatts,
+            intensityFactor = powerSummary.intensityFactor,
+            tss = powerSummary.tss,
+            workKj = powerSummary.workKj,
+            avgPowerToWeight = powerSummary.avgPowerToWeight,
+            maxPowerToWeight = powerSummary.maxPowerToWeight,
+            variabilityIndex = powerSummary.variabilityIndex,
 
             totalDistance = totalDistance,
             maxDisplacement = maxDisplacement,
-            activeTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)),
+            activeTimeSec = activeTimeSec,
             totalTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s)),
             avgSpeedMps = avgSpeedMpsVal,
             ascentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.ASCENDING)),
@@ -328,6 +356,137 @@ class WorkoutDataMapper(
             aerobicDecouplingPct = dec,
             isPowerBasedEfficiency = isPower,
             isAerobicDecouplingHighDrift = isHighDrift
+        )
+    }
+
+    /**
+     * Resolved session-level power training metrics (`REQ-UI-402.1`, Rule 20).
+     */
+    internal data class PowerTrainingSummary(
+        val normalizedPowerWatts: Double? = null,
+        val intensityFactor: Double? = null,
+        val tss: Double? = null,
+        val workKj: Double? = null,
+        val avgPowerToWeight: Double? = null,
+        val maxPowerToWeight: Double? = null,
+        val variabilityIndex: Double? = null
+    )
+
+    /**
+     * Resolves session-level power training metrics (`NP`, `IF`, `TSS`, `Work kJ`, `W/kg`, `VI`)
+     * prioritizing `ExtremaType.END` over `ExtremaType.AVG`/`MAX` for cumulative session metrics
+     * and providing an on-the-fly fallback when `POWER` extrema and athlete thresholds exist (`REQ-UI-402.1`, Rule 20).
+     */
+    internal fun resolvePowerTrainingSummary(
+        npEnd: Double?,
+        npAvg: Double?,
+        ifEnd: Double?,
+        ifAvg: Double?,
+        tssEnd: Double?,
+        tssAvg: Double?,
+        tssMax: Double?,
+        workEnd: Double?,
+        workAvg: Double?,
+        workMax: Double?,
+        ptwAvg: Double?,
+        ptwMax: Double?,
+        avgPowerWatts: Double?,
+        maxPowerWatts: Double?,
+        activeTimeSec: Long,
+        startTimeS: Long,
+        effectiveFtpWatts: Double = try {
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveFtpAt(
+                context,
+                startTimeS * 1000L
+            )?.toDouble() ?: 0.0
+        } catch (_: Throwable) {
+            0.0
+        },
+        effectiveWeightKg: Double = try {
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveWeightKgAt(
+                context,
+                startTimeS * 1000L
+            )?.toDouble() ?: 0.0
+        } catch (_: Throwable) {
+            0.0
+        }
+    ): PowerTrainingSummary {
+        fun cleanPositive(v: Double?): Double? = v?.takeIf { it.isFinite() && it > 0.0 && it < Double.MAX_VALUE }
+
+        val validNp = cleanPositive(npEnd) ?: cleanPositive(npAvg)
+        val validAvgPower = cleanPositive(avgPowerWatts)
+        val validMaxPower = cleanPositive(maxPowerWatts)
+        val validIf = cleanPositive(ifEnd) ?: cleanPositive(ifAvg)
+        val validTss = cleanPositive(tssEnd) ?: cleanPositive(tssMax) ?: cleanPositive(tssAvg)
+        val validWorkKj = cleanPositive(workEnd) ?: cleanPositive(workMax) ?: cleanPositive(workAvg)
+        val validAvgPtw = cleanPositive(ptwAvg)
+        val validMaxPtw = cleanPositive(ptwMax)
+
+        // If no power telemetry or power extrema exist at all, return empty nulls.
+        if (validNp == null && validAvgPower == null && validMaxPower == null &&
+            validIf == null && validTss == null && validWorkKj == null &&
+            validAvgPtw == null && validMaxPtw == null
+        ) {
+            return PowerTrainingSummary()
+        }
+
+        val effectiveNp = validNp ?: validAvgPower
+        val resolvedVi = if (validNp != null && validAvgPower != null) {
+            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateVariabilityIndex(
+                validNp,
+                validAvgPower
+            )
+        } else {
+            null
+        }
+        val resolvedIf = validIf ?: if (effectiveNp != null && effectiveFtpWatts > 0.0) {
+            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateIntensityFactor(
+                effectiveNp,
+                effectiveFtpWatts
+            )
+        } else {
+            null
+        }
+        val resolvedTss = validTss ?: if (effectiveNp != null && resolvedIf != null && activeTimeSec > 0L && effectiveFtpWatts > 0.0) {
+            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateTss(
+                activeTimeSec.toDouble(),
+                effectiveNp,
+                resolvedIf,
+                effectiveFtpWatts
+            )
+        } else {
+            null
+        }
+        val resolvedWorkKj = validWorkKj ?: if (validAvgPower != null && activeTimeSec > 0L) {
+            (validAvgPower * activeTimeSec.toDouble()) / 1000.0
+        } else {
+            null
+        }
+        val resolvedAvgPtw = validAvgPtw ?: if (validAvgPower != null && effectiveWeightKg > 0.0) {
+            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculatePowerToWeight(
+                validAvgPower,
+                effectiveWeightKg
+            )
+        } else {
+            null
+        }
+        val resolvedMaxPtw = validMaxPtw ?: if (validMaxPower != null && effectiveWeightKg > 0.0) {
+            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculatePowerToWeight(
+                validMaxPower,
+                effectiveWeightKg
+            )
+        } else {
+            null
+        }
+
+        return PowerTrainingSummary(
+            normalizedPowerWatts = validNp ?: validAvgPower,
+            intensityFactor = resolvedIf,
+            tss = resolvedTss,
+            workKj = resolvedWorkKj,
+            avgPowerToWeight = resolvedAvgPtw,
+            maxPowerToWeight = resolvedMaxPtw,
+            variabilityIndex = resolvedVi
         )
     }
 
@@ -490,15 +649,35 @@ class WorkoutDataMapper(
         val rawMinWPrimeBal = getBatchVal(SensorType.W_PRIME_BAL, ExtremaType.MIN)
         val (minWPrimeBalKj, minWPrimeBalPct, isEmptyTankWarning) = resolveWPrimeBalSummary(rawMinWPrimeBal)
 
+        val avgPowerWattsBatch = getBatchVal(SensorType.POWER, ExtremaType.AVG)
+        val maxPowerWattsBatch = getBatchVal(SensorType.POWER, ExtremaType.MAX)
         val aerobicSummary = resolveAerobicEfficiencySummary(
             powerEf = getBatchVal(SensorType.POWER, ExtremaType.EFFICIENCY_FACTOR),
             powerDecouplingPct = getBatchVal(SensorType.POWER, ExtremaType.AEROBIC_DECOUPLING),
             speedEf = getBatchVal(SensorType.SPEED_mps, ExtremaType.EFFICIENCY_FACTOR),
             speedDecouplingPct = getBatchVal(SensorType.SPEED_mps, ExtremaType.AEROBIC_DECOUPLING),
             avgHrBpm = getBatchVal(SensorType.HR, ExtremaType.AVG),
-            avgPowerWatts = getBatchVal(SensorType.POWER, ExtremaType.AVG),
+            avgPowerWatts = avgPowerWattsBatch,
             avgSpeedMps = getBatchVal(SensorType.SPEED_mps, ExtremaType.AVG) ?: snapshot.avgSpeedMps,
             bSportType = bSportType
+        )
+        val powerSummary = resolvePowerTrainingSummary(
+            npEnd = getBatchVal(SensorType.NORMALIZED_POWER, ExtremaType.END),
+            npAvg = getBatchVal(SensorType.NORMALIZED_POWER, ExtremaType.AVG),
+            ifEnd = getBatchVal(SensorType.INTENSITY_FACTOR, ExtremaType.END),
+            ifAvg = getBatchVal(SensorType.INTENSITY_FACTOR, ExtremaType.AVG),
+            tssEnd = getBatchVal(SensorType.TSS, ExtremaType.END),
+            tssAvg = getBatchVal(SensorType.TSS, ExtremaType.AVG),
+            tssMax = getBatchVal(SensorType.TSS, ExtremaType.MAX),
+            workEnd = getBatchVal(SensorType.WORK_KJ, ExtremaType.END),
+            workAvg = getBatchVal(SensorType.WORK_KJ, ExtremaType.AVG),
+            workMax = getBatchVal(SensorType.WORK_KJ, ExtremaType.MAX),
+            ptwAvg = getBatchVal(SensorType.POWER_TO_WEIGHT, ExtremaType.AVG),
+            ptwMax = getBatchVal(SensorType.POWER_TO_WEIGHT, ExtremaType.MAX),
+            avgPowerWatts = avgPowerWattsBatch,
+            maxPowerWatts = maxPowerWattsBatch,
+            activeTimeSec = snapshot.activeTimeSec,
+            startTimeS = snapshot.startTimeS
         )
 
         return WorkoutData(
@@ -540,6 +719,13 @@ class WorkoutDataMapper(
             aerobicDecouplingPct = aerobicSummary.aerobicDecouplingPct,
             isPowerBasedEfficiency = aerobicSummary.isPowerBasedEfficiency,
             isAerobicDecouplingHighDrift = aerobicSummary.isAerobicDecouplingHighDrift,
+            normalizedPowerWatts = powerSummary.normalizedPowerWatts,
+            intensityFactor = powerSummary.intensityFactor,
+            tss = powerSummary.tss,
+            workKj = powerSummary.workKj,
+            avgPowerToWeight = powerSummary.avgPowerToWeight,
+            maxPowerToWeight = powerSummary.maxPowerToWeight,
+            variabilityIndex = powerSummary.variabilityIndex,
 
             totalDistance = snapshot.totalDistance,
             maxDisplacement = maxDisplacement,

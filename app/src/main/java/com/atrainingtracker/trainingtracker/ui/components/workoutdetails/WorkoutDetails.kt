@@ -186,6 +186,56 @@ fun WorkoutDetails(
                 }
             }
         }
+
+        // --- Section 6: Power Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) (REQ-UI-402.2) ---
+        val hasPowerTrainingMetrics = data.normalizedPowerWatts != null ||
+            data.intensityFactor != null ||
+            data.tss != null ||
+            data.workKj != null ||
+            data.avgPowerToWeight != null
+        if (hasPowerTrainingMetrics) {
+            PowerTrainingMetricsSection(data = data)
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PowerTrainingMetricsSection(
+    data: WorkoutDetailsData,
+    modifier: Modifier = Modifier
+) {
+    val badges = buildList {
+        data.normalizedPowerWatts?.let { add(stringResource(R.string.workout_power_metrics_np_format, it)) }
+        data.intensityFactor?.let { add(stringResource(R.string.workout_power_metrics_if_format, it)) }
+        data.tss?.let { add(stringResource(R.string.workout_power_metrics_tss_format, it)) }
+        data.workKj?.let { add(stringResource(R.string.workout_power_metrics_work_format, it)) }
+        data.avgPowerToWeight?.let { add(stringResource(R.string.workout_power_metrics_wkg_format, it)) }
+        data.variabilityIndex?.let { add(stringResource(R.string.workout_power_metrics_vi_format, it)) }
+    }
+    if (badges.isEmpty()) return
+
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        badges.forEach { badgeLabel ->
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                shape = MaterialTheme.shapes.small
+            ) {
+                Text(
+                    text = badgeLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
     }
 }
 

@@ -1938,5 +1938,13 @@
     <string name="athlete_profile_pmc_acwr_caution">Duże obciążenie</string>
     <string name="athlete_profile_pmc_acwr_danger">Strefa ryzyka</string>
     <string name="athlete_profile_pmc_empty">Brak danych o obciążeniu treningowym.</string>
+
+    <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->
+    <string name="workout_power_metrics_np_format">NP: %1$.0f W</string>
+    <string name="workout_power_metrics_if_format">IF: %1$.2f</string>
+    <string name="workout_power_metrics_tss_format">TSS: %1$.0f</string>
+    <string name="workout_power_metrics_work_format">Praca: %1$.0f kJ</string>
+    <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
+    <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
 </resources>
 
