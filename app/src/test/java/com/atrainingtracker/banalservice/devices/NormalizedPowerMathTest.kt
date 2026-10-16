@@ -24,7 +24,8 @@ import java.util.ArrayDeque
 
 /**
  * Pure algorithmic verification of Dr. Andrew Coggan's Normalized Power (NP)
- * and Intensity Factor (IF = NP / FTP) calculations conforming to REQ-TRK-020 and TST-TRK-012.
+ * and Intensity Factor (IF = NP / FTP) calculations conforming to REQ-TRK-020, REQ-TRK-023,
+ * TST-TRK-012, and TST-TRK-015.
  */
 class NormalizedPowerMathTest {
 
@@ -41,18 +42,14 @@ class NormalizedPowerMathTest {
             }
             window30s.addLast(powerWatts)
 
-            if (window30s.size < 30) {
-                return Pair(null, null)
-            }
-
-            var sum30 = 0.0
+            var sum = 0.0
             for (p in window30s) {
-                sum30 += p
+                sum += p
             }
-            val p30s = sum30 / 30.0
-            val p30sPow4 = Math.pow(p30s, 4.0)
+            val pRolling = sum / window30s.size.toDouble()
+            val pRollingPow4 = Math.pow(pRolling, 4.0)
 
-            sum4thPower += p30sPow4
+            sum4thPower += pRollingPow4
             count4thPower++
 
             val np = Math.pow(sum4thPower / count4thPower, 0.25)
@@ -69,13 +66,53 @@ class NormalizedPowerMathTest {
     }
 
     @Test
-    fun testWarmupWindow_lessThan30Samples_returnsNull() {
+    fun testWarmupWindow_growing1To29Samples_emitsValidNpAndIfFromFirstSample() {
         val engine = NormalizedPowerEngine(ftp = 250)
         for (i in 1..29) {
             val (np, ifVal) = engine.ingestSample(200.0)
-            assertNull("NP must be null before 30 samples have accumulated", np)
-            assertNull("IF must be null before 30 samples have accumulated", ifVal)
+            assertNotNull("NP must be emitted on sample $i using growing window", np)
+            assertEquals(200.0, np!!, 0.001)
+            assertNotNull("IF must be emitted on sample $i using growing window", ifVal)
+            assertEquals(0.80, ifVal!!, 0.001)
         }
+    }
+
+    @Test
+    fun test_NP_Transition_Boundary_Stability() {
+        // 1. Constant power input: C^0 and C^1 continuity across k=29 -> k=30 -> k=31
+        val constantEngine = NormalizedPowerEngine(ftp = 250)
+        var np29Constant = 0.0
+        for (k in 1..29) {
+            np29Constant = constantEngine.ingestSample(220.0).first!!
+        }
+        val np30Constant = constantEngine.ingestSample(220.0).first!!
+        val np31Constant = constantEngine.ingestSample(220.0).first!!
+
+        assertEquals(220.0, np29Constant, 1e-6)
+        assertEquals(220.0, np30Constant, 1e-6)
+        assertEquals(220.0, np31Constant, 1e-6)
+        assertTrue(kotlin.math.abs(np30Constant - np29Constant) < 1e-6)
+        assertTrue(kotlin.math.abs(np31Constant - np30Constant) < 1e-6)
+
+        // 2. Variable power input (alternating 180W / 260W): smooth bounded transition across k=29 -> k=30 -> k=31
+        val variableEngine = NormalizedPowerEngine(ftp = 250)
+        var np29Var = 0.0
+        for (k in 1..29) {
+            val p = if (k % 2 == 0) 260.0 else 180.0
+            np29Var = variableEngine.ingestSample(p).first!!
+        }
+        val np30Var = variableEngine.ingestSample(260.0).first!!
+        val np31Var = variableEngine.ingestSample(180.0).first!!
+
+        // At k=30, Welford step weight is 1/30, so transition delta is strictly bounded (< 1.5 W)
+        assertTrue(
+            "Transition across k=29 ($np29Var) -> k=30 ($np30Var) must be smooth and continuous",
+            kotlin.math.abs(np30Var - np29Var) < 1.5
+        )
+        assertTrue(
+            "Transition across k=30 ($np30Var) -> k=31 ($np31Var) must be smooth and continuous",
+            kotlin.math.abs(np31Var - np30Var) < 1.5
+        )
     }
 
     @Test
@@ -102,14 +139,16 @@ class NormalizedPowerMathTest {
         val engine = NormalizedPowerEngine(ftp = 300)
         var lastNp: Double? = null
 
-        // Ingest 30 samples of 100W, then 30 samples of 300W
-        // Arithmetic mean across the 60 samples is 200W
-        for (i in 1..30) {
-            engine.ingestSample(100.0)
-        }
-        for (i in 1..30) {
-            val (np, _) = engine.ingestSample(300.0)
-            lastNp = np
+        // Ingest 2 symmetric cycles of 30s at 100W followed by 30s at 300W (120s total).
+        // Arithmetic mean across the 120 samples is strictly 200W.
+        repeat(2) {
+            for (i in 1..30) {
+                engine.ingestSample(100.0)
+            }
+            for (i in 1..30) {
+                val (np, _) = engine.ingestSample(300.0)
+                lastNp = np
+            }
         }
 
         assertNotNull(lastNp)
@@ -134,9 +173,12 @@ class NormalizedPowerMathTest {
             sample30Np = np
         }
 
-        // On sample 30, rolling 30s average is (15 * 300 + 15 * 0) / 30 = 150W
+        // On sample 30, rolling 30s average is (15 * 300 + 15 * 0) / 30 = 150W,
+        // while cumulative NP blends the initial 300W ramp with the coasting decay (> 150W and < 300W)
         assertNotNull(sample30Np)
-        assertEquals(150.0, sample30Np!!, 0.001)
+        assertTrue(sample30Np!! > 150.0 && sample30Np < 300.0)
+        val finalRollingAvg = engine.window30s.average()
+        assertEquals(150.0, finalRollingAvg, 0.001)
     }
 
     @Test
@@ -163,14 +205,12 @@ class NormalizedPowerMathTest {
             val (np2, if2) = engineZeroFtp.ingestSample(250.0)
             val (np3, if3) = engineNegativeFtp.ingestSample(250.0)
 
-            if (i == 30) {
-                assertNotNull(np1)
-                assertNull("IF must be null when FTP is null", if1)
-                assertNotNull(np2)
-                assertNull("IF must be null when FTP is 0", if2)
-                assertNotNull(np3)
-                assertNull("IF must be null when FTP is negative", if3)
-            }
+            assertNotNull(np1)
+            assertNull("IF must be null when FTP is null", if1)
+            assertNotNull(np2)
+            assertNull("IF must be null when FTP is 0", if2)
+            assertNotNull(np3)
+            assertNull("IF must be null when FTP is negative", if3)
         }
     }
 
@@ -215,6 +255,6 @@ class NormalizedPowerMathTest {
         assertTrue(currentNp!! > 0.0)
         assertFalse(currentNp.isNaN())
         assertFalse(currentNp.isInfinite())
-        assertEquals(18000L - 29L, engine.count4thPower)
+        assertEquals(18000L, engine.count4thPower)
     }
 }
