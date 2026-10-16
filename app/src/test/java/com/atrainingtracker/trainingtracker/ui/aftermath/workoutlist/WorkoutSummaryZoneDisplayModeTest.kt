@@ -126,4 +126,27 @@ class WorkoutSummaryZoneDisplayModeTest {
             content.contains("workoutCardPrefs.copy(zoneCardDisplayMode = mode)")
         )
     }
+
+    @Test
+    fun zoneModeSelector_supportsAllThreeDisplayModesWithDeterministicSelectionAndHistogramFallback() {
+        val selectableModes = listOf(
+            ZoneCardDisplayMode.STACKED_BAR,
+            ZoneCardDisplayMode.COLUMNS,
+            ZoneCardDisplayMode.HISTOGRAM
+        )
+        for (targetMode in selectableModes) {
+            val prefs = WorkoutCardSectionPreferences(zoneCardDisplayMode = targetMode)
+            assertEquals(targetMode, prefs.zoneCardDisplayMode)
+        }
+
+        // Verify histogram fallback contract preserved for both cards (REQ-UI-386 invariant)
+        assertEquals(
+            ZoneCardDisplayMode.HISTOGRAM,
+            ZoneCardDisplayMode.HISTOGRAM.resolveWithHistogramFallback(hasHistogram = true)
+        )
+        assertEquals(
+            ZoneCardDisplayMode.COLUMNS,
+            ZoneCardDisplayMode.HISTOGRAM.resolveWithHistogramFallback(hasHistogram = false)
+        )
+    }
 }

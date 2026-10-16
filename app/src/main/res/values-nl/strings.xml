@@ -1492,7 +1492,7 @@
     <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 zones</string>
     <string name="zone_mode_columns">Kolommen</string>
-    <string name="zone_mode_stacked_bar">Gestapelde balk</string>
+    <string name="zone_mode_stacked_bar">Balk</string>
     <string name="zone_mode_histogram">Histogram</string>
     <string name="aftermath_laps_splits_title">Ronden en tussentijden</string>
     <string name="split_badge_best">Beste</string>
