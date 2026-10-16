@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ Faithful analytical geometric vectorization (ATT-2859 / REQ-UI-375 / Rule 37).
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="192.0"
+    android:viewportHeight="192.0">
+    <path
+        android:fillColor="#0000FF"
+        android:pathData="M 96.00,27.50 A 15.50,15.50 0 1,1 127.00,27.50 A 15.50,15.50 0 1,1 96.00,27.50 Z" />
+    <path
+        android:pathData="M 108.50,50.00 L 105.00,98.00"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="20.50"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 106.50,48.50 L 80.00,54.00 L 91.50,78.50"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="12.50"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 111.00,50.00 L 128.00,81.00 L 136.00,52.00"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="12.00"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 105.50,99.00 L 146.50,111.00 L 122.50,155.00"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="21.50"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 104.50,100.00 L 81.00,134.50 L 45.50,163.50"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="20.50"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

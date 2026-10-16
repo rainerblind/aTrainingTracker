@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ Faithful analytical geometric vectorization (ATT-2859 / REQ-UI-375 / Rule 37).
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="192.0"
+    android:viewportHeight="192.0">
+    <path
+        android:fillColor="#000000"
+        android:fillType="evenOdd"
+        android:pathData="M 12.00,124.50 A 35.50,35.50 0 1,1 83.00,124.50 A 35.50,35.50 0 1,1 12.00,124.50 Z M 27.00,124.50 A 20.50,20.50 0 1,0 68.00,124.50 A 20.50,20.50 0 1,0 27.00,124.50 Z M 110.00,128.50 A 34.50,34.50 0 1,1 179.00,128.50 A 34.50,34.50 0 1,1 110.00,128.50 Z M 122.50,128.50 A 22.00,22.00 0 1,0 166.50,128.50 A 22.00,22.00 0 1,0 122.50,128.50 Z M 61.50,68.80 L 71.50,68.80 A 1.50,1.50 0 0,1 73.00,70.30 L 73.00,71.30 A 1.50,1.50 0 0,1 71.50,72.80 L 61.50,72.80 A 1.50,1.50 0 0,1 60.00,71.30 L 60.00,70.30 A 1.50,1.50 0 0,1 61.50,68.80 Z" />
+    <path
+        android:pathData="M 72.50,70.50 L 86.00,129.50"
+        android:strokeColor="#FF0000"
+        android:strokeWidth="12.50"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 86.50,129.00 L 131.00,93.00"
+        android:strokeColor="#FF0000"
+        android:strokeWidth="12.50"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 75.00,83.50 L 129.00,86.00"
+        android:strokeColor="#FF0000"
+        android:strokeWidth="4.00"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 74.00,89.00 L 49.50,124.50 L 86.50,129.50"
+        android:strokeColor="#FF0000"
+        android:strokeWidth="4.80"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 129.00,83.00 L 142.50,129.00"
+        android:strokeColor="#FF0000"
+        android:strokeWidth="7.80"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#0000FF"
+        android:pathData="M 130.50,43.00 A 15.00,15.00 0 1,1 160.50,43.00 A 15.00,15.00 0 1,1 130.50,43.00 Z M 66.5,63.5 C 62.0,51.0 91.0,29.5 133.5,33.5 L 133.5,51.5 C 114.0,56.0 97.0,61.0 87.5,64.5 C 76.0,68.5 69.0,69.5 66.5,63.5 Z" />
+    <path
+        android:pathData="M 129.50,45.00 L 131.00,80.50 L 162.50,83.00"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="9.50"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 74.50,59.50 L 120.00,85.50 L 86.50,110.50 L 90.50,121.50"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="16.50"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 89.00,82.00 L 96.50,102.00 L 88.00,136.50 L 97.50,145.50"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="13.00"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

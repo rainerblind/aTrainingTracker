@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ Faithful analytical geometric vectorization (ATT-2859 / REQ-UI-375 / Rule 37).
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="96.0"
+    android:viewportHeight="96.0">
+    <path
+        android:fillColor="#000000"
+        android:pathData="M 10.00,0.00 L 86.00,0.00 A 10.00,10.00 0 0,1 96.00,10.00 L 96.00,86.00 A 10.00,10.00 0 0,1 86.00,96.00 L 10.00,96.00 A 10.00,10.00 0 0,1 0.00,86.00 L 0.00,10.00 A 10.00,10.00 0 0,1 10.00,0.00 Z" />
+    <path
+        android:pathData="M 47.5,20.5 C 42.5,11.5 34.5,9.5 28.0,10.5 C 19.5,12.0 15.0,19.5 16.0,27.5 C 17.5,38.0 34.0,51.5 47.5,64.0 C 61.0,51.5 77.5,38.0 79.0,27.5 C 80.0,19.5 75.5,12.0 67.0,10.5 C 60.5,9.5 52.5,11.5 47.5,20.5 Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M 27.00,75.5 L 32.00,75.5 L 32.00,81.0 L 40.50,81.0 L 40.50,75.5 L 45.50,75.5 L 45.50,90.5 L 40.50,90.5 L 40.50,84.8 L 32.00,84.8 L 32.00,90.5 L 27.00,90.5 Z M 49.50,75.5 L 64.00,75.5 A 3.8,3.8 0 0,1 67.80,79.3 L 67.80,81.2 A 3.2,3.2 0 0,1 65.00,84.4 A 3.0,3.0 0 0,1 67.70,87.4 L 67.70,90.5 L 62.70,90.5 L 62.70,87.5 A 1.5,1.5 0 0,0 61.20,86.0 L 54.50,86.0 L 54.50,90.5 L 49.50,90.5 Z M 54.50,79.0 L 62.00,79.0 A 1.4,1.4 0 0,1 63.40,80.4 L 63.40,81.2 A 1.4,1.4 0 0,1 62.00,82.6 L 54.50,82.6 Z" />
+</vector>

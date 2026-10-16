@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ Faithful analytical geometric vectorization (ATT-2859 / REQ-UI-375 / Rule 37).
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="144.0"
+    android:viewportHeight="144.0">
+    <path
+        android:fillColor="#0A3D91"
+        android:pathData="M 24.00,10.50 L 120.00,10.50 A 13.50,13.50 0 0,1 133.50,24.00 L 133.50,120.00 A 13.50,13.50 0 0,1 120.00,133.50 L 24.00,133.50 A 13.50,13.50 0 0,1 10.50,120.00 L 10.50,24.00 A 13.50,13.50 0 0,1 24.00,10.50 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 65.04,27.90 A 9.92,9.92 0 1,1 84.88,27.90 A 9.92,9.92 0 1,1 65.04,27.90 Z" />
+    <path
+        android:pathData="M 73.04,42.30 L 70.80,73.02"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="13.12"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 71.76,41.34 L 54.80,44.86 L 62.16,60.54"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8.00"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 74.64,42.30 L 85.52,62.14 L 90.64,43.58"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7.68"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 71.12,73.66 L 97.36,81.34 L 82.00,109.50"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="13.76"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 70.48,74.30 L 55.44,96.38 L 32.72,114.94"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="13.12"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

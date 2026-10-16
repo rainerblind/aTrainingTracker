@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ Faithful analytical geometric vectorization (ATT-2859 / REQ-UI-375 / Rule 37).
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="144.0"
+    android:viewportHeight="144.0">
+    <path
+        android:fillColor="#0A3D91"
+        android:pathData="M 24.00,10.50 L 120.00,10.50 A 13.50,13.50 0 0,1 133.50,24.00 L 133.50,120.00 A 13.50,13.50 0 0,1 120.00,133.50 L 24.00,133.50 A 13.50,13.50 0 0,1 10.50,120.00 L 10.50,24.00 A 13.50,13.50 0 0,1 24.00,10.50 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M 14.99,80.87 A 24.23,24.23 0 1,1 63.45,80.87 A 24.23,24.23 0 1,1 14.99,80.87 Z M 25.23,80.87 A 13.99,13.99 0 1,0 53.21,80.87 A 13.99,13.99 0 1,0 25.23,80.87 Z M 81.88,83.60 A 23.55,23.55 0 1,1 128.97,83.60 A 23.55,23.55 0 1,1 81.88,83.60 Z M 90.41,83.60 A 15.02,15.02 0 1,0 120.44,83.60 A 15.02,15.02 0 1,0 90.41,83.60 Z M 48.77,42.86 L 55.60,42.86 A 1.02,1.02 0 0,1 56.62,43.88 L 56.62,44.56 A 1.02,1.02 0 0,1 55.60,45.59 L 48.77,45.59 A 1.02,1.02 0 0,1 47.75,44.56 L 47.75,43.88 A 1.02,1.02 0 0,1 48.77,42.86 Z" />
+    <path
+        android:pathData="M 56.28,44.02 L 65.50,84.28"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8.53"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 65.84,83.94 L 96.21,59.37"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8.53"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 57.99,52.89 L 94.84,54.60"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.73"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 57.31,56.64 L 40.58,80.87 L 65.84,84.28"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.28"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 94.84,52.55 L 104.06,83.94"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5.32"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 95.87,25.25 A 10.24,10.24 0 1,1 116.34,25.25 A 10.24,10.24 0 1,1 95.87,25.25 Z M 52.19,39.24 C 49.11,30.71 68.91,16.03 97.91,18.76 L 97.91,31.05 C 84.60,34.12 73.00,37.53 66.52,39.92 C 58.67,42.65 53.89,43.33 52.19,39.24 Z" />
+    <path
+        android:pathData="M 95.18,26.61 L 96.21,50.84 L 117.71,52.55"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6.48"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 57.65,36.51 L 88.70,54.25 L 65.84,71.32 L 68.57,78.82"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="11.26"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M 67.54,51.86 L 72.66,65.52 L 66.86,89.06 L 73.34,95.20"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8.87"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M 42.06,126.30 L 42.06,132.47 L 38.31,132.47 L 38.31,116.23 L 42.06,116.23 L 42.06,117.97 C 42.58,117.28 43.16,116.78 43.78,116.45 C 44.42,116.12 45.14,115.95 45.95,115.95 C 47.40,115.95 48.59,116.53 49.52,117.69 C 50.45,118.83 50.92,120.31 50.92,122.13 C 50.92,123.94 50.45,125.42 49.52,126.58 C 48.59,127.72 47.40,128.30 45.95,128.30 C 45.14,128.30 44.42,128.14 43.78,127.81 C 43.16,127.49 42.58,126.98 42.06,126.30 Z M 44.56,118.69 C 43.76,118.69 43.14,118.98 42.70,119.58 C 42.28,120.17 42.06,121.02 42.06,122.13 C 42.06,123.24 42.28,124.09 42.70,124.69 C 43.14,125.28 43.76,125.58 44.56,125.58 C 45.36,125.58 45.98,125.29 46.41,124.70 C 46.83,124.11 47.05,123.25 47.05,122.13 C 47.05,121.01 46.83,120.16 46.41,119.58 C 45.98,118.98 45.36,118.69 44.56,118.69 Z M 59.91,118.64 C 59.07,118.64 58.44,118.94 58.00,119.55 C 57.56,120.14 57.34,121.00 57.34,122.13 C 57.34,123.26 57.56,124.13 58.00,124.72 C 58.44,125.31 59.07,125.61 59.91,125.61 C 60.72,125.61 61.34,125.31 61.78,124.72 C 62.22,124.13 62.44,123.26 62.44,122.13 C 62.44,121.00 62.22,120.14 61.78,119.55 C 61.34,118.94 60.72,118.64 59.91,118.64 Z M 59.91,115.95 C 61.93,115.95 63.51,116.50 64.64,117.59 C 65.78,118.69 66.34,120.20 66.34,122.13 C 66.34,124.06 65.78,125.58 64.64,126.67 C 63.51,127.76 61.93,128.30 59.91,128.30 C 57.88,128.30 56.29,127.76 55.14,126.67 C 53.99,125.58 53.42,124.06 53.42,122.13 C 53.42,120.20 53.99,118.69 55.14,117.59 C 56.29,116.50 57.88,115.95 59.91,115.95 Z M 68.25,116.23 L 71.91,116.23 L 73.89,124.34 L 75.86,116.23 L 79.00,116.23 L 80.98,124.27 L 82.97,116.23 L 86.61,116.23 L 83.52,128.00 L 79.42,128.00 L 77.44,119.92 L 75.45,128.00 L 71.36,128.00 L 68.25,116.23 Z M 101.05,122.09 L 101.05,123.16 L 92.25,123.16 C 92.34,124.04 92.66,124.71 93.20,125.16 C 93.76,125.59 94.52,125.81 95.50,125.81 C 96.29,125.81 97.10,125.70 97.92,125.47 C 98.76,125.23 99.61,124.87 100.48,124.39 L 100.48,127.28 C 99.60,127.63 98.71,127.88 97.81,128.05 C 96.93,128.21 96.04,128.30 95.16,128.30 C 93.03,128.30 91.38,127.76 90.19,126.69 C 89.01,125.60 88.42,124.08 88.42,122.13 C 88.42,120.21 89.00,118.70 90.16,117.61 C 91.32,116.51 92.92,115.95 94.94,115.95 C 96.79,115.95 98.27,116.51 99.38,117.63 C 100.49,118.74 101.05,120.23 101.05,122.09 Z M 97.17,120.84 C 97.17,120.13 96.96,119.55 96.55,119.11 C 96.14,118.67 95.60,118.45 94.92,118.45 C 94.19,118.45 93.60,118.66 93.14,119.08 C 92.69,119.48 92.41,120.07 92.30,120.84 L 97.17,120.84 Z M 113.05,119.44 C 112.71,119.29 112.39,119.18 112.06,119.11 C 111.74,119.04 111.41,119.00 111.08,119.00 C 110.11,119.00 109.36,119.31 108.84,119.92 C 108.32,120.54 108.06,121.42 108.06,122.58 L 108.06,128.00 L 104.31,128.00 L 104.31,116.23 L 108.06,116.23 L 108.06,118.17 C 108.54,117.40 109.09,116.84 109.72,116.48 C 110.35,116.13 111.11,115.95 111.98,115.95 C 112.11,115.95 112.24,115.96 112.39,115.97 C 112.54,115.98 112.75,116.01 113.03,116.05 L 113.05,119.44 Z" />
+</vector>
