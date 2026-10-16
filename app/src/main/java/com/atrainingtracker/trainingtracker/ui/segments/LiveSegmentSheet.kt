@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
+import com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingEntitySheet
 import com.atrainingtracker.trainingtracker.ui.map.MapDetailLayout
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
 import com.atrainingtracker.banalservice.BSportType
@@ -55,31 +56,23 @@ fun LiveSegmentSheet(
         showZoomControls = false,
         externalScrubDistance = externalScrubDistance,
         header = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
-            ) {
-                // --- Header with live data (REQ-UI-196: harmonized padding with drag handle) ---
-                SegmentHeader(
-                    summary = liveSegment.staticData.summary,
-                    liveSegmentStatus = liveSegment.liveData.segmentStatus,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 4.dp)
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                SegmentLiveDetails(
-                    liveSegmentData = liveSegment.liveData,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
+            LiveTrackingEntitySheet(
+                headerContent = { headerModifier ->
+                    // --- Header with live data (REQ-UI-196: harmonized padding with drag handle) ---
+                    SegmentHeader(
+                        summary = liveSegment.staticData.summary,
+                        liveSegmentStatus = liveSegment.liveData.segmentStatus,
+                        modifier = headerModifier
+                    )
+                },
+                telemetryHudContent = { hudModifier ->
+                    SegmentLiveDetails(
+                        liveSegmentData = liveSegment.liveData,
+                        modifier = hudModifier
+                    )
+                },
+                elevationContent = {}
+            )
         }
     )
 }

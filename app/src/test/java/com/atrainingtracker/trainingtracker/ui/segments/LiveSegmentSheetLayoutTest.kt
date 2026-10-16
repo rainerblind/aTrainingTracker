@@ -112,13 +112,24 @@ class LiveSegmentSheetLayoutTest {
             mapDetailContent.contains("if (!useStatusBarsPadding) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier")
         )
 
-        // 3. Verify LiveSegmentSheet.kt header applies background(surface)
+        // 3. Verify LiveSegmentSheet.kt delegates header to LiveTrackingEntitySheet with surface background (REQ-UI-196, REQ-UI-383, ATT-3576)
         val liveSheetFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LiveSegmentSheet.kt")
         assertTrue("LiveSegmentSheet.kt must exist", liveSheetFile.exists())
         val liveSheetContent = liveSheetFile.readText()
         assertTrue(
-            "LiveSegmentSheet header must apply background(MaterialTheme.colorScheme.surface) (REQ-UI-196, ATT-1735)",
-            liveSheetContent.contains(".background(MaterialTheme.colorScheme.surface)")
+            "LiveSegmentSheet header must delegate to LiveTrackingEntitySheet (REQ-UI-196, REQ-UI-383, ATT-3576)",
+            liveSheetContent.contains("LiveTrackingEntitySheet(")
+        )
+        assertFalse(
+            "LiveSegmentSheet must not instantiate raw HorizontalDivider directly (REQ-UI-383, ATT-3576)",
+            liveSheetContent.contains("HorizontalDivider(")
+        )
+        val entitySheetFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/core/LiveTrackingEntitySheet.kt")
+        assertTrue("LiveTrackingEntitySheet.kt must exist", entitySheetFile.exists())
+        val entitySheetContent = entitySheetFile.readText()
+        assertTrue(
+            "LiveTrackingEntitySheet must apply background(MaterialTheme.colorScheme.surface) (REQ-UI-196, REQ-UI-383)",
+            entitySheetContent.contains(".background(MaterialTheme.colorScheme.surface)")
         )
     }
 
