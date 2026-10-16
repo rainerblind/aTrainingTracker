@@ -1879,5 +1879,8 @@
     <string name="athlete_profile_delete_title">Eliminar medição?</string>
     <string name="athlete_profile_delete_message">Eliminar %1$s (%2$s) de %3$s?</string>
 
+    <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
+    <string name="elevation_profile_empty_state">Perfil de elevação — aguardando rota ou gravação</string>
+
 </resources>
 

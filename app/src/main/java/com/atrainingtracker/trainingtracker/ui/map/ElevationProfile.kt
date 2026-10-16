@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import android.content.res.Configuration
 import android.graphics.Paint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,7 +43,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import com.atrainingtracker.R
@@ -257,6 +261,7 @@ fun ElevationProfile(
     climbGradientShading: Boolean = false,
     segmentColorProvider: ((Double) -> Color)? = null,
     fixedHeight: androidx.compose.ui.unit.Dp? = null,
+    showEmptyState: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -288,6 +293,7 @@ fun ElevationProfile(
         climbGradientShading = climbGradientShading,
         segmentColorProvider = segmentColorProvider,
         fixedHeight = fixedHeight,
+        showEmptyState = showEmptyState,
         modifier = modifier
     )
 }
@@ -316,9 +322,19 @@ fun ElevationProfile(
     fillParentHeight: Boolean = false,
     climbGradientShading: Boolean = false,
     segmentColorProvider: ((Double) -> Color)? = null,
-    fixedHeight: androidx.compose.ui.unit.Dp? = null
+    fixedHeight: androidx.compose.ui.unit.Dp? = null,
+    showEmptyState: Boolean = false
 ) {
-    if (pathPoints.size < 2) return
+    if (pathPoints.size < 2) {
+        if (showEmptyState) {
+            ElevationProfileEmptyState(
+                fixedHeight = fixedHeight,
+                fillParentHeight = fillParentHeight,
+                modifier = modifier
+            )
+        }
+        return
+    }
 
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
@@ -1173,3 +1189,88 @@ private fun GradeLegendItem(
         )
     }
 }
+
+/**
+ * ATT-3779 / REQ-UI-394: Placeholder empty state rendered when the Elevation Profile is enabled
+ * on a tracking tab (`showEmptyState = true`) but fewer than 2 elevation points exist
+ * (e.g., before tracking starts and no route is selected).
+ *
+ * Uses the canonical minimum elevation profile height (`calculateElevationProfileHeight(0.0)` = 70.dp)
+ * in strict compliance with Design Guidelines Section 2.3 ("No Hardcoded Fixed Heights").
+ */
+@Composable
+internal fun ElevationProfileEmptyState(
+    fixedHeight: Dp? = null,
+    fillParentHeight: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val targetHeight = fixedHeight ?: calculateElevationProfileHeight(0.0)
+    val colorScheme = MaterialTheme.colorScheme
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (fillParentHeight) Modifier.fillMaxHeight()
+                else Modifier.height(targetHeight)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            val gridColor = colorScheme.outlineVariant.copy(alpha = 0.25f)
+            val topY = h * 0.2f
+            val midY = h * 0.5f
+            val bottomY = h * 0.8f
+            drawLine(gridColor, Offset(0f, topY), Offset(w, topY), strokeWidth = 1f)
+            drawLine(gridColor, Offset(0f, midY), Offset(w, midY), strokeWidth = 1f)
+            drawLine(gridColor, Offset(0f, bottomY), Offset(w, bottomY), strokeWidth = 1f)
+        }
+
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Terrain,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(R.string.elevation_profile_empty_state),
+                style = MaterialTheme.typography.labelMedium,
+                color = colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Preview(name = "ElevationProfileEmptyState Light", showBackground = true)
+@Composable
+private fun ElevationProfileEmptyStateLightPreview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        Surface {
+            ElevationProfileEmptyState()
+        }
+    }
+}
+
+@Preview(
+    name = "ElevationProfileEmptyState Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    showBackground = true
+)
+@Composable
+private fun ElevationProfileEmptyStateDarkPreview() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        Surface {
+            ElevationProfileEmptyState()
+        }
+    }
+}
+

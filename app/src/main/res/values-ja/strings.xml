@@ -1860,5 +1860,8 @@
     <string name="athlete_profile_delete_title">測定値を削除しますか？</string>
     <string name="athlete_profile_delete_message">%3$s の %1$s (%2$s) を削除しますか？</string>
 
+    <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
+    <string name="elevation_profile_empty_state">標高プロファイル — ルートまたは記録の待機中</string>
+
 </resources>
 

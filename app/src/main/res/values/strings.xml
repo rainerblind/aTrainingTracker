@@ -2074,6 +2074,9 @@
     <string name="athlete_profile_delete_title">Delete measurement?</string>
     <string name="athlete_profile_delete_message">Delete %1$s (%2$s) from %3$s?</string>
 
+    <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
+    <string name="elevation_profile_empty_state">Elevation profile — waiting for track or route</string>
+
 </resources>
 
 

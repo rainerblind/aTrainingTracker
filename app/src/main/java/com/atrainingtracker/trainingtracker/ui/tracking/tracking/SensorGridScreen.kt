@@ -658,7 +658,7 @@ fun SensorGridScreen(
                     // here! Material 3 BottomSheetScaffold passes static sheetPeekHeight (~174dp) in paddingValues even when
                     // the user swipes the Live Segment / Climb sheet down to SheetValue.Hidden (skipHiddenState = false),
                     // which creates a permanent 174dp blank whitespace below the ElevationProfile.
-                    if (state.showElevationProfile && resolvedProfile.pathPoints.size >= 2) {
+                    if (state.showElevationProfile) {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -668,6 +668,7 @@ fun SensorGridScreen(
                                 pathPoints = resolvedProfile.pathPoints,
                                 currentDistance = resolvedProfile.markerDistance,
                                 climbs = resolvedProfile.climbs,
+                                showEmptyState = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
