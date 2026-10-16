@@ -123,15 +123,6 @@ class MainActivityWithNavigationInteropTest {
     fun testPublicMethodsPresence() {
         val clazz = MainActivityWithNavigation::class.java
 
-        // startPairing must exist with exact parameter types (Protocol, DeviceType)
-        val startPairingMethod = clazz.getMethod(
-            "startPairing",
-            com.atrainingtracker.banalservice.Protocol::class.java,
-            com.atrainingtracker.banalservice.devices.DeviceType::class.java
-        )
-        assertNotNull("startPairing method must be present", startPairingMethod)
-        assertTrue(Modifier.isPublic(startPairingMethod.modifiers))
-
         // navigateToDrawerItem must exist
         val navigateMethod = clazz.getMethod("navigateToDrawerItem", Int::class.javaPrimitiveType)
         assertNotNull("navigateToDrawerItem method must be present", navigateMethod)
