@@ -2,29 +2,49 @@
 
 ## 1. Architectural Decomposition (SWE.2)
 
-### 1.1 DataStore & Preference Model Layer (`MyPreferenceManager.kt`)
-- **`WorkoutCardSectionPreferences`**:
-  - Update default constructor parameter `val zoneCardDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.STACKED_BAR` (previously `ZoneCardDisplayMode.COLUMNS`).
-  - Update `workoutCardPreferencesFlow` to fall back to `ZoneCardDisplayMode.STACKED_BAR` when `WORKOUT_CARD_ZONE_DISPLAY_MODE` is unset or unparseable, while preserving `"FIVE_ZONES"` -> `ZoneCardDisplayMode.COLUMNS` legacy migration.
-- **`WorkoutDetailPreferences`**:
+### 1.1 DataStore, Migration & Preference Model Layer (`MyPreferenceManager.kt`)
+- **`WorkoutCardSectionPreferences` (Summary / List View)**:
+  - Update default constructor parameter `val zoneCardDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.STACKED_BAR` (replacing `ZoneCardDisplayMode.COLUMNS` per user requirement in `ATT-3773`).
+  - **Deserialization & Migration Path (`workoutCardPreferencesFlow`)**:
+    - If `preferences[WORKOUT_CARD_ZONE_DISPLAY_MODE]` is present (`rawMode != null`), preserve the user's persisted selection (mapping legacy `"FIVE_ZONES"` to `ZoneCardDisplayMode.COLUMNS`, or `safeEnumValueOf(rawMode, ZoneCardDisplayMode.STACKED_BAR)`).
+    - If `WORKOUT_CARD_ZONE_DISPLAY_MODE` is unset (`rawMode == null`), default to `ZoneCardDisplayMode.STACKED_BAR`.
+- **`WorkoutDetailPreferences` (Workout Details / `TrackOnMapScreen`)**:
   - Add constructor parameter `val zoneCardDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.HISTOGRAM`.
   - Add companion object key `val WORKOUT_DETAIL_ZONE_DISPLAY_MODE = stringPreferencesKey("workout_detail_zone_display_mode")`.
-  - In `workoutDetailPreferencesFlow`, deserialize `preferences[WORKOUT_DETAIL_ZONE_DISPLAY_MODE]` using `if (rawMode == "FIVE_ZONES") ZoneCardDisplayMode.COLUMNS else safeEnumValueOf(rawMode, ZoneCardDisplayMode.HISTOGRAM)`, defaulting to `ZoneCardDisplayMode.HISTOGRAM` when unset.
-  - In `setWorkoutDetailPreferences(prefs: WorkoutDetailPreferences)`, persist `preferences[WORKOUT_DETAIL_ZONE_DISPLAY_MODE] = prefs.zoneCardDisplayMode.name`.
+  - **Deserialization & Migration Path (`workoutDetailPreferencesFlow`)**:
+    - Read `val rawMode = preferences[WORKOUT_DETAIL_ZONE_DISPLAY_MODE]`.
+    - When `rawMode != null`, map `"FIVE_ZONES"` to `ZoneCardDisplayMode.COLUMNS` or `safeEnumValueOf(rawMode, ZoneCardDisplayMode.HISTOGRAM)`.
+    - When `rawMode == null` (first launch after update or fresh install), initialize to `ZoneCardDisplayMode.HISTOGRAM` as explicitly specified by the user in `ATT-3773` (*"Workout Details: Default = ZoneCardDisplayMode.HISTOGRAM ('Histogramm', with automatic fallback to COLUMNS if fine-grained histogram data is absent)"*).
+  - **Persistence & Disabled `showZoneAnalysis` Retention**:
+    - `setWorkoutDetailPreferences(prefs: WorkoutDetailPreferences)` persists `preferences[WORKOUT_DETAIL_ZONE_DISPLAY_MODE] = prefs.zoneCardDisplayMode.name`.
+    - When `showZoneAnalysis` is toggled to `false` in either Summary or Details, the `zoneCardDisplayMode` value in `WorkoutCardSectionPreferences` / `WorkoutDetailPreferences` and its underlying DataStore key (`WORKOUT_CARD_ZONE_DISPLAY_MODE` / `WORKOUT_DETAIL_ZONE_DISPLAY_MODE`) are **retained (not cleared)**—merely ignored while `showZoneAnalysis == false`—so re-enabling `showZoneAnalysis` restores the athlete's previously chosen display mode without data loss.
 
-### 1.2 UI Presentation Layer (`HeartRateZoneDistributionCard.kt`, `PowerZoneDistributionCard.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`, `WorkoutMasksAndCardsSection.kt`)
+### 1.2 UI Presentation Layer & Parameter Backward Compatibility
 - **`HeartRateZoneDistributionCard.kt` & `PowerZoneDistributionCard.kt`**:
-  - Add parameter `showModeSelector: Boolean = true` to both composables and document `@param showModeSelector` in KDoc.
+  - Add trailing default parameter `showModeSelector: Boolean = true`:
+    ```kotlin
+    @Composable
+    fun HeartRateZoneDistributionCard(
+        distribution: ZoneDistributionData,
+        modifier: Modifier = Modifier,
+        displayMode: ZoneCardDisplayMode? = null,
+        onDisplayModeChange: ((ZoneCardDisplayMode) -> Unit)? = null,
+        showModeSelector: Boolean = true
+    )
+    ```
+    (and identical signature on `PowerZoneDistributionCard`).
+  - Defaulting `showModeSelector: Boolean = true` guarantees 100% source and binary backward compatibility for all existing call sites (`TrackOnMapScreen.kt` and `@Preview` functions).
   - Gate the bottom `SingleChoiceSegmentedButtonRow` row on `if (showModeSelector && distribution.entries.isNotEmpty())`.
 - **`WorkoutSummary.kt`**:
-  - Pass `showModeSelector = false` to `HeartRateZoneDistributionCard` and `PowerZoneDistributionCard` in `WorkoutSectionType.ZONES` so summary cards render strictly in the configured summary display mode (`STACKED_BAR` by default) without the bottom switcher row.
+  - Pass `showModeSelector = false` to `HeartRateZoneDistributionCard` and `PowerZoneDistributionCard` in `WorkoutSectionType.ZONES` so summary cards render strictly in `effectiveHrZoneDisplayMode` / `effectivePowerZoneDisplayMode` (`preferences.zoneCardDisplayMode`, defaulting to `STACKED_BAR`) without the bottom switcher row.
 - **`TrackOnMapScreen.kt`**:
   - Update lines 157–158 so `effectiveHrZoneDisplayMode = hrZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode` and `effectivePowerZoneDisplayMode = powerZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode` (retaining `showModeSelector = true` default on `HeartRateZoneDistributionCard` and `PowerZoneDistributionCard`).
-- **`WorkoutMasksAndCardsSection.kt`**:
+- **`WorkoutMasksAndCardsSection.kt` Refactoring Strategy (`< 400` Lines Invariant, `REQ-UI-262`)**:
+  - Extract a reusable private helper composable `ZoneDisplayModeSelector(label: String, selectedMode: ZoneCardDisplayMode, onModeSelected: (ZoneCardDisplayMode) -> Unit)` encapsulating the 3-way `SingleChoiceSegmentedButtonRow` (`STACKED_BAR`, `COLUMNS`, `HISTOGRAM`).
+  - Condense the 9-branch `when (type)` expression for `MatrixFeatureRow` (lines 144–219) into concise single-expression branches, reducing total file length from 398 lines to ~335 lines (strictly `< 400` lines).
   - When `workoutCardPrefs.showZoneAnalysis || workoutDetailPrefs.showZoneAnalysis`:
-    - If `workoutCardPrefs.showZoneAnalysis`: render a 3-way `SingleChoiceSegmentedButtonRow` labeled `"${stringResource(R.string.settings_zone_card_display_mode_title)} (${stringResource(R.string.tuning_matrix_col_list)})"` updating `onWorkoutCardPrefsChange(workoutCardPrefs.copy(zoneCardDisplayMode = mode))`.
-    - If `workoutDetailPrefs.showZoneAnalysis`: render a 3-way `SingleChoiceSegmentedButtonRow` labeled `"${stringResource(R.string.settings_zone_card_display_mode_title)} (${stringResource(R.string.tuning_matrix_col_details)})"` updating `onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(zoneCardDisplayMode = mode))`.
-  - Condense the `MatrixFeatureRow` mapping in `WorkoutMasksAndCardsSection.kt` so the file stays strictly `< 400` lines (`REQ-UI-262`).
+    - If `workoutCardPrefs.showZoneAnalysis`: render `ZoneDisplayModeSelector` labeled `"${stringResource(R.string.settings_zone_card_display_mode_title)} (${stringResource(R.string.tuning_matrix_col_list)})"` calling `onWorkoutCardPrefsChange(workoutCardPrefs.copy(zoneCardDisplayMode = mode))`.
+    - If `workoutDetailPrefs.showZoneAnalysis`: render `ZoneDisplayModeSelector` labeled `"${stringResource(R.string.settings_zone_card_display_mode_title)} (${stringResource(R.string.tuning_matrix_col_details)})"` calling `onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(zoneCardDisplayMode = mode))`.
 
 ## 2. UI Consistency (Rule 23 & Rule 38)
 - **Reference Screen**: `WorkoutMasksAndCardsSection.kt`, `HeartRateZoneDistributionCard.kt`, `PowerZoneDistributionCard.kt`.
@@ -42,12 +62,13 @@
    - Pass `showModeSelector = false` in `WorkoutSummary.kt`.
    - Bind `effectiveHrZoneDisplayMode` and `effectivePowerZoneDisplayMode` in `TrackOnMapScreen.kt` to `activeDetailPrefs.zoneCardDisplayMode`.
 3. **Step 3 (`WorkoutMasksAndCardsSection.kt`)**:
-   - Render independent Summary (`workoutCardPrefs.copy(zoneCardDisplayMode = mode)`) and Details (`workoutDetailPrefs.copy(zoneCardDisplayMode = mode)`) 3-way `SingleChoiceSegmentedButtonRow` selectors while keeping total file length `< 400` lines.
+   - Extract `ZoneDisplayModeSelector` and condense `MatrixFeatureRow` branches to render independent Summary (`workoutCardPrefs.copy(zoneCardDisplayMode = mode)`) and Details (`workoutDetailPrefs.copy(zoneCardDisplayMode = mode)`) selectors while keeping total file length `< 400` lines (~335 lines).
 4. **Step 4 (`WorkoutCardSectionPreferencesTest.kt`, `WorkoutSummaryZoneDisplayModeTest.kt`)**:
-   - Update `WorkoutCardSectionPreferencesTest` and `WorkoutSummaryZoneDisplayModeTest` to verify `REQ-UI-388` / `TST-UI-351`, and run targeted tests:
+   - Update unit tests to verify Summary default (`STACKED_BAR`), Details default (`HISTOGRAM`), retention of `zoneCardDisplayMode` when `showZoneAnalysis = false`, `showModeSelector = true` default vs `showModeSelector = false` in `WorkoutSummary.kt`, and `< 400` line count in `AdvancedTuningModularityTest`:
      `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutCardSectionPreferencesTest" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryZoneDisplayModeTest" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningModularityTest"`
 
 ## 4. Invariant Protection & Rollback Safety
 - Tier 3 domain fallback (`ZoneCardDisplayMode.HISTOGRAM.resolveWithHistogramFallback(distribution.histogram != null)` -> `COLUMNS`) strictly preserved.
+- `showZoneAnalysis == false` retains persisted `zoneCardDisplayMode` preferences without data loss.
 - `WorkoutMasksAndCardsSection.kt` `< 400` line limit strictly preserved (`REQ-UI-262`).
 - Single-line non-wrapping `SegmentedButton` layout (`REQ-UI-386` / Rule 38) and legend-free `STACKED_BAR` (`REQ-UI-387`) strictly preserved.
