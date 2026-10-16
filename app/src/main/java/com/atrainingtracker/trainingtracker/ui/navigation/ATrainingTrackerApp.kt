@@ -414,6 +414,17 @@ fun ATrainingTrackerApp(
                     )
                 }
 
+                composable(NavRoutes.EQUIPMENT) {
+                    val equipmentViewModel: EquipmentViewModel = viewModel(activity)
+                    EquipmentTabsScreen(
+                        viewModel = equipmentViewModel,
+                        initialTab = 0,
+                        onNavigateToWorkouts = { stats ->
+                            activity.navigateToFilteredWorkouts(stats)
+                        }
+                    )
+                }
+
                 composable(NavRoutes.BIKES) {
                     val equipmentViewModel: EquipmentViewModel = viewModel(activity)
                     EquipmentTabsScreen(

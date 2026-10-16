@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.athleteprofile
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,10 +41,13 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -59,7 +63,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -68,6 +74,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,21 +95,25 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.activities.ZoneProfileTabContent
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
+import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Stateful entry composable for the dedicated Athlete Profile screen (`REQ-UI-391.5`).
+ * Stateful entry composable for the unified **Profile & Zones** screen (`REQ-UI-391.5`, `REQ-UI-397.2`).
  */
 @Composable
 fun AthleteProfileScreen(
     viewModel: AthleteProfileViewModel,
+    initialTab: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -115,14 +126,21 @@ fun AthleteProfileScreen(
         onAddEntry = viewModel::addEntry,
         onUpdateEntry = viewModel::updateEntry,
         onDeleteEntry = viewModel::deleteEntry,
+        initialTab = initialTab,
         modifier = modifier
     )
 }
 
 /**
- * Stateless UI content for the Athlete Profile screen (`REQ-UI-391.5`, `REQ-UI-396.1`, Rule 23, Rule 38, Rule 41).
+ * Stateless UI content for the unified **Profile & Zones** screen (`REQ-UI-391.5`, `REQ-UI-396.1`, `REQ-UI-397.2`, Rule 23, Rule 38, Rule 41).
+ *
+ * Hosts 4 tabs in a [PrimaryScrollableTabRow] + [HorizontalPager]:
+ * - Page 0: Athlete Profile (`R.string.athlete_profile_tab_profile`)
+ * - Page 1: Running Heart Rate Zones (`R.string.tab_hr_run`)
+ * - Page 2: Cycling Heart Rate Zones (`R.string.tab_hr_bike`)
+ * - Page 3: Cycling Power Zones (`R.string.tab_pwr_bike`)
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun AthleteProfileContent(
     uiState: AthleteProfileUiState,
@@ -132,69 +150,119 @@ fun AthleteProfileContent(
     onAddEntry: (AthleteMetricType, Double, Long) -> Unit,
     onUpdateEntry: (Long, AthleteMetricType, Double, Long) -> Unit,
     onDeleteEntry: (Long, AthleteMetricType) -> Unit,
+    initialTab: Int = 0,
     modifier: Modifier = Modifier
 ) {
     var showAddDialogForMetric by remember { mutableStateOf<AthleteMetricType?>(null) }
     var editingEntry by remember { mutableStateOf<AthleteMetricEntry?>(null) }
     var deletingEntry by remember { mutableStateOf<AthleteMetricEntry?>(null) }
+    var showZoneCalculatorDialog by remember { mutableStateOf(false) }
     val navBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    val tabTitleResIds = remember {
+        listOf(
+            R.string.athlete_profile_tab_profile,
+            R.string.tab_hr_run,
+            R.string.tab_hr_bike,
+            R.string.tab_pwr_bike
+        )
+    }
+    val pagerState = rememberPagerState(
+        initialPage = initialTab.coerceIn(0, tabTitleResIds.lastIndex),
+        pageCount = { tabTitleResIds.size }
+    )
+    val scope = rememberCoroutineScope()
 
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.surface
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 1. Standard App Header (Rule 23)
+            // 1. Standard App Header + Tab Row (Rule 23, REQ-UI-397.2)
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier
-                        .statusBarsPadding()
-                        .fillMaxWidth()
-                        .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = stringResource(R.string.athlete_profile_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(
-                        onClick = {
-                            val defaultMetric = when (uiState.selectedPlotMetric) {
-                                PlotMetricType.WEIGHT -> AthleteMetricType.WEIGHT_KG
-                                PlotMetricType.HR_REST -> AthleteMetricType.HR_REST_BPM
-                                PlotMetricType.FTP, PlotMetricType.POWER_TO_WEIGHT -> AthleteMetricType.FTP_WATTS
-                            }
-                            showAddDialogForMetric = defaultMetric
-                        }
+                Column(modifier = Modifier.statusBarsPadding()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = stringResource(R.string.athlete_profile_add_entry),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        Text(
+                            text = stringResource(R.string.athlete_profile_title),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
+                        if (pagerState.currentPage == 0) {
+                            IconButton(
+                                onClick = {
+                                    val defaultMetric = when (uiState.selectedPlotMetric) {
+                                        PlotMetricType.WEIGHT -> AthleteMetricType.WEIGHT_KG
+                                        PlotMetricType.HR_REST -> AthleteMetricType.HR_REST_BPM
+                                        PlotMetricType.FTP, PlotMetricType.POWER_TO_WEIGHT -> AthleteMetricType.FTP_WATTS
+                                    }
+                                    showAddDialogForMetric = defaultMetric
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = stringResource(R.string.athlete_profile_add_entry),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        } else {
+                            IconButton(
+                                onClick = { showZoneCalculatorDialog = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Calculate,
+                                    contentDescription = stringResource(R.string.zone_calc_button),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                    }
+
+                    PrimaryScrollableTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        divider = {}
+                    ) {
+                        tabTitleResIds.forEachIndexed { index, titleResId ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                                text = { Text(stringResource(titleResId)) }
+                            )
+                        }
                     }
                 }
             }
 
-            LazyColumn(
+            HorizontalPager(
+                state = pagerState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    top = 16.dp,
-                    end = 16.dp,
-                    bottom = 16.dp + navBarBottomPadding
-                ),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+                beyondViewportPageCount = 1
+            ) { page ->
+                when (page) {
+                    0 -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                top = 16.dp,
+                                end = 16.dp,
+                                bottom = 16.dp + navBarBottomPadding
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
                 // 2. 2x2 Summary Cards Grid
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -421,6 +489,30 @@ fun AthleteProfileContent(
                             isImperial = uiState.isImperial,
                             onEditClick = { editingEntry = entry },
                             onDeleteClick = { deletingEntry = entry }
+                        )
+                    }
+                }
+                        }
+                    }
+                    1 -> {
+                        ZoneProfileTabContent(
+                            zoneType = ZoneType.HR_RUN,
+                            showCalculatorDialog = showZoneCalculatorDialog && pagerState.currentPage == 1,
+                            onDismissCalculatorDialog = { showZoneCalculatorDialog = false }
+                        )
+                    }
+                    2 -> {
+                        ZoneProfileTabContent(
+                            zoneType = ZoneType.HR_BIKE,
+                            showCalculatorDialog = showZoneCalculatorDialog && pagerState.currentPage == 2,
+                            onDismissCalculatorDialog = { showZoneCalculatorDialog = false }
+                        )
+                    }
+                    else -> {
+                        ZoneProfileTabContent(
+                            zoneType = ZoneType.PWR_BIKE,
+                            showCalculatorDialog = showZoneCalculatorDialog && pagerState.currentPage == 3,
+                            onDismissCalculatorDialog = { showZoneCalculatorDialog = false }
                         )
                     }
                 }

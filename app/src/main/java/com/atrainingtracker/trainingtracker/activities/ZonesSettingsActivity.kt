@@ -965,3 +965,179 @@ fun SettingsScreenPreview() {
         )
     }
 }
+
+/**
+ * Reusable single-zone profile tab content composable (`REQ-UI-397.2`, `ATT-3851`).
+ *
+ * Encapsulates DataStore state loading, monotonicity-guarded zone persistence, [SettingsScreenContent],
+ * and [ZoneCalculatorDialog] for a given [zoneType] so it can be embedded directly inside the unified
+ * **Profile & Zones** tabbed screen (`AthleteProfileScreen`) without duplicating zone editing logic.
+ */
+@Composable
+fun ZoneProfileTabContent(
+    zoneType: ZoneType,
+    showCalculatorDialog: Boolean,
+    onDismissCalculatorDialog: () -> Unit
+) {
+    val context = LocalContext.current
+    val dataStore = remember { SettingsDataStore(context) }
+    val scope = rememberCoroutineScope()
+
+    var profileState by remember(zoneType) { mutableStateOf<ZoneProfileState?>(null) }
+
+    val loadProfile: suspend () -> ZoneProfileState = {
+        dataStore.checkAndMigratePowerZones()
+        ZoneProfileState(
+            type = zoneType,
+            z1 = dataStore.getZone1MaxFlow(zoneType).first(),
+            z2 = dataStore.getZone2MaxFlow(zoneType).first(),
+            z3 = dataStore.getZone3MaxFlow(zoneType).first(),
+            z4 = dataStore.getZone4MaxFlow(zoneType).first(),
+            z5 = if (zoneType == ZoneType.PWR_BIKE) dataStore.getZone5MaxFlow(zoneType).first() else 0,
+            z6 = if (zoneType == ZoneType.PWR_BIKE) dataStore.getZone6MaxFlow(zoneType).first() else 0,
+            displayOptions = dataStore.getZoneDisplayOptionsFlow(zoneType).first()
+        )
+    }
+
+    LaunchedEffect(zoneType) {
+        profileState = withContext(Dispatchers.IO) { loadProfile() }
+    }
+
+    val saveSingleProfile: (ZoneProfileState) -> Unit = { profile ->
+        scope.launch(Dispatchers.IO) {
+            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_1, profile.z1)
+            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_2, profile.z2)
+            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_3, profile.z3)
+            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_4, profile.z4)
+            if (profile.type == ZoneType.PWR_BIKE) {
+                dataStore.saveHrZoneMax(profile.type, Zone.ZONE_5, profile.z5)
+                dataStore.saveHrZoneMax(profile.type, Zone.ZONE_6, profile.z6)
+            }
+            dataStore.saveZoneDisplayOptions(profile.type, profile.displayOptions)
+        }
+    }
+
+    val isCustomized by dataStore.isZoneCustomizedFlow(zoneType).collectAsState(initial = false)
+    val storedFtp by dataStore.ftpFlow.collectAsState(initial = null)
+    val storedHrMax by dataStore.hrMaxFlow.collectAsState(initial = null)
+    val storedHrRest by dataStore.hrRestFlow.collectAsState(initial = null)
+    val storedHrMethod by dataStore.hrCalcMethodFlow.collectAsState(initial = null)
+
+    val currentProfile = profileState
+    if (currentProfile == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else {
+        SettingsScreenContent(
+            z1Max = currentProfile.z1,
+            z2Max = currentProfile.z2,
+            z3Max = currentProfile.z3,
+            z4Max = currentProfile.z4,
+            z5Max = currentProfile.z5,
+            z6Max = currentProfile.z6,
+            displayOptions = currentProfile.displayOptions,
+            zoneType = currentProfile.type,
+            onUpdateZone1Max = { new ->
+                val updated = currentProfile.copy(z1 = new)
+                profileState = updated
+                if (isProfileMonotonic(updated)) saveSingleProfile(updated)
+            },
+            onUpdateZone2Max = { new ->
+                val updated = currentProfile.copy(z2 = new)
+                profileState = updated
+                if (isProfileMonotonic(updated)) saveSingleProfile(updated)
+            },
+            onUpdateZone3Max = { new ->
+                val updated = currentProfile.copy(z3 = new)
+                profileState = updated
+                if (isProfileMonotonic(updated)) saveSingleProfile(updated)
+            },
+            onUpdateZone4Max = { new ->
+                val updated = currentProfile.copy(z4 = new)
+                profileState = updated
+                if (isProfileMonotonic(updated)) saveSingleProfile(updated)
+            },
+            onUpdateZone5Max = { new ->
+                val updated = currentProfile.copy(z5 = new)
+                profileState = updated
+                if (isProfileMonotonic(updated)) saveSingleProfile(updated)
+            },
+            onUpdateZone6Max = { new ->
+                val updated = currentProfile.copy(z6 = new)
+                profileState = updated
+                if (isProfileMonotonic(updated)) saveSingleProfile(updated)
+            },
+            onUpdateDisplayOptions = { newOptions ->
+                val updated = currentProfile.copy(displayOptions = newOptions)
+                profileState = updated
+                saveSingleProfile(updated)
+            }
+        )
+    }
+
+    if (showCalculatorDialog) {
+        val holder = remember(zoneType, isCustomized, storedFtp, storedHrMax, storedHrRest, storedHrMethod) {
+            ZoneCalculatorStateHolder(
+                zoneType = zoneType,
+                initialCustomized = isCustomized,
+                initialFtp = storedFtp,
+                initialHrMax = storedHrMax,
+                initialHrRest = storedHrRest,
+                initialHrMethod = if (storedHrMethod == "MAX_HR") HrMethod.MAX_HR else HrMethod.KARVONEN
+            )
+        }
+        ZoneCalculatorDialog(
+            holder = holder,
+            onDismiss = onDismissCalculatorDialog,
+            onSavePower = { ftp, cutoffs ->
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        dataStore.saveCalculatedPowerZones(ftp, cutoffs)
+                        com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
+                            .getInstance(context)
+                            .addEntry(
+                                metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.FTP_WATTS,
+                                value = ftp.toDouble()
+                            )
+                        val reloaded = loadProfile()
+                        withContext(Dispatchers.Main) {
+                            profileState = reloaded
+                            holder.onSaveCompleted()
+                            onDismissCalculatorDialog()
+                        }
+                    } catch (_: Exception) {
+                        withContext(Dispatchers.Main) {
+                            holder.onSaveFailed()
+                        }
+                    }
+                }
+            },
+            onSaveHeartRate = { zType, hrMax, hrRest, method, cutoffs ->
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        dataStore.saveCalculatedHeartRateZones(zType, hrMax, hrRest, method, cutoffs)
+                        if (hrRest != null && hrRest > 0) {
+                            com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
+                                .getInstance(context)
+                                .addEntry(
+                                    metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.HR_REST_BPM,
+                                    value = hrRest.toDouble()
+                                )
+                        }
+                        val reloaded = loadProfile()
+                        withContext(Dispatchers.Main) {
+                            profileState = reloaded
+                            holder.onSaveCompleted()
+                            onDismissCalculatorDialog()
+                        }
+                    } catch (_: Exception) {
+                        withContext(Dispatchers.Main) {
+                            holder.onSaveFailed()
+                        }
+                    }
+                }
+            }
+        )
+    }
+}

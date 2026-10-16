@@ -52,6 +52,7 @@ object NavRoutes {
     const val LOCATIONS_PATTERN = "locations?clusterId={clusterId}"
     const val ARG_CLUSTER_ID = "clusterId"
     const val SENSORS = "sensors"
+    const val EQUIPMENT = "equipment"
     const val BIKES = "bikes"
     const val SHOES = "shoes"
     const val SPORT_TYPES = "sport_types"
@@ -100,6 +101,7 @@ object NavRoutes {
         R.id.drawer_start_locations -> START_LOCATIONS
         R.id.drawer_my_locations -> LOCATIONS
         R.id.drawer_my_sensors -> SENSORS
+        R.id.drawer_equipment -> EQUIPMENT
         R.id.drawer_bikes -> BIKES
         R.id.drawer_shoes -> SHOES
         R.id.drawer_sport_types -> SPORT_TYPES
@@ -123,6 +125,7 @@ object NavRoutes {
         START_LOCATIONS -> R.id.drawer_start_locations
         LOCATIONS -> R.id.drawer_my_locations
         SENSORS -> R.id.drawer_my_sensors
+        EQUIPMENT -> R.id.drawer_equipment
         BIKES -> R.id.drawer_bikes
         SHOES -> R.id.drawer_shoes
         SPORT_TYPES -> R.id.drawer_sport_types
