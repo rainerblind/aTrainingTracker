@@ -289,7 +289,9 @@ class TrackingViewModel(
                 )
             }
 
-            // Rule 39: Actively subscribe currentSpeed and currentBearing alongside currentTrack and bSportType
+            // REQ-MAP-052.1 / ATT-3775 / Rule 39: Actively subscribe currentSpeed and currentBearing
+            // alongside currentTrack and bSportType so Follow-Me zoom and bearing update continuously
+            // in both READY and TRACKING modes even when currentTrack does not emit.
             val liveTelemetryFlow = combine(
                 banalServiceRepository.currentTrack,
                 banalServiceRepository.bSportType,
