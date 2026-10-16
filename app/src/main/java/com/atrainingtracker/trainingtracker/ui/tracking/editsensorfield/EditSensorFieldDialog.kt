@@ -159,7 +159,16 @@ fun EditSensorFieldDialog(
                         onDismiss = { showWeightDialog = false },
                         onSaveWeightKg = { newWeight ->
                             coroutineScope.launch(Dispatchers.IO) {
-                                dataStore.setAthleteWeightKg(newWeight)
+                                if (newWeight > 0f) {
+                                    com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
+                                        .getInstance(context)
+                                        .addEntry(
+                                            metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.WEIGHT_KG,
+                                            value = newWeight.toDouble()
+                                        )
+                                } else {
+                                    dataStore.setAthleteWeightKg(newWeight)
+                                }
                             }
                         }
                     )

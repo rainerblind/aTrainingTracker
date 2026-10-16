@@ -132,8 +132,9 @@ class SettingsDataStore(
         val KEY_IS_HR_ZONES_CONFIGURED = booleanPreferencesKey("is_hr_zones_configured")
         val KEY_IS_PWR_ZONES_CONFIGURED = booleanPreferencesKey("is_pwr_zones_configured")
 
-        // Athlete Baselines (ATT-1289, REQ-TRK-019)
+        // Athlete Baselines (ATT-1289, REQ-TRK-019, ATT-3704, REQ-UI-391)
         val KEY_ATHLETE_WEIGHT_KG = floatPreferencesKey("athlete_weight_kg")
+        val KEY_ATHLETE_METRICS_SEEDED = booleanPreferencesKey("athlete_metrics_seeded")
         const val DEFAULT_ATHLETE_WEIGHT_KG = 0.0f
         const val MIN_ATHLETE_WEIGHT_KG = 30.0f
         const val MAX_ATHLETE_WEIGHT_KG = 300.0f
@@ -308,6 +309,58 @@ class SettingsDataStore(
                 prefs[KEY_ATHLETE_WEIGHT_KG] = DEFAULT_ATHLETE_WEIGHT_KG
             } else {
                 prefs[KEY_ATHLETE_WEIGHT_KG] = weightKg.coerceIn(MIN_ATHLETE_WEIGHT_KG, MAX_ATHLETE_WEIGHT_KG)
+            }
+        }
+    }
+
+    /**
+     * Flow emitting whether initial athlete metrics history seeding from DataStore has completed (`REQ-UI-391.3`).
+     */
+    val athleteMetricsSeededFlow: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_ATHLETE_METRICS_SEEDED] ?: false
+    }
+
+    /**
+     * Marks initial athlete metrics history seeding as completed (`REQ-UI-391.3`).
+     */
+    suspend fun setAthleteMetricsSeeded(seeded: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_ATHLETE_METRICS_SEEDED] = seeded
+        }
+    }
+
+    /**
+     * Unidirectionally updates or clears the athlete's Resting Heart Rate (`KEY_HR_REST`) in DataStore (`REQ-UI-391.3`).
+     */
+    suspend fun setHrRest(hrRest: Int?) {
+        dataStore.edit { prefs ->
+            if (hrRest == null || hrRest <= 0) {
+                prefs.remove(KEY_HR_REST)
+            } else {
+                prefs[KEY_HR_REST] = hrRest.coerceIn(
+                    com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MIN_HR_REST,
+                    com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MAX_HR_REST
+                )
+            }
+        }
+    }
+
+    /**
+     * Unidirectionally updates or clears the athlete's Functional Threshold Power (`KEY_CYCLING_FTP` and `KEY_CYCLING_FTP_UPDATED_AT`) in DataStore (`REQ-UI-391.3`).
+     */
+    suspend fun setFtp(ftp: Int?, updatedAtMillis: Long = System.currentTimeMillis()) {
+        dataStore.edit { prefs ->
+            if (ftp == null || ftp <= 0) {
+                prefs.remove(KEY_CYCLING_FTP)
+                prefs.remove(KEY_CYCLING_FTP_UPDATED_AT)
+            } else {
+                prefs[KEY_CYCLING_FTP] = ftp.coerceIn(
+                    com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MIN_FTP,
+                    com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MAX_FTP
+                )
+                if (updatedAtMillis > 0L) {
+                    prefs[KEY_CYCLING_FTP_UPDATED_AT] = updatedAtMillis
+                }
             }
         }
     }

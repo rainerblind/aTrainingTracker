@@ -469,6 +469,13 @@ fun ATrainingTrackerApp(
                     )
                 }
 
+                composable(NavRoutes.ATHLETE_PROFILE) {
+                    val athleteProfileViewModel: com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModel = viewModel(activity)
+                    com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileScreen(
+                        viewModel = athleteProfileViewModel
+                    )
+                }
+
                 composable(NavRoutes.BACKUP_RESTORE) {
                     val backupRestoreViewModel: BackupRestoreViewModel = viewModel(activity)
                     ImportBackupTabsScreen(viewModel = backupRestoreViewModel)
