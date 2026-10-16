@@ -34,7 +34,6 @@ import java.io.File
 class ComposeSafePainterContractTest {
 
     private val targetFiles = listOf(
-        "com/atrainingtracker/trainingtracker/ui/tracking/controltracking/PairingButtons.kt",
         "com/atrainingtracker/banalservice/ui/devices/PairingProtocolBottomSheet.kt",
         "com/atrainingtracker/banalservice/ui/devices/DeviceTypeSelectionDialog.kt",
         "com/atrainingtracker/banalservice/ui/devices/devicelist/DeviceItem.kt",

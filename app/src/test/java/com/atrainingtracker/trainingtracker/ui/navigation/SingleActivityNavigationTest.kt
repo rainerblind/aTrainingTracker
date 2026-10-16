@@ -196,15 +196,6 @@ class SingleActivityNavigationTest {
         assertNotNull("startWorkoutSummaryListFromPeriod method must be present", startFromPeriodMethod)
         assertTrue(Modifier.isPublic(startFromPeriodMethod.modifiers))
 
-        // startPairing(Protocol, DeviceType)
-        val startPairingMethod = clazz.getMethod(
-            "startPairing",
-            Protocol::class.java,
-            DeviceType::class.java
-        )
-        assertNotNull("startPairing method must be present", startPairingMethod)
-        assertTrue(Modifier.isPublic(startPairingMethod.modifiers))
-
         // navigateToDrawerItem(Int)
         val navigateMethod = clazz.getMethod("navigateToDrawerItem", Int::class.javaPrimitiveType)
         assertNotNull("navigateToDrawerItem method must be present", navigateMethod)
