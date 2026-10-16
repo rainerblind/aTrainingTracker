@@ -41,13 +41,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.RestartAlt
@@ -779,17 +782,11 @@ fun SettingsScreenContent(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             (1..zoneCount).forEach { zIndex ->
-                FilterChip(
+                ZonePreviewPill(
+                    label = zoneLabels[zIndex - 1],
+                    zoneColor = zoneColorsList[zIndex - 1],
                     selected = (previewZone == zIndex),
                     onClick = { previewZone = zIndex },
-                    label = { Text(zoneLabels[zIndex - 1]) },
-                    leadingIcon = {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .background(zoneColorsList[zIndex - 1], shape = CircleShape)
-                        )
-                    },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -873,6 +870,46 @@ fun SettingsScreenContent(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+/**
+ * Compact zone-tinted bordered selector pill for the live zone preview row (`REQ-UI-384` / Rule 38).
+ * Replaces Material 3 `FilterChip` + `leadingIcon` so that all 5 (HR) or 7 (Cycling Power) zones
+ * render on a single line without vertical character wrapping (`"Z\n1"`..`"Z\n7"`).
+ */
+@Composable
+fun ZonePreviewPill(
+    label: String,
+    zoneColor: androidx.compose.ui.graphics.Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 36.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = zoneColor.copy(alpha = if (selected) 0.28f else 0.12f),
+        border = BorderStroke(
+            width = if (selected) 2.dp else 1.dp,
+            color = if (selected) zoneColor else zoneColor.copy(alpha = 0.6f)
+        )
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                softWrap = false
+            )
+        }
     }
 }
 
