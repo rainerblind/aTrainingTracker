@@ -103,7 +103,8 @@ fun PowerZoneDistributionCard(
                 ZoneCardDisplayMode.STACKED_BAR -> {
                     ZoneDistributionStackedBar(
                         distribution = distribution,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        showLegend = false
                     )
                 }
                 ZoneCardDisplayMode.COLUMNS, ZoneCardDisplayMode.FIVE_ZONES -> {
