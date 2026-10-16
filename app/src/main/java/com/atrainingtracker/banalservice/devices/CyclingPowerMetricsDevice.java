@@ -40,10 +40,13 @@ import java.util.concurrent.TimeUnit;
  * Computed metrics device that calculates real-time power-to-weight ratio (W/kg),
  * Dr. Andrew Coggan's Normalized Power (NP), Intensity Factor (IF = NP / FTP),
  * Mechanical Work (kJ), and Training Stress Score (TSS) at 1Hz based on active cycling power,
- * athlete weight, and FTP (REQ-TRK-019, REQ-TRK-020, REQ-TRK-021, TST-TRK-011, TST-TRK-012, TST-TRK-013).
+ * athlete weight, and FTP (REQ-TRK-019, REQ-TRK-020, REQ-TRK-021, REQ-TRK-023, TST-TRK-011, TST-TRK-012, TST-TRK-013, TST-TRK-015).
  *
- * <p>State consistency & pause handling:
+ * <p>State consistency, growing warm-up window (Rule 40), & pause handling:
  * NP and TSS are cumulative session metrics computed via Welford's online running mean of 4th powers.
+ * During the initial warm-up phase (1 <= k < 30 active seconds) and after a long-pause window flush,
+ * the rolling average is computed over the available samples (sum / window.size()) so live metrics are
+ * emitted from the very first active second without a 30-second blank "--" delay.
  * Pauses gate metric accumulation. When an active pause exceeds 30 seconds, the 30-sample rolling buffer
  * is flushed to decouple physiological efforts and prevent blending pre-pause samples across long stops,
  * while retaining cumulative session accumulators (mean and active seconds) to maintain session continuity.</p>
@@ -305,34 +308,18 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         }
         mPowerWindow30s.addLast(power);
 
-        if (mPowerWindow30s.size() < 30) {
-            // Window is still filling
-            if (mLastCalculatedNp == null) {
-                // Initial lifetime warmup: NP, IF, and TSS are undefined
-                if (mNormalizedPowerSensor != null) {
-                    mNormalizedPowerSensor.newValue(null);
-                }
-                if (mIntensityFactorSensor != null) {
-                    mIntensityFactorSensor.newValue(null);
-                }
-                if (mTssSensor != null) {
-                    mTssSensor.newValue(null);
-                }
-                return;
-            }
-            // Post-long-pause window refill: retain prior calculated NP
-        } else {
-            // Calculate 30-second rolling average
-            double sum30 = 0.0;
+        if (!mPowerWindow30s.isEmpty()) {
+            // Calculate rolling average over the growing (1..29s) or full (30s) window (Rule 40 / REQ-TRK-023)
+            double sum = 0.0;
             for (double p : mPowerWindow30s) {
-                sum30 += p;
+                sum += p;
             }
-            double p30s = sum30 / 30.0;
-            double p30sPow4 = Math.pow(p30s, 4.0);
+            double pRolling = sum / (double) mPowerWindow30s.size();
+            double pRollingPow4 = Math.pow(pRolling, 4.0);
 
-            // Welford's online running mean of 4th powers
+            // Welford's online running mean of 4th powers (1 tick = 1 active second)
             mCount4thPower++;
-            mMean4thPower += (p30sPow4 - mMean4thPower) / (double) mCount4thPower;
+            mMean4thPower += (pRollingPow4 - mMean4thPower) / (double) mCount4thPower;
             mLastCalculatedNp = Math.pow(mMean4thPower, 0.25);
         }
 

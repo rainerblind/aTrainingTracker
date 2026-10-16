@@ -57,30 +57,24 @@ class MechanicalWorkAndTssMathTest {
             workJoules += power * 1.0
             activePowerDurationSec++
 
-            // 2. Rolling 30-sample buffer for NP
+            // 2. Rolling 30-sample buffer for NP (growing 1..29s during warm-up / refill per Rule 40)
             if (window.size == 30) {
                 window.pollFirst()
             }
             window.addLast(power)
 
-            if (window.size < 30) {
-                // If we don't have 30 samples in the window yet, but already have prior session NP,
-                // keep lastCalculatedNp; otherwise it's null (initial warmup).
-                return
-            }
-
-            // 3. 30s rolling average
-            var sum30 = 0.0
+            // 3. Rolling average over current window (1..30 samples)
+            var sum = 0.0
             for (p in window) {
-                sum30 += p
+                sum += p
             }
-            val p30s = sum30 / 30.0
-            val p30sPow4 = p30s.pow(4.0)
+            val pRolling = sum / window.size.toDouble()
+            val pRollingPow4 = pRolling.pow(4.0)
 
             // Welford's online running mean recurrence:
             // Y_N = Y_{N-1} + (y_N - Y_{N-1}) / N
             count4thPower++
-            mean4thPower += (p30sPow4 - mean4thPower) / count4thPower.toDouble()
+            mean4thPower += (pRollingPow4 - mean4thPower) / count4thPower.toDouble()
 
             lastCalculatedNp = mean4thPower.pow(0.25)
         }
@@ -180,17 +174,19 @@ class MechanicalWorkAndTssMathTest {
     }
 
     @Test
-    fun testTss_warmupReturnsNull() {
+    fun testTss_growingWarmupWindow_emitsValidTssFromFirstSecond() {
         val engine = TestTelemetryEngine(ftp = 250)
-        // During the first 29 seconds, NP is undefined, so TSS must be null
-        repeat(29) {
+        // During the first 29 seconds, growing rolling window emits valid NP, IF, and TSS from tick 1
+        for (t in 1..29) {
             engine.ingestSample(250.0)
-            assertNull("TSS must be null during warmup", engine.getTss())
+            assertNotNull("TSS must be emitted during warmup tick $t", engine.getTss())
+            assertEquals(t.toDouble() / 36.0, engine.getTss()!!, 1e-4)
         }
 
-        // On tick 30, window is complete, NP is 250W, IF is 1.0, TSS becomes valid
+        // On tick 30, window is complete, NP is 250W, IF is 1.0, TSS continues smoothly
         engine.ingestSample(250.0)
         assertNotNull(engine.getTss())
+        assertEquals(30.0 / 36.0, engine.getTss()!!, 1e-4)
     }
 
     @Test
@@ -309,10 +305,11 @@ class MechanicalWorkAndTssMathTest {
         // Ingest next sample with pauseDurationMs = 900_000L
         engine.ingestSample(100.0, pauseDurationMs = 900_000L)
 
-        // Window size should have reset to 1 fresh sample
+        // Window size should have reset to 1 fresh sample (100W uncontaminated by pre-pause 300W)
         assertEquals(1, engine.window.size)
-        // Prior NP is retained during post-pause warmup
-        assertEquals(300.0, engine.getNormalizedPower()!!, 1e-2)
+        // Growing post-pause window immediately blends the fresh 100W sample into cumulative NP
+        val firstPostPauseNp = engine.getNormalizedPower()!!
+        assertTrue(firstPostPauseNp < 300.0 && firstPostPauseNp > 290.0)
 
         // Ingest remaining 29 samples of 100W
         repeat(29) {
@@ -320,6 +317,6 @@ class MechanicalWorkAndTssMathTest {
         }
         assertEquals(30, engine.window.size)
         // NP has updated using fresh 100W rolling samples, blending into cumulative mean
-        assertTrue(engine.getNormalizedPower()!! < 300.0)
+        assertTrue(engine.getNormalizedPower()!! < firstPostPauseNp)
     }
 }
