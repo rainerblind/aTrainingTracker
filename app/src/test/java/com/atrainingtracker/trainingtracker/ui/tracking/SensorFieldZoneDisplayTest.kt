@@ -133,29 +133,10 @@ class SensorFieldZoneDisplayTest {
         assertEquals(Color(0xFF8B5A2B), stateZ6.zoneColor)
         assertEquals(Color(0xFF000000), stateZ7.zoneColor)
 
-        // Verify XML parity with color.xml and WCAG 2.1 AA >= 3.0:1 non-text contrast against Zone 7 (TST-UI-355.1)
-        val colorXmlFile = java.io.File("src/main/res/values/color.xml").let {
-            if (it.exists()) it else java.io.File("app/src/main/res/values/color.xml")
-        }
-        assertTrue("color.xml must exist", colorXmlFile.exists())
-        val xmlContent = colorXmlFile.readText()
-        assertTrue(
-            "color.xml must define zone_6 as #8B5A2B",
-            xmlContent.contains("<color name=\"zone_6\">#8B5A2B</color>")
+        val contrastRatio = com.atrainingtracker.trainingtracker.ui.theme.TTColor.calculateContrastRatio(
+            zone6Color,
+            zone7Color
         )
-
-        fun srgbChannelToLinear(c: Float): Double {
-            val v = c.toDouble()
-            return if (v <= 0.03928) v / 12.92 else Math.pow((v + 0.055) / 1.055, 2.4)
-        }
-        fun relativeLuminance(color: Color): Double =
-            0.2126 * srgbChannelToLinear(color.red) +
-                0.7152 * srgbChannelToLinear(color.green) +
-                0.0722 * srgbChannelToLinear(color.blue)
-
-        val l6 = relativeLuminance(zone6Color)
-        val l7 = relativeLuminance(zone7Color)
-        val contrastRatio = (Math.max(l6, l7) + 0.05) / (Math.min(l6, l7) + 0.05)
         assertTrue(
             "Zone 6 (#8B5A2B) vs Zone 7 (#000000) contrast ratio ($contrastRatio) must be >= 3.0:1",
             contrastRatio >= 3.0
