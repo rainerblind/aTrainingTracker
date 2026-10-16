@@ -1863,5 +1863,16 @@
     <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
     <string name="elevation_profile_empty_state">標高プロファイル — ルートまたは記録の待機中</string>
 
+    <!-- ATT-3852: Categorized & Searchable SensorType Selector (REQ-UI-395) -->
+    <string name="sensor_category_time_and_laps">時間とラップ</string>
+    <string name="sensor_category_speed_pace_and_distance">速度・ペース・距離</string>
+    <string name="sensor_category_cadence_and_running">ケイデンスとランニング</string>
+    <string name="sensor_category_heart_rate_and_energy">心拍数とエネルギー</string>
+    <string name="sensor_category_power_and_pedaling">パワーとペダリング</string>
+    <string name="sensor_category_elevation_and_navigation">標高とナビゲーション</string>
+    <string name="sensor_category_system_environment_and_diagnostics">システム・環境・診断</string>
+    <string name="sensor_type_search_hint">項目または単位を検索…</string>
+    <string name="sensor_type_no_matches">一致する項目がありません</string>
+
 </resources>
 

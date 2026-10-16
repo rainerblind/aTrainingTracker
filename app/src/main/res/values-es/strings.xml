@@ -1884,4 +1884,15 @@
     <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
     <string name="elevation_profile_empty_state">Perfil de altitud — esperando ruta o actividad</string>
 
+    <!-- ATT-3852: Categorized & Searchable SensorType Selector (REQ-UI-395) -->
+    <string name="sensor_category_time_and_laps">Tiempo y vueltas</string>
+    <string name="sensor_category_speed_pace_and_distance">Velocidad, ritmo y distancia</string>
+    <string name="sensor_category_cadence_and_running">Cadencia y carrera</string>
+    <string name="sensor_category_heart_rate_and_energy">Frecuencia cardíaca y energía</string>
+    <string name="sensor_category_power_and_pedaling">Potencia y pedaleo</string>
+    <string name="sensor_category_elevation_and_navigation">Altitud y navegación</string>
+    <string name="sensor_category_system_environment_and_diagnostics">Sistema, entorno y diagnóstico</string>
+    <string name="sensor_type_search_hint">Buscar métrica o unidad…</string>
+    <string name="sensor_type_no_matches">Ninguna métrica coincide con la búsqueda</string>
+
 </resources>

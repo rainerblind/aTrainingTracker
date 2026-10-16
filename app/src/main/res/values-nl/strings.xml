@@ -1883,5 +1883,16 @@
     <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
     <string name="elevation_profile_empty_state">Hoogteprofiel — wacht op route of opname</string>
 
+    <!-- ATT-3852: Categorized & Searchable SensorType Selector (REQ-UI-395) -->
+    <string name="sensor_category_time_and_laps">Tijd &amp; ronden</string>
+    <string name="sensor_category_speed_pace_and_distance">Snelheid, tempo &amp; afstand</string>
+    <string name="sensor_category_cadence_and_running">Cadans &amp; hardlopen</string>
+    <string name="sensor_category_heart_rate_and_energy">Hartslag &amp; energie</string>
+    <string name="sensor_category_power_and_pedaling">Vermogen &amp; trapefficiëntie</string>
+    <string name="sensor_category_elevation_and_navigation">Hoogte &amp; navigatie</string>
+    <string name="sensor_category_system_environment_and_diagnostics">Systeem, omgeving &amp; diagnose</string>
+    <string name="sensor_type_search_hint">Zoek meting of eenheid…</string>
+    <string name="sensor_type_no_matches">Geen metingen gevonden</string>
+
 </resources>
 
