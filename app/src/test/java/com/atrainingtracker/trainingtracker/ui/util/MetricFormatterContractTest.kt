@@ -134,7 +134,10 @@ class MetricFormatterContractTest {
             "app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/RouteSelectionButton.kt",
             "app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/TurnPromptBanner.kt",
             "app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/splits/LapSplitVisualizer.kt",
-            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/climbs/LiveClimbSheet.kt"
+            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/climbs/LiveClimbSheet.kt",
+            "app/src/main/java/com/atrainingtracker/trainingtracker/climbs/ClimbDetector.kt",
+            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningAccordion.kt",
+            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/NavigationSection.kt"
         )
 
         for (relPath in filesToCheck) {
@@ -145,10 +148,18 @@ class MetricFormatterContractTest {
             // Assert absence of raw templates
             assertFalse("File $relPath must not contain '\"%.1f km\"'", text.contains("\"%.1f km\""))
             assertFalse("File $relPath must not contain '\"%.2f km\"'", text.contains("\"%.2f km\""))
+            assertFalse("File $relPath must not contain 'Anstieg %.1f'", text.contains("Anstieg %.1f"))
+            assertFalse("File $relPath must not contain '\"Anstieg'", text.contains("\"Anstieg"))
             assertFalse("File $relPath must not contain '\${distanceRemaining} m'", text.contains("\${distanceRemaining} m"))
             assertFalse("File $relPath must not contain '+\${branch.totalElevationMeters.roundToInt()} m'",
                 text.contains("+\${branch.totalElevationMeters.roundToInt()} m"))
             assertFalse("File $relPath must not contain '+\$climb m'", text.contains("+\$climb m"))
+            if (relPath.endsWith("ClimbDetector.kt") ||
+                relPath.endsWith("AdvancedTuningAccordion.kt") ||
+                relPath.endsWith("NavigationSection.kt")) {
+                assertTrue("File $relPath must explicitly reference DistanceFormatter (ATT-3575)",
+                    text.contains("DistanceFormatter"))
+            }
         }
     }
 

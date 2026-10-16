@@ -18,9 +18,14 @@
 
 package com.atrainingtracker.trainingtracker.climbs
 
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
+import org.junit.After
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 
 /**
@@ -28,6 +33,16 @@ import org.junit.Test
  * (REQ-MAP-027, TST-MAP-029 Group 1).
  */
 class ClimbDetectorTest {
+
+    @Before
+    fun setUp() {
+        TrainingApplication.setUnitForTesting(MyUnits.METRIC)
+    }
+
+    @After
+    fun tearDown() {
+        TrainingApplication.setUnitForTesting(null)
+    }
 
     @Test
     fun detectClimbs_detectsValidClimbAndCalculatesCategory() {
@@ -60,7 +75,8 @@ class ClimbDetectorTest {
         assertEquals(120.0, climb.elevationGainMeters, 1.0)
         assertEquals(6.0, climb.avgGradePercent, 0.1)
         assertEquals(ClimbCategory.CAT_4, climb.category)
-        assertTrue(climb.name.contains("2.0 km"))
+        val expectedDist = DistanceFormatter().format_with_units(2000.0)
+        assertEquals("Climb $expectedDist @ 6.0%", climb.name)
         assertEquals(21, climb.pathPoints.size)
     }
 

@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
@@ -53,12 +54,16 @@ fun NavigationSection(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        val distanceFormatter = DistanceFormatter()
         // Route Selection Radius
         TuningSliderItem(
             title = stringResource(R.string.tuning_route_selection_radius_title),
-            valueText = String.format(Locale.getDefault(), "%.1f km", routeSelectionRadiusKm),
+            valueText = distanceFormatter.format_with_units((routeSelectionRadiusKm * 1000f).toDouble()),
             helperText = stringResource(R.string.tuning_route_selection_radius_desc),
-            defaultText = stringResource(R.string.tuning_default_format, "1.0 km"),
+            defaultText = stringResource(
+                R.string.tuning_default_format,
+                distanceFormatter.format_with_units((TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM * 1000f).toDouble())
+            ),
             value = routeSelectionRadiusKm,
             onValueChange = { snapped ->
                 val rounded = (snapped * 2f).roundToInt() / 2f

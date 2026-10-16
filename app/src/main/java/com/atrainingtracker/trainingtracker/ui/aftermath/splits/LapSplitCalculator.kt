@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.splits
 
 import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
+import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import java.util.Locale
@@ -138,15 +140,13 @@ object LapSplitCalculator {
     }
 
     private fun defaultPaceFormatter(paceSecPerMeter: Double): String {
-        // Assume metric (seconds per km = paceSecPerMeter * 1000)
-        val totalSecPerKm = (paceSecPerMeter * 1000.0).roundToInt()
-        val minutes = totalSecPerKm / 60
-        val seconds = totalSecPerKm % 60
-        return String.format(Locale.US, "%d:%02d /km", minutes, seconds)
+        if (paceSecPerMeter <= 0.0 || (1.0 / paceSecPerMeter) <= MIN_VALID_SPEED) {
+            return "--"
+        }
+        return PaceFormatter().format_with_units(paceSecPerMeter)
     }
 
     private fun defaultSpeedFormatter(speedMps: Double): String {
-        val speedKmh = speedMps * 3.6
-        return String.format(Locale.US, "%.1f km/h", speedKmh)
+        return SpeedFormatter().format_with_units(speedMps)
     }
 }
