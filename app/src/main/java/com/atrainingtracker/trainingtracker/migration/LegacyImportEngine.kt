@@ -1063,6 +1063,43 @@ object LegacyImportEngine {
             }
         }
 
+        // 4b. Calculate and persist Skiba W'bal extrema (MIN, AVG, END) when power samples exist (REQ-UI-399.3)
+        try {
+            val effectiveCp = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getEffectiveCpWatts(context)
+            val effectiveWPrimeKj = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getEffectiveWPrimeKj(context).toDouble()
+            if (effectiveCp != null && effectiveCp > 0 && effectiveWPrimeKj > 0.0 && samplesDb.existsTable(baseFileName)) {
+                val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+                val powerSamples = mutableListOf<Double?>()
+                samplesDb.database.query(tableName, null, null, null, null, null, null).use { cursor ->
+                    val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+                    if (powerIdx != -1) {
+                        while (cursor.moveToNext()) {
+                            val p = if (!cursor.isNull(powerIdx)) cursor.getDouble(powerIdx) else null
+                            powerSamples.add(p)
+                        }
+                    }
+                }
+                if (powerSamples.any { it != null && it > 0.0 }) {
+                    val wPrimeSummary = com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeWPrimeBalanceSeries(
+                        powerSamplesWatts = powerSamples,
+                        cpWatts = effectiveCp.toDouble(),
+                        wPrimeKj = effectiveWPrimeKj
+                    )
+                    wPrimeSummary.minWPrimeBalKj?.let {
+                        summariesDb.updateExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.MIN, it, null)
+                    }
+                    wPrimeSummary.avgWPrimeBalKj?.let {
+                        summariesDb.updateExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.AVG, it, null)
+                    }
+                    wPrimeSummary.endWPrimeBalKj?.let {
+                        summariesDb.updateExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.END, it, null)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not compute W'bal extrema during recalculateStats: ${e.message}")
+        }
+
         // 5. Clustering (Spatial Markers)
         if (points.isNotEmpty()) {
             val start = points.first()

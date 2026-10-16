@@ -1896,5 +1896,19 @@
     <string name="sensor_type_search_hint">Szukaj parametru lub jednostki…</string>
     <string name="sensor_type_no_matches">Brak pasujących parametrów</string>
 
+    <!-- ATT-3862: Critical Power (CP), W', and W'bal (REQ-UI-399) -->
+    <string name="w_prime_bal">Bilans W\' (Bateria beztlenowa)</string>
+    <string name="w_prime_bal_short">W\'bal</string>
+    <string name="athlete_profile_metric_cp">CP</string>
+    <string name="athlete_profile_metric_w_prime">W\'</string>
+    <string name="athlete_profile_cp_estimator_title">Kalkulator 2-punktowy CP i W\'</string>
+    <string name="athlete_profile_cp_estimator_short_power">Moc krótkiego wysiłku (W)</string>
+    <string name="athlete_profile_cp_estimator_short_sec">Krótki czas (s)</string>
+    <string name="athlete_profile_cp_estimator_long_power">Moc długiego wysiłku (W)</string>
+    <string name="athlete_profile_cp_estimator_long_sec">Długi czas (s)</string>
+    <string name="athlete_profile_cp_estimator_apply">Zastosuj oszacowanie (%1$d W / %2$.1f kJ)</string>
+    <string name="workout_w_prime_bal_min_format">Min. W\'bal: %1$.1f kJ (%2$.0f%%)</string>
+    <string name="workout_w_prime_empty_tank">Pusty bak (&lt;10%%)</string>
+
 </resources>
 

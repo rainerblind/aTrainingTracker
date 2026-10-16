@@ -29,6 +29,7 @@ import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator;
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
 
 import java.util.ArrayDeque;
@@ -39,17 +40,17 @@ import java.util.concurrent.TimeUnit;
 /**
  * Computed metrics device that calculates real-time power-to-weight ratio (W/kg),
  * Dr. Andrew Coggan's Normalized Power (NP), Intensity Factor (IF = NP / FTP),
- * Mechanical Work (kJ), and Training Stress Score (TSS) at 1Hz based on active cycling power,
- * athlete weight, and FTP (REQ-TRK-019, REQ-TRK-020, REQ-TRK-021, REQ-TRK-023, TST-TRK-011, TST-TRK-012, TST-TRK-013, TST-TRK-015).
+ * Mechanical Work (kJ), Training Stress Score (TSS), and Skiba's Anaerobic Battery (W'bal in kJ)
+ * at 1Hz based on active cycling power, athlete weight, FTP, CP, and W'
+ * (REQ-TRK-019, REQ-TRK-020, REQ-TRK-021, REQ-TRK-023, REQ-UI-399).
  *
  * <p>State consistency, growing warm-up window (Rule 40), & pause handling:
  * NP and TSS are cumulative session metrics computed via Welford's online running mean of 4th powers.
  * During the initial warm-up phase (1 <= k < 30 active seconds) and after a long-pause window flush,
  * the rolling average is computed over the available samples (sum / window.size()) so live metrics are
  * emitted from the very first active second without a 30-second blank "--" delay.
- * Pauses gate metric accumulation. When an active pause exceeds 30 seconds, the 30-sample rolling buffer
- * is flushed to decouple physiological efforts and prevent blending pre-pause samples across long stops,
- * while retaining cumulative session accumulators (mean and active seconds) to maintain session continuity.</p>
+ * Pauses gate NP/Work/TSS accumulation, while W'bal continues exponential reconstitution at P = 0 W
+ * during pauses once an active effort has begun.</p>
  */
 public class CyclingPowerMetricsDevice extends MyDevice {
 
@@ -62,6 +63,7 @@ public class CyclingPowerMetricsDevice extends MyDevice {
     private MySensor<Double> mIntensityFactorSensor;
     private MySensor<Double> mWorkKjSensor;
     private MySensor<Double> mTssSensor;
+    private MySensor<Double> mWPrimeBalSensor;
 
     public interface RecordingStateProvider {
         boolean isRecordingSuspended();
@@ -79,10 +81,20 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         long currentTimeMillis();
     }
 
+    public interface CpProvider {
+        Integer getCpWatts(Context context);
+    }
+
+    public interface WPrimeKjProvider {
+        float getWPrimeKj(Context context);
+    }
+
     private final RecordingStateProvider mRecordingStateProvider;
     private final AthleteWeightProvider mWeightProvider;
     private final FtpProvider mFtpProvider;
     private final TimeProvider mTimeProvider;
+    private final CpProvider mCpProvider;
+    private final WPrimeKjProvider mWPrimeKjProvider;
 
     // Internal state for Normalized Power calculation (Welford's online running mean)
     private final ArrayDeque<Double> mPowerWindow30s = new ArrayDeque<>(30);
@@ -90,9 +102,10 @@ public class CyclingPowerMetricsDevice extends MyDevice {
     private long mCount4thPower = 0L;
     private Double mLastCalculatedNp = null;
 
-    // Internal state for Mechanical Work and TSS
+    // Internal state for Mechanical Work, TSS, and Skiba W'bal (in Joules)
     private double mWorkJoules = 0.0;
     private long mActivePowerDurationSec = 0L;
+    private Double mCurrentWPrimeBalJoules = null;
 
     // Pause tracking for long-pause window flushing (> 30s)
     private boolean mWasSuspended = false;
@@ -101,20 +114,20 @@ public class CyclingPowerMetricsDevice extends MyDevice {
     private static final FilterData cPowerFilter = new FilterData(null, SensorType.POWER, FilterType.MOVING_AVERAGE_TIME, 3);
 
     public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager) {
-        this(context, mySensorManager, TrainingApplication::isRecordingSuspended, SettingsDataStoreJavaHelper::getAthleteWeightKg, SettingsDataStoreJavaHelper::getFtp, System::currentTimeMillis);
+        this(context, mySensorManager, TrainingApplication::isRecordingSuspended, SettingsDataStoreJavaHelper::getAthleteWeightKg, SettingsDataStoreJavaHelper::getFtp, System::currentTimeMillis, null, SettingsDataStoreJavaHelper::getEffectiveWPrimeKj);
     }
 
     public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager,
                                      RecordingStateProvider recordingStateProvider,
                                      AthleteWeightProvider weightProvider) {
-        this(context, mySensorManager, recordingStateProvider, weightProvider, SettingsDataStoreJavaHelper::getFtp, System::currentTimeMillis);
+        this(context, mySensorManager, recordingStateProvider, weightProvider, SettingsDataStoreJavaHelper::getFtp, System::currentTimeMillis, null, SettingsDataStoreJavaHelper::getEffectiveWPrimeKj);
     }
 
     public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager,
                                      RecordingStateProvider recordingStateProvider,
                                      AthleteWeightProvider weightProvider,
                                      FtpProvider ftpProvider) {
-        this(context, mySensorManager, recordingStateProvider, weightProvider, ftpProvider, System::currentTimeMillis);
+        this(context, mySensorManager, recordingStateProvider, weightProvider, ftpProvider, System::currentTimeMillis, null, SettingsDataStoreJavaHelper::getEffectiveWPrimeKj);
     }
 
     public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager,
@@ -122,11 +135,27 @@ public class CyclingPowerMetricsDevice extends MyDevice {
                                      AthleteWeightProvider weightProvider,
                                      FtpProvider ftpProvider,
                                      TimeProvider timeProvider) {
+        this(context, mySensorManager, recordingStateProvider, weightProvider, ftpProvider, timeProvider, null, SettingsDataStoreJavaHelper::getEffectiveWPrimeKj);
+    }
+
+    public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager,
+                                     RecordingStateProvider recordingStateProvider,
+                                     AthleteWeightProvider weightProvider,
+                                     FtpProvider ftpProvider,
+                                     TimeProvider timeProvider,
+                                     CpProvider cpProvider,
+                                     WPrimeKjProvider wPrimeKjProvider) {
         super(context, mySensorManager, DeviceType.CYCLING_POWER_METRICS);
         mRecordingStateProvider = recordingStateProvider != null ? recordingStateProvider : TrainingApplication::isRecordingSuspended;
         mWeightProvider = weightProvider != null ? weightProvider : SettingsDataStoreJavaHelper::getAthleteWeightKg;
         mFtpProvider = ftpProvider != null ? ftpProvider : SettingsDataStoreJavaHelper::getFtp;
         mTimeProvider = timeProvider != null ? timeProvider : System::currentTimeMillis;
+        mCpProvider = cpProvider != null ? cpProvider : ctx -> {
+            Integer cp = SettingsDataStoreJavaHelper.getCpWatts(ctx);
+            if (cp != null && cp > 0) return cp;
+            return mFtpProvider.getFtp(ctx);
+        };
+        mWPrimeKjProvider = wPrimeKjProvider != null ? wPrimeKjProvider : SettingsDataStoreJavaHelper::getEffectiveWPrimeKj;
         if (DEBUG) Log.i(TAG, "CyclingPowerMetricsDevice initialized");
 
         try {
@@ -170,6 +199,9 @@ public class CyclingPowerMetricsDevice extends MyDevice {
 
         mTssSensor = new MySensor<>(this, SensorType.TSS);
         addSensor(mTssSensor);
+
+        mWPrimeBalSensor = new MySensor<>(this, SensorType.W_PRIME_BAL);
+        addSensor(mWPrimeBalSensor);
     }
 
     public synchronized MySensor<Double> getPowerToWeightSensor() {
@@ -190,6 +222,10 @@ public class CyclingPowerMetricsDevice extends MyDevice {
 
     public synchronized MySensor<Double> getTssSensor() {
         return mTssSensor;
+    }
+
+    public synchronized MySensor<Double> getWPrimeBalSensor() {
+        return mWPrimeBalSensor;
     }
 
     public synchronized void resetSession() {
@@ -216,13 +252,27 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         if (mTssSensor != null) {
             mTssSensor.newValue(null);
         }
+        Integer cp = mCpProvider.getCpWatts(mContext);
+        float wPrimeKj = mWPrimeKjProvider.getWPrimeKj(mContext);
+        if (cp != null && cp > 0 && wPrimeKj > 0.0f) {
+            mCurrentWPrimeBalJoules = wPrimeKj * 1000.0;
+            if (mWPrimeBalSensor != null) {
+                mWPrimeBalSensor.newValue((double) wPrimeKj);
+            }
+        } else {
+            mCurrentWPrimeBalJoules = null;
+            if (mWPrimeBalSensor != null) {
+                mWPrimeBalSensor.newValue(null);
+            }
+        }
     }
 
     /**
      * Periodic 1Hz computation of power-to-weight ratio (W/kg),
      * Normalized Power (NP), Intensity Factor (IF), Mechanical Work (kJ),
-     * and Training Stress Score (TSS).
-     * Gated by active recording suspension (paused / auto-paused).
+     * Training Stress Score (TSS), and Anaerobic Battery (W'bal in kJ).
+     * Gated by active recording suspension (paused / auto-paused), while W'bal continues
+     * exponential reconstitution at 0W during pauses if an active effort has started.
      */
     public synchronized void calculateMetrics() {
         boolean isSuspended = mRecordingStateProvider.isRecordingSuspended();
@@ -232,6 +282,22 @@ public class CyclingPowerMetricsDevice extends MyDevice {
             if (!mWasSuspended) {
                 mWasSuspended = true;
                 mSuspendedStartMs = now;
+            }
+            if (mCurrentWPrimeBalJoules != null) {
+                Integer cp = resolveEffectiveCpWatts();
+                float wPrimeKj = mWPrimeKjProvider.getWPrimeKj(mContext);
+                if (cp != null && cp > 0 && wPrimeKj > 0.0f) {
+                    mCurrentWPrimeBalJoules = PowerPhysiologyCalculator.INSTANCE.stepWPrimeBalanceJoules(
+                            mCurrentWPrimeBalJoules,
+                            0.0,
+                            cp.doubleValue(),
+                            wPrimeKj * 1000.0,
+                            1.0
+                    );
+                    if (mWPrimeBalSensor != null) {
+                        mWPrimeBalSensor.newValue(mCurrentWPrimeBalJoules / 1000.0);
+                    }
+                }
             }
             if (DEBUG) Log.i(TAG, "calculateMetrics(): recording suspended -> skip");
             return;
@@ -280,7 +346,7 @@ public class CyclingPowerMetricsDevice extends MyDevice {
             }
         }
 
-        // 2. Power Validation for NP, IF, Mechanical Work & TSS
+        // 2. Power Validation for NP, IF, Mechanical Work, TSS & W'bal
         if (power == null || Double.isNaN(power) || Double.isInfinite(power) || power < 0.0) {
             if (mNormalizedPowerSensor != null) {
                 mNormalizedPowerSensor.newValue(null);
@@ -290,6 +356,9 @@ public class CyclingPowerMetricsDevice extends MyDevice {
             }
             if (mTssSensor != null) {
                 mTssSensor.newValue(null);
+            }
+            if (mWPrimeBalSensor != null) {
+                mWPrimeBalSensor.newValue(null);
             }
             return;
         }
@@ -346,5 +415,38 @@ public class CyclingPowerMetricsDevice extends MyDevice {
                 mTssSensor.newValue(null);
             }
         }
+
+        // 6. Calculate Skiba W'bal (REQ-UI-399.2)
+        Integer cp = resolveEffectiveCpWatts();
+        float wPrimeKj = mWPrimeKjProvider.getWPrimeKj(mContext);
+        if (cp != null && cp > 0 && wPrimeKj > 0.0f) {
+            double wPrimeJoules = wPrimeKj * 1000.0;
+            if (mCurrentWPrimeBalJoules == null) {
+                mCurrentWPrimeBalJoules = wPrimeJoules;
+            }
+            mCurrentWPrimeBalJoules = PowerPhysiologyCalculator.INSTANCE.stepWPrimeBalanceJoules(
+                    mCurrentWPrimeBalJoules,
+                    power,
+                    cp.doubleValue(),
+                    wPrimeJoules,
+                    1.0
+            );
+            if (mWPrimeBalSensor != null) {
+                mWPrimeBalSensor.newValue(mCurrentWPrimeBalJoules / 1000.0);
+            }
+        } else {
+            if (mWPrimeBalSensor != null) {
+                mWPrimeBalSensor.newValue(null);
+            }
+        }
+    }
+
+    private Integer resolveEffectiveCpWatts() {
+        Integer cp = mCpProvider != null ? mCpProvider.getCpWatts(mContext) : null;
+        if (cp != null && cp > 0) {
+            return cp;
+        }
+        Integer ftp = mFtpProvider != null ? mFtpProvider.getFtp(mContext) : null;
+        return (ftp != null && ftp > 0) ? ftp : null;
     }
 }

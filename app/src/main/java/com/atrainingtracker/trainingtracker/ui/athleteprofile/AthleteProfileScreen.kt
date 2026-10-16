@@ -207,6 +207,8 @@ fun AthleteProfileContent(
                                         PlotMetricType.WEIGHT -> AthleteMetricType.WEIGHT_KG
                                         PlotMetricType.HR_REST -> AthleteMetricType.HR_REST_BPM
                                         PlotMetricType.FTP, PlotMetricType.POWER_TO_WEIGHT -> AthleteMetricType.FTP_WATTS
+                                        PlotMetricType.CP -> AthleteMetricType.CP_WATTS
+                                        PlotMetricType.W_PRIME -> AthleteMetricType.W_PRIME_KJ
                                     }
                                     showAddDialogForMetric = defaultMetric
                                 }
@@ -263,7 +265,7 @@ fun AthleteProfileContent(
                             ),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                // 2. 2x2 Summary Cards Grid
+                // 2. Summary Cards Grid (3x2 including CP and W', REQ-UI-399.1)
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(
@@ -343,6 +345,46 @@ fun AthleteProfileContent(
                                 modifier = Modifier.weight(1f)
                             )
                         }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            val effectiveCpEntry = uiState.latestCpEntry ?: uiState.latestFtpEntry
+                            val cpText = effectiveCpEntry?.let {
+                                "${AthleteMetricsPlotMath.formatCpValue(it.value)} W"
+                            } ?: stringResource(R.string.athlete_weight_unconfigured)
+                            val cpDate = uiState.latestCpEntry?.let {
+                                AthleteMetricsPlotMath.formatMediumDate(it.timestampMs)
+                            } ?: ""
+
+                            MetricSummaryCard(
+                                title = stringResource(R.string.athlete_profile_metric_cp),
+                                valueText = cpText,
+                                dateText = cpDate,
+                                isSelected = uiState.selectedPlotMetric == PlotMetricType.CP,
+                                onCardClick = { onSelectPlotMetric(PlotMetricType.CP) },
+                                onAddClick = { showAddDialogForMetric = AthleteMetricType.CP_WATTS },
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            val wPrimeText = uiState.latestWPrimeEntry?.let {
+                                "${AthleteMetricsPlotMath.formatWPrimeValue(it.value)} kJ"
+                            } ?: "${AthleteMetricsPlotMath.formatWPrimeValue(SettingsDataStore.DEFAULT_W_PRIME_KJ.toDouble())} kJ"
+                            val wPrimeDate = uiState.latestWPrimeEntry?.let {
+                                AthleteMetricsPlotMath.formatMediumDate(it.timestampMs)
+                            } ?: ""
+
+                            MetricSummaryCard(
+                                title = stringResource(R.string.athlete_profile_metric_w_prime),
+                                valueText = wPrimeText,
+                                dateText = wPrimeDate,
+                                isSelected = uiState.selectedPlotMetric == PlotMetricType.W_PRIME,
+                                onCardClick = { onSelectPlotMetric(PlotMetricType.W_PRIME) },
+                                onAddClick = { showAddDialogForMetric = AthleteMetricType.W_PRIME_KJ },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
 
@@ -377,6 +419,8 @@ fun AthleteProfileContent(
                                     PlotMetricType.WEIGHT to stringResource(R.string.athlete_profile_metric_weight),
                                     PlotMetricType.HR_REST to stringResource(R.string.athlete_profile_metric_hr_rest),
                                     PlotMetricType.FTP to stringResource(R.string.athlete_profile_metric_ftp),
+                                    PlotMetricType.CP to stringResource(R.string.athlete_profile_metric_cp),
+                                    PlotMetricType.W_PRIME to stringResource(R.string.athlete_profile_metric_w_prime),
                                     PlotMetricType.POWER_TO_WEIGHT to stringResource(R.string.athlete_profile_metric_w_per_kg)
                                 )
                                 metricOptions.forEach { (type, label) ->
@@ -441,7 +485,9 @@ fun AthleteProfileContent(
                                 null to stringResource(R.string.athlete_profile_filter_all),
                                 AthleteMetricType.WEIGHT_KG to stringResource(R.string.athlete_profile_metric_weight),
                                 AthleteMetricType.HR_REST_BPM to stringResource(R.string.athlete_profile_metric_hr_rest),
-                                AthleteMetricType.FTP_WATTS to stringResource(R.string.athlete_profile_metric_ftp)
+                                AthleteMetricType.FTP_WATTS to stringResource(R.string.athlete_profile_metric_ftp),
+                                AthleteMetricType.CP_WATTS to stringResource(R.string.athlete_profile_metric_cp),
+                                AthleteMetricType.W_PRIME_KJ to stringResource(R.string.athlete_profile_metric_w_prime)
                             )
                             filterOptions.forEach { (filterType, label) ->
                                 CompactSelectorPill(
@@ -526,6 +572,8 @@ fun AthleteProfileContent(
             AthleteMetricType.WEIGHT_KG -> uiState.latestWeightEntry?.value
             AthleteMetricType.HR_REST_BPM -> uiState.latestHrRestEntry?.value
             AthleteMetricType.FTP_WATTS -> uiState.latestFtpEntry?.value
+            AthleteMetricType.CP_WATTS -> uiState.latestCpEntry?.value ?: uiState.latestFtpEntry?.value
+            AthleteMetricType.W_PRIME_KJ -> uiState.latestWPrimeEntry?.value ?: SettingsDataStore.DEFAULT_W_PRIME_KJ.toDouble()
         }
         AthleteMetricEntryDialog(
             isEditMode = false,
@@ -747,7 +795,8 @@ fun AthleteMetricTimeSeriesChart(
                 PlotMetricType.POWER_TO_WEIGHT -> 0.25
                 PlotMetricType.WEIGHT -> 2.0
                 PlotMetricType.HR_REST -> 3.0
-                PlotMetricType.FTP -> 10.0
+                PlotMetricType.FTP, PlotMetricType.CP -> 10.0
+                PlotMetricType.W_PRIME -> 2.0
             }
         } else {
             rawSpan * 0.15
@@ -779,8 +828,8 @@ fun AthleteMetricTimeSeriesChart(
             )
             val v = yMin + frac * yRange
             val label = when (metricType) {
-                PlotMetricType.WEIGHT -> String.format(Locale.US, "%.1f", v)
-                PlotMetricType.HR_REST, PlotMetricType.FTP -> v.roundToInt().toString()
+                PlotMetricType.WEIGHT, PlotMetricType.W_PRIME -> String.format(Locale.US, "%.1f", v)
+                PlotMetricType.HR_REST, PlotMetricType.FTP, PlotMetricType.CP -> v.roundToInt().toString()
                 PlotMetricType.POWER_TO_WEIGHT -> String.format(Locale.US, "%.2f", v)
             }
             drawContext.canvas.nativeCanvas.drawText(
@@ -953,6 +1002,8 @@ fun AthleteMetricEntryDialog(
                 AthleteMetricType.WEIGHT_KG -> AthleteMetricsPlotMath.formatWeightValue(initialCanonicalValue, isImperial)
                 AthleteMetricType.HR_REST_BPM -> AthleteMetricsPlotMath.formatHrRestValue(initialCanonicalValue)
                 AthleteMetricType.FTP_WATTS -> AthleteMetricsPlotMath.formatFtpValue(initialCanonicalValue)
+                AthleteMetricType.CP_WATTS -> AthleteMetricsPlotMath.formatCpValue(initialCanonicalValue)
+                AthleteMetricType.W_PRIME_KJ -> AthleteMetricsPlotMath.formatWPrimeValue(initialCanonicalValue)
             }
         }
     }
@@ -960,10 +1011,29 @@ fun AthleteMetricEntryDialog(
     var textValue by remember(selectedMetric) { mutableStateOf(initialText) }
     var hasValidationError by remember(selectedMetric, textValue) { mutableStateOf(false) }
 
+    // 2-Point CP & W' Estimator state (`REQ-UI-399.1`)
+    var shortPowerInput by remember { mutableStateOf("400") }
+    var shortSecInput by remember { mutableStateOf("180") }
+    var longPowerInput by remember { mutableStateOf("310") }
+    var longSecInput by remember { mutableStateOf("720") }
+
+    val twoPointEstimate = remember(shortPowerInput, shortSecInput, longPowerInput, longSecInput) {
+        val p1 = shortPowerInput.trim().replace(',', '.').toDoubleOrNull()
+        val t1 = shortSecInput.trim().toIntOrNull()
+        val p2 = longPowerInput.trim().replace(',', '.').toDoubleOrNull()
+        val t2 = longSecInput.trim().toIntOrNull()
+        if (p1 != null && t1 != null && p2 != null && t2 != null) {
+            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.estimateCpAndWPrime(p1, t1, p2, t2)
+        } else {
+            null
+        }
+    }
+
     val unitStr = when (selectedMetric) {
         AthleteMetricType.WEIGHT_KG -> AthleteMetricsPlotMath.weightUnitLabel(isImperial)
         AthleteMetricType.HR_REST_BPM -> "bpm"
-        AthleteMetricType.FTP_WATTS -> "W"
+        AthleteMetricType.FTP_WATTS, AthleteMetricType.CP_WATTS -> "W"
+        AthleteMetricType.W_PRIME_KJ -> "kJ"
     }
 
     fun parseToCanonicalValue(input: String): Double? {
@@ -996,7 +1066,9 @@ fun AthleteMetricEntryDialog(
                         val metrics = listOf(
                             AthleteMetricType.WEIGHT_KG to stringResource(R.string.athlete_profile_metric_weight),
                             AthleteMetricType.HR_REST_BPM to stringResource(R.string.athlete_profile_metric_hr_rest),
-                            AthleteMetricType.FTP_WATTS to stringResource(R.string.athlete_profile_metric_ftp)
+                            AthleteMetricType.FTP_WATTS to stringResource(R.string.athlete_profile_metric_ftp),
+                            AthleteMetricType.CP_WATTS to stringResource(R.string.athlete_profile_metric_cp),
+                            AthleteMetricType.W_PRIME_KJ to stringResource(R.string.athlete_profile_metric_w_prime)
                         )
                         metrics.forEach { (mType, label) ->
                             CompactSelectorPill(
@@ -1020,7 +1092,7 @@ fun AthleteMetricEntryDialog(
                     },
                     isError = hasValidationError,
                     keyboardOptions = KeyboardOptions(
-                        keyboardType = if (selectedMetric == AthleteMetricType.WEIGHT_KG) {
+                        keyboardType = if (selectedMetric == AthleteMetricType.WEIGHT_KG || selectedMetric == AthleteMetricType.W_PRIME_KJ) {
                             KeyboardType.Decimal
                         } else {
                             KeyboardType.Number
@@ -1029,6 +1101,87 @@ fun AthleteMetricEntryDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                if (selectedMetric == AthleteMetricType.CP_WATTS || selectedMetric == AthleteMetricType.W_PRIME_KJ) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.athlete_profile_cp_estimator_title),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(
+                                    value = shortPowerInput,
+                                    onValueChange = { shortPowerInput = it },
+                                    label = { Text(stringResource(R.string.athlete_profile_cp_estimator_short_power)) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = shortSecInput,
+                                    onValueChange = { shortSecInput = it },
+                                    label = { Text(stringResource(R.string.athlete_profile_cp_estimator_short_sec)) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(
+                                    value = longPowerInput,
+                                    onValueChange = { longPowerInput = it },
+                                    label = { Text(stringResource(R.string.athlete_profile_cp_estimator_long_power)) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = longSecInput,
+                                    onValueChange = { longSecInput = it },
+                                    label = { Text(stringResource(R.string.athlete_profile_cp_estimator_long_sec)) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            twoPointEstimate?.let { est ->
+                                OutlinedButton(
+                                    onClick = {
+                                        textValue = if (selectedMetric == AthleteMetricType.CP_WATTS) {
+                                            est.cpWattsRounded.toString()
+                                        } else {
+                                            String.format(Locale.US, "%.1f", est.wPrimeKj)
+                                        }
+                                        hasValidationError = false
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = stringResource(
+                                            R.string.athlete_profile_cp_estimator_apply,
+                                            est.cpWattsRounded,
+                                            est.wPrimeKj
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
@@ -1101,6 +1254,8 @@ private fun metricDisplayName(metricType: AthleteMetricType): String = when (met
     AthleteMetricType.WEIGHT_KG -> stringResource(R.string.athlete_profile_metric_weight)
     AthleteMetricType.HR_REST_BPM -> stringResource(R.string.athlete_profile_metric_hr_rest)
     AthleteMetricType.FTP_WATTS -> stringResource(R.string.athlete_profile_metric_ftp)
+    AthleteMetricType.CP_WATTS -> stringResource(R.string.athlete_profile_metric_cp)
+    AthleteMetricType.W_PRIME_KJ -> stringResource(R.string.athlete_profile_metric_w_prime)
 }
 
 private fun formatEntryValueWithUnit(entry: AthleteMetricEntry, isImperial: Boolean): String =
@@ -1111,6 +1266,10 @@ private fun formatEntryValueWithUnit(entry: AthleteMetricEntry, isImperial: Bool
             "${AthleteMetricsPlotMath.formatHrRestValue(entry.value)} bpm"
         AthleteMetricType.FTP_WATTS ->
             "${AthleteMetricsPlotMath.formatFtpValue(entry.value)} W"
+        AthleteMetricType.CP_WATTS ->
+            "${AthleteMetricsPlotMath.formatCpValue(entry.value)} W"
+        AthleteMetricType.W_PRIME_KJ ->
+            "${AthleteMetricsPlotMath.formatWPrimeValue(entry.value)} kJ"
     }
 
 @Preview(showBackground = true, name = "AthleteProfile - Populated Light")

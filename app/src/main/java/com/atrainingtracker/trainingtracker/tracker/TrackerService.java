@@ -144,6 +144,9 @@ public class TrackerService extends Service {
 
     // Same sensor types from the old thread. Used for Averages.
     private static final HashSet<SensorType> IMPORTANT_SENSOR_TYPES = new HashSet<>(SensorType.CORE_METRICS);
+    static {
+        IMPORTANT_SENSOR_TYPES.add(SensorType.W_PRIME_BAL);
+    }
 
     // Sensors to track for Min/Max and used for average if in IMPORTANT_SENSOR_TYPES
     private static final HashSet<SensorType> SENSORS_TO_TRACK = new HashSet<>(IMPORTANT_SENSOR_TYPES);
@@ -151,6 +154,7 @@ public class TrackerService extends Service {
         SENSORS_TO_TRACK.add(SensorType.LATITUDE);
         SENSORS_TO_TRACK.add(SensorType.LONGITUDE);
         SENSORS_TO_TRACK.add(SensorType.LINE_DISTANCE_m);
+        SENSORS_TO_TRACK.add(SensorType.W_PRIME_BAL);
     }
     
     public static final String START_TYPE = "START_TYPE";
@@ -1546,6 +1550,10 @@ public class TrackerService extends Service {
                 }
                 summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
                 repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
+            }
+            if (sensor == SensorType.W_PRIME_BAL && stats.count > 0) {
+                summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.END, stats.last, endPos);
+                repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.END, stats.last, endPos);
             }
         }
 

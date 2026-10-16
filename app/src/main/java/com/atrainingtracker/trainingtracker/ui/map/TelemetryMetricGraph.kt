@@ -72,7 +72,8 @@ enum class TelemetryMetricType {
     HEART_RATE,
     SPEED,
     PACE,
-    POWER
+    POWER,
+    W_PRIME_BAL
 }
 
 
@@ -135,6 +136,7 @@ fun TelemetryMetricGraph(
             TelemetryMetricType.HEART_RATE -> TTColor.Zone4
             TelemetryMetricType.SPEED, TelemetryMetricType.PACE -> colorScheme.primary
             TelemetryMetricType.POWER -> TTColor.Zone5
+            TelemetryMetricType.W_PRIME_BAL -> TTColor.WPrimeBalGreen
         }
     }
 
@@ -165,6 +167,9 @@ fun TelemetryMetricGraph(
         when (metricType) {
             TelemetryMetricType.POWER -> {
                 0.0 to (max * 1.1).coerceAtLeast(50.0)
+            }
+            TelemetryMetricType.W_PRIME_BAL -> {
+                0.0 to (max * 1.1).coerceAtLeast(10.0)
             }
             TelemetryMetricType.HEART_RATE -> {
                 (min - 5.0).coerceAtLeast(30.0) to (max + 5.0).coerceAtLeast(100.0)

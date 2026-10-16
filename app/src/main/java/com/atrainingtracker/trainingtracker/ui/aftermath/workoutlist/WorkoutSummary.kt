@@ -377,6 +377,35 @@ fun WorkoutSummary(
                                 )
                             }
                         }
+                        if (TelemetryMetricUtils.hasWPrimeBalData(telemetryPoints)) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(mapClickModifier)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.w_prime_bal),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                )
+                                TelemetryMetricGraph(
+                                    pathPoints = telemetryPoints,
+                                    metricType = TelemetryMetricType.W_PRIME_BAL,
+                                    currentDistance = null,
+                                    onDistanceSelected = {},
+                                    bSportType = workoutData.bSportType,
+                                    enableGestures = false,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
                     }
                 }
                 WorkoutSectionType.ZONES -> {

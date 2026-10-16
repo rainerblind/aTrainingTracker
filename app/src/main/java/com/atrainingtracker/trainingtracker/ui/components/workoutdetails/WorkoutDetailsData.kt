@@ -36,5 +36,8 @@ data class WorkoutDetailsData(
     val descentMeters: Long,
     val bSportType: BSportType,  // necessary for distinguishing to show speed or pace
 
-    val maxDisplacement: Double?
+    val maxDisplacement: Double?,
+    val minWPrimeBalKj: Double? = null,
+    val minWPrimeBalPct: Double? = null,
+    val isEmptyTankWarning: Boolean = false
 )

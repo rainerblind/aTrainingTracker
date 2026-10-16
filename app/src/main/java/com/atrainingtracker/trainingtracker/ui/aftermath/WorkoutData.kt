@@ -119,6 +119,11 @@ data class WorkoutData(
     val maxLat: Double? = null,
     val maxLng: Double? = null,
 
+    // --- 2b. Anaerobic Battery (W'bal) Summary (REQ-UI-399.3) ---
+    val minWPrimeBalKj: Double? = null,
+    val minWPrimeBalPct: Double? = null,
+    val isEmptyTankWarning: Boolean = false,
+
     // --- 3. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
     val extremaRows: List<ExtremaDataRow> = emptyList(),
@@ -161,7 +166,10 @@ data class WorkoutData(
             bSportType = bSportType,
             ascentMeters = ascentMeters,
             descentMeters = descentMeters,
-            maxDisplacement = maxDisplacement
+            maxDisplacement = maxDisplacement,
+            minWPrimeBalKj = minWPrimeBalKj,
+            minWPrimeBalPct = minWPrimeBalPct,
+            isEmptyTankWarning = isEmptyTankWarning
         )
 
     val descriptionData: DescriptionData

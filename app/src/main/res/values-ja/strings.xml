@@ -1875,5 +1875,19 @@
     <string name="sensor_type_search_hint">項目または単位を検索…</string>
     <string name="sensor_type_no_matches">一致する項目がありません</string>
 
+    <!-- ATT-3862: Critical Power (CP), W', and W'bal (REQ-UI-399) -->
+    <string name="w_prime_bal">W\'バランス (無酸素バッテリー)</string>
+    <string name="w_prime_bal_short">W\'bal</string>
+    <string name="athlete_profile_metric_cp">CP</string>
+    <string name="athlete_profile_metric_w_prime">W\'</string>
+    <string name="athlete_profile_cp_estimator_title">2点法 CP &amp; W\' 推定</string>
+    <string name="athlete_profile_cp_estimator_short_power">短時間パワー (W)</string>
+    <string name="athlete_profile_cp_estimator_short_sec">短時間 (秒)</string>
+    <string name="athlete_profile_cp_estimator_long_power">長時間パワー (W)</string>
+    <string name="athlete_profile_cp_estimator_long_sec">長時間 (秒)</string>
+    <string name="athlete_profile_cp_estimator_apply">推定値を適用 (%1$d W / %2$.1f kJ)</string>
+    <string name="workout_w_prime_bal_min_format">最小 W\'bal: %1$.1f kJ (%2$.0f%%)</string>
+    <string name="workout_w_prime_empty_tank">タンク空 (&lt;10%%)</string>
+
 </resources>
 
