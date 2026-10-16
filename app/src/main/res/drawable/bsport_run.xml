@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ATT-2859 / REQ-UI-375: Running sport icon compiled directly from Bilder/Bluetooth/runner.fig & logo.fig -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="192"
+    android:viewportHeight="192">
+    <path
+        android:pathData="M 100.94,27.73 A 12.18,12.13 0 1,0 125.30,27.73 A 12.18,12.13 0 1,0 100.94,27.73 Z"
+        android:fillColor="#0000FF"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="7.19" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 108.18,98.84 L 147.93,110.06 L 123.33,155.52"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="20.14"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 110.96,55.78 L 106.31,98.84 L 80.75,135.62 L 44.07,165.83"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="20.14"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 111.97,45.85 L 129.04,81.72 L 136.57,51.51"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="12.23"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 111.97,45.85 L 79.84,53.38 L 93.08,79.95"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="12.23"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

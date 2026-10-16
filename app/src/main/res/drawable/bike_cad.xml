@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ Faithful analytical geometric vectorization (ATT-2859 / REQ-UI-375 / Rule 37).
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="96.0"
+    android:viewportHeight="96.0">
+    <path
+        android:fillColor="#000000"
+        android:pathData="M 10.00,0.00 L 86.00,0.00 A 10.00,10.00 0 0,1 96.00,10.00 L 96.00,86.00 A 10.00,10.00 0 0,1 86.00,96.00 L 10.00,96.00 A 10.00,10.00 0 0,1 0.00,86.00 L 0.00,10.00 A 10.00,10.00 0 0,1 10.00,0.00 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M 12.00,51.50 A 12.50,12.50 0 1,1 37.00,51.50 A 12.50,12.50 0 1,1 12.00,51.50 Z M 15.80,51.50 A 8.70,8.70 0 1,0 33.20,51.50 A 8.70,8.70 0 1,0 15.80,51.50 Z M 53.50,51.50 A 12.50,12.50 0 1,1 78.50,51.50 A 12.50,12.50 0 1,1 53.50,51.50 Z M 57.30,51.50 A 8.70,8.70 0 1,0 74.70,51.50 A 8.70,8.70 0 1,0 57.30,51.50 Z M 59.80,14.00 A 5.20,5.20 0 1,1 70.20,14.00 A 5.20,5.20 0 1,1 59.80,14.00 Z" />
+    <path
+        android:pathData="M 72.5,29.0 L 63.0,29.0 L 53.5,21.5 L 40.5,31.0 L 50.8,40.0 L 43.2,60.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M 19.00,75.5 L 28.00,75.5 A 4.5,4.5 0 0,1 32.50,80.0 L 32.50,81.2 L 27.50,81.2 L 27.50,80.5 A 1.5,1.5 0 0,0 26.00,79.0 L 21.00,79.0 A 1.5,1.5 0 0,0 19.50,80.5 L 19.50,85.5 A 1.5,1.5 0 0,0 21.00,87.0 L 26.00,87.0 A 1.5,1.5 0 0,0 27.50,85.5 L 27.50,84.8 L 32.50,84.8 L 32.50,86.0 A 4.5,4.5 0 0,1 28.00,90.5 L 19.00,90.5 A 4.5,4.5 0 0,1 14.50,86.0 L 14.50,80.0 A 4.5,4.5 0 0,1 19.00,75.5 Z M 35.00,90.5 L 42.50,75.5 L 49.50,75.5 L 57.00,90.5 L 51.50,90.5 L 50.00,87.5 L 42.00,87.5 L 40.50,90.5 Z M 43.50,84.2 L 46.00,79.0 L 48.50,84.2 Z M 60.50,75.5 L 75.00,75.5 A 4.5,4.5 0 0,1 79.50,80.0 L 79.50,86.0 A 4.5,4.5 0 0,1 75.00,90.5 L 60.50,90.5 Z M 65.50,79.2 L 72.70,79.2 A 1.8,1.8 0 0,1 74.50,81.0 L 74.50,85.0 A 1.8,1.8 0 0,1 72.70,86.8 L 65.50,86.8 Z" />
+</vector>

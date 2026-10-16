@@ -56,6 +56,13 @@ private data class SportItemSpec(
     val labelRes: Int
 )
 
+/**
+ * Sport type selection bar for Run, Bike, and Other activities.
+ *
+ * Renders scalable multi-color vector drawables (`R.drawable.bsport_run`, `R.drawable.bsport_bike`,
+ * `R.drawable.bsport_other`) compiled directly from the Xfig 3.2 master geometry (`REQ-UI-375`) with
+ * `Color.Unspecified` when selected and dynamic `Color.Gray` desaturation when unselected.
+ */
 @Composable
 fun SportTypeSelector(
     currentSport: BSportType,
