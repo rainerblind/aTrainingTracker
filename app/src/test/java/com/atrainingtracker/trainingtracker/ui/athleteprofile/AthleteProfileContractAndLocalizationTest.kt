@@ -117,7 +117,15 @@ class AthleteProfileContractAndLocalizationTest {
             "athlete_profile_cp_estimator_long_sec",
             "athlete_profile_cp_estimator_apply",
             "workout_w_prime_bal_min_format",
-            "workout_w_prime_empty_tank"
+            "workout_w_prime_empty_tank",
+            "efficiency_factor_short",
+            "aerobic_decoupling_short",
+            "workout_ef_pwhr_format",
+            "workout_ef_pahr_format",
+            "workout_ef_only_pw_format",
+            "workout_ef_only_pa_format",
+            "workout_decoupling_coupled",
+            "workout_decoupling_drift"
         )
 
         val root = resolveModuleRoot()
@@ -147,6 +155,16 @@ class AthleteProfileContractAndLocalizationTest {
             val wPrimeText = wPrimeMatch!!.groupValues[1]
             assertTrue("$locale workout_w_prime_bal_min_format must contain %1\$.1f", wPrimeText.contains("%1\$.1f"))
             assertTrue("$locale workout_w_prime_bal_min_format must contain %2\$.0f", wPrimeText.contains("%2\$.0f"))
+
+            // Verify positional specifiers in workout_ef_pwhr_format and workout_ef_pahr_format
+            for (efKey in listOf("workout_ef_pwhr_format", "workout_ef_pahr_format")) {
+                val efRegex = Regex("""<string name="$efKey">([^<]+)</string>""")
+                val efMatch = efRegex.find(content)
+                assertTrue("$efKey not matched in $locale", efMatch != null)
+                val efText = efMatch!!.groupValues[1]
+                assertTrue("$locale $efKey must contain %1\$.2f", efText.contains("%1\$.2f"))
+                assertTrue("$locale $efKey must contain %2\$.1f", efText.contains("%2\$.1f"))
+            }
         }
     }
 

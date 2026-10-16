@@ -1063,23 +1063,30 @@ object LegacyImportEngine {
             }
         }
 
-        // 4b. Calculate and persist Skiba W'bal extrema (MIN, AVG, END) when power samples exist (REQ-UI-399.3)
+        // 4b. Calculate and persist Skiba W'bal extrema (MIN, AVG, END) and Aerobic Efficiency / Decoupling (REQ-UI-399.3, REQ-UI-400.2)
         try {
-            val effectiveCp = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getEffectiveCpWatts(context)
-            val effectiveWPrimeKj = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getEffectiveWPrimeKj(context).toDouble()
-            if (effectiveCp != null && effectiveCp > 0 && effectiveWPrimeKj > 0.0 && samplesDb.existsTable(baseFileName)) {
+            if (samplesDb.existsTable(baseFileName)) {
                 val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
                 val powerSamples = mutableListOf<Double?>()
+                val speedSamples = mutableListOf<Double?>()
+                val hrSamples = mutableListOf<Double?>()
                 samplesDb.database.query(tableName, null, null, null, null, null, null).use { cursor ->
                     val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
-                    if (powerIdx != -1) {
-                        while (cursor.moveToNext()) {
-                            val p = if (!cursor.isNull(powerIdx)) cursor.getDouble(powerIdx) else null
-                            powerSamples.add(p)
-                        }
+                    val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
+                    val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+                    while (cursor.moveToNext()) {
+                        val p = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getDouble(powerIdx) else null
+                        val s = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
+                        val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getDouble(hrIdx) else null
+                        powerSamples.add(p)
+                        speedSamples.add(s)
+                        hrSamples.add(hr)
                     }
                 }
-                if (powerSamples.any { it != null && it > 0.0 }) {
+
+                val effectiveCp = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getEffectiveCpWatts(context)
+                val effectiveWPrimeKj = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getEffectiveWPrimeKj(context).toDouble()
+                if (effectiveCp != null && effectiveCp > 0 && effectiveWPrimeKj > 0.0 && powerSamples.any { it != null && it > 0.0 }) {
                     val wPrimeSummary = com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeWPrimeBalanceSeries(
                         powerSamplesWatts = powerSamples,
                         cpWatts = effectiveCp.toDouble(),
@@ -1095,9 +1102,24 @@ object LegacyImportEngine {
                         summariesDb.updateExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.END, it, null)
                     }
                 }
+
+                // REQ-UI-400.2: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr)
+                val aerobicResult = com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
+                    powerSamplesWatts = powerSamples,
+                    speedSamplesMps = speedSamples,
+                    hrSamplesBpm = hrSamples,
+                    bSportType = bSportType
+                )
+                val targetSensor = if (aerobicResult.isPowerBased) SensorType.POWER else SensorType.SPEED_mps
+                aerobicResult.efficiencyFactor?.let {
+                    summariesDb.updateExtremaValue(workoutId, targetSensor, ExtremaType.EFFICIENCY_FACTOR, it, null)
+                }
+                aerobicResult.decouplingPct?.let {
+                    summariesDb.updateExtremaValue(workoutId, targetSensor, ExtremaType.AEROBIC_DECOUPLING, it, null)
+                }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Could not compute W'bal extrema during recalculateStats: ${e.message}")
+            Log.w(TAG, "Could not compute W'bal or Aerobic Efficiency extrema during recalculateStats: ${e.message}")
         }
 
         // 5. Clustering (Spatial Markers)

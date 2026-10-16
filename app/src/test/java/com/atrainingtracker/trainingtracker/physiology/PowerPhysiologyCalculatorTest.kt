@@ -117,4 +117,65 @@ class PowerPhysiologyCalculatorTest {
         assertEquals(75.0, moderate.minWPrimeBalPct!!, 0.05)
         assertFalse(moderate.isEmptyTankWarning)
     }
+
+    @Test
+    fun calculateNormalizedPower_and_cyclingEfficiencyFactor_and_PwHrDecoupling() {
+        // AC-1: H1 = 60s at 240W, HR = 150 bpm -> EF1 = 240 / 150 = 1.60 W/bpm
+        //       H2 = 60s at 240W, HR = 160 bpm -> EF2 = 240 / 160 = 1.50 W/bpm
+        //       Decoupling % = (1.60 - 1.50) / 1.60 * 100 = 6.25% (>= 5.0% -> High Drift)
+        val powerStream = List(120) { 240.0 }
+        val hrStream = List(60) { 150.0 } + List(60) { 160.0 }
+
+        val np = PowerPhysiologyCalculator.calculateNormalizedPower(powerStream)
+        assertNotNull(np)
+        assertEquals(240.0, np!!, 1e-4)
+
+        val result = PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
+            powerSamplesWatts = powerStream,
+            speedSamplesMps = emptyList(),
+            hrSamplesBpm = hrStream,
+            bSportType = com.atrainingtracker.banalservice.BSportType.BIKE
+        )
+        assertTrue(result.isPowerBased)
+        assertNotNull(result.efficiencyFactor)
+        // Full-session NP = 240W, Avg HR = 155 bpm -> EF = 240 / 155 = 1.548387 W/bpm
+        assertEquals(240.0 / 155.0, result.efficiencyFactor!!, 1e-4)
+        assertEquals(1.60, result.efFirstHalf!!, 1e-4)
+        assertEquals(1.50, result.efSecondHalf!!, 1e-4)
+        assertEquals(6.25, result.decouplingPct!!, 1e-4)
+        assertTrue(result.isHighDrift)
+    }
+
+    @Test
+    fun computeAerobicEfficiencyAndDecoupling_runningPaHrCoupledResponseAndEdgeCases() {
+        // AC-2: Running without power:
+        // H1 = 60s at 3.5 m/s (210 m/min), HR = 150 bpm -> EF1 = 210 / 150 = 1.40 m/min/bpm
+        // H2 = 60s at 3.5 m/s (210 m/min), HR = 153 bpm -> EF2 = 210 / 153 = 1.372549 m/min/bpm
+        // Decoupling % = (1.40 - 1.372549) / 1.40 * 100 = 1.96078% (< 5.0% -> Coupled)
+        val speedStream = List(120) { 3.5 }
+        val hrStream = List(60) { 150.0 } + List(60) { 153.0 }
+
+        val result = PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
+            powerSamplesWatts = emptyList(),
+            speedSamplesMps = speedStream,
+            hrSamplesBpm = hrStream,
+            bSportType = com.atrainingtracker.banalservice.BSportType.RUN
+        )
+        assertFalse(result.isPowerBased)
+        assertEquals(1.40, result.efFirstHalf!!, 1e-4)
+        assertEquals(210.0 / 153.0, result.efSecondHalf!!, 1e-4)
+        assertEquals((3.0 / 153.0) * 100.0, result.decouplingPct!!, 1e-4)
+        assertFalse(result.isHighDrift)
+
+        // Missing HR returns null EF and decoupling safely
+        val noHr = PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
+            powerSamplesWatts = List(30) { 250.0 },
+            speedSamplesMps = emptyList(),
+            hrSamplesBpm = emptyList(),
+            bSportType = com.atrainingtracker.banalservice.BSportType.BIKE
+        )
+        assertNull(noHr.efficiencyFactor)
+        assertNull(noHr.decouplingPct)
+        assertFalse(noHr.isHighDrift)
+    }
 }

@@ -116,6 +116,70 @@ fun WorkoutDetails(
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onErrorContainer,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // --- Section 5: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400.3) ---
+        if (data.efficiencyFactor != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val summaryText = if (data.aerobicDecouplingPct != null) {
+                    if (data.isPowerBasedEfficiency) {
+                        stringResource(R.string.workout_ef_pwhr_format, data.efficiencyFactor, data.aerobicDecouplingPct)
+                    } else {
+                        stringResource(R.string.workout_ef_pahr_format, data.efficiencyFactor, data.aerobicDecouplingPct)
+                    }
+                } else {
+                    if (data.isPowerBasedEfficiency) {
+                        stringResource(R.string.workout_ef_only_pw_format, data.efficiencyFactor)
+                    } else {
+                        stringResource(R.string.workout_ef_only_pa_format, data.efficiencyFactor)
+                    }
+                }
+                Text(
+                    text = summaryText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (data.aerobicDecouplingPct != null) {
+                    val badgeBg = if (data.isAerobicDecouplingHighDrift) {
+                        MaterialTheme.colorScheme.errorContainer
+                    } else {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    }
+                    val badgeFg = if (data.isAerobicDecouplingHighDrift) {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    }
+                    val badgeText = if (data.isAerobicDecouplingHighDrift) {
+                        stringResource(R.string.workout_decoupling_drift)
+                    } else {
+                        stringResource(R.string.workout_decoupling_coupled)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        color = badgeBg,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Text(
+                            text = badgeText,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = badgeFg,
+                            maxLines = 1,
+                            softWrap = false,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }

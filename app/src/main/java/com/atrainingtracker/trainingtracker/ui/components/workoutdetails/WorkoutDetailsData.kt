@@ -39,5 +39,9 @@ data class WorkoutDetailsData(
     val maxDisplacement: Double?,
     val minWPrimeBalKj: Double? = null,
     val minWPrimeBalPct: Double? = null,
-    val isEmptyTankWarning: Boolean = false
+    val isEmptyTankWarning: Boolean = false,
+    val efficiencyFactor: Double? = null,
+    val aerobicDecouplingPct: Double? = null,
+    val isPowerBasedEfficiency: Boolean = true,
+    val isAerobicDecouplingHighDrift: Boolean = false
 )
