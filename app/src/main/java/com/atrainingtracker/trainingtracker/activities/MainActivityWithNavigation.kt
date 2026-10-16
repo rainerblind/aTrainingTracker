@@ -687,14 +687,6 @@ class MainActivityWithNavigation :
             Log.i(TAG, "migrating to new Strava OAuth")
             StravaHelper.requestAccessToken(this)
         }
-
-        if (TrainingApplication.uploadToRunKeeper() && TrainingApplication.getRunkeeperToken() == null) {
-            TrainingApplication.setUploadToRunkeeper(false)
-        }
-
-        if (TrainingApplication.uploadToTrainingPeaks() && TrainingApplication.getTrainingPeaksRefreshToken() == null) {
-            TrainingApplication.setUploadToTrainingPeaks(false)
-        }
     }
 
     fun applyDisplaySettings() {
