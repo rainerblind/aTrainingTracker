@@ -259,6 +259,7 @@ fun LiveTrackLayer(path: List<LatLng>) {
     if (path.isEmpty()) return
     val style = LocalMapStyle.current
     val trackColor = resolveLiveTrackColor(style.isDark)
+    val livePattern = remember(style.trackDotGap) { listOf(Dot(), Gap(style.trackDotGap)) }
     
     XRayPolyline(
         points = path,
@@ -266,7 +267,7 @@ fun LiveTrackLayer(path: List<LatLng>) {
         width = style.trackWidth,
         baseZIndex = style.trackBaseZIndex,
         overlayZIndex = style.trackOverlayZIndex,
-        pattern = listOf(Dot(), Gap(style.trackDotGap)),
+        pattern = livePattern,
         jointType = JointType.ROUND
     )
 }

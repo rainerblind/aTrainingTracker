@@ -62,6 +62,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -231,64 +233,105 @@ class TrackingViewModel(
         }
     }
 
-    private data class MapData<T1, T2, T3, T4>(
-        val allLiveSegments: T1,
-        val activeLiveSegments: T2,
-        val allRoutes: T3,
-        val activeNavigatedRouteId: T4
+    private data class StaticMapLayerData(
+        val mapSegments: List<MapSegment>,
+        val activeLiveSegmentIds: Set<Long>,
+        val mapRoutes: List<MapRoute>
+    )
+
+    private data class LiveTelemetryTuple(
+        val currentTrack: List<LatLng>,
+        val bSportType: BSportType,
+        val userSpeed: Float,
+        val userBearing: Float
     )
 
     private fun observeMapState() {
         viewModelScope.launch {
-            val mapDataFlow = combine(
-                liveSegmentsRepository.liveSegments,
-                activeLiveSegments,
+            // REQ-MAP-051.1: Pre-map static MapSegment instances only when static segment paths change,
+            // never on 1-Hz liveData or currentTrack emissions.
+            val staticMapSegmentsFlow = liveSegmentsRepository.liveSegments
+                .map { list -> list.map { it.staticData } }
+                .distinctUntilChanged()
+                .map { staticList ->
+                    staticList.map { staticData ->
+                        MapSegment(
+                            stravaId = staticData.summary.stravaId,
+                            name = staticData.summary.name,
+                            bSportType = staticData.summary.bSportType,
+                            path = staticData.path,
+                            latLngs = staticData.latLngs
+                        )
+                    }
+                }
+
+            val activeLiveSegmentIdsFlow = activeLiveSegments
+                .map { list -> list.map { it.staticData.summary.stravaId }.toSet() }
+                .distinctUntilChanged()
+
+            // REQ-MAP-051.1: Pre-map MapRoute instances only when stored routes or activeNavigatedRouteId change.
+            val mapRoutesFlow = combine(
                 routesRepository.allRoutes,
                 routesRepository.activeNavigatedRouteId
-            ) { allSegments, activeSegments, allRoutes, activeNavigatedRouteId ->
-                MapData(allSegments, activeSegments, allRoutes, activeNavigatedRouteId)
+            ) { allRoutes, activeNavigatedRouteId ->
+                allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeNavigatedRouteId)) }
+            }.distinctUntilChanged()
+
+            val staticMapLayerFlow = combine(
+                staticMapSegmentsFlow,
+                activeLiveSegmentIdsFlow,
+                mapRoutesFlow
+            ) { mapSegments, activeIds, mapRoutes ->
+                StaticMapLayerData(
+                    mapSegments = mapSegments,
+                    activeLiveSegmentIds = activeIds,
+                    mapRoutes = mapRoutes
+                )
+            }
+
+            // Rule 39: Actively subscribe currentSpeed and currentBearing alongside currentTrack and bSportType
+            val liveTelemetryFlow = combine(
+                banalServiceRepository.currentTrack,
+                banalServiceRepository.bSportType,
+                banalServiceRepository.currentSpeed,
+                banalServiceRepository.currentBearing
+            ) { currentTrack, bSportType, speed, bearing ->
+                LiveTelemetryTuple(
+                    currentTrack = currentTrack,
+                    bSportType = bSportType,
+                    userSpeed = speed?.toFloat() ?: 0f,
+                    userBearing = bearing?.toFloat() ?: 0f
+                )
             }
 
             combine(
                 trackingViewsRepository.getTrackingViewInfoFlow(viewId),
-                mapDataFlow,
-                banalServiceRepository.currentTrack,
-                banalServiceRepository.bSportType
-            ) { viewInfo, mapData, currentTrack, bSportType ->
-                val (allLiveSegments, activeLiveSegments, allRoutes, activeNavigatedRouteId) = mapData
-                val markerList = mutableListOf<LocationMarker>()
-                if (currentTrack.isNotEmpty()) {
-                    markerList.add(
+                staticMapLayerFlow,
+                liveTelemetryFlow
+            ) { viewInfo, staticLayers, liveTelemetry ->
+                val currentTrack = liveTelemetry.currentTrack
+                val markerList = if (currentTrack.isNotEmpty()) {
+                    listOf(
                         LocationMarker(
                             position = currentTrack.first(),
                             iconResId = R.drawable.start_logo_map,
                             title = application.getString(R.string.Start)
                         )
                     )
+                } else {
+                    emptyList()
                 }
-
-                // Convert LiveSegments into MapSegments
-                val mapSegments = allLiveSegments.map { live ->
-                    MapSegment(
-                        stravaId = live.staticData.summary.stravaId,
-                        name = live.staticData.summary.name,
-                        bSportType = live.staticData.summary.bSportType,
-                        path = live.staticData.path
-                    )
-                }
-
-                val activeIds = activeLiveSegments.map { it.staticData.summary.stravaId }.toSet()
 
                 TrackingMapState(
                     showMap = viewInfo?.showMap ?: false,
                     zoomFocus = MapZoomFocus.FOLLOW_ME,
-                    userSpeed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
-                    userBearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
-                    bSportType = bSportType,
+                    userSpeed = liveTelemetry.userSpeed,
+                    userBearing = liveTelemetry.userBearing,
+                    bSportType = liveTelemetry.bSportType,
                     currentTrack = currentTrack,
-                    mapSegments = mapSegments,
-                    mapRoutes = allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeNavigatedRouteId)) },
-                    activeLiveSegmentIds = activeIds,
+                    mapSegments = staticLayers.mapSegments,
+                    mapRoutes = staticLayers.mapRoutes,
+                    activeLiveSegmentIds = staticLayers.activeLiveSegmentIds,
                     mapMarkers = markerList
                 )
             }.collect { newMapState ->
