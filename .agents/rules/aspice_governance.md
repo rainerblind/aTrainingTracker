@@ -173,3 +173,8 @@ This table maps every legacy rule number (Rules 1 through 36) from historical sp
 | **Rule 34** | Chesterton's Fence for Empty Callback Lambdas | **Migrated** | `docs/coding_standards.md` **Sec 1.2** | Software Engineering: No silent callback suppression. |
 | **Rule 35** | Clean Hardware Teardown on Entity Deletion | **Migrated** | `docs/coding_standards.md` **Sec 3.3** | Software Engineering: Disconnect hardware on delete. |
 | **Rule 36** | Single Source of Truth & DRY — Shared Code | **Migrated** | `docs/coding_standards.md` **Sec 1.1** | Software Engineering: Mandatory canonical formatters. |
+| **Rule 37** | True Geometric Primitives Over Polygon Auto-Tracing | **Migrated** | `docs/design_guidelines.md` **Sec 5.5** | UI & Icons: Construct vectors from geometric primitives; no naive `L`-polygon tracing. |
+| **Rule 38** | No Wrapping in Dense Horizontal Chip Rows | **Migrated** | `docs/design_guidelines.md` **Sec 5.6** | UI & Layout: Use compact bordered/tinted pills over 7-chip M3 `FilterChip` rows. |
+| **Rule 39** | Reactive Flow Subscription Over Static `.value` Reads | **Migrated** | `docs/coding_standards.md` **Sec 1.5** | Software Engineering: Subscribe live flows in `combine(...)`; never read `.value` inside static observers. |
+| **Rule 40** | Growing Warm-Up Window for Rolling Telemetry | **Migrated** | `docs/coding_standards.md` **Sec 1.6** | Software Engineering: Emit rolling metrics from second 1 using growing $1..W-1$ window. |
+

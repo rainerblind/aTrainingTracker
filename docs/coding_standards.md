@@ -49,6 +49,16 @@ This document serves as the authoritative living source of truth for software en
   * Any user-triggered action that invalidates existing historical caches, re-clusters historical workouts, clears bulk data, or resets persistent preferences **MUST** be protected by an explicit confirmation dialog (`AppDialogActions` / `AlertDialog`).
   * The dialog must clearly explain the consequences of the re-computation (e.g. re-clustering historical workouts) before executing the background task.
 
+### 1.5 Reactive Flow Subscription Over Static `.value` Reads in `combine(...)` (Rule 39 — ATT-3581)
+* **Active Flow Subscription Invariant**:
+  * When a reactive pipeline in a ViewModel (such as `TrackingViewModel.observeMapState` using `combine(...)`) computes dynamic UI or camera state (e.g. Follow-Me speed-dependent zoom, bearing rotation) from live telemetry flows (`currentSpeed`, `currentBearing`), those telemetry flows **MUST** be subscribed as active inputs to `combine(...)`.
+  * **Prohibition**: Never read `.value` of a rapidly changing `StateFlow` inside the lambda of a `combine(...)` that only subscribes to static preference flows (`SettingsDataStore`). Preference flows only emit when user settings change, leaving the derived state frozen during live activity.
+
+### 1.6 Growing Warm-Up Window Over Blank Delay for Rolling Telemetry Metrics (Rule 40 — ATT-1290 / ATT-1291)
+* **Immediate Live Feedback**:
+  * Live rolling-window physiological metrics (such as 30-second Coggan Normalized Power, Intensity Factor, and TSS) **MUST** compute over the growing window ($1 \le k < W$) during the initial warm-up phase ($t < 30\text{ s}$) rather than emitting `null` (`"--"`) until the full window $W$ is reached.
+  * Returning `"--"` for 30 seconds while a sensor is actively transmitting misleads the athlete into thinking the sensor connection is broken.
+
 ---
 
 ## 2. Database & Data Transfer Object (DTO) Architecture
