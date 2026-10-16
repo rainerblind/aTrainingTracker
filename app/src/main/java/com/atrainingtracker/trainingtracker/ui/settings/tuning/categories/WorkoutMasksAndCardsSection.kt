@@ -361,12 +361,14 @@ fun WorkoutMasksAndCardsSection(
                 )
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     zoneModes.forEachIndexed { index, (mode, labelRes) ->
+                        val selected = workoutCardPrefs.zoneCardDisplayMode == mode
                         SegmentedButton(
-                            selected = workoutCardPrefs.zoneCardDisplayMode == mode,
+                            selected = selected,
                             onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(zoneCardDisplayMode = mode)) },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = zoneModes.size)
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = zoneModes.size),
+                            icon = {}, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
                         ) {
-                            Text(stringResource(labelRes))
+                            Text(stringResource(labelRes), style = MaterialTheme.typography.labelSmall, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -392,3 +394,4 @@ fun WorkoutAftermathMatrixSection(
         onWorkoutDetailPrefsChange = onWorkoutDetailPrefsChange
     )
 }
+

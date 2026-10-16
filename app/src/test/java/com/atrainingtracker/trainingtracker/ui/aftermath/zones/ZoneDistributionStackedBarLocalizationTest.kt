@@ -43,7 +43,8 @@ class ZoneDistributionStackedBarLocalizationTest {
 
     private val expectedKeys = listOf(
         "zone_mode_stacked_bar",
-        "zone_mode_columns"
+        "zone_mode_columns",
+        "zone_mode_histogram"
     )
 
     @Test
@@ -65,6 +66,10 @@ class ZoneDistributionStackedBarLocalizationTest {
                 assertTrue("Locale $locale string '$key' must have closing tag", endIndex > startIndex)
                 val value = content.substring(startIndex, endIndex).trim()
                 assertFalse("Locale $locale string '$key' must not be empty", value.isEmpty())
+                assertFalse(
+                    "Locale $locale string '$key' ('$value') must be a single-line token without embedded newlines or spaces that force wrapping (REQ-UI-386)",
+                    value.contains("\n")
+                )
             }
         }
     }

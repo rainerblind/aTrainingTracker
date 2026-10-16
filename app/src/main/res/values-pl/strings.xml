@@ -1494,7 +1494,7 @@
     <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 stref</string>
     <string name="zone_mode_columns">Kolumny</string>
-    <string name="zone_mode_stacked_bar">Pasek skumulowany</string>
+    <string name="zone_mode_stacked_bar">Pasek</string>
     <string name="zone_mode_histogram">Histogram</string>
     <string name="aftermath_laps_splits_title">Okrążenia i międzyczasy</string>
     <string name="split_badge_best">Najlepszy</string>
