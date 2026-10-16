@@ -750,7 +750,11 @@ object LegacyImportEngine {
                 lastTime = parsedWorkout.lastTime,
                 minAltPos = parsedWorkout.minAltPos,
                 maxAltPos = parsedWorkout.maxAltPos,
-                listener = listener
+                listener = listener,
+                sessionNormalizedPowerWatts = parsedWorkout.sessionNormalizedPowerWatts,
+                sessionIntensityFactor = parsedWorkout.sessionIntensityFactor,
+                sessionTss = parsedWorkout.sessionTss,
+                sessionWorkKj = parsedWorkout.sessionWorkKj
             )
 
             schedulePostImportCommunityUpload(context, workoutId, effectiveBaseFileName)
@@ -856,7 +860,11 @@ object LegacyImportEngine {
         lastTime: String? = null,
         minAltPos: LatLng? = null,
         maxAltPos: LatLng? = null,
-        listener: ProgressListener? = null
+        listener: ProgressListener? = null,
+        sessionNormalizedPowerWatts: Double? = null,
+        sessionIntensityFactor: Double? = null,
+        sessionTss: Double? = null,
+        sessionWorkKj: Double? = null
     ) {
         val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
         val samplesDb = WorkoutSamplesDatabaseManager.getInstance(context)
@@ -1117,9 +1125,54 @@ object LegacyImportEngine {
                 aerobicResult.decouplingPct?.let {
                     summariesDb.updateExtremaValue(workoutId, targetSensor, ExtremaType.AEROBIC_DECOUPLING, it, null)
                 }
+
+                // REQ-MIG-039.4 (ATT-3860): Calculate and persist session power training metrics (NP, IF, TSS, Work kJ, W/kg)
+                val workoutStartMs: Long? = firstTime?.let {
+                    try {
+                        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).parse(it)?.time
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+                val effectiveFtp = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveFtpAt(context, workoutStartMs)
+                val effectiveWeightKg = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveWeightKgAt(context, workoutStartMs)
+                val powerMetrics = com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computePowerTrainingMetrics(
+                    powerSamplesWatts = powerSamples,
+                    activeTimeSeconds = activeTime,
+                    ftpWatts = effectiveFtp?.toDouble(),
+                    athleteWeightKg = effectiveWeightKg.toDouble().takeIf { it > 0.0 },
+                    fallbackNpWatts = sessionNormalizedPowerWatts,
+                    fallbackIf = sessionIntensityFactor,
+                    fallbackTss = sessionTss,
+                    fallbackWorkKj = sessionWorkKj
+                )
+                powerMetrics.normalizedPowerWatts?.let { np ->
+                    summariesDb.updateExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.AVG, np, null)
+                    summariesDb.updateExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.END, np, null)
+                }
+                powerMetrics.intensityFactor?.let { ifVal ->
+                    summariesDb.updateExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.AVG, ifVal, null)
+                    summariesDb.updateExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.END, ifVal, null)
+                }
+                powerMetrics.tss?.let { tss ->
+                    summariesDb.updateExtremaValue(workoutId, SensorType.TSS, ExtremaType.AVG, tss, null)
+                    summariesDb.updateExtremaValue(workoutId, SensorType.TSS, ExtremaType.MAX, tss, null)
+                    summariesDb.updateExtremaValue(workoutId, SensorType.TSS, ExtremaType.END, tss, null)
+                }
+                powerMetrics.workKj?.let { workKj ->
+                    summariesDb.updateExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.AVG, workKj, null)
+                    summariesDb.updateExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.MAX, workKj, null)
+                    summariesDb.updateExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.END, workKj, null)
+                }
+                powerMetrics.avgPowerToWeight?.let { avgWPerKg ->
+                    summariesDb.updateExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG, avgWPerKg, null)
+                }
+                powerMetrics.maxPowerToWeight?.let { maxWPerKg ->
+                    summariesDb.updateExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null)
+                }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Could not compute W'bal or Aerobic Efficiency extrema during recalculateStats: ${e.message}")
+            Log.w(TAG, "Could not compute W'bal, Aerobic Efficiency, or Power Training extrema during recalculateStats: ${e.message}")
         }
 
         // 5. Clustering (Spatial Markers)

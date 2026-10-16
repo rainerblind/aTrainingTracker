@@ -67,8 +67,35 @@ data class AerobicEfficiencyResult(
 )
 
 /**
+ * Session-level power-based training metrics (`REQ-MIG-039.1`, `ATT-3860`, `ATT-3858`).
+ *
+ * @property normalizedPowerWatts Dr. Andrew Coggan's 30-second 4th-power Normalized Power ($\text{NP}$, in $\text{W}$).
+ * @property avgPowerWatts Arithmetic mean power over active samples ($\text{Avg\_Power}$, in $\text{W}$).
+ * @property maxPowerWatts Maximum power over active samples ($\text{Max\_Power}$, in $\text{W}$).
+ * @property variabilityIndex Pacing steadiness ratio $\text{VI} = \text{NP} / \text{Avg\_Power}$.
+ * @property intensityFactor Relative intensity $\text{IF} = \text{NP} / \text{FTP}$.
+ * @property tss Training Stress Score $\text{TSS} = \frac{T_{\text{active}} \cdot \text{NP} \cdot \text{IF}}{\text{FTP} \cdot 36.0}$.
+ * @property workKj Total mechanical work in kilojoules ($\text{Work}_{\text{kJ}} = \sum P_i \cdot \Delta t / 1000.0$).
+ * @property avgPowerToWeight Session average power-to-weight ratio ($\text{Avg\_Power} / m_{\text{kg}}$, in $\text{W/kg}$).
+ * @property maxPowerToWeight Session peak power-to-weight ratio ($\text{Max\_Power} / m_{\text{kg}}$, in $\text{W/kg}$).
+ * @property npPowerToWeight Session normalized power-to-weight ratio ($\text{NP} / m_{\text{kg}}$, in $\text{W/kg}$).
+ */
+data class PowerTrainingMetricsResult(
+    val normalizedPowerWatts: Double?,
+    val avgPowerWatts: Double?,
+    val maxPowerWatts: Double?,
+    val variabilityIndex: Double?,
+    val intensityFactor: Double?,
+    val tss: Double?,
+    val workKj: Double?,
+    val avgPowerToWeight: Double?,
+    val maxPowerToWeight: Double?,
+    val npPowerToWeight: Double?
+)
+
+/**
  * Canonical, stateless, pure-Kotlin domain calculator for cycling & running power/cardiovascular
- * physiology metrics (`REQ-UI-399`, `REQ-UI-400`, Rule 36 — Single Source of Truth & DRY).
+ * physiology metrics (`REQ-UI-399`, `REQ-UI-400`, `REQ-MIG-039`, Rule 36 — Single Source of Truth & DRY).
  *
  * Threading: Pure mathematical functions with zero mutable state or Android framework dependencies;
  * safe to invoke from any thread or coroutine dispatcher.
@@ -545,5 +572,218 @@ object PowerPhysiologyCalculator {
                 isHighDrift = isDrift
             )
         }
+    }
+
+    /**
+     * Computes Intensity Factor ($\text{IF} = \text{NP} / \text{FTP}$) (`REQ-MIG-039.1`, `REQ-TRK-020`).
+     *
+     * @param normalizedPowerWatts Normalized Power in Watts ($> 0$).
+     * @param ftpWatts Athlete Functional Threshold Power in Watts ($> 0$).
+     * @return Intensity Factor, or `null` if either input is non-positive or non-finite.
+     */
+    @JvmStatic
+    fun calculateIntensityFactor(normalizedPowerWatts: Double, ftpWatts: Double): Double? {
+        if (!normalizedPowerWatts.isFinite() || !ftpWatts.isFinite() ||
+            normalizedPowerWatts <= 0.0 || ftpWatts <= 0.0
+        ) {
+            return null
+        }
+        val ifVal = normalizedPowerWatts / ftpWatts
+        return ifVal.takeIf { it.isFinite() && it > 0.0 }
+    }
+
+    /**
+     * Computes Training Stress Score ($\text{TSS}$) (`REQ-MIG-039.1`, `REQ-TRK-021`):
+     * $$\text{TSS} = \frac{T_{\text{active}} \cdot \text{NP} \cdot \text{IF}}{\text{FTP} \cdot 36.0}$$
+     *
+     * @param activeTimeSeconds Active riding duration in seconds ($> 0$).
+     * @param normalizedPowerWatts Normalized Power in Watts ($> 0$).
+     * @param intensityFactor Intensity Factor ($\text{NP} / \text{FTP} > 0$).
+     * @param ftpWatts Athlete Functional Threshold Power in Watts ($> 0$).
+     * @return Training Stress Score ($\ge 0$), or `null` if any input is non-positive or non-finite.
+     */
+    @JvmStatic
+    fun calculateTss(
+        activeTimeSeconds: Double,
+        normalizedPowerWatts: Double,
+        intensityFactor: Double,
+        ftpWatts: Double
+    ): Double? {
+        if (!activeTimeSeconds.isFinite() || !normalizedPowerWatts.isFinite() ||
+            !intensityFactor.isFinite() || !ftpWatts.isFinite() ||
+            activeTimeSeconds <= 0.0 || normalizedPowerWatts <= 0.0 ||
+            intensityFactor <= 0.0 || ftpWatts <= 0.0
+        ) {
+            return null
+        }
+        val tss = (activeTimeSeconds * normalizedPowerWatts * intensityFactor) / (ftpWatts * 36.0)
+        return tss.takeIf { it.isFinite() && it >= 0.0 }
+    }
+
+    /**
+     * Computes Mechanical Work in kilojoules ($\text{Work}_{\text{kJ}} = \frac{\sum P_i \cdot \Delta t}{1000.0}$) (`REQ-MIG-039.1`, `REQ-TRK-021`).
+     *
+     * @param powerSamplesWatts 1-Hz power samples in Watts.
+     * @param sampleIntervalSec Duration represented by each sample in seconds (default `1.0`).
+     * @return Total mechanical work in kJ ($> 0$), or `null` if no positive power samples exist.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun calculateWorkKj(
+        powerSamplesWatts: List<Double?>,
+        sampleIntervalSec: Double = 1.0
+    ): Double? {
+        if (powerSamplesWatts.isEmpty() || !sampleIntervalSec.isFinite() || sampleIntervalSec <= 0.0) {
+            return null
+        }
+        var totalJoules = 0.0
+        var hasPositive = false
+        for (p in powerSamplesWatts) {
+            if (p != null && p.isFinite() && p >= 0.0) {
+                if (p > 0.0) hasPositive = true
+                totalJoules += p * sampleIntervalSec
+            }
+        }
+        if (!hasPositive || totalJoules <= 0.0) return null
+        val workKj = totalJoules / 1000.0
+        return workKj.takeIf { it.isFinite() && it > 0.0 }
+    }
+
+    /**
+     * Computes Power-to-Weight ratio ($\text{W/kg} = P / m_{\text{kg}}$) (`REQ-MIG-039.1`, `REQ-TRK-019`).
+     *
+     * @param powerWatts Power in Watts ($\ge 0$).
+     * @param weightKg Athlete body weight in kilograms ($> 0$).
+     * @return Power-to-Weight in $\text{W/kg}$, or `null` if inputs are invalid.
+     */
+    @JvmStatic
+    fun calculatePowerToWeight(powerWatts: Double, weightKg: Double): Double? {
+        if (!powerWatts.isFinite() || !weightKg.isFinite() || powerWatts < 0.0 || weightKg <= 0.0) {
+            return null
+        }
+        val wPerKg = powerWatts / weightKg
+        return wPerKg.takeIf { it.isFinite() }
+    }
+
+    /**
+     * Computes Variability Index ($\text{VI} = \text{NP} / \text{Avg\_Power}$) (`REQ-MIG-039.1`, `ATT-3858`).
+     *
+     * @param normalizedPowerWatts Normalized Power in Watts ($> 0$).
+     * @param avgPowerWatts Arithmetic mean power in Watts ($> 0$).
+     * @return Variability Index ($> 0$), or `null` if either input is non-positive or non-finite.
+     */
+    @JvmStatic
+    fun calculateVariabilityIndex(normalizedPowerWatts: Double, avgPowerWatts: Double): Double? {
+        if (!normalizedPowerWatts.isFinite() || !avgPowerWatts.isFinite() ||
+            normalizedPowerWatts <= 0.0 || avgPowerWatts <= 0.0
+        ) {
+            return null
+        }
+        val vi = normalizedPowerWatts / avgPowerWatts
+        return vi.takeIf { it.isFinite() && it > 0.0 }
+    }
+
+    /**
+     * Evaluates a workout's recorded power sample stream (with optional FIT session-level fallback seeds)
+     * and computes session-level power training metrics (`REQ-MIG-039.1`, `ATT-3860`, `ATT-3858`):
+     * - `normalizedPowerWatts` ($\text{NP}$)
+     * - `avgPowerWatts` ($\text{Avg\_Power}$)
+     * - `maxPowerWatts` ($\text{Max\_Power}$)
+     * - `variabilityIndex` ($\text{VI} = \text{NP} / \text{Avg\_Power}$)
+     * - `intensityFactor` ($\text{IF} = \text{NP} / \text{FTP}$)
+     * - `tss` ($\text{TSS} = (T_{\text{active}} \cdot \text{NP} \cdot \text{IF}) / (\text{FTP} \cdot 36.0)$)
+     * - `workKj` ($\text{Work}_{\text{kJ}}$)
+     * - `avgPowerToWeight`, `maxPowerToWeight`, `npPowerToWeight` ($\text{W/kg}$)
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun computePowerTrainingMetrics(
+        powerSamplesWatts: List<Double?>,
+        activeTimeSeconds: Int = 0,
+        ftpWatts: Double? = null,
+        athleteWeightKg: Double? = null,
+        sampleIntervalSec: Double = 1.0,
+        fallbackNpWatts: Double? = null,
+        fallbackIf: Double? = null,
+        fallbackTss: Double? = null,
+        fallbackWorkKj: Double? = null
+    ): PowerTrainingMetricsResult {
+        val validSamples = powerSamplesWatts.mapNotNull { p ->
+            if (p != null && p.isFinite() && p >= 0.0) p else null
+        }
+        val hasPositiveSample = validSamples.any { it > 0.0 }
+
+        val avgPower = if (hasPositiveSample) validSamples.average() else null
+        val maxPower = if (hasPositiveSample) validSamples.maxOrNull() else null
+
+        val npWatts = calculateNormalizedPower(powerSamplesWatts)
+            ?: fallbackNpWatts?.takeIf { it.isFinite() && it > 0.0 }
+
+        val vi = if (npWatts != null && avgPower != null && avgPower > 0.0) {
+            calculateVariabilityIndex(npWatts, avgPower)
+        } else {
+            null
+        }
+
+        val effectiveFtp = ftpWatts?.takeIf { it.isFinite() && it > 0.0 }
+        val ifVal = if (npWatts != null && effectiveFtp != null) {
+            calculateIntensityFactor(npWatts, effectiveFtp)
+        } else {
+            fallbackIf?.takeIf { it.isFinite() && it > 0.0 }
+        }
+
+        val effectiveDurationSec = when {
+            activeTimeSeconds > 0 -> activeTimeSeconds.toDouble()
+            hasPositiveSample && sampleIntervalSec > 0.0 -> validSamples.size * sampleIntervalSec
+            else -> 0.0
+        }
+
+        val tssVal = if (effectiveDurationSec > 0.0 && npWatts != null && ifVal != null && effectiveFtp != null) {
+            calculateTss(effectiveDurationSec, npWatts, ifVal, effectiveFtp)
+        } else {
+            fallbackTss?.takeIf { it.isFinite() && it > 0.0 }
+        }
+
+        val workKjVal = if (hasPositiveSample) {
+            if (activeTimeSeconds > 0 && avgPower != null && validSamples.size != activeTimeSeconds) {
+                // Scale by authoritative activeTime when sample rate differs from 1Hz
+                val sampleBasedKj = calculateWorkKj(validSamples, sampleIntervalSec)
+                sampleBasedKj
+            } else {
+                calculateWorkKj(validSamples, sampleIntervalSec)
+            }
+        } else {
+            fallbackWorkKj?.takeIf { it.isFinite() && it > 0.0 }
+        }
+
+        val effectiveWeightKg = athleteWeightKg?.takeIf { it.isFinite() && it > 0.0 }
+        val avgWPerKg = if (avgPower != null && avgPower > 0.0 && effectiveWeightKg != null) {
+            calculatePowerToWeight(avgPower, effectiveWeightKg)
+        } else {
+            null
+        }
+        val maxWPerKg = if (maxPower != null && maxPower > 0.0 && effectiveWeightKg != null) {
+            calculatePowerToWeight(maxPower, effectiveWeightKg)
+        } else {
+            null
+        }
+        val npWPerKg = if (npWatts != null && npWatts > 0.0 && effectiveWeightKg != null) {
+            calculatePowerToWeight(npWatts, effectiveWeightKg)
+        } else {
+            null
+        }
+
+        return PowerTrainingMetricsResult(
+            normalizedPowerWatts = npWatts,
+            avgPowerWatts = avgPower,
+            maxPowerWatts = maxPower,
+            variabilityIndex = vi,
+            intensityFactor = ifVal,
+            tss = tssVal,
+            workKj = workKjVal,
+            avgPowerToWeight = avgWPerKg,
+            maxPowerToWeight = maxWPerKg,
+            npPowerToWeight = npWPerKg
+        )
     }
 }

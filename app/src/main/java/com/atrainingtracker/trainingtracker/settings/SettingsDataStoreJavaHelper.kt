@@ -254,4 +254,54 @@ object SettingsDataStoreJavaHelper {
     fun getEffectiveWPrimeKj(context: Context): Float {
         return getWPrimeKj(context)?.takeIf { it > 0.0f } ?: SettingsDataStore.DEFAULT_W_PRIME_KJ
     }
+
+    /**
+     * Resolves the athlete's Functional Threshold Power (FTP, in W) effective at [timestampMs] (`REQ-MIG-039.2`):
+     * queries [com.atrainingtracker.trainingtracker.database.AthleteMetricsDatabaseManager.getEntryEffectiveAt]
+     * for [com.atrainingtracker.trainingtracker.database.AthleteMetricType.FTP_WATTS], falling back to [getFtp].
+     */
+    @JvmStatic
+    fun resolveEffectiveFtpAt(context: Context, timestampMs: Long?): Int? {
+        if (timestampMs != null && timestampMs > 0L) {
+            try {
+                val entry = com.atrainingtracker.trainingtracker.database.AthleteMetricsDatabaseManager
+                    .getInstance(context)
+                    .getEntryEffectiveAt(
+                        com.atrainingtracker.trainingtracker.database.AthleteMetricType.FTP_WATTS,
+                        timestampMs
+                    )
+                if (entry != null && entry.value > 0.0) {
+                    return Math.round(entry.value).toInt().takeIf { it > 0 }
+                }
+            } catch (_: Throwable) {
+                // Fallback to DataStore in headless or unit test environments
+            }
+        }
+        return getFtp(context)?.takeIf { it > 0 }
+    }
+
+    /**
+     * Resolves the athlete's body weight (in kg) effective at [timestampMs] (`REQ-MIG-039.2`):
+     * queries [com.atrainingtracker.trainingtracker.database.AthleteMetricsDatabaseManager.getEntryEffectiveAt]
+     * for [com.atrainingtracker.trainingtracker.database.AthleteMetricType.WEIGHT_KG], falling back to [getAthleteWeightKg].
+     */
+    @JvmStatic
+    fun resolveEffectiveWeightKgAt(context: Context, timestampMs: Long?): Float {
+        if (timestampMs != null && timestampMs > 0L) {
+            try {
+                val entry = com.atrainingtracker.trainingtracker.database.AthleteMetricsDatabaseManager
+                    .getInstance(context)
+                    .getEntryEffectiveAt(
+                        com.atrainingtracker.trainingtracker.database.AthleteMetricType.WEIGHT_KG,
+                        timestampMs
+                    )
+                if (entry != null && entry.value > 0.0) {
+                    return entry.value.toFloat()
+                }
+            } catch (_: Throwable) {
+                // Fallback to DataStore in headless or unit test environments
+            }
+        }
+        return getAthleteWeightKg(context)
+    }
 }
