@@ -128,4 +128,40 @@ class AthleteProfileContractAndLocalizationTest {
             assertTrue("$locale athlete_profile_delete_message must contain %3\$s", text.contains("%3\$s"))
         }
     }
+
+    @Test
+    fun `AthleteProfileScreen applies WindowInsets navigationBars to LazyColumn bottom contentPadding (Rule 41)`() {
+        val screenFile = File(
+            resolveModuleRoot(),
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileScreen.kt"
+        )
+        assertTrue("AthleteProfileScreen.kt must exist", screenFile.exists())
+        val source = screenFile.readText()
+
+        assertTrue(
+            "AthleteProfileScreen.kt must import WindowInsets",
+            source.contains("import androidx.compose.foundation.layout.WindowInsets")
+        )
+        assertTrue(
+            "AthleteProfileScreen.kt must import asPaddingValues",
+            source.contains("import androidx.compose.foundation.layout.asPaddingValues")
+        )
+        assertTrue(
+            "AthleteProfileScreen.kt must import navigationBars",
+            source.contains("import androidx.compose.foundation.layout.navigationBars")
+        )
+        assertTrue(
+            "AthleteProfileContent must compute navBarBottomPadding from WindowInsets.navigationBars",
+            source.contains("val navBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()")
+        )
+        assertTrue(
+            "AthleteProfileContent LazyColumn must apply bottom = 16.dp + navBarBottomPadding in contentPadding (Rule 41)",
+            source.contains("bottom = 16.dp + navBarBottomPadding")
+        )
+        assertTrue(
+            "AthleteProfileContent header row must retain .statusBarsPadding()",
+            source.contains(".statusBarsPadding()")
+        )
+    }
 }
+
