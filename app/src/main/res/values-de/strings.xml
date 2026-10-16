@@ -1966,4 +1966,7 @@
     <string name="athlete_profile_delete_title">Messwert löschen?</string>
     <string name="athlete_profile_delete_message">%1$s (%2$s) vom %3$s löschen?</string>
 
+    <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
+    <string name="elevation_profile_empty_state">Höhenprofil — wartet auf Strecke oder Aufzeichnung</string>
+
 </resources>

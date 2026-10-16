@@ -1880,4 +1880,7 @@
     <string name="athlete_profile_delete_title">Supprimer la mesure ?</string>
     <string name="athlete_profile_delete_message">Supprimer %1$s (%2$s) du %3$s ?</string>
 
+    <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
+    <string name="elevation_profile_empty_state">Profil d\'altitude — en attente de parcours ou d\'activité</string>
+
 </resources>
