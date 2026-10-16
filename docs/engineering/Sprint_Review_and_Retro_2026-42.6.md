@@ -22,6 +22,14 @@
 11. **ATT-3696**: *Make Zone 6 color (`TTColor.Zone6` / `R.color.zone_6`) distinctly browner and lighter for clear visual separation from Zone 7 (Black)* — **Accepted**
 12. **ATT-3692**: *Remove dead sensor pairing code from `ControlTrackingScreen`, `ControlTrackingViewModel`, `TrackingTabsScreen`, and `MainActivityWithNavigation`* — **Accepted**
 13. **ATT-3779**: *Render `ElevationProfile` empty state on tracking tabs when enabled before tracking starts or without active route* — **Accepted**
+14. **ATT-3529**: *Eliminate `ResourcesNotFoundException` crashes by populating high-density drawables and migrating Compose icon call sites to `safePainterResource`* — **Accepted**
+15. **ATT-3567**: *Remove Unnecessary `FOREGROUND_SERVICE_CONNECTED_DEVICE` Permission from Manifest and `TrackerService`* — **Accepted**
+16. **ATT-3574**: *Centralize All 67 Hardcoded Compose Color Literals Across 20 Files into `Color.kt` and `TTColor`* — **Accepted**
+17. **ATT-3575**: *Complete Canonical Formatter, Speed Conversion, and Dead `TuningSlider` Cleanup in `ClimbDetector`, `LapSplitCalculator`, and Tuning Screens* — **Accepted**
+18. **ATT-3576**: *Unify Internal Sheet Layout of `LiveClimbSheet` and `LiveSegmentSheet` via Shared `LiveTrackingEntitySheet`* — **Accepted**
+19. **ATT-3577**: *Migrate Remaining Inline Cursor Extractions in `WorkoutClusterEngine` and `EquipmentDataProvider` to `fromCursor` Mappers* — **Accepted**
+20. **ATT-3551**: *Remove Obsolete Runkeeper and TrainingPeaks Legacy Classes, Manifest Entries, and Unused Apache HttpClient Dependency* — **Accepted**
+21. **ATT-3552**: *Decompose `LegacyImportEngine` into Dedicated Format Parsers for TCX, GPX, and FIT* — **Accepted**
 
 ### 1.2 Bounced / Reverted Tickets
 - **ATT-2859**: *Migrate legacy multi-density raster drawables to scalable Jetpack Compose vector assets* — **Reverted on `sprint/2026-42.6` (`fc89b8d4`)** and bounced back to `Zu erledigen` after discovering the original `.fig` (`xfig`), `.svg` (Inkscape), and `.xcf` (GIMP) master vector files in `/home/rainer/Dropbox/workspace/`.
