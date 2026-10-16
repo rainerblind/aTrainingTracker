@@ -225,4 +225,21 @@ object AthleteMetricsPlotMath {
      */
     fun formatShortDate(timestampMs: Long, locale: Locale = Locale.getDefault()): String =
         DateFormat.getDateInstance(DateFormat.SHORT, locale).format(Date(timestampMs))
+
+    /**
+     * Filters [PmcDailyPoint] series by [timeRange] relative to [nowMs] (`REQ-UI-401.3`).
+     */
+    fun filterPmcPointsByTimeRange(
+        points: List<com.atrainingtracker.trainingtracker.physiology.PmcDailyPoint>,
+        timeRange: MetricsTimeRange,
+        nowMs: Long
+    ): List<com.atrainingtracker.trainingtracker.physiology.PmcDailyPoint> {
+        val cutoffMs = timeRange.days?.let { nowMs - it.toLong() * MILLIS_PER_DAY }
+        return if (cutoffMs != null) {
+            points.filter { it.dayStartTimestampMs >= cutoffMs }
+        } else {
+            points
+        }
+    }
 }
+

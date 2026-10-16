@@ -25,15 +25,23 @@ import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.physiology.PmcDailyPoint
+import com.atrainingtracker.trainingtracker.physiology.PmcSummaryResult
+import com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator
+import com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
- * Immutable UI state for [AthleteProfileScreen] (`REQ-UI-391.5`).
+ * Immutable UI state for [AthleteProfileScreen] (`REQ-UI-391.5`, `REQ-UI-401.3`).
  */
 data class AthleteProfileUiState(
     val latestWeightEntry: AthleteMetricEntry? = null,
@@ -46,28 +54,34 @@ data class AthleteProfileUiState(
     val selectedPlotMetric: PlotMetricType = PlotMetricType.WEIGHT,
     val selectedTimeRange: MetricsTimeRange = MetricsTimeRange.ALL,
     val plotPoints: List<MetricPlotPoint> = emptyList(),
+    val pmcSummary: PmcSummaryResult = PmcSummaryResult(),
+    val pmcPlotPoints: List<PmcDailyPoint> = emptyList(),
     val historyFilterMetric: AthleteMetricType? = null,
     val filteredHistory: List<AthleteMetricEntry> = emptyList(),
     val isImperial: Boolean = false
 )
 
 /**
- * ViewModel driving [AthleteProfileScreen] (`REQ-UI-391.5`, `REQ-UI-399.1`).
+ * ViewModel driving [AthleteProfileScreen] (`REQ-UI-391.5`, `REQ-UI-399.1`, `REQ-UI-401.3`).
  */
 class AthleteProfileViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = AthleteMetricsRepository.getInstance(application)
+    private val settingsDataStore = SettingsDataStore.getInstance(application)
 
     private val _selectedPlotMetric = MutableStateFlow(PlotMetricType.WEIGHT)
     private val _selectedTimeRange = MutableStateFlow(MetricsTimeRange.ALL)
     private val _historyFilterMetric = MutableStateFlow<AthleteMetricType?>(null)
+    private val _workoutLoadSamples = MutableStateFlow<List<WorkoutTrainingLoadSample>>(emptyList())
+    private val _hrMaxBpm = MutableStateFlow<Int?>(null)
 
     val uiState: StateFlow<AthleteProfileUiState> = combine(
         repository.entriesFlow,
         _selectedPlotMetric,
         _selectedTimeRange,
-        _historyFilterMetric
-    ) { entries, plotMetric, timeRange, historyFilter ->
+        _historyFilterMetric,
+        _workoutLoadSamples
+    ) { entries, plotMetric, timeRange, historyFilter, workoutSamples ->
         val isImperial = try {
             TrainingApplication.getUnit() == MyUnits.IMPERIAL
         } catch (_: Throwable) {
@@ -99,6 +113,19 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
             isImperial = isImperial
         )
 
+        val pmcSummary = PowerPhysiologyCalculator.computePerformanceManagementChart(
+            workoutSamples = workoutSamples,
+            nowMs = nowMs,
+            ftpWatts = latestFtp?.value,
+            hrRestBpm = latestHrRest?.value,
+            hrMaxBpm = _hrMaxBpm.value?.toDouble()
+        )
+        val pmcPlotPoints = AthleteMetricsPlotMath.filterPmcPointsByTimeRange(
+            points = pmcSummary.dailyPoints,
+            timeRange = timeRange,
+            nowMs = nowMs
+        )
+
         val filteredHistory = if (historyFilter == null) {
             entries
         } else {
@@ -116,6 +143,8 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
             selectedPlotMetric = plotMetric,
             selectedTimeRange = timeRange,
             plotPoints = plotPoints,
+            pmcSummary = pmcSummary,
+            pmcPlotPoints = pmcPlotPoints,
             historyFilterMetric = historyFilter,
             filteredHistory = filteredHistory,
             isImperial = isImperial
@@ -129,6 +158,19 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
     init {
         viewModelScope.launch {
             repository.initializeAndRefresh()
+        }
+        viewModelScope.launch {
+            settingsDataStore.hrMaxFlow.collect { hrMax ->
+                _hrMaxBpm.value = hrMax
+            }
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val samples = try {
+                WorkoutSummariesDatabaseManager.getInstance(getApplication()).getWorkoutTrainingLoadRecords()
+            } catch (_: Throwable) {
+                emptyList()
+            }
+            _workoutLoadSamples.value = samples
         }
     }
 

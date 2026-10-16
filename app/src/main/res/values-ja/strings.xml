@@ -1899,5 +1899,23 @@
     <string name="workout_decoupling_coupled">安定 (&lt;5%%)</string>
     <string name="workout_decoupling_drift">高ドリフト (≥5%%)</string>
 
+    <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
+    <string name="athlete_profile_pmc_title">パフォーマンス管理 (CTL / ATL / TSB)</string>
+    <string name="athlete_profile_pmc_ctl_label">フィットネス (CTL)</string>
+    <string name="athlete_profile_pmc_atl_label">疲労 (ATL)</string>
+    <string name="athlete_profile_pmc_tsb_label">フォーム (TSB)</string>
+    <string name="athlete_profile_pmc_acwr_label">負荷比 (ACWR)</string>
+    <string name="athlete_profile_pmc_ramp_label">7日ランプ率</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/週</string>
+    <string name="athlete_profile_pmc_ramp_warning">急上昇</string>
+    <string name="athlete_profile_pmc_zone_fresh">レース準備完了</string>
+    <string name="athlete_profile_pmc_zone_neutral">ニュートラル</string>
+    <string name="athlete_profile_pmc_zone_optimal">最適負荷</string>
+    <string name="athlete_profile_pmc_zone_fatigue">高疲労</string>
+    <string name="athlete_profile_pmc_acwr_under">テーパリング</string>
+    <string name="athlete_profile_pmc_acwr_sweet_spot">スイートスポット</string>
+    <string name="athlete_profile_pmc_acwr_caution">高負荷</string>
+    <string name="athlete_profile_pmc_acwr_danger">危険ゾーン</string>
+    <string name="athlete_profile_pmc_empty">トレーニング負荷データがまだありません。</string>
 </resources>
 

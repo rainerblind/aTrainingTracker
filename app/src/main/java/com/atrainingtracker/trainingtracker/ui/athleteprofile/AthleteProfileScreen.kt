@@ -98,6 +98,10 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.activities.ZoneProfileTabContent
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
+import com.atrainingtracker.trainingtracker.physiology.AcwrZone
+import com.atrainingtracker.trainingtracker.physiology.PmcDailyPoint
+import com.atrainingtracker.trainingtracker.physiology.PmcSummaryResult
+import com.atrainingtracker.trainingtracker.physiology.TsbReadinessZone
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
@@ -466,6 +470,14 @@ fun AthleteProfileContent(
                             )
                         }
                     }
+                }
+
+                // 3b. Performance Management Chart (PMC: CTL / ATL / TSB / ACWR / Ramp Rate, REQ-UI-401.3)
+                item {
+                    PerformanceManagementChartCard(
+                        pmcSummary = uiState.pmcSummary,
+                        pmcPlotPoints = uiState.pmcPlotPoints
+                    )
                 }
 
                 // 4. History Log Header & Filter Row
@@ -1272,6 +1284,352 @@ private fun formatEntryValueWithUnit(entry: AthleteMetricEntry, isImperial: Bool
             "${AthleteMetricsPlotMath.formatWPrimeValue(entry.value)} kJ"
     }
 
+/**
+ * Performance Management Chart (PMC) card displaying current Fitness (CTL), Fatigue (ATL),
+ * Form / Race-Readiness (TSB), Workload Ratio (ACWR), 7d Ramp Rate, and the interactive
+ * multi-curve time-series Canvas chart (`REQ-UI-401.3`, `ATT-3859`).
+ */
+@Composable
+fun PerformanceManagementChartCard(
+    pmcSummary: PmcSummaryResult,
+    pmcPlotPoints: List<PmcDailyPoint>,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.athlete_profile_pmc_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            // Row 1: CTL (Fitness), ATL (Fatigue), TSB (Form + Readiness Zone Badge)
+            val tsbZoneText = when (pmcSummary.currentTsbZone) {
+                TsbReadinessZone.FRESH_RACE_READY -> stringResource(R.string.athlete_profile_pmc_zone_fresh)
+                TsbReadinessZone.NEUTRAL -> stringResource(R.string.athlete_profile_pmc_zone_neutral)
+                TsbReadinessZone.OPTIMAL_OVERLOAD -> stringResource(R.string.athlete_profile_pmc_zone_optimal)
+                TsbReadinessZone.HIGH_FATIGUE_RISK -> stringResource(R.string.athlete_profile_pmc_zone_fatigue)
+            }
+            val tsbColor = when (pmcSummary.currentTsbZone) {
+                TsbReadinessZone.FRESH_RACE_READY -> Color(0xFF2E7D32)
+                TsbReadinessZone.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
+                TsbReadinessZone.OPTIMAL_OVERLOAD -> Color(0xFF1565C0)
+                TsbReadinessZone.HIGH_FATIGUE_RISK -> MaterialTheme.colorScheme.error
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PmcStatBadge(
+                    label = stringResource(R.string.athlete_profile_pmc_ctl_label),
+                    valueText = String.format(Locale.US, "%.1f", pmcSummary.currentCtl),
+                    badgeText = null,
+                    accentColor = Color(0xFF1E88E5),
+                    modifier = Modifier.weight(1f)
+                )
+                PmcStatBadge(
+                    label = stringResource(R.string.athlete_profile_pmc_atl_label),
+                    valueText = String.format(Locale.US, "%.1f", pmcSummary.currentAtl),
+                    badgeText = null,
+                    accentColor = Color(0xFFD81B60),
+                    modifier = Modifier.weight(1f)
+                )
+                PmcStatBadge(
+                    label = stringResource(R.string.athlete_profile_pmc_tsb_label),
+                    valueText = String.format(Locale.US, "%+.1f", pmcSummary.currentTsb),
+                    badgeText = tsbZoneText,
+                    accentColor = tsbColor,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // Row 2: ACWR (Workload Ratio) & 7d Ramp Rate
+            val acwrZoneText = when (pmcSummary.currentAcwrZone) {
+                AcwrZone.UNDER_TRAINING -> stringResource(R.string.athlete_profile_pmc_acwr_under)
+                AcwrZone.SWEET_SPOT -> stringResource(R.string.athlete_profile_pmc_acwr_sweet_spot)
+                AcwrZone.HIGH_LOAD_CAUTION -> stringResource(R.string.athlete_profile_pmc_acwr_caution)
+                AcwrZone.DANGER_ZONE -> stringResource(R.string.athlete_profile_pmc_acwr_danger)
+                null -> null
+            }
+            val acwrColor = when (pmcSummary.currentAcwrZone) {
+                AcwrZone.SWEET_SPOT -> Color(0xFF2E7D32)
+                AcwrZone.HIGH_LOAD_CAUTION -> Color(0xFFEF6C00)
+                AcwrZone.DANGER_ZONE -> MaterialTheme.colorScheme.error
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PmcStatBadge(
+                    label = stringResource(R.string.athlete_profile_pmc_acwr_label),
+                    valueText = pmcSummary.currentAcwr?.let { String.format(Locale.US, "%.2f", it) } ?: "—",
+                    badgeText = acwrZoneText,
+                    accentColor = acwrColor,
+                    modifier = Modifier.weight(1f)
+                )
+                PmcStatBadge(
+                    label = stringResource(R.string.athlete_profile_pmc_ramp_label),
+                    valueText = stringResource(
+                        R.string.athlete_profile_pmc_ramp_format,
+                        pmcSummary.currentRampRate7d
+                    ),
+                    badgeText = if (pmcSummary.isAggressiveRampUp) {
+                        stringResource(R.string.athlete_profile_pmc_ramp_warning)
+                    } else {
+                        null
+                    },
+                    accentColor = if (pmcSummary.isAggressiveRampUp) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            PerformanceManagementChartCanvas(
+                points = pmcPlotPoints,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(190.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun PmcStatBadge(
+    label: String,
+    valueText: String,
+    badgeText: String?,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.45f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = valueText,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (!badgeText.isNullOrEmpty()) {
+                Text(
+                    text = badgeText,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = accentColor,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Multi-curve Canvas chart plotting Fitness (CTL — blue area/line), Fatigue (ATL — magenta line),
+ * and Form / Race-Readiness (TSB — amber/green line) over time (`REQ-UI-401.3`).
+ */
+@Composable
+fun PerformanceManagementChartCanvas(
+    points: List<PmcDailyPoint>,
+    modifier: Modifier = Modifier
+) {
+    if (points.isEmpty()) {
+        Box(
+            modifier = modifier,
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = stringResource(R.string.athlete_profile_pmc_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    val ctlColor = Color(0xFF1E88E5)
+    val atlColor = Color(0xFFD81B60)
+    val tsbColor = Color(0xFFFB8C00)
+    val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Canvas(modifier = modifier) {
+        val leftPad = 44.dp.toPx()
+        val rightPad = 14.dp.toPx()
+        val topPad = 12.dp.toPx()
+        val bottomPad = 24.dp.toPx()
+
+        val plotW = (size.width - leftPad - rightPad).coerceAtLeast(1f)
+        val plotH = (size.height - topPad - bottomPad).coerceAtLeast(1f)
+
+        val minValRaw = points.minOf { minOf(it.ctl, it.atl, it.tsb) }
+        val maxValRaw = points.maxOf { maxOf(it.ctl, it.atl, it.tsb) }
+        val rawSpan = (maxValRaw - minValRaw).coerceAtLeast(10.0)
+        val pad = rawSpan * 0.12
+        val yMin = minValRaw - pad
+        val yMax = maxValRaw + pad
+        val yRange = (yMax - yMin).coerceAtLeast(1.0)
+
+        val minTs = points.first().dayStartTimestampMs
+        val maxTs = points.last().dayStartTimestampMs
+        val tsSpan = (maxTs - minTs).coerceAtLeast(1L)
+
+        val textPaint = android.graphics.Paint().apply {
+            isAntiAlias = true
+            color = labelColor.toArgb()
+            textSize = 10.sp.toPx()
+        }
+
+        // Draw horizontal grid lines + Y-axis labels
+        val gridSteps = 2
+        for (i in 0..gridSteps) {
+            val frac = i.toFloat() / gridSteps.toFloat()
+            val y = topPad + plotH * (1f - frac)
+            drawLine(
+                color = gridColor,
+                start = Offset(leftPad, y),
+                end = Offset(leftPad + plotW, y),
+                strokeWidth = 1.dp.toPx()
+            )
+            val v = yMin + frac * yRange
+            drawContext.canvas.nativeCanvas.drawText(
+                v.roundToInt().toString(),
+                4.dp.toPx(),
+                y + 4.dp.toPx(),
+                textPaint
+            )
+        }
+
+        // Zero reference line when 0 is within [yMin, yMax]
+        if (yMin < 0.0 && yMax > 0.0) {
+            val zeroNorm = ((0.0 - yMin) / yRange).toFloat().coerceIn(0f, 1f)
+            val zeroY = topPad + plotH * (1f - zeroNorm)
+            drawLine(
+                color = gridColor.copy(alpha = 0.75f),
+                start = Offset(leftPad, zeroY),
+                end = Offset(leftPad + plotW, zeroY),
+                strokeWidth = 1.2.dp.toPx()
+            )
+        }
+
+        fun mapSeries(selector: (PmcDailyPoint) -> Double): List<Offset> =
+            points.map { pt ->
+                val x = if (points.size == 1 || maxTs == minTs) {
+                    leftPad + plotW * 0.5f
+                } else {
+                    leftPad + ((pt.dayStartTimestampMs - minTs).toDouble() / tsSpan.toDouble()).toFloat() * plotW
+                }
+                val normY = ((selector(pt) - yMin) / yRange).toFloat().coerceIn(0f, 1f)
+                val y = topPad + plotH * (1f - normY)
+                Offset(x, y)
+            }
+
+        val ctlOffsets = mapSeries { it.ctl }
+        val atlOffsets = mapSeries { it.atl }
+        val tsbOffsets = mapSeries { it.tsb }
+
+        if (ctlOffsets.size >= 2) {
+            val fillPath = Path().apply {
+                moveTo(ctlOffsets.first().x, topPad + plotH)
+                ctlOffsets.forEach { lineTo(it.x, it.y) }
+                lineTo(ctlOffsets.last().x, topPad + plotH)
+                close()
+            }
+            drawPath(
+                path = fillPath,
+                brush = Brush.verticalGradient(
+                    colors = listOf(ctlColor.copy(alpha = 0.22f), Color.Transparent),
+                    startY = topPad,
+                    endY = topPad + plotH
+                )
+            )
+
+            fun drawCurve(offsets: List<Offset>, color: Color, strokeDp: Float) {
+                val path = Path().apply {
+                    moveTo(offsets.first().x, offsets.first().y)
+                    for (i in 1 until offsets.size) {
+                        lineTo(offsets[i].x, offsets[i].y)
+                    }
+                }
+                drawPath(
+                    path = path,
+                    color = color,
+                    style = Stroke(
+                        width = strokeDp.dp.toPx(),
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+            }
+
+            drawCurve(tsbOffsets, tsbColor, 1.8f)
+            drawCurve(atlOffsets, atlColor, 2.0f)
+            drawCurve(ctlOffsets, ctlColor, 2.5f)
+        } else {
+            drawCircle(color = tsbColor, radius = 3.5.dp.toPx(), center = tsbOffsets.first())
+            drawCircle(color = atlColor, radius = 3.5.dp.toPx(), center = atlOffsets.first())
+            drawCircle(color = ctlColor, radius = 4.dp.toPx(), center = ctlOffsets.first())
+        }
+
+        // X-axis date ticks (start and end)
+        val startStr = AthleteMetricsPlotMath.formatShortDate(minTs)
+        drawContext.canvas.nativeCanvas.drawText(
+            startStr,
+            leftPad,
+            size.height - 4.dp.toPx(),
+            textPaint
+        )
+        if (points.size > 1 && maxTs > minTs) {
+            val endStr = AthleteMetricsPlotMath.formatShortDate(maxTs)
+            val endW = textPaint.measureText(endStr)
+            drawContext.canvas.nativeCanvas.drawText(
+                endStr,
+                (leftPad + plotW - endW).coerceAtLeast(leftPad),
+                size.height - 4.dp.toPx(),
+                textPaint
+            )
+        }
+    }
+}
+
 @Preview(showBackground = true, name = "AthleteProfile - Populated Light")
 @Composable
 private fun AthleteProfilePopulatedLightPreview() {
@@ -1324,3 +1682,4 @@ private fun AthleteProfileEmptyDarkPreview() {
         )
     }
 }
+

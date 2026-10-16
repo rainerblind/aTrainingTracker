@@ -271,4 +271,119 @@ class PowerPhysiologyCalculatorTest {
         assertTrue(importEngineSrc.contains("SensorType.WORK_KJ"))
         assertTrue(importEngineSrc.contains("SensorType.POWER_TO_WEIGHT"))
     }
+
+    @Test
+    fun calculateHrTssAndResolveWorkoutTrainingLoad_followThreeTierHierarchy() {
+        // TST-UI-364 (REQ-UI-401.1)
+        // 1 hour (3600s) at HR_r = 0.85 (hrRest = 50, hrMax = 190 -> hrAvg = 50 + 0.85 * 140 = 169 bpm) -> hrTSS = 100.0
+        val hrTss1hAtThreshold = PowerPhysiologyCalculator.calculateHrTss(
+            activeTimeSeconds = 3600.0,
+            avgHrBpm = 169.0,
+            hrRestBpm = 50.0,
+            hrMaxBpm = 190.0
+        )
+        assertNotNull(hrTss1hAtThreshold)
+        assertEquals(100.0, hrTss1hAtThreshold!!, 1e-4)
+
+        // Easy recovery run: HR_r = 0.60 (hrAvg = 50 + 0.60 * 140 = 134 bpm) for 1 hour -> < 100 hrTSS
+        val hrTssEasy = PowerPhysiologyCalculator.calculateHrTss(
+            activeTimeSeconds = 3600.0,
+            avgHrBpm = 134.0,
+            hrRestBpm = 50.0,
+            hrMaxBpm = 190.0
+        )
+        assertNotNull(hrTssEasy)
+        assertTrue(hrTssEasy!! in 30.0..60.0)
+
+        // Tier 1: Stored powerTss takes precedence
+        val tier1Sample = WorkoutTrainingLoadSample(
+            timestampMs = 1_760_000_000_000L,
+            activeTimeSeconds = 3600,
+            powerTss = 88.5,
+            normalizedPowerWatts = 250.0,
+            avgHrBpm = 169.0
+        )
+        assertEquals(88.5, PowerPhysiologyCalculator.resolveWorkoutTrainingLoad(tier1Sample, ftpWatts = 250.0), 1e-4)
+
+        // Tier 2: Derived power TSS when powerTss is null
+        val tier2Sample = WorkoutTrainingLoadSample(
+            timestampMs = 1_760_000_000_000L,
+            activeTimeSeconds = 3600,
+            powerTss = null,
+            normalizedPowerWatts = 250.0,
+            avgHrBpm = 169.0
+        )
+        assertEquals(100.0, PowerPhysiologyCalculator.resolveWorkoutTrainingLoad(tier2Sample, ftpWatts = 250.0), 1e-4)
+
+        // Tier 3: hrTSS fallback when no power data exists
+        val tier3Sample = WorkoutTrainingLoadSample(
+            timestampMs = 1_760_000_000_000L,
+            activeTimeSeconds = 3600,
+            powerTss = null,
+            normalizedPowerWatts = null,
+            avgPowerWatts = null,
+            avgHrBpm = 169.0
+        )
+        assertEquals(
+            100.0,
+            PowerPhysiologyCalculator.resolveWorkoutTrainingLoad(
+                tier3Sample,
+                ftpWatts = 250.0,
+                hrRestBpm = 50.0,
+                hrMaxBpm = 190.0
+            ),
+            1e-4
+        )
+    }
+
+    @Test
+    fun computePerformanceManagementChart_computesCtlAtlTsbAcwrRampRateAndZones() {
+        // TST-UI-364 (REQ-UI-401.1)
+        val dayMs = 86_400_000L
+        val startDay = 20_000L
+        val startMs = startDay * dayMs
+
+        // 14 days of 100 TSS/day followed by 7 days of rest (0 TSS/day)
+        val samples = (0 until 14).map { d ->
+            WorkoutTrainingLoadSample(
+                timestampMs = startMs + d * dayMs + 3600_000L,
+                activeTimeSeconds = 3600,
+                powerTss = 100.0
+            )
+        }
+        val endMs = startMs + 20 * dayMs + 3600_000L
+
+        val pmc = PowerPhysiologyCalculator.computePerformanceManagementChart(
+            workoutSamples = samples,
+            nowMs = endMs
+        )
+
+        assertEquals(21, pmc.dailyPoints.size)
+
+        // Day 0: TSB_0 = 0.0, CTL_0 = 100/42, ATL_0 = 100/7
+        val day0 = pmc.dailyPoints[0]
+        assertEquals(0.0, day0.tsb, 1e-6)
+        assertEquals(100.0 / 42.0, day0.ctl, 1e-6)
+        assertEquals(100.0 / 7.0, day0.atl, 1e-6)
+        assertEquals(6.0, day0.acwr!!, 1e-4)
+        assertEquals(AcwrZone.DANGER_ZONE, day0.acwrZone)
+
+        // Day 7: CTL has ramped > 8 CTL/wk -> aggressive ramp warning
+        val day7 = pmc.dailyPoints[7]
+        assertTrue(day7.rampRate7d > 8.0)
+        assertTrue(day7.isAggressiveRampUp)
+        assertEquals(TsbReadinessZone.HIGH_FATIGUE_RISK, day7.tsbZone)
+
+        // Verify zone classification helpers across all boundaries
+        assertEquals(TsbReadinessZone.FRESH_RACE_READY, PowerPhysiologyCalculator.classifyTsbZone(12.0))
+        assertEquals(TsbReadinessZone.NEUTRAL, PowerPhysiologyCalculator.classifyTsbZone(0.0))
+        assertEquals(TsbReadinessZone.OPTIMAL_OVERLOAD, PowerPhysiologyCalculator.classifyTsbZone(-18.0))
+        assertEquals(TsbReadinessZone.HIGH_FATIGUE_RISK, PowerPhysiologyCalculator.classifyTsbZone(-35.0))
+
+        assertEquals(AcwrZone.UNDER_TRAINING, PowerPhysiologyCalculator.classifyAcwrZone(0.65))
+        assertEquals(AcwrZone.SWEET_SPOT, PowerPhysiologyCalculator.classifyAcwrZone(1.05))
+        assertEquals(AcwrZone.HIGH_LOAD_CAUTION, PowerPhysiologyCalculator.classifyAcwrZone(1.40))
+        assertEquals(AcwrZone.DANGER_ZONE, PowerPhysiologyCalculator.classifyAcwrZone(1.65))
+    }
 }
+

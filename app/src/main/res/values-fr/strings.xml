@@ -1919,4 +1919,22 @@
     <string name="workout_decoupling_coupled">Couplé (&lt;5%%)</string>
     <string name="workout_decoupling_drift">Dérive élevée (≥5%%)</string>
 
+    <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
+    <string name="athlete_profile_pmc_title">Gestion de la performance (CTL / ATL / TSB)</string>
+    <string name="athlete_profile_pmc_ctl_label">Condition (CTL)</string>
+    <string name="athlete_profile_pmc_atl_label">Fatigue (ATL)</string>
+    <string name="athlete_profile_pmc_tsb_label">Forme (TSB)</string>
+    <string name="athlete_profile_pmc_acwr_label">Ratio de charge (ACWR)</string>
+    <string name="athlete_profile_pmc_ramp_label">Progression 7j</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/sem</string>
+    <string name="athlete_profile_pmc_ramp_warning">Hausse rapide</string>
+    <string name="athlete_profile_pmc_zone_fresh">Prêt pour la course</string>
+    <string name="athlete_profile_pmc_zone_neutral">Neutre</string>
+    <string name="athlete_profile_pmc_zone_optimal">Surcharge optimale</string>
+    <string name="athlete_profile_pmc_zone_fatigue">Fatigue élevée</string>
+    <string name="athlete_profile_pmc_acwr_under">Affûtage</string>
+    <string name="athlete_profile_pmc_acwr_sweet_spot">Zone optimale</string>
+    <string name="athlete_profile_pmc_acwr_caution">Charge élevée</string>
+    <string name="athlete_profile_pmc_acwr_danger">Zone à risque</string>
+    <string name="athlete_profile_pmc_empty">Aucune donnée de charge d’entraînement pour le moment.</string>
 </resources>

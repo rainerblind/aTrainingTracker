@@ -748,6 +748,67 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * ATT-3859 / REQ-UI-401.2: Retrieves lightweight training load summaries for all finished workouts
+     * in a single batch query to populate the Performance Management Chart (PMC).
+     */
+    @NonNull
+    public List<com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample> getWorkoutTrainingLoadRecords() {
+        List<com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample> results = new ArrayList<>();
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return results;
+        }
+
+        String sql = "SELECT w." + WorkoutSummaries.C_ID + ", "
+                + "CAST(strftime('%s', w." + WorkoutSummaries.TIME_START + ") AS INTEGER) * 1000 AS start_ms, "
+                + "IFNULL(w." + WorkoutSummaries.TIME_ACTIVE_s + ", 0) AS active_s, "
+                + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'TSS' AND e." + WorkoutSummaries.EXTREMA_TYPE + " IN ('END', 'AVG', 'MAX') THEN e." + WorkoutSummaries.VALUE + " END) AS power_tss, "
+                + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'NORMALIZED_POWER' AND e." + WorkoutSummaries.EXTREMA_TYPE + " IN ('END', 'AVG') THEN e." + WorkoutSummaries.VALUE + " END) AS np_watts, "
+                + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'POWER' AND e." + WorkoutSummaries.EXTREMA_TYPE + " = 'AVG' THEN e." + WorkoutSummaries.VALUE + " END) AS avg_power, "
+                + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'HR' AND e." + WorkoutSummaries.EXTREMA_TYPE + " = 'AVG' THEN e." + WorkoutSummaries.VALUE + " END) AS avg_hr "
+                + "FROM " + WorkoutSummaries.TABLE + " w "
+                + "LEFT JOIN " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " e ON w." + WorkoutSummaries.C_ID + " = e." + WorkoutSummaries.WORKOUT_ID + " "
+                + "WHERE w." + WorkoutSummaries.FINISHED + " = 1 "
+                + "GROUP BY w." + WorkoutSummaries.C_ID + " "
+                + "ORDER BY start_ms ASC";
+
+        try (Cursor cursor = db.rawQuery(sql, null)) {
+            if (cursor != null) {
+                int startMsIdx = cursor.getColumnIndex("start_ms");
+                int activeSIdx = cursor.getColumnIndex("active_s");
+                int tssIdx = cursor.getColumnIndex("power_tss");
+                int npIdx = cursor.getColumnIndex("np_watts");
+                int pwrIdx = cursor.getColumnIndex("avg_power");
+                int hrIdx = cursor.getColumnIndex("avg_hr");
+
+                while (cursor.moveToNext()) {
+                    long startMs = (startMsIdx != -1 && !cursor.isNull(startMsIdx)) ? cursor.getLong(startMsIdx) : 0L;
+                    int activeS = (activeSIdx != -1 && !cursor.isNull(activeSIdx)) ? cursor.getInt(activeSIdx) : 0;
+                    Double powerTss = (tssIdx != -1 && !cursor.isNull(tssIdx)) ? cursor.getDouble(tssIdx) : null;
+                    Double npWatts = (npIdx != -1 && !cursor.isNull(npIdx)) ? cursor.getDouble(npIdx) : null;
+                    Double avgPower = (pwrIdx != -1 && !cursor.isNull(pwrIdx)) ? cursor.getDouble(pwrIdx) : null;
+                    Double avgHr = (hrIdx != -1 && !cursor.isNull(hrIdx)) ? cursor.getDouble(hrIdx) : null;
+
+                    if (startMs > 0L) {
+                        results.add(new com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample(
+                                startMs,
+                                activeS,
+                                powerTss,
+                                npWatts,
+                                avgPower,
+                                avgHr
+                        ));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying workout training load records: " + e.getMessage(), e);
+        }
+
+        return results;
+    }
+
+    /**
      * DTO for batch extrema lookups (ATT-359).
      */
     public static class ExtremaRecord {
