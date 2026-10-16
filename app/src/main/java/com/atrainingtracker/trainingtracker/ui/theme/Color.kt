@@ -303,4 +303,12 @@ object TTColor {
     val ZoneGaugeTrack = Color(0xFF1B1B1F)
     val WarningBorderLight = Color(0xFFE0E0E0)
     val WPrimeBalGreen = Color(0xFF10B981)
+
+    // Performance Management Chart (PMC) Colors (REQ-UI-401)
+    val PmcCtlBlue = Color(0xFF1E88E5)
+    val PmcAtlMagenta = Color(0xFFD81B60)
+    val PmcTsbAmber = Color(0xFFFB8C00)
+    val PmcFreshGreen = Color(0xFF2E7D32)
+    val PmcOptimalBlue = Color(0xFF1565C0)
+    val PmcCautionOrange = Color(0xFFEF6C00)
 }

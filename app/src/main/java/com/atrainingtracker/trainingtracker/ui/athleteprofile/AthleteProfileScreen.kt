@@ -98,6 +98,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.activities.ZoneProfileTabContent
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.physiology.AcwrZone
 import com.atrainingtracker.trainingtracker.physiology.PmcDailyPoint
 import com.atrainingtracker.trainingtracker.physiology.PmcSummaryResult
@@ -1323,9 +1324,9 @@ fun PerformanceManagementChartCard(
                 TsbReadinessZone.HIGH_FATIGUE_RISK -> stringResource(R.string.athlete_profile_pmc_zone_fatigue)
             }
             val tsbColor = when (pmcSummary.currentTsbZone) {
-                TsbReadinessZone.FRESH_RACE_READY -> Color(0xFF2E7D32)
+                TsbReadinessZone.FRESH_RACE_READY -> TTColor.PmcFreshGreen
                 TsbReadinessZone.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
-                TsbReadinessZone.OPTIMAL_OVERLOAD -> Color(0xFF1565C0)
+                TsbReadinessZone.OPTIMAL_OVERLOAD -> TTColor.PmcOptimalBlue
                 TsbReadinessZone.HIGH_FATIGUE_RISK -> MaterialTheme.colorScheme.error
             }
 
@@ -1337,14 +1338,14 @@ fun PerformanceManagementChartCard(
                     label = stringResource(R.string.athlete_profile_pmc_ctl_label),
                     valueText = String.format(Locale.US, "%.1f", pmcSummary.currentCtl),
                     badgeText = null,
-                    accentColor = Color(0xFF1E88E5),
+                    accentColor = TTColor.PmcCtlBlue,
                     modifier = Modifier.weight(1f)
                 )
                 PmcStatBadge(
                     label = stringResource(R.string.athlete_profile_pmc_atl_label),
                     valueText = String.format(Locale.US, "%.1f", pmcSummary.currentAtl),
                     badgeText = null,
-                    accentColor = Color(0xFFD81B60),
+                    accentColor = TTColor.PmcAtlMagenta,
                     modifier = Modifier.weight(1f)
                 )
                 PmcStatBadge(
@@ -1365,8 +1366,8 @@ fun PerformanceManagementChartCard(
                 null -> null
             }
             val acwrColor = when (pmcSummary.currentAcwrZone) {
-                AcwrZone.SWEET_SPOT -> Color(0xFF2E7D32)
-                AcwrZone.HIGH_LOAD_CAUTION -> Color(0xFFEF6C00)
+                AcwrZone.SWEET_SPOT -> TTColor.PmcFreshGreen
+                AcwrZone.HIGH_LOAD_CAUTION -> TTColor.PmcCautionOrange
                 AcwrZone.DANGER_ZONE -> MaterialTheme.colorScheme.error
                 else -> MaterialTheme.colorScheme.onSurfaceVariant
             }
@@ -1485,9 +1486,9 @@ fun PerformanceManagementChartCanvas(
         return
     }
 
-    val ctlColor = Color(0xFF1E88E5)
-    val atlColor = Color(0xFFD81B60)
-    val tsbColor = Color(0xFFFB8C00)
+    val ctlColor = TTColor.PmcCtlBlue
+    val atlColor = TTColor.PmcAtlMagenta
+    val tsbColor = TTColor.PmcTsbAmber
     val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
 
