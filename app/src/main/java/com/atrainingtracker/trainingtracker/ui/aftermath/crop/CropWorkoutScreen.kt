@@ -157,15 +157,9 @@ fun CropWorkoutScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Map preview of cropped segment
-            val retainedPoints = remember(uiState.startIndex, uiState.endIndex, uiState.points) {
-                if (uiState.points.isNotEmpty() && uiState.startIndex <= uiState.endIndex) {
-                    uiState.points.subList(uiState.startIndex, uiState.endIndex + 1)
-                } else emptyList()
-            }
-
-            val pathPoints = remember(retainedPoints) {
-                retainedPoints.mapNotNull { pt ->
+            // 1. Map preview of cropped segment (REQ-MAP-051.4: Pre-extract once and downsample to <= 500 points)
+            val preExtractedPathPoints = remember(uiState.points) {
+                uiState.points.map { pt ->
                     pt.latLng?.let { ll ->
                         PathPoint(
                             distance = pt.distanceTotalM,
@@ -175,6 +169,19 @@ fun CropWorkoutScreen(
                         )
                     }
                 }
+            }
+
+            val pathPoints = remember(uiState.startIndex, uiState.endIndex, preExtractedPathPoints) {
+                if (preExtractedPathPoints.isNotEmpty() &&
+                    uiState.startIndex >= 0 &&
+                    uiState.endIndex < preExtractedPathPoints.size &&
+                    uiState.startIndex <= uiState.endIndex
+                ) {
+                    val sliced = preExtractedPathPoints
+                        .subList(uiState.startIndex, uiState.endIndex + 1)
+                        .filterNotNull()
+                    CropWorkoutPreviewMath.downsamplePathPoints(sliced)
+                } else emptyList()
             }
 
             if (pathPoints.isNotEmpty()) {
@@ -370,3 +377,37 @@ fun CropWorkoutScreen(
         )
     }
 }
+
+/**
+ * Pure mathematical helper for downsampling interactive workout crop preview polylines (REQ-MAP-051.4).
+ * Bounds the number of points sent to Google Maps Polyline.setPoints during 60–120 Hz RangeSlider drags
+ * while strictly preserving the exact start and end coordinates of the selected window.
+ */
+object CropWorkoutPreviewMath {
+    const val MAX_PREVIEW_POINTS = 500
+
+    /**
+     * Downsamples [points] to at most [maxPoints] evenly spaced samples across the list,
+     * guaranteeing that `first()` and `last()` are always preserved.
+     */
+    fun downsamplePathPoints(
+        points: List<PathPoint>,
+        maxPoints: Int = MAX_PREVIEW_POINTS
+    ): List<PathPoint> {
+        if (points.size <= maxPoints || maxPoints < 2) {
+            return points
+        }
+        val lastIdx = points.lastIndex
+        val result = ArrayList<PathPoint>(maxPoints)
+        for (i in 0 until maxPoints) {
+            val idx = if (i == maxPoints - 1) {
+                lastIdx
+            } else {
+                ((i.toLong() * lastIdx) / (maxPoints - 1)).toInt()
+            }
+            result.add(points[idx])
+        }
+        return result
+    }
+}
+

@@ -80,7 +80,8 @@ data class SegmentSummary @JvmOverloads constructor(
 
 data class SegmentWithPath(
     val summary: SegmentSummary,
-    val path: List<PathPoint>
+    val path: List<PathPoint>,
+    val latLngs: List<LatLng> = path.map { it.latLng }
 )
 
 
