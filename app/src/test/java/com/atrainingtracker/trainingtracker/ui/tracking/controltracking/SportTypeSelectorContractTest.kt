@@ -23,8 +23,8 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Contract test enforcing REQ-UI-312 / TST-UI-272.3:
- * SportTypeSelector Defensive Loading Contract Verification.
+ * Contract test enforcing REQ-UI-312 / TST-UI-272.3 & REQ-UI-375 / TST-UI-338:
+ * SportTypeSelector Defensive Loading & VectorDrawable Contract Verification.
  */
 class SportTypeSelectorContractTest {
 
@@ -46,6 +46,8 @@ class SportTypeSelectorContractTest {
         assertTrue("Must supply DirectionsRun fallback for running", content.contains("DirectionsRun"))
         assertTrue("Must supply DirectionsBike fallback for cycling", content.contains("DirectionsBike"))
         assertTrue("Must supply FitnessCenter fallback for other", content.contains("FitnessCenter"))
+        assertTrue("Must dynamically tint unselected sport icons instead of using _gray drawables", content.contains("Color.Unspecified") && content.contains("Color.Gray"))
+        assertTrue("Must not reference obsolete _gray drawables", !content.contains("_gray"))
     }
 
     @Test
@@ -61,16 +63,22 @@ class SportTypeSelectorContractTest {
 
         val rootDrawables = resDir.listFiles()?.map { it.name }?.toSet() ?: emptySet()
         val requiredDrawables = listOf(
-            "bsport_run.png",
-            "bsport_run_gray.png",
-            "bsport_bike.png",
-            "bsport_bike_gray.png",
-            "bsport_other.png",
-            "bsport_other_gray.png"
+            "bsport_run.xml",
+            "bsport_bike.xml",
+            "bsport_other.xml"
         )
 
         for (drawable in requiredDrawables) {
-            assertTrue("Drawable $drawable must exist in root res/drawable/", drawable in rootDrawables)
+            assertTrue("Vector drawable $drawable must exist in root res/drawable/", drawable in rootDrawables)
+        }
+
+        val obsoleteGrayDrawables = listOf(
+            "bsport_run_gray.png",
+            "bsport_bike_gray.png",
+            "bsport_other_gray.png"
+        )
+        for (obsolete in obsoleteGrayDrawables) {
+            assertTrue("Obsolete gray raster $obsolete must be purged from root res/drawable/", obsolete !in rootDrawables)
         }
     }
 }
