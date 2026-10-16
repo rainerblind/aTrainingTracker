@@ -157,5 +157,20 @@ class LiveSegmentSheetContractTest {
             content.contains("LaunchedEffect(externalScrubDistance) {\n        selectedDistance = externalScrubDistance\n    }")
         )
     }
+
+    @Test
+    fun testLiveSegmentSheet_delegatesToLiveTrackingEntitySheet() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LiveSegmentSheet.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "LiveSegmentSheet must delegate header slot to LiveTrackingEntitySheet (REQ-UI-383, ATT-3576)",
+            content.contains("LiveTrackingEntitySheet(")
+        )
+        assertFalse(
+            "LiveSegmentSheet must not contain direct HorizontalDivider call (REQ-UI-383, ATT-3576)",
+            content.contains("HorizontalDivider(")
+        )
+    }
 }
 
