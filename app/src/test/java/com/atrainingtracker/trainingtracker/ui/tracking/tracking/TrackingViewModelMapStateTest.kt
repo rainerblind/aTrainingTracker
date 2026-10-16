@@ -23,6 +23,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BSportType
@@ -56,6 +57,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -145,8 +147,14 @@ class TrackingViewModelMapStateTest {
         every { mockTrackingViewsRepo.getSensorFieldConfigsForView(any()) } returns flowOf(emptyList())
     }
 
+    private val createdViewModels = mutableListOf<TrackingViewModel>()
+
     @After
     fun tearDown() {
+        createdViewModels.forEach { vm ->
+            vm.viewModelScope.cancel()
+        }
+        createdViewModels.clear()
         Dispatchers.resetMain()
         unmockkAll()
     }
@@ -159,7 +167,7 @@ class TrackingViewModelMapStateTest {
             liveSegmentsRepository = mockLiveSegmentsRepo,
             routesRepository = mockRoutesRepo,
             viewId = 1L
-        )
+        ).also { createdViewModels.add(it) }
     }
 
     @Test
