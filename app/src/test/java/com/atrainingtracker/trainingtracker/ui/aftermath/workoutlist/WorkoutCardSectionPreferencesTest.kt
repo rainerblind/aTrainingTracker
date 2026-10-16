@@ -105,9 +105,58 @@ class WorkoutCardSectionPreferencesTest {
     @Test
     fun zoneCardDisplayMode_defaultAndCopy() {
         val prefs = WorkoutCardSectionPreferences()
-        assertEquals(ZoneCardDisplayMode.COLUMNS, prefs.zoneCardDisplayMode)
+        assertEquals(ZoneCardDisplayMode.STACKED_BAR, prefs.zoneCardDisplayMode)
 
-        val modified = prefs.copy(zoneCardDisplayMode = ZoneCardDisplayMode.STACKED_BAR)
-        assertEquals(ZoneCardDisplayMode.STACKED_BAR, modified.zoneCardDisplayMode)
+        val modified = prefs.copy(zoneCardDisplayMode = ZoneCardDisplayMode.COLUMNS)
+        assertEquals(ZoneCardDisplayMode.COLUMNS, modified.zoneCardDisplayMode)
+
+        val detailPrefs = com.atrainingtracker.trainingtracker.WorkoutDetailPreferences()
+        assertEquals(ZoneCardDisplayMode.HISTOGRAM, detailPrefs.zoneCardDisplayMode)
+
+        val modifiedDetail = detailPrefs.copy(zoneCardDisplayMode = ZoneCardDisplayMode.STACKED_BAR)
+        assertEquals(ZoneCardDisplayMode.STACKED_BAR, modifiedDetail.zoneCardDisplayMode)
+    }
+
+    @Test
+    fun parseZoneCardDisplayMode_handlesNullLegacyAndDowngradeStrings() {
+        // Summary defaults to STACKED_BAR when null or unknown
+        assertEquals(
+            ZoneCardDisplayMode.STACKED_BAR,
+            com.atrainingtracker.trainingtracker.parseZoneCardDisplayMode(null, ZoneCardDisplayMode.STACKED_BAR)
+        )
+        assertEquals(
+            ZoneCardDisplayMode.STACKED_BAR,
+            com.atrainingtracker.trainingtracker.parseZoneCardDisplayMode("UNKNOWN_FUTURE_MODE", ZoneCardDisplayMode.STACKED_BAR)
+        )
+
+        // Details defaults to HISTOGRAM when null or unknown
+        assertEquals(
+            ZoneCardDisplayMode.HISTOGRAM,
+            com.atrainingtracker.trainingtracker.parseZoneCardDisplayMode(null, ZoneCardDisplayMode.HISTOGRAM)
+        )
+        assertEquals(
+            ZoneCardDisplayMode.HISTOGRAM,
+            com.atrainingtracker.trainingtracker.parseZoneCardDisplayMode("UNKNOWN_FUTURE_MODE", ZoneCardDisplayMode.HISTOGRAM)
+        )
+
+        // Legacy FIVE_ZONES migrates to COLUMNS in both contexts
+        assertEquals(
+            ZoneCardDisplayMode.COLUMNS,
+            com.atrainingtracker.trainingtracker.parseZoneCardDisplayMode("FIVE_ZONES", ZoneCardDisplayMode.STACKED_BAR)
+        )
+        assertEquals(
+            ZoneCardDisplayMode.COLUMNS,
+            com.atrainingtracker.trainingtracker.parseZoneCardDisplayMode("FIVE_ZONES", ZoneCardDisplayMode.HISTOGRAM)
+        )
+
+        // Explicit valid enum values preserved
+        assertEquals(
+            ZoneCardDisplayMode.COLUMNS,
+            com.atrainingtracker.trainingtracker.parseZoneCardDisplayMode("COLUMNS", ZoneCardDisplayMode.STACKED_BAR)
+        )
+        assertEquals(
+            ZoneCardDisplayMode.STACKED_BAR,
+            com.atrainingtracker.trainingtracker.parseZoneCardDisplayMode("STACKED_BAR", ZoneCardDisplayMode.HISTOGRAM)
+        )
     }
 }

@@ -40,13 +40,17 @@ import com.atrainingtracker.R
  * `PaddingValues(horizontal = 6.dp, vertical = 0.dp)`, and single-line `labelSmall` text
  * (`maxLines = 1`, `softWrap = false`, `TextOverflow.Ellipsis`) so all 3 mode labels render on a
  * single line across all 9 supported locales without mid-word wrapping (REQ-UI-386 / Rule 38).
+ *
+ * @param showModeSelector Whether to render the bottom 3-way [SingleChoiceSegmentedButtonRow] mode switcher.
+ *   Defaults to `true` (Workout Details); set to `false` in Workout Summary cards to keep the summary compact (REQ-UI-388).
  */
 @Composable
 fun HeartRateZoneDistributionCard(
     distribution: ZoneDistributionData,
     modifier: Modifier = Modifier,
     displayMode: ZoneCardDisplayMode? = null,
-    onDisplayModeChange: ((ZoneCardDisplayMode) -> Unit)? = null
+    onDisplayModeChange: ((ZoneCardDisplayMode) -> Unit)? = null,
+    showModeSelector: Boolean = true
 ) {
     var internalDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
     val effectiveDisplayMode = (displayMode ?: internalDisplayMode)
@@ -122,11 +126,11 @@ fun HeartRateZoneDistributionCard(
                 }
             }
 
-            // Bottom Mode Switcher: Centered below chart for ample breathing room (ATT-1959 / ATT-3390 / ATT-3771)
+            // Bottom Mode Switcher: Centered below chart for ample breathing room (ATT-1959 / ATT-3390 / ATT-3771 / ATT-3773)
             val hasHistogram = distribution.histogram != null
             val buttonCount = if (hasHistogram) 3 else 2
 
-            if (distribution.entries.isNotEmpty()) {
+            if (showModeSelector && distribution.entries.isNotEmpty()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
