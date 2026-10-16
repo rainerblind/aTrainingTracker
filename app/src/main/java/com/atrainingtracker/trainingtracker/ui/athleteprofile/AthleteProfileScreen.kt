@@ -27,10 +27,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -117,7 +120,7 @@ fun AthleteProfileScreen(
 }
 
 /**
- * Stateless UI content for the Athlete Profile screen (`REQ-UI-391.5`, Rule 23, Rule 38).
+ * Stateless UI content for the Athlete Profile screen (`REQ-UI-391.5`, `REQ-UI-396.1`, Rule 23, Rule 38, Rule 41).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -134,6 +137,7 @@ fun AthleteProfileContent(
     var showAddDialogForMetric by remember { mutableStateOf<AthleteMetricType?>(null) }
     var editingEntry by remember { mutableStateOf<AthleteMetricEntry?>(null) }
     var deletingEntry by remember { mutableStateOf<AthleteMetricEntry?>(null) }
+    val navBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -183,7 +187,12 @@ fun AthleteProfileContent(
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    top = 16.dp,
+                    end = 16.dp,
+                    bottom = 16.dp + navBarBottomPadding
+                ),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // 2. 2x2 Summary Cards Grid
