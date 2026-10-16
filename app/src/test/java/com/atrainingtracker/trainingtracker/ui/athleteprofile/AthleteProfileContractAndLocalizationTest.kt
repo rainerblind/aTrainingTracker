@@ -142,7 +142,13 @@ class AthleteProfileContractAndLocalizationTest {
             "athlete_profile_pmc_acwr_sweet_spot",
             "athlete_profile_pmc_acwr_caution",
             "athlete_profile_pmc_acwr_danger",
-            "athlete_profile_pmc_empty"
+            "athlete_profile_pmc_empty",
+            "workout_power_metrics_np_format",
+            "workout_power_metrics_if_format",
+            "workout_power_metrics_tss_format",
+            "workout_power_metrics_work_format",
+            "workout_power_metrics_wkg_format",
+            "workout_power_metrics_vi_format"
         )
 
         val root = resolveModuleRoot()
@@ -189,6 +195,20 @@ class AthleteProfileContractAndLocalizationTest {
             assertTrue("athlete_profile_pmc_ramp_format not matched in $locale", rampMatch != null)
             val rampText = rampMatch!!.groupValues[1]
             assertTrue("$locale athlete_profile_pmc_ramp_format must contain %1\$+.1f", rampText.contains("%1\$+.1f"))
+
+            // Verify positional specifiers in workout_power_metrics_*
+            for (intPwrKey in listOf("workout_power_metrics_np_format", "workout_power_metrics_tss_format", "workout_power_metrics_work_format")) {
+                val pwrRegex = Regex("""<string name="$intPwrKey">([^<]+)</string>""")
+                val pwrMatch = pwrRegex.find(content)
+                assertTrue("$intPwrKey not matched in $locale", pwrMatch != null)
+                assertTrue("$locale $intPwrKey must contain %1\$.0f", pwrMatch!!.groupValues[1].contains("%1\$.0f"))
+            }
+            for (decPwrKey in listOf("workout_power_metrics_if_format", "workout_power_metrics_wkg_format", "workout_power_metrics_vi_format")) {
+                val pwrRegex = Regex("""<string name="$decPwrKey">([^<]+)</string>""")
+                val pwrMatch = pwrRegex.find(content)
+                assertTrue("$decPwrKey not matched in $locale", pwrMatch != null)
+                assertTrue("$locale $decPwrKey must contain %1\$.2f", pwrMatch!!.groupValues[1].contains("%1\$.2f"))
+            }
         }
     }
 
@@ -247,6 +267,23 @@ class AthleteProfileContractAndLocalizationTest {
             "AthleteProfileScreen.kt must render PerformanceManagementChartCard and PerformanceManagementChartCanvas (REQ-UI-401.3)",
             source.contains("fun PerformanceManagementChartCard(") &&
                 source.contains("fun PerformanceManagementChartCanvas(")
+        )
+
+        val detailsFile = File(
+            resolveModuleRoot(),
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutdetails/WorkoutDetails.kt"
+        )
+        assertTrue("WorkoutDetails.kt must exist", detailsFile.exists())
+        val detailsSource = detailsFile.readText()
+        assertTrue(
+            "WorkoutDetails.kt must render PowerTrainingMetricsSection (REQ-UI-402.2)",
+            detailsSource.contains("PowerTrainingMetricsSection(") &&
+                detailsSource.contains("R.string.workout_power_metrics_np_format") &&
+                detailsSource.contains("R.string.workout_power_metrics_if_format") &&
+                detailsSource.contains("R.string.workout_power_metrics_tss_format") &&
+                detailsSource.contains("R.string.workout_power_metrics_work_format") &&
+                detailsSource.contains("R.string.workout_power_metrics_wkg_format") &&
+                detailsSource.contains("R.string.workout_power_metrics_vi_format")
         )
     }
 }

@@ -330,4 +330,111 @@ class WorkoutDataMappingSymmetryTest {
         assertEquals(singleData.detailsData.efficiencyFactor, snapshotData.detailsData.efficiencyFactor)
         assertEquals(singleData.detailsData.aerobicDecouplingPct, snapshotData.detailsData.aerobicDecouplingPct)
     }
+
+    @Test
+    fun `fromCursor and fromSnapshot map Power Training Metrics symmetrically and prioritize END over AVG (REQ-UI-402_1)`() {
+        val cursor = createMockCursor(sourceString = "FIT", raceInt = 1)
+        val sensorPower = com.atrainingtracker.banalservice.sensor.SensorType.POWER
+        val sensorNp = com.atrainingtracker.banalservice.sensor.SensorType.NORMALIZED_POWER
+        val sensorIf = com.atrainingtracker.banalservice.sensor.SensorType.INTENSITY_FACTOR
+        val sensorTss = com.atrainingtracker.banalservice.sensor.SensorType.TSS
+        val sensorWork = com.atrainingtracker.banalservice.sensor.SensorType.WORK_KJ
+        val sensorPtw = com.atrainingtracker.banalservice.sensor.SensorType.POWER_TO_WEIGHT
+        val extAvg = com.atrainingtracker.trainingtracker.database.ExtremaType.AVG
+        val extMax = com.atrainingtracker.trainingtracker.database.ExtremaType.MAX
+        val extEnd = com.atrainingtracker.trainingtracker.database.ExtremaType.END
+
+        every { mockSummariesDb.getExtremaValue(5023L, sensorPower, extAvg) } returns 200.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorPower, extMax) } returns 600.0
+        // Suppose AVG had an intermediate cumulative mean, while END has the authoritative session end value
+        every { mockSummariesDb.getExtremaValue(5023L, sensorNp, extAvg) } returns 190.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorNp, extEnd) } returns 210.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorIf, extAvg) } returns 0.76
+        every { mockSummariesDb.getExtremaValue(5023L, sensorIf, extEnd) } returns 0.84
+        every { mockSummariesDb.getExtremaValue(5023L, sensorTss, extAvg) } returns 40.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorTss, extEnd) } returns 75.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorWork, extAvg) } returns 350.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorWork, extEnd) } returns 720.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorPtw, extAvg) } returns 2.80
+        every { mockSummariesDb.getExtremaValue(5023L, sensorPtw, extMax) } returns 8.00
+
+        val singleData = mapper.fromCursor(cursor)
+        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+            extrema = mapOf(
+                5023L to listOf(
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPower, extAvg, 200.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPower, extMax, 600.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorNp, extAvg, 190.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorNp, extEnd, 210.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorIf, extAvg, 0.76, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorIf, extEnd, 0.84, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorTss, extAvg, 40.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorTss, extEnd, 75.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorWork, extAvg, 350.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorWork, extEnd, 720.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPtw, extAvg, 2.80, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPtw, extMax, 8.00, null)
+                )
+            ),
+            stravaData = emptyMap(),
+            clusterNames = mapOf(42L to "Test Cluster"),
+            laps = emptyMap()
+        )
+        val batchData = mapper.fromCursor(cursor, batchMetadata)
+        val snapshot = mapper.readCursorSnapshot(cursor)
+        val snapshotData = mapper.fromSnapshot(snapshot, batchMetadata)
+
+        // Prioritizes END over AVG and computes VI = 210 / 200 = 1.05
+        assertEquals(210.0, singleData.normalizedPowerWatts!!, 1e-6)
+        assertEquals(0.84, singleData.intensityFactor!!, 1e-6)
+        assertEquals(75.0, singleData.tss!!, 1e-6)
+        assertEquals(720.0, singleData.workKj!!, 1e-6)
+        assertEquals(2.80, singleData.avgPowerToWeight!!, 1e-6)
+        assertEquals(8.00, singleData.maxPowerToWeight!!, 1e-6)
+        assertEquals(1.05, singleData.variabilityIndex!!, 1e-6)
+
+        // Rule 20 symmetry across single, batch, snapshot, and detailsData
+        assertEquals(singleData.normalizedPowerWatts, batchData.normalizedPowerWatts)
+        assertEquals(singleData.normalizedPowerWatts, snapshotData.normalizedPowerWatts)
+        assertEquals(singleData.intensityFactor, batchData.intensityFactor)
+        assertEquals(singleData.intensityFactor, snapshotData.intensityFactor)
+        assertEquals(singleData.tss, batchData.tss)
+        assertEquals(singleData.tss, snapshotData.tss)
+        assertEquals(singleData.workKj, batchData.workKj)
+        assertEquals(singleData.workKj, snapshotData.workKj)
+        assertEquals(singleData.avgPowerToWeight, batchData.avgPowerToWeight)
+        assertEquals(singleData.avgPowerToWeight, snapshotData.avgPowerToWeight)
+        assertEquals(singleData.maxPowerToWeight, batchData.maxPowerToWeight)
+        assertEquals(singleData.maxPowerToWeight, snapshotData.maxPowerToWeight)
+        assertEquals(singleData.variabilityIndex, batchData.variabilityIndex)
+        assertEquals(singleData.variabilityIndex, snapshotData.variabilityIndex)
+
+        assertEquals(singleData.detailsData.normalizedPowerWatts, snapshotData.detailsData.normalizedPowerWatts)
+        assertEquals(singleData.detailsData.intensityFactor, snapshotData.detailsData.intensityFactor)
+        assertEquals(singleData.detailsData.tss, snapshotData.detailsData.tss)
+        assertEquals(singleData.detailsData.workKj, snapshotData.detailsData.workKj)
+        assertEquals(singleData.detailsData.avgPowerToWeight, snapshotData.detailsData.avgPowerToWeight)
+        assertEquals(singleData.detailsData.variabilityIndex, snapshotData.detailsData.variabilityIndex)
+
+        // Verify fallback derivation when only avgPowerWatts, activeTimeSec, FTP, and weight exist
+        val fallbackSummary = mapper.resolvePowerTrainingSummary(
+            npEnd = null, npAvg = null,
+            ifEnd = null, ifAvg = null,
+            tssEnd = null, tssAvg = null, tssMax = null,
+            workEnd = null, workAvg = null, workMax = null,
+            ptwAvg = null, ptwMax = null,
+            avgPowerWatts = 250.0,
+            maxPowerWatts = 500.0,
+            activeTimeSec = 3600L,
+            startTimeS = 1_700_000_000L,
+            effectiveFtpWatts = 250.0,
+            effectiveWeightKg = 75.0
+        )
+        assertEquals(250.0, fallbackSummary.normalizedPowerWatts!!, 1e-6)
+        assertEquals(1.0, fallbackSummary.intensityFactor!!, 1e-6)
+        assertEquals(100.0, fallbackSummary.tss!!, 1e-6)
+        assertEquals(900.0, fallbackSummary.workKj!!, 1e-6)
+        assertEquals(250.0 / 75.0, fallbackSummary.avgPowerToWeight!!, 1e-6)
+        assertEquals(500.0 / 75.0, fallbackSummary.maxPowerToWeight!!, 1e-6)
+    }
 }
