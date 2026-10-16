@@ -71,7 +71,6 @@
         android:enableOnBackInvokedCallback="true"
         android:resizeableActivity="true"
         tools:targetApi="tiramisu">
-        <uses-library android:name="org.apache.http.legacy" android:required="false" />
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
             android:value="${MAPS_API_KEY}" />  <!-- stored under secrets.properties -->
@@ -160,11 +159,6 @@
         </activity>
 
         <activity
-            android:name=".trainingtracker.onlinecommunities.runkeeper.RunkeeperGetAccessTokenActivity"
-            android:label="@string/RunkeeperGetAccessTokenActivityLabel"
-            android:theme="@style/Theme.aTrainingTracker" />
-
-        <activity
             android:name=".trainingtracker.onlinecommunities.strava.StravaOAuthCallbackActivity"
             android:launchMode="singleTop"
             android:exported="true">
@@ -177,11 +171,6 @@
                 <data android:host="rainerblind.github.io" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".trainingtracker.onlinecommunities.trainingpeaks.TrainingpeaksGetAccessTokenActivity"
-            android:label="@string/TrainingPeaksGetAccessTokenActivityLabel"
-            android:theme="@style/Theme.aTrainingTracker" />
 
         <!-- <uses-library android:name="com.dsi.ant.antradio_library" /> -->
         <service

@@ -141,11 +141,6 @@ dependencies {
     implementation "com.google.accompanist:accompanist-drawablepainter:0.37.3"
 
     // --- Legacy & Hardware SDKs ---
-    implementation 'org.apache.httpcomponents:fluent-hc:4.5.14'
-    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
-    implementation 'org.apache.httpcomponents:httpclient-cache:4.5.14'
-    implementation 'org.apache.httpcomponents:httpcore:4.4.16'
-    implementation 'org.apache.httpcomponents:httpmime:4.5.14'
     implementation 'com.getpebble:pebblekit:4.0.1'
     implementation files('../ANT-Android-SDKs/ANT+_Android_SDK/API/antpluginlib_3-9-0.aar')
 

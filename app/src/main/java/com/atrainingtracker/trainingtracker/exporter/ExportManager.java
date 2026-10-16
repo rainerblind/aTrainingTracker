@@ -81,11 +81,6 @@ public class ExportManager {
                     case GPX -> new GPXFileWriter(context);
                     case FIT -> new FitFileWriter(context);
                     case STRAVA -> new TCXFileWriter(context);
-                    /* case RUNKEEPER:
-                        return  new RunkeeperFileExporter(mContext);
-                    /* case TRAINING_PEAKS:
-                        return new TCXFileExporter(mContext);
-                        return new TrainingPeaksFileExporter(mContext); */
                 };
             case DROPBOX:
                 return new DropboxUploader(context);
@@ -94,12 +89,6 @@ public class ExportManager {
             case COMMUNITY:
                 return switch (exportInfo.getFileFormat()) {
                     case STRAVA -> new StravaUploader(context);
-                                /* case RUNKEEPER:
-                                    exporter = new RunkeeperUploader(mContext);
-                                    break; */
-                                /* case TRAINING_PEAKS:
-                                    exporter = new TrainingPeaksUploader(mContext);
-                                    break; */
                     default ->
                             throw new IllegalStateException("Unexpected value: " + exportInfo.getFileFormat());
                 };
