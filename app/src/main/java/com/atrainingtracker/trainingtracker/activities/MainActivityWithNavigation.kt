@@ -905,21 +905,6 @@ class MainActivityWithNavigation :
         }
     }
 
-    fun startPairing(protocol: Protocol, deviceType: DeviceType?) {
-        if (DEBUG) Log.d(TAG, "startPairing: $protocol, deviceType: $deviceType")
-        try {
-            val tabViewModel: DevicesTabbedViewModel = ViewModelProvider(this)[DevicesTabbedViewModel::class.java]
-            if (deviceType != null) {
-                tabViewModel.startPairingScan(protocol, deviceType)
-            } else {
-                tabViewModel.updateFilters(protocol, null)
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to pre-configure DevicesTabbedViewModel filters for pairing", e)
-        }
-        navigateToDrawerItem(R.id.drawer_my_sensors)
-    }
-
     @Deprecated("Replaced by non-blocking checkSensorBatteryAfterWorkout (ATT-2192)")
     protected fun checkBatteryStatus() {
         checkSensorBatteryAfterWorkout(-1L)

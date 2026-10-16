@@ -48,10 +48,8 @@ import androidx.compose.ui.unit.dp
 
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.sensor.SensorType
-import com.atrainingtracker.banalservice.ui.devices.DeviceTypeSelectionDialog
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
@@ -62,8 +60,6 @@ fun ControlTrackingScreen(
     searchingFor: String?,
     devices: List<RemoteDeviceUIData>,
     currentSport: BSportType,
-    isAntSupported: Boolean = false,
-    isBluetoothSupported: Boolean = false,
     onSearch: () -> Unit,
     onDeviceClick: (RemoteDeviceUIData) -> Unit,
     onSportSelected: (BSportType) -> Unit,
@@ -71,10 +67,6 @@ fun ControlTrackingScreen(
     onPause: () -> Unit,
     onResume: () -> Unit,
     onStop: () -> Unit,
-    onPairingClicked: (Protocol) -> Unit = {},
-    selectingProtocol: Protocol? = null,
-    onDeviceTypeSelected: (DeviceType) -> Unit = {},
-    onCancelDeviceTypeSelection: () -> Unit = {},
     showResearchButton: Boolean = true,
     locationCalibrationStatus: com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus? = null,
     modifier: Modifier = Modifier,
@@ -459,15 +451,6 @@ fun ControlTrackingScreen(
             }
         )
     }
-
-    // Device Type Selection Dialog
-    selectingProtocol?.let { protocol ->
-        DeviceTypeSelectionDialog(
-            protocol = protocol,
-            onSelected = onDeviceTypeSelected,
-            onDismiss = onCancelDeviceTypeSelection
-        )
-    }
 }
 
 /**
@@ -523,11 +506,8 @@ fun PreviewControlTrackingScreenSearching() {
                 searchingFor = "my spd",
                 devices = listOf(RemoteDeviceUIData(1, deviceType = DeviceType.HRM, name = "Polar H10", R.drawable.hr)),
                 currentSport = BSportType.RUN,
-                isAntSupported = true,
-                isBluetoothSupported = true,
                 onSearch = {}, onDeviceClick = {}, onSportSelected = {},
-                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
-                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {}
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}
             )
         }
     }
@@ -548,11 +528,8 @@ fun PreviewControlTrackingScreen() {
                 searchingFor = null,
                 devices = listOf(RemoteDeviceUIData(1, deviceType = DeviceType.HRM, name = "Polar H10", R.drawable.hr)),
                 currentSport = BSportType.RUN,
-                isAntSupported = true,
-                isBluetoothSupported = true,
                 onSearch = {}, onDeviceClick = {}, onSportSelected = {},
-                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
-                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {}
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}
             )
         }
     }
@@ -573,11 +550,8 @@ fun PreviewControlTrackingScreenNoRemoteDevices() {
                 searchingFor = null,
                 devices = emptyList(),
                 currentSport = BSportType.RUN,
-                isAntSupported = true,
-                isBluetoothSupported = true,
                 onSearch = {}, onDeviceClick = {}, onSportSelected = {},
-                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
-                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {},
+                onStart = {}, onPause = {}, onResume = {}, onStop = {},
                 showResearchButton = false
             )
         }
@@ -606,11 +580,8 @@ fun PreviewControlTrackingScreenMultiDevices() {
                     RemoteDeviceUIData(6, deviceType = DeviceType.BIKE_SPEED_AND_CADENCE, name = "Combo", R.drawable.bt_bike_speed_and_cadence)
                 ),
                 currentSport = BSportType.BIKE,
-                isAntSupported = true,
-                isBluetoothSupported = true,
                 onSearch = {}, onDeviceClick = {}, onSportSelected = {},
-                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
-                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {},
+                onStart = {}, onPause = {}, onResume = {}, onStop = {},
                 showResearchButton = true
             )
         }
@@ -634,11 +605,8 @@ fun PreviewControlTrackingScreenSingleDevice() {
                     RemoteDeviceUIData(1, deviceType = DeviceType.BIKE_CADENCE, name = "cad", R.drawable.bt_bike_cad)
                 ),
                 currentSport = BSportType.BIKE,
-                isAntSupported = true,
-                isBluetoothSupported = true,
                 onSearch = {}, onDeviceClick = {}, onSportSelected = {},
-                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
-                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {},
+                onStart = {}, onPause = {}, onResume = {}, onStop = {},
                 showResearchButton = true
             )
         }
