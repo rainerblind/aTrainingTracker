@@ -66,21 +66,29 @@ object ZoneDistributionStackedBarMath {
 }
 
 /**
- * Continuous horizontal stacked distribution bar for metabolic and physiological training zones (REQ-UI-372).
+ * Continuous horizontal stacked distribution bar for metabolic and physiological training zones (REQ-UI-372 / REQ-UI-387).
  *
  * - Renders a contiguous horizontal bar representing 100% of active workout time.
  * - Active zone segment widths are weighted strictly proportionally using Compose weight(entry.percentage).
  * - Uniform contour border around the bar container and circular legend swatches ensures WCAG 2.1 AA
  *   contrast (>= 3:1) across both light and dark themes.
  * - Zero-duration zones are omitted from the horizontal bar and rendered with dimmed alpha in the legend
- *   to preserve full metabolic spectrum context.
+ *   when [showLegend] is enabled.
+ *
+ * @param distribution The physiological zone distribution dataset.
+ * @param modifier Compose layout modifier.
+ * @param barHeight Height of the continuous horizontal stacked bar (defaults to `16.dp`).
+ * @param showLegend Controls whether the responsive `FlowRow` per-zone time and percentage breakdown
+ *   list is rendered beneath the bar. Defaults to `false` so `ZoneCardDisplayMode.STACKED_BAR` serves
+ *   as a clean, compact single-bar overview (`REQ-UI-387` / `ATT-3772`); pass `true` only when an
+ *   explicit per-zone breakdown legend is desired beneath the stacked bar.
  */
 @Composable
 fun ZoneDistributionStackedBar(
     distribution: ZoneDistributionData,
     modifier: Modifier = Modifier,
     barHeight: Dp = 16.dp,
-    showLegend: Boolean = true
+    showLegend: Boolean = false
 ) {
     val activeEntries = ZoneDistributionStackedBarMath.getActiveEntries(distribution.entries)
     val barShape = RoundedCornerShape(6.dp)

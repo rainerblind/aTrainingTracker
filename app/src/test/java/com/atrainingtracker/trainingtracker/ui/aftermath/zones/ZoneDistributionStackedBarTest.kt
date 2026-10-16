@@ -99,8 +99,29 @@ class ZoneDistributionStackedBarTest {
             content.contains("weight(entry.percentage)"))
         assertTrue("Must enclose bar with outline border for WCAG 2.1 AA contrast",
             content.contains("BorderStroke") && content.contains("0.5.dp"))
-        assertTrue("Must use responsive FlowRow for legend wrapping",
-            content.contains("FlowRow"))
+        assertTrue("Must default showLegend to false for compact STACKED_BAR mode (REQ-UI-387)",
+            Regex("""showLegend\s*:\s*Boolean\s*=\s*false""").containsMatchIn(content))
+        assertTrue("Regression check: Must preserve conditional FlowRow legend rendering when showLegend is true",
+            content.contains("if (showLegend && distribution.entries.isNotEmpty())") &&
+                content.contains("FlowRow") &&
+                content.contains("StackedBarLegendItem"))
+    }
+
+    @Test
+    fun testZoneDistributionCards_stackedBarModeOmitsDetailedBreakdownList() {
+        val cardFiles = listOf(
+            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/HeartRateZoneDistributionCard.kt",
+            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/PowerZoneDistributionCard.kt"
+        )
+        for (relPath in cardFiles) {
+            val file = resolve(relPath)
+            assertTrue("$relPath must exist", file.exists())
+            val content = file.readText()
+            assertTrue(
+                "$relPath must pass showLegend = false to ZoneDistributionStackedBar in STACKED_BAR mode (REQ-UI-387)",
+                Regex("""ZoneDistributionStackedBar\s*\([\s\S]*?showLegend\s*=\s*false""").containsMatchIn(content)
+            )
+        }
     }
 
     private fun resolve(relPath: String): File {
