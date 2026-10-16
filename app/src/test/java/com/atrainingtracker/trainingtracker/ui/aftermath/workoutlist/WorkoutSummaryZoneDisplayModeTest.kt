@@ -51,7 +51,7 @@ class WorkoutSummaryZoneDisplayModeTest {
     }
 
     @Test
-    fun workoutSummary_sourceContractEnforcesReactivePreferenceAndLocalOverride() {
+    fun workoutSummary_sourceContractEnforcesReactivePreferenceAndOmitsModeSelector() {
         val candidates = listOf(
             File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummary.kt"),
             File("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummary.kt"),
@@ -73,10 +73,40 @@ class WorkoutSummaryZoneDisplayModeTest {
             "WorkoutSummary must compute effectivePowerZoneDisplayMode using preferences.zoneCardDisplayMode",
             content.contains("powerZoneDisplayMode ?: preferences.zoneCardDisplayMode")
         )
+        assertTrue(
+            "WorkoutSummary must pass showModeSelector = false to zone cards (REQ-UI-388.3)",
+            content.contains("showModeSelector = false")
+        )
     }
 
     @Test
-    fun trackOnMapScreen_sourceContractEnforcesReactivePreferenceAndLocalOverride() {
+    fun zoneCards_sourceContractSupportsOptionalModeSelectorGating() {
+        val cardFiles = listOf(
+            "ui/aftermath/zones/HeartRateZoneDistributionCard.kt",
+            "ui/aftermath/zones/PowerZoneDistributionCard.kt"
+        )
+        for (rel in cardFiles) {
+            val candidates = listOf(
+                File("app/src/main/java/com/atrainingtracker/trainingtracker/$rel"),
+                File("src/main/java/com/atrainingtracker/trainingtracker/$rel"),
+                File("../app/src/main/java/com/atrainingtracker/trainingtracker/$rel")
+            )
+            val file = candidates.firstOrNull { it.exists() }
+                ?: error("Card file $rel not found")
+            val content = file.readText()
+            assertTrue(
+                "$rel must declare showModeSelector: Boolean = true default parameter (REQ-UI-388.3)",
+                content.contains("showModeSelector: Boolean = true")
+            )
+            assertTrue(
+                "$rel must gate the mode switcher row on showModeSelector && distribution.entries.isNotEmpty()",
+                content.contains("if (showModeSelector && distribution.entries.isNotEmpty())")
+            )
+        }
+    }
+
+    @Test
+    fun trackOnMapScreen_sourceContractEnforcesReactiveDetailPreferenceAndLocalOverride() {
         val candidates = listOf(
             File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapScreen.kt"),
             File("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapScreen.kt"),
@@ -87,21 +117,21 @@ class WorkoutSummaryZoneDisplayModeTest {
 
         val content = file.readText()
         assertTrue(
-            "TrackOnMapScreen must collect workoutCardPreferencesFlow",
-            content.contains("workoutCardPreferencesFlow.collectAsState")
+            "TrackOnMapScreen must collect workoutDetailPreferencesFlow",
+            content.contains("workoutDetailPreferencesFlow.collectAsState")
         )
         assertTrue(
-            "TrackOnMapScreen must compute effectiveHrZoneDisplayMode using persistedCardPrefs.zoneCardDisplayMode",
-            content.contains("hrZoneDisplayMode ?: persistedCardPrefs.zoneCardDisplayMode")
+            "TrackOnMapScreen must compute effectiveHrZoneDisplayMode using activeDetailPrefs.zoneCardDisplayMode (REQ-UI-388)",
+            content.contains("hrZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode")
         )
         assertTrue(
-            "TrackOnMapScreen must compute effectivePowerZoneDisplayMode using persistedCardPrefs.zoneCardDisplayMode",
-            content.contains("powerZoneDisplayMode ?: persistedCardPrefs.zoneCardDisplayMode")
+            "TrackOnMapScreen must compute effectivePowerZoneDisplayMode using activeDetailPrefs.zoneCardDisplayMode (REQ-UI-388)",
+            content.contains("powerZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode")
         )
     }
 
     @Test
-    fun workoutMasksAndCardsSection_sourceContractExposesZoneDisplayModeSelector() {
+    fun workoutMasksAndCardsSection_sourceContractExposesIndependentSummaryAndDetailZoneModeSelectors() {
         val candidates = listOf(
             File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
             File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
@@ -122,8 +152,12 @@ class WorkoutSummaryZoneDisplayModeTest {
                 content.contains("ZoneCardDisplayMode.HISTOGRAM")
         )
         assertTrue(
-            "WorkoutMasksAndCardsSection must mutate zoneCardDisplayMode on selection",
+            "WorkoutMasksAndCardsSection must mutate workoutCardPrefs.zoneCardDisplayMode on Summary selection",
             content.contains("workoutCardPrefs.copy(zoneCardDisplayMode = mode)")
+        )
+        assertTrue(
+            "WorkoutMasksAndCardsSection must mutate workoutDetailPrefs.zoneCardDisplayMode on Details selection",
+            content.contains("workoutDetailPrefs.copy(zoneCardDisplayMode = mode)")
         )
     }
 
@@ -137,9 +171,11 @@ class WorkoutSummaryZoneDisplayModeTest {
         for (targetMode in selectableModes) {
             val prefs = WorkoutCardSectionPreferences(zoneCardDisplayMode = targetMode)
             assertEquals(targetMode, prefs.zoneCardDisplayMode)
+            val detailPrefs = com.atrainingtracker.trainingtracker.WorkoutDetailPreferences(zoneCardDisplayMode = targetMode)
+            assertEquals(targetMode, detailPrefs.zoneCardDisplayMode)
         }
 
-        // Verify histogram fallback contract preserved for both cards (REQ-UI-386 invariant)
+        // Verify histogram fallback contract preserved for both cards (REQ-UI-386 / REQ-UI-388 invariant)
         assertEquals(
             ZoneCardDisplayMode.HISTOGRAM,
             ZoneCardDisplayMode.HISTOGRAM.resolveWithHistogramFallback(hasHistogram = true)

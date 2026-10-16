@@ -46,7 +46,20 @@ private val Context.dataStore by preferencesDataStore(name = "user_preferences")
 typealias WorkoutListCardPreferences = WorkoutCardSectionPreferences
 
 /**
- * Configurable section visibility preferences for detailed workout journal cards (REQ-UI-210 / ATT-1714 / REQ-UI-229 / REQ-UI-240).
+ * Resolves a persisted [ZoneCardDisplayMode] string with legacy `"FIVE_ZONES"` migration
+ * and downgrade-safe fallback to [defaultMode] (REQ-UI-388).
+ */
+internal fun parseZoneCardDisplayMode(
+    rawMode: String?,
+    defaultMode: ZoneCardDisplayMode
+): ZoneCardDisplayMode {
+    if (rawMode == null) return defaultMode
+    if (rawMode == "FIVE_ZONES") return ZoneCardDisplayMode.COLUMNS
+    return safeEnumValueOf(rawMode, defaultMode)
+}
+
+/**
+ * Configurable section visibility preferences for detailed workout journal cards (REQ-UI-210 / ATT-1714 / REQ-UI-229 / REQ-UI-240 / REQ-UI-388).
  */
 data class WorkoutCardSectionPreferences(
     val showDescription: Boolean = true,
@@ -59,11 +72,11 @@ data class WorkoutCardSectionPreferences(
     val showZoneAnalysis: Boolean = true,
     val showExportStatus: Boolean = true,
     val lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY,
-    val zoneCardDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.COLUMNS
+    val zoneCardDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.STACKED_BAR
 )
 
 /**
- * Configurable section visibility preferences for the full-screen Workout Details screen (REQ-UI-240 / ATT-2030).
+ * Configurable section visibility preferences for the full-screen Workout Details screen (REQ-UI-240 / ATT-2030 / REQ-UI-388).
  */
 data class WorkoutDetailPreferences(
     val showDescription: Boolean = true,
@@ -74,7 +87,8 @@ data class WorkoutDetailPreferences(
     val showElevationProfile: Boolean = true,
     val showTelemetryCharts: Boolean = true,
     val showZoneAnalysis: Boolean = true,
-    val showExportStatus: Boolean = true
+    val showExportStatus: Boolean = true,
+    val zoneCardDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.HISTOGRAM
 )
 
 /**
@@ -125,6 +139,7 @@ class MyPreferenceManager(context: Context) {
         val WORKOUT_DETAIL_SHOW_CHARTS = booleanPreferencesKey("workout_detail_show_charts")
         val WORKOUT_DETAIL_SHOW_ZONES = booleanPreferencesKey("workout_detail_show_zones")
         val WORKOUT_DETAIL_SHOW_EXPORT_STATUS = booleanPreferencesKey("workout_detail_show_export_status")
+        val WORKOUT_DETAIL_ZONE_DISPLAY_MODE = stringPreferencesKey("workout_detail_zone_display_mode")
         val WORKOUT_SECTIONS_ORDER = stringPreferencesKey("workout_sections_order")
 
         val EDIT_WORKOUT_SHOW_CLUSTER = booleanPreferencesKey("edit_workout_show_cluster")
@@ -151,15 +166,10 @@ class MyPreferenceManager(context: Context) {
                 val rawMode = preferences[WORKOUT_CARD_LAP_DISPLAY_MODE]
                 if (rawMode != null && rawMode != "BOTH") safeEnumValueOf(rawMode, LapDisplayMode.VISUALIZER_ONLY) else LapDisplayMode.VISUALIZER_ONLY
             },
-            zoneCardDisplayMode = run {
-                val rawMode = preferences[WORKOUT_CARD_ZONE_DISPLAY_MODE]
-                if (rawMode != null) {
-                    if (rawMode == "FIVE_ZONES") ZoneCardDisplayMode.COLUMNS
-                    else safeEnumValueOf(rawMode, ZoneCardDisplayMode.COLUMNS)
-                } else {
-                    ZoneCardDisplayMode.COLUMNS
-                }
-            }
+            zoneCardDisplayMode = parseZoneCardDisplayMode(
+                preferences[WORKOUT_CARD_ZONE_DISPLAY_MODE],
+                ZoneCardDisplayMode.STACKED_BAR
+            )
         )
     }
 
@@ -194,7 +204,11 @@ class MyPreferenceManager(context: Context) {
             showTelemetryCharts = preferences[WORKOUT_DETAIL_SHOW_CHARTS] ?: true,
             showZoneAnalysis = preferences[WORKOUT_DETAIL_SHOW_ZONES] ?: true,
             showExportStatus = preferences[WORKOUT_DETAIL_SHOW_EXPORT_STATUS]
-                ?: preferences[WORKOUT_CARD_SHOW_EXPORT_STATUS] ?: true
+                ?: preferences[WORKOUT_CARD_SHOW_EXPORT_STATUS] ?: true,
+            zoneCardDisplayMode = parseZoneCardDisplayMode(
+                preferences[WORKOUT_DETAIL_ZONE_DISPLAY_MODE],
+                ZoneCardDisplayMode.HISTOGRAM
+            )
         )
     }
 
@@ -209,6 +223,7 @@ class MyPreferenceManager(context: Context) {
             preferences[WORKOUT_DETAIL_SHOW_CHARTS] = prefs.showTelemetryCharts
             preferences[WORKOUT_DETAIL_SHOW_ZONES] = prefs.showZoneAnalysis
             preferences[WORKOUT_DETAIL_SHOW_EXPORT_STATUS] = prefs.showExportStatus
+            preferences[WORKOUT_DETAIL_ZONE_DISPLAY_MODE] = prefs.zoneCardDisplayMode.name
         }
     }
 

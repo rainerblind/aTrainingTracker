@@ -392,6 +392,7 @@ fun WorkoutSummary(
                                 distribution = distribution,
                                 displayMode = effectiveHrZoneDisplayMode,
                                 onDisplayModeChange = { hrZoneDisplayMode = it },
+                                showModeSelector = false,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -403,6 +404,7 @@ fun WorkoutSummary(
                                 distribution = distribution,
                                 displayMode = effectivePowerZoneDisplayMode,
                                 onDisplayModeChange = { powerZoneDisplayMode = it },
+                                showModeSelector = false,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
