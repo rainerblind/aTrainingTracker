@@ -1920,5 +1920,23 @@
     <string name="workout_decoupling_coupled">Stabilne (&lt;5%%)</string>
     <string name="workout_decoupling_drift">Wysoki dryf (≥5%%)</string>
 
+    <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
+    <string name="athlete_profile_pmc_title">Zarządzanie formą (CTL / ATL / TSB)</string>
+    <string name="athlete_profile_pmc_ctl_label">Kondycja (CTL)</string>
+    <string name="athlete_profile_pmc_atl_label">Zmęczenie (ATL)</string>
+    <string name="athlete_profile_pmc_tsb_label">Forma (TSB)</string>
+    <string name="athlete_profile_pmc_acwr_label">Wskaźnik obciążenia (ACWR)</string>
+    <string name="athlete_profile_pmc_ramp_label">Przyrost 7d</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/tydz.</string>
+    <string name="athlete_profile_pmc_ramp_warning">Szybki wzrost</string>
+    <string name="athlete_profile_pmc_zone_fresh">Gotowość startowa</string>
+    <string name="athlete_profile_pmc_zone_neutral">Neutralna</string>
+    <string name="athlete_profile_pmc_zone_optimal">Optymalny bodziec</string>
+    <string name="athlete_profile_pmc_zone_fatigue">Wysokie zmęczenie</string>
+    <string name="athlete_profile_pmc_acwr_under">Tapering</string>
+    <string name="athlete_profile_pmc_acwr_sweet_spot">Sweet Spot</string>
+    <string name="athlete_profile_pmc_acwr_caution">Duże obciążenie</string>
+    <string name="athlete_profile_pmc_acwr_danger">Strefa ryzyka</string>
+    <string name="athlete_profile_pmc_empty">Brak danych o obciążeniu treningowym.</string>
 </resources>
 

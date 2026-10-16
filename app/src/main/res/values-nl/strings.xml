@@ -1919,5 +1919,23 @@
     <string name="workout_decoupling_coupled">Gekoppeld (&lt;5%%)</string>
     <string name="workout_decoupling_drift">Hoge drift (≥5%%)</string>
 
+    <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
+    <string name="athlete_profile_pmc_title">Prestatiemanagement (CTL / ATL / TSB)</string>
+    <string name="athlete_profile_pmc_ctl_label">Conditie (CTL)</string>
+    <string name="athlete_profile_pmc_atl_label">Vermoeidheid (ATL)</string>
+    <string name="athlete_profile_pmc_tsb_label">Vorm (TSB)</string>
+    <string name="athlete_profile_pmc_acwr_label">Belastingsratio (ACWR)</string>
+    <string name="athlete_profile_pmc_ramp_label">7d opbouw</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/wk</string>
+    <string name="athlete_profile_pmc_ramp_warning">Snelle opbouw</string>
+    <string name="athlete_profile_pmc_zone_fresh">Wedstrijdklaar</string>
+    <string name="athlete_profile_pmc_zone_neutral">Neutraal</string>
+    <string name="athlete_profile_pmc_zone_optimal">Optimale prikkel</string>
+    <string name="athlete_profile_pmc_zone_fatigue">Hoge vermoeidheid</string>
+    <string name="athlete_profile_pmc_acwr_under">Tapering</string>
+    <string name="athlete_profile_pmc_acwr_sweet_spot">Sweet Spot</string>
+    <string name="athlete_profile_pmc_acwr_caution">Hoge belasting</string>
+    <string name="athlete_profile_pmc_acwr_danger">Gevarenzone</string>
+    <string name="athlete_profile_pmc_empty">Nog geen trainingsbelastingsgegevens beschikbaar.</string>
 </resources>
 

@@ -125,7 +125,24 @@ class AthleteProfileContractAndLocalizationTest {
             "workout_ef_only_pw_format",
             "workout_ef_only_pa_format",
             "workout_decoupling_coupled",
-            "workout_decoupling_drift"
+            "workout_decoupling_drift",
+            "athlete_profile_pmc_title",
+            "athlete_profile_pmc_ctl_label",
+            "athlete_profile_pmc_atl_label",
+            "athlete_profile_pmc_tsb_label",
+            "athlete_profile_pmc_acwr_label",
+            "athlete_profile_pmc_ramp_label",
+            "athlete_profile_pmc_ramp_format",
+            "athlete_profile_pmc_ramp_warning",
+            "athlete_profile_pmc_zone_fresh",
+            "athlete_profile_pmc_zone_neutral",
+            "athlete_profile_pmc_zone_optimal",
+            "athlete_profile_pmc_zone_fatigue",
+            "athlete_profile_pmc_acwr_under",
+            "athlete_profile_pmc_acwr_sweet_spot",
+            "athlete_profile_pmc_acwr_caution",
+            "athlete_profile_pmc_acwr_danger",
+            "athlete_profile_pmc_empty"
         )
 
         val root = resolveModuleRoot()
@@ -165,6 +182,13 @@ class AthleteProfileContractAndLocalizationTest {
                 assertTrue("$locale $efKey must contain %1\$.2f", efText.contains("%1\$.2f"))
                 assertTrue("$locale $efKey must contain %2\$.1f", efText.contains("%2\$.1f"))
             }
+
+            // Verify positional specifier in athlete_profile_pmc_ramp_format
+            val rampRegex = Regex("""<string name="athlete_profile_pmc_ramp_format">([^<]+)</string>""")
+            val rampMatch = rampRegex.find(content)
+            assertTrue("athlete_profile_pmc_ramp_format not matched in $locale", rampMatch != null)
+            val rampText = rampMatch!!.groupValues[1]
+            assertTrue("$locale athlete_profile_pmc_ramp_format must contain %1\$+.1f", rampText.contains("%1\$+.1f"))
         }
     }
 
@@ -219,6 +243,12 @@ class AthleteProfileContractAndLocalizationTest {
                 source.contains("ZoneType.HR_BIKE") &&
                 source.contains("ZoneType.PWR_BIKE")
         )
+        assertTrue(
+            "AthleteProfileScreen.kt must render PerformanceManagementChartCard and PerformanceManagementChartCanvas (REQ-UI-401.3)",
+            source.contains("fun PerformanceManagementChartCard(") &&
+                source.contains("fun PerformanceManagementChartCanvas(")
+        )
     }
 }
+
 

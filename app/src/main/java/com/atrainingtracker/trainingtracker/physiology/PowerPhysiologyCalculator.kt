@@ -94,8 +94,80 @@ data class PowerTrainingMetricsResult(
 )
 
 /**
+ * Semantic Training Stress Balance ($\text{TSB}$) readiness zone (`REQ-UI-401.1`, `ATT-3859`).
+ */
+enum class TsbReadinessZone {
+    /** $\text{TSB} \ge +5.0$ (including $+5$ to $+25$): Fresh / Peaked (*Race-Ready*). */
+    FRESH_RACE_READY,
+    /** $-10.0 \le \text{TSB} < +5.0$: Neutral / Grey Zone. */
+    NEUTRAL,
+    /** $-30.0 \le \text{TSB} < -10.0$: Optimal / Productive Training Overload. */
+    OPTIMAL_OVERLOAD,
+    /** $\text{TSB} < -30.0$: High Fatigue / Overreaching Risk. */
+    HIGH_FATIGUE_RISK
+}
+
+/**
+ * Semantic Acute:Chronic Workload Ratio ($\text{ACWR}$, Gabbett) zone (`REQ-UI-401.1`, `ATT-3859`).
+ */
+enum class AcwrZone {
+    /** $\text{ACWR} < 0.80$: Under-training / Tapering. */
+    UNDER_TRAINING,
+    /** $0.80 \le \text{ACWR} \le 1.30$: Optimal training "Sweet Spot". */
+    SWEET_SPOT,
+    /** $1.30 < \text{ACWR} \le 1.50$: High load / Caution. */
+    HIGH_LOAD_CAUTION,
+    /** $\text{ACWR} > 1.50$: Danger zone (elevated overreaching / injury risk). */
+    DANGER_ZONE
+}
+
+/**
+ * Lightweight workout training load summary used as input to the Performance Management Chart (`REQ-UI-401.1`, `REQ-UI-401.2`).
+ */
+data class WorkoutTrainingLoadSample(
+    val timestampMs: Long,
+    val activeTimeSeconds: Int = 0,
+    val powerTss: Double? = null,
+    val normalizedPowerWatts: Double? = null,
+    val avgPowerWatts: Double? = null,
+    val avgHrBpm: Double? = null
+)
+
+/**
+ * Single calendar-day state in the Performance Management Chart (`REQ-UI-401.1`).
+ */
+data class PmcDailyPoint(
+    val dayEpochIndex: Long,
+    val dayStartTimestampMs: Long,
+    val dailyTss: Double,
+    val ctl: Double,
+    val atl: Double,
+    val tsb: Double,
+    val acwr: Double?,
+    val rampRate7d: Double,
+    val tsbZone: TsbReadinessZone,
+    val acwrZone: AcwrZone?,
+    val isAggressiveRampUp: Boolean
+)
+
+/**
+ * Longitudinal Performance Management Chart (PMC) summary and daily time series (`REQ-UI-401.1`, `ATT-3859`).
+ */
+data class PmcSummaryResult(
+    val dailyPoints: List<PmcDailyPoint> = emptyList(),
+    val currentCtl: Double = 0.0,
+    val currentAtl: Double = 0.0,
+    val currentTsb: Double = 0.0,
+    val currentAcwr: Double? = null,
+    val currentRampRate7d: Double = 0.0,
+    val currentTsbZone: TsbReadinessZone = TsbReadinessZone.NEUTRAL,
+    val currentAcwrZone: AcwrZone? = null,
+    val isAggressiveRampUp: Boolean = false
+)
+
+/**
  * Canonical, stateless, pure-Kotlin domain calculator for cycling & running power/cardiovascular
- * physiology metrics (`REQ-UI-399`, `REQ-UI-400`, `REQ-MIG-039`, Rule 36 — Single Source of Truth & DRY).
+ * physiology metrics (`REQ-UI-399`, `REQ-UI-400`, `REQ-MIG-039`, `REQ-UI-401`, Rule 36 — Single Source of Truth & DRY).
  *
  * Threading: Pure mathematical functions with zero mutable state or Android framework dependencies;
  * safe to invoke from any thread or coroutine dispatcher.
@@ -116,6 +188,26 @@ object PowerPhysiologyCalculator {
 
     /** Rolling window size in seconds ($30\text{ s}$) for Dr. Andrew Coggan's Normalized Power (NP) algorithm. */
     const val NP_ROLLING_WINDOW_SECONDS: Int = 30
+
+    /** Chronic Training Load (Fitness) EWMA time constant $\tau_{\text{CTL}} = 42.0$ days (`REQ-UI-401.1`). */
+    const val CTL_TAU_DAYS: Double = 42.0
+
+    /** Acute Training Load (Fatigue) EWMA time constant $\tau_{\text{ATL}} = 7.0$ days (`REQ-UI-401.1`). */
+    const val ATL_TAU_DAYS: Double = 7.0
+
+    /** Weekly CTL ramp rate threshold ($+8.0\text{ CTL/week}$) above which aggressive build is flagged (`REQ-UI-401.1`). */
+    const val AGGRESSIVE_RAMP_RATE_THRESHOLD: Double = 8.0
+
+    /** Default Resting Heart Rate ($60\text{ bpm}$) used for $\text{hrTSS}$ fallback when unconfigured. */
+    const val DEFAULT_HR_REST_BPM: Double = 60.0
+
+    /** Default Maximum Heart Rate ($190\text{ bpm}$) used for $\text{hrTSS}$ fallback when unconfigured. */
+    const val DEFAULT_HR_MAX_BPM: Double = 190.0
+
+    /** Standard Heart Rate Reserve fraction at Lactate Threshold ($HR_{r,\text{thr}} = 0.85$). */
+    const val LTHR_HR_RESERVE_FRACTION: Double = 0.85
+
+    private const val MILLIS_PER_DAY: Long = 86_400_000L
 
     /**
      * Solves the two-point linear work-time model ($W = CP \cdot t + W'$) given two maximal
@@ -786,4 +878,215 @@ object PowerPhysiologyCalculator {
             npPowerToWeight = npWPerKg
         )
     }
+
+    /**
+     * Classifies a Training Stress Balance ($\text{TSB}$) value into its semantic readiness zone (`REQ-UI-401.1`).
+     */
+    @JvmStatic
+    fun classifyTsbZone(tsb: Double): TsbReadinessZone = when {
+        tsb >= 5.0 -> TsbReadinessZone.FRESH_RACE_READY
+        tsb >= -10.0 -> TsbReadinessZone.NEUTRAL
+        tsb >= -30.0 -> TsbReadinessZone.OPTIMAL_OVERLOAD
+        else -> TsbReadinessZone.HIGH_FATIGUE_RISK
+    }
+
+    /**
+     * Classifies an Acute:Chronic Workload Ratio ($\text{ACWR}$) value into its semantic workload zone (`REQ-UI-401.1`).
+     */
+    @JvmStatic
+    fun classifyAcwrZone(acwr: Double?): AcwrZone? {
+        if (acwr == null || !acwr.isFinite() || acwr < 0.0) return null
+        return when {
+            acwr < 0.80 -> AcwrZone.UNDER_TRAINING
+            acwr <= 1.30 -> AcwrZone.SWEET_SPOT
+            acwr <= 1.50 -> AcwrZone.HIGH_LOAD_CAUTION
+            else -> AcwrZone.DANGER_ZONE
+        }
+    }
+
+    /**
+     * Estimates Heart-Rate Training Stress Score ($\text{hrTSS}$) via Banister's $\text{TRIMP}$
+     * normalized to 1 hour at Lactate Threshold ($HR_{r,\text{thr}} = 0.85$) (`REQ-UI-401.1`).
+     *
+     * Formula:
+     * - $HR_r = \text{clamp}\left(\frac{HR_{\text{avg}} - HR_{\text{rest}}}{HR_{\text{max}} - HR_{\text{rest}}}, 0.0, 1.0\right)$
+     * - $\text{TRIMP}(t_{\text{min}}, HR_r) = t_{\text{min}} \cdot HR_r \cdot 0.64 \cdot e^{1.92 \cdot HR_r}$
+     * - $\text{hrTSS} = 100.0 \cdot \frac{(T_{\text{active}} / 60.0) \cdot HR_r \cdot e^{1.92 \cdot HR_r}}{60.0 \cdot 0.85 \cdot e^{1.92 \cdot 0.85}}$
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun calculateHrTss(
+        activeTimeSeconds: Double,
+        avgHrBpm: Double,
+        hrRestBpm: Double = DEFAULT_HR_REST_BPM,
+        hrMaxBpm: Double = DEFAULT_HR_MAX_BPM
+    ): Double? {
+        if (!activeTimeSeconds.isFinite() || activeTimeSeconds <= 0.0 ||
+            !avgHrBpm.isFinite() || avgHrBpm <= 0.0
+        ) {
+            return null
+        }
+        val safeHrRest = if (hrRestBpm.isFinite() && hrRestBpm > 20.0 && hrRestBpm < 130.0) hrRestBpm else DEFAULT_HR_REST_BPM
+        val safeHrMax = if (hrMaxBpm.isFinite() && hrMaxBpm > safeHrRest + 20.0) hrMaxBpm else max(DEFAULT_HR_MAX_BPM, safeHrRest + 60.0)
+        val hrSpan = safeHrMax - safeHrRest
+        if (hrSpan <= 0.0) return null
+
+        val hrr = ((avgHrBpm - safeHrRest) / hrSpan).coerceIn(0.0, 1.0)
+        if (hrr <= 0.0) return 0.0
+
+        val durationMinutes = activeTimeSeconds / 60.0
+        val trimpNumerator = durationMinutes * hrr * exp(1.92 * hrr)
+        val trimpThreshold1h = 60.0 * LTHR_HR_RESERVE_FRACTION * exp(1.92 * LTHR_HR_RESERVE_FRACTION)
+        return 100.0 * (trimpNumerator / trimpThreshold1h)
+    }
+
+    /**
+     * Resolves a workout's effective training stress score ($\text{TSS}$ or $\text{hrTSS}$) using the 3-tier hierarchy (`REQ-UI-401.1`):
+     * 1. Stored `powerTss` ($> 0.0$).
+     * 2. Power-derived $\text{TSS}$ from `normalizedPowerWatts` (or `avgPowerWatts`), `activeTimeSeconds`, and `ftpWatts`.
+     * 3. Multi-sport Heart-Rate fallback ($\text{hrTSS}$) from `avgHrBpm`, `activeTimeSeconds`, `hrRestBpm`, and `hrMaxBpm`.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun resolveWorkoutTrainingLoad(
+        sample: WorkoutTrainingLoadSample,
+        ftpWatts: Double? = null,
+        hrRestBpm: Double? = null,
+        hrMaxBpm: Double? = null
+    ): Double {
+        val directTss = sample.powerTss
+        if (directTss != null && directTss.isFinite() && directTss > 0.0) {
+            return directTss
+        }
+
+        val activeSec = sample.activeTimeSeconds.toDouble()
+        val effectiveFtp = ftpWatts?.takeIf { it.isFinite() && it > 0.0 }
+        val effectivePower = (sample.normalizedPowerWatts?.takeIf { it.isFinite() && it > 0.0 })
+            ?: (sample.avgPowerWatts?.takeIf { it.isFinite() && it > 0.0 })
+        if (activeSec > 0.0 && effectivePower != null && effectiveFtp != null) {
+            val ifVal = calculateIntensityFactor(effectivePower, effectiveFtp)
+            val derivedTss = if (ifVal != null) calculateTss(activeSec, effectivePower, ifVal, effectiveFtp) else null
+            if (derivedTss != null && derivedTss > 0.0) {
+                return derivedTss
+            }
+        }
+
+        val avgHr = sample.avgHrBpm
+        if (activeSec > 0.0 && avgHr != null && avgHr.isFinite() && avgHr > 0.0) {
+            val hrTss = calculateHrTss(
+                activeTimeSeconds = activeSec,
+                avgHrBpm = avgHr,
+                hrRestBpm = hrRestBpm ?: DEFAULT_HR_REST_BPM,
+                hrMaxBpm = hrMaxBpm ?: DEFAULT_HR_MAX_BPM
+            )
+            if (hrTss != null && hrTss > 0.0) {
+                return hrTss
+            }
+        }
+
+        return 0.0
+    }
+
+    /**
+     * Computes the longitudinal Performance Management Chart (PMC) series from workout samples (`REQ-UI-401.1`, `ATT-3859`).
+     *
+     * Aggregates daily training stress $TSS_t$ across calendar days ($t = \lfloor \text{timestampMs} / 86{,}400{,}000 \rfloor$,
+     * with $TSS_t = 0.0$ on rest days) through [nowMs] and evaluates:
+     * - $\text{CTL}_t = \text{CTL}_{t-1} + \frac{TSS_t - \text{CTL}_{t-1}}{42.0}$
+     * - $\text{ATL}_t = \text{ATL}_{t-1} + \frac{TSS_t - \text{ATL}_{t-1}}{7.0}$
+     * - $\text{TSB}_t = \text{CTL}_{t-1} - \text{ATL}_{t-1}$
+     * - $\text{ACWR}_t = \text{ATL}_t / \text{CTL}_t$ (when $\text{CTL}_t > 0$)
+     * - $\text{RampRate}_t = \text{CTL}_t - \text{CTL}_{t-7}$
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun computePerformanceManagementChart(
+        workoutSamples: List<WorkoutTrainingLoadSample>,
+        nowMs: Long = System.currentTimeMillis(),
+        ftpWatts: Double? = null,
+        hrRestBpm: Double? = null,
+        hrMaxBpm: Double? = null
+    ): PmcSummaryResult {
+        if (workoutSamples.isEmpty()) {
+            return PmcSummaryResult()
+        }
+
+        val dailyLoads = HashMap<Long, Double>()
+        var minDayIndex = Long.MAX_VALUE
+        var maxSampleDayIndex = Long.MIN_VALUE
+
+        for (sample in workoutSamples) {
+            if (sample.timestampMs <= 0L) continue
+            val load = resolveWorkoutTrainingLoad(
+                sample = sample,
+                ftpWatts = ftpWatts,
+                hrRestBpm = hrRestBpm,
+                hrMaxBpm = hrMaxBpm
+            )
+            if (load <= 0.0) continue
+            val dayIdx = sample.timestampMs / MILLIS_PER_DAY
+            dailyLoads[dayIdx] = (dailyLoads[dayIdx] ?: 0.0) + load
+            if (dayIdx < minDayIndex) minDayIndex = dayIdx
+            if (dayIdx > maxSampleDayIndex) maxSampleDayIndex = dayIdx
+        }
+
+        if (dailyLoads.isEmpty() || minDayIndex == Long.MAX_VALUE) {
+            return PmcSummaryResult()
+        }
+
+        val nowDayIndex = max(maxSampleDayIndex, nowMs / MILLIS_PER_DAY)
+        val totalDays = (nowDayIndex - minDayIndex + 1L).coerceAtMost(3650L).toInt()
+        val startDayIndex = nowDayIndex - totalDays + 1L
+
+        val points = ArrayList<PmcDailyPoint>(totalDays)
+        var prevCtl = 0.0
+        var prevAtl = 0.0
+
+        for (i in 0 until totalDays) {
+            val dayIdx = startDayIndex + i.toLong()
+            val tss = dailyLoads[dayIdx] ?: 0.0
+            val tsb = prevCtl - prevAtl
+            val ctl = prevCtl + (tss - prevCtl) / CTL_TAU_DAYS
+            val atl = prevAtl + (tss - prevAtl) / ATL_TAU_DAYS
+            val acwr = if (ctl > 0.01) atl / ctl else null
+            val ctl7DaysAgo = if (i >= 7) points[i - 7].ctl else 0.0
+            val rampRate7d = ctl - ctl7DaysAgo
+            val tsbZone = classifyTsbZone(tsb)
+            val acwrZone = classifyAcwrZone(acwr)
+            val aggressiveRamp = rampRate7d > AGGRESSIVE_RAMP_RATE_THRESHOLD
+
+            points.add(
+                PmcDailyPoint(
+                    dayEpochIndex = dayIdx,
+                    dayStartTimestampMs = dayIdx * MILLIS_PER_DAY,
+                    dailyTss = tss,
+                    ctl = ctl,
+                    atl = atl,
+                    tsb = tsb,
+                    acwr = acwr,
+                    rampRate7d = rampRate7d,
+                    tsbZone = tsbZone,
+                    acwrZone = acwrZone,
+                    isAggressiveRampUp = aggressiveRamp
+                )
+            )
+
+            prevCtl = ctl
+            prevAtl = atl
+        }
+
+        val latest = points.last()
+        return PmcSummaryResult(
+            dailyPoints = points,
+            currentCtl = latest.ctl,
+            currentAtl = latest.atl,
+            currentTsb = latest.tsb,
+            currentAcwr = latest.acwr,
+            currentRampRate7d = latest.rampRate7d,
+            currentTsbZone = latest.tsbZone,
+            currentAcwrZone = latest.acwrZone,
+            isAggressiveRampUp = latest.isAggressiveRampUp
+        )
+    }
 }
+

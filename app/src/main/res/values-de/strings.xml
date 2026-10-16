@@ -2005,4 +2005,22 @@
     <string name="workout_decoupling_coupled">Stabil (&lt;5%%)</string>
     <string name="workout_decoupling_drift">Hohe Drift (≥5%%)</string>
 
+    <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
+    <string name="athlete_profile_pmc_title">Leistungsmanagement (CTL / ATL / TSB)</string>
+    <string name="athlete_profile_pmc_ctl_label">Fitness (CTL)</string>
+    <string name="athlete_profile_pmc_atl_label">Ermüdung (ATL)</string>
+    <string name="athlete_profile_pmc_tsb_label">Form (TSB)</string>
+    <string name="athlete_profile_pmc_acwr_label">Belastungsquote (ACWR)</string>
+    <string name="athlete_profile_pmc_ramp_label">7T-Steigerung</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/Wo.</string>
+    <string name="athlete_profile_pmc_ramp_warning">Hoher Anstieg</string>
+    <string name="athlete_profile_pmc_zone_fresh">Wettkampfbereit</string>
+    <string name="athlete_profile_pmc_zone_neutral">Neutral</string>
+    <string name="athlete_profile_pmc_zone_optimal">Optimaler Aufbau</string>
+    <string name="athlete_profile_pmc_zone_fatigue">Hohe Ermüdung</string>
+    <string name="athlete_profile_pmc_acwr_under">Tapering</string>
+    <string name="athlete_profile_pmc_acwr_sweet_spot">Sweet Spot</string>
+    <string name="athlete_profile_pmc_acwr_caution">Hohe Last</string>
+    <string name="athlete_profile_pmc_acwr_danger">Risikobereich</string>
+    <string name="athlete_profile_pmc_empty">Noch keine Trainingsbelastungsdaten vorhanden.</string>
 </resources>
