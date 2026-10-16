@@ -59,10 +59,6 @@ class FollowMeUnifiedAnchorContractTest {
             content.contains("contentPadding = PaddingValues(top = topPadding)")
         )
         assertTrue(
-            "ATrainingTrackerMap must pass lookaheadPaddingPercent to followMeController",
-            content.contains("lookaheadPaddingPercent = tuningConfig.mapFollowMeLookaheadPaddingPercent")
-        )
-        assertTrue(
             "ATrainingTrackerMap must pass viewportHeightDp = maxHeight.value to followMeController",
             content.contains("viewportHeightDp = maxHeight.value")
         )

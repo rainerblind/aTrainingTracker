@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
 import android.content.Context
 import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -118,7 +119,7 @@ object TuningSubtitleFormatter {
             TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
         }
         val dismissStr = "${effectiveDismiss}s"
-        val radiusStr = String.format(Locale.getDefault(), "%.1f km", radiusKm)
+        val radiusStr = DistanceFormatter().format_with_units((radiusKm * 1000f).toDouble())
         return "$dismissStr, $radiusStr"
     }
 

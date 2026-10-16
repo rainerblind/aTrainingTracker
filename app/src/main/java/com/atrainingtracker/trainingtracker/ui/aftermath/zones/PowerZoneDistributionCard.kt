@@ -43,7 +43,8 @@ fun PowerZoneDistributionCard(
     onDisplayModeChange: ((ZoneCardDisplayMode) -> Unit)? = null
 ) {
     var internalDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
-    val effectiveDisplayMode = displayMode ?: internalDisplayMode
+    val effectiveDisplayMode = (displayMode ?: internalDisplayMode)
+        .resolveWithHistogramFallback(distribution.histogram != null)
     val setDisplayMode: (ZoneCardDisplayMode) -> Unit = { newMode ->
         if (onDisplayModeChange != null) {
             onDisplayModeChange(newMode)

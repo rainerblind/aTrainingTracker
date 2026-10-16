@@ -14,6 +14,8 @@ import android.media.AudioManager
 import android.media.ToneGenerator
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 
 /**
@@ -34,14 +36,42 @@ data class AutoPauseConfig(
     val bikeEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED,
     val runEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED,
     val otherEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED,
-    val speedThresholdKmh: Float = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
-    val debounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_DEBOUNCE_SEC
+    val bikeSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC,
+    val bikeDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+    val runSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC,
+    val runDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+    val otherSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC,
+    val otherDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
+    val isMetric: Boolean = true,
+    // Deprecated backward-compatibility bridges
+    @Deprecated(message = "Use sport-specific speed thresholds", replaceWith = ReplaceWith("bikeSpeedThreshold"))
+    val speedThresholdKmh: Float? = null,
+    @Deprecated(message = "Use sport-specific debounces", replaceWith = ReplaceWith("bikeDebounceSec"))
+    val debounceSec: Int? = null
 ) {
     fun isEnabledForSport(sportType: BSportType): Boolean {
         return when (sportType) {
             BSportType.BIKE -> bikeEnabled
             BSportType.RUN -> runEnabled
             else -> otherEnabled
+        }
+    }
+
+    fun getSpeedThresholdForSport(sportType: BSportType): Double {
+        if (speedThresholdKmh != null) return speedThresholdKmh.toDouble()
+        return when (sportType) {
+            BSportType.BIKE -> bikeSpeedThreshold.toDouble()
+            BSportType.RUN -> runSpeedThreshold.toDouble()
+            else -> otherSpeedThreshold.toDouble()
+        }
+    }
+
+    fun getDebounceSecForSport(sportType: BSportType): Int {
+        if (debounceSec != null) return debounceSec
+        return when (sportType) {
+            BSportType.BIKE -> bikeDebounceSec
+            BSportType.RUN -> runDebounceSec
+            else -> otherDebounceSec
         }
     }
 }
@@ -106,13 +136,26 @@ class AutoPauseManager(
 ) {
     companion object {
         const val STALE_PACKET_TIMEOUT_MS = 5000L
+        const val HYSTERESIS_OFFSET_USER_UNIT = 0.5
         const val HYSTERESIS_OFFSET_KMH = 0.5f
         const val RESUME_HARD_CEILING_KMH = 6.0f
+        const val RESUME_HARD_CEILING_MPH = 6.0f
         const val SENSOR_LOST_RECOVERY_TICKS = 2
 
         @JvmStatic
         fun calculateResumeSpeedThresholdKmh(pauseThresholdKmh: Float): Float {
             return (pauseThresholdKmh + HYSTERESIS_OFFSET_KMH).coerceAtMost(RESUME_HARD_CEILING_KMH)
+        }
+
+        /**
+         * Calculates the resume speed threshold in active user units with anti-chatter hysteresis deadband (+0.5).
+         * Parameterized physical ceiling (6.0 km/h Metric, 6.0 mph Imperial) prevents boundary inversion
+         * where resume speed could otherwise fall below pause speed under Imperial units.
+         */
+        @JvmStatic
+        fun calculateResumeSpeedThresholdUserUnit(pauseThreshold: Double, isMetric: Boolean): Double {
+            val ceiling = if (isMetric) RESUME_HARD_CEILING_KMH.toDouble() else RESUME_HARD_CEILING_MPH.toDouble()
+            return (pauseThreshold + HYSTERESIS_OFFSET_USER_UNIT).coerceAtMost(ceiling)
         }
 
         @JvmStatic
@@ -253,16 +296,18 @@ class AutoPauseManager(
             return AutoPauseTransition(previousState = prevState, newState = AutoPauseState.SENSOR_LOST)
         }
 
-        val pauseThresholdKmh = config.speedThresholdKmh
-        val resumeThresholdKmh = calculateResumeSpeedThresholdKmh(pauseThresholdKmh)
-        val pauseThresholdMps = pauseThresholdKmh / 3.6
-        val resumeThresholdMps = resumeThresholdKmh / 3.6
+        val sportThreshold = config.getSpeedThresholdForSport(sportType)
+        val sportDebounceSec = config.getDebounceSecForSport(sportType)
+        val unit = if (config.isMetric) MyUnits.METRIC else MyUnits.IMPERIAL
+        val pauseThresholdMps = MyHelper.UserUnit2mps(sportThreshold, unit)
+        val resumeThresholdUserUnit = calculateResumeSpeedThresholdUserUnit(sportThreshold, config.isMetric)
+        val resumeThresholdMps = MyHelper.UserUnit2mps(resumeThresholdUserUnit, unit)
 
         return when (currentState) {
             AutoPauseState.TRACKING -> {
                 if (speedMps < pauseThresholdMps) {
                     debounceCounter = 1
-                    if (debounceCounter >= config.debounceSec) {
+                    if (debounceCounter >= sportDebounceSec) {
                         currentState = AutoPauseState.AUTO_PAUSED
                         debounceCounter = 0
                         audioNotifier.playTone(SoundCue.AUTO_PAUSE)
@@ -289,7 +334,7 @@ class AutoPauseManager(
             AutoPauseState.PAUSE_DEBOUNCE_PENDING -> {
                 if (speedMps < pauseThresholdMps) {
                     debounceCounter++
-                    if (debounceCounter >= config.debounceSec) {
+                    if (debounceCounter >= sportDebounceSec) {
                         currentState = AutoPauseState.AUTO_PAUSED
                         debounceCounter = 0
                         audioNotifier.playTone(SoundCue.AUTO_PAUSE)

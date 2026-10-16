@@ -300,21 +300,21 @@ class AdvancedTuningAccordionTest {
                 dismissSec = 4,
                 context = mockContext
             )
-            assertEquals("4s, 1.0 km", subtitle1)
+            assertEquals("4s, 1.00 km", subtitle1)
 
             val subtitle2 = TuningSubtitleFormatter.formatNavigationSubtitle(
                 radiusKm = 2.5f,
                 dismissSec = 10,
                 context = mockContext
             )
-            assertEquals("10s, 2.5 km", subtitle2)
+            assertEquals("10s, 2.50 km", subtitle2)
 
             val subtitle3 = TuningSubtitleFormatter.formatNavigationSubtitle(
                 radiusKm = 2.5f,
                 dismissSec = 0,
                 context = mockContext
             )
-            assertEquals("4s, 2.5 km", subtitle3)
+            assertEquals("4s, 2.50 km", subtitle3)
         } finally {
             Locale.setDefault(defaultLocale)
         }

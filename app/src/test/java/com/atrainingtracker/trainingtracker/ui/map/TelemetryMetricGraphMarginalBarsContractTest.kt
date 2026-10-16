@@ -113,13 +113,17 @@ class TelemetryMetricGraphMarginalBarsContractTest {
         val content = file.readText()
 
         assertTrue("TrackOnMapScreen must hoist hrZoneDisplayMode",
-            content.contains("var hrZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }"))
+            content.contains("var hrZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }") ||
+            content.contains("var hrZoneDisplayMode by rememberSaveable { mutableStateOf<ZoneCardDisplayMode?>(null) }"))
         assertTrue("TrackOnMapScreen must hoist powerZoneDisplayMode",
-            content.contains("var powerZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }"))
+            content.contains("var powerZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }") ||
+            content.contains("var powerZoneDisplayMode by rememberSaveable { mutableStateOf<ZoneCardDisplayMode?>(null) }"))
         assertTrue("TrackOnMapScreen must pass hrZoneDisplayMode to MapDetailLayout",
-            content.contains("hrZoneDisplayMode = hrZoneDisplayMode"))
+            content.contains("hrZoneDisplayMode = hrZoneDisplayMode") ||
+            content.contains("hrZoneDisplayMode = effectiveHrZoneDisplayMode"))
         assertTrue("TrackOnMapScreen must pass powerZoneDisplayMode to MapDetailLayout",
-            content.contains("powerZoneDisplayMode = powerZoneDisplayMode"))
+            content.contains("powerZoneDisplayMode = powerZoneDisplayMode") ||
+            content.contains("powerZoneDisplayMode = effectivePowerZoneDisplayMode"))
     }
 
     @Test

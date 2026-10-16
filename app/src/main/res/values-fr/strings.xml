@@ -887,7 +887,9 @@
     <string name="segment_status_finished">Terminé</string>
     <string name="segment_status_start_in">Départ dans : %1$s</string>
     <string name="segment_status_remaining">Reste : %1$s</string>
-    <string name="segment_status_offset">Écart : %1$s</string>
+    <string name="segment_status_offset">Écart latéral : %1$s</string>
+    <string name="segment_status_past_finish">Après l\'arrivée : %1$s</string>
+    <string name="segment_status_pr_delta">%1$s vs PR</string>
 
     <!-- ANT(+) Plugins -->
     <string name="ant_general_explanation">Avec le bon matériel/logiciel, vous pouvez coupler vos appareils ANT+.</string>
@@ -1517,6 +1519,9 @@
     <string name="settings_lap_display_mode_visualizer">Visualiseur</string>
     <string name="settings_lap_display_mode_both">Les deux</string>
 
+    <!-- Configurable Default Zone Card Display Mode (ATT-3676 / REQ-UI-372.8) -->
+    <string name="settings_zone_card_display_mode_title">Mode d\'affichage des cartes de zones</string>
+
     <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
     <string name="workout_source_tracked">Enregistré</string>
     <string name="workout_source_tcx">TCX</string>
@@ -1759,22 +1764,7 @@
     <string name="ant_dialog_view_status">Afficher l\'état ANT+</string>
     <string name="ant_dialog_dismiss">Compris</string>
 
-    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
-    <string name="tuning_map_camera_section_title">Caméra de carte et navigation suivi</string>
-    <string name="tuning_map_base_zoom_title">Zoom de base suivi</string>
-    <string name="tuning_map_base_zoom_desc">Niveau de zoom de base à l\'arrêt (0 km/h) en mode suivi (valeur plus élevée = zoom plus rapproché)</string>
-    <string name="tuning_map_speed_zoom_enabled_title">Zoom dépendant de la vitesse</string>
-    <string name="tuning_map_speed_zoom_enabled_desc">Effectue un zoom arrière progressif avec la vitesse pour élargir la visibilité vers l\'avant</string>
-    <string name="tuning_map_cruising_zoom_title">Zoom à vitesse de croisière (à 20 km/h)</string>
-    <string name="tuning_map_cruising_zoom_desc">Niveau de zoom de la caméra mis à l\'échelle à vitesse cycliste typique (20 km/h) (valeur plus élevée = zoom plus rapproché)</string>
-    <string name="tuning_map_tilt_angle_title">Angle d\'inclinaison de la caméra</string>
-    <string name="tuning_map_tilt_angle_desc">Angle d\'inclinaison de perspective pour navigation 3D (0° est 2D plat, 70° est perspective 3D complète)</string>
-    <string name="tuning_map_lookahead_padding_title">Marge pour visibilité vers l\'avant</string>
-    <string name="tuning_map_lookahead_padding_desc">Pourcentage de marge pour positionner le cycliste en bas et maximiser la route visible devant (valeur plus élevée = cycliste plus bas / plus de visibilité vers l\'avant)</string>
-    <string name="tuning_map_follow_me_speed_smoothing_title">Lissage du zoom de vitesse</string>
-    <string name="tuning_map_follow_me_speed_smoothing_desc">Facteur d\'amortissement des variations de vitesse pour le zoom Suivez-moi (valeur plus basse = plus fluide, plus haute = réponse plus rapide)</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_title">Lissage de l\'orientation</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_desc">Facteur d\'amortissement de la rotation de caméra en mode Suivez-moi (valeur plus basse = plus fluide, plus haute = réponse plus rapide)</string>
+
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NOUVEAU</string>
@@ -1849,6 +1839,8 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Vitesse en dessous de laquelle l\'enregistrement est mis en pause</string>
     <string name="tuning_auto_pause_debounce_title">Délai avant pause</string>
     <string name="tuning_auto_pause_debounce_desc">Durée sous le seuil avant de mettre en pause</string>
+    <string name="tuning_speed_value_format">%1$d %2$s</string>
+    <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Pause automatique</string>
     <string name="cockpit_auto_pause_resume">Reprendre maintenant</string>
     <string name="cockpit_speed_sensor_lost">Capteur de vitesse perdu</string>

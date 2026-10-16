@@ -36,18 +36,16 @@ import java.lang.reflect.Modifier
 
 /**
  * Unit tests verifying permission-gated Foreground Service types derivation in TrackerService
- * (REQ-TRK-015, TST-TRK-007, ATT-2972).
+ * (REQ-TRK-015, REQ-TRK-022, TST-TRK-007, TST-TRK-014, ATT-2972, ATT-3567).
  */
 class TrackerServiceFGSTypeTest {
 
     private class TestableTrackerService : TrackerService() {
-        var bluetoothGranted = false
         var healthGranted = false
         var fgLocationGranted = true
         var testSdkInt = Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
         override fun getBuildVersionSdkInt(): Int = testSdkInt
-        override fun hasBluetoothPermission(): Boolean = bluetoothGranted
         override fun hasHealthPermission(): Boolean = healthGranted
         override fun hasLocationPermission(): Boolean = fgLocationGranted
 
@@ -74,8 +72,7 @@ class TrackerServiceFGSTypeTest {
     }
 
     @Test
-    fun testDetermineForegroundServiceType_WithoutBluetoothAndHealth_ReturnsLocationOnly() {
-        service.bluetoothGranted = false
+    fun testDetermineForegroundServiceType_WithoutHealth_ReturnsLocationOnly() {
         service.healthGranted = false
 
         val fgsType = service.determineForegroundServiceType()
@@ -87,32 +84,38 @@ class TrackerServiceFGSTypeTest {
     }
 
     @Test
-    fun testDetermineForegroundServiceType_WithBluetoothOnly_ReturnsLocationAndConnectedDevice() {
-        service.bluetoothGranted = true
-        service.healthGranted = false
-
-        val fgsType = service.determineForegroundServiceType()
-
-        val expected = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-        assertEquals(expected, fgsType)
-        assertTrue(fgsType and ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION != 0)
-        assertTrue(fgsType and ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE != 0)
-        assertFalse(fgsType and ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH != 0)
-    }
-
-    @Test
-    fun testDetermineForegroundServiceType_WithBluetoothAndHealth_ReturnsAllThreeTypes() {
-        service.bluetoothGranted = true
+    fun testDetermineForegroundServiceType_WithHealth_ReturnsLocationAndHealth() {
         service.healthGranted = true
 
         val fgsType = service.determineForegroundServiceType()
 
-        val expected = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+        val expected = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
         assertEquals(expected, fgsType)
         assertTrue(fgsType and ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION != 0)
-        assertTrue(fgsType and ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE != 0)
         assertTrue(fgsType and ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH != 0)
+        assertFalse(fgsType and ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE != 0)
+    }
+
+    @Test
+    fun testDetermineForegroundServiceType_NeverIncludesConnectedDevice() {
+        service.healthGranted = false
+        var fgsType = service.determineForegroundServiceType()
+        assertEquals(0, fgsType and ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+
+        service.healthGranted = true
+        fgsType = service.determineForegroundServiceType()
+        assertEquals(0, fgsType and ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+    }
+
+    @Test
+    fun testDetermineForegroundServiceType_PreApi34_ReturnsLocationOnlyRegardlessOfHealth() {
+        service.testSdkInt = Build.VERSION_CODES.TIRAMISU
+        service.healthGranted = true
+
+        val fgsType = service.determineForegroundServiceType()
+
+        assertEquals(ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION, fgsType)
+        assertFalse(fgsType and ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH != 0)
+        assertFalse(fgsType and ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE != 0)
     }
 }

@@ -183,6 +183,35 @@ public class TrackerService extends Service {
         return mAutoPauseManager;
     }
 
+    private static volatile TrackerService sInstance = null;
+
+    public static void invalidateAutoPauseCache() {
+        TrackerService service = sInstance;
+        if (service != null) {
+            service.invalidateAutoPauseConfigCache();
+        }
+    }
+
+    private volatile AutoPauseConfig mCachedAutoPauseConfig = null;
+    private long mLastAutoPauseConfigFetchMs = 0L;
+    private static final long AUTO_PAUSE_CONFIG_CACHE_TTL_MS = 5000L;
+
+    public AutoPauseConfig getAutoPauseConfig() {
+        long now = System.currentTimeMillis();
+        boolean currentIsMetric = (TrainingApplication.getUnit() == com.atrainingtracker.trainingtracker.MyUnits.METRIC);
+        if (mCachedAutoPauseConfig == null 
+                || (now - mLastAutoPauseConfigFetchMs) > AUTO_PAUSE_CONFIG_CACHE_TTL_MS
+                || mCachedAutoPauseConfig.isMetric() != currentIsMetric) {
+            mCachedAutoPauseConfig = SettingsDataStoreJavaHelper.getAutoPauseConfig(this);
+            mLastAutoPauseConfigFetchMs = now;
+        }
+        return mCachedAutoPauseConfig;
+    }
+
+    public void invalidateAutoPauseConfigCache() {
+        mCachedAutoPauseConfig = null;
+    }
+
     private int mExtremaDbUpdateCounter = 0;
     private static final int EXTREMA_DB_UPDATE_INTERVAL = 10; // Update Avg in DB every 10 seconds
     // int            mCalories        = 0;
@@ -371,6 +400,7 @@ public class TrackerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        sInstance = this;
         if (DEBUG) {
             Log.d(TAG, "onCreate");
         }
@@ -439,17 +469,6 @@ public class TrackerService extends Service {
     }
 
     /**
-     * Verifies whether the application has been granted Bluetooth permissions required
-     * for peripheral sensor connections and scanning.
-     */
-    protected boolean hasBluetoothPermission() {
-        if (getBuildVersionSdkInt() >= Build.VERSION_CODES.S) {
-            return ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED;
-        }
-        return ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH) == android.content.pm.PackageManager.PERMISSION_GRANTED;
-    }
-
-    /**
      * Verifies whether the application has been granted permissions required for the
      * Android 14+ (API 34+) Health Foreground Service type.
      * Enforces the Android contract requiring both FOREGROUND_SERVICE_HEALTH and a health
@@ -467,14 +486,11 @@ public class TrackerService extends Service {
     /**
      * Dynamically derives the permitted Foreground Service type bitmask based on held runtime permissions.
      * Strictly omits FOREGROUND_SERVICE_TYPE_HEALTH unless health runtime permissions are granted,
-     * preventing fatal SecurityExceptions on Android 14+ (REQ-TRK-015, ATT-2972).
+     * preventing fatal SecurityExceptions on Android 14+ (REQ-TRK-015, REQ-TRK-022, ATT-2972, ATT-3567).
      */
     protected int determineForegroundServiceType() {
         int foregroundServiceType = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
         if (getBuildVersionSdkInt() >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            if (hasBluetoothPermission()) {
-                foregroundServiceType |= ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
-            }
             if (hasHealthPermission()) {
                 foregroundServiceType |= ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH;
             }
@@ -708,6 +724,9 @@ public class TrackerService extends Service {
     @Override
     public void onDestroy() {
         performSuperOnDestroy();
+        if (sInstance == this) {
+            sInstance = null;
+        }
         if (DEBUG) Log.d(TAG, "onDestroy");
 
         // first of all, stop the trackerHandle
@@ -1428,14 +1447,7 @@ public class TrackerService extends Service {
             sportType = BSportType.UNKNOWN;
         }
 
-        TuningConfig tuningConfig = SettingsDataStoreJavaHelper.getTuningConfig(this);
-        AutoPauseConfig config = new AutoPauseConfig(
-                tuningConfig.getAutoPauseBikeEnabled(),
-                tuningConfig.getAutoPauseRunEnabled(),
-                tuningConfig.getAutoPauseOtherEnabled(),
-                tuningConfig.getAutoPauseSpeedThresholdKmh(),
-                tuningConfig.getAutoPauseDebounceSec()
-        );
+        AutoPauseConfig config = getAutoPauseConfig();
         boolean manualPauseLocked = TrainingApplication.isManualPauseLocked();
 
         return mAutoPauseManager.evaluateTick(

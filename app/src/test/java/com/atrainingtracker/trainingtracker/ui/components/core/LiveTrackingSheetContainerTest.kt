@@ -44,6 +44,10 @@ class LiveTrackingSheetContainerTest {
         File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/core/LiveTrackingSheetContainer.kt")
     }
 
+    private val entitySheetFile: File by lazy {
+        File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/core/LiveTrackingEntitySheet.kt")
+    }
+
     @Test
     fun testLiveTrackingSheetContainer_composableExistsAndIsPublic() {
         val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingSheetContainerKt")
@@ -76,6 +80,45 @@ class LiveTrackingSheetContainerTest {
             "LiveTrackingSheetContainer must conditionally wire clickable to onExpand when isPartiallyExpanded",
             content.contains("if (isPartiallyExpanded)") &&
             content.contains("Modifier.clickable(onClick = onExpand)")
+        )
+    }
+
+    @Test
+    fun testLiveTrackingEntitySheet_composableExistsAndIsPublic() {
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingEntitySheetKt")
+        assertNotNull("LiveTrackingEntitySheetKt class must exist", clazz)
+
+        val methods = clazz.declaredMethods
+        val entityMethod = methods.find { it.name.startsWith("LiveTrackingEntitySheet") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("LiveTrackingEntitySheet composable function must exist and be public", entityMethod)
+        assertTrue(Modifier.isPublic(entityMethod!!.modifiers))
+    }
+
+    @Test
+    fun testLiveTrackingEntitySheet_sourceStructureAndTokens() {
+        assertTrue("LiveTrackingEntitySheet.kt must exist", entitySheetFile.exists())
+        val content = entitySheetFile.readText()
+
+        assertTrue(
+            "LiveTrackingEntitySheet must apply fillMaxWidth() and wrapContentHeight() (REQ-UI-270, REQ-UI-383)",
+            content.contains(".fillMaxWidth()") && content.contains(".wrapContentHeight()")
+        )
+        assertTrue(
+            "LiveTrackingEntitySheet must apply MaterialTheme surface background (REQ-UI-196, REQ-UI-383)",
+            content.contains(".background(MaterialTheme.colorScheme.surface)")
+        )
+        assertTrue(
+            "LiveTrackingEntitySheet must render canonical 0.5.dp divider with 16.dp horizontal padding (REQ-UI-383)",
+            content.contains("HorizontalDivider(") &&
+            content.contains(".padding(horizontal = 16.dp)") &&
+            content.contains("thickness = 0.5.dp") &&
+            content.contains("color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)")
+        )
+        assertTrue(
+            "LiveTrackingEntitySheet must forward canonical slot paddings to header and HUD (REQ-UI-383)",
+            content.contains("headerContent(Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 4.dp))") &&
+            content.contains("telemetryHudContent(Modifier.padding(horizontal = 16.dp, vertical = 4.dp))") &&
+            content.contains("elevationContent()")
         )
     }
 

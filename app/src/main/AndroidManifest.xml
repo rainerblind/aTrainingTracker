@@ -40,7 +40,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" android:minSdkVersion="29"/> Not necessary since we track within a background service, which is visible by a notification-->
     <uses-feature
@@ -72,7 +71,6 @@
         android:enableOnBackInvokedCallback="true"
         android:resizeableActivity="true"
         tools:targetApi="tiramisu">
-        <uses-library android:name="org.apache.http.legacy" android:required="false" />
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
             android:value="${MAPS_API_KEY}" />  <!-- stored under secrets.properties -->
@@ -161,11 +159,6 @@
         </activity>
 
         <activity
-            android:name=".trainingtracker.onlinecommunities.runkeeper.RunkeeperGetAccessTokenActivity"
-            android:label="@string/RunkeeperGetAccessTokenActivityLabel"
-            android:theme="@style/Theme.aTrainingTracker" />
-
-        <activity
             android:name=".trainingtracker.onlinecommunities.strava.StravaOAuthCallbackActivity"
             android:launchMode="singleTop"
             android:exported="true">
@@ -179,20 +172,15 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".trainingtracker.onlinecommunities.trainingpeaks.TrainingpeaksGetAccessTokenActivity"
-            android:label="@string/TrainingPeaksGetAccessTokenActivityLabel"
-            android:theme="@style/Theme.aTrainingTracker" />
-
         <!-- <uses-library android:name="com.dsi.ant.antradio_library" /> -->
         <service
             android:name=".trainingtracker.tracker.TrackerService"
-            android:foregroundServiceType="location|health|connectedDevice" />
+            android:foregroundServiceType="location|health" />
         <service android:name=".trainingtracker.smartwatch.pebble.PebbleService" />
         <service android:name=".trainingtracker.smartwatch.pebble.PebbleServiceBuildIn" />
         <service
             android:name=".banalservice.BANALService"
-            android:foregroundServiceType="location|health|connectedDevice" />
+            android:foregroundServiceType="location|health" />
         <service android:name=".trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService" />
 
         <!-- TODO: still necessary? -->

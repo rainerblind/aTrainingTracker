@@ -41,28 +41,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class WorkoutBatchKey(
-    val id: Long,
-    val fileName: String?,
-    val clusterId: Long
-) {
-    companion object {
-        fun fromCursor(cursor: Cursor): WorkoutBatchKey {
-            val id = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID))
-            val fileIdx = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
-            val fileName = if (!cursor.isNull(fileIdx)) cursor.getString(fileIdx) else null
-            val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID))
-            return WorkoutBatchKey(id, fileName, clusterId)
-        }
-    }
-}
-
-data class WorkoutBatchKeys(
-    val idList: List<Long>,
-    val fileNameList: List<String>,
-    val clusterIdList: Set<Long>
-)
-
 class WorkoutClusterRepository internal constructor(
     private val context: Context,
     private val repositoryScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -117,31 +95,11 @@ class WorkoutClusterRepository internal constructor(
 
         /**
          * Authoritative batch key extraction mapping open cursor to [WorkoutBatchKeys].
-         * Pre-resolves column indices once before iteration (REQ-DAT-025, TST-DAT-020).
-         * Leaves cursor closure to the caller's `.use { ... }` block.
+         * Delegates to [WorkoutClusterDatabaseManager.fromCursorBatchKeys].
          */
         @JvmStatic
-        fun fromCursorBatchKeys(cursor: Cursor): WorkoutBatchKeys {
-            val idList = mutableListOf<Long>()
-            val fileNameList = mutableListOf<String>()
-            val clusterIdList = mutableSetOf<Long>()
-
-            val idIdx = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)
-            val fileIdx = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
-            val clusterIdx = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID)
-
-            while (cursor.moveToNext()) {
-                idList.add(cursor.getLong(idIdx))
-                if (!cursor.isNull(fileIdx)) {
-                    cursor.getString(fileIdx)?.let { fileNameList.add(it) }
-                }
-                val clusterId = cursor.getLong(clusterIdx)
-                if (clusterId != -1L) {
-                    clusterIdList.add(clusterId)
-                }
-            }
-            return WorkoutBatchKeys(idList, fileNameList, clusterIdList)
-        }
+        fun fromCursorBatchKeys(cursor: Cursor): WorkoutBatchKeys =
+            WorkoutClusterDatabaseManager.fromCursorBatchKeys(cursor)
     }
 
     suspend fun refreshClusters(forceShowProgress: Boolean = false, forceCheckIntegrity: Boolean = false): Unit = withContext(Dispatchers.IO) {

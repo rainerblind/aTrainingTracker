@@ -75,7 +75,11 @@ class DeviceManagerLocationInitTest {
         @JvmStatic
         @AfterClass
         fun tearDownClass() {
-            unmockkAll()
+            try {
+                unmockkAll()
+            } catch (e: Exception) {
+                // Defensive handling against MockK cancelAll ConcurrentModificationException during suite-wide test teardown
+            }
         }
     }
 

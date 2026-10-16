@@ -768,9 +768,9 @@ fun ClusterNamingDialog(
                     DarkMapStyle.resolveMapProperties(isDark, localContext)
                 }
                 
-                Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp)).background(if (isDark) Color(0xFF121212) else Color.White)) {
+                Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp)).background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {
                     GoogleMap(
-                        modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
+                        modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White),
                         cameraPositionState = cameraPositionState,
                         properties = mapProperties,
                         onMapLoaded = { isMapLoaded = true },

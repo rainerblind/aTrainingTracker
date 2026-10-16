@@ -54,7 +54,8 @@ class Advertisement(dbus.service.Object):
         self.local_name = 'ATT Power Sim'
         self.include_tx_power = False
         self.data = None
-        dbus.service.Object.__init__(self, bus, self.path)
+        if bus is not None:
+            dbus.service.Object.__init__(self, bus, self.path)
 
     def get_properties(self):
         properties = dict()
@@ -108,7 +109,8 @@ class Application(dbus.service.Object):
     def __init__(self, bus):
         self.path = '/'
         self.services = []
-        dbus.service.Object.__init__(self, bus, self.path)
+        if bus is not None:
+            dbus.service.Object.__init__(self, bus, self.path)
 
     def get_path(self):
         return dbus.ObjectPath(self.path)
@@ -139,7 +141,8 @@ class Service(dbus.service.Object):
         self.uuid = uuid
         self.primary = primary
         self.characteristics = []
-        dbus.service.Object.__init__(self, bus, self.path)
+        if bus is not None:
+            dbus.service.Object.__init__(self, bus, self.path)
 
     def get_properties(self):
         return {
@@ -177,7 +180,8 @@ class Characteristic(dbus.service.Object):
         self.service = service
         self.flags = flags
         self.descriptors = []
-        dbus.service.Object.__init__(self, bus, self.path)
+        if bus is not None:
+            dbus.service.Object.__init__(self, bus, self.path)
 
     def get_properties(self):
         return {
@@ -230,15 +234,16 @@ class Characteristic(dbus.service.Object):
 
 class CyclingPowerFeatureCharacteristic(Characteristic):
     # UUID 0x2A65: Cycling Power Feature
+    # Bit 0: Pedal Power Balance Supported (0x01)
     # Bit 3: Crank Revolution Data Supported (0x08)
     def __init__(self, bus, index, service):
         super().__init__(bus, index, CYCLING_POWER_FEATURE_UUID, ['read'], service)
-        # 32-bit uint: bit 3 = crank revolution data supported
-        self.value = [0x08, 0x00, 0x00, 0x00]
+        # 32-bit uint: bit 0 (0x01) = pedal power balance, bit 3 (0x08) = crank revolution data
+        self.value = [0x09, 0x00, 0x00, 0x00]
 
     @dbus.service.method(GATT_CHRC_IFACE, in_signature='a{sv}', out_signature='ay')
     def ReadValue(self, options):
-        print(f"[*] Read CyclingPowerFeature (0x2A65) -> Crank Revolution Data Supported")
+        print(f"[*] Read CyclingPowerFeature (0x2A65) -> Pedal Power Balance & Crank Revolution Data Supported")
         return dbus.Array([dbus.Byte(b) for b in self.value], signature='y')
 
 
@@ -261,6 +266,7 @@ class CyclingPowerMeasurementCharacteristic(Characteristic):
         self.notifying = False
         self.power = 200  # Watts
         self.cadence = 85  # RPM
+        self.pedal_balance = 50.0  # Percentage Right (0.0..100.0) or None when disabled
         self.cumulative_crank_revs = 0
         self.last_crank_event_time = 0  # 1/1024 seconds
         self.timer_id = None
@@ -268,6 +274,12 @@ class CyclingPowerMeasurementCharacteristic(Characteristic):
     def build_payload(self):
         # Flags: 16-bit uint (0x0020 = Crank Revolution Data Present)
         flags = 0x0020
+        balance_bytes = []
+        if self.pedal_balance is not None:
+            flags |= 0x0001  # Pedal Power Balance Present (Bit 0). Bit 1 = 0 (Left Reference)
+            raw_balance = max(0, min(200, int(round(self.pedal_balance * 2))))
+            balance_bytes = [raw_balance]
+
         flags_bytes = list(flags.to_bytes(2, byteorder='little'))
 
         # Instantaneous Power: 16-bit signed integer
@@ -285,7 +297,7 @@ class CyclingPowerMeasurementCharacteristic(Characteristic):
         crank_rev_bytes = list(self.cumulative_crank_revs.to_bytes(2, byteorder='little'))
         crank_time_bytes = list(self.last_crank_event_time.to_bytes(2, byteorder='little'))
 
-        payload = flags_bytes + power_bytes + crank_rev_bytes + crank_time_bytes
+        payload = flags_bytes + power_bytes + balance_bytes + crank_rev_bytes + crank_time_bytes
         return dbus.Array([dbus.Byte(b) for b in payload], signature='y')
 
     def send_notification(self):
@@ -300,7 +312,8 @@ class CyclingPowerMeasurementCharacteristic(Characteristic):
         if self.notifying:
             return
         self.notifying = True
-        print(f"[*] Client connected & subscribed to Cycling Power notifications! (Sende {self.power}W, {self.cadence}RPM)")
+        bal_str = f", Balance {self.pedal_balance:.1f}%" if self.pedal_balance is not None else ""
+        print(f"[*] Client connected & subscribed to Cycling Power notifications! (Sende {self.power}W, {self.cadence}RPM{bal_str})")
         self.timer_id = GLib.timeout_add(1000, self.send_notification)
 
     @dbus.service.method(GATT_CHRC_IFACE)
@@ -354,44 +367,82 @@ def find_adapter(bus):
     return None
 
 
+def format_status(meas_char):
+    if meas_char.pedal_balance is not None:
+        left = 100.0 - meas_char.pedal_balance
+        right = meas_char.pedal_balance
+        bal_desc = f"{right:.1f} % (L/R: {left:.0f}/{right:.0f})"
+    else:
+        bal_desc = "deaktiviert"
+    return f" -> Leistung: {meas_char.power} W | Kadenz: {meas_char.cadence} RPM | Balance: {bal_desc}"
+
+
+def handle_cli_command(line, meas_char):
+    """
+    Processes a single CLI line command against a CyclingPowerMeasurementCharacteristic.
+    Returns tuple (status_msg, should_quit).
+    """
+    line = line.strip()
+    if not line:
+        return "", False
+
+    if line == '+':
+        meas_char.power += 10
+    elif line == '-':
+        meas_char.power = max(0, meas_char.power - 10)
+    elif line.startswith('w'):
+        try:
+            meas_char.power = int(line[1:].strip())
+        except ValueError:
+            print("Ungültige Watt-Eingabe (z.B. w250)")
+    elif line.startswith('c'):
+        try:
+            meas_char.cadence = int(line[1:].strip())
+        except ValueError:
+            print("Ungültige Cadence-Eingabe (z.B. c90)")
+    elif line.startswith('b'):
+        arg = line[1:].strip().lower()
+        if arg == 'off':
+            meas_char.pedal_balance = None
+        else:
+            try:
+                val = float(arg)
+                if 0.0 <= val <= 100.0:
+                    meas_char.pedal_balance = val
+                else:
+                    print("Ungültiger Balance-Bereich: Erlaubt sind 0.0 bis 100.0 % (z.B. b 50, b 54, b 40, b off)")
+            except ValueError:
+                print("Ungültige Balance-Eingabe (z.B. b 50, b 54, b off)")
+    elif line == 'q':
+        return "Beende Simulator...", True
+    else:
+        print("Unbekannter Befehl (+, -, w<Zahl>, c<Zahl>, b <0-100> / b off, q)")
+
+    return format_status(meas_char), False
+
+
 def keyboard_input_loop(meas_char, loop):
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 65)
     print("  ATT BLE Cycling Power Simulator RUNNING")
-    print("=" * 60)
+    print("=" * 65)
     print("  Steuerung im Terminal:")
-    print("    [+] / [-]     : Leistung um 10 W erhöhen / verringern")
-    print("    [w<Zahl>]     : Exakte Wattzahl (z.B. w250 für 250 W)")
-    print("    [c<Zahl>]     : Trittfrequenz (z.B. c90 für 90 RPM)")
-    print("    [q]           : Beenden")
-    print("=" * 60)
-    print(f"  Aktuell: {meas_char.power} W | {meas_char.cadence} RPM\n")
+    print("    [+] / [-]         : Leistung um 10 W erhöhen / verringern")
+    print("    [w<Zahl>]         : Exakte Wattzahl (z.B. w250 für 250 W)")
+    print("    [c<Zahl>]         : Trittfrequenz (z.B. c90 für 90 RPM)")
+    print("    [b <0-100>|off]   : Pedal Power Balance % (z.B. b 50, b 54, b off)")
+    print("    [q]               : Beenden")
+    print("=" * 65)
+    print(format_status(meas_char) + "\n")
 
     while True:
         try:
             line = input().strip()
-            if not line:
-                continue
-            if line == '+':
-                meas_char.power += 10
-            elif line == '-':
-                meas_char.power = max(0, meas_char.power - 10)
-            elif line.startswith('w'):
-                try:
-                    meas_char.power = int(line[1:])
-                except ValueError:
-                    print("Ungültige Watt-Eingabe (z.B. w250)")
-            elif line.startswith('c'):
-                try:
-                    meas_char.cadence = int(line[1:])
-                except ValueError:
-                    print("Ungültige Cadence-Eingabe (z.B. c90)")
-            elif line == 'q':
-                print("Beende Simulator...")
+            msg, should_quit = handle_cli_command(line, meas_char)
+            if msg:
+                print(msg)
+            if should_quit:
                 loop.quit()
                 break
-            else:
-                print("Unbekannter Befehl (+, -, w<Zahl>, c<Zahl>, q)")
-            print(f" -> Leistung: {meas_char.power} W | Kadenz: {meas_char.cadence} RPM")
         except (EOFError, KeyboardInterrupt):
             loop.quit()
             break

@@ -77,6 +77,7 @@ import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
 import com.atrainingtracker.trainingtracker.ui.map.createHeartPinMarker
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.Circle
@@ -546,12 +547,12 @@ fun LocationMiniMap(
                 val center = Offset(size.width / 2f, size.height / 2f)
                 val circleRadius = size.minDimension * 0.35f
                 drawCircle(
-                    color = Color(0x332196F3),
+                    color = TTColor.GeofenceFill,
                     radius = circleRadius,
                     center = center
                 )
                 drawCircle(
-                    color = Color(0x882196F3),
+                    color = TTColor.GeofenceStroke,
                     radius = circleRadius,
                     center = center,
                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
@@ -585,7 +586,7 @@ fun LocationMiniMap(
     val heartMarkerIcon = remember {
         createHeartPinMarker(
             context = context,
-            pinColor = Color(0xFF2196F3),
+            pinColor = TTColor.GeofencePin,
             heartColor = Color.White
         )
     }
@@ -599,7 +600,7 @@ fun LocationMiniMap(
 
     Box(modifier = modifier) {
         GoogleMap(
-            modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
+            modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White),
             cameraPositionState = cameraPositionState,
             properties = mapProperties,
             onMapLoaded = { isMapLoaded = true },
@@ -617,8 +618,8 @@ fun LocationMiniMap(
             Circle(
                 center = latLng,
                 radius = radius,
-                fillColor = Color(0x332196F3),
-                strokeColor = Color(0x882196F3),
+                fillColor = TTColor.GeofenceFill,
+                strokeColor = TTColor.GeofenceStroke,
                 strokeWidth = 2f
             )
         }

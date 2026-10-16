@@ -889,6 +889,8 @@
     <string name="segment_status_start_in">Inizio tra: %1$s</string>
     <string name="segment_status_remaining">Resta: %1$s</string>
     <string name="segment_status_offset">Offset: %1$s</string>
+    <string name="segment_status_past_finish">Dopo il traguardo: %1$s</string>
+    <string name="segment_status_pr_delta">%1$s vs. PR</string>
 
     <!-- ANT(+) Plugins -->
     <string name="ant_general_explanation">Con hardware e software corretti, puoi associare i tuoi dispositivi ANT+.</string>
@@ -1514,6 +1516,9 @@
     <string name="settings_lap_display_mode_visualizer">Visualizzatore</string>
     <string name="settings_lap_display_mode_both">Entrambi</string>
 
+    <!-- Configurable Default Zone Card Display Mode (ATT-3676 / REQ-UI-372.8) -->
+    <string name="settings_zone_card_display_mode_title">Modalità visualizzazione schede zone</string>
+
     <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
     <string name="workout_source_tracked">Registrato</string>
     <string name="workout_source_tcx">TCX</string>
@@ -1756,22 +1761,7 @@
     <string name="ant_dialog_view_status">Mostra stato ANT+</string>
     <string name="ant_dialog_dismiss">Ho capito</string>
 
-    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
-    <string name="tuning_map_camera_section_title">Fotocamera mappa e navigazione seguimi</string>
-    <string name="tuning_map_base_zoom_title">Zoom di base seguimi</string>
-    <string name="tuning_map_base_zoom_desc">Livello di zoom base della fotocamera da fermo (0 km/h) in modalità seguimi (valore più alto = zoom più vicino)</string>
-    <string name="tuning_map_speed_zoom_enabled_title">Zoom in base alla velocità</string>
-    <string name="tuning_map_speed_zoom_enabled_desc">Diminuisce gradualmente lo zoom all\'aumentare della velocità per ampliare la visibilità in avanti</string>
-    <string name="tuning_map_cruising_zoom_title">Zoom a velocità di crociera (a 20 km/h)</string>
-    <string name="tuning_map_cruising_zoom_desc">Livello di zoom della fotocamera regolato sulla velocità tipica da ciclismo (20 km/h) (valore più alto = zoom più vicino)</string>
-    <string name="tuning_map_tilt_angle_title">Angolo di inclinazione della fotocamera</string>
-    <string name="tuning_map_tilt_angle_desc">Angolo di inclinazione prospettica per navigazione 3D (0° è 2D piatto, 70° è prospettiva 3D completa)</string>
-    <string name="tuning_map_lookahead_padding_title">Spaziatura per visuale in avanti</string>
-    <string name="tuning_map_lookahead_padding_desc">Percentuale di spaziatura per posizionare il ciclista nella parte bassa e massimizzare la strada visibile in avanti (valore più alto = ciclista più in basso / maggiore visuale in avanti)</string>
-    <string name="tuning_map_follow_me_speed_smoothing_title">Smorzamento zoom di velocità</string>
-    <string name="tuning_map_follow_me_speed_smoothing_desc">Fattore di smorzamento per le variazioni di velocità nello zoom Seguimi (valore inferiore = più fluido, valore superiore = risposta più rapida)</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_title">Smorzamento rotazione</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_desc">Fattore di smorzamento per la rotazione della fotocamera in modalità Seguimi (valore inferiore = più fluido, valore superiore = risposta più rapida)</string>
+
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NUOVO</string>
@@ -1850,6 +1840,8 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Velocità al di sotto della quale la registrazione viene messa in pausa</string>
     <string name="tuning_auto_pause_debounce_title">Ritardo prima della pausa</string>
     <string name="tuning_auto_pause_debounce_desc">Tempo sotto la soglia prima di mettere in pausa</string>
+    <string name="tuning_speed_value_format">%1$d %2$s</string>
+    <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Pausa automatica</string>
     <string name="cockpit_auto_pause_resume">Riprendi ora</string>
     <string name="cockpit_speed_sensor_lost">Sensore di velocità perso</string>

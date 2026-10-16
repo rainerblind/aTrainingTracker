@@ -23,7 +23,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,7 +32,6 @@ import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
-import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
 /**
  * Reusable, canonical workout route clustering tuning content (REQ-SET-075, Rule 36).
@@ -196,58 +194,5 @@ fun ClusterTuningContent(
                 enabled = enabled && useAltitudePosForClustering
             )
         }
-    }
-}
-
-/**
- * Legacy bespoke slider for cluster tuning.
- *
- * @deprecated Use [TuningSliderItem] from TuningFormControls.kt instead (Rule 36, REQ-SET-077).
- */
-@Deprecated(
-    message = "Use TuningSliderItem from TuningFormControls.kt instead (Rule 36, REQ-SET-077).",
-    replaceWith = ReplaceWith(
-        expression = "TuningSliderItem(title = label, valueText = \"\", helperText = \"\", defaultText = \"\", value = value, onValueChange = onValueChange, valueRange = valueRange, steps = 0, enabled = enabled, onValueChangeFinished = onValueChangeFinished)",
-        imports = ["com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem"]
-    )
-)
-@Composable
-fun TuningSlider(
-    label: String,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    valueRange: ClosedFloatingPointRange<Float>,
-    unit: String,
-    displayMultiplier: Float = 1f,
-    decimalPlaces: Int = 0,
-    enabled: Boolean = true,
-    onValueChangeFinished: (() -> Unit)? = null
-) {
-    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
-    val contentAlpha = if (enabled) 1.0f else TTAlpha.Disabled
-
-    Column(
-        modifier = Modifier.alpha(contentAlpha),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else TTAlpha.Disabled)
-        )
-        Text(
-            text = java.lang.String.format(locale, "%.${decimalPlaces}f %s", value * displayMultiplier, unit),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
-        )
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            onValueChangeFinished = onValueChangeFinished,
-            valueRange = valueRange,
-            enabled = enabled,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }

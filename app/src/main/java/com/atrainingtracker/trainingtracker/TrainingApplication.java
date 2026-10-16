@@ -151,14 +151,6 @@ public class TrainingApplication extends Application {
     public static final String SP_AUTOMATED_STRAVA_EQUIPMENT_SYNC = "automated_strava_equipment_sync";
     public static final String SP_STRAVA_EQUIPMENT_SYNC_INTERVAL_DAYS = "strava_equipment_sync_interval_days";
     public static final String SP_STRAVA_ATHLETE_ID = "stravaAthleteId";
-    public static final String PREFERENCE_SCREEN_RUNKEEPER = "psUploadToRunkeeper";
-    public static final String SP_UPLOAD_TO_RUNKEEPER = "uploadToRunkeeper";
-    public static final String SP_RUNKEEPER_TOKEN = "runkeeperToken";
-    public static final String PREFERENCE_SCREEN_TRAINING_PEAKS = "psUploadToTrainingPeaks";
-    //     protected final static AccessType DROPBOX_ACCESS_TYPE = AccessType.APP_FOLDER;
-    public static final String SP_UPLOAD_TO_TRAINING_PEAKS = "uploadToTrainingPeaks";
-    public static final String SP_TRAINING_PEAKS_ACCESS_TOKEN = "trainingPeaksAccessToken";
-    public static final String SP_TRAINING_PEAKS_REFRESH_TOKEN = "trainingPeaksRefreshToken";
     // public static final String SP_DISPLAY_UPDATE_TIME     = "displayUpdateTime";
     public static final String SP_EXPORT_TCX = "export_tcx";
     public static final String SP_EXPORT_GPX = "export_gpx";
@@ -212,16 +204,6 @@ public class TrainingApplication extends Application {
     private static final String SP_UPLOAD_STRAVA_HR = "uploadStravaHR";
     private static final String SP_UPLOAD_STRAVA_POWER = "uploadStravaPower";
     private static final String SP_UPLOAD_STRAVA_CADENCE = "uploadStravaCadence";
-    private static final String SP_UPLOAD_RUNKEEPER_GPS = "uploadRunkeeperGPS";
-    private static final String SP_UPLOAD_RUNKEEPER_ALTITUDE = "uploadRunkeeperAltitude";
-    private static final String SP_UPLOAD_RUNKEEPER_HR = "uploadRunkeeperHR";
-    private static final String SP_UPLOAD_RUNKEEPER_POWER = "uploadRunkeeperPower";
-    private static final String SP_UPLOAD_RUNKEEPER_CADENCE = "uploadRunkeeperCadence";
-    private static final String SP_UPLOAD_TRAINING_PEAKS_GPS = "uploadTrainingPeaksGPS";
-    private static final String SP_UPLOAD_TRAINING_PEAKS_ALTITUDE = "uploadTrainingPeaksAltitude";
-    private static final String SP_UPLOAD_TRAINING_PEAKS_HR = "uploadTrainingPeaksHR";
-    private static final String SP_UPLOAD_TRAINING_PEAKS_POWER = "uploadTrainingPeaksPower";
-    private static final String SP_UPLOAD_TRAINING_PEAKS_CADENCE = "uploadTrainingPeaksCadence";
     //public static final int UPLOAD_PROGRESS_NOTIFICATION_ID       = 3;
 
     // public static final int UPLOAD_RESULT_BASE_NOTIFICATION_ID    = 8;
@@ -1086,106 +1068,6 @@ public class TrainingApplication extends Application {
         return cSharedPreferences.getBoolean(SP_UPLOAD_STRAVA_CADENCE, true);
     }
 
-    /*
-     * Runkeeper helpers
-     */
-    public static boolean uploadToRunKeeper() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TO_RUNKEEPER, false);
-    }
-
-    public static void setUploadToRunkeeper(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, value).apply();
-    }
-
-    @Nullable
-    public static String getRunkeeperToken() {
-        return cSharedPreferences.getString(SP_RUNKEEPER_TOKEN, null);
-    }
-
-    public static void setRunkeeperToken(String token) {
-        cSharedPreferences.edit().putString(SP_RUNKEEPER_TOKEN, token).apply();
-    }
-
-    public static void deleteRunkeeperToken() {
-        cSharedPreferences.edit().remove(SP_RUNKEEPER_TOKEN).apply();
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, false).apply();
-    }
-
-    public static boolean uploadRunkeeperGPS() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_RUNKEEPER_GPS, true);
-    }
-
-    public static boolean uploadRunkeeperAltitude() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_RUNKEEPER_ALTITUDE, true);
-    }
-
-    public static boolean uploadRunkeeperHR() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_RUNKEEPER_HR, true);
-    }
-
-    public static boolean uploadRunkeeperPower() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_RUNKEEPER_POWER, true);
-    }
-
-    public static boolean uploadRunkeeperCadence() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_RUNKEEPER_CADENCE, true);
-    }
-
-    /*
-     * TrainingPeaks helpers
-     */
-    public static boolean uploadToTrainingPeaks() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TO_TRAINING_PEAKS, false);
-    }
-
-    public static void setUploadToTrainingPeaks(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, value).apply();
-    }
-
-    @Nullable
-    public static String getTrainingPeaksAccessToken() {
-        return cSharedPreferences.getString(SP_TRAINING_PEAKS_ACCESS_TOKEN, null);
-    }
-
-    public static void setTrainingPeaksAccessToken(String token) {
-        cSharedPreferences.edit().putString(SP_TRAINING_PEAKS_ACCESS_TOKEN, token).apply();
-    }
-
-    @Nullable
-    public static String getTrainingPeaksRefreshToken() {
-        return cSharedPreferences.getString(SP_TRAINING_PEAKS_REFRESH_TOKEN, null);
-    }
-
-    public static void setTrainingPeaksRefreshToken(String token) {
-        cSharedPreferences.edit().putString(SP_TRAINING_PEAKS_REFRESH_TOKEN, token).apply();
-    }
-
-    public static void deleteTrainingPeaksToken() {
-        cSharedPreferences.edit().remove(SP_TRAINING_PEAKS_ACCESS_TOKEN).apply();
-        cSharedPreferences.edit().remove(SP_TRAINING_PEAKS_REFRESH_TOKEN).apply();
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, false).apply();
-    }
-
-    public static boolean uploadTrainingPeaksGPS() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TRAINING_PEAKS_GPS, true);
-    }
-
-    public static boolean uploadTrainingPeaksAltitude() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TRAINING_PEAKS_ALTITUDE, true);
-    }
-
-    public static boolean uploadTrainingPeaksHR() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TRAINING_PEAKS_HR, true);
-    }
-
-    public static boolean uploadTrainingPeaksPower() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TRAINING_PEAKS_POWER, true);
-    }
-
-    public static boolean uploadTrainingPeaksCadence() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TRAINING_PEAKS_CADENCE, true);
-    }
-
     @Deprecated
     public static boolean defaultToPrivate() {  // in the past, it was possible to mark activities in Strava as private via the API.  Unfortunately, this is no longer possible.
         return false;
@@ -1243,10 +1125,6 @@ public class TrainingApplication extends Application {
             case GPX -> exportToGPX();
             case FIT -> exportToFIT();
             case STRAVA -> uploadToStrava();
-            /* case RUNKEEPER:
-                return uploadToRunKeeper(); */
-            /* case TRAINING_PEAKS:
-                return uploadToTrainingPeaks(); */
         };
     }
 
@@ -1254,10 +1132,6 @@ public class TrainingApplication extends Application {
         switch (fileFormat) {
             case STRAVA:
                 return uploadToStrava();
-            /* case RUNKEEPER:
-                return uploadToRunKeeper(); */
-            /* case TRAINING_PEAKS:
-                return uploadToTrainingPeaks(); */
             default:
                 return false;
         }

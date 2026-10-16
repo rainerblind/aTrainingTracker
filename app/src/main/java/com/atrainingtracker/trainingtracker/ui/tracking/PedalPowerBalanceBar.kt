@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -182,7 +183,7 @@ fun PedalPowerBalanceBar(
 
                         // Dark shadow / outline (ensures > 12:1 contrast against bright fills)
                         drawRoundRect(
-                            color = Color(0xFF1B1B1F),
+                            color = TTColor.BalanceGaugeTrack,
                             topLeft = Offset(needleLeft - 0.75.dp.toPx(), needleTop),
                             size = Size(needleWidthPx + 1.5.dp.toPx(), needleHeight),
                             cornerRadius = cornerRadius,

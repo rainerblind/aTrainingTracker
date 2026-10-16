@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
@@ -42,7 +43,7 @@ import com.google.maps.android.compose.MapType
 object DarkMapStyle {
     private const val TAG = "DarkMapStyle"
 
-    val DARK_MAP_BACKGROUND_COLOR: Color = Color(0xFF121212)
+    val DARK_MAP_BACKGROUND_COLOR: Color = TTColor.DarkMapCanvas
 
     @Volatile
     private var cachedStyleOptions: MapStyleOptions? = null

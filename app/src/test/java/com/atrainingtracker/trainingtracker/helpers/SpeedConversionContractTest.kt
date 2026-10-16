@@ -29,6 +29,7 @@ import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtils
 import com.google.android.gms.maps.model.LatLng
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -207,5 +208,42 @@ class SpeedConversionContractTest {
                 violatingFiles.joinToString("\n"),
             violatingFiles.isEmpty()
         )
+    }
+
+    @Test
+    fun testLapSplitCalculatorAndSensorsGpsFilterUseCanonicalFormattersWithoutMagicMultiplier() {
+        val targetFiles = listOf(
+            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/splits/LapSplitCalculator.kt",
+            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/SensorsGpsFilterSection.kt"
+        )
+
+        for (relPath in targetFiles) {
+            val file = sequenceOf(
+                File(relPath),
+                File("../$relPath"),
+                File("../../$relPath")
+            ).firstOrNull { it.exists() } ?: File(relPath)
+
+            assertTrue("File must exist: $relPath", file.exists())
+            val content = file.readText()
+
+            val codeWithoutComments = content.lines().filter { line ->
+                val trimmed = line.trim()
+                !trimmed.startsWith("//") && !trimmed.startsWith("/*") && !trimmed.startsWith("*")
+            }.joinToString("\n")
+
+            assertFalse(
+                "File $relPath must not contain magic '* 3.6' outside comments (ATT-3575, Rule 36)",
+                codeWithoutComments.contains("* 3.6")
+            )
+            assertFalse(
+                "File $relPath must not contain hardcoded '\"%.1f km/h\"' string (ATT-3575)",
+                codeWithoutComments.contains("\"%.1f km/h\"")
+            )
+            assertTrue(
+                "File $relPath must reference SpeedFormatter (ATT-3575)",
+                content.contains("SpeedFormatter")
+            )
+        }
     }
 }

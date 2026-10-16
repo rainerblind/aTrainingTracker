@@ -19,16 +19,22 @@
 package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
@@ -144,6 +150,7 @@ object TuningPreferencesDefaults {
     const val DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED = true
 
     const val DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM = 18.0f
+    const val DEFAULT_MAP_FOLLOW_ME_MIN_ZOOM = 16.0f
     const val MIN_MAP_FOLLOW_ME_CRUISING_ZOOM = 14.0f
     const val MAX_MAP_FOLLOW_ME_CRUISING_ZOOM = 19.5f
     const val STEP_MAP_FOLLOW_ME_CRUISING_ZOOM = 0.5f
@@ -196,6 +203,30 @@ object TuningPreferencesDefaults {
     const val DEFAULT_AUTO_PAUSE_BIKE_ENABLED = true
     const val DEFAULT_AUTO_PAUSE_RUN_ENABLED = false
     const val DEFAULT_AUTO_PAUSE_OTHER_ENABLED = false
+
+    const val MIN_AUTO_PAUSE_SPEED_THRESHOLD = 1
+    const val MAX_AUTO_PAUSE_SPEED_THRESHOLD = 5
+    const val STEP_AUTO_PAUSE_SPEED_THRESHOLD = 1
+
+    const val DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC = 3
+    const val DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_IMPERIAL = 2
+    const val DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC = 2
+    const val MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC = 1
+    const val MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC = 20
+
+    const val DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC = 2
+    const val DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_IMPERIAL = 1
+    const val DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC = 5
+    const val MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC = 1
+    const val MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC = 20
+
+    const val DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC = 1
+    const val DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_IMPERIAL = 1
+    const val DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC = 10
+    const val MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC = 1
+    const val MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC = 60
+
+    // Legacy compatibility constants
     const val DEFAULT_AUTO_PAUSE_SPEED_THRESHOLD_KMH = 1.5f
     const val MIN_AUTO_PAUSE_SPEED_THRESHOLD_KMH = 0.5f
     const val MAX_AUTO_PAUSE_SPEED_THRESHOLD_KMH = 5.0f
@@ -258,8 +289,14 @@ data class TuningConfig(
     val autoPauseBikeEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED,
     val autoPauseRunEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED,
     val autoPauseOtherEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED,
-    val autoPauseSpeedThresholdKmh: Float = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
-    val autoPauseDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_DEBOUNCE_SEC
+    val autoPauseBikeSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC,
+    val autoPauseBikeDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+    val autoPauseRunSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC,
+    val autoPauseRunDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+    val autoPauseOtherSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC,
+    val autoPauseOtherDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
+    val autoPauseSpeedThresholdKmh: Float = autoPauseBikeSpeedThreshold.toFloat(),
+    val autoPauseDebounceSec: Int = autoPauseBikeDebounceSec
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -342,13 +379,33 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_NAVIGATION_CUE_DISMISS_DURATION_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_navigation_cue_dismiss_duration_sec")
         val KEY_ELEVATION_SMOOTHING_SIGMA_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_elevation_smoothing_sigma_meters")
 
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_INITIAL_ZOOM: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_initial_zoom")
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_map_follow_me_speed_zoom_enabled")
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_CRUISING_ZOOM: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_cruising_zoom")
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_TILT_ANGLE: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_tilt_angle")
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_lookahead_padding_percent")
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_speed_smoothing_alpha")
+        @Deprecated("Map camera follow-me zoom/tilt/smoothing are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
         val KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA: Preferences.Key<Float> = floatPreferencesKey("tuning_map_follow_me_bearing_smoothing_alpha")
+
+        /**
+         * List of legacy map camera tuning keys retained for migration cleanup and factory reset (REQ-MAP-050).
+         */
+        val LEGACY_MAP_CAMERA_KEYS = listOf(
+            KEY_MAP_FOLLOW_ME_INITIAL_ZOOM,
+            KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+            KEY_MAP_FOLLOW_ME_CRUISING_ZOOM,
+            KEY_MAP_FOLLOW_ME_TILT_ANGLE,
+            KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+            KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+            KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
+        )
         val KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_suppress_ant_missing_adapter_dialog")
         val KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_follow_unique_route_enabled")
         val KEY_CLUSTER_TOL_ENDPOINTS: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_tol_endpoints")
@@ -361,6 +418,12 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_AUTO_PAUSE_BIKE_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_bike_enabled")
         val KEY_AUTO_PAUSE_RUN_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_run_enabled")
         val KEY_AUTO_PAUSE_OTHER_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_other_enabled")
+        val KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_bike_speed_threshold")
+        val KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_bike_debounce_sec")
+        val KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_run_speed_threshold")
+        val KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_run_debounce_sec")
+        val KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_other_speed_threshold")
+        val KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_other_debounce_sec")
         val KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH: Preferences.Key<Float> = floatPreferencesKey("tuning_auto_pause_speed_threshold_kmh")
         val KEY_AUTO_PAUSE_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_debounce_sec")
 
@@ -414,10 +477,119 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_AUTO_PAUSE_BIKE_ENABLED,
             KEY_AUTO_PAUSE_RUN_ENABLED,
             KEY_AUTO_PAUSE_OTHER_ENABLED,
+            KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD,
+            KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+            KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD,
+            KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+            KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD,
+            KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
             KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
             KEY_AUTO_PAUSE_DEBOUNCE_SEC
         )
+
+        /**
+         * Resolves and maps sport-specific auto-pause preferences with fallback to legacy keys and default values.
+         */
+        fun mapAutoPausePreferences(prefs: Preferences): AutoPausePreferences {
+            val bikeEnabled = prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED
+            val runEnabled = prefs[KEY_AUTO_PAUSE_RUN_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED
+            val otherEnabled = prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED
+
+            val legacyThreshold = prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH]?.roundToInt()
+            val legacyDebounce = prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC]
+
+            val bikeThreshold = (prefs[KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD] ?: legacyThreshold ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC)
+                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD)
+            val bikeDebounce = (prefs[KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC] ?: legacyDebounce ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
+                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
+
+            val runThreshold = (prefs[KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD] ?: legacyThreshold ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC)
+                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD)
+            val runDebounce = (prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] ?: legacyDebounce ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC)
+                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC)
+
+            val otherThreshold = (prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] ?: legacyThreshold ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC)
+                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD, TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD)
+            val otherDebounce = (prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] ?: legacyDebounce ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC)
+                .coerceIn(TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC, TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC)
+
+            return AutoPausePreferences(
+                bikeEnabled = bikeEnabled,
+                runEnabled = runEnabled,
+                otherEnabled = otherEnabled,
+                bikeSpeedThreshold = bikeThreshold,
+                bikeDebounceSec = bikeDebounce,
+                runSpeedThreshold = runThreshold,
+                runDebounceSec = runDebounce,
+                otherSpeedThreshold = otherThreshold,
+                otherDebounceSec = otherDebounce
+            )
+        }
+
+        /**
+         * Maps follow-me camera preferences to calibrated defaults, ignoring any legacy stored overrides (ATT-3581 / REQ-MAP-050).
+         */
+        fun mapFollowMePreferences(prefs: Preferences): FollowMeCameraPreferences {
+            return FollowMeCameraPreferences(
+                initialZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
+                speedZoomEnabled = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+                cruisingZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
+                tiltAngle = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE,
+                lookaheadPaddingPercent = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+                speedSmoothingAlpha = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+                bearingSmoothingAlpha = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+                minZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_MIN_ZOOM
+            )
+        }
+
+        /**
+         * Purges legacy map camera keys from a [MutablePreferences] instance (ATT-3581 / REQ-MAP-050).
+         */
+        fun purgeLegacyMapCameraKeys(prefs: MutablePreferences) {
+            for (key in LEGACY_MAP_CAMERA_KEYS) {
+                prefs.remove(key)
+            }
+        }
     }
+
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                purgeLegacyMapCameraPreferences()
+            } catch (_: Exception) {
+                // Best-effort legacy key purge on startup
+            }
+        }
+    }
+
+/**
+ * Resolved follow-me camera preferences slice (REQ-MAP-050).
+ */
+data class FollowMeCameraPreferences(
+    val initialZoom: Float,
+    val speedZoomEnabled: Boolean,
+    val cruisingZoom: Float,
+    val tiltAngle: Float,
+    val lookaheadPaddingPercent: Float,
+    val speedSmoothingAlpha: Float,
+    val bearingSmoothingAlpha: Float,
+    val minZoom: Float
+)
+
+/**
+ * Resolved sport-specific auto-pause preferences slice.
+ */
+data class AutoPausePreferences(
+    val bikeEnabled: Boolean,
+    val runEnabled: Boolean,
+    val otherEnabled: Boolean,
+    val bikeSpeedThreshold: Int,
+    val bikeDebounceSec: Int,
+    val runSpeedThreshold: Int,
+    val runDebounceSec: Int,
+    val otherSpeedThreshold: Int,
+    val otherDebounceSec: Int
+)
 
     val tuningConfigFlow: Flow<TuningConfig> = context.dataStore.data.map { prefs ->
         val rawElevationDomainStr = prefs[KEY_ELEVATION_X_AXIS_DOMAIN] ?: prefs[KEY_PROFILE_X_AXIS_DOMAIN]
@@ -531,6 +703,8 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MAX_ROUTE_SELECTION_RADIUS_KM
         )
 
+        val autoPausePrefs = mapAutoPausePreferences(prefs)
+
         TuningConfig(
             elevationXAxisDomain = elevationDomain,
             telemetryXAxisDomain = telemetryDomain,
@@ -576,31 +750,13 @@ class TuningPreferencesDataStore(private val context: Context) {
                 TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
                 TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
             ),
-            mapFollowMeInitialZoom = (prefs[KEY_MAP_FOLLOW_ME_INITIAL_ZOOM] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM).coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM
-            ),
-            mapFollowMeSpeedZoomEnabled = prefs[KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
-            mapFollowMeCruisingZoom = (prefs[KEY_MAP_FOLLOW_ME_CRUISING_ZOOM] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM).coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM
-            ),
-            mapFollowMeTiltAngle = (prefs[KEY_MAP_FOLLOW_ME_TILT_ANGLE] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE).coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE
-            ),
-            mapFollowMeLookaheadPaddingPercent = (prefs[KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT).coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
-            ),
-            mapFollowMeSpeedSmoothingAlpha = (prefs[KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA).coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
-            ),
-            mapFollowMeBearingSmoothingAlpha = (prefs[KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA] ?: TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA).coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
-            ),
+            mapFollowMeInitialZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
+            mapFollowMeSpeedZoomEnabled = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+            mapFollowMeCruisingZoom = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
+            mapFollowMeTiltAngle = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE,
+            mapFollowMeLookaheadPaddingPercent = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
+            mapFollowMeSpeedSmoothingAlpha = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+            mapFollowMeBearingSmoothingAlpha = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
             suppressAntMissingAdapterDialog = prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] ?: TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG,
             autoFollowUniqueRouteEnabled = prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED,
             clusterTolEndpoints = (prefs[KEY_CLUSTER_TOL_ENDPOINTS] ?: TrainingApplication.getClusterTolEndpoints()).coerceIn(
@@ -621,17 +777,17 @@ class TuningPreferencesDataStore(private val context: Context) {
             ),
             clusterUseSportType = prefs[KEY_CLUSTER_USE_SPORT_TYPE] ?: TrainingApplication.useSportTypeForClustering(),
             clusterUseAltitudePos = prefs[KEY_CLUSTER_USE_ALTITUDE_POS] ?: TrainingApplication.useAltitudePosForClustering(),
-            autoPauseBikeEnabled = prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED,
-            autoPauseRunEnabled = prefs[KEY_AUTO_PAUSE_RUN_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED,
-            autoPauseOtherEnabled = prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED,
-            autoPauseSpeedThresholdKmh = (prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_SPEED_THRESHOLD_KMH).coerceIn(
-                TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
-                TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD_KMH
-            ),
-            autoPauseDebounceSec = (prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] ?: TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_DEBOUNCE_SEC).coerceIn(
-                TuningPreferencesDefaults.MIN_AUTO_PAUSE_DEBOUNCE_SEC,
-                TuningPreferencesDefaults.MAX_AUTO_PAUSE_DEBOUNCE_SEC
-            )
+            autoPauseBikeEnabled = autoPausePrefs.bikeEnabled,
+            autoPauseRunEnabled = autoPausePrefs.runEnabled,
+            autoPauseOtherEnabled = autoPausePrefs.otherEnabled,
+            autoPauseBikeSpeedThreshold = autoPausePrefs.bikeSpeedThreshold,
+            autoPauseBikeDebounceSec = autoPausePrefs.bikeDebounceSec,
+            autoPauseRunSpeedThreshold = autoPausePrefs.runSpeedThreshold,
+            autoPauseRunDebounceSec = autoPausePrefs.runDebounceSec,
+            autoPauseOtherSpeedThreshold = autoPausePrefs.otherSpeedThreshold,
+            autoPauseOtherDebounceSec = autoPausePrefs.otherDebounceSec,
+            autoPauseSpeedThresholdKmh = autoPausePrefs.bikeSpeedThreshold.toFloat(),
+            autoPauseDebounceSec = autoPausePrefs.bikeDebounceSec
         )
     }
 
@@ -708,13 +864,29 @@ class TuningPreferencesDataStore(private val context: Context) {
             TuningPreferencesDefaults.MIN_CLUSTER_TOL_ALTITUDE_POS,
             TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS
         )
-        val clampedAutoPauseSpeedThreshold = config.autoPauseSpeedThresholdKmh.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD_KMH
+        val clampedBikeSpeedThreshold = config.autoPauseBikeSpeedThreshold.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
         )
-        val clampedAutoPauseDebounce = config.autoPauseDebounceSec.coerceIn(
-            TuningPreferencesDefaults.MIN_AUTO_PAUSE_DEBOUNCE_SEC,
-            TuningPreferencesDefaults.MAX_AUTO_PAUSE_DEBOUNCE_SEC
+        val clampedBikeDebounce = config.autoPauseBikeDebounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC
+        )
+        val clampedRunSpeedThreshold = config.autoPauseRunSpeedThreshold.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
+        )
+        val clampedRunDebounce = config.autoPauseRunDebounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC
+        )
+        val clampedOtherSpeedThreshold = config.autoPauseOtherSpeedThreshold.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
+        )
+        val clampedOtherDebounce = config.autoPauseOtherDebounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC
         )
 
         context.dataStore.edit { prefs ->
@@ -767,31 +939,10 @@ class TuningPreferencesDataStore(private val context: Context) {
                 TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS,
                 TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS
             )
-            prefs[KEY_MAP_FOLLOW_ME_INITIAL_ZOOM] = config.mapFollowMeInitialZoom.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM
-            )
-            prefs[KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED] = config.mapFollowMeSpeedZoomEnabled
-            prefs[KEY_MAP_FOLLOW_ME_CRUISING_ZOOM] = config.mapFollowMeCruisingZoom.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM
-            )
-            prefs[KEY_MAP_FOLLOW_ME_TILT_ANGLE] = config.mapFollowMeTiltAngle.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE
-            )
-            prefs[KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT] = config.mapFollowMeLookaheadPaddingPercent.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
-            )
-            prefs[KEY_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA] = config.mapFollowMeSpeedSmoothingAlpha.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
-            )
-            prefs[KEY_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA] = config.mapFollowMeBearingSmoothingAlpha.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
-            )
+            // ATT-3581: Actively purge any legacy camera preferences to prevent stale override interference
+            for (legacyKey in LEGACY_MAP_CAMERA_KEYS) {
+                prefs.remove(legacyKey)
+            }
             prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] = config.suppressAntMissingAdapterDialog
             prefs[KEY_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED] = config.autoFollowUniqueRouteEnabled
             prefs[KEY_CLUSTER_TOL_ENDPOINTS] = clampedClusterTolEndpoints
@@ -803,8 +954,12 @@ class TuningPreferencesDataStore(private val context: Context) {
             prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] = config.autoPauseBikeEnabled
             prefs[KEY_AUTO_PAUSE_RUN_ENABLED] = config.autoPauseRunEnabled
             prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] = config.autoPauseOtherEnabled
-            prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clampedAutoPauseSpeedThreshold
-            prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clampedAutoPauseDebounce
+            prefs[KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD] = clampedBikeSpeedThreshold
+            prefs[KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC] = clampedBikeDebounce
+            prefs[KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD] = clampedRunSpeedThreshold
+            prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] = clampedRunDebounce
+            prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] = clampedOtherSpeedThreshold
+            prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] = clampedOtherDebounce
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
@@ -813,6 +968,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         TrainingApplication.setClusterTolAltitudePos(clampedClusterTolAltitudePos)
         TrainingApplication.setUseSportTypeForClustering(config.clusterUseSportType)
         TrainingApplication.setUseAltitudePosForClustering(config.clusterUseAltitudePos)
+        TrackerService.invalidateAutoPauseCache()
     }
 
 
@@ -873,49 +1029,48 @@ class TuningPreferencesDataStore(private val context: Context) {
         }
     }
 
-    suspend fun updateMapFollowMeInitialZoom(zoom: Float) {
-        val clamped = zoom.coerceIn(
-            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_INITIAL_ZOOM,
-            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_INITIAL_ZOOM
-        )
+    /**
+     * Purges legacy map camera tuning keys from Preferences DataStore so old stored values
+     * cannot persist or interfere with calibrated defaults (REQ-MAP-050 / ATT-3581).
+     */
+    suspend fun purgeLegacyMapCameraPreferences() {
         context.dataStore.edit { prefs ->
-            prefs[KEY_MAP_FOLLOW_ME_INITIAL_ZOOM] = clamped
+            purgeLegacyMapCameraKeys(prefs)
         }
     }
 
+    @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
+    suspend fun updateMapFollowMeInitialZoom(zoom: Float) {
+        context.dataStore.edit { prefs ->
+            prefs.remove(KEY_MAP_FOLLOW_ME_INITIAL_ZOOM)
+        }
+    }
+
+    @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
     suspend fun updateMapFollowMeSpeedZoomEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
-            prefs[KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED] = enabled
+            prefs.remove(KEY_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED)
         }
     }
 
+    @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
     suspend fun updateMapFollowMeCruisingZoom(zoom: Float) {
-        val clamped = zoom.coerceIn(
-            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_CRUISING_ZOOM,
-            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_CRUISING_ZOOM
-        )
         context.dataStore.edit { prefs ->
-            prefs[KEY_MAP_FOLLOW_ME_CRUISING_ZOOM] = clamped
+            prefs.remove(KEY_MAP_FOLLOW_ME_CRUISING_ZOOM)
         }
     }
 
+    @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
     suspend fun updateMapFollowMeTiltAngle(angle: Float) {
-        val clamped = angle.coerceIn(
-            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_TILT_ANGLE,
-            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_TILT_ANGLE
-        )
         context.dataStore.edit { prefs ->
-            prefs[KEY_MAP_FOLLOW_ME_TILT_ANGLE] = clamped
+            prefs.remove(KEY_MAP_FOLLOW_ME_TILT_ANGLE)
         }
     }
 
+    @Deprecated("Camera parameters are permanently hardcoded to calibrated defaults per ATT-3581 / REQ-MAP-050")
     suspend fun updateMapFollowMeLookaheadPaddingPercent(percent: Float) {
-        val clamped = percent.coerceIn(
-            TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT,
-            TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT
-        )
         context.dataStore.edit { prefs ->
-            prefs[KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT] = clamped
+            prefs.remove(KEY_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT)
         }
     }
 
@@ -988,6 +1143,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clamped
         }
+        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun updateAutoPauseDebounceSec(debounceSec: Int) {
@@ -998,6 +1154,75 @@ class TuningPreferencesDataStore(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clamped
         }
+        TrackerService.invalidateAutoPauseCache()
+    }
+
+    suspend fun updateAutoPauseBikeSpeedThreshold(threshold: Int) {
+        val clamped = threshold.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD] = clamped
+            prefs[KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH] = clamped.toFloat()
+        }
+        TrackerService.invalidateAutoPauseCache()
+    }
+
+    suspend fun updateAutoPauseBikeDebounceSec(debounceSec: Int) {
+        val clamped = debounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC] = clamped
+            prefs[KEY_AUTO_PAUSE_DEBOUNCE_SEC] = clamped
+        }
+        TrackerService.invalidateAutoPauseCache()
+    }
+
+    suspend fun updateAutoPauseRunSpeedThreshold(threshold: Int) {
+        val clamped = threshold.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD] = clamped
+        }
+        TrackerService.invalidateAutoPauseCache()
+    }
+
+    suspend fun updateAutoPauseRunDebounceSec(debounceSec: Int) {
+        val clamped = debounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] = clamped
+        }
+        TrackerService.invalidateAutoPauseCache()
+    }
+
+    suspend fun updateAutoPauseOtherSpeedThreshold(threshold: Int) {
+        val clamped = threshold.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] = clamped
+        }
+        TrackerService.invalidateAutoPauseCache()
+    }
+
+    suspend fun updateAutoPauseOtherDebounceSec(debounceSec: Int) {
+        val clamped = debounceSec.coerceIn(
+            TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
+            TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] = clamped
+        }
+        TrackerService.invalidateAutoPauseCache()
     }
 
     suspend fun resetToDefaults() {

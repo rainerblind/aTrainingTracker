@@ -962,6 +962,8 @@
     <string name="segment_status_start_in">Start in: %1$s</string>
     <string name="segment_status_remaining">Ziel in: %1$s</string>
     <string name="segment_status_offset">Daneben: %1$s</string>
+    <string name="segment_status_past_finish">Nach Ziel: %1$s</string>
+    <string name="segment_status_pr_delta">%1$s vs. PR</string>
 
     <!-- ANT(+) Plugins -->
     <string name="ant_general_explanation">Wenn alles korrekt installiert ist, kannst Du deine ANT+ Sensoren koppeln.  Dazu benötigst Du jedoch die richtige Hard- und Software.
@@ -1603,6 +1605,9 @@
     <string name="settings_lap_display_mode_visualizer">Visualizer</string>
     <string name="settings_lap_display_mode_both">Beide</string>
 
+    <!-- Configurable Default Zone Card Display Mode (ATT-3676 / REQ-UI-372.8) -->
+    <string name="settings_zone_card_display_mode_title">Zonenkarten-Anzeigemodus</string>
+
     <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
     <string name="workout_source_tracked">Aufgezeichnet</string>
     <string name="workout_source_tcx">TCX</string>
@@ -1845,22 +1850,7 @@
     <string name="ant_dialog_view_status">ANT+ Status anzeigen</string>
     <string name="ant_dialog_dismiss">Verstanden</string>
 
-    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
-    <string name="tuning_map_camera_section_title">Kartenkamera &amp; Follow-Me-Navigation</string>
-    <string name="tuning_map_base_zoom_title">Follow-Me Basis-Zoom</string>
-    <string name="tuning_map_base_zoom_desc">Basis-Zoomstufe im Stillstand (0 km/h) im Follow-Me-Trackingmodus (höherer Wert = näher herangezoomt)</string>
-    <string name="tuning_map_speed_zoom_enabled_title">Geschwindigkeitsabhängiger Zoom</string>
-    <string name="tuning_map_speed_zoom_enabled_desc">Zoomt bei zunehmender Geschwindigkeit schrittweise heraus für mehr Vorausschau</string>
-    <string name="tuning_map_cruising_zoom_title">Reisegeschwindigkeit-Zoom (bei 20 km/h)</string>
-    <string name="tuning_map_cruising_zoom_desc">Ziel-Zoomstufe bei typischer Fahrgeschwindigkeit (20 km/h) (höherer Wert = näher herangezoomt)</string>
-    <string name="tuning_map_tilt_angle_title">Kamera-Neigungswinkel</string>
-    <string name="tuning_map_tilt_angle_desc">Perspektivischer Neigungswinkel für die 3D-Navigation (0° ist flaches 2D, 70° volle 3D-Perspektive)</string>
-    <string name="tuning_map_lookahead_padding_title">Vorausschau-Kameraabstand</string>
-    <string name="tuning_map_lookahead_padding_desc">Anzeigebereich-Puffer in Prozent, um die Fahrerposition nach unten zu versetzen und den Blick auf die Strecke nach vorn zu maximieren (höherer Wert = Fahrer weiter unten / mehr Vorausschau)</string>
-    <string name="tuning_map_follow_me_speed_smoothing_title">Geschwindigkeits-Zoom-Glättung</string>
-    <string name="tuning_map_follow_me_speed_smoothing_desc">Dämpfungsfaktor für Geschwindigkeitsänderungen beim Follow-Me-Zoom (niedriger Wert = sanfter, höherer Wert = schnellere Reaktion)</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_title">Kompass- / Drehungsglättung</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_desc">Dämpfungsfaktor für Kameradrehungen im Follow-Me-Modus (niedriger Wert = sanfter, höherer Wert = schnellere Reaktion)</string>
+
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NEU</string>
@@ -1935,6 +1925,8 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Geschwindigkeit, unter der die Aufzeichnung pausiert wird</string>
     <string name="tuning_auto_pause_debounce_title">Verzögerung bis zur Pause</string>
     <string name="tuning_auto_pause_debounce_desc">Dauer unterhalb der Schwelle, bevor pausiert wird</string>
+    <string name="tuning_speed_value_format">%1$d %2$s</string>
+    <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Auto-Pause</string>
     <string name="cockpit_auto_pause_resume">Jetzt fortsetzen</string>
     <string name="cockpit_speed_sensor_lost">Geschwindigkeitssensor verloren</string>

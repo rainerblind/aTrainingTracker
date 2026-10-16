@@ -20,6 +20,9 @@ package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -149,6 +152,28 @@ object SettingsDataStoreJavaHelper {
     @JvmStatic
     fun getAutoPauseDebounceSec(context: Context): Int {
         return getTuningConfig(context).autoPauseDebounceSec
+    }
+
+    /**
+     * Synchronous bridge to fetch the full sport-specific auto-pause configuration.
+     * Evaluates active unit mode (Metric vs Imperial) via MyHelper.getUnits().
+     */
+    @JvmStatic
+    fun getAutoPauseConfig(context: Context): AutoPauseConfig {
+        val tuningConfig = getTuningConfig(context)
+        val isMetric = (TrainingApplication.getUnit() == MyUnits.METRIC)
+        return AutoPauseConfig(
+            bikeEnabled = tuningConfig.autoPauseBikeEnabled,
+            runEnabled = tuningConfig.autoPauseRunEnabled,
+            otherEnabled = tuningConfig.autoPauseOtherEnabled,
+            bikeSpeedThreshold = tuningConfig.autoPauseBikeSpeedThreshold,
+            bikeDebounceSec = tuningConfig.autoPauseBikeDebounceSec,
+            runSpeedThreshold = tuningConfig.autoPauseRunSpeedThreshold,
+            runDebounceSec = tuningConfig.autoPauseRunDebounceSec,
+            otherSpeedThreshold = tuningConfig.autoPauseOtherSpeedThreshold,
+            otherDebounceSec = tuningConfig.autoPauseOtherDebounceSec,
+            isMetric = isMetric
+        )
     }
 
     /**

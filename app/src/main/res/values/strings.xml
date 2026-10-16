@@ -1098,6 +1098,8 @@
     <string name="segment_status_start_in">Start in: %1$s</string>
     <string name="segment_status_remaining">Remaining: %1$s</string>
     <string name="segment_status_offset">Offset: %1$s</string>
+    <string name="segment_status_past_finish">Past finish: %1$s</string>
+    <string name="segment_status_pr_delta">%1$s vs. PR</string>
 
     <!-- ANT(+) Plugins -->
     <string name="ant_general_explanation">When everything is properly installed, you can pair your ANT+ devices. For this, you need the compatible hardware and software.
@@ -1711,6 +1713,9 @@
     <string name="settings_lap_display_mode_visualizer">Visualizer</string>
     <string name="settings_lap_display_mode_both">Both</string>
 
+    <!-- Configurable Default Zone Card Display Mode (ATT-3676 / REQ-UI-372.8) -->
+    <string name="settings_zone_card_display_mode_title">Zone Card Display Mode</string>
+
     <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
     <string name="workout_source_tracked">Tracked</string>
     <string name="workout_source_tcx">TCX</string>
@@ -1953,22 +1958,7 @@
     <string name="ant_dialog_view_status">View ANT+ Status</string>
     <string name="ant_dialog_dismiss">Got it</string>
 
-    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
-    <string name="tuning_map_camera_section_title">Map Camera &amp; Follow-Me Navigation</string>
-    <string name="tuning_map_base_zoom_title">Follow-Me Base Zoom</string>
-    <string name="tuning_map_base_zoom_desc">Base camera zoom level when stationary (0 km/h) in follow-me tracking mode (higher value = closer zoom)</string>
-    <string name="tuning_map_speed_zoom_enabled_title">Speed-Dependent Zoom</string>
-    <string name="tuning_map_speed_zoom_enabled_desc">Gradually zooms out as travel speed increases to expand forward route visibility</string>
-    <string name="tuning_map_cruising_zoom_title">Cruising Speed Zoom (at 20 km/h)</string>
-    <string name="tuning_map_cruising_zoom_desc">Camera zoom level scaled to at typical cycling speed (20 km/h) (higher value = closer zoom)</string>
-    <string name="tuning_map_tilt_angle_title">Camera Tilt Angle</string>
-    <string name="tuning_map_tilt_angle_desc">Perspective pitch angle for 3D navigation (0° is flat 2D, 70° is full 3D perspective)</string>
-    <string name="tuning_map_lookahead_padding_title">Forward Lookahead Padding</string>
-    <string name="tuning_map_lookahead_padding_desc">Viewport padding percent to position the rider in the lower portion and maximize visible road ahead (higher value = rider further down / more road ahead)</string>
-    <string name="tuning_map_follow_me_speed_smoothing_title">Speed Zoom Smoothing</string>
-    <string name="tuning_map_follow_me_speed_smoothing_desc">Dampening factor for speed changes in Follow-Me zoom (lower value = smoother, higher value = faster response)</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_title">Bearing Smoothing</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_desc">Dampening factor for camera rotation in Follow-Me mode (lower value = smoother, higher value = faster response)</string>
+
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NEW</string>
@@ -2043,6 +2033,8 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Speed below which recording is paused</string>
     <string name="tuning_auto_pause_debounce_title">Pause Debounce Delay</string>
     <string name="tuning_auto_pause_debounce_desc">Duration below threshold before pausing</string>
+    <string name="tuning_speed_value_format">%1$d %2$s</string>
+    <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Auto-Pause</string>
     <string name="cockpit_auto_pause_resume">Resume Now</string>
     <string name="cockpit_speed_sensor_lost">Speed Sensor Lost</string>

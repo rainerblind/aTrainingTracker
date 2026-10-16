@@ -23,7 +23,10 @@ import android.database.Cursor
 import android.provider.BaseColumns
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.WorkoutClusterContract
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.ui.aftermath.EquipmentDataProvider
 import io.mockk.*
+import java.io.File
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -182,5 +185,195 @@ class WorkoutClusterMapperTest {
         assertEquals(77L, key.clusterId)
         verify(exactly = 0) { cursor.moveToNext() }
         verify(exactly = 0) { cursor.close() }
+    }
+
+    @Test
+    fun testSourceCodeContract_zeroManualCursorExtractionsInTargetClasses() {
+        val filesToCheck = listOf(
+            "app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt",
+            "app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterRepository.kt",
+            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/EquipmentDataProvider.kt"
+        )
+
+        for (relPath in filesToCheck) {
+            val file = resolveFile(relPath)
+            assertTrue("Target file must exist: $relPath", file.exists())
+            val text = file.readText()
+
+            assertFalse("File $relPath must not contain 'getColumnIndex(' (Rule 20/36)", text.contains("getColumnIndex("))
+            assertFalse("File $relPath must not contain 'getColumnIndexOrThrow(' (Rule 20/36)", text.contains("getColumnIndexOrThrow("))
+        }
+    }
+
+    @Test
+    fun testWorkoutBoundsDto_fromCursor_extractsNonNullCoordinates() {
+        val cursor = mockk<Cursor>(relaxed = true)
+        val columnMap = mapOf(
+            WorkoutSummaries.BOUND_MIN_LAT to 0,
+            WorkoutSummaries.BOUND_MIN_LNG to 1,
+            WorkoutSummaries.BOUND_MAX_LAT to 2,
+            WorkoutSummaries.BOUND_MAX_LNG to 3
+        )
+        every { cursor.getColumnIndexOrThrow(any()) } answers { columnMap[firstArg()] ?: -1 }
+        every { cursor.isNull(0) } returns false
+        every { cursor.getDouble(0) } returns 48.0
+        every { cursor.isNull(1) } returns false
+        every { cursor.getDouble(1) } returns 11.0
+        every { cursor.isNull(2) } returns false
+        every { cursor.getDouble(2) } returns 48.5
+        every { cursor.isNull(3) } returns false
+        every { cursor.getDouble(3) } returns 11.5
+
+        val dto = WorkoutBoundsDto.fromCursor(cursor)
+
+        assertEquals(48.0, dto.minLat ?: 0.0, 0.0001)
+        assertEquals(11.0, dto.minLng ?: 0.0, 0.0001)
+        assertEquals(48.5, dto.maxLat ?: 0.0, 0.0001)
+        assertEquals(11.5, dto.maxLng ?: 0.0, 0.0001)
+        assertTrue(dto.hasPoints)
+
+        verify(exactly = 0) { cursor.moveToNext() }
+        verify(exactly = 0) { cursor.close() }
+    }
+
+    @Test
+    fun testWorkoutBoundsDto_fromCursor_handlesNullCoordinates() {
+        val cursor = mockk<Cursor>(relaxed = true)
+        val columnMap = mapOf(
+            WorkoutSummaries.BOUND_MIN_LAT to 0,
+            WorkoutSummaries.BOUND_MIN_LNG to 1,
+            WorkoutSummaries.BOUND_MAX_LAT to 2,
+            WorkoutSummaries.BOUND_MAX_LNG to 3
+        )
+        every { cursor.getColumnIndexOrThrow(any()) } answers { columnMap[firstArg()] ?: -1 }
+        every { cursor.isNull(any()) } returns true
+
+        val dto = WorkoutBoundsDto.fromCursor(cursor)
+
+        assertNull(dto.minLat)
+        assertNull(dto.minLng)
+        assertNull(dto.maxLat)
+        assertNull(dto.maxLng)
+        assertFalse(dto.hasPoints)
+
+        verify(exactly = 0) { cursor.moveToNext() }
+        verify(exactly = 0) { cursor.close() }
+    }
+
+    @Test
+    fun testClusterWorkoutCandidateDto_fromCursor_extractsAllFields() {
+        val cursor = mockk<Cursor>(relaxed = true)
+        val columnMap = mapOf(
+            WorkoutSummaries.C_ID to 0,
+            WorkoutSummaries.WORKOUT_NAME to 1,
+            WorkoutSummaries.FILE_BASE_NAME to 2,
+            WorkoutSummaries.SPORT_ID to 3,
+            WorkoutSummaries.DISTANCE_TOTAL_m to 4
+        )
+        every { cursor.getColumnIndexOrThrow(any()) } answers { columnMap[firstArg()] ?: -1 }
+        every { cursor.getLong(0) } returns 1234L
+        every { cursor.isNull(1) } returns false
+        every { cursor.getString(1) } returns "Morning Ride"
+        every { cursor.isNull(2) } returns false
+        every { cursor.getString(2) } returns "workout_1234.fit"
+        every { cursor.getLong(3) } returns 2L
+        every { cursor.getDouble(4) } returns 45200.5
+
+        val candidate = ClusterWorkoutCandidateDto.fromCursor(cursor)
+
+        assertEquals(1234L, candidate.workoutId)
+        assertEquals("Morning Ride", candidate.workoutName)
+        assertEquals("workout_1234.fit", candidate.fileBaseName)
+        assertEquals(2L, candidate.sportId)
+        assertEquals(45200.5, candidate.distance, 0.01)
+
+        verify(exactly = 0) { cursor.moveToNext() }
+        verify(exactly = 0) { cursor.close() }
+    }
+
+    @Test
+    fun testClusterWorkoutCandidateDto_fromCursor_handlesNullStrings() {
+        val cursor = mockk<Cursor>(relaxed = true)
+        val columnMap = mapOf(
+            WorkoutSummaries.C_ID to 0,
+            WorkoutSummaries.WORKOUT_NAME to 1,
+            WorkoutSummaries.FILE_BASE_NAME to 2,
+            WorkoutSummaries.SPORT_ID to 3,
+            WorkoutSummaries.DISTANCE_TOTAL_m to 4
+        )
+        every { cursor.getColumnIndexOrThrow(any()) } answers { columnMap[firstArg()] ?: -1 }
+        every { cursor.getLong(0) } returns 5678L
+        every { cursor.isNull(1) } returns true
+        every { cursor.isNull(2) } returns true
+        every { cursor.getLong(3) } returns 1L
+        every { cursor.getDouble(4) } returns 12000.0
+
+        val candidate = ClusterWorkoutCandidateDto.fromCursor(cursor)
+
+        assertEquals(5678L, candidate.workoutId)
+        assertNull(candidate.workoutName)
+        assertNull(candidate.fileBaseName)
+        assertEquals(1L, candidate.sportId)
+        assertEquals(12000.0, candidate.distance, 0.01)
+
+        verify(exactly = 0) { cursor.moveToNext() }
+        verify(exactly = 0) { cursor.close() }
+    }
+
+    @Test
+    fun testWorkoutEquipmentDto_fromCursor_extractsSportAndEquipmentId() {
+        val cursor = mockk<Cursor>(relaxed = true)
+        val columnMap = mapOf(
+            WorkoutSummaries.SPORT_ID to 0,
+            WorkoutSummaries.EQUIPMENT_ID to 1
+        )
+        every { cursor.getColumnIndexOrThrow(any()) } answers { columnMap[firstArg()] ?: -1 }
+        every { cursor.getLong(0) } returns 3L
+        every { cursor.getLong(1) } returns 42L
+
+        val dto = WorkoutEquipmentDto.fromCursor(cursor)
+
+        assertEquals(3L, dto.sportId)
+        assertEquals(42L, dto.equipmentId)
+
+        verify(exactly = 0) { cursor.moveToNext() }
+        verify(exactly = 0) { cursor.close() }
+    }
+
+    @Test
+    fun testEquipmentDataProvider_delegatesToWorkoutEquipmentDto() {
+        val mockEquipmentDbHelper = mockk<EquipmentDbHelper>(relaxed = true)
+        val mockSportTypeManager = mockk<com.atrainingtracker.banalservice.database.SportTypeDatabaseManager>(relaxed = true)
+        val cursor = mockk<Cursor>(relaxed = true)
+
+        val columnMap = mapOf(
+            WorkoutSummaries.SPORT_ID to 0,
+            WorkoutSummaries.EQUIPMENT_ID to 1
+        )
+        every { cursor.getColumnIndexOrThrow(any()) } answers { columnMap[firstArg()] ?: -1 }
+        every { cursor.getLong(0) } returns 1L
+        every { cursor.getLong(1) } returns 99L
+
+        every { mockSportTypeManager.getBSportType(1L) } returns BSportType.BIKE
+        every { mockEquipmentDbHelper.getEquipmentNameFromId(99L) } returns "Road Bike"
+
+        val provider = EquipmentDataProvider(mockEquipmentDbHelper, mockSportTypeManager)
+        val data = provider.getEquipmentData(cursor)
+
+        assertEquals(BSportType.BIKE, data.bSportType)
+        assertEquals(99L, data.equipmentId)
+        assertEquals("Road Bike", data.equipmentName)
+
+        verify(exactly = 0) { cursor.moveToNext() }
+        verify(exactly = 0) { cursor.close() }
+    }
+
+    private fun resolveFile(relPath: String): File {
+        val candidates = listOf(
+            File(relPath),
+            File("../$relPath"),
+            File("../../$relPath")
+        )
+        return candidates.firstOrNull { it.exists() } ?: File(relPath)
     }
 }

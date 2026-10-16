@@ -54,6 +54,36 @@ class LiveClimbSheetLayoutTest {
         val sheetMethod = methods.find { it.name.startsWith("LiveClimbSheet") && Modifier.isPublic(it.modifiers) }
         assertNotNull("LiveClimbSheet composable function must exist and be public", sheetMethod)
         assertTrue(Modifier.isPublic(sheetMethod!!.modifiers))
+
+        val headerMethod = methods.find { it.name.startsWith("ClimbHeader") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("ClimbHeader composable function must exist and be public (REQ-UI-383, ATT-3576)", headerMethod)
+        assertTrue(Modifier.isPublic(headerMethod!!.modifiers))
+
+        val detailsMethod = methods.find { it.name.startsWith("ClimbLiveDetails") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("ClimbLiveDetails composable function must exist and be public (REQ-UI-383, ATT-3576)", detailsMethod)
+        assertTrue(Modifier.isPublic(detailsMethod!!.modifiers))
+    }
+
+    @Test
+    fun testLiveClimbSheet_delegatesToLiveTrackingEntitySheet() {
+        val content = liveClimbSheetFile.readText()
+
+        assertTrue(
+            "LiveClimbSheet must delegate root layout to LiveTrackingEntitySheet (REQ-UI-383, ATT-3576)",
+            content.contains("LiveTrackingEntitySheet(")
+        )
+        assertFalse(
+            "LiveClimbSheet must not instantiate raw HorizontalDivider directly (REQ-UI-383, ATT-3576)",
+            content.contains("HorizontalDivider(")
+        )
+        assertTrue(
+            "LiveClimbSheet must declare ClimbHeader composable (REQ-UI-383, ATT-3576)",
+            content.contains("fun ClimbHeader(")
+        )
+        assertTrue(
+            "LiveClimbSheet must declare ClimbLiveDetails composable (REQ-UI-383, ATT-3576)",
+            content.contains("fun ClimbLiveDetails(")
+        )
     }
 
     @Test

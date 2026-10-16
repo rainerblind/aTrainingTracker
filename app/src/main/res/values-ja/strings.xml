@@ -870,7 +870,9 @@
     <string name="segment_status_finished">終了</string>
     <string name="segment_status_start_in">開始まで: %1$s</string>
     <string name="segment_status_remaining">残り: %1$s</string>
-    <string name="segment_status_offset">タイム差: %1$s</string>
+    <string name="segment_status_offset">コースずれ: %1$s</string>
+    <string name="segment_status_past_finish">ゴール通過後: %1$s</string>
+    <string name="segment_status_pr_delta">%1$s (自己ベスト比)</string>
 
     <!-- ANT(+) Plugins -->
     <string name="ant_general_explanation">対応するハード・ソフトを揃えることで、ANT+ デバイスをペアリングできます。</string>
@@ -1494,6 +1496,9 @@
     <string name="settings_lap_display_mode_visualizer">ビジュアライザー</string>
     <string name="settings_lap_display_mode_both">両方</string>
 
+    <!-- Configurable Default Zone Card Display Mode (ATT-3676 / REQ-UI-372.8) -->
+    <string name="settings_zone_card_display_mode_title">ゾーンカード表示モード</string>
+
     <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
     <string name="workout_source_tracked">記録済み</string>
     <string name="workout_source_tcx">TCX</string>
@@ -1736,22 +1741,6 @@
     <string name="ant_dialog_view_status">ANT+ ステータスを表示</string>
     <string name="ant_dialog_dismiss">了解</string>
 
-    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
-    <string name="tuning_map_camera_section_title">マップカメラと追従ナビゲーション</string>
-    <string name="tuning_map_base_zoom_title">追従ベースズーム</string>
-    <string name="tuning_map_base_zoom_desc">追従トラッキングモードでの停止時（0 km/h）のベースズームレベル（値が大きいほど拡大表示）</string>
-    <string name="tuning_map_speed_zoom_enabled_title">速度依存ズーム</string>
-    <string name="tuning_map_speed_zoom_enabled_desc">走行速度が上がると段階的にズームアウトし、進行方向の見通しを広げます</string>
-    <string name="tuning_map_cruising_zoom_title">巡航速度ズーム（20 km/h時）</string>
-    <string name="tuning_map_cruising_zoom_desc">一般的なサイクリング速度（20 km/h）に合わせたカメラズームレベル（値が大きいほど拡大表示）</string>
-    <string name="tuning_map_tilt_angle_title">カメラ傾斜角度</string>
-    <string name="tuning_map_tilt_angle_desc">3Dナビゲーションの視点傾斜角度（0°はフラットな2D、70°は完全な3Dパースペクティブ）</string>
-    <string name="tuning_map_lookahead_padding_title">前方視野マージン</string>
-    <string name="tuning_map_lookahead_padding_desc">ライダーの位置を下部に配置し、前方の道路視野を最大化するためのビューポート余白比率（%）（値が大きいほどライダーが下側に配置され前方が広く見えます）</string>
-    <string name="tuning_map_follow_me_speed_smoothing_title">速度ズームのスムージング</string>
-    <string name="tuning_map_follow_me_speed_smoothing_desc">追従モードズームにおける速度変化の減衰係数（小さい値 = より滑らか、大きい値 = より素早い応答）</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_title">方位・回転のスムージング</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_desc">追従モードにおけるカメラ回転の減衰係数（小さい値 = より滑らか、大きい値 = より素早い応答）</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">新規</string>
@@ -1830,6 +1819,8 @@
     <string name="tuning_auto_pause_speed_threshold_desc">記録が一時停止される速度のしきい値</string>
     <string name="tuning_auto_pause_debounce_title">一時停止遅延時間</string>
     <string name="tuning_auto_pause_debounce_desc">一時停止するまでのしきい値以下の継続時間</string>
+    <string name="tuning_speed_value_format">%1$d %2$s</string>
+    <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">オートポーズ</string>
     <string name="cockpit_auto_pause_resume">今すぐ再開</string>
     <string name="cockpit_speed_sensor_lost">スピードセンサー喪失</string>

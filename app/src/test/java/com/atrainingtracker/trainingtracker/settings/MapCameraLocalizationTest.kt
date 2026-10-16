@@ -26,14 +26,14 @@ import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * Localization parity tests verifying all 11 map camera tuning string resources
- * exist and are non-empty across all 9 supported locales (REQ-MAP-042 / TST-MAP-044.5).
+ * Localization parity tests verifying all 15 obsolete map camera tuning string resources
+ * are completely removed across all 9 supported locales (REQ-MAP-050 / ATT-3581).
  */
 class MapCameraLocalizationTest {
 
     private val locales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
 
-    private val expectedKeys = listOf(
+    private val obsoleteKeys = listOf(
         "tuning_map_camera_section_title",
         "tuning_map_base_zoom_title",
         "tuning_map_base_zoom_desc",
@@ -44,11 +44,15 @@ class MapCameraLocalizationTest {
         "tuning_map_tilt_angle_title",
         "tuning_map_tilt_angle_desc",
         "tuning_map_lookahead_padding_title",
-        "tuning_map_lookahead_padding_desc"
+        "tuning_map_lookahead_padding_desc",
+        "tuning_map_follow_me_speed_smoothing_title",
+        "tuning_map_follow_me_speed_smoothing_desc",
+        "tuning_map_follow_me_bearing_smoothing_title",
+        "tuning_map_follow_me_bearing_smoothing_desc"
     )
 
     @Test
-    fun testMapCameraStrings_haveParityAcrossAll9Locales() {
+    fun testMapCameraStrings_purgedAcrossAll9Locales() {
         val resDir = findResDirectory()
 
         for (locale in locales) {
@@ -57,50 +61,12 @@ class MapCameraLocalizationTest {
             assertTrue("strings.xml must exist for locale $dirName", file.exists())
 
             val stringMap = parseStringsFile(file)
-            for (key in expectedKeys) {
-                assertTrue(
-                    "Key '$key' must exist in $dirName/strings.xml",
+            for (key in obsoleteKeys) {
+                assertFalse(
+                    "Obsolete key '$key' must NOT exist in $dirName/strings.xml per ATT-3581 / REQ-MAP-050",
                     stringMap.containsKey(key)
                 )
-                assertFalse(
-                    "Value for '$key' in $dirName/strings.xml must not be blank",
-                    stringMap[key].isNullOrBlank()
-                )
             }
-        }
-    }
-
-    @Test
-    fun testMapCameraZoomDescriptions_clarifyDirectionAcrossAll9Locales() {
-        val resDir = findResDirectory()
-
-        for (locale in locales) {
-            val dirName = if (locale.isEmpty()) "values" else "values-$locale"
-            val file = File(resDir, "$dirName/strings.xml")
-            val stringMap = parseStringsFile(file)
-
-            val baseZoomDesc = stringMap["tuning_map_base_zoom_desc"] ?: ""
-            val cruisingZoomDesc = stringMap["tuning_map_cruising_zoom_desc"] ?: ""
-            val lookaheadTitle = stringMap["tuning_map_lookahead_padding_title"] ?: ""
-
-            assertTrue(
-                "Base zoom description in $dirName must provide direction guidance (contains parentheses hint): '$baseZoomDesc'",
-                baseZoomDesc.contains("(") || baseZoomDesc.contains("（")
-            )
-            assertTrue(
-                "Cruising zoom description in $dirName must provide direction guidance (contains parentheses hint): '$cruisingZoomDesc'",
-                cruisingZoomDesc.contains("(") || cruisingZoomDesc.contains("（")
-            )
-            assertFalse(
-                "Lookahead title in $dirName must not refer to bottom: '$lookaheadTitle'",
-                lookaheadTitle.contains("Bottom", ignoreCase = true) ||
-                    lookaheadTitle.contains("unten", ignoreCase = true) ||
-                    lookaheadTitle.contains("inferior", ignoreCase = true) ||
-                    lookaheadTitle.contains("inférieure", ignoreCase = true) ||
-                    lookaheadTitle.contains("onderste", ignoreCase = true) ||
-                    lookaheadTitle.contains("dolny", ignoreCase = true) ||
-                    lookaheadTitle.contains("下部", ignoreCase = true)
-            )
         }
     }
 

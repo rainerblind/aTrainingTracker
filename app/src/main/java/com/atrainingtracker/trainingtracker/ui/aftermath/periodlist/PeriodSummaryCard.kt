@@ -58,6 +58,7 @@ import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLngBounds
 
@@ -580,7 +581,7 @@ private fun PeriodMultiWorkoutMap(
         DarkMapStyle.resolveMapProperties(isDark, context)
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White)) {
+    Box(modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,

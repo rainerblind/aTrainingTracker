@@ -31,12 +31,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 
 import androidx.compose.ui.platform.LocalContext
 import com.atrainingtracker.banalservice.BANALService
@@ -64,7 +67,7 @@ fun PairingProtocolBottomSheet(
             },
             leadingContent = {
                 Icon(
-                    painter = painterResource(id = Protocol.BLUETOOTH_LE.iconId),
+                    painter = safePainterResource(id = Protocol.BLUETOOTH_LE.iconId, fallback = Icons.Default.Bluetooth),
                     contentDescription = null,
                     modifier = Modifier
                         .size(48.dp)
@@ -85,7 +88,7 @@ fun PairingProtocolBottomSheet(
             },
             leadingContent = {
                 Icon(
-                    painter = painterResource(id = Protocol.ANT_PLUS.iconId),
+                    painter = safePainterResource(id = Protocol.ANT_PLUS.iconId, fallback = Icons.Default.Sensors),
                     contentDescription = null,
                     modifier = Modifier
                         .size(48.dp)
