@@ -119,6 +119,18 @@ class WorkoutDataMapper(
         val rawMinWPrimeBal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.MIN)
         val (minWPrimeBalKj, minWPrimeBalPct, isEmptyTankWarning) = resolveWPrimeBalSummary(rawMinWPrimeBal)
 
+        val avgSpeedMpsVal = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps))
+        val aerobicSummary = resolveAerobicEfficiencySummary(
+            powerEf = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.EFFICIENCY_FACTOR),
+            powerDecouplingPct = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.AEROBIC_DECOUPLING),
+            speedEf = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.EFFICIENCY_FACTOR),
+            speedDecouplingPct = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.AEROBIC_DECOUPLING),
+            avgHrBpm = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HR, ExtremaType.AVG),
+            avgPowerWatts = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.AVG),
+            avgSpeedMps = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.AVG) ?: avgSpeedMpsVal,
+            bSportType = bSportType
+        )
+
         // The mapper is responsible for assembling the final object from its constituent parts.
         return WorkoutData(
             id = workoutId,
@@ -157,12 +169,16 @@ class WorkoutDataMapper(
             minWPrimeBalKj = minWPrimeBalKj,
             minWPrimeBalPct = minWPrimeBalPct,
             isEmptyTankWarning = isEmptyTankWarning,
+            efficiencyFactor = aerobicSummary.efficiencyFactor,
+            aerobicDecouplingPct = aerobicSummary.aerobicDecouplingPct,
+            isPowerBasedEfficiency = aerobicSummary.isPowerBasedEfficiency,
+            isAerobicDecouplingHighDrift = aerobicSummary.isAerobicDecouplingHighDrift,
 
             totalDistance = totalDistance,
             maxDisplacement = maxDisplacement,
             activeTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)),
             totalTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s)),
-            avgSpeedMps = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps)),
+            avgSpeedMps = avgSpeedMpsVal,
             ascentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.ASCENDING)),
             descentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCENDING)),
             minAltitude = minAltitude,
@@ -232,6 +248,87 @@ class WorkoutDataMapper(
         } else null
         val isEmptyTank = pct != null && pct < com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.EMPTY_TANK_WARNING_THRESHOLD_PCT
         return Triple(validMinKj, pct, isEmptyTank)
+    }
+
+    /**
+     * Resolved Efficiency Factor ($\text{EF}$) and Aerobic Decoupling ($\text{Pw:Hr }\%$ or $\text{Pa:Hr }\%$) summary (`REQ-UI-400.3`).
+     */
+    internal data class AerobicEfficiencySummary(
+        val efficiencyFactor: Double?,
+        val aerobicDecouplingPct: Double?,
+        val isPowerBasedEfficiency: Boolean,
+        val isAerobicDecouplingHighDrift: Boolean
+    )
+
+    /**
+     * Resolves Efficiency Factor ($\text{EF}$) and Aerobic Decoupling ($\text{Pw:Hr }\%$ or $\text{Pa:Hr }\%$)
+     * from persisted extrema records, with an on-the-fly fallback for Efficiency Factor when average HR
+     * and average Power / Speed exist (`REQ-UI-400.3`, Rule 20).
+     */
+    internal fun resolveAerobicEfficiencySummary(
+        powerEf: Double?,
+        powerDecouplingPct: Double?,
+        speedEf: Double?,
+        speedDecouplingPct: Double?,
+        avgHrBpm: Double?,
+        avgPowerWatts: Double?,
+        avgSpeedMps: Double?,
+        bSportType: BSportType
+    ): AerobicEfficiencySummary {
+        fun cleanPositive(v: Double?): Double? = v?.takeIf { it.isFinite() && it > 0.0 && it < Double.MAX_VALUE }
+        fun cleanFinite(v: Double?): Double? = v?.takeIf { it.isFinite() && it > -1000.0 && it < 1000.0 }
+
+        val validPowerEf = cleanPositive(powerEf)
+        val validPowerDec = cleanFinite(powerDecouplingPct)
+        val validSpeedEf = cleanPositive(speedEf)
+        val validSpeedDec = cleanFinite(speedDecouplingPct)
+        val validHr = cleanPositive(avgHrBpm)
+        val validPowerAvg = cleanPositive(avgPowerWatts)
+        val validSpeedAvg = cleanPositive(avgSpeedMps)
+
+        val ef: Double?
+        val dec: Double?
+        val isPower: Boolean
+
+        if (validPowerEf != null || validPowerDec != null) {
+            ef = validPowerEf ?: if (validPowerAvg != null && validHr != null) {
+                com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateEfficiencyFactorPower(validPowerAvg, validHr)
+            } else null
+            dec = validPowerDec
+            isPower = true
+        } else if (validSpeedEf != null || validSpeedDec != null) {
+            ef = validSpeedEf ?: if (validSpeedAvg != null && validHr != null) {
+                com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateEfficiencyFactorSpeed(validSpeedAvg, validHr)
+            } else null
+            dec = validSpeedDec
+            isPower = false
+        } else if (validHr != null) {
+            if (validPowerAvg != null && (bSportType != BSportType.RUN || validSpeedAvg == null)) {
+                ef = com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateEfficiencyFactorPower(validPowerAvg, validHr)
+                dec = null
+                isPower = true
+            } else if (validSpeedAvg != null) {
+                ef = com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateEfficiencyFactorSpeed(validSpeedAvg, validHr)
+                dec = null
+                isPower = false
+            } else {
+                ef = null
+                dec = null
+                isPower = bSportType != BSportType.RUN
+            }
+        } else {
+            ef = null
+            dec = null
+            isPower = bSportType != BSportType.RUN
+        }
+
+        val isHighDrift = dec != null && dec >= com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.AEROBIC_DECOUPLING_DRIFT_THRESHOLD_PCT
+        return AerobicEfficiencySummary(
+            efficiencyFactor = ef,
+            aerobicDecouplingPct = dec,
+            isPowerBasedEfficiency = isPower,
+            isAerobicDecouplingHighDrift = isHighDrift
+        )
     }
 
     /**
@@ -393,6 +490,17 @@ class WorkoutDataMapper(
         val rawMinWPrimeBal = getBatchVal(SensorType.W_PRIME_BAL, ExtremaType.MIN)
         val (minWPrimeBalKj, minWPrimeBalPct, isEmptyTankWarning) = resolveWPrimeBalSummary(rawMinWPrimeBal)
 
+        val aerobicSummary = resolveAerobicEfficiencySummary(
+            powerEf = getBatchVal(SensorType.POWER, ExtremaType.EFFICIENCY_FACTOR),
+            powerDecouplingPct = getBatchVal(SensorType.POWER, ExtremaType.AEROBIC_DECOUPLING),
+            speedEf = getBatchVal(SensorType.SPEED_mps, ExtremaType.EFFICIENCY_FACTOR),
+            speedDecouplingPct = getBatchVal(SensorType.SPEED_mps, ExtremaType.AEROBIC_DECOUPLING),
+            avgHrBpm = getBatchVal(SensorType.HR, ExtremaType.AVG),
+            avgPowerWatts = getBatchVal(SensorType.POWER, ExtremaType.AVG),
+            avgSpeedMps = getBatchVal(SensorType.SPEED_mps, ExtremaType.AVG) ?: snapshot.avgSpeedMps,
+            bSportType = bSportType
+        )
+
         return WorkoutData(
             id = snapshot.workoutId,
             finished = snapshot.finished,
@@ -428,6 +536,10 @@ class WorkoutDataMapper(
             minWPrimeBalKj = minWPrimeBalKj,
             minWPrimeBalPct = minWPrimeBalPct,
             isEmptyTankWarning = isEmptyTankWarning,
+            efficiencyFactor = aerobicSummary.efficiencyFactor,
+            aerobicDecouplingPct = aerobicSummary.aerobicDecouplingPct,
+            isPowerBasedEfficiency = aerobicSummary.isPowerBasedEfficiency,
+            isAerobicDecouplingHighDrift = aerobicSummary.isAerobicDecouplingHighDrift,
 
             totalDistance = snapshot.totalDistance,
             maxDisplacement = maxDisplacement,

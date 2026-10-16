@@ -119,10 +119,14 @@ data class WorkoutData(
     val maxLat: Double? = null,
     val maxLng: Double? = null,
 
-    // --- 2b. Anaerobic Battery (W'bal) Summary (REQ-UI-399.3) ---
+    // --- 2b. Anaerobic Battery (W'bal) & Aerobic Efficiency Summary (REQ-UI-399.3, REQ-UI-400.3) ---
     val minWPrimeBalKj: Double? = null,
     val minWPrimeBalPct: Double? = null,
     val isEmptyTankWarning: Boolean = false,
+    val efficiencyFactor: Double? = null,
+    val aerobicDecouplingPct: Double? = null,
+    val isPowerBasedEfficiency: Boolean = true,
+    val isAerobicDecouplingHighDrift: Boolean = false,
 
     // --- 3. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
@@ -169,7 +173,11 @@ data class WorkoutData(
             maxDisplacement = maxDisplacement,
             minWPrimeBalKj = minWPrimeBalKj,
             minWPrimeBalPct = minWPrimeBalPct,
-            isEmptyTankWarning = isEmptyTankWarning
+            isEmptyTankWarning = isEmptyTankWarning,
+            efficiencyFactor = efficiencyFactor,
+            aerobicDecouplingPct = aerobicDecouplingPct,
+            isPowerBasedEfficiency = isPowerBasedEfficiency,
+            isAerobicDecouplingHighDrift = isAerobicDecouplingHighDrift
         )
 
     val descriptionData: DescriptionData

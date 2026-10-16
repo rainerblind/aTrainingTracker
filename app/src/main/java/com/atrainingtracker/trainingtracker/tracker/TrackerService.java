@@ -1557,6 +1557,54 @@ public class TrackerService extends Service {
             }
         }
 
+        // 2b. Calculate and persist Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) from recorded samples (REQ-UI-400.2)
+        try {
+            if (mBaseFileName != null && !mBaseFileName.isEmpty()) {
+                WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(this);
+                if (samplesManager.existsTable(mBaseFileName)) {
+                    String tableName = WorkoutSamplesDatabaseManager.getTableName(mBaseFileName);
+                    java.util.List<Double> powerSamples = new java.util.ArrayList<>();
+                    java.util.List<Double> speedSamples = new java.util.ArrayList<>();
+                    java.util.List<Double> hrSamples = new java.util.ArrayList<>();
+                    try (Cursor sampleCursor = samplesManager.getDatabase().query(tableName, null, null, null, null, null, null)) {
+                        if (sampleCursor != null) {
+                            int powerIdx = sampleCursor.getColumnIndex(SensorType.POWER.name());
+                            int speedIdx = sampleCursor.getColumnIndex(SensorType.SPEED_mps.name());
+                            int hrIdx = sampleCursor.getColumnIndex(SensorType.HR.name());
+                            while (sampleCursor.moveToNext()) {
+                                Double p = (powerIdx != -1 && !sampleCursor.isNull(powerIdx)) ? sampleCursor.getDouble(powerIdx) : null;
+                                Double s = (speedIdx != -1 && !sampleCursor.isNull(speedIdx)) ? sampleCursor.getDouble(speedIdx) : null;
+                                Double hr = (hrIdx != -1 && !sampleCursor.isNull(hrIdx)) ? sampleCursor.getDouble(hrIdx) : null;
+                                powerSamples.add(p);
+                                speedSamples.add(s);
+                                hrSamples.add(hr);
+                            }
+                        }
+                    }
+                    BSportType liveSport = (mBanalService != null && mBanalService.getBSportType() != null)
+                            ? mBanalService.getBSportType()
+                            : BSportType.UNKNOWN;
+                    com.atrainingtracker.trainingtracker.physiology.AerobicEfficiencyResult aerobicResult =
+                            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
+                                    powerSamples, speedSamples, hrSamples, liveSport
+                            );
+                    SensorType targetSensor = aerobicResult.isPowerBased() ? SensorType.POWER : SensorType.SPEED_mps;
+                    if (aerobicResult.getEfficiencyFactor() != null) {
+                        double ef = aerobicResult.getEfficiencyFactor();
+                        summariesManager.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
+                        repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
+                    }
+                    if (aerobicResult.getDecouplingPct() != null) {
+                        double dec = aerobicResult.getDecouplingPct();
+                        summariesManager.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
+                        repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "finalizeLiveSession: Could not compute Aerobic Efficiency / Decoupling extrema", e);
+        }
+
         // REQ-MAP-020 (ATT-528): Authoritative deterministic calculation of max line distance and apex from recorded track
         if (startPos != null && mLiveSession.getSampledLatLngs() != null && !mLiveSession.getSampledLatLngs().isEmpty()) {
             double calculatedMaxDisp = 0.0;

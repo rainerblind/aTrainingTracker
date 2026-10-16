@@ -267,4 +267,67 @@ class WorkoutDataMappingSymmetryTest {
         assertEquals(singleData.detailsData.minWPrimeBalKj, batchData.detailsData.minWPrimeBalKj)
         assertEquals(singleData.detailsData.minWPrimeBalKj, snapshotData.detailsData.minWPrimeBalKj)
     }
+
+    @Test
+    fun `fromCursor and fromSnapshot map Efficiency Factor and Aerobic Decoupling symmetrically (REQ-UI-400_3)`() {
+        val cursor = createMockCursor(sourceString = "FIT", raceInt = 0)
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.EFFICIENCY_FACTOR
+            )
+        } returns 1.65
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.AEROBIC_DECOUPLING
+            )
+        } returns 3.8
+
+        val singleData = mapper.fromCursor(cursor)
+        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+            extrema = mapOf(
+                5023L to listOf(
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(
+                        5023L,
+                        com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                        com.atrainingtracker.trainingtracker.database.ExtremaType.EFFICIENCY_FACTOR,
+                        1.65,
+                        null
+                    ),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(
+                        5023L,
+                        com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                        com.atrainingtracker.trainingtracker.database.ExtremaType.AEROBIC_DECOUPLING,
+                        3.8,
+                        null
+                    )
+                )
+            ),
+            stravaData = emptyMap(),
+            clusterNames = mapOf(42L to "Test Cluster"),
+            laps = emptyMap()
+        )
+        val batchData = mapper.fromCursor(cursor, batchMetadata)
+        val snapshot = mapper.readCursorSnapshot(cursor)
+        val snapshotData = mapper.fromSnapshot(snapshot, batchMetadata)
+
+        assertEquals(1.65, singleData.efficiencyFactor!!, 1e-6)
+        assertEquals(3.8, singleData.aerobicDecouplingPct!!, 1e-6)
+        assertEquals(true, singleData.isPowerBasedEfficiency)
+        assertEquals(false, singleData.isAerobicDecouplingHighDrift)
+
+        assertEquals(singleData.efficiencyFactor, batchData.efficiencyFactor)
+        assertEquals(singleData.efficiencyFactor, snapshotData.efficiencyFactor)
+        assertEquals(singleData.aerobicDecouplingPct, batchData.aerobicDecouplingPct)
+        assertEquals(singleData.aerobicDecouplingPct, snapshotData.aerobicDecouplingPct)
+        assertEquals(singleData.isPowerBasedEfficiency, batchData.isPowerBasedEfficiency)
+        assertEquals(singleData.isPowerBasedEfficiency, snapshotData.isPowerBasedEfficiency)
+        assertEquals(singleData.isAerobicDecouplingHighDrift, batchData.isAerobicDecouplingHighDrift)
+        assertEquals(singleData.isAerobicDecouplingHighDrift, snapshotData.isAerobicDecouplingHighDrift)
+        assertEquals(singleData.detailsData.efficiencyFactor, snapshotData.detailsData.efficiencyFactor)
+        assertEquals(singleData.detailsData.aerobicDecouplingPct, snapshotData.detailsData.aerobicDecouplingPct)
+    }
 }

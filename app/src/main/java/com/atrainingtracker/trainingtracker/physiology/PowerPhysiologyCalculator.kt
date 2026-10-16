@@ -1,5 +1,6 @@
 package com.atrainingtracker.trainingtracker.physiology
 
+import com.atrainingtracker.banalservice.BSportType
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.pow
@@ -45,8 +46,29 @@ data class WPrimeSummaryResult(
 )
 
 /**
+ * Result of evaluating Efficiency Factor ($\text{EF}$) and Aerobic Decoupling ($\text{Pw:Hr }\%$ or $\text{Pa:Hr }\%$)
+ * over a paired workout telemetry stream (`REQ-UI-400.1`).
+ *
+ * @property efficiencyFactor Full-session Efficiency Factor ($\text{NP} / \text{Avg\_HR}$ in $\text{W/bpm}$ for cycling,
+ *           or $(\text{Avg\_Speed}_{\text{m/s}} \times 60.0) / \text{Avg\_HR}$ in $\text{m/min/bpm}$ for running).
+ * @property decouplingPct Percentage aerobic decoupling $\frac{\text{EF}_1 - \text{EF}_2}{\text{EF}_1} \times 100.0$.
+ * @property efFirstHalf First-half Efficiency Factor ($\text{EF}_1$).
+ * @property efSecondHalf Second-half Efficiency Factor ($\text{EF}_2$).
+ * @property isPowerBased `true` when evaluated from Power + HR (`Pw:Hr`), `false` when evaluated from Speed + HR (`Pa:Hr`).
+ * @property isHighDrift `true` when [decouplingPct] $\ge$ [PowerPhysiologyCalculator.AEROBIC_DECOUPLING_DRIFT_THRESHOLD_PCT] ($5.0\%$).
+ */
+data class AerobicEfficiencyResult(
+    val efficiencyFactor: Double?,
+    val decouplingPct: Double?,
+    val efFirstHalf: Double?,
+    val efSecondHalf: Double?,
+    val isPowerBased: Boolean,
+    val isHighDrift: Boolean
+)
+
+/**
  * Canonical, stateless, pure-Kotlin domain calculator for cycling & running power/cardiovascular
- * physiology metrics (`REQ-UI-399`, Rule 36 — Single Source of Truth & DRY).
+ * physiology metrics (`REQ-UI-399`, `REQ-UI-400`, Rule 36 — Single Source of Truth & DRY).
  *
  * Threading: Pure mathematical functions with zero mutable state or Android framework dependencies;
  * safe to invoke from any thread or coroutine dispatcher.
@@ -61,6 +83,12 @@ object PowerPhysiologyCalculator {
 
     /** Threshold percentage ($10.0\%$) below which an "Empty Tank" anaerobic depletion warning is raised. */
     const val EMPTY_TANK_WARNING_THRESHOLD_PCT: Double = 10.0
+
+    /** Threshold percentage ($5.0\%$) at or above which Aerobic Decoupling indicates significant cardiovascular drift (`REQ-UI-400.1`). */
+    const val AEROBIC_DECOUPLING_DRIFT_THRESHOLD_PCT: Double = 5.0
+
+    /** Rolling window size in seconds ($30\text{ s}$) for Dr. Andrew Coggan's Normalized Power (NP) algorithm. */
+    const val NP_ROLLING_WINDOW_SECONDS: Int = 30
 
     /**
      * Solves the two-point linear work-time model ($W = CP \cdot t + W'$) given two maximal
@@ -279,5 +307,243 @@ object PowerPhysiologyCalculator {
             minWPrimeBalPct = minPct,
             isEmptyTankWarning = isEmptyTank
         )
+    }
+
+    /**
+     * Computes Dr. Andrew Coggan's Normalized Power (NP) over a 1-Hz power sample stream (`REQ-UI-400.1`, Rule 40):
+     * - Maintains a 30-second rolling average window (using the growing $1..29\text{ s}$ warm-up window per Rule 40).
+     * - Raises each rolling average $R_k$ to the 4th power ($R_k^4$).
+     * - Returns the 4th root of the mean of $R_k^4$: $\text{NP} = \left(\frac{1}{N} \sum_{k=1}^{N} R_k^4\right)^{1/4}$.
+     *
+     * @param powerSamplesWatts 1-Hz power samples in Watts (`null` or negative samples are ignored).
+     * @return Normalized Power in Watts ($> 0$), or `null` if no positive power samples exist.
+     */
+    @JvmStatic
+    fun calculateNormalizedPower(powerSamplesWatts: List<Double?>): Double? {
+        val validSamples = powerSamplesWatts.mapNotNull { p ->
+            if (p != null && p.isFinite() && p >= 0.0) p else null
+        }
+        if (validSamples.isEmpty() || validSamples.all { it <= 0.0 }) {
+            return null
+        }
+
+        val window = ArrayDeque<Double>(NP_ROLLING_WINDOW_SECONDS)
+        var windowSum = 0.0
+        var sumFourthPowers = 0.0
+        var count = 0
+
+        for (p in validSamples) {
+            window.addLast(p)
+            windowSum += p
+            if (window.size > NP_ROLLING_WINDOW_SECONDS) {
+                windowSum -= window.removeFirst()
+            }
+            val rollingAvg = windowSum / window.size.toDouble()
+            sumFourthPowers += rollingAvg.pow(4.0)
+            count++
+        }
+
+        if (count == 0) return null
+        val np = (sumFourthPowers / count.toDouble()).pow(0.25)
+        return np.takeIf { it.isFinite() && it > 0.0 }
+    }
+
+    /**
+     * Computes cycling/power Efficiency Factor ($\text{EF}_{\text{pw}}$, in $\text{W/bpm}$) (`REQ-UI-400.1`):
+     * $$\text{EF}_{\text{pw}} = \frac{\text{NP}}{\text{Avg\_HR}}$$
+     *
+     * @param normalizedPowerWatts Normalized Power (or average power fallback) in Watts ($> 0$).
+     * @param avgHeartRateBpm Average Heart Rate in bpm ($> 0$).
+     * @return Efficiency Factor in $\text{W/bpm}$, or `null` if inputs are non-positive or non-finite.
+     */
+    @JvmStatic
+    fun calculateEfficiencyFactorPower(normalizedPowerWatts: Double, avgHeartRateBpm: Double): Double? {
+        if (!normalizedPowerWatts.isFinite() || !avgHeartRateBpm.isFinite() ||
+            normalizedPowerWatts <= 0.0 || avgHeartRateBpm <= 0.0
+        ) {
+            return null
+        }
+        val ef = normalizedPowerWatts / avgHeartRateBpm
+        return ef.takeIf { it.isFinite() && it > 0.0 }
+    }
+
+    /**
+     * Computes running/speed Efficiency Factor ($\text{EF}_{\text{pa}}$, in $\text{m/min/bpm}$) (`REQ-UI-400.1`):
+     * $$\text{EF}_{\text{pa}} = \frac{\text{Avg\_Speed}_{\text{m/s}} \times 60.0}{\text{Avg\_HR}}$$
+     *
+     * @param avgSpeedMps Average horizontal speed in $\text{m/s}$ ($> 0$).
+     * @param avgHeartRateBpm Average Heart Rate in bpm ($> 0$).
+     * @return Efficiency Factor in $\text{m/min/bpm}$, or `null` if inputs are non-positive or non-finite.
+     */
+    @JvmStatic
+    fun calculateEfficiencyFactorSpeed(avgSpeedMps: Double, avgHeartRateBpm: Double): Double? {
+        if (!avgSpeedMps.isFinite() || !avgHeartRateBpm.isFinite() ||
+            avgSpeedMps <= 0.0 || avgHeartRateBpm <= 0.0
+        ) {
+            return null
+        }
+        val speedMetersPerMin = avgSpeedMps * 60.0
+        val ef = speedMetersPerMin / avgHeartRateBpm
+        return ef.takeIf { it.isFinite() && it > 0.0 }
+    }
+
+    /**
+     * Computes percentage Aerobic Decoupling ($\text{Pw:Hr }\%$ or $\text{Pa:Hr }\%$) from first-half
+     * Efficiency Factor ($\text{EF}_1$) and second-half Efficiency Factor ($\text{EF}_2$) (`REQ-UI-400.1`):
+     * $$\text{Decoupling }\% = \frac{\text{EF}_1 - \text{EF}_2}{\text{EF}_1} \times 100.0$$
+     *
+     * Positive values indicate cardiovascular drift (lower output per heartbeat in the second half);
+     * values $< 5.0\%$ indicate a coupled aerobic response, while $\ge 5.0\%$ indicates high drift.
+     *
+     * @param efFirstHalf First-half Efficiency Factor ($\text{EF}_1 > 0$).
+     * @param efSecondHalf Second-half Efficiency Factor ($\text{EF}_2 > 0$).
+     * @return Aerobic decoupling percentage, or `null` if either input is non-positive or non-finite.
+     */
+    @JvmStatic
+    fun calculateAerobicDecouplingFromEf(efFirstHalf: Double, efSecondHalf: Double): Double? {
+        if (!efFirstHalf.isFinite() || !efSecondHalf.isFinite() ||
+            efFirstHalf <= 0.0 || efSecondHalf <= 0.0
+        ) {
+            return null
+        }
+        val pct = ((efFirstHalf - efSecondHalf) / efFirstHalf) * 100.0
+        return pct.takeIf { it.isFinite() }
+    }
+
+    /**
+     * Evaluates a workout's paired telemetry streams (`POWER`, `SPEED_mps`, `HR`) to compute
+     * full-session Efficiency Factor ($\text{EF}$) and first-half vs. second-half Aerobic Decoupling
+     * ($\text{Pw:Hr }\%$ for power, $\text{Pa:Hr }\%$ for speed) (`REQ-UI-400.1`).
+     *
+     * Modality Selection:
+     * - When valid paired `POWER` ($> 0\text{ W}$ average) and `HR` ($> 0\text{ bpm}$) samples exist
+     *   (and sport is not `BSportType.RUN` unless speed is absent), evaluates power-based `Pw:Hr` (`isPowerBased = true`).
+     * - Otherwise, when valid paired `SPEED_mps` ($> 0\text{ m/s}$) and `HR` ($> 0\text{ bpm}$) samples exist,
+     *   evaluates speed/pace-based `Pa:Hr` (`isPowerBased = false`).
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun computeAerobicEfficiencyAndDecoupling(
+        powerSamplesWatts: List<Double?>,
+        speedSamplesMps: List<Double?>,
+        hrSamplesBpm: List<Double?>,
+        bSportType: BSportType = BSportType.UNKNOWN
+    ): AerobicEfficiencyResult {
+        val maxLen = maxOf(powerSamplesWatts.size, speedSamplesMps.size, hrSamplesBpm.size)
+        if (maxLen == 0 || hrSamplesBpm.isEmpty()) {
+            return AerobicEfficiencyResult(
+                efficiencyFactor = null,
+                decouplingPct = null,
+                efFirstHalf = null,
+                efSecondHalf = null,
+                isPowerBased = bSportType != BSportType.RUN,
+                isHighDrift = false
+            )
+        }
+
+        // Collect paired active Power + HR samples
+        val pairedPower = ArrayList<Double>()
+        val pairedPowerHr = ArrayList<Double>()
+        val powerLimit = minOf(powerSamplesWatts.size, hrSamplesBpm.size)
+        for (i in 0 until powerLimit) {
+            val p = powerSamplesWatts[i]
+            val hr = hrSamplesBpm[i]
+            if (p != null && p.isFinite() && p >= 0.0 && hr != null && hr.isFinite() && hr > 0.0) {
+                pairedPower.add(p)
+                pairedPowerHr.add(hr)
+            }
+        }
+
+        // Collect paired active Speed + HR samples
+        val pairedSpeed = ArrayList<Double>()
+        val pairedSpeedHr = ArrayList<Double>()
+        val speedLimit = minOf(speedSamplesMps.size, hrSamplesBpm.size)
+        for (i in 0 until speedLimit) {
+            val s = speedSamplesMps[i]
+            val hr = hrSamplesBpm[i]
+            if (s != null && s.isFinite() && s > 0.0 && hr != null && hr.isFinite() && hr > 0.0) {
+                pairedSpeed.add(s)
+                pairedSpeedHr.add(hr)
+            }
+        }
+
+        val hasValidPowerPairs = pairedPower.isNotEmpty() && pairedPower.any { it > 0.0 }
+        val hasValidSpeedPairs = pairedSpeed.isNotEmpty() && pairedSpeed.any { it > 0.0 }
+
+        val usePower = when {
+            bSportType == BSportType.RUN && hasValidSpeedPairs && !hasValidPowerPairs -> false
+            hasValidPowerPairs -> true
+            hasValidSpeedPairs -> false
+            else -> return AerobicEfficiencyResult(
+                efficiencyFactor = null,
+                decouplingPct = null,
+                efFirstHalf = null,
+                efSecondHalf = null,
+                isPowerBased = bSportType != BSportType.RUN,
+                isHighDrift = false
+            )
+        }
+
+        if (usePower) {
+            val totalNp = calculateNormalizedPower(pairedPower)
+            val totalAvgHr = pairedPowerHr.average()
+            val totalEf = if (totalNp != null) calculateEfficiencyFactorPower(totalNp, totalAvgHr) else null
+
+            var ef1: Double? = null
+            var ef2: Double? = null
+            var decouplingPct: Double? = null
+            if (pairedPower.size >= 2) {
+                val mid = pairedPower.size / 2
+                val np1 = calculateNormalizedPower(pairedPower.subList(0, mid))
+                val hr1 = pairedPowerHr.subList(0, mid).average()
+                val np2 = calculateNormalizedPower(pairedPower.subList(mid, pairedPower.size))
+                val hr2 = pairedPowerHr.subList(mid, pairedPowerHr.size).average()
+                if (np1 != null && np2 != null) {
+                    ef1 = calculateEfficiencyFactorPower(np1, hr1)
+                    ef2 = calculateEfficiencyFactorPower(np2, hr2)
+                    if (ef1 != null && ef2 != null) {
+                        decouplingPct = calculateAerobicDecouplingFromEf(ef1, ef2)
+                    }
+                }
+            }
+            val isDrift = decouplingPct != null && decouplingPct >= AEROBIC_DECOUPLING_DRIFT_THRESHOLD_PCT
+            return AerobicEfficiencyResult(
+                efficiencyFactor = totalEf,
+                decouplingPct = decouplingPct,
+                efFirstHalf = ef1,
+                efSecondHalf = ef2,
+                isPowerBased = true,
+                isHighDrift = isDrift
+            )
+        } else {
+            val totalAvgSpeed = pairedSpeed.average()
+            val totalAvgHr = pairedSpeedHr.average()
+            val totalEf = calculateEfficiencyFactorSpeed(totalAvgSpeed, totalAvgHr)
+
+            var ef1: Double? = null
+            var ef2: Double? = null
+            var decouplingPct: Double? = null
+            if (pairedSpeed.size >= 2) {
+                val mid = pairedSpeed.size / 2
+                val spd1 = pairedSpeed.subList(0, mid).average()
+                val hr1 = pairedSpeedHr.subList(0, mid).average()
+                val spd2 = pairedSpeed.subList(mid, pairedSpeed.size).average()
+                val hr2 = pairedSpeedHr.subList(mid, pairedSpeedHr.size).average()
+                ef1 = calculateEfficiencyFactorSpeed(spd1, hr1)
+                ef2 = calculateEfficiencyFactorSpeed(spd2, hr2)
+                if (ef1 != null && ef2 != null) {
+                    decouplingPct = calculateAerobicDecouplingFromEf(ef1, ef2)
+                }
+            }
+            val isDrift = decouplingPct != null && decouplingPct >= AEROBIC_DECOUPLING_DRIFT_THRESHOLD_PCT
+            return AerobicEfficiencyResult(
+                efficiencyFactor = totalEf,
+                decouplingPct = decouplingPct,
+                efFirstHalf = ef1,
+                efSecondHalf = ef2,
+                isPowerBased = false,
+                isHighDrift = isDrift
+            )
+        }
     }
 }

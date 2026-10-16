@@ -1909,4 +1909,14 @@
     <string name="workout_w_prime_bal_min_format">W\'bal min : %1$.1f kJ (%2$.0f%%)</string>
     <string name="workout_w_prime_empty_tank">Réservoir vide (&lt;10%%)</string>
 
+    <!-- ATT-3861: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400) -->
+    <string name="efficiency_factor_short">EF</string>
+    <string name="aerobic_decoupling_short">Pw:Hr</string>
+    <string name="workout_ef_pwhr_format">EF : %1$.2f W/bpm • Pw:Hr : %2$.1f%%</string>
+    <string name="workout_ef_pahr_format">EF : %1$.2f m/min/bpm • Pa:Hr : %2$.1f%%</string>
+    <string name="workout_ef_only_pw_format">EF : %1$.2f W/bpm</string>
+    <string name="workout_ef_only_pa_format">EF : %1$.2f m/min/bpm</string>
+    <string name="workout_decoupling_coupled">Couplé (&lt;5%%)</string>
+    <string name="workout_decoupling_drift">Dérive élevée (≥5%%)</string>
+
 </resources>
