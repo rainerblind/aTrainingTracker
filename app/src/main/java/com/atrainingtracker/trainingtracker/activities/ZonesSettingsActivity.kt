@@ -36,24 +36,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
-import androidx.compose.material.icons.filled.RestartAlt
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -68,9 +63,6 @@ import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMath
-import android.text.format.DateUtils
-import com.atrainingtracker.trainingtracker.MyUnits
-import com.atrainingtracker.trainingtracker.ui.settings.AthleteWeightDialog
 import com.atrainingtracker.trainingtracker.ui.settings.HrMethod
 import com.atrainingtracker.trainingtracker.ui.settings.ZoneCalculatorDialog
 import com.atrainingtracker.trainingtracker.ui.settings.ZoneCalculatorStateHolder
@@ -214,14 +206,11 @@ fun ZoneSettingsScreen(
     val currentType = zoneTypes[pagerState.currentPage]
     val isCustomized by dataStore.isZoneCustomizedFlow(currentType).collectAsState(initial = false)
     val storedFtp by dataStore.ftpFlow.collectAsState(initial = null)
-    val ftpUpdatedAt by dataStore.ftpUpdatedAtFlow.collectAsState(initial = null)
     val storedHrMax by dataStore.hrMaxFlow.collectAsState(initial = null)
     val storedHrRest by dataStore.hrRestFlow.collectAsState(initial = null)
     val storedHrMethod by dataStore.hrCalcMethodFlow.collectAsState(initial = null)
-    val storedAthleteWeightKg by dataStore.athleteWeightKgFlow.collectAsState(initial = 0.0f)
 
     var showCalculatorDialog by remember { mutableStateOf(false) }
-    var showAthleteWeightDialog by remember { mutableStateOf(false) }
     var bannerVisible by rememberSaveable { mutableStateOf(promptReason != null) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -251,19 +240,6 @@ fun ZoneSettingsScreen(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            SuggestionChip(
-                                onClick = {},
-                                label = {
-                                    Text(
-                                        text = stringResource(
-                                            if (isCustomized) R.string.zone_calc_status_customized
-                                            else R.string.zone_calc_status_calculated
-                                        ),
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
-                                },
-                                shape = MaterialTheme.shapes.extraSmall
-                            )
                         }
 
                         Row(
@@ -277,92 +253,6 @@ fun ZoneSettingsScreen(
                                     imageVector = Icons.Default.Calculate,
                                     contentDescription = stringResource(R.string.zone_calc_button),
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                            IconButton(
-                                onClick = {
-                                    scope.launch(Dispatchers.IO) {
-                                        dataStore.resetToDefaults(currentType)
-                                        reloadProfiles()
-                                    }
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.RestartAlt,
-                                    contentDescription = stringResource(R.string.reset_to_defaults),
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                        }
-                    }
-
-                    if (currentType == ZoneType.PWR_BIKE && ftpUpdatedAt != null) {
-                        val dateStr = DateUtils.formatDateTime(
-                            context,
-                            ftpUpdatedAt!!,
-                            DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_YEAR
-                        )
-                        val isStale = (System.currentTimeMillis() - ftpUpdatedAt!!) > 180L * 24 * 60 * 60 * 1000
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.zone_calc_last_updated, dateStr),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                            )
-                            if (isStale) {
-                                SuggestionChip(
-                                    onClick = {},
-                                    label = {
-                                        Text(
-                                            text = stringResource(R.string.zone_calc_calibration_recommended),
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                    },
-                                    colors = SuggestionChipDefaults.suggestionChipColors(
-                                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                                        labelColor = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                )
-                            }
-                        }
-                    }
-
-                    if (currentType == ZoneType.PWR_BIKE) {
-                        val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
-                        val weightText = if (storedAthleteWeightKg > 0f) {
-                            val displayWeight = if (isImperial) storedAthleteWeightKg * SettingsDataStore.LBS_PER_KG else storedAthleteWeightKg
-                            val unitStr = if (isImperial) "lbs" else "kg"
-                            String.format(java.util.Locale.US, "%.1f %s", displayWeight, unitStr)
-                        } else {
-                            stringResource(R.string.athlete_weight_unconfigured)
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "${stringResource(R.string.athlete_weight_title)}: $weightText",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
-                            )
-                            TextButton(
-                                onClick = { showAthleteWeightDialog = true },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.athlete_weight_edit),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }
@@ -521,18 +411,6 @@ fun ZoneSettingsScreen(
                                 holder.onSaveFailed()
                             }
                         }
-                    }
-                }
-            )
-        }
-
-        if (showAthleteWeightDialog) {
-            AthleteWeightDialog(
-                initialWeightKg = storedAthleteWeightKg,
-                onDismiss = { showAthleteWeightDialog = false },
-                onSaveWeightKg = { weightKg ->
-                    scope.launch(Dispatchers.IO) {
-                        dataStore.setAthleteWeightKg(weightKg)
                     }
                 }
             )
