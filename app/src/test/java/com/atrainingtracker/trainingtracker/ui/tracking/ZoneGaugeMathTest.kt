@@ -26,138 +26,123 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Unit tests for [ZoneGaugeMath] verifying intra-zone needle calculation, dynamic ceilings,
- * boundary clamping, and null/stale handling across 5-zone HR and 7-zone Power models (REQ-UI-376, TST-UI-339.1).
+ * Unit tests for [ZoneGaugeMath] verifying proportional segment weights, 10% boundary clipping,
+ * strictly linear needle velocity, cumulative cutoff alignment, and null/stale handling across
+ * 5-zone HR and 7-zone Power models (REQ-UI-376, REQ-UI-390, TST-UI-339, TST-UI-353).
  */
 class ZoneGaugeMathTest {
 
+    // 5-zone HR cutoffs: Z2=[120,140] (20), Z3=[140,160] (20), Z4=[160,180] (20) -> S_inner = 60 bpm
     private val hrCutoffs = listOf(120, 140, 160, 180)
-    private val powerCutoffs = listOf(150, 200, 250, 300, 350, 450)
+
+    // Standard Coggan 7-zone Power cutoffs for FTP = 200 W:
+    // [55%, 75%, 90%, 105%, 120%, 150%] = [110, 150, 180, 210, 240, 300] W
+    // Spans: Z2=40 (20%), Z3=30 (15%), Z4=30 (15%), Z5=30 (15%), Z6=60 (30%) -> S_inner = 190 W (95% FTP)
+    // w_cap = (10 / 95) * 190 = 20 W (10% FTP) -> X_min = 90 W (45% FTP), X_max = 320 W (160% FTP), S_total = 230 W (115% FTP)
+    private val cogganPowerCutoffs = listOf(110, 150, 180, 210, 240, 300)
 
     @Test
-    fun testHeartRate5Zones_intraZoneNeedlePositioning() {
-        // Z1 baseline is 30.0 bpm, Z1 max is 120 bpm -> width 90 bpm
-        // Midpoint of Z1: 30 + 45 = 75 bpm -> fraction 0.5 within Z1 -> 0.5 * 0.2 = 0.10
-        val midZ1 = ZoneGaugeMath.calculateNeedleFraction(75.0, hrCutoffs, isPower = false)
-        assertNotNull(midZ1)
-        assertEquals(0.10f, midZ1!!, 0.001f)
+    fun testCogganPower7Zones_proportionalSegmentWeights_match10_20_15_15_15_30_10() {
+        val weights = ZoneGaugeMath.calculateSegmentWeights(cogganPowerCutoffs, isPower = true)
+        assertEquals(7, weights.size)
+        assertEquals(1.0f, weights.sum(), 1e-4f)
 
-        // Upper boundary of Z1: 120 bpm -> exactly 0.20
-        val endZ1 = ZoneGaugeMath.calculateNeedleFraction(120.0, hrCutoffs, isPower = false)
-        assertNotNull(endZ1)
-        assertEquals(0.20f, endZ1!!, 0.001f)
-
-        // Upper boundary of Z2: 140 bpm -> exactly 0.40
-        val endZ2 = ZoneGaugeMath.calculateNeedleFraction(140.0, hrCutoffs, isPower = false)
-        assertNotNull(endZ2)
-        assertEquals(0.40f, endZ2!!, 0.001f)
-
-        // Upper boundary of Z3: 160 bpm -> exactly 0.60
-        val endZ3 = ZoneGaugeMath.calculateNeedleFraction(160.0, hrCutoffs, isPower = false)
-        assertNotNull(endZ3)
-        assertEquals(0.60f, endZ3!!, 0.001f)
-
-        // Upper boundary of Z4: 180 bpm -> exactly 0.80
-        val endZ4 = ZoneGaugeMath.calculateNeedleFraction(180.0, hrCutoffs, isPower = false)
-        assertNotNull(endZ4)
-        assertEquals(0.80f, endZ4!!, 0.001f)
+        val expectedSpans = listOf(10f, 20f, 15f, 15f, 15f, 30f, 10f)
+        val totalSpan = 115f
+        for (i in expectedSpans.indices) {
+            assertEquals(
+                "Segment Z${i + 1} weight must equal ${expectedSpans[i]}/115",
+                expectedSpans[i] / totalSpan,
+                weights[i],
+                1e-4f
+            )
+        }
     }
 
     @Test
-    fun testHeartRate5Zones_openEndedZone5CeilingAndClamping() {
-        // HR max = 195 bpm -> topLower = 180, topUpper = max(195, 180+25) = 205 bpm
-        val hrMax = 195
-        val expectedCeiling = 205.0
+    fun testPower7Zones_strictlyLinearNeedleAndExactCutoffAlignment() {
+        val weights = ZoneGaugeMath.calculateSegmentWeights(cogganPowerCutoffs, isPower = true)
+        var cumulativeWeight = 0f
 
-        // Entry of Zone 5: 180 bpm -> 0.80
-        val entryZ5 = ZoneGaugeMath.calculateNeedleFraction(180.0, hrCutoffs, hrMax = hrMax, isPower = false)
-        assertNotNull(entryZ5)
-        assertEquals(0.80f, entryZ5!!, 0.001f)
+        for (i in cogganPowerCutoffs.indices) {
+            cumulativeWeight += weights[i]
+            val cutoffValue = cogganPowerCutoffs[i].toDouble()
+            val needleAtCutoff = ZoneGaugeMath.calculateNeedleFraction(cutoffValue, cogganPowerCutoffs, isPower = true)
+            assertNotNull(needleAtCutoff)
+            assertEquals(
+                "Needle at cutoff C_${i + 1} ($cutoffValue W) must match exact cumulative segment weight",
+                cumulativeWeight,
+                needleAtCutoff!!,
+                1e-4f
+            )
+        }
 
-        // At ceiling: 205 bpm -> exactly 1.00
-        val atCeiling = ZoneGaugeMath.calculateNeedleFraction(expectedCeiling, hrCutoffs, hrMax = hrMax, isPower = false)
-        assertNotNull(atCeiling)
-        assertEquals(1.00f, atCeiling!!, 0.001f)
+        // Verify constant linear needle velocity (dx / dWatt) across Z2, Z4, and Z6:
+        // +15 W in Z2 (120 -> 135 W), +15 W in Z4 (190 -> 205 W), and +15 W in Z6 (260 -> 275 W)
+        val deltaZ2 = ZoneGaugeMath.calculateNeedleFraction(135.0, cogganPowerCutoffs, isPower = true)!! -
+            ZoneGaugeMath.calculateNeedleFraction(120.0, cogganPowerCutoffs, isPower = true)!!
+        val deltaZ4 = ZoneGaugeMath.calculateNeedleFraction(205.0, cogganPowerCutoffs, isPower = true)!! -
+            ZoneGaugeMath.calculateNeedleFraction(190.0, cogganPowerCutoffs, isPower = true)!!
+        val deltaZ6 = ZoneGaugeMath.calculateNeedleFraction(275.0, cogganPowerCutoffs, isPower = true)!! -
+            ZoneGaugeMath.calculateNeedleFraction(260.0, cogganPowerCutoffs, isPower = true)!!
 
-        // Beyond ceiling: 220 bpm -> clamped cleanly to 1.00
-        val beyondCeiling = ZoneGaugeMath.calculateNeedleFraction(220.0, hrCutoffs, hrMax = hrMax, isPower = false)
-        assertNotNull(beyondCeiling)
-        assertEquals(1.00f, beyondCeiling!!, 0.001f)
+        assertEquals("Needle velocity must be identical in Z2 and Z4", deltaZ2, deltaZ4, 1e-5f)
+        assertEquals("Needle velocity must be identical in Z4 and Z6", deltaZ4, deltaZ6, 1e-5f)
+        assertEquals("15 W over 230 W total span must equal 15/230", 15f / 230f, deltaZ4, 1e-4f)
     }
 
     @Test
-    fun testHeartRate5Zones_belowBaselineClamping() {
-        // Below 30 bpm baseline: clamps to 0.00f
-        val below30 = ZoneGaugeMath.calculateNeedleFraction(20.0, hrCutoffs, isPower = false)
-        assertNotNull(below30)
-        assertEquals(0.00f, below30!!, 0.0001f)
+    fun testPower7Zones_10PercentBoundaryClippingAtXMinAndXMax() {
+        // For cogganPowerCutoffs (FTP=200W): X_min = 110 - 20 = 90 W (45% FTP), X_max = 300 + 20 = 320 W (160% FTP)
+        val atXMin = ZoneGaugeMath.calculateNeedleFraction(90.0, cogganPowerCutoffs, isPower = true)
+        val belowXMin = ZoneGaugeMath.calculateNeedleFraction(40.0, cogganPowerCutoffs, isPower = true)
+        val atZero = ZoneGaugeMath.calculateNeedleFraction(0.0, cogganPowerCutoffs, isPower = true)
+        assertEquals(0.0f, atXMin!!, 1e-4f)
+        assertEquals(0.0f, belowXMin!!, 1e-4f)
+        assertEquals(0.0f, atZero!!, 1e-4f)
 
-        val atZero = ZoneGaugeMath.calculateNeedleFraction(0.0, hrCutoffs, isPower = false)
-        assertNotNull(atZero)
-        assertEquals(0.00f, atZero!!, 0.0001f)
+        // Midpoint of clipped Z1 (100 W -> 10 W above X_min=90 W): 10 / 230
+        val midZ1 = ZoneGaugeMath.calculateNeedleFraction(100.0, cogganPowerCutoffs, isPower = true)
+        assertEquals(10f / 230f, midZ1!!, 1e-4f)
+
+        // Midpoint of clipped Z7 (310 W -> 220 W above X_min=90 W): 220 / 230
+        val midZ7 = ZoneGaugeMath.calculateNeedleFraction(310.0, cogganPowerCutoffs, isPower = true)
+        assertEquals(220f / 230f, midZ7!!, 1e-4f)
+
+        // At and above X_max = 320 W
+        val atXMax = ZoneGaugeMath.calculateNeedleFraction(320.0, cogganPowerCutoffs, isPower = true)
+        val aboveXMax = ZoneGaugeMath.calculateNeedleFraction(800.0, cogganPowerCutoffs, isPower = true)
+        assertEquals(1.0f, atXMax!!, 1e-4f)
+        assertEquals(1.0f, aboveXMax!!, 1e-4f)
     }
 
     @Test
-    fun testPower7Zones_intraZoneNeedlePositioning() {
-        val segmentWidth = 1.0f / 7.0f
+    fun testHeartRate5Zones_strictlyLinearNeedleAndExactCutoffAlignment() {
+        val weights = ZoneGaugeMath.calculateSegmentWeights(hrCutoffs, isPower = false)
+        assertEquals(5, weights.size)
+        assertEquals(1.0f, weights.sum(), 1e-4f)
 
-        // Baseline is 0.0 W. Z1 upper boundary: 150 W -> 1/7
-        val endZ1 = ZoneGaugeMath.calculateNeedleFraction(150.0, powerCutoffs, isPower = true)
-        assertNotNull(endZ1)
-        assertEquals(segmentWidth, endZ1!!, 0.001f)
+        var cumulativeWeight = 0f
+        for (i in hrCutoffs.indices) {
+            cumulativeWeight += weights[i]
+            val cutoffBpm = hrCutoffs[i].toDouble()
+            val needleAtCutoff = ZoneGaugeMath.calculateNeedleFraction(cutoffBpm, hrCutoffs, isPower = false)
+            assertNotNull(needleAtCutoff)
+            assertEquals(
+                "HR needle at cutoff C_${i + 1} ($cutoffBpm bpm) must match cumulative segment weight",
+                cumulativeWeight,
+                needleAtCutoff!!,
+                1e-4f
+            )
+        }
 
-        // Z2 upper boundary: 200 W -> 2/7
-        val endZ2 = ZoneGaugeMath.calculateNeedleFraction(200.0, powerCutoffs, isPower = true)
-        assertNotNull(endZ2)
-        assertEquals(2 * segmentWidth, endZ2!!, 0.001f)
+        // Midpoint of HR interior range (150 bpm is exact midpoint of [120, 180]) -> must be exactly 0.50f
+        val midHr = ZoneGaugeMath.calculateNeedleFraction(150.0, hrCutoffs, isPower = false)
+        assertEquals(0.50f, midHr!!, 1e-4f)
 
-        // Z3 upper boundary: 250 W -> 3/7
-        val endZ3 = ZoneGaugeMath.calculateNeedleFraction(250.0, powerCutoffs, isPower = true)
-        assertNotNull(endZ3)
-        assertEquals(3 * segmentWidth, endZ3!!, 0.001f)
-
-        // Z4 upper boundary: 300 W -> 4/7
-        val endZ4 = ZoneGaugeMath.calculateNeedleFraction(300.0, powerCutoffs, isPower = true)
-        assertNotNull(endZ4)
-        assertEquals(4 * segmentWidth, endZ4!!, 0.001f)
-
-        // Z5 upper boundary: 350 W -> 5/7
-        val endZ5 = ZoneGaugeMath.calculateNeedleFraction(350.0, powerCutoffs, isPower = true)
-        assertNotNull(endZ5)
-        assertEquals(5 * segmentWidth, endZ5!!, 0.001f)
-
-        // Z6 upper boundary: 450 W -> 6/7
-        val endZ6 = ZoneGaugeMath.calculateNeedleFraction(450.0, powerCutoffs, isPower = true)
-        assertNotNull(endZ6)
-        assertEquals(6 * segmentWidth, endZ6!!, 0.001f)
-    }
-
-    @Test
-    fun testPower7Zones_openEndedZone7DynamicCeilingAndClamping() {
-        // FTP = 300 W -> dynamic ceiling = min(2500, max(450 + 300, 300 * 2.0)) = max(750, 600) = 750 W
-        val ftp = 300
-        val expectedCeiling = 750.0
-
-        // Z7 entry: 450 W -> 6/7
-        val entryZ7 = ZoneGaugeMath.calculateNeedleFraction(450.0, powerCutoffs, ftp = ftp, isPower = true)
-        assertNotNull(entryZ7)
-        assertEquals(6f / 7f, entryZ7!!, 0.001f)
-
-        // At dynamic ceiling: 750 W -> 1.00
-        val atCeiling = ZoneGaugeMath.calculateNeedleFraction(expectedCeiling, powerCutoffs, ftp = ftp, isPower = true)
-        assertNotNull(atCeiling)
-        assertEquals(1.00f, atCeiling!!, 0.001f)
-
-        // Sprint beyond ceiling: 1500 W -> clamped cleanly to 1.00
-        val sprint = ZoneGaugeMath.calculateNeedleFraction(1500.0, powerCutoffs, ftp = ftp, isPower = true)
-        assertNotNull(sprint)
-        assertEquals(1.00f, sprint!!, 0.001f)
-
-        // Physical cap enforcement: with FTP=1500 W, dynamic ceiling would be 3000 W, but capped at 2500 W
-        val highFtp = 1500
-        val extremeSprint = ZoneGaugeMath.calculateNeedleFraction(2600.0, powerCutoffs, ftp = highFtp, isPower = true)
-        assertNotNull(extremeSprint)
-        assertEquals(1.00f, extremeSprint!!, 0.001f)
+        // Clamping below X_min and above X_max
+        assertEquals(0.0f, ZoneGaugeMath.calculateNeedleFraction(30.0, hrCutoffs, isPower = false)!!, 1e-4f)
+        assertEquals(1.0f, ZoneGaugeMath.calculateNeedleFraction(220.0, hrCutoffs, isPower = false)!!, 1e-4f)
     }
 
     @Test
@@ -167,8 +152,8 @@ class ZoneGaugeMathTest {
         assertNull(ZoneGaugeMath.calculateNeedleFraction(Double.POSITIVE_INFINITY, hrCutoffs, isPower = false))
         assertNull(ZoneGaugeMath.calculateNeedleFraction(Double.NEGATIVE_INFINITY, hrCutoffs, isPower = false))
 
-        assertNull(ZoneGaugeMath.calculateNeedleFraction(null, powerCutoffs, isPower = true))
-        assertNull(ZoneGaugeMath.calculateNeedleFraction(Double.NaN, powerCutoffs, isPower = true))
+        assertNull(ZoneGaugeMath.calculateNeedleFraction(null, cogganPowerCutoffs, isPower = true))
+        assertNull(ZoneGaugeMath.calculateNeedleFraction(Double.NaN, cogganPowerCutoffs, isPower = true))
     }
 
     @Test
@@ -179,13 +164,13 @@ class ZoneGaugeMathTest {
         assertEquals(4, ZoneGaugeMath.calculateActiveZoneIndex(175.0, hrCutoffs, isPower = false))
         assertEquals(5, ZoneGaugeMath.calculateActiveZoneIndex(195.0, hrCutoffs, isPower = false))
 
-        assertEquals(1, ZoneGaugeMath.calculateActiveZoneIndex(100.0, powerCutoffs, isPower = true))
-        assertEquals(2, ZoneGaugeMath.calculateActiveZoneIndex(180.0, powerCutoffs, isPower = true))
-        assertEquals(3, ZoneGaugeMath.calculateActiveZoneIndex(220.0, powerCutoffs, isPower = true))
-        assertEquals(4, ZoneGaugeMath.calculateActiveZoneIndex(280.0, powerCutoffs, isPower = true))
-        assertEquals(5, ZoneGaugeMath.calculateActiveZoneIndex(320.0, powerCutoffs, isPower = true))
-        assertEquals(6, ZoneGaugeMath.calculateActiveZoneIndex(400.0, powerCutoffs, isPower = true))
-        assertEquals(7, ZoneGaugeMath.calculateActiveZoneIndex(550.0, powerCutoffs, isPower = true))
+        assertEquals(1, ZoneGaugeMath.calculateActiveZoneIndex(100.0, cogganPowerCutoffs, isPower = true))
+        assertEquals(2, ZoneGaugeMath.calculateActiveZoneIndex(130.0, cogganPowerCutoffs, isPower = true))
+        assertEquals(3, ZoneGaugeMath.calculateActiveZoneIndex(165.0, cogganPowerCutoffs, isPower = true))
+        assertEquals(4, ZoneGaugeMath.calculateActiveZoneIndex(195.0, cogganPowerCutoffs, isPower = true))
+        assertEquals(5, ZoneGaugeMath.calculateActiveZoneIndex(225.0, cogganPowerCutoffs, isPower = true))
+        assertEquals(6, ZoneGaugeMath.calculateActiveZoneIndex(270.0, cogganPowerCutoffs, isPower = true))
+        assertEquals(7, ZoneGaugeMath.calculateActiveZoneIndex(350.0, cogganPowerCutoffs, isPower = true))
 
         assertNull(ZoneGaugeMath.calculateActiveZoneIndex(null, hrCutoffs, isPower = false))
     }
@@ -198,24 +183,29 @@ class ZoneGaugeMathTest {
             cutoffs = hrCutoffs
         )
         assertEquals(5, hrState.segmentColors.size)
+        assertEquals(5, hrState.segmentWeights.size)
+        assertEquals(1.0f, hrState.segmentWeights.sum(), 1e-4f)
         assertEquals(3, hrState.activeZoneIndex)
-        assertNotNull(hrState.needleFraction)
+        assertEquals(0.50f, hrState.needleFraction!!, 1e-4f)
 
         val powerState = ZoneGaugeMath.calculateZoneGaugeState(
-            value = 320.0,
+            value = 225.0,
             zoneType = SettingsDataStore.ZoneType.PWR_BIKE,
-            cutoffs = powerCutoffs
+            cutoffs = cogganPowerCutoffs
         )
         assertEquals(7, powerState.segmentColors.size)
+        assertEquals(7, powerState.segmentWeights.size)
+        assertEquals(1.0f, powerState.segmentWeights.sum(), 1e-4f)
         assertEquals(5, powerState.activeZoneIndex)
         assertNotNull(powerState.needleFraction)
 
         val staleState = ZoneGaugeMath.calculateZoneGaugeState(
             value = null,
             zoneType = SettingsDataStore.ZoneType.PWR_BIKE,
-            cutoffs = powerCutoffs
+            cutoffs = cogganPowerCutoffs
         )
         assertEquals(7, staleState.segmentColors.size)
+        assertEquals(7, staleState.segmentWeights.size)
         assertNull(staleState.activeZoneIndex)
         assertNull(staleState.needleFraction)
     }

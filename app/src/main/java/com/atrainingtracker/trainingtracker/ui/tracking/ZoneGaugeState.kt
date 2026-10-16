@@ -21,14 +21,20 @@ package com.atrainingtracker.trainingtracker.ui.tracking
 import androidx.compose.ui.graphics.Color
 
 /**
- * Immutable UI state model for the horizontal training zone gauge bar (REQ-UI-376).
+ * Immutable UI state model for the horizontal training zone gauge bar (REQ-UI-376, REQ-UI-390).
  *
  * @property segmentColors Ordered list of zone colors (5 for Heart Rate, 7 for Power).
  * @property needleFraction Normalized horizontal position [0.0..1.0] of the needle, or null if telemetry is stale/null.
  * @property activeZoneIndex 1-based index of the currently active zone (e.g. 1..5 for HR, 1..7 for Power), or null.
+ * @property segmentWeights Normalized visual width weights for each zone segment, summing to 1.0f.
  */
 data class ZoneGaugeState(
     val segmentColors: List<Color>,
     val needleFraction: Float?,
-    val activeZoneIndex: Int? = null
+    val activeZoneIndex: Int? = null,
+    val segmentWeights: List<Float> = if (segmentColors.isNotEmpty()) {
+        List(segmentColors.size) { 1f / segmentColors.size }
+    } else {
+        emptyList()
+    }
 )

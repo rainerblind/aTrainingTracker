@@ -24,6 +24,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -55,19 +56,21 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 /**
- * Compact, high-visibility horizontal segmented training zone gauge bar (REQ-UI-376).
+ * Compact, high-visibility horizontal segmented training zone gauge bar (REQ-UI-376, REQ-UI-390).
  *
- * Partitions the bar into equal-width contiguous segments corresponding to the athlete's
- * zone model (5-zone HR or 7-zone Power). Renders a high-contrast needle indicator with dark outline
- * centered vertically over the track. When telemetry is stale or null, dims track opacity to 0.35 alpha
- * and hides the needle.
+ * Partitions the bar into proportionally weighted contiguous segments (`state.segmentWeights`)
+ * corresponding to the athlete's zone model (5-zone HR or 7-zone Power) with 10% clipped outer zones.
+ * Renders a 4.dp high-contrast theme Primary Blue (`MaterialTheme.colorScheme.primary`) needle indicator
+ * with contrasting halo outline centered vertically over the track, and centers the active zone label
+ * (`"Z1"`..`"Z7"`) directly beneath the active zone segment using `MaterialTheme.colorScheme.onSurface`.
+ * When telemetry is stale or null, dims track opacity to 0.35 alpha and hides the needle.
  *
  * Adheres strictly to True-Black AMOLED contrast guidelines (REQ-UI-190, REQ-UI-220, Rule 23).
  *
- * @param state Immutable state containing segment colors, needle fraction, and active zone index.
+ * @param state Immutable state containing segment colors, proportional segment weights, needle fraction, and active zone index.
  * @param modifier Composable modifier for layout customization.
  * @param trackHeight Height of the horizontal zone track (default 6.dp).
- * @param showBadge Whether to display the compact active zone badge (e.g. "Z3") adjacent to the bar.
+ * @param showBadge Whether to display the compact active zone badge (e.g. "Z3") centered beneath the active segment.
  */
 @Composable
 fun ZoneGaugeBar(
@@ -86,25 +89,23 @@ fun ZoneGaugeBar(
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
     )
     val totalBarHeight = trackHeight + 4.dp // 2dp needle overhang top & bottom
+    val primaryNeedleColor = MaterialTheme.colorScheme.primary
 
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = modifier.fillMaxWidth()
     ) {
-        // Main Track + Needle Overlay
+        // 1. Full-Width Main Track + Primary Blue Needle Overlay
         BoxWithConstraints(
             modifier = Modifier
-                .weight(1f)
+                .fillMaxWidth()
                 .height(totalBarHeight)
                 .testTag("zone_gauge_bar_container"),
             contentAlignment = Alignment.Center
         ) {
             val totalWidthPx = constraints.maxWidth.toFloat()
             val totalHeightPx = constraints.maxHeight.toFloat()
-            val trackHeightPx = (trackHeight.value / totalBarHeight.value) * totalHeightPx
-            val trackTopPx = (totalHeightPx - trackHeightPx) / 2f
 
-            // 1. Horizontal Segmented Track
+            // Horizontal Segmented Track (weighted proportionally by state.segmentWeights)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -115,9 +116,10 @@ fun ZoneGaugeBar(
             ) {
                 Row(modifier = Modifier.fillMaxSize()) {
                     state.segmentColors.forEachIndexed { index, color ->
+                        val segmentWeight = state.segmentWeights.getOrElse(index) { 1f }.coerceAtLeast(0.001f)
                         Box(
                             modifier = Modifier
-                                .weight(1f)
+                                .weight(segmentWeight)
                                 .fillMaxHeight()
                                 .background(color.copy(alpha = trackAlpha))
                         )
@@ -133,10 +135,10 @@ fun ZoneGaugeBar(
                 }
             }
 
-            // 2. High-Contrast Needle Overlay
+            // High-Contrast Primary Blue Needle Overlay (4.dp width + contrasting halo outline)
             if (!isStale && totalWidthPx > 0f) {
                 val needleFraction = state.needleFraction.coerceIn(0.0f, 1.0f)
-                val needleWidthPx = 3.dp.value * (totalHeightPx / totalBarHeight.value)
+                val needleWidthPx = 4.dp.value * (totalHeightPx / totalBarHeight.value)
                 val halfNeedleWidth = needleWidthPx / 2f
                 val clampedCenterX = (needleFraction * totalWidthPx).coerceIn(halfNeedleWidth, totalWidthPx - halfNeedleWidth)
 
@@ -148,9 +150,9 @@ fun ZoneGaugeBar(
                     val needleLeft = clampedCenterX - halfNeedleWidth
                     val needleTop = 0f
                     val needleHeight = size.height
-                    val cornerRadius = CornerRadius(1.5.dp.toPx(), 1.5.dp.toPx())
+                    val cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
 
-                    // Dark shadow / outline (ensures > 12:1 contrast against bright zones like Chartreuse)
+                    // Contrasting halo outline (ensures sharp boundary against all 7 zone colors & card surface)
                     drawRoundRect(
                         color = TTColor.ZoneGaugeTrack,
                         topLeft = Offset(needleLeft - 0.75.dp.toPx(), needleTop),
@@ -159,9 +161,9 @@ fun ZoneGaugeBar(
                         style = Stroke(width = 1.dp.toPx())
                     )
 
-                    // Pure White Fill
+                    // Theme Primary Blue Fill (MaterialTheme.colorScheme.primary)
                     drawRoundRect(
-                        color = Color.White,
+                        color = primaryNeedleColor,
                         topLeft = Offset(needleLeft, needleTop),
                         size = Size(needleWidthPx, needleHeight),
                         cornerRadius = cornerRadius
@@ -170,20 +172,39 @@ fun ZoneGaugeBar(
             }
         }
 
-        // Optional Active Zone Badge
-        if (showBadge && state.activeZoneIndex != null) {
-            val activeColor = state.segmentColors.getOrElse(state.activeZoneIndex - 1) { MaterialTheme.colorScheme.primary }
-            Text(
-                text = "Z${state.activeZoneIndex}",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
-                ),
-                color = activeColor,
+        // 2. Centered Under-Segment Active Zone Badge
+        if (showBadge && state.activeZoneIndex != null && state.activeZoneIndex in 1..state.segmentColors.size) {
+            Row(
                 modifier = Modifier
-                    .padding(start = 6.dp)
-                    .testTag("zone_gauge_badge")
-            )
+                    .fillMaxWidth()
+                    .padding(top = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                state.segmentColors.indices.forEach { index ->
+                    val segmentWeight = state.segmentWeights.getOrElse(index) { 1f }.coerceAtLeast(0.001f)
+                    Box(
+                        modifier = Modifier.weight(segmentWeight),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (index == state.activeZoneIndex - 1) {
+                            Text(
+                                text = "Z${state.activeZoneIndex}",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.testTag("zone_gauge_badge")
+                            )
+                        }
+                    }
+                    if (index < state.segmentColors.lastIndex) {
+                        Spacer(modifier = Modifier.width(1.dp))
+                    }
+                }
+            }
         }
     }
 }
@@ -200,8 +221,9 @@ private fun PreviewZoneGaugeBarHrLight() {
             ZoneGaugeBar(
                 state = ZoneGaugeState(
                     segmentColors = ZoneGaugeMath.HR_SEGMENT_COLORS,
-                    needleFraction = 0.55f,
-                    activeZoneIndex = 3
+                    needleFraction = 0.50f,
+                    activeZoneIndex = 3,
+                    segmentWeights = ZoneGaugeMath.calculateSegmentWeights(listOf(120, 140, 160, 180), isPower = false)
                 ),
                 showBadge = true
             )
@@ -220,8 +242,9 @@ private fun PreviewZoneGaugeBarPowerAmoled() {
             ZoneGaugeBar(
                 state = ZoneGaugeState(
                     segmentColors = ZoneGaugeMath.POWER_SEGMENT_COLORS,
-                    needleFraction = 0.72f,
-                    activeZoneIndex = 5
+                    needleFraction = 0.61f,
+                    activeZoneIndex = 5,
+                    segmentWeights = ZoneGaugeMath.calculateSegmentWeights(listOf(110, 150, 180, 210, 240, 300), isPower = true)
                 ),
                 showBadge = true
             )
@@ -238,7 +261,8 @@ private fun PreviewZoneGaugeBarPowerStale() {
                 state = ZoneGaugeState(
                     segmentColors = ZoneGaugeMath.POWER_SEGMENT_COLORS,
                     needleFraction = null,
-                    activeZoneIndex = null
+                    activeZoneIndex = null,
+                    segmentWeights = ZoneGaugeMath.calculateSegmentWeights(listOf(110, 150, 180, 210, 240, 300), isPower = true)
                 ),
                 showBadge = true
             )
