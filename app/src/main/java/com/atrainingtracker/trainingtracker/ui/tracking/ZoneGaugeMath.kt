@@ -23,11 +23,12 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 /**
- * High-performance, pure mathematical calculation engine for the visual training zone gauge bar (REQ-UI-376).
+ * High-performance, pure mathematical calculation engine for the visual training zone gauge bar
+ * (REQ-UI-376, REQ-UI-390).
  *
- * Partitions the horizontal gauge track into K contiguous equal-width segments (K=5 for Heart Rate,
- * K=7 for Coggan Cycling Power). Computes precise intra-zone needle positions, handles dynamic
- * open-ended top zone ceilings (U5 for HR, U7 for Power capped at 2500W), and provides safe null/stale handling.
+ * Sizes interior closed zones (Z2..Z_{K-1}) proportionally to their configured span (C_i - C_{i-1}),
+ * clips the outer open-ended zones (Z1 and Z_K) to a 10% boundary span (w_cap = (10 / 95) * S_inner),
+ * and computes strictly linear needle positions across [X_min, X_max].
  */
 object ZoneGaugeMath {
 
@@ -54,16 +55,56 @@ object ZoneGaugeMath {
     const val POWER_PHYSICAL_CEILING = 2500.0
 
     /**
-     * Calculates the normalized needle position [0.0..1.0] across K equal-width zone segments.
+     * Ratio of each outer clipped boundary zone (Z1 and Z_K) relative to the total interior span S_inner.
+     * For standard Coggan 7-zone power (Z1max=55% FTP, Z6max=150% FTP -> S_inner = 95% FTP),
+     * w_cap = (10.0 / 95.0) * 95% FTP = 10% FTP, yielding X_min = 45% FTP, X_max = 160% FTP, S_total = 115% FTP.
+     */
+    const val BOUNDARY_CAP_RATIO = 10.0 / 95.0
+
+    /**
+     * Computes the normalized visual width weights (summing to 1.0f) for all K zone segments.
+     *
+     * @param cutoffs Upper cutoff thresholds [C_1, ..., C_{K-1}] (4 for HR, 6 for Power).
+     * @param isPower True for 7-zone Cycling Power, false for 5-zone Heart Rate.
+     * @return List of K positive Float weights summing to 1.0f.
+     */
+    fun calculateSegmentWeights(
+        cutoffs: List<Int>,
+        isPower: Boolean = false
+    ): List<Float> {
+        val numZones = if (isPower) 7 else 5
+        val requiredCutoffs = numZones - 1
+        if (cutoffs.size < requiredCutoffs) {
+            return List(numZones) { 1.0f / numZones }
+        }
+
+        val interiorSpans = DoubleArray(requiredCutoffs - 1) { idx ->
+            maxOf(1.0, (cutoffs[idx + 1] - cutoffs[idx]).toDouble())
+        }
+        val sInner = interiorSpans.sum()
+        val wCap = BOUNDARY_CAP_RATIO * sInner
+        val sTotal = sInner + 2.0 * wCap
+
+        return buildList(numZones) {
+            add((wCap / sTotal).toFloat())
+            for (span in interiorSpans) {
+                add((span / sTotal).toFloat())
+            }
+            add((wCap / sTotal).toFloat())
+        }
+    }
+
+    /**
+     * Calculates the strictly linear normalized needle position [0.0..1.0] across [X_min, X_max] (REQ-UI-390.1).
      *
      * @param value The instantaneous reading (bpm or Watts). Returns null if value is null, NaN, or non-finite.
      * @param cutoffs The upper cutoff thresholds for the closed zones:
      *                For HR (5 zones): list of 4 cutoffs [Z1max, Z2max, Z3max, Z4max].
      *                For Power (7 zones): list of 6 cutoffs [Z1max, Z2max, Z3max, Z4max, Z5max, Z6max].
-     * @param hrMax Optional athlete HR max for dynamic open-ended Z5 ceiling.
-     * @param ftp Optional athlete FTP for dynamic open-ended Z7 ceiling.
+     * @param hrMax Optional athlete HR max (retained for binary/source signature compatibility).
+     * @param ftp Optional athlete FTP (retained for binary/source signature compatibility).
      * @param isPower True if calculating for Cycling Power (7 zones), false for Heart Rate (5 zones).
-     * @return Float in [0.0..1.0] representing horizontal needle fraction, or null if invalid or unconfigured.
+     * @return Float in [0.0..1.0] representing strictly linear horizontal needle fraction, or null if invalid.
      */
     fun calculateNeedleFraction(
         value: Double?,
@@ -82,48 +123,22 @@ object ZoneGaugeMath {
             return null
         }
 
-        val segmentWidth = 1.0 / numZones
-        val baselineLower = if (isPower) POWER_BASELINE_LOWER_BOUND else HR_BASELINE_LOWER_BOUND
+        var sInner = 0.0
+        for (idx in 0 until requiredCutoffs - 1) {
+            sInner += maxOf(1.0, (cutoffs[idx + 1] - cutoffs[idx]).toDouble())
+        }
 
-        // Below baseline
-        if (value <= baselineLower) {
+        val wCap = BOUNDARY_CAP_RATIO * sInner
+        val c1 = cutoffs[0].toDouble()
+        val xMin = c1 - wCap
+        val xMax = c1 + sInner + wCap
+        val sTotal = xMax - xMin
+
+        if (sTotal <= 0.0) {
             return 0.0f
         }
 
-        // Zone 1: [baselineLower, cutoffs[0]]
-        val z1Max = cutoffs[0].toDouble()
-        if (value <= z1Max) {
-            val span = z1Max - baselineLower
-            val intraFraction = if (span > 0) (value - baselineLower) / span else 0.0
-            return (intraFraction.coerceIn(0.0, 1.0) * segmentWidth).toFloat()
-        }
-
-        // Intermediate interior zones: i = 1 until requiredCutoffs - 1
-        for (i in 1 until requiredCutoffs) {
-            val lower = cutoffs[i - 1].toDouble()
-            val upper = cutoffs[i].toDouble()
-            if (value <= upper) {
-                val span = upper - lower
-                val intraFraction = if (span > 0) (value - lower) / span else 0.0
-                val needlePos = (i + intraFraction.coerceIn(0.0, 1.0)) * segmentWidth
-                return needlePos.coerceIn(0.0, 1.0).toFloat()
-            }
-        }
-
-        // Top open-ended zone (Zone 5 for HR, Zone 7 for Power):
-        val topLower = cutoffs[requiredCutoffs - 1].toDouble()
-        val topUpper = if (isPower) {
-            val dynamicCeiling = maxOf(topLower + 300.0, (ftp?.toDouble() ?: 250.0) * 2.0)
-            minOf(POWER_PHYSICAL_CEILING, dynamicCeiling)
-        } else {
-            val nominalCeiling = hrMax?.toDouble() ?: (topLower + 25.0)
-            maxOf(nominalCeiling, topLower + 25.0)
-        }
-
-        val topSpan = topUpper - topLower
-        val topIntraFraction = if (topSpan > 0) (value - topLower) / topSpan else 0.0
-        val topNeedlePos = (requiredCutoffs + topIntraFraction.coerceIn(0.0, 1.0)) * segmentWidth
-        return topNeedlePos.coerceIn(0.0, 1.0).toFloat()
+        return ((value - xMin) / sTotal).coerceIn(0.0, 1.0).toFloat()
     }
 
     /**
@@ -161,13 +176,15 @@ object ZoneGaugeMath {
     ): ZoneGaugeState {
         val isPower = (zoneType == SettingsDataStore.ZoneType.PWR_BIKE)
         val segmentColors = if (isPower) POWER_SEGMENT_COLORS else HR_SEGMENT_COLORS
+        val segmentWeights = calculateSegmentWeights(cutoffs, isPower)
         val needleFraction = calculateNeedleFraction(value, cutoffs, hrMax, ftp, isPower)
         val activeZoneIndex = calculateActiveZoneIndex(value, cutoffs, isPower)
 
         return ZoneGaugeState(
             segmentColors = segmentColors,
             needleFraction = needleFraction,
-            activeZoneIndex = activeZoneIndex
+            activeZoneIndex = activeZoneIndex,
+            segmentWeights = segmentWeights
         )
     }
 }
