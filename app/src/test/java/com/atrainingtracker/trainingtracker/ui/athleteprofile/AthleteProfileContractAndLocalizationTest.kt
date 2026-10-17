@@ -276,12 +276,17 @@ class AthleteProfileContractAndLocalizationTest {
         assertTrue("WorkoutDetails.kt must exist", detailsFile.exists())
         val detailsSource = detailsFile.readText()
         assertTrue(
-            "WorkoutDetails.kt must render PowerTrainingMetricsSection (REQ-UI-402.2)",
-            detailsSource.contains("PowerTrainingMetricsSection(") &&
-                detailsSource.contains("R.string.workout_power_metrics_np_format") &&
-                detailsSource.contains("R.string.workout_power_metrics_if_format") &&
-                detailsSource.contains("R.string.workout_power_metrics_tss_format") &&
-                detailsSource.contains("R.string.workout_power_metrics_work_format") &&
+            "WorkoutDetails.kt must render Section 5.10 grouped rows without FlowRow pill badges (REQ-UI-402.2, REQ-UI-404)",
+            !detailsSource.contains("FlowRow(") &&
+                !detailsSource.contains("surfaceContainerHighest") &&
+                detailsSource.contains("fun WorkoutDomainRow(") &&
+                detailsSource.contains("PowerTrainingMetricsSection(") &&
+                detailsSource.contains("AerobicEfficiencyRow(") &&
+                detailsSource.contains("AnaerobicBatteryRow(") &&
+                detailsSource.contains("R.string.workout_power_value_watts_format") &&
+                detailsSource.contains("R.string.workout_power_value_if_format") &&
+                detailsSource.contains("R.string.workout_power_value_tss_format") &&
+                detailsSource.contains("R.string.workout_power_value_work_format") &&
                 detailsSource.contains("R.string.workout_power_metrics_wkg_format") &&
                 detailsSource.contains("R.string.workout_power_metrics_vi_format")
         )
