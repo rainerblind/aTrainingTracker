@@ -1925,5 +1925,21 @@
     <string name="workout_power_metrics_work_format">仕事量: %1$.0f kJ</string>
     <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
     <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
+
+    <!-- Physiology & Training Models (ATT-3929 / REQ-UI-403) -->
+    <string name="tuning_cat_physiology_models">生理学・トレーニングモデル</string>
+    <string name="tuning_physiology_none_enabled">基本指標のみ</string>
+    <string name="tuning_physiology_coggan_short">Coggan</string>
+    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
+    <string name="tuning_physiology_cp_short">CP / W\'bal</string>
+    <string name="tuning_physiology_coggan_title">Cogganパワー指標 (NP, IF, TSS)</string>
+    <string name="tuning_physiology_coggan_desc">Normalized Power、Intensity Factor、TSS、Variability Indexをワークアウトとコックピットに表示します</string>
+    <string name="tuning_physiology_pmc_title">パフォーマンス管理 (PMC)</string>
+    <string name="tuning_physiology_pmc_desc">プロフィールとゾーン画面にフィットネス (CTL)、疲労 (ATL)、フォーム (TSB) チャートを表示します</string>
+    <string name="tuning_physiology_ef_title">有酸素効率とデカップリング</string>
+    <string name="tuning_physiology_ef_desc">効率係数 (EF) と有酸素デカップリング (Pw:Hr / Pa:Hr) をワークアウト概要と詳細に表示します</string>
+    <string name="tuning_physiology_cp_title">クリティカルパワー＆無酸素バッテリー (CP, W\', W\'bal)</string>
+    <string name="tuning_physiology_cp_desc">クリティカルパワー、W\'、W\'balバッテリーをプロフィール、コックピット、ワークアウト分析に表示します</string>
 </resources>
 

@@ -34,6 +34,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
 
@@ -41,7 +42,10 @@ import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
 @Composable
 fun WorkoutDetails(
     data: WorkoutDetailsData,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enableCogganPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS,
+    enableAerobicEfficiencyModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL,
+    enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
 ) {
     val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
 
@@ -93,8 +97,8 @@ fun WorkoutDetails(
             modifier = Modifier
         )
 
-        // --- Section 4: Anaerobic Battery (W'bal) Minimum & Empty-Tank Badge (REQ-UI-399.3) ---
-        if (data.minWPrimeBalKj != null && data.minWPrimeBalPct != null) {
+        // --- Section 4: Anaerobic Battery (W'bal) Minimum & Empty-Tank Badge (REQ-UI-399.3, REQ-UI-403) ---
+        if (enableCriticalPowerModel && data.minWPrimeBalKj != null && data.minWPrimeBalPct != null) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -125,8 +129,8 @@ fun WorkoutDetails(
             }
         }
 
-        // --- Section 5: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400.3) ---
-        if (data.efficiencyFactor != null) {
+        // --- Section 5: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400.3, REQ-UI-403) ---
+        if (enableAerobicEfficiencyModel && data.efficiencyFactor != null) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -187,14 +191,20 @@ fun WorkoutDetails(
             }
         }
 
-        // --- Section 6: Power Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) (REQ-UI-402.2) ---
-        val hasPowerTrainingMetrics = data.normalizedPowerWatts != null ||
-            data.intensityFactor != null ||
-            data.tss != null ||
-            data.workKj != null ||
-            data.avgPowerToWeight != null
+        // --- Section 6: Power Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) (REQ-UI-402.2, REQ-UI-403) ---
+        val hasPowerTrainingMetrics = data.workKj != null ||
+            data.avgPowerToWeight != null ||
+            (enableCogganPowerMetrics && (
+                data.normalizedPowerWatts != null ||
+                data.intensityFactor != null ||
+                data.tss != null ||
+                data.variabilityIndex != null
+            ))
         if (hasPowerTrainingMetrics) {
-            PowerTrainingMetricsSection(data = data)
+            PowerTrainingMetricsSection(
+                data = data,
+                enableCogganPowerMetrics = enableCogganPowerMetrics
+            )
         }
     }
 }
@@ -203,15 +213,20 @@ fun WorkoutDetails(
 @Composable
 private fun PowerTrainingMetricsSection(
     data: WorkoutDetailsData,
+    enableCogganPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS,
     modifier: Modifier = Modifier
 ) {
     val badges = buildList {
-        data.normalizedPowerWatts?.let { add(stringResource(R.string.workout_power_metrics_np_format, it)) }
-        data.intensityFactor?.let { add(stringResource(R.string.workout_power_metrics_if_format, it)) }
-        data.tss?.let { add(stringResource(R.string.workout_power_metrics_tss_format, it)) }
+        if (enableCogganPowerMetrics) {
+            data.normalizedPowerWatts?.let { add(stringResource(R.string.workout_power_metrics_np_format, it)) }
+            data.intensityFactor?.let { add(stringResource(R.string.workout_power_metrics_if_format, it)) }
+            data.tss?.let { add(stringResource(R.string.workout_power_metrics_tss_format, it)) }
+        }
         data.workKj?.let { add(stringResource(R.string.workout_power_metrics_work_format, it)) }
         data.avgPowerToWeight?.let { add(stringResource(R.string.workout_power_metrics_wkg_format, it)) }
-        data.variabilityIndex?.let { add(stringResource(R.string.workout_power_metrics_vi_format, it)) }
+        if (enableCogganPowerMetrics) {
+            data.variabilityIndex?.let { add(stringResource(R.string.workout_power_metrics_vi_format, it)) }
+        }
     }
     if (badges.isEmpty()) return
 

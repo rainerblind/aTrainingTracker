@@ -239,4 +239,53 @@ class EditSensorFieldViewModelTest {
         assertEquals("sec", state.movingAverageUnit)
         assertTrue(state.isCustomFilterExpanded)
     }
+
+    @Test
+    fun testAvailableSensorTypes_reactivelyUpdatesOnDelayedTuningConfigEmission() = runTest {
+        every { ActivityType.getSensorTypeArray(any(), any()) } returns arrayOf(
+            SensorType.SPEED_mps,
+            SensorType.POWER,
+            SensorType.NORMALIZED_POWER,
+            SensorType.INTENSITY_FACTOR,
+            SensorType.TSS,
+            SensorType.W_PRIME_BAL
+        )
+
+        val delayedTuningFlow = kotlinx.coroutines.flow.MutableSharedFlow<com.atrainingtracker.trainingtracker.settings.TuningConfig>()
+        val viewModel = EditSensorFieldViewModel(
+            application = application,
+            trackingViewsRepository = trackingViewsRepo,
+            banalServiceRepository = banalServiceRepo,
+            activityType = ActivityType.BIKE_POWER,
+            sensorFieldId = -1L,
+            tabViewId = 1L,
+            rowNr = 0,
+            colNr = 0,
+            tuningConfigFlow = delayedTuningFlow
+        )
+
+        // Immediately before delayed flow emits, initial state uses default TuningConfig (Coggan=true, CP=false)
+        // and never shows an empty list
+        val initialAvailable = viewModel.uiState.value.availableSensorTypesForCurrentActivityType
+        assertTrue(initialAvailable.isNotEmpty())
+        assertTrue(initialAvailable.contains(SensorType.NORMALIZED_POWER))
+        assertFalse(initialAvailable.contains(SensorType.W_PRIME_BAL))
+
+        // Simulate delayed TuningConfig emission disabling Coggan and enabling Critical Power
+        testDispatcher.scheduler.advanceUntilIdle()
+        delayedTuningFlow.emit(
+            com.atrainingtracker.trainingtracker.settings.TuningConfig(
+                enableCogganPowerMetrics = false,
+                enableCriticalPowerModel = true
+            )
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val updatedAvailable = viewModel.uiState.value.availableSensorTypesForCurrentActivityType
+        assertFalse(updatedAvailable.contains(SensorType.NORMALIZED_POWER))
+        assertFalse(updatedAvailable.contains(SensorType.INTENSITY_FACTOR))
+        assertFalse(updatedAvailable.contains(SensorType.TSS))
+        assertTrue(updatedAvailable.contains(SensorType.W_PRIME_BAL))
+        assertTrue(updatedAvailable.contains(SensorType.POWER))
+    }
 }

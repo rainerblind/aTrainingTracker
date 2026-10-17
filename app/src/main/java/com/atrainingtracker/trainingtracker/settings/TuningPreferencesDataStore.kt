@@ -235,6 +235,11 @@ object TuningPreferencesDefaults {
     const val MIN_AUTO_PAUSE_DEBOUNCE_SEC = 1
     const val MAX_AUTO_PAUSE_DEBOUNCE_SEC = 5
     const val STEP_AUTO_PAUSE_DEBOUNCE_SEC = 1
+
+    const val DEFAULT_ENABLE_COGGAN_POWER_METRICS = true
+    const val DEFAULT_ENABLE_PMC_MODEL = false
+    const val DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL = false
+    const val DEFAULT_ENABLE_CRITICAL_POWER_MODEL = false
 }
 
 /**
@@ -296,7 +301,11 @@ data class TuningConfig(
     val autoPauseOtherSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC,
     val autoPauseOtherDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
     val autoPauseSpeedThresholdKmh: Float = autoPauseBikeSpeedThreshold.toFloat(),
-    val autoPauseDebounceSec: Int = autoPauseBikeDebounceSec
+    val autoPauseDebounceSec: Int = autoPauseBikeDebounceSec,
+    val enableCogganPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS,
+    val enablePmcModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL,
+    val enableAerobicEfficiencyModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL,
+    val enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -426,6 +435,10 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_other_debounce_sec")
         val KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH: Preferences.Key<Float> = floatPreferencesKey("tuning_auto_pause_speed_threshold_kmh")
         val KEY_AUTO_PAUSE_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_debounce_sec")
+        val KEY_ENABLE_COGGAN_POWER_METRICS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_coggan_power_metrics")
+        val KEY_ENABLE_PMC_MODEL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_pmc_model")
+        val KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_aerobic_efficiency_model")
+        val KEY_ENABLE_CRITICAL_POWER_MODEL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_critical_power_model")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -484,7 +497,11 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD,
             KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
             KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
-            KEY_AUTO_PAUSE_DEBOUNCE_SEC
+            KEY_AUTO_PAUSE_DEBOUNCE_SEC,
+            KEY_ENABLE_COGGAN_POWER_METRICS,
+            KEY_ENABLE_PMC_MODEL,
+            KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL,
+            KEY_ENABLE_CRITICAL_POWER_MODEL
         )
 
         /**
@@ -787,8 +804,52 @@ data class AutoPausePreferences(
             autoPauseOtherSpeedThreshold = autoPausePrefs.otherSpeedThreshold,
             autoPauseOtherDebounceSec = autoPausePrefs.otherDebounceSec,
             autoPauseSpeedThresholdKmh = autoPausePrefs.bikeSpeedThreshold.toFloat(),
-            autoPauseDebounceSec = autoPausePrefs.bikeDebounceSec
+            autoPauseDebounceSec = autoPausePrefs.bikeDebounceSec,
+            enableCogganPowerMetrics = prefs[KEY_ENABLE_COGGAN_POWER_METRICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS,
+            enablePmcModel = prefs[KEY_ENABLE_PMC_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL,
+            enableAerobicEfficiencyModel = prefs[KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL,
+            enableCriticalPowerModel = prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
         )
+    }
+
+    val enableCogganPowerMetricsFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_ENABLE_COGGAN_POWER_METRICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS
+    }
+
+    val enablePmcModelFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_ENABLE_PMC_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL
+    }
+
+    val enableAerobicEfficiencyModelFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL
+    }
+
+    val enableCriticalPowerModelFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
+    }
+
+    suspend fun setEnableCogganPowerMetrics(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ENABLE_COGGAN_POWER_METRICS] = enabled
+        }
+    }
+
+    suspend fun setEnablePmcModel(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ENABLE_PMC_MODEL] = enabled
+        }
+    }
+
+    suspend fun setEnableAerobicEfficiencyModel(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL] = enabled
+        }
+    }
+
+    suspend fun setEnableCriticalPowerModel(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] = enabled
+        }
     }
 
     suspend fun saveTuningConfig(config: TuningConfig) {
@@ -960,6 +1021,10 @@ data class AutoPausePreferences(
             prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] = clampedRunDebounce
             prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] = clampedOtherSpeedThreshold
             prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] = clampedOtherDebounce
+            prefs[KEY_ENABLE_COGGAN_POWER_METRICS] = config.enableCogganPowerMetrics
+            prefs[KEY_ENABLE_PMC_MODEL] = config.enablePmcModel
+            prefs[KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL] = config.enableAerobicEfficiencyModel
+            prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] = config.enableCriticalPowerModel
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)

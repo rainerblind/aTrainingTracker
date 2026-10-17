@@ -1945,5 +1945,21 @@
     <string name="workout_power_metrics_work_format">Arbeid: %1$.0f kJ</string>
     <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
     <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
+
+    <!-- Physiology & Training Models (ATT-3929 / REQ-UI-403) -->
+    <string name="tuning_cat_physiology_models">Fysiologie &amp; trainingsmodellen</string>
+    <string name="tuning_physiology_none_enabled">Alleen basisstatistieken</string>
+    <string name="tuning_physiology_coggan_short">Coggan</string>
+    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
+    <string name="tuning_physiology_cp_short">CP / W\'bal</string>
+    <string name="tuning_physiology_coggan_title">Coggan-vermogensmetrieken (NP, IF, TSS)</string>
+    <string name="tuning_physiology_coggan_desc">Toon Normalized Power, Intensity Factor, TSS en Variability Index in trainingen en cockpit</string>
+    <string name="tuning_physiology_pmc_title">Prestatiemanagement (PMC)</string>
+    <string name="tuning_physiology_pmc_desc">Toon grafiek voor Fitness (CTL), Vermoeidheid (ATL) en Vorm (TSB) bij Profiel &amp; zones</string>
+    <string name="tuning_physiology_ef_title">Aerobe efficiëntie &amp; ontkoppeling</string>
+    <string name="tuning_physiology_ef_desc">Toon efficiëntiefactor (EF) en aerobe ontkoppeling (Pw:Hr / Pa:Hr) in overzichten en details</string>
+    <string name="tuning_physiology_cp_title">Critical Power &amp; anaerobe batterij (CP, W\', W\'bal)</string>
+    <string name="tuning_physiology_cp_desc">Toon Critical Power, W\' en W\'bal-batterij in Profiel &amp; zones, cockpit en trainingsanalyse</string>
 </resources>
 
