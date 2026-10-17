@@ -128,7 +128,8 @@ class VectorAssetResolutionContractTest {
     }
 
     /**
-     * TST-UI-338.2: Verify multi-color palette and protocol badge differentiation from Xfig/XCF masters.
+     * TST-UI-338.2 & TST-UI-369.1: Verify multi-color palette, transparent stopwatch inner dial (REQ-UI-406),
+     * and protocol badge differentiation from Xfig/XCF masters.
      */
     @Test
     fun testMultiColorAndProtocolBadgeVisualFidelityContracts() {
@@ -142,12 +143,25 @@ class VectorAssetResolutionContractTest {
         val runXml = File(drawableDir, "bsport_run.xml").readText().uppercase()
         assertTrue("bsport_run.xml must preserve blue runner (#0000FF)", runXml.contains("#0000FF"))
 
-        val otherXml = File(drawableDir, "bsport_other.xml").readText().uppercase()
-        assertTrue("bsport_other.xml must preserve light gray stopwatch dial (#F0F0F0)", otherXml.contains("#F0F0F0"))
+        val otherXmlFile = File(drawableDir, "bsport_other.xml")
+        val otherXml = otherXmlFile.readText().uppercase()
+        assertFalse("bsport_other.xml must not use opaque #F0F0F0 inner dial fill (REQ-UI-406)", otherXml.contains("#F0F0F0"))
         assertTrue("bsport_other.xml must preserve gold stopwatch ring (#FFC700)", otherXml.contains("#FFC700"))
         assertTrue("bsport_other.xml must preserve blue left button cap (#000090)", otherXml.contains("#000090"))
         assertTrue("bsport_other.xml must preserve red center button cap (#FF0000)", otherXml.contains("#FF0000"))
         assertTrue("bsport_other.xml must preserve green right button cap (#009000)", otherXml.contains("#009000"))
+
+        val otherDoc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(otherXmlFile)
+        val otherPaths = otherDoc.getElementsByTagName("path")
+        assertTrue("bsport_other.xml must contain <path> elements", otherPaths.length >= 1)
+        for (i in 0 until otherPaths.length) {
+            val fillAttr = otherPaths.item(i).attributes?.getNamedItem("android:fillColor")?.nodeValue.orEmpty()
+            assertEquals(
+                "bsport_other.xml path[$i] must declare transparent fillColor (#00000000) per REQ-UI-406",
+                "#00000000",
+                fillAttr
+            )
+        }
 
         val antBadges = listOf("bike_cad", "bike_pwr", "bike_spd", "bike_speed_and_cadence", "hr", "run_spd", "temp")
         for (badge in antBadges) {
