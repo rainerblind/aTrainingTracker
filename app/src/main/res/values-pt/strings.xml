@@ -1960,5 +1960,22 @@
     <string name="tuning_physiology_ef_desc">Mostrar fator de eficiência (EF) e desacoplamento aeróbico (Pw:Hr / Pa:Hr) nos resumos e detalhes</string>
     <string name="tuning_physiology_cp_title">Potência crítica e bateria anaeróbica (CP, W\', W\'bal)</string>
     <string name="tuning_physiology_cp_desc">Mostrar potência crítica, W\' e bateria W\'bal em Perfil e zonas, cockpit e análise de treino</string>
+    <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
+    <string name="workout_domain_efficiency">Eficiência</string>
+    <string name="workout_ef_short">EF</string>
+    <string name="workout_pwhr_short">Pw:Hr</string>
+    <string name="workout_pahr_short">Pa:Hr</string>
+    <string name="workout_ef_value_pw_format">%1$.2f W/bpm</string>
+    <string name="workout_ef_value_pa_format">%1$.2f m/min/bpm</string>
+    <string name="workout_decoupling_pct_format">%1$.1f%%</string>
+    <string name="workout_w_prime_min_kj_label">Mín. W\'bal</string>
+    <string name="workout_w_prime_min_pct_label">Mín. %%</string>
+    <string name="workout_w_prime_min_kj_value_format">%1$.1f kJ</string>
+    <string name="workout_w_prime_min_pct_value_format">%1$.0f%%</string>
+    <string name="workout_power_label_work">Trabalho</string>
+    <string name="workout_power_value_watts_format">%1$.0f W</string>
+    <string name="workout_power_value_if_format">%1$.2f</string>
+    <string name="workout_power_value_tss_format">%1$.0f</string>
+    <string name="workout_power_value_work_format">%1$.0f kJ</string>
 </resources>
 

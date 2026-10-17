@@ -184,6 +184,13 @@ class PhysiologyModelsVisibilityContractTest {
         assertTrue(detailsContent.contains("enableCogganPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS"))
         assertTrue(detailsContent.contains("enableAerobicEfficiencyModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL"))
         assertTrue(detailsContent.contains("enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL"))
+        assertFalse("WorkoutDetails must not use FlowRow pill badges (Section 5.10)", detailsContent.contains("FlowRow("))
+        assertFalse("WorkoutDetails must not use surfaceContainerHighest pills (Section 5.10)", detailsContent.contains("surfaceContainerHighest"))
+        assertTrue(detailsContent.contains("fun WorkoutDomainRow("))
+        assertTrue(detailsContent.contains("R.drawable.ic_power"))
+        assertTrue(detailsContent.contains("R.drawable.ic_cardio_load"))
+        assertTrue(detailsContent.contains("R.drawable.ic_battery_full"))
+        assertTrue(detailsContent.contains("Spacer(modifier = Modifier.width(20.dp))"))
 
         val mapLayoutCandidates = listOf(
             File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayout.kt"),
@@ -195,7 +202,7 @@ class PhysiologyModelsVisibilityContractTest {
     }
 
     @Test
-    fun `TST-UI-366_7 all 9 locales define physiology models string keys`() {
+    fun `TST-UI-366_7 and TST-UI-367_2 all 9 locales define physiology models and Section 5_10 string keys`() {
         val locales = listOf(
             "values",
             "values-de",
@@ -221,7 +228,23 @@ class PhysiologyModelsVisibilityContractTest {
             "tuning_physiology_ef_title",
             "tuning_physiology_ef_desc",
             "tuning_physiology_cp_title",
-            "tuning_physiology_cp_desc"
+            "tuning_physiology_cp_desc",
+            "workout_domain_efficiency",
+            "workout_ef_short",
+            "workout_pwhr_short",
+            "workout_pahr_short",
+            "workout_ef_value_pw_format",
+            "workout_ef_value_pa_format",
+            "workout_decoupling_pct_format",
+            "workout_w_prime_min_kj_label",
+            "workout_w_prime_min_pct_label",
+            "workout_w_prime_min_kj_value_format",
+            "workout_w_prime_min_pct_value_format",
+            "workout_power_label_work",
+            "workout_power_value_watts_format",
+            "workout_power_value_if_format",
+            "workout_power_value_tss_format",
+            "workout_power_value_work_format"
         )
 
         val resBase = listOf(

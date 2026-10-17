@@ -1941,5 +1941,22 @@
     <string name="tuning_physiology_ef_desc">効率係数 (EF) と有酸素デカップリング (Pw:Hr / Pa:Hr) をワークアウト概要と詳細に表示します</string>
     <string name="tuning_physiology_cp_title">クリティカルパワー＆無酸素バッテリー (CP, W\', W\'bal)</string>
     <string name="tuning_physiology_cp_desc">クリティカルパワー、W\'、W\'balバッテリーをプロフィール、コックピット、ワークアウト分析に表示します</string>
+    <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
+    <string name="workout_domain_efficiency">効率</string>
+    <string name="workout_ef_short">EF</string>
+    <string name="workout_pwhr_short">Pw:Hr</string>
+    <string name="workout_pahr_short">Pa:Hr</string>
+    <string name="workout_ef_value_pw_format">%1$.2f W/bpm</string>
+    <string name="workout_ef_value_pa_format">%1$.2f m/min/bpm</string>
+    <string name="workout_decoupling_pct_format">%1$.1f%%</string>
+    <string name="workout_w_prime_min_kj_label">最小 W\'bal</string>
+    <string name="workout_w_prime_min_pct_label">最小 %%</string>
+    <string name="workout_w_prime_min_kj_value_format">%1$.1f kJ</string>
+    <string name="workout_w_prime_min_pct_value_format">%1$.0f%%</string>
+    <string name="workout_power_label_work">仕事量</string>
+    <string name="workout_power_value_watts_format">%1$.0f W</string>
+    <string name="workout_power_value_if_format">%1$.2f</string>
+    <string name="workout_power_value_tss_format">%1$.0f</string>
+    <string name="workout_power_value_work_format">%1$.0f kJ</string>
 </resources>
 

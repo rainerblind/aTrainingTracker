@@ -18,27 +18,39 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.workoutdetails
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
-import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
-import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
-
+/**
+ * Shared workout telemetry summary details rendered inside `WorkoutSummary` cards
+ * and `TrackOnMapScreen` / `MapDetailLayout` (`REQ-UI-399`, `REQ-UI-400`, `REQ-UI-402`,
+ * `REQ-UI-403`, `REQ-UI-404`, `docs/design_guidelines.md` Section 5.10).
+ */
 @Composable
 fun WorkoutDetails(
     data: WorkoutDetailsData,
@@ -92,165 +104,74 @@ fun WorkoutDetails(
 
         // --- Section 3: Altitude (Ascent and Descent) ---
         AltitudeRow(
-            data.ascentMeters,
-            data.descentMeters,
+            ascentMeters = data.ascentMeters,
+            descentMeters = data.descentMeters,
             modifier = Modifier
         )
 
-        // --- Section 4: Anaerobic Battery (W'bal) Minimum & Empty-Tank Badge (REQ-UI-399.3, REQ-UI-403) ---
-        if (enableCriticalPowerModel && data.minWPrimeBalKj != null && data.minWPrimeBalPct != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.workout_w_prime_bal_min_format, data.minWPrimeBalKj, data.minWPrimeBalPct),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                if (data.isEmptyTankWarning) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        shape = MaterialTheme.shapes.small
-                    ) {
-                        Text(
-                            text = stringResource(R.string.workout_w_prime_empty_tank),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            maxLines = 1,
-                            softWrap = false,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // --- Section 5: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400.3, REQ-UI-403) ---
-        if (enableAerobicEfficiencyModel && data.efficiencyFactor != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val summaryText = if (data.aerobicDecouplingPct != null) {
-                    if (data.isPowerBasedEfficiency) {
-                        stringResource(R.string.workout_ef_pwhr_format, data.efficiencyFactor, data.aerobicDecouplingPct)
-                    } else {
-                        stringResource(R.string.workout_ef_pahr_format, data.efficiencyFactor, data.aerobicDecouplingPct)
-                    }
-                } else {
-                    if (data.isPowerBasedEfficiency) {
-                        stringResource(R.string.workout_ef_only_pw_format, data.efficiencyFactor)
-                    } else {
-                        stringResource(R.string.workout_ef_only_pa_format, data.efficiencyFactor)
-                    }
-                }
-                Text(
-                    text = summaryText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-                if (data.aerobicDecouplingPct != null) {
-                    val badgeBg = if (data.isAerobicDecouplingHighDrift) {
-                        MaterialTheme.colorScheme.errorContainer
-                    } else {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    }
-                    val badgeFg = if (data.isAerobicDecouplingHighDrift) {
-                        MaterialTheme.colorScheme.onErrorContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSecondaryContainer
-                    }
-                    val badgeText = if (data.isAerobicDecouplingHighDrift) {
-                        stringResource(R.string.workout_decoupling_drift)
-                    } else {
-                        stringResource(R.string.workout_decoupling_coupled)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                        color = badgeBg,
-                        shape = MaterialTheme.shapes.small
-                    ) {
-                        Text(
-                            text = badgeText,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = badgeFg,
-                            maxLines = 1,
-                            softWrap = false,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // --- Section 6: Power Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) (REQ-UI-402.2, REQ-UI-403) ---
-        val hasPowerTrainingMetrics = data.workKj != null ||
-            data.avgPowerToWeight != null ||
-            (enableCogganPowerMetrics && (
-                data.normalizedPowerWatts != null ||
+        // --- Section 4: Power Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) (REQ-UI-402, REQ-UI-403, REQ-UI-404) ---
+        val hasCogganMetrics = enableCogganPowerMetrics && (
+            data.normalizedPowerWatts != null ||
                 data.intensityFactor != null ||
                 data.tss != null ||
                 data.variabilityIndex != null
-            ))
-        if (hasPowerTrainingMetrics) {
+        )
+        val hasBasicPowerMetrics = data.workKj != null || data.avgPowerToWeight != null
+        if (hasCogganMetrics || hasBasicPowerMetrics) {
             PowerTrainingMetricsSection(
                 data = data,
                 enableCogganPowerMetrics = enableCogganPowerMetrics
             )
         }
+
+        // --- Section 5: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400, REQ-UI-403, REQ-UI-404) ---
+        if (enableAerobicEfficiencyModel && data.efficiencyFactor != null) {
+            AerobicEfficiencyRow(data = data)
+        }
+
+        // --- Section 6: Anaerobic Battery (W'bal) Minimum & Empty-Tank Status (REQ-UI-399, REQ-UI-403, REQ-UI-404) ---
+        if (enableCriticalPowerModel && data.minWPrimeBalKj != null && data.minWPrimeBalPct != null) {
+            AnaerobicBatteryRow(data = data)
+        }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * Canonical domain-grouped row layout following `docs/design_guidelines.md` Section 5.10 (`AltitudeRow` pattern):
+ * Left column with `labelMedium` domain label + `24.dp` domain icon, `20.dp` horizontal spacer,
+ * and right column of equal-weight `MetricItem(layout = MetricLayout.VERTICAL, modifier = Modifier.weight(1f))` rows.
+ */
 @Composable
-private fun PowerTrainingMetricsSection(
-    data: WorkoutDetailsData,
-    enableCogganPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS,
-    modifier: Modifier = Modifier
+private fun WorkoutDomainRow(
+    domainLabel: String,
+    @DrawableRes domainIconRes: Int,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
 ) {
-    val badges = buildList {
-        if (enableCogganPowerMetrics) {
-            data.normalizedPowerWatts?.let { add(stringResource(R.string.workout_power_metrics_np_format, it)) }
-            data.intensityFactor?.let { add(stringResource(R.string.workout_power_metrics_if_format, it)) }
-            data.tss?.let { add(stringResource(R.string.workout_power_metrics_tss_format, it)) }
-        }
-        data.workKj?.let { add(stringResource(R.string.workout_power_metrics_work_format, it)) }
-        data.avgPowerToWeight?.let { add(stringResource(R.string.workout_power_metrics_wkg_format, it)) }
-        if (enableCogganPowerMetrics) {
-            data.variabilityIndex?.let { add(stringResource(R.string.workout_power_metrics_vi_format, it)) }
-        }
-    }
-    if (badges.isEmpty()) return
-
-    FlowRow(
+    Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        badges.forEach { badgeLabel ->
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                shape = MaterialTheme.shapes.small
-            ) {
-                Text(
-                    text = badgeLabel,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    softWrap = false,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-            }
+        Column {
+            Text(
+                text = domainLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Icon(
+                painter = painterResource(id = domainIconRes),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
+        Spacer(modifier = Modifier.width(20.dp))
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            content = content
+        )
     }
 }
 
@@ -258,44 +179,111 @@ private fun PowerTrainingMetricsSection(
 private fun AltitudeRow(
     ascentMeters: Long,
     descentMeters: Long,
-    modifier: Modifier = Modifier,
-){
+    modifier: Modifier = Modifier
+) {
     val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
 
     if (ascentMeters > 0 || descentMeters > 0) {
-        Row(
-            modifier = modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        WorkoutDomainRow(
+            domainLabel = stringResource(R.string.elevation),
+            domainIconRes = R.drawable.ic_altitude,
+            modifier = modifier
         ) {
-            Column {
-                Text(
-                    text = stringResource(R.string.elevation),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            Row(modifier = Modifier.fillMaxWidth()) {
+                MetricItem(
+                    iconRes = R.drawable.ic_ascent,
+                    label = stringResource(R.string.ascent_short),
+                    value = formatters.altitude.format_with_units(ascentMeters),
+                    layout = MetricLayout.VERTICAL,
+                    modifier = Modifier.weight(1f)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_altitude),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(24.dp), // Slightly smaller than Time/Distance (28dp)
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                MetricItem(
+                    iconRes = R.drawable.ic_descent,
+                    label = stringResource(R.string.descent_short),
+                    value = formatters.altitude.format_with_units(descentMeters),
+                    layout = MetricLayout.VERTICAL,
+                    modifier = Modifier.weight(1f)
                 )
             }
-            Spacer(modifier = Modifier.width(20.dp))
-            Column {
-                Row(modifier = Modifier.fillMaxWidth()) {
+        }
+    }
+}
+
+/**
+ * Grouped Power & Coggan Load row (`REQ-UI-404.2`, `docs/design_guidelines.md` Section 5.10).
+ * Displays Coggan metrics (`NP` with `VI` secondary subtitle, `IF`, `TSS`) when `enableCogganPowerMetrics` is enabled,
+ * and basic physics (`Work kJ`, `W/kg`) in balanced equal-weight `MetricItem` columns.
+ */
+@Composable
+private fun PowerTrainingMetricsSection(
+    data: WorkoutDetailsData,
+    enableCogganPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS,
+    modifier: Modifier = Modifier
+) {
+    val showCogganRow = enableCogganPowerMetrics && (
+        data.normalizedPowerWatts != null ||
+            data.intensityFactor != null ||
+            data.tss != null
+    )
+    val showBasicPhysicsRow = data.workKj != null || data.avgPowerToWeight != null
+
+    if (!showCogganRow && !showBasicPhysicsRow) return
+
+    WorkoutDomainRow(
+        domainLabel = stringResource(R.string.power),
+        domainIconRes = R.drawable.ic_power,
+        modifier = modifier
+    ) {
+        if (showCogganRow) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                data.normalizedPowerWatts?.let { np ->
                     MetricItem(
-                        iconRes = R.drawable.ic_ascent,
-                        label = stringResource(R.string.ascent_short),
-                        value = formatters.altitude.format_with_units(ascentMeters),
+                        iconRes = null,
+                        label = stringResource(R.string.normalized_power_short),
+                        value = stringResource(R.string.workout_power_value_watts_format, np),
+                        secondaryValue = data.variabilityIndex?.let { vi ->
+                            stringResource(R.string.workout_power_metrics_vi_format, vi)
+                        },
                         layout = MetricLayout.VERTICAL,
                         modifier = Modifier.weight(1f)
                     )
+                }
+                data.intensityFactor?.let { ifVal ->
                     MetricItem(
-                        iconRes = R.drawable.ic_descent,
-                        label = stringResource(R.string.descent_short),
-                        value = formatters.altitude.format_with_units(descentMeters),
+                        iconRes = null,
+                        label = stringResource(R.string.intensity_factor_short),
+                        value = stringResource(R.string.workout_power_value_if_format, ifVal),
+                        layout = MetricLayout.VERTICAL,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                data.tss?.let { tssVal ->
+                    MetricItem(
+                        iconRes = null,
+                        label = stringResource(R.string.tss_short),
+                        value = stringResource(R.string.workout_power_value_tss_format, tssVal),
+                        layout = MetricLayout.VERTICAL,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+        if (showBasicPhysicsRow) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                data.workKj?.let { work ->
+                    MetricItem(
+                        iconRes = null,
+                        label = stringResource(R.string.workout_power_label_work),
+                        value = stringResource(R.string.workout_power_value_work_format, work),
+                        layout = MetricLayout.VERTICAL,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                data.avgPowerToWeight?.let { wkg ->
+                    MetricItem(
+                        iconRes = null,
+                        label = stringResource(R.string.power_to_weight_short),
+                        value = stringResource(R.string.workout_power_metrics_wkg_format, wkg),
                         layout = MetricLayout.VERTICAL,
                         modifier = Modifier.weight(1f)
                     )
@@ -305,12 +293,113 @@ private fun AltitudeRow(
     }
 }
 
+/**
+ * Grouped Aerobic Efficiency & Decoupling (`EF`, `Pw:Hr` / `Pa:Hr`) row (`REQ-UI-404.3`, Section 5.10).
+ */
+@Composable
+private fun AerobicEfficiencyRow(
+    data: WorkoutDetailsData,
+    modifier: Modifier = Modifier
+) {
+    val ef = data.efficiencyFactor ?: return
 
+    WorkoutDomainRow(
+        domainLabel = stringResource(R.string.workout_domain_efficiency),
+        domainIconRes = R.drawable.ic_cardio_load,
+        modifier = modifier
+    ) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            val efValue = if (data.isPowerBasedEfficiency) {
+                stringResource(R.string.workout_ef_value_pw_format, ef)
+            } else {
+                stringResource(R.string.workout_ef_value_pa_format, ef)
+            }
+            MetricItem(
+                iconRes = null,
+                label = stringResource(R.string.workout_ef_short),
+                value = efValue,
+                layout = MetricLayout.VERTICAL,
+                modifier = Modifier.weight(1f)
+            )
+
+            data.aerobicDecouplingPct?.let { decouplingPct ->
+                val decouplingLabel = if (data.isPowerBasedEfficiency) {
+                    stringResource(R.string.workout_pwhr_short)
+                } else {
+                    stringResource(R.string.workout_pahr_short)
+                }
+                val statusSubtitle = if (data.isAerobicDecouplingHighDrift) {
+                    stringResource(R.string.workout_decoupling_drift)
+                } else {
+                    stringResource(R.string.workout_decoupling_coupled)
+                }
+                MetricItem(
+                    iconRes = null,
+                    label = decouplingLabel,
+                    value = stringResource(R.string.workout_decoupling_pct_format, decouplingPct),
+                    secondaryValue = statusSubtitle,
+                    valueColor = if (data.isAerobicDecouplingHighDrift) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    layout = MetricLayout.VERTICAL,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Grouped Critical Power / Anaerobic Battery (`Min W'bal`, `Min %`) row (`REQ-UI-404.4`, Section 5.10).
+ */
+@Composable
+private fun AnaerobicBatteryRow(
+    data: WorkoutDetailsData,
+    modifier: Modifier = Modifier
+) {
+    val minKj = data.minWPrimeBalKj ?: return
+    val minPct = data.minWPrimeBalPct ?: return
+
+    WorkoutDomainRow(
+        domainLabel = stringResource(R.string.w_prime_bal_short),
+        domainIconRes = R.drawable.ic_battery_full,
+        modifier = modifier
+    ) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            MetricItem(
+                iconRes = null,
+                label = stringResource(R.string.workout_w_prime_min_kj_label),
+                value = stringResource(R.string.workout_w_prime_min_kj_value_format, minKj),
+                layout = MetricLayout.VERTICAL,
+                modifier = Modifier.weight(1f)
+            )
+            MetricItem(
+                iconRes = null,
+                label = stringResource(R.string.workout_w_prime_min_pct_label),
+                value = stringResource(R.string.workout_w_prime_min_pct_value_format, minPct),
+                secondaryValue = if (data.isEmptyTankWarning) {
+                    stringResource(R.string.workout_w_prime_empty_tank)
+                } else {
+                    null
+                },
+                valueColor = if (data.isEmptyTankWarning) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                layout = MetricLayout.VERTICAL,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
 
 @Preview
 @Composable
 fun PreviewDetailItem() {
-    MaterialTheme {
+    ATrainingTrackerTheme {
         MetricItem(
             iconRes = R.drawable.ic_distance,
             label = "Distance",
@@ -325,9 +414,8 @@ fun PreviewDetailItem() {
 @Preview
 @Composable
 fun PreviewDistanceAndTime() {
-    MaterialTheme {
+    ATrainingTrackerTheme {
         Row(modifier = Modifier.fillMaxWidth()) {
-            // Active Time
             MetricItem(
                 iconRes = R.drawable.ic_time_active,
                 label = "Active Time",
@@ -351,22 +439,37 @@ fun PreviewDistanceAndTime() {
     }
 }
 
-
 @Preview(showBackground = true)
 @Composable
 fun PreviewWorkoutDetails() {
-    MaterialTheme {
+    ATrainingTrackerTheme {
         WorkoutDetails(
             data = WorkoutDetailsData(
-                totalDistance = 12500.0,
-                maxDisplacement = 4500.0,
-                activeTimeSec = 3600,
-                totalTimeSec = 4200,
-                avgSpeedMps = 3.47,
+                totalDistance = 42500.0,
+                maxDisplacement = 18500.0,
+                activeTimeSec = 5400,
+                totalTimeSec = 5700,
+                avgSpeedMps = 7.87,
                 bSportType = BSportType.BIKE,
-                ascentMeters = 250,
-                descentMeters = 240
-            )
+                ascentMeters = 620,
+                descentMeters = 615,
+                normalizedPowerWatts = 215.0,
+                intensityFactor = 0.78,
+                tss = 91.0,
+                workKj = 1080.0,
+                avgPowerToWeight = 2.87,
+                variabilityIndex = 1.06,
+                efficiencyFactor = 1.48,
+                aerobicDecouplingPct = 3.2,
+                isPowerBasedEfficiency = true,
+                isAerobicDecouplingHighDrift = false,
+                minWPrimeBalKj = 4.2,
+                minWPrimeBalPct = 21.0,
+                isEmptyTankWarning = false
+            ),
+            enableCogganPowerMetrics = true,
+            enableAerobicEfficiencyModel = true,
+            enableCriticalPowerModel = true
         )
     }
 }
