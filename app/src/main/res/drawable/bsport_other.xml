@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ATT-2859 / REQ-UI-375: Stopwatch sport icon compiled directly from Bilder/logo.fig -->
+<!-- ATT-2859 / ATT-3926 / REQ-UI-375 / REQ-UI-406: Stopwatch sport icon compiled from Bilder/logo.fig with transparent inner dial (#00000000) -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="48dp"
     android:height="48dp"
@@ -7,7 +7,7 @@
     android:viewportHeight="192">
     <path
         android:pathData="M 31.63,110.42 A 63.87,63.87 0 1,0 159.37,110.42 A 63.87,63.87 0 1,0 31.63,110.42 Z"
-        android:fillColor="#F0F0F0"
+        android:fillColor="#00000000"
         android:strokeColor="#FFC700"
         android:strokeWidth="8.81" />
     <path
