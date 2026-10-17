@@ -176,7 +176,7 @@ fun isDrawerGroupInitiallyExpanded(group: DrawerGroup, selectedItemId: Int): Boo
     !group.collapsible || group.items.any { isDrawerItemSelected(it.id, selectedItemId) }
 
 /**
- * Creates the list of [DrawerGroup] objects defining the drawer layout and items (REQ-UI-397).
+ * Creates the list of [DrawerGroup] objects defining the drawer layout and items (REQ-UI-397, REQ-UI-405).
  */
 @VisibleForTesting
 fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
@@ -187,7 +187,8 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
             items = listOf(
                 DrawerItemConfig(R.id.drawer_start_tracking, R.drawable.control_start, startTrackingTitleRes),
                 DrawerItemConfig(R.id.drawer_workouts, R.drawable.workout_list, R.string.tab_workouts),
-                DrawerItemConfig(R.id.drawer_periods, R.drawable.ic_calendar_month, R.string.workout_periods__periods)
+                DrawerItemConfig(R.id.drawer_periods, R.drawable.ic_calendar_month, R.string.workout_periods__periods),
+                DrawerItemConfig(R.id.drawer_athlete_profile, R.drawable.ic_athlete_profile, R.string.drawer_athlete_profile)
             )
         ),
         DrawerGroup(
@@ -203,9 +204,8 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
         ),
         DrawerGroup(
             titleRes = R.string.drawer__my_stuff,
-            collapsible = false,
+            collapsible = true,
             items = listOf(
-                DrawerItemConfig(R.id.drawer_athlete_profile, R.drawable.ic_athlete_profile, R.string.drawer_athlete_profile),
                 DrawerItemConfig(R.id.drawer_my_sensors, R.drawable.ic_my_paired_devices, R.string.devices_myRemoteDevices),
                 DrawerItemConfig(R.id.drawer_equipment, R.drawable.ic_equipment_combined, R.string.equipment_management_title),
                 DrawerItemConfig(R.id.drawer_sport_types, R.drawable.ic_sports_combined, R.string.sport_types)
