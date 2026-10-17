@@ -48,6 +48,14 @@ enum class AthleteMetricType(
     FTP_WATTS(
         minMetricValue = ZoneCalculationMath.MIN_FTP.toDouble(),
         maxMetricValue = ZoneCalculationMath.MAX_FTP.toDouble()
+    ),
+    CP_WATTS(
+        minMetricValue = 50.0,
+        maxMetricValue = 1000.0
+    ),
+    W_PRIME_KJ(
+        minMetricValue = 5.0,
+        maxMetricValue = 60.0
     );
 
     /**
@@ -238,6 +246,34 @@ class AthleteMetricsDatabaseManager private constructor(context: Context) {
         ).use { cursor ->
             return if (cursor.moveToFirst()) AthleteMetricEntry.fromCursor(cursor) else null
         }
+    }
+
+    /**
+     * Returns the entry for [metricType] effective at [timestampMs] (`REQ-MIG-039.2`):
+     * queries the chronologically latest entry with `timestamp_ms <= timestampMs`
+     * (`ORDER BY timestamp_ms DESC, _id DESC LIMIT 1`), falling back to [getLatestEntry]
+     * if no historical entry exists at or before [timestampMs].
+     */
+    @Synchronized
+    fun getEntryEffectiveAt(metricType: AthleteMetricType, timestampMs: Long): AthleteMetricEntry? {
+        if (timestampMs > 0L) {
+            val db = database
+            db.query(
+                AthleteMetricsDbHelper.TABLE_HISTORY,
+                null,
+                "${AthleteMetricsDbHelper.METRIC_TYPE} = ? AND ${AthleteMetricsDbHelper.TIMESTAMP_MS} <= ?",
+                arrayOf(metricType.name, timestampMs.toString()),
+                null,
+                null,
+                "${AthleteMetricsDbHelper.TIMESTAMP_MS} DESC, ${AthleteMetricsDbHelper.C_ID} DESC",
+                "1"
+            ).use { cursor ->
+                if (cursor.moveToFirst()) {
+                    return AthleteMetricEntry.fromCursor(cursor)
+                }
+            }
+        }
+        return getLatestEntry(metricType)
     }
 
     /**

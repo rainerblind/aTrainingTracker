@@ -234,9 +234,11 @@ public class LiveWorkoutSession {
         public LatLng maxPos = null;
         public double sum = 0;
         public int count = 0;
+        public double last = 0;
 
         public int addValue(double value, LatLng position, boolean calcAverage) {
             int changed = 0;
+            last = value;
             if (value < min) {
                 min = value;
                 minPos = position;

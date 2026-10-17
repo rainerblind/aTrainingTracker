@@ -88,6 +88,40 @@ class ZoneDistributionStackedBarTest {
     }
 
     @Test
+    fun testFormatSegmentPercentage_roundsToNearestWholePercent() {
+        assertEquals("0%", ZoneDistributionStackedBarMath.formatSegmentPercentage(0f, java.util.Locale.US))
+        assertEquals("5%", ZoneDistributionStackedBarMath.formatSegmentPercentage(5.2f, java.util.Locale.US))
+        assertEquals("24%", ZoneDistributionStackedBarMath.formatSegmentPercentage(24.4f, java.util.Locale.US))
+        assertEquals("53%", ZoneDistributionStackedBarMath.formatSegmentPercentage(52.6f, java.util.Locale.US))
+        assertEquals("100%", ZoneDistributionStackedBarMath.formatSegmentPercentage(100f, java.util.Locale.US))
+    }
+
+    @Test
+    fun testCanFitPercentageLabel_respectsMinimumWidthThreshold() {
+        // "5%" (2 chars) -> 2 * 6.5 + 4.0 = 17.0dp
+        assertEquals(17.0f, ZoneDistributionStackedBarMath.minRequiredSegmentWidthDp("5%"), 0.001f)
+        assertTrue(ZoneDistributionStackedBarMath.canFitPercentageLabel(17.0f, "5%"))
+        assertTrue(ZoneDistributionStackedBarMath.canFitPercentageLabel(25.0f, "5%"))
+        assertFalse(ZoneDistributionStackedBarMath.canFitPercentageLabel(8.0f, "5%"))
+        assertFalse(ZoneDistributionStackedBarMath.canFitPercentageLabel(16.9f, "5%"))
+
+        // "24%" (3 chars) -> 3 * 6.5 + 4.0 = 23.5dp
+        assertEquals(23.5f, ZoneDistributionStackedBarMath.minRequiredSegmentWidthDp("24%"), 0.001f)
+        assertTrue(ZoneDistributionStackedBarMath.canFitPercentageLabel(23.5f, "24%"))
+        assertTrue(ZoneDistributionStackedBarMath.canFitPercentageLabel(40.0f, "24%"))
+        assertFalse(ZoneDistributionStackedBarMath.canFitPercentageLabel(15.0f, "24%"))
+        assertFalse(ZoneDistributionStackedBarMath.canFitPercentageLabel(23.4f, "24%"))
+
+        // "100%" (4 chars) -> 4 * 6.5 + 4.0 = 30.0dp
+        assertEquals(30.0f, ZoneDistributionStackedBarMath.minRequiredSegmentWidthDp("100%"), 0.001f)
+        assertTrue(ZoneDistributionStackedBarMath.canFitPercentageLabel(30.0f, "100%"))
+        assertFalse(ZoneDistributionStackedBarMath.canFitPercentageLabel(29.9f, "100%"))
+
+        // Empty label should return false
+        assertFalse(ZoneDistributionStackedBarMath.canFitPercentageLabel(100f, ""))
+    }
+
+    @Test
     fun testStackedBar_componentSourceContract() {
         val sourceFile = resolve("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionStackedBar.kt")
         assertTrue("ZoneDistributionStackedBar.kt must exist", sourceFile.exists())
@@ -105,6 +139,15 @@ class ZoneDistributionStackedBarTest {
             content.contains("if (showLegend && distribution.entries.isNotEmpty())") &&
                 content.contains("FlowRow") &&
                 content.contains("StackedBarLegendItem"))
+        assertTrue("Must use BoxWithConstraints with Modifier.weight(entry.percentage) for per-segment percentage labels (REQ-UI-398.2)",
+            content.contains("BoxWithConstraints") &&
+                content.contains("ZoneDistributionStackedBarMath.formatSegmentPercentage(entry.percentage)") &&
+                content.contains("ZoneDistributionStackedBarMath.canFitPercentageLabel(maxWidth.value, label)"))
+        assertTrue("Must render single-line labelSmall text with didOverflowWidth guard (REQ-UI-398.2 / Rule 38)",
+            content.contains("MaterialTheme.typography.labelSmall") &&
+                content.contains("maxLines = 1") &&
+                content.contains("softWrap = false") &&
+                content.contains("didOverflowWidth"))
     }
 
     @Test

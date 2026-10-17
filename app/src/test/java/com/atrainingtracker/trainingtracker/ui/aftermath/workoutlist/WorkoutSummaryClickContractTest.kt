@@ -48,8 +48,8 @@ class WorkoutSummaryClickContractTest {
 
         val occurrences = Regex("""enableGestures\s*=\s*false""").findAll(content).count()
         assertEquals(
-            "WorkoutSummary must pass enableGestures = false to all 3 telemetry graphs (Speed/Pace, HR, Power) (REQ-UI-247)",
-            3,
+            "WorkoutSummary must pass enableGestures = false to all 4 telemetry graphs (Speed/Pace, HR, Power, W'bal) (REQ-UI-247, REQ-UI-399.3)",
+            4,
             occurrences
         )
     }
@@ -66,8 +66,8 @@ class WorkoutSummaryClickContractTest {
 
         val clickModifierCount = Regex("""\.then\(mapClickModifier\)""").findAll(teleBlock).count()
         assertEquals(
-            "All 3 telemetry metric sections in WorkoutSummary must be wrapped with mapClickModifier (REQ-UI-247)",
-            3,
+            "All 4 telemetry metric sections in WorkoutSummary must be wrapped with mapClickModifier (REQ-UI-247, REQ-UI-399.3)",
+            4,
             clickModifierCount
         )
     }

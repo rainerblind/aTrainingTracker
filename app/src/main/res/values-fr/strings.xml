@@ -1856,9 +1856,10 @@
     <string name="athlete_weight_clear">Effacer</string>
     <string name="athlete_weight_edit">Modifier</string>
 
-    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, REQ-UI-391) -->
-    <string name="drawer_athlete_profile">Profil de l\'athlète</string>
-    <string name="athlete_profile_title">Profil de l\'athlète</string>
+    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, ATT-3851, REQ-UI-391, REQ-UI-397) -->
+    <string name="drawer_athlete_profile">Profil et zones</string>
+    <string name="athlete_profile_title">Profil et zones</string>
+    <string name="athlete_profile_tab_profile">Profil</string>
     <string name="athlete_profile_add_entry">Ajouter une mesure</string>
     <string name="athlete_profile_edit_entry">Modifier la mesure</string>
     <string name="athlete_profile_metric_weight">Poids</string>
@@ -1883,4 +1884,65 @@
     <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
     <string name="elevation_profile_empty_state">Profil d\'altitude — en attente de parcours ou d\'activité</string>
 
+    <!-- ATT-3852: Categorized & Searchable SensorType Selector (REQ-UI-395) -->
+    <string name="sensor_category_time_and_laps">Temps et tours</string>
+    <string name="sensor_category_speed_pace_and_distance">Vitesse, allure et distance</string>
+    <string name="sensor_category_cadence_and_running">Cadence et course</string>
+    <string name="sensor_category_heart_rate_and_energy">Fréquence cardiaque et énergie</string>
+    <string name="sensor_category_power_and_pedaling">Puissance et pédalage</string>
+    <string name="sensor_category_elevation_and_navigation">Altitude et navigation</string>
+    <string name="sensor_category_system_environment_and_diagnostics">Système, environnement et diagnostic</string>
+    <string name="sensor_type_search_hint">Rechercher une mesure ou une unité…</string>
+    <string name="sensor_type_no_matches">Aucune mesure ne correspond à votre recherche</string>
+
+    <!-- ATT-3862: Critical Power (CP), W', and W'bal (REQ-UI-399) -->
+    <string name="w_prime_bal">Réserve W\' (Batterie anaérobie)</string>
+    <string name="w_prime_bal_short">W\'bal</string>
+    <string name="athlete_profile_metric_cp">CP</string>
+    <string name="athlete_profile_metric_w_prime">W\'</string>
+    <string name="athlete_profile_cp_estimator_title">Estimateur 2 points CP &amp; W\'</string>
+    <string name="athlete_profile_cp_estimator_short_power">Puissance effort court (W)</string>
+    <string name="athlete_profile_cp_estimator_short_sec">Durée courte (s)</string>
+    <string name="athlete_profile_cp_estimator_long_power">Puissance effort long (W)</string>
+    <string name="athlete_profile_cp_estimator_long_sec">Durée longue (s)</string>
+    <string name="athlete_profile_cp_estimator_apply">Appliquer l\'estimation (%1$d W / %2$.1f kJ)</string>
+    <string name="workout_w_prime_bal_min_format">W\'bal min : %1$.1f kJ (%2$.0f%%)</string>
+    <string name="workout_w_prime_empty_tank">Réservoir vide (&lt;10%%)</string>
+
+    <!-- ATT-3861: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400) -->
+    <string name="efficiency_factor_short">EF</string>
+    <string name="aerobic_decoupling_short">Pw:Hr</string>
+    <string name="workout_ef_pwhr_format">EF : %1$.2f W/bpm • Pw:Hr : %2$.1f%%</string>
+    <string name="workout_ef_pahr_format">EF : %1$.2f m/min/bpm • Pa:Hr : %2$.1f%%</string>
+    <string name="workout_ef_only_pw_format">EF : %1$.2f W/bpm</string>
+    <string name="workout_ef_only_pa_format">EF : %1$.2f m/min/bpm</string>
+    <string name="workout_decoupling_coupled">Couplé (&lt;5%%)</string>
+    <string name="workout_decoupling_drift">Dérive élevée (≥5%%)</string>
+
+    <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
+    <string name="athlete_profile_pmc_title">Gestion de la performance (CTL / ATL / TSB)</string>
+    <string name="athlete_profile_pmc_ctl_label">Condition (CTL)</string>
+    <string name="athlete_profile_pmc_atl_label">Fatigue (ATL)</string>
+    <string name="athlete_profile_pmc_tsb_label">Forme (TSB)</string>
+    <string name="athlete_profile_pmc_acwr_label">Ratio de charge (ACWR)</string>
+    <string name="athlete_profile_pmc_ramp_label">Progression 7j</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/sem</string>
+    <string name="athlete_profile_pmc_ramp_warning">Hausse rapide</string>
+    <string name="athlete_profile_pmc_zone_fresh">Prêt pour la course</string>
+    <string name="athlete_profile_pmc_zone_neutral">Neutre</string>
+    <string name="athlete_profile_pmc_zone_optimal">Surcharge optimale</string>
+    <string name="athlete_profile_pmc_zone_fatigue">Fatigue élevée</string>
+    <string name="athlete_profile_pmc_acwr_under">Affûtage</string>
+    <string name="athlete_profile_pmc_acwr_sweet_spot">Zone optimale</string>
+    <string name="athlete_profile_pmc_acwr_caution">Charge élevée</string>
+    <string name="athlete_profile_pmc_acwr_danger">Zone à risque</string>
+    <string name="athlete_profile_pmc_empty">Aucune donnée de charge d’entraînement pour le moment.</string>
+
+    <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->
+    <string name="workout_power_metrics_np_format">NP : %1$.0f W</string>
+    <string name="workout_power_metrics_if_format">IF : %1$.2f</string>
+    <string name="workout_power_metrics_tss_format">TSS : %1$.0f</string>
+    <string name="workout_power_metrics_work_format">Travail : %1$.0f kJ</string>
+    <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
+    <string name="workout_power_metrics_vi_format">VI : %1$.2f</string>
 </resources>

@@ -48,6 +48,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +64,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -94,10 +97,12 @@ data class DrawerItemConfig(
  *
  * @property titleRes String resource ID for the category section header.
  * @property items List of [DrawerItemConfig] entries belonging to this category.
+ * @property collapsible Whether this section is a collapsible accordion defaulting to collapsed unless an item inside it is active (REQ-UI-397.3).
  */
 data class DrawerGroup(
     val titleRes: Int,
-    val items: List<DrawerItemConfig>
+    val items: List<DrawerItemConfig>,
+    val collapsible: Boolean = false
 )
 
 /**
@@ -148,13 +153,37 @@ class NavigationDrawerController(
 }
 
 /**
- * Creates the list of [DrawerGroup] objects defining the drawer layout and items.
+ * Evaluates whether a drawer item should be highlighted as selected for a given [selectedItemId],
+ * including backward-compatible deep-link aliases for consolidated destinations (REQ-UI-397.1, REQ-UI-397.2).
+ */
+@VisibleForTesting
+fun isDrawerItemSelected(itemId: Int, selectedItemId: Int): Boolean = when (itemId) {
+    R.id.drawer_equipment -> selectedItemId == R.id.drawer_equipment ||
+        selectedItemId == R.id.drawer_bikes ||
+        selectedItemId == R.id.drawer_shoes
+    R.id.drawer_athlete_profile -> selectedItemId == R.id.drawer_athlete_profile ||
+        selectedItemId == R.id.drawer_training_zones
+    else -> itemId == selectedItemId
+}
+
+/**
+ * Determines whether a [DrawerGroup] should be initially expanded when rendered.
+ * Primary sections (`collapsible = false`) are always expanded; secondary sections (`collapsible = true`)
+ * default to collapsed unless the active [selectedItemId] belongs to that group (REQ-UI-397.3).
+ */
+@VisibleForTesting
+fun isDrawerGroupInitiallyExpanded(group: DrawerGroup, selectedItemId: Int): Boolean =
+    !group.collapsible || group.items.any { isDrawerItemSelected(it.id, selectedItemId) }
+
+/**
+ * Creates the list of [DrawerGroup] objects defining the drawer layout and items (REQ-UI-397).
  */
 @VisibleForTesting
 fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
     return listOf(
         DrawerGroup(
             titleRes = R.string.drawer__training,
+            collapsible = false,
             items = listOf(
                 DrawerItemConfig(R.id.drawer_start_tracking, R.drawable.control_start, startTrackingTitleRes),
                 DrawerItemConfig(R.id.drawer_workouts, R.drawable.workout_list, R.string.tab_workouts),
@@ -163,6 +192,7 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
         ),
         DrawerGroup(
             titleRes = R.string.drawer__maps,
+            collapsible = false,
             items = listOf(
                 DrawerItemConfig(R.id.drawer_map, R.drawable.ic_map, R.string.tab_map),
                 DrawerItemConfig(R.id.drawer_segments, R.drawable.ic_segment, R.string.segments),
@@ -173,17 +203,17 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
         ),
         DrawerGroup(
             titleRes = R.string.drawer__my_stuff,
+            collapsible = false,
             items = listOf(
+                DrawerItemConfig(R.id.drawer_athlete_profile, R.drawable.ic_athlete_profile, R.string.drawer_athlete_profile),
                 DrawerItemConfig(R.id.drawer_my_sensors, R.drawable.ic_my_paired_devices, R.string.devices_myRemoteDevices),
-                DrawerItemConfig(R.id.drawer_bikes, R.drawable.ic_equipment_bike, R.string.prefs_manage_bikes_title),
-                DrawerItemConfig(R.id.drawer_shoes, R.drawable.ic_equipment_shoe, R.string.prefs_manage_shoes_title),
-                DrawerItemConfig(R.id.drawer_sport_types, R.drawable.ic_sports_combined, R.string.sport_types),
-                DrawerItemConfig(R.id.drawer_training_zones, R.drawable.ic_zones_hr_run_combined, R.string.prefs_training_zones),
-                DrawerItemConfig(R.id.drawer_athlete_profile, R.drawable.ic_athlete_profile, R.string.drawer_athlete_profile)
+                DrawerItemConfig(R.id.drawer_equipment, R.drawable.ic_equipment_combined, R.string.equipment_management_title),
+                DrawerItemConfig(R.id.drawer_sport_types, R.drawable.ic_sports_combined, R.string.sport_types)
             )
         ),
         DrawerGroup(
             titleRes = R.string.prefsOnlineCommunities,
+            collapsible = true,
             items = listOf(
                 DrawerItemConfig(R.id.drawer_strava, R.drawable.logo_square_strava, R.string.Strava, tintIcon = false),
                 DrawerItemConfig(R.id.drawer_dropbox, R.drawable.dropbox_logo_blue, R.string.Dropbox, tintIcon = false),
@@ -193,17 +223,13 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
         ),
         DrawerGroup(
             titleRes = R.string.drawer__settings,
+            collapsible = true,
             items = listOf(
                 DrawerItemConfig(R.id.drawer_units, R.drawable.ic_square_foot, R.string.prefsUnitsTitle),
                 DrawerItemConfig(R.id.drawer_display_settings, R.drawable.ic_display_settings, R.string.Display),
                 DrawerItemConfig(R.id.drawer_tracking_layouts, R.drawable.ic_table_edit, R.string.prefsConfigureDisplaysTitle),
                 DrawerItemConfig(R.id.drawer_backup_restore, R.drawable.ic_save_to_disc, R.string.import_backup),
-                DrawerItemConfig(R.id.drawer_privacy_policy, R.drawable.ic_privacy, R.string.privacy_policy)
-            )
-        ),
-        DrawerGroup(
-            titleRes = R.string.drawer__expert_settings,
-            items = listOf(
+                DrawerItemConfig(R.id.drawer_privacy_policy, R.drawable.ic_privacy, R.string.privacy_policy),
                 DrawerItemConfig(R.id.drawer_advanced_tuning, R.drawable.ic_tune, R.string.advanced_tuning_title)
             )
         )
@@ -326,6 +352,7 @@ fun DrawerHeader() {
 
 /**
  * Section view rendering a category header and its child navigation rows.
+ * Supports collapsible accordion sections for secondary categories (REQ-UI-397.3).
  */
 @Composable
 fun DrawerGroupView(
@@ -333,20 +360,58 @@ fun DrawerGroupView(
     selectedItemId: Int,
     onItemSelected: (Int) -> Unit
 ) {
+    var isExpanded by remember(group.titleRes) {
+        mutableStateOf(isDrawerGroupInitiallyExpanded(group, selectedItemId))
+    }
+
+    LaunchedEffect(selectedItemId) {
+        if (group.collapsible && group.items.any { isDrawerItemSelected(it.id, selectedItemId) }) {
+            isExpanded = true
+        }
+    }
+
+    val headerColor = colorResource(id = R.color.color_primary)
+
     Column {
-        Text(
-            text = stringResource(id = group.titleRes),
-            color = colorResource(id = R.color.color_primary),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
-        )
-        group.items.forEach { item ->
-            DrawerItemView(
-                item = item,
-                isSelected = selectedItemId == item.id,
-                onClick = { onItemSelected(item.id) }
+        if (group.collapsible) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isExpanded = !isExpanded }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(id = group.titleRes),
+                    color = headerColor,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = headerColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        } else {
+            Text(
+                text = stringResource(id = group.titleRes),
+                color = headerColor,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
             )
+        }
+        if (isExpanded) {
+            group.items.forEach { item ->
+                DrawerItemView(
+                    item = item,
+                    isSelected = isDrawerItemSelected(item.id, selectedItemId),
+                    onClick = { onItemSelected(item.id) }
+                )
+            }
         }
     }
 }

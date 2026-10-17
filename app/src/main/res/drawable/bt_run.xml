@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ATT-2859 / REQ-UI-375: bt_run compiled from Bilder/Bluetooth/runner.fig & BT_RUN.xcf -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="144"
+    android:viewportHeight="144">
+    <path
+        android:fillColor="#07377F"
+        android:pathData="M 23.5,10.0 L 120.5,10.0 A 13.5,13.5 0 0,1 134.0,23.5 L 134.0,120.5 A 13.5,13.5 0 0,1 120.5,134.0 L 23.5,134.0 A 13.5,13.5 0 0,1 10.0,120.5 L 10.0,23.5 A 13.5,13.5 0 0,1 23.5,10.0 Z" />
+    <path
+        android:pathData="M 68.18,27.90 A 7.83,7.80 0 1,0 83.84,27.90 A 7.83,7.80 0 1,0 68.18,27.90 Z"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.62" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 72.83,73.62 L 98.39,80.83 L 82.57,110.05"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="12.95"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 74.62,45.94 L 71.63,73.62 L 55.20,97.26 L 31.62,116.68"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="12.95"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 75.27,39.56 L 86.24,62.61 L 91.08,43.19"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7.86"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 75.27,39.56 L 54.61,44.40 L 63.12,61.47"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7.86"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

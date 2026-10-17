@@ -47,5 +47,9 @@ data class ParsedWorkoutData(
     val maxAltPos: LatLng? = null,
     val parsedLaps: List<ParsedLap> = emptyList(),
     val bufferedSamples: List<ContentValues> = emptyList(),
-    val foundSensors: Set<SensorType> = emptySet()
+    val foundSensors: Set<SensorType> = emptySet(),
+    val sessionNormalizedPowerWatts: Double? = null,
+    val sessionIntensityFactor: Double? = null,
+    val sessionTss: Double? = null,
+    val sessionWorkKj: Double? = null
 )

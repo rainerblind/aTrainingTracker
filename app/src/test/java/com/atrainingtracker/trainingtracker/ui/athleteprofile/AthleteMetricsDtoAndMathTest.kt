@@ -90,6 +90,18 @@ class AthleteMetricsDtoAndMathTest {
         assertTrue(AthleteMetricType.FTP_WATTS.isValidMetricValue(600.0))
         assertFalse(AthleteMetricType.FTP_WATTS.isValidMetricValue(49.0))
         assertFalse(AthleteMetricType.FTP_WATTS.isValidMetricValue(601.0))
+
+        assertTrue(AthleteMetricType.CP_WATTS.isValidMetricValue(50.0))
+        assertTrue(AthleteMetricType.CP_WATTS.isValidMetricValue(285.0))
+        assertTrue(AthleteMetricType.CP_WATTS.isValidMetricValue(1000.0))
+        assertFalse(AthleteMetricType.CP_WATTS.isValidMetricValue(49.0))
+        assertFalse(AthleteMetricType.CP_WATTS.isValidMetricValue(1001.0))
+
+        assertTrue(AthleteMetricType.W_PRIME_KJ.isValidMetricValue(5.0))
+        assertTrue(AthleteMetricType.W_PRIME_KJ.isValidMetricValue(21.6))
+        assertTrue(AthleteMetricType.W_PRIME_KJ.isValidMetricValue(60.0))
+        assertFalse(AthleteMetricType.W_PRIME_KJ.isValidMetricValue(4.9))
+        assertFalse(AthleteMetricType.W_PRIME_KJ.isValidMetricValue(60.1))
     }
 
     @Test
@@ -134,7 +146,9 @@ class AthleteMetricsDtoAndMathTest {
         val entries = listOf(
             AthleteMetricEntry(1L, nowMs - 400 * dayMs, AthleteMetricType.WEIGHT_KG, 76.0),
             AthleteMetricEntry(2L, nowMs - 100 * dayMs, AthleteMetricType.WEIGHT_KG, 74.0),
-            AthleteMetricEntry(3L, nowMs - 10 * dayMs, AthleteMetricType.WEIGHT_KG, 72.0)
+            AthleteMetricEntry(3L, nowMs - 10 * dayMs, AthleteMetricType.WEIGHT_KG, 72.0),
+            AthleteMetricEntry(4L, nowMs - 5 * dayMs, AthleteMetricType.CP_WATTS, 285.0),
+            AthleteMetricEntry(5L, nowMs - 5 * dayMs, AthleteMetricType.W_PRIME_KJ, 21.6)
         )
 
         val oneMonth = AthleteMetricsPlotMath.filterAndConvertSeries(
@@ -166,5 +180,25 @@ class AthleteMetricsDtoAndMathTest {
             isImperial = false
         )
         assertEquals(3, allPoints.size)
+
+        val cpPoints = AthleteMetricsPlotMath.filterAndConvertSeries(
+            entries = entries,
+            metricType = PlotMetricType.CP,
+            timeRange = MetricsTimeRange.ALL,
+            nowMs = nowMs,
+            isImperial = false
+        )
+        assertEquals(1, cpPoints.size)
+        assertEquals("285", AthleteMetricsPlotMath.formatCpValue(cpPoints[0].value))
+
+        val wPrimePoints = AthleteMetricsPlotMath.filterAndConvertSeries(
+            entries = entries,
+            metricType = PlotMetricType.W_PRIME,
+            timeRange = MetricsTimeRange.ALL,
+            nowMs = nowMs,
+            isImperial = false
+        )
+        assertEquals(1, wPrimePoints.size)
+        assertEquals("21.6", AthleteMetricsPlotMath.formatWPrimeValue(wPrimePoints[0].value, Locale.US))
     }
 }

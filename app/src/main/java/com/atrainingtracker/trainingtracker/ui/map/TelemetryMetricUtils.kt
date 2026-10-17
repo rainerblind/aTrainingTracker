@@ -113,6 +113,14 @@ object TelemetryMetricUtils {
     }
 
     /**
+     * Checks whether valid Skiba W'bal samples exist in [path] (`REQ-UI-399.3`).
+     */
+    fun hasWPrimeBalData(path: List<PathPoint>?): Boolean {
+        if (path.isNullOrEmpty()) return false
+        return path.any { it.wPrimeBalKj != null && it.wPrimeBalKj >= 0.0 }
+    }
+
+    /**
      * Extracts scalar value for a given [PathPoint] according to [metricType] and [unit].
      * Returns null if sample is invalid or unrecorded.
      */
@@ -149,6 +157,9 @@ object TelemetryMetricUtils {
             }
             TelemetryMetricType.POWER -> {
                 point.power?.takeIf { it >= 0 }?.toDouble()
+            }
+            TelemetryMetricType.W_PRIME_BAL -> {
+                point.wPrimeBalKj?.takeIf { it >= 0.0 }
             }
         }
     }
@@ -208,6 +219,9 @@ object TelemetryMetricUtils {
                 } else {
                     base
                 }
+            }
+            TelemetryMetricType.W_PRIME_BAL -> {
+                String.format(Locale.US, "%.1f kJ", value)
             }
         }
     }

@@ -448,4 +448,89 @@ class CyclingPowerMetricsDeviceTest {
 
         device.shutDown()
     }
+
+    @Test
+    fun testCalculateMetrics_wPrimeBal_depletesAboveCpAndReconstitutesDuringPause() {
+        var currentPower = 380.0
+        every { powerSensorData.value } answers { currentPower }
+        var isSuspended = false
+        var currentTime = 1_000_000L
+
+        // CP = 280W, W' = 20.0 kJ
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { isSuspended },
+            { 75.0f },
+            { 270 },
+            { currentTime },
+            { 280 },
+            { 20.0f }
+        )
+
+        // 10 seconds at 380W (100W above CP = 1000 J = 1.0 kJ depletion -> 19.0 kJ remaining)
+        for (i in 1..10) {
+            currentTime += 1000L
+            device.calculateMetrics()
+        }
+        assertEquals(19.0, device.wPrimeBalSensor.sensorData.value as Double, 0.01)
+
+        // Suspend recording (paused/stopped) for 10 ticks -> W'bal must reconstitute exponentially at P=0W
+        isSuspended = true
+        for (i in 1..10) {
+            currentTime += 1000L
+            device.calculateMetrics()
+        }
+        val afterPauseReconstitution = device.wPrimeBalSensor.sensorData.value as Double
+        org.junit.Assert.assertTrue("W'bal must reconstitute during pause at 0W", afterPauseReconstitution > 19.0)
+        org.junit.Assert.assertTrue("W'bal must stay <= 20.0 kJ capacity", afterPauseReconstitution <= 20.0)
+
+        // Reset session restores W'bal to full capacity on next active tick at <= CP
+        device.resetSession()
+        isSuspended = false
+        currentPower = 200.0
+        currentTime += 1000L
+        device.calculateMetrics()
+        assertEquals(20.0, device.wPrimeBalSensor.sensorData.value as Double, 0.001)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_wPrimeBal_fallsBackToFtpWhenCpUnconfiguredAndEmitsNullWithoutCapacity() {
+        every { powerSensorData.value } returns 350.0
+        var currentTime = 1_000_000L
+
+        // CP = null, FTP = 250W, W' = 15.0 kJ -> uses FTP (250W) as effective CP (100W depletion = 0.1 kJ per second)
+        val deviceWithFtpFallback = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { currentTime },
+            { null },
+            { 15.0f }
+        )
+        currentTime += 1000L
+        deviceWithFtpFallback.calculateMetrics()
+        assertEquals(14.9, deviceWithFtpFallback.wPrimeBalSensor.sensorData.value as Double, 0.001)
+        deviceWithFtpFallback.shutDown()
+
+        // W' = 0.0f -> wPrimeBalSensor emits null
+        val deviceWithoutWPrime = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { currentTime },
+            { 280 },
+            { 0.0f }
+        )
+        currentTime += 1000L
+        deviceWithoutWPrime.calculateMetrics()
+        assertNull(deviceWithoutWPrime.wPrimeBalSensor.sensorData.value)
+        deviceWithoutWPrime.shutDown()
+    }
 }

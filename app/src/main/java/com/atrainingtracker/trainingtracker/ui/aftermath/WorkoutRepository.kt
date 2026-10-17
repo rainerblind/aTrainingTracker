@@ -352,6 +352,7 @@ class WorkoutRepository private constructor(private val application: Application
             val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
             val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
             val slopeIdx = cursor.getColumnIndex(SensorType.SLOPE.name)
+            val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
 
             var initialEpochSec: Long? = null
             var sampleIndex = 0L
@@ -376,6 +377,7 @@ class WorkoutRepository private constructor(private val application: Application
                     val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
                     val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
                     val slope = if (slopeIdx != -1 && !cursor.isNull(slopeIdx)) cursor.getDouble(slopeIdx) else null
+                    val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
 
                     points.add(
                         PathPoint(
@@ -386,14 +388,15 @@ class WorkoutRepository private constructor(private val application: Application
                             hr = hr,
                             power = power,
                             speedMps = speed,
-                            slope = slope
+                            slope = slope,
+                            wPrimeBalKj = wPrimeBal
                         )
                     )
                 }
                 sampleIndex++
             }
         }
-        points
+        enrichPointsWithWPrimeBal(points)
     }
 
     /**
@@ -427,6 +430,7 @@ class WorkoutRepository private constructor(private val application: Application
             val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
             val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
             val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
+            val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
 
             var initialEpochSec: Long? = null
             var sampleIndex = 0L
@@ -448,6 +452,7 @@ class WorkoutRepository private constructor(private val application: Application
                 val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
                 val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else 0.0
                 val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
+                val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
 
                 if (hr != null || power != null || speed != null || alt != 0.0) {
                     points.add(
@@ -459,7 +464,8 @@ class WorkoutRepository private constructor(private val application: Application
                             hr = hr,
                             power = power,
                             speedMps = speed,
-                            slope = null
+                            slope = null,
+                            wPrimeBalKj = wPrimeBal
                         )
                     )
                 }
@@ -467,13 +473,36 @@ class WorkoutRepository private constructor(private val application: Application
             }
         }
 
-        if (points.size > 800) {
-            val step = kotlin.math.ceil(points.size / 800.0).toInt()
-            points.filterIndexed { index, _ ->
-                index == 0 || index == points.lastIndex || index % step == 0
+        val enrichedPoints = enrichPointsWithWPrimeBal(points)
+        if (enrichedPoints.size > 800) {
+            val step = kotlin.math.ceil(enrichedPoints.size / 800.0).toInt()
+            enrichedPoints.filterIndexed { index, _ ->
+                index == 0 || index == enrichedPoints.lastIndex || index % step == 0
             }
         } else {
-            points
+            enrichedPoints
+        }
+    }
+
+    /**
+     * Enriches [points] with calculated Skiba $W'_{\text{bal}}$ (`kJ`) values when power telemetry
+     * is present and `wPrimeBalKj` was not directly stored in the raw samples table (`REQ-UI-399.3`).
+     */
+    private fun enrichPointsWithWPrimeBal(points: List<PathPoint>): List<PathPoint> {
+        if (points.isEmpty() || points.any { it.wPrimeBalKj != null }) return points
+        if (points.none { (it.power ?: 0) > 0 }) return points
+        val effectiveCp = SettingsDataStoreJavaHelper.getEffectiveCpWatts(application) ?: return points
+        val effectiveWPrimeKj = SettingsDataStoreJavaHelper.getEffectiveWPrimeKj(application).toDouble()
+        if (effectiveCp <= 0 || effectiveWPrimeKj <= 0.0) return points
+
+        val summary = com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeWPrimeBalanceSeries(
+            powerSamplesWatts = points.map { it.power?.toDouble() },
+            cpWatts = effectiveCp.toDouble(),
+            wPrimeKj = effectiveWPrimeKj
+        )
+        if (summary.seriesKj.size != points.size) return points
+        return points.mapIndexed { idx, pt ->
+            pt.copy(wPrimeBalKj = summary.seriesKj[idx]?.toDouble())
         }
     }
 

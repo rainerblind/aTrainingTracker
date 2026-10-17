@@ -188,5 +188,16 @@ class AthleteMetricsRepositorySyncTest {
         assertEquals(48, settingsDataStore.hrRestFlow.first())
         repository.deleteEntry(hrId, AthleteMetricType.HR_REST_BPM)
         assertNull(settingsDataStore.hrRestFlow.first())
+
+        // 8. Verify CP_WATTS & W_PRIME_KJ projection and clear behavior
+        val cpId = repository.addEntry(AthleteMetricType.CP_WATTS, 285.0, t2)
+        assertEquals(285, settingsDataStore.cpWattsFlow.first())
+        repository.deleteEntry(cpId, AthleteMetricType.CP_WATTS)
+        assertNull(settingsDataStore.cpWattsFlow.first())
+
+        val wPrimeId = repository.addEntry(AthleteMetricType.W_PRIME_KJ, 21.6, t2)
+        assertEquals(21.6f, settingsDataStore.wPrimeKjFlow.first()!!, 1e-3f)
+        repository.deleteEntry(wPrimeId, AthleteMetricType.W_PRIME_KJ)
+        assertNull(settingsDataStore.wPrimeKjFlow.first())
     }
 }

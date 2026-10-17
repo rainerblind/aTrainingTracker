@@ -85,6 +85,7 @@ class AthleteProfileContractAndLocalizationTest {
         val requiredKeys = listOf(
             "drawer_athlete_profile",
             "athlete_profile_title",
+            "athlete_profile_tab_profile",
             "athlete_profile_add_entry",
             "athlete_profile_edit_entry",
             "athlete_profile_metric_weight",
@@ -104,7 +105,50 @@ class AthleteProfileContractAndLocalizationTest {
             "athlete_profile_date_label",
             "athlete_profile_value_label",
             "athlete_profile_delete_title",
-            "athlete_profile_delete_message"
+            "athlete_profile_delete_message",
+            "w_prime_bal",
+            "w_prime_bal_short",
+            "athlete_profile_metric_cp",
+            "athlete_profile_metric_w_prime",
+            "athlete_profile_cp_estimator_title",
+            "athlete_profile_cp_estimator_short_power",
+            "athlete_profile_cp_estimator_short_sec",
+            "athlete_profile_cp_estimator_long_power",
+            "athlete_profile_cp_estimator_long_sec",
+            "athlete_profile_cp_estimator_apply",
+            "workout_w_prime_bal_min_format",
+            "workout_w_prime_empty_tank",
+            "efficiency_factor_short",
+            "aerobic_decoupling_short",
+            "workout_ef_pwhr_format",
+            "workout_ef_pahr_format",
+            "workout_ef_only_pw_format",
+            "workout_ef_only_pa_format",
+            "workout_decoupling_coupled",
+            "workout_decoupling_drift",
+            "athlete_profile_pmc_title",
+            "athlete_profile_pmc_ctl_label",
+            "athlete_profile_pmc_atl_label",
+            "athlete_profile_pmc_tsb_label",
+            "athlete_profile_pmc_acwr_label",
+            "athlete_profile_pmc_ramp_label",
+            "athlete_profile_pmc_ramp_format",
+            "athlete_profile_pmc_ramp_warning",
+            "athlete_profile_pmc_zone_fresh",
+            "athlete_profile_pmc_zone_neutral",
+            "athlete_profile_pmc_zone_optimal",
+            "athlete_profile_pmc_zone_fatigue",
+            "athlete_profile_pmc_acwr_under",
+            "athlete_profile_pmc_acwr_sweet_spot",
+            "athlete_profile_pmc_acwr_caution",
+            "athlete_profile_pmc_acwr_danger",
+            "athlete_profile_pmc_empty",
+            "workout_power_metrics_np_format",
+            "workout_power_metrics_if_format",
+            "workout_power_metrics_tss_format",
+            "workout_power_metrics_work_format",
+            "workout_power_metrics_wkg_format",
+            "workout_power_metrics_vi_format"
         )
 
         val root = resolveModuleRoot()
@@ -126,6 +170,122 @@ class AthleteProfileContractAndLocalizationTest {
             assertTrue("$locale athlete_profile_delete_message must contain %1\$s", text.contains("%1\$s"))
             assertTrue("$locale athlete_profile_delete_message must contain %2\$s", text.contains("%2\$s"))
             assertTrue("$locale athlete_profile_delete_message must contain %3\$s", text.contains("%3\$s"))
+
+            // Verify positional specifiers in workout_w_prime_bal_min_format
+            val wPrimeFmtRegex = Regex("""<string name="workout_w_prime_bal_min_format">([^<]+)</string>""")
+            val wPrimeMatch = wPrimeFmtRegex.find(content)
+            assertTrue("workout_w_prime_bal_min_format not matched in $locale", wPrimeMatch != null)
+            val wPrimeText = wPrimeMatch!!.groupValues[1]
+            assertTrue("$locale workout_w_prime_bal_min_format must contain %1\$.1f", wPrimeText.contains("%1\$.1f"))
+            assertTrue("$locale workout_w_prime_bal_min_format must contain %2\$.0f", wPrimeText.contains("%2\$.0f"))
+
+            // Verify positional specifiers in workout_ef_pwhr_format and workout_ef_pahr_format
+            for (efKey in listOf("workout_ef_pwhr_format", "workout_ef_pahr_format")) {
+                val efRegex = Regex("""<string name="$efKey">([^<]+)</string>""")
+                val efMatch = efRegex.find(content)
+                assertTrue("$efKey not matched in $locale", efMatch != null)
+                val efText = efMatch!!.groupValues[1]
+                assertTrue("$locale $efKey must contain %1\$.2f", efText.contains("%1\$.2f"))
+                assertTrue("$locale $efKey must contain %2\$.1f", efText.contains("%2\$.1f"))
+            }
+
+            // Verify positional specifier in athlete_profile_pmc_ramp_format
+            val rampRegex = Regex("""<string name="athlete_profile_pmc_ramp_format">([^<]+)</string>""")
+            val rampMatch = rampRegex.find(content)
+            assertTrue("athlete_profile_pmc_ramp_format not matched in $locale", rampMatch != null)
+            val rampText = rampMatch!!.groupValues[1]
+            assertTrue("$locale athlete_profile_pmc_ramp_format must contain %1\$+.1f", rampText.contains("%1\$+.1f"))
+
+            // Verify positional specifiers in workout_power_metrics_*
+            for (intPwrKey in listOf("workout_power_metrics_np_format", "workout_power_metrics_tss_format", "workout_power_metrics_work_format")) {
+                val pwrRegex = Regex("""<string name="$intPwrKey">([^<]+)</string>""")
+                val pwrMatch = pwrRegex.find(content)
+                assertTrue("$intPwrKey not matched in $locale", pwrMatch != null)
+                assertTrue("$locale $intPwrKey must contain %1\$.0f", pwrMatch!!.groupValues[1].contains("%1\$.0f"))
+            }
+            for (decPwrKey in listOf("workout_power_metrics_if_format", "workout_power_metrics_wkg_format", "workout_power_metrics_vi_format")) {
+                val pwrRegex = Regex("""<string name="$decPwrKey">([^<]+)</string>""")
+                val pwrMatch = pwrRegex.find(content)
+                assertTrue("$decPwrKey not matched in $locale", pwrMatch != null)
+                assertTrue("$locale $decPwrKey must contain %1\$.2f", pwrMatch!!.groupValues[1].contains("%1\$.2f"))
+            }
         }
     }
+
+    @Test
+    fun `AthleteProfileScreen applies WindowInsets navigationBars to LazyColumn bottom contentPadding and hosts 4 Profile and Zones tabs (Rule 41, REQ-UI-397)`() {
+        val screenFile = File(
+            resolveModuleRoot(),
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileScreen.kt"
+        )
+        assertTrue("AthleteProfileScreen.kt must exist", screenFile.exists())
+        val source = screenFile.readText()
+
+        assertTrue(
+            "AthleteProfileScreen.kt must import WindowInsets",
+            source.contains("import androidx.compose.foundation.layout.WindowInsets")
+        )
+        assertTrue(
+            "AthleteProfileScreen.kt must import asPaddingValues",
+            source.contains("import androidx.compose.foundation.layout.asPaddingValues")
+        )
+        assertTrue(
+            "AthleteProfileScreen.kt must import navigationBars",
+            source.contains("import androidx.compose.foundation.layout.navigationBars")
+        )
+        assertTrue(
+            "AthleteProfileContent must compute navBarBottomPadding from WindowInsets.navigationBars",
+            source.contains("val navBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()")
+        )
+        assertTrue(
+            "AthleteProfileContent LazyColumn must apply bottom = 16.dp + navBarBottomPadding in contentPadding (Rule 41)",
+            source.contains("bottom = 16.dp + navBarBottomPadding")
+        )
+        assertTrue(
+            "AthleteProfileContent header row must retain .statusBarsPadding()",
+            source.contains(".statusBarsPadding()")
+        )
+        assertTrue(
+            "AthleteProfileContent must host PrimaryScrollableTabRow and HorizontalPager for Profile & Zones tabs",
+            source.contains("PrimaryScrollableTabRow(") && source.contains("HorizontalPager(")
+        )
+        assertTrue(
+            "AthleteProfileContent must include all 4 tab titles (Profile, HR Run, HR Bike, Power Bike)",
+            source.contains("R.string.athlete_profile_tab_profile") &&
+                source.contains("R.string.tab_hr_run") &&
+                source.contains("R.string.tab_hr_bike") &&
+                source.contains("R.string.tab_pwr_bike")
+        )
+        assertTrue(
+            "AthleteProfileContent must embed ZoneProfileTabContent for HR_RUN, HR_BIKE, and PWR_BIKE",
+            source.contains("ZoneProfileTabContent(") &&
+                source.contains("ZoneType.HR_RUN") &&
+                source.contains("ZoneType.HR_BIKE") &&
+                source.contains("ZoneType.PWR_BIKE")
+        )
+        assertTrue(
+            "AthleteProfileScreen.kt must render PerformanceManagementChartCard and PerformanceManagementChartCanvas (REQ-UI-401.3)",
+            source.contains("fun PerformanceManagementChartCard(") &&
+                source.contains("fun PerformanceManagementChartCanvas(")
+        )
+
+        val detailsFile = File(
+            resolveModuleRoot(),
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutdetails/WorkoutDetails.kt"
+        )
+        assertTrue("WorkoutDetails.kt must exist", detailsFile.exists())
+        val detailsSource = detailsFile.readText()
+        assertTrue(
+            "WorkoutDetails.kt must render PowerTrainingMetricsSection (REQ-UI-402.2)",
+            detailsSource.contains("PowerTrainingMetricsSection(") &&
+                detailsSource.contains("R.string.workout_power_metrics_np_format") &&
+                detailsSource.contains("R.string.workout_power_metrics_if_format") &&
+                detailsSource.contains("R.string.workout_power_metrics_tss_format") &&
+                detailsSource.contains("R.string.workout_power_metrics_work_format") &&
+                detailsSource.contains("R.string.workout_power_metrics_wkg_format") &&
+                detailsSource.contains("R.string.workout_power_metrics_vi_format")
+        )
+    }
 }
+
+

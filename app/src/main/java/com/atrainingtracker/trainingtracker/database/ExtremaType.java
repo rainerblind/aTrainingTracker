@@ -30,7 +30,9 @@ public enum ExtremaType {
     AVG(R.string.average),
     START(R.string.start),
     MAX_LINE_DISTANCE(R.string.max_line_distance),
-    END(R.string.end);
+    END(R.string.end),
+    EFFICIENCY_FACTOR(R.string.efficiency_factor_short),
+    AEROBIC_DECOUPLING(R.string.aerobic_decoupling_short);
 
     private final int nameId;
 

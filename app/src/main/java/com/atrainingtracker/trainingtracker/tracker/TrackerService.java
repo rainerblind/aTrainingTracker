@@ -144,6 +144,9 @@ public class TrackerService extends Service {
 
     // Same sensor types from the old thread. Used for Averages.
     private static final HashSet<SensorType> IMPORTANT_SENSOR_TYPES = new HashSet<>(SensorType.CORE_METRICS);
+    static {
+        IMPORTANT_SENSOR_TYPES.add(SensorType.W_PRIME_BAL);
+    }
 
     // Sensors to track for Min/Max and used for average if in IMPORTANT_SENSOR_TYPES
     private static final HashSet<SensorType> SENSORS_TO_TRACK = new HashSet<>(IMPORTANT_SENSOR_TYPES);
@@ -151,6 +154,7 @@ public class TrackerService extends Service {
         SENSORS_TO_TRACK.add(SensorType.LATITUDE);
         SENSORS_TO_TRACK.add(SensorType.LONGITUDE);
         SENSORS_TO_TRACK.add(SensorType.LINE_DISTANCE_m);
+        SENSORS_TO_TRACK.add(SensorType.W_PRIME_BAL);
     }
     
     public static final String START_TYPE = "START_TYPE";
@@ -1547,6 +1551,108 @@ public class TrackerService extends Service {
                 summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
                 repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
             }
+            if (sensor == SensorType.W_PRIME_BAL && stats.count > 0) {
+                summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.END, stats.last, endPos);
+                repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.END, stats.last, endPos);
+            }
+        }
+
+        // 2b. Calculate and persist Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) from recorded samples (REQ-UI-400.2)
+        try {
+            if (mBaseFileName != null && !mBaseFileName.isEmpty()) {
+                WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(this);
+                if (samplesManager.existsTable(mBaseFileName)) {
+                    String tableName = WorkoutSamplesDatabaseManager.getTableName(mBaseFileName);
+                    java.util.List<Double> powerSamples = new java.util.ArrayList<>();
+                    java.util.List<Double> speedSamples = new java.util.ArrayList<>();
+                    java.util.List<Double> hrSamples = new java.util.ArrayList<>();
+                    try (Cursor sampleCursor = samplesManager.getDatabase().query(tableName, null, null, null, null, null, null)) {
+                        if (sampleCursor != null) {
+                            int powerIdx = sampleCursor.getColumnIndex(SensorType.POWER.name());
+                            int speedIdx = sampleCursor.getColumnIndex(SensorType.SPEED_mps.name());
+                            int hrIdx = sampleCursor.getColumnIndex(SensorType.HR.name());
+                            while (sampleCursor.moveToNext()) {
+                                Double p = (powerIdx != -1 && !sampleCursor.isNull(powerIdx)) ? sampleCursor.getDouble(powerIdx) : null;
+                                Double s = (speedIdx != -1 && !sampleCursor.isNull(speedIdx)) ? sampleCursor.getDouble(speedIdx) : null;
+                                Double hr = (hrIdx != -1 && !sampleCursor.isNull(hrIdx)) ? sampleCursor.getDouble(hrIdx) : null;
+                                powerSamples.add(p);
+                                speedSamples.add(s);
+                                hrSamples.add(hr);
+                            }
+                        }
+                    }
+                    BSportType liveSport = (mBanalService != null && mBanalService.getBSportType() != null)
+                            ? mBanalService.getBSportType()
+                            : BSportType.UNKNOWN;
+                    com.atrainingtracker.trainingtracker.physiology.AerobicEfficiencyResult aerobicResult =
+                            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
+                                    powerSamples, speedSamples, hrSamples, liveSport
+                            );
+                    SensorType targetSensor = aerobicResult.isPowerBased() ? SensorType.POWER : SensorType.SPEED_mps;
+                    if (aerobicResult.getEfficiencyFactor() != null) {
+                        double ef = aerobicResult.getEfficiencyFactor();
+                        summariesManager.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
+                        repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
+                    }
+                    if (aerobicResult.getDecouplingPct() != null) {
+                        double dec = aerobicResult.getDecouplingPct();
+                        summariesManager.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
+                        repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
+                    }
+
+                    // REQ-MIG-039.4 (ATT-3860 / ATT-3858): Calculate and persist session power training metrics (NP, IF, TSS, Work kJ, W/kg)
+                    long sessionTimeMs = System.currentTimeMillis();
+                    Integer effectiveFtp = SettingsDataStoreJavaHelper.resolveEffectiveFtpAt(this, sessionTimeMs);
+                    float effectiveWeightKg = SettingsDataStoreJavaHelper.resolveEffectiveWeightKgAt(this, sessionTimeMs);
+                    Double ftpWattsObj = (effectiveFtp != null && effectiveFtp > 0) ? effectiveFtp.doubleValue() : null;
+                    Double weightKgObj = (effectiveWeightKg > 0.0f) ? (double) effectiveWeightKg : null;
+                    com.atrainingtracker.trainingtracker.physiology.PowerTrainingMetricsResult powerMetrics =
+                            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computePowerTrainingMetrics(
+                                    powerSamples,
+                                    mTimeActive_s,
+                                    ftpWattsObj,
+                                    weightKgObj
+                            );
+                    if (powerMetrics.getNormalizedPowerWatts() != null) {
+                        double np = powerMetrics.getNormalizedPowerWatts();
+                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.AVG, np, null);
+                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.END, np, null);
+                        repository.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.AVG, np, null);
+                    }
+                    if (powerMetrics.getIntensityFactor() != null) {
+                        double ifVal = powerMetrics.getIntensityFactor();
+                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.AVG, ifVal, null);
+                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.END, ifVal, null);
+                        repository.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.AVG, ifVal, null);
+                    }
+                    if (powerMetrics.getTss() != null) {
+                        double tss = powerMetrics.getTss();
+                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.AVG, tss, null);
+                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.MAX, tss, null);
+                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.END, tss, null);
+                        repository.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.AVG, tss, null);
+                    }
+                    if (powerMetrics.getWorkKj() != null) {
+                        double workKj = powerMetrics.getWorkKj();
+                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.AVG, workKj, null);
+                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.MAX, workKj, null);
+                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.END, workKj, null);
+                        repository.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.AVG, workKj, null);
+                    }
+                    if (powerMetrics.getAvgPowerToWeight() != null) {
+                        double avgWPerKg = powerMetrics.getAvgPowerToWeight();
+                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG, avgWPerKg, null);
+                        repository.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG, avgWPerKg, null);
+                    }
+                    if (powerMetrics.getMaxPowerToWeight() != null) {
+                        double maxWPerKg = powerMetrics.getMaxPowerToWeight();
+                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null);
+                        repository.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "finalizeLiveSession: Could not compute Aerobic Efficiency / Decoupling or Power Training extrema", e);
         }
 
         // REQ-MAP-020 (ATT-528): Authoritative deterministic calculation of max line distance and apex from recorded track

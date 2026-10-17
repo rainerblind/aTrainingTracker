@@ -426,6 +426,24 @@ fun TrackOnMapScreen(
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
+                                if (TelemetryMetricUtils.hasWPrimeBalData(activeScrubPath)) {
+                                    Text(
+                                        text = stringResource(R.string.w_prime_bal),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                    )
+                                    TelemetryMetricGraph(
+                                        pathPoints = activeScrubPath,
+                                        metricType = TelemetryMetricType.W_PRIME_BAL,
+                                        currentDistance = null,
+                                        onDistanceSelected = {},
+                                        bSportType = workoutData.bSportType,
+                                        enableGestures = false,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
                             }
                         }
                         WorkoutSectionType.ZONES -> {

@@ -41,70 +41,71 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 public enum SensorType
         implements Parcelable {
-    ACCUMULATED_SENSORS(R.string.accumulated_sensors, R.string.accumulated_sensors_short, R.string.units_none, SensorValueType.STRING, new DefaultStringFormatter(), false),
-    ACCURACY(R.string.accuracy, R.string.accuracy_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),  // TODO: special formatter?
+    ACCUMULATED_SENSORS(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.accumulated_sensors, R.string.accumulated_sensors_short, R.string.units_none, SensorValueType.STRING, new DefaultStringFormatter(), false),
+    ACCURACY(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.accuracy, R.string.accuracy_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),  // TODO: special formatter?
     // ACCURACY_gps           (R.string.accuracy,               R.string.accuracy_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DefaultNumberFormatter()),  // TODO: special formatter?
     // ACCURACY_network       (R.string.accuracy,               R.string.accuracy_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DefaultNumberFormatter()),  // TODO: special formatter?
     // ACCURACY_google_fused  (R.string.accuracy,               R.string.accuracy_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DefaultNumberFormatter()),  // TODO: special formatter?
-    ALTITUDE(R.string.altitude, R.string.altitude_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new AltitudeFormatter(), true),
+    ALTITUDE(SensorCategory.ELEVATION_AND_NAVIGATION, R.string.altitude, R.string.altitude_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new AltitudeFormatter(), true),
     // ALTITUDE_gps           (R.string.altitude,               R.string.altitude_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // ALTITUDE_network       (R.string.altitude,               R.string.altitude_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // ALTITUDE_google_fused  (R.string.altitude,               R.string.altitude_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
-    ASCENT(R.string.ascent, R.string.ascent_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new AltitudeFormatter(), false),
-    BEARING(R.string.bearing, R.string.bearing_short, R.string.units_degree, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
+    ASCENT(SensorCategory.ELEVATION_AND_NAVIGATION, R.string.ascent, R.string.ascent_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new AltitudeFormatter(), false),
+    BEARING(SensorCategory.ELEVATION_AND_NAVIGATION, R.string.bearing, R.string.bearing_short, R.string.units_degree, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
     // BEARING_gps            (R.string.bearing,                R.string.bearing_short,                R.string.units_degree,          SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // BEARING_network        (R.string.bearing,                R.string.bearing_short,                R.string.units_degree,          SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // BEARING_google_fused   (R.string.bearing,                R.string.bearing_short,                R.string.units_degree,          SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
-    CADENCE(R.string.cadence, R.string.cadence_short, R.string.units_rpm, SensorValueType.DOUBLE, new IntegerFormatter(), true),
-    CALORIES(R.string.calories, R.string.calories_short, R.string.units_calories, SensorValueType.INTEGER, new IntegerFormatter(), false),
-    DESCENT(R.string.descent, R.string.descent_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new AltitudeFormatter(), false),
-    DISTANCE_m(R.string.distance, R.string.distance_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
+    CADENCE(SensorCategory.CADENCE_AND_RUNNING, R.string.cadence, R.string.cadence_short, R.string.units_rpm, SensorValueType.DOUBLE, new IntegerFormatter(), true),
+    CALORIES(SensorCategory.HEART_RATE_AND_ENERGY, R.string.calories, R.string.calories_short, R.string.units_calories, SensorValueType.INTEGER, new IntegerFormatter(), false),
+    DESCENT(SensorCategory.ELEVATION_AND_NAVIGATION, R.string.descent, R.string.descent_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new AltitudeFormatter(), false),
+    DISTANCE_m(SensorCategory.SPEED_PACE_AND_DISTANCE, R.string.distance, R.string.distance_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
     // DISTANCE_m_gps         (R.string.distance,               R.string.distance_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DistanceFormatter()),
     // DISTANCE_m_network     (R.string.distance,               R.string.distance_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DistanceFormatter()),
     // DISTANCE_m_google_fused(R.string.distance,               R.string.distance_short,               R.string.units_distance_basic,  SensorValueType.DOUBLE,  new DistanceFormatter()),
-    DISTANCE_m_LAP(R.string.distance_lap, R.string.distance_lap_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
-    LINE_DISTANCE_m(R.string.line_distance, R.string.line_distance_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
-    HR(R.string.heart_rate, R.string.heart_rate_short, R.string.units_heart_rate, SensorValueType.INTEGER, new IntegerFormatter(), true),
-    LAP_NR(R.string.lap_number, R.string.lap_number_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false),
-    LATITUDE(R.string.position, R.string.position_short, R.string.units_none, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
+    DISTANCE_m_LAP(SensorCategory.SPEED_PACE_AND_DISTANCE, R.string.distance_lap, R.string.distance_lap_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
+    LINE_DISTANCE_m(SensorCategory.ELEVATION_AND_NAVIGATION, R.string.line_distance, R.string.line_distance_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
+    HR(SensorCategory.HEART_RATE_AND_ENERGY, R.string.heart_rate, R.string.heart_rate_short, R.string.units_heart_rate, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    LAP_NR(SensorCategory.TIME_AND_LAPS, R.string.lap_number, R.string.lap_number_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false),
+    LATITUDE(SensorCategory.ELEVATION_AND_NAVIGATION, R.string.position, R.string.position_short, R.string.units_none, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
     // LATITUDE_gps           (R.string.latitude,               R.string.latitude_short,               R.string.units_none,            SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // LATITUDE_network       (R.string.latitude,               R.string.latitude_short,               R.string.units_none,            SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // LATITUDE_google_fused  (R.string.latitude,               R.string.latitude_short,               R.string.units_none,            SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
-    LONGITUDE(R.string.position, R.string.position_short, R.string.units_none, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
+    LONGITUDE(SensorCategory.ELEVATION_AND_NAVIGATION, R.string.position, R.string.position_short, R.string.units_none, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
     // LONGITUDE_gps          (R.string.longitude,              R.string.longitude_short,              R.string.units_none,            SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // LONGITUDE_network      (R.string.longitude,              R.string.longitude_short,              R.string.units_none,            SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // LONGITUDE_google_fused (R.string.longitude,              R.string.longitude_short,              R.string.units_none,            SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
-    PACE_spm(R.string.pace, R.string.pace_short, R.string.units_pace_basic, SensorValueType.DOUBLE, new PaceFormatter(), true),
-    PEDAL_POWER_BALANCE(R.string.pedal_power_balance, R.string.pedal_power_balance_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
-    PEDAL_SMOOTHNESS_L(R.string.pedal_smoothness_l, R.string.pedal_smoothness_l_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
-    PEDAL_SMOOTHNESS_R(R.string.pedal_smoothness_r, R.string.pedal_smoothness_r_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
-    PEDAL_SMOOTHNESS(R.string.pedal_smoothness, R.string.pedal_smoothness_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
-    POWER(R.string.power, R.string.power_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), true),
-    POWER_TO_WEIGHT(R.string.power_to_weight, R.string.power_to_weight_short, R.string.units_power_to_weight, SensorValueType.DOUBLE, new PowerToWeightFormatter(), true),
-    NORMALIZED_POWER(R.string.normalized_power, R.string.normalized_power_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), true),
-    INTENSITY_FACTOR(R.string.intensity_factor, R.string.intensity_factor_short, R.string.units_none, SensorValueType.DOUBLE, new IntensityFactorFormatter(), true),
-    WORK_KJ(R.string.work_kj, R.string.work_kj_short, R.string.units_work_kj, SensorValueType.DOUBLE, new IntegerFormatter(), false),
-    TSS(R.string.tss, R.string.tss_short, R.string.units_none, SensorValueType.DOUBLE, new IntegerFormatter(), false),
-    SPEED_mps(R.string.speed, R.string.speed_short, R.string.units_speed_basic, SensorValueType.DOUBLE, new SpeedFormatter(), true),
+    PACE_spm(SensorCategory.SPEED_PACE_AND_DISTANCE, R.string.pace, R.string.pace_short, R.string.units_pace_basic, SensorValueType.DOUBLE, new PaceFormatter(), true),
+    PEDAL_POWER_BALANCE(SensorCategory.POWER_AND_PEDALING, R.string.pedal_power_balance, R.string.pedal_power_balance_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    PEDAL_SMOOTHNESS_L(SensorCategory.POWER_AND_PEDALING, R.string.pedal_smoothness_l, R.string.pedal_smoothness_l_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    PEDAL_SMOOTHNESS_R(SensorCategory.POWER_AND_PEDALING, R.string.pedal_smoothness_r, R.string.pedal_smoothness_r_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    PEDAL_SMOOTHNESS(SensorCategory.POWER_AND_PEDALING, R.string.pedal_smoothness, R.string.pedal_smoothness_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    POWER(SensorCategory.POWER_AND_PEDALING, R.string.power, R.string.power_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), true),
+    POWER_TO_WEIGHT(SensorCategory.POWER_AND_PEDALING, R.string.power_to_weight, R.string.power_to_weight_short, R.string.units_power_to_weight, SensorValueType.DOUBLE, new PowerToWeightFormatter(), true),
+    NORMALIZED_POWER(SensorCategory.POWER_AND_PEDALING, R.string.normalized_power, R.string.normalized_power_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), true),
+    INTENSITY_FACTOR(SensorCategory.POWER_AND_PEDALING, R.string.intensity_factor, R.string.intensity_factor_short, R.string.units_none, SensorValueType.DOUBLE, new IntensityFactorFormatter(), true),
+    WORK_KJ(SensorCategory.POWER_AND_PEDALING, R.string.work_kj, R.string.work_kj_short, R.string.units_work_kj, SensorValueType.DOUBLE, new IntegerFormatter(), false),
+    TSS(SensorCategory.POWER_AND_PEDALING, R.string.tss, R.string.tss_short, R.string.units_none, SensorValueType.DOUBLE, new IntegerFormatter(), false),
+    W_PRIME_BAL(SensorCategory.POWER_AND_PEDALING, R.string.w_prime_bal, R.string.w_prime_bal_short, R.string.units_work_kj, SensorValueType.DOUBLE, new PowerToWeightFormatter(), false),
+    SPEED_mps(SensorCategory.SPEED_PACE_AND_DISTANCE, R.string.speed, R.string.speed_short, R.string.units_speed_basic, SensorValueType.DOUBLE, new SpeedFormatter(), true),
     // SPEED_mps_gps          (R.string.speed,                  R.string.speed_short,                  R.string.units_speed_basic,     SensorValueType.DOUBLE,  new SpeedFormatter()),
     // SPEED_mps_network      (R.string.speed,                  R.string.speed_short,                  R.string.units_speed_basic,     SensorValueType.DOUBLE,  new SpeedFormatter()),
     // SPEED_mps_google_fused (R.string.speed,                  R.string.speed_short,                  R.string.units_speed_basic,     SensorValueType.DOUBLE,  new SpeedFormatter()),
-    SENSORS(R.string.current_sensors, R.string.current_sensors_short, R.string.units_none, SensorValueType.STRING, new DefaultStringFormatter(), false),
-    SLOPE(R.string.slope, R.string.slope_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
-    STRIDES(R.string.strides, R.string.strides_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), true),
-    TEMPERATURE(R.string.temperature, R.string.temperature_short, R.string.units_temperature, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
-    TEMPERATURE_MAX(R.string.temperature_max, R.string.temperature_max_short, R.string.units_temperature, SensorValueType.DOUBLE, new DefaultNumberFormatter(), false),
-    TEMPERATURE_MIN(R.string.temperature_min, R.string.temperature_min_short, R.string.units_temperature, SensorValueType.DOUBLE, new DefaultNumberFormatter(), false),
-    TIME_ACTIVE(R.string.time_active, R.string.time_active_short, R.string.units_time_basic, SensorValueType.INTEGER, new TimeFormatter(), false),
-    TIME_LAP(R.string.time_lap, R.string.time_lap_short, R.string.units_time_basic, SensorValueType.INTEGER, new TimeFormatter(), false),
-    TIME_OF_DAY(R.string.time_of_day, R.string.time_of_day_short, R.string.units_none, SensorValueType.STRING, new DefaultStringFormatter(), false),
-    TIME_TOTAL(R.string.time_total, R.string.time_total_short, R.string.units_time_basic, SensorValueType.INTEGER, new TimeFormatter(), false),
-    TORQUE(R.string.torque, R.string.torque_short, R.string.units_torque, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
-    TORQUE_EFFECTIVENESS_L(R.string.torque_effectiveness_l, R.string.torque_effectiveness_l_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
-    TORQUE_EFFECTIVENESS_R(R.string.torque_effectiveness_r, R.string.torque_effectiveness_r_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
-    VERTICAL_SPEED(R.string.vertical_speed, R.string.vertical_speed_short, R.string.units_vertical_speed_basic, SensorValueType.INTEGER, new IntegerFormatter(), true),
-    PHONE_BATTERY(R.string.phone_battery, R.string.phone_battery_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), false),
-    BATTERY_REMAINING_TIME(R.string.battery_remaining_time, R.string.battery_remaining_time_short, R.string.units_none, SensorValueType.INTEGER, new BatteryRemainingTimeFormatter(), false);
+    SENSORS(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.current_sensors, R.string.current_sensors_short, R.string.units_none, SensorValueType.STRING, new DefaultStringFormatter(), false),
+    SLOPE(SensorCategory.ELEVATION_AND_NAVIGATION, R.string.slope, R.string.slope_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    STRIDES(SensorCategory.CADENCE_AND_RUNNING, R.string.strides, R.string.strides_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    TEMPERATURE(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.temperature, R.string.temperature_short, R.string.units_temperature, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
+    TEMPERATURE_MAX(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.temperature_max, R.string.temperature_max_short, R.string.units_temperature, SensorValueType.DOUBLE, new DefaultNumberFormatter(), false),
+    TEMPERATURE_MIN(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.temperature_min, R.string.temperature_min_short, R.string.units_temperature, SensorValueType.DOUBLE, new DefaultNumberFormatter(), false),
+    TIME_ACTIVE(SensorCategory.TIME_AND_LAPS, R.string.time_active, R.string.time_active_short, R.string.units_time_basic, SensorValueType.INTEGER, new TimeFormatter(), false),
+    TIME_LAP(SensorCategory.TIME_AND_LAPS, R.string.time_lap, R.string.time_lap_short, R.string.units_time_basic, SensorValueType.INTEGER, new TimeFormatter(), false),
+    TIME_OF_DAY(SensorCategory.TIME_AND_LAPS, R.string.time_of_day, R.string.time_of_day_short, R.string.units_none, SensorValueType.STRING, new DefaultStringFormatter(), false),
+    TIME_TOTAL(SensorCategory.TIME_AND_LAPS, R.string.time_total, R.string.time_total_short, R.string.units_time_basic, SensorValueType.INTEGER, new TimeFormatter(), false),
+    TORQUE(SensorCategory.POWER_AND_PEDALING, R.string.torque, R.string.torque_short, R.string.units_torque, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
+    TORQUE_EFFECTIVENESS_L(SensorCategory.POWER_AND_PEDALING, R.string.torque_effectiveness_l, R.string.torque_effectiveness_l_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    TORQUE_EFFECTIVENESS_R(SensorCategory.POWER_AND_PEDALING, R.string.torque_effectiveness_r, R.string.torque_effectiveness_r_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    VERTICAL_SPEED(SensorCategory.ELEVATION_AND_NAVIGATION, R.string.vertical_speed, R.string.vertical_speed_short, R.string.units_vertical_speed_basic, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    PHONE_BATTERY(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.phone_battery, R.string.phone_battery_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), false),
+    BATTERY_REMAINING_TIME(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.battery_remaining_time, R.string.battery_remaining_time_short, R.string.units_none, SensorValueType.INTEGER, new BatteryRemainingTimeFormatter(), false);
 
     // max bit = 118
 
@@ -127,19 +128,28 @@ public enum SensorType
         }
     };
     public final boolean filteringPossible;
+    private final SensorCategory category;
     private final int fullNameId;
     private final int shortNameId;
     private final int unitId;
     private final SensorValueType sensorValueType;
     private final MyFormatter myFormatter;
 
-    SensorType(int fullNameId, int shortNameId, int unitId, SensorValueType sensorValueType, MyFormatter myFormatter, boolean filteringPossible) {
+    SensorType(SensorCategory category, int fullNameId, int shortNameId, int unitId, SensorValueType sensorValueType, MyFormatter myFormatter, boolean filteringPossible) {
+        this.category = category;
         this.fullNameId = fullNameId;
         this.shortNameId = shortNameId;
         this.unitId = unitId;
         this.sensorValueType = sensorValueType;
         this.myFormatter = myFormatter;
         this.filteringPossible = filteringPossible;
+    }
+
+    /**
+     * Returns the semantic {@link SensorCategory} for this telemetry metric (ATT-3852, REQ-UI-395.1).
+     */
+    public SensorCategory getCategory() {
+        return category;
     }
 
     public int getIconResId() {
