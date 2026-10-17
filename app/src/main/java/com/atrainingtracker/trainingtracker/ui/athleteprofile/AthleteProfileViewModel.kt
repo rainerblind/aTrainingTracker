@@ -31,6 +31,8 @@ import com.atrainingtracker.trainingtracker.physiology.PmcSummaryResult
 import com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator
 import com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -41,7 +43,62 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Immutable UI state for [AthleteProfileScreen] (`REQ-UI-391.5`, `REQ-UI-401.3`).
+ * Pure helper resolving which [PlotMetricType] pills are visible in [AthleteProfileScreen] (`REQ-UI-403`).
+ */
+fun resolveVisiblePlotMetrics(enableCriticalPowerModel: Boolean): List<PlotMetricType> =
+    if (enableCriticalPowerModel) {
+        PlotMetricType.entries
+    } else {
+        PlotMetricType.entries.filter { it != PlotMetricType.CP && it != PlotMetricType.W_PRIME }
+    }
+
+/**
+ * Pure helper resolving the active [PlotMetricType], falling back to [PlotMetricType.WEIGHT]
+ * when Critical Power model is disabled and CP or W' was selected (`REQ-UI-403`).
+ */
+fun resolveEffectivePlotMetric(
+    selected: PlotMetricType,
+    enableCriticalPowerModel: Boolean
+): PlotMetricType =
+    if (!enableCriticalPowerModel && (selected == PlotMetricType.CP || selected == PlotMetricType.W_PRIME)) {
+        PlotMetricType.WEIGHT
+    } else {
+        selected
+    }
+
+/**
+ * Pure helper resolving which [AthleteMetricType] history filter chips are visible (`REQ-UI-403`).
+ */
+fun resolveVisibleHistoryFilterMetrics(enableCriticalPowerModel: Boolean): List<AthleteMetricType?> {
+    val base = listOf<AthleteMetricType?>(
+        null,
+        AthleteMetricType.WEIGHT_KG,
+        AthleteMetricType.HR_REST_BPM,
+        AthleteMetricType.FTP_WATTS
+    )
+    return if (enableCriticalPowerModel) {
+        base + listOf(AthleteMetricType.CP_WATTS, AthleteMetricType.W_PRIME_KJ)
+    } else {
+        base
+    }
+}
+
+/**
+ * Pure helper resolving the active history filter, falling back to `null` (All)
+ * when Critical Power model is disabled and CP or W' was selected (`REQ-UI-403`).
+ */
+fun resolveEffectiveHistoryFilter(
+    selected: AthleteMetricType?,
+    enableCriticalPowerModel: Boolean
+): AthleteMetricType? =
+    if (!enableCriticalPowerModel && (selected == AthleteMetricType.CP_WATTS || selected == AthleteMetricType.W_PRIME_KJ)) {
+        null
+    } else {
+        selected
+    }
+
+/**
+ * Immutable UI state for [AthleteProfileScreen] (`REQ-UI-391.5`, `REQ-UI-401.3`, `REQ-UI-403`).
  */
 data class AthleteProfileUiState(
     val latestWeightEntry: AthleteMetricEntry? = null,
@@ -58,16 +115,19 @@ data class AthleteProfileUiState(
     val pmcPlotPoints: List<PmcDailyPoint> = emptyList(),
     val historyFilterMetric: AthleteMetricType? = null,
     val filteredHistory: List<AthleteMetricEntry> = emptyList(),
-    val isImperial: Boolean = false
+    val isImperial: Boolean = false,
+    val enablePmcModel: Boolean = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL,
+    val enableCriticalPowerModel: Boolean = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
 )
 
 /**
- * ViewModel driving [AthleteProfileScreen] (`REQ-UI-391.5`, `REQ-UI-399.1`, `REQ-UI-401.3`).
+ * ViewModel driving [AthleteProfileScreen] (`REQ-UI-391.5`, `REQ-UI-399.1`, `REQ-UI-401.3`, `REQ-UI-403`).
  */
 class AthleteProfileViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = AthleteMetricsRepository.getInstance(application)
     private val settingsDataStore = SettingsDataStore.getInstance(application)
+    private val tuningDataStore = TuningPreferencesDataStore(application)
 
     private val _selectedPlotMetric = MutableStateFlow(PlotMetricType.WEIGHT)
     private val _selectedTimeRange = MutableStateFlow(MetricsTimeRange.ALL)
@@ -80,13 +140,20 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
         _selectedPlotMetric,
         _selectedTimeRange,
         _historyFilterMetric,
-        _workoutLoadSamples
-    ) { entries, plotMetric, timeRange, historyFilter, workoutSamples ->
+        combine(_workoutLoadSamples, tuningDataStore.tuningConfigFlow) { samples, tuning ->
+            samples to tuning
+        }
+    ) { entries, rawPlotMetric, timeRange, rawHistoryFilter, (workoutSamples, tuningConfig) ->
         val isImperial = try {
             TrainingApplication.getUnit() == MyUnits.IMPERIAL
         } catch (_: Throwable) {
             false
         }
+
+        val enablePmc = tuningConfig.enablePmcModel
+        val enableCp = tuningConfig.enableCriticalPowerModel
+        val plotMetric = resolveEffectivePlotMetric(rawPlotMetric, enableCp)
+        val historyFilter = resolveEffectiveHistoryFilter(rawHistoryFilter, enableCp)
 
         val latestWeight = entries.firstOrNull { it.metricType == AthleteMetricType.WEIGHT_KG }
         val latestHrRest = entries.firstOrNull { it.metricType == AthleteMetricType.HR_REST_BPM }
@@ -126,10 +193,18 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
             nowMs = nowMs
         )
 
-        val filteredHistory = if (historyFilter == null) {
+        val visibleEntries = if (enableCp) {
             entries
         } else {
-            entries.filter { it.metricType == historyFilter }
+            entries.filter {
+                it.metricType != AthleteMetricType.CP_WATTS && it.metricType != AthleteMetricType.W_PRIME_KJ
+            }
+        }
+
+        val filteredHistory = if (historyFilter == null) {
+            visibleEntries
+        } else {
+            visibleEntries.filter { it.metricType == historyFilter }
         }
 
         AthleteProfileUiState(
@@ -147,7 +222,9 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
             pmcPlotPoints = pmcPlotPoints,
             historyFilterMetric = historyFilter,
             filteredHistory = filteredHistory,
-            isImperial = isImperial
+            isImperial = isImperial,
+            enablePmcModel = enablePmc,
+            enableCriticalPowerModel = enableCp
         )
     }.stateIn(
         scope = viewModelScope,

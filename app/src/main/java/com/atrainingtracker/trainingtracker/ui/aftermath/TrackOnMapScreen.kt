@@ -49,6 +49,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
@@ -81,6 +83,8 @@ fun TrackOnMapScreen(
 ) {
     val context = LocalContext.current
     val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
+    val tuningDataStore = remember { TuningPreferencesDataStore(context.applicationContext) }
+    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
     val persistedDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = WorkoutDetailPreferences())
     val persistedCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = WorkoutCardSectionPreferences())
     val activeDetailPrefs = detailPreferences ?: persistedDetailPrefs
@@ -426,7 +430,7 @@ fun TrackOnMapScreen(
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
-                                if (TelemetryMetricUtils.hasWPrimeBalData(activeScrubPath)) {
+                                if (tuningConfig.enableCriticalPowerModel && TelemetryMetricUtils.hasWPrimeBalData(activeScrubPath)) {
                                     Text(
                                         text = stringResource(R.string.w_prime_bal),
                                         style = MaterialTheme.typography.titleSmall,

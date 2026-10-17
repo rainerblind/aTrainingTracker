@@ -1946,4 +1946,20 @@
     <string name="workout_power_metrics_work_format">Trabajo: %1$.0f kJ</string>
     <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
     <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
+
+    <!-- Physiology & Training Models (ATT-3929 / REQ-UI-403) -->
+    <string name="tuning_cat_physiology_models">Fisiología y modelos de entrenamiento</string>
+    <string name="tuning_physiology_none_enabled">Solo métricas básicas</string>
+    <string name="tuning_physiology_coggan_short">Coggan</string>
+    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
+    <string name="tuning_physiology_cp_short">CP / W\'bal</string>
+    <string name="tuning_physiology_coggan_title">Métricas de potencia Coggan (NP, IF, TSS)</string>
+    <string name="tuning_physiology_coggan_desc">Mostrar potencia normalizada, factor de intensidad, TSS e índice de variabilidad en entrenamientos y cabina</string>
+    <string name="tuning_physiology_pmc_title">Gestión del rendimiento (PMC)</string>
+    <string name="tuning_physiology_pmc_desc">Mostrar gráfico de forma física (CTL), fatiga (ATL) y forma (TSB) en Perfil y zonas</string>
+    <string name="tuning_physiology_ef_title">Eficiencia aeróbica y desacoplamiento</string>
+    <string name="tuning_physiology_ef_desc">Mostrar factor de eficiencia (EF) y desacoplamiento aeróbico (Pw:Hr / Pa:Hr) en resúmenes y detalles</string>
+    <string name="tuning_physiology_cp_title">Potencia crítica y batería anaeróbica (CP, W\', W\'bal)</string>
+    <string name="tuning_physiology_cp_desc">Mostrar potencia crítica, W\' y batería W\'bal en Perfil y zonas, cabina y análisis de entrenamientos</string>
 </resources>

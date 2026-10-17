@@ -78,6 +78,7 @@ class AdvancedTuningScreenTest {
         val searchIndex = content.indexOf("TuningSection.SENSOR_SEARCH")
         val workoutMasksIndex = content.indexOf("TuningSection.WORKOUT_MASKS_CARDS")
         val aftermathIndex = content.indexOf("TuningSection.AFTERMATH_ANALYSIS")
+        val physiologyIndex = content.indexOf("TuningSection.PHYSIOLOGY_MODELS")
 
         assertTrue("Navigation must exist", navIndex >= 0)
         assertTrue("Cockpit Typography must exist", cockpitIndex >= 0)
@@ -86,13 +87,15 @@ class AdvancedTuningScreenTest {
         assertTrue("Sensor Search must exist", searchIndex >= 0)
         assertTrue("Workout Masks must exist", workoutMasksIndex >= 0)
         assertTrue("Aftermath Analysis must exist", aftermathIndex >= 0)
+        assertTrue("Physiology Models must exist", physiologyIndex >= 0)
 
         assertTrue("Navigation must precede Cockpit", navIndex < cockpitIndex)
         assertTrue("Cockpit must precede Battery Saver", cockpitIndex < batteryIndex)
         assertTrue("Battery Saver must precede Sensors GPS", batteryIndex < sensorsIndex)
         assertTrue("Sensors GPS must precede Sensor Search", sensorsIndex < searchIndex)
         assertTrue("Sensor Search must precede Workout Masks", searchIndex < workoutMasksIndex)
-        assertTrue("Workout Masks must precede Aftermath Analysis", workoutMasksIndex < aftermathIndex)
+        assertTrue("Workout Masks must precede Physiology Models", workoutMasksIndex < physiologyIndex)
+        assertTrue("Physiology Models must precede Aftermath Analysis", physiologyIndex < aftermathIndex)
     }
 
     @Test

@@ -1946,5 +1946,21 @@
     <string name="workout_power_metrics_work_format">Praca: %1$.0f kJ</string>
     <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
     <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
+
+    <!-- Physiology & Training Models (ATT-3929 / REQ-UI-403) -->
+    <string name="tuning_cat_physiology_models">Fizjologia i modele treningowe</string>
+    <string name="tuning_physiology_none_enabled">Tylko metryki podstawowe</string>
+    <string name="tuning_physiology_coggan_short">Coggan</string>
+    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
+    <string name="tuning_physiology_cp_short">CP / W\'bal</string>
+    <string name="tuning_physiology_coggan_title">Metryki mocy Coggana (NP, IF, TSS)</string>
+    <string name="tuning_physiology_coggan_desc">Pokaż Normalized Power, Intensity Factor, TSS i Variability Index w treningach oraz kokpicie</string>
+    <string name="tuning_physiology_pmc_title">Zarządzanie formą (PMC)</string>
+    <string name="tuning_physiology_pmc_desc">Pokaż wykres kondycji (CTL), zmęczenia (ATL) i formy (TSB) na ekranie Profil i strefy</string>
+    <string name="tuning_physiology_ef_title">Wydajność tlenowa i dryf (Decoupling)</string>
+    <string name="tuning_physiology_ef_desc">Pokaż współczynnik wydajności (EF) i dryf tlenowy (Pw:Hr / Pa:Hr) w podsumowaniach i szczegółach</string>
+    <string name="tuning_physiology_cp_title">Moc krytyczna i bateria beztlenowa (CP, W\', W\'bal)</string>
+    <string name="tuning_physiology_cp_desc">Pokaż moc krytyczną, W\' i baterię W\'bal w Profilu i strefach, kokpicie oraz analizie treningu</string>
 </resources>
 
