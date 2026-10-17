@@ -44,8 +44,8 @@ Engineering standards and guidelines in **aTrainingTracker** are decoupled into 
   2. The agent MUST confirm that the command exits with code `0` (`GATE_PASSED: <KEY> is Erledigt`).
   3. If the command exits with code `1` or the sub-task is in any status other than `Erledigt`, code modification is **strictly blocked**. The agent must ensure the Stage 3 implementation plan deliverable is completed and passes Gate 3 audit (`freigabe` to `Erledigt`) before touching production code.
 
-## Rule 5: Strict Separation of Ticket Creation vs. Implementation
-* **Rule**: When asked to create a ticket (e.g. via `tools/jira_util.py create-issue`), the agent MUST ONLY create the issue, link its epic/parent, set its backlog rank, report the issue key to the user, and **STOP IMMEDIATELY** (*"When an agent is asked to create a ticket, he immediately wants to start realizing it. This must never ever happen!"* — Rainer Blind, Sprint Retro 2026-40.16 / ATT-232).
+## Rule 5: Strict Separation of Ticket Creation vs. Implementation & Top-of-Backlog Placement
+* **Rule**: When asked to create a ticket (e.g. via `tools/jira_util.py create-issue`), the agent MUST ONLY create the issue, link its epic/parent, place it at the **top of the backlog** (enforced automatically by `tools/jira_util.py create-issue` / `rank-top`), report the issue key to the user, and **STOP IMMEDIATELY** (*"When an agent is asked to create a ticket, he immediately wants to start realizing it. This must never ever happen!"* — Rainer Blind, Sprint Retro 2026-40.16 / ATT-232; *"Follow up tickets should always be placed on top of the backlog."* — Rainer Blind, Sprint Retro 2026-42.7).
 * Creating a ticket is an ideation/backlog activity. It must NEVER trigger autonomous feature branching, sub-task creation, or stage progression without explicit human command.
 
 ## Rule 6: Autonomous In-Sprint Escalation Protocol
@@ -68,13 +68,13 @@ Engineering standards and guidelines in **aTrainingTracker** are decoupled into 
 
 ## Rule 8: Absolute Prohibition on Code Modifications During Sprint Review
 * **Rule**: Under NO circumstances may production code, test code, or resource files be modified during Ceremony 2 (Sprint-End Joint Review) (*"Please stop this. No code changes during the Sprint Review! As already stated: Please create a ticket to fix this in the next sprint."* — Rainer Blind, Sprint Retro 2026-41.1 / ATT-2470).
-* Any user change requests, design refinements, or feedback identified during the review of integrated tickets MUST be recorded exclusively as new backlog tickets for the next sprint, ranked at the top of the backlog.
+* Any user change requests, design refinements, or feedback identified during the review of integrated tickets MUST be recorded exclusively as new follow-up tickets for the next sprint and **MUST always be placed at the very top of the backlog** (*"Follow up tickets should always be placed on top of the backlog."* — Rainer Blind, Sprint Retro 2026-42.7).
 * The sprint integration branch `sprint/<SPRINT_NAME>` must remain strictly stable and clean throughout the review ceremony.
 
-## Rule 9: Lean Defect Recording Protocol with Immediate Evidence Capture (Consolidating Legacy Rules 17 & 25)
+## Rule 9: Lean Defect Recording Protocol with Immediate Evidence Capture & Top-of-Backlog Ranking (Consolidating Legacy Rules 17 & 25)
 * **Rule**: During Ceremony 2 (Sprint-End Joint Review), when the human tester or developer discovers an anomaly, cosmetic defect, or regression, the agent **MUST NOT** conduct an extensive technical root-cause or code analysis on the spot (*"Während des Sprint Reviews soll es noch keine detaillierte Analyse der Auffälligkeit geben. Es soll eigentlich nur ein Ticket zur Aufnahme der Auffälligkeit erstellt werden. Dabei ist es jedoch wichtig, den Kontext der Beanstandung nicht zu verlieren. Falls erforderlich ist natürlich auch eine kurze Analyse notwendig."*).
 * **Immediate Evidence Capture**: The agent **MUST** capture on-device evidence immediately (via `adb exec-out screencap -p > <FILE>.png` or `adb logcat -d`) and upload it as a Jira attachment to the newly created follow-up ticket.
-* **Preserve Full User Context**: Focus completely on capturing the exact complaint, user intent, device/reproduction context, and observable symptoms into a dedicated Jira follow-up ticket without losing critical details.
+* **Preserve Full User Context & Place on Top of Backlog**: Focus completely on capturing the exact complaint, user intent, device/reproduction context, and observable symptoms into a dedicated Jira follow-up ticket without losing critical details, and **always place the follow-up ticket at the top of the backlog** (`tools/jira_util.py create-issue` / `rank-top`).
 * **Defer Deep Investigation**: Root-cause analysis, forensic file inspection, and architectural refactoring belong exclusively to Stage 1 (Analysis) of the subsequent sprint.
 
 ## Rule 10: Mandatory Device Deployment Before Sprint Review ("Install Before Review")
@@ -178,4 +178,5 @@ This table maps every legacy rule number (Rules 1 through 36) from historical sp
 | **Rule 39** | Reactive Flow Subscription Over Static `.value` Reads | **Migrated** | `docs/coding_standards.md` **Sec 1.5** | Software Engineering: Subscribe live flows in `combine(...)`; never read `.value` inside static observers. |
 | **Rule 40** | Growing Warm-Up Window for Rolling Telemetry | **Migrated** | `docs/coding_standards.md` **Sec 1.6** | Software Engineering: Emit rolling metrics from second 1 using growing $1..W-1$ window. |
 | **Rule 41** | System Navigation Bar Inset Clearance | **Migrated** | `docs/design_guidelines.md` **Sec 5.6** | UI & Layout: Apply `navigationBarsPadding()` / `WindowInsets.navigationBars` to scrollable screens so bottom content clears the system navigation bar. |
+| **Rule 42** | `WorkoutDetails` Grouped Metric Rows (`AltitudeRow` + `MetricItem`) | **Migrated** | `docs/design_guidelines.md` **Sec 5.10** | UI & Layout: Render multi-metric rows in `WorkoutDetails` / summary cards using `AltitudeRow` + 2–3 equal-weight `MetricItem` columns; never use ad-hoc `FlowRow` or nested `Card` blocks. |
 

@@ -252,6 +252,56 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 | **Map** (`Layout 2`) | ✅ **On** | ✅ **On** | ❌ Off | ❌ Off | ❌ Off | ✅ **On** |
 | **Laps** (`Layout 3`) | ❌ Off | ❌ Off | ✅ **On** | ❌ Off | ❌ Off | ❌ Off |
 
+### 5.10 `WorkoutDetails` & Summary Card Grouped Metric Rows (`AltitudeRow` Pattern)
+* **Canonical Grouped Row Layout**:
+  * Domain-grouped summary metrics rendered inside `WorkoutDetails.kt` (shared by `WorkoutSummary` cards and `TrackOnMapScreen` / `MapDetailLayout`, such as Elevation, Power Training Metrics `NP/IF/TSS/Work/W/kg`, Aerobic Efficiency `EF & Decoupling`, and Anaerobic Battery `W'bal`) **MUST** follow the `AltitudeRow` layout pattern:
+    1. **Left Domain Header Column**: A `Column` displaying the localized domain category label (`style = MaterialTheme.typography.labelMedium`, `color = MaterialTheme.colorScheme.onSurfaceVariant`), a `Spacer(modifier = Modifier.height(4.dp))`, and a `24.dp` domain `Icon` (`tint = MaterialTheme.colorScheme.onSurfaceVariant`), followed by `Spacer(modifier = Modifier.width(20.dp))`.
+    2. **Right Metrics Column / Grid**: A `Column` containing one or more horizontal `Row(modifier = Modifier.fillMaxWidth())` rows of equal-weight `MetricItem` cells (`layout = MetricLayout.VERTICAL`, `modifier = Modifier.weight(1f)`), where each `MetricItem` displays its short metric label above (`labelMedium`, `onSurfaceVariant`) and bold formatted value (with units) below. When a domain group has more than 3 metrics (e.g., 5–6 power metrics), arrange them into balanced multi-row `Row`s of 2–3 equal-weight `MetricItem` columns (`Modifier.weight(1f)`).
+* **Anti-Patterns (Strictly Forbidden)**:
+  * ❌ **Do NOT use `FlowRow` pill/chip badges (`Surface(color = surfaceContainerHighest)` with `"NP: 175 W"`)** for workout summary metrics. Wrapping pill clouds break the tabular visual alignment of `WorkoutDetails` and leave trailing chips orphaned on new lines.
+  * ❌ **Do NOT render raw inline `Text("EF: 1,32 W/bpm")` lines** without a domain header column and `MetricItem` structure.
+
+```kotlin
+// Canonical Grouped Metric Row Pattern in WorkoutDetails.kt (AltitudeRow reference):
+Row(
+    modifier = modifier.fillMaxWidth(),
+    verticalAlignment = Alignment.CenterVertically
+) {
+    Column {
+        Text(
+            text = stringResource(R.string.domain_label),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Icon(
+            painter = painterResource(id = R.drawable.ic_domain_icon),
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    Spacer(modifier = Modifier.width(20.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            MetricItem(
+                iconRes = R.drawable.ic_metric_1, // or optional icon
+                label = stringResource(R.string.metric_1_short),
+                value = formattedValue1,
+                layout = MetricLayout.VERTICAL,
+                modifier = Modifier.weight(1f)
+            )
+            MetricItem(
+                iconRes = R.drawable.ic_metric_2,
+                label = stringResource(R.string.metric_2_short),
+                value = formattedValue2,
+                layout = MetricLayout.VERTICAL,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+```
 
 ---
 
@@ -261,6 +311,3 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Single Spatial Authority**:
   * Map camera tracking, Follow-Me lookahead offsets, and viewport content paddings MUST share a single spatial authority to prevent conflicting animation loops and viewport jitter.
   * Avoid competing camera updates where Google Maps `contentPadding` recalculation in `BoxWithConstraints` fights with `cameraPositionState.animate(...)`. Keep map paddings symmetric or fixed, and implement forward camera lookahead analytically via target coordinate projection (ATT-3054 / ATT-3102).
-
-
-

@@ -718,7 +718,49 @@ def create_subtask(parent_key, summary, description, role="coordinator", add_to_
 
     return new_key
 
-def create_issue(summary, description, issuetype_id="10008", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None):
+def rank_at_top_of_backlog(issue_key, role="agent1"):
+    """Ranks the given issue at the very top of the Jira Agile backlog."""
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    try:
+        boards = jira_request(f"{base}/rest/agile/1.0/board", role=role).get("values", [])
+        top_key = None
+        if boards:
+            board_id = boards[0]["id"]
+            backlog = jira_request(
+                f"{base}/rest/agile/1.0/board/{board_id}/backlog?maxResults=10&fields=summary",
+                role=role
+            ).get("issues", [])
+            for item in backlog:
+                if item.get("key") and item.get("key") != issue_key:
+                    top_key = item["key"]
+                    break
+        if not top_key:
+            data = jira_request(
+                f"{base}/rest/api/3/search/jql",
+                method="POST",
+                payload={
+                    "jql": f"project = ATT AND sprint is EMPTY AND issuetype != Sub-task AND key != {issue_key} ORDER BY rank ASC",
+                    "maxResults": 1,
+                    "fields": ["summary"]
+                },
+                role=role
+            )
+            issues = data.get("issues", [])
+            if issues:
+                top_key = issues[0]["key"]
+        if top_key:
+            jira_request(
+                f"{base}/rest/agile/1.0/issue/rank",
+                method="PUT",
+                payload={"issues": [issue_key], "rankBeforeIssue": top_key},
+                role=role
+            )
+            print(f"Ranked {issue_key} at the top of the backlog (before {top_key}).")
+    except Exception as e:
+        print(f"Warning: Could not rank {issue_key} at the top of the backlog: {e}", file=sys.stderr)
+
+def create_issue(summary, description, issuetype_id="10008", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None, rank_top=True):
     if description.startswith("@") and os.path.exists(description[1:]):
         with open(description[1:], "r", encoding="utf-8") as f:
             description = f.read()
@@ -752,6 +794,9 @@ def create_issue(summary, description, issuetype_id="10008", parent_key=None, ro
     new_key = data['key']
     print(f"Issue {new_key} created.")
 
+    if rank_top:
+        rank_at_top_of_backlog(new_key, role=role)
+
     if add_to_sprint:
         if role in ("agent1", "agent2", "coordinator"):
             print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)
@@ -778,7 +823,7 @@ if __name__ == "__main__":
     active_role, remaining_argv = parse_role_from_args(sys.argv[1:])
 
     if len(remaining_argv) < 1:
-        print("Usage: jira_util.py [--as agent1|agent2|coordinator] [list | show KEY | status KEY | check-gate KEY | versions | set-fixversion KEY VERSION | clear-fixversion KEY | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint] | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--fixversion=VERSION] | add-to-sprint KEY]", file=sys.stderr)
+        print("Usage: jira_util.py [--as agent1|agent2|coordinator] [list | show KEY | status KEY | check-gate KEY | versions | set-fixversion KEY VERSION | clear-fixversion KEY | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint] | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--bottom] [--fixversion=VERSION] | rank-top KEY | add-to-sprint KEY]", file=sys.stderr)
         sys.exit(1)
 
     cmd = remaining_argv[0]
@@ -816,6 +861,8 @@ if __name__ == "__main__":
         set_parent(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "assign" and len(remaining_argv) == 3:
         assign_issue(remaining_argv[1], remaining_argv[2], role=active_role)
+    elif cmd == "rank-top" and len(remaining_argv) == 2:
+        rank_at_top_of_backlog(remaining_argv[1], role=active_role)
     elif cmd == "create-subtask" and len(remaining_argv) >= 4:
         # Parse optional flags
         add_sprint = False
@@ -842,6 +889,7 @@ if __name__ == "__main__":
         create_subtask(parent_k, summ, desc, role=subtask_role, add_to_sprint=add_sprint)
     elif cmd == "create-issue" and len(remaining_argv) >= 3:
         add_sprint = False
+        rank_top = True
         fix_ver = None
         priority_arg = None
         labels_arg = None
@@ -852,6 +900,10 @@ if __name__ == "__main__":
                     print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)
                     sys.exit(1)
                 add_sprint = True
+            elif arg == "--bottom":
+                rank_top = False
+            elif arg == "--top":
+                rank_top = True
             elif arg.startswith("--fixversion=") or arg.startswith("--fix-version="):
                 if active_role in ("agent1", "agent2", "coordinator"):
                     print("Error: Tickets must not get a solution ('Lösungsversion') assigned at creation time! Mandate: 'Add version when ticket is finished, not when started' (Rule 19).", file=sys.stderr)
@@ -866,14 +918,14 @@ if __name__ == "__main__":
 
 
         if len(filtered_args) < 2:
-            print("Usage: create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--add-to-sprint] [--fixversion=VERSION] [--priority=PRIORITY] [--labels=L1,L2]", file=sys.stderr)
+            print("Usage: create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--bottom] [--add-to-sprint] [--fixversion=VERSION] [--priority=PRIORITY] [--labels=L1,L2]", file=sys.stderr)
             sys.exit(1)
 
         summary = filtered_args[0]
         desc = filtered_args[1]
         type_id = filtered_args[2] if len(filtered_args) >= 3 else "10008"
         parent = filtered_args[3] if len(filtered_args) >= 4 else None
-        create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver, priority=priority_arg, labels=labels_arg)
+        create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver, priority=priority_arg, labels=labels_arg, rank_top=rank_top)
     elif cmd == "add-to-sprint" and len(remaining_argv) == 2:
         if active_role in ("agent1", "agent2", "coordinator"):
             print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)
