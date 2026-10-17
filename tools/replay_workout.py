@@ -141,7 +141,7 @@ class TcxParser:
         root = tree.getroot()
 
         # Handle wildcard namespaces
-        points: List[TcxPoint] = []
+        raw_records: List[dict] = []
         start_epoch: Optional[float] = None
 
         # Trackpoints may appear under Activity/Lap/Track/Trackpoint or Course/Track/Trackpoint
@@ -174,36 +174,37 @@ class TcxParser:
                 elif tag == "Extensions":
                     ext_elem = child
 
-            # Coordinates are mandatory for replay
-            if pos_elem is None:
-                continue
-
-            lat_elem = None
-            lon_elem = None
-            for pchild in pos_elem:
-                ptag = pchild.tag.split("}")[-1] if "}" in pchild.tag else pchild.tag
-                if ptag == "LatitudeDegrees":
-                    lat_elem = pchild
-                elif ptag == "LongitudeDegrees":
-                    lon_elem = pchild
-
-            if lat_elem is None or lon_elem is None or not lat_elem.text or not lon_elem.text:
-                continue
-
-            try:
-                lat = float(lat_elem.text)
-                lon = float(lon_elem.text)
-            except ValueError:
-                continue
+            # Extract optional Position (LatitudeDegrees / LongitudeDegrees)
+            lat: Optional[float] = None
+            lon: Optional[float] = None
+            if pos_elem is not None:
+                lat_elem = None
+                lon_elem = None
+                for pchild in pos_elem:
+                    ptag = pchild.tag.split("}")[-1] if "}" in pchild.tag else pchild.tag
+                    if ptag == "LatitudeDegrees":
+                        lat_elem = pchild
+                    elif ptag == "LongitudeDegrees":
+                        lon_elem = pchild
+                if lat_elem is not None and lon_elem is not None and lat_elem.text and lon_elem.text:
+                    try:
+                        lat = float(lat_elem.text)
+                        lon = float(lon_elem.text)
+                    except ValueError:
+                        lat = None
+                        lon = None
 
             # Time parsing
-            time_iso = time_elem.text if time_elem is not None and time_elem.text else ""
+            time_iso = time_elem.text.strip() if time_elem is not None and time_elem.text else ""
+            if lat is None and lon is None and not time_iso:
+                # Trackpoint has neither GPS position nor timestamp; skip
+                continue
+
             time_sec = 0.0
             if time_iso:
                 # Parse ISO-8601 timestamp e.g. 2026-10-10T10:00:00Z
                 try:
                     iso_clean = time_iso.replace("Z", "+00:00")
-                    # Python 3.11+ supports fromisoformat
                     import datetime
                     dt = datetime.datetime.fromisoformat(iso_clean)
                     epoch = dt.timestamp()
@@ -211,23 +212,25 @@ class TcxParser:
                         start_epoch = epoch
                     time_sec = max(0.0, epoch - start_epoch)
                 except Exception:
-                    time_sec = float(len(points))
+                    time_sec = float(len(raw_records))
             else:
-                time_sec = float(len(points))
+                time_sec = float(len(raw_records))
 
-            # Altitude
-            ele = 0.0
+            # Optional Altitude
+            ele: Optional[float] = None
             if ele_elem is not None and ele_elem.text:
                 try:
                     ele = float(ele_elem.text)
                 except ValueError:
-                    ele = 0.0
+                    ele = None
 
-            # Distance
+            # Optional Distance
             dist = 0.0
+            has_dist = False
             if dist_elem is not None and dist_elem.text:
                 try:
                     dist = float(dist_elem.text)
+                    has_dist = True
                 except ValueError:
                     dist = 0.0
 
@@ -252,6 +255,7 @@ class TcxParser:
             # Extensions (Watts, Speed)
             watts = 0
             speed_mps = 0.0
+            has_speed = False
             if ext_elem is not None:
                 for ext in ext_elem.iter():
                     etag = ext.tag.split("}")[-1] if "}" in ext.tag else ext.tag
@@ -263,29 +267,113 @@ class TcxParser:
                     elif etag == "Speed" and ext.text:
                         try:
                             speed_mps = float(ext.text)
+                            has_speed = True
                         except ValueError:
                             speed_mps = 0.0
 
-            points.append(TcxPoint(
-                time_iso=time_iso,
-                time_sec=time_sec,
-                lat=lat,
-                lon=lon,
-                ele=ele,
-                dist=dist,
-                hr=hr,
-                cadence=cadence,
-                watts=watts,
-                speed_mps=speed_mps,
-                bearing=0.0
-            ))
+            raw_records.append({
+                "time_iso": time_iso,
+                "time_sec": time_sec,
+                "lat": lat,
+                "lon": lon,
+                "ele": ele,
+                "dist": dist,
+                "has_dist": has_dist,
+                "hr": hr,
+                "cadence": cadence,
+                "watts": watts,
+                "speed_mps": speed_mps,
+                "has_speed": has_speed,
+            })
 
-        if not points:
+        known_pos_indices = [
+            i for i, r in enumerate(raw_records)
+            if r["lat"] is not None and r["lon"] is not None
+        ]
+        if not known_pos_indices:
             raise ValueError(f"No valid trackpoints found in TCX file: {file_path}")
 
-        # Compute cumulative distance and bearings if missing
+        # Linearly interpolate missing (lat, lon) across variable-interval GPS gaps (REQ-TOOL-006.1)
+        first_pos_idx = known_pos_indices[0]
+        for i in range(0, first_pos_idx):
+            raw_records[i]["lat"] = raw_records[first_pos_idx]["lat"]
+            raw_records[i]["lon"] = raw_records[first_pos_idx]["lon"]
+
+        last_pos_idx = known_pos_indices[-1]
+        for i in range(last_pos_idx + 1, len(raw_records)):
+            raw_records[i]["lat"] = raw_records[last_pos_idx]["lat"]
+            raw_records[i]["lon"] = raw_records[last_pos_idx]["lon"]
+
+        for k in range(len(known_pos_indices) - 1):
+            idx_a = known_pos_indices[k]
+            idx_b = known_pos_indices[k + 1]
+            if idx_b - idx_a <= 1:
+                continue
+            t_a = raw_records[idx_a]["time_sec"]
+            t_b = raw_records[idx_b]["time_sec"]
+            lat_a = raw_records[idx_a]["lat"]
+            lon_a = raw_records[idx_a]["lon"]
+            lat_b = raw_records[idx_b]["lat"]
+            lon_b = raw_records[idx_b]["lon"]
+            dt_ab = t_b - t_a
+            for j in range(idx_a + 1, idx_b):
+                if dt_ab >= 0.001:
+                    alpha = max(0.0, min(1.0, (raw_records[j]["time_sec"] - t_a) / dt_ab))
+                else:
+                    alpha = 0.0
+                raw_records[j]["lat"] = lat_a + alpha * (lat_b - lat_a)
+                raw_records[j]["lon"] = lon_a + alpha * (lon_b - lon_a)
+
+        # Linearly interpolate missing AltitudeMeters across gaps
+        known_ele_indices = [i for i, r in enumerate(raw_records) if r["ele"] is not None]
+        if not known_ele_indices:
+            for r in raw_records:
+                r["ele"] = 0.0
+        else:
+            first_ele_idx = known_ele_indices[0]
+            for i in range(0, first_ele_idx):
+                raw_records[i]["ele"] = raw_records[first_ele_idx]["ele"]
+            last_ele_idx = known_ele_indices[-1]
+            for i in range(last_ele_idx + 1, len(raw_records)):
+                raw_records[i]["ele"] = raw_records[last_ele_idx]["ele"]
+            for k in range(len(known_ele_indices) - 1):
+                idx_a = known_ele_indices[k]
+                idx_b = known_ele_indices[k + 1]
+                if idx_b - idx_a <= 1:
+                    continue
+                t_a = raw_records[idx_a]["time_sec"]
+                t_b = raw_records[idx_b]["time_sec"]
+                ele_a = raw_records[idx_a]["ele"]
+                ele_b = raw_records[idx_b]["ele"]
+                dt_ab = t_b - t_a
+                for j in range(idx_a + 1, idx_b):
+                    if dt_ab >= 0.001:
+                        alpha = max(0.0, min(1.0, (raw_records[j]["time_sec"] - t_a) / dt_ab))
+                    else:
+                        alpha = 0.0
+                    raw_records[j]["ele"] = ele_a + alpha * (ele_b - ele_a)
+
+        points: List[TcxPoint] = [
+            TcxPoint(
+                time_iso=r["time_iso"],
+                time_sec=r["time_sec"],
+                lat=float(r["lat"]),
+                lon=float(r["lon"]),
+                ele=float(r["ele"]),
+                dist=float(r["dist"]),
+                hr=r["hr"],
+                cadence=r["cadence"],
+                watts=r["watts"],
+                speed_mps=float(r["speed_mps"]),
+                bearing=0.0,
+            )
+            for r in raw_records
+        ]
+
+        # Compute cumulative distance, bearings, and fallback speed if missing (REQ-TOOL-006.1)
         cum_dist = 0.0
         for i in range(len(points)):
+            step_d = 0.0
             if i > 0:
                 step_d = haversine_distance(points[i - 1].lat, points[i - 1].lon, points[i].lat, points[i].lon)
                 cum_dist += step_d
@@ -298,8 +386,25 @@ class TcxParser:
                 if len(points) > 1:
                     points[0].bearing = calculate_bearing(points[0].lat, points[0].lon, points[1].lat, points[1].lon)
 
-            if points[i].dist == 0.0 and i > 0:
-                points[i].dist = cum_dist
+            if i > 0 and (not raw_records[i]["has_dist"] or points[i].dist <= points[i - 1].dist):
+                points[i].dist = points[i - 1].dist + step_d if points[i - 1].dist > 0.0 else cum_dist
+
+            if i > 0 and (not raw_records[i]["has_speed"] or points[i].speed_mps <= 0.0):
+                dt = points[i].time_sec - points[i - 1].time_sec
+                delta_d = max(0.0, points[i].dist - points[i - 1].dist)
+                if delta_d == 0.0 and step_d > 0.0:
+                    delta_d = step_d
+                if dt >= 0.001:
+                    raw_speed = delta_d / dt
+                    points[i].speed_mps = raw_speed if math.isfinite(raw_speed) else 0.0
+                else:
+                    points[i].speed_mps = 0.0
+
+        if len(points) > 1 and (not raw_records[0]["has_speed"] or points[0].speed_mps <= 0.0):
+            for p in points[1:]:
+                if p.speed_mps > 0.0 and math.isfinite(p.speed_mps):
+                    points[0].speed_mps = p.speed_mps
+                    break
 
         return points
 
@@ -1033,9 +1138,14 @@ class AdbGpsInjector:
         self.device_serial = device_serial
         self.is_registered = False
         self.is_killed = False
+        self.base_epoch_ms: int = int(time.time() * 1000)
         self._queue = queue.Queue(maxsize=5)
         self._worker_thread = None
         self._stop_event = threading.Event()
+
+    def reset_epoch(self, time_sec: float = 0.0) -> None:
+        """Resets the Replay Session Epoch so injected timestamps maintain relative time_sec offset."""
+        self.base_epoch_ms = int(time.time() * 1000) - int(round(time_sec * 1000.0))
 
     def kill(self):
         """Suppresses mock GPS location injection, simulating satellite signal loss."""
@@ -1101,9 +1211,12 @@ class AdbGpsInjector:
                 continue
             if item is None:
                 break
-            lat, lon = item
-            now_ms = int(time.time() * 1000)
-            cmds = [self.build_inject_cmd(p, lat, lon, now_ms, accuracy=2.5) for p in self.DEFAULT_PROVIDERS]
+            if len(item) == 3:
+                lat, lon, time_ms = item
+            else:
+                lat, lon = item
+                time_ms = int(time.time() * 1000)
+            cmds = [self.build_inject_cmd(p, lat, lon, time_ms, accuracy=2.5) for p in self.DEFAULT_PROVIDERS]
             self._run_adb(["shell", " && ".join(cmds)], check=False)
             self._queue.task_done()
 
@@ -1118,7 +1231,7 @@ class AdbGpsInjector:
         """Constructs Android 14+ compatible location injection shell command string."""
         return f"cmd location providers set-test-provider-location {provider} --location {lat:.6f},{lon:.6f} --accuracy {accuracy:.1f} --time {time_ms}"
 
-    def inject_location(self, lat: float, lon: float, ele: float, speed_mps: float, bearing_deg: float):
+    def inject_location(self, lat: float, lon: float, ele: float = 0.0, speed_mps: float = 0.0, bearing_deg: float = 0.0, time_sec: Optional[float] = None):
         if not self.enabled or not self.is_registered or self.is_killed:
             return
         if self._queue.full():
@@ -1127,7 +1240,11 @@ class AdbGpsInjector:
             except queue.Empty:
                 pass
         try:
-            self._queue.put_nowait((lat, lon))
+            if time_sec is not None:
+                timestamp_ms = self.base_epoch_ms + int(round(time_sec * 1000.0))
+                self._queue.put_nowait((lat, lon, timestamp_ms))
+            else:
+                self._queue.put_nowait((lat, lon))
         except queue.Full:
             pass
 
@@ -1219,6 +1336,7 @@ class ReplayEngine:
         self.on_update = on_update
         self.status = "STOPPED"
         self.current_index = 0
+        self.elapsed_time_sec: float = points[0].time_sec
         self.speed_multiplier = 1.0
         self.total_duration_sec = points[-1].time_sec if points[-1].time_sec > 0 else float(len(points))
         self.total_distance_m = points[-1].dist
@@ -1242,6 +1360,7 @@ class ReplayEngine:
     def stop(self):
         self.status = "STOPPED"
         self.current_index = 0
+        self.elapsed_time_sec = self.points[0].time_sec
         if self.on_update:
             self.on_update(self.current_point)
 
@@ -1252,12 +1371,13 @@ class ReplayEngine:
         """Seeks timeline to given ratio [0.0, 1.0]."""
         ratio = max(0.0, min(1.0, ratio))
         self.current_index = int(round(ratio * (len(self.points) - 1)))
+        self.elapsed_time_sec = self.points[self.current_index].time_sec
         if self.on_update:
             self.on_update(self.current_point)
 
     def seek_time(self, delta_sec: float):
         """Seeks relative to current point by delta seconds."""
-        cur_time = self.current_point.time_sec
+        cur_time = self.elapsed_time_sec
         target_time = max(0.0, min(self.total_duration_sec, cur_time + delta_sec))
         # Find closest point
         best_idx = 0
@@ -1268,20 +1388,23 @@ class ReplayEngine:
                 min_diff = diff
                 best_idx = i
         self.current_index = best_idx
+        self.elapsed_time_sec = self.points[self.current_index].time_sec
         if self.on_update:
             self.on_update(self.current_point)
 
-    def step(self):
-        """Advances replay by one step based on speed multiplier."""
+    def step(self, dt_sec: float = 1.0):
+        """Advances replay by elapsed workout time (dt_sec * speed_multiplier) rather than raw array index."""
         if self.status != "PLAYING":
             return
-        # Advance index proportionally to speed multiplier
-        step_increment = max(1, int(round(self.speed_multiplier)))
-        if self.current_index + step_increment < len(self.points):
-            self.current_index += step_increment
-        else:
+        self.elapsed_time_sec += dt_sec * self.speed_multiplier
+        idx = self.current_index
+        while idx + 1 < len(self.points) and self.points[idx + 1].time_sec <= self.elapsed_time_sec + 1e-6:
+            idx += 1
+        self.current_index = min(idx, len(self.points) - 1)
+        if self.current_index >= len(self.points) - 1 and self.elapsed_time_sec >= self.points[-1].time_sec - 1e-6:
             self.current_index = len(self.points) - 1
-            self.status = "STOPPED"
+            self.elapsed_time_sec = self.points[-1].time_sec
+            self.status = "PAUSED"
 
         if self.on_update:
             self.on_update(self.current_point)
@@ -1702,6 +1825,7 @@ if HAS_PYQT6:
                     self.file_path = fname
                     self.lbl_file.setText(f"Activity: {os.path.basename(fname)}")
                     self.engine = ReplayEngine(points, on_update=self.on_engine_update)
+                    self.gps.reset_epoch(self.engine.current_point.time_sec)
                     self.lbl_time_total.setText(format_duration(self.engine.total_duration_sec))
                     self.on_engine_update(self.engine.current_point)
                 except Exception as e:
@@ -1725,6 +1849,7 @@ if HAS_PYQT6:
         def on_slider_moved(self, val: int):
             ratio = val / 1000.0
             self.engine.seek_ratio(ratio)
+            self.gps.reset_epoch(self.engine.current_point.time_sec)
 
         def on_timer_tick(self):
             self.tick_counter += 1
@@ -1758,7 +1883,7 @@ if HAS_PYQT6:
 
             # Dispatch to BLE and ADB
             self.ble.update_telemetry(pt.watts, pt.cadence, pt.hr)
-            self.gps.inject_location(pt.lat, pt.lon, pt.ele, pt.speed_mps, pt.bearing)
+            self.gps.inject_location(pt.lat, pt.lon, pt.ele, pt.speed_mps, pt.bearing, time_sec=pt.time_sec)
 
         def _update_battery_label_color(self, label: QLabel, level: int):
             if level <= 5:
@@ -1884,13 +2009,15 @@ def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInje
         if trigger_mgr:
             trigger_mgr.evaluate(pt.time_sec)
         ble.update_telemetry(pt.watts, pt.cadence, pt.hr)
-        gps.inject_location(pt.lat, pt.lon, pt.ele, pt.speed_mps, pt.bearing)
+        gps.inject_location(pt.lat, pt.lon, pt.ele, pt.speed_mps, pt.bearing, time_sec=pt.time_sec)
 
     engine.on_update = on_update
+    gps.reset_epoch(engine.current_point.time_sec)
     engine.play()
 
     try:
         while True:
+            t_start = time.time()
             k = key_reader.poll_key()
             if k:
                 if k == ' ':
@@ -1900,6 +2027,7 @@ def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInje
                         engine.play()
                 elif k == 's':
                     engine.stop()
+                    gps.reset_epoch(engine.current_point.time_sec)
                 elif k == '1':
                     engine.set_speed(1.0)
                 elif k == '2':
@@ -1937,7 +2065,8 @@ def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInje
             )
             sys.stdout.flush()
 
-            time.sleep(1.0 / engine.speed_multiplier)
+            elapsed = time.time() - t_start
+            time.sleep(max(0.01, 1.0 - elapsed))
     finally:
         key_reader.restore()
         print("\n\nSimulation stopped cleanly.")
