@@ -155,8 +155,19 @@ public class MySensorManager extends MyDevice {
         return sensorList;
     }
 
+    /**
+     * Returns a thread-safe defensive snapshot copy of the sensor types accumulated during the
+     * active workout session ({@code REQ-TRK-030.2}, {@code ATT-3986}).
+     *
+     * <p>Threading / Concurrency: Synchronized on {@code this} {@link MySensorManager} monitor so
+     * concurrent sensor registrations via {@link #registerSensor(MySensor)} /
+     * {@link #notifyNewSensor(MySensor)} never throw {@link java.util.ConcurrentModificationException}
+     * while callers iterate over the returned set.
+     *
+     * @return a detached {@link HashSet} containing all accumulated {@link SensorType}s
+     */
     public synchronized Set<SensorType> getAccumulatedSensorTypeSet() {
-        return mAccumulatedSensorTypeSet;
+        return new HashSet<>(mAccumulatedSensorTypeSet);
     }
 
     public synchronized void setPriorityList(SensorType sensorType, DeviceType[] deviceTypeArray) {
@@ -317,9 +328,9 @@ public class MySensorManager extends MyDevice {
 
 
     /**
-     * called when there is a new Sensor
+     * Called when there is a new sensor ({@code REQ-TRK-030.2}, {@code ATT-3986}).
      */
-    private void notifyNewSensor(MySensor mySensor) {
+    private synchronized void notifyNewSensor(MySensor mySensor) {
         if (DEBUG) Log.d(TAG, "notifyNewSensor(" + mySensor.mSensorType.name() + ")");
 
         mAccumulatedSensorTypeSet.add(mySensor.getSensorType());

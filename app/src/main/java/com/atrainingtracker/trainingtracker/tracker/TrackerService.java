@@ -1232,38 +1232,74 @@ public class TrackerService extends Service {
             Log.e(TAG, "Error saving active devices during endWorkout", t);
         }
 
-        WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
-        SQLiteDatabase summariesDb = summariesDatabaseManager.getDatabase();
-        summariesDb.beginTransaction();
         try {
-            // save the accumulated SensorTypes
-            if (banalService != null) {
-                summariesDatabaseManager.saveAccumulatedSensorTypes(mWorkoutID, banalService.getAccumulatedSensorTypeSet());
+            WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
+            SQLiteDatabase summariesDb = summariesDatabaseManager.getDatabase();
+
+            // 1. Critical state transition: commit FINISHED = 1 first in its own dedicated, minimal transaction (REQ-TRK-030.1)
+            summariesDb.beginTransaction();
+            try {
+                ContentValues finishedValues = new ContentValues();
+                finishedValues.put(WorkoutSummaries.FINISHED, 1);
+                summariesDb.update(WorkoutSummaries.TABLE,
+                        finishedValues,
+                        WorkoutSummaries.C_ID + "=" + mWorkoutID,
+                        null);
+                summariesDb.setTransactionSuccessful();
+            } catch (Throwable t) {
+                Log.e(TAG, "Error setting FINISHED=1 in summaries table during endWorkout", t);
+            } finally {
+                summariesDb.endTransaction();
             }
 
-            // update the summaries
-            ContentValues summaryValues = new ContentValues();
-            summaryValues.put(WorkoutSummaries.FINISHED, 1);
-
-            // TODO: store at very beginning, end of ANT and BTLE searching, GPS found
+            // 2. Save the accumulated SensorTypes in an isolated block so failures cannot roll back FINISHED = 1
             if (banalService != null) {
-                summaryValues.put(WorkoutSummaries.GC_DATA, banalService.getAccumulatedGCDataString());
+                try {
+                    summariesDatabaseManager.saveAccumulatedSensorTypes(mWorkoutID, banalService.getAccumulatedSensorTypeSet());
+                } catch (Throwable t) {
+                    Log.e(TAG, "Error saving accumulated sensor types during endWorkout", t);
+                }
             }
 
-            long sportTypeId = getSportTypeId();
-            summaryValues.put(WorkoutSummaries.SPORT_ID, sportTypeId);
-            summaryValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
+            // 3. Update auxiliary summary metadata (GC_DATA, SPORT_ID, B_SPORT) in an isolated block
+            try {
+                ContentValues summaryValues = new ContentValues();
+                if (banalService != null) {
+                    try {
+                        summaryValues.put(WorkoutSummaries.GC_DATA, banalService.getAccumulatedGCDataString());
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Error reading accumulated GC data during endWorkout", t);
+                    }
+                }
 
-            summariesDb.update(WorkoutSummaries.TABLE,
-                    summaryValues,
-                    WorkoutSummaries.C_ID + "=" + mWorkoutID,
-                    null);
+                try {
+                    long sportTypeId = getSportTypeId();
+                    summaryValues.put(WorkoutSummaries.SPORT_ID, sportTypeId);
+                    BSportType bSportType = SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId);
+                    if (bSportType != null) {
+                        summaryValues.put(WorkoutSummaries.B_SPORT, bSportType.name());
+                    }
+                } catch (Throwable t) {
+                    Log.e(TAG, "Error resolving sport type metadata during endWorkout", t);
+                }
 
-            summariesDb.setTransactionSuccessful();
-        } catch (Exception e) {
-            Log.e(TAG, "Error updating summaries table during endWorkout transaction", e);
-        } finally {
-            summariesDb.endTransaction();
+                if (summaryValues.size() > 0) {
+                    summariesDb.beginTransaction();
+                    try {
+                        summariesDb.update(WorkoutSummaries.TABLE,
+                                summaryValues,
+                                WorkoutSummaries.C_ID + "=" + mWorkoutID,
+                                null);
+                        summariesDb.setTransactionSuccessful();
+                    } finally {
+                        summariesDb.endTransaction();
+                    }
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "Error updating auxiliary summary metadata during endWorkout", t);
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Error accessing WorkoutSummariesDatabaseManager during endWorkout", t);
         }
 
         try {
@@ -1809,65 +1845,149 @@ public class TrackerService extends Service {
         }
     }
 
+    /**
+     * Checks whether a valid, finite average speed can be computed from active duration and distance
+     * ({@code REQ-TRK-030.3}).
+     *
+     * @return {@code true} when {@code mTimeActive_s > 0} and {@code mDistanceTotal_m} is finite and non-negative.
+     */
     protected boolean averageSpeedCalculateable() {
-        return mTimeActive_s != 0;
+        return mTimeActive_s > 0 && Double.isFinite(mDistanceTotal_m) && mDistanceTotal_m >= 0.0;
     }
 
+    /**
+     * Returns the session average speed in meters per second, guarded against zero or negative
+     * active duration and non-finite division results ({@code REQ-TRK-030.3}).
+     *
+     * @return finite average speed in m/s, or {@code 0.0} when active duration is {@code <= 0}.
+     */
     protected double getAverageSpeed() {
-        return mDistanceTotal_m / mTimeActive_s;
+        if (!averageSpeedCalculateable()) {
+            return 0.0;
+        }
+        double speed = mDistanceTotal_m / mTimeActive_s;
+        return Double.isFinite(speed) ? speed : 0.0;
     }
 
-
-
-    private void finalizeLiveSession() {
+    /**
+     * Finalizes the in-memory {@link LiveWorkoutSession} upon workout stop, persisting map polyline
+     * and elevation/distance streams first, followed by extrema, physiology metrics, commute/trainer
+     * heuristics, and identity/clustering/auto-naming in independently fault-isolated blocks
+     * ({@code REQ-TRK-030.4}).
+     */
+    @VisibleForTesting
+    protected void finalizeLiveSession() {
         if (mLiveSession == null) return;
         if (DEBUG) Log.i(TAG, "finalizeLiveSession");
 
+        final BANALServiceComm banalService = mBanalService;
         WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(this);
-        WorkoutRepository repository = WorkoutRepository.Companion.getInstance((Application) getApplicationContext());
+        WorkoutRepository repository = (mWorkoutRepository != null)
+                ? mWorkoutRepository
+                : WorkoutRepository.Companion.getInstance((Application) getApplicationContext());
 
-        // 1. Save START and END locations
-        LatLng startPos = mLiveSession.getStartLatLng();
-        LatLng endPos = mLiveSession.getLastLatLng();
-
-        if (startPos != null) {
-            summariesManager.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.START, startPos.latitude, startPos);
-            summariesManager.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.START, startPos.longitude, startPos);
+        // 1. Finalize Map and Streams first so route geometry and profile streams are never lost if downstream steps fail (REQ-TRK-030.4)
+        try {
+            List<LatLng> pointsToSimplify = mLiveSession.getRawLatLngs();
+            if (pointsToSimplify == null || pointsToSimplify.isEmpty()) {
+                pointsToSimplify = mLiveSession.getSampledLatLngs();
+            }
+            List<LatLng> simplifiedPoints = (pointsToSimplify != null && !pointsToSimplify.isEmpty())
+                    ? PolyUtil.simplify(pointsToSimplify, 10.0)
+                    : Collections.emptyList();
+            String polyline = PolyUtil.encode(simplifiedPoints);
+            List<Double> sampledAltitudes = mLiveSession.getSampledAltitudes();
+            List<Double> sampledDistances = mLiveSession.getSampledDistances();
+            String altStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(sampledAltitudes != null ? sampledAltitudes : Collections.emptyList());
+            String distStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(sampledDistances != null ? sampledDistances : Collections.emptyList());
+            summariesManager.updateMapAndStreams(mWorkoutID, polyline, altStream, distStream);
+            if (repository != null) {
+                repository.setMapPolyline(mWorkoutID, polyline);
+                repository.setElevationStreams(mWorkoutID, altStream, distStream);
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "finalizeLiveSession: Error persisting map polyline and elevation/distance streams", t);
         }
 
-        if (endPos != null) {
-            summariesManager.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.END, endPos.latitude, endPos);
-            summariesManager.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.END, endPos.longitude, endPos);
-        }
+        // 2. Save START and END locations, Sensor Extrema, and Max Line Distance (REQ-TRK-030.4)
+        try {
+            LatLng startPos = mLiveSession.getStartLatLng();
+            LatLng endPos = mLiveSession.getLastLatLng();
 
-        // 2. Save and Push Extrema Values
-        for (Map.Entry<SensorType, LiveWorkoutSession.RunningStats> entry : mLiveSession.getSensorStats().entrySet()) {
-            SensorType sensor = entry.getKey();
-            LiveWorkoutSession.RunningStats stats = entry.getValue();
+            if (startPos != null) {
+                summariesManager.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.START, startPos.latitude, startPos);
+                summariesManager.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.START, startPos.longitude, startPos);
+            }
 
-            // Min
-            summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MIN, stats.min, stats.minPos);
-            repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MIN, stats.min, stats.minPos);
-            // Max
-            summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MAX, stats.max, stats.maxPos);
-            repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MAX, stats.max, stats.maxPos);
-            // Avg
-            if (IMPORTANT_SENSOR_TYPES.contains(sensor)) {
-                double avgValue = stats.getAverage();
-                // Special case: for Speed, use the authoritative distance/time average (SCRUM-108)
-                if (sensor == SensorType.SPEED_mps && averageSpeedCalculateable()) {
-                    avgValue = getAverageSpeed();
+            if (endPos != null) {
+                summariesManager.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.END, endPos.latitude, endPos);
+                summariesManager.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.END, endPos.longitude, endPos);
+            }
+
+            for (Map.Entry<SensorType, LiveWorkoutSession.RunningStats> entry : mLiveSession.getSensorStats().entrySet()) {
+                SensorType sensor = entry.getKey();
+                LiveWorkoutSession.RunningStats stats = entry.getValue();
+                if (stats == null) continue;
+
+                // Min
+                if (Double.isFinite(stats.min) && stats.min != Double.MAX_VALUE) {
+                    summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MIN, stats.min, stats.minPos);
+                    if (repository != null) {
+                        repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MIN, stats.min, stats.minPos);
+                    }
                 }
-                summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
-                repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
+                // Max
+                if (Double.isFinite(stats.max) && stats.max != -Double.MAX_VALUE) {
+                    summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MAX, stats.max, stats.maxPos);
+                    if (repository != null) {
+                        repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MAX, stats.max, stats.maxPos);
+                    }
+                }
+                // Avg
+                if (IMPORTANT_SENSOR_TYPES.contains(sensor)) {
+                    double avgValue = stats.getAverage();
+                    // Special case: for Speed, use the authoritative distance/time average (SCRUM-108)
+                    if (sensor == SensorType.SPEED_mps && averageSpeedCalculateable()) {
+                        avgValue = getAverageSpeed();
+                    }
+                    if (Double.isFinite(avgValue)) {
+                        summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
+                        if (repository != null) {
+                            repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
+                        }
+                    }
+                }
+                if (sensor == SensorType.W_PRIME_BAL && stats.count > 0 && Double.isFinite(stats.last)) {
+                    summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.END, stats.last, endPos);
+                    if (repository != null) {
+                        repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.END, stats.last, endPos);
+                    }
+                }
             }
-            if (sensor == SensorType.W_PRIME_BAL && stats.count > 0) {
-                summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.END, stats.last, endPos);
-                repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.END, stats.last, endPos);
+
+            // REQ-MAP-020 (ATT-528): Authoritative deterministic calculation of max line distance and apex from recorded track
+            if (startPos != null && mLiveSession.getSampledLatLngs() != null && !mLiveSession.getSampledLatLngs().isEmpty()) {
+                double calculatedMaxDisp = 0.0;
+                LatLng calculatedApex = startPos;
+                for (LatLng pt : mLiveSession.getSampledLatLngs()) {
+                    if (pt != null) {
+                        float dist = WorkoutClusterEngine.Companion.distanceBetween(startPos, pt);
+                        if (dist > calculatedMaxDisp) {
+                            calculatedMaxDisp = dist;
+                            calculatedApex = pt;
+                        }
+                    }
+                }
+                summariesManager.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
+                if (repository != null) {
+                    repository.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
+                }
             }
+        } catch (Throwable t) {
+            Log.e(TAG, "finalizeLiveSession: Error persisting start/end locations and sensor extrema", t);
         }
 
-        // 2b. Calculate and persist Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) from recorded samples (REQ-UI-400.2)
+        // 3. Calculate and persist Efficiency Factor (EF), Aerobic Decoupling, and Power Training Metrics from recorded samples (REQ-UI-400.2, REQ-MIG-039.4)
         try {
             if (mBaseFileName != null && !mBaseFileName.isEmpty()) {
                 WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(this);
@@ -1891,8 +2011,8 @@ public class TrackerService extends Service {
                             }
                         }
                     }
-                    BSportType liveSport = (mBanalService != null && mBanalService.getBSportType() != null)
-                            ? mBanalService.getBSportType()
+                    BSportType liveSport = (banalService != null && banalService.getBSportType() != null)
+                            ? banalService.getBSportType()
                             : BSportType.UNKNOWN;
                     com.atrainingtracker.trainingtracker.physiology.AerobicEfficiencyResult aerobicResult =
                             com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
@@ -1902,12 +2022,16 @@ public class TrackerService extends Service {
                     if (aerobicResult.getEfficiencyFactor() != null) {
                         double ef = aerobicResult.getEfficiencyFactor();
                         summariesManager.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
-                        repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
+                        if (repository != null) {
+                            repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
+                        }
                     }
                     if (aerobicResult.getDecouplingPct() != null) {
                         double dec = aerobicResult.getDecouplingPct();
                         summariesManager.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
-                        repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
+                        if (repository != null) {
+                            repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
+                        }
                     }
 
                     // REQ-MIG-039.4 (ATT-3860 / ATT-3858): Calculate and persist session power training metrics (NP, IF, TSS, Work kJ, W/kg)
@@ -1927,166 +2051,153 @@ public class TrackerService extends Service {
                         double np = powerMetrics.getNormalizedPowerWatts();
                         summariesManager.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.AVG, np, null);
                         summariesManager.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.END, np, null);
-                        repository.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.AVG, np, null);
+                        if (repository != null) {
+                            repository.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.AVG, np, null);
+                        }
                     }
                     if (powerMetrics.getIntensityFactor() != null) {
                         double ifVal = powerMetrics.getIntensityFactor();
                         summariesManager.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.AVG, ifVal, null);
                         summariesManager.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.END, ifVal, null);
-                        repository.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.AVG, ifVal, null);
+                        if (repository != null) {
+                            repository.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.AVG, ifVal, null);
+                        }
                     }
                     if (powerMetrics.getTss() != null) {
                         double tss = powerMetrics.getTss();
                         summariesManager.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.AVG, tss, null);
                         summariesManager.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.MAX, tss, null);
                         summariesManager.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.END, tss, null);
-                        repository.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.AVG, tss, null);
+                        if (repository != null) {
+                            repository.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.AVG, tss, null);
+                        }
                     }
                     if (powerMetrics.getWorkKj() != null) {
                         double workKj = powerMetrics.getWorkKj();
                         summariesManager.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.AVG, workKj, null);
                         summariesManager.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.MAX, workKj, null);
                         summariesManager.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.END, workKj, null);
-                        repository.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.AVG, workKj, null);
+                        if (repository != null) {
+                            repository.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.AVG, workKj, null);
+                        }
                     }
                     if (powerMetrics.getAvgPowerToWeight() != null) {
                         double avgWPerKg = powerMetrics.getAvgPowerToWeight();
                         summariesManager.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG, avgWPerKg, null);
-                        repository.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG, avgWPerKg, null);
+                        if (repository != null) {
+                            repository.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG, avgWPerKg, null);
+                        }
                     }
                     if (powerMetrics.getMaxPowerToWeight() != null) {
                         double maxWPerKg = powerMetrics.getMaxPowerToWeight();
                         summariesManager.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null);
-                        repository.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null);
+                        if (repository != null) {
+                            repository.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null);
+                        }
                     }
                 }
             }
-        } catch (Exception e) {
-            Log.w(TAG, "finalizeLiveSession: Could not compute Aerobic Efficiency / Decoupling or Power Training extrema", e);
+        } catch (Throwable t) {
+            Log.w(TAG, "finalizeLiveSession: Could not compute Aerobic Efficiency / Decoupling or Power Training extrema", t);
         }
 
-        // REQ-MAP-020 (ATT-528): Authoritative deterministic calculation of max line distance and apex from recorded track
-        if (startPos != null && mLiveSession.getSampledLatLngs() != null && !mLiveSession.getSampledLatLngs().isEmpty()) {
-            double calculatedMaxDisp = 0.0;
-            LatLng calculatedApex = startPos;
-            for (LatLng pt : mLiveSession.getSampledLatLngs()) {
-                if (pt != null) {
-                    float dist = WorkoutClusterEngine.Companion.distanceBetween(startPos, pt);
-                    if (dist > calculatedMaxDisp) {
-                        calculatedMaxDisp = dist;
-                        calculatedApex = pt;
-                    }
-                }
-            }
-            summariesManager.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
-            repository.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
+        // 4. Guess Commute and Trainer (REQ-TRK-030.4)
+        try {
+            guessCommuteAndTrainer();
+        } catch (Throwable t) {
+            Log.e(TAG, "finalizeLiveSession: Error in guessCommuteAndTrainer", t);
         }
 
-        // 3. Guess Commute and Trainer
-        guessCommuteAndTrainer();
+        // 5. Identity Determination, Route Clustering & Auto-Naming (SCRUM-200, ATT-1398, REQ-TRK-030.4)
+        try {
+            EquipmentAndSportTypeDiscoveryManager discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(this);
+            final Set<Long> activeRemoteDeviceIds = (banalService != null)
+                    ? new HashSet<>(banalService.getDatabaseIdsOfActiveRemoteDevices())
+                    : new HashSet<>(mActiveSessionDeviceIds);
+            final BSportType banalSportType = (banalService != null && banalService.getBSportType() != null)
+                    ? banalService.getBSportType()
+                    : BSportType.UNKNOWN;
 
-        // 4. Identity Determination (SCRUM-200)
-        // Perform arbitration between hardware and route patterns
-        EquipmentAndSportTypeDiscoveryManager discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(this);
-        final BANALServiceComm banalService = mBanalService;
-        final Set<Long> activeRemoteDeviceIds = (banalService != null)
-                ? new HashSet<>(banalService.getDatabaseIdsOfActiveRemoteDevices())
-                : new HashSet<>(mActiveSessionDeviceIds);
-        final BSportType banalSportType = (banalService != null && banalService.getBSportType() != null)
-                ? banalService.getBSportType()
-                : BSportType.UNKNOWN;
+            // Initial arbitration using currently active devices in memory (more reliable than waiting for DB sync)
+            EquipmentAndSportTypeDiscoveryManager.InferredIdentity identity = discoveryManager.resolveIdentity(activeRemoteDeviceIds, banalSportType, getAverageSpeed());
 
-        // Initial arbitration using currently active devices in memory (more reliable than waiting for DB sync)
-        EquipmentAndSportTypeDiscoveryManager.InferredIdentity identity = discoveryManager.resolveIdentity(activeRemoteDeviceIds, banalSportType, getAverageSpeed());
+            LatLng startPosRaw = mLiveSession.getStartLatLng();
+            LatLng endPosRaw = mLiveSession.getLastLatLng();
+            LatLng maxDispPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
 
-        LatLng startPosRaw = mLiveSession.getStartLatLng();
-        LatLng endPosRaw = mLiveSession.getLastLatLng();
-        LatLng maxDispPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
+            if (startPosRaw != null && endPosRaw != null && maxDispPos != null) {
+                WorkoutClusterEngine engine = WorkoutClusterEngine.Companion.getInstance(this);
 
-        if (startPosRaw != null && endPosRaw != null && maxDispPos != null) {
-            WorkoutClusterEngine engine = WorkoutClusterEngine.Companion.getInstance(this);
-
-            // Determine candidate sport types for clustering (ATT-773, REQ-SET-064)
-            Set<BSportType> candidateSports;
-            BSportType userSelectedSport = (banalService != null) ? banalService.getUserSelectedBSportType() : null;
-            if (userSelectedSport != null && userSelectedSport != BSportType.UNKNOWN) {
-                // Tier 1: User Pre-Selection Sovereignty (Option A)
-                candidateSports = Collections.singleton(userSelectedSport);
-            } else if (identity.isHighConfidence()) {
-                // Tier 2: Dedicated Hardware Sensor Sovereignty (REQ-SET-030)
-                candidateSports = Collections.singleton(identity.getBSportType());
-            } else {
-                // Tier 3: Speed-Based Multi-Sport Candidate Set
-                candidateSports = discoveryManager.getCandidateBSportTypes(banalSportType, getAverageSpeed());
-            }
-
-            LatLng minAltPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.ALTITUDE, ExtremaType.MIN);
-            LatLng maxAltPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.ALTITUDE, ExtremaType.MAX);
-            WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null, candidateSports, minAltPos, maxAltPos);
-            if (suggestion != null) {
-                // If hardware confidence is high, we only take the name from the cluster
-                if (identity.isHighConfidence()) {
-                    ContentValues nameValues = new ContentValues();
-                    int displayCount = suggestion.getHitCount() + 1;
-                    String autoName = WorkoutClusterEngine.formatClusterWorkoutName(this, suggestion.getName(), displayCount, suggestion.getHasCounter());
-                    nameValues.put(WorkoutSummaries.WORKOUT_NAME, autoName);
-                    nameValues.put(WorkoutSummaries.CLUSTER_ID, suggestion.getId());
-                    summariesManager.getDatabase().update(WorkoutSummaries.TABLE, nameValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(mWorkoutID)});
-                    
-                    // Apply hardware-based identity (Sport, Gear, Strava)
-                    summariesManager.applyInferredIdentity(mWorkoutID, identity);
+                // Determine candidate sport types for clustering (ATT-773, REQ-SET-064)
+                Set<BSportType> candidateSports;
+                BSportType userSelectedSport = (banalService != null) ? banalService.getUserSelectedBSportType() : null;
+                if (userSelectedSport != null && userSelectedSport != BSportType.UNKNOWN) {
+                    // Tier 1: User Pre-Selection Sovereignty (Option A)
+                    candidateSports = Collections.singleton(userSelectedSport);
+                } else if (identity.isHighConfidence()) {
+                    // Tier 2: Dedicated Hardware Sensor Sovereignty (REQ-SET-030)
+                    candidateSports = Collections.singleton(identity.getBSportType());
                 } else {
-                    // Low hardware confidence -> Workout Cluster wins everything and resolves ambiguous sport type
-                    engine.assignClusterToWorkout(this, mWorkoutID, suggestion.getId());
+                    // Tier 3: Speed-Based Multi-Sport Candidate Set
+                    candidateSports = discoveryManager.getCandidateBSportTypes(banalSportType, getAverageSpeed());
+                }
+
+                LatLng minAltPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.ALTITUDE, ExtremaType.MIN);
+                LatLng maxAltPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.ALTITUDE, ExtremaType.MAX);
+                WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null, candidateSports, minAltPos, maxAltPos);
+                if (suggestion != null) {
+                    // If hardware confidence is high, we only take the name from the cluster
+                    if (identity.isHighConfidence()) {
+                        ContentValues nameValues = new ContentValues();
+                        int displayCount = suggestion.getHitCount() + 1;
+                        String autoName = WorkoutClusterEngine.formatClusterWorkoutName(this, suggestion.getName(), displayCount, suggestion.getHasCounter());
+                        nameValues.put(WorkoutSummaries.WORKOUT_NAME, autoName);
+                        nameValues.put(WorkoutSummaries.CLUSTER_ID, suggestion.getId());
+                        summariesManager.getDatabase().update(WorkoutSummaries.TABLE, nameValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(mWorkoutID)});
+
+                        // Apply hardware-based identity (Sport, Gear, Strava)
+                        summariesManager.applyInferredIdentity(mWorkoutID, identity);
+                    } else {
+                        // Low hardware confidence -> Workout Cluster wins everything and resolves ambiguous sport type
+                        engine.assignClusterToWorkout(this, mWorkoutID, suggestion.getId());
+                    }
+                } else {
+                    // No cluster match -> use hardware identity
+                    summariesManager.applyInferredIdentity(mWorkoutID, identity);
+
+                    // ATT-1398: Intelligent Workout Auto-Naming based on recognized start/destination Lieblingsorte
+                    KnownLocationsDatabaseManager knownLocationsManager = KnownLocationsDatabaseManager.getInstance(this);
+                    KnownLocationsDatabaseManager.MyLocation startLoc = knownLocationsManager.getMyLocation(startPosRaw);
+                    KnownLocationsDatabaseManager.MyLocation endLoc = knownLocationsManager.getMyLocation(endPosRaw);
+                    float endpointDist = engine.distanceBetween(startPosRaw, endPosRaw);
+                    BSportType resolvedSport = (identity != null && identity.getBSportType() != null && identity.getBSportType() != BSportType.UNKNOWN)
+                        ? identity.getBSportType()
+                        : banalSportType;
+                    String autoName = WorkoutAutoNamingHelper.generateWorkoutName(
+                        this,
+                        resolvedSport,
+                        startLoc,
+                        endLoc,
+                        endpointDist,
+                        mDistanceTotal_m
+                    );
+                    if (autoName != null && !autoName.trim().isEmpty()) {
+                        ContentValues nameValues = new ContentValues();
+                        nameValues.put(WorkoutSummaries.WORKOUT_NAME, autoName);
+                        summariesManager.getDatabase().update(WorkoutSummaries.TABLE, nameValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(mWorkoutID)});
+                    }
                 }
             } else {
-                // No cluster match -> use hardware identity
+                // No spatial data -> use hardware identity
                 summariesManager.applyInferredIdentity(mWorkoutID, identity);
-
-                // ATT-1398: Intelligent Workout Auto-Naming based on recognized start/destination Lieblingsorte
-                KnownLocationsDatabaseManager knownLocationsManager = KnownLocationsDatabaseManager.getInstance(this);
-                KnownLocationsDatabaseManager.MyLocation startLoc = knownLocationsManager.getMyLocation(startPosRaw);
-                KnownLocationsDatabaseManager.MyLocation endLoc = knownLocationsManager.getMyLocation(endPosRaw);
-                float endpointDist = engine.distanceBetween(startPosRaw, endPosRaw);
-                BSportType resolvedSport = (identity != null && identity.getBSportType() != null && identity.getBSportType() != BSportType.UNKNOWN)
-                    ? identity.getBSportType()
-                    : banalSportType;
-                String autoName = WorkoutAutoNamingHelper.generateWorkoutName(
-                    this,
-                    resolvedSport,
-                    startLoc,
-                    endLoc,
-                    endpointDist,
-                    mDistanceTotal_m
-                );
-                if (autoName != null && !autoName.trim().isEmpty()) {
-                    ContentValues nameValues = new ContentValues();
-                    nameValues.put(WorkoutSummaries.WORKOUT_NAME, autoName);
-                    summariesManager.getDatabase().update(WorkoutSummaries.TABLE, nameValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(mWorkoutID)});
-                }
             }
-        } else {
-            // No spatial data -> use hardware identity
-            summariesManager.applyInferredIdentity(mWorkoutID, identity);
+        } catch (Throwable t) {
+            Log.e(TAG, "finalizeLiveSession: Error in identity determination, clustering, or auto-naming", t);
         }
-
-        // 5. Finalize Map and Streams (one last check)
-        List<LatLng> pointsToSimplify = mLiveSession.getRawLatLngs();
-        if (pointsToSimplify.isEmpty()) {
-            pointsToSimplify = mLiveSession.getSampledLatLngs();
-        }
-        List<LatLng> simplifiedPoints = (pointsToSimplify != null && !pointsToSimplify.isEmpty())
-                ? PolyUtil.simplify(pointsToSimplify, 10.0)
-                : Collections.emptyList();
-        String polyline = PolyUtil.encode(simplifiedPoints);
-        String altStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(mLiveSession.getSampledAltitudes());
-        String distStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(mLiveSession.getSampledDistances());
-        summariesManager.updateMapAndStreams(mWorkoutID, polyline, altStream, distStream);
-        repository.setMapPolyline(mWorkoutID, polyline);
-        repository.setElevationStreams(mWorkoutID, altStream, distStream);
     }
 
-    private void guessCommuteAndTrainer() {
+    @VisibleForTesting
+    protected void guessCommuteAndTrainer() {
         if (DEBUG) Log.i(TAG, "guessCommuteAndTrainer");
         WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(this);
 
@@ -2111,8 +2222,13 @@ public class TrackerService extends Service {
             values.put(WorkoutSummaries.COMMUTE, commute);
             values.put(WorkoutSummaries.TRAINER, trainer);
             summariesManager.getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(mWorkoutID)});
-            
-            WorkoutRepository.Companion.getInstance((Application) getApplicationContext()).setCommuteAndTrainer(mWorkoutID, commute, trainer);
+
+            WorkoutRepository repository = (mWorkoutRepository != null)
+                    ? mWorkoutRepository
+                    : WorkoutRepository.Companion.getInstance((Application) getApplicationContext());
+            if (repository != null) {
+                repository.setCommuteAndTrainer(mWorkoutID, commute, trainer);
+            }
         }
     }
 
