@@ -963,12 +963,16 @@ internal suspend fun navigateToPagerTarget(
         try {
             animateScrollToPage(target)
             Log.i(TAG, "Successfully animated to page $target")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            Log.i(TAG, "animateScrollToPage cancelled by user gesture or concurrent scroll; skipping fallback", e)
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             Log.e(TAG, "animateScrollToPage failed: page $target not ready yet", e)
             try {
                 scrollToPage(target)
                 Log.i(TAG, "Fallback scrollToPage succeeded for page $target")
+            } catch (e2: kotlinx.coroutines.CancellationException) {
+                Log.i(TAG, "Fallback scrollToPage cancelled", e2)
             } catch (e2: Exception) {
                 currentCoroutineContext().ensureActive()
                 Log.e(TAG, "Fallback scrollToPage also failed", e2)

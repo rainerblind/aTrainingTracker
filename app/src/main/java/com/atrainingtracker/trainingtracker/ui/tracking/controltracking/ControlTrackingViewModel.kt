@@ -34,12 +34,13 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataReposit
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -71,8 +72,8 @@ class ControlTrackingViewModel(
     private val devicesRepository = DeviceDataRepository.getInstance(application)
 
     // A channel for one-time events (like clicking a button to navigate)
-    private val _navigationEvent = MutableSharedFlow<ControlNavigation>(replay = 0)
-    val navigationEvent = _navigationEvent.asSharedFlow()
+    private val _navigationEvent = Channel<ControlNavigation>(Channel.BUFFERED)
+    val navigationEvent: Flow<ControlNavigation> = _navigationEvent.receiveAsFlow()
 
     val devicesDatabaseManager = DevicesDatabaseManager.getInstance(application)
 
@@ -138,7 +139,7 @@ class ControlTrackingViewModel(
 
     fun onDeviceClicked(device: RemoteDeviceUIData) {
         viewModelScope.launch {
-            _navigationEvent.emit(ControlNavigation.ToEditDevice(device.id, device.deviceType))
+            _navigationEvent.send(ControlNavigation.ToEditDevice(device.id, device.deviceType))
         }
     }
 
@@ -163,7 +164,7 @@ class ControlTrackingViewModel(
         val dbManager = WorkoutSummariesDatabaseManager.getInstance(application)
         if (!TrainingApplication.isTracking() && dbManager.hasUnfinishedWorkout()) {
             viewModelScope.launch {
-                _navigationEvent.emit(ControlNavigation.ShowRecoveryDialog)
+                _navigationEvent.send(ControlNavigation.ShowRecoveryDialog)
             }
         } else {
             sendBroadcast(TrainingApplication.REQUEST_START_TRACKING)

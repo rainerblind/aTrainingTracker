@@ -31,6 +31,7 @@ import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -55,6 +56,7 @@ class TrackingTabsNavigationTimeoutTest {
     fun setUp() {
         mockkStatic(Log::class)
         every { Log.i(any(), any()) } returns 0
+        every { Log.i(any(), any<String>(), any()) } returns 0
         every { Log.w(any(), any<String>()) } returns 0
         every { Log.w(any(), any<String>(), any()) } returns 0
         every { Log.e(any(), any()) } returns 0
@@ -229,4 +231,128 @@ class TrackingTabsNavigationTimeoutTest {
         assertNull(appContext.findActivity())
         assertNull(nonActivityWrapper.findActivity())
     }
+
+    /**
+     * TST-UI-375.1: Verifies that when navigation events are emitted while no collector is active
+     * (simulating an Activity in STOPPED where repeatOnLifecycle cancels collection), the events
+     * are safely retained in the Channel buffer and delivered immediately upon starting collection.
+     */
+    @Test
+    fun `navigationEvent channel buffers one-off events across uncollected STOPPED lifecycle`() = runTest {
+        val channel = kotlinx.coroutines.channels.Channel<TabNavigationEvent>(kotlinx.coroutines.channels.Channel.BUFFERED)
+        val flow = channel.receiveAsFlow()
+
+        // 1. Emit events while in simulated STOPPED state (zero active collectors)
+        channel.send(TabNavigationEvent.NavigateTo(index = 0))
+        channel.send(TabNavigationEvent.EditDevice(deviceId = 42L))
+
+        // 2. Start collection (simulating Activity entering STARTED)
+        val receivedEvents = mutableListOf<TabNavigationEvent>()
+        val collectorJob = launch {
+            flow.collect { receivedEvents.add(it) }
+        }
+        runCurrent()
+
+        assertEquals(
+            "Buffered events emitted during STOPPED must be delivered on collection",
+            listOf(TabNavigationEvent.NavigateTo(index = 0), TabNavigationEvent.EditDevice(deviceId = 42L)),
+            receivedEvents
+        )
+
+        collectorJob.cancel()
+    }
+
+    /**
+     * TST-UI-375.3: Verifies that events consumed through Channel.receiveAsFlow() are consumed
+     * exactly once, so subsequent re-subscriptions (e.g. Activity recreation) receive zero replay events.
+     */
+    @Test
+    fun `navigationEvent channel guarantees exactly-once delivery with zero replay on re-subscription`() = runTest {
+        val channel = kotlinx.coroutines.channels.Channel<TabNavigationEvent>(kotlinx.coroutines.channels.Channel.BUFFERED)
+        val flow = channel.receiveAsFlow()
+
+        channel.send(TabNavigationEvent.NavigateTo(index = 1))
+
+        // First collector consumes the event
+        val firstBatch = mutableListOf<TabNavigationEvent>()
+        val firstJob = launch {
+            flow.collect { firstBatch.add(it) }
+        }
+        runCurrent()
+        assertEquals(listOf(TabNavigationEvent.NavigateTo(index = 1)), firstBatch)
+        firstJob.cancel()
+
+        // Second collector subscribes (e.g. after configuration change or navigation re-entry)
+        val secondBatch = mutableListOf<TabNavigationEvent>()
+        val secondJob = launch {
+            flow.collect { secondBatch.add(it) }
+        }
+        runCurrent()
+
+        assertTrue(
+            "Channel must not replay previously consumed events upon re-subscription",
+            secondBatch.isEmpty()
+        )
+        secondJob.cancel()
+    }
+
+    /**
+     * TST-UI-375.4: Verifies that when animateScrollToPage is cancelled by a user drag/swipe gesture
+     * (throwing CancellationException), navigateToPagerTarget catches it cleanly and SKIPS the
+     * fallback scrollToPage, preserving the user's manual scroll position.
+     */
+    @Test
+    fun `navigateToPagerTarget when animation cancelled by user gesture skips fallback scrollToPage`() = runTest {
+        val pageCountState = MutableStateFlow(3)
+        var lastKnownPage = 0
+        var fallbackCalled = false
+
+        val didNavigate = navigateToPagerTarget(
+            tabIndex = 0,
+            screenMode = ScreenMode.TRACKING, // target = 1
+            currentPageCount = { pageCountState.value },
+            pageCountFlow = pageCountState,
+            onUpdateLastKnownPage = { lastKnownPage = it },
+            animateScrollToPage = {
+                throw kotlinx.coroutines.CancellationException("User swipe interrupted scroll animation")
+            },
+            scrollToPage = {
+                fallbackCalled = true
+            }
+        )
+
+        assertTrue("navigateToPagerTarget must return true when target is in bounds", didNavigate)
+        assertEquals("lastKnownPage was recorded for navigation target", 1, lastKnownPage)
+        assertFalse("fallback scrollToPage must NOT be called when animation is cancelled by user gesture", fallbackCalled)
+    }
+
+    /**
+     * TST-UI-375.5: Verifies that when animateScrollToPage fails due to a non-cancellation Exception
+     * (e.g. view not attached or layout error), fallback scrollToPage IS executed to ensure target arrival.
+     */
+    @Test
+    fun `navigateToPagerTarget when animation fails with runtime exception invokes fallback scrollToPage`() = runTest {
+        val pageCountState = MutableStateFlow(3)
+        var lastKnownPage = 0
+        val fallbackTargets = mutableListOf<Int>()
+
+        val didNavigate = navigateToPagerTarget(
+            tabIndex = 0,
+            screenMode = ScreenMode.TRACKING, // target = 1
+            currentPageCount = { pageCountState.value },
+            pageCountFlow = pageCountState,
+            onUpdateLastKnownPage = { lastKnownPage = it },
+            animateScrollToPage = {
+                throw IllegalStateException("View hierarchy layout glitch")
+            },
+            scrollToPage = {
+                fallbackTargets.add(it)
+            }
+        )
+
+        assertTrue("navigateToPagerTarget must return true", didNavigate)
+        assertEquals(1, lastKnownPage)
+        assertEquals("Fallback scrollToPage must be invoked when non-cancellation Exception occurs", listOf(1), fallbackTargets)
+    }
 }
+
