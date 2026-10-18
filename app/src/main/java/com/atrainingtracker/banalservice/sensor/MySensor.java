@@ -23,7 +23,7 @@ import android.util.Log;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.MyDevice;
 
-import java.util.LinkedList;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 
 public class MySensor<T> {
@@ -31,10 +31,10 @@ public class MySensor<T> {
     private static final boolean DEBUG = BANALService.getDebug(false);
     protected MyDevice mDevice;
     protected SensorType mSensorType;
-    protected T mValue = null;
-    protected boolean mActivated = true;
-    protected LinkedList<SensorListener> mSensorListeners = new LinkedList<>();
-    protected long mLastUpdateTimestamp = 0L;
+    protected volatile T mValue = null;
+    protected volatile boolean mActivated = true;
+    protected final CopyOnWriteArrayList<SensorListener> mSensorListeners = new CopyOnWriteArrayList<>();
+    protected volatile long mLastUpdateTimestamp = 0L;
 
     public MySensor(MyDevice myDevice, SensorType sensorType) {
         mDevice = myDevice;
@@ -52,14 +52,20 @@ public class MySensor<T> {
 
     public void addSensorListener(SensorListener sensorListener) {
         if (DEBUG) Log.i(TAG, "addSensorListener() to " + mDevice + ", " + mSensorType);
+        if (sensorListener == null) {
+            return;
+        }
 
-        mSensorListeners.add(sensorListener);   // first, add the listener to the list
+        mSensorListeners.addIfAbsent(sensorListener);   // first, add the listener to the list
         if (mActivated) {
             sensorListener.newValue(mValue);    // then, inform the listener about the current value
         }
     }
 
     public void removeSensorListener(SensorListener sensorListener) {
+        if (sensorListener == null) {
+            return;
+        }
         mSensorListeners.remove(sensorListener);
     }
 
@@ -68,12 +74,13 @@ public class MySensor<T> {
         if (mActivated) {
             mValue = value;
             mLastUpdateTimestamp = System.currentTimeMillis();
+            T currentValue = getValue();
 
             // inform all the listeners
             for (SensorListener sensorListener : mSensorListeners) {
                 if (DEBUG) Log.i(TAG, "informing sensorListener " + sensorListener);
 
-                sensorListener.newValue(getValue());
+                sensorListener.newValue(currentValue);
             }
         }
     }
@@ -104,11 +111,20 @@ public class MySensor<T> {
     }
 
     public String getDeviceName() {
-        return getDevice().getName();
+        return mDevice != null ? mDevice.getName() : null;
+    }
+
+    /**
+     * Returns the epoch timestamp (ms) when this sensor last received a value via {@link #newValue(Object)}.
+     *
+     * @return last update timestamp in milliseconds, or {@code 0L} if never updated.
+     */
+    public long getLastUpdateTimestamp() {
+        return mLastUpdateTimestamp;
     }
 
     public SensorData<T> getSensorData() {
-        return new SensorData<T>(getSensorType(), getValue(), getStringValue(), getDeviceName(), mLastUpdateTimestamp);
+        return new SensorData<T>(getSensorType(), getValue(), getStringValue(), getDeviceName(), getLastUpdateTimestamp());
     }
 
     public interface SensorListener<T> {

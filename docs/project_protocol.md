@@ -59,11 +59,11 @@ Sub-tasks represent stage execution activities (`[Analysis]`, `[Req & Test Spec]
 │   Agent 1 erstellt Deliverable ──► In Überprüfung                      │
 │   ──► Agent 2 Gate-Audit (review_agent.py)                             │
 │   ──► Bei PASS: Direkt nach 'Erledigt' (kein Human Review auf Subtasks)│
+│   ──► Hauptticket rückt sofort synchron eine Stage-Spalte weiter!      │
 │ • Sobald Stage 5 (Test) bestanden ist:                                 │
-│   1. Feature-Branch sofort in sprint/<sprint_id> mergen (--no-ff)      │
-│      und feature/ATT-XXX löschen (Keine Merge-Konflikte im Sprint!)   │
-│   2. Agent schiebt Parent-Ticket nach 'Final Review (Human)'           │
-│      python3 tools/jira_util.py move ATT-XXX "final review"            │
+│   1. Feature-Branch als EIN atomarer Commit in sprint/<sprint_id>      │
+│      integrieren (git merge --squash) und feature/ATT-XXX löschen      │
+│   2. Parent-Ticket steht auf 'Final Review (Human)' (Assigned: human)  │
 │ • Nächstes Ticket zweigt vom aktuellen Stand des sprint-Branches ab    │
 └────────────────────────────────────┬───────────────────────────────────┘
                                      │
@@ -94,9 +94,10 @@ Sub-tasks represent stage execution activities (`[Analysis]`, `[Req & Test Spec]
 * **Zero Human Approval on Sub-Tasks**: Sub-tasks represent technical stage deliverables and transition autonomously to `Erledigt` upon passing Agent 2's automated gate audit. Human approval is NEVER required for sub-tasks, and agents must never halt or prompt the user for sub-task approval. Human approval is exclusively reserved for parent tickets in Ceremony 2 (Joint Review).
 * **Sub-Task Self-Sufficiency**: Every sub-task Description MUST be self-contained. Empty descriptions or redirection stubs (e.g. "see parent") are strictly forbidden.
 * **Documentation-Before-Transition Sequencing**: Agents MUST update the sub-task Description and post any audit comments **BEFORE** calling `move` to transition to `In Überprüfung`.
-* **Mandatory Lösungsversion (Fix Version/s)**: Parent tickets MUST have an active unreleased `Lösungsversion` assigned (e.g. `V4.9.38`). Sub-tasks MUST NOT have a `Lösungsversion` assigned ("Sub-Tasks must not get a solution").
+* **Mandatory Lösungsversion (Fix Version/s)**: Parent tickets MUST have an active unreleased `Lösungsversion` assigned when finished/accepted (e.g. `V4.9.40`). Sub-tasks MUST NOT have a `Lösungsversion` assigned ("Sub-Tasks must not get a solution").
 * **Sub-Task Canonical Naming & Standardization**: Sub-task summaries MUST begin with the standardized canonical prefix `[Analysis]`, `[Req & Test Spec]`, `[Impl-Plan]`, `[Implementation]`, `[Test]` followed directly by the parent ticket summary (e.g. `[Req & Test Spec] <Parent Summary>`). Stage descriptions in titles are strictly omitted.
-* **Jira Backend Automation for Parent Ticket States**: Strict adherence to the standardized sub-task naming scheme triggers Jira backend automation to transition parent tickets automatically. Agents do NOT manually change the state of main tickets between lifecycle stages.
+* **Synchronous Parent Ticket Stage Progression (Rule 3 / Rule 45)**: Immediately when a stage sub-task transitions to `Erledigt` (`freigabe`), the parent ticket advances to the next stage column (`[Analysis]` $\rightarrow$ `Test Spec` $\rightarrow$ `Implementation Plan` $\rightarrow$ `Implementation` $\rightarrow$ `Test` $\rightarrow$ `Final Review (Human)`). This is enforced automatically by `tools/jira_util.py move <SUBTASK_KEY> freigabe` so parent tickets never lag behind when Jira backend automation fails to fire.
+* **Single Atomic Commit per Ticket ("One Commit per Ticket", Rule 44)**: Each ticket in a sprint produces strictly one atomic commit on `sprint/<sprint_id>` (via `git merge --squash feature/<KEY>`) containing all Stage 1–5 deliverables, living docs, production code, and unit tests.
 * **Next-Sprint Default for Review Revisions & Lean Defect Recording (Zero Code Changes During Review)**: During Ceremony 2 (Joint Review), under NO circumstances may code be modified. Do NOT conduct deep technical root-cause or code analysis during review ("Während des Sprint Reviews soll es noch keine detaillierte Analyse der Auffälligkeit geben"). Focus on capturing the exact human observation, steps to reproduce, user intent, and reproduction context into a new backlog ticket for the **next sprint**, preserving full context for Stage 1 (Analysis) while keeping review velocity high.
 * **Strict Separation of Creation vs. Implementation**: When instructed to create or update a Jira ticket, create/update it, stop immediately, and do not start autonomous implementation.
 * **Bug Ticket Creation vs. Deferred Analysis (ATT-1250)**: Filing a bug ticket (`create-issue`) MUST be fast and lightweight. Creating a ticket never triggers autonomous execution.

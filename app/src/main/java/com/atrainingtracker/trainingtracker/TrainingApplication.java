@@ -214,7 +214,7 @@ public class TrainingApplication extends Application {
     private static final String APPLICATION_NAME = TAG;
     protected static Context cAppContext;
     @NonNull
-    protected static TrackingMode cTrackingMode = TrackingMode.READY;
+    protected static volatile TrackingMode cTrackingMode = TrackingMode.READY;
     private static final AtomicBoolean mManualPauseLock = new AtomicBoolean(false);
     private static final AtomicBoolean mIsAutoPaused = new AtomicBoolean(false);
     protected static boolean cResumeFromCrash = false;
@@ -1565,6 +1565,7 @@ public class TrainingApplication extends Application {
 
         setManualPauseLock(false, this);
         setAutoPaused(false, this);
+        TrackerService.notifyManualResume();
 
         if (TrainingApplication.startSearchWhenResumeFromPaused()) {
             sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
@@ -1586,6 +1587,54 @@ public class TrainingApplication extends Application {
         cTrackingMode = TrackingMode.READY;
         sActiveWorkoutId = -1;
         notifyTrackingStateChanged();
+    }
+
+    /**
+     * Resets the static tracking state flags ({@link #cTrackingMode}, {@link #mManualPauseLock},
+     * {@link #mIsAutoPaused}, and {@link #sActiveWorkoutId}) to their idle defaults when
+     * asynchronous workout initialization aborts before tracking can begin ({@code REQ-TRK-033.3}).
+     *
+     * <p>Threading: Safe to invoke from any thread; all mutated fields are {@code volatile} or
+     * backed by {@link AtomicBoolean}.
+     */
+    public static void resetTrackingStateOnAbort() {
+        setManualPauseLock(false, cAppContext);
+        setAutoPaused(false, cAppContext);
+        cTrackingMode = TrackingMode.READY;
+        sActiveWorkoutId = -1;
+    }
+
+    /**
+     * Restores the application tracking state to {@link TrackingMode#READY}, clears pause locks,
+     * cancels the active tracking notification, and broadcasts {@link #TRACKING_STATE_CHANGED}
+     * when {@link TrackerService} aborts during asynchronous database initialization
+     * ({@code REQ-TRK-033.3}).
+     */
+    public void onTrackingAborted() {
+        if (DEBUG) Log.w(TAG, "onTrackingAborted: resetting tracking state to READY");
+        setManualPauseLock(false, this);
+        setAutoPaused(false, this);
+
+        try {
+            stopPebbleWatchapp();
+        } catch (Throwable ignored) {
+        }
+
+        cTrackingMode = TrackingMode.READY;
+        sActiveWorkoutId = -1;
+        mWorkoutID = -1;
+
+        try {
+            if (mNotificationManager != null) {
+                mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
+            }
+        } catch (Throwable ignored) {
+        }
+
+        try {
+            notifyTrackingStateChanged();
+        } catch (Throwable ignored) {
+        }
     }
 
     protected void trackingStopped() {

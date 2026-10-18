@@ -26,7 +26,8 @@ This skill guides the agent through **Stage 4 (Implementation / Software Constru
      ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.knownlocations.*"
      ```
    - Defer full test suite execution (`./gradlew testDebugUnitTest`) to Stage 5.
-4. **Subtask Completion**:
+4. **Subtask Completion & Synchronous Parent Stage Progression (Rule 3 / Rule 45)**:
    - Populate the Stage 4 Jira subtask (`[Implementation]`) Description with a concise summary of changes and targeted test results.
    - Transition subtask to `In Überprüfung` and run Gate 4 audit (`tools/review_agent.py audit <KEY>`).
-   - Upon Gate 4 approval (`RECOMMEND PASS`), transition subtask directly to `Erledigt` via transition `freigabe`.
+   - Upon Gate 4 approval (`RECOMMEND PASS`), transition subtask directly to `Erledigt` via transition `freigabe` (`python3 tools/jira_util.py move <SUBTASK_KEY> freigabe`), which automatically advances the parent ticket from `Implementation` to `Test`.
+   - **One Commit per Ticket (Rule 44)**: Defer committing until Stage 5 verification completes so the entire ticket (Stage 1–5 docs, living docs, production code, and unit tests) is committed as a single atomic commit per ticket (or squashed via `git merge --squash` when integrating into `sprint/<SPRINT_NAME>`).

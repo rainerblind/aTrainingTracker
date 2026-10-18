@@ -809,7 +809,52 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
-     * DTO for batch extrema lookups (ATT-359).
+     * DTO holding encoded spatial and analytical streams for a workout session ({@code REQ-TRK-031.1}).
+     */
+    public static class EncodedStreams {
+        @Nullable public final String mapPolyline;
+        @Nullable public final String altitudeStream;
+        @Nullable public final String distanceStream;
+
+        public EncodedStreams(@Nullable String mapPolyline, @Nullable String altitudeStream, @Nullable String distanceStream) {
+            this.mapPolyline = mapPolyline;
+            this.altitudeStream = altitudeStream;
+            this.distanceStream = distanceStream;
+        }
+    }
+
+    /**
+     * Fetches the persisted encoded map polyline, altitude stream, and distance stream for a workout
+     * in a single targeted query ({@code REQ-TRK-031.1}).
+     *
+     * @param workoutId The ID of the workout session.
+     * @return An {@link EncodedStreams} record, or {@code null} if no summary row exists.
+     */
+    @Nullable
+    public EncodedStreams getEncodedStreams(long workoutId) {
+        try (Cursor cursor = getDatabase().query(
+                WorkoutSummaries.TABLE,
+                new String[]{WorkoutSummaries.MAP_POLYLINE, WorkoutSummaries.ALTITUDE_STREAM, WorkoutSummaries.DISTANCE_STREAM},
+                WorkoutSummaries.C_ID + "=?",
+                new String[]{String.valueOf(workoutId)},
+                null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int polyIdx = cursor.getColumnIndex(WorkoutSummaries.MAP_POLYLINE);
+                int altIdx = cursor.getColumnIndex(WorkoutSummaries.ALTITUDE_STREAM);
+                int distIdx = cursor.getColumnIndex(WorkoutSummaries.DISTANCE_STREAM);
+                String poly = (polyIdx != -1 && !cursor.isNull(polyIdx)) ? cursor.getString(polyIdx) : null;
+                String alt = (altIdx != -1 && !cursor.isNull(altIdx)) ? cursor.getString(altIdx) : null;
+                String dist = (distIdx != -1 && !cursor.isNull(distIdx)) ? cursor.getString(distIdx) : null;
+                return new EncodedStreams(poly, alt, dist);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying encoded streams for workout " + workoutId, e);
+        }
+        return null;
+    }
+
+    /**
+     * DTO for batch extrema lookups (ATT-359, REQ-TRK-031.1).
      */
     public static class ExtremaRecord {
         public final long workoutId;
@@ -817,13 +862,19 @@ public class WorkoutSummariesDatabaseManager {
         public final ExtremaType extremaType;
         public final double value;
         public final LatLng position;
+        @Nullable public final Integer count;
 
         public ExtremaRecord(long workoutId, SensorType sensorType, ExtremaType extremaType, double value, LatLng position) {
+            this(workoutId, sensorType, extremaType, value, position, null);
+        }
+
+        public ExtremaRecord(long workoutId, SensorType sensorType, ExtremaType extremaType, double value, LatLng position, @Nullable Integer count) {
             this.workoutId = workoutId;
             this.sensorType = sensorType;
             this.extremaType = extremaType;
             this.value = value;
             this.position = position;
+            this.count = count;
         }
     }
 
@@ -853,12 +904,14 @@ public class WorkoutSummariesDatabaseManager {
             int valIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.VALUE);
             int latIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.LATITUDE);
             int lonIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.LONGITUDE);
+            int countIdx = cursor.getColumnIndex(WorkoutSummaries.COUNT);
 
             while (cursor.moveToNext()) {
                 LatLng pos = null;
                 if (!cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
                     pos = new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx));
                 }
+                Integer count = (countIdx != -1 && !cursor.isNull(countIdx)) ? cursor.getInt(countIdx) : null;
                 SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, cursor.getString(sensorIdx), TAG);
                 ExtremaType extremaType = EnumUtils.safeValueOfOrNull(ExtremaType.class, cursor.getString(typeIdx), TAG);
                 if (sensorType == null || extremaType == null) {
@@ -870,7 +923,8 @@ public class WorkoutSummariesDatabaseManager {
                         sensorType,
                         extremaType,
                         cursor.getDouble(valIdx),
-                        pos
+                        pos,
+                        count
                 ));
             }
         }
@@ -946,13 +1000,27 @@ public class WorkoutSummariesDatabaseManager {
      * Atomically updates or inserts a sensor peak value and its location.
      */
     public void updateExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position) {
-        updateExtremaValue(getDatabase(), workoutId, sensorType, extremaType, value, position);
+        updateExtremaValue(getDatabase(), workoutId, sensorType, extremaType, value, position, null);
+    }
+
+    /**
+     * Atomically updates or inserts a sensor peak value, its location, and its sample count ({@code REQ-TRK-031.1}).
+     */
+    public void updateExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position, @Nullable Integer count) {
+        updateExtremaValue(getDatabase(), workoutId, sensorType, extremaType, value, position, count);
     }
 
     /**
      * Implementation for extrema update using an explicit database handle.
      */
     public void updateExtremaValue(SQLiteDatabase db, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position) {
+        updateExtremaValue(db, workoutId, sensorType, extremaType, value, position, null);
+    }
+
+    /**
+     * Implementation for extrema update with optional sample count using an explicit database handle ({@code REQ-TRK-031.1}).
+     */
+    public void updateExtremaValue(SQLiteDatabase db, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position, @Nullable Integer count) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.WORKOUT_ID, workoutId);
         values.put(WorkoutSummaries.SENSOR_TYPE, sensorType.name());
@@ -961,6 +1029,9 @@ public class WorkoutSummariesDatabaseManager {
         if (position != null) {
             values.put(WorkoutSummaries.LATITUDE, position.latitude);
             values.put(WorkoutSummaries.LONGITUDE, position.longitude);
+        }
+        if (count != null) {
+            values.put(WorkoutSummaries.COUNT, count);
         }
 
         String where = WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?";
@@ -1513,6 +1584,7 @@ public class WorkoutSummariesDatabaseManager {
         public static final String VALUE = "value";
         public static final String LATITUDE = "latitude";
         public static final String LONGITUDE = "longitude";
+        public static final String COUNT = "count"; // added in Version 25 (ATT-3987)
 
         public final static int ENCODING_STEP_SIZE = 20;  // twenty seconds (Introduced in Version 15)
     }
@@ -1542,7 +1614,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 21; // 25.07.2026 Added bounding box for performance (ATT-352)
         // public static final int DB_VERSION = 22; // 01.10.2026 Added composite index on extrema table for start location queries (ATT-1734)
         // public static final int DB_VERSION = 23; // 02.10.2026 Added race column (ATT-2005)
-        public static final int DB_VERSION = 24; // 03.10.2026 Added source column (ATT-2186)
+        // public static final int DB_VERSION = 24; // 03.10.2026 Added source column (ATT-2186)
+        public static final int DB_VERSION = 25; // 18.10.2026 Added count column to extrema table (ATT-3987)
         
 
 
@@ -1594,7 +1667,8 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.VALUE + " real," // end of version 5
                 + WorkoutSummaries.LATITUDE + " real,"
                 + WorkoutSummaries.LONGITUDE + " real,"
-                + WorkoutSummaries.SAMPLES_COLUMN_ID + " int)";
+                + WorkoutSummaries.SAMPLES_COLUMN_ID + " int,"
+                + WorkoutSummaries.COUNT + " int)";
 
         protected static final String CREATE_TABLE_ACCUMULATED_SENSORS = "create table " + WorkoutSummaries.TABLE_ACCUMULATED_SENSORS + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1844,6 +1918,11 @@ public class WorkoutSummariesDatabaseManager {
             if (oldVersion < 24) {
                 Log.i(TAG, "upgrading to DB version 24 (Adding source column)");
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.SOURCE, "text", "'TRACKED'");
+            }
+
+            if (oldVersion < 25) {
+                Log.i(TAG, "upgrading to DB version 25 (Adding count column to extrema table)");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.COUNT, "int", null);
             }
         }
 

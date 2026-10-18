@@ -102,34 +102,71 @@ data class AutoPauseTransition(
  */
 interface AutoPauseAudioNotifier {
     fun playTone(soundCue: SoundCue)
+    fun release() {}
 }
 
 /**
  * Default Android ToneGenerator audio notifier.
+ * Lazily reuses a single [ToneGenerator] instance across tones and releases it idempotently (REQ-TRK-028.4 / Rule 36).
  */
-class DefaultAutoPauseAudioNotifier : AutoPauseAudioNotifier {
+class DefaultAutoPauseAudioNotifier(
+    private val toneGeneratorProvider: (() -> ToneGenerator?)? = null
+) : AutoPauseAudioNotifier {
+    private var toneGenerator: ToneGenerator? = null
+
+    @Synchronized
+    private fun getOrCreateToneGenerator(): ToneGenerator? {
+        if (toneGenerator == null) {
+            toneGenerator = toneGeneratorProvider?.invoke()
+                ?: ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
+        }
+        return toneGenerator
+    }
+
+    @Synchronized
     override fun playTone(soundCue: SoundCue) {
         try {
             when (soundCue) {
                 SoundCue.AUTO_PAUSE -> {
-                    val tg = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
-                    tg.startTone(ToneGenerator.TONE_PROP_BEEP2, 200)
+                    getOrCreateToneGenerator()?.startTone(ToneGenerator.TONE_PROP_BEEP2, 200)
                 }
                 SoundCue.AUTO_RESUME -> {
-                    val tg = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
-                    tg.startTone(ToneGenerator.TONE_PROP_ACK, 200)
+                    getOrCreateToneGenerator()?.startTone(ToneGenerator.TONE_PROP_ACK, 200)
                 }
                 SoundCue.NONE -> {}
             }
         } catch (t: Throwable) {
-            Log.w("AutoPauseManager", "Audio tone error: ${t.message}")
+            try {
+                Log.w("AutoPauseManager", "Audio tone error: ${t.message}")
+            } catch (_: Throwable) {
+                // Ignore unmocked Android Log in local JVM unit tests
+            }
+        }
+    }
+
+    /**
+     * Releases the underlying native [ToneGenerator] resource idempotently.
+     */
+    @Synchronized
+    override fun release() {
+        try {
+            toneGenerator?.release()
+        } catch (t: Throwable) {
+            try {
+                Log.w("AutoPauseManager", "ToneGenerator release error: ${t.message}")
+            } catch (_: Throwable) {
+                // Ignore unmocked Android Log in local JVM unit tests
+            }
+        } finally {
+            toneGenerator = null
         }
     }
 }
 
 /**
  * Domain engine managing sport-specific auto-pause transitions, anti-chatter hysteresis,
- * debounce filtering, stale packet TTL guards, and mutex precedence (REQ-TRK-018 / ATT-45).
+ * debounce filtering, registered-source standstill vs. sensor-lost detection, and mutex precedence
+ * (REQ-TRK-018 / REQ-TRK-028 / ATT-45 / ATT-3984).
  */
 class AutoPauseManager(
     private val audioNotifier: AutoPauseAudioNotifier = DefaultAutoPauseAudioNotifier()
@@ -176,10 +213,12 @@ class AutoPauseManager(
     var lastValidSpeedPacketTimestampMs: Long = 0L
         private set
 
+    @Synchronized
     fun resetDebounceCounter() {
         debounceCounter = 0
     }
 
+    @Synchronized
     fun setState(state: AutoPauseState) {
         currentState = state
         if (state == AutoPauseState.TRACKING || state == AutoPauseState.AUTO_PAUSED || state == AutoPauseState.MANUAL_PAUSED) {
@@ -188,7 +227,35 @@ class AutoPauseManager(
         }
     }
 
+    @Synchronized
     fun isAutoPaused(): Boolean = currentState == AutoPauseState.AUTO_PAUSED
+
+    /**
+     * Synchronizes engine state when the user explicitly resumes from an auto-paused session
+     * via the UI or notification while [com.atrainingtracker.trainingtracker.TrainingApplication.isManualPauseLocked] is false
+     * (REQ-TRK-028.3).
+     * If manual pause lock is active, this method is a safe no-op.
+     */
+    @Synchronized
+    fun onManualResume() {
+        if (com.atrainingtracker.trainingtracker.TrainingApplication.isManualPauseLocked() ||
+            currentState == AutoPauseState.MANUAL_PAUSED
+        ) {
+            return
+        }
+        debounceCounter = 0
+        sensorLostRecoveryTicks = 0
+        if (currentState == AutoPauseState.AUTO_PAUSED || currentState == AutoPauseState.PAUSE_DEBOUNCE_PENDING) {
+            currentState = AutoPauseState.TRACKING
+        }
+    }
+
+    /**
+     * Releases native audio resources held by [audioNotifier] (REQ-TRK-028.4).
+     */
+    fun release() {
+        audioNotifier.release()
+    }
 
     /**
      * Evaluates a 1Hz telemetry tick.
@@ -199,15 +266,19 @@ class AutoPauseManager(
      * @param sportType Active sport profile
      * @param config Active auto-pause settings
      * @param manualPauseLocked Whether user has explicitly manually paused
+     * @param hasSpeedSource Whether a speed sensor/provider is currently registered in MySensorManager (REQ-TRK-028.2)
      * @return AutoPauseTransition containing resulting state and required actions
      */
+    @JvmOverloads
+    @Synchronized
     fun evaluateTick(
         currentSpeedMps: Double?,
         packetTimestampMs: Long,
         currentTimestampMs: Long,
         sportType: BSportType,
         config: AutoPauseConfig,
-        manualPauseLocked: Boolean
+        manualPauseLocked: Boolean,
+        hasSpeedSource: Boolean = (isSpeedFiniteAndValid(currentSpeedMps) || packetTimestampMs > 0L)
     ): AutoPauseTransition {
         val prevState = currentState
 
@@ -248,17 +319,19 @@ class AutoPauseManager(
         }
 
         // 3. Numerical Sanitization: Reject NaN, Infinity, negative values
-        val hasFiniteSpeed = isSpeedFiniteAndValid(currentSpeedMps)
+        val isSpeedCorrupt = currentSpeedMps != null && !isSpeedFiniteAndValid(currentSpeedMps)
 
-        // 4. Stale Packet Drop (TTL = 5000ms) & SENSOR_LOST Detection
+        // 4. Stale Packet Check (TTL = 5000ms) & Registered Speed Source vs. SENSOR_LOST (REQ-TRK-028.2)
         val isPacketStale = if (packetTimestampMs <= 0L) {
             true
         } else {
             (currentTimestampMs - packetTimestampMs) > STALE_PACKET_TIMEOUT_MS
         }
 
-        if (!hasFiniteSpeed || isPacketStale) {
-            // Packet missing or stale
+        val hasFreshValidReading = !isSpeedCorrupt && !isPacketStale && currentSpeedMps != null
+
+        if (isSpeedCorrupt || !hasSpeedSource) {
+            // Speed source unregistered/disconnected or corrupt numeric reading -> SENSOR_LOST
             if (currentState == AutoPauseState.TRACKING || currentState == AutoPauseState.PAUSE_DEBOUNCE_PENDING) {
                 currentState = AutoPauseState.SENSOR_LOST
                 debounceCounter = 0
@@ -276,12 +349,16 @@ class AutoPauseManager(
             return AutoPauseTransition(previousState = prevState, newState = currentState)
         }
 
-        // Valid and fresh packet received
-        lastValidSpeedPacketTimestampMs = packetTimestampMs
-        val speedMps = currentSpeedMps!!
+        if (hasFreshValidReading) {
+            lastValidSpeedPacketTimestampMs = packetTimestampMs
+        }
 
-        // 5. Sensor Lost Recovery Contract: 2 consecutive seconds of fresh speed
+        // 5. Sensor Lost Recovery Contract: 2 consecutive seconds of fresh valid speed
         if (currentState == AutoPauseState.SENSOR_LOST) {
+            if (!hasFreshValidReading) {
+                sensorLostRecoveryTicks = 0
+                return AutoPauseTransition(previousState = prevState, newState = AutoPauseState.SENSOR_LOST)
+            }
             sensorLostRecoveryTicks++
             if (sensorLostRecoveryTicks >= SENSOR_LOST_RECOVERY_TICKS) {
                 currentState = AutoPauseState.TRACKING
@@ -295,6 +372,11 @@ class AutoPauseManager(
             }
             return AutoPauseTransition(previousState = prevState, newState = AutoPauseState.SENSOR_LOST)
         }
+
+        // For a registered speed source (hasSpeedSource == true): if the sensor stopped emitting
+        // packets at standstill (isPacketStale) or ThresholdSensor zeroed out to null, treat
+        // effective speed as 0.0 m/s for pause evaluation while requiring a fresh reading to auto-resume.
+        val speedMps = if (hasFreshValidReading) currentSpeedMps else 0.0
 
         val sportThreshold = config.getSpeedThresholdForSport(sportType)
         val sportDebounceSec = config.getDebounceSecForSport(sportType)
@@ -363,8 +445,8 @@ class AutoPauseManager(
             }
 
             AutoPauseState.AUTO_PAUSED -> {
-                // Must reach resume threshold (including hysteresis) to resume
-                if (speedMps >= resumeThresholdMps) {
+                // Must have a fresh reading reaching resume threshold (including hysteresis) to resume
+                if (hasFreshValidReading && speedMps >= resumeThresholdMps) {
                     currentState = AutoPauseState.TRACKING
                     debounceCounter = 0
                     audioNotifier.playTone(SoundCue.AUTO_RESUME)
@@ -376,7 +458,7 @@ class AutoPauseManager(
                         auditLogEvent = "AUTO_RESUMED_SPEED_ABOVE_THRESHOLD"
                     )
                 } else {
-                    // Still stationary or within deadband (chatter suppression)
+                    // Still stationary, stale, or within deadband (chatter suppression)
                     AutoPauseTransition(
                         previousState = prevState,
                         newState = AutoPauseState.AUTO_PAUSED
