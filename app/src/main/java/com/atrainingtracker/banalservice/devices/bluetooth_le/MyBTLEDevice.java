@@ -58,9 +58,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     private final Object mGattLock = new Object();
     protected volatile BluetoothGatt mBluetoothGatt;
     protected final Queue<BluetoothGattCharacteristic> mReadCharacteristicQueue = new ConcurrentLinkedQueue<BluetoothGattCharacteristic>();
-    protected State mState = State.DISCONNECTED;
+    protected volatile State mState = State.DISCONNECTED;
     Handler mHandler;
-    private BluetoothGattCharacteristic mBatteryCharacteristic;
+    private volatile BluetoothGattCharacteristic mBatteryCharacteristic;
     private final Runnable mBatteryReadRunnable = new Runnable() {
         @Override
         public void run() {

@@ -66,10 +66,13 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static com.atrainingtracker.banalservice.BSportType.UNKNOWN;
 
@@ -81,15 +84,15 @@ import javax.annotation.Nullable;
 
 public class DeviceManager {
     private static final String TAG = "DeviceManager";
-    private static final boolean DEBUG = BANALService.getDebug(true);
-    protected static MyRemoteDevice cMyRemoteDeviceCurrentlySearchingFor = null;
+    private static final boolean DEBUG = BANALService.getDebug(false);
+    protected static volatile MyRemoteDevice cMyRemoteDeviceCurrentlySearchingFor = null;
     protected Context mContext;
-    protected ClockDevice mClockDevice;
-    protected BatteryDevice mBatteryDevice;
-    protected SpeedAndLocationDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_Network;
-    protected AltitudeFromPressureDevice mAltitudeFromPressureDevice;
-    protected VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
-    protected CyclingPowerMetricsDevice mCyclingPowerMetricsDevice;
+    protected volatile ClockDevice mClockDevice;
+    protected volatile BatteryDevice mBatteryDevice;
+    protected volatile SpeedAndLocationDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_Network;
+    protected volatile AltitudeFromPressureDevice mAltitudeFromPressureDevice;
+    protected volatile VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
+    protected volatile CyclingPowerMetricsDevice mCyclingPowerMetricsDevice;
     protected boolean mHavePressureSensor = false;
     protected IntentFilter mPairingChangedFilter = new IntentFilter(BANALService.PAIRING_CHANGED);
     // protected IntentFilter mRemoveDeviceFilter            = new IntentFilter(BANALService.REMOVE_DEVICE);
@@ -98,12 +101,12 @@ public class DeviceManager {
     protected IntentFilter mStartSearchingForNewDevicesFilter = new IntentFilter(BANALService.START_SEARCHING_FOR_NEW_DEVICES_INTENT);
     protected IntentFilter mStopSearchingForNewDevicesFilter = new IntentFilter(BANALService.STOP_SEARCHING_FOR_NEW_DEVICES_INTENT);
     protected MySensorManager mSensorManager;
-    protected Map<Long, MyRemoteDevice> mMyRemoteDevices = new HashMap<Long, MyRemoteDevice>();
-    protected Map<MyRemoteDevice, Integer> mMyRemoteDeviceTries = new HashMap<>();
-    protected LinkedList<MyRemoteDevice> mSearchQueue = new LinkedList<MyRemoteDevice>();
-    protected LinkedList<Long> mNewlyFoundDevices = new LinkedList<>();
-    protected ANTSearchForNewDevicesEngineMultiDeviceSearch mAntAsyncSearchEngine = null;
-    protected BTSearchForNewDevicesEngine mBTSearchForNewDevicesEngine = null;
+    protected final Map<Long, MyRemoteDevice> mMyRemoteDevices = new ConcurrentHashMap<>();
+    protected final Map<MyRemoteDevice, Integer> mMyRemoteDeviceTries = new ConcurrentHashMap<>();
+    protected final Deque<MyRemoteDevice> mSearchQueue = new ConcurrentLinkedDeque<>();
+    protected final List<Long> mNewlyFoundDevices = new CopyOnWriteArrayList<>();
+    protected volatile ANTSearchForNewDevicesEngineMultiDeviceSearch mAntAsyncSearchEngine = null;
+    protected volatile BTSearchForNewDevicesEngine mBTSearchForNewDevicesEngine = null;
     private final DevicesDatabaseManager mDevicesDatabaseManager;
     private final BroadcastReceiver mStopSearchingForNewDevicesReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -122,20 +125,21 @@ public class DeviceManager {
             long deviceID = intent.getLongExtra(BANALService.DEVICE_ID, -1);
             if (DEBUG)
                 Log.i(TAG, "finished searching for a remote device, success=" + success + ", deviceID=" + deviceID);
-            if (cMyRemoteDeviceCurrentlySearchingFor != null
-                    && cMyRemoteDeviceCurrentlySearchingFor.getDeviceId() == deviceID) {  // it is indeed the device that we are currently searching
+            MyRemoteDevice current = cMyRemoteDeviceCurrentlySearchingFor;
+            if (current != null
+                    && current.getDeviceId() == deviceID) {  // it is indeed the device that we are currently searching
                 if (!success) {                                                     // it was not found
-                    if (!mMyRemoteDeviceTries.containsKey(cMyRemoteDeviceCurrentlySearchingFor)        // device not in the list
-                            || mMyRemoteDeviceTries.get(cMyRemoteDeviceCurrentlySearchingFor) <= 1) {  // no longer try to search for this device
+                    Integer tries = mMyRemoteDeviceTries.get(current);
+                    if (tries == null || tries <= 1) {  // no longer try to search for this device
                         if (DEBUG)
                             Log.i(TAG, "max number of tries <= 1 -> give up searching for this device");
-                        cMyRemoteDeviceCurrentlySearchingFor.shutDown();                // so we shut it down
+                        current.shutDown();                // so we shut it down
                         mMyRemoteDevices.remove(deviceID);                              // and remove it
                     } else {  // continue searching
                         if (DEBUG)
                             Log.i(TAG, "max number of tries > 1 -> give this device another chance");
-                        mMyRemoteDeviceTries.put(cMyRemoteDeviceCurrentlySearchingFor, mMyRemoteDeviceTries.get(cMyRemoteDeviceCurrentlySearchingFor) - 1);
-                        mSearchQueue.addLast(cMyRemoteDeviceCurrentlySearchingFor);
+                        mMyRemoteDeviceTries.put(current, tries - 1);
+                        mSearchQueue.addLast(current);
                     }
 
                 }
@@ -423,11 +427,13 @@ public class DeviceManager {
     }
 
     public DeviceType getNewRemoteDeviceTypeCurrentlySearchingFor() {
-        if (mAntAsyncSearchEngine != null) {
-            return mAntAsyncSearchEngine.getDeviceType();
+        ANTSearchForNewDevicesEngineMultiDeviceSearch antEngine = mAntAsyncSearchEngine;
+        if (antEngine != null) {
+            return antEngine.getDeviceType();
         }
-        if (mBTSearchForNewDevicesEngine != null) {
-            return mBTSearchForNewDevicesEngine.getDeviceType();
+        BTSearchForNewDevicesEngine btEngine = mBTSearchForNewDevicesEngine;
+        if (btEngine != null) {
+            return btEngine.getDeviceType();
         }
         return null;
     }
@@ -435,14 +441,17 @@ public class DeviceManager {
     public void shutDown() {
         if (DEBUG) Log.d(TAG, "shutDown()");
 
+        stopSearchForNewRemoteDevices();
+
         for (MyDevice myDevice : getMyDeviceList()) {
             myDevice.shutDown();
         }
 
         cMyRemoteDeviceCurrentlySearchingFor = null;
-        mMyRemoteDevices = null;
-        mSearchQueue = null;
-        // TODO: also remove entries of the lists?
+        mMyRemoteDevices.clear();
+        mSearchQueue.clear();
+        mMyRemoteDeviceTries.clear();
+        mNewlyFoundDevices.clear();
 
         LifecycleUtils.safeUnregisterReceiver(mContext, mPairingChangedReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(mContext, mSearchingStoppedForOneReceiver, TAG);
@@ -552,18 +561,18 @@ public class DeviceManager {
     protected void searchForNextRemoteDevice() {
         if (DEBUG) Log.d(TAG, "searchForNextRemoteDevice");
 
-        if (mSearchQueue.isEmpty()) {
+        MyRemoteDevice next = mSearchQueue.pollFirst();
+        cMyRemoteDeviceCurrentlySearchingFor = next;
+        if (next == null) {
             if (DEBUG) Log.d(TAG, "empty search queue");
-            cMyRemoteDeviceCurrentlySearchingFor = null;
             // finished searching, broadcast this
             mContext.sendBroadcast(new Intent(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT)
                     .setPackage(mContext.getPackageName()));
         } else {
-            cMyRemoteDeviceCurrentlySearchingFor = mSearchQueue.pollFirst();
-            if (cMyRemoteDeviceCurrentlySearchingFor.isSearching()) {
+            if (next.isSearching()) {
                 // the device is still searching => probably something went wrong
                 Log.d(TAG, "BUG: should start searching for an already searching device");
-            } else if (cMyRemoteDeviceCurrentlySearchingFor.isReceivingData()) { // if the device is already receiving data, we do not have to search for it
+            } else if (next.isReceivingData()) { // if the device is already receiving data, we do not have to search for it
                 if (DEBUG) Log.i(TAG, "device is already receiving data, so we continue");
                 searchForNextRemoteDevice();
             } else {
@@ -572,12 +581,12 @@ public class DeviceManager {
 
                 if (!TrainingApplication.searchOnlyForSportSpecificDevices()                                       // either, the sport type is ignored
                         || bSportType == null || bSportType == UNKNOWN                                             // or the sport type is not yet defined
-                        || cMyRemoteDeviceCurrentlySearchingFor.getDeviceType().getSportType() == UNKNOWN          // or the device is not sport specific (e.g. a heart rate monitor)
-                        || bSportType == cMyRemoteDeviceCurrentlySearchingFor.getDeviceType().getSportType()       // or it is the correct sport type
+                        || next.getDeviceType().getSportType() == UNKNOWN          // or the device is not sport specific (e.g. a heart rate monitor)
+                        || bSportType == next.getDeviceType().getSportType()       // or it is the correct sport type
                 ) {
                     if (DEBUG)
                         Log.i(TAG, "starting to search for the device at the head of the queue");
-                    cMyRemoteDeviceCurrentlySearchingFor.startSearching();                                          // then, we start searching for this device.
+                    next.startSearching();                                          // then, we start searching for this device.
                 } else {
                     if (DEBUG)
                         Log.i(TAG, "Device type at the head of the search queue does not fit to the user selected sport type => this device will be ignored");
@@ -593,7 +602,8 @@ public class DeviceManager {
 
     @Nullable
     public String getNameOfSearchingDevice() {
-        return cMyRemoteDeviceCurrentlySearchingFor == null ? null : cMyRemoteDeviceCurrentlySearchingFor.getName();
+        MyRemoteDevice current = cMyRemoteDeviceCurrentlySearchingFor;
+        return current == null ? null : current.getName();
     }
 
     public void startSearchForPairedDevices() {
@@ -624,7 +634,7 @@ public class DeviceManager {
         }
 
         // give all devices the same number of chances ...
-        mMyRemoteDeviceTries = new HashMap<>();
+        mMyRemoteDeviceTries.clear();
         for (MyRemoteDevice myRemoteDevice : mSearchQueue) {
             mMyRemoteDeviceTries.put(myRemoteDevice, TrainingApplication.getNumberOfSearchTries());
         }
@@ -672,16 +682,19 @@ public class DeviceManager {
     public List<SpeedAndLocationDevice> getActiveSpeedAndLocationDevices() {
         List<SpeedAndLocationDevice> result = new LinkedList<>();
 
-        if (mSpeedAndLocationDevice_GPS != null) {
-            result.add(mSpeedAndLocationDevice_GPS);
+        SpeedAndLocationDevice gps = mSpeedAndLocationDevice_GPS;
+        if (gps != null) {
+            result.add(gps);
         }
 
-        if (mSpeedAndLocationDevice_GoogleFused != null) {
-            result.add(mSpeedAndLocationDevice_GoogleFused);
+        SpeedAndLocationDevice fused = mSpeedAndLocationDevice_GoogleFused;
+        if (fused != null) {
+            result.add(fused);
         }
 
-        if (mSpeedAndLocationDevice_Network != null) {
-            result.add(mSpeedAndLocationDevice_Network);
+        SpeedAndLocationDevice network = mSpeedAndLocationDevice_Network;
+        if (network != null) {
+            result.add(network);
         }
 
         return result;
@@ -700,27 +713,30 @@ public class DeviceManager {
 
         result.addAll(getActiveRemoteDevices());
         result.addAll(getActiveSpeedAndLocationDevices());
-        if (mAltitudeFromPressureDevice != null) {
-            result.add(mAltitudeFromPressureDevice);
+        AltitudeFromPressureDevice altDevice = mAltitudeFromPressureDevice;
+        if (altDevice != null) {
+            result.add(altDevice);
         }
 
         return result;
     }
 
     public boolean calibrateAltimeter(double referenceAltitude) {
-        if (mAltitudeFromPressureDevice != null) {
-            return mAltitudeFromPressureDevice.calibrate(referenceAltitude);
+        AltitudeFromPressureDevice altDevice = mAltitudeFromPressureDevice;
+        if (altDevice != null) {
+            return altDevice.calibrate(referenceAltitude);
         }
         return false;
     }
 
     public boolean isAltimeterCalibrated() {
-        return mAltitudeFromPressureDevice != null && mAltitudeFromPressureDevice.isCalibrated();
+        AltitudeFromPressureDevice altDevice = mAltitudeFromPressureDevice;
+        return altDevice != null && altDevice.isCalibrated();
     }
 
     public List<Long> getIdsOfNewlyFoundDevices() {
         if (DEBUG) Log.i(TAG, "getIdsOfNewlyFoundDevices: " + mNewlyFoundDevices.size() + " devices found");
-        return mNewlyFoundDevices;
+        return new ArrayList<>(mNewlyFoundDevices);
     }
 
     public List<Long> getDatabaseIdsOfActiveRemoteDevices() {
@@ -751,25 +767,37 @@ public class DeviceManager {
 
         List<MyDevice> myDeviceList = new ArrayList<MyDevice>();
 
-        myDeviceList.add(mClockDevice);
-        if (mBatteryDevice != null) {
-            myDeviceList.add(mBatteryDevice);
+        ClockDevice clockDevice = mClockDevice;
+        if (clockDevice != null) {
+            myDeviceList.add(clockDevice);
         }
-        if (mSpeedAndLocationDevice_GPS != null) {
-            myDeviceList.add(mSpeedAndLocationDevice_GPS);
+        BatteryDevice batteryDevice = mBatteryDevice;
+        if (batteryDevice != null) {
+            myDeviceList.add(batteryDevice);
         }
-        if (mSpeedAndLocationDevice_Network != null) {
-            myDeviceList.add(mSpeedAndLocationDevice_Network);
+        SpeedAndLocationDevice gps = mSpeedAndLocationDevice_GPS;
+        if (gps != null) {
+            myDeviceList.add(gps);
         }
-        if (mSpeedAndLocationDevice_GoogleFused != null) {
-            myDeviceList.add(mSpeedAndLocationDevice_GoogleFused);
+        SpeedAndLocationDevice network = mSpeedAndLocationDevice_Network;
+        if (network != null) {
+            myDeviceList.add(network);
         }
-        if (mAltitudeFromPressureDevice != null) {
-            myDeviceList.add(mAltitudeFromPressureDevice);
+        SpeedAndLocationDevice fused = mSpeedAndLocationDevice_GoogleFused;
+        if (fused != null) {
+            myDeviceList.add(fused);
         }
-        myDeviceList.add(mVerticalSpeedAndSlopeDevice);
-        if (mCyclingPowerMetricsDevice != null) {
-            myDeviceList.add(mCyclingPowerMetricsDevice);
+        AltitudeFromPressureDevice altDevice = mAltitudeFromPressureDevice;
+        if (altDevice != null) {
+            myDeviceList.add(altDevice);
+        }
+        VerticalSpeedAndSlopeDevice vSpeedDevice = mVerticalSpeedAndSlopeDevice;
+        if (vSpeedDevice != null) {
+            myDeviceList.add(vSpeedDevice);
+        }
+        CyclingPowerMetricsDevice powerMetricsDevice = mCyclingPowerMetricsDevice;
+        if (powerMetricsDevice != null) {
+            myDeviceList.add(powerMetricsDevice);
         }
         myDeviceList.addAll(getRemoteDeviceList());
 
@@ -827,13 +855,12 @@ public class DeviceManager {
     protected void removeAndStopRemoteDevice(long deviceId) {
         if (DEBUG) Log.d(TAG, "removeAndStopRemoteDevice(" + deviceId + ")");
 
-        MyRemoteDevice myRemoteDevice = mMyRemoteDevices.get(deviceId);
+        MyRemoteDevice myRemoteDevice = mMyRemoteDevices.remove(deviceId);
         if (myRemoteDevice != null) {
             mSearchQueue.remove(myRemoteDevice);
             if (cMyRemoteDeviceCurrentlySearchingFor == myRemoteDevice) {
                 searchForNextRemoteDevice();
             }
-            mMyRemoteDevices.remove(deviceId);
             myRemoteDevice.shutDown();
         }
     }
@@ -886,7 +913,11 @@ public class DeviceManager {
         }
 
         if (myANTDevice != null) {
-            mMyRemoteDevices.put(deviceID, myANTDevice);
+            MyRemoteDevice existing = mMyRemoteDevices.putIfAbsent(deviceID, myANTDevice);
+            if (existing != null) {
+                myANTDevice.shutDown();
+                return null;
+            }
             mSearchQueue.addFirst(myANTDevice);
         }
 
@@ -939,7 +970,11 @@ public class DeviceManager {
         }
 
         if (myBTLEDevice != null) {
-            mMyRemoteDevices.put(deviceID, myBTLEDevice);
+            MyRemoteDevice existing = mMyRemoteDevices.putIfAbsent(deviceID, myBTLEDevice);
+            if (existing != null) {
+                myBTLEDevice.shutDown();
+                return null;
+            }
             mSearchQueue.addFirst(myBTLEDevice);
         }
 
@@ -1026,24 +1061,28 @@ public class DeviceManager {
         switch (protocol) {
             case ANT_PLUS:
 
-                if (mAntAsyncSearchEngine != null) {
-                    mAntAsyncSearchEngine.stopAsyncSearch();
+                ANTSearchForNewDevicesEngineMultiDeviceSearch prevAntEngine = mAntAsyncSearchEngine;
+                if (prevAntEngine != null) {
+                    prevAntEngine.stopAsyncSearch();
                 }
 
-                mAntAsyncSearchEngine = new ANTSearchForNewDevicesEngineMultiDeviceSearch(mContext, deviceType, mANTAsyncSearchEngineInterface);
-                mAntAsyncSearchEngine.startAsyncSearch();
+                ANTSearchForNewDevicesEngineMultiDeviceSearch newAntEngine = new ANTSearchForNewDevicesEngineMultiDeviceSearch(mContext, deviceType, mANTAsyncSearchEngineInterface);
+                mAntAsyncSearchEngine = newAntEngine;
+                newAntEngine.startAsyncSearch();
 
                 break;
 
             case BLUETOOTH_LE:
 
-                if (mBTSearchForNewDevicesEngine != null) {
+                BTSearchForNewDevicesEngine prevBtEngine = mBTSearchForNewDevicesEngine;
+                if (prevBtEngine != null) {
                     if (DEBUG) Log.i(TAG, "stopping previous asyncSearchEngine");
-                    mBTSearchForNewDevicesEngine.stopAsyncSearch();
+                    prevBtEngine.stopAsyncSearch();
                 }
 
-                mBTSearchForNewDevicesEngine = new BTSearchForNewDevicesEngine(mContext, deviceType, mBTSearchInterface);
-                mBTSearchForNewDevicesEngine.startAsyncSearch();
+                BTSearchForNewDevicesEngine newBtEngine = new BTSearchForNewDevicesEngine(mContext, deviceType, mBTSearchInterface);
+                mBTSearchForNewDevicesEngine = newBtEngine;
+                newBtEngine.startAsyncSearch();
 
                 break;
         }
@@ -1055,15 +1094,17 @@ public class DeviceManager {
         mNewlyFoundDevices.clear();
 
         // ANT_PLUS:
-        if (mAntAsyncSearchEngine != null) {
-            mAntAsyncSearchEngine.stopAsyncSearch();
-            mAntAsyncSearchEngine = null;
+        ANTSearchForNewDevicesEngineMultiDeviceSearch antEngine = mAntAsyncSearchEngine;
+        mAntAsyncSearchEngine = null;
+        if (antEngine != null) {
+            antEngine.stopAsyncSearch();
         }
 
         // BLUETOOTH_LE:
-        if (mBTSearchForNewDevicesEngine != null) {
-            mBTSearchForNewDevicesEngine.stopAsyncSearch();
-            mBTSearchForNewDevicesEngine = null;
+        BTSearchForNewDevicesEngine btEngine = mBTSearchForNewDevicesEngine;
+        mBTSearchForNewDevicesEngine = null;
+        if (btEngine != null) {
+            btEngine.stopAsyncSearch();
         }
     }
 

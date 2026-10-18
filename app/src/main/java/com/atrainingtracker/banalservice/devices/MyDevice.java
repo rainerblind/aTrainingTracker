@@ -50,11 +50,11 @@ public abstract class MyDevice {
     protected EnumMap<SensorType, MySensor> mSensorMap = new EnumMap<SensorType, MySensor>(SensorType.class);
     protected MySensorManager mMySensorManager;
     private final String TAG = "MyDevice";
-    private boolean mSensorsRegistered = false;
+    private volatile boolean mSensorsRegistered = false;
 
     protected final DevicesDatabaseManager mDevicesDatabaseManager;
     protected long mDeviceId = -1;  // the id of the device within the database
-    protected int mBatteryPercentage = -1;
+    protected volatile int mBatteryPercentage = -1;
 
     private final BroadcastReceiver resetAccumulatorsReceiver = new BroadcastReceiver() {
         @Override

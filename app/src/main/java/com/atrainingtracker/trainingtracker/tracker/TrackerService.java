@@ -171,10 +171,10 @@ public class TrackerService extends Service {
     private final ScheduledExecutorService mScheduler = Executors.newScheduledThreadPool(1);
     private final java.util.concurrent.ExecutorService mDbExecutor = Executors.newSingleThreadExecutor();
     // we assume that we start while the BANAL Service is searching
-    protected boolean mSearching = true;
-    protected boolean mCreateNewLapWhenConnectedToBanalService = false;
-    protected boolean mResumeFromPausedWhenConnectedToBanalService = false;
-    protected boolean mResumeTrackingWhenConnectedToBanalService = false;
+    protected volatile boolean mSearching = true;
+    protected volatile boolean mCreateNewLapWhenConnectedToBanalService = false;
+    protected volatile boolean mResumeFromPausedWhenConnectedToBanalService = false;
+    protected volatile boolean mResumeTrackingWhenConnectedToBanalService = false;
     @Nullable
     volatile BANALServiceComm mBanalService;
     private final AtomicInteger mSamplingErrorCount = new AtomicInteger(0);
@@ -184,7 +184,7 @@ public class TrackerService extends Service {
     private android.os.PowerManager.WakeLock wakeLock;
     private TrainingApplication mTrainingApplication;
     private WorkoutRepository mWorkoutRepository;
-    private ScheduledFuture mTrackerHandle;
+    private volatile ScheduledFuture mTrackerHandle;
 
     /**
      * Returns the cumulative count of sample row insertion failures during the current service
@@ -218,7 +218,7 @@ public class TrackerService extends Service {
     }
 
     private volatile AutoPauseConfig mCachedAutoPauseConfig = null;
-    private long mLastAutoPauseConfigFetchMs = 0L;
+    private volatile long mLastAutoPauseConfigFetchMs = 0L;
     private static final long AUTO_PAUSE_CONFIG_CACHE_TTL_MS = 5000L;
 
     public AutoPauseConfig getAutoPauseConfig() {
@@ -248,14 +248,14 @@ public class TrackerService extends Service {
 
 
     public static final int TRACKING_INTERRUPTED_NOTIFICATION_ID = 2;
-    private boolean mTrackingInterrupted = false;
+    private volatile boolean mTrackingInterrupted = false;
     private volatile long mWorkoutID;
     private final Set<Long> mActiveSessionDeviceIds = Collections.synchronizedSet(new HashSet<>());
-    private LiveWorkoutSession mLiveSession;
+    private volatile LiveWorkoutSession mLiveSession;
     private volatile boolean mIsRehydrating = false;
     private volatile CompletableFuture<Void> mTableInitializationFuture = CompletableFuture.completedFuture(null);
-    private StartType mStartType;
-    private boolean mWorkoutStartLocationRecorded = false;
+    private volatile StartType mStartType;
+    private volatile boolean mWorkoutStartLocationRecorded = false;
 
     public CompletableFuture<Void> getTableInitializationFuture() {
         return mTableInitializationFuture;
@@ -284,7 +284,7 @@ public class TrackerService extends Service {
                     lapSpeed);
         }
     };
-    private String mBaseFileName;
+    private volatile String mBaseFileName;
 
     // private String mSport;  
     // private String mGCDataString;
@@ -307,8 +307,9 @@ public class TrackerService extends Service {
                 Log.i(TAG, "Triggering atomic altitude correction by " + altitudeCorrection);
 
             // 1. Live Session Update
-            if (mLiveSession != null) {
-                mLiveSession.applyAltitudeCorrection(altitudeCorrection);
+            LiveWorkoutSession session = mLiveSession;
+            if (session != null) {
+                session.applyAltitudeCorrection(altitudeCorrection);
             }
 
             // 2. Database Synchronization (offloaded to DB executor via non-blocking barrier)
@@ -349,9 +350,9 @@ public class TrackerService extends Service {
         }
     };
     // private long   mLapNr           = BANALService.INIT_LAP_NR-1;
-    int mTimeTotal_s = 0;
-    private int mTimeActive_s = 0;
-    private double mDistanceTotal_m = 0.0;
+    volatile int mTimeTotal_s = 0;
+    private volatile int mTimeActive_s = 0;
+    private volatile double mDistanceTotal_m = 0.0;
     private final BroadcastReceiver mSearchingFinishedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.d(TAG, "searching finished");

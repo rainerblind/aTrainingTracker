@@ -60,11 +60,11 @@ public class LiveWorkoutSession {
         this.sensorsForAverage = sensorsForAverage;
     }
 
-    public void setWorkoutId(long workoutId) {
+    public synchronized void setWorkoutId(long workoutId) {
         this.workoutId = workoutId;
     }
 
-    public int addSample(SensorType type, double value, LatLng position) {
+    public synchronized int addSample(SensorType type, double value, LatLng position) {
         if (type == SensorType.ALTITUDE) {
             // REQ-CON-017: Suppress non-physical altitude readings from running extrema
             if (value < -500.0 || value > 9000.0) {
@@ -85,25 +85,25 @@ public class LiveWorkoutSession {
         return stats.addValue(value, position, sensorsForAverage != null && sensorsForAverage.contains(type));
     }
 
-    public LatLng getStartLatLng() {
+    public synchronized LatLng getStartLatLng() {
         return startLatLng;
     }
 
     /**
      * Restores the session start coordinate upon workout resumption ({@code REQ-TRK-031.2}).
      */
-    public void setStartLatLng(LatLng startLatLng) {
+    public synchronized void setStartLatLng(LatLng startLatLng) {
         this.startLatLng = startLatLng;
     }
 
-    public LatLng getLastLatLng() {
+    public synchronized LatLng getLastLatLng() {
         return lastLatLng;
     }
 
     /**
      * Restores the most recent session coordinate upon workout resumption ({@code REQ-TRK-031.2}).
      */
-    public void setLastLatLng(LatLng lastLatLng) {
+    public synchronized void setLastLatLng(LatLng lastLatLng) {
         this.lastLatLng = lastLatLng;
     }
 
@@ -119,7 +119,7 @@ public class LiveWorkoutSession {
      * @param preResumeAltitudes Decoded pre-resume 20s altitude stream values (m), or {@code null}.
      * @param preResumeDistances Decoded pre-resume 20s distance stream values (m), or {@code null}.
      */
-    public void rehydrateStreams(List<LatLng> preResumeLatLngs, List<Double> preResumeAltitudes, List<Double> preResumeDistances) {
+    public synchronized void rehydrateStreams(List<LatLng> preResumeLatLngs, List<Double> preResumeAltitudes, List<Double> preResumeDistances) {
         rawLatLngs.clear();
         sampledLatLngs.clear();
         if (preResumeLatLngs != null && !preResumeLatLngs.isEmpty()) {
@@ -190,7 +190,7 @@ public class LiveWorkoutSession {
      * @param avgValue    Persisted pre-resume average value, or {@code null}.
      * @param sampleCount Pre-resume sample count weight for running average continuity.
      */
-    public void rehydrateSensorStats(SensorType sensorType, Double minValue, Double maxValue, Double avgValue, int sampleCount) {
+    public synchronized void rehydrateSensorStats(SensorType sensorType, Double minValue, Double maxValue, Double avgValue, int sampleCount) {
         rehydrateSensorStats(sensorType, minValue, null, maxValue, null, avgValue, sampleCount);
     }
 
@@ -206,7 +206,7 @@ public class LiveWorkoutSession {
      * @param avgValue    Persisted pre-resume average value, or {@code null}.
      * @param sampleCount Pre-resume sample count weight for running average continuity.
      */
-    public void rehydrateSensorStats(SensorType sensorType, Double minValue, LatLng minPosition, Double maxValue, LatLng maxPosition, Double avgValue, int sampleCount) {
+    public synchronized void rehydrateSensorStats(SensorType sensorType, Double minValue, LatLng minPosition, Double maxValue, LatLng maxPosition, Double avgValue, int sampleCount) {
         if (sensorType == null) return;
         RunningStats stats = sensorStats.get(sensorType);
         if (stats == null) {
@@ -220,7 +220,7 @@ public class LiveWorkoutSession {
      * Records a point for the map and elevation streams if the step interval is reached.
      * @return the incremental encoded strings if a point was added, null otherwise.
      */
-    public StreamIncrement recordStreamPoint(LatLng latLng, Double altitude, Double distance) {
+    public synchronized StreamIncrement recordStreamPoint(LatLng latLng, Double altitude, Double distance) {
         if (latLng != null) {
             rawLatLngs.add(latLng);
         }
@@ -279,48 +279,48 @@ public class LiveWorkoutSession {
         }
     }
 
-    public long getWorkoutId() {
+    public synchronized long getWorkoutId() {
         return workoutId;
     }
 
-    public List<LatLng> getSampledLatLngs() {
-        return sampledLatLngs;
+    public synchronized List<LatLng> getSampledLatLngs() {
+        return new ArrayList<>(sampledLatLngs);
     }
 
     /**
      * Returns a copy of all raw 1 Hz trackpoints collected during the live session.
      * Used for Douglas-Peucker simplification upon session finalization.
      */
-    public List<LatLng> getRawLatLngs() {
+    public synchronized List<LatLng> getRawLatLngs() {
         return new ArrayList<>(rawLatLngs);
     }
 
     /**
      * Adds a raw LatLng trackpoint directly.
      */
-    public void addRawLatLng(LatLng latLng) {
+    public synchronized void addRawLatLng(LatLng latLng) {
         if (latLng != null) {
             rawLatLngs.add(latLng);
         }
     }
 
-    public List<Double> getSampledAltitudes() {
-        return sampledAltitudes;
+    public synchronized List<Double> getSampledAltitudes() {
+        return new ArrayList<>(sampledAltitudes);
     }
 
-    public List<Double> getSampledDistances() {
-        return sampledDistances;
+    public synchronized List<Double> getSampledDistances() {
+        return new ArrayList<>(sampledDistances);
     }
 
-    public Map<SensorType, RunningStats> getSensorStats() {
-        return Collections.unmodifiableMap(sensorStats);
+    public synchronized Map<SensorType, RunningStats> getSensorStats() {
+        return Collections.unmodifiableMap(new HashMap<>(sensorStats));
     }
 
     /**
      * ATT-38: Shifts all altitude-related data by the given offset.
      * This is used when a barometric altitude correction is triggered mid-workout.
      */
-    public void applyAltitudeCorrection(double offset) {
+    public synchronized void applyAltitudeCorrection(double offset) {
         // REQ-CON-017: Reject runaway retroactive shifts exceeding 500m
         if (Math.abs(offset) > 500.0) {
             return;
@@ -329,9 +329,11 @@ public class LiveWorkoutSession {
         // 1. Shift RunningStats
         RunningStats altStats = sensorStats.get(SensorType.ALTITUDE);
         if (altStats != null) {
-            if (altStats.min != Double.MAX_VALUE) altStats.min += offset;
-            if (altStats.max != -Double.MAX_VALUE) altStats.max += offset;
-            altStats.sum += (offset * altStats.count);
+            synchronized (altStats) {
+                if (altStats.min != Double.MAX_VALUE) altStats.min += offset;
+                if (altStats.max != -Double.MAX_VALUE) altStats.max += offset;
+                altStats.sum += (offset * altStats.count);
+            }
         }
 
         // 2. Shift Sampled Altitudes
@@ -351,15 +353,15 @@ public class LiveWorkoutSession {
         public static final int CHANGED_MAX = 2;
         public static final int CHANGED_AVG = 4;
 
-        public double min = Double.MAX_VALUE;
-        public LatLng minPos = null;
-        public double max = -Double.MAX_VALUE;
-        public LatLng maxPos = null;
-        public double sum = 0;
-        public int count = 0;
-        public double last = 0;
+        public volatile double min = Double.MAX_VALUE;
+        public volatile LatLng minPos = null;
+        public volatile double max = -Double.MAX_VALUE;
+        public volatile LatLng maxPos = null;
+        public volatile double sum = 0;
+        public volatile int count = 0;
+        public volatile double last = 0;
 
-        public int addValue(double value, LatLng position, boolean calcAverage) {
+        public synchronized int addValue(double value, LatLng position, boolean calcAverage) {
             int changed = 0;
             last = value;
             if (value < min) {
@@ -389,28 +391,28 @@ public class LiveWorkoutSession {
             return changed;
         }
 
-        public double getAverage() {
+        public synchronized double getAverage() {
             return count > 0 ? sum / count : 0;
         }
 
         /**
          * Returns the number of samples accumulated for this sensor ({@code REQ-TRK-031.2}).
          */
-        public int getCount() {
+        public synchronized int getCount() {
             return count;
         }
 
         /**
          * Rehydrates running statistics from persisted pre-resume extrema and sample count ({@code REQ-TRK-031.2}).
          */
-        public void rehydrate(Double minValue, Double maxValue, Double avgValue, int sampleCount) {
+        public synchronized void rehydrate(Double minValue, Double maxValue, Double avgValue, int sampleCount) {
             rehydrate(minValue, null, maxValue, null, avgValue, sampleCount);
         }
 
         /**
          * Rehydrates running statistics and peak coordinates from persisted pre-resume extrema and sample count ({@code REQ-TRK-031.2}).
          */
-        public void rehydrate(Double minValue, LatLng minPosition, Double maxValue, LatLng maxPosition, Double avgValue, int sampleCount) {
+        public synchronized void rehydrate(Double minValue, LatLng minPosition, Double maxValue, LatLng maxPosition, Double avgValue, int sampleCount) {
             if (minValue != null && Double.isFinite(minValue)) {
                 this.min = minValue;
                 this.minPos = minPosition;

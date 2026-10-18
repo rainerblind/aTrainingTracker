@@ -60,7 +60,7 @@ public abstract class MyANTDevice extends MyRemoteDevice {
     /**
      * The state of the device/channel
      **/
-    protected DeviceState mDeviceState = null;  // TODO: rename to mANTDeviceState
+    protected volatile DeviceState mDeviceState = null;  // TODO: rename to mANTDeviceState
     private final String TAG = "MyANTDevice";
     private AntPlusLegacyCommonPcc mLegacyCommonPcc = null;
     private AntPlusCommonPcc mCommonPcc = null;
