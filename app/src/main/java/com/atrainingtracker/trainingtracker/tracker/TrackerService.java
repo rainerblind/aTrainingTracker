@@ -104,6 +104,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The core background service responsible for live workout tracking and session persistence.
@@ -175,7 +176,8 @@ public class TrackerService extends Service {
     protected boolean mResumeFromPausedWhenConnectedToBanalService = false;
     protected boolean mResumeTrackingWhenConnectedToBanalService = false;
     @Nullable
-    BANALServiceComm mBanalService;
+    volatile BANALServiceComm mBanalService;
+    private final AtomicInteger mSamplingErrorCount = new AtomicInteger(0);
     private android.os.PowerManager.WakeLock wakeLock;
     private TrainingApplication mTrainingApplication;
     private WorkoutRepository mWorkoutRepository;
@@ -349,22 +351,32 @@ public class TrackerService extends Service {
 
     // finally the main tracking routine, that is called periodically
     final Runnable tracker = new Runnable() {
+        @Override
         public void run() {
-            if (DEBUG) {
-                Log.d(TAG, "sampling/tracking");
-            }
+            try {
+                if (DEBUG) {
+                    Log.d(TAG, "sampling/tracking");
+                }
 
-            if (mBanalService != null) {
+                final BANALServiceComm banalService = mBanalService;
+                if (banalService != null) {
 
-                sampleAndWriteToDb();
+                    sampleAndWriteToDb(banalService);
 
-                // update notification
-                if (DEBUG) Log.i(TAG, "updating notification");
-                mTrainingApplication.updateTimeAndDistanceToNotification(mBanalService.getBestSensorData(SensorType.TIME_ACTIVE),
-                        mBanalService.getBestSensorData(SensorType.DISTANCE_m),
-                        SportTypeDatabaseManager.getInstance(TrackerService.this).getUIName(mBanalService.getSportTypeId()));
-                if (DEBUG) Log.i(TAG, "updated notification");
+                    // update notification
+                    if (DEBUG) Log.i(TAG, "updating notification");
+                    if (mTrainingApplication != null) {
+                        mTrainingApplication.updateTimeAndDistanceToNotification(
+                                banalService.getBestSensorData(SensorType.TIME_ACTIVE),
+                                banalService.getBestSensorData(SensorType.DISTANCE_m),
+                                SportTypeDatabaseManager.getInstance(TrackerService.this).getUIName(banalService.getSportTypeId()));
+                    }
+                    if (DEBUG) Log.i(TAG, "updated notification");
 
+                }
+            } catch (Throwable t) {
+                mSamplingErrorCount.incrementAndGet();
+                Log.e(TAG, "Error during 1 Hz sampling tick; continuing tracking loop", t);
             }
         }
     };
@@ -972,6 +984,14 @@ public class TrackerService extends Service {
     }
 
     /**
+     * Returns the number of caught transient exceptions during the 1 Hz sampling loop ({@code REQ-TRK-027.1}, {@code ATT-3981}).
+     */
+    @VisibleForTesting
+    int getSamplingErrorCount() {
+        return mSamplingErrorCount.get();
+    }
+
+    /**
      * Finalizes and records the currently active lap at the conclusion of a workout session.
      *
      * <p>Functional Description: Queries {@link BANALService} for accumulated lap metrics
@@ -986,27 +1006,28 @@ public class TrackerService extends Service {
     protected void createNewLap() {
         if (DEBUG) Log.i(TAG, "createNewLap");
 
-        if (mBanalService == null) {
+        final BANALServiceComm banalService = mBanalService;
+        if (banalService == null) {
             mCreateNewLapWhenConnectedToBanalService = true;
         } else {
 
             SensorData sensorData;
 
             int prevLapNr = 0;
-            sensorData = mBanalService.getBestSensorData(SensorType.LAP_NR);
-            if (sensorData != null) {
+            sensorData = banalService.getBestSensorData(SensorType.LAP_NR);
+            if (sensorData != null && sensorData.getValue() != null) {
                 prevLapNr = (Integer) sensorData.getValue();
             }
 
             int lapTime_s = 0;
-            sensorData = mBanalService.getBestSensorData(SensorType.TIME_LAP);
+            sensorData = banalService.getBestSensorData(SensorType.TIME_LAP);
             if (sensorData != null
                     && sensorData.getValue() != null) {
                 lapTime_s = (Integer) sensorData.getValue();
             }
 
             double lapDistance = 0.0;
-            sensorData = mBanalService.getBestSensorData(SensorType.DISTANCE_m_LAP);
+            sensorData = banalService.getBestSensorData(SensorType.DISTANCE_m_LAP);
             if (sensorData != null
                     && sensorData.getValue() != null) {
                 lapDistance = (Double) sensorData.getValue();
@@ -1037,17 +1058,18 @@ public class TrackerService extends Service {
     protected long getSportTypeId() {
         EquipmentAndSportTypeDiscoveryManager discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(this);
 
-        if (mBanalService != null) {
+        final BANALServiceComm banalService = mBanalService;
+        if (banalService != null) {
             if (averageSpeedCalculateable()) {
                 return discoveryManager.resolveSportType(
-                        new HashSet<>(mBanalService.getDatabaseIdsOfActiveRemoteDevices()),
-                        mBanalService.getBSportType(),
+                        new HashSet<>(banalService.getDatabaseIdsOfActiveRemoteDevices()),
+                        banalService.getBSportType(),
                         getAverageSpeed());
             }
             else {
                 return discoveryManager.resolveSportType(
-                        new HashSet<>(mBanalService.getDatabaseIdsOfActiveRemoteDevices()),
-                        mBanalService.getBSportType());
+                        new HashSet<>(banalService.getDatabaseIdsOfActiveRemoteDevices()),
+                        banalService.getBSportType());
             }
         }
 
@@ -1095,7 +1117,8 @@ public class TrackerService extends Service {
         }
 
         mSearching = false;
-        if (mBanalService == null) {
+        final BANALServiceComm banalService = mBanalService;
+        if (banalService == null) {
             return;
         }
 
@@ -1105,7 +1128,7 @@ public class TrackerService extends Service {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.SPORT_ID, sportTypeId);
         values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
-        values.put(WorkoutSummaries.GC_DATA, mBanalService.getGCDataString());
+        values.put(WorkoutSummaries.GC_DATA, banalService.getGCDataString());
 
         mTableInitializationFuture.thenAcceptAsync(v -> {
             try {
@@ -1172,10 +1195,12 @@ public class TrackerService extends Service {
             Log.e(TAG, "Error in createNewLap during endWorkout", t);
         }
 
+        final BANALServiceComm banalService = mBanalService;
+
         // store the ANT and BTLE Devices that were active during the workout
         if (DEBUG) Log.d(TAG, "storing active device list");
         try {
-            updateActiveSessionDevices();
+            updateActiveSessionDevices(banalService);
             ActiveDevicesDbHelper activeDevicesDbHelper = new ActiveDevicesDbHelper(this);
             for (Long deviceDbId : mActiveSessionDeviceIds) {
                 if (deviceDbId != null && deviceDbId >= 0) {
@@ -1191,8 +1216,8 @@ public class TrackerService extends Service {
         summariesDb.beginTransaction();
         try {
             // save the accumulated SensorTypes
-            if (mBanalService != null) {
-                summariesDatabaseManager.saveAccumulatedSensorTypes(mWorkoutID, mBanalService.getAccumulatedSensorTypeSet());
+            if (banalService != null) {
+                summariesDatabaseManager.saveAccumulatedSensorTypes(mWorkoutID, banalService.getAccumulatedSensorTypeSet());
             }
 
             // update the summaries
@@ -1200,8 +1225,8 @@ public class TrackerService extends Service {
             summaryValues.put(WorkoutSummaries.FINISHED, 1);
 
             // TODO: store at very beginning, end of ANT and BTLE searching, GPS found
-            if (mBanalService != null) {
-                summaryValues.put(WorkoutSummaries.GC_DATA, mBanalService.getAccumulatedGCDataString());
+            if (banalService != null) {
+                summaryValues.put(WorkoutSummaries.GC_DATA, banalService.getAccumulatedGCDataString());
             }
 
             long sportTypeId = getSportTypeId();
@@ -1253,9 +1278,13 @@ public class TrackerService extends Service {
      * Continuously records active session remote devices into ActiveDevicesDbHelper (REQ-CON-007, ATT-3312).
      */
     private void updateActiveSessionDevices() {
-        if (mBanalService != null && mWorkoutID > 0) {
+        updateActiveSessionDevices(mBanalService);
+    }
+
+    private void updateActiveSessionDevices(@Nullable final BANALServiceComm banalService) {
+        if (banalService != null && mWorkoutID > 0) {
             try {
-                for (long deviceDbId : mBanalService.getDatabaseIdsOfActiveRemoteDevices()) {
+                for (long deviceDbId : banalService.getDatabaseIdsOfActiveRemoteDevices()) {
                     if (deviceDbId >= 0 && mActiveSessionDeviceIds.add(deviceDbId)) {
                         if (DEBUG) Log.d(TAG, "New active session device detected: " + deviceDbId);
                         new ActiveDevicesDbHelper(this).addActiveDevice(mWorkoutID, deviceDbId);
@@ -1268,19 +1297,23 @@ public class TrackerService extends Service {
     }
 
     private void sampleAndWriteToDb() {
+        sampleAndWriteToDb(mBanalService);
+    }
+
+    private void sampleAndWriteToDb(@Nullable final BANALServiceComm banalService) {
         if (DEBUG) Log.d(TAG, "sampleAndWriteToDb()");
 
-        if (mBanalService == null) return;
+        if (banalService == null) return;
 
-        updateActiveSessionDevices();
+        updateActiveSessionDevices(banalService);
 
         // 1. Always capture Total Time (SCRUM-97: needs to update during pause)
-        SensorData<Integer> totalTimeData = mBanalService.getBestSensorData(SensorType.TIME_TOTAL);
+        SensorData<Integer> totalTimeData = banalService.getBestSensorData(SensorType.TIME_TOTAL);
         if (totalTimeData != null && totalTimeData.getValue() != null) {
             mTimeTotal_s = totalTimeData.getValue();
         }
 
-        final AutoPauseTransition autoPauseTransition = evaluateAutoPauseTick();
+        final AutoPauseTransition autoPauseTransition = evaluateAutoPauseTick(banalService);
 
         if (TrainingApplication.isPaused()) {
             if (autoPauseTransition != null && autoPauseTransition.getTriggerResume()) {
@@ -1320,8 +1353,8 @@ public class TrackerService extends Service {
         final boolean updateAvgInDb = (mExtremaDbUpdateCounter >= EXTREMA_DB_UPDATE_INTERVAL);
 
         LatLng currentPosTemp = null;
-        SensorData<Number> latData = mBanalService.getBestSensorData(SensorType.LATITUDE);
-        SensorData<Number> lonData = mBanalService.getBestSensorData(SensorType.LONGITUDE);
+        SensorData<Number> latData = banalService.getBestSensorData(SensorType.LATITUDE);
+        SensorData<Number> lonData = banalService.getBestSensorData(SensorType.LONGITUDE);
         if (latData != null && lonData != null && latData.getValue() != null && lonData.getValue() != null) {
             if (SENSORS_TO_TRACK.contains(SensorType.LATITUDE) && SENSORS_TO_TRACK.contains(SensorType.LONGITUDE)) {
                 currentPosTemp = new LatLng(latData.getValue().doubleValue(), lonData.getValue().doubleValue());
@@ -1333,7 +1366,7 @@ public class TrackerService extends Service {
         if (mStartType == StartType.START_NORMAL && !mWorkoutStartLocationRecorded && currentPos != null) {
             mWorkoutStartLocationRecorded = true;
             final LatLng startPos = currentPos;
-            SensorData<Number> altData = (mBanalService != null) ? mBanalService.getBestSensorData(SensorType.ALTITUDE) : null;
+            SensorData<Number> altData = banalService.getBestSensorData(SensorType.ALTITUDE);
             final Double startAlt = (altData != null && altData.getValue() != null) ? altData.getValue().doubleValue() : null;
             mDbExecutor.execute(() -> {
                 KnownLocationsDatabaseManager.getInstance(TrackerService.this).recordWorkoutStart(startPos, startAlt);
@@ -1345,7 +1378,7 @@ public class TrackerService extends Service {
         // 1. Update LiveSession running statistics ONLY from authoritative best sensor telemetry (REQ-MAP-019, ATT-499)
         if (mLiveSession != null) {
             for (SensorType sensorType : SENSORS_TO_TRACK) {
-                SensorData<Number> bestData = mBanalService.getBestSensorData(sensorType);
+                SensorData<Number> bestData = banalService.getBestSensorData(sensorType);
                 if (bestData == null || bestData.getValue() == null) continue;
 
                 double sampleVal = bestData.getValue().doubleValue();
@@ -1382,7 +1415,7 @@ public class TrackerService extends Service {
         }
 
         // 2. Capture multi-sensor telemetry for raw samples database and session accumulators
-        for (SensorData<Number> sensorData : mBanalService.getAllSensorData()) {
+        for (SensorData<Number> sensorData : banalService.getAllSensorData()) {
             if (sensorData == null || sensorData.getValue() == null) continue;
 
             SensorType sensorType = sensorData.getSensorType();
@@ -1449,8 +1482,8 @@ public class TrackerService extends Service {
         // Handle Streams (every 20s)
         final LiveWorkoutSession.StreamIncrement streamIncrement;
         if (mLiveSession != null) {
-            SensorData<Number> altData = mBanalService.getBestSensorData(SensorType.ALTITUDE);
-            SensorData<Number> distData = mBanalService.getBestSensorData(SensorType.DISTANCE_m);
+            SensorData<Number> altData = banalService.getBestSensorData(SensorType.ALTITUDE);
+            SensorData<Number> distData = banalService.getBestSensorData(SensorType.DISTANCE_m);
             Double alt = (altData != null && altData.getValue() != null) ? altData.getValue().doubleValue() : null;
             Double dist = (distData != null && distData.getValue() != null) ? distData.getValue().doubleValue() : null;
             streamIncrement = mLiveSession.recordStreamPoint(currentPos, alt, dist);
@@ -1546,15 +1579,15 @@ public class TrackerService extends Service {
         }
     }
 
-    private AutoPauseTransition evaluateAutoPauseTick() {
-        if (mBanalService == null) return null;
+    private AutoPauseTransition evaluateAutoPauseTick(@Nullable final BANALServiceComm banalService) {
+        if (banalService == null) return null;
 
-        SensorData<Number> speedData = mBanalService.getBestSensorData(SensorType.SPEED_mps);
+        SensorData<Number> speedData = banalService.getBestSensorData(SensorType.SPEED_mps);
         Double speedMps = (speedData != null && speedData.getValue() != null) ? speedData.getValue().doubleValue() : null;
         long packetTimestamp = (speedData != null) ? speedData.getTimestamp() : 0L;
         long nowMs = System.currentTimeMillis();
 
-        BSportType sportType = mBanalService.getBSportType();
+        BSportType sportType = banalService.getBSportType();
         if (sportType == null) {
             sportType = BSportType.UNKNOWN;
         }
@@ -1824,9 +1857,16 @@ public class TrackerService extends Service {
         // 4. Identity Determination (SCRUM-200)
         // Perform arbitration between hardware and route patterns
         EquipmentAndSportTypeDiscoveryManager discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(this);
-        
+        final BANALServiceComm banalService = mBanalService;
+        final Set<Long> activeRemoteDeviceIds = (banalService != null)
+                ? new HashSet<>(banalService.getDatabaseIdsOfActiveRemoteDevices())
+                : new HashSet<>(mActiveSessionDeviceIds);
+        final BSportType banalSportType = (banalService != null && banalService.getBSportType() != null)
+                ? banalService.getBSportType()
+                : BSportType.UNKNOWN;
+
         // Initial arbitration using currently active devices in memory (more reliable than waiting for DB sync)
-        EquipmentAndSportTypeDiscoveryManager.InferredIdentity identity = discoveryManager.resolveIdentity(new HashSet<>(mBanalService.getDatabaseIdsOfActiveRemoteDevices()), mBanalService.getBSportType(), getAverageSpeed());
+        EquipmentAndSportTypeDiscoveryManager.InferredIdentity identity = discoveryManager.resolveIdentity(activeRemoteDeviceIds, banalSportType, getAverageSpeed());
 
         LatLng startPosRaw = mLiveSession.getStartLatLng();
         LatLng endPosRaw = mLiveSession.getLastLatLng();
@@ -1837,7 +1877,7 @@ public class TrackerService extends Service {
 
             // Determine candidate sport types for clustering (ATT-773, REQ-SET-064)
             Set<BSportType> candidateSports;
-            BSportType userSelectedSport = mBanalService.getUserSelectedBSportType();
+            BSportType userSelectedSport = (banalService != null) ? banalService.getUserSelectedBSportType() : null;
             if (userSelectedSport != null && userSelectedSport != BSportType.UNKNOWN) {
                 // Tier 1: User Pre-Selection Sovereignty (Option A)
                 candidateSports = Collections.singleton(userSelectedSport);
@@ -1846,7 +1886,7 @@ public class TrackerService extends Service {
                 candidateSports = Collections.singleton(identity.getBSportType());
             } else {
                 // Tier 3: Speed-Based Multi-Sport Candidate Set
-                candidateSports = discoveryManager.getCandidateBSportTypes(mBanalService.getBSportType(), getAverageSpeed());
+                candidateSports = discoveryManager.getCandidateBSportTypes(banalSportType, getAverageSpeed());
             }
 
             LatLng minAltPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.ALTITUDE, ExtremaType.MIN);
@@ -1879,7 +1919,7 @@ public class TrackerService extends Service {
                 float endpointDist = engine.distanceBetween(startPosRaw, endPosRaw);
                 BSportType resolvedSport = (identity != null && identity.getBSportType() != null && identity.getBSportType() != BSportType.UNKNOWN)
                     ? identity.getBSportType()
-                    : mBanalService.getBSportType();
+                    : banalSportType;
                 String autoName = WorkoutAutoNamingHelper.generateWorkoutName(
                     this,
                     resolvedSport,

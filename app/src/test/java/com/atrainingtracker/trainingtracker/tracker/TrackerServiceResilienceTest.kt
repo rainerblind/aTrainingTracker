@@ -21,24 +21,43 @@ package com.atrainingtracker.trainingtracker.tracker
 import android.app.Notification
 import android.app.Service
 import android.content.BroadcastReceiver
+import android.content.ContentValues
 import android.content.Intent
 import android.content.ServiceConnection
 import android.util.Log
+import com.atrainingtracker.banalservice.BANALService.BANALServiceComm
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.sensor.SensorData
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.lang.reflect.Modifier
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Unit tests verifying Android 14+ (API 34+) Foreground Service resilience for TrackerService
- * (REQ-STB-002, TST-STB-002, ATT-622).
+ * Unit tests verifying Android 14+ (API 34+) Foreground Service resilience and 1 Hz sampling loop
+ * fault isolation for TrackerService (REQ-STB-002, TST-STB-002, ATT-622; REQ-TRK-027, TST-TRK-019, ATT-3981).
  */
 class TrackerServiceResilienceTest {
 
@@ -218,5 +237,168 @@ class TrackerServiceResilienceTest {
 
         // Then: endWorkout() must be called to properly finalize and export the workout
         assertTrue("endWorkout() must be called when service stops normally", service.endWorkoutCalled)
+    }
+
+    /**
+     * TST-TRK-019.1: Verifies that an unchecked exception thrown during a 1 Hz sampling tick
+     * in TrackerService.tracker.run() is caught, logged, and counted without terminating
+     * subsequent ticks on a ScheduledExecutorService.scheduleAtFixedRate loop (REQ-TRK-027.1).
+     */
+    @Test
+    fun testSamplingLoopContinuesAfterTransientUncheckedException() {
+        mockkStatic(TrainingApplication::class)
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        mockkStatic(SportTypeDatabaseManager::class)
+        mockkConstructor(ContentValues::class)
+        every { anyConstructed<ContentValues>().put(any<String>(), any<Int>()) } just Runs
+        every { anyConstructed<ContentValues>().put(any<String>(), any<Double>()) } just Runs
+        every { anyConstructed<ContentValues>().put(any<String>(), any<String>()) } just Runs
+
+        val mockAutoPauseConfig = mockk<AutoPauseConfig>(relaxed = true)
+        every { TrainingApplication.isPaused() } returns false
+        every { TrainingApplication.isManualPauseLocked() } returns false
+        every { TrainingApplication.getUnit() } returns MyUnits.METRIC
+        every { SettingsDataStoreJavaHelper.getAutoPauseConfig(any()) } returns mockAutoPauseConfig
+
+        val mockSportDbManager = mockk<SportTypeDatabaseManager>(relaxed = true)
+        every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportDbManager
+        every { mockSportDbManager.getUIName(any()) } returns "Run"
+
+        val mockApp = mockk<TrainingApplication>(relaxed = true)
+        val appField = TrackerService::class.java.getDeclaredField("mTrainingApplication")
+        appField.isAccessible = true
+        appField.set(service, mockApp)
+
+        // Set incomplete table initialization future so async DB callback doesn't touch real SQLite in this test
+        val initFutureField = TrackerService::class.java.getDeclaredField("mTableInitializationFuture")
+        initFutureField.isAccessible = true
+        initFutureField.set(service, CompletableFuture<Void>())
+
+        val tickCounter = AtomicInteger(0)
+        val threeTicksLatch = CountDownLatch(3)
+
+        every { mockApp.updateTimeAndDistanceToNotification(any(), any(), any()) } answers {
+            threeTicksLatch.countDown()
+        }
+
+        val mockBanal = mockk<BANALServiceComm>(relaxed = true)
+        every { mockBanal.databaseIdsOfActiveRemoteDevices } returns emptyList()
+        every { mockBanal.bSportType } returns BSportType.RUN
+        every { mockBanal.sportTypeId } returns 1L
+
+        every { mockBanal.getBestSensorData(SensorType.TIME_TOTAL) } answers {
+            val tick = tickCounter.incrementAndGet()
+            if (tick == 1) {
+                threeTicksLatch.countDown()
+                throw RuntimeException("Simulated transient sensor fault on tick 1")
+            }
+            SensorData(SensorType.TIME_TOTAL, tick, "$tick", "clock")
+        }
+        every { mockBanal.getBestSensorData(SensorType.SPEED_mps) } returns null
+        every { mockBanal.getBestSensorData(SensorType.LATITUDE) } returns null
+        every { mockBanal.getBestSensorData(SensorType.LONGITUDE) } returns null
+        every { mockBanal.getBestSensorData(SensorType.TIME_ACTIVE) } answers {
+            val t = tickCounter.get()
+            SensorData(SensorType.TIME_ACTIVE, t, "$t", "clock")
+        }
+        every { mockBanal.getBestSensorData(SensorType.DISTANCE_m) } returns SensorData(SensorType.DISTANCE_m, 100.0, "100.0", "gps")
+        every { mockBanal.allSensorData } answers {
+            val currentTick = tickCounter.get()
+            listOf(
+                SensorData<Number>(SensorType.TIME_TOTAL, currentTick, "$currentTick", "clock"),
+                SensorData<Number>(SensorType.TIME_ACTIVE, currentTick, "$currentTick", "clock")
+            )
+        }
+
+        service.mBanalService = mockBanal
+
+        val scheduler = Executors.newSingleThreadScheduledExecutor()
+        try {
+            val future = scheduler.scheduleAtFixedRate(service.tracker, 0L, 10L, TimeUnit.MILLISECONDS)
+            assertTrue("Expected at least 3 ticks to execute despite tick 1 throwing RuntimeException", threeTicksLatch.await(2, TimeUnit.SECONDS))
+            future.cancel(false)
+        } finally {
+            scheduler.shutdownNow()
+        }
+
+        // Verify tick 1 error was caught and logged, and subsequent ticks (tick >= 3) succeeded and updated state
+        assertEquals(1, service.samplingErrorCount)
+        assertTrue("Expected mTimeTotal_s to advance on subsequent ticks after tick 1 exception", service.getTimeTotal_s() >= 3)
+        assertTrue("Expected mTimeActive_s to advance on subsequent ticks after tick 1 exception", service.getTimeActive_s() >= 3)
+        verify(atLeast = 1) { Log.e("TrackerService", any<String>(), any<Throwable>()) }
+    }
+
+    /**
+     * TST-TRK-019.2: Verifies that mBanalService is declared volatile and snapshotted into a local
+     * variable so concurrent unbinding (mBanalService = null on main thread) mid-tick does not cause
+     * a NullPointerException in tracker.run() or sampleAndWriteToDb() (REQ-TRK-027.3).
+     */
+    @Test
+    fun testVolatileBanalServiceAndLocalSnapshotPreventsMidTickNullPointerException() {
+        // 1. Assert mBanalService field has the volatile modifier
+        val banalField = TrackerService::class.java.getDeclaredField("mBanalService")
+        assertTrue(
+            "mBanalService must be declared volatile for cross-thread visibility",
+            Modifier.isVolatile(banalField.modifiers)
+        )
+
+        mockkStatic(TrainingApplication::class)
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        mockkStatic(SportTypeDatabaseManager::class)
+        mockkConstructor(ContentValues::class)
+        every { anyConstructed<ContentValues>().put(any<String>(), any<Int>()) } just Runs
+        every { anyConstructed<ContentValues>().put(any<String>(), any<Double>()) } just Runs
+        every { anyConstructed<ContentValues>().put(any<String>(), any<String>()) } just Runs
+
+        val mockAutoPauseConfig = mockk<AutoPauseConfig>(relaxed = true)
+        every { TrainingApplication.isPaused() } returns false
+        every { TrainingApplication.isManualPauseLocked() } returns false
+        every { TrainingApplication.getUnit() } returns MyUnits.METRIC
+        every { SettingsDataStoreJavaHelper.getAutoPauseConfig(any()) } returns mockAutoPauseConfig
+
+        val mockSportDbManager = mockk<SportTypeDatabaseManager>(relaxed = true)
+        every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportDbManager
+        every { mockSportDbManager.getUIName(any()) } returns "Bike"
+
+        val mockApp = mockk<TrainingApplication>(relaxed = true)
+        val appField = TrackerService::class.java.getDeclaredField("mTrainingApplication")
+        appField.isAccessible = true
+        appField.set(service, mockApp)
+
+        val initFutureField = TrackerService::class.java.getDeclaredField("mTableInitializationFuture")
+        initFutureField.isAccessible = true
+        initFutureField.set(service, CompletableFuture<Void>())
+
+        val mockBanal = mockk<BANALServiceComm>(relaxed = true)
+        every { mockBanal.databaseIdsOfActiveRemoteDevices } returns emptyList()
+        every { mockBanal.bSportType } returns BSportType.BIKE
+        every { mockBanal.sportTypeId } returns 2L
+
+        // Simulate onServiceDisconnected setting service.mBanalService = null right in the middle of the tick!
+        every { mockBanal.getBestSensorData(SensorType.TIME_TOTAL) } answers {
+            service.mBanalService = null
+            SensorData(SensorType.TIME_TOTAL, 42, "42", "clock")
+        }
+        every { mockBanal.getBestSensorData(SensorType.SPEED_mps) } returns null
+        every { mockBanal.getBestSensorData(SensorType.LATITUDE) } returns null
+        every { mockBanal.getBestSensorData(SensorType.LONGITUDE) } returns null
+        every { mockBanal.getBestSensorData(SensorType.TIME_ACTIVE) } returns SensorData(SensorType.TIME_ACTIVE, 40, "40", "clock")
+        every { mockBanal.getBestSensorData(SensorType.DISTANCE_m) } returns SensorData(SensorType.DISTANCE_m, 500.0, "500.0", "gps")
+        every { mockBanal.allSensorData } returns listOf(
+            SensorData<Number>(SensorType.TIME_TOTAL, 42, "42", "clock"),
+            SensorData<Number>(SensorType.TIME_ACTIVE, 40, "40", "clock"),
+            SensorData<Number>(SensorType.DISTANCE_m, 500.0, "500.0", "gps")
+        )
+
+        service.mBanalService = mockBanal
+
+        // When: tracker.run() executes while mBanalService becomes null mid-tick
+        service.tracker.run()
+
+        // Then: Zero exceptions were thrown (error count == 0) because the local snapshot remained non-null
+        assertEquals("Mid-tick mBanalService = null must not throw NPE when snapshotted locally", 0, service.samplingErrorCount)
+        assertEquals(42, service.getTimeTotal_s())
+        assertEquals(40, service.getTimeActive_s())
+        assertEquals(500.0, service.getDistanceTotal_m(), 1e-6)
     }
 }

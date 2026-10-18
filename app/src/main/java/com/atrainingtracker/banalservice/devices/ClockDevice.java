@@ -22,6 +22,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import androidx.annotation.VisibleForTesting;
+
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.MyIntegerAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
@@ -35,6 +37,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClockDevice extends MyDevice {
     private static final String TAG = "ClockDevice";
@@ -58,6 +61,7 @@ public class ClockDevice extends MyDevice {
     private Timer timer;
     private boolean timerRunning = false;
     private final DateFormat df = SimpleDateFormat.getTimeInstance();
+    private final AtomicInteger mClockTimerErrorCount = new AtomicInteger(0);
 
     public ClockDevice(Context context, MySensorManager mySensorManager) {
         super(context, mySensorManager, DeviceType.CLOCK);
@@ -153,19 +157,42 @@ public class ClockDevice extends MyDevice {
         mLapTimeSensor_s.reset();
     }
 
+    /**
+     * Returns the number of caught transient exceptions during the 1 Hz clock timer loop ({@code REQ-TRK-027.2}, {@code ATT-3981}).
+     */
+    @VisibleForTesting
+    public int getClockTimerErrorCount() {
+        return mClockTimerErrorCount.get();
+    }
+
+    /**
+     * Executes a single 1 Hz clock timer tick for unit testing ({@code REQ-TRK-027.2}, {@code ATT-3981}).
+     */
+    @VisibleForTesting
+    public void runClockTickForTesting() {
+        new ClockTimeTask().run();
+    }
+
     private class ClockTimeTask extends TimerTask {
         @Override
         public void run() {
-            mTotalTimeSensor_s.increment(1);
-            mActiveTimeSensor_s.increment(1);
-            mLapTimeSensor_s.increment(1);
+            try {
+                mTotalTimeSensor_s.increment(1);
+                mActiveTimeSensor_s.increment(1);
+                mLapTimeSensor_s.increment(1);
 
-            mTimeOfDaySensor.newValue(df.format(Calendar.getInstance().getTime()));
+                mTimeOfDaySensor.newValue(df.format(Calendar.getInstance().getTime()));
 
-            // send broadcast
-            if (DEBUG) Log.d(TAG, "sending new time event broadcast");
-            mContext.sendBroadcast(new Intent(BANALService.NEW_TIME_EVENT_INTENT)
-                    .setPackage(mContext.getPackageName()));
+                // send broadcast
+                if (DEBUG) Log.d(TAG, "sending new time event broadcast");
+                if (mContext != null) {
+                    mContext.sendBroadcast(new Intent(BANALService.NEW_TIME_EVENT_INTENT)
+                            .setPackage(mContext.getPackageName()));
+                }
+            } catch (Throwable t) {
+                mClockTimerErrorCount.incrementAndGet();
+                Log.e(TAG, "Error during 1 Hz clock timer tick; continuing clock timer", t);
+            }
         }
     }
 
