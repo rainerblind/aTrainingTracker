@@ -108,8 +108,19 @@ import com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepository
 import com.atrainingtracker.trainingtracker.ui.components.RouteSelectionButton
 import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModel
+import android.app.Application
+import android.content.Context
+import android.content.ContextWrapper
 import android.location.Location
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val TAG = "TrackingTabsScreen"
 private val DEBUG = BuildConfig.DEBUG
@@ -118,7 +129,8 @@ private val DEBUG = BuildConfig.DEBUG
 fun TrackingTabsScreen(
     trackingTabsViewModel: TrackingTabsViewModel
 ) {
-    val context = LocalContext.current as androidx.appcompat.app.AppCompatActivity
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
 
     val isSystemDark = isSystemInDarkTheme()
     var cockpitThemeMode by remember { mutableStateOf(TrainingApplication.getCockpitThemeMode()) }
@@ -152,7 +164,7 @@ fun TrackingTabsScreen(
         }
     }
 
-    val batterySaverController = remember { BatterySaverController(activity = context) }
+    val batterySaverController = remember(activity) { BatterySaverController(activity = activity) }
     LaunchedEffect(brightnessMode, customBrightness) {
         batterySaverController.setMode(brightnessMode, customBrightness)
     }
@@ -181,7 +193,7 @@ fun TrackingTabsScreen(
                 )
                 val result = snackbarHostState.showSnackbar(visuals)
                 if (result == SnackbarResult.ActionPerformed) {
-                    (context as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors)
+                    (activity as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors)
                 }
                 WorkoutNavigationEvents.consumeLowBatteryAlert()
             }
@@ -203,7 +215,8 @@ fun TrackingTabsScreen(
     val controlViewModel: ControlTrackingViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return ControlTrackingViewModel(context.application) as T
+                val application = activity?.application ?: (context.applicationContext as Application)
+                return ControlTrackingViewModel(application) as T
             }
         }
     )
@@ -426,72 +439,45 @@ fun TrackingTabsScreen(
 
     val currentPagerState by rememberUpdatedState(pagerState)
     val currentScreenMode by rememberUpdatedState(screenMode)
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
     // NAVIGATION COLLECTION (necessary, when deleting tabs or tracking starts)
-    LaunchedEffect(Unit) {
-        Log.i(TAG, "LaunchedEffect(Unit) started collecting navigationEvent")
-        trackingTabsViewModel.navigationEvent.collect { tabNavigationEvent ->
-            Log.i(TAG, "navigationEvent received: $tabNavigationEvent, currentScreenMode=$currentScreenMode, pageCount=${currentPagerState.pageCount}, currentPage=${currentPagerState.currentPage}")
-            when (tabNavigationEvent) {
-                is TabNavigationEvent.NavigateTo -> {
-                    // Calculate offset: if TRACKING mode, page 0 is Control, so add 1
-                    val offset = if (currentScreenMode == ScreenMode.TRACKING) 1 else 0
-                    val target = tabNavigationEvent.index + offset
-                    Log.i(TAG, "Navigating to target=$target (offset=$offset)")
-
-                    lastKnownPage = target
-
-                    // If pager hasn't loaded enough pages yet, wait for pageCount to be ready
-                    if (currentPagerState.pageCount <= target) {
-                        try {
-                            kotlinx.coroutines.withTimeout(2000) {
-                                androidx.compose.runtime.snapshotFlow { currentPagerState.pageCount }
-                                    .collect { count ->
-                                        if (count > target) {
-                                            throw kotlinx.coroutines.CancellationException("PageCountReady")
-                                        }
-                                    }
-                            }
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            if (e.message != "PageCountReady") throw e
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Timed out waiting for pageCount > $target", e)
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            Log.i(TAG, "LaunchedEffect(lifecycleOwner) started collecting navigationEvent")
+            trackingTabsViewModel.navigationEvent.collect { tabNavigationEvent ->
+                Log.i(TAG, "navigationEvent received: $tabNavigationEvent, currentScreenMode=$currentScreenMode, pageCount=${currentPagerState.pageCount}, currentPage=${currentPagerState.currentPage}")
+                when (tabNavigationEvent) {
+                    is TabNavigationEvent.NavigateTo -> {
+                        navigateToPagerTarget(
+                            tabIndex = tabNavigationEvent.index,
+                            screenMode = currentScreenMode,
+                            currentPageCount = { currentPagerState.pageCount },
+                            pageCountFlow = androidx.compose.runtime.snapshotFlow { currentPagerState.pageCount },
+                            onUpdateLastKnownPage = { lastKnownPage = it },
+                            animateScrollToPage = { currentPagerState.animateScrollToPage(it) },
+                            scrollToPage = { currentPagerState.scrollToPage(it) }
+                        )
+                    }
+                    is TabNavigationEvent.EditDevice -> {
+                        if (activity != null && activity.canShowDialogFragments()) {
+                            val editDeviceDialog = EditDeviceFragmentFactory.create(
+                                deviceId = tabNavigationEvent.deviceId,
+                                deviceType = com.atrainingtracker.banalservice.devices.DeviceType.ALL
+                            )
+                            editDeviceDialog.show(
+                                activity.supportFragmentManager,
+                                "EditDeviceDialog"
+                            )
+                        } else {
+                            Log.w(TAG, "Skipping EditDeviceDialog: host activity unavailable or state already saved")
                         }
                     }
-
-                    if (target in 0 until currentPagerState.pageCount) {
-                        try {
-                            currentPagerState.animateScrollToPage(target)
-                            Log.i(TAG, "Successfully animated to page $target")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "animateScrollToPage failed: page $target not ready yet", e)
-                            try {
-                                currentPagerState.scrollToPage(target)
-                                Log.i(TAG, "Fallback scrollToPage succeeded for page $target")
-                            } catch (e2: Exception) {
-                                Log.e(TAG, "Fallback scrollToPage also failed", e2)
-                            }
-                        }
-                    } else {
-                        Log.e(TAG, "Cannot scroll to target $target: pageCount is ${currentPagerState.pageCount}")
-                    }
-                }
-                is TabNavigationEvent.EditDevice -> {
-                    val editDeviceDialog = EditDeviceFragmentFactory.create(
-                        deviceId = tabNavigationEvent.deviceId,
-                        deviceType = com.atrainingtracker.banalservice.devices.DeviceType.ALL
-                    )
-                    editDeviceDialog.show(
-                        context.supportFragmentManager,
-                        "EditDeviceDialog"
-                    )
                 }
             }
         }
     }
 
-
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
@@ -506,10 +492,10 @@ fun TrackingTabsScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    DisposableEffect(context, isSystemDark) {
+    DisposableEffect(activity, isSystemDark) {
         onDispose {
-            if (!context.isFinishing && !context.isDestroyed) {
-                context.window?.let { window ->
+            if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
+                activity.window?.let { window ->
                     val insetsController = WindowCompat.getInsetsController(window, window.decorView)
                     insetsController.isAppearanceLightStatusBars = !isSystemDark
                     insetsController.isAppearanceLightNavigationBars = !isSystemDark
@@ -577,7 +563,7 @@ fun TrackingTabsScreen(
                                         allDevices = allDevices,
                                         onDeviceClick = { trackingTabsViewModel.onEditDevice(it) },
                                         onMenuClick = {
-                                            (context as? MainActivityWithNavigation)?.openDrawer()
+                                            (activity as? MainActivityWithNavigation)?.openDrawer()
                                         }
                                     )
                                 }
@@ -709,30 +695,46 @@ fun TrackingTabsScreen(
                         if (screenMode == ScreenMode.TRACKING && page == 0) {
 
                             // --- CONTROL TAB (Page 0) ---
-                            LaunchedEffect(Unit) {
-                                controlViewModel.navigationEvent.collect { navigation ->
-                                    when (navigation) {
-                                        is ControlNavigation.ToEditDevice -> {
-                                            val editDeviceDialog =
-                                                EditDeviceFragmentFactory.create(
-                                                    deviceId = navigation.deviceId,
-                                                    deviceType = navigation.deviceType
-                                                )
-                                            editDeviceDialog.show(
-                                                context.supportFragmentManager,
-                                                "EditDeviceDialog"
-                                            )
-                                        }
+                            LaunchedEffect(lifecycleOwner) {
+                                lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    controlViewModel.navigationEvent.collect { navigation ->
+                                        when (navigation) {
+                                            is ControlNavigation.ToEditDevice -> {
+                                                if (activity != null && activity.canShowDialogFragments()) {
+                                                    val editDeviceDialog =
+                                                        EditDeviceFragmentFactory.create(
+                                                            deviceId = navigation.deviceId,
+                                                            deviceType = navigation.deviceType
+                                                        )
+                                                    editDeviceDialog.show(
+                                                        activity.supportFragmentManager,
+                                                        "EditDeviceDialog"
+                                                    )
+                                                } else {
+                                                    Log.w(TAG, "Skipping EditDeviceDialog from ControlTab: host activity unavailable or state already saved")
+                                                }
+                                            }
 
-                                        is ControlNavigation.ShowRecoveryDialog -> {
-                                            val recoveryHandler = context as? StartOrResumeInterface
-                                            if (recoveryHandler != null) {
-                                                recoveryHandler.showStartOrResumeDialog()
-                                            } else if (context.supportFragmentManager.findFragmentByTag(StartOrResumeDialog.TAG) == null) {
-                                                StartOrResumeDialog().show(
-                                                    context.supportFragmentManager,
-                                                    StartOrResumeDialog.TAG
-                                                )
+                                            is ControlNavigation.ShowRecoveryDialog -> {
+                                                val recoveryHandler = activity as? StartOrResumeInterface
+                                                if (recoveryHandler != null) {
+                                                    if (activity.canShowDialogFragments()) {
+                                                        recoveryHandler.showStartOrResumeDialog()
+                                                    } else {
+                                                        Log.w(TAG, "Skipping recovery dialog via handler: host activity state already saved")
+                                                    }
+                                                } else if (
+                                                    activity != null &&
+                                                    activity.canShowDialogFragments() &&
+                                                    activity.supportFragmentManager.findFragmentByTag(StartOrResumeDialog.TAG) == null
+                                                ) {
+                                                    StartOrResumeDialog().show(
+                                                        activity.supportFragmentManager,
+                                                        StartOrResumeDialog.TAG
+                                                    )
+                                                } else {
+                                                    Log.w(TAG, "Skipping StartOrResumeDialog: host activity unavailable or state already saved")
+                                                }
                                             }
                                         }
                                     }
@@ -887,5 +889,93 @@ fun getControlTabTitle(mode: TrackingMode): String {
         TrackingMode.PAUSED -> stringResource(R.string.Paused)
         TrackingMode.TRACKING -> stringResource(R.string.Tracking)
         else -> stringResource(R.string.tab_start)
+    }
+}
+
+/**
+ * Unwraps nested [ContextWrapper] instances to locate the hosting [AppCompatActivity],
+ * or returns `null` if the [Context] is not backed by an [AppCompatActivity].
+ *
+ * Ref: REQ-UI-410 / ATT-4000
+ */
+internal tailrec fun Context.findActivity(): AppCompatActivity? = when (this) {
+    is AppCompatActivity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+/**
+ * Returns `true` when the receiver [AppCompatActivity] is non-null, active (neither finishing
+ * nor destroyed), and its [androidx.fragment.app.FragmentManager] has not yet saved state,
+ * making it safe to commit [androidx.fragment.app.DialogFragment.show] transactions.
+ *
+ * Ref: REQ-UI-410 / ATT-4000
+ */
+internal fun AppCompatActivity?.canShowDialogFragments(): Boolean {
+    return this != null && !isFinishing && !isDestroyed && !supportFragmentManager.isStateSaved
+}
+
+/**
+ * Executes a programmatic tab navigation event against the Cockpit pager without cancelling
+ * the caller coroutine if `pageCount` fails to grow past the target index within [timeoutMs].
+ *
+ * Only updates `lastKnownPage` via [onUpdateLastKnownPage] after confirming the resolved
+ * pager target index is within `0 until currentPageCount()`.
+ *
+ * Ref: REQ-UI-410 / ATT-4000
+ *
+ * @return `true` if the target page was in bounds and scroll was invoked, `false` otherwise.
+ */
+internal suspend fun navigateToPagerTarget(
+    tabIndex: Int,
+    screenMode: ScreenMode,
+    currentPageCount: () -> Int,
+    pageCountFlow: Flow<Int>,
+    onUpdateLastKnownPage: (Int) -> Unit,
+    animateScrollToPage: suspend (Int) -> Unit,
+    scrollToPage: suspend (Int) -> Unit,
+    timeoutMs: Long = 2000L
+): Boolean {
+    // Calculate offset: if TRACKING mode, page 0 is Control, so add 1
+    val offset = if (screenMode == ScreenMode.TRACKING) 1 else 0
+    val target = tabIndex + offset
+    Log.i(TAG, "Navigating to target=$target (offset=$offset)")
+
+    if (target < 0) {
+        Log.w(TAG, "Cannot scroll to negative target $target")
+        return false
+    }
+
+    // If pager hasn't loaded enough pages yet, wait up to timeoutMs for pageCount > target
+    if (currentPageCount() <= target) {
+        val readyCount = withTimeoutOrNull(timeoutMs) {
+            pageCountFlow.first { count -> count > target }
+        }
+        if (readyCount == null) {
+            Log.w(TAG, "Timed out after ${timeoutMs}ms waiting for pageCount > $target (current=${currentPageCount()})")
+        }
+    }
+
+    val finalPageCount = currentPageCount()
+    if (target in 0 until finalPageCount) {
+        onUpdateLastKnownPage(target)
+        try {
+            animateScrollToPage(target)
+            Log.i(TAG, "Successfully animated to page $target")
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            Log.e(TAG, "animateScrollToPage failed: page $target not ready yet", e)
+            try {
+                scrollToPage(target)
+                Log.i(TAG, "Fallback scrollToPage succeeded for page $target")
+            } catch (e2: Exception) {
+                currentCoroutineContext().ensureActive()
+                Log.e(TAG, "Fallback scrollToPage also failed", e2)
+            }
+        }
+        return true
+    } else {
+        Log.e(TAG, "Cannot scroll to target $target: pageCount is $finalPageCount")
+        return false
     }
 }
