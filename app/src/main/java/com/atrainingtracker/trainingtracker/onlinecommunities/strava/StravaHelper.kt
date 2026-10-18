@@ -57,7 +57,7 @@ object StravaHelper {
     const val BEARER = "Bearer"
     
     private val TAG = StravaHelper::class.java.simpleName
-    private const val DEBUG = true
+    private val DEBUG = BuildConfig.DEBUG
 
     @JvmStatic
     fun translateClimbCategory(climbCategory: Int): String {
@@ -74,7 +74,7 @@ object StravaHelper {
     @JvmStatic
     fun storeJSONData(jsonObject: JSONObject) {
         if (DEBUG) {
-            Log.i(TAG, "storeJSONData: $jsonObject")
+            Log.d(TAG, "storeJSONData: hasAthlete=${jsonObject.has("athlete")}, hasAccessToken=${jsonObject.has(ACCESS_TOKEN)}")
         }
         try {
             if (jsonObject.has("athlete")) {
@@ -194,7 +194,7 @@ object StravaHelper {
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val responseBody = response.body?.string()
-                    if (DEBUG) Log.d(TAG, "Refresh Response: $responseBody")
+                    if (DEBUG) Log.d(TAG, "Refresh Response: success (HTTP ${response.code})")
                     responseBody?.let {
                         val responseJson = JSONObject(it)
                         storeJSONData(responseJson)
@@ -203,7 +203,7 @@ object StravaHelper {
                 } else {
                     val code = response.code
                     val errorBody = response.body?.string().orEmpty()
-                    Log.e(TAG, "Refresh failed: $code ${response.message} body: $errorBody")
+                    Log.e(TAG, "Refresh failed: HTTP $code ${response.message}")
                     if (code == 400 || code == 401) {
                         if (errorBody.contains("invalid", ignoreCase = true) || errorBody.contains("revoked", ignoreCase = true)) {
                             Log.w(TAG, "Strava authorization permanently revoked. Triggering local data purge (REQ-EXT-009).")

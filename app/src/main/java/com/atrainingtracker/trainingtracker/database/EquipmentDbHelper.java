@@ -65,7 +65,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     static final String DB_NAME = "Equipment.db";
     static final int DB_VERSION = 2;
     private static final String TAG = "EquipmentDbHelper";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = com.atrainingtracker.BuildConfig.DEBUG;
     private static final String CREATE_EQUIPMENT_TABLE = "create table " + EQUIPMENT + " ("
             + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
             + NAME + " text,"

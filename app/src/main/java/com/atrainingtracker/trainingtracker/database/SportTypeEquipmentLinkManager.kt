@@ -52,7 +52,7 @@ class SportTypeEquipmentLinkManager private constructor(context: Context) {
     }
 
     companion object {
-        private const val DEBUG = true
+        private val DEBUG = com.atrainingtracker.BuildConfig.DEBUG
         private const val TAG = "SportTypeEquipmentLinkManager"
         private const val TABLE_NAME = "SportTypeEquipmentLink"
         private const val COLUMN_SPORT_ID = "sport_type_id"

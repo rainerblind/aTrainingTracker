@@ -27,7 +27,7 @@ import com.atrainingtracker.trainingtracker.activities.ConfigViewsActivityClassi
 
 public abstract class ConfigViewFragment extends Fragment {
     private static final String TAG = ConfigViewFragment.class.getName();
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = com.atrainingtracker.BuildConfig.DEBUG;
 
     // public static final String TRACKING_VIEW_CHANGED_INTENT = "TRACKING_VIEW_CHANGED_INTENT";
 

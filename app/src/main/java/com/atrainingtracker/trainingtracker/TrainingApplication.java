@@ -765,6 +765,10 @@ public class TrainingApplication extends Application {
         return getStravaAccessToken() != null;
     }
 
+    public static boolean hasStravaAccessToken() {
+        return getStravaAccessToken() != null;
+    }
+
     public static void setUploadToStrava(boolean value) {
         // Since we now use the presence of the access token as the source of truth,
         // we keep this for legacy compatibility but the logic is handled by token presence.
@@ -1262,6 +1266,9 @@ public class TrainingApplication extends Application {
 
         // ATT-3982 / REQ-MIG-040: Purge stale backup/restore staging directories from previous interrupted runs
         com.atrainingtracker.trainingtracker.migration.SecureZipExtractor.purgeStaleStagingDirs(this);
+
+        // ATT-3983 / REQ-SEC-041: Security migration for fresh Strava re-authentication
+        com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSecurityMigration.runMigrationIfRequired(this);
 
         initWorkManager();
         if (sWorkManagerAvailable) {

@@ -68,7 +68,7 @@ import java.util.UUID;
 // TODO create super class for similar services???
 public class PebbleService extends Service {
     private static final String TAG = "PebbleService";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = com.atrainingtracker.BuildConfig.DEBUG;
 
 
     private static final int MAX_STRING_SIZE = 14;

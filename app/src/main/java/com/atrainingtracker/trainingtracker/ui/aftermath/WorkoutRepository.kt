@@ -1461,7 +1461,10 @@ class WorkoutRepository private constructor(private val application: Application
      * Replaces a workout in the memory list with a fresh instance.
      */
     private fun updateWorkoutInList(workoutId: Long, updatedWorkout: WorkoutData) {
-        Log.i(TAG, "updateWorkoutInList: workoutId=$workoutId (${updatedWorkout.fileBaseName}), mapPolyline: ${updatedWorkout.mapPolyline}, extremaRows: ${updatedWorkout.extremaRows}, exportStatuses: ${updatedWorkout.exportStatuses}")
+        if (com.atrainingtracker.BuildConfig.DEBUG) {
+            val hasRoute = !updatedWorkout.mapPolyline.isNullOrEmpty()
+            Log.d(TAG, "updateWorkoutInList: workoutId=$workoutId (${updatedWorkout.fileBaseName}), hasPolyline=$hasRoute, extremaRows: ${updatedWorkout.extremaRows}, exportStatuses: ${updatedWorkout.exportStatuses}")
+        }
         _allWorkouts.update { currentList ->
             currentList.map {
                 if (it.id == workoutId) updatedWorkout else it

@@ -64,7 +64,7 @@ class ControlTrackingViewModel(
 ) : ViewModel() {
 
     companion object {
-        val DEBUG = true
+        val DEBUG = com.atrainingtracker.BuildConfig.DEBUG
         val TAG = "ControlTrackingViewModel"
     }
 

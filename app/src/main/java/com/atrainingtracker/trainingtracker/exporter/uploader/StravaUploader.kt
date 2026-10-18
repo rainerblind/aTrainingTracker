@@ -51,7 +51,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
 
     companion object {
         private const val TAG = "StravaUploader"
-        private val DEBUG = TrainingApplication.getDebug(true)
+        private val DEBUG = com.atrainingtracker.BuildConfig.DEBUG
 
         private const val URL_STRAVA_UPLOAD = "https://www.strava.com/api/v3/uploads"
         private const val URL_STRAVA_ACTIVITY = "https://www.strava.com/api/v3/activities/"
@@ -251,7 +251,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
             return ExportResult(false, true, "Network error: ${e.message}")  // a network error -> retry
         }
 
-        Log.i(TAG, "uploadToStrava responseCode=$responseCode, response: $responseBody")
+        if (DEBUG) Log.d(TAG, "uploadToStrava completed: responseCode=$responseCode")
 
         if (responseBody.isEmpty()) {
             return ExportResult(false, false, "no response from Strava")  // probably something strange -> do not retry
@@ -573,7 +573,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         activityJSON = updateStravaActivity(activityId, formBuilder.build())
             ?: return ExportResult(false, false,"Update request failed") // no retry
 
-        Log.i(TAG, "doUpdate Result for $activityId: $activityJSON")
+        if (DEBUG) Log.d(TAG, "doUpdate Result for $activityId: success=${activityJSON != null}")
 
         // Final feedback check: Is the activity flagged?
         val isFlagged = activityJSON.optBoolean("flagged", false)

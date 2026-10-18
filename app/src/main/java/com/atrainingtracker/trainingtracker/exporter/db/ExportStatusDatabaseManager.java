@@ -47,7 +47,7 @@ import java.util.EnumMap;
  */
 public class ExportStatusDatabaseManager {
 
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = com.atrainingtracker.BuildConfig.DEBUG;
     private static final String TAG = "ExportStatusRepo";
     private static ExportStatusDatabaseManager sInstance;
     private final ExportStatusDbHelper mDbHelper;

@@ -466,7 +466,7 @@ class LiveSegmentsRepository internal constructor(
      **********************************************************************************************/
 
     companion object {
-        val DEBUG = true
+        val DEBUG = com.atrainingtracker.BuildConfig.DEBUG
         val TAG = "LiveSegmentsRepository"
 
         val SEGMENT_DISTANCE_THRESHOLD = 50 // m          distance between the current location and the segment to decide whether we are on the segment

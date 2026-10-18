@@ -59,7 +59,7 @@ import java.util.List;
 
 public class ExportManager {
     private static final String TAG = "ExportManager";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = com.atrainingtracker.BuildConfig.DEBUG;
     @Nullable
     protected final Context mContext;
     // protected static HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>> cCash = new HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>>();
