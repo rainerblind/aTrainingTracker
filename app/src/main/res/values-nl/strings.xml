@@ -1136,6 +1136,9 @@
     <string name="restore_failed">Herstel mislukt. Controleer of het bestand geldig is.</string>
     <string name="backup_security_error">Beveiligingsfout: Ongeldig of beschadigd back-uparchief.</string>
     <string name="backup_security_error_desc">Het back-uparchief bevat ongeautoriseerde paden, symbolische koppelingen of overschrijdt veilige groottelimieten en is afgewezen.</string>
+    <string name="backup_restore_error_missing_databases">Het back-uparchief mist de database-map.</string>
+    <string name="backup_restore_error_integrity_failed">De back-updatabase heeft de SQLite-integriteitscontrole niet doorstaan.</string>
+    <string name="backup_restore_error_schema_downgrade">De back-up is gemaakt door een nieuwere versie van de app en kan niet worden hersteld.</string>
     <string name="restore_warning_title">GEFAHR: Volledig herstel</string>
     <string name="restore_warning_message">Dit zal ALLE huidige trainingen, materiaal en instellingen op DEZE telefoon PERMANENT WISSEN en vervangen door de gegevens uit de back-up. Weet u het absoluut zeker?</string>
     <string name="import_finished_format">Import voltooid. %1$d nieuwe trainingen toegevoegd.</string>

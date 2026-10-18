@@ -1136,6 +1136,9 @@
     <string name="restore_failed">Ripristino fallito. Assicurati che il file sia valido.</string>
     <string name="backup_security_error">Errore di sicurezza: Archivio di backup non valido o danneggiato.</string>
     <string name="backup_security_error_desc">L\'archivio di backup contiene percorsi non autorizzati, collegamenti simbolici o supera i limiti di dimensione sicuri ed è stato rifiutato.</string>
+    <string name="backup_restore_error_missing_databases">Nell\'archivio di backup manca la cartella dei database.</string>
+    <string name="backup_restore_error_integrity_failed">Il database di backup non ha superato la verifica di integrità SQLite.</string>
+    <string name="backup_restore_error_schema_downgrade">Il backup è stato creato da una versione più recente dell\'app e non può essere ripristinato.</string>
     <string name="restore_warning_title">PERICOLO: Ripristino totale</string>
     <string name="restore_warning_message">Questo CANCELLERÀ PERMANENTEMENTE tutti gli allenamenti, l\'attrezzatura e le impostazioni su QUESTO telefono e li sostituirà con i dati del backup. Sei assolutamente sicuro?</string>
     <string name="import_finished_format">Importazione terminata. Aggiunti %1$d nuovi allenamenti.</string>

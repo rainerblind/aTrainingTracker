@@ -1238,6 +1238,9 @@
     <string name="restore_failed">Wiederherstellung fehlgeschlagen. Bitte stellen Sie sicher, dass die Datei gültig ist.</string>
     <string name="backup_security_error">Sicherheitsfehler: Ungültiges oder beschädigtes Sicherungsarchiv.</string>
     <string name="backup_security_error_desc">Das Sicherungsarchiv enthält unzulässige Pfade, symbolische Links oder überschreitet sichere Größengrenzen und wurde abgelehnt.</string>
+    <string name="backup_restore_error_missing_databases">Dem Sicherungsarchiv fehlt das Datenbankverzeichnis.</string>
+    <string name="backup_restore_error_integrity_failed">Die Sicherungsdatenbank hat die SQLite-Integritätsprüfung nicht bestanden.</string>
+    <string name="backup_restore_error_schema_downgrade">Die Sicherung wurde mit einer neueren App-Version erstellt und kann nicht wiederhergestellt werden.</string>
     <string name="restore_warning_title">GEFAHR: Vollständige Wiederherstellung</string>
     <string name="restore_warning_message">Dies wird ALLE aktuellen Workouts, Ausrüstungen und Einstellungen auf DIESEM Telefon UNWIDERRUFLICH LÖSCHEN und durch die Daten aus dem Backup ersetzen. Sind Sie absolut sicher?</string>
     <string name="import_finished_format">Import abgeschlossen. %1$d neue Workouts hinzugefügt.</string>

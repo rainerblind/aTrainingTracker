@@ -1137,6 +1137,9 @@
     <string name="restore_failed">Échec de la restauration. Vérifiez que le fichier est valide.</string>
     <string name="backup_security_error">Erreur de sécurité : Archive de sauvegarde non valide ou corrompue.</string>
     <string name="backup_security_error_desc">L\'archive de sauvegarde contient des chemins non autorisés, des liens symboliques ou dépasse les limites de taille sécurisées et a été rejetée.</string>
+    <string name="backup_restore_error_missing_databases">Le dossier des bases de données est manquant dans l\'archive de sauvegarde.</string>
+    <string name="backup_restore_error_integrity_failed">La base de données de sauvegarde a échoué à la vérification d\'intégrité SQLite.</string>
+    <string name="backup_restore_error_schema_downgrade">La sauvegarde a été créée par une version plus récente de l\'application et ne peut pas être restaurée.</string>
     <string name="restore_warning_title">DANGER : Restauration complète</string>
     <string name="restore_warning_message">Ceci EFFACERA DÉFINITIVEMENT tous les entraînements, équipements et réglages sur CE téléphone et les remplacera par les données de la sauvegarde. Êtes-vous sûr ?</string>
     <string name="import_finished_format">Importation terminée. %1$d nouveaux entraînements ajoutés.</string>

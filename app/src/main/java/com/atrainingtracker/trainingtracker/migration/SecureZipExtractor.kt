@@ -35,11 +35,18 @@ object SecureZipExtractor {
     @JvmStatic
     fun purgeStaleStagingDirs(context: Context) {
         try {
-            val cacheDir = context.cacheDir ?: return
-            listOf("restore_temp", "import_temp", "import_analysis").forEach { dirName ->
-                val dir = File(cacheDir, dirName)
-                if (dir.exists()) {
-                    dir.deleteRecursively()
+            val cacheDir = context.cacheDir
+            val dataDir = context.applicationInfo?.dataDir?.let { File(it) } ?: context.filesDir.parentFile ?: context.filesDir
+            val staleNames = listOf(
+                "restore_temp", "restore_staging", "import_temp", "import_analysis",
+                "backup_rollback", "databases_staging_trash", "shared_prefs_staging_trash", "datastore_staging_trash"
+            )
+            listOfNotNull(cacheDir, dataDir, context.filesDir).forEach { baseDir ->
+                staleNames.forEach { dirName ->
+                    val dir = File(baseDir, dirName)
+                    if (dir.exists()) {
+                        dir.deleteRecursively()
+                    }
                 }
             }
         } catch (e: Exception) {

@@ -1267,6 +1267,9 @@ public class TrainingApplication extends Application {
         // ATT-3982 / REQ-MIG-040: Purge stale backup/restore staging directories from previous interrupted runs
         com.atrainingtracker.trainingtracker.migration.SecureZipExtractor.purgeStaleStagingDirs(this);
 
+        // ATT-3989 / REQ-MIG-041: Transactional restore recovery for interrupted operations
+        com.atrainingtracker.trainingtracker.migration.RestoreJournalManager.recoverInterruptedRestoreIfNecessary(this);
+
         // ATT-3983 / REQ-SEC-041: Security migration for fresh Strava re-authentication
         com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSecurityMigration.runMigrationIfRequired(this);
 

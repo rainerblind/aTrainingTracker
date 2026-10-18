@@ -164,44 +164,7 @@ object BackupManager {
     }
 
     private fun checkpointAndCloseAllDatabases(context: Context) {
-        try {
-            // Handle Java and Kotlin database access nuances safely
-            // Use TRUNCATE to flush everything to disk and clear WAL files without a hard close (ATT-289)
-            val databases = listOfNotNull(
-                try { WorkoutSummariesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-                try { WorkoutSamplesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-                try { LapsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-                try { RoutesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-                try { WorkoutClusterDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-                try { KnownLocationsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-                try { SportTypeEquipmentLinkManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-                try { TrackingViewsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-                try { DevicesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-                try { SportTypeDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-                try { StravaUploadDbHelper(context).writableDatabase } catch (_: Throwable) { null },
-                try { ExportStatusDatabaseManager.getInstance(context)?.getDatabase() } catch (_: Throwable) { null },
-                try { SegmentsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-                try { EquipmentDbHelper(context).writableDatabase } catch (_: Throwable) { null },
-                try { ActiveDevicesDbHelper(context).writableDatabase } catch (_: Throwable) { null }
-            )
-
-            databases.forEach { db ->
-                try {
-                    if (db.isOpen) {
-                        // Checkpoint WAL to main file and truncate log
-                        db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE);", null).use { 
-                            if (it.moveToFirst()) {
-                                Log.v(TAG, "Checkpoint TRUNCATE result: ${it.getInt(0)}")
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Error checkpointing database", e)
-                }
-            }
-        } catch (t: Throwable) {
-            Log.w(TAG, "Failed to checkpoint databases", t)
-        }
+        DatabaseConnectionManager.quiesceAllDatabases(context, closeConnections = false)
     }
 
     private fun zipFolder(folder: File, internalPath: String, zos: ZipOutputStream) {
