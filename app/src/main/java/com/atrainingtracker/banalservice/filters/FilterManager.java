@@ -32,9 +32,10 @@ import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import androidx.core.content.ContextCompat;
 import com.atrainingtracker.util.LifecycleUtils;
@@ -43,10 +44,10 @@ public class FilterManager {
     private static final String TAG = FilterType.class.getSimpleName();
     private static final boolean DEBUG = BANALService.getDebug(false);
 
-    protected HashMap<String, FilterData> mRequiredButNotAvailableFilters = new HashMap<>();
+    protected final Map<String, FilterData> mRequiredButNotAvailableFilters = new ConcurrentHashMap<>();
 
-    protected HashMap<String, MyFilter> myFilterMap = new HashMap<>();
-    protected HashMap<MyFilter, MySensor> mMapFilter2Sensor = new HashMap<>();
+    protected final Map<String, MyFilter> myFilterMap = new ConcurrentHashMap<>();
+    protected final Map<MyFilter, MySensor> mMapFilter2Sensor = new ConcurrentHashMap<>();
 
     protected Context mContext;
     protected DeviceManager mDeviceManager;
@@ -92,8 +93,10 @@ public class FilterManager {
             filterData.filterType = FilterType.INSTANTANEOUS;
         }
 
+        String hashKey = filterData.getHashKey();
+
         // if the requested filter is already there, we simply return
-        if (myFilterMap.containsKey(filterData.getHashKey())) {
+        if (myFilterMap.containsKey(hashKey)) {
             if (DEBUG) Log.i(TAG, "filter already there");
             return;
         }
@@ -114,7 +117,7 @@ public class FilterManager {
 
         if (mySensor == null) {  // sensor not (yet) available
             if (DEBUG) Log.i(TAG, "sensor not (yet) available");
-            mRequiredButNotAvailableFilters.put(filterData.getHashKey(), filterData);   // save this request for later on..
+            mRequiredButNotAvailableFilters.put(hashKey, filterData);   // save this request for later on..
             return;
         }
 
@@ -153,18 +156,25 @@ public class FilterManager {
                 break;
         }
 
-        mySensor.addSensorListener(myFilter);
-
-        myFilterMap.put(filterData.getHashKey(), myFilter);
-        mMapFilter2Sensor.put(myFilter, mySensor);
-
-        if (DEBUG) Log.i(TAG, "filter " + filterData.getHashKey() + "created");
+        MyFilter existing = myFilterMap.putIfAbsent(hashKey, myFilter);
+        if (existing == null) {
+            mMapFilter2Sensor.put(myFilter, mySensor);
+            mySensor.addSensorListener(myFilter);
+            mRequiredButNotAvailableFilters.remove(hashKey);
+            if (DEBUG) Log.i(TAG, "filter " + hashKey + "created");
+        }
     }
 
     public void shutDown() {
         for (MyFilter myFilter : myFilterMap.values()) {
-            mMapFilter2Sensor.get(myFilter).removeSensorListener(myFilter);
+            MySensor sensor = mMapFilter2Sensor.get(myFilter);
+            if (sensor != null) {
+                sensor.removeSensorListener(myFilter);
+            }
         }
+        myFilterMap.clear();
+        mMapFilter2Sensor.clear();
+        mRequiredButNotAvailableFilters.clear();
 
         LifecycleUtils.safeUnregisterReceiver(mContext, mSensorsChangedReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(mContext, mResetAccumulatorsReceiver, TAG);
@@ -185,11 +195,8 @@ public class FilterManager {
 
     public FilteredSensorData getFilteredSensorData(FilterData filterData) {
         String key = filterData.getHashKey();
-        if (myFilterMap.containsKey(key)) {
-            return myFilterMap.get(key).getFilteredSensorData();
-        } else {
-            return null;
-        }
+        MyFilter filter = myFilterMap.get(key);
+        return filter != null ? filter.getFilteredSensorData() : null;
     }
 
 

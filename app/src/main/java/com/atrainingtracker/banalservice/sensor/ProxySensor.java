@@ -67,7 +67,7 @@ public class ProxySensor<T> extends MySensor<T> {
     }
 
     @Override
-    public void addSensorListener(SensorListener sensorListener) {
+    public synchronized void addSensorListener(SensorListener sensorListener) {
         super.addSensorListener(sensorListener);
         final MySensor<T> source = mSourceSensor;
         if (source != null) {
@@ -76,7 +76,7 @@ public class ProxySensor<T> extends MySensor<T> {
     }
 
     @Override
-    public void removeSensorListener(SensorListener sensorListener) {
+    public synchronized void removeSensorListener(SensorListener sensorListener) {
         super.removeSensorListener(sensorListener);
         final MySensor<T> source = mSourceSensor;
         if (source != null) {
@@ -99,7 +99,7 @@ public class ProxySensor<T> extends MySensor<T> {
         return (source != null && source.getDevice() != null) ? source.getDevice().getDeviceId() : -1L;
     }
 
-    public void setSourceSensor(MySensor<T> sourceSensor) {
+    public synchronized void setSourceSensor(MySensor<T> sourceSensor) {
         final MySensor<T> previousSource = mSourceSensor;
         // move all SensorListeners to the new sensor
         for (SensorListener sensorListener : mSensorListeners) {
