@@ -140,6 +140,7 @@ public class TrackerService extends Service {
     public static final String WORKOUT_NAME = "de.rainerblind.trainingtracker.TrackerService.WORKOUT_NAME";
     public static final String TRACKING_STARTED_INTENT = "de.rainerblind.trainingtracker.TrackerService.TRACKING_STARTED_INTENT";
     public static final String TRACKING_FINISHED_INTENT = "de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT";
+    public static final String TRACKING_ABORTED_INTENT = "com.atrainingtracker.trainingtracker.tracker.TrackerService.TRACKING_ABORTED_INTENT";
     public static final String WORKOUT_ID               = "WORKOUT_ID";
     public static final String WORKOUT_UPDATED_INTENT   = "com.atrainingtracker.trainingtracker.WOKRKOUT_UPDATED_INTENT";
 
@@ -170,6 +171,7 @@ public class TrackerService extends Service {
     // protected ContentValues mSummaryValues = new ContentValues();
     private final ScheduledExecutorService mScheduler = Executors.newScheduledThreadPool(1);
     private final java.util.concurrent.ExecutorService mDbExecutor = Executors.newSingleThreadExecutor();
+    private volatile CompletableFuture<Void> mFinalizationFuture = CompletableFuture.completedFuture(null);
     // we assume that we start while the BANAL Service is searching
     protected volatile boolean mSearching = true;
     protected volatile boolean mCreateNewLapWhenConnectedToBanalService = false;
@@ -193,6 +195,32 @@ public class TrackerService extends Service {
     @VisibleForTesting
     public int getSampleInsertFailureCount() {
         return mSampleInsertFailureCount.get();
+    }
+
+    /**
+     * Returns the {@link CompletableFuture} that completes once the terminal {@code onDestroy()}
+     * workout finalization task on {@code mDbExecutor} has finished ({@code REQ-TRK-033.2}).
+     */
+    @VisibleForTesting
+    @NonNull
+    public CompletableFuture<Void> getFinalizationFuture() {
+        return mFinalizationFuture;
+    }
+
+    /**
+     * Returns whether the 1 Hz {@code mScheduler} thread pool has been shut down ({@code REQ-TRK-033.1}).
+     */
+    @VisibleForTesting
+    public boolean isSchedulerShutdownForTesting() {
+        return mScheduler.isShutdown();
+    }
+
+    /**
+     * Returns whether the single-threaded {@code mDbExecutor} has been shut down ({@code REQ-TRK-033.2}).
+     */
+    @VisibleForTesting
+    public boolean isDbExecutorShutdownForTesting() {
+        return mDbExecutor.isShutdown();
     }
 
     private final AutoPauseManager mAutoPauseManager = new AutoPauseManager();
@@ -597,10 +625,13 @@ public class TrackerService extends Service {
                         Log.e(TAG, "Fatal error initializing workout database asynchronously", t);
                         initFuture.completeExceptionally(t);
                         mTrackingInterrupted = true;
-                        if (mTrackerHandle != null) {
-                            mTrackerHandle.cancel(true);
+                        ScheduledFuture<?> handle = mTrackerHandle;
+                        if (handle != null) {
+                            handle.cancel(true);
                             mTrackerHandle = null;
                         }
+                        TrainingApplication.resetTrackingStateOnAbort();
+                        runOnMainThread(this::handleTrackingAborted);
                         showTrackingInterruptedNotification();
                         performStopSelf();
                     }
@@ -707,6 +738,69 @@ public class TrackerService extends Service {
         }
     }
 
+    protected void performStopForeground() {
+        try {
+            if (getBaseContext() != null) {
+                stopForeground(true);
+            }
+        } catch (Throwable ignored) {
+            // Safe fallback in unmocked unit test environments
+        }
+    }
+
+    /**
+     * Dispatches {@code action} to the Android main looper if available and the caller is on a
+     * background thread; otherwise executes {@code action} inline ({@code REQ-TRK-033.3}).
+     */
+    protected void runOnMainThread(@NonNull Runnable action) {
+        try {
+            android.os.Looper mainLooper = android.os.Looper.getMainLooper();
+            if (mainLooper != null && android.os.Looper.myLooper() != mainLooper) {
+                if (new android.os.Handler(mainLooper).post(action)) {
+                    return;
+                }
+            }
+        } catch (Throwable ignored) {
+            // Fallback to inline execution in unmocked unit test environments
+        }
+        action.run();
+    }
+
+    /**
+     * Resets {@link TrainingApplication} tracking state to {@code READY} and broadcasts
+     * {@link #TRACKING_ABORTED_INTENT} when asynchronous workout initialization fails
+     * ({@code REQ-TRK-033.3}).
+     */
+    protected void handleTrackingAborted() {
+        TrainingApplication.resetTrackingStateOnAbort();
+        if (mTrainingApplication != null) {
+            mTrainingApplication.onTrackingAborted();
+        } else {
+            try {
+                if (getBaseContext() != null && getApplication() instanceof TrainingApplication) {
+                    ((TrainingApplication) getApplication()).onTrackingAborted();
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        notifyTrackingAborted();
+    }
+
+    protected void notifyTrackingAborted() {
+        try {
+            Intent abortedIntent = new Intent(TRACKING_ABORTED_INTENT)
+                    .setPackage(this.getPackageName());
+            this.sendBroadcast(abortedIntent);
+        } catch (Throwable e) {
+            try {
+                if (getBaseContext() != null) {
+                    Log.w(TAG, "Failed to broadcast TRACKING_ABORTED_INTENT", e);
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
     public static void showTrackingInterruptedNotification(Context context) {
         if (context == null) {
             return;
@@ -776,6 +870,19 @@ public class TrackerService extends Service {
         super.onDestroy();
     }
 
+    /**
+     * Tears down the tracking service without blocking the Android main thread ({@code REQ-TRK-033}).
+     *
+     * <p>1. Cancels {@code mTrackerHandle} and shuts down {@code mScheduler} ({@code REQ-TRK-033.1})
+     * so the 1 Hz sampling pool thread is reclaimed and cannot enqueue further tasks onto
+     * {@code mDbExecutor}.
+     * <p>2. Releases main-thread resources ({@code mAutoPauseManager}, broadcast receivers,
+     * {@code unbindService(mBanalConnection)}, {@code stopForeground}).
+     * <p>3. Enqueues a terminal {@code finalizationTask} onto the single-threaded FIFO
+     * {@code mDbExecutor} followed immediately by {@code mDbExecutor.shutdown()} ({@code REQ-TRK-033.2}),
+     * ensuring all pending 1 Hz sample writes finish in FIFO order before {@link #endWorkout()}
+     * executes off the main thread.
+     */
     @Override
     public void onDestroy() {
         performSuperOnDestroy();
@@ -788,35 +895,52 @@ public class TrackerService extends Service {
             mTableInitializationFuture.cancel(false);
         }
 
-        // first of all, stop the trackerHandle
-        if (mTrackerHandle != null) {
-            mTrackerHandle.cancel(true);
+        // Stop the periodic 1 Hz tracker task and shut down the scheduler pool (REQ-TRK-033.1)
+        ScheduledFuture<?> handle = mTrackerHandle;
+        if (handle != null) {
+            handle.cancel(true);
+            mTrackerHandle = null;
         }
+        mScheduler.shutdownNow();
 
-        mDbExecutor.shutdown();
-        try {
-            if (!mDbExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
-                Log.w(TAG, "Database executor did not terminate in time.");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
-        if (!mTrackingInterrupted) {
-            endWorkout();
-        }
-
-        unbindService(mBanalConnection);
-        mBanalService = null;
-
+        // Release main-thread resources immediately while keeping mBanalService and wakeLock
+        // valid until the terminal finalization task on mDbExecutor completes (REQ-TRK-033.2).
+        mAutoPauseManager.release();
 
         LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mUserSelectedSportTypeChangedReceiver, TAG);
 
-        mAutoPauseManager.release();
-        releaseWakeLock();
+        unbindService(mBanalConnection);
+        performStopForeground();
+
+        final boolean interrupted = mTrackingInterrupted;
+        final CompletableFuture<Void> finalizationFuture = new CompletableFuture<>();
+        mFinalizationFuture = finalizationFuture;
+
+        Runnable finalizationTask = () -> {
+            try {
+                if (!interrupted) {
+                    endWorkout();
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "Unexpected error during async workout finalization in onDestroy", t);
+            } finally {
+                mBanalService = null;
+                releaseWakeLock();
+                finalizationFuture.complete(null);
+            }
+        };
+
+        try {
+            mDbExecutor.execute(finalizationTask);
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            Log.w(TAG, "mDbExecutor already shut down in onDestroy; running finalizationTask inline", e);
+            finalizationTask.run();
+        } finally {
+            mDbExecutor.shutdown();
+        }
     }
 
     private static final String[] RESUME_WORKOUT_PROJECTION = new String[] {

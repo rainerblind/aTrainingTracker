@@ -97,6 +97,12 @@ class TrackerServiceAsyncInitTest {
             trackingStartedBroadcastWorkoutId = workoutId
         }
 
+        var trackingAbortedBroadcasted = false
+
+        override fun notifyTrackingAborted() {
+            trackingAbortedBroadcasted = true
+        }
+
         override fun sendBroadcast(intent: Intent?) {
             // No-op
         }
@@ -142,6 +148,7 @@ class TrackerServiceAsyncInitTest {
             service.onDestroy()
         } catch (_: Exception) {
         }
+        com.atrainingtracker.trainingtracker.TrainingApplication.resetTrackingStateOnAbort()
         unmockkAll()
     }
 
@@ -248,6 +255,55 @@ class TrackerServiceAsyncInitTest {
         assertTrue("User must be notified about interrupted tracking", service.notificationShown)
         // 4. Tracking interrupted flag is set
         assertTrue("mTrackingInterrupted must be true", service.isTrackingInterrupted)
+    }
+
+    /**
+     * TST-TRK-025.3: Verifies that when START_NORMAL asynchronous database initialization fails,
+     * TrainingApplication's tracking mode is reset from TRACKING to READY, manual/auto pause flags
+     * are cleared, mTrainingApplication.onTrackingAborted() is invoked when bound, and
+     * TRACKING_ABORTED_INTENT is broadcast (REQ-TRK-033.3).
+     */
+    @Test
+    fun testStartNormalAsyncFailure_ResetsTrainingApplicationTrackingModeAndBroadcastsAbort() {
+        // Given: TrainingApplication was placed in TRACKING mode by startTracking()
+        com.atrainingtracker.trainingtracker.TrainingApplication.setTrackingModeForTesting(
+            com.atrainingtracker.trainingtracker.TrackingMode.TRACKING
+        )
+        com.atrainingtracker.trainingtracker.TrainingApplication.setActiveWorkoutIdForTesting(777L)
+        com.atrainingtracker.trainingtracker.TrainingApplication.setManualPauseLock(true, null)
+        com.atrainingtracker.trainingtracker.TrainingApplication.setAutoPaused(true, null)
+
+        val mockApp = mockk<com.atrainingtracker.trainingtracker.TrainingApplication>(relaxed = true)
+        val appField = TrackerService::class.java.getDeclaredField("mTrainingApplication").apply { isAccessible = true }
+        appField.set(service, mockApp)
+
+        service.tableCreationException = RuntimeException("Simulated DB initialization failure")
+
+        val intent = mockk<Intent>(relaxed = true)
+        every { intent.getStringExtra(TrackerService.START_TYPE) } returns TrackerService.StartType.START_NORMAL.name
+
+        // When: onStartCommand runs and async initialization fails
+        service.onStartCommand(intent, 0, 1)
+
+        assertTrue("performStopSelf must complete within timeout", service.stopSelfLatch.await(5, TimeUnit.SECONDS))
+
+        // Then:
+        assertTrue("tableInitializationFuture must complete exceptionally", service.tableInitializationFuture.isCompletedExceptionally)
+        assertTrue("mTrackingInterrupted must be true", service.isTrackingInterrupted)
+        assertEquals(
+            "TrainingApplication trackingMode must be reset to READY on async init abort",
+            com.atrainingtracker.trainingtracker.TrackingMode.READY,
+            com.atrainingtracker.trainingtracker.TrainingApplication.getTrackingMode()
+        )
+        assertFalse("TrainingApplication.isTracking() must be false after abort",
+            com.atrainingtracker.trainingtracker.TrainingApplication.isTracking())
+        assertFalse("manualPauseLock must be cleared on abort",
+            com.atrainingtracker.trainingtracker.TrainingApplication.isManualPauseLocked())
+        assertFalse("autoPaused must be cleared on abort",
+            com.atrainingtracker.trainingtracker.TrainingApplication.isAutoPaused())
+        assertEquals(-1L, com.atrainingtracker.trainingtracker.TrainingApplication.getActiveWorkoutID())
+        assertTrue("TRACKING_ABORTED_INTENT must be broadcast", service.trackingAbortedBroadcasted)
+        io.mockk.verify(exactly = 1) { mockApp.onTrackingAborted() }
     }
 
     @Test
