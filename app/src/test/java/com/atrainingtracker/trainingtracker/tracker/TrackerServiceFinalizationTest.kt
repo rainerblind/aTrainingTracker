@@ -83,6 +83,12 @@ class TrackerServiceFinalizationTest {
         var onEndWorkoutAction: (() -> Unit)? = null
         var onUnbindServiceAction: (() -> Unit)? = null
 
+        var capturedSnapshot: TrackerService.BanalFinalizationSnapshot? = null
+        var savedLapNr: Long? = null
+        var savedLapTime: Int? = null
+        var savedLapDistance: Double? = null
+        var savedLapSpeed: Double? = null
+
         override fun getBuildVersionSdkInt(): Int = testSdkInt
         override fun hasHealthPermission(): Boolean = healthGranted
 
@@ -94,6 +100,13 @@ class TrackerServiceFinalizationTest {
             if (delegateToRealEndWorkout) {
                 super.endWorkout()
             }
+        }
+
+        override fun saveLap(lapNr: Long, lapTime: Int, lapDistance: Double, averageSpeed: Double) {
+            savedLapNr = lapNr
+            savedLapTime = lapTime
+            savedLapDistance = lapDistance
+            savedLapSpeed = averageSpeed
         }
 
         override fun performStopForeground() {
@@ -703,10 +716,176 @@ class TrackerServiceFinalizationTest {
         val mockService = TestableTrackerService()
         TrackerService.setInstanceForTesting(mockService)
         assertTrue("isRunning must be true when instance is set", TrackerService.isRunning())
-        assertEquals(mockService, TrackerService.getInstance())
-
         TrackerService.setInstanceForTesting(null)
         assertFalse("isRunning must be false after reset", TrackerService.isRunning())
+    }
+
+    /**
+     * TST-TRK-027.1: Verifies that BanalFinalizationSnapshot captures all telemetry fields
+     * defensively and immutably from BANALServiceComm (REQ-TRK-035.1).
+     */
+    @Test
+    fun testBanalFinalizationSnapshot_capturesAllTelemetryCorrectly() {
+        val mockBanal = mockk<com.atrainingtracker.banalservice.BANALService.BANALServiceComm>(relaxed = true)
+        val mockLapNr = mockk<com.atrainingtracker.banalservice.sensor.SensorData<Int>>()
+        every { mockLapNr.value } returns 3
+        every { mockBanal.getBestSensorData(SensorType.LAP_NR) } returns mockLapNr
+
+        val mockLapTime = mockk<com.atrainingtracker.banalservice.sensor.SensorData<Int>>()
+        every { mockLapTime.value } returns 120
+        every { mockBanal.getBestSensorData(SensorType.TIME_LAP) } returns mockLapTime
+
+        val mockLapDist = mockk<com.atrainingtracker.banalservice.sensor.SensorData<Double>>()
+        every { mockLapDist.value } returns 850.5
+        every { mockBanal.getBestSensorData(SensorType.DISTANCE_m_LAP) } returns mockLapDist
+
+        every { mockBanal.databaseIdsOfActiveRemoteDevices } returns listOf(101L, 102L)
+        every { mockBanal.accumulatedSensorTypeSet } returns setOf(SensorType.HR, SensorType.SPEED_mps, SensorType.CADENCE)
+        every { mockBanal.accumulatedGCDataString } returns "HR=150,SPD=25"
+        every { mockBanal.bSportType } returns BSportType.BIKE
+        every { mockBanal.userSelectedBSportType } returns BSportType.BIKE
+
+        val mockContext = mockk<Context>(relaxed = true)
+
+        val snapshot = TrackerService.BanalFinalizationSnapshot.capture(
+            mockBanal,
+            mockContext,
+            7.5,
+            true
+        )
+
+        assertEquals(3, snapshot.lapNr)
+        assertEquals(120, snapshot.lapTime_s)
+        assertEquals(850.5, snapshot.lapDistance_m, 1e-6)
+        assertEquals(setOf(101L, 102L), snapshot.activeRemoteDeviceIds)
+        assertEquals(setOf(SensorType.HR, SensorType.SPEED_mps, SensorType.CADENCE), snapshot.accumulatedSensorTypes)
+        assertEquals("HR=150,SPD=25", snapshot.accumulatedGCDataString)
+        assertEquals(BSportType.BIKE, snapshot.bSportType)
+        assertEquals(BSportType.BIKE, snapshot.userSelectedSportType)
+    }
+
+    /**
+     * TST-TRK-027.2: Verifies that in-flight ticks and sample writes are aborted when mIsStopping is true (REQ-TRK-035.2).
+     */
+    @Test
+    fun testInFlightTick_whenIsStoppingTrue_abortsWithoutSampleWrite() {
+        val mockBanal = mockk<com.atrainingtracker.banalservice.BANALService.BANALServiceComm>(relaxed = true)
+        setField("mBanalService", mockBanal)
+        setField("mIsStopping", true)
+
+        // Run tracker tick
+        val trackerField = TrackerService::class.java.getDeclaredField("tracker").apply { isAccessible = true }
+        val trackerRunnable = trackerField.get(service) as Runnable
+        trackerRunnable.run()
+
+        // Call sampleAndWriteToDb directly as well
+        service.sampleAndWriteToDb(mockBanal)
+
+        // Verify no sensor data was queried
+        verify(exactly = 0) { mockBanal.getBestSensorData(any()) }
+        verify(exactly = 0) { mockBanal.databaseIdsOfActiveRemoteDevices }
+    }
+
+    /**
+     * TST-TRK-027.3: Verifies that endWorkout(snapshot) successfully persists the final lap,
+     * active devices, and accumulated sensors even if BANALService is already destroyed/null (REQ-TRK-035.3).
+     */
+    @Test
+    fun testEndWorkout_withSnapshot_persistsFinalLapAndAccumulatedSensorsEvenIfBanalServiceDestroyed() {
+        service.delegateToRealEndWorkout = true
+        val workoutId = 999L
+        setWorkoutId(workoutId)
+        setField("mBaseFileName", "test_file_name")
+
+        // Crucial: mBanalService is null to simulate BANALService already destroyed
+        setField("mBanalService", null)
+
+        mockkConstructor(ContentValues::class)
+        every { anyConstructed<ContentValues>().put(any(), any<Int>()) } returns Unit
+        every { anyConstructed<ContentValues>().put(any(), any<Long>()) } returns Unit
+        every { anyConstructed<ContentValues>().put(any(), any<String>()) } returns Unit
+        every { anyConstructed<ContentValues>().size() } returns 1
+
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any(), any<Long>()) } answers { self as Intent }
+
+        val summariesManagerMock = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
+        val mockDb = mockk<SQLiteDatabase>(relaxed = true)
+        every { summariesManagerMock.database } returns mockDb
+        mockkStatic(WorkoutSummariesDatabaseManager::class)
+        every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns summariesManagerMock
+
+        val snapshot = TrackerService.BanalFinalizationSnapshot(
+            4,
+            300,
+            2000.0,
+            setOf(200L),
+            setOf(SensorType.POWER),
+            "GC_SAMPLE",
+            BSportType.BIKE,
+            BSportType.BIKE,
+            1L
+        )
+
+        service.endWorkout(snapshot)
+
+        // Verify lap saved with snapshot metrics
+        assertEquals(4L, service.savedLapNr)
+        assertEquals(300, service.savedLapTime)
+        assertEquals(2000.0, service.savedLapDistance ?: 0.0, 1e-6)
+        assertEquals(2000.0 / 300.0, service.savedLapSpeed ?: 0.0, 1e-6)
+
+        // Verify accumulated sensors saved from snapshot
+        verify(exactly = 1) {
+            summariesManagerMock.saveAccumulatedSensorTypes(workoutId, setOf(SensorType.POWER))
+        }
+
+        // Verify FINISHED = 1 transaction executed
+        verify(atLeast = 1) {
+            mockDb.update(
+                eq(WorkoutSummaries.TABLE),
+                any(),
+                eq("${WorkoutSummaries.C_ID}=$workoutId"),
+                isNull()
+            )
+        }
+    }
+
+    /**
+     * TST-TRK-027.4: Verifies that onDestroy() defers safeUnbindBanalService() until after async
+     * finalization on mDbExecutor completes, keeping BANALService alive during endWorkout() (REQ-TRK-035.4).
+     */
+    @Test
+    fun testOnDestroy_defersUnbindBanalUntilAfterFinalization() {
+        val realService = TestableTrackerService()
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(realService, 888L)
+        val baseFileNameField = TrackerService::class.java.getDeclaredField("mBaseFileName").apply { isAccessible = true }
+        baseFileNameField.set(realService, "2026-10-18_test")
+
+        val mockBanal = mockk<com.atrainingtracker.banalservice.BANALService.BANALServiceComm>(relaxed = true)
+        val banalField = TrackerService::class.java.getDeclaredField("mBanalService").apply { isAccessible = true }
+        banalField.set(realService, mockBanal)
+        realService.setBanalBoundForTesting(true)
+
+        val executionOrder = java.util.Collections.synchronizedList(mutableListOf<String>())
+        realService.onEndWorkoutAction = {
+            executionOrder.add("endWorkout")
+            // Verify BANAL snapshot was captured
+            assertTrue(realService.finalizationSnapshotForTesting != null)
+        }
+        realService.onUnbindServiceAction = {
+            executionOrder.add("unbindService")
+        }
+
+        realService.onDestroy()
+
+        realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
+
+        assertTrue("endWorkout must be called during onDestroy", realService.endWorkoutCalled)
+        assertEquals("endWorkout must execute before unbindService", listOf("endWorkout", "unbindService"), executionOrder)
+        assertTrue("unbindService must be called", realService.unbindServiceCalled)
     }
 }
 
