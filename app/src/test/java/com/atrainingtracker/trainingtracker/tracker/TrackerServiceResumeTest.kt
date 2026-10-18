@@ -34,14 +34,22 @@ import com.atrainingtracker.banalservice.sensor.SensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.sensor.SensorValueType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.EncodedStreams
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.ExtremaRecord
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.PolyUtil
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -57,9 +65,10 @@ import java.util.concurrent.TimeUnit
 /**
  * Unit test suite verifying targeted single-row indexed query, bounds safety,
  * asynchronous BANALService deferred resume table name synchronization,
- * ordered onServiceConnected callbacks, and sample write error surfacing
- * for TrackerService crash/user resumption (REQ-DAT-002, TST-DAT-002, ATT-3549;
- * REQ-TRK-026, TST-TRK-018, ATT-3980).
+ * ordered onServiceConnected callbacks, sample write error surfacing,
+ * and LiveWorkoutSession rehydration for TrackerService crash/user resumption
+ * (REQ-DAT-002, TST-DAT-002, ATT-3549; REQ-TRK-026, TST-TRK-018, ATT-3980;
+ * REQ-TRK-031, TST-TRK-023, ATT-3987).
  */
 class TrackerServiceResumeTest {
 
@@ -104,6 +113,8 @@ class TrackerServiceResumeTest {
         override fun unregisterReceiver(receiver: BroadcastReceiver?) {}
         override fun unbindService(conn: ServiceConnection) {}
         override fun endWorkout() {}
+        override fun guessCommuteAndTrainer() {}
+        fun callFinalizeLiveSession() = super.finalizeLiveSession()
     }
 
     private class DirectExecutorService : AbstractExecutorService() {
@@ -557,5 +568,229 @@ class TrackerServiceResumeTest {
         )
         assertFalse("handleMissingColumns must return false on unrecoverable SQLiteException", unrecoverable)
         verify(atLeast = 1) { Log.e(eq("TrackerService"), any<String>(), any<SQLiteException>()) }
+    }
+
+    /**
+     * TST-TRK-023.1 & TST-TRK-023.2: Verifies that applyResumedState instantiates mLiveSession
+     * and rehydrates streams (polyline, altitude, distance) and sensor extrema (MIN, MAX, AVG, count)
+     * before completing mTableInitializationFuture and notifying tracking started.
+     */
+    @Test
+    fun testApplyResumedState_instantiatesAndRehydratesLiveSession_fromEncodedStreamsAndExtrema() {
+        val workoutId = 88L
+        val p1 = LatLng(48.1000, 11.5000)
+        val p2 = LatLng(48.1100, 11.5100)
+        val encodedPoly = PolyUtil.encode(listOf(p1, p2))
+        val encodedAlt = NumericalEncodingUtils.encodeDoubles(listOf(500.0, 515.0))
+        val encodedDist = NumericalEncodingUtils.encodeDoubles(listOf(0.0, 600.0))
+
+        every { mockDbManager.getEncodedStreams(workoutId) } returns EncodedStreams(encodedPoly, encodedAlt, encodedDist)
+        every { mockDbManager.getExtremaForWorkouts(listOf(workoutId)) } returns listOf(
+            ExtremaRecord(workoutId, SensorType.HR, ExtremaType.MIN, 115.0, p1, null),
+            ExtremaRecord(workoutId, SensorType.HR, ExtremaType.MAX, 172.0, p2, null),
+            ExtremaRecord(workoutId, SensorType.HR, ExtremaType.AVG, 145.0, null, 80)
+        )
+
+        val state = TrackerService.ResumedWorkoutState(
+            "2026-10-18_090000",
+            workoutId,
+            120,
+            100,
+            85,
+            1,
+            600.0
+        )
+
+        service.applyResumedState(state)
+
+        val liveSessionField: Field = TrackerService::class.java.getDeclaredField("mLiveSession")
+        liveSessionField.isAccessible = true
+        val liveSession = liveSessionField.get(service) as? LiveWorkoutSession
+        assertNotNull("mLiveSession must be non-null after applyResumedState", liveSession)
+        assertEquals(workoutId, liveSession!!.workoutId)
+        assertEquals(2, liveSession.rawLatLngs.size)
+        assertEquals(2, liveSession.sampledLatLngs.size)
+        assertEquals(p1.latitude, liveSession.startLatLng.latitude, 1e-4)
+        assertEquals(p2.latitude, liveSession.lastLatLng.latitude, 1e-4)
+        assertEquals(listOf(500.0, 515.0), liveSession.sampledAltitudes)
+        assertEquals(listOf(0.0, 600.0), liveSession.sampledDistances)
+
+        val hrStats = liveSession.sensorStats[SensorType.HR]
+        assertNotNull(hrStats)
+        assertEquals(115.0, hrStats!!.min, 1e-4)
+        assertEquals(172.0, hrStats.max, 1e-4)
+        assertEquals(80, hrStats.count)
+        assertEquals(145.0, hrStats.average, 1e-4)
+        assertEquals(workoutId, service.notifiedWorkoutId)
+    }
+
+    /**
+     * TST-TRK-023.3: Verifies that while mIsRehydrating is true (during asynchronous DB rehydration),
+     * sampleAndWriteToDb() still writes raw SQLite samples but does not mutate mLiveSession or throw
+     * ConcurrentModificationException; once mIsRehydrating is cleared, subsequent ticks update mLiveSession.
+     */
+    @Test
+    fun testSampleAndWriteToDb_whileIsRehydratingTrue_skipsLiveSessionMutationWithoutRace() {
+        val workoutId = 91L
+        val liveSession = LiveWorkoutSession(workoutId, setOf(SensorType.HR))
+
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        val baseFileNameField = TrackerService::class.java.getDeclaredField("mBaseFileName").apply { isAccessible = true }
+        val samplesTableField = TrackerService::class.java.getDeclaredField("mSamplesTableName").apply { isAccessible = true }
+        val liveSessionField = TrackerService::class.java.getDeclaredField("mLiveSession").apply { isAccessible = true }
+        val isRehydratingField = TrackerService::class.java.getDeclaredField("mIsRehydrating").apply { isAccessible = true }
+        val banalServiceField = TrackerService::class.java.getDeclaredField("mBanalService").apply { isAccessible = true }
+
+        workoutIdField.set(service, workoutId)
+        baseFileNameField.set(service, "2026-10-18_100000")
+        samplesTableField.set(service, "\"2026-10-18_100000\"")
+        liveSessionField.set(service, liveSession)
+        isRehydratingField.set(service, true)
+
+        val mockBanalComm = mockk<BANALServiceComm>(relaxed = true)
+        val hrData = SensorData<Number>(SensorType.HR, 155, "155", null)
+        every { mockBanalComm.allSensorData } returns listOf(hrData)
+        every { mockBanalComm.getBestSensorData(any()) } returns null
+        every { mockBanalComm.getBestSensorData(SensorType.HR) } returns hrData
+        banalServiceField.set(service, mockBanalComm)
+
+        every { mockSamplesDb.insertOrThrow("\"2026-10-18_100000\"", null, any()) } returns 1L
+
+        val sampleMethod: Method = TrackerService::class.java.getDeclaredMethod("sampleAndWriteToDb")
+        sampleMethod.isAccessible = true
+
+        // 1. Tick while mIsRehydrating == true -> writes to DB, skips mLiveSession mutation
+        sampleMethod.invoke(service)
+        assertNull("mLiveSession must not be mutated while mIsRehydrating is true", liveSession.sensorStats[SensorType.HR])
+        verify(exactly = 1) { mockSamplesDb.insertOrThrow("\"2026-10-18_100000\"", null, any()) }
+
+        // 2. Clear mIsRehydrating -> next tick updates mLiveSession
+        isRehydratingField.set(service, false)
+        sampleMethod.invoke(service)
+        assertEquals("mLiveSession must record sample once mIsRehydrating is false", 1, liveSession.sensorStats[SensorType.HR]!!.count)
+        assertEquals(155.0, liveSession.sensorStats[SensorType.HR]!!.max, 1e-4)
+    }
+
+    /**
+     * TST-TRK-023.4 Boundary Check: Verifies that if MAP_POLYLINE is corrupt/malformed,
+     * rehydrateLiveSession catches the exception for the polyline block independently and still
+     * restores valid ALTITUDE_STREAM, DISTANCE_STREAM, and sensor extrema.
+     */
+    @Test
+    fun testRehydrateLiveSession_corruptPolyline_stillRestoresAltitudeDistanceAndExtrema() {
+        val workoutId = 95L
+        val encodedAlt = NumericalEncodingUtils.encodeDoubles(listOf(420.0, 435.0))
+        val encodedDist = NumericalEncodingUtils.encodeDoubles(listOf(0.0, 500.0))
+
+        // Corrupt polyline string that fails PolyUtil.decode
+        every { mockDbManager.getEncodedStreams(workoutId) } returns EncodedStreams("corrupt_polyline_\u0000_invalid", encodedAlt, encodedDist)
+        every { mockDbManager.getExtremaForWorkouts(listOf(workoutId)) } returns listOf(
+            ExtremaRecord(workoutId, SensorType.HR, ExtremaType.MIN, 120.0, null, null),
+            ExtremaRecord(workoutId, SensorType.HR, ExtremaType.MAX, 165.0, null, null),
+            ExtremaRecord(workoutId, SensorType.HR, ExtremaType.AVG, 142.0, null, 50)
+        )
+
+        val state = TrackerService.ResumedWorkoutState(
+            "2026-10-18_110000",
+            workoutId,
+            60,
+            50,
+            40,
+            1,
+            500.0
+        )
+
+        service.applyResumedState(state)
+
+        val liveSessionField = TrackerService::class.java.getDeclaredField("mLiveSession").apply { isAccessible = true }
+        val liveSession = liveSessionField.get(service) as LiveWorkoutSession
+
+        // Altitude and distance streams plus extrema must still be restored despite polyline failure
+        assertEquals(listOf(420.0, 435.0), liveSession.sampledAltitudes)
+        assertEquals(listOf(0.0, 500.0), liveSession.sampledDistances)
+        assertEquals(165.0, liveSession.sensorStats[SensorType.HR]!!.max, 1e-4)
+        assertEquals(50, liveSession.sensorStats[SensorType.HR]!!.count)
+    }
+
+    /**
+     * TST-TRK-023.5: Verifies end-to-end resume + post-resume sampling + finalizeLiveSession()
+     * persists the combined route polyline, combined streams, preserved start location, updated end
+     * location, and merged extrema to WorkoutSummariesDatabaseManager and WorkoutRepository.
+     */
+    @Test
+    fun testResumedSession_finalizeLiveSession_persistsCombinedRouteStreamsAndMergedExtrema() {
+        val workoutId = 105L
+        val p1 = LatLng(48.1000, 11.5000)
+        val p2 = LatLng(48.1100, 11.5100)
+        val p3 = LatLng(48.1250, 11.5250)
+
+        val encodedPoly = PolyUtil.encode(listOf(p1, p2))
+        val encodedAlt = NumericalEncodingUtils.encodeDoubles(listOf(500.0, 510.0))
+        val encodedDist = NumericalEncodingUtils.encodeDoubles(listOf(0.0, 1000.0))
+
+        every { mockDbManager.getEncodedStreams(workoutId) } returns EncodedStreams(encodedPoly, encodedAlt, encodedDist)
+        every { mockDbManager.getExtremaForWorkouts(listOf(workoutId)) } returns listOf(
+            ExtremaRecord(workoutId, SensorType.HR, ExtremaType.MIN, 110.0, p1, null),
+            ExtremaRecord(workoutId, SensorType.HR, ExtremaType.MAX, 160.0, p2, null),
+            ExtremaRecord(workoutId, SensorType.HR, ExtremaType.AVG, 140.0, null, 10)
+        )
+
+        val repositoryMock = mockk<WorkoutRepository>(relaxed = true)
+        val repoField = TrackerService::class.java.getDeclaredField("mWorkoutRepository").apply { isAccessible = true }
+        repoField.set(service, repositoryMock)
+
+        val state = TrackerService.ResumedWorkoutState(
+            "2026-10-18_120000",
+            workoutId,
+            150,
+            100,
+            120,
+            1,
+            1000.0
+        )
+
+        // 1. Resume workout
+        service.applyResumedState(state)
+
+        val liveSessionField = TrackerService::class.java.getDeclaredField("mLiveSession").apply { isAccessible = true }
+        val liveSession = liveSessionField.get(service) as LiveWorkoutSession
+
+        // 2. Append post-resume samples (20 steps for a 20s stream point at p3, plus 10 HR samples at 180 bpm -> merged avg = 160.0 over 20 samples)
+        for (i in 1..20) {
+            liveSession.recordStreamPoint(p3, 530.0, 1500.0)
+        }
+        for (i in 1..10) {
+            liveSession.addSample(SensorType.HR, 180.0, p3)
+        }
+
+        // 3. Finalize session upon stop
+        service.callFinalizeLiveSession()
+
+        // 4. Verify combined polyline & streams persisted
+        val polySlot = slot<String>()
+        val altSlot = slot<String>()
+        val distSlot = slot<String>()
+        verify(exactly = 1) {
+            mockDbManager.updateMapAndStreams(
+                eq(workoutId),
+                capture(polySlot),
+                capture(altSlot),
+                capture(distSlot)
+            )
+        }
+        val finalDecodedPoints = PolyUtil.decode(polySlot.captured)
+        assertTrue("Final polyline must include both pre-resume and post-resume points", finalDecodedPoints.size >= 2)
+        assertEquals(p1.latitude, finalDecodedPoints.first().latitude, 1e-4)
+        assertEquals(p3.latitude, finalDecodedPoints.last().latitude, 1e-4)
+        assertEquals(listOf(500.0, 510.0, 530.0), NumericalEncodingUtils.decodeDoubles(altSlot.captured))
+        assertEquals(listOf(0.0, 1000.0, 1500.0), NumericalEncodingUtils.decodeDoubles(distSlot.captured))
+
+        // 5. Verify START is p1, END is p3, HR MIN is still 110.0 at p1, HR MAX is 180.0 at p3, HR AVG is 160.0 with count 20
+        verify { mockDbManager.updateExtremaValue(eq(workoutId), eq(SensorType.LATITUDE), eq(ExtremaType.START), eq(p1.latitude), any()) }
+        verify { mockDbManager.updateExtremaValue(eq(workoutId), eq(SensorType.LATITUDE), eq(ExtremaType.END), eq(p3.latitude), any()) }
+        verify { mockDbManager.updateExtremaValue(eq(workoutId), eq(SensorType.HR), eq(ExtremaType.MIN), eq(110.0), any()) }
+        verify { mockDbManager.updateExtremaValue(eq(workoutId), eq(SensorType.HR), eq(ExtremaType.MAX), eq(180.0), eq(p3)) }
+        verify { mockDbManager.updateExtremaValue(eq(workoutId), eq(SensorType.HR), eq(ExtremaType.AVG), eq(160.0), isNull(), eq(20)) }
+        verify { repositoryMock.setMapPolyline(eq(workoutId), eq(polySlot.captured)) }
     }
 }

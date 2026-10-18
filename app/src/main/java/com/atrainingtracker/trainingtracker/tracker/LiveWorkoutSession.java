@@ -89,8 +89,131 @@ public class LiveWorkoutSession {
         return startLatLng;
     }
 
+    /**
+     * Restores the session start coordinate upon workout resumption ({@code REQ-TRK-031.2}).
+     */
+    public void setStartLatLng(LatLng startLatLng) {
+        this.startLatLng = startLatLng;
+    }
+
     public LatLng getLastLatLng() {
         return lastLatLng;
+    }
+
+    /**
+     * Restores the most recent session coordinate upon workout resumption ({@code REQ-TRK-031.2}).
+     */
+    public void setLastLatLng(LatLng lastLatLng) {
+        this.lastLatLng = lastLatLng;
+    }
+
+    /**
+     * Rehydrates the in-memory spatial, altitude, and distance streams along with their delta-encoding
+     * fixed-point anchors from previously persisted workout stream data ({@code REQ-TRK-031.2}).
+     *
+     * <p>Each stream parameter is handled independently: if {@code null} or empty, its corresponding
+     * in-memory list is cleared and its delta anchor is reset to {@code 0} without throwing
+     * {@link NullPointerException}.
+     *
+     * @param preResumeLatLngs   Decoded pre-resume map polyline points, or {@code null}.
+     * @param preResumeAltitudes Decoded pre-resume 20s altitude stream values (m), or {@code null}.
+     * @param preResumeDistances Decoded pre-resume 20s distance stream values (m), or {@code null}.
+     */
+    public void rehydrateStreams(List<LatLng> preResumeLatLngs, List<Double> preResumeAltitudes, List<Double> preResumeDistances) {
+        rawLatLngs.clear();
+        sampledLatLngs.clear();
+        if (preResumeLatLngs != null && !preResumeLatLngs.isEmpty()) {
+            for (LatLng pt : preResumeLatLngs) {
+                if (pt != null) {
+                    rawLatLngs.add(pt);
+                    sampledLatLngs.add(pt);
+                }
+            }
+            if (!sampledLatLngs.isEmpty()) {
+                if (startLatLng == null) {
+                    startLatLng = sampledLatLngs.get(0);
+                }
+                lastLatLng = sampledLatLngs.get(sampledLatLngs.size() - 1);
+                lastLatE5 = Math.round(lastLatLng.latitude * 1e5);
+                lastLngE5 = Math.round(lastLatLng.longitude * 1e5);
+            } else {
+                lastLatE5 = 0;
+                lastLngE5 = 0;
+            }
+        } else {
+            lastLatE5 = 0;
+            lastLngE5 = 0;
+        }
+
+        sampledAltitudes.clear();
+        if (preResumeAltitudes != null && !preResumeAltitudes.isEmpty()) {
+            for (Double alt : preResumeAltitudes) {
+                if (alt != null && Double.isFinite(alt)) {
+                    sampledAltitudes.add(alt);
+                }
+            }
+            if (!sampledAltitudes.isEmpty()) {
+                double lastAlt = sampledAltitudes.get(sampledAltitudes.size() - 1);
+                lastAltE2 = Math.round(lastAlt * 100);
+            } else {
+                lastAltE2 = 0;
+            }
+        } else {
+            lastAltE2 = 0;
+        }
+
+        sampledDistances.clear();
+        if (preResumeDistances != null && !preResumeDistances.isEmpty()) {
+            for (Double dist : preResumeDistances) {
+                if (dist != null && Double.isFinite(dist)) {
+                    sampledDistances.add(dist);
+                }
+            }
+            if (!sampledDistances.isEmpty()) {
+                double lastDist = sampledDistances.get(sampledDistances.size() - 1);
+                lastDistE2 = Math.round(lastDist * 100);
+            } else {
+                lastDistE2 = 0;
+            }
+        } else {
+            lastDistE2 = 0;
+        }
+    }
+
+    /**
+     * Rehydrates the running statistics ({@code MIN}, {@code MAX}, {@code AVG}, and sample {@code count})
+     * for a specific sensor upon workout resumption ({@code REQ-TRK-031.2}).
+     *
+     * @param sensorType  The sensor type to restore.
+     * @param minValue    Persisted pre-resume minimum value, or {@code null}.
+     * @param maxValue    Persisted pre-resume maximum value, or {@code null}.
+     * @param avgValue    Persisted pre-resume average value, or {@code null}.
+     * @param sampleCount Pre-resume sample count weight for running average continuity.
+     */
+    public void rehydrateSensorStats(SensorType sensorType, Double minValue, Double maxValue, Double avgValue, int sampleCount) {
+        rehydrateSensorStats(sensorType, minValue, null, maxValue, null, avgValue, sampleCount);
+    }
+
+    /**
+     * Rehydrates the running statistics ({@code MIN}, {@code MAX}, {@code AVG}, spatial peak coordinates,
+     * and sample {@code count}) for a specific sensor upon workout resumption ({@code REQ-TRK-031.2}).
+     *
+     * @param sensorType  The sensor type to restore.
+     * @param minValue    Persisted pre-resume minimum value, or {@code null}.
+     * @param minPosition Persisted geographical position of the minimum peak, or {@code null}.
+     * @param maxValue    Persisted pre-resume maximum value, or {@code null}.
+     * @param maxPosition Persisted geographical position of the maximum peak, or {@code null}.
+     * @param avgValue    Persisted pre-resume average value, or {@code null}.
+     * @param sampleCount Pre-resume sample count weight for running average continuity.
+     */
+    public void rehydrateSensorStats(SensorType sensorType, Double minValue, LatLng minPosition, Double maxValue, LatLng maxPosition, Double avgValue, int sampleCount) {
+        if (sensorType == null) return;
+        RunningStats stats = sensorStats.get(sensorType);
+        if (stats == null) {
+            stats = new RunningStats();
+            sensorStats.put(sensorType, stats);
+        }
+        stats.rehydrate(minValue, minPosition, maxValue, maxPosition, avgValue, sampleCount);
     }
 
     /**
@@ -268,6 +391,50 @@ public class LiveWorkoutSession {
 
         public double getAverage() {
             return count > 0 ? sum / count : 0;
+        }
+
+        /**
+         * Returns the number of samples accumulated for this sensor ({@code REQ-TRK-031.2}).
+         */
+        public int getCount() {
+            return count;
+        }
+
+        /**
+         * Rehydrates running statistics from persisted pre-resume extrema and sample count ({@code REQ-TRK-031.2}).
+         */
+        public void rehydrate(Double minValue, Double maxValue, Double avgValue, int sampleCount) {
+            rehydrate(minValue, null, maxValue, null, avgValue, sampleCount);
+        }
+
+        /**
+         * Rehydrates running statistics and peak coordinates from persisted pre-resume extrema and sample count ({@code REQ-TRK-031.2}).
+         */
+        public void rehydrate(Double minValue, LatLng minPosition, Double maxValue, LatLng maxPosition, Double avgValue, int sampleCount) {
+            if (minValue != null && Double.isFinite(minValue)) {
+                this.min = minValue;
+                this.minPos = minPosition;
+            } else {
+                this.min = Double.MAX_VALUE;
+                this.minPos = null;
+            }
+
+            if (maxValue != null && Double.isFinite(maxValue)) {
+                this.max = maxValue;
+                this.maxPos = maxPosition;
+            } else {
+                this.max = -Double.MAX_VALUE;
+                this.maxPos = null;
+            }
+
+            if (avgValue != null && Double.isFinite(avgValue) && sampleCount > 0) {
+                this.count = sampleCount;
+                this.sum = avgValue * sampleCount;
+                this.last = avgValue;
+            } else {
+                this.count = 0;
+                this.sum = 0;
+            }
         }
     }
 }

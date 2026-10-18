@@ -252,6 +252,7 @@ public class TrackerService extends Service {
     private volatile long mWorkoutID;
     private final Set<Long> mActiveSessionDeviceIds = Collections.synchronizedSet(new HashSet<>());
     private LiveWorkoutSession mLiveSession;
+    private volatile boolean mIsRehydrating = false;
     private volatile CompletableFuture<Void> mTableInitializationFuture = CompletableFuture.completedFuture(null);
     private StartType mStartType;
     private boolean mWorkoutStartLocationRecorded = false;
@@ -921,9 +922,10 @@ public class TrackerService extends Service {
 
     /**
      * Applies restored workout state on resume ({@code RESUME_BY_USER} or {@code RESUME_SERVICE_RECREATION}),
-     * synchronizing {@code mSamplesTableName} with {@code mBaseFileName}, completing
-     * {@code mTableInitializationFuture}, and broadcasting {@code notifyTrackingStarted(mWorkoutID)}
-     * ({@code REQ-TRK-026.1}, {@code REQ-TRK-026.3}, {@code ATT-3980}).
+     * synchronizing {@code mSamplesTableName} with {@code mBaseFileName}, instantiating and rehydrating
+     * {@code mLiveSession} on {@code mDbExecutor}, completing {@code mTableInitializationFuture}, and
+     * broadcasting {@code notifyTrackingStarted(mWorkoutID)}
+     * ({@code REQ-TRK-026.1}, {@code REQ-TRK-026.3}, {@code REQ-TRK-031.3}, {@code ATT-3980}, {@code ATT-3987}).
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     void applyResumedState(@NonNull ResumedWorkoutState state) {
@@ -961,12 +963,173 @@ public class TrackerService extends Service {
         BANALService.setInitialSensorValue(SensorType.LAP_NR, state.lapNr);
         BANALService.setInitialSensorValue(SensorType.DISTANCE_m, mDistanceTotal_m);
 
-        if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
-            mTableInitializationFuture.complete(null);
+        mLiveSession = new LiveWorkoutSession(mWorkoutID, IMPORTANT_SENSOR_TYPES);
+        mIsRehydrating = true;
+        final long resumedWorkoutId = mWorkoutID;
+        final int resumedActiveTimeS = mTimeActive_s;
+        Runnable rehydrateTask = () -> {
+            try {
+                rehydrateLiveSession(resumedWorkoutId, resumedActiveTimeS);
+            } finally {
+                mIsRehydrating = false;
+                if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
+                    mTableInitializationFuture.complete(null);
+                }
+                if (resumedWorkoutId > 0) {
+                    notifyTrackingStarted(resumedWorkoutId);
+                }
+            }
+        };
+        if (mDbExecutor != null && !mDbExecutor.isShutdown()) {
+            mDbExecutor.execute(rehydrateTask);
+        } else {
+            rehydrateTask.run();
         }
-        if (mWorkoutID > 0) {
-            notifyTrackingStarted(mWorkoutID);
+    }
+
+    /**
+     * Rehydrates the in-memory {@link LiveWorkoutSession} streams and per-sensor running statistics
+     * from {@link WorkoutSummariesDatabaseManager} upon workout resumption ({@code REQ-TRK-031.3}, {@code ATT-3987}).
+     *
+     * <p>Each encoded stream ({@code mapPolyline}, {@code altitudeStream}, {@code distanceStream}) is
+     * decoded in its own independent {@code try / catch} block so a corrupted or empty stream falls back
+     * to {@link Collections#emptyList()} while preserving sibling streams.
+     *
+     * @param workoutId         The resumed workout database ID.
+     * @param activeTimeSeconds Restored pre-resume active duration in seconds (used as fallback weight for legacy rows).
+     */
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void rehydrateLiveSession(long workoutId, int activeTimeSeconds) {
+        final LiveWorkoutSession session = mLiveSession;
+        if (session == null || workoutId <= 0) {
+            return;
         }
+        try {
+            WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(this);
+            if (summariesManager == null) {
+                return;
+            }
+
+            // 1. Rehydrate encoded streams with independent per-stream fault isolation
+            WorkoutSummariesDatabaseManager.EncodedStreams encodedStreams = summariesManager.getEncodedStreams(workoutId);
+            if (encodedStreams != null) {
+                List<LatLng> decodedLatLngs = Collections.emptyList();
+                if (encodedStreams.mapPolyline != null && !encodedStreams.mapPolyline.isEmpty()) {
+                    try {
+                        decodedLatLngs = PolyUtil.decode(encodedStreams.mapPolyline);
+                    } catch (Exception e) {
+                        Log.w(TAG, "rehydrateLiveSession: Failed to decode mapPolyline for workout " + workoutId, e);
+                        decodedLatLngs = Collections.emptyList();
+                    }
+                }
+
+                List<Double> decodedAltitudes = Collections.emptyList();
+                if (encodedStreams.altitudeStream != null && !encodedStreams.altitudeStream.isEmpty()) {
+                    try {
+                        decodedAltitudes = NumericalEncodingUtils.INSTANCE.decodeDoubles(encodedStreams.altitudeStream);
+                    } catch (Exception e) {
+                        Log.w(TAG, "rehydrateLiveSession: Failed to decode altitudeStream for workout " + workoutId, e);
+                        decodedAltitudes = Collections.emptyList();
+                    }
+                }
+
+                List<Double> decodedDistances = Collections.emptyList();
+                if (encodedStreams.distanceStream != null && !encodedStreams.distanceStream.isEmpty()) {
+                    try {
+                        decodedDistances = NumericalEncodingUtils.INSTANCE.decodeDoubles(encodedStreams.distanceStream);
+                    } catch (Exception e) {
+                        Log.w(TAG, "rehydrateLiveSession: Failed to decode distanceStream for workout " + workoutId, e);
+                        decodedDistances = Collections.emptyList();
+                    }
+                }
+
+                session.rehydrateStreams(decodedLatLngs, decodedAltitudes, decodedDistances);
+            }
+
+            // 2. Rehydrate per-sensor extrema and running average sample counts
+            List<WorkoutSummariesDatabaseManager.ExtremaRecord> extremaRecords =
+                    summariesManager.getExtremaForWorkouts(Collections.singletonList(workoutId));
+            if (extremaRecords != null && !extremaRecords.isEmpty()) {
+                Map<SensorType, Double> minMap = new HashMap<>();
+                Map<SensorType, LatLng> minPosMap = new HashMap<>();
+                Map<SensorType, Double> maxMap = new HashMap<>();
+                Map<SensorType, LatLng> maxPosMap = new HashMap<>();
+                Map<SensorType, Double> avgMap = new HashMap<>();
+                Map<SensorType, Integer> countMap = new HashMap<>();
+                Set<SensorType> sensorsWithExtrema = new HashSet<>();
+                LatLng persistedStartPos = null;
+                Double persistedStartLat = null;
+                Double persistedStartLon = null;
+
+                for (WorkoutSummariesDatabaseManager.ExtremaRecord record : extremaRecords) {
+                    if (record == null || record.sensorType == null || record.extremaType == null) continue;
+                    if (record.extremaType == ExtremaType.START) {
+                        if (record.position != null) {
+                            persistedStartPos = record.position;
+                        }
+                        if (record.sensorType == SensorType.LATITUDE) {
+                            persistedStartLat = record.value;
+                        } else if (record.sensorType == SensorType.LONGITUDE) {
+                            persistedStartLon = record.value;
+                        }
+                        continue;
+                    }
+                    if (record.extremaType == ExtremaType.MIN) {
+                        minMap.put(record.sensorType, record.value);
+                        if (record.position != null) {
+                            minPosMap.put(record.sensorType, record.position);
+                        }
+                        sensorsWithExtrema.add(record.sensorType);
+                    } else if (record.extremaType == ExtremaType.MAX) {
+                        maxMap.put(record.sensorType, record.value);
+                        if (record.position != null) {
+                            maxPosMap.put(record.sensorType, record.position);
+                        }
+                        sensorsWithExtrema.add(record.sensorType);
+                    } else if (record.extremaType == ExtremaType.AVG) {
+                        avgMap.put(record.sensorType, record.value);
+                        if (record.count != null && record.count > 0) {
+                            countMap.put(record.sensorType, record.count);
+                        }
+                        sensorsWithExtrema.add(record.sensorType);
+                    }
+                }
+
+                if (session.getStartLatLng() == null) {
+                    if (persistedStartPos != null) {
+                        session.setStartLatLng(persistedStartPos);
+                    } else if (persistedStartLat != null && persistedStartLon != null) {
+                        session.setStartLatLng(new LatLng(persistedStartLat, persistedStartLon));
+                    }
+                }
+
+                for (SensorType sensorType : sensorsWithExtrema) {
+                    Double minVal = minMap.get(sensorType);
+                    LatLng minPos = minPosMap.get(sensorType);
+                    Double maxVal = maxMap.get(sensorType);
+                    LatLng maxPos = maxPosMap.get(sensorType);
+                    Double avgVal = avgMap.get(sensorType);
+                    Integer persistedCount = countMap.get(sensorType);
+                    int sampleCount = (persistedCount != null && persistedCount > 0)
+                            ? persistedCount
+                            : (activeTimeSeconds > 0 ? activeTimeSeconds : 1);
+                    session.rehydrateSensorStats(sensorType, minVal, minPos, maxVal, maxPos, avgVal, sampleCount);
+                }
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "rehydrateLiveSession: Failed to rehydrate LiveWorkoutSession for workoutId=" + workoutId, t);
+        }
+    }
+
+    @VisibleForTesting
+    @Nullable
+    LiveWorkoutSession getLiveSession() {
+        return mLiveSession;
+    }
+
+    @VisibleForTesting
+    boolean isRehydrating() {
+        return mIsRehydrating;
     }
 
     @VisibleForTesting
@@ -1434,8 +1597,8 @@ public class TrackerService extends Service {
 
         Map<String, SensorValueType> sensorName2Type = new HashMap<>();
 
-        // 1. Update LiveSession running statistics ONLY from authoritative best sensor telemetry (REQ-MAP-019, ATT-499)
-        if (mLiveSession != null) {
+        // 1. Update LiveSession running statistics ONLY from authoritative best sensor telemetry (REQ-MAP-019, ATT-499, REQ-TRK-031.3)
+        if (mLiveSession != null && !mIsRehydrating) {
             for (SensorType sensorType : SENSORS_TO_TRACK) {
                 SensorData<Number> bestData = banalService.getBestSensorData(sensorType);
                 if (bestData == null || bestData.getValue() == null) continue;
@@ -1452,20 +1615,26 @@ public class TrackerService extends Service {
                     LiveWorkoutSession.RunningStats stats = mLiveSession.getSensorStats().get(sensorType);
 
                     if ((changed & LiveWorkoutSession.RunningStats.CHANGED_MIN) != 0) {
-                        mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MIN, stats.min, stats.minPos);
+                        if (mWorkoutRepository != null) {
+                            mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MIN, stats.min, stats.minPos);
+                        }
                         extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.MIN, stats.min, stats.minPos));
                     }
                     if ((changed & LiveWorkoutSession.RunningStats.CHANGED_MAX) != 0) {
-                        mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MAX, stats.max, stats.maxPos);
+                        if (mWorkoutRepository != null) {
+                            mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MAX, stats.max, stats.maxPos);
+                        }
                         extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.MAX, stats.max, stats.maxPos));
                     }
                     if ((changed & LiveWorkoutSession.RunningStats.CHANGED_AVG) != 0) {
                         // For Speed, we defer the average update until after the loop to use the 
                         // authoritative distance/time calculation (SCRUM-108)
                         if (sensorType != SensorType.SPEED_mps) {
-                            mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.AVG, stats.getAverage(), null);
+                            if (mWorkoutRepository != null) {
+                                mWorkoutRepository.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.AVG, stats.getAverage(), null);
+                            }
                             if (updateAvgInDb) {
-                                extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.AVG, stats.getAverage(), null));
+                                extremaUpdates.add(new ExtremaUpdate(sensorType, ExtremaType.AVG, stats.getAverage(), null, stats.getCount()));
                             }
                         }
                     }
@@ -1523,10 +1692,14 @@ public class TrackerService extends Service {
 
             // Harmonize with Speed sensor average in Extrema Table (SCRUM-108)
             // We do this every sample to ensure UI consistency while tracking.
-            if (mLiveSession != null && mLiveSession.getSensorStats().containsKey(SensorType.SPEED_mps)) {
-                mWorkoutRepository.updateExtremaValue(mWorkoutID, SensorType.SPEED_mps, ExtremaType.AVG, authoritativeAvgSpeed, null);
+            if (mLiveSession != null && !mIsRehydrating && mLiveSession.getSensorStats().containsKey(SensorType.SPEED_mps)) {
+                if (mWorkoutRepository != null) {
+                    mWorkoutRepository.updateExtremaValue(mWorkoutID, SensorType.SPEED_mps, ExtremaType.AVG, authoritativeAvgSpeed, null);
+                }
                 if (updateAvgInDb) {
-                    extremaUpdates.add(new ExtremaUpdate(SensorType.SPEED_mps, ExtremaType.AVG, authoritativeAvgSpeed, null));
+                    LiveWorkoutSession.RunningStats speedStats = mLiveSession.getSensorStats().get(SensorType.SPEED_mps);
+                    Integer speedCount = speedStats != null ? speedStats.getCount() : null;
+                    extremaUpdates.add(new ExtremaUpdate(SensorType.SPEED_mps, ExtremaType.AVG, authoritativeAvgSpeed, null, speedCount));
                 }
             }
         }
@@ -1539,7 +1712,7 @@ public class TrackerService extends Service {
 
         // Handle Streams (every 20s)
         final LiveWorkoutSession.StreamIncrement streamIncrement;
-        if (mLiveSession != null) {
+        if (mLiveSession != null && !mIsRehydrating) {
             SensorData<Number> altData = banalService.getBestSensorData(SensorType.ALTITUDE);
             SensorData<Number> distData = banalService.getBestSensorData(SensorType.DISTANCE_m);
             Double alt = (altData != null && altData.getValue() != null) ? altData.getValue().doubleValue() : null;
@@ -1594,7 +1767,11 @@ public class TrackerService extends Service {
 
                 // Write Extrema
                 for (ExtremaUpdate update : extremaUpdates) {
-                    summariesManager.updateExtremaValue(summariesDb, workoutId, update.type, update.extrema, update.value, update.pos);
+                    if (update.count != null) {
+                        summariesManager.updateExtremaValue(summariesDb, workoutId, update.type, update.extrema, update.value, update.pos, update.count);
+                    } else {
+                        summariesManager.updateExtremaValue(summariesDb, workoutId, update.type, update.extrema, update.value, update.pos);
+                    }
                 }
 
                 // Write Summary
@@ -1836,12 +2013,19 @@ public class TrackerService extends Service {
         final ExtremaType extrema;
         final double value;
         final LatLng pos;
+        @Nullable
+        final Integer count;
 
         ExtremaUpdate(SensorType type, ExtremaType extrema, double value, LatLng pos) {
+            this(type, extrema, value, pos, null);
+        }
+
+        ExtremaUpdate(SensorType type, ExtremaType extrema, double value, LatLng pos, @Nullable Integer count) {
             this.type = type;
             this.extrema = extrema;
             this.value = value;
             this.pos = pos;
+            this.count = count;
         }
     }
 
@@ -1951,7 +2135,8 @@ public class TrackerService extends Service {
                         avgValue = getAverageSpeed();
                     }
                     if (Double.isFinite(avgValue)) {
-                        summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
+                        Integer avgCount = stats.getCount() > 0 ? stats.getCount() : null;
+                        summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null, avgCount);
                         if (repository != null) {
                             repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
                         }
