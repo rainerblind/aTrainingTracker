@@ -301,4 +301,30 @@ class DeviceListViewModelPairingTest {
 
         job.cancel()
     }
+
+    /**
+     * TST-SEN-020.7: Immediate unpair reversal safety test.
+     * Toggling pair switch on an auto-paired device dispatches onPairedChanged(deviceId, false),
+     * ensuring updateDevice is invoked with isPaired = false (persisting PAIRED = 0 in database).
+     */
+    @Test
+    fun `testOnPairedChanged_unpairingAutoPairedDevice_updatesDeviceWithPairedFalse`() = runTest(testDispatcher) {
+        val deviceId = 777L
+        val autoPairedDevice = createUiDevice(deviceId, DeviceType.BIKE_SPEED_AND_CADENCE, isPaired = true)
+        every { mockDeviceRepo.getDeviceSnapshotById(deviceId) } returns autoPairedDevice
+
+        val viewModel = DeviceListViewModel(
+            application = mockApplication,
+            settingsDataStore = mockSettingsDataStore,
+            devicesDBRepository = mockDeviceRepo,
+            banalServiceRepository = mockBanalRepo
+        )
+
+        viewModel.onPairedChanged(deviceId, false)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            mockDeviceRepo.updateDevice(match { it.id == deviceId && !it.isPaired })
+        }
+    }
 }

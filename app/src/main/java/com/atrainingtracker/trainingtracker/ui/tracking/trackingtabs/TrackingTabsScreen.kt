@@ -755,6 +755,7 @@ fun TrackingTabsScreen(
                                 onStop = { controlViewModel.onStopTracking() },
                                 showResearchButton = hasPairedRemoteDevices,
                                 locationCalibrationStatus = locationCalibrationStatus,
+                                onPairSensor = { (activity as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors) },
                                 bottomContent = {
                                     val isDimmed = routeSelectorUiState.activeRoute == null && routeSelectorUiState.routes.isEmpty()
                                     val emptySubtitleRes = if (isDimmed) {

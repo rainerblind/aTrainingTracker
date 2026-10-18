@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -62,7 +63,8 @@ fun DeviceListScreen(
     scanningProtocol: Protocol? = null,
     scanningDeviceType: DeviceType? = null,
     onCheckAntInstallation: (() -> Unit)? = null,
-    filterCriteria: DeviceFilterCriteria = DeviceFilterCriteria()
+    filterCriteria: DeviceFilterCriteria = DeviceFilterCriteria(),
+    onScanForSensors: (() -> Unit)? = null
 ) {
     val devices by viewModel.getFilteredDevices(filterSpec, filterCriteria).collectAsState(initial = emptyList())
     val density = LocalDensity.current
@@ -92,12 +94,14 @@ fun DeviceListScreen(
             )
         }
 
-        if (showAntCard) {
+        if (showAntCard && onCheckAntInstallation != null) {
             val cardTopPadding = if (isSearching) 8.dp else topPadding
-            AntServicesStatusCard(
-                onCheckStatusClick = onCheckAntInstallation!!,
-                modifier = Modifier.padding(top = cardTopPadding)
-            )
+            onCheckAntInstallation.let { onCheck ->
+                AntServicesStatusCard(
+                    onCheckStatusClick = onCheck,
+                    modifier = Modifier.padding(top = cardTopPadding)
+                )
+            }
         }
 
         if (devices.isEmpty()) {
@@ -111,6 +115,12 @@ fun DeviceListScreen(
                 }
             }
             val placeholderPadding = if (isSearching || showAntCard) 8.dp else topPadding
+            val showSearchAction = !isSearching && filterCriteria.isEmpty
+            val hintText = if (showSearchAction) {
+                stringResource(R.string.devices_empty_state_search_hint)
+            } else {
+                ""
+            }
             EmptyStatePlaceholder(
                 modifier = Modifier
                     .padding(top = placeholderPadding)
@@ -118,8 +128,23 @@ fun DeviceListScreen(
                     .weight(1f),
                 icon = Icons.Default.Devices,
                 message = emptyMessage,
-                hint = "" // Information is now prominently in the header
-            )
+                hint = hintText
+            ) {
+                if (showSearchAction && onScanForSensors != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(
+                        onClick = onScanForSensors
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(R.string.devices_action_search_sensors))
+                    }
+                }
+            }
         } else {
             val scrollbarTop = if (isSearching || showAntCard) 0.dp else topPadding
             FastScrollableBox(

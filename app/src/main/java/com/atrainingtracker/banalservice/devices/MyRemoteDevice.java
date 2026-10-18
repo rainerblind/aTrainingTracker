@@ -94,7 +94,10 @@ public abstract class MyRemoteDevice extends MyDevice {
         intent.putExtra(BANALService.PROTOCOL, getProtocol().name());
         intent.putExtra(BANALService.DEVICE_TYPE, getDeviceType().name());
         intent.putExtra(BANALService.DEVICE_ID, getDeviceId());
-        intent.putExtra(BANALService.DEVICE_NAME, getName());
+        String name = getName();
+        if (name != null) {
+            intent.putExtra(BANALService.DEVICE_NAME, name);
+        }
         return intent;
     }
 

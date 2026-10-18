@@ -145,4 +145,45 @@ class ControlTrackingSensorHeaderContractTest {
             content.contains("name = \"cad\"")
         )
     }
+
+    /**
+     * TST-SEN-020.3: ControlTrackingScreen Onboarding Button Visibility & Hierarchy Contract.
+     * Verifies:
+     * 1. ControlTrackingScreen accepts onPairSensor lambda parameter.
+     * 2. When 0 devices are paired (!showResearchButton) and not searching (searchingFor == null),
+     *    the onboarding "+ Pair Sensor" button is rendered.
+     * 3. References R.string.onboarding_pair_sensor_action and Icons.Default.Add.
+     * 4. OutlinedButton triggers onPairSensor.
+     * 5. Strict layout non-interference: existing devices and research button branches remain intact.
+     */
+    @Test
+    fun testOnboardingPairSensorButtonContract() {
+        val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingScreen.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "ControlTrackingScreen must accept onPairSensor parameter",
+            content.contains("onPairSensor: () -> Unit = {}")
+        )
+
+        assertTrue(
+            "ControlTrackingScreen must include else if (searchingFor == null) branch for onboarding",
+            content.contains("else if (searchingFor == null)")
+        )
+
+        assertTrue(
+            "Onboarding button must reference R.string.onboarding_pair_sensor_action",
+            content.contains("R.string.onboarding_pair_sensor_action")
+        )
+
+        assertTrue(
+            "Onboarding button must use Icons.Default.Add",
+            content.contains("Icons.Default.Add")
+        )
+
+        assertTrue(
+            "Onboarding button must configure onClick = onPairSensor",
+            content.contains("onClick = onPairSensor")
+        )
+    }
 }

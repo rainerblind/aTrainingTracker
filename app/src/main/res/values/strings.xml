@@ -2199,6 +2199,11 @@
     <string name="cockpit_section_divider_chip_navigation">Navigation</string>
     <string name="cockpit_section_divider_chip_total">Total</string>
     <string name="cockpit_section_divider_delete">Remove divider</string>
+
+    <!-- Sensor Onboarding & Empty State (REQ-SEN-020 / ATT-4051) -->
+    <string name="onboarding_pair_sensor_action">+ Pair Sensor</string>
+    <string name="devices_empty_state_search_hint">Scan for nearby Bluetooth LE or ANT+ sensors</string>
+    <string name="devices_action_search_sensors">+ Search for Sensors</string>
 </resources>
 
 

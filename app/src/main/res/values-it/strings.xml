@@ -2006,5 +2006,10 @@
     <string name="cockpit_section_divider_chip_navigation">Navigazione</string>
     <string name="cockpit_section_divider_chip_total">Totale</string>
     <string name="cockpit_section_divider_delete">Rimuovi separatore</string>
+
+    <!-- Sensor Onboarding & Empty State (REQ-SEN-020 / ATT-4051) -->
+    <string name="onboarding_pair_sensor_action">+ Associa sensore</string>
+    <string name="devices_empty_state_search_hint">Cerca sensori Bluetooth LE o ANT+ nelle vicinanze</string>
+    <string name="devices_action_search_sensors">+ Cerca sensori</string>
 </resources>
 

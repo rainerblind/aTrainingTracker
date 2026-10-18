@@ -260,6 +260,33 @@ class DevicesTabbedViewModelTest {
 
         assertEquals("Garmin HRM-Pro", emitted)
     }
+
+    /**
+     * TST-SEN-020.8: Navigation disposal / screen lifecycle invokes stopSearching()
+     * and resets isSearching to false without ghost actions.
+     */
+    @Test
+    fun testStopSearching_resetsIsSearchingForNewDevices() = kotlinx.coroutines.test.runTest {
+        val searchingFlow = MutableStateFlow(false)
+        every { mockBanalServiceRepository.isSearchingForNewDevices } returns searchingFlow
+        every { mockBanalServiceRepository.startSearchingForNewDevices(any(), any()) } answers {
+            searchingFlow.value = true
+        }
+        every { mockBanalServiceRepository.stopSearchingForNewDevices() } answers {
+            searchingFlow.value = false
+        }
+
+        val savedStateHandle = SavedStateHandle()
+        val viewModel = DevicesTabbedViewModel(mockApplication, savedStateHandle)
+
+        viewModel.startSearching()
+        assertTrue(viewModel.isSearchingForNewDevices.value)
+
+        viewModel.stopSearching()
+        assertFalse(viewModel.isSearchingForNewDevices.value)
+        assertNull(viewModel.scanningProtocol.value)
+        assertNull(viewModel.scanningDeviceType.value)
+    }
 }
 
 

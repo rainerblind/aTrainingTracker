@@ -1985,5 +1985,10 @@
     <string name="cockpit_section_divider_chip_navigation">ナビゲーション</string>
     <string name="cockpit_section_divider_chip_total">合計</string>
     <string name="cockpit_section_divider_delete">区切り線を削除</string>
+
+    <!-- Sensor Onboarding & Empty State (REQ-SEN-020 / ATT-4051) -->
+    <string name="onboarding_pair_sensor_action">+ センサーをペアリング</string>
+    <string name="devices_empty_state_search_hint">近くのBluetooth LEまたはANT+センサーをスキャン</string>
+    <string name="devices_action_search_sensors">+ センサーを検索</string>
 </resources>
 

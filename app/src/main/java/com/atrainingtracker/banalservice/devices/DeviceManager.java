@@ -61,6 +61,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper;
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.TrackingMode;
 import com.dsi.ant.plugins.antplus.pccbase.MultiDeviceSearch;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
@@ -164,6 +165,18 @@ public class DeviceManager {
             pairingChanged(deviceId, paired);
         }
     };
+    protected IntentFilter mTrackingStateChangedFilter = new IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED);
+
+    private final BroadcastReceiver mTrackingStateChangedReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            TrackingMode mode = TrainingApplication.getTrackingMode();
+            if (mode == TrackingMode.READY || mode == TrackingMode.IDLE) {
+                // Direct state check protects against broadcast timing delays
+                startSearchForPairedDevices();
+            }
+        }
+    };
     // Callback interface for searching for ANT+
     IANTAsyncSearchEngineInterface mANTAsyncSearchEngineInterface = new IANTAsyncSearchEngineInterface() {
         public void onSearchStopped() {
@@ -175,38 +188,46 @@ public class DeviceManager {
                 Log.d(TAG, "onNewANTDeviceFound: " + deviceType.name() + ", Ant Nr:" + deviceFound.getAntDeviceNumber());
 
             long deviceId = -1;
+            boolean isNew = false;
+            boolean isWorkoutActive = false;
 
-            // check whether this device is already in DB
-            // ANTDeviceID antDeviceID = new ANTDeviceID(antDeviceType.getDeviceTypeByte(), deviceFound.getAntDeviceNumber());
-            if (!mDevicesDatabaseManager.isANTDeviceInDB(deviceType, deviceFound.getAntDeviceNumber())) { // not yet known
-                if (DEBUG)
-                    Log.d(TAG, "device is not yet in the database, so we have to add it to the database");
+            synchronized (mDevicesDatabaseManager) {
+                isWorkoutActive = (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING);
+                if (!mDevicesDatabaseManager.isANTDeviceInDB(deviceType, deviceFound.getAntDeviceNumber())) { // not yet known
+                    if (DEBUG)
+                        Log.d(TAG, "device is not yet in the database, so we have to add it to the database");
 
-                deviceId = mDevicesDatabaseManager.insertNewAntDeviceIntoDB(deviceType, deviceFound.getDeviceDisplayName(), deviceFound.getAntDeviceNumber(), pairingRecommendation, manufacturer, batteryPercentage);
+                    deviceId = mDevicesDatabaseManager.insertNewAntDeviceIntoDB(deviceType, deviceFound.getDeviceDisplayName(), deviceFound.getAntDeviceNumber(), true, manufacturer, batteryPercentage);
+                    isNew = true;
+                } else {
+                    if (DEBUG)
+                        Log.i(TAG, "Device already in database, so we do not add it to the database");
+                    deviceId = mDevicesDatabaseManager.getDeviceId(deviceType, deviceFound.getAntDeviceNumber());
 
-                if (deviceId > 0 && pairingRecommendation) {
-                    pairingChanged(deviceId, pairingRecommendation);
+                    if (manufacturer != null) {
+                        if (DEBUG) Log.i(TAG, "wow, we got a manufacturer: " + manufacturer);
+                        mDevicesDatabaseManager.setManufacturerName(deviceId, manufacturer);
+                    }
+
+                    if (batteryPercentage >= 0) {
+                        if (DEBUG) Log.i(TAG, "wow, we got a battery percentage: " + batteryPercentage);
+                        mDevicesDatabaseManager.setBatteryPercentage(deviceId, batteryPercentage);
+                    }
                 }
 
-                // TODO: when manufacturer == null, we should indicate that we are searching for it
-            } else {
-                if (DEBUG)
-                    Log.i(TAG, "Device already in database, so we do not add it to the database");
-                deviceId = mDevicesDatabaseManager.getDeviceId(deviceType, deviceFound.getAntDeviceNumber());
-
-                if (manufacturer != null) {
-                    if (DEBUG) Log.i(TAG, "wow, we got a manufacturer: " + manufacturer);
-                    mDevicesDatabaseManager.setManufacturerName(mDevicesDatabaseManager.getDeviceId(deviceType, deviceFound.getAntDeviceNumber()), manufacturer);
-                }
-
-                if (batteryPercentage >= 0) {
-                    if (DEBUG) Log.i(TAG, "wow, we got a battery percentage: " + batteryPercentage);
-                    mDevicesDatabaseManager.setBatteryPercentage(mDevicesDatabaseManager.getDeviceId(deviceType, deviceFound.getAntDeviceNumber()), batteryPercentage);
+                if (deviceId > 0) {
+                    mNewlyFoundDevices.add(deviceId);
+                } else {
+                    Log.w(TAG, "Failed to insert or locate ANT device in DB: " + deviceFound.getAntDeviceNumber());
                 }
             }
 
-            mNewlyFoundDevices.add(deviceId);
-            sendNewDeviceFoundBroadcast(deviceId);
+            if (deviceId > 0) {
+                if (isNew && !isWorkoutActive) {
+                    pairingChanged(deviceId, true);
+                }
+                sendNewDeviceFoundBroadcast(deviceId);
+            }
         }
     };
     // stuff for searching for Bluetooth le
@@ -224,19 +245,34 @@ public class DeviceManager {
                 Log.d(TAG, "onNewBluetoothDeviceFound: " + deviceType.name() + ", BT address: " + BluetoothMACAddress);
 
             long deviceId = -1;
+            boolean isNew = false;
+            boolean isWorkoutActive = false;
 
-            // check whether this device is already in DB
-            if (!mDevicesDatabaseManager.isBluetoothDeviceInDB(deviceType, BluetoothMACAddress)) {
-                if (DEBUG) Log.d(TAG, "device is not yet in the database, so we have to add it");
+            synchronized (mDevicesDatabaseManager) {
+                isWorkoutActive = (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING);
+                if (!mDevicesDatabaseManager.isBluetoothDeviceInDB(deviceType, BluetoothMACAddress)) {
+                    if (DEBUG) Log.d(TAG, "device is not yet in the database, so we have to add it");
 
-                deviceId = mDevicesDatabaseManager.insertNewBluetoothDeviceIntoDB(deviceType, BluetoothMACAddress, name, manufacturer, batteryPercentage, false);
-            } else {
-                if (DEBUG) Log.d(TAG, "Device already in database, so we do not add it");
-                deviceId = mDevicesDatabaseManager.getDeviceId(deviceType, BluetoothMACAddress);
+                    deviceId = mDevicesDatabaseManager.insertNewBluetoothDeviceIntoDB(deviceType, BluetoothMACAddress, name, manufacturer, batteryPercentage, true);
+                    isNew = true;
+                } else {
+                    if (DEBUG) Log.d(TAG, "Device already in database, so we do not add it");
+                    deviceId = mDevicesDatabaseManager.getDeviceId(deviceType, BluetoothMACAddress);
+                }
+
+                if (deviceId > 0) {
+                    mNewlyFoundDevices.add(deviceId);
+                } else {
+                    Log.w(TAG, "Failed to insert or locate Bluetooth device in DB: " + BluetoothMACAddress);
+                }
             }
 
-            mNewlyFoundDevices.add(deviceId);
-            sendNewDeviceFoundBroadcast(deviceId);
+            if (deviceId > 0) {
+                if (isNew && !isWorkoutActive) {
+                    pairingChanged(deviceId, true);
+                }
+                sendNewDeviceFoundBroadcast(deviceId);
+            }
         }
     };
     // TODO: start search fo new
@@ -348,6 +384,7 @@ public class DeviceManager {
         ContextCompat.registerReceiver(mContext, mSearchingStoppedForOneReceiver, mSearchingStoppedForOneFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(mContext, mStartSearchingForNewDevicesReceiver, mStartSearchingForNewDevicesFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(mContext, mStopSearchingForNewDevicesReceiver, mStopSearchingForNewDevicesFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(mContext, mTrackingStateChangedReceiver, mTrackingStateChangedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     public void createVerticalSpeedAndSlopeDevice() {
@@ -460,6 +497,7 @@ public class DeviceManager {
         // mContext.unregisterReceiver(mStartSearchingReceiver);
         LifecycleUtils.safeUnregisterReceiver(mContext, mStartSearchingForNewDevicesReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(mContext, mStopSearchingForNewDevicesReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(mContext, mTrackingStateChangedReceiver, TAG);
     }
 
     private void pairingChanged(long deviceId, boolean paired) {

@@ -84,7 +84,8 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
     protected void myOnDeviceFound(MultiDeviceSearchResult deviceFound) {
         if (DEBUG) Log.i(TAG, "onDeviceFound(): " + deviceFound.getDeviceDisplayName());
 
-        boolean pairingRecommendation = deviceFound.isPreferredDevice() || deviceFound.isAlreadyConnected();
+        // Default auto-pairing on discovery (REQ-SEN-020, ATT-4051)
+        boolean pairingRecommendation = true;
 
         DeviceType deviceType = DeviceType.getDeviceType(deviceFound.getAntDeviceType());
 
