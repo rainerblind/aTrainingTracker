@@ -761,28 +761,27 @@ def rank_at_top_of_backlog(issue_key, role="agent1"):
         print(f"Warning: Could not rank {issue_key} at the top of the backlog: {e}", file=sys.stderr)
 
 ISSUE_TYPE_ALIASES = {
-    "feature": "10008",
-    "new feature": "10008",
-    "story": "10008",
-    "bug": "10009",
-    "fehler": "10009",
-    "verbesserung": "10010",
-    "improvement": "10010",
-    "task": "10001",
-    "aufgabe": "10001",
+    "feature": "10007",
+    "new feature": "10007",
+    "story": "10007",
+    "bug": "10006",
+    "fehler": "10006",
+    "verbesserung": "10008",
+    "improvement": "10008",
+    "epic": "10001",
     "subtask": "10002",
     "sub-task": "10002",
 }
 
 def resolve_issuetype_id(issuetype_arg):
     if not issuetype_arg:
-        return "10008"
+        return "10007"
     val = str(issuetype_arg).strip()
     if val.isdigit():
         return val
     return ISSUE_TYPE_ALIASES.get(val.lower(), val)
 
-def create_issue(summary, description, issuetype_id="10008", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None, rank_top=True):
+def create_issue(summary, description, issuetype_id="10007", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None, rank_top=True):
     if description.startswith("@") and os.path.exists(description[1:]):
         with open(description[1:], "r", encoding="utf-8") as f:
             description = f.read()
@@ -891,7 +890,7 @@ def ensure_retro_ticket(role="agent1"):
     new_key = create_issue(
         summary=summary,
         description=initial_desc,
-        issuetype_id="10010",
+        issuetype_id="Verbesserung",
         parent_key="ATT-232",
         role=role,
         add_to_sprint=False,
