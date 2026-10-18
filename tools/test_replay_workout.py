@@ -683,6 +683,22 @@ class TestAdbGpsInjector(unittest.TestCase):
         self.assertEqual(engine.status, "PAUSED")
         self.assertFalse(injector.is_registered)
         self.assertTrue(any("remove-test-provider gps" in c and "remove-test-provider network" in c for c in executed_cmds))
+        executed_cmds.clear()
+
+        # 6. Calling kill() while PLAYING immediately removes test providers; revive() re-registers them
+        engine.stop()
+        engine.play()
+        self.assertTrue(injector.is_registered)
+        executed_cmds.clear()
+
+        injector.kill()
+        self.assertFalse(injector.is_registered)
+        self.assertTrue(any("remove-test-provider gps" in c and "remove-test-provider fused" in c for c in executed_cmds))
+        executed_cmds.clear()
+
+        injector.revive()
+        self.assertTrue(injector.is_registered)
+        self.assertTrue(any("add-test-provider gps" in c for c in executed_cmds))
 
         injector.teardown()
 
