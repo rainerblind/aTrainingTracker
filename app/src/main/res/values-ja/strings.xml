@@ -1958,5 +1958,19 @@
     <string name="workout_power_value_if_format">%1$.2f</string>
     <string name="workout_power_value_tss_format">%1$.0f</string>
     <string name="workout_power_value_work_format">%1$.0f kJ</string>
+    <string name="workout_detail_tab_overview">概要</string>
+    <string name="workout_detail_tab_map_graphs">地図とグラフ</string>
+    <string name="workout_detail_tab_zones">ゾーン</string>
+    <string name="workout_detail_tab_laps_segments">ラップ＆セグメント</string>
+    <string name="workout_detail_tab_custom_default">カスタムタブ</string>
+    <string name="workout_detail_section_details">ワークアウト指標と概要</string>
+    <string name="workout_detail_tabs_config_title">詳細タブの設定</string>
+    <string name="workout_detail_tabs_config_subtitle">ワークアウト詳細画面のタブとセクションをカスタマイズ</string>
+    <string name="workout_detail_tabs_add_tab">タブを追加</string>
+    <string name="workout_detail_tabs_rename_tab">タブ名</string>
+    <string name="workout_detail_tabs_delete_tab">タブを削除</string>
+    <string name="workout_detail_tabs_reset_defaults">デフォルトのタブに戻す</string>
+    <string name="workout_detail_tabs_sections_header">割り当てられたセクション</string>
+    <string name="workout_detail_tabs_map_pinned_hint">地図が有効な場合、常にタブの上部に固定されます</string>
 </resources>
 

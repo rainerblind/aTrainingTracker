@@ -1979,5 +1979,19 @@
     <string name="workout_power_value_if_format">%1$.2f</string>
     <string name="workout_power_value_tss_format">%1$.0f</string>
     <string name="workout_power_value_work_format">%1$.0f kJ</string>
+    <string name="workout_detail_tab_overview">Panoramica</string>
+    <string name="workout_detail_tab_map_graphs">Mappa e grafici</string>
+    <string name="workout_detail_tab_zones">Zone</string>
+    <string name="workout_detail_tab_laps_segments">Giri e segmenti</string>
+    <string name="workout_detail_tab_custom_default">Scheda personalizzata</string>
+    <string name="workout_detail_section_details">Metriche e riepilogo</string>
+    <string name="workout_detail_tabs_config_title">Configura schede dettagli</string>
+    <string name="workout_detail_tabs_config_subtitle">Personalizza le schede e assegna le sezioni per i dettagli dell\'allenamento</string>
+    <string name="workout_detail_tabs_add_tab">Aggiungi scheda</string>
+    <string name="workout_detail_tabs_rename_tab">Nome scheda</string>
+    <string name="workout_detail_tabs_delete_tab">Elimina scheda</string>
+    <string name="workout_detail_tabs_reset_defaults">Ripristina schede predefinite</string>
+    <string name="workout_detail_tabs_sections_header">Sezioni assegnate</string>
+    <string name="workout_detail_tabs_map_pinned_hint">La mappa è sempre fissata in alto quando è attiva in una scheda</string>
 </resources>
 
