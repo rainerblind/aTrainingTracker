@@ -629,6 +629,63 @@ class TestAdbGpsInjector(unittest.TestCase):
         fix_seek1 = injector._queue.get_nowait()
         self.assertEqual(fix_seek1[2] - fix_seek0[2], 5000)
 
+    def test_adb_gps_injector_removes_test_providers_on_pause_stop_and_eof(self):
+        """TST-TRK-017.1: Verifies startup cleanup, lazy add-test-provider on PLAYING, and immediate remove-test-provider on PAUSED, STOPPED, kill, and EOF."""
+        executed_cmds = []
+
+        class RecordingInjector(AdbGpsInjector):
+            def _run_adb(self, cmd_args, check=False):
+                executed_cmds.append(" ".join(cmd_args))
+                return None
+
+        injector = RecordingInjector(enabled=True, device_serial="DEVICE123")
+        points = [
+            TcxPoint("2026-10-10T10:00:00Z", 0.0, 48.0, 11.0, 500.0, 0.0, 120, 80, 180, 6.0, 45.0),
+            TcxPoint("2026-10-10T10:00:05Z", 5.0, 48.001, 11.001, 505.0, 30.0, 130, 85, 200, 6.0, 45.0),
+        ]
+        engine = ReplayEngine(points, gps=injector)
+
+        # 1. Startup setup() grants mock_location and clears leftover providers while keeping is_registered=False in STOPPED
+        injector.setup()
+        self.assertFalse(injector.is_registered)
+        self.assertTrue(any("remove-test-provider gps" in c for c in executed_cmds))
+        self.assertFalse(any("add-test-provider gps" in c for c in executed_cmds))
+        executed_cmds.clear()
+
+        # 2. Entering PLAYING lazily registers test providers
+        engine.play()
+        self.assertTrue(injector.is_registered)
+        self.assertTrue(any("add-test-provider gps" in c and "add-test-provider fused" in c for c in executed_cmds))
+        executed_cmds.clear()
+
+        # 3. Pausing immediately removes test providers
+        engine.pause()
+        self.assertFalse(injector.is_registered)
+        self.assertTrue(any("remove-test-provider gps" in c and "remove-test-provider fused" in c for c in executed_cmds))
+        executed_cmds.clear()
+
+        # 4. Resuming PLAYING re-registers test providers, and stopping removes them
+        engine.play()
+        self.assertTrue(injector.is_registered)
+        executed_cmds.clear()
+
+        engine.stop()
+        self.assertFalse(injector.is_registered)
+        self.assertTrue(any("remove-test-provider gps" in c for c in executed_cmds))
+        executed_cmds.clear()
+
+        # 5. Stepping to timeline EOF automatically transitions to PAUSED and removes test providers
+        engine.play()
+        self.assertTrue(injector.is_registered)
+        executed_cmds.clear()
+
+        engine.step(dt_sec=5.0)
+        self.assertEqual(engine.status, "PAUSED")
+        self.assertFalse(injector.is_registered)
+        self.assertTrue(any("remove-test-provider gps" in c and "remove-test-provider network" in c for c in executed_cmds))
+
+        injector.teardown()
+
 
 class TestHostPreFlightDiagnostics(unittest.TestCase):
     def test_preflight_report_structure(self):
@@ -654,6 +711,12 @@ class TestCliArguments(unittest.TestCase):
         args = parser.parse_args([])
         self.assertEqual(args.hr_battery, 100)
         self.assertEqual(args.power_battery, 100)
+        self.assertFalse(args.cleanup)
+
+    def test_cleanup_cli_argument(self):
+        parser = build_arg_parser()
+        args = parser.parse_args(["--cleanup"])
+        self.assertTrue(args.cleanup)
 
     def test_custom_battery_arguments(self):
         parser = build_arg_parser()
