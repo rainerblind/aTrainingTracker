@@ -1344,6 +1344,8 @@
     <string name="backup_failed">Failed to create backup.</string>
     <string name="restore_success">Restore successful. The app will now restart.</string>
     <string name="restore_failed">Restore failed. Please ensure the file is valid.</string>
+    <string name="backup_security_error">Security error: Invalid or corrupted backup archive.</string>
+    <string name="backup_security_error_desc">The backup archive contains unauthorized paths, symbolic links, or exceeds safe size limits and was rejected.</string>
     <string name="restore_warning_title">DANGER: Full Restore</string>
     <string name="restore_warning_message">This will PERMANENTLY WIPE all current workouts, equipment, and settings on THIS phone and replace them with the data from the backup. Are you absolutely sure?</string>
     <string name="import_finished_format">Import finished. Added %1$d new workouts.</string>

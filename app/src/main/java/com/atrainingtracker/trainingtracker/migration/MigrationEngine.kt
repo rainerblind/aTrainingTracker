@@ -48,21 +48,7 @@ object MigrationEngine {
             if (tempDir.exists()) tempDir.deleteRecursively()
             tempDir.mkdirs()
 
-            ZipInputStream(BufferedInputStream(FileInputStream(backupFile))).use { zis ->
-                var entry = zis.nextEntry
-                while (entry != null) {
-                    val outFile = File(tempDir, entry.name)
-                    if (entry.isDirectory) {
-                        outFile.mkdirs()
-                    } else {
-                        outFile.parentFile?.mkdirs()
-                        FileOutputStream(outFile).use { fos ->
-                            zis.copyTo(fos)
-                        }
-                    }
-                    entry = zis.nextEntry
-                }
-            }
+            SecureZipExtractor.extractBackupArchive(backupFile, tempDir)
 
             // 2. Wipe current state
             listener?.onProgress("Wiping local data...")
@@ -90,6 +76,8 @@ object MigrationEngine {
             return true
         } catch (e: Exception) {
             Log.e(TAG, "Restore failed", e)
+            val tempDir = File(context.cacheDir, "restore_temp")
+            if (tempDir.exists()) tempDir.deleteRecursively()
             return false
         }
     }

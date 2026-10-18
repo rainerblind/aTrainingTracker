@@ -410,7 +410,13 @@ object LegacyImportEngine {
 
                             listener?.onStatus(context.getString(R.string.legacy_import__downloading_google_drive, entry.name))
                             val workerDir = File(tempDir, "job_$current").apply { mkdirs() }
-                            val tempFile = File(workerDir, entry.name)
+                            val tempFile = try {
+                                SecureZipExtractor.sanitizeDriveFileName(entry.name, workerDir)
+                            } catch (e: SecurityException) {
+                                Log.e(TAG, "Security violation: Invalid remote file name: ${entry.name}", e)
+                                failedCount.incrementAndGet()
+                                continue
+                            }
                             try {
                                 val downloaded = downloadGoogleDriveFileWithRetry(driveClient, entry.id, tempFile)
                                 if (!downloaded) {

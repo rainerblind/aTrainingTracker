@@ -1236,6 +1236,8 @@
     <string name="backup_failed">Backup-Erstellung fehlgeschlagen.</string>
     <string name="restore_success">Wiederherstellung erfolgreich. Die App wird nun neu gestartet.</string>
     <string name="restore_failed">Wiederherstellung fehlgeschlagen. Bitte stellen Sie sicher, dass die Datei gültig ist.</string>
+    <string name="backup_security_error">Sicherheitsfehler: Ungültiges oder beschädigtes Sicherungsarchiv.</string>
+    <string name="backup_security_error_desc">Das Sicherungsarchiv enthält unzulässige Pfade, symbolische Links oder überschreitet sichere Größengrenzen und wurde abgelehnt.</string>
     <string name="restore_warning_title">GEFAHR: Vollständige Wiederherstellung</string>
     <string name="restore_warning_message">Dies wird ALLE aktuellen Workouts, Ausrüstungen und Einstellungen auf DIESEM Telefon UNWIDERRUFLICH LÖSCHEN und durch die Daten aus dem Backup ersetzen. Sind Sie absolut sicher?</string>
     <string name="import_finished_format">Import abgeschlossen. %1$d neue Workouts hinzugefügt.</string>

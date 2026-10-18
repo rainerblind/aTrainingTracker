@@ -63,9 +63,8 @@ object ImportEngine {
     fun analyzeBackup(context: Context, backupFile: File): AnalysisResult {
         val sportTypes = mutableMapOf<Long, SportTypeInfo>()
         val equipment = mutableMapOf<Long, EquipmentInfo>()
-        
+        val tempDir = File(context.cacheDir, "import_analysis")
         try {
-            val tempDir = File(context.cacheDir, "import_analysis")
             if (tempDir.exists()) tempDir.deleteRecursively()
             tempDir.mkdirs()
 
@@ -121,9 +120,15 @@ object ImportEngine {
             srcSummariesDb.close()
             srcSportDb.close()
             srcEquipDb?.close()
-            tempDir.deleteRecursively()
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Security violation in analyzeBackup", e)
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Analysis failed", e)
+        } finally {
+            if (tempDir.exists()) {
+                tempDir.deleteRecursively()
+            }
         }
         return AnalysisResult(sportTypes.values.toList(), equipment.values.toList())
     }
@@ -215,22 +220,17 @@ object ImportEngine {
             Log.i(TAG, "Import finished. Imported $importedCount new workouts.")
         } catch (e: Exception) {
             Log.e(TAG, "Import failed", e)
+        } finally {
+            val tempDir = File(context.cacheDir, "import_temp")
+            if (tempDir.exists()) {
+                tempDir.deleteRecursively()
+            }
         }
         return importedCount
     }
 
     private fun unzipBackup(backupFile: File, destDir: File) {
-        ZipInputStream(BufferedInputStream(FileInputStream(backupFile))).use { zis ->
-            var entry = zis.nextEntry
-            while (entry != null) {
-                val outFile = File(destDir, entry.name)
-                if (!entry.isDirectory) {
-                    outFile.parentFile?.mkdirs()
-                    FileOutputStream(outFile).use { fos -> zis.copyTo(fos) }
-                }
-                entry = zis.nextEntry
-            }
-        }
+        SecureZipExtractor.extractBackupArchive(backupFile, destDir)
     }
 
     private fun existsInTarget(db: SQLiteDatabase, fileBaseName: String): Boolean {

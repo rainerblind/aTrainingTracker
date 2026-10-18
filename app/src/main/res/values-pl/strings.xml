@@ -1132,6 +1132,8 @@
     <string name="backup_failed">Nie udało się utworzyć kopii zapasowej.</string>
     <string name="restore_success">Przywracanie zakończone sukcesem. Aplikacja zostanie uruchomiona ponownie.</string>
     <string name="restore_failed">Przywracanie nie powiodło się. Upewnij się, że plik jest poprawny.</string>
+    <string name="backup_security_error">Błąd bezpieczeństwa: Nieprawidłowe lub uszkodzone archiwum kopii zapasowej.</string>
+    <string name="backup_security_error_desc">Archiwum kopii zapasowej zawiera nieautoryzowane ścieżki, dowiązania symboliczne lub przekracza bezpieczne limity rozmiaru i zostało odrzucone.</string>
     <string name="restore_warning_title">NIEBEZPIECZEŃSTWO: Pełne przywracanie</string>
     <string name="restore_warning_message">To TRWALE USUNIE wszystkie obecne treningi, sprzęt i ustawienia na TYM telefonie i zastąpi je danymi z kopii zapasowej. Czy jesteś absolutnie pewien?</string>
     <string name="import_finished_format">Import zakończony. Dodano %1$d nowych treningów.</string>

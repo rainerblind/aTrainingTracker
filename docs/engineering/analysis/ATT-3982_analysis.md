@@ -1,0 +1,182 @@
+# Stage 1 Analysis: ATT-3982 — Backup import vulnerable to zip-slip path traversal
+
+## 1. Executive Summary
+- **Ticket**: `ATT-3982` — `[Bug] [Highest] Backup import vulnerable to zip-slip path traversal` (Epic: `ATT-281` *Data Sovereignty & Migration*)
+- **Classification**: Security Defect / Vulnerability Remediation (CWE-22: Zip Slip Path Traversal)
+- **Problem Statement**: 
+  In `MigrationEngine.performFullRestore()` and `ImportEngine.unzipBackup()`, archive extraction constructs output destination files using `File(destDir, entry.name)` without canonical path validation. If an incoming `.attbackup` archive contains directory traversal sequences (such as `../../databases/WorkoutSummaries.db` or `../../shared_prefs/app_prefs.xml`), file creation escapes the temporary staging directory and overwrites arbitrary files in the app sandbox.
+  Crucially, `ImportEngine.analyzeBackup()` invokes `unzipBackup()` immediately upon backup selection to scan for unique sport types and equipment—meaning sandbox file overwrites and potential arbitrary code execution or credential hijacking can occur during the analysis phase even before user confirmation!
+  Furthermore, `LegacyImportEngine.kt:413` downloads Google Drive files using `File(workerDir, entry.name)` without sanitizing path traversal sequences in Drive file names.
+
+---
+
+## 2. Forensic Investigation & Threat Modeling
+
+### 2.1 Threat Mechanics (CWE-22: Zip Slip)
+Zip Slip is a form of directory traversal that can be exploited by extracting files from an archive. The vulnerability stems from consuming the unvalidated name of a zip entry (`entry.name`) to create a target file path:
+```kotlin
+val outFile = File(tempDir, entry.name)
+```
+When `entry.name` contains relative traversal elements like `../`, `File(tempDir, entry.name)` resolves to a path outside `tempDir`.
+
+### 2.2 Vulnerability Locations in Codebase
+
+#### 1. `MigrationEngine.kt` (Lines 51–65):
+```kotlin
+ZipInputStream(BufferedInputStream(FileInputStream(backupFile))).use { zis ->
+    var entry = zis.nextEntry
+    while (entry != null) {
+        val outFile = File(tempDir, entry.name)
+        if (entry.isDirectory) {
+            outFile.mkdirs()
+        } else {
+            outFile.parentFile?.mkdirs()
+            FileOutputStream(outFile).use { fos ->
+                zis.copyTo(fos)
+            }
+        }
+        entry = zis.nextEntry
+    }
+}
+```
+- **Context**: Used during full state restoration (`performFullRestore`).
+- **Exploitation Impact**: An archive downloaded from cloud storage (Google Drive / Dropbox) or imported via the system file picker can overwrite any file in the application's internal data directory (`/data/data/com.atrainingtracker/`).
+
+#### 2. `ImportEngine.kt` (Lines 222–234):
+```kotlin
+private fun unzipBackup(backupFile: File, destDir: File) {
+    ZipInputStream(BufferedInputStream(FileInputStream(backupFile))).use { zis ->
+        var entry = zis.nextEntry
+        while (entry != null) {
+            val outFile = File(destDir, entry.name)
+            if (!entry.isDirectory) {
+                outFile.parentFile?.mkdirs()
+                FileOutputStream(outFile).use { fos -> zis.copyTo(fos) }
+            }
+            entry = zis.nextEntry
+        }
+    }
+}
+```
+- **Context**: Used in both `analyzeBackup()` (analysis preview) and `performIncrementalImport()` (workout merging).
+- **Critical Risk**: In `BackupRestoreViewModel.onBackupFileSelected()`, `ImportEngine.analyzeBackup()` is triggered automatically to populate metadata chips. A malicious archive can compromise internal databases, shared preferences, or Dex/native libraries without the user ever clicking "Proceed" or "Import".
+
+#### 3. `LegacyImportEngine.kt` (Line 413):
+```kotlin
+val workerDir = File(tempDir, "job_$current").apply { mkdirs() }
+val tempFile = File(workerDir, entry.name)
+```
+- **Context**: Downloads remote files during Google Drive batch workout import.
+- **Risk**: Remote filenames containing `../` sequences can escape `workerDir`.
+
+---
+
+## 3. Defense-in-Depth Security Architecture
+
+To completely eliminate the Zip Slip vulnerability and harden the archive extraction pipeline against adjacent vectors (such as Zip Bombs and unexpected file types), the remediation must apply a 4-tier defense:
+
+1. **Strict Canonical Path Traversal Guard**:
+   For every entry extracted from a zip archive:
+   ```kotlin
+   val canonicalDestDir = destDir.canonicalFile.toPath()
+   val outFile = File(destDir, entry.name)
+   val canonicalOutFile = outFile.canonicalFile.toPath()
+   if (!canonicalOutFile.startsWith(canonicalDestDir)) {
+       throw SecurityException("Zip-slip path traversal attempt detected: ${entry.name}")
+   }
+   ```
+   If an entry attempts to escape `destDir`, extraction must abort immediately, purge all extracted files, and fail securely without writing to disk.
+
+2. **Top-Level Directory Whitelist**:
+   Legitimate `.attbackup` archives generated by `BackupManager.kt` bundle strictly three top-level directories:
+   - `databases/`
+   - `shared_prefs/`
+   - `datastore/`
+   Any zip entry whose path does not start with one of these three canonical directories (or metadata manifest if future-proofed) must be rejected with a `SecurityException` or filtered out.
+
+3. **Zip-Bomb & Resource Exhaustion Protection**:
+   A malicious archive could contain highly compressed files (e.g. 100 GB of zeros compressed to 10 MB) that exhaust internal device storage and cause device instability or Denial of Service:
+   - **Maximum Total Uncompressed Size**: Cap total uncompressed bytes at 1,024 MB (1 GB).
+   - **Maximum Single File Size**: Cap any individual entry at 512 MB.
+   - **Maximum Entry Count**: Cap total number of zip entries at 10,000.
+   - If any threshold is exceeded during streaming extraction, extraction immediately halts and throws `SecurityException`.
+
+4. **Filename Sanitization in `LegacyImportEngine`**:
+   In `LegacyImportEngine.kt:413`, replace raw `entry.name` with:
+   ```kotlin
+   val safeName = File(entry.name).name
+   val tempFile = File(workerDir, safeName)
+   ```
+   ensuring the file is strictly contained within `workerDir`.
+
+---
+
+## 4. Chesterton's Fence Archaeology (`REQ-PRO-022`)
+
+1. **Original Requirement ID & Target**:
+   - Extends `REQ-MIG-004` (*Full Migration Mode*) and `REQ-MIG-036` (*Automated Background Backup WorkManager Scheduling*).
+   - Targets `MigrationEngine.kt`, `ImportEngine.kt`, `LegacyImportEngine.kt`, and new security test suite `BackupImportSecurityTest.kt`.
+2. **Historical Origin & Commit Trace**:
+   - Sprint `2026-40.2` (Initial implementation of `.attbackup` archive extraction in `MigrationEngine.kt` and `ImportEngine.kt`).
+   - Sprint `2026-41.2` (`LegacyImportEngine.kt` Google Drive batch download).
+3. **Root Reason for Existing Formulation**:
+   - The initial authors implemented unzipping using standard Java `ZipInputStream` loops without considering untrusted input boundaries, assuming `.attbackup` archives would only ever be created by the app itself.
+   - However, since archives can be imported from public Google Drive folders, Dropbox, or local file pickers, untrusted archive contents must be treated as hostile input.
+4. **Preservation of Core Invariants**:
+   - Valid `.attbackup` archives generated by `BackupManager` must continue to unpack and restore 100% reliably.
+   - Directory structures under `databases/`, `shared_prefs/`, and `datastore/` must be preserved exactly.
+   - Existing database upgrade routines and cluster history recalculations must remain unaffected.
+
+---
+
+## 5. Scope & Bounding (`ATT-1250`)
+
+### In-Scope:
+- Canonical path validation in `MigrationEngine.performFullRestore()`.
+- Canonical path validation and top-level directory whitelisting in `ImportEngine.unzipBackup()`.
+- Zip-bomb protections (entry count, total size, single file size limits) during unzipping.
+- Remote filename sanitization in `LegacyImportEngine.kt:413`.
+- Reusable, robust extraction helper or utility ensuring DRY security enforcement across both engines.
+- Comprehensive unit test suite (`BackupImportSecurityTest.kt`) covering:
+  - Rejection of path traversal (`../`) entries in both full restore and incremental import.
+  - Rejection of entries outside whitelisted top-level directories.
+  - Protection against zip bomb expansion.
+  - Successful extraction and validation of valid `.attbackup` archives.
+
+### Out-of-Scope:
+- Multi-database transactional atomicity during incremental import (handled in `ATT-3992`).
+- Pre-validation of database schemas prior to full wipe (handled in `ATT-3989`).
+- Drive query escaping and token management (handled in `ATT-4014` and `ATT-3983`).
+
+---
+
+## 6. Acceptance Criteria (Given-When-Then)
+
+- **AC-1 (Zip-Slip Traversal Rejection in `MigrationEngine`)**:
+  - *Given* an `.attbackup` archive containing an entry with relative traversal path (e.g. `../../databases/evil.db`),
+  - *When* `MigrationEngine.performFullRestore()` is invoked,
+  - *Then* the operation SHALL fail immediately with `false`, no file outside `tempDir` SHALL be written, and all temporary extraction files SHALL be deleted.
+- **AC-2 (Zip-Slip Traversal Rejection in `ImportEngine.analyzeBackup`)**:
+  - *Given* an `.attbackup` archive containing an entry with relative traversal path,
+  - *When* `ImportEngine.analyzeBackup()` is invoked,
+  - *Then* a `SecurityException` SHALL be raised, and zero files outside `tempDir` SHALL be created.
+- **AC-3 (Zip-Slip Traversal Rejection in `ImportEngine.performIncrementalImport`)**:
+  - *Given* an `.attbackup` archive containing an entry with relative traversal path,
+  - *When* `ImportEngine.performIncrementalImport()` is invoked,
+  - *Then* the import SHALL return `0`, no file outside `tempDir` SHALL be written, and temporary staging files SHALL be cleaned up.
+- **AC-4 (Zip Bomb Protection)**:
+  - *Given* a zip archive containing > 10,000 entries or uncompressing to > 1 GB of data,
+  - *When* extraction is attempted,
+  - *Then* extraction SHALL abort immediately with a `SecurityException`.
+- **AC-5 (Directory Whitelist Enforcement)**:
+  - *Given* an `.attbackup` archive containing entries outside `databases/`, `shared_prefs/`, or `datastore/` (e.g. `lib/libevil.so`),
+  - *When* unpacked,
+  - *Then* unauthorized entries SHALL be rejected.
+- **AC-6 (Google Drive File Name Sanitization in `LegacyImportEngine`)**:
+  - *Given* a Google Drive file with entry name `../../malicious.fit`,
+  - *When* downloaded by `LegacyImportEngine`,
+  - *Then* the file SHALL be stored strictly as `workerDir/malicious.fit` without directory traversal.
+- **AC-7 (Backward Compatibility & Regression)**:
+  - *Given* a valid, canonical `.attbackup` created by `BackupManager`,
+  - *When* imported or restored,
+  - *Then* extraction succeeds cleanly with 100% fidelity.

@@ -1135,6 +1135,8 @@
     <string name="backup_failed">Échec de la création de la sauvegarde.</string>
     <string name="restore_success">Restauration réussie. L\'application va redémarrer.</string>
     <string name="restore_failed">Échec de la restauration. Vérifiez que le fichier est valide.</string>
+    <string name="backup_security_error">Erreur de sécurité : Archive de sauvegarde non valide ou corrompue.</string>
+    <string name="backup_security_error_desc">L\'archive de sauvegarde contient des chemins non autorisés, des liens symboliques ou dépasse les limites de taille sécurisées et a été rejetée.</string>
     <string name="restore_warning_title">DANGER : Restauration complète</string>
     <string name="restore_warning_message">Ceci EFFACERA DÉFINITIVEMENT tous les entraînements, équipements et réglages sur CE téléphone et les remplacera par les données de la sauvegarde. Êtes-vous sûr ?</string>
     <string name="import_finished_format">Importation terminée. %1$d nouveaux entraînements ajoutés.</string>

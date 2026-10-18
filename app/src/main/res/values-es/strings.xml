@@ -1136,6 +1136,8 @@
     <string name="backup_failed">Error al crear la copia.</string>
     <string name="restore_success">Restauración con éxito. La aplicación se reiniciará.</string>
     <string name="restore_failed">Error de restauración. Asegúrese de que el archivo es válido.</string>
+    <string name="backup_security_error">Error de seguridad: Archivo de copia de seguridad no válido o dañado.</string>
+    <string name="backup_security_error_desc">El archivo de copia de seguridad contiene rutas no autorizadas, enlaces simbólicos o supera los límites de tamaño seguros y fue rechazado.</string>
     <string name="restore_warning_title">PELIGRO: Restauración total</string>
     <string name="restore_warning_message">Esto ELIMINARÁ PERMANENTEMENTE todos los entrenamientos, equipo y ajustes en ESTE teléfono y los reemplazará con los datos de la copia. ¿Está seguro?</string>
     <string name="import_finished_format">Importación finalizada. %1$d entrenamientos añadidos.</string>

@@ -1260,6 +1260,9 @@ public class TrainingApplication extends Application {
         // ATT-3163 / REQ-UI-342: Intercept missing platform SelectGesture on Android 14+ OEM devices
         com.atrainingtracker.trainingtracker.ui.common.ComposeHandwritingResilience.install();
 
+        // ATT-3982 / REQ-MIG-040: Purge stale backup/restore staging directories from previous interrupted runs
+        com.atrainingtracker.trainingtracker.migration.SecureZipExtractor.purgeStaleStagingDirs(this);
+
         initWorkManager();
         if (sWorkManagerAvailable) {
             com.atrainingtracker.trainingtracker.migration.BackupWorker.Companion.schedule(this);
