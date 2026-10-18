@@ -104,11 +104,20 @@ public class MySensor<T> {
     }
 
     public String getDeviceName() {
-        return getDevice().getName();
+        return mDevice != null ? mDevice.getName() : null;
+    }
+
+    /**
+     * Returns the epoch timestamp (ms) when this sensor last received a value via {@link #newValue(Object)}.
+     *
+     * @return last update timestamp in milliseconds, or {@code 0L} if never updated.
+     */
+    public long getLastUpdateTimestamp() {
+        return mLastUpdateTimestamp;
     }
 
     public SensorData<T> getSensorData() {
-        return new SensorData<T>(getSensorType(), getValue(), getStringValue(), getDeviceName(), mLastUpdateTimestamp);
+        return new SensorData<T>(getSensorType(), getValue(), getStringValue(), getDeviceName(), getLastUpdateTimestamp());
     }
 
     public interface SensorListener<T> {

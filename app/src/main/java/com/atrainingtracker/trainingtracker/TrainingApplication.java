@@ -1565,6 +1565,7 @@ public class TrainingApplication extends Application {
 
         setManualPauseLock(false, this);
         setAutoPaused(false, this);
+        TrackerService.notifyManualResume();
 
         if (TrainingApplication.startSearchWhenResumeFromPaused()) {
             sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
