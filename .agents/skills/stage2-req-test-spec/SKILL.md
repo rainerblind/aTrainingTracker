@@ -19,11 +19,12 @@ This skill guides the agent through **Stage 2 (Requirement & Test Specification)
    - Synchronize `docs/tests.md` with the new test definition.
 3. **Traceability Matrix**:
    - Map all test cases to requirement IDs in a structured markdown table.
-4. **Deliverable Production & Gate Audit**:
+4. **Deliverable Production, Gate Audit & Synchronous Parent Stage Progression (Rule 3 / Rule 45)**:
    - Author `docs/engineering/test_specs/<TICKET_KEY>_test_spec.md` using `templates/test_spec_template.md`.
    - Update Stage 2 Jira subtask (`[Req & Test Spec]`) Description with the complete text.
    - Transition subtask to `In Überprüfung` and run Gate 2 audit (`tools/review_agent.py audit <KEY>`).
-   - Upon Gate 2 approval (`RECOMMEND PASS`), transition subtask directly to `Erledigt` via transition `freigabe`.
+   - Upon Gate 2 approval (`RECOMMEND PASS`), transition subtask directly to `Erledigt` via transition `freigabe` (`python3 tools/jira_util.py move <SUBTASK_KEY> freigabe`), which automatically advances the parent ticket from `Test Spec` to `Implementation Plan`.
+   - **One Commit per Ticket (Rule 44)**: Do not create a separate intermediate git commit for Stage 2; keep changes on the working branch until the single atomic ticket commit at the end of Stage 5 (or squash when merging into `sprint/<SPRINT_NAME>`).
 
 ## Deliverable Template
 Use the standardized markdown template located at:

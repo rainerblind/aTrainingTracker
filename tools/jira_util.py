@@ -455,12 +455,61 @@ def upload_attachment(issue_key, file_path, role="agent1"):
         print(f"Error uploading attachment: {e}", file=sys.stderr)
         sys.exit(1)
 
+PARENT_STAGE_ORDER = [
+    "zu erledigen",
+    "analysis",
+    "test spec",
+    "implementation plan",
+    "implementation",
+    "test",
+    "final review (human)"
+]
+
+def resolve_desired_parent_stage_for_subtask(subtask_summary):
+    s = (subtask_summary or "").strip().lower()
+    if re.match(r'^\[analysis\]', s):
+        return "test spec"
+    if re.match(r'^\[(req\s*&\s*test\s*spec|req/test\s*spec|test-spec|test\s*spec|specification|spec)\]', s):
+        return "implementation plan"
+    if re.match(r'^\[(impl-plan|impl\s*plan|implementation\s*plan|design|plan)\]', s):
+        return "implementation"
+    if re.match(r'^\[(implementation|impl)\]', s):
+        return "test"
+    if re.match(r'^\[(test|verification)\]', s):
+        return "final review (human)"
+    return None
+
+def sync_parent_stage_on_subtask_done(parent_key, subtask_summary, role="agent1"):
+    desired_stage = resolve_desired_parent_stage_for_subtask(subtask_summary)
+    if not desired_stage or not parent_key:
+        return
+    try:
+        config = get_config()
+        parent_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=status"
+        parent_info = jira_request(parent_url, role=role)
+        current_parent_status = parent_info.get("fields", {}).get("status", {}).get("name", "").strip().lower()
+        if current_parent_status in ("erledigt", "done", desired_stage):
+            return
+        if current_parent_status in PARENT_STAGE_ORDER and desired_stage in PARENT_STAGE_ORDER:
+            curr_idx = PARENT_STAGE_ORDER.index(current_parent_status)
+            target_idx = PARENT_STAGE_ORDER.index(desired_stage)
+            if curr_idx < target_idx:
+                for step_stage in PARENT_STAGE_ORDER[curr_idx + 1 : target_idx + 1]:
+                    transition_issue(parent_key, step_stage, role=role)
+    except Exception as e:
+        print(f"Warning: Could not auto-advance parent {parent_key} to '{desired_stage}': {e}", file=sys.stderr)
+
 def transition_issue(issue_key, status_name, role="agent1"):
     config = get_config()
-    # Check if issue is a subtask
-    issue_info_url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=issuetype"
+    # Check if issue is a subtask, its current status, summary, and parent
+    issue_info_url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=issuetype,status,summary,parent"
     issue_info = jira_request(issue_info_url, role=role)
-    is_subtask = issue_info.get("fields", {}).get("issuetype", {}).get("subtask", False)
+    fields_data = issue_info.get("fields", {})
+    is_subtask = fields_data.get("issuetype", {}).get("subtask", False)
+    current_status_name = fields_data.get("status", {}).get("name", "")
+    current_status_lower = current_status_name.lower().strip()
+    issue_summary = fields_data.get("summary", "")
+    parent_key = fields_data.get("parent", {}).get("key")
 
     normalized_input = status_name.lower().strip()
     # Strict Human Gate Guard on parent tickets: Prohibit AI agents from moving parent tickets to Erledigt / Done
@@ -511,6 +560,13 @@ def transition_issue(issue_key, status_name, role="agent1"):
             "rework": "implementation"
         }
     normalized_target = aliases.get(normalized_input, normalized_input)
+
+    # Idempotent check if already in target status
+    if current_status_lower == normalized_target or (is_subtask and normalized_target == "freigabe" and current_status_lower == "erledigt"):
+        print(f"{issue_key} is already in '{current_status_name}'.")
+        if "final review" in current_status_lower and not is_subtask:
+            assign_issue(issue_key, "human", role=role)
+        return
 
     chosen_trans = None
     # Pass 1: exact match on target status name
@@ -571,6 +627,11 @@ def transition_issue(issue_key, status_name, role="agent1"):
         assign_issue(issue_key, "agent2", role=role)
     elif "bearbeitung" in norm_target_lower or "progress" in norm_target_lower:
         assign_issue(issue_key, "agent1", role=role)
+
+    # Mandate ("Move main ticket forward once the sub-ticket is finished"):
+    # When a stage subtask transitions to Erledigt, synchronously advance its parent ticket to the next stage column.
+    if is_subtask and (norm_target_lower == "erledigt" or trans_name == "freigabe"):
+        sync_parent_stage_on_subtask_done(parent_key, issue_summary, role=role)
 
 def add_comment(issue_key, text, role="agent1"):
     if text.startswith("@") and os.path.exists(text[1:]):
@@ -781,17 +842,51 @@ def resolve_issuetype_id(issuetype_arg):
         return val
     return ISSUE_TYPE_ALIASES.get(val.lower(), val)
 
+def sanitize_issue_summary(summary):
+    """
+    Mandate (Rule 13): Ticket summaries must not contain ticket category or epic in summary,
+    while preserving priority prefixes like [Highest], [High], [Medium], [Low], [Lowest].
+    """
+    priority_tags = []
+    remaining = (summary or "").strip()
+    while True:
+        m = re.match(r'^\[([^\]]+)\]\s*', remaining)
+        if not m:
+            break
+        tag_content = m.group(1).strip()
+        if tag_content.lower() in ("highest", "high", "medium", "low", "lowest"):
+            priority_tags.append(f"[{tag_content}]")
+        remaining = remaining[m.end():].strip()
+    if priority_tags and remaining:
+        return " ".join(priority_tags) + " " + remaining
+    return remaining if remaining else summary
+
+def resolve_valid_epic_key(parent_key, role="agent1"):
+    if not parent_key:
+        return None
+    try:
+        config = get_config()
+        url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=issuetype,parent"
+        info = jira_request(url, role=role)
+        fields_data = info.get("fields", {})
+        itype = fields_data.get("issuetype", {})
+        if itype.get("id") == "10001" or itype.get("name", "").lower() == "epic":
+            return parent_key
+        nested_parent = fields_data.get("parent", {})
+        if nested_parent and nested_parent.get("key"):
+            return nested_parent.get("key")
+        print(f"Warning: '{parent_key}' is not an Epic (type='{itype.get('name')}'); omitting parent field.", file=sys.stderr)
+        return None
+    except Exception:
+        return parent_key
+
 def create_issue(summary, description, issuetype_id="10007", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None, rank_top=True):
     if description.startswith("@") and os.path.exists(description[1:]):
         with open(description[1:], "r", encoding="utf-8") as f:
             description = f.read()
 
     issuetype_id = resolve_issuetype_id(issuetype_id)
-
-    # Mandate (Rule 18): Ticket summaries must not contain ticket category or epic in summary
-    clean_summary = re.sub(r'^\s*(\[[^\]]+\]\s*)+', '', summary).strip()
-    if clean_summary:
-        summary = clean_summary
+    summary = sanitize_issue_summary(summary)
 
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
@@ -801,8 +896,9 @@ def create_issue(summary, description, issuetype_id="10007", parent_key=None, ro
         "description": description,
         "issuetype": {"id": issuetype_id}
     }
-    if parent_key:
-        fields["parent"] = {"key": parent_key}
+    valid_epic_key = resolve_valid_epic_key(parent_key, role=role) if parent_key else None
+    if valid_epic_key:
+        fields["parent"] = {"key": valid_epic_key}
     if fix_version:
         fields["fixVersions"] = [{"name": fix_version}]
     if priority:
@@ -953,9 +1049,13 @@ if __name__ == "__main__":
         check_gate(remaining_argv[1], role=active_role)
     elif cmd == "versions":
         list_versions(role=active_role)
-    elif cmd == "set-fixversion" and len(remaining_argv) == 3:
+    elif cmd in ("set-fixversion", "set-fix-version") and len(remaining_argv) == 3:
         set_fix_version(remaining_argv[1], remaining_argv[2], role=active_role)
-    elif cmd == "clear-fixversion" and len(remaining_argv) == 2:
+    elif cmd == "update" and len(remaining_argv) == 4 and remaining_argv[2] in ("--fix-version", "--fixversion"):
+        set_fix_version(remaining_argv[1], remaining_argv[3], role=active_role)
+    elif cmd == "update" and len(remaining_argv) == 3 and (remaining_argv[2].startswith("--fix-version=") or remaining_argv[2].startswith("--fixversion=")):
+        set_fix_version(remaining_argv[1], remaining_argv[2].split("=", 1)[1], role=active_role)
+    elif cmd in ("clear-fixversion", "clear-fix-version") and len(remaining_argv) == 2:
         set_fix_version(remaining_argv[1], "none", role=active_role)
     elif cmd == "download" and len(remaining_argv) == 3:
         download_attachment(remaining_argv[1], remaining_argv[2], role=active_role)
@@ -1011,6 +1111,8 @@ if __name__ == "__main__":
         labels_arg = None
         explicit_type = None
         explicit_parent = None
+        explicit_summary = None
+        explicit_desc = None
         filtered_args = []
         idx = 1
         while idx < len(remaining_argv):
@@ -1033,6 +1135,16 @@ if __name__ == "__main__":
                 priority_arg = arg.split("=", 1)[1]
             elif arg.startswith("--labels="):
                 labels_arg = arg.split("=", 1)[1]
+            elif arg.startswith("--summary="):
+                explicit_summary = arg.split("=", 1)[1]
+            elif arg == "--summary" and idx + 1 < len(remaining_argv):
+                explicit_summary = remaining_argv[idx + 1]
+                idx += 1
+            elif arg.startswith("--description=") or arg.startswith("--desc="):
+                explicit_desc = arg.split("=", 1)[1]
+            elif arg in ("--description", "--desc") and idx + 1 < len(remaining_argv):
+                explicit_desc = remaining_argv[idx + 1]
+                idx += 1
             elif arg.startswith("--type=") or arg.startswith("--issuetype="):
                 explicit_type = arg.split("=", 1)[1]
             elif arg in ("--type", "--issuetype") and idx + 1 < len(remaining_argv):
@@ -1047,14 +1159,15 @@ if __name__ == "__main__":
                 filtered_args.append(arg)
             idx += 1
 
-        if len(filtered_args) < 2:
+        summary = explicit_summary if explicit_summary else (filtered_args[0] if len(filtered_args) >= 1 else None)
+        desc = explicit_desc if explicit_desc else (filtered_args[1] if len(filtered_args) >= 2 else (filtered_args[0] if explicit_summary and len(filtered_args) >= 1 else None))
+        if not summary or not desc:
             print("Usage: create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--priority=PRIORITY] [--labels=L1,L2]", file=sys.stderr)
             sys.exit(1)
 
-        summary = filtered_args[0]
-        desc = filtered_args[1]
-        type_id = explicit_type if explicit_type else (filtered_args[2] if len(filtered_args) >= 3 else "10008")
-        parent = explicit_parent if explicit_parent else (filtered_args[3] if len(filtered_args) >= 4 else None)
+        pos_offset = (0 if explicit_summary else 1) + (0 if explicit_desc else 1)
+        type_id = explicit_type if explicit_type else (filtered_args[pos_offset] if len(filtered_args) > pos_offset else "10008")
+        parent = explicit_parent if explicit_parent else (filtered_args[pos_offset + 1] if len(filtered_args) > pos_offset + 1 else None)
         create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver, priority=priority_arg, labels=labels_arg, rank_top=rank_top)
     elif cmd == "add-to-sprint" and len(remaining_argv) == 2:
         if active_role in ("agent1", "agent2", "coordinator"):

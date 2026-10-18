@@ -29,7 +29,7 @@ python3 tools/jira_util.py search "project = ATT AND sprint = <SPRINT_ID> ORDER 
 python3 tools/jira_util.py ensure-retro
 
 # Create a parent / follow-up issue (automatically ranked at the top of the backlog!)
-# TYPE can be "Feature" (10008), "Bug" (10009), or "Verbesserung" / "Improvement" (10010)
+# TYPE can be "Bug" (10006), "Feature" (10007), or "Verbesserung" / "Improvement" (10008)
 python3 tools/jira_util.py create-issue "<SUMMARY>" "<DESC_OR_@FILE>" [Feature|Bug|Verbesserung] [EPIC_KEY]
 # Or with explicit flags:
 python3 tools/jira_util.py create-issue "<SUMMARY>" "<DESC_OR_@FILE>" --type=Verbesserung --parent=<EPIC_KEY>
@@ -62,7 +62,7 @@ python3 tools/jira_util.py assign <KEY> human
 # Transition subtask states
 python3 tools/jira_util.py move <SUBTASK_KEY> in_progress
 python3 tools/jira_util.py move <SUBTASK_KEY> in_review
-python3 tools/jira_util.py move <SUBTASK_KEY> freigabe     # Moves subtask directly to Erledigt!
+python3 tools/jira_util.py move <SUBTASK_KEY> freigabe     # Moves subtask directly to Erledigt AND auto-advances parent ticket one stage column!
 
 # Transition parent ticket states (NEVER move parent tickets to Erledigt!)
 python3 tools/jira_util.py move <PARENT_KEY> "analysis"
@@ -74,7 +74,7 @@ python3 tools/jira_util.py check-gate <IMPL_PLAN_SUBTASK_KEY>
 ```
 
 ## Critical Governance Invariants
-1. **Subtask Direct Completion**: Subtasks in `In Überprüfung` that have passed automated Gate audit transition directly to `Erledigt` via transition `freigabe`. No intermediate human review pause is required for subtasks.
+1. **Subtask Direct Completion & Synchronous Parent Stage Progression**: Subtasks in `In Überprüfung` that have passed automated Gate audit transition directly to `Erledigt` via transition `freigabe`. No intermediate human review pause is required for subtasks. Immediately when a stage subtask transitions to `Erledigt` (`freigabe`), `tools/jira_util.py` automatically advances the parent ticket one column forward (`[Analysis]` $\rightarrow$ `Test Spec`, `[Req & Test Spec]` $\rightarrow$ `Implementation Plan`, `[Impl-Plan]` $\rightarrow$ `Implementation`, `[Implementation]` $\rightarrow$ `Test`, `[Test]` $\rightarrow$ `Final Review (Human)`).
 2. **Parent Final Review Gate**: Parent tickets mandate a `Final Review (Human)` state after Stage 5 (`Test`). AI agents transition the parent ticket to `Final Review (Human)` and assign it to the user.
 3. **Erledigt Prohibition for Parent Tickets**: AI agents are strictly forbidden from transitioning parent tickets to `Erledigt`. This action is reserved exclusively for the human user.
 4. **Prohibition on Agent Sprint Manipulation (Except `ensure-retro`)**: Agents must NEVER move backlog feature/bug tickets into active sprints autonomously (`"Agents must not move tickets to sprints!"`). Only the human user assigns backlog tickets to sprints during Sprint-Start Screening. `--add-to-sprint` is only valid for subtasks of a parent ticket already in the active sprint, and `ensure-retro` is specifically used during Sprint Planning to create the sprint's `Review & Retro` ticket when Jira's automation fails to fire.

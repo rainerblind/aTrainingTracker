@@ -18,7 +18,7 @@ This skill acts as the **Agile Sprint Facilitator & Scrum Master**. It orchestra
 To eliminate merge conflicts across shared living documents (`docs/requirements.md`, `docs/tests.md`, Navigation, ViewModels) and allow subsequent sprint tickets to build immediately upon prior tickets:
 * **Sprint Branch**: Created at Sprint-Start from `develop`: `sprint/<SPRINT_NAME>` (e.g. `sprint/2026-40.1`).
 * **Feature Branches**: Each sprint ticket branches from `sprint/<SPRINT_NAME>`: `feature/<KEY>`.
-* **In-Sprint Merge**: As soon as a ticket completes Stage 5 (Clean-room tests pass & Gate 5 audit passes), the agent merges `feature/<KEY>` into `sprint/<SPRINT_NAME>` (`--no-ff`), deletes `feature/<KEY>`, and transitions the parent ticket to `Final Review (Human)`.
+* **Single Atomic Commit per Ticket ("One Commit per Ticket", Rule 44)**: As soon as a ticket completes Stage 5 (Clean-room tests pass & Gate 5 audit passes), the agent integrates `feature/<KEY>` into `sprint/<SPRINT_NAME>` as **strictly one atomic commit** via `git merge --squash feature/<KEY> && git commit -m "feat(<KEY>): <Summary>"` (or a single Stage 5 commit), deletes `feature/<KEY>` (`git branch -D feature/<KEY>`), and transitions the parent ticket to `Final Review (Human)`.
 * **Sprint-End Integration**: At Sprint-End, the human user validates the entire sprint build. Upon final sign-off, `sprint/<SPRINT_NAME>` is merged into `develop` (`--no-ff`) and deleted.
 
 ---
@@ -38,7 +38,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
      ```bash
      python3 tools/jira_util.py ensure-retro
      ```
-     This command checks the active sprint for a `Review & Retro` ticket and, if none exists, creates `Review & Retro - Sprint <SPRINT_NAME>` (Type: `Verbesserung` / `10010`, Epic: `ATT-232`) and adds it to the active sprint.
+     This command checks the active sprint for a `Review & Retro` ticket and, if none exists, creates `Review & Retro - Sprint <SPRINT_NAME>` (Type: `Verbesserung` / `10008`, Epic: `ATT-232`) and adds it to the active sprint.
    * *Strict Invariant*: Aside from `ensure-retro` for the sprint's `Review & Retro` ceremony ticket, AI agents MUST NEVER move backlog feature/bug tickets into active sprints autonomously (`"Agents must not move tickets to sprints!"`). Only the human user assigns backlog tickets to sprints.
 2. **Establish Sprint Integration Branch**:
    Create and push the sprint integration branch from latest `develop`:
@@ -50,9 +50,10 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
 3. **Ticket-by-Ticket Walkthrough with the Human User**:
    For each feature/bug/improvement ticket in sequence (skipping the `Review & Retro` ceremony ticket, which remains as the sprint's continuous retro logging and Ceremony 2 retrospective container rather than entering `Analysis` or spawning `[Analysis]..[Test]` subtasks):
    * **Present Summary & Context**: Present the ticket key, title, and current description to the user.
+   * **Strict Turn Boundary Before Moving to `Analysis` (Rule 7)**: Never call `python3 tools/jira_util.py move <KEY> "analysis"` in the same turn in which `<KEY>` is first presented to the user. Wait for the user's explicit approval of `<KEY>` before moving it to `Analysis`.
    * **Human Prerequisite Detection (Rule 22)**: Explicitly check whether the ticket depends on actions only the human can perform (e.g. Google Cloud Console / OAuth client registration, SHA-1 fingerprints, API keys, Play Console settings, third-party accounts, test hardware/sensors, outdoor rides). If so, name each action to the user, record them in the ticket description under a `Human Prerequisites` section, and agree whether they are completed before development starts (`"Tickets that need actions by me should be detected during the sprint planning."` — Retro 2026-40.16, ATT-1306).
    * **Screening Evaluation**:
-     * *Case A: Clean & Unambiguous*: If the ticket description clearly articulates the goal, scope, and expected outcome, confirm with the user and advance the ticket to `Analysis`:
+     * *Case A: Clean & Unambiguous*: If the ticket description clearly articulates the goal, scope, and expected outcome, confirm with the user and advance the ticket to `Analysis` after receiving the user's approval:
        ```bash
        python3 tools/jira_util.py move <KEY> "analysis"
        ```
@@ -70,6 +71,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
 4. **Handoff to Autonomous Execution (Phase 2)**:
    Once all regular sprint tickets are in status `Analysis` (with the `Review & Retro` ticket retained for in-sprint anomaly logging and Ceremony 2 retrospective documentation), Phase 1 concludes. The implementation agents (`agent1`, `agent2`) take over Phase 2:
    * **Continuous Unattended Execution & Full-Sprint Mandate**: The sprint pipeline runs continuously and autonomously across the entire sprint backlog without stopping the console, pausing between tickets, or asking whether to continue (`"Again, I was asked if we should continue. → Agents should do the entire Sprint."`).
+   * **Synchronous Parent Stage Progression (Rule 3 / Rule 45)**: Whenever a stage subtask (`[Analysis]`, `[Req & Test Spec]`, `[Impl-Plan]`, `[Implementation]`, `[Test]`) transitions to `Erledigt` via `freigabe`, the parent ticket immediately advances to the next workflow column (`Test Spec` $\rightarrow$ `Implementation Plan` $\rightarrow$ `Implementation` $\rightarrow$ `Test` $\rightarrow$ `Final Review (Human)`), enforced automatically by `tools/jira_util.py move <SUBTASK_KEY> freigabe`.
    * **In-Sprint Human Escalation Protocol**: If an agent encounters a blocker, design decision, or requirement ambiguity that strictly requires human guidance, the agent MUST NOT halt or prompt the console. Instead:
      1. Post a clarifying question/decision comment on the subtask: `python3 tools/jira_util.py comment <SUBTASK_KEY> "Question for Human: ..."`
      2. Reassign the subtask to Human: `python3 tools/jira_util.py assign <SUBTASK_KEY> human`
@@ -77,7 +79,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
      4. When the human answers in a comment and reassigns to coordinator, the coordinator reassigns to `agent1` to resume the ticket.
    * Each ticket branches from the active `sprint/<SPRINT_NAME>` branch.
    * **Mandatory Rules & Skills Refresh ("Obey the Rules")**: At the start of handling each ticket, the agent MUST explicitly re-read `.agents/rules/aspice_governance.md` and the skill for the active stage using `view_file` to reload constraints into active working memory and prevent context drift across compactions.
-   * Upon completing Stage 5 verification, the ticket is merged back into `sprint/<SPRINT_NAME>` immediately via `--no-ff`.
+   * **One Commit per Ticket (Rule 44)**: Upon completing Stage 5 verification, the ticket is integrated back into `sprint/<SPRINT_NAME>` as a **single atomic commit** (`git merge --squash feature/<KEY> && git commit -m "feat(<KEY>): <Summary>"`).
    * *In-Sprint Anomaly Logging*: Any process hiccups, tool issues, or user corrections during execution are immediately logged as comments in the sprint's `Review & Retro` ticket.
 
 ---
@@ -119,8 +121,8 @@ Jointly review all completed sprint tickets with the human user against expectat
        * **Mandate**: Under NO circumstances may code be modified during Ceremony 2 (`"No code changes during the Sprint Review!"`).
        * **Lean Defect Recording**: Do NOT conduct a deep technical root-cause or code analysis during review (`"Während des Sprint Reviews soll es noch keine detaillierte Analyse der Auffälligkeit geben. Es soll eigentlich nur ein Ticket zur Aufnahme der Auffälligkeit erstellt werden. Dabei ist es jedoch wichtig, den Kontext der Beanstandung nicht zu verlieren. Falls erforderlich ist natürlich auch eine kurze Analyse notwendig."`). Only perform a brief sanity check if strictly required to frame the issue. Focus on capturing the exact human observation, steps to reproduce, user intent, and context without loss into a dedicated Jira follow-up ticket (automatically ranked at the top of the backlog):
          ```bash
-         # TYPE can be "Feature" (10008), "Bug" (10009), or "Verbesserung" (10010)
-         python3 tools/jira_util.py create-issue "<CLEAN_SUMMARY>" "<DESC_OR_@FILE>" <Feature|Bug|Verbesserung> <EPIC_KEY>
+         # TYPE can be "Bug" (10006), "Feature" (10007), or "Verbesserung" (10008)
+         python3 tools/jira_util.py create-issue "<CLEAN_SUMMARY>" "<DESC_OR_@FILE>" <Feature|Bug|Verbesserung> [EPIC_KEY]
          # Upload on-device screenshot or log evidence:
          python3 tools/jira_util.py upload <NEW_KEY> <SCREENSHOT_PATH>
          ```
