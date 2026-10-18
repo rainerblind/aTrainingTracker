@@ -16,31 +16,57 @@ This skill provides standardized guidance for interacting with Jira in accordanc
 
 ## Common CLI Commands
 ```bash
-# Show parent issue details and subtasks
+# Show parent issue details, comments, attachments, and subtasks
 python3 tools/jira_util.py show <KEY>
 
 # Check issue status
 python3 tools/jira_util.py status <KEY>
 
-# Create a subtask linked to parent and added to active sprint
-python3 tools/jira_util.py create-subtask <PARENT_KEY> "<SUMMARY>" "<DESC>" --add-to-sprint
+# Search issues with JQL (always include ORDER BY rank ASC for sprint/backlog queries)
+python3 tools/jira_util.py search "project = ATT AND sprint = <SPRINT_ID> ORDER BY rank ASC"
 
-# Update subtask description with deliverable content
+# Create a parent / follow-up issue (automatically ranked at the top of the backlog!)
+# TYPE can be "Feature" (10008), "Bug" (10009), or "Verbesserung" / "Improvement" (10010)
+python3 tools/jira_util.py create-issue "<SUMMARY>" "<DESC_OR_@FILE>" [Feature|Bug|Verbesserung] [EPIC_KEY]
+# Or with explicit flags:
+python3 tools/jira_util.py create-issue "<SUMMARY>" "<DESC_OR_@FILE>" --type=Verbesserung --parent=<EPIC_KEY>
+
+# Create a subtask linked to parent and added to active sprint
+python3 tools/jira_util.py create-subtask <PARENT_KEY> "<SUMMARY>" "<DESC_OR_@FILE>" --add-to-sprint
+
+# Update issue/subtask description or summary
 python3 tools/jira_util.py update-desc <KEY> "<CONTENT_OR_@FILE>"
+python3 tools/jira_util.py update-summary <KEY> "<NEW_SUMMARY>"
+python3 tools/jira_util.py set-parent <KEY> <EPIC_OR_PARENT_KEY>
+
+# Upload / attach a screenshot or log file to an issue
+python3 tools/jira_util.py upload <KEY> <FILE_PATH>
+# (Alias `attach` is also supported: `python3 tools/jira_util.py attach <KEY> <FILE_PATH>`)
+
+# Rank an existing issue at the very top of the backlog
+python3 tools/jira_util.py rank-top <KEY>
+
+# Set or clear Fix Version (Lösungsversion) on a finished parent ticket (NEVER on subtasks or unfinished tickets)
+python3 tools/jira_util.py set-fixversion <PARENT_KEY> <VERSION>
+python3 tools/jira_util.py clear-fixversion <KEY>
 
 # Post a role-attributed comment
-python3 tools/jira_util.py comment <KEY> "<COMMENT_TEXT>"
+python3 tools/jira_util.py comment <KEY> "<COMMENT_TEXT_OR_@FILE>"
+
+# Assign issue to a role (agent1 | agent2 | coordinator | human)
+python3 tools/jira_util.py assign <KEY> human
 
 # Transition subtask states
 python3 tools/jira_util.py move <SUBTASK_KEY> in_progress
 python3 tools/jira_util.py move <SUBTASK_KEY> in_review
 python3 tools/jira_util.py move <SUBTASK_KEY> freigabe     # Moves subtask directly to Erledigt!
 
-# Transition parent ticket states
+# Transition parent ticket states (NEVER move parent tickets to Erledigt!)
+python3 tools/jira_util.py move <PARENT_KEY> "analysis"
 python3 tools/jira_util.py move <PARENT_KEY> "test"
 python3 tools/jira_util.py move <PARENT_KEY> "final review" # Assigns to human for final review
 
-# Check Gate 3 prerequisite before modifying code
+# Check Gate 3 prerequisite before modifying production code
 python3 tools/jira_util.py check-gate <IMPL_PLAN_SUBTASK_KEY>
 ```
 

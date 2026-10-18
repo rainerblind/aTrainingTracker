@@ -105,13 +105,21 @@ Jointly review all completed sprint tickets with the human user against expectat
    * User verifies on-device behavior (Pixel 10 APK built from `sprint/<SPRINT_NAME>`) and inspects the code review.
    * **Evaluation Decision**:
      * **In Ordnung (i.O. / Accepted)**:
-       1. Human user transitions ticket from `Final Review (Human)` to `Erledigt` in Jira.
+       1. Set the active unreleased Fix Version (`Lösungsversion`) on the parent ticket (Rule 14):
+          ```bash
+          python3 tools/jira_util.py set-fixversion <KEY> <VERSION>
+          ```
+       2. Human user transitions ticket from `Final Review (Human)` to `Erledigt` in Jira.
      * **User Feedback / Refinements ("No Code Changes During Review & Lean Defect Recording")**:
        * **Mandate**: Under NO circumstances may code be modified during Ceremony 2 (`"No code changes during the Sprint Review!"`).
-       * **Lean Defect Recording**: Do NOT conduct a deep technical root-cause or code analysis during review (`"Während des Sprint Reviews soll es noch keine detaillierte Analyse der Auffälligkeit geben. Es soll eigentlich nur ein Ticket zur Aufnahme der Auffälligkeit erstellt werden. Dabei ist es jedoch wichtig, den Kontext der Beanstandung nicht zu verlieren. Falls erforderlich ist natürlich auch eine kurze Analyse notwendig."`). Only perform a brief sanity check if strictly required to frame the issue. Focus on capturing the exact human observation, steps to reproduce, user intent, and context without loss into a dedicated Jira follow-up ticket via `tools/jira_util.py create-issue`.
-       * Rank the new ticket at the top of the backlog via Jira Agile API.
-       * Transition the current sprint ticket to `Erledigt`.
-       * Proceed strictly to the next ticket.
+       * **Lean Defect Recording**: Do NOT conduct a deep technical root-cause or code analysis during review (`"Während des Sprint Reviews soll es noch keine detaillierte Analyse der Auffälligkeit geben. Es soll eigentlich nur ein Ticket zur Aufnahme der Auffälligkeit erstellt werden. Dabei ist es jedoch wichtig, den Kontext der Beanstandung nicht zu verlieren. Falls erforderlich ist natürlich auch eine kurze Analyse notwendig."`). Only perform a brief sanity check if strictly required to frame the issue. Focus on capturing the exact human observation, steps to reproduce, user intent, and context without loss into a dedicated Jira follow-up ticket (automatically ranked at the top of the backlog):
+         ```bash
+         # TYPE can be "Feature" (10008), "Bug" (10009), or "Verbesserung" (10010)
+         python3 tools/jira_util.py create-issue "<CLEAN_SUMMARY>" "<DESC_OR_@FILE>" <Feature|Bug|Verbesserung> <EPIC_KEY>
+         # Upload on-device screenshot or log evidence:
+         python3 tools/jira_util.py upload <NEW_KEY> <SCREENSHOT_PATH>
+         ```
+       * Set Fix Version on the current sprint ticket (`python3 tools/jira_util.py set-fixversion <KEY> <VERSION>`), have the human user transition the current sprint ticket to `Erledigt`, and proceed strictly to the next ticket.
      * **Nicht in Ordnung (n.i.O. / Rejection of Core Scope)**:
        * Move ticket back to `Analysis` with explicit human feedback:
          ```bash
