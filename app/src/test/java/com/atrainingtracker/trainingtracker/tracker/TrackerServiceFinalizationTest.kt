@@ -136,8 +136,9 @@ class TrackerServiceFinalizationTest {
 
         service = TestableTrackerService()
 
-        // Mock mDbExecutor to prevent NPE during shutdown in onDestroy
+        // Mock mDbExecutor to execute tasks inline in synchronous unit tests
         val executorMock = mockk<ExecutorService>(relaxed = true)
+        every { executorMock.execute(any()) } answers { firstArg<Runnable>().run() }
         every { executorMock.awaitTermination(any(), any()) } returns true
         setField("mDbExecutor", executorMock)
     }
@@ -441,5 +442,96 @@ class TrackerServiceFinalizationTest {
         val snapshot3 = sensorManager.accumulatedSensorTypeSet
         assertTrue("Subsequent snapshot must contain newly registered POWER sensor", snapshot3.contains(SensorType.POWER))
     }
+
+    /**
+     * TST-TRK-025.1: Verifies that onDestroy() shuts down mScheduler immediately, does not block
+     * the calling (main) thread while a slow database task (300 ms) is running on mDbExecutor,
+     * and executes endWorkout() on mDbExecutor in strict FIFO order after the pending DB task completes
+     * (REQ-TRK-033.1, REQ-TRK-033.2).
+     */
+    @Test
+    fun testOnDestroy_NonBlockingMainThreadAndFifoFinalizationOnRealDbExecutor() {
+        val realService = object : TestableTrackerService() {
+            var endWorkoutThreadName: String? = null
+            val executionOrder = java.util.Collections.synchronizedList(mutableListOf<String>())
+
+            override fun endWorkout() {
+                endWorkoutThreadName = Thread.currentThread().name
+                executionOrder.add("endWorkout")
+                super.endWorkout()
+            }
+        }
+
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(realService, 9001L)
+
+        val interruptedField = TrackerService::class.java.getDeclaredField("mTrackingInterrupted").apply { isAccessible = true }
+        interruptedField.set(realService, false)
+
+        val banalField = TrackerService::class.java.getDeclaredField("mBanalService").apply { isAccessible = true }
+        val mockBanal = mockk<com.atrainingtracker.banalservice.BANALService.BANALServiceComm>(relaxed = true)
+        banalField.set(realService, mockBanal)
+
+        val dbExecutorField = TrackerService::class.java.getDeclaredField("mDbExecutor").apply { isAccessible = true }
+        val realDbExecutor = dbExecutorField.get(realService) as ExecutorService
+
+        val taskStartedLatch = java.util.concurrent.CountDownLatch(1)
+        realDbExecutor.execute {
+            taskStartedLatch.countDown()
+            Thread.sleep(300)
+            realService.executionOrder.add("sample-write-done")
+        }
+        assertTrue("Slow DB task must start before onDestroy()", taskStartedLatch.await(2, java.util.concurrent.TimeUnit.SECONDS))
+
+        // Act: Call onDestroy() on the test (main) thread while the 300ms DB task is in flight
+        val callerThreadName = Thread.currentThread().name
+        val startNs = System.nanoTime()
+        realService.onDestroy()
+        val elapsedMs = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs)
+
+        // Assert 1: Main thread returned without waiting for the 300ms DB task
+        assertTrue("onDestroy() must not block the calling thread (< 150ms), took ${elapsedMs}ms", elapsedMs < 150)
+
+        // Assert 2: Both mScheduler and mDbExecutor are shut down immediately upon return from onDestroy()
+        assertTrue("mScheduler must be shut down in onDestroy() (REQ-TRK-033.1)", realService.isSchedulerShutdownForTesting)
+        assertTrue("mDbExecutor must be shut down in onDestroy() (REQ-TRK-033.2)", realService.isDbExecutorShutdownForTesting)
+
+        // Assert 3: Await asynchronous finalization completion and verify strict FIFO ordering
+        realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
+        assertEquals(
+            "Pending sample write must complete strictly before endWorkout() on single-thread FIFO mDbExecutor",
+            listOf("sample-write-done", "endWorkout"),
+            realService.executionOrder
+        )
+        assertTrue("endWorkout must have been invoked", realService.endWorkoutCalled)
+        assertFalse("endWorkout must execute on background mDbExecutor thread, not caller thread",
+            callerThreadName == realService.endWorkoutThreadName)
+        org.junit.Assert.assertNull("mBanalService must be nulled in finalizationTask finally block", banalField.get(realService))
+    }
+
+    /**
+     * TST-TRK-025.2: Verifies that when mTrackingInterrupted is true on a real mDbExecutor,
+     * onDestroy() still shuts down mScheduler and mDbExecutor, skips endWorkout(), clears mBanalService,
+     * and completes finalizationFuture (REQ-TRK-033.1, REQ-TRK-033.2).
+     */
+    @Test
+    fun testOnDestroy_RealDbExecutorWhenInterrupted_SkipsEndWorkoutAndCompletesTeardown() {
+        val realService = TestableTrackerService()
+        val interruptedField = TrackerService::class.java.getDeclaredField("mTrackingInterrupted").apply { isAccessible = true }
+        interruptedField.set(realService, true)
+
+        val banalField = TrackerService::class.java.getDeclaredField("mBanalService").apply { isAccessible = true }
+        banalField.set(realService, mockk<com.atrainingtracker.banalservice.BANALService.BANALServiceComm>(relaxed = true))
+
+        realService.onDestroy()
+
+        assertTrue("mScheduler must be shut down in onDestroy()", realService.isSchedulerShutdownForTesting)
+        assertTrue("mDbExecutor must be shut down in onDestroy()", realService.isDbExecutorShutdownForTesting)
+
+        realService.finalizationFuture.get(2, java.util.concurrent.TimeUnit.SECONDS)
+        assertFalse("endWorkout must NOT be called when mTrackingInterrupted is true", realService.endWorkoutCalled)
+        org.junit.Assert.assertNull("mBanalService must be nulled in finally block", banalField.get(realService))
+    }
 }
+
 

@@ -224,9 +224,12 @@ class TrackerServiceResilienceTest {
 
         // When: onDestroy is invoked
         service.onDestroy()
+        service.finalizationFuture.get(2, TimeUnit.SECONDS)
 
         // Then: endWorkout must NOT be called so the unfinished workout data is preserved
         assertFalse("endWorkout() must NOT be called if tracking was interrupted", service.endWorkoutCalled)
+        assertTrue("mScheduler must be shut down in onDestroy()", service.isSchedulerShutdownForTesting)
+        assertTrue("mDbExecutor must be shut down in onDestroy()", service.isDbExecutorShutdownForTesting)
     }
 
     @Test
@@ -236,9 +239,12 @@ class TrackerServiceResilienceTest {
 
         // When: onDestroy is invoked
         service.onDestroy()
+        service.finalizationFuture.get(2, TimeUnit.SECONDS)
 
         // Then: endWorkout() must be called to properly finalize and export the workout
         assertTrue("endWorkout() must be called when service stops normally", service.endWorkoutCalled)
+        assertTrue("mScheduler must be shut down in onDestroy()", service.isSchedulerShutdownForTesting)
+        assertTrue("mDbExecutor must be shut down in onDestroy()", service.isDbExecutorShutdownForTesting)
     }
 
     /**
