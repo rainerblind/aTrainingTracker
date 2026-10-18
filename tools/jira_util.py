@@ -760,10 +760,34 @@ def rank_at_top_of_backlog(issue_key, role="agent1"):
     except Exception as e:
         print(f"Warning: Could not rank {issue_key} at the top of the backlog: {e}", file=sys.stderr)
 
+ISSUE_TYPE_ALIASES = {
+    "feature": "10008",
+    "new feature": "10008",
+    "story": "10008",
+    "bug": "10009",
+    "fehler": "10009",
+    "verbesserung": "10010",
+    "improvement": "10010",
+    "task": "10001",
+    "aufgabe": "10001",
+    "subtask": "10002",
+    "sub-task": "10002",
+}
+
+def resolve_issuetype_id(issuetype_arg):
+    if not issuetype_arg:
+        return "10008"
+    val = str(issuetype_arg).strip()
+    if val.isdigit():
+        return val
+    return ISSUE_TYPE_ALIASES.get(val.lower(), val)
+
 def create_issue(summary, description, issuetype_id="10008", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None, rank_top=True):
     if description.startswith("@") and os.path.exists(description[1:]):
         with open(description[1:], "r", encoding="utf-8") as f:
             description = f.read()
+
+    issuetype_id = resolve_issuetype_id(issuetype_id)
 
     # Mandate (Rule 18): Ticket summaries must not contain ticket category or epic in summary
     clean_summary = re.sub(r'^\s*(\[[^\]]+\]\s*)+', '', summary).strip()
@@ -819,16 +843,109 @@ def add_to_active_sprint(issue_key, role="agent1"):
     jira_request(url, method="POST", payload=payload, role=role)
     print(f"Added {issue_key} to active sprint '{active_sprint['name']}' (id {sprint_id}).")
 
+def ensure_retro_ticket(role="agent1"):
+    """
+    Checks whether a 'Review & Retro' ticket exists in the active sprint.
+    If Jira's automation failed to create one, creates 'Review & Retro - <Sprint Name>'
+    (Verbesserung, Epic ATT-232) and adds it to the active sprint.
+    """
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    boards = jira_request(f"{base}/rest/agile/1.0/board", role=role)["values"]
+    if not boards:
+        print("Error: No Agile board found.", file=sys.stderr)
+        sys.exit(1)
+    board_id = boards[0]["id"]
+    active_sprint = resolve_active_sprint(board_id, role=role)
+    if not active_sprint:
+        print("Error: No active sprint found.", file=sys.stderr)
+        sys.exit(1)
+
+    sprint_id = active_sprint["id"]
+    sprint_name = active_sprint["name"].strip()
+    sprint_short_id = re.sub(r'(?i)^sprint\s*', '', sprint_name).strip()
+    display_sprint = sprint_name if sprint_name.lower().startswith("sprint") else f"Sprint {sprint_name}"
+
+    issues = jira_request(
+        f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype",
+        role=role
+    ).get("issues", [])
+
+    for issue in issues:
+        itype = issue.get("fields", {}).get("issuetype", {}).get("name", "")
+        if itype.lower() in ("sub-task", "subtask"):
+            continue
+        summary = issue.get("fields", {}).get("summary", "")
+        if "retro" in summary.lower():
+            status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
+            print(f"Review & Retro ticket already exists in {display_sprint} (id {sprint_id}): {issue['key']} — {summary} [{status}]")
+            return issue["key"]
+
+    summary = f"Review & Retro - {display_sprint}"
+    initial_desc = (
+        f"h2. Sprint Review & Retrospective - {display_sprint}\n"
+        f"*Sprint*: {sprint_short_id} (id {sprint_id})\n"
+        f"*Branch*: sprint/{sprint_short_id} -> develop\n"
+    )
+    labels = ["process", "retro", "review", f"sprint-{sprint_short_id}"]
+    new_key = create_issue(
+        summary=summary,
+        description=initial_desc,
+        issuetype_id="10010",
+        parent_key="ATT-232",
+        role=role,
+        add_to_sprint=False,
+        labels=labels,
+        rank_top=False
+    )
+    add_to_active_sprint(new_key, role=role)
+    final_desc = (
+        f"h2. Sprint Review & Retrospective - {display_sprint}\n"
+        f"*Deliverable*: docs/engineering/Sprint_Review_and_Retro_{new_key}.md\n"
+        f"*Branch*: sprint/{sprint_short_id} -> develop\n"
+    )
+    update_issue_description(new_key, final_desc, role=role)
+    print(f"Created Review & Retro ticket {new_key} for {display_sprint} (id {sprint_id}).")
+    return new_key
+
+USAGE_TEXT = (
+    "Usage: jira_util.py [--as agent1|agent2|coordinator] <command> [args]\n"
+    "Commands:\n"
+    "  list                                                  List active sprint issues\n"
+    "  show KEY                                              Show issue details, description, comments, and subtasks\n"
+    "  status KEY                                            Show issue status\n"
+    "  search JQL                                            Search issues using JQL\n"
+    "  ensure-retro                                          Check/create 'Review & Retro' ticket in the active sprint\n"
+    "  check-gate KEY                                        Verify Impl-Plan subtask is Erledigt (Gate 3)\n"
+    "  move KEY <target>                                     Transition issue (todo|in_progress|in_review|freigabe|analysis|test|final review)\n"
+    "  comment KEY TEXT_OR_@FILE                             Add role-attributed comment\n"
+    "  update-desc KEY TEXT_OR_@FILE                         Update issue description\n"
+    "  update-summary KEY SUMMARY                            Update issue summary\n"
+    "  set-parent KEY PARENT_EPIC_KEY                        Link issue to parent/epic\n"
+    "  assign KEY ROLE_OR_ACCOUNT_ID                         Assign issue (agent1|agent2|coordinator|human)\n"
+    "  upload|attach KEY FILE_PATH                           Upload attachment to issue\n"
+    "  download URL FILENAME                                 Download single attachment URL\n"
+    "  download-all KEY                                      Download all attachments for issue\n"
+    "  versions                                              List project versions\n"
+    "  set-fixversion KEY VERSION                            Set Lösungsversion on parent issue\n"
+    "  clear-fixversion KEY                                  Clear Lösungsversion on issue\n"
+    "  rank-top KEY                                          Rank issue at the very top of the backlog\n"
+    "  create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint]\n"
+    "  create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom]"
+)
+
 if __name__ == "__main__":
     active_role, remaining_argv = parse_role_from_args(sys.argv[1:])
 
-    if len(remaining_argv) < 1:
-        print("Usage: jira_util.py [--as agent1|agent2|coordinator] [list | show KEY | status KEY | check-gate KEY | versions | set-fixversion KEY VERSION | clear-fixversion KEY | move KEY todo|in_progress|in_review|freigabe | comment KEY TEXT | download URL FILENAME | download-all KEY | search JQL | update-desc KEY TEXT | create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint] | create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--bottom] [--fixversion=VERSION] | rank-top KEY | add-to-sprint KEY]", file=sys.stderr)
-        sys.exit(1)
+    if len(remaining_argv) < 1 or remaining_argv[0] in ("-h", "--help", "help"):
+        print(USAGE_TEXT, file=sys.stderr)
+        sys.exit(0 if remaining_argv and remaining_argv[0] in ("-h", "--help", "help") else 1)
 
     cmd = remaining_argv[0]
     if cmd == "list":
         list_sprint_issues(role=active_role)
+    elif cmd in ("ensure-retro", "ensure_retro"):
+        ensure_retro_ticket(role=active_role)
     elif cmd == "show" and len(remaining_argv) == 2:
         show_issue(remaining_argv[1], role=active_role)
     elif cmd == "status" and len(remaining_argv) == 2:
@@ -845,7 +962,7 @@ if __name__ == "__main__":
         download_attachment(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "download-all" and len(remaining_argv) == 2:
         download_all_attachments(remaining_argv[1], role=active_role)
-    elif cmd in ("upload", "upload-attachment") and len(remaining_argv) == 3:
+    elif cmd in ("upload", "upload-attachment", "attach") and len(remaining_argv) == 3:
         upload_attachment(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "move" and len(remaining_argv) == 3:
         transition_issue(remaining_argv[1], remaining_argv[2], role=active_role)
@@ -893,8 +1010,12 @@ if __name__ == "__main__":
         fix_ver = None
         priority_arg = None
         labels_arg = None
+        explicit_type = None
+        explicit_parent = None
         filtered_args = []
-        for arg in remaining_argv[1:]:
+        idx = 1
+        while idx < len(remaining_argv):
+            arg = remaining_argv[idx]
             if arg == "--add-to-sprint":
                 if active_role in ("agent1", "agent2", "coordinator"):
                     print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)
@@ -913,18 +1034,28 @@ if __name__ == "__main__":
                 priority_arg = arg.split("=", 1)[1]
             elif arg.startswith("--labels="):
                 labels_arg = arg.split("=", 1)[1]
+            elif arg.startswith("--type=") or arg.startswith("--issuetype="):
+                explicit_type = arg.split("=", 1)[1]
+            elif arg in ("--type", "--issuetype") and idx + 1 < len(remaining_argv):
+                explicit_type = remaining_argv[idx + 1]
+                idx += 1
+            elif arg.startswith("--parent=") or arg.startswith("--epic="):
+                explicit_parent = arg.split("=", 1)[1]
+            elif arg in ("--parent", "--epic") and idx + 1 < len(remaining_argv):
+                explicit_parent = remaining_argv[idx + 1]
+                idx += 1
             else:
                 filtered_args.append(arg)
-
+            idx += 1
 
         if len(filtered_args) < 2:
-            print("Usage: create-issue SUMMARY DESC [TYPE_ID] [PARENT_KEY] [--bottom] [--add-to-sprint] [--fixversion=VERSION] [--priority=PRIORITY] [--labels=L1,L2]", file=sys.stderr)
+            print("Usage: create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--priority=PRIORITY] [--labels=L1,L2]", file=sys.stderr)
             sys.exit(1)
 
         summary = filtered_args[0]
         desc = filtered_args[1]
-        type_id = filtered_args[2] if len(filtered_args) >= 3 else "10008"
-        parent = filtered_args[3] if len(filtered_args) >= 4 else None
+        type_id = explicit_type if explicit_type else (filtered_args[2] if len(filtered_args) >= 3 else "10008")
+        parent = explicit_parent if explicit_parent else (filtered_args[3] if len(filtered_args) >= 4 else None)
         create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver, priority=priority_arg, labels=labels_arg, rank_top=rank_top)
     elif cmd == "add-to-sprint" and len(remaining_argv) == 2:
         if active_role in ("agent1", "agent2", "coordinator"):
@@ -932,5 +1063,5 @@ if __name__ == "__main__":
             sys.exit(1)
         add_to_active_sprint(remaining_argv[1], role=active_role)
     else:
-        print("Invalid command or arguments.", file=sys.stderr)
+        print(f"Invalid command or arguments: {' '.join(remaining_argv)}\n\n{USAGE_TEXT}", file=sys.stderr)
         sys.exit(1)

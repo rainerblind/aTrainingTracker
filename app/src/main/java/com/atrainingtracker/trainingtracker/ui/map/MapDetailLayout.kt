@@ -142,7 +142,8 @@ fun MapDetailLayout(
     val hasTelemetryGraphs = showZoomControls && showTelemetryCharts && activeScrubPath != null && (
         TelemetryMetricUtils.hasHeartRateData(activeScrubPath) ||
         TelemetryMetricUtils.hasSpeedData(activeScrubPath) ||
-        TelemetryMetricUtils.hasPowerData(activeScrubPath)
+        TelemetryMetricUtils.hasPowerData(activeScrubPath) ||
+        (tuningConfig.enableCriticalPowerModel && TelemetryMetricUtils.hasWPrimeBalData(activeScrubPath))
     )
     val hasZoomToolbar = showZoomControls && (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty()
     val hasScrollableContent = metadataContent != null || analyticsContent != null || hasTelemetryGraphs
@@ -473,8 +474,8 @@ fun MapDetailLayout(
                                         )
                                     }
 
-                                    // W'bal Graph (REQ-UI-399.3)
-                                    if (TelemetryMetricUtils.hasWPrimeBalData(path)) {
+                                    // W'bal Graph (REQ-UI-399.3 / REQ-UI-403)
+                                    if (tuningConfig.enableCriticalPowerModel && TelemetryMetricUtils.hasWPrimeBalData(path)) {
                                         Spacer(modifier = Modifier.height(8.dp))
                                         val activeWPrimePoint = if (selectedDistance != null) {
                                             TelemetryMetricUtils.findNearestPoint(

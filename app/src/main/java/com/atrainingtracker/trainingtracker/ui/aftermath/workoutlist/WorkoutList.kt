@@ -43,6 +43,12 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * The scrollable list of WorkoutSummaries.
@@ -67,6 +73,9 @@ fun WorkoutList(
     workoutCardPreferences: WorkoutCardSectionPreferences = WorkoutCardSectionPreferences(),
     workoutSectionsOrder: List<WorkoutSectionType> = WorkoutSectionType.DEFAULT_ORDER
 ) {
+    val context = LocalContext.current
+    val tuningDataStore = remember(context) { TuningPreferencesDataStore(context.applicationContext) }
+    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
     val density = LocalDensity.current
     val topPadding = with(density) { (headerHeightPx + appBarOffsetPx).toDp() }
     val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
@@ -121,7 +130,8 @@ fun WorkoutList(
                             onClusterClick = onClusterClick,
                             onMarkFinished = { onMarkFinished(workoutData.id) },
                             preferences = workoutCardPreferences,
-                            workoutSectionsOrder = workoutSectionsOrder
+                            workoutSectionsOrder = workoutSectionsOrder,
+                            tuningConfig = tuningConfig
                         )
                     }
                 }

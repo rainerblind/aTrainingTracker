@@ -98,6 +98,110 @@ class TestTcxParser(unittest.TestCase):
         self.assertFalse(expanded.startswith("~"))
         self.assertTrue(os.path.isabs(expanded))
 
+    def test_variable_interval_tcx_interpolation_and_fallback_speed(self):
+        """TST-TOOL-006.1: Retains 1-Hz HR/Power trackpoints missing <Position>, linearly interpolates lat/lon/ele, and computes speed_mps = step_d / dt."""
+        tcx_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase>
+  <Activities>
+    <Activity Sport="Biking">
+      <Lap StartTime="2026-10-10T10:00:00Z">
+        <Track>
+          <Trackpoint>
+            <Time>2026-10-10T10:00:00Z</Time>
+            <Position><LatitudeDegrees>48.000000</LatitudeDegrees><LongitudeDegrees>11.000000</LongitudeDegrees></Position>
+            <AltitudeMeters>500.0</AltitudeMeters>
+            <HeartRateBpm><Value>130</Value></HeartRateBpm>
+            <Cadence>80</Cadence>
+            <Extensions><TPX><Watts>200</Watts></TPX></Extensions>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-10-10T10:00:01Z</Time>
+            <HeartRateBpm><Value>132</Value></HeartRateBpm>
+            <Cadence>82</Cadence>
+            <Extensions><TPX><Watts>210</Watts></TPX></Extensions>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-10-10T10:00:02Z</Time>
+            <HeartRateBpm><Value>134</Value></HeartRateBpm>
+            <Cadence>84</Cadence>
+            <Extensions><TPX><Watts>220</Watts></TPX></Extensions>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-10-10T10:00:03Z</Time>
+            <HeartRateBpm><Value>136</Value></HeartRateBpm>
+            <Cadence>86</Cadence>
+            <Extensions><TPX><Watts>230</Watts></TPX></Extensions>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-10-10T10:00:04Z</Time>
+            <HeartRateBpm><Value>138</Value></HeartRateBpm>
+            <Cadence>88</Cadence>
+            <Extensions><TPX><Watts>240</Watts></TPX></Extensions>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-10-10T10:00:05Z</Time>
+            <Position><LatitudeDegrees>48.000500</LatitudeDegrees><LongitudeDegrees>11.000500</LongitudeDegrees></Position>
+            <AltitudeMeters>510.0</AltitudeMeters>
+            <HeartRateBpm><Value>140</Value></HeartRateBpm>
+            <Cadence>90</Cadence>
+            <Extensions><TPX><Watts>250</Watts></TPX></Extensions>
+          </Trackpoint>
+        </Track>
+      </Lap>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>"""
+        with tempfile.NamedTemporaryFile("w", suffix=".tcx", delete=False) as f:
+            f.write(tcx_xml)
+            tmp_name = f.name
+        try:
+            points = TcxParser.parse_file(tmp_name)
+            self.assertEqual(len(points), 6, "All 6 1-Hz trackpoints must be retained")
+            # Check preserved 1-Hz HR and Power on intermediate non-Position trackpoints
+            self.assertEqual([p.hr for p in points], [130, 132, 134, 136, 138, 140])
+            self.assertEqual([p.watts for p in points], [200, 210, 220, 230, 240, 250])
+            # Check linear coordinate & altitude interpolation at t = 2.0s (alpha = 0.4)
+            self.assertAlmostEqual(points[2].lat, 48.000200, places=6)
+            self.assertAlmostEqual(points[2].lon, 11.000200, places=6)
+            self.assertAlmostEqual(points[2].ele, 504.0, places=4)
+            # Check fallback speed_mps > 0 on all points when <Speed> is omitted
+            for p in points:
+                self.assertGreater(p.speed_mps, 10.0)
+                self.assertLess(p.speed_mps, 18.0)
+        finally:
+            os.remove(tmp_name)
+
+    def test_duplicate_timestamp_dt_zero_safety(self):
+        """TST-TOOL-006.1: Duplicate timestamps (dt < 0.001) safely yield speed_mps = 0.0 without ZeroDivisionError or Inf/NaN."""
+        tcx_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase>
+  <Activities>
+    <Activity Sport="Biking">
+      <Lap StartTime="2026-10-10T10:00:00Z">
+        <Track>
+          <Trackpoint>
+            <Time>2026-10-10T10:00:00Z</Time>
+            <Position><LatitudeDegrees>48.000000</LatitudeDegrees><LongitudeDegrees>11.000000</LongitudeDegrees></Position>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-10-10T10:00:00Z</Time>
+            <Position><LatitudeDegrees>48.000100</LatitudeDegrees><LongitudeDegrees>11.000100</LongitudeDegrees></Position>
+          </Trackpoint>
+        </Track>
+      </Lap>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>"""
+        with tempfile.NamedTemporaryFile("w", suffix=".tcx", delete=False) as f:
+            f.write(tcx_xml)
+            tmp_name = f.name
+        try:
+            points = TcxParser.parse_file(tmp_name)
+            self.assertEqual(len(points), 2)
+            self.assertEqual(points[1].speed_mps, 0.0)
+        finally:
+            os.remove(tmp_name)
+
 
 class TestBlePayloads(unittest.TestCase):
     def test_build_power_payload(self):
@@ -208,14 +312,24 @@ class TestReplayEngine(unittest.TestCase):
     def test_initial_state(self):
         self.assertEqual(self.engine.status, "STOPPED")
         self.assertEqual(self.engine.current_index, 0)
+        self.assertEqual(self.engine.elapsed_time_sec, 0.0)
         self.assertEqual(self.engine.progress_ratio, 0.0)
 
-    def test_playback_lifecycle(self):
+    def test_playback_lifecycle_and_elapsed_time_stepping(self):
+        """TST-TOOL-006.2: Advances by workout elapsed time (1.0s * speed_multiplier) rather than raw array index."""
         self.engine.play()
         self.assertEqual(self.engine.status, "PLAYING")
 
+        # 4 steps at 1x = 4.0s elapsed -> still at index 0 (t=0.0s, next is t=5.0s)
+        for _ in range(4):
+            self.engine.step()
+        self.assertEqual(self.engine.current_index, 0)
+        self.assertAlmostEqual(self.engine.elapsed_time_sec, 4.0)
+
+        # 5th step at 1x = 5.0s elapsed -> advances to index 1 (t=5.0s)
         self.engine.step()
         self.assertEqual(self.engine.current_index, 1)
+        self.assertAlmostEqual(self.engine.elapsed_time_sec, 5.0)
 
         self.engine.pause()
         self.assertEqual(self.engine.status, "PAUSED")
@@ -223,28 +337,47 @@ class TestReplayEngine(unittest.TestCase):
         self.engine.stop()
         self.assertEqual(self.engine.status, "STOPPED")
         self.assertEqual(self.engine.current_index, 0)
+        self.assertEqual(self.engine.elapsed_time_sec, 0.0)
 
     def test_seek_ratio(self):
         self.engine.seek_ratio(0.5)
-        # points length 4, index should be 1 or 2
         self.assertIn(self.engine.current_index, [1, 2])
+        self.assertEqual(self.engine.elapsed_time_sec, self.engine.current_point.time_sec)
 
         self.engine.seek_ratio(1.0)
         self.assertEqual(self.engine.current_index, 3)
+        self.assertEqual(self.engine.elapsed_time_sec, 15.0)
 
         self.engine.seek_ratio(0.0)
         self.assertEqual(self.engine.current_index, 0)
+        self.assertEqual(self.engine.elapsed_time_sec, 0.0)
 
     def test_seek_time(self):
         self.engine.seek_time(10.0)
         self.assertEqual(self.engine.current_point.time_sec, 10.0)
+        self.assertEqual(self.engine.elapsed_time_sec, 10.0)
 
-    def test_speed_scaling(self):
-        self.engine.set_speed(2.0)
-        self.assertEqual(self.engine.speed_multiplier, 2.0)
+    def test_speed_scaling_and_final_tick_termination(self):
+        """TST-TOOL-006.2: Speed multiplier scales elapsed_time_sec and final point transitions to PAUSED without out-of-bounds."""
+        self.engine.set_speed(5.0)
+        self.assertEqual(self.engine.speed_multiplier, 5.0)
         self.engine.play()
+
+        # 1 step at 5x = +5.0s -> index 1 (t=5.0s)
+        self.engine.step()
+        self.assertEqual(self.engine.current_index, 1)
+        self.assertEqual(self.engine.status, "PLAYING")
+
+        # 2nd step at 5x = +10.0s -> index 2 (t=10.0s)
         self.engine.step()
         self.assertEqual(self.engine.current_index, 2)
+        self.assertEqual(self.engine.status, "PLAYING")
+
+        # 3rd step at 5x = +15.0s -> reaches final point (index 3, t=15.0s) and transitions to PAUSED
+        self.engine.step()
+        self.assertEqual(self.engine.current_index, 3)
+        self.assertEqual(self.engine.elapsed_time_sec, 15.0)
+        self.assertEqual(self.engine.status, "PAUSED")
 
 
 @unittest.skipUnless(HAS_PYQT6, "PyQt6 is required for GUI tests")
@@ -472,6 +605,103 @@ class TestAdbGpsInjector(unittest.TestCase):
         injector.toggle()
         self.assertFalse(injector.is_killed)
 
+    def test_workout_relative_timestamps_and_reset_epoch(self):
+        """TST-TOOL-006.3: Stamps --time with base_epoch_ms + int(round(time_sec * 1000.0)) and resets epoch cleanly."""
+        injector = AdbGpsInjector(enabled=True, device_serial="DEVICE123")
+        injector.is_registered = True
+        injector.base_epoch_ms = 1700000000000
+
+        injector.inject_location(48.0, 11.0, 500.0, 6.0, 45.0, time_sec=0.0)
+        injector.inject_location(48.0005, 11.0005, 505.0, 6.0, 45.0, time_sec=5.0)
+        self.assertEqual(injector._queue.qsize(), 2)
+
+        fix0 = injector._queue.get_nowait()
+        fix1 = injector._queue.get_nowait()
+        self.assertEqual(fix0, (48.0, 11.0, 1700000000000))
+        self.assertEqual(fix1, (48.0005, 11.0005, 1700000005000))
+        self.assertEqual(fix1[2] - fix0[2], 5000)
+
+        # Verify reset_epoch anchors base_epoch_ms so time_sec offset is preserved
+        injector.reset_epoch(time_sec=10.0)
+        injector.inject_location(48.001, 11.001, 510.0, 6.0, 45.0, time_sec=10.0)
+        injector.inject_location(48.0015, 11.0015, 515.0, 6.0, 45.0, time_sec=15.0)
+        fix_seek0 = injector._queue.get_nowait()
+        fix_seek1 = injector._queue.get_nowait()
+        self.assertEqual(fix_seek1[2] - fix_seek0[2], 5000)
+
+    def test_adb_gps_injector_removes_test_providers_on_pause_stop_and_eof(self):
+        """TST-TRK-017.1: Verifies startup cleanup, lazy add-test-provider on PLAYING, and immediate remove-test-provider on PAUSED, STOPPED, kill, and EOF."""
+        executed_cmds = []
+
+        class RecordingInjector(AdbGpsInjector):
+            def _run_adb(self, cmd_args, check=False):
+                executed_cmds.append(" ".join(cmd_args))
+                return None
+
+        injector = RecordingInjector(enabled=True, device_serial="DEVICE123")
+        points = [
+            TcxPoint("2026-10-10T10:00:00Z", 0.0, 48.0, 11.0, 500.0, 0.0, 120, 80, 180, 6.0, 45.0),
+            TcxPoint("2026-10-10T10:00:05Z", 5.0, 48.001, 11.001, 505.0, 30.0, 130, 85, 200, 6.0, 45.0),
+        ]
+        engine = ReplayEngine(points, gps=injector)
+
+        # 1. Startup setup() grants mock_location and clears leftover providers while keeping is_registered=False in STOPPED
+        injector.setup()
+        self.assertFalse(injector.is_registered)
+        self.assertTrue(any("remove-test-provider gps" in c for c in executed_cmds))
+        self.assertFalse(any("add-test-provider gps" in c for c in executed_cmds))
+        executed_cmds.clear()
+
+        # 2. Entering PLAYING lazily registers test providers
+        engine.play()
+        self.assertTrue(injector.is_registered)
+        self.assertTrue(any("add-test-provider gps" in c and "add-test-provider fused" in c for c in executed_cmds))
+        executed_cmds.clear()
+
+        # 3. Pausing immediately removes test providers
+        engine.pause()
+        self.assertFalse(injector.is_registered)
+        self.assertTrue(any("remove-test-provider gps" in c and "remove-test-provider fused" in c for c in executed_cmds))
+        executed_cmds.clear()
+
+        # 4. Resuming PLAYING re-registers test providers, and stopping removes them
+        engine.play()
+        self.assertTrue(injector.is_registered)
+        executed_cmds.clear()
+
+        engine.stop()
+        self.assertFalse(injector.is_registered)
+        self.assertTrue(any("remove-test-provider gps" in c for c in executed_cmds))
+        executed_cmds.clear()
+
+        # 5. Stepping to timeline EOF automatically transitions to PAUSED and removes test providers
+        engine.play()
+        self.assertTrue(injector.is_registered)
+        executed_cmds.clear()
+
+        engine.step(dt_sec=5.0)
+        self.assertEqual(engine.status, "PAUSED")
+        self.assertFalse(injector.is_registered)
+        self.assertTrue(any("remove-test-provider gps" in c and "remove-test-provider network" in c for c in executed_cmds))
+        executed_cmds.clear()
+
+        # 6. Calling kill() while PLAYING immediately removes test providers; revive() re-registers them
+        engine.stop()
+        engine.play()
+        self.assertTrue(injector.is_registered)
+        executed_cmds.clear()
+
+        injector.kill()
+        self.assertFalse(injector.is_registered)
+        self.assertTrue(any("remove-test-provider gps" in c and "remove-test-provider fused" in c for c in executed_cmds))
+        executed_cmds.clear()
+
+        injector.revive()
+        self.assertTrue(injector.is_registered)
+        self.assertTrue(any("add-test-provider gps" in c for c in executed_cmds))
+
+        injector.teardown()
+
 
 class TestHostPreFlightDiagnostics(unittest.TestCase):
     def test_preflight_report_structure(self):
@@ -497,6 +727,12 @@ class TestCliArguments(unittest.TestCase):
         args = parser.parse_args([])
         self.assertEqual(args.hr_battery, 100)
         self.assertEqual(args.power_battery, 100)
+        self.assertFalse(args.cleanup)
+
+    def test_cleanup_cli_argument(self):
+        parser = build_arg_parser()
+        args = parser.parse_args(["--cleanup"])
+        self.assertTrue(args.cleanup)
 
     def test_custom_battery_arguments(self):
         parser = build_arg_parser()

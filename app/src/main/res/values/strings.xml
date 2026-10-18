@@ -441,6 +441,7 @@
     <string name="tab_tracking">Tracking</string>
     <string name="tab_map">Map</string>
     <string name="tab_laps">Laps</string>
+    <string name="tab_power">Power</string>
     <string name="tab_workouts">Workouts</string>
 
 
@@ -2139,6 +2140,53 @@
     <string name="workout_power_metrics_work_format">Work: %1$.0f kJ</string>
     <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
     <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
+
+    <!-- Physiology & Training Models (ATT-3929 / REQ-UI-403) -->
+    <string name="tuning_cat_physiology_models">Physiology &amp; Training Models</string>
+    <string name="tuning_physiology_none_enabled">Basic metrics only</string>
+    <string name="tuning_physiology_coggan_short">Coggan</string>
+    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
+    <string name="tuning_physiology_cp_short">CP / W\'bal</string>
+    <string name="tuning_physiology_coggan_title">Coggan Power Metrics (NP, IF, TSS)</string>
+    <string name="tuning_physiology_coggan_desc">Show Normalized Power, Intensity Factor, Training Stress Score, and Variability Index in workouts and cockpit</string>
+    <string name="tuning_physiology_pmc_title">Performance Management (PMC)</string>
+    <string name="tuning_physiology_pmc_desc">Show Fitness (CTL), Fatigue (ATL), and Form (TSB) chart on the Profile &amp; Zones screen</string>
+    <string name="tuning_physiology_ef_title">Aerobic Efficiency &amp; Decoupling</string>
+    <string name="tuning_physiology_ef_desc">Show Efficiency Factor (EF) and Aerobic Decoupling (Pw:Hr / Pa:Hr) in workout summaries and details</string>
+    <string name="tuning_physiology_cp_title">Critical Power &amp; Anaerobic Battery (CP, W\', W\'bal)</string>
+    <string name="tuning_physiology_cp_desc">Show Critical Power, W\', and dynamic W\'bal battery in Profile &amp; Zones, cockpit, and workout analytics</string>
+    <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
+    <string name="workout_domain_efficiency">Efficiency</string>
+    <string name="workout_ef_short">EF</string>
+    <string name="workout_pwhr_short">Pw:Hr</string>
+    <string name="workout_pahr_short">Pa:Hr</string>
+    <string name="workout_ef_value_pw_format">%1$.2f W/bpm</string>
+    <string name="workout_ef_value_pa_format">%1$.2f m/min/bpm</string>
+    <string name="workout_decoupling_pct_format">%1$.1f%%</string>
+    <string name="workout_w_prime_min_kj_label">Min W\'bal</string>
+    <string name="workout_w_prime_min_pct_label">Min %%</string>
+    <string name="workout_w_prime_min_kj_value_format">%1$.1f kJ</string>
+    <string name="workout_w_prime_min_pct_value_format">%1$.0f%%</string>
+    <string name="workout_power_label_work">Work</string>
+    <string name="workout_power_value_watts_format">%1$.0f W</string>
+    <string name="workout_power_value_if_format">%1$.2f</string>
+    <string name="workout_power_value_tss_format">%1$.0f</string>
+    <string name="workout_power_value_work_format">%1$.0f kJ</string>
+    <string name="workout_detail_tab_overview">Overview</string>
+    <string name="workout_detail_tab_map_graphs">Map &amp; Graphs</string>
+    <string name="workout_detail_tab_zones">Zones</string>
+    <string name="workout_detail_tab_laps_segments">Laps &amp; Segments</string>
+    <string name="workout_detail_tab_custom_default">Custom Tab</string>
+    <string name="workout_detail_section_details">Workout Metrics &amp; Summary</string>
+    <string name="workout_detail_tabs_config_title">Configure Detail Tabs</string>
+    <string name="workout_detail_tabs_config_subtitle">Customize tabs and assign sections for the Workout Details screen</string>
+    <string name="workout_detail_tabs_add_tab">Add Tab</string>
+    <string name="workout_detail_tabs_rename_tab">Tab Name</string>
+    <string name="workout_detail_tabs_delete_tab">Delete Tab</string>
+    <string name="workout_detail_tabs_reset_defaults">Reset to Default Tabs</string>
+    <string name="workout_detail_tabs_sections_header">Assigned Sections</string>
+    <string name="workout_detail_tabs_map_pinned_hint">Map is always anchored at the top when enabled in a tab</string>
 </resources>
 
 

@@ -351,44 +351,46 @@ fun AthleteProfileContent(
                             )
                         }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            val effectiveCpEntry = uiState.latestCpEntry ?: uiState.latestFtpEntry
-                            val cpText = effectiveCpEntry?.let {
-                                "${AthleteMetricsPlotMath.formatCpValue(it.value)} W"
-                            } ?: stringResource(R.string.athlete_weight_unconfigured)
-                            val cpDate = uiState.latestCpEntry?.let {
-                                AthleteMetricsPlotMath.formatMediumDate(it.timestampMs)
-                            } ?: ""
+                        if (uiState.enableCriticalPowerModel) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                val effectiveCpEntry = uiState.latestCpEntry ?: uiState.latestFtpEntry
+                                val cpText = effectiveCpEntry?.let {
+                                    "${AthleteMetricsPlotMath.formatCpValue(it.value)} W"
+                                } ?: stringResource(R.string.athlete_weight_unconfigured)
+                                val cpDate = uiState.latestCpEntry?.let {
+                                    AthleteMetricsPlotMath.formatMediumDate(it.timestampMs)
+                                } ?: ""
 
-                            MetricSummaryCard(
-                                title = stringResource(R.string.athlete_profile_metric_cp),
-                                valueText = cpText,
-                                dateText = cpDate,
-                                isSelected = uiState.selectedPlotMetric == PlotMetricType.CP,
-                                onCardClick = { onSelectPlotMetric(PlotMetricType.CP) },
-                                onAddClick = { showAddDialogForMetric = AthleteMetricType.CP_WATTS },
-                                modifier = Modifier.weight(1f)
-                            )
+                                MetricSummaryCard(
+                                    title = stringResource(R.string.athlete_profile_metric_cp),
+                                    valueText = cpText,
+                                    dateText = cpDate,
+                                    isSelected = uiState.selectedPlotMetric == PlotMetricType.CP,
+                                    onCardClick = { onSelectPlotMetric(PlotMetricType.CP) },
+                                    onAddClick = { showAddDialogForMetric = AthleteMetricType.CP_WATTS },
+                                    modifier = Modifier.weight(1f)
+                                )
 
-                            val wPrimeText = uiState.latestWPrimeEntry?.let {
-                                "${AthleteMetricsPlotMath.formatWPrimeValue(it.value)} kJ"
-                            } ?: "${AthleteMetricsPlotMath.formatWPrimeValue(SettingsDataStore.DEFAULT_W_PRIME_KJ.toDouble())} kJ"
-                            val wPrimeDate = uiState.latestWPrimeEntry?.let {
-                                AthleteMetricsPlotMath.formatMediumDate(it.timestampMs)
-                            } ?: ""
+                                val wPrimeText = uiState.latestWPrimeEntry?.let {
+                                    "${AthleteMetricsPlotMath.formatWPrimeValue(it.value)} kJ"
+                                } ?: "${AthleteMetricsPlotMath.formatWPrimeValue(SettingsDataStore.DEFAULT_W_PRIME_KJ.toDouble())} kJ"
+                                val wPrimeDate = uiState.latestWPrimeEntry?.let {
+                                    AthleteMetricsPlotMath.formatMediumDate(it.timestampMs)
+                                } ?: ""
 
-                            MetricSummaryCard(
-                                title = stringResource(R.string.athlete_profile_metric_w_prime),
-                                valueText = wPrimeText,
-                                dateText = wPrimeDate,
-                                isSelected = uiState.selectedPlotMetric == PlotMetricType.W_PRIME,
-                                onCardClick = { onSelectPlotMetric(PlotMetricType.W_PRIME) },
-                                onAddClick = { showAddDialogForMetric = AthleteMetricType.W_PRIME_KJ },
-                                modifier = Modifier.weight(1f)
-                            )
+                                MetricSummaryCard(
+                                    title = stringResource(R.string.athlete_profile_metric_w_prime),
+                                    valueText = wPrimeText,
+                                    dateText = wPrimeDate,
+                                    isSelected = uiState.selectedPlotMetric == PlotMetricType.W_PRIME,
+                                    onCardClick = { onSelectPlotMetric(PlotMetricType.W_PRIME) },
+                                    onAddClick = { showAddDialogForMetric = AthleteMetricType.W_PRIME_KJ },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }
@@ -420,14 +422,16 @@ fun AthleteProfileContent(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                val metricOptions = listOf(
-                                    PlotMetricType.WEIGHT to stringResource(R.string.athlete_profile_metric_weight),
-                                    PlotMetricType.HR_REST to stringResource(R.string.athlete_profile_metric_hr_rest),
-                                    PlotMetricType.FTP to stringResource(R.string.athlete_profile_metric_ftp),
-                                    PlotMetricType.CP to stringResource(R.string.athlete_profile_metric_cp),
-                                    PlotMetricType.W_PRIME to stringResource(R.string.athlete_profile_metric_w_prime),
-                                    PlotMetricType.POWER_TO_WEIGHT to stringResource(R.string.athlete_profile_metric_w_per_kg)
-                                )
+                                val metricOptions = buildList {
+                                    add(PlotMetricType.WEIGHT to stringResource(R.string.athlete_profile_metric_weight))
+                                    add(PlotMetricType.HR_REST to stringResource(R.string.athlete_profile_metric_hr_rest))
+                                    add(PlotMetricType.FTP to stringResource(R.string.athlete_profile_metric_ftp))
+                                    if (uiState.enableCriticalPowerModel) {
+                                        add(PlotMetricType.CP to stringResource(R.string.athlete_profile_metric_cp))
+                                        add(PlotMetricType.W_PRIME to stringResource(R.string.athlete_profile_metric_w_prime))
+                                    }
+                                    add(PlotMetricType.POWER_TO_WEIGHT to stringResource(R.string.athlete_profile_metric_w_per_kg))
+                                }
                                 metricOptions.forEach { (type, label) ->
                                     CompactSelectorPill(
                                         label = label,
@@ -473,12 +477,14 @@ fun AthleteProfileContent(
                     }
                 }
 
-                // 3b. Performance Management Chart (PMC: CTL / ATL / TSB / ACWR / Ramp Rate, REQ-UI-401.3)
-                item {
-                    PerformanceManagementChartCard(
-                        pmcSummary = uiState.pmcSummary,
-                        pmcPlotPoints = uiState.pmcPlotPoints
-                    )
+                // 3b. Performance Management Chart (PMC: CTL / ATL / TSB / ACWR / Ramp Rate, REQ-UI-401.3, REQ-UI-403)
+                if (uiState.enablePmcModel) {
+                    item {
+                        PerformanceManagementChartCard(
+                            pmcSummary = uiState.pmcSummary,
+                            pmcPlotPoints = uiState.pmcPlotPoints
+                        )
+                    }
                 }
 
                 // 4. History Log Header & Filter Row
@@ -494,14 +500,16 @@ fun AthleteProfileContent(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            val filterOptions: List<Pair<AthleteMetricType?, String>> = listOf(
-                                null to stringResource(R.string.athlete_profile_filter_all),
-                                AthleteMetricType.WEIGHT_KG to stringResource(R.string.athlete_profile_metric_weight),
-                                AthleteMetricType.HR_REST_BPM to stringResource(R.string.athlete_profile_metric_hr_rest),
-                                AthleteMetricType.FTP_WATTS to stringResource(R.string.athlete_profile_metric_ftp),
-                                AthleteMetricType.CP_WATTS to stringResource(R.string.athlete_profile_metric_cp),
-                                AthleteMetricType.W_PRIME_KJ to stringResource(R.string.athlete_profile_metric_w_prime)
-                            )
+                            val filterOptions: List<Pair<AthleteMetricType?, String>> = buildList {
+                                add(null to stringResource(R.string.athlete_profile_filter_all))
+                                add(AthleteMetricType.WEIGHT_KG to stringResource(R.string.athlete_profile_metric_weight))
+                                add(AthleteMetricType.HR_REST_BPM to stringResource(R.string.athlete_profile_metric_hr_rest))
+                                add(AthleteMetricType.FTP_WATTS to stringResource(R.string.athlete_profile_metric_ftp))
+                                if (uiState.enableCriticalPowerModel) {
+                                    add(AthleteMetricType.CP_WATTS to stringResource(R.string.athlete_profile_metric_cp))
+                                    add(AthleteMetricType.W_PRIME_KJ to stringResource(R.string.athlete_profile_metric_w_prime))
+                                }
+                            }
                             filterOptions.forEach { (filterType, label) ->
                                 CompactSelectorPill(
                                     label = label,
@@ -594,6 +602,7 @@ fun AthleteProfileContent(
             initialCanonicalValue = defaultVal,
             initialTimestampMs = System.currentTimeMillis(),
             isImperial = uiState.isImperial,
+            enableCriticalPowerModel = uiState.enableCriticalPowerModel,
             onDismiss = { showAddDialogForMetric = null },
             onSave = { metricType, canonicalValue, timestampMs ->
                 onAddEntry(metricType, canonicalValue, timestampMs)
@@ -610,6 +619,7 @@ fun AthleteProfileContent(
             initialCanonicalValue = entry.value,
             initialTimestampMs = entry.timestampMs,
             isImperial = uiState.isImperial,
+            enableCriticalPowerModel = uiState.enableCriticalPowerModel,
             onDismiss = { editingEntry = null },
             onSave = { metricType, canonicalValue, timestampMs ->
                 onUpdateEntry(entry.id, metricType, canonicalValue, timestampMs)
@@ -1000,6 +1010,7 @@ fun AthleteMetricEntryDialog(
     initialCanonicalValue: Double?,
     initialTimestampMs: Long,
     isImperial: Boolean,
+    enableCriticalPowerModel: Boolean = false,
     onDismiss: () -> Unit,
     onSave: (AthleteMetricType, Double, Long) -> Unit
 ) {
@@ -1076,13 +1087,15 @@ fun AthleteMetricEntryDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val metrics = listOf(
-                            AthleteMetricType.WEIGHT_KG to stringResource(R.string.athlete_profile_metric_weight),
-                            AthleteMetricType.HR_REST_BPM to stringResource(R.string.athlete_profile_metric_hr_rest),
-                            AthleteMetricType.FTP_WATTS to stringResource(R.string.athlete_profile_metric_ftp),
-                            AthleteMetricType.CP_WATTS to stringResource(R.string.athlete_profile_metric_cp),
-                            AthleteMetricType.W_PRIME_KJ to stringResource(R.string.athlete_profile_metric_w_prime)
-                        )
+                        val metrics = buildList {
+                            add(AthleteMetricType.WEIGHT_KG to stringResource(R.string.athlete_profile_metric_weight))
+                            add(AthleteMetricType.HR_REST_BPM to stringResource(R.string.athlete_profile_metric_hr_rest))
+                            add(AthleteMetricType.FTP_WATTS to stringResource(R.string.athlete_profile_metric_ftp))
+                            if (enableCriticalPowerModel) {
+                                add(AthleteMetricType.CP_WATTS to stringResource(R.string.athlete_profile_metric_cp))
+                                add(AthleteMetricType.W_PRIME_KJ to stringResource(R.string.athlete_profile_metric_w_prime))
+                            }
+                        }
                         metrics.forEach { (mType, label) ->
                             CompactSelectorPill(
                                 label = label,

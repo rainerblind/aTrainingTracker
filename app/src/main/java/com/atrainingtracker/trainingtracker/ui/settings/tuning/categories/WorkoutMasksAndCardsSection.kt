@@ -24,13 +24,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -38,11 +39,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsConfigSheet
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
+import kotlinx.coroutines.launch
 
 private data class MatrixFeatureRow(
     val sectionType: WorkoutSectionType,
@@ -235,27 +239,11 @@ fun WorkoutMasksAndCardsSection(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        IconButton(
-                            onClick = { moveSection(index, index - 1) },
-                            enabled = index > 0,
-                            modifier = Modifier.size(22.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowUp,
-                                contentDescription = stringResource(R.string.action_move_up),
-                                modifier = Modifier.size(18.dp)
-                            )
+                        IconButton(onClick = { moveSection(index, index - 1) }, enabled = index > 0, modifier = Modifier.size(22.dp)) {
+                            Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.action_move_up), Modifier.size(18.dp))
                         }
-                        IconButton(
-                            onClick = { moveSection(index, index + 1) },
-                            enabled = index < features.size - 1,
-                            modifier = Modifier.size(22.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = stringResource(R.string.action_move_down),
-                                modifier = Modifier.size(18.dp)
-                            )
+                        IconButton(onClick = { moveSection(index, index + 1) }, enabled = index < features.size - 1, modifier = Modifier.size(22.dp)) {
+                            Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.action_move_down), Modifier.size(18.dp))
                         }
                     }
 
@@ -269,16 +257,10 @@ fun WorkoutMasksAndCardsSection(
                             .weight(1f)
                             .padding(horizontal = 4.dp)
                     )
-                    Box(
-                        modifier = Modifier.size(50.dp, 44.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.size(50.dp, 44.dp), contentAlignment = Alignment.Center) {
                         Checkbox(checked = feature.listChecked, onCheckedChange = feature.onListChange)
                     }
-                    Box(
-                        modifier = Modifier.size(50.dp, 44.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.size(50.dp, 44.dp), contentAlignment = Alignment.Center) {
                         Checkbox(checked = feature.detailChecked, onCheckedChange = feature.onDetailChange)
                     }
                 }
@@ -352,6 +334,27 @@ fun WorkoutMasksAndCardsSection(
                     )
                 }
             }
+        }
+
+        // Workout Detail Tabs Configuration Launcher (REQ-UI-408)
+        val context = LocalContext.current
+        val scope = rememberCoroutineScope()
+        val prefMgr = remember(context) { MyPreferenceManager(context) }
+        val detailTabs by prefMgr.workoutDetailTabsOrderFlow.collectAsState(initial = remember(prefMgr) { prefMgr.getWorkoutDetailTabs() })
+        var showTabsConfigSheet by remember { mutableStateOf(false) }
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+        OutlinedButton(onClick = { showTabsConfigSheet = true }, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp)) {
+            Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.workout_detail_tabs_config_title))
+        }
+        if (showTabsConfigSheet) {
+            WorkoutDetailTabsConfigSheet(
+                tabs = detailTabs,
+                onTabsChange = { updated -> scope.launch { prefMgr.setWorkoutDetailTabs(updated) } },
+                onResetDefaults = { scope.launch { prefMgr.resetWorkoutDetailTabs() } },
+                onDismiss = { showTabsConfigSheet = false }
+            )
         }
     }
 }

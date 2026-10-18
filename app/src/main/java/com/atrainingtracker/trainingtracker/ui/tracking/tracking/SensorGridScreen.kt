@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -146,6 +147,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyle
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
+import com.atrainingtracker.trainingtracker.ui.tracking.packVisibleRowsForTuning
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitTypography
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.LocalCockpitTypography
 import com.google.android.gms.maps.model.LatLng
@@ -573,17 +575,23 @@ fun SensorGridScreen(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // 1. The Sensor Grid (Scrollable, capped at 50% available height when map visible, or unweighted when map hidden; REQ-UI-358)
+                    // 1. The Sensor Grid (Scrollable, capped at 50% available height when map visible, or unweighted when map hidden; REQ-UI-358 / REQ-UI-409.3)
                     val sensorGridModifier = if (state.mapState.showMap) {
                         Modifier
                             .fillMaxWidth()
+                            .defaultMinSize(minHeight = 48.dp)
                             .heightIn(max = availableHeight * 0.5f)
                             .verticalScroll(rememberScrollState())
                     } else {
                         Modifier
                             .fillMaxWidth()
+                            .defaultMinSize(minHeight = 48.dp)
                             .verticalScroll(rememberScrollState())
                             .weight(1f, fill = false)
+                    }
+
+                    val packedRows = remember(state.fields, tuningConfig, screenMode) {
+                        packVisibleRowsForTuning(state.fields, tuningConfig, screenMode)
                     }
 
                     Column(
@@ -591,11 +599,7 @@ fun SensorGridScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
                     ) {
-                        val fieldsByRow = state.fields.groupBy { it.rowNr }
-                        val sortedRows = fieldsByRow.keys.sorted()
-
-                        sortedRows.forEach { rowNr ->
-                            val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
+                        packedRows.forEach { fieldsInThisRow ->
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.height(IntrinsicSize.Min),

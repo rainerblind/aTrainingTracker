@@ -16,31 +16,60 @@ This skill provides standardized guidance for interacting with Jira in accordanc
 
 ## Common CLI Commands
 ```bash
-# Show parent issue details and subtasks
+# Show parent issue details, comments, attachments, and subtasks
 python3 tools/jira_util.py show <KEY>
 
 # Check issue status
 python3 tools/jira_util.py status <KEY>
 
-# Create a subtask linked to parent and added to active sprint
-python3 tools/jira_util.py create-subtask <PARENT_KEY> "<SUMMARY>" "<DESC>" --add-to-sprint
+# Search issues with JQL (always include ORDER BY rank ASC for sprint/backlog queries)
+python3 tools/jira_util.py search "project = ATT AND sprint = <SPRINT_ID> ORDER BY rank ASC"
 
-# Update subtask description with deliverable content
+# Ensure the active sprint has a 'Review & Retro' ticket (creates one if Jira automation did not fire)
+python3 tools/jira_util.py ensure-retro
+
+# Create a parent / follow-up issue (automatically ranked at the top of the backlog!)
+# TYPE can be "Feature" (10008), "Bug" (10009), or "Verbesserung" / "Improvement" (10010)
+python3 tools/jira_util.py create-issue "<SUMMARY>" "<DESC_OR_@FILE>" [Feature|Bug|Verbesserung] [EPIC_KEY]
+# Or with explicit flags:
+python3 tools/jira_util.py create-issue "<SUMMARY>" "<DESC_OR_@FILE>" --type=Verbesserung --parent=<EPIC_KEY>
+
+# Create a subtask linked to parent and added to active sprint
+python3 tools/jira_util.py create-subtask <PARENT_KEY> "<SUMMARY>" "<DESC_OR_@FILE>" --add-to-sprint
+
+# Update issue/subtask description or summary
 python3 tools/jira_util.py update-desc <KEY> "<CONTENT_OR_@FILE>"
+python3 tools/jira_util.py update-summary <KEY> "<NEW_SUMMARY>"
+python3 tools/jira_util.py set-parent <KEY> <EPIC_OR_PARENT_KEY>
+
+# Upload / attach a screenshot or log file to an issue
+python3 tools/jira_util.py upload <KEY> <FILE_PATH>
+# (Alias `attach` is also supported: `python3 tools/jira_util.py attach <KEY> <FILE_PATH>`)
+
+# Rank an existing issue at the very top of the backlog
+python3 tools/jira_util.py rank-top <KEY>
+
+# Set or clear Fix Version (Lösungsversion) on a finished parent ticket (NEVER on subtasks or unfinished tickets)
+python3 tools/jira_util.py set-fixversion <PARENT_KEY> <VERSION>
+python3 tools/jira_util.py clear-fixversion <KEY>
 
 # Post a role-attributed comment
-python3 tools/jira_util.py comment <KEY> "<COMMENT_TEXT>"
+python3 tools/jira_util.py comment <KEY> "<COMMENT_TEXT_OR_@FILE>"
+
+# Assign issue to a role (agent1 | agent2 | coordinator | human)
+python3 tools/jira_util.py assign <KEY> human
 
 # Transition subtask states
 python3 tools/jira_util.py move <SUBTASK_KEY> in_progress
 python3 tools/jira_util.py move <SUBTASK_KEY> in_review
 python3 tools/jira_util.py move <SUBTASK_KEY> freigabe     # Moves subtask directly to Erledigt!
 
-# Transition parent ticket states
+# Transition parent ticket states (NEVER move parent tickets to Erledigt!)
+python3 tools/jira_util.py move <PARENT_KEY> "analysis"
 python3 tools/jira_util.py move <PARENT_KEY> "test"
 python3 tools/jira_util.py move <PARENT_KEY> "final review" # Assigns to human for final review
 
-# Check Gate 3 prerequisite before modifying code
+# Check Gate 3 prerequisite before modifying production code
 python3 tools/jira_util.py check-gate <IMPL_PLAN_SUBTASK_KEY>
 ```
 
@@ -48,10 +77,10 @@ python3 tools/jira_util.py check-gate <IMPL_PLAN_SUBTASK_KEY>
 1. **Subtask Direct Completion**: Subtasks in `In Überprüfung` that have passed automated Gate audit transition directly to `Erledigt` via transition `freigabe`. No intermediate human review pause is required for subtasks.
 2. **Parent Final Review Gate**: Parent tickets mandate a `Final Review (Human)` state after Stage 5 (`Test`). AI agents transition the parent ticket to `Final Review (Human)` and assign it to the user.
 3. **Erledigt Prohibition for Parent Tickets**: AI agents are strictly forbidden from transitioning parent tickets to `Erledigt`. This action is reserved exclusively for the human user.
-4. **Prohibition on Agent Sprint Manipulation**: Agents must NEVER move tickets into active sprints or pull tickets from the backlog autonomously (`"Agents must not move tickets to sprints!"`). Only the human user assigns tickets to sprints during Sprint-Start Screening. `--add-to-sprint` is only valid for subtasks of a parent ticket already in the active sprint.
+4. **Prohibition on Agent Sprint Manipulation (Except `ensure-retro`)**: Agents must NEVER move backlog feature/bug tickets into active sprints autonomously (`"Agents must not move tickets to sprints!"`). Only the human user assigns backlog tickets to sprints during Sprint-Start Screening. `--add-to-sprint` is only valid for subtasks of a parent ticket already in the active sprint, and `ensure-retro` is specifically used during Sprint Planning to create the sprint's `Review & Retro` ticket when Jira's automation fails to fire.
 5. **Separation of Ticket Creation vs. Implementation**: Creating a ticket (`create-issue`) is strictly an ideation/logging step (`"When an agent is asked to create a ticket, he immediately wants to start realizing it. This must never ever happen!"`). The agent must report the new issue key and STOP immediately. Never branch, create subtasks, or start stages without explicit human instruction.
 6. **No "Lösungsversion" (Fix Version) on Sub-Tasks**: Sub-tasks represent stage execution activities, not deliverable product solutions (`"Again: Sub-Tasks must not get a solution!"`). Sub-tasks must NEVER have a `fixVersions` value assigned. Only parent user-facing tickets have a `Lösungsversion`.
-7. **Continuous In-Sprint Retro Logging**: During the sprint, any observed process anomalies, tool failures, or user corrections must be immediately posted as comments on the active sprint's `Review & Retro` ticket (`"Agent(en) sollten Auffälligkeiten / Probleme gleich als Kommentar im Review & Retro Ticket des Sprints hinterlegen."`).
+7. **Ensure `Review & Retro` Ticket & Continuous In-Sprint Retro Logging**: During Ceremony 1 (Sprint Planning), run `python3 tools/jira_util.py ensure-retro` to ensure the sprint's `Review & Retro` ticket exists in the active sprint. During the sprint, any observed process anomalies, tool failures, or user corrections must be immediately posted as comments on the active sprint's `Review & Retro` ticket (`"Agent(en) sollten Auffälligkeiten / Probleme gleich als Kommentar im Review & Retro Ticket des Sprints hinterlegen."`).
 8. **Unattended Autonomous In-Sprint Escalation Protocol**: All tickets of an active sprint must proceed autonomously without stopping the console or waiting for user interaction (`"All tickets of a sprint must be finished without user interaction via the console. When there are questions or decistions that must be ansered by the human, assign the corresponding sub-ticket to the Human and raise the question as comment. The human will answer in a comment and assign the ticket ot the AI coordinator. In the meantime, please contine with an other main ticket."`).
    - Reassign blocked sub-task: `python3 tools/jira_util.py assign <SUBTASK_KEY> human`
    - Add explicit question comment: `python3 tools/jira_util.py comment <SUBTASK_KEY> "Question for Human: ..."`

@@ -81,36 +81,56 @@ class NavigationDrawerStateTest {
         assertEquals("Navigation drawer must contain 5 category hubs (Advanced group removed)", 5, groups.size)
         assertEquals(expectedCategories, groups.map { it.titleRes })
 
-        // Verify collapsible flags: Training, Maps, My Stuff are always expanded; Online Communities and Settings are collapsible
-        org.junit.Assert.assertFalse(groups[0].collapsible)
-        org.junit.Assert.assertFalse(groups[1].collapsible)
-        org.junit.Assert.assertFalse(groups[2].collapsible)
-        org.junit.Assert.assertTrue(groups[3].collapsible)
-        org.junit.Assert.assertTrue(groups[4].collapsible)
+        val trainingGroup = groups.first { it.titleRes == R.string.drawer__training }
+        val mapsGroup = groups.first { it.titleRes == R.string.drawer__maps }
+        val myStuffGroup = groups.first { it.titleRes == R.string.drawer__my_stuff }
+        val onlineGroup = groups.first { it.titleRes == R.string.prefsOnlineCommunities }
+        val settingsGroup = groups.first { it.titleRes == R.string.drawer__settings }
 
-        // Verify My Stuff ordering: Athlete -> Gear (Profile & Zones, My Sensors, Equipment, Sport Types)
-        val myStuffIds = groups[2].items.map { it.id }
+        // Verify collapsible flags: Training and Maps are always expanded; My Stuff, Online Communities, and Settings are collapsible (REQ-UI-405)
+        org.junit.Assert.assertFalse(trainingGroup.collapsible)
+        org.junit.Assert.assertFalse(mapsGroup.collapsible)
+        org.junit.Assert.assertTrue(myStuffGroup.collapsible)
+        org.junit.Assert.assertTrue(onlineGroup.collapsible)
+        org.junit.Assert.assertTrue(settingsGroup.collapsible)
+
+        // Verify Training ordering: Start Tracking, Workouts, Stats & Periods, Profile & Zones (REQ-UI-405.1)
+        val trainingIds = trainingGroup.items.map { it.id }
         assertEquals(
             listOf(
-                R.id.drawer_athlete_profile,
+                R.id.drawer_start_tracking,
+                R.id.drawer_workouts,
+                R.id.drawer_periods,
+                R.id.drawer_athlete_profile
+            ),
+            trainingIds
+        )
+        val profileItem = trainingGroup.items.first { it.id == R.id.drawer_athlete_profile }
+        assertEquals(R.drawable.ic_athlete_profile, profileItem.iconRes)
+        assertEquals(R.string.drawer_athlete_profile, profileItem.titleRes)
+
+        // Verify My Stuff ordering: My Sensors, Equipment, Sport Types (REQ-UI-405.2)
+        val myStuffIds = myStuffGroup.items.map { it.id }
+        assertEquals(
+            listOf(
                 R.id.drawer_my_sensors,
                 R.id.drawer_equipment,
                 R.id.drawer_sport_types
             ),
             myStuffIds
         )
-        val equipmentItem = groups[2].items.first { it.id == R.id.drawer_equipment }
+        val equipmentItem = myStuffGroup.items.first { it.id == R.id.drawer_equipment }
         assertEquals(R.drawable.ic_equipment_combined, equipmentItem.iconRes)
         assertEquals(R.string.equipment_management_title, equipmentItem.titleRes)
 
         // Verify Settings includes Advanced Tuning at the bottom
-        val settingsIds = groups[4].items.map { it.id }
+        val settingsIds = settingsGroup.items.map { it.id }
         org.junit.Assert.assertTrue(settingsIds.contains(R.id.drawer_advanced_tuning))
         assertEquals(R.id.drawer_advanced_tuning, settingsIds.last())
 
-        // Verify default visible items across non-collapsible groups = 12 (3 + 5 + 4)
+        // Verify default visible destination items across non-collapsible groups = 9 (4 + 5) (REQ-UI-405.3)
         val defaultVisibleCount = groups.filter { !it.collapsible }.sumOf { it.items.size }
-        assertEquals("Default visible items when secondary groups are collapsed must be 12", 12, defaultVisibleCount)
+        assertEquals("Default visible destination items when secondary groups are collapsed must be 9", 9, defaultVisibleCount)
 
         val allItems = groups.flatMap { it.items.map { item -> item.id } }
         assertEquals("Navigation drawer must contain 22 total items across 5 groups", 22, allItems.size)
@@ -127,14 +147,26 @@ class NavigationDrawerStateTest {
     @Test
     fun testCollapsibleDrawerInitialExpansionAndConsolidatedSelection() {
         val groups = createDrawerGroups(R.string.tab_start)
-        val trainingGroup = groups[0]
-        val onlineGroup = groups[3]
-        val settingsGroup = groups[4]
+        val trainingGroup = groups.first { it.titleRes == R.string.drawer__training }
+        val myStuffGroup = groups.first { it.titleRes == R.string.drawer__my_stuff }
+        val onlineGroup = groups.first { it.titleRes == R.string.prefsOnlineCommunities }
+        val settingsGroup = groups.first { it.titleRes == R.string.drawer__settings }
 
         // Default selection (Start Tracking): primary expanded, secondary collapsed
         org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(trainingGroup, R.id.drawer_start_tracking))
+        org.junit.Assert.assertFalse(isDrawerGroupInitiallyExpanded(myStuffGroup, R.id.drawer_start_tracking))
         org.junit.Assert.assertFalse(isDrawerGroupInitiallyExpanded(onlineGroup, R.id.drawer_start_tracking))
         org.junit.Assert.assertFalse(isDrawerGroupInitiallyExpanded(settingsGroup, R.id.drawer_start_tracking))
+
+        // Exhaustively verify every item in My Stuff (plus consolidated aliases) auto-expands My Stuff
+        myStuffGroup.items.forEach { item ->
+            org.junit.Assert.assertTrue(
+                "Selecting ${item.id} must auto-expand My Stuff",
+                isDrawerGroupInitiallyExpanded(myStuffGroup, item.id)
+            )
+        }
+        org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(myStuffGroup, R.id.drawer_bikes))
+        org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(myStuffGroup, R.id.drawer_shoes))
 
         // Active item inside Online Communities or Settings auto-expands that group
         org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(onlineGroup, R.id.drawer_strava))

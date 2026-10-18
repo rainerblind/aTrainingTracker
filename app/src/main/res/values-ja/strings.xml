@@ -349,6 +349,7 @@
     <string name="tab_tracking">記録中</string>
     <string name="tab_map">マップ</string>
     <string name="tab_laps">ラップ</string>
+    <string name="tab_power">パワー</string>
     <string name="tab_workouts">履歴</string>
 
     <!-- layouts -->
@@ -1925,5 +1926,52 @@
     <string name="workout_power_metrics_work_format">仕事量: %1$.0f kJ</string>
     <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
     <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
+
+    <!-- Physiology & Training Models (ATT-3929 / REQ-UI-403) -->
+    <string name="tuning_cat_physiology_models">生理学・トレーニングモデル</string>
+    <string name="tuning_physiology_none_enabled">基本指標のみ</string>
+    <string name="tuning_physiology_coggan_short">Coggan</string>
+    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
+    <string name="tuning_physiology_cp_short">CP / W\'bal</string>
+    <string name="tuning_physiology_coggan_title">Cogganパワー指標 (NP, IF, TSS)</string>
+    <string name="tuning_physiology_coggan_desc">Normalized Power、Intensity Factor、TSS、Variability Indexをワークアウトとコックピットに表示します</string>
+    <string name="tuning_physiology_pmc_title">パフォーマンス管理 (PMC)</string>
+    <string name="tuning_physiology_pmc_desc">プロフィールとゾーン画面にフィットネス (CTL)、疲労 (ATL)、フォーム (TSB) チャートを表示します</string>
+    <string name="tuning_physiology_ef_title">有酸素効率とデカップリング</string>
+    <string name="tuning_physiology_ef_desc">効率係数 (EF) と有酸素デカップリング (Pw:Hr / Pa:Hr) をワークアウト概要と詳細に表示します</string>
+    <string name="tuning_physiology_cp_title">クリティカルパワー＆無酸素バッテリー (CP, W\', W\'bal)</string>
+    <string name="tuning_physiology_cp_desc">クリティカルパワー、W\'、W\'balバッテリーをプロフィール、コックピット、ワークアウト分析に表示します</string>
+    <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
+    <string name="workout_domain_efficiency">効率</string>
+    <string name="workout_ef_short">EF</string>
+    <string name="workout_pwhr_short">Pw:Hr</string>
+    <string name="workout_pahr_short">Pa:Hr</string>
+    <string name="workout_ef_value_pw_format">%1$.2f W/bpm</string>
+    <string name="workout_ef_value_pa_format">%1$.2f m/min/bpm</string>
+    <string name="workout_decoupling_pct_format">%1$.1f%%</string>
+    <string name="workout_w_prime_min_kj_label">最小 W\'bal</string>
+    <string name="workout_w_prime_min_pct_label">最小 %%</string>
+    <string name="workout_w_prime_min_kj_value_format">%1$.1f kJ</string>
+    <string name="workout_w_prime_min_pct_value_format">%1$.0f%%</string>
+    <string name="workout_power_label_work">仕事量</string>
+    <string name="workout_power_value_watts_format">%1$.0f W</string>
+    <string name="workout_power_value_if_format">%1$.2f</string>
+    <string name="workout_power_value_tss_format">%1$.0f</string>
+    <string name="workout_power_value_work_format">%1$.0f kJ</string>
+    <string name="workout_detail_tab_overview">概要</string>
+    <string name="workout_detail_tab_map_graphs">地図とグラフ</string>
+    <string name="workout_detail_tab_zones">ゾーン</string>
+    <string name="workout_detail_tab_laps_segments">ラップ＆セグメント</string>
+    <string name="workout_detail_tab_custom_default">カスタムタブ</string>
+    <string name="workout_detail_section_details">ワークアウト指標と概要</string>
+    <string name="workout_detail_tabs_config_title">詳細タブの設定</string>
+    <string name="workout_detail_tabs_config_subtitle">ワークアウト詳細画面のタブとセクションをカスタマイズ</string>
+    <string name="workout_detail_tabs_add_tab">タブを追加</string>
+    <string name="workout_detail_tabs_rename_tab">タブ名</string>
+    <string name="workout_detail_tabs_delete_tab">タブを削除</string>
+    <string name="workout_detail_tabs_reset_defaults">デフォルトのタブに戻す</string>
+    <string name="workout_detail_tabs_sections_header">割り当てられたセクション</string>
+    <string name="workout_detail_tabs_map_pinned_hint">地図が有効な場合、常にタブの上部に固定されます</string>
 </resources>
 

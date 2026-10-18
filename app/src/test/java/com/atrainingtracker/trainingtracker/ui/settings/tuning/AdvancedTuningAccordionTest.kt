@@ -399,6 +399,43 @@ class AdvancedTuningAccordionTest {
     }
 
     @Test
+    fun testPhysiologyModelsSubtitle_reflectsEnabledSchools() {
+        val mockContext = mockk<Context>()
+        every { mockContext.getString(R.string.tuning_physiology_coggan_short) } returns "Coggan"
+        every { mockContext.getString(R.string.tuning_physiology_pmc_short) } returns "PMC"
+        every { mockContext.getString(R.string.tuning_physiology_ef_short) } returns "EF / Decoupling"
+        every { mockContext.getString(R.string.tuning_physiology_cp_short) } returns "CP / W'"
+        every { mockContext.getString(R.string.tuning_physiology_none_enabled) } returns "None enabled"
+
+        val defaultSubtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
+            enableCogganPowerMetrics = true,
+            enablePmcModel = false,
+            enableAerobicEfficiencyModel = false,
+            enableCriticalPowerModel = false,
+            context = mockContext
+        )
+        assertEquals("Coggan", defaultSubtitle)
+
+        val allSubtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
+            enableCogganPowerMetrics = true,
+            enablePmcModel = true,
+            enableAerobicEfficiencyModel = true,
+            enableCriticalPowerModel = true,
+            context = mockContext
+        )
+        assertEquals("Coggan, PMC, EF / Decoupling, CP / W'", allSubtitle)
+
+        val noneSubtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
+            enableCogganPowerMetrics = false,
+            enablePmcModel = false,
+            enableAerobicEfficiencyModel = false,
+            enableCriticalPowerModel = false,
+            context = mockContext
+        )
+        assertEquals("None enabled", noneSubtitle)
+    }
+
+    @Test
     fun testTuningSectionEnum_canonicalLifecycleSequence() {
         val expected = listOf(
             TuningSection.NAVIGATION,
@@ -407,6 +444,7 @@ class AdvancedTuningAccordionTest {
             TuningSection.SENSORS_GPS,
             TuningSection.SENSOR_SEARCH,
             TuningSection.WORKOUT_MASKS_CARDS,
+            TuningSection.PHYSIOLOGY_MODELS,
             TuningSection.ROUTE_CLUSTERING,
             TuningSection.AFTERMATH_ANALYSIS
         )

@@ -143,6 +143,11 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Scale Direction Transparency**:
   * Whenever exposing numerical sliders or continuous values in user settings (such as map zoom levels, camera tilt angles, sensitivity curves, or lookahead paddings), the preference subtitle or hint text MUST explicitly explain the physical direction of the scale (e.g., *"Höherer Wert = Näher herangezoomt"* / *"Niedrigerer Wert = Weiträumigere Übersicht"*) (ATT-2946 / ATT-3054 / ATT-3171).
 
+### 3.2 Single Unambiguous Configuration Surface (Retiring Redundant Legacy Controls)
+* **Retire Overlapping Matrix Columns When Adding Dedicated Config Sheets (ATT-3920 / ATT-4043)**:
+  * When introducing a dedicated configuration sheet or editor for a view (such as `WorkoutDetailTabsConfigSheet` for `DetailedWorkoutView` tab ordering and visibility), any legacy settings controls that previously toggled the same view (such as the `Details` column in the 2-column `WorkoutMasksAndCardsSection` matrix) **MUST** be retired and cleaned up in the same change.
+  * Never keep two competing UI surfaces in the same settings screen that toggle the same underlying preferences; doing so confuses the athlete about which control is authoritative.
+
 ---
 
 ## 4. Spacing, Typography & Localization Parity
@@ -253,18 +258,20 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 | **Laps** (`Layout 3`) | ❌ Off | ❌ Off | ✅ **On** | ❌ Off | ❌ Off | ❌ Off |
 
 ### 5.10 `WorkoutDetails` & Summary Card Grouped Metric Rows (`AltitudeRow` Pattern)
-* **Canonical Grouped Row Layout**:
-  * Domain-grouped summary metrics rendered inside `WorkoutDetails.kt` (shared by `WorkoutSummary` cards and `TrackOnMapScreen` / `MapDetailLayout`, such as Elevation, Power Training Metrics `NP/IF/TSS/Work/W/kg`, Aerobic Efficiency `EF & Decoupling`, and Anaerobic Battery `W'bal`) **MUST** follow the `AltitudeRow` layout pattern:
+* **Canonical Single-Line Grouped Row Layout (ATT-3858, ATT-3930, ATT-4042)**:
+  * Domain-grouped summary metrics rendered inside `WorkoutDetails.kt` (shared by `WorkoutSummary` cards and `TrackOnMapScreen` / `MapDetailLayout`, such as Elevation, Power Training Metrics `NP/IF/TSS`, Aerobic Efficiency `EF & Decoupling`, and Anaerobic Battery `CP/W'/W'bal`) **MUST** follow the single-line `AltitudeRow` layout pattern:
     1. **Left Domain Header Column**: A `Column` displaying the localized domain category label (`style = MaterialTheme.typography.labelMedium`, `color = MaterialTheme.colorScheme.onSurfaceVariant`), a `Spacer(modifier = Modifier.height(4.dp))`, and a `24.dp` domain `Icon` (`tint = MaterialTheme.colorScheme.onSurfaceVariant`), followed by `Spacer(modifier = Modifier.width(20.dp))`.
-    2. **Right Metrics Column / Grid**: A `Column` containing one or more horizontal `Row(modifier = Modifier.fillMaxWidth())` rows of equal-weight `MetricItem` cells (`layout = MetricLayout.VERTICAL`, `modifier = Modifier.weight(1f)`), where each `MetricItem` displays its short metric label above (`labelMedium`, `onSurfaceVariant`) and bold formatted value (with units) below. When a domain group has more than 3 metrics (e.g., 5–6 power metrics), arrange them into balanced multi-row `Row`s of 2–3 equal-weight `MetricItem` columns (`Modifier.weight(1f)`).
+    2. **Single Horizontal Row of 2–3 Primary `MetricItem`s**: A **single** `Row(modifier = Modifier.fillMaxWidth())` containing **at most 2–3** equal-weight `MetricItem` cells (`layout = MetricLayout.VERTICAL`, `modifier = Modifier.weight(1f)`), where each `MetricItem` displays its short metric label above (`labelMedium`, `onSurfaceVariant`) and bold formatted value (with units) below. Do **NOT** stack multiple `Row`s of metrics under one domain icon in `WorkoutDetails.kt`; select only the 2 or 3 most important metrics for the summary row.
+    3. **Clear Visual Separation Between Consecutive Domain Rows**: Separate consecutive domain rows with adequate vertical padding (e.g. `padding(vertical = 4.dp)` or `8.dp` spacing) and a subtle `HorizontalDivider` (`thickness = 0.5.dp`) so adjacent rows do not visually run together.
 * **Anti-Patterns (Strictly Forbidden)**:
+  * ❌ **Do NOT stack multiple horizontal `Row`s (e.g. 2 rows of 3 metrics) under a single domain header** in `WorkoutDetails`. Keep each domain row strictly to a single line of 2–3 primary metrics.
   * ❌ **Do NOT use `FlowRow` pill/chip badges (`Surface(color = surfaceContainerHighest)` with `"NP: 175 W"`)** for workout summary metrics. Wrapping pill clouds break the tabular visual alignment of `WorkoutDetails` and leave trailing chips orphaned on new lines.
   * ❌ **Do NOT render raw inline `Text("EF: 1,32 W/bpm")` lines** without a domain header column and `MetricItem` structure.
 
 ```kotlin
-// Canonical Grouped Metric Row Pattern in WorkoutDetails.kt (AltitudeRow reference):
+// Canonical Single-Line Grouped Metric Row Pattern in WorkoutDetails.kt (AltitudeRow reference):
 Row(
-    modifier = modifier.fillMaxWidth(),
+    modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
     verticalAlignment = Alignment.CenterVertically
 ) {
     Column {
@@ -282,23 +289,21 @@ Row(
         )
     }
     Spacer(modifier = Modifier.width(20.dp))
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            MetricItem(
-                iconRes = R.drawable.ic_metric_1, // or optional icon
-                label = stringResource(R.string.metric_1_short),
-                value = formattedValue1,
-                layout = MetricLayout.VERTICAL,
-                modifier = Modifier.weight(1f)
-            )
-            MetricItem(
-                iconRes = R.drawable.ic_metric_2,
-                label = stringResource(R.string.metric_2_short),
-                value = formattedValue2,
-                layout = MetricLayout.VERTICAL,
-                modifier = Modifier.weight(1f)
-            )
-        }
+    Row(modifier = Modifier.fillMaxWidth()) {
+        MetricItem(
+            iconRes = R.drawable.ic_metric_1, // or optional icon
+            label = stringResource(R.string.metric_1_short),
+            value = formattedValue1,
+            layout = MetricLayout.VERTICAL,
+            modifier = Modifier.weight(1f)
+        )
+        MetricItem(
+            iconRes = R.drawable.ic_metric_2,
+            label = stringResource(R.string.metric_2_short),
+            value = formattedValue2,
+            layout = MetricLayout.VERTICAL,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 ```
