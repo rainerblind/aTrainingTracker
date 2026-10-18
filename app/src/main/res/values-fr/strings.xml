@@ -1978,4 +1978,18 @@
     <string name="workout_power_value_if_format">%1$.2f</string>
     <string name="workout_power_value_tss_format">%1$.0f</string>
     <string name="workout_power_value_work_format">%1$.0f kJ</string>
+    <string name="workout_detail_tab_overview">Aperçu</string>
+    <string name="workout_detail_tab_map_graphs">Carte et graphiques</string>
+    <string name="workout_detail_tab_zones">Zones</string>
+    <string name="workout_detail_tab_laps_segments">Tours et segments</string>
+    <string name="workout_detail_tab_custom_default">Onglet personnalisé</string>
+    <string name="workout_detail_section_details">Métriques et résumé</string>
+    <string name="workout_detail_tabs_config_title">Configurer les onglets de détails</string>
+    <string name="workout_detail_tabs_config_subtitle">Personnaliser les onglets et les sections des détails d\'entraînement</string>
+    <string name="workout_detail_tabs_add_tab">Ajouter un onglet</string>
+    <string name="workout_detail_tabs_rename_tab">Nom de l\'onglet</string>
+    <string name="workout_detail_tabs_delete_tab">Supprimer l\'onglet</string>
+    <string name="workout_detail_tabs_reset_defaults">Réinitialiser les onglets par défaut</string>
+    <string name="workout_detail_tabs_sections_header">Sections attribuées</string>
+    <string name="workout_detail_tabs_map_pinned_hint">La carte est toujours fixée en haut lorsqu\'elle est activée dans un onglet</string>
 </resources>

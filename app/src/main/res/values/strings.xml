@@ -2172,6 +2172,20 @@
     <string name="workout_power_value_if_format">%1$.2f</string>
     <string name="workout_power_value_tss_format">%1$.0f</string>
     <string name="workout_power_value_work_format">%1$.0f kJ</string>
+    <string name="workout_detail_tab_overview">Overview</string>
+    <string name="workout_detail_tab_map_graphs">Map &amp; Graphs</string>
+    <string name="workout_detail_tab_zones">Zones</string>
+    <string name="workout_detail_tab_laps_segments">Laps &amp; Segments</string>
+    <string name="workout_detail_tab_custom_default">Custom Tab</string>
+    <string name="workout_detail_section_details">Workout Metrics &amp; Summary</string>
+    <string name="workout_detail_tabs_config_title">Configure Detail Tabs</string>
+    <string name="workout_detail_tabs_config_subtitle">Customize tabs and assign sections for the Workout Details screen</string>
+    <string name="workout_detail_tabs_add_tab">Add Tab</string>
+    <string name="workout_detail_tabs_rename_tab">Tab Name</string>
+    <string name="workout_detail_tabs_delete_tab">Delete Tab</string>
+    <string name="workout_detail_tabs_reset_defaults">Reset to Default Tabs</string>
+    <string name="workout_detail_tabs_sections_header">Assigned Sections</string>
+    <string name="workout_detail_tabs_map_pinned_hint">Map is always anchored at the top when enabled in a tab</string>
 </resources>
 
 

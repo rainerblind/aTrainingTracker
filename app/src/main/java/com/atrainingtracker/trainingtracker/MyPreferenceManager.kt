@@ -30,6 +30,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilt
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabConfig
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.routes.RouteFilterCriteria
@@ -141,6 +142,7 @@ class MyPreferenceManager(context: Context) {
         val WORKOUT_DETAIL_SHOW_EXPORT_STATUS = booleanPreferencesKey("workout_detail_show_export_status")
         val WORKOUT_DETAIL_ZONE_DISPLAY_MODE = stringPreferencesKey("workout_detail_zone_display_mode")
         val WORKOUT_SECTIONS_ORDER = stringPreferencesKey("workout_sections_order")
+        val WORKOUT_DETAIL_TABS_CONFIG = stringPreferencesKey("pref_key_workout_detail_tabs_config")
 
         val EDIT_WORKOUT_SHOW_CLUSTER = booleanPreferencesKey("edit_workout_show_cluster")
         val EDIT_WORKOUT_SHOW_COMMUTE_TRAINER = booleanPreferencesKey("edit_workout_show_commute_trainer")
@@ -234,6 +236,36 @@ class MyPreferenceManager(context: Context) {
     suspend fun setWorkoutSectionsOrder(order: List<WorkoutSectionType>) {
         dataStore.edit { preferences ->
             preferences[WORKOUT_SECTIONS_ORDER] = WorkoutSectionType.toSerializedString(order)
+        }
+    }
+
+    /**
+     * Reactive flow of individually configured Workout Detail tabs (`REQ-UI-408.2` / `ATT-3920`).
+     */
+    val workoutDetailTabsOrderFlow: Flow<List<WorkoutDetailTabConfig>> = dataStore.data.map { preferences ->
+        WorkoutDetailTabConfig.deserializeTabs(preferences[WORKOUT_DETAIL_TABS_CONFIG])
+    }
+
+    /**
+     * Returns the default Workout Detail tabs (`REQ-UI-408.2`).
+     */
+    fun getWorkoutDetailTabs(): List<WorkoutDetailTabConfig> = WorkoutDetailTabConfig.DEFAULT_TABS
+
+    /**
+     * Atomically persists [tabs] to DataStore (`REQ-UI-408.2`).
+     */
+    suspend fun setWorkoutDetailTabs(tabs: List<WorkoutDetailTabConfig>) {
+        dataStore.edit { preferences ->
+            preferences[WORKOUT_DETAIL_TABS_CONFIG] = WorkoutDetailTabConfig.serializeTabs(tabs)
+        }
+    }
+
+    /**
+     * Resets Workout Detail tabs to [WorkoutDetailTabConfig.DEFAULT_TABS] (`REQ-UI-408.2`).
+     */
+    suspend fun resetWorkoutDetailTabs() {
+        dataStore.edit { preferences ->
+            preferences[WORKOUT_DETAIL_TABS_CONFIG] = WorkoutDetailTabConfig.serializeTabs(WorkoutDetailTabConfig.DEFAULT_TABS)
         }
     }
 

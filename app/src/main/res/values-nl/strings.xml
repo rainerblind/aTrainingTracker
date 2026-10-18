@@ -1978,5 +1978,19 @@
     <string name="workout_power_value_if_format">%1$.2f</string>
     <string name="workout_power_value_tss_format">%1$.0f</string>
     <string name="workout_power_value_work_format">%1$.0f kJ</string>
+    <string name="workout_detail_tab_overview">Overzicht</string>
+    <string name="workout_detail_tab_map_graphs">Kaart &amp; grafieken</string>
+    <string name="workout_detail_tab_zones">Zones</string>
+    <string name="workout_detail_tab_laps_segments">Rondes &amp; segmenten</string>
+    <string name="workout_detail_tab_custom_default">Aangepast tabblad</string>
+    <string name="workout_detail_section_details">Trainingsmetingen &amp; overzicht</string>
+    <string name="workout_detail_tabs_config_title">Detailtabbladen configureren</string>
+    <string name="workout_detail_tabs_config_subtitle">Pas tabbladen en secties aan voor het trainingsdetailscherm</string>
+    <string name="workout_detail_tabs_add_tab">Tabblad toevoegen</string>
+    <string name="workout_detail_tabs_rename_tab">Tabbladnaam</string>
+    <string name="workout_detail_tabs_delete_tab">Tabblad verwijderen</string>
+    <string name="workout_detail_tabs_reset_defaults">Standaardtabbladen herstellen</string>
+    <string name="workout_detail_tabs_sections_header">Toegewezen secties</string>
+    <string name="workout_detail_tabs_map_pinned_hint">De kaart wordt altijd bovenaan het tabblad vastgezet</string>
 </resources>
 

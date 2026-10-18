@@ -1979,5 +1979,19 @@
     <string name="workout_power_value_if_format">%1$.2f</string>
     <string name="workout_power_value_tss_format">%1$.0f</string>
     <string name="workout_power_value_work_format">%1$.0f kJ</string>
+    <string name="workout_detail_tab_overview">Przegląd</string>
+    <string name="workout_detail_tab_map_graphs">Mapa i wykresy</string>
+    <string name="workout_detail_tab_zones">Strefy</string>
+    <string name="workout_detail_tab_laps_segments">Okrążenia i segmenty</string>
+    <string name="workout_detail_tab_custom_default">Własna karta</string>
+    <string name="workout_detail_section_details">Metryki i podsumowanie treningu</string>
+    <string name="workout_detail_tabs_config_title">Konfiguruj karty szczegółów</string>
+    <string name="workout_detail_tabs_config_subtitle">Dostosuj karty i przypisz sekcje na ekranie szczegółów treningu</string>
+    <string name="workout_detail_tabs_add_tab">Dodaj kartę</string>
+    <string name="workout_detail_tabs_rename_tab">Nazwa karty</string>
+    <string name="workout_detail_tabs_delete_tab">Usuń kartę</string>
+    <string name="workout_detail_tabs_reset_defaults">Przywróć domyślne karty</string>
+    <string name="workout_detail_tabs_sections_header">Przypisane sekcje</string>
+    <string name="workout_detail_tabs_map_pinned_hint">Mapa jest zawsze przypięta na górze karty</string>
 </resources>
 

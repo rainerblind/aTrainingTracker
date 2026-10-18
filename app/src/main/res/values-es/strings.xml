@@ -1979,4 +1979,18 @@
     <string name="workout_power_value_if_format">%1$.2f</string>
     <string name="workout_power_value_tss_format">%1$.0f</string>
     <string name="workout_power_value_work_format">%1$.0f kJ</string>
+    <string name="workout_detail_tab_overview">Resumen</string>
+    <string name="workout_detail_tab_map_graphs">Mapa y gráficos</string>
+    <string name="workout_detail_tab_zones">Zonas</string>
+    <string name="workout_detail_tab_laps_segments">Vueltas y segmentos</string>
+    <string name="workout_detail_tab_custom_default">Pestaña personalizada</string>
+    <string name="workout_detail_section_details">Métricas y resumen</string>
+    <string name="workout_detail_tabs_config_title">Configurar pestañas de detalles</string>
+    <string name="workout_detail_tabs_config_subtitle">Personalizar pestañas y asignar secciones de detalles del entrenamiento</string>
+    <string name="workout_detail_tabs_add_tab">Añadir pestaña</string>
+    <string name="workout_detail_tabs_rename_tab">Nombre de pestaña</string>
+    <string name="workout_detail_tabs_delete_tab">Eliminar pestaña</string>
+    <string name="workout_detail_tabs_reset_defaults">Restaurar pestañas predeterminadas</string>
+    <string name="workout_detail_tabs_sections_header">Secciones asignadas</string>
+    <string name="workout_detail_tabs_map_pinned_hint">El mapa siempre se fija en la parte superior de la pestaña</string>
 </resources>

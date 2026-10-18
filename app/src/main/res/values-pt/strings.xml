@@ -1977,5 +1977,19 @@
     <string name="workout_power_value_if_format">%1$.2f</string>
     <string name="workout_power_value_tss_format">%1$.0f</string>
     <string name="workout_power_value_work_format">%1$.0f kJ</string>
+    <string name="workout_detail_tab_overview">Visão geral</string>
+    <string name="workout_detail_tab_map_graphs">Mapa e gráficos</string>
+    <string name="workout_detail_tab_zones">Zonas</string>
+    <string name="workout_detail_tab_laps_segments">Voltas e segmentos</string>
+    <string name="workout_detail_tab_custom_default">Aba personalizada</string>
+    <string name="workout_detail_section_details">Métricas e resumo do treino</string>
+    <string name="workout_detail_tabs_config_title">Configurar abas de detalhes</string>
+    <string name="workout_detail_tabs_config_subtitle">Personalizar abas e atribuir seções para os detalhes do treino</string>
+    <string name="workout_detail_tabs_add_tab">Adicionar aba</string>
+    <string name="workout_detail_tabs_rename_tab">Nome da aba</string>
+    <string name="workout_detail_tabs_delete_tab">Excluir aba</string>
+    <string name="workout_detail_tabs_reset_defaults">Restaurar abas padrão</string>
+    <string name="workout_detail_tabs_sections_header">Seções atribuídas</string>
+    <string name="workout_detail_tabs_map_pinned_hint">O mapa fica sempre fixado no topo quando ativado em uma aba</string>
 </resources>
 
