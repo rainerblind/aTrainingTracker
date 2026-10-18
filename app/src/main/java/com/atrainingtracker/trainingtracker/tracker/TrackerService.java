@@ -178,10 +178,22 @@ public class TrackerService extends Service {
     @Nullable
     volatile BANALServiceComm mBanalService;
     private final AtomicInteger mSamplingErrorCount = new AtomicInteger(0);
+    public static final int SAMPLE_INSERT_FAILURE_INITIAL_BURST = 3;
+    public static final int SAMPLE_INSERT_FAILURE_LOG_INTERVAL = 60;
+    private final AtomicInteger mSampleInsertFailureCount = new AtomicInteger(0);
     private android.os.PowerManager.WakeLock wakeLock;
     private TrainingApplication mTrainingApplication;
     private WorkoutRepository mWorkoutRepository;
     private ScheduledFuture mTrackerHandle;
+
+    /**
+     * Returns the cumulative count of sample row insertion failures during the current service
+     * lifecycle ({@code REQ-TRK-029.3}).
+     */
+    @VisibleForTesting
+    public int getSampleInsertFailureCount() {
+        return mSampleInsertFailureCount.get();
+    }
 
     private final AutoPauseManager mAutoPauseManager = new AutoPauseManager();
 
@@ -1305,11 +1317,13 @@ public class TrackerService extends Service {
         }
     }
 
-    private void sampleAndWriteToDb() {
+    @VisibleForTesting
+    void sampleAndWriteToDb() {
         sampleAndWriteToDb(mBanalService);
     }
 
-    private void sampleAndWriteToDb(@Nullable final BANALServiceComm banalService) {
+    @VisibleForTesting
+    void sampleAndWriteToDb(@Nullable final BANALServiceComm banalService) {
         if (DEBUG) Log.d(TAG, "sampleAndWriteToDb()");
 
         if (banalService == null) return;
@@ -1435,8 +1449,7 @@ public class TrackerService extends Service {
                 if (deviceName.equals("gps") || deviceName.equals("network") || deviceName.equals("google_fused")) {
                     sensorName += "_" + deviceName;
                 } else {
-                    sensorName += " (" + deviceName + ")";
-                    sensorName = "'" + sensorName + "'";
+                    sensorName = quoteSqlColumnIdentifier(sensorName + " (" + deviceName + ")");
                 }
             }
             SensorValueType type = sensorType.getSensorValueType();
@@ -1512,7 +1525,7 @@ public class TrackerService extends Service {
                 }
             }
             if (resolvedTableName == null) {
-                Log.e(TAG, "Cannot write workout sample: mSamplesTableName is invalid (" + mSamplesTableName + ") for workoutId=" + mWorkoutID + ", baseFileName=" + mBaseFileName);
+                logSampleInsertFailure("Cannot write workout sample: mSamplesTableName is invalid (" + mSamplesTableName + ") for workoutId=" + mWorkoutID + ", baseFileName=" + mBaseFileName, null);
                 return;
             }
             final String tableName = resolvedTableName;
@@ -1536,7 +1549,10 @@ public class TrackerService extends Service {
                 }
 
                 if (!sampleInserted) {
-                    Log.e(TAG, "Aborting sample and summary transaction because sample insert failed for table " + tableName);
+                    int failureCount = mSampleInsertFailureCount.get();
+                    if (failureCount == 0 || shouldLogSampleInsertFailure(failureCount)) {
+                        Log.w(TAG, "Aborting sample and summary transaction because sample insert failed for table " + tableName + " (sampleInsertFailureCount=" + failureCount + ")");
+                    }
                     return;
                 }
 
@@ -1556,7 +1572,7 @@ public class TrackerService extends Service {
                 samplesDb.setTransactionSuccessful();
                 summariesDb.setTransactionSuccessful();
             } catch (Exception e) {
-                Log.e(TAG, "Error during async DB write", e);
+                logSampleInsertFailure("Error during async DB write for table " + tableName, e);
                 sampleInserted = false;
             } finally {
                 samplesDb.endTransaction();
@@ -1620,9 +1636,109 @@ public class TrackerService extends Service {
     }
 
     /**
+     * Quotes a raw SQLite column identifier using SQL-standard double quotes ({@code "..."}) and
+     * escapes any embedded double quote character by doubling it ({@code ""}).
+     *
+     * <p>Using SQL-standard double quotes preserves single quotes / apostrophes (e.g.,
+     * {@code Rainer's HRM}), parentheses, spaces, and embedded double quotes inside both
+     * {@link SQLiteDatabase#insertOrThrow} (via {@link ContentValues} keys) and
+     * {@code ALTER TABLE ... ADD COLUMN} DDL statements ({@code REQ-TRK-029.1}, {@code ATT-3985}).
+     *
+     * @param rawColumnName the unquoted column name (e.g. {@code HR (Rainer's HRM)})
+     * @return the safely double-quoted SQLite identifier (e.g. {@code "HR (Rainer's HRM)"})
+     */
+    @VisibleForTesting
+    @NonNull
+    public static String quoteSqlColumnIdentifier(@NonNull String rawColumnName) {
+        return "\"" + rawColumnName.replace("\"", "\"\"") + "\"";
+    }
+
+    /**
+     * Unquotes a SQLite column identifier key from {@link ContentValues} to recover the exact
+     * unquoted column name stored in {@code sqlite_master} and returned by
+     * {@link Cursor#getColumnNames()} ({@code REQ-TRK-029.1}, {@code ATT-3985}).
+     *
+     * <p>Unlike the legacy {@code key.replace("'", "")} implementation, this method strips only
+     * outer SQL identifier delimiters ({@code "..."} or legacy {@code '...'}) and unescapes doubled
+     * delimiter characters without removing internal apostrophes or quotes.
+     *
+     * @param sqlColumnIdentifier the potentially quoted SQLite identifier
+     * @return the unquoted column name as stored in SQLite schema metadata
+     */
+    @VisibleForTesting
+    @NonNull
+    public static String unquoteSqlColumnIdentifier(@Nullable String sqlColumnIdentifier) {
+        if (sqlColumnIdentifier == null) {
+            return "";
+        }
+        if (sqlColumnIdentifier.length() >= 2
+                && sqlColumnIdentifier.startsWith("\"")
+                && sqlColumnIdentifier.endsWith("\"")) {
+            return sqlColumnIdentifier.substring(1, sqlColumnIdentifier.length() - 1)
+                    .replace("\"\"", "\"");
+        }
+        if (sqlColumnIdentifier.length() >= 2
+                && sqlColumnIdentifier.startsWith("'")
+                && sqlColumnIdentifier.endsWith("'")) {
+            return sqlColumnIdentifier.substring(1, sqlColumnIdentifier.length() - 1)
+                    .replace("''", "'");
+        }
+        return sqlColumnIdentifier;
+    }
+
+    /**
+     * Checks whether a {@link Cursor} already contains the specified unquoted column name.
+     *
+     * <p>First checks {@link Cursor#getColumnIndex(String)}; if that returns {@code < 0} (which can
+     * happen in Android's {@code AbstractWindowedCursor} when a column name contains a period
+     * {@code .} due to table-prefix stripping), falls back to inspecting
+     * {@link Cursor#getColumnNames()} directly ({@code REQ-TRK-029.2}).
+     */
+    @VisibleForTesting
+    static boolean hasColumnInCursor(@NonNull Cursor cursor, @NonNull String rawColumnName) {
+        if (cursor.getColumnIndex(rawColumnName) >= 0) {
+            return true;
+        }
+        String[] columnNames = cursor.getColumnNames();
+        if (columnNames != null) {
+            for (String columnName : columnNames) {
+                if (rawColumnName.equals(columnName) || rawColumnName.equalsIgnoreCase(columnName)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Determines whether a sample insertion failure with the given 1-based counter should be
+     * emitted to logcat under the rate-limiting policy ({@code REQ-TRK-029.3}): log the initial
+     * burst ({@code 1..SAMPLE_INSERT_FAILURE_INITIAL_BURST}) and every
+     * {@code SAMPLE_INSERT_FAILURE_LOG_INTERVAL}-th failure thereafter.
+     */
+    @VisibleForTesting
+    static boolean shouldLogSampleInsertFailure(int failureCount) {
+        return failureCount > 0
+                && (failureCount <= SAMPLE_INSERT_FAILURE_INITIAL_BURST
+                || failureCount % SAMPLE_INSERT_FAILURE_LOG_INTERVAL == 0);
+    }
+
+    private void logSampleInsertFailure(@NonNull String message, @Nullable Throwable cause) {
+        int count = mSampleInsertFailureCount.incrementAndGet();
+        if (shouldLogSampleInsertFailure(count)) {
+            String formattedMessage = message + " (sampleInsertFailureCount=" + count + ")";
+            if (cause != null) {
+                Log.e(TAG, formattedMessage, cause);
+            } else {
+                Log.e(TAG, formattedMessage);
+            }
+        }
+    }
+
+    /**
      * Recovers from missing columns (when new sensors are discovered mid-workout) or a missing
      * sample table for a valid {@code mBaseFileName}, and logs/rejects unrecoverable SQLite errors
-     * ({@code REQ-TRK-026.4}, {@code ATT-3980}).
+     * ({@code REQ-TRK-026.4}, {@code REQ-TRK-029}, {@code ATT-3980}, {@code ATT-3985}).
      *
      * @return {@code true} if the sample row was successfully inserted after recovery, {@code false} otherwise
      */
@@ -1639,15 +1755,15 @@ public class TrackerService extends Service {
                     tableName = validTable;
                     mSamplesTableName = validTable;
                 } catch (Exception createEx) {
-                    Log.e(TAG, "Failed to self-heal missing sample table " + validTable, createEx);
+                    logSampleInsertFailure("Failed to self-heal missing sample table " + validTable, createEx);
                     return false;
                 }
             } else {
-                Log.e(TAG, "Unrecoverable SQLite error: sample table " + tableName + " does not exist and baseFileName (" + mBaseFileName + ") is invalid", insertException);
+                logSampleInsertFailure("Unrecoverable SQLite error: sample table " + tableName + " does not exist and baseFileName (" + mBaseFileName + ") is invalid", insertException);
                 return false;
             }
         } else if (errMsg != null && !errMsg.contains("no such column") && !errMsg.contains("has no column named")) {
-            Log.e(TAG, "Unrecoverable SQLite error inserting sample into table " + tableName, insertException);
+            logSampleInsertFailure("Unrecoverable SQLite error inserting sample into table " + tableName, insertException);
             return false;
         }
 
@@ -1655,25 +1771,26 @@ public class TrackerService extends Service {
         // It ensures that new sensors added during a workout get their own columns.
         try (Cursor cursor = samplesDb.query(tableName, null, null, null, null, null, null, "1")) {
             if (cursor == null) {
-                Log.e(TAG, "Failed to inspect columns of sample table " + tableName + ": query returned null cursor");
+                logSampleInsertFailure("Failed to inspect columns of sample table " + tableName + ": query returned null cursor", null);
                 return false;
             }
             for (String key : values.keySet()) {
-                String queryKey = key.replace("'", "");
-                if (cursor.getColumnIndex(queryKey) < 0) {
+                String queryKey = unquoteSqlColumnIdentifier(key);
+                if (!hasColumnInCursor(cursor, queryKey)) {
                     SensorValueType valueType = name2Type != null ? name2Type.get(key) : null;
                     String type = valueType == null ? "text" : switch (valueType) {
                         case INTEGER -> "int";
                         case DOUBLE -> "double";
                         default -> "text";
                     };
-                    samplesDb.execSQL("ALTER TABLE " + tableName + " ADD COLUMN " + key + " " + type + " null;");
+                    String quotedColumn = quoteSqlColumnIdentifier(queryKey);
+                    samplesDb.execSQL("ALTER TABLE " + tableName + " ADD COLUMN " + quotedColumn + " " + type + " null;");
                 }
             }
             samplesDb.insertOrThrow(tableName, null, values);
             return true;
         } catch (Exception e) {
-            Log.e(TAG, "Failed to fix schema or insert after schema fix for table " + tableName, e);
+            logSampleInsertFailure("Failed to fix schema or insert after schema fix for table " + tableName, e);
             return false;
         }
     }
