@@ -278,7 +278,8 @@ public class DeviceManager {
 
         mSensorManager = mySensorManager;
 
-        mClockDevice = new ClockDevice(mContext, mSensorManager);
+        mClockDevice = new ClockDevice(mContext, mSensorManager, false);
+        mClockDevice.startTimer();
         mBatteryDevice = new BatteryDevice(mContext, mSensorManager);
         
         long altitudePressureId = mDevicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);

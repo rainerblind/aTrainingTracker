@@ -97,12 +97,8 @@ class ClockDeviceResilienceTest {
      */
     @Test
     fun testClockTimeTaskCatchesTransientExceptionAndContinuesIncrementingSensors() {
-        val device = ClockDevice(mockContext, mockSensorManager)
+        val device = ClockDevice(mockContext, mockSensorManager, false)
         clockDevice = device
-        // Stop the background 1000ms timer so we can drive deterministic ticks via runClockTickForTesting()
-        device.shutDown()
-        // Re-register sensors so they remain activated for getValue() assertions
-        device.registerSensors()
 
         val initialTotal = (device.getSensor(SensorType.TIME_TOTAL).value as Number).toInt()
         val initialActive = (device.getSensor(SensorType.TIME_ACTIVE).value as Number).toInt()

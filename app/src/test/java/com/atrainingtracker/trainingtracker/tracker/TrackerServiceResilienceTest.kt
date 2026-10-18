@@ -131,6 +131,8 @@ class TrackerServiceResilienceTest {
 
     @After
     fun tearDown() {
+        service.setTrackingInterruptedForTesting(true)
+        service.onDestroy()
         unmockkAll()
     }
 

@@ -64,6 +64,11 @@ public class ClockDevice extends MyDevice {
     private final AtomicInteger mClockTimerErrorCount = new AtomicInteger(0);
 
     public ClockDevice(Context context, MySensorManager mySensorManager) {
+        this(context, mySensorManager, true);
+    }
+
+    @VisibleForTesting
+    ClockDevice(Context context, MySensorManager mySensorManager, boolean startTimerImmediately) {
         super(context, mySensorManager, DeviceType.CLOCK);
         if (DEBUG) Log.i(TAG, "begin of constructor: mLaps=" + mLaps);
 
@@ -75,7 +80,11 @@ public class ClockDevice extends MyDevice {
         TimeFormatter timeFormatter = new TimeFormatter();
 
         registerSensors();
-        startTimer();
+        if (startTimerImmediately) {
+            startTimer();
+        } else {
+            mLapSensor.newValue(mLaps);
+        }
         if (DEBUG) Log.i(TAG, "end of constructor: mLaps=" + mLaps);
     }
 
@@ -116,21 +125,23 @@ public class ClockDevice extends MyDevice {
     // 	}
     // };
 
-    private synchronized void startTimer() {
+    protected synchronized void startTimer() {
         mLapSensor.newValue(mLaps);  // TODO: is this really the right place?
 
         // timer might be already running?
         if (!timerRunning) {
-            timer = new Timer();
+            timer = new Timer("ClockDeviceTimer", true);
             timer.scheduleAtFixedRate(new ClockTimeTask(), 0, 1000);
             timerRunning = true;
         }
     }
 
-    private synchronized void stopTimer() {
-        timer.cancel();
-        timer.purge();
-        timer = null;
+    protected synchronized void stopTimer() {
+        if (timer != null) {
+            timer.cancel();
+            timer.purge();
+            timer = null;
+        }
         timerRunning = false;
     }
 
@@ -191,6 +202,12 @@ public class ClockDevice extends MyDevice {
                 }
             } catch (Throwable t) {
                 mClockTimerErrorCount.incrementAndGet();
+                String msg = t.getMessage();
+                if (msg != null && msg.contains("not mocked")) {
+                    // Orphaned timer thread in a local JVM unit test after unmockkAll(); stop timer to prevent cross-test interference
+                    stopTimer();
+                    return;
+                }
                 Log.e(TAG, "Error during 1 Hz clock timer tick; continuing clock timer", t);
             }
         }
