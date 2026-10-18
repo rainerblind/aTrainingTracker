@@ -479,4 +479,187 @@ class SensorAndDeviceConcurrencyStressTest {
             assertEquals(125.0, sampledAlt, 1e-6)
         }
     }
+
+    /**
+     * TST-TRK-028.1: Verifies that concurrent [MySensorManager.registerSensor] / [MySensorManager.unregisterSensor]
+     * calls on worker threads and concurrent [ProxySensor.addSensorListener] / [ProxySensor.removeSensorListener]
+     * calls whose `newValue(T)` callback performs re-entrant queries on [MySensorManager] execute without A/B monitor
+     * deadlocks or thread starvation across 8 threads (REQ-SEN-021.1, REQ-SEN-021.3).
+     */
+    @Test
+    fun `TST-TRK-028_1 concurrent MySensorManager registration and ProxySensor listener queries are deadlock-free`() {
+        val sensorManager = MySensorManager(mockBanalService)
+        val deviceA = FakeRemoteDevice(mockBanalService, sensorManager, DeviceType.RUN_SPEED, 201L)
+        val deviceB = FakeRemoteDevice(mockBanalService, sensorManager, DeviceType.SPEED_AND_LOCATION_GPS, 202L)
+        val deviceC = FakeRemoteDevice(mockBanalService, sensorManager, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED, 203L)
+
+        val speedSensorA = MySensor<Double>(deviceA, SensorType.SPEED_mps)
+        val speedSensorB = MySensor<Double>(deviceB, SensorType.SPEED_mps)
+        val speedSensorC = MySensor<Double>(deviceC, SensorType.SPEED_mps)
+
+        // Seed initial registration
+        sensorManager.registerSensor(speedSensorA)
+        val proxySensor = sensorManager.getSensor(SensorType.SPEED_mps) as ProxySensor<Double>
+
+        val threadCount = 8
+        val iterationsPerThread = 1000
+        val executor = Executors.newFixedThreadPool(threadCount)
+        val startGate = CountDownLatch(1)
+        val doneGate = CountDownLatch(threadCount)
+        val errors = CopyOnWriteArrayList<Throwable>()
+        val reentrantQueryCount = AtomicInteger(0)
+
+        for (t in 0 until threadCount) {
+            executor.submit {
+                try {
+                    startGate.await()
+                    if (t % 2 == 0) {
+                        // Registration threads: continuously register and unregister sensors on MySensorManager
+                        for (i in 0 until iterationsPerThread) {
+                            when (i % 3) {
+                                0 -> {
+                                    sensorManager.registerSensor(speedSensorB)
+                                    sensorManager.unregisterSensor(speedSensorA)
+                                }
+                                1 -> {
+                                    sensorManager.registerSensor(speedSensorC)
+                                    sensorManager.unregisterSensor(speedSensorB)
+                                }
+                                else -> {
+                                    sensorManager.registerSensor(speedSensorA)
+                                    sensorManager.unregisterSensor(speedSensorC)
+                                }
+                            }
+                        }
+                    } else {
+                        // Listener threads: continuously register and unregister listeners on ProxySensor
+                        // whose callback executes re-entrant queries on MySensorManager
+                        val listener = MySensor.SensorListener<Double> { _ ->
+                            reentrantQueryCount.incrementAndGet()
+                            // Re-entrant queries that acquire MySensorManager monitor
+                            sensorManager.getSensorList(listOf(SensorType.SPEED_mps, SensorType.HR))
+                            sensorManager.accumulatedSensorTypeSet
+                            sensorManager.allSensors
+                        }
+
+                        for (i in 0 until iterationsPerThread) {
+                            proxySensor.addSensorListener(listener)
+                            proxySensor.removeSensorListener(listener)
+                        }
+                    }
+                } catch (t: Throwable) {
+                    errors.add(t)
+                } finally {
+                    doneGate.countDown()
+                }
+            }
+        }
+
+        unmockkAll()
+        startGate.countDown()
+        assertTrue(
+            "Deadlock detected! Concurrent MySensorManager and ProxySensor operations did not complete within 15s",
+            doneGate.await(15, TimeUnit.SECONDS)
+        )
+        executor.shutdownNow()
+
+        if (errors.isNotEmpty()) {
+            throw AssertionError("Deadlock stress test failed with error: ${errors.first()}", errors.first())
+        }
+
+        assertTrue("Re-entrant queries should have been invoked during test", reentrantQueryCount.get() > 0)
+    }
+
+    /**
+     * TST-TRK-028.2: Verifies that during [ProxySensor.addSensorListener], [ProxySensor.setSourceSensor],
+     * and [MySensorManager.registerSensor], the listener callback [MySensor.SensorListener.newValue] is
+     * invoked strictly without holding locks on the [ProxySensor] or [MySensorManager] instances (REQ-SEN-021.1, REQ-SEN-021.2, REQ-SEN-021.3).
+     */
+    @Test
+    fun `TST-TRK-028_2 initial newValue dispatch on ProxySensor occurs without holding monitor locks`() {
+        val sensorManager = MySensorManager(mockBanalService)
+        val device = FakeRemoteDevice(mockBanalService, sensorManager, DeviceType.RUN_SPEED, 301L)
+        val sourceSensor = MySensor<Double>(device, SensorType.SPEED_mps)
+        sourceSensor.newValue(12.5)
+
+        val proxySensor = ProxySensor<Double>(sensorManager, SensorType.SPEED_mps, sourceSensor)
+
+        val lockHeldProxy = AtomicInteger(0)
+        val lockHeldManager = AtomicInteger(0)
+        val callbacksReceived = AtomicInteger(0)
+
+        val listener = MySensor.SensorListener<Double> { _ ->
+            callbacksReceived.incrementAndGet()
+            if (Thread.holdsLock(proxySensor)) {
+                lockHeldProxy.incrementAndGet()
+            }
+            if (Thread.holdsLock(sensorManager)) {
+                lockHeldManager.incrementAndGet()
+            }
+        }
+
+        // 1. Initial callback on addSensorListener
+        proxySensor.addSensorListener(listener)
+        assertEquals("addSensorListener must not hold ProxySensor monitor", 0, lockHeldProxy.get())
+        assertEquals("addSensorListener must not hold MySensorManager monitor", 0, lockHeldManager.get())
+
+        // 2. Initial callback on setSourceSensor
+        val newSourceSensor = MySensor<Double>(device, SensorType.SPEED_mps)
+        newSourceSensor.newValue(25.0)
+        proxySensor.setSourceSensor(newSourceSensor)
+        assertEquals("setSourceSensor must not hold ProxySensor monitor during callback", 0, lockHeldProxy.get())
+        assertEquals("setSourceSensor must not hold MySensorManager monitor during callback", 0, lockHeldManager.get())
+
+        // 3. Callback through MySensorManager.registerSensor
+        sensorManager.registerSensor(sourceSensor)
+        assertEquals("registerSensor must not hold MySensorManager monitor during callback", 0, lockHeldManager.get())
+
+        assertTrue("Callbacks must have been executed", callbacksReceived.get() >= 2)
+    }
+
+    /**
+     * TST-TRK-028.3: Verifies that when [ProxySensor.setSourceSensor] is invoked, registered listeners
+     * cleanly disconnect from the previous source, attach to the new source, and immediately receive
+     * the new source's current value (REQ-SEN-021.2).
+     */
+    @Test
+    fun `TST-TRK-028_3 source sensor swap in ProxySensor cleanly migrates listeners and propagates values`() {
+        val sensorManager = MySensorManager(mockBanalService)
+        val deviceA = FakeRemoteDevice(mockBanalService, sensorManager, DeviceType.RUN_SPEED, 401L)
+        val deviceB = FakeRemoteDevice(mockBanalService, sensorManager, DeviceType.SPEED_AND_LOCATION_GPS, 402L)
+
+        val sourceA = MySensor<Double>(deviceA, SensorType.SPEED_mps)
+        val sourceB = MySensor<Double>(deviceB, SensorType.SPEED_mps)
+        sourceA.newValue(5.0)
+        sourceB.newValue(10.0)
+
+        val proxySensor = ProxySensor<Double>(sensorManager, SensorType.SPEED_mps, sourceA)
+
+        val receivedValues = CopyOnWriteArrayList<Double>()
+        val listener = MySensor.SensorListener<Double> { value ->
+            if (value != null) {
+                receivedValues.add(value)
+            }
+        }
+
+        // 1. Register listener on proxy bound to sourceA
+        proxySensor.addSensorListener(listener)
+        assertEquals(listOf(5.0), receivedValues)
+
+        // 2. Emit value on sourceA -> listener receives it
+        sourceA.newValue(7.5)
+        assertEquals(listOf(5.0, 7.5), receivedValues)
+
+        // 3. Switch to sourceB -> listener immediately receives sourceB initial value (10.0)
+        proxySensor.setSourceSensor(sourceB)
+        assertEquals(listOf(5.0, 7.5, 10.0), receivedValues)
+
+        // 4. Emit value on sourceB -> listener receives it
+        sourceB.newValue(15.0)
+        assertEquals(listOf(5.0, 7.5, 10.0, 15.0), receivedValues)
+
+        // 5. Emit value on old sourceA -> listener must NOT receive it
+        sourceA.newValue(99.0)
+        assertEquals(listOf(5.0, 7.5, 10.0, 15.0), receivedValues)
+    }
 }
