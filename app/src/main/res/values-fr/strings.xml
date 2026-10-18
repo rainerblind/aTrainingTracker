@@ -349,6 +349,7 @@
     <string name="tab_tracking">Suivi</string>
     <string name="tab_map">Carte</string>
     <string name="tab_laps">Tours</string>
+    <string name="tab_power">Puissance</string>
     <string name="tab_workouts">Historique</string>
 
     <!-- layouts -->

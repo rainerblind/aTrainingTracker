@@ -349,6 +349,7 @@
     <string name="tab_tracking">Segui</string>
     <string name="tab_map">Mappa</string>
     <string name="tab_laps">Giri</string>
+    <string name="tab_power">Potenza</string>
     <string name="tab_workouts">Cronologia</string>
 
     <!-- layouts -->

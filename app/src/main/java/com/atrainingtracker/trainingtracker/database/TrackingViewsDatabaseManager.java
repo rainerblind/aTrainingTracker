@@ -585,6 +585,14 @@ public class TrackingViewsDatabaseManager {
     }
 
 
+    /**
+     * Non-destructively ensures the dedicated Power tab exists for {@link ActivityType#BIKE_POWER}
+     * without overwriting or deleting existing user-customized tracking tabs (REQ-UI-409.2).
+     */
+    public void ensurePowerTabExistsForBikePower() {
+        cDbHelper.ensurePowerTabExistsForBikePower(getDatabase());
+    }
+
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     public static class TrackingViewsDbHelper extends SQLiteOpenHelper {
@@ -836,12 +844,73 @@ public class TrackingViewsDatabaseManager {
             for (ActivityType activityType : viewMap.keySet()) {
                 // Standard Tab: layoutNr 1, live segments, live climbs, nav hints
                 addDefaultTab(db, activityType, mContext.getString(R.string.text_default), 1, false, false, true, true, true, viewMap.get(activityType));
-                // Map Tab: layoutNr 2, map, elevation profile, nav hints
-                addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 2, false, true, false, false, true, getDefaultStartRowDataList(activityType));
-                // Laps Tab: layoutNr 3, lap button only
-                addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 3, true, false, false, false, false, getDefaultLapRowDataList(activityType));
+                if (activityType == ActivityType.BIKE_POWER) {
+                    // Dedicated Power Tab: layoutNr 2, nav hints only (REQ-UI-409.2)
+                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_power), 2, false, false, false, false, true, getDefaultPowerRowDataList());
+                    // Map Tab: layoutNr 3, map, elevation profile, nav hints
+                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 3, false, true, false, false, true, getDefaultMapRowDataList(activityType));
+                    // Laps Tab: layoutNr 4, lap button only
+                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 4, true, false, false, false, false, getDefaultLapRowDataList(activityType));
+                } else {
+                    // Map Tab: layoutNr 2, map, elevation profile, nav hints
+                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 2, false, true, false, false, true, getDefaultMapRowDataList(activityType));
+                    // Laps Tab: layoutNr 3, lap button only
+                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 3, true, false, false, false, false, getDefaultLapRowDataList(activityType));
+                }
             }
             if (DEBUG) Log.d(TAG, "filled db");
+        }
+
+        /**
+         * Non-destructively ensures the dedicated Power tab exists for {@link ActivityType#BIKE_POWER}
+         * by querying {@link #VIEWS_TABLE} first and inserting the Power tab at layoutNr = 2 (shifting
+         * subsequent BIKE_POWER layouts up by 1) only if absent (REQ-UI-409.2).
+         *
+         * @param db Writable SQLite database instance.
+         */
+        public void ensurePowerTabExistsForBikePower(@NonNull SQLiteDatabase db) {
+            String powerTabName = mContext != null ? mContext.getString(R.string.tab_power) : null;
+            if (powerTabName == null || powerTabName.isEmpty()) {
+                powerTabName = "Power";
+            }
+            db.beginTransaction();
+            try {
+                boolean exists = false;
+                try (Cursor c = db.query(
+                        VIEWS_TABLE,
+                        new String[]{C_ID},
+                        ACTIVITY_TYPE + "=? AND " + NAME + "=?",
+                        new String[]{ActivityType.BIKE_POWER.name(), powerTabName},
+                        null,
+                        null,
+                        null
+                )) {
+                    if (c != null && c.moveToFirst()) {
+                        exists = true;
+                    }
+                }
+                if (!exists) {
+                    db.execSQL("UPDATE " + VIEWS_TABLE
+                            + " SET " + LAYOUT_NR + " = " + LAYOUT_NR + " + 1"
+                            + " WHERE " + ACTIVITY_TYPE + " = '" + ActivityType.BIKE_POWER.name() + "'"
+                            + " AND " + LAYOUT_NR + " >= 2");
+                    addDefaultTab(
+                            db,
+                            ActivityType.BIKE_POWER,
+                            powerTabName,
+                            2,
+                            false,
+                            false,
+                            false,
+                            false,
+                            true,
+                            getDefaultPowerRowDataList()
+                    );
+                }
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
         }
 
         /**
@@ -857,7 +926,7 @@ public class TrackingViewsDatabaseManager {
          * @param db SQLite database instance.
          * @param activityType Activity type profile.
          * @param name Localized tab title.
-         * @param layoutNr Sequential layout index (1 = Standard, 2 = Map, 3 = Laps).
+         * @param layoutNr Sequential layout index (1 = Standard, 2 = Map/Power, 3 = Laps/Map, 4 = Laps).
          * @param showLapButton Whether the lap split button is visible.
          * @param showMap Whether the map canvas and elevation profile are enabled.
          * @param showLiveSegments Whether Strava live segment bottom sheets are enabled.
@@ -1085,7 +1154,7 @@ public class TrackingViewsDatabaseManager {
          ******************************************************************************************/
 
         @NonNull
-        protected List<RowData> getDefaultStartRowDataList(ActivityType activityType) {
+        public List<RowData> getDefaultStartRowDataList(ActivityType activityType) {
             List<RowData> rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
@@ -1101,8 +1170,81 @@ public class TrackingViewsDatabaseManager {
             return rowDataList;
         }
 
+        /**
+         * Builds the dedicated Power tab sensor grid layout for {@link ActivityType#BIKE_POWER} (REQ-UI-409.2).
+         *
+         * @return Ordered list of {@link RowData} entries for the Power tab.
+         */
         @NonNull
-        protected List<RowData> getDefaultLapRowDataList(ActivityType activityType) {
+        public List<RowData> getDefaultPowerRowDataList() {
+            List<RowData> rowDataList = new LinkedList<>();
+            // Row 1: TIME_ACTIVE (SMALL, col 1), HR (SMALL, col 2), CADENCE (SMALL, col 3)
+            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
+            rowDataList.add(new RowData(SensorType.HR, ViewSize.SMALL, 1, 2));
+            rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.SMALL, 1, 3));
+            // Row 2: POWER (HUGE, col 1)
+            rowDataList.add(new RowData(SensorType.POWER, ViewSize.HUGE, 2, 1));
+            // Row 3: POWER_TO_WEIGHT (LARGE, col 1), NORMALIZED_POWER (LARGE, col 2)
+            rowDataList.add(new RowData(SensorType.POWER_TO_WEIGHT, ViewSize.LARGE, 3, 1));
+            rowDataList.add(new RowData(SensorType.NORMALIZED_POWER, ViewSize.LARGE, 3, 2));
+            // Row 4: INTENSITY_FACTOR (NORMAL, col 1), TSS (NORMAL, col 2), WORK_KJ (NORMAL, col 3)
+            rowDataList.add(new RowData(SensorType.INTENSITY_FACTOR, ViewSize.NORMAL, 4, 1));
+            rowDataList.add(new RowData(SensorType.TSS, ViewSize.NORMAL, 4, 2));
+            rowDataList.add(new RowData(SensorType.WORK_KJ, ViewSize.NORMAL, 4, 3));
+            // Row 5: W_PRIME_BAL (LARGE, col 1)
+            rowDataList.add(new RowData(SensorType.W_PRIME_BAL, ViewSize.LARGE, 5, 1));
+            // Row 6: PEDAL_POWER_BALANCE (SMALL, col 1), TORQUE (SMALL, col 2)
+            rowDataList.add(new RowData(SensorType.PEDAL_POWER_BALANCE, ViewSize.SMALL, 6, 1));
+            rowDataList.add(new RowData(SensorType.TORQUE, ViewSize.SMALL, 6, 2));
+            return rowDataList;
+        }
+
+        /**
+         * Builds the default Map tab sensor grid header for the given {@link ActivityType} (REQ-UI-409.2).
+         *
+         * @param activityType Activity type profile.
+         * @return Ordered list of {@link RowData} entries for the Map tab.
+         */
+        @NonNull
+        public List<RowData> getDefaultMapRowDataList(ActivityType activityType) {
+            if (activityType == ActivityType.BIKE_POWER) {
+                List<RowData> rowDataList = new LinkedList<>();
+                // Row 1: TIME_ACTIVE (NORMAL, col 1), DISTANCE_m (NORMAL, col 2)
+                rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.NORMAL, 1, 1));
+                rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 1, 2));
+                // Row 2: SPEED_mps (NORMAL, col 1), HR (NORMAL, col 2)
+                rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.NORMAL, 2, 1));
+                rowDataList.add(new RowData(SensorType.HR, ViewSize.NORMAL, 2, 2));
+                // Row 3: POWER (NORMAL, col 1), POWER_TO_WEIGHT (NORMAL, col 2)
+                rowDataList.add(new RowData(SensorType.POWER, ViewSize.NORMAL, 3, 1));
+                rowDataList.add(new RowData(SensorType.POWER_TO_WEIGHT, ViewSize.NORMAL, 3, 2));
+                return rowDataList;
+            }
+            return getDefaultStartRowDataList(activityType);
+        }
+
+        @NonNull
+        public List<RowData> getDefaultLapRowDataList(ActivityType activityType) {
+            if (activityType == ActivityType.BIKE_POWER) {
+                List<RowData> rowDataList = new LinkedList<>();
+                // Row 1: TIME_LAP (LARGE, col 1), LAP_NR (SMALL, col 2)
+                rowDataList.add(new RowData(SensorType.TIME_LAP, ViewSize.LARGE, 1, 1));
+                rowDataList.add(new RowData(SensorType.LAP_NR, ViewSize.SMALL, 1, 2));
+                // Row 2: SPEED_mps (NORMAL, col 1), DISTANCE_m_LAP (NORMAL, col 2)
+                rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.NORMAL, 2, 1));
+                rowDataList.add(new RowData(SensorType.DISTANCE_m_LAP, ViewSize.NORMAL, 2, 2));
+                // Row 3: HR (NORMAL, col 1), CADENCE (NORMAL, col 2)
+                rowDataList.add(new RowData(SensorType.HR, ViewSize.NORMAL, 3, 1));
+                rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.NORMAL, 3, 2));
+                // Row 4: POWER (LARGE, col 1), POWER_TO_WEIGHT (NORMAL, col 2)
+                rowDataList.add(new RowData(SensorType.POWER, ViewSize.LARGE, 4, 1));
+                rowDataList.add(new RowData(SensorType.POWER_TO_WEIGHT, ViewSize.NORMAL, 4, 2));
+                // Row 5: ALTITUDE (NORMAL, col 1), ASCENT (NORMAL, col 2)
+                rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 5, 1));
+                rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.NORMAL, 5, 2));
+                return rowDataList;
+            }
+
             List<RowData> rowDataList = new LinkedList<>();
             rowDataList.add(new RowData(SensorType.TIME_LAP, ViewSize.SMALL, 1, 1));
             rowDataList.add(new RowData(SensorType.LAP_NR, ViewSize.SMALL, 1, 2));
@@ -1131,10 +1273,7 @@ public class TrackingViewsDatabaseManager {
                     rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.NORMAL, 5, 2));
                 }
                 case BIKE_POWER -> {
-                    rowDataList.add(new RowData(SensorType.POWER, ViewSize.HUGE, 4, 1));
-                    rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.SMALL, 5, 1));
-                    rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.SMALL, 6, 1));
-                    rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.SMALL, 6, 2));
+                    // Handled above
                 }
             }
 
@@ -1142,7 +1281,7 @@ public class TrackingViewsDatabaseManager {
         }
 
         @NonNull
-        protected EnumMap<ActivityType, List<RowData>> createViewMap() {
+        public EnumMap<ActivityType, List<RowData>> createViewMap() {
             if (DEBUG) Log.d(TAG, "createViewMap");
             EnumMap<ActivityType, List<RowData>> viewMap = new EnumMap<>(ActivityType.class);
             List<RowData> rowDataList;
@@ -1176,10 +1315,23 @@ public class TrackingViewsDatabaseManager {
             }
             viewMap.put(ActivityType.BIKE_SPEED_AND_CADENCE, rowDataList);
 
-            // BIKE_POWER
-            rowDataList = getDefaultStartRowDataList(ActivityType.BIKE_POWER);
+            // BIKE_POWER (REQ-UI-409.2 — 6-row Standard layout)
+            rowDataList = new LinkedList<>();
+            // Row 1: TIME_ACTIVE (SMALL, col 1), TIME_OF_DAY (SMALL, col 2)
+            rowDataList.add(new RowData(SensorType.TIME_ACTIVE, ViewSize.SMALL, 1, 1));
+            rowDataList.add(new RowData(SensorType.TIME_OF_DAY, ViewSize.SMALL, 1, 2));
+            // Row 2: SPEED_mps (NORMAL, col 1), DISTANCE_m (NORMAL, col 2)
+            rowDataList.add(new RowData(SensorType.SPEED_mps, ViewSize.NORMAL, 2, 1));
+            rowDataList.add(new RowData(SensorType.DISTANCE_m, ViewSize.NORMAL, 2, 2));
+            // Row 3: HR (LARGE, col 1), CADENCE (LARGE, col 2)
+            rowDataList.add(new RowData(SensorType.HR, ViewSize.LARGE, 3, 1));
+            rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 3, 2));
+            // Row 4: POWER (HUGE, col 1)
             rowDataList.add(new RowData(SensorType.POWER, ViewSize.HUGE, 4, 1));
-            rowDataList.add(new RowData(SensorType.CADENCE, ViewSize.LARGE, 5, 1));
+            // Row 5: POWER_TO_WEIGHT (NORMAL, col 1), NORMALIZED_POWER (NORMAL, col 2)
+            rowDataList.add(new RowData(SensorType.POWER_TO_WEIGHT, ViewSize.NORMAL, 5, 1));
+            rowDataList.add(new RowData(SensorType.NORMALIZED_POWER, ViewSize.NORMAL, 5, 2));
+            // Row 6: ALTITUDE (NORMAL, col 1), ASCENT (NORMAL, col 2)
             rowDataList.add(new RowData(SensorType.ALTITUDE, ViewSize.NORMAL, 6, 1));
             rowDataList.add(new RowData(SensorType.ASCENT, ViewSize.NORMAL, 6, 2));
             if (mHavePressureSensor) {
@@ -1190,7 +1342,7 @@ public class TrackingViewsDatabaseManager {
             return viewMap;
         }
 
-        protected record RowData(SensorType sensorType, ViewSize viewSize, int row, int col) {
+        public record RowData(SensorType sensorType, ViewSize viewSize, int row, int col) {
 
         }
 

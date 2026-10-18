@@ -308,14 +308,13 @@ class TrackingViewsDatabaseManagerTest {
 
         dbHelper.onCreate(mockDb)
 
-        val supportedActivities = listOf(
+        val nonPowerActivities = listOf(
             com.atrainingtracker.banalservice.ActivityType.GENERIC_HR,
             com.atrainingtracker.banalservice.ActivityType.RUN_SPEED_AND_CADENCE,
-            com.atrainingtracker.banalservice.ActivityType.BIKE_SPEED_AND_CADENCE,
-            com.atrainingtracker.banalservice.ActivityType.BIKE_POWER
+            com.atrainingtracker.banalservice.ActivityType.BIKE_SPEED_AND_CADENCE
         )
 
-        for (activityType in supportedActivities) {
+        for (activityType in nonPowerActivities) {
             // Standard Tab: layoutNr 1, live segments, live climbs, nav hints
             verify(atLeast = 1) {
                 dbHelper.addDefaultTab(
@@ -361,6 +360,15 @@ class TrackingViewsDatabaseManagerTest {
                     any()
                 )
             }
+        }
+
+        // BIKE_POWER (REQ-UI-409.2): 4 tabs (1 = Standard, 2 = Power, 3 = Map, 4 = Laps)
+        val bikePower = com.atrainingtracker.banalservice.ActivityType.BIKE_POWER
+        verify(atLeast = 1) {
+            dbHelper.addDefaultTab(mockDb, bikePower, any(), 1, false, false, true, true, true, any())
+            dbHelper.addDefaultTab(mockDb, bikePower, any(), 2, false, false, false, false, true, any())
+            dbHelper.addDefaultTab(mockDb, bikePower, any(), 3, false, true, false, false, true, any())
+            dbHelper.addDefaultTab(mockDb, bikePower, any(), 4, true, false, false, false, false, any())
         }
     }
 

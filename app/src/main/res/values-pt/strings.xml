@@ -349,6 +349,7 @@
     <string name="tab_tracking">Seguimento</string>
     <string name="tab_map">Mapa</string>
     <string name="tab_laps">Voltas</string>
+    <string name="tab_power">Potência</string>
     <string name="tab_workouts">Histórico</string>
 
     <!-- layouts -->
