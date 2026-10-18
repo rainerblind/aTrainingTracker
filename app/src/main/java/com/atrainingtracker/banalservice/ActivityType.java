@@ -158,6 +158,7 @@ public enum ActivityType {
                         SensorType.INTENSITY_FACTOR,
                         SensorType.WORK_KJ,
                         SensorType.TSS,
+                        SensorType.W_PRIME_BAL,
                         SensorType.DISTANCE_m,
                         SensorType.SPEED_mps,
                         SensorType.TIME_OF_DAY,

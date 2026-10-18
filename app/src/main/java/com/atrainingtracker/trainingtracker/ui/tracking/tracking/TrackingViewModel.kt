@@ -39,6 +39,8 @@ import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
@@ -82,6 +84,7 @@ data class TrackingScreenState(
     val elevationProfileScope: ElevationProfileScope = ElevationProfileScope.FULL_ROUTE,
     val elevationProfileLookahead: Int = 2000,
     val fields: List<SensorFieldState> = emptyList(),
+    val tuningConfig: TuningConfig = TuningConfig(),
     val pathPoints: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint> = emptyList(),
     val mapState: TrackingMapState = TrackingMapState(showMap = showMap),
     
@@ -190,6 +193,9 @@ class TrackingViewModel(
 
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
     private val settingsDataStore = SettingsDataStore(application)
+    private val tuningPreferencesDataStore by lazy { TuningPreferencesDataStore(application) }
+    private val _tuningConfig = MutableStateFlow(TuningConfig())
+    val tuningConfig: StateFlow<TuningConfig> = _tuningConfig.asStateFlow()
     private val zoneDisplayOptionsMap = mutableMapOf<SettingsDataStore.ZoneType, ZoneDisplayOptions>()
     private val defaultZoneColor = Color.Transparent
 
@@ -205,11 +211,37 @@ class TrackingViewModel(
     )
 
     init {
+        observeTuningConfig()
         observeZoneDisplayOptions()
         observeMapState()
         // Load both the main UI state and the activity type
         loadSensorFieldStates()
         loadActivityType()
+    }
+
+    /**
+     * Subscribes non-blockingly to [TuningPreferencesDataStore.tuningConfigFlow] so initial SQLite
+     * sensor field loading never waits for DataStore I/O (REQ-UI-409.3).
+     */
+    private fun observeTuningConfig() {
+        val appContext = application.applicationContext ?: application
+        val hasValidFilesDir = try {
+            !appContext.filesDir?.path.isNullOrEmpty()
+        } catch (_: Throwable) {
+            false
+        }
+        if (!hasValidFilesDir) return
+
+        viewModelScope.launch {
+            tuningPreferencesDataStore.tuningConfigFlow
+                .distinctUntilChanged()
+                .collect { config ->
+                    _tuningConfig.value = config
+                    _uiState.update { current ->
+                        current.copy(tuningConfig = config)
+                    }
+                }
+        }
     }
 
     private fun observeZoneDisplayOptions() {
@@ -405,7 +437,8 @@ class TrackingViewModel(
                         zoneColor = defaultZoneColor,
                         zoneDisplayOptions = displayOptions,
                         zoneGaugeState = calculateZoneGaugeState(zoneType, displayOptions, null),
-                        pedalBalanceState = initialPedalBalanceState
+                        pedalBalanceState = initialPedalBalanceState,
+                        sensorType = config.sensorType
                     )
                 }
 
@@ -416,6 +449,7 @@ class TrackingViewModel(
                 val currentMap = _mapState.value
                 TrackingScreenState(
                     fields = finalFields,
+                    tuningConfig = _tuningConfig.value,
                     showMap = viewInfo?.showMap ?: false,
                     showLiveSegments = viewInfo?.showLiveSegments ?: false,
                     showElevationProfile = viewInfo?.showElevationProfile ?: false,

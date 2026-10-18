@@ -349,6 +349,7 @@
     <string name="tab_tracking">記録中</string>
     <string name="tab_map">マップ</string>
     <string name="tab_laps">ラップ</string>
+    <string name="tab_power">パワー</string>
     <string name="tab_workouts">履歴</string>
 
     <!-- layouts -->

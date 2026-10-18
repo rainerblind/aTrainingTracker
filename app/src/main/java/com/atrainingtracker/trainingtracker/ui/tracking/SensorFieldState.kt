@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.ui.tracking
 
 import androidx.compose.ui.graphics.Color
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 
 /**
@@ -58,5 +60,73 @@ data class SensorFieldState(
     val zoneGaugeState: ZoneGaugeState? = null,
 
     // The optional state of the visual pedal power balance indicator bar (REQ-UI-377).
-    val pedalBalanceState: PedalBalanceState? = null
+    val pedalBalanceState: PedalBalanceState? = null,
+
+    // The canonical sensor type for dynamic tuning visibility gating (REQ-UI-409.3).
+    val sensorType: SensorType? = null
 )
+
+/**
+ * Evaluates whether a given [sensorType] is visible under the active [tuningConfig] (REQ-UI-409.3).
+ *
+ * - Coggan metrics ([SensorType.NORMALIZED_POWER], [SensorType.INTENSITY_FACTOR], [SensorType.TSS])
+ *   are visible only when [TuningConfig.enableCogganPowerMetrics] is `true`.
+ * - Skiba Critical Power / W'bal ([SensorType.W_PRIME_BAL]) is visible only when
+ *   [TuningConfig.enableCriticalPowerModel] is `true`.
+ * - When [tuningConfig] is `null` (e.g. during cold app boot), falls back to [TuningConfig] defaults.
+ */
+fun isSensorTypeVisibleForTuning(
+    sensorType: SensorType?,
+    tuningConfig: TuningConfig? = null
+): Boolean {
+    if (sensorType == null) return true
+    val effectiveConfig = tuningConfig ?: TuningConfig()
+    return when (sensorType) {
+        SensorType.NORMALIZED_POWER,
+        SensorType.INTENSITY_FACTOR,
+        SensorType.TSS -> effectiveConfig.enableCogganPowerMetrics
+        SensorType.W_PRIME_BAL -> effectiveConfig.enableCriticalPowerModel
+        else -> true
+    }
+}
+
+/**
+ * Pure view-only filter for [fields] based on [tuningConfig] and [screenMode] (REQ-UI-409.3).
+ *
+ * In [ScreenMode.CONFIGURATION], all fields remain visible so layout editing never hides persisted
+ * database rows or corrupts row/column indices.
+ */
+fun filterVisibleFieldsForTuning(
+    fields: List<SensorFieldState>,
+    tuningConfig: TuningConfig? = null,
+    screenMode: ScreenMode = ScreenMode.TRACKING
+): List<SensorFieldState> {
+    if (screenMode == ScreenMode.CONFIGURATION) {
+        return fields
+    }
+    return fields.filter { isSensorTypeVisibleForTuning(it.sensorType, tuningConfig) }
+}
+
+/**
+ * Pure view-only row-packing projection for cockpit rendering (REQ-UI-409.3).
+ *
+ * Groups visible fields by their persisted [SensorFieldState.rowNr] in ascending order and sorts
+ * each non-empty row's fields by [SensorFieldState.colNr] ascending.
+ *
+ * Strict View-Only Invariant: This function never mutates [SensorFieldState.rowNr] or
+ * [SensorFieldState.colNr] and never writes to SQLite, guaranteeing 100% round-trip restoration
+ * when a physiological model toggle is switched OFF and back ON.
+ */
+fun packVisibleRowsForTuning(
+    fields: List<SensorFieldState>,
+    tuningConfig: TuningConfig? = null,
+    screenMode: ScreenMode = ScreenMode.TRACKING
+): List<List<SensorFieldState>> {
+    val visible = filterVisibleFieldsForTuning(fields, tuningConfig, screenMode)
+    if (visible.isEmpty()) return emptyList()
+    return visible
+        .groupBy { it.rowNr }
+        .toSortedMap()
+        .values
+        .map { rowFields -> rowFields.sortedBy { it.colNr } }
+}
