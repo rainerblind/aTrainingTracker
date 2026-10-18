@@ -2079,4 +2079,16 @@
     <string name="workout_detail_tabs_reset_defaults">Standard-Tabs wiederherstellen</string>
     <string name="workout_detail_tabs_sections_header">Zugewiesene Sektionen</string>
     <string name="workout_detail_tabs_map_pinned_hint">Die Karte wird im Tab immer oben fixiert</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">Abschnittstrennlinie hinzufügen</string>
+    <string name="cockpit_section_divider_edit">Abschnittstrennlinie bearbeiten</string>
+    <string name="cockpit_section_divider_dialog_title">Abschnittstrennlinie</string>
+    <string name="cockpit_section_divider_title_label">Mini-Titel (optional)</string>
+    <string name="cockpit_section_divider_chip_power">Leistung</string>
+    <string name="cockpit_section_divider_chip_heart_rate">Puls</string>
+    <string name="cockpit_section_divider_chip_lap">Runde</string>
+    <string name="cockpit_section_divider_chip_pacing">Pacing</string>
+    <string name="cockpit_section_divider_chip_navigation">Navigation</string>
+    <string name="cockpit_section_divider_chip_total">Gesamt</string>
+    <string name="cockpit_section_divider_delete">Trennlinie entfernen</string>
 </resources>

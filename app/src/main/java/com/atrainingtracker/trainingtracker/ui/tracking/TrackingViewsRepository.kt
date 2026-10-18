@@ -60,6 +60,16 @@ data class TrackingViewInfo(
     val elevationProfileLookahead: Int = 2000
 )
 
+/**
+ * Data class representing a horizontal section divider configuration for Cockpit rows (REQ-UI-411).
+ */
+data class SectionDividerInfo(
+    val id: Long = 0,
+    val viewId: Long,
+    val rowNr: Int,
+    val title: String? = null
+)
+
 
 /**
  * A data class to hold the complete configuration for a single sensor field,
@@ -580,6 +590,44 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         }
 
         // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    // --- Section Dividers (REQ-UI-411) ---
+
+    fun getSectionDividersFlow(tabViewId: Long): Flow<List<SectionDividerInfo>> {
+        return configUpdateTrigger.map {
+            fetchSectionDividers(tabViewId)
+        }.flowOn(Dispatchers.IO)
+    }
+
+    private fun fetchSectionDividers(tabViewId: Long): List<SectionDividerInfo> {
+        val list = viewsDbManager.getSectionDividers(tabViewId)
+        return list.map {
+            SectionDividerInfo(
+                id = it.id(),
+                viewId = it.viewId(),
+                rowNr = it.rowNr(),
+                title = it.title()
+            )
+        }
+    }
+
+    suspend fun setSectionDivider(viewId: Long, rowNr: Int, title: String?) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.setSectionDivider(viewId, rowNr, title)
+        }
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun deleteSectionDivider(viewId: Long, rowNr: Int) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.deleteSectionDivider(viewId, rowNr)
+        }
         withContext(Dispatchers.Main) {
             configUpdateTrigger.value++
         }

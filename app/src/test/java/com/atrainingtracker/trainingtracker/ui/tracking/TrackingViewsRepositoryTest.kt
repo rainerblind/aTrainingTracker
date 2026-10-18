@@ -309,4 +309,49 @@ class TrackingViewsRepositoryTest {
             mockViewsDbManager.updateShowNavigationHints(101L, false)
         }
     }
+
+    @Test
+    fun getSectionDividersFlow_mapsDataCorrectly() = runBlocking {
+        val repository = TrackingViewsRepository.getInstance(mockContext)
+        val mockData = listOf(
+            TrackingViewsDatabaseManager.SectionDividerData(1L, 42L, 2, "HEART RATE"),
+            TrackingViewsDatabaseManager.SectionDividerData(2L, 42L, 4, null)
+        )
+        every { mockViewsDbManager.getSectionDividers(42L) } returns mockData
+
+        val dividers = repository.getSectionDividersFlow(42L).first()
+
+        assertEquals(2, dividers.size)
+        assertEquals(1L, dividers[0].id)
+        assertEquals(42L, dividers[0].viewId)
+        assertEquals(2, dividers[0].rowNr)
+        assertEquals("HEART RATE", dividers[0].title)
+
+        assertEquals(2L, dividers[1].id)
+        assertEquals(42L, dividers[1].viewId)
+        assertEquals(4, dividers[1].rowNr)
+        assertNull(dividers[1].title)
+    }
+
+    @Test
+    fun setSectionDivider_delegatesToViewsDbManager() = runBlocking {
+        val repository = TrackingViewsRepository.getInstance(mockContext)
+
+        repository.setSectionDivider(42L, 3, "POWER")
+
+        verify(exactly = 1) {
+            mockViewsDbManager.setSectionDivider(42L, 3, "POWER")
+        }
+    }
+
+    @Test
+    fun deleteSectionDivider_delegatesToViewsDbManager() = runBlocking {
+        val repository = TrackingViewsRepository.getInstance(mockContext)
+
+        repository.deleteSectionDivider(42L, 3)
+
+        verify(exactly = 1) {
+            mockViewsDbManager.deleteSectionDivider(42L, 3)
+        }
+    }
 }

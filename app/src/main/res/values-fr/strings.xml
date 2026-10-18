@@ -1993,4 +1993,16 @@
     <string name="workout_detail_tabs_reset_defaults">Réinitialiser les onglets par défaut</string>
     <string name="workout_detail_tabs_sections_header">Sections attribuées</string>
     <string name="workout_detail_tabs_map_pinned_hint">La carte est toujours fixée en haut lorsqu\'elle est activée dans un onglet</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">Ajouter un séparateur de section</string>
+    <string name="cockpit_section_divider_edit">Modifier le séparateur de section</string>
+    <string name="cockpit_section_divider_dialog_title">Séparateur de section</string>
+    <string name="cockpit_section_divider_title_label">Mini-titre (facultatif)</string>
+    <string name="cockpit_section_divider_chip_power">Puissance</string>
+    <string name="cockpit_section_divider_chip_heart_rate">Fréquence cardiaque</string>
+    <string name="cockpit_section_divider_chip_lap">Tour</string>
+    <string name="cockpit_section_divider_chip_pacing">Allure</string>
+    <string name="cockpit_section_divider_chip_navigation">Navigation</string>
+    <string name="cockpit_section_divider_chip_total">Total</string>
+    <string name="cockpit_section_divider_delete">Supprimer le séparateur</string>
 </resources>

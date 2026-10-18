@@ -1994,5 +1994,17 @@
     <string name="workout_detail_tabs_reset_defaults">Ripristina schede predefinite</string>
     <string name="workout_detail_tabs_sections_header">Sezioni assegnate</string>
     <string name="workout_detail_tabs_map_pinned_hint">La mappa è sempre fissata in alto quando è attiva in una scheda</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">Aggiungi separatore di sezione</string>
+    <string name="cockpit_section_divider_edit">Modifica separatore di sezione</string>
+    <string name="cockpit_section_divider_dialog_title">Separatore di sezione</string>
+    <string name="cockpit_section_divider_title_label">Mini-titolo (opzionale)</string>
+    <string name="cockpit_section_divider_chip_power">Potenza</string>
+    <string name="cockpit_section_divider_chip_heart_rate">Frequenza cardiaca</string>
+    <string name="cockpit_section_divider_chip_lap">Giro</string>
+    <string name="cockpit_section_divider_chip_pacing">Ritmo</string>
+    <string name="cockpit_section_divider_chip_navigation">Navigazione</string>
+    <string name="cockpit_section_divider_chip_total">Totale</string>
+    <string name="cockpit_section_divider_delete">Rimuovi separatore</string>
 </resources>
 

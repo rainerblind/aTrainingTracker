@@ -1994,4 +1994,16 @@
     <string name="workout_detail_tabs_reset_defaults">Restaurar pestañas predeterminadas</string>
     <string name="workout_detail_tabs_sections_header">Secciones asignadas</string>
     <string name="workout_detail_tabs_map_pinned_hint">El mapa siempre se fija en la parte superior de la pestaña</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">Añadir separador de sección</string>
+    <string name="cockpit_section_divider_edit">Editar separador de sección</string>
+    <string name="cockpit_section_divider_dialog_title">Separador de sección</string>
+    <string name="cockpit_section_divider_title_label">Minitítulo (opcional)</string>
+    <string name="cockpit_section_divider_chip_power">Potencia</string>
+    <string name="cockpit_section_divider_chip_heart_rate">Pulso</string>
+    <string name="cockpit_section_divider_chip_lap">Vuelta</string>
+    <string name="cockpit_section_divider_chip_pacing">Ritmo</string>
+    <string name="cockpit_section_divider_chip_navigation">Navegación</string>
+    <string name="cockpit_section_divider_chip_total">Total</string>
+    <string name="cockpit_section_divider_delete">Eliminar separador</string>
 </resources>

@@ -110,4 +110,35 @@ class SensorGridLocalizationTest {
             )
         }
     }
+
+    @Test
+    fun testSectionDividerStringsParityAcrossAllLocales() {
+        val resDir = findResDir()
+        val expectedKeys = listOf(
+            "cockpit_section_divider_add",
+            "cockpit_section_divider_edit",
+            "cockpit_section_divider_dialog_title",
+            "cockpit_section_divider_title_label",
+            "cockpit_section_divider_chip_power",
+            "cockpit_section_divider_chip_heart_rate",
+            "cockpit_section_divider_chip_lap",
+            "cockpit_section_divider_chip_pacing",
+            "cockpit_section_divider_chip_navigation",
+            "cockpit_section_divider_chip_total",
+            "cockpit_section_divider_delete"
+        )
+
+        for (suffix in locales) {
+            val dirName = if (suffix.isEmpty()) "values" else "values$suffix"
+            val stringsFile = File(resDir, "$dirName/strings.xml")
+            assertTrue("Expected strings.xml to exist in $dirName", stringsFile.exists())
+
+            for (key in expectedKeys) {
+                val value = parseStringResource(stringsFile, key)
+                assertNotNull("Missing $key in $dirName", value)
+                assertTrue("$key in $dirName must not be blank", value!!.isNotBlank())
+            }
+        }
+    }
 }
+

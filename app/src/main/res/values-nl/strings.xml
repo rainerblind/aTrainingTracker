@@ -1993,5 +1993,17 @@
     <string name="workout_detail_tabs_reset_defaults">Standaardtabbladen herstellen</string>
     <string name="workout_detail_tabs_sections_header">Toegewezen secties</string>
     <string name="workout_detail_tabs_map_pinned_hint">De kaart wordt altijd bovenaan het tabblad vastgezet</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">Sectiescheiding toevoegen</string>
+    <string name="cockpit_section_divider_edit">Sectiescheiding bewerken</string>
+    <string name="cockpit_section_divider_dialog_title">Sectiescheiding</string>
+    <string name="cockpit_section_divider_title_label">Minititel (optioneel)</string>
+    <string name="cockpit_section_divider_chip_power">Vermogen</string>
+    <string name="cockpit_section_divider_chip_heart_rate">Hartslag</string>
+    <string name="cockpit_section_divider_chip_lap">Ronde</string>
+    <string name="cockpit_section_divider_chip_pacing">Pacing</string>
+    <string name="cockpit_section_divider_chip_navigation">Navigatie</string>
+    <string name="cockpit_section_divider_chip_total">Totaal</string>
+    <string name="cockpit_section_divider_delete">Scheiding verwijderen</string>
 </resources>
 

@@ -1992,5 +1992,17 @@
     <string name="workout_detail_tabs_reset_defaults">Restaurar abas padrão</string>
     <string name="workout_detail_tabs_sections_header">Seções atribuídas</string>
     <string name="workout_detail_tabs_map_pinned_hint">O mapa fica sempre fixado no topo quando ativado em uma aba</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">Adicionar separador de seção</string>
+    <string name="cockpit_section_divider_edit">Editar separador de seção</string>
+    <string name="cockpit_section_divider_dialog_title">Separador de seção</string>
+    <string name="cockpit_section_divider_title_label">Minitítulo (opcional)</string>
+    <string name="cockpit_section_divider_chip_power">Potência</string>
+    <string name="cockpit_section_divider_chip_heart_rate">Frequência cardíaca</string>
+    <string name="cockpit_section_divider_chip_lap">Volta</string>
+    <string name="cockpit_section_divider_chip_pacing">Ritmo</string>
+    <string name="cockpit_section_divider_chip_navigation">Navegação</string>
+    <string name="cockpit_section_divider_chip_total">Total</string>
+    <string name="cockpit_section_divider_delete">Remover separador</string>
 </resources>
 

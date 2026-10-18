@@ -58,6 +58,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.PedalPowerBalanceMath
 import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMath
 import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.SectionDividerInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -84,6 +85,7 @@ data class TrackingScreenState(
     val elevationProfileScope: ElevationProfileScope = ElevationProfileScope.FULL_ROUTE,
     val elevationProfileLookahead: Int = 2000,
     val fields: List<SensorFieldState> = emptyList(),
+    val sectionDividers: List<SectionDividerInfo> = emptyList(),
     val tuningConfig: TuningConfig = TuningConfig(),
     val pathPoints: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint> = emptyList(),
     val mapState: TrackingMapState = TrackingMapState(showMap = showMap),
@@ -396,8 +398,9 @@ class TrackingViewModel(
                 trackingViewsRepository.getSensorFieldConfigsForView(viewId),
                 banalServiceRepository.allFilteredSensorData,
                 trackingViewsRepository.getTrackingViewInfoFlow(viewId),
-                banalServiceRepository.currentPathPoints
-            ) { configs, allSensorData, viewInfo, livePathPoints ->
+                banalServiceRepository.currentPathPoints,
+                trackingViewsRepository.getSectionDividersFlow(viewId)
+            ) { configs, allSensorData, viewInfo, livePathPoints, sectionDividers ->
                 // --- Step 1: Create the base state from the latest configurations ---
                 val currentActivity = banalServiceRepository.activityType.value
                 val baseFields = configs.map { config ->
@@ -449,6 +452,7 @@ class TrackingViewModel(
                 val currentMap = _mapState.value
                 TrackingScreenState(
                     fields = finalFields,
+                    sectionDividers = sectionDividers,
                     tuningConfig = _tuningConfig.value,
                     showMap = viewInfo?.showMap ?: false,
                     showLiveSegments = viewInfo?.showLiveSegments ?: false,
@@ -726,6 +730,17 @@ class TrackingViewModel(
         }
     }
 
+    fun onSetSectionDivider(rowNr: Int, title: String?) {
+        viewModelScope.launch {
+            trackingViewsRepository.setSectionDivider(viewId, rowNr, title)
+        }
+    }
+
+    fun onDeleteSectionDivider(rowNr: Int) {
+        viewModelScope.launch {
+            trackingViewsRepository.deleteSectionDivider(viewId, rowNr)
+        }
+    }
 }
 
 /**

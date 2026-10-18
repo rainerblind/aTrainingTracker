@@ -1973,5 +1973,17 @@
     <string name="workout_detail_tabs_reset_defaults">デフォルトのタブに戻す</string>
     <string name="workout_detail_tabs_sections_header">割り当てられたセクション</string>
     <string name="workout_detail_tabs_map_pinned_hint">地図が有効な場合、常にタブの上部に固定されます</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">セクション区切り線を追加</string>
+    <string name="cockpit_section_divider_edit">セクション区切り線を編集</string>
+    <string name="cockpit_section_divider_dialog_title">セクション区切り線</string>
+    <string name="cockpit_section_divider_title_label">ミニタイトル（省略可能）</string>
+    <string name="cockpit_section_divider_chip_power">パワー</string>
+    <string name="cockpit_section_divider_chip_heart_rate">心拍数</string>
+    <string name="cockpit_section_divider_chip_lap">ラップ</string>
+    <string name="cockpit_section_divider_chip_pacing">ペーシング</string>
+    <string name="cockpit_section_divider_chip_navigation">ナビゲーション</string>
+    <string name="cockpit_section_divider_chip_total">合計</string>
+    <string name="cockpit_section_divider_delete">区切り線を削除</string>
 </resources>
 
