@@ -159,6 +159,7 @@ public class TrackerService extends Service {
         SENSORS_TO_TRACK.add(SensorType.W_PRIME_BAL);
     }
     
+    public static final String ACTION_STOP = "com.atrainingtracker.trainingtracker.tracker.TrackerService.ACTION_STOP";
     public static final String START_TYPE = "START_TYPE";
     private static final String TAG = "TrackerService";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
@@ -172,6 +173,8 @@ public class TrackerService extends Service {
     private final ScheduledExecutorService mScheduler = Executors.newScheduledThreadPool(1);
     private final java.util.concurrent.ExecutorService mDbExecutor = Executors.newSingleThreadExecutor();
     private volatile CompletableFuture<Void> mFinalizationFuture = CompletableFuture.completedFuture(null);
+    private volatile boolean mIsStopping = false;
+    private volatile boolean mBanalBound = false;
     // we assume that we start while the BANAL Service is searching
     protected volatile boolean mSearching = true;
     protected volatile boolean mCreateNewLapWhenConnectedToBanalService = false;
@@ -199,7 +202,8 @@ public class TrackerService extends Service {
 
     /**
      * Returns the {@link CompletableFuture} that completes once the terminal {@code onDestroy()}
-     * workout finalization task on {@code mDbExecutor} has finished ({@code REQ-TRK-033.2}).
+     * or {@code ACTION_STOP} workout finalization task on {@code mDbExecutor} has finished
+     * ({@code REQ-TRK-033.2}, {@code REQ-TRK-034.3}).
      */
     @VisibleForTesting
     @NonNull
@@ -221,6 +225,36 @@ public class TrackerService extends Service {
     @VisibleForTesting
     public boolean isDbExecutorShutdownForTesting() {
         return mDbExecutor.isShutdown();
+    }
+
+    /**
+     * Returns whether the service is currently executing graceful stop finalization ({@code REQ-TRK-034.2}).
+     */
+    @VisibleForTesting
+    public boolean isStoppingForTesting() {
+        return mIsStopping;
+    }
+
+    /**
+     * Returns whether an instance of {@link TrackerService} is currently active ({@code REQ-TRK-034.1}).
+     */
+    public static boolean isRunning() {
+        return sInstance != null;
+    }
+
+    @Nullable
+    public static TrackerService getInstance() {
+        return sInstance;
+    }
+
+    @VisibleForTesting
+    public static void setInstanceForTesting(@Nullable TrackerService instance) {
+        sInstance = instance;
+    }
+
+    @VisibleForTesting
+    public void setBanalBoundForTesting(boolean bound) {
+        mBanalBound = bound;
     }
 
     private final AutoPauseManager mAutoPauseManager = new AutoPauseManager();
@@ -496,6 +530,7 @@ public class TrackerService extends Service {
 
         // request bind to the BANAL Service
         bindService(new Intent(this, BANALService.class), mBanalConnection, Context.BIND_AUTO_CREATE);
+        mBanalBound = true;
 
         ContextCompat.registerReceiver(this, mSearchingFinishedReceiver, mSearchingFinishedFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mAltitudeCorrectionReceiver, mAltitudeCorrectionFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -578,6 +613,10 @@ public class TrackerService extends Service {
             Log.d(TAG, "onStartCommand Received start id " + startId + ": " + intent);
         }
 
+        if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+            return handleActionStop();
+        }
+
         // On Android 14+ (API 34+), promoting a background service to a foreground service of type location
         // requires background location permission. If the service was recreated by the OS after being killed
         // (intent == null) and the user has not granted background location permission, starting the FGS
@@ -630,7 +669,6 @@ public class TrackerService extends Service {
                             handle.cancel(true);
                             mTrackerHandle = null;
                         }
-                        TrainingApplication.resetTrackingStateOnAbort();
                         runOnMainThread(this::handleTrackingAborted);
                         showTrackingInterruptedNotification();
                         performStopSelf();
@@ -746,6 +784,94 @@ public class TrackerService extends Service {
         } catch (Throwable ignored) {
             // Safe fallback in unmocked unit test environments
         }
+    }
+
+    protected synchronized void safeUnbindBanalService() {
+        try {
+            if (mBanalBound || mBanalService != null) {
+                unbindService(mBanalConnection);
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Error unbinding BANALService", t);
+        } finally {
+            mBanalBound = false;
+        }
+    }
+
+    /**
+     * Handles graceful asynchronous workout finalization under foreground service priority
+     * ({@code REQ-TRK-034.2}, {@code REQ-TRK-034.3}).
+     *
+     * <p>1. Shuts down {@code mScheduler} immediately to prevent any further 1 Hz ticks from being enqueued.
+     * <p>2. Retains active foreground service priority and notification so Android's Low Memory Killer
+     * does not terminate the process during lengthy database finalization on {@code mDbExecutor}.
+     * <p>3. Enqueues {@code finalizationTask} onto the single-threaded FIFO {@code mDbExecutor}.
+     * <p>4. In the completion callback of {@code finalizationTask}, dispatches main-thread unbinding
+     * of {@code mBanalConnection}, {@code performStopForeground()}, and {@code performStopSelf()}.
+     */
+    protected int handleActionStop() {
+        if (mIsStopping) {
+            Log.w(TAG, "handleActionStop: ACTION_STOP received while already stopping; ignoring duplicate");
+            return Service.START_NOT_STICKY;
+        }
+        if (mWorkoutID <= 0 && mBaseFileName == null) {
+            Log.w(TAG, "handleActionStop: ACTION_STOP received while not tracking; stopping self");
+            performStopSelf();
+            return Service.START_NOT_STICKY;
+        }
+        mIsStopping = true;
+        if (DEBUG) Log.d(TAG, "handleActionStop: initiating foreground-protected async finalization");
+
+        ScheduledFuture<?> handle = mTrackerHandle;
+        if (handle != null) {
+            handle.cancel(true);
+            mTrackerHandle = null;
+        }
+        mScheduler.shutdownNow();
+
+        mAutoPauseManager.release();
+
+        LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mUserSelectedSportTypeChangedReceiver, TAG);
+
+        final boolean interrupted = mTrackingInterrupted;
+        final CompletableFuture<Void> finalizationFuture = new CompletableFuture<>();
+        mFinalizationFuture = finalizationFuture;
+
+        Runnable finalizationTask = () -> {
+            try {
+                if (!interrupted) {
+                    endWorkout();
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "Unexpected error during async workout finalization in handleActionStop", t);
+            } finally {
+                mBanalService = null;
+                releaseWakeLock();
+                runOnMainThread(() -> {
+                    try {
+                        safeUnbindBanalService();
+                        performStopForeground();
+                        performStopSelf();
+                    } finally {
+                        finalizationFuture.complete(null);
+                    }
+                });
+            }
+        };
+
+        try {
+            mDbExecutor.execute(finalizationTask);
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            Log.w(TAG, "mDbExecutor already shut down; running finalizationTask inline", e);
+            finalizationTask.run();
+        } finally {
+            mDbExecutor.shutdown();
+        }
+
+        return Service.START_NOT_STICKY;
     }
 
     /**
@@ -912,7 +1038,20 @@ public class TrackerService extends Service {
         LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mUserSelectedSportTypeChangedReceiver, TAG);
 
-        unbindService(mBanalConnection);
+        if (mIsStopping) {
+            CompletableFuture<Void> future = mFinalizationFuture;
+            if (future != null && !future.isDone()) {
+                try {
+                    future.get(2, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (Throwable ignored) {
+                }
+            }
+            safeUnbindBanalService();
+            performStopForeground();
+            return;
+        }
+
+        safeUnbindBanalService();
         performStopForeground();
 
         final boolean interrupted = mTrackingInterrupted;

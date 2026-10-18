@@ -75,14 +75,38 @@ class TrackerServiceFinalizationTest {
         var testSdkInt = Build.VERSION_CODES.UPSIDE_DOWN_CAKE
         var healthGranted = false
 
+        var performStopForegroundCalled = false
+        var performStopSelfCalled = false
+        var unbindServiceCalled = false
+        var banalServicePresentDuringEndWorkout: Boolean? = null
+        var endWorkoutLatchHook: (() -> Unit)? = null
+        var onEndWorkoutAction: (() -> Unit)? = null
+        var onUnbindServiceAction: (() -> Unit)? = null
+
         override fun getBuildVersionSdkInt(): Int = testSdkInt
         override fun hasHealthPermission(): Boolean = healthGranted
 
         override fun endWorkout() {
             endWorkoutCalled = true
+            banalServicePresentDuringEndWorkout = (mBanalService != null)
+            onEndWorkoutAction?.invoke()
+            endWorkoutLatchHook?.invoke()
             if (delegateToRealEndWorkout) {
                 super.endWorkout()
             }
+        }
+
+        override fun performStopForeground() {
+            performStopForegroundCalled = true
+            super.performStopForeground()
+        }
+
+        override fun performStopSelf() {
+            performStopSelfCalled = true
+        }
+
+        override fun runOnMainThread(action: Runnable) {
+            action.run()
         }
 
         override fun getSportTypeId(): Long {
@@ -110,7 +134,8 @@ class TrackerServiceFinalizationTest {
         }
 
         override fun unbindService(conn: ServiceConnection) {
-            // No-op in unit tests
+            unbindServiceCalled = true
+            onUnbindServiceAction?.invoke()
         }
 
         override fun sendBroadcast(intent: Intent?) {
@@ -531,6 +556,157 @@ class TrackerServiceFinalizationTest {
         realService.finalizationFuture.get(2, java.util.concurrent.TimeUnit.SECONDS)
         assertFalse("endWorkout must NOT be called when mTrackingInterrupted is true", realService.endWorkoutCalled)
         org.junit.Assert.assertNull("mBanalService must be nulled in finally block", banalField.get(realService))
+    }
+
+    private fun createStopIntent(): Intent {
+        val intent = mockk<Intent>(relaxed = true)
+        every { intent.action } returns TrackerService.ACTION_STOP
+        return intent
+    }
+
+    /**
+     * TST-TRK-026.1: Verifies that when ACTION_STOP is received, performStopForeground() and
+     * performStopSelf() are NOT called while endWorkout() is executing on mDbExecutor, and are
+     * called on the main thread after the finalization task finishes (REQ-TRK-034.2, REQ-TRK-034.3).
+     */
+    @Test
+    fun testActionStop_MaintainsForegroundStatusDuringEndWorkoutAndStopsSelfAfterCompletion() {
+        val realService = TestableTrackerService()
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(realService, 1001L)
+        val baseFileNameField = TrackerService::class.java.getDeclaredField("mBaseFileName").apply { isAccessible = true }
+        baseFileNameField.set(realService, "2026-10-18_120000")
+
+        val endWorkoutStartedLatch = java.util.concurrent.CountDownLatch(1)
+        val endWorkoutBlockLatch = java.util.concurrent.CountDownLatch(1)
+
+        realService.endWorkoutLatchHook = {
+            endWorkoutStartedLatch.countDown()
+            endWorkoutBlockLatch.await(3, java.util.concurrent.TimeUnit.SECONDS)
+        }
+
+        val stopIntent = createStopIntent()
+        val result = realService.onStartCommand(stopIntent, 0, 1)
+        assertEquals(android.app.Service.START_NOT_STICKY, result)
+
+        // Wait until endWorkout() is currently executing on mDbExecutor
+        assertTrue("endWorkout must start executing", endWorkoutStartedLatch.await(2, java.util.concurrent.TimeUnit.SECONDS))
+
+        // Assert: While endWorkout() is running, stopForeground and stopSelf must NOT have been called
+        assertFalse("stopForeground must NOT be called while endWorkout is running", realService.performStopForegroundCalled)
+        assertFalse("stopSelf must NOT be called while endWorkout is running", realService.performStopSelfCalled)
+        assertTrue("isStopping must be true", realService.isStoppingForTesting)
+
+        // Release endWorkout to complete
+        endWorkoutBlockLatch.countDown()
+
+        // Wait for finalizationFuture
+        realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
+
+        // Assert: After completion, stopForeground and stopSelf were invoked
+        assertTrue("endWorkout must be called", realService.endWorkoutCalled)
+        assertTrue("performStopForeground must be called after finalization completes", realService.performStopForegroundCalled)
+        assertTrue("performStopSelf must be called after finalization completes", realService.performStopSelfCalled)
+    }
+
+    /**
+     * TST-TRK-026.2: Verifies that mBanalService remains non-null during endWorkout() execution,
+     * and safeUnbindBanalService() is called only after endWorkout() finishes (REQ-TRK-034.3).
+     */
+    @Test
+    fun testActionStop_KeepsBanalServiceBoundUntilEndWorkoutCompletes() {
+        val realService = TestableTrackerService()
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(realService, 2002L)
+        val baseFileNameField = TrackerService::class.java.getDeclaredField("mBaseFileName").apply { isAccessible = true }
+        baseFileNameField.set(realService, "2026-10-18_120000")
+
+        val mockBanal = mockk<com.atrainingtracker.banalservice.BANALService.BANALServiceComm>(relaxed = true)
+        val banalField = TrackerService::class.java.getDeclaredField("mBanalService").apply { isAccessible = true }
+        banalField.set(realService, mockBanal)
+        realService.setBanalBoundForTesting(true)
+
+        val unbindOrder = java.util.Collections.synchronizedList(mutableListOf<String>())
+        realService.onEndWorkoutAction = { unbindOrder.add("endWorkout") }
+        realService.onUnbindServiceAction = { unbindOrder.add("unbindService") }
+
+        val stopIntent = createStopIntent()
+        realService.onStartCommand(stopIntent, 0, 1)
+
+        realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
+
+        assertTrue("mBanalService must be non-null during endWorkout", realService.banalServicePresentDuringEndWorkout == true)
+        assertEquals("endWorkout must complete before unbindService", listOf("endWorkout", "unbindService"), unbindOrder)
+        assertTrue("unbindService must have been called", realService.unbindServiceCalled)
+        org.junit.Assert.assertNull("mBanalService must be cleared to null after completion", banalField.get(realService))
+    }
+
+    /**
+     * TST-TRK-026.3: Verifies that delivering a duplicate ACTION_STOP while stopping is already in progress
+     * safely returns START_NOT_STICKY and does not submit duplicate finalization tasks (REQ-TRK-034.2).
+     */
+    @Test
+    fun testActionStop_WhenDuplicateStopReceived_IgnoresSecondStopSafely() {
+        val realService = TestableTrackerService()
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(realService, 3003L)
+        val baseFileNameField = TrackerService::class.java.getDeclaredField("mBaseFileName").apply { isAccessible = true }
+        baseFileNameField.set(realService, "2026-10-18_120000")
+
+        val endWorkoutStartedLatch = java.util.concurrent.CountDownLatch(1)
+        val endWorkoutBlockLatch = java.util.concurrent.CountDownLatch(1)
+        var endWorkoutCount = 0
+
+        realService.endWorkoutLatchHook = {
+            endWorkoutCount++
+            endWorkoutStartedLatch.countDown()
+            endWorkoutBlockLatch.await(3, java.util.concurrent.TimeUnit.SECONDS)
+        }
+
+        // First stop
+        val res1 = realService.onStartCommand(createStopIntent(), 0, 1)
+        assertEquals(android.app.Service.START_NOT_STICKY, res1)
+        assertTrue(endWorkoutStartedLatch.await(2, java.util.concurrent.TimeUnit.SECONDS))
+
+        // Second duplicate stop while still running
+        val res2 = realService.onStartCommand(createStopIntent(), 0, 2)
+        assertEquals(android.app.Service.START_NOT_STICKY, res2)
+
+        endWorkoutBlockLatch.countDown()
+        realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
+
+        assertEquals("endWorkout must only be executed once", 1, endWorkoutCount)
+    }
+
+    /**
+     * TST-TRK-026.3: Verifies that if ACTION_STOP is received when not tracking, the service
+     * calls performStopSelf() immediately and does not run endWorkout().
+     */
+    @Test
+    fun testActionStop_WhenNotTracking_CallsStopSelfImmediately() {
+        val realService = TestableTrackerService()
+
+        val res = realService.onStartCommand(createStopIntent(), 0, 1)
+        assertEquals(android.app.Service.START_NOT_STICKY, res)
+        assertTrue("performStopSelf must be called", realService.performStopSelfCalled)
+        assertFalse("endWorkout must NOT be called", realService.endWorkoutCalled)
+    }
+
+    /**
+     * TST-TRK-026.4: Verifies TrackerService.isRunning() and setInstanceForTesting lifecycle (REQ-TRK-034.1).
+     */
+    @Test
+    fun testTrackerService_IsRunningLifecycle() {
+        TrackerService.setInstanceForTesting(null)
+        assertFalse("isRunning must be false when instance is null", TrackerService.isRunning())
+
+        val mockService = TestableTrackerService()
+        TrackerService.setInstanceForTesting(mockService)
+        assertTrue("isRunning must be true when instance is set", TrackerService.isRunning())
+        assertEquals(mockService, TrackerService.getInstance())
+
+        TrackerService.setInstanceForTesting(null)
+        assertFalse("isRunning must be false after reset", TrackerService.isRunning())
     }
 }
 

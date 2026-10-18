@@ -1582,7 +1582,13 @@ public class TrainingApplication extends Application {
 
         stopPebbleWatchapp();
 
-        stopService(new Intent(this, TrackerService.class));
+        if (TrackerService.isRunning()) {
+            Intent stopIntent = new Intent(this, TrackerService.class);
+            stopIntent.setAction(TrackerService.ACTION_STOP);
+            LifecycleUtils.safeStartService(this, stopIntent, TAG);
+        } else {
+            stopService(new Intent(this, TrackerService.class));
+        }
 
         cTrackingMode = TrackingMode.READY;
         sActiveWorkoutId = -1;
