@@ -51,7 +51,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
 
 /**
  * Orchestrates all persistent storage operations for high-level workout session metadata.
@@ -1166,12 +1165,12 @@ public class WorkoutSummariesDatabaseManager {
 
     /**
      * Sanitizes historical workouts contaminated with runaway altitude shifts (REQ-CON-017).
-     * Identifies workouts where maximum recorded altitude exceeds 4000m while minimum is below 1000m,
-     * clamps non-physical leading staircase points in ALTITUDE_STREAM to the valid ground baseline,
-     * recalculates EXTREMUM values (MIN, MAX, AVG), and updates database tables atomically.
      *
+     * @deprecated Automated background mutation of historical workout altitude data is prohibited (REQ-CON-017, ATT-3990).
+     * Database opening MUST remain passive and side-effect free to preserve legitimate mountain climbs.
      * @return count of sanitized workouts
      */
+    @Deprecated
     public int sanitizeCorruptedAltitudeWorkouts() {
         SQLiteDatabase db = getDatabase();
         int repairedCount = 0;
@@ -1688,15 +1687,7 @@ public class WorkoutSummariesDatabaseManager {
 
         @Override
         public void onOpen(@NonNull SQLiteDatabase db) {
-            super.onOpen(db);
-            // Asynchronously sanitize any historical workouts corrupted with runaway altitude shifts (REQ-CON-017)
-            Executors.newSingleThreadExecutor().execute(() -> {
-                try {
-                    WorkoutSummariesDatabaseManager.getInstance(mContext).sanitizeCorruptedAltitudeWorkouts();
-                } catch (Exception e) {
-                    Log.w(TAG, "Error during automatic altitude sanitization: " + e.getMessage());
-                }
-            });
+            // REQ-CON-017 / ATT-3990: Passive hook; zero side-effects, zero mutations, zero thread allocations.
         }
 
         // Called only once, first time the DB is created
