@@ -10,7 +10,17 @@
 
 package com.atrainingtracker.trainingtracker.tracker.autopause
 
+import android.media.ToneGenerator
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.MySensor
+import com.atrainingtracker.banalservice.sensor.ProxySensor
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.verify
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -20,7 +30,8 @@ import org.junit.Test
 
 /**
  * Unit tests verifying AutoPauseManager state transitions, hysteresis, debounce,
- * stale packet TTL, sanitization, and manual mutex precedence (TST-TRK-010 / REQ-TRK-018).
+ * standstill silence handling, ProxySensor timestamp delegation, manual resume synchronization,
+ * and reusable ToneGenerator lifecycle (TST-TRK-010 / REQ-TRK-018, TST-TRK-020 / REQ-TRK-028).
  */
 class AutoPauseManagerTest {
 
@@ -29,13 +40,19 @@ class AutoPauseManagerTest {
 
     class TestAudioNotifier : AutoPauseAudioNotifier {
         val playedTones = mutableListOf<SoundCue>()
+        var releaseCount = 0
         override fun playTone(soundCue: SoundCue) {
             playedTones.add(soundCue)
+        }
+        override fun release() {
+            releaseCount++
         }
     }
 
     @Before
     fun setUp() {
+        TrainingApplication.setManualPauseLock(false, null)
+        TrainingApplication.setAutoPaused(false, null)
         mockAudioNotifier = TestAudioNotifier()
         autoPauseManager = AutoPauseManager(mockAudioNotifier)
     }
@@ -179,43 +196,46 @@ class AutoPauseManagerTest {
     }
 
     @Test
-    fun `TST-TRK-010_6 stale packet rejection triggers SENSOR_LOST and recovers on 2 ticks`() {
+    fun `TST-TRK-010_6 missing speed source or corrupt speed triggers SENSOR_LOST and recovers on 2 ticks`() {
         val config = AutoPauseConfig(bikeEnabled = true, debounceSec = 2)
         val now = 100000L
 
-        // Active tracking with valid packet at now - 6000ms (> 5000ms TTL)
+        // Active tracking without any registered speed source (hasSpeedSource = false, null speed, 0 timestamp)
         val transition = autoPauseManager.evaluateTick(
-            currentSpeedMps = 0.0,
-            packetTimestampMs = now - 6000L,
+            currentSpeedMps = null,
+            packetTimestampMs = 0L,
             currentTimestampMs = now,
             sportType = BSportType.BIKE,
             config = config,
-            manualPauseLocked = false
+            manualPauseLocked = false,
+            hasSpeedSource = false
         )
 
         assertEquals(AutoPauseState.SENSOR_LOST, transition.newState)
-        assertFalse("Must NOT assume standstill on stale packet", transition.triggerPause)
+        assertFalse("Must NOT assume standstill when no speed sensor is registered", transition.triggerPause)
         assertEquals("SENSOR_LOST_STALE_TTL_EXCEEDED", transition.auditLogEvent)
 
-        // Missing packet (null speed or 0 timestamp) keeps SENSOR_LOST
+        // Missing speed source continues to keep SENSOR_LOST
         val keepLost = autoPauseManager.evaluateTick(
             currentSpeedMps = null,
             packetTimestampMs = 0L,
             currentTimestampMs = now + 1000L,
             sportType = BSportType.BIKE,
             config = config,
-            manualPauseLocked = false
+            manualPauseLocked = false,
+            hasSpeedSource = false
         )
         assertEquals(AutoPauseState.SENSOR_LOST, keepLost.newState)
 
-        // Recovery: 1st fresh packet
+        // Recovery: 1st fresh packet from registered speed source
         val rec1 = autoPauseManager.evaluateTick(
             currentSpeedMps = 5.0,
             packetTimestampMs = now + 2000L,
             currentTimestampMs = now + 2000L,
             sportType = BSportType.BIKE,
             config = config,
-            manualPauseLocked = false
+            manualPauseLocked = false,
+            hasSpeedSource = true
         )
         assertEquals(AutoPauseState.SENSOR_LOST, rec1.newState)
         assertEquals(1, autoPauseManager.sensorLostRecoveryTicks)
@@ -227,7 +247,8 @@ class AutoPauseManagerTest {
             currentTimestampMs = now + 3000L,
             sportType = BSportType.BIKE,
             config = config,
-            manualPauseLocked = false
+            manualPauseLocked = false,
+            hasSpeedSource = true
         )
         assertEquals(AutoPauseState.TRACKING, rec2.newState)
         assertEquals("SENSOR_LOST_RECOVERED", rec2.auditLogEvent)
@@ -461,5 +482,212 @@ class AutoPauseManagerTest {
         assertEquals(AutoPauseState.TRACKING, tick4.newState)
         assertTrue(tick4.triggerResume)
     }
+
+    @Test
+    fun `TST-TRK-020_1 MySensor tracks and propagates lastUpdateTimestamp`() {
+        val sensor = MySensor<Number>(null, SensorType.SPEED_mps)
+        assertEquals("Initial timestamp must be 0L before any newValue()", 0L, sensor.lastUpdateTimestamp)
+        assertEquals(0L, sensor.sensorData.timestamp)
+
+        val before = System.currentTimeMillis()
+        sensor.newValue(5.0)
+        val after = System.currentTimeMillis()
+
+        assertTrue("Timestamp must be >= before", sensor.lastUpdateTimestamp >= before)
+        assertTrue("Timestamp must be <= after", sensor.lastUpdateTimestamp <= after)
+        assertEquals(sensor.lastUpdateTimestamp, sensor.sensorData.timestamp)
+        assertEquals(5.0, sensor.sensorData.value)
+    }
+
+    @Test
+    fun `TST-TRK-020_2 ProxySensor delegates timestamp to source sensor and preserves null deviceName`() {
+        val sourceSensor = MySensor<Number>(null, SensorType.SPEED_mps)
+        val proxySensor = ProxySensor<Number>(null, SensorType.SPEED_mps, sourceSensor)
+
+        assertEquals(0L, proxySensor.lastUpdateTimestamp)
+        assertEquals(0L, proxySensor.sensorData.timestamp)
+        assertNull("ProxySensor must keep getDeviceName() null so primary DB columns remain unsuffixed", proxySensor.deviceName)
+
+        sourceSensor.newValue(4.2)
+        val expectedTs = sourceSensor.lastUpdateTimestamp
+        assertTrue(expectedTs > 0L)
+
+        val proxyData = proxySensor.sensorData
+        assertEquals(expectedTs, proxySensor.lastUpdateTimestamp)
+        assertEquals(expectedTs, proxyData.timestamp)
+        assertEquals(4.2, proxyData.value)
+        assertNull(proxyData.deviceName)
+
+        // Unbound ProxySensor safely returns 0L and null value without NPE
+        proxySensor.setSourceSensor(null)
+        assertEquals(0L, proxySensor.lastUpdateTimestamp)
+        assertEquals(0L, proxySensor.sensorData.timestamp)
+        assertNull(proxySensor.sensorData.value)
+    }
+
+    @Test
+    fun `TST-TRK-020_3 standstill silence triggers AUTO_PAUSED without entering SENSOR_LOST`() {
+        val config = AutoPauseConfig(bikeEnabled = true, speedThresholdKmh = 1.5f, debounceSec = 3)
+        val t0 = 100_000L
+
+        // Athlete stops at t0 (speed 0.0 m/s), then GPS/ANT+ sensor goes silent for 10s (> 5000ms TTL)
+        val tick1 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 0.0,
+            packetTimestampMs = t0,
+            currentTimestampMs = t0 + 10_000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.PAUSE_DEBOUNCE_PENDING, tick1.newState)
+        assertEquals(1, autoPauseManager.debounceCounter)
+        assertFalse(tick1.triggerPause)
+
+        // Even if sensor value is null while source sensor is registered (e.g. awaiting first fix at standstill)
+        val tick2 = autoPauseManager.evaluateTick(
+            currentSpeedMps = null,
+            packetTimestampMs = 0L,
+            currentTimestampMs = t0 + 11_000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.PAUSE_DEBOUNCE_PENDING, tick2.newState)
+        assertEquals(2, autoPauseManager.debounceCounter)
+        assertFalse(tick2.triggerPause)
+
+        val tick3 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 0.0,
+            packetTimestampMs = t0,
+            currentTimestampMs = t0 + 12_000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.AUTO_PAUSED, tick3.newState)
+        assertTrue(tick3.triggerPause)
+        assertEquals(SoundCue.AUTO_PAUSE, tick3.soundCue)
+    }
+
+    @Test
+    fun `TST-TRK-020_4 stale non-zero speed after packet dropout decays to 0 and triggers AUTO_PAUSED`() {
+        val config = AutoPauseConfig(bikeEnabled = true, speedThresholdKmh = 1.5f, debounceSec = 2)
+        val t0 = 200_000L
+
+        // Last packet had moving speed 5.0 m/s at t0, but sensor stopped transmitting for > 5000ms
+        val tick1 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 5.0,
+            packetTimestampMs = t0,
+            currentTimestampMs = t0 + 6_000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.PAUSE_DEBOUNCE_PENDING, tick1.newState)
+        assertEquals(1, autoPauseManager.debounceCounter)
+        assertFalse(tick1.triggerPause)
+
+        val tick2 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 5.0,
+            packetTimestampMs = t0,
+            currentTimestampMs = t0 + 7_000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.AUTO_PAUSED, tick2.newState)
+        assertTrue(tick2.triggerPause)
+    }
+
+    @Test
+    fun `TST-TRK-020_5 onManualResume transitions AUTO_PAUSED to TRACKING and allows subsequent auto-pause`() {
+        val config = AutoPauseConfig(bikeEnabled = true, speedThresholdKmh = 1.5f, debounceSec = 2)
+        val now = 300_000L
+
+        // Enter AUTO_PAUSED
+        autoPauseManager.evaluateTick(0.0, now, now, BSportType.BIKE, config, false, true)
+        val pauseTrans = autoPauseManager.evaluateTick(0.0, now + 1000L, now + 1000L, BSportType.BIKE, config, false, true)
+        assertEquals(AutoPauseState.AUTO_PAUSED, pauseTrans.newState)
+        assertTrue(pauseTrans.triggerPause)
+
+        // User manually resumes while still stationary
+        autoPauseManager.onManualResume()
+        assertEquals(AutoPauseState.TRACKING, autoPauseManager.currentState)
+        assertEquals(0, autoPauseManager.debounceCounter)
+
+        // Subsequent stationary ticks re-evaluate debounce and re-trigger AUTO_PAUSED
+        val sub1 = autoPauseManager.evaluateTick(0.0, now + 2000L, now + 2000L, BSportType.BIKE, config, false, true)
+        assertEquals(AutoPauseState.PAUSE_DEBOUNCE_PENDING, sub1.newState)
+        assertFalse(sub1.triggerPause)
+
+        val sub2 = autoPauseManager.evaluateTick(0.0, now + 3000L, now + 3000L, BSportType.BIKE, config, false, true)
+        assertEquals(AutoPauseState.AUTO_PAUSED, sub2.newState)
+        assertTrue(sub2.triggerPause)
+    }
+
+    @Test
+    fun `TST-TRK-020_6 DefaultAutoPauseAudioNotifier reuses single ToneGenerator and releases cleanly`() {
+        var createdCount = 0
+        val mockToneGenerator = mockk<ToneGenerator>(relaxed = true)
+        every { mockToneGenerator.startTone(any(), any()) } returns true
+
+        val notifier = DefaultAutoPauseAudioNotifier {
+            createdCount++
+            mockToneGenerator
+        }
+
+        notifier.playTone(SoundCue.AUTO_PAUSE)
+        notifier.playTone(SoundCue.AUTO_RESUME)
+        notifier.playTone(SoundCue.AUTO_PAUSE)
+
+        assertEquals("Must allocate at most 1 ToneGenerator across multiple playTone calls", 1, createdCount)
+        verify(exactly = 2) { mockToneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP2, 200) }
+        verify(exactly = 1) { mockToneGenerator.startTone(ToneGenerator.TONE_PROP_ACK, 200) }
+
+        notifier.release()
+        verify(exactly = 1) { mockToneGenerator.release() }
+
+        // Playing after release lazily creates a new instance
+        notifier.playTone(SoundCue.AUTO_RESUME)
+        assertEquals(2, createdCount)
+    }
+
+    @Test
+    fun `TST-TRK-020_7 onManualResume respects manualPauseLocked and release is idempotent on IllegalStateException`() {
+        // 1. Verify onManualResume is a no-op when TrainingApplication.isManualPauseLocked() is true
+        TrainingApplication.setManualPauseLock(true, null)
+        autoPauseManager.setState(AutoPauseState.MANUAL_PAUSED)
+        autoPauseManager.onManualResume()
+        assertEquals(
+            "onManualResume must not override MANUAL_PAUSED while manualPauseLocked is active",
+            AutoPauseState.MANUAL_PAUSED,
+            autoPauseManager.currentState
+        )
+        TrainingApplication.setManualPauseLock(false, null)
+
+        // 2. Verify DefaultAutoPauseAudioNotifier.release() is idempotent and swallows IllegalStateException
+        val throwingToneGen = mockk<ToneGenerator>(relaxed = true)
+        every { throwingToneGen.startTone(any(), any()) } returns true
+        every { throwingToneGen.release() } throws IllegalStateException("Already released")
+
+        val notifier = DefaultAutoPauseAudioNotifier { throwingToneGen }
+        notifier.playTone(SoundCue.AUTO_PAUSE)
+
+        // First release catches IllegalStateException and nulls reference
+        notifier.release()
+        // Second release is a no-op and does not invoke release() again
+        notifier.release()
+        verify(exactly = 1) { throwingToneGen.release() }
+
+        // Also verify AutoPauseManager.release() delegates to audioNotifier.release()
+        autoPauseManager.release()
+        assertEquals(1, mockAudioNotifier.releaseCount)
+    }
 }
+
 

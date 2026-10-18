@@ -198,6 +198,13 @@ public class TrackerService extends Service {
         }
     }
 
+    public static void notifyManualResume() {
+        TrackerService service = sInstance;
+        if (service != null) {
+            service.mAutoPauseManager.onManualResume();
+        }
+    }
+
     private volatile AutoPauseConfig mCachedAutoPauseConfig = null;
     private long mLastAutoPauseConfigFetchMs = 0L;
     private static final long AUTO_PAUSE_CONFIG_CACHE_TTL_MS = 5000L;
@@ -588,6 +595,7 @@ public class TrackerService extends Service {
 
             case RESUME_BY_USER:
                 Log.d(TAG, "resuming by user request");
+                mAutoPauseManager.onManualResume();
                 if (mTableInitializationFuture == null || mTableInitializationFuture.isDone()) {
                     mTableInitializationFuture = new CompletableFuture<>();
                 }
@@ -793,6 +801,7 @@ public class TrackerService extends Service {
         LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mUserSelectedSportTypeChangedReceiver, TAG);
 
+        mAutoPauseManager.release();
         releaseWakeLock();
     }
 
@@ -1594,6 +1603,10 @@ public class TrackerService extends Service {
 
         AutoPauseConfig config = getAutoPauseConfig();
         boolean manualPauseLocked = TrainingApplication.isManualPauseLocked();
+        if (mAutoPauseManager.isAutoPaused() && !TrainingApplication.isAutoPaused() && !manualPauseLocked) {
+            mAutoPauseManager.onManualResume();
+        }
+        boolean hasSpeedSource = (speedData != null);
 
         return mAutoPauseManager.evaluateTick(
                 speedMps,
@@ -1601,7 +1614,8 @@ public class TrackerService extends Service {
                 nowMs,
                 sportType,
                 config,
-                manualPauseLocked
+                manualPauseLocked,
+                hasSpeedSource
         );
     }
 
