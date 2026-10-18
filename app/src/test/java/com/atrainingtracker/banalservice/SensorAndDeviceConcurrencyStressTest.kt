@@ -366,6 +366,7 @@ class SensorAndDeviceConcurrencyStressTest {
             }
         }
 
+        unmockkAll()
         startGate.countDown()
         assertTrue(
             "Deadlock or timeout detected in sensor concurrency test",
@@ -453,6 +454,7 @@ class SensorAndDeviceConcurrencyStressTest {
             }
         }
 
+        unmockkAll()
         startGate.countDown()
         assertTrue("LiveWorkoutSession stress test timed out", doneGate.await(15, TimeUnit.SECONDS))
         executor.shutdownNow()
