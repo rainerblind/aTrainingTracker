@@ -41,53 +41,70 @@ Furthermore, naively instantiating `new LiveWorkoutSession(mTimeActive_s, IMPORT
 ### Component 1: Database Layer — `WorkoutSummariesDatabaseManager.java` (`REQ-TRK-031.1`)
 * Add constant `public static final String COUNT = "count";` to `WorkoutSummaries`.
 * Increment `WorkoutSummariesDbHelper.DB_VERSION` from `24` to `25`.
-* Include `COUNT + " INTEGER"` in `WorkoutSummariesDbHelper.CREATE_TABLE_EXTREMA_VALUES` and add `if (oldVersion < 25)` migration in `onUpgrade()`:
+* Include `WorkoutSummaries.COUNT + " int"` in `WorkoutSummariesDbHelper.CREATE_TABLE_EXTREMA_VALUES` and add `if (oldVersion < 25)` migration in `onUpgrade()` reusing the existing deterministic `PRAGMA table_info` helper `addColumnIfNotExists(...)` (Rule 36 — no blind `try-catch` around `ALTER TABLE`):
   ```java
   if (oldVersion < 25) {
-      try {
-          db.execSQL("ALTER TABLE " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " ADD COLUMN " + WorkoutSummaries.COUNT + " INTEGER");
-      } catch (SQLException e) {
-          Log.w(TAG, "Column count might already exist in " + WorkoutSummaries.TABLE_EXTREMA_VALUES, e);
-      }
+      Log.i(TAG, "upgrading to DB version 25 (Adding count column to extrema table)");
+      addColumnIfNotExists(db, WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.COUNT, "int", null);
   }
   ```
-* Extend `ExtremaRecord` with `@Nullable public final Integer count;`, keeping the 5-argument constructor delegating to the 6-argument constructor `ExtremaRecord(long workoutId, String sensorType, String extremaType, double value, @Nullable LatLng position, @Nullable Integer count)`.
-* In `getExtremaForWorkouts(List<Long> workoutIds)`, read `int countCol = cursor.getColumnIndex(WorkoutSummaries.COUNT);` and map `Integer count = (countCol != -1 && !cursor.isNull(countCol)) ? cursor.getInt(countCol) : null;` into `new ExtremaRecord(..., count)`.
-* Add overloaded `public void updateExtremaValue(long workoutId, SensorType sensorType, ExtremaType extremaType, double value, @Nullable Integer count)` (with the 4-argument overload delegating with `null`) that puts `WorkoutSummaries.COUNT, count` into `ContentValues` when `count != null`.
+* Add `EncodedStreams` DTO (`@Nullable public final String mapPolyline`, `@Nullable public final String altitudeStream`, `@Nullable public final String distanceStream`) and `@Nullable public EncodedStreams getEncodedStreams(long workoutId)` to fetch `MAP_POLYLINE`, `ALTITUDE_STREAM`, and `DISTANCE_STREAM` for a workout in a single query.
+* Extend `ExtremaRecord` with `@Nullable public final Integer count;`, keeping the 5-argument constructor `ExtremaRecord(long workoutId, SensorType sensorType, ExtremaType extremaType, double value, LatLng position)` delegating to the 6-argument constructor `ExtremaRecord(long workoutId, SensorType sensorType, ExtremaType extremaType, double value, LatLng position, @Nullable Integer count)` with `count = null`.
+* In `getExtremaForWorkouts(Collection<Long> workoutIds)`, read `int countCol = cursor.getColumnIndex(WorkoutSummaries.COUNT);` and map `Integer count = (countCol != -1 && !cursor.isNull(countCol)) ? cursor.getInt(countCol) : null;` into `new ExtremaRecord(..., count)`.
+* Add overloaded `updateExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position, @Nullable Integer count)` and `updateExtremaValue(SQLiteDatabase db, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position, @Nullable Integer count)` (with the 5-argument overloads delegating with `count = null`) that puts `WorkoutSummaries.COUNT, count` into `ContentValues` when `count != null`.
 
 ### Component 2: Domain Session Layer — `LiveWorkoutSession.java` (`REQ-TRK-031.2`)
 * In `LiveWorkoutSession.RunningStats`:
   * Add `public int getCount() { return count; }`.
-  * Add `public void rehydrate(@Nullable Double minValue, @Nullable Double maxValue, @Nullable Double avgValue, int sampleCount)`:
-    * Sets `this.min = (minValue != null && Double.isFinite(minValue)) ? minValue : Double.MAX_VALUE;`
-    * Sets `this.max = (maxValue != null && Double.isFinite(maxValue)) ? maxValue : -Double.MAX_VALUE;`
-    * If `avgValue != null && Double.isFinite(avgValue) && sampleCount > 0`, sets `this.count = sampleCount;` and `this.sum = avgValue * sampleCount;`; otherwise sets `this.count = 0;` and `this.sum = 0;`.
-    * Resets `this.minChanged = false;`, `this.maxChanged = false;`, and `this.updatedInCurrentSample = false;`.
+  * Add `public void rehydrate(@Nullable Double minValue, @Nullable LatLng minPosition, @Nullable Double maxValue, @Nullable LatLng maxPosition, @Nullable Double avgValue, int sampleCount)` (plus a 4-argument overload `rehydrate(@Nullable Double minValue, @Nullable Double maxValue, @Nullable Double avgValue, int sampleCount)` delegating with `null` positions):
+    * Sets `this.min = (minValue != null && Double.isFinite(minValue)) ? minValue : Double.MAX_VALUE;` and `this.minPos = (this.min != Double.MAX_VALUE) ? minPosition : null;`.
+    * Sets `this.max = (maxValue != null && Double.isFinite(maxValue)) ? maxValue : -Double.MAX_VALUE;` and `this.maxPos = (this.max != -Double.MAX_VALUE) ? maxPosition : null;`.
+    * If `avgValue != null && Double.isFinite(avgValue) && sampleCount > 0`, sets `this.count = sampleCount;`, `this.sum = avgValue * sampleCount;`, and `this.last = avgValue;`; otherwise sets `this.count = 0;` and `this.sum = 0.0;`.
 * In `LiveWorkoutSession`:
-  * Add `public void rehydrateSensorStats(@NonNull SensorType sensorType, @Nullable Double minValue, @Nullable Double maxValue, @Nullable Double avgValue, int sampleCount)` which obtains (or creates via `computeIfAbsent`) the `RunningStats` for `sensorType` and invokes `stats.rehydrate(minValue, maxValue, avgValue, sampleCount)`.
+  * Add `public void setStartLatLng(@Nullable LatLng startLatLng)` so a persisted `ExtremaType.START` coordinate can anchor `startLatLng` even if the workout was paused before the first 20-second stream sample.
+  * Add `public void rehydrateSensorStats(@NonNull SensorType sensorType, @Nullable Double minValue, @Nullable LatLng minPosition, @Nullable Double maxValue, @Nullable LatLng maxPosition, @Nullable Double avgValue, int sampleCount)` (plus a 5-argument overload without positions) which obtains or creates the `RunningStats` for `sensorType` and invokes `stats.rehydrate(...)`.
   * Add `public void rehydrateStreams(@Nullable List<LatLng> preResumeLatLngs, @Nullable List<Double> preResumeAltitudes, @Nullable List<Double> preResumeDistances)`:
-    * Clears `rawLatLngs` and `sampledLatLngs`; if `preResumeLatLngs != null && !preResumeLatLngs.isEmpty()`, adds all to both lists and sets `lastLatE5 = (int) Math.round(last.latitude * 1e5)` and `lastLngE5 = (int) Math.round(last.longitude * 1e5)`.
-    * Clears `sampledAltitudes`; if `preResumeAltitudes != null && !preResumeAltitudes.isEmpty()`, adds all and sets `lastAltE2 = (int) Math.round(lastAlt * 100)`.
-    * Clears `sampledDistances`; if `preResumeDistances != null && !preResumeDistances.isEmpty()`, adds all and sets `lastDistE2 = (int) Math.round(lastDist * 100)`.
+    * Handles `null` or empty lists independently for each stream without throwing `NullPointerException`:
+      * Clears `rawLatLngs` and `sampledLatLngs`; if `preResumeLatLngs != null && !preResumeLatLngs.isEmpty()`, adds all points to both lists, sets `if (startLatLng == null) startLatLng = preResumeLatLngs.get(0);`, `lastLatLng = preResumeLatLngs.get(preResumeLatLngs.size() - 1);`, `lastLatE5 = Math.round(lastLatLng.latitude * 1e5);`, and `lastLngE5 = Math.round(lastLatLng.longitude * 1e5);`; otherwise resets `lastLatE5 = 0;` and `lastLngE5 = 0;`.
+      * Clears `sampledAltitudes`; if `preResumeAltitudes != null && !preResumeAltitudes.isEmpty()`, adds all altitudes and sets `lastAltE2 = Math.round(preResumeAltitudes.get(preResumeAltitudes.size() - 1) * 100);`; otherwise resets `lastAltE2 = 0;`.
+      * Clears `sampledDistances`; if `preResumeDistances != null && !preResumeDistances.isEmpty()`, adds all distances and sets `lastDistE2 = Math.round(preResumeDistances.get(preResumeDistances.size() - 1) * 100);`; otherwise resets `lastDistE2 = 0;`.
 
 ### Component 3: Service Layer — `TrackerService.java` (`REQ-TRK-031.3`)
-* Add field `private boolean mHasStartLocationExtrema = false;` (reset to `false` on `START_NORMAL`).
-* In `applyResumedState(@NonNull ResumedWorkoutState state)`:
-  * Instantiate `mLiveSession = new LiveWorkoutSession(mTimeActive_s, IMPORTANT_SENSOR_TYPES);`
-  * Call `rehydrateLiveSession(mWorkoutID, mTimeActive_s);`
-* Implement `void rehydrateLiveSession(long workoutId, int activeTimeSeconds)` (wrapped in defensive `try / catch (Throwable t)`):
-  * Obtain `WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(getApplicationContext());`.
-  * Call `WorkoutSummariesDatabaseManager.EncodedStreams encodedStreams = summariesManager.getEncodedStreams(workoutId);`. If `encodedStreams != null`:
-    * Decode `mapPolyline` via `PolyUtil.decode(encodedStreams.mapPolyline)` when non-empty.
-    * Decode `altitudeStream` via `EncodingUtils.INSTANCE.decodeSignedStream(encodedStreams.altitudeStream, 100.0)` when non-empty.
-    * Decode `distanceStream` via `EncodingUtils.INSTANCE.decodeSignedStream(encodedStreams.distanceStream, 100.0)` when non-empty.
-    * Call `mLiveSession.rehydrateStreams(decodedLatLngs, decodedAltitudes, decodedDistances)`.
-  * Call `List<WorkoutSummariesDatabaseManager.ExtremaRecord> extremaRecords = summariesManager.getExtremaForWorkouts(Collections.singletonList(workoutId));`. If `extremaRecords != null && !extremaRecords.isEmpty()`:
-    * Group `MIN`, `MAX`, `AVG`, and `count` per `SensorType` (and detect if `ExtremaType.START` is already present for `LATITUDE`/`LONGITUDE`, setting `mHasStartLocationExtrema = true`).
-    * For each `SensorType` with persisted extrema, determine `int sampleCount = (persistedCount != null && persistedCount > 0) ? persistedCount : Math.max(0, activeTimeSeconds);` and call `mLiveSession.rehydrateSensorStats(sensorType, minVal, maxVal, avgVal, sampleCount)`.
-* In `sampleAndWriteToDb()`:
-  * Guard the `if (mTimeActive_s == 1 || mLiveSession.getRawLatLngs().size() == 1)` `ExtremaType.START` write with `if (!mHasStartLocationExtrema && (mTimeActive_s == 1 || mLiveSession.getRawLatLngs().size() == 1))` and set `mHasStartLocationExtrema = true;` once written so resuming a workout that had 0 or 1 pre-resume 20s points does not overwrite a pre-existing `START` coordinate.
-  * Pass `stats.getCount()` to `summariesManager.updateExtremaValue(mWorkoutID, sensorType, ExtremaType.MIN/MAX/AVG, ..., stats.getCount())`.
+* **Thread-Safety & Non-Blocking Rehydration (`mDbExecutor` + `mIsRehydrating` Barrier)**:
+  * Add `private volatile boolean mIsRehydrating = false;` (exposed via `@VisibleForTesting boolean isRehydrating()`).
+  * In `applyResumedState(@NonNull ResumedWorkoutState state)`:
+    * Instantiate `mLiveSession = new LiveWorkoutSession(mWorkoutID, IMPORTANT_SENSOR_TYPES);` and set `mIsRehydrating = true;`.
+    * Offload `rehydrateLiveSession(mWorkoutID, mTimeActive_s)` to `mDbExecutor`:
+      ```java
+      Runnable rehydrateTask = () -> {
+          try {
+              rehydrateLiveSession(mWorkoutID, mTimeActive_s);
+          } finally {
+              mIsRehydrating = false;
+              if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
+                  mTableInitializationFuture.complete(null);
+              }
+              if (mWorkoutID > 0) {
+                  notifyTrackingStarted(mWorkoutID);
+              }
+          }
+      };
+      if (mDbExecutor != null && !mDbExecutor.isShutdown()) {
+          mDbExecutor.execute(rehydrateTask);
+      } else {
+          rehydrateTask.run();
+      }
+      ```
+    * In `sampleAndWriteToDb()`, guard both the `mLiveSession.addSample(...)` loop and `mLiveSession.recordStreamPoint(...)` with `if (mLiveSession != null && !mIsRehydrating)`. Because `mIsRehydrating` is `volatile` and remains `true` until `rehydrateLiveSession()` finishes on `mDbExecutor` (and `mTableInitializationFuture` only completes in `finally`), the 1 Hz `mScheduler` thread can never race with `rehydrateLiveSession()` or mutate `mLiveSession`'s non-synchronized `HashMap`/`ArrayList`s during rehydration, and the Android main thread is never blocked by stream decoding or SQLite reads.
+* **Independent Fault-Isolated Stream & Extrema Rehydration (`rehydrateLiveSession(long workoutId, int activeTimeSeconds)`)**:
+  * Wrapped in a top-level `try / catch (Throwable t)` so unexpected errors never crash `TrackerService`.
+  * Calls `summariesManager.getEncodedStreams(workoutId)`. If non-null, decodes `mapPolyline` (`PolyUtil.decode`), `altitudeStream` (`NumericalEncodingUtils.INSTANCE.decodeDoubles`), and `distanceStream` (`NumericalEncodingUtils.INSTANCE.decodeDoubles`) in **three separate, independent `try / catch (Exception e)` blocks**. If any stream is `null`, empty, or corrupted, that stream falls back to `Collections.emptyList()` while valid sibling streams are preserved. Calls `mLiveSession.rehydrateStreams(decodedLatLngs, decodedAltitudes, decodedDistances)`.
+  * Calls `summariesManager.getExtremaForWorkouts(Collections.singletonList(workoutId))`. Groups `MIN` (value + position), `MAX` (value + position), `AVG` (value + `count`), and `START` (`LATITUDE`/`LONGITUDE`) per `SensorType`:
+    * If `ExtremaType.START` exists, restores `mLiveSession.setStartLatLng(...)` so pre-resume start coordinates are never overwritten if the workout was paused before the first 20-second stream point.
+    * For each `SensorType` present in `extremaRecords`, determines `int sampleCount = (persistedCount != null && persistedCount > 0) ? persistedCount : (activeTimeSeconds > 0 ? activeTimeSeconds : 1);` and calls `mLiveSession.rehydrateSensorStats(sensorType, minVal, minPos, maxVal, maxPos, avgVal, sampleCount)`.
+* **Statistical Drift & Mid-Workout Sensor Pairing Behavior**:
+  * *v25+ Exact Sample Count vs. Legacy Pre-v25 Fallback Drift*: In `sampleAndWriteToDb()` and `finalizeLiveSession()`, `ExtremaUpdate` carries `final Integer count` (`stats.getCount()`) and persists it via `summariesManager.updateExtremaValue(summariesDb, workoutId, update.type, update.extrema, update.value, update.pos, update.count)`, giving `0.0%` drift on v25+ workouts. For legacy pre-v25 rows where `COUNT` is `NULL`, `activeTimeSeconds` (`TIME_ACTIVE_s`) is used as a 1 Hz continuous-sampling approximation (`count ≈ activeTimeSeconds`). If a sensor was temporarily disconnected or paired late in a legacy pre-v25 workout (`actualCount < activeTimeSeconds`), the fallback weights the pre-resume mean by `activeTimeSeconds / actualCount`, keeping the post-resume combined average strictly bounded between the pre-resume average and post-resume samples.
+  * *Mid-Workout Sensor Pairing After Resume*: `rehydrateSensorStats` is called **only** for sensors present in `extremaRecords`. Any sensor paired for the first time *after* resume has no pre-resume row in `TABLE_EXTREMA_VALUES` and retains its clean initial `RunningStats` (`count = 0, sum = 0.0, min = Double.MAX_VALUE, max = -Double.MAX_VALUE`), tracking post-resume samples accurately from sample 1 without overwriting already-active sensors.
 
 ### UI Consistency (Rule 23 — mandatory if UI is added or changed)
 No UI changes.
@@ -96,30 +113,41 @@ No UI changes.
 
 ## 5. Step-by-Step Implementation Sequence (Stage 4 Construction)
 
-### Step 1: Database Version 25 Migration & `COUNT` Column in `WorkoutSummariesDatabaseManager.java`
+### Step 1: Database Version 25 Migration, `EncodedStreams`, & `COUNT` Column in `WorkoutSummariesDatabaseManager.java`
 * Files:
   * `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java`
   * `app/src/test/java/com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseSourceMigrationTest.kt`
 * Changes:
-  * Add `WorkoutSummaries.COUNT = "count"`, bump `DB_VERSION` to `25`, update `CREATE_TABLE_EXTREMA_VALUES` and `onUpgrade(oldVersion < 25)`, extend `ExtremaRecord` and `getExtremaForWorkouts`, and add the 5-argument `updateExtremaValue(..., Integer count)` overload.
-  * Update `WorkoutSummariesDatabaseSourceMigrationTest.testDbVersion_is24()` to assert `DB_VERSION >= 24`.
+  * Add `WorkoutSummaries.COUNT = "count"`, bump `DB_VERSION` to `25`, update `CREATE_TABLE_EXTREMA_VALUES`, and call `addColumnIfNotExists(db, WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.COUNT, "int", null)` in `onUpgrade(oldVersion < 25)`.
+  * Add `EncodedStreams` and `getEncodedStreams(long workoutId)`.
+  * Extend `ExtremaRecord` with `@Nullable public final Integer count`, update `getExtremaForWorkouts`, and add the `updateExtremaValue(..., @Nullable Integer count)` overloads.
+  * Update `WorkoutSummariesDatabaseSourceMigrationTest` to verify `DB_VERSION == 25` and `COUNT` migration via `addColumnIfNotExists`.
 
 ### Step 2: Stream & `RunningStats` Rehydration API in `LiveWorkoutSession.java`
 * Files:
   * `app/src/main/java/com/atrainingtracker/trainingtracker/tracker/LiveWorkoutSession.java`
 * Changes:
-  * Add `RunningStats.getCount()`, `RunningStats.rehydrate(...)`, `LiveWorkoutSession.rehydrateSensorStats(...)`, and `LiveWorkoutSession.rehydrateStreams(...)` with full JavaDoc headers (`REQ-PRO-011`).
+  * Add `RunningStats.getCount()`, `RunningStats.rehydrate(...)`, `LiveWorkoutSession.setStartLatLng(...)`, `LiveWorkoutSession.rehydrateSensorStats(...)`, and `LiveWorkoutSession.rehydrateStreams(...)` with full JavaDoc headers (`REQ-PRO-011`).
 
-### Step 3: `mLiveSession` Instantiation & Rehydration in `TrackerService.java`
+### Step 3: Asynchronous `mLiveSession` Rehydration & `mIsRehydrating` Guard in `TrackerService.java`
 * Files:
   * `app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`
 * Changes:
-  * Instantiate and rehydrate `mLiveSession` in `applyResumedState()`, implement `rehydrateLiveSession(long workoutId, int activeTimeSeconds)`, guard `ExtremaType.START` overwrite with `mHasStartLocationExtrema`, and pass `stats.getCount()` to `updateExtremaValue(...)`.
+  * Add `volatile boolean mIsRehydrating`, instantiate `mLiveSession = new LiveWorkoutSession(mWorkoutID, IMPORTANT_SENSOR_TYPES)` in `applyResumedState()`, offload `rehydrateLiveSession(mWorkoutID, mTimeActive_s)` to `mDbExecutor` with `mIsRehydrating = false` and `mTableInitializationFuture.complete(null)` in `finally`, guard `sampleAndWriteToDb()` with `!mIsRehydrating`, and persist `stats.getCount()` in `ExtremaUpdate`.
 
 ### Step 4: Unit Tests in `LiveWorkoutSessionTest.kt` and `TrackerServiceResumeTest.kt`
 * Files:
   * `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/LiveWorkoutSessionTest.kt`
   * `app/src/test/java/com/atrainingtracker/trainingtracker/tracker/TrackerServiceResumeTest.kt`
+* Test Cases:
+  * `LiveWorkoutSessionTest`:
+    * `rehydrateStreams` restores `rawLatLngs`, `sampledLatLngs`, `sampledAltitudes`, `sampledDistances`, `startLatLng`, `lastLatLng`, and delta anchors (`lastLatE5`, `lastLngE5`, `lastAltE2`, `lastDistE2`) so post-resume `recordStreamPoint` increments concatenate without jumps.
+    * `rehydrateStreams(null, emptyList(), null)` and partial stream inputs safely reset empty streams without throwing `NullPointerException`.
+    * `rehydrateSensorStats` restores `min`, `minPos`, `max`, `maxPos`, `sum`, and `count` (including mid-workout sensor `count = 300` vs `activeTime = 1800` and newly paired post-resume sensor starting at `count = 0`).
+  * `TrackerServiceResumeTest`:
+    * `applyResumedState` instantiates `mLiveSession`, rehydrates encoded streams and extrema on `mDbExecutor`, and completes `mTableInitializationFuture` after rehydration.
+    * `sampleAndWriteToDb` skips `mLiveSession` mutation while `mIsRehydrating == true` (concurrency barrier verification).
+    * Corrupt polyline with valid altitude/distance stream recovers valid streams independently without aborting rehydration.
 * Command:
   ```bash
   ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSessionTest" --tests "com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" --tests "com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest"
