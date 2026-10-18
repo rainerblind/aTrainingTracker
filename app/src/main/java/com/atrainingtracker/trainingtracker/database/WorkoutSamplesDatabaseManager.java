@@ -592,7 +592,9 @@ public class WorkoutSamplesDatabaseManager {
 
 
     public boolean existsTable(String baseFileName) {
-        if (baseFileName == null) return false;
+        if (baseFileName == null || baseFileName.trim().isEmpty() || "null".equalsIgnoreCase(baseFileName.trim())) {
+            return false;
+        }
         return existsColumnInTable(getDatabase(), getTableName(baseFileName), WorkoutSamplesDbHelper.TIME);
     }
 
@@ -623,8 +625,22 @@ public class WorkoutSamplesDatabaseManager {
         return true;
     }
 
+    /**
+     * Resolves the quoted SQLite table identifier for the given workout {@code workoutName}.
+     *
+     * <p>Requirement {@code REQ-TRK-026.2} ({@code ATT-3980}): Strictly rejects {@code null}, empty/blank,
+     * or literal {@code "null"} (case-insensitive) input to prevent silent creation or targeting of a
+     * table named {@code "\"null\""} during deferred resume flows.
+     *
+     * @param workoutName the workout {@code FILE_BASE_NAME}
+     * @return the quoted SQLite table name {@code "\"<workoutName>\""}
+     * @throws IllegalArgumentException if {@code workoutName} is {@code null}, blank, or literal {@code "null"}
+     */
     @NonNull
     public static String getTableName(String workoutName) {
+        if (workoutName == null || workoutName.trim().isEmpty() || "null".equalsIgnoreCase(workoutName.trim())) {
+            throw new IllegalArgumentException("Invalid workout baseFileName for sample table: " + workoutName);
+        }
         return "\"" + workoutName + "\"";
     }
 

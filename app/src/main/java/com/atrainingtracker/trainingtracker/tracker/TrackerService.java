@@ -284,9 +284,6 @@ public class TrackerService extends Service {
             if (DEBUG)
                 Log.i(TAG, "Triggering atomic altitude correction by " + altitudeCorrection);
 
-            final long workoutId = mWorkoutID;
-            final String samplesTable = mSamplesTableName;
-
             // 1. Live Session Update
             if (mLiveSession != null) {
                 mLiveSession.applyAltitudeCorrection(altitudeCorrection);
@@ -294,6 +291,15 @@ public class TrackerService extends Service {
 
             // 2. Database Synchronization (offloaded to DB executor via non-blocking barrier)
             mTableInitializationFuture.thenAcceptAsync(v -> {
+                final long workoutId = mWorkoutID;
+                final String samplesTable = (mSamplesTableName != null && !mSamplesTableName.trim().isEmpty())
+                        ? mSamplesTableName
+                        : resolveSamplesTableNameSafely(mBaseFileName);
+                if (mTrackingInterrupted || workoutId <= 0 || samplesTable == null || samplesTable.isEmpty()) {
+                    Log.w(TAG, "Skipping altitude correction: invalid workoutId (" + workoutId + ") or samplesTable (" + samplesTable + ")");
+                    return;
+                }
+
                 WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(TrackerService.this);
                 WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
 
@@ -371,15 +377,9 @@ public class TrackerService extends Service {
             // ATT-3045: Ensure location devices are checked/initialized defensively when service connects
             BANALService.checkOrInitializeLocationDevices();
 
-            if (!BANALService.isSearching()) {
-                onSearchingFinished();
-            }
-
-            if (mCreateNewLapWhenConnectedToBanalService) {
-                mCreateNewLapWhenConnectedToBanalService = false;
-                createNewLap();
-            }
-
+            // REQ-TRK-026.3 (ATT-3980): Restore resumed workout state (mWorkoutID, mBaseFileName,
+            // mSamplesTableName, and initial sensor values including LAP_NR) BEFORE createNewLap()
+            // or onSearchingFinished() executes.
             if (mResumeFromPausedWhenConnectedToBanalService) {
                 recreateValuesWhenResuming();
                 mResumeFromPausedWhenConnectedToBanalService = false;
@@ -392,6 +392,15 @@ public class TrackerService extends Service {
                 // mBanalService.resumeTracking();
                 sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT)
                         .setPackage(getPackageName()));
+            }
+
+            if (mCreateNewLapWhenConnectedToBanalService) {
+                mCreateNewLapWhenConnectedToBanalService = false;
+                createNewLap();
+            }
+
+            if (!BANALService.isSearching()) {
+                onSearchingFinished();
             }
         }
 
@@ -567,7 +576,9 @@ public class TrackerService extends Service {
 
             case RESUME_BY_USER:
                 Log.d(TAG, "resuming by user request");
-                mTableInitializationFuture = CompletableFuture.completedFuture(null);
+                if (mTableInitializationFuture == null || mTableInitializationFuture.isDone()) {
+                    mTableInitializationFuture = new CompletableFuture<>();
+                }
                 if (mBanalService != null) {
                     recreateValuesWhenResuming();
                     // mBanalService.resumeFromPaused();  already started by broadcast?
@@ -578,7 +589,9 @@ public class TrackerService extends Service {
 
             case RESUME_SERVICE_RECREATION:
                 Log.d(TAG, "resuming after killed service");
-                mTableInitializationFuture = CompletableFuture.completedFuture(null);
+                if (mTableInitializationFuture == null || mTableInitializationFuture.isDone()) {
+                    mTableInitializationFuture = new CompletableFuture<>();
+                }
                 // 3-Tier Startup State-Recovery Hierarchy (REQ-TRK-018):
                 if (TrainingApplication.isManualPauseLocked()) {
                     Log.i(TAG, "Startup recovery Tier 1: restoring MANUAL_PAUSED");
@@ -609,8 +622,8 @@ public class TrackerService extends Service {
                 break;
         }
 
-        if (startType != StartType.START_NORMAL) {
-            mSamplesTableName = WorkoutSamplesDatabaseManager.getTableName(mBaseFileName);
+        if (startType != StartType.START_NORMAL && mBaseFileName != null && !mBaseFileName.trim().isEmpty()) {
+            mSamplesTableName = resolveSamplesTableNameSafely(mBaseFileName);
         }
 
         if (mBanalService != null && !BANALService.isSearching()) {
@@ -622,11 +635,6 @@ public class TrackerService extends Service {
                 1, // sampling time
                 TimeUnit.SECONDS);
 
-        // notify others (for resume types; START_NORMAL emits upon table creation)
-        if (startType != StartType.START_NORMAL) {
-            notifyTrackingStarted(mWorkoutID);
-        }
-
         Notification notification = mTrainingApplication != null ? mTrainingApplication.getSearchingAndTrackingNotification() : null;
         if (notification != null) {
             try {
@@ -634,6 +642,9 @@ public class TrackerService extends Service {
             } catch (SecurityException | IllegalStateException e) {
                 Log.e(TAG, "Failed to start foreground service: " + e.getMessage(), e);
                 mTrackingInterrupted = true;
+                if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
+                    mTableInitializationFuture.cancel(false);
+                }
                 if (mTrackerHandle != null) {
                     mTrackerHandle.cancel(true);
                     mTrackerHandle = null;
@@ -715,10 +726,16 @@ public class TrackerService extends Service {
     }
 
     protected void notifyTrackingStarted(long workoutId) {
-        Intent trackingStartedIntent = new Intent(TRACKING_STARTED_INTENT)
-                .putExtra(WorkoutSummaries.WORKOUT_ID, workoutId)
-                .setPackage(this.getPackageName());
-        this.sendBroadcast(trackingStartedIntent);
+        try {
+            Intent trackingStartedIntent = new Intent(TRACKING_STARTED_INTENT)
+                    .putExtra(WorkoutSummaries.WORKOUT_ID, workoutId)
+                    .setPackage(this.getPackageName());
+            this.sendBroadcast(trackingStartedIntent);
+        } catch (NullPointerException e) {
+            if (getBaseContext() != null) {
+                throw e;
+            }
+        }
     }
 
     protected void performSuperOnDestroy() {
@@ -732,6 +749,10 @@ public class TrackerService extends Service {
             sInstance = null;
         }
         if (DEBUG) Log.d(TAG, "onDestroy");
+
+        if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
+            mTableInitializationFuture.cancel(false);
+        }
 
         // first of all, stop the trackerHandle
         if (mTrackerHandle != null) {
@@ -794,6 +815,25 @@ public class TrackerService extends Service {
         }
     }
 
+    /**
+     * Resolves the quoted sample table name for the given {@code baseFileName} safely at the
+     * service boundary ({@code REQ-TRK-026.2}, {@code ATT-3980}).
+     */
+    @Nullable
+    @VisibleForTesting
+    static String resolveSamplesTableNameSafely(@Nullable String baseFileName) {
+        if (baseFileName == null || baseFileName.trim().isEmpty() || "null".equalsIgnoreCase(baseFileName.trim())) {
+            Log.e(TAG, "Cannot resolve samples table name for invalid baseFileName: " + baseFileName);
+            return null;
+        }
+        try {
+            return WorkoutSamplesDatabaseManager.getTableName(baseFileName);
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Cannot resolve samples table name for invalid baseFileName: " + baseFileName, e);
+            return null;
+        }
+    }
+
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     void recreateValuesWhenResuming() {
         SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(this).getDatabase();
@@ -829,25 +869,52 @@ public class TrackerService extends Service {
                 );
             } else {
                 Log.w(TAG, "recreateValuesWhenResuming: No workout summary record found to resume.");
+                if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
+                    mTableInitializationFuture.completeExceptionally(
+                            new IllegalStateException("No workout summary record found to resume"));
+                }
                 return;
             }
         } catch (Exception e) {
             Log.e(TAG, "recreateValuesWhenResuming: Failed to extract resume record from database", e);
+            if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
+                mTableInitializationFuture.completeExceptionally(e);
+            }
             return;
         }
 
         applyResumedState(state);
     }
 
+    /**
+     * Applies restored workout state on resume ({@code RESUME_BY_USER} or {@code RESUME_SERVICE_RECREATION}),
+     * synchronizing {@code mSamplesTableName} with {@code mBaseFileName}, completing
+     * {@code mTableInitializationFuture}, and broadcasting {@code notifyTrackingStarted(mWorkoutID)}
+     * ({@code REQ-TRK-026.1}, {@code REQ-TRK-026.3}, {@code ATT-3980}).
+     */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     void applyResumedState(@NonNull ResumedWorkoutState state) {
         mBaseFileName = state.baseFileName;
+        mSamplesTableName = resolveSamplesTableNameSafely(mBaseFileName);
         mWorkoutID = state.workoutId;
         mTimeTotal_s = state.timeTotal_s;
         mTimeActive_s = state.timeActive_s;
         mDistanceTotal_m = state.distanceTotal_m;
 
+        if (mSamplesTableName == null) {
+            Log.e(TAG, "applyResumedState: Invalid baseFileName (" + mBaseFileName + ") for workoutId=" + mWorkoutID);
+            if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
+                mTableInitializationFuture.completeExceptionally(
+                        new IllegalStateException("Invalid baseFileName on resume: " + mBaseFileName));
+            }
+            mTrackingInterrupted = true;
+            showTrackingInterruptedNotification();
+            performStopSelf();
+            return;
+        }
+
         Log.d(TAG, "resuming with mBaseFileName=" + mBaseFileName
+                + ", mSamplesTableName=" + mSamplesTableName
                 + ", mWorkoutId=" + mWorkoutID
                 + ", time_total_s=" + mTimeTotal_s
                 + ", time_active_s=" + mTimeActive_s
@@ -860,6 +927,13 @@ public class TrackerService extends Service {
         BANALService.setInitialSensorValue(SensorType.CALORIES, state.calories);
         BANALService.setInitialSensorValue(SensorType.LAP_NR, state.lapNr);
         BANALService.setInitialSensorValue(SensorType.DISTANCE_m, mDistanceTotal_m);
+
+        if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
+            mTableInitializationFuture.complete(null);
+        }
+        if (mWorkoutID > 0) {
+            notifyTrackingStarted(mWorkoutID);
+        }
     }
 
     @VisibleForTesting
@@ -870,6 +944,16 @@ public class TrackerService extends Service {
     @VisibleForTesting
     String getBaseFileName() {
         return mBaseFileName;
+    }
+
+    @VisibleForTesting
+    String getSamplesTableName() {
+        return mSamplesTableName;
+    }
+
+    @VisibleForTesting
+    ServiceConnection getBanalConnectionForTesting() {
+        return mBanalConnection;
     }
 
     @VisibleForTesting
@@ -1378,7 +1462,18 @@ public class TrackerService extends Service {
 
         // 2. Offload all DB work to the dedicated executor via non-blocking reactive barrier
         mTableInitializationFuture.thenAcceptAsync(v -> {
-            final String tableName = mSamplesTableName;
+            String resolvedTableName = mSamplesTableName;
+            if (resolvedTableName == null || resolvedTableName.trim().isEmpty() || "\"null\"".equalsIgnoreCase(resolvedTableName.trim())) {
+                resolvedTableName = resolveSamplesTableNameSafely(mBaseFileName);
+                if (resolvedTableName != null) {
+                    mSamplesTableName = resolvedTableName;
+                }
+            }
+            if (resolvedTableName == null) {
+                Log.e(TAG, "Cannot write workout sample: mSamplesTableName is invalid (" + mSamplesTableName + ") for workoutId=" + mWorkoutID + ", baseFileName=" + mBaseFileName);
+                return;
+            }
+            final String tableName = resolvedTableName;
             final long workoutId = mWorkoutID;
 
             WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(TrackerService.this);
@@ -1388,15 +1483,19 @@ public class TrackerService extends Service {
 
             samplesDb.beginTransaction();
             summariesDb.beginTransaction();
+            boolean sampleInserted = false;
             try {
                 // Write Samples
                 try {
                     samplesDb.insertOrThrow(tableName, null, samplingValues);
+                    sampleInserted = true;
                 } catch (SQLException e) {
-                    // Logic to handle missing columns (simplified for brevity here, 
-                    // but in real app we'd need to re-implement the ALTER TABLE logic if necessary)
-                    // For SCRUM-100 we focus on the locking.
-                    handleMissingColumns(samplesDb, tableName, samplingValues, finalSensorName2Type);
+                    sampleInserted = handleMissingColumns(samplesDb, tableName, samplingValues, finalSensorName2Type, e);
+                }
+
+                if (!sampleInserted) {
+                    Log.e(TAG, "Aborting sample and summary transaction because sample insert failed for table " + tableName);
+                    return;
                 }
 
                 // Write Extrema
@@ -1416,13 +1515,22 @@ public class TrackerService extends Service {
                 summariesDb.setTransactionSuccessful();
             } catch (Exception e) {
                 Log.e(TAG, "Error during async DB write", e);
+                sampleInserted = false;
             } finally {
                 samplesDb.endTransaction();
                 summariesDb.endTransaction();
             }
 
-            // Notify UI
-            LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra("WORKOUT_ID", workoutId));
+            if (sampleInserted) {
+                // Notify UI
+                try {
+                    LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra("WORKOUT_ID", workoutId));
+                } catch (Exception e) {
+                    if (getBaseContext() != null) {
+                        Log.w(TAG, "Failed to broadcast WORKOUT_UPDATED_INTENT", e);
+                    }
+                }
+            }
         }, mDbExecutor).exceptionally(ex -> {
             Log.e(TAG, "Sample write skipped due to initialization failure: " + ex.getMessage());
             return null;
@@ -1464,14 +1572,50 @@ public class TrackerService extends Service {
         );
     }
 
-    private void handleMissingColumns(SQLiteDatabase samplesDb, String tableName, ContentValues values, Map<String, SensorValueType> name2Type) {
-        // Implementation of the ALTER TABLE logic removed from main flow for readability
+    /**
+     * Recovers from missing columns (when new sensors are discovered mid-workout) or a missing
+     * sample table for a valid {@code mBaseFileName}, and logs/rejects unrecoverable SQLite errors
+     * ({@code REQ-TRK-026.4}, {@code ATT-3980}).
+     *
+     * @return {@code true} if the sample row was successfully inserted after recovery, {@code false} otherwise
+     */
+    @VisibleForTesting
+    boolean handleMissingColumns(SQLiteDatabase samplesDb, String tableName, ContentValues values, Map<String, SensorValueType> name2Type, @Nullable SQLException insertException) {
+        String errMsg = insertException != null ? insertException.getMessage() : null;
+        if (errMsg != null && errMsg.contains("no such table")) {
+            String validTable = resolveSamplesTableNameSafely(mBaseFileName);
+            if (validTable != null) {
+                Log.w(TAG, "Sample table " + tableName + " missing for valid baseFileName " + mBaseFileName + "; recreating table", insertException);
+                try {
+                    WorkoutSamplesDatabaseManager.getInstance(this)
+                            .createNewTable(mBaseFileName, Arrays.asList(SensorType.values()));
+                    tableName = validTable;
+                    mSamplesTableName = validTable;
+                } catch (Exception createEx) {
+                    Log.e(TAG, "Failed to self-heal missing sample table " + validTable, createEx);
+                    return false;
+                }
+            } else {
+                Log.e(TAG, "Unrecoverable SQLite error: sample table " + tableName + " does not exist and baseFileName (" + mBaseFileName + ") is invalid", insertException);
+                return false;
+            }
+        } else if (errMsg != null && !errMsg.contains("no such column") && !errMsg.contains("has no column named")) {
+            Log.e(TAG, "Unrecoverable SQLite error inserting sample into table " + tableName, insertException);
+            return false;
+        }
+
+        // Implementation of the ALTER TABLE logic removed from main flow for readability.
         // It ensures that new sensors added during a workout get their own columns.
         try (Cursor cursor = samplesDb.query(tableName, null, null, null, null, null, null, "1")) {
+            if (cursor == null) {
+                Log.e(TAG, "Failed to inspect columns of sample table " + tableName + ": query returned null cursor");
+                return false;
+            }
             for (String key : values.keySet()) {
                 String queryKey = key.replace("'", "");
                 if (cursor.getColumnIndex(queryKey) < 0) {
-                    String type = switch (name2Type.get(key)) {
+                    SensorValueType valueType = name2Type != null ? name2Type.get(key) : null;
+                    String type = valueType == null ? "text" : switch (valueType) {
                         case INTEGER -> "int";
                         case DOUBLE -> "double";
                         default -> "text";
@@ -1479,9 +1623,11 @@ public class TrackerService extends Service {
                     samplesDb.execSQL("ALTER TABLE " + tableName + " ADD COLUMN " + key + " " + type + " null;");
                 }
             }
-            samplesDb.insert(tableName, null, values);
+            samplesDb.insertOrThrow(tableName, null, values);
+            return true;
         } catch (Exception e) {
-            Log.e(TAG, "Failed to fix schema or insert after schema fix", e);
+            Log.e(TAG, "Failed to fix schema or insert after schema fix for table " + tableName, e);
+            return false;
         }
     }
 
