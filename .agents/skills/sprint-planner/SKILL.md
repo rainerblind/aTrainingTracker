@@ -29,12 +29,17 @@ To eliminate merge conflicts across shared living documents (`docs/requirements.
 Ensure that every ticket committed to the active sprint has clear, unambiguous acceptance criteria, an understood problem statement, and no unresolved architectural questions before development begins, while establishing the clean sprint integration branch.
 
 ### Step-by-Step Procedure
-1. **Query Active Sprint Backlog**:
-   Find all tickets in the active sprint currently in status `Zu erledigen` using the exact active sprint ID or name (do not use generic `openSprints()` which can match multiple concurrently active sprints):
-   ```bash
-   python3 tools/jira_util.py search "project = ATT AND sprint = <SPRINT_ID> AND status = 'Zu erledigen' ORDER BY rank ASC"
-   ```
-   *Strict Invariant*: AI agents MUST NEVER move tickets into active sprints or pull backlog items autonomously (`"Agents must not move tickets to sprints!"`). Only the human user assigns tickets to sprints.
+1. **Query Active Sprint Backlog & Ensure `Review & Retro` Ticket Exists**:
+   * Find all tickets in the active sprint currently in status `Zu erledigen` using the exact active sprint ID or name (do not use generic `openSprints()` which can match multiple concurrently active sprints):
+     ```bash
+     python3 tools/jira_util.py search "project = ATT AND sprint = <SPRINT_ID> AND status = 'Zu erledigen' ORDER BY rank ASC"
+     ```
+   * **Ensure Sprint `Review & Retro` Ticket Exists**: Jira has an automation intended to create a `Review & Retro` ticket for each sprint, but it frequently fails to fire. Therefore, during Ceremony 1 (Sprint Planning), the agent **MUST** check if a `Review & Retro` ticket exists in the active sprint and create it if missing:
+     ```bash
+     python3 tools/jira_util.py ensure-retro
+     ```
+     This command checks the active sprint for a `Review & Retro` ticket and, if none exists, creates `Review & Retro - Sprint <SPRINT_NAME>` (Type: `Verbesserung` / `10010`, Epic: `ATT-232`) and adds it to the active sprint.
+   * *Strict Invariant*: Aside from `ensure-retro` for the sprint's `Review & Retro` ceremony ticket, AI agents MUST NEVER move backlog feature/bug tickets into active sprints autonomously (`"Agents must not move tickets to sprints!"`). Only the human user assigns backlog tickets to sprints.
 2. **Establish Sprint Integration Branch**:
    Create and push the sprint integration branch from latest `develop`:
    ```bash
@@ -43,7 +48,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
    git checkout -b sprint/<SPRINT_NAME>  # e.g. sprint/2026-40.1
    ```
 3. **Ticket-by-Ticket Walkthrough with the Human User**:
-   For each ticket in sequence:
+   For each feature/bug/improvement ticket in sequence (skipping the `Review & Retro` ceremony ticket, which remains as the sprint's continuous retro logging and Ceremony 2 retrospective container rather than entering `Analysis` or spawning `[Analysis]..[Test]` subtasks):
    * **Present Summary & Context**: Present the ticket key, title, and current description to the user.
    * **Human Prerequisite Detection (Rule 22)**: Explicitly check whether the ticket depends on actions only the human can perform (e.g. Google Cloud Console / OAuth client registration, SHA-1 fingerprints, API keys, Play Console settings, third-party accounts, test hardware/sensors, outdoor rides). If so, name each action to the user, record them in the ticket description under a `Human Prerequisites` section, and agree whether they are completed before development starts (`"Tickets that need actions by me should be detected during the sprint planning."` — Retro 2026-40.16, ATT-1306).
    * **Screening Evaluation**:
@@ -63,7 +68,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
          python3 tools/jira_util.py move <KEY> "analysis"
          ```
 4. **Handoff to Autonomous Execution (Phase 2)**:
-   Once all sprint tickets are in status `Analysis`, Phase 1 concludes. The implementation agents (`agent1`, `agent2`) take over Phase 2:
+   Once all regular sprint tickets are in status `Analysis` (with the `Review & Retro` ticket retained for in-sprint anomaly logging and Ceremony 2 retrospective documentation), Phase 1 concludes. The implementation agents (`agent1`, `agent2`) take over Phase 2:
    * **Continuous Unattended Execution & Full-Sprint Mandate**: The sprint pipeline runs continuously and autonomously across the entire sprint backlog without stopping the console, pausing between tickets, or asking whether to continue (`"Again, I was asked if we should continue. → Agents should do the entire Sprint."`).
    * **In-Sprint Human Escalation Protocol**: If an agent encounters a blocker, design decision, or requirement ambiguity that strictly requires human guidance, the agent MUST NOT halt or prompt the console. Instead:
      1. Post a clarifying question/decision comment on the subtask: `python3 tools/jira_util.py comment <SUBTASK_KEY> "Question for Human: ..."`

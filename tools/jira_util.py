@@ -843,6 +843,71 @@ def add_to_active_sprint(issue_key, role="agent1"):
     jira_request(url, method="POST", payload=payload, role=role)
     print(f"Added {issue_key} to active sprint '{active_sprint['name']}' (id {sprint_id}).")
 
+def ensure_retro_ticket(role="agent1"):
+    """
+    Checks whether a 'Review & Retro' ticket exists in the active sprint.
+    If Jira's automation failed to create one, creates 'Review & Retro - <Sprint Name>'
+    (Verbesserung, Epic ATT-232) and adds it to the active sprint.
+    """
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    boards = jira_request(f"{base}/rest/agile/1.0/board", role=role)["values"]
+    if not boards:
+        print("Error: No Agile board found.", file=sys.stderr)
+        sys.exit(1)
+    board_id = boards[0]["id"]
+    active_sprint = resolve_active_sprint(board_id, role=role)
+    if not active_sprint:
+        print("Error: No active sprint found.", file=sys.stderr)
+        sys.exit(1)
+
+    sprint_id = active_sprint["id"]
+    sprint_name = active_sprint["name"].strip()
+    sprint_short_id = re.sub(r'(?i)^sprint\s*', '', sprint_name).strip()
+    display_sprint = sprint_name if sprint_name.lower().startswith("sprint") else f"Sprint {sprint_name}"
+
+    issues = jira_request(
+        f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype",
+        role=role
+    ).get("issues", [])
+
+    for issue in issues:
+        itype = issue.get("fields", {}).get("issuetype", {}).get("name", "")
+        if itype.lower() in ("sub-task", "subtask"):
+            continue
+        summary = issue.get("fields", {}).get("summary", "")
+        if "retro" in summary.lower():
+            status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
+            print(f"Review & Retro ticket already exists in {display_sprint} (id {sprint_id}): {issue['key']} — {summary} [{status}]")
+            return issue["key"]
+
+    summary = f"Review & Retro - {display_sprint}"
+    initial_desc = (
+        f"h2. Sprint Review & Retrospective - {display_sprint}\n"
+        f"*Sprint*: {sprint_short_id} (id {sprint_id})\n"
+        f"*Branch*: sprint/{sprint_short_id} -> develop\n"
+    )
+    labels = ["process", "retro", "review", f"sprint-{sprint_short_id}"]
+    new_key = create_issue(
+        summary=summary,
+        description=initial_desc,
+        issuetype_id="10010",
+        parent_key="ATT-232",
+        role=role,
+        add_to_sprint=False,
+        labels=labels,
+        rank_top=False
+    )
+    add_to_active_sprint(new_key, role=role)
+    final_desc = (
+        f"h2. Sprint Review & Retrospective - {display_sprint}\n"
+        f"*Deliverable*: docs/engineering/Sprint_Review_and_Retro_{new_key}.md\n"
+        f"*Branch*: sprint/{sprint_short_id} -> develop\n"
+    )
+    update_issue_description(new_key, final_desc, role=role)
+    print(f"Created Review & Retro ticket {new_key} for {display_sprint} (id {sprint_id}).")
+    return new_key
+
 USAGE_TEXT = (
     "Usage: jira_util.py [--as agent1|agent2|coordinator] <command> [args]\n"
     "Commands:\n"
@@ -850,6 +915,7 @@ USAGE_TEXT = (
     "  show KEY                                              Show issue details, description, comments, and subtasks\n"
     "  status KEY                                            Show issue status\n"
     "  search JQL                                            Search issues using JQL\n"
+    "  ensure-retro                                          Check/create 'Review & Retro' ticket in the active sprint\n"
     "  check-gate KEY                                        Verify Impl-Plan subtask is Erledigt (Gate 3)\n"
     "  move KEY <target>                                     Transition issue (todo|in_progress|in_review|freigabe|analysis|test|final review)\n"
     "  comment KEY TEXT_OR_@FILE                             Add role-attributed comment\n"
@@ -878,6 +944,8 @@ if __name__ == "__main__":
     cmd = remaining_argv[0]
     if cmd == "list":
         list_sprint_issues(role=active_role)
+    elif cmd in ("ensure-retro", "ensure_retro"):
+        ensure_retro_ticket(role=active_role)
     elif cmd == "show" and len(remaining_argv) == 2:
         show_issue(remaining_argv[1], role=active_role)
     elif cmd == "status" and len(remaining_argv) == 2:

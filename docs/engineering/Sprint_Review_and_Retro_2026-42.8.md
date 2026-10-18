@@ -52,3 +52,10 @@
 - **Countermeasure (`tools/jira_util.py`, `.agents/skills/jira-workflow/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`)**:
   - Enhanced `tools/jira_util.py` to accept `"attach"` as an alias for `"upload"`, resolve human-readable issue type names (`Feature`, `Bug`, `Verbesserung`, `Improvement`), accept both positional args and `--type`/`--parent`/`--epic` flags in `create-issue`, and print the full `USAGE_TEXT` whenever an invalid command or `--help` is passed.
   - Updated `.agents/skills/jira-workflow/SKILL.md` and `.agents/skills/sprint-planner/SKILL.md` with the complete CLI reference for all `tools/jira_util.py` commands.
+
+### Learning 4: Ensure `Review & Retro` Ticket During Sprint Planning When Jira Automation Fails (`ensure-retro`)
+- **Observation**: Jira has a backend automation intended to create a `Review & Retro` ticket for each sprint, but it frequently fails to execute (for instance, in Sprints `2026-42.5` through `2026-42.8`).
+- **Root Cause**: `sprint-planner/SKILL.md` assumed the `Review & Retro` ticket was already created by Jira automation at Sprint-Start and lacked an explicit step or CLI command to create and attach it to the active sprint when missing.
+- **Countermeasure (`tools/jira_util.py ensure-retro`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/jira-workflow/SKILL.md`, `.agents/rules/aspice_governance.md` Rule 11)**:
+  - Added `python3 tools/jira_util.py ensure-retro` to check whether a `Review & Retro` ticket exists in the active sprint and, if missing, automatically create `Review & Retro - Sprint <SPRINT_NAME>` (Type: `Verbesserung` / `10010`, Epic: `ATT-232`, Labels: `process,retro,review,sprint-<ID>`) and add it to the active sprint.
+  - Codified `python3 tools/jira_util.py ensure-retro` in Ceremony 1 Step 1 of `.agents/skills/sprint-planner/SKILL.md` (with explicit instructions that the `Review & Retro` ticket serves as the sprint's continuous retro logging and Ceremony 2 retrospective container rather than entering `Analysis` or spawning `[Analysis]..[Test]` subtasks).
