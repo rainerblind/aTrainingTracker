@@ -145,7 +145,8 @@ public class TrackerService extends Service {
     public static final String WORKOUT_UPDATED_INTENT   = "com.atrainingtracker.trainingtracker.WOKRKOUT_UPDATED_INTENT";
 
     // Same sensor types from the old thread. Used for Averages.
-    private static final HashSet<SensorType> IMPORTANT_SENSOR_TYPES = new HashSet<>(SensorType.CORE_METRICS);
+    @VisibleForTesting
+    static final HashSet<SensorType> IMPORTANT_SENSOR_TYPES = new HashSet<>(SensorType.CORE_METRICS);
     static {
         IMPORTANT_SENSOR_TYPES.add(SensorType.W_PRIME_BAL);
     }
@@ -1389,13 +1390,31 @@ public class TrackerService extends Service {
         BANALService.setInitialSensorValue(SensorType.LAP_NR, state.lapNr);
         BANALService.setInitialSensorValue(SensorType.DISTANCE_m, mDistanceTotal_m);
 
-        mLiveSession = new LiveWorkoutSession(mWorkoutID, IMPORTANT_SENSOR_TYPES);
-        mIsRehydrating = true;
         final long resumedWorkoutId = mWorkoutID;
         final int resumedActiveTimeS = mTimeActive_s;
+
+        // ATT-4095 (REQ-TRK-036.1): Reuse existing in-memory LiveWorkoutSession on RESUME_BY_USER when service stayed alive
+        if (mLiveSession != null && mLiveSession.getWorkoutId() == resumedWorkoutId && !mIsRehydrating) {
+            Log.i(TAG, "applyResumedState: Reusing existing in-memory LiveWorkoutSession for workoutId=" + resumedWorkoutId);
+            if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
+                mTableInitializationFuture.complete(null);
+            }
+            if (resumedWorkoutId > 0) {
+                notifyTrackingStarted(resumedWorkoutId);
+            }
+            return;
+        }
+
+        // ATT-4095 (REQ-TRK-036.2): Construct, rehydrate, and publish candidate session on mDbExecutor
+        if (mTableInitializationFuture == null || mTableInitializationFuture.isDone()) {
+            mTableInitializationFuture = new CompletableFuture<>();
+        }
+        mIsRehydrating = true;
         Runnable rehydrateTask = () -> {
             try {
-                rehydrateLiveSession(resumedWorkoutId, resumedActiveTimeS);
+                LiveWorkoutSession newSession = new LiveWorkoutSession(resumedWorkoutId, IMPORTANT_SENSOR_TYPES);
+                rehydrateLiveSession(newSession, resumedWorkoutId, resumedActiveTimeS);
+                mLiveSession = newSession;
             } finally {
                 mIsRehydrating = false;
                 if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
@@ -1414,20 +1433,31 @@ public class TrackerService extends Service {
     }
 
     /**
+     * Overload for testing and backward compatibility delegating to {@link #rehydrateLiveSession(LiveWorkoutSession, long, int)}.
+     */
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void rehydrateLiveSession(long workoutId, int activeTimeSeconds) {
+        final LiveWorkoutSession session = mLiveSession;
+        if (session != null) {
+            rehydrateLiveSession(session, workoutId, activeTimeSeconds);
+        }
+    }
+
+    /**
      * Rehydrates the in-memory {@link LiveWorkoutSession} streams and per-sensor running statistics
-     * from {@link WorkoutSummariesDatabaseManager} upon workout resumption ({@code REQ-TRK-031.3}, {@code ATT-3987}).
+     * from {@link WorkoutSummariesDatabaseManager} upon workout resumption ({@code REQ-TRK-031.3}, {@code REQ-TRK-036.2}, {@code ATT-3987}, {@code ATT-4095}).
      *
      * <p>Each encoded stream ({@code mapPolyline}, {@code altitudeStream}, {@code distanceStream}) is
      * decoded in its own independent {@code try / catch} block so a corrupted or empty stream falls back
      * to {@link Collections#emptyList()} while preserving sibling streams.
      *
+     * @param session           The {@link LiveWorkoutSession} instance to populate.
      * @param workoutId         The resumed workout database ID.
      * @param activeTimeSeconds Restored pre-resume active duration in seconds (used as fallback weight for legacy rows).
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    void rehydrateLiveSession(long workoutId, int activeTimeSeconds) {
-        final LiveWorkoutSession session = mLiveSession;
-        if (session == null || workoutId <= 0) {
+    void rehydrateLiveSession(@NonNull LiveWorkoutSession session, long workoutId, int activeTimeSeconds) {
+        if (workoutId <= 0) {
             return;
         }
         try {

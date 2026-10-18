@@ -793,4 +793,150 @@ class TrackerServiceResumeTest {
         verify { mockDbManager.updateExtremaValue(eq(workoutId), eq(SensorType.HR), eq(ExtremaType.AVG), eq(160.0), isNull(), eq(20)) }
         verify { repositoryMock.setMapPolyline(eq(workoutId), eq(polySlot.captured)) }
     }
+
+    @Test
+    fun testResumedSession_whenServiceRemainsAlive_reusesLiveSessionAndPreservesRawLatLngs() {
+        // TST-TRK-029.1 (REQ-TRK-036.1, ATT-4095)
+        val workoutId = 201L
+        val prePauseSession = LiveWorkoutSession(workoutId, TrackerService.IMPORTANT_SENSOR_TYPES)
+        val p1 = LatLng(48.1351, 11.5820)
+        val p2 = LatLng(48.1352, 11.5821)
+        val p3 = LatLng(48.1353, 11.5822)
+        val p4 = LatLng(48.1354, 11.5823)
+        val p5 = LatLng(48.1355, 11.5824)
+        prePauseSession.addRawLatLng(p1)
+        prePauseSession.addRawLatLng(p2)
+        prePauseSession.addRawLatLng(p3)
+        prePauseSession.addRawLatLng(p4)
+        prePauseSession.addRawLatLng(p5)
+
+        val liveSessionField = TrackerService::class.java.getDeclaredField("mLiveSession").apply { isAccessible = true }
+        liveSessionField.set(service, prePauseSession)
+
+        val state = TrackerService.ResumedWorkoutState(
+            "2026-10-18_140000",
+            workoutId,
+            120,
+            100,
+            80,
+            1,
+            500.0
+        )
+
+        // Act: Apply resume state as if user resumed while service was alive
+        service.applyResumedState(state)
+
+        // Assert: Identical session reused and all 5 raw 1 Hz trackpoints preserved
+        val currentSession = liveSessionField.get(service) as LiveWorkoutSession
+        assertSame("LiveWorkoutSession instance must be reused on RESUME_BY_USER", prePauseSession, currentSession)
+        assertEquals(5, currentSession.rawLatLngs.size)
+        assertEquals(p1, currentSession.rawLatLngs[0])
+        assertEquals(p5, currentSession.rawLatLngs[4])
+        assertEquals(workoutId, service.notifiedWorkoutId)
+        assertTrue(service.tableInitializationFuture.isDone)
+
+        // Database streams must NOT have been queried
+        verify(exactly = 0) { mockDbManager.getEncodedStreams(workoutId) }
+    }
+
+    @Test
+    fun testResumedSession_whenServiceRecreated_constructsNewSessionAndRehydratesFromDb() {
+        // TST-TRK-029.2 (REQ-TRK-036.2, ATT-4095)
+        val workoutId = 202L
+        val p1 = LatLng(48.2000, 11.6000)
+        val p2 = LatLng(48.2010, 11.6010)
+        val encodedPoly = PolyUtil.encode(listOf(p1, p2))
+        val encodedAlt = NumericalEncodingUtils.encodeDoubles(listOf(450.0, 455.0))
+        val encodedDist = NumericalEncodingUtils.encodeDoubles(listOf(0.0, 200.0))
+
+        every { mockDbManager.getEncodedStreams(workoutId) } returns EncodedStreams(encodedPoly, encodedAlt, encodedDist)
+        every { mockDbManager.getExtremaForWorkouts(listOf(workoutId)) } returns emptyList()
+
+        val liveSessionField = TrackerService::class.java.getDeclaredField("mLiveSession").apply { isAccessible = true }
+        liveSessionField.set(service, null) // Simulating service recreation
+
+        val state = TrackerService.ResumedWorkoutState(
+            "2026-10-18_150000",
+            workoutId,
+            60,
+            50,
+            40,
+            1,
+            200.0
+        )
+
+        // Act
+        service.applyResumedState(state)
+
+        // Assert
+        val currentSession = liveSessionField.get(service) as LiveWorkoutSession
+        assertNotNull("New LiveWorkoutSession must be constructed when mLiveSession was null", currentSession)
+        assertEquals(workoutId, currentSession.workoutId)
+        assertEquals(2, currentSession.sampledLatLngs.size)
+        assertEquals(p1.latitude, currentSession.sampledLatLngs[0].latitude, 1e-4)
+        assertEquals(workoutId, service.notifiedWorkoutId)
+        assertTrue(service.tableInitializationFuture.isDone)
+        verify(exactly = 1) { mockDbManager.getEncodedStreams(workoutId) }
+    }
+
+    @Test
+    fun testResumedSession_publicationSafety_assignsLiveSessionOnlyAfterRehydrationCompletes() {
+        // TST-TRK-029.3 (REQ-TRK-036.2, ATT-4095)
+        val workoutId = 203L
+        val p1 = LatLng(48.3000, 11.7000)
+        val encodedPoly = PolyUtil.encode(listOf(p1))
+
+        every { mockDbManager.getEncodedStreams(workoutId) } returns EncodedStreams(encodedPoly, "", "")
+        every { mockDbManager.getExtremaForWorkouts(listOf(workoutId)) } returns emptyList()
+
+        // Capture task submitted to executor
+        var capturedTask: Runnable? = null
+        val queuingExecutor = object : AbstractExecutorService() {
+            override fun shutdown() {}
+            override fun shutdownNow(): List<Runnable> = emptyList()
+            override fun isShutdown(): Boolean = false
+            override fun isTerminated(): Boolean = false
+            override fun awaitTermination(timeout: Long, unit: TimeUnit): Boolean = true
+            override fun execute(command: Runnable) {
+                capturedTask = command
+            }
+        }
+
+        val dbExecField = TrackerService::class.java.getDeclaredField("mDbExecutor").apply { isAccessible = true }
+        dbExecField.set(service, queuingExecutor)
+
+        val liveSessionField = TrackerService::class.java.getDeclaredField("mLiveSession").apply { isAccessible = true }
+        liveSessionField.set(service, null)
+
+        val state = TrackerService.ResumedWorkoutState(
+            "2026-10-18_160000",
+            workoutId,
+            30,
+            20,
+            15,
+            1,
+            100.0
+        )
+
+        // Act: Invoke applyResumedState
+        service.applyResumedState(state)
+
+        // Assert BEFORE rehydration executes: mLiveSession remains null (publication safety) and mIsRehydrating is true
+        assertNull("mLiveSession must NOT be published before rehydration task runs", liveSessionField.get(service))
+        assertTrue("mIsRehydrating must be true while rehydration task is pending", service.isRehydrating)
+        assertFalse(service.tableInitializationFuture.isDone)
+        assertNotNull("Rehydration task must have been queued to mDbExecutor", capturedTask)
+
+        // Now run rehydration task
+        capturedTask!!.run()
+
+        // Assert AFTER rehydration executes: session published and mIsRehydrating resets to false
+        val publishedSession = liveSessionField.get(service) as LiveWorkoutSession
+        assertNotNull("mLiveSession must be published after rehydration finishes", publishedSession)
+        assertEquals(workoutId, publishedSession.workoutId)
+        assertEquals(1, publishedSession.sampledLatLngs.size)
+        assertFalse("mIsRehydrating must reset to false after task completes", service.isRehydrating)
+        assertTrue(service.tableInitializationFuture.isDone)
+        assertEquals(workoutId, service.notifiedWorkoutId)
+    }
 }
