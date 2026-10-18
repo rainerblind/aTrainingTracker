@@ -794,7 +794,7 @@ object LegacyImportEngine {
 
     private fun getWorkoutId(db: WorkoutSummariesDatabaseManager, fileBaseName: String): Long {
         db.database.query(WorkoutSummaries.TABLE, arrayOf(WorkoutSummaries.C_ID), 
-            "${WorkoutSummaries.FILE_BASE_NAME} = ?", arrayOf(fileBaseName), null, null, null).use {
+            "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE", arrayOf(fileBaseName), null, null, null).use {
             return if (it.moveToFirst()) it.getLong(0) else -1L
         }
     }
@@ -814,7 +814,7 @@ object LegacyImportEngine {
             db.database.query(
                 WorkoutSummaries.TABLE, 
                 arrayOf(WorkoutSummaries.C_ID), 
-                "${WorkoutSummaries.FILE_BASE_NAME} = ?", 
+                "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE", 
                 arrayOf(fileBaseName), 
                 null, null, null
             ).use {
@@ -824,11 +824,11 @@ object LegacyImportEngine {
 
         val hasSport = bSportType != null && bSportType != BSportType.UNKNOWN
         val selection = if (hasSport) {
-            "${WorkoutSummaries.FILE_BASE_NAME} = ? OR " +
+            "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE OR " +
                     "${WorkoutSummaries.TIME_START} = ? OR " +
                     "(${WorkoutSummaries.B_SPORT} = ? AND ${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
         } else {
-            "${WorkoutSummaries.FILE_BASE_NAME} = ? OR " +
+            "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE OR " +
                     "${WorkoutSummaries.TIME_START} = ? OR " +
                     "(${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
         }

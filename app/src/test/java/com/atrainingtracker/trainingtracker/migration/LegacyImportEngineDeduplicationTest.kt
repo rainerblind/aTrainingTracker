@@ -98,7 +98,7 @@ class LegacyImportEngineDeduplicationTest {
         )
 
         assertTrue("Expected existing workout to return true", exists)
-        assertEquals("${WorkoutSummaries.FILE_BASE_NAME} = ?", capturedSelection.captured)
+        assertEquals("${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE", capturedSelection.captured)
         assertEquals(1, capturedArgs.captured.size)
         assertEquals("2024_05_10_14_30_00", capturedArgs.captured[0])
     }
@@ -149,7 +149,7 @@ class LegacyImportEngineDeduplicationTest {
         )
 
         assertTrue("Expected existing workout to return true", exists)
-        val expectedSelection = "${WorkoutSummaries.FILE_BASE_NAME} = ? OR " +
+        val expectedSelection = "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE OR " +
                 "${WorkoutSummaries.TIME_START} = ? OR " +
                 "(${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
         assertEquals(expectedSelection, capturedSelection.captured)
@@ -189,7 +189,7 @@ class LegacyImportEngineDeduplicationTest {
         )
 
         assertTrue("Expected existing workout to return true", exists)
-        val expectedSelection = "${WorkoutSummaries.FILE_BASE_NAME} = ? OR " +
+        val expectedSelection = "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE OR " +
                 "${WorkoutSummaries.TIME_START} = ? OR " +
                 "(${WorkoutSummaries.B_SPORT} = ? AND ${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
         assertEquals(expectedSelection, capturedSelection.captured)

@@ -2016,5 +2016,6 @@
     <string name="onboarding_pair_sensor_action">+ Sparuj czujnik</string>
     <string name="devices_empty_state_search_hint">Skanuj w poszukiwaniu czujników Bluetooth LE lub ANT+ w pobliżu</string>
     <string name="devices_action_search_sensors">+ Szukaj czujników</string>
+    <string name="error_workout_table_name_too_long">Nazwa tabeli treningu przekracza limit identyfikatora SQLite (64 znaki)</string>
 </resources>
 

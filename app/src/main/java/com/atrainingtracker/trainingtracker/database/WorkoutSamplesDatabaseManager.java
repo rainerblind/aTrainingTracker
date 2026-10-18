@@ -33,6 +33,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
@@ -641,7 +642,19 @@ public class WorkoutSamplesDatabaseManager {
         if (workoutName == null || workoutName.trim().isEmpty() || "null".equalsIgnoreCase(workoutName.trim())) {
             throw new IllegalArgumentException("Invalid workout baseFileName for sample table: " + workoutName);
         }
-        return "\"" + workoutName + "\"";
+        String escaped = workoutName.replace("\"", "\"\"");
+        if (escaped.length() > 64) {
+            String msg = "Workout table name exceeds SQLite identifier limit (64 chars): " + workoutName;
+            try {
+                Context appContext = TrainingApplication.getAppContext();
+                if (appContext != null) {
+                    msg = appContext.getString(R.string.error_workout_table_name_too_long) + ": " + workoutName;
+                }
+            } catch (Throwable ignored) {
+            }
+            throw new IllegalArgumentException(msg);
+        }
+        return "\"" + escaped + "\"";
     }
 
     @NonNull

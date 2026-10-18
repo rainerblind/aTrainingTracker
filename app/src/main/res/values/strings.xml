@@ -2209,6 +2209,7 @@
     <string name="onboarding_pair_sensor_action">+ Pair Sensor</string>
     <string name="devices_empty_state_search_hint">Scan for nearby Bluetooth LE or ANT+ sensors</string>
     <string name="devices_action_search_sensors">+ Search for Sensors</string>
+    <string name="error_workout_table_name_too_long">Workout table name exceeds SQLite identifier limit (64 chars)</string>
 </resources>
 
 

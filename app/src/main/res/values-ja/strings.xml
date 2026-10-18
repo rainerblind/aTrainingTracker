@@ -1995,5 +1995,6 @@
     <string name="onboarding_pair_sensor_action">+ センサーをペアリング</string>
     <string name="devices_empty_state_search_hint">近くのBluetooth LEまたはANT+センサーをスキャン</string>
     <string name="devices_action_search_sensors">+ センサーを検索</string>
+    <string name="error_workout_table_name_too_long">ワークアウトテーブル名がSQLite識別子の制限（64文字）を超えています</string>
 </resources>
 

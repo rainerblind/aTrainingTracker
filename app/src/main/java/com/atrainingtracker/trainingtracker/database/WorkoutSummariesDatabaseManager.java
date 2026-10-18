@@ -1708,6 +1708,9 @@ public class WorkoutSummariesDatabaseManager {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_extrema_sensor_extrema ON " + WorkoutSummaries.TABLE_EXTREMA_VALUES
                     + " (" + WorkoutSummaries.SENSOR_TYPE + ", " + WorkoutSummaries.EXTREMA_TYPE + ")");
 
+            // case-insensitive index for deduplication and lookup (REQ-MIG-042 / ATT-3991)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_summaries_file_base_name_nocase ON "
+                    + WorkoutSummaries.TABLE + " (" + WorkoutSummaries.FILE_BASE_NAME + " COLLATE NOCASE)");
         }
 
         private void addColumn(@NonNull SQLiteDatabase db, String table, String column, String type, String defaultValue) {

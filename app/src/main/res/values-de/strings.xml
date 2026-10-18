@@ -2101,4 +2101,5 @@
     <string name="onboarding_pair_sensor_action">+ Sensor koppeln</string>
     <string name="devices_empty_state_search_hint">Suche nach Bluetooth-LE- oder ANT+-Sensoren in der Nähe</string>
     <string name="devices_action_search_sensors">+ Sensoren suchen</string>
+    <string name="error_workout_table_name_too_long">Name der Trainingstabelle überschreitet SQLite-Längenbegrenzung (64 Zeichen)</string>
 </resources>
