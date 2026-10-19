@@ -366,7 +366,9 @@ def build_audit_prompt(gate_key, gate_info, subtask, parent_issue):
 
     docs_diff = ""
     try:
-        docs_diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD", "--", "docs/requirements.md", "docs/tests.md"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+        docs_diff = subprocess.check_output(["git", "diff", "HEAD", "--", "docs/requirements.md", "docs/tests.md"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+        if not docs_diff:
+            docs_diff = subprocess.check_output(["git", "diff", "HEAD~1", "HEAD", "--", "docs/requirements.md", "docs/tests.md"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
     except Exception:
         pass
     if docs_diff:

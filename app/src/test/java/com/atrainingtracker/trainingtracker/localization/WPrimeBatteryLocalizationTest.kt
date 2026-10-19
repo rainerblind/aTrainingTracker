@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.localization
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -103,6 +104,10 @@ class WPrimeBatteryLocalizationTest {
             assertTrue(
                 "w_prime_warning_low_battery in $dirName must contain %",
                 warning.contains("%")
+            )
+            assertFalse(
+                "w_prime_warning_low_battery in $dirName must not contain %%",
+                warning.contains("%%")
             )
         }
     }

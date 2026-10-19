@@ -1926,9 +1926,9 @@
     <string name="athlete_profile_cp_estimator_long_sec">Duração longa (s)</string>
     <string name="athlete_profile_cp_estimator_apply">Aplicar estimativa (%1$d W / %2$.1f kJ)</string>
     <string name="workout_w_prime_bal_min_format">Mín. W\'bal: %1$.1f kJ (%2$.0f%%)</string>
-    <string name="workout_w_prime_empty_tank">Tanque vazio (&lt;10%%)</string>
+    <string name="workout_w_prime_empty_tank">Tanque vazio (&lt;10%)</string>
     <string name="w_prime_battery_pct">%1$d%%</string>
-    <string name="w_prime_warning_low_battery">Bateria W\' fraca (&lt;20%%)</string>
+    <string name="w_prime_warning_low_battery">Bateria W\' fraca (&lt;20%)</string>
 
     <!-- ATT-3861: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400) -->
     <string name="efficiency_factor_short">EF</string>
@@ -1937,8 +1937,8 @@
     <string name="workout_ef_pahr_format">EF: %1$.2f m/min/bpm • Pa:Hr: %2$.1f%%</string>
     <string name="workout_ef_only_pw_format">EF: %1$.2f W/bpm</string>
     <string name="workout_ef_only_pa_format">EF: %1$.2f m/min/bpm</string>
-    <string name="workout_decoupling_coupled">Acoplado (&lt;5%%)</string>
-    <string name="workout_decoupling_drift">Deriva alta (≥5%%)</string>
+    <string name="workout_decoupling_coupled">Acoplado (&lt;5%)</string>
+    <string name="workout_decoupling_drift">Deriva alta (≥5%)</string>
 
     <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
     <string name="athlete_profile_pmc_title">Gestão de desempenho (CTL / ATL / TSB)</string>
@@ -1991,7 +1991,7 @@
     <string name="workout_ef_value_pa_format">%1$.2f m/min/bpm</string>
     <string name="workout_decoupling_pct_format">%1$.1f%%</string>
     <string name="workout_w_prime_min_kj_label">Mín. W\'bal</string>
-    <string name="workout_w_prime_min_pct_label">Mín. %%</string>
+    <string name="workout_w_prime_min_pct_label">Mín. %</string>
     <string name="workout_w_prime_min_kj_value_format">%1$.1f kJ</string>
     <string name="workout_w_prime_min_pct_value_format">%1$.0f%%</string>
     <string name="workout_power_label_work">Trabalho</string>
