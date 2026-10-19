@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -59,80 +60,128 @@ fun WorkoutDetails(
     enableAerobicEfficiencyModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL,
     enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
 ) {
-    val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
+    val visibleSections = buildVisibleWorkoutDetailSections(
+        data = data,
+        enableCogganPowerMetrics = enableCogganPowerMetrics,
+        enableAerobicEfficiencyModel = enableAerobicEfficiencyModel,
+        enableCriticalPowerModel = enableCriticalPowerModel
+    )
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // --- Metrics Row: Time and Distance ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // 1. Active Time
-            MetricItem(
-                iconRes = R.drawable.ic_time_active,
-                label = stringResource(R.string.time_active),
-                value = formatters.time.format(data.activeTimeSec),
-                secondaryValue = stringResource(R.string.total_time_format, formatters.time.format(data.totalTimeSec)),
-                layout = MetricLayout.VERTICAL,
-                isPrimary = true,
-                iconSize = 28.dp,
-                modifier = Modifier.weight(1f)
-            )
+        visibleSections.forEachIndexed { index, section ->
+            if (index > 0) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 6.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+            }
+            section()
+        }
+    }
+}
 
-            // 2. Distance
-            val maxDispString = if (data.maxDisplacement != null) {
-                val maxDispFormatted = formatters.distance.format_with_units(data.maxDisplacement)
-                stringResource(R.string.format_max_displacement, maxDispFormatted)
-            } else null
+/**
+ * Builds the list of non-empty visible telemetry domain row composables for [WorkoutDetails] based on
+ * available data fields and feature flag toggles (`REQ-UI-415.2`).
+ *
+ * Contract:
+ * - Returns a guaranteed non-empty list of `@Composable () -> Unit` lambdas (Section 1 Active Time & Distance is always present).
+ * - Each item in the list produces a self-contained domain row without external vertical margin or leading/trailing dividers.
+ * - The calling composable is responsible for vertical arrangement (e.g. `Arrangement.spacedBy(12.dp)`)
+ *   and rendering `HorizontalDivider` with `if (index > 0)` guards between adjacent visible sections.
+ */
+@Composable
+private fun buildVisibleWorkoutDetailSections(
+    data: WorkoutDetailsData,
+    enableCogganPowerMetrics: Boolean,
+    enableAerobicEfficiencyModel: Boolean,
+    enableCriticalPowerModel: Boolean
+): List<@Composable () -> Unit> = buildList {
+    // Section 1: Active Time & Distance (always visible)
+    add {
+        MetricsTimeDistanceRow(data = data)
+    }
 
-            MetricItem(
-                iconRes = R.drawable.ic_distance,
-                label = stringResource(R.string.distance),
-                value = formatters.distance.format_with_units(data.totalDistance),
-                secondaryValue = maxDispString,
-                layout = MetricLayout.VERTICAL,
-                isPrimary = true,
-                iconSize = 28.dp,
-                modifier = Modifier.weight(1f)
+    // Section 2: Altitude (Ascent and Descent)
+    if (data.ascentMeters > 0 || data.descentMeters > 0) {
+        add {
+            AltitudeRow(
+                ascentMeters = data.ascentMeters,
+                descentMeters = data.descentMeters
             )
         }
+    }
 
-        // --- Section 3: Altitude (Ascent and Descent) ---
-        AltitudeRow(
-            ascentMeters = data.ascentMeters,
-            descentMeters = data.descentMeters,
-            modifier = Modifier
-        )
-
-        // --- Section 4: Power Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) (REQ-UI-402, REQ-UI-403, REQ-UI-404) ---
-        val hasCogganMetrics = enableCogganPowerMetrics && (
-            data.normalizedPowerWatts != null ||
-                data.intensityFactor != null ||
-                data.tss != null ||
-                data.variabilityIndex != null
-        )
-        val hasBasicPowerMetrics = data.workKj != null || data.avgPowerToWeight != null
-        if (hasCogganMetrics || hasBasicPowerMetrics) {
+    // Section 3: Power Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) (REQ-UI-402, REQ-UI-403, REQ-UI-404, REQ-UI-415)
+    val powerSlots = resolvePowerMetricSlots(data, enableCogganPowerMetrics)
+    if (powerSlots.isNotEmpty()) {
+        add {
             PowerTrainingMetricsSection(
                 data = data,
-                enableCogganPowerMetrics = enableCogganPowerMetrics
+                enableCogganPowerMetrics = enableCogganPowerMetrics,
+                slots = powerSlots
             )
         }
+    }
 
-        // --- Section 5: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400, REQ-UI-403, REQ-UI-404) ---
-        if (enableAerobicEfficiencyModel && data.efficiencyFactor != null) {
+    // Section 4: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400, REQ-UI-403, REQ-UI-404)
+    if (enableAerobicEfficiencyModel && data.efficiencyFactor != null) {
+        add {
             AerobicEfficiencyRow(data = data)
         }
+    }
 
-        // --- Section 6: Anaerobic Battery (W'bal) Minimum & Empty-Tank Status (REQ-UI-399, REQ-UI-403, REQ-UI-404) ---
-        if (enableCriticalPowerModel && data.minWPrimeBalKj != null && data.minWPrimeBalPct != null) {
+    // Section 5: Anaerobic Battery (W'bal) Minimum & Empty-Tank Status (REQ-UI-399, REQ-UI-403, REQ-UI-404)
+    if (enableCriticalPowerModel && data.minWPrimeBalKj != null && data.minWPrimeBalPct != null) {
+        add {
             AnaerobicBatteryRow(data = data)
         }
+    }
+}
+
+@Composable
+private fun MetricsTimeDistanceRow(
+    data: WorkoutDetailsData,
+    modifier: Modifier = Modifier
+) {
+    val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // 1. Active Time
+        MetricItem(
+            iconRes = R.drawable.ic_time_active,
+            label = stringResource(R.string.time_active),
+            value = formatters.time.format(data.activeTimeSec),
+            secondaryValue = stringResource(R.string.total_time_format, formatters.time.format(data.totalTimeSec)),
+            layout = MetricLayout.VERTICAL,
+            isPrimary = true,
+            iconSize = 28.dp,
+            modifier = Modifier.weight(1f)
+        )
+
+        // 2. Distance
+        val maxDispString = if (data.maxDisplacement != null) {
+            val maxDispFormatted = formatters.distance.format_with_units(data.maxDisplacement)
+            stringResource(R.string.format_max_displacement, maxDispFormatted)
+        } else null
+
+        MetricItem(
+            iconRes = R.drawable.ic_distance,
+            label = stringResource(R.string.distance),
+            value = formatters.distance.format_with_units(data.totalDistance),
+            secondaryValue = maxDispString,
+            layout = MetricLayout.VERTICAL,
+            isPrimary = true,
+            iconSize = 28.dp,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -210,83 +259,85 @@ private fun AltitudeRow(
 }
 
 /**
- * Grouped Power & Coggan Load row (`REQ-UI-404.2`, `docs/design_guidelines.md` Section 5.10).
+ * Grouped Power & Coggan Load row (`REQ-UI-404.2`, `REQ-UI-415.1`, `docs/design_guidelines.md` Section 5.10).
  * Displays Coggan metrics (`NP` with `VI` secondary subtitle, `IF`, `TSS`) when `enableCogganPowerMetrics` is enabled,
- * and basic physics (`Work kJ`, `W/kg`) in balanced equal-weight `MetricItem` columns.
+ * falling back to basic physics (`Work kJ`, `W/kg`) in a single horizontal row of balanced equal-weight `MetricItem` columns.
  */
 @Composable
 private fun PowerTrainingMetricsSection(
     data: WorkoutDetailsData,
     enableCogganPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS,
+    slots: List<PowerMetricSlot> = resolvePowerMetricSlots(data, enableCogganPowerMetrics),
     modifier: Modifier = Modifier
 ) {
-    val showCogganRow = enableCogganPowerMetrics && (
-        data.normalizedPowerWatts != null ||
-            data.intensityFactor != null ||
-            data.tss != null
-    )
-    val showBasicPhysicsRow = data.workKj != null || data.avgPowerToWeight != null
-
-    if (!showCogganRow && !showBasicPhysicsRow) return
+    if (slots.isEmpty()) return
 
     WorkoutDomainRow(
         domainLabel = stringResource(R.string.power),
         domainIconRes = R.drawable.ic_power,
         modifier = modifier
     ) {
-        if (showCogganRow) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                data.normalizedPowerWatts?.let { np ->
-                    MetricItem(
-                        iconRes = null,
-                        label = stringResource(R.string.normalized_power_short),
-                        value = stringResource(R.string.workout_power_value_watts_format, np),
-                        secondaryValue = data.variabilityIndex?.let { vi ->
-                            stringResource(R.string.workout_power_metrics_vi_format, vi)
-                        },
-                        layout = MetricLayout.VERTICAL,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                data.intensityFactor?.let { ifVal ->
-                    MetricItem(
-                        iconRes = null,
-                        label = stringResource(R.string.intensity_factor_short),
-                        value = stringResource(R.string.workout_power_value_if_format, ifVal),
-                        layout = MetricLayout.VERTICAL,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                data.tss?.let { tssVal ->
-                    MetricItem(
-                        iconRes = null,
-                        label = stringResource(R.string.tss_short),
-                        value = stringResource(R.string.workout_power_value_tss_format, tssVal),
-                        layout = MetricLayout.VERTICAL,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-        if (showBasicPhysicsRow) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                data.workKj?.let { work ->
-                    MetricItem(
-                        iconRes = null,
-                        label = stringResource(R.string.workout_power_label_work),
-                        value = stringResource(R.string.workout_power_value_work_format, work),
-                        layout = MetricLayout.VERTICAL,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                data.avgPowerToWeight?.let { wkg ->
-                    MetricItem(
-                        iconRes = null,
-                        label = stringResource(R.string.power_to_weight_short),
-                        value = stringResource(R.string.workout_power_metrics_wkg_format, wkg),
-                        layout = MetricLayout.VERTICAL,
-                        modifier = Modifier.weight(1f)
-                    )
+        Row(modifier = Modifier.fillMaxWidth()) {
+            slots.forEach { slot ->
+                when (slot) {
+                    PowerMetricSlot.NORMALIZED_POWER -> {
+                        data.normalizedPowerWatts?.let { np ->
+                            MetricItem(
+                                iconRes = null,
+                                label = stringResource(R.string.normalized_power_short),
+                                value = stringResource(R.string.workout_power_value_watts_format, np),
+                                secondaryValue = data.variabilityIndex?.let { vi ->
+                                    stringResource(R.string.workout_power_metrics_vi_format, vi)
+                                },
+                                layout = MetricLayout.VERTICAL,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                    PowerMetricSlot.INTENSITY_FACTOR -> {
+                        data.intensityFactor?.let { ifVal ->
+                            MetricItem(
+                                iconRes = null,
+                                label = stringResource(R.string.intensity_factor_short),
+                                value = stringResource(R.string.workout_power_value_if_format, ifVal),
+                                layout = MetricLayout.VERTICAL,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                    PowerMetricSlot.TSS -> {
+                        data.tss?.let { tssVal ->
+                            MetricItem(
+                                iconRes = null,
+                                label = stringResource(R.string.tss_short),
+                                value = stringResource(R.string.workout_power_value_tss_format, tssVal),
+                                layout = MetricLayout.VERTICAL,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                    PowerMetricSlot.WORK_KJ -> {
+                        data.workKj?.let { work ->
+                            MetricItem(
+                                iconRes = null,
+                                label = stringResource(R.string.workout_power_label_work),
+                                value = stringResource(R.string.workout_power_value_work_format, work),
+                                layout = MetricLayout.VERTICAL,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                    PowerMetricSlot.POWER_TO_WEIGHT -> {
+                        data.avgPowerToWeight?.let { wkg ->
+                            MetricItem(
+                                iconRes = null,
+                                label = stringResource(R.string.power_to_weight_short),
+                                value = stringResource(R.string.workout_power_metrics_wkg_format, wkg),
+                                layout = MetricLayout.VERTICAL,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -396,48 +447,6 @@ private fun AnaerobicBatteryRow(
     }
 }
 
-@Preview
-@Composable
-fun PreviewDetailItem() {
-    ATrainingTrackerTheme {
-        MetricItem(
-            iconRes = R.drawable.ic_distance,
-            label = "Distance",
-            modifier = Modifier.fillMaxWidth(),
-            value = "10,00 km",
-            secondaryValue = "(Max. Luftlinie: 5,00 km)",
-            layout = MetricLayout.VERTICAL
-        )
-    }
-}
-
-@Preview
-@Composable
-fun PreviewDistanceAndTime() {
-    ATrainingTrackerTheme {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            MetricItem(
-                iconRes = R.drawable.ic_time_active,
-                label = "Active Time",
-                value = "0:30:00",
-                secondaryValue = "(Total: 0:45:00)",
-                modifier = Modifier.weight(1f),
-                layout = MetricLayout.VERTICAL,
-                iconSize = 28.dp
-            )
-
-            MetricItem(
-                iconRes = R.drawable.ic_distance,
-                label = "Distance",
-                value = "10,00 km",
-                secondaryValue = "(Max. Luftlinie: 5,00 km)",
-                modifier = Modifier.weight(1f),
-                layout = MetricLayout.VERTICAL,
-                iconSize = 28.dp
-            )
-        }
-    }
-}
 
 @Preview(showBackground = true)
 @Composable
