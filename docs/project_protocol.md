@@ -97,6 +97,7 @@ Sub-tasks represent stage execution activities (`[Analysis]`, `[Req & Test Spec]
 * **Mandatory Lösungsversion (Fix Version/s)**: Parent tickets MUST have an active unreleased `Lösungsversion` assigned when finished/accepted (e.g. `V4.9.40`). Sub-tasks MUST NOT have a `Lösungsversion` assigned ("Sub-Tasks must not get a solution").
 * **Sub-Task Canonical Naming & Standardization**: Sub-task summaries MUST begin with the standardized canonical prefix `[Analysis]`, `[Req & Test Spec]`, `[Impl-Plan]`, `[Implementation]`, `[Test]` followed directly by the parent ticket summary (e.g. `[Req & Test Spec] <Parent Summary>`). Stage descriptions in titles are strictly omitted.
 * **Synchronous Parent Ticket Stage Progression (Rule 3 / Rule 45)**: Immediately when a stage sub-task transitions to `Erledigt` (`freigabe`), the parent ticket advances to the next stage column (`[Analysis]` $\rightarrow$ `Test Spec` $\rightarrow$ `Implementation Plan` $\rightarrow$ `Implementation` $\rightarrow$ `Test` $\rightarrow$ `Final Review (Human)`). This is enforced automatically by `tools/jira_util.py move <SUBTASK_KEY> freigabe` so parent tickets never lag behind when Jira backend automation fails to fire.
+* **Subagent Delegation & Asymmetric `pro` / `flash` Zipper Principle (Rule 11b / Rule 46)**: Doing (`agent1`) and Gate Review (`agent2`) across the 5 ASPICE stages MUST use different model tiers (`pro` vs. `flash`) alternating by stage: Stage 1 (`pro` / `flash`), Stage 2 (`flash` / `pro`), Stage 3 (`pro` / `flash`), Stage 4 (`flash` / `pro` for Standard, `pro` / `flash` for High-Risk), and Stage 5 (`flash` / `pro`).
 * **Single Atomic Commit per Ticket ("One Commit per Ticket", Rule 44)**: Each ticket in a sprint produces strictly one atomic commit on `sprint/<sprint_id>` (via `git merge --squash feature/<KEY>`) containing all Stage 1–5 deliverables, living docs, production code, and unit tests.
 * **Next-Sprint Default for Review Revisions & Lean Defect Recording (Zero Code Changes During Review)**: During Ceremony 2 (Joint Review), under NO circumstances may code be modified. Do NOT conduct deep technical root-cause or code analysis during review ("Während des Sprint Reviews soll es noch keine detaillierte Analyse der Auffälligkeit geben"). Focus on capturing the exact human observation, steps to reproduce, user intent, and reproduction context into a new backlog ticket for the **next sprint**, preserving full context for Stage 1 (Analysis) while keeping review velocity high.
 * **Strict Separation of Creation vs. Implementation**: When instructed to create or update a Jira ticket, create/update it, stop immediately, and do not start autonomous implementation.
@@ -134,11 +135,11 @@ The detailed procedural rules, quality checklists, and templates are encapsulate
 | :--- | :--- | :--- |
 | **Sprint Facilitation** | [sprint-planner](file:///.agents/skills/sprint-planner/SKILL.md) | Sprint-Start Screening (interaktiv mit User), Anforderungsklährung, Übergabe an autonome Phase, Sprint-End Joint Review. |
 | **Regression Archaeology** | [regression-bisect](file:///.agents/skills/regression-bisect/SKILL.md) | Interval bisection, exponential boundary search (1, 2, 4, 8, 16...), binary git bisection (`tools/sprint_bisect.py`), and Chesterton's Fence forensics before fixing. |
-| **Stage 1: Analysis** | [stage1-analysis](file:///.agents/skills/stage1-analysis/SKILL.md) | Forensic RCA, Chesterton's Fence archaeology, scope bounding.<br>Template: `templates/analysis_template.md` |
-| **Stage 2: Req & Test Spec** | [stage2-req-test-spec](file:///.agents/skills/stage2-req-test-spec/SKILL.md) | Requirements specification (`REQ-XXX`), test cases (`TST-XXX`), 9-language localization audit, living doc synchronization.<br>Template: `templates/test_spec_template.md` |
-| **Stage 3: Impl Plan** | [stage3-impl-plan](file:///.agents/skills/stage3-impl-plan/SKILL.md) | Architectural decomposition, SWE.2 layering, atomic step breakdown, invariants.<br>Template: `templates/plan_template.md` |
-| **Stage 4: Implementation** | [stage4-implementation](file:///.agents/skills/stage4-implementation/SKILL.md) | Gate 3 verification (`check-gate`), software construction, targeted unit tests, KDoc/JavaDoc standards. |
-| **Stage 5: Verification** | [stage5-verification](file:///.agents/skills/stage5-verification/SKILL.md) | Clean-room regression suite (`./gradlew testDebugUnitTest`), Pixel 10 checks, walkthrough generation, transition to `Final Review (Human)`.<br>Template: `templates/walkthrough_template.md` |
+| **Stage 1: Analysis** | [stage1-analysis](file:///.agents/skills/stage1-analysis/SKILL.md) | Forensic RCA, Chesterton's Fence archaeology, scope bounding (`agent1=pro`, `agent2=flash`).<br>Template: `templates/analysis_template.md` |
+| **Stage 2: Req & Test Spec** | [stage2-req-test-spec](file:///.agents/skills/stage2-req-test-spec/SKILL.md) | Requirements specification (`REQ-XXX`), test cases (`TST-XXX`), 9-language localization audit, living doc synchronization (`agent1=flash`, `agent2=pro`).<br>Template: `templates/test_spec_template.md` |
+| **Stage 3: Impl Plan** | [stage3-impl-plan](file:///.agents/skills/stage3-impl-plan/SKILL.md) | Architectural decomposition, SWE.2 layering, atomic step breakdown, invariants (`agent1=pro`, `agent2=flash`).<br>Template: `templates/plan_template.md` |
+| **Stage 4: Implementation** | [stage4-implementation](file:///.agents/skills/stage4-implementation/SKILL.md) | Gate 3 verification (`check-gate`), software construction, targeted unit tests, KDoc/JavaDoc standards (`agent1=flash/pro`, `agent2=pro/flash`). |
+| **Stage 5: Verification** | [stage5-verification](file:///.agents/skills/stage5-verification/SKILL.md) | Clean-room regression suite (`./gradlew testDebugUnitTest`), Pixel 10 checks, walkthrough generation, transition to `Final Review (Human)` (`agent1=flash`, `agent2=pro`).<br>Template: `templates/walkthrough_template.md` |
 | **Jira Operations** | [jira-workflow](file:///.agents/skills/jira-workflow/SKILL.md) | Role-safe operations with `tools/jira_util.py`, subtask transitions, parent ticket human gate enforcement. |
 | **UI Fast Iteration** | [ui-designer](file:///.agents/skills/ui-designer/SKILL.md) | Rapid Jetpack Compose `@Preview` loop, AMOLED dark theme tokens, instant visual diffs and human check cycles. |
 | **Backlog Ideation** | [brainstormer](file:///.agents/skills/brainstormer/SKILL.md) | Socratic problem discovery, edge case probing, user story formulation, automated backlog ticket creation.<br>Template: `templates/backlog_ticket_template.md` |
@@ -149,12 +150,13 @@ The detailed procedural rules, quality checklists, and templates are encapsulate
 
 Detailed standards for design and implementation are codified in dedicated companion documents:
 * **UI & Interaction Design Guidelines**: [`docs/design_guidelines.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/design_guidelines.md)
-  * Visual consistency baseline, 1:1 vectorization fidelity, compact header icon actions, and bottom sheet scroll rules (Section 5)
+  * Visual consistency baseline, 1:1 vectorization fidelity, unambiguous action icons, compact header icon actions, modal overlay composition retention, and centered section dividers (Section 5)
   * Discrete scalar ranges & durations ($\ge 5$ numeric values) — sliders over wrapping chips (Section 1.4)
   * Sub-entity chart coordinate normalization (Section 2.1)
   * Adaptive elevation profile scaling and fixed heights prohibition (Section 2.3)
   * Elevation profile marker badge boundary clearance (Section 2.4)
   * Continuous linear projection for sparse geometry progress tracking (Section 2.5)
+  * Mandatory axis scale labels and outlier-resilient Y-scaling on telemetry/progression charts (Section 2.6)
   * Settings sliders explanatory hints and scannable accordions (Section 3)
   * Unified viewport anchor authority for maps (Section 6.1)
   * Jetpack Compose multi-state `@Preview` tooling, 9-language localization parity, and positional format specifiers (`%1$s`) (Section 4)
@@ -163,6 +165,8 @@ Detailed standards for design and implementation are codified in dedicated compa
   * Chesterton's Fence for empty callback lambdas & gesture contract tests (Section 1.2)
   * Strict prohibition of sorting and ranking on formatted display strings (Section 1.3)
   * Explicit confirmation dialogs for destructive or cache-invalidating operations (Section 1.4)
+  * Backend filter & service key normalization (no localized UI sentinel strings) & post-trim empty guard (Section 1.7)
+  * Constructor state seeding parity with `resetSession()` in stateful metric devices (Section 1.8)
   * Database & DTO mapping symmetry (`fromCursor`) (Section 2.1)
   * Specific direct platform intents over generic app settings (Section 3.1)
   * Defensive service lifecycle finalization & FGS permission gating (Section 3.2)

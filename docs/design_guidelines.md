@@ -126,6 +126,14 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
     $$\text{alt} = P_i.\text{alt} + s \times (P_{i+1}.\text{alt} - P_i.\text{alt})$$
   * Telemetry and visual marker positions along polyline profiles must be interpolated continuously using this projected distance and altitude (ATT-3103 / ATT-3174).
 
+### 2.6 Mandatory Axis Scale Labels & Outlier-Resilient Y-Scaling on Telemetry & Progression Charts (Rule 48 — ATT-4287)
+* **Explicit X-Axis & Y-Axis Scale Markers**:
+  * Every chart rendered on a `Canvas` (including historical workout cluster progression charts such as `ClusterTrendChart` and post-workout telemetry charts) **MUST** render explicit, human-readable scale markers/labels on both the X-axis (e.g. session dates `"dd.MM."` / `"MMM yy"`, distance, or duration) and the Y-axis (e.g. formatted pace `"5:30 /km"`, speed `"28.5 km/h"`, heart rate `"155 bpm"`, or power `"220 W"` aligned with the horizontal reference gridlines).
+  * Drawing unlabeled gridlines without axis tick values leaves the athlete unable to read absolute performance levels or time intervals from the graph.
+* **Outlier-Resilient Y-Axis Domain Clamping**:
+  * Historical progression charts **MUST NOT** scale their Y-axis linearly across raw un-clamped `min..max` extrema when a single anomalous session (e.g. an unpaused stop yielding `115:52 /km` when normal sessions are `5:14/km – 8:28/km`) is present.
+  * Use outlier-resilient bounds (such as interquartile range $\text{IQR} = Q_3 - Q_1$ clamping to $[Q_1 - 1.5 \times \text{IQR}, Q_3 + 1.5 \times \text{IQR}]$ or 5th–95th percentile clamping when $N \ge 4$, pinning extreme outliers to the top/bottom canvas edge with an indicator) so the primary trend line utilizes the full vertical canvas height.
+
 ---
 
 ## 3. Settings & Accordion Structure
@@ -203,6 +211,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 ### 5.5 Typography & Icons
 * Text styles from `MaterialTheme.typography`; emphasis via `FontWeight.Bold` / `SemiBold` (no custom font families).
 * Icons from Material Icons (`Icons.Default.*`, `Icons.AutoMirrored.*` for directional icons). Map POIs/markers should use a consistent standard icon set (see ATT-2461) rather than ad-hoc drawn shapes.
+* **Unambiguous Action Iconography & No ASCII Symbol Prefixes in Strings (Rule 49 — ATT-4286, ATT-4288)**:
+  * **Never Use Minus-Like Icons (`HorizontalRule`) for Insert/Add Actions**: Never use `Icons.Default.HorizontalRule` (`—`) in a toolbar next to `+` (`Icons.Default.Add`) to represent inserting a section divider or item; a horizontal bar next to `+` visually reads as a minus/remove button (`-`). Use a dedicated split/section icon or labeled menu item.
+  * **Never Include Literal `"+ "` Prefixes Inside Localized `<string>` Resources**: When a button, chip, or action item renders a leading `Icon(Icons.Default.Add, ...)`, the corresponding `<string>` resource in `strings.xml` **MUST NOT** start with a literal `"+ "` character (which produces duplicate `+ + Pair Sensor` labels on screen). Keep icon graphics in Compose `Icon` slots and keep XML strings purely textual.
 * **Semantic Category Icon Tinting (Rule 23)**: When rendering paired or symmetric category items across lists, tables, or tabbed views (e.g. equipment categories like bikes and shoes in `EquipmentSensorMatrixScreen`):
   * **Unified Active Role**: All active entities across categories MUST use the same unified brand color token (`MaterialTheme.colorScheme.primary`). Do NOT assign disparate color roles (e.g. `primary` to bikes and `secondary` to shoes) to differentiate categories; visual distinction is provided by the vector drawables themselves (`ic_equipment_bike` vs `ic_equipment_shoe`) and section/tab titles.
   * **Status Tinting**: Use `MaterialTheme.colorScheme.outline` for retired/inactive entities, and `MaterialTheme.colorScheme.error` for failed/unhealthy states.
@@ -234,7 +245,10 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Transient Auto-Dismiss (3–5 Seconds)**: Navigation cues are time-sensitive and ephemeral. Upon being triggered (or once a maneuver instruction is issued), the cue must automatically vanish after a brief, configurable interval (3–5 seconds) via a smooth animation (fade or slide), promptly returning the screen to full telemetry focus without requiring manual dismissal while riding.
 * **Expert Settings Customization**: Auto-dismiss duration (e.g. 2–8 seconds or persistent until passed, default 4 seconds) and countdown distance (30–300 m, default 100 m) are exposed as configurable parameters in Expert Settings (*Experteneinstellungen*), allowing athletes to tailor cue timing to their riding speed and sport discipline (ATT-3321, ATT-3322).
 
-### 5.8 Bottom Sheets (`AppModalBottomSheet`, Live Segments & Climbs)
+### 5.8 Bottom Sheets (`AppModalBottomSheet`, Live Segments & Climbs) & Modal Overlay Composition Retention
+* **Modal Overlay Composition Retention — Never Unmount Host Screens When Opening a Sheet or Dialog (Rule 47 — ATT-4285)**:
+  * Modal bottom sheets (`AppModalBottomSheet`, `ModalBottomSheet`) and dialogs (`AlertDialog`) **MUST** be rendered as overlays *alongside* the underlying host screen (e.g. `RouteTabbedScreen`, `EquipmentSensorMatrixScreen`) in the Compose tree—**NEVER** inside a mutually exclusive `if (editingItem != null) { Sheet(...) } else { HostScreen(...) }` branch.
+  * Unmounting the underlying screen while a modal sheet is open destroys non-saveable composition state and causes `PrimaryScrollableTabRow` (`rememberScrollState(0)`), `LazyListState`, and collapsing header states to visibly jump or reset when the modal closes.
 * **No Nested `verticalScroll` Inside `AppModalBottomSheet` (ATT-3274 / ATT-3679)**:
   * `AppModalBottomSheet` defaults to `scrollable = true`, which wraps its content slot in a `Column(Modifier.verticalScroll(rememberScrollState()))`. Child screens hosted inside `AppModalBottomSheet` **MUST NOT** apply a second `Modifier.verticalScroll` (which crashes Compose with `IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints`), or must explicitly pass `scrollable = false` to `AppModalBottomSheet`.
 * **Default Fully Expanded Presentation**:
@@ -307,6 +321,12 @@ Row(
     }
 }
 ```
+
+### 5.11 Cockpit & Form Section Dividers: Prominent Contrast & Centered Titles (Rule 49 — ATT-4286)
+* **Visual Prominence**:
+  * Section dividers inside dense telemetry grids (`SensorGridScreen`) must be clearly distinguishable at a glance while riding, using a thick stroke (`thickness >= 2.dp` or `3.dp`, or a tinted pill/banner container) with high-contrast color tokens (`MaterialTheme.colorScheme.primary` or `onSurfaceVariant` at high opacity) rather than a faint `1.dp` hairline surrounded by empty whitespace.
+* **Centered Section Titles**:
+  * When a section divider includes a title, the title **MUST** be horizontally centered across the full row width (flanked by symmetric `HorizontalDivider(modifier = Modifier.weight(1f))` segments on both left and right, or centered inside a full-width section header bar), never left-aligned with a single trailing line.
 
 ---
 
