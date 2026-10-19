@@ -169,23 +169,24 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
 
     public void updateOrInsert(String fileBaseName, ContentValues values) {
         SQLiteDatabase db = getWritableDatabase();
-
-        int updates = 0;
+        db.beginTransaction();
         try {
-            updates = db.update(TABLE,
+            int updates = db.update(TABLE,
                     values,
                     WorkoutSummaries.FILE_BASE_NAME + "=?",
                     new String[]{fileBaseName});
-            if (DEBUG) Log.d(TAG, "updated " + fileBaseName);
+            if (updates < 1) {
+                db.insert(TABLE, null, values);
+                if (DEBUG) Log.d(TAG, "added " + fileBaseName);
+            } else {
+                if (DEBUG) Log.d(TAG, "updated " + fileBaseName);
+            }
+            db.setTransactionSuccessful();
         } catch (SQLException e) {
-            Log.e(TAG, e.getMessage());
-            if (DEBUG) Log.d(TAG, "Exception! for " + fileBaseName);
+            Log.e(TAG, "Exception in updateOrInsert for " + fileBaseName + ": " + e.getMessage(), e);
+        } finally {
+            db.endTransaction();
         }
-        if (updates < 1) {  // if nothing is updated, we create the entry
-            db.insert(TABLE, null, values);
-            if (DEBUG) Log.d(TAG, "added " + fileBaseName);
-        }
-
     }
 
     public void updateStatus(String fileBaseName, String status) {
@@ -278,21 +279,22 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
 
     /**
      * Fetches Strava activity JSON data for a batch of workout filenames (ATT-359).
-     * Reduces O(N) queries to O(1).
+     * Reduces O(N) queries to O(1) using parameterized SQL queries (REQ-EXP-021, ATT-4012).
      */
     public java.util.Map<String, String> getStravaActivityDataForWorkouts(java.util.Collection<String> fileNames) {
         java.util.Map<String, String> results = new java.util.HashMap<>();
-        if (fileNames.isEmpty()) return results;
+        if (fileNames == null || fileNames.isEmpty()) return results;
 
-        StringBuilder inClause = new StringBuilder();
-        for (String name : fileNames) {
-            if (inClause.length() > 0) inClause.append(",");
-            inClause.append("'").append(name).append("'");
+        String[] nameArray = fileNames.toArray(new String[0]);
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < nameArray.length; i++) {
+            if (i > 0) placeholders.append(",");
+            placeholders.append("?");
         }
 
-        String selection = WorkoutSummaries.FILE_BASE_NAME + " IN (" + inClause + ")";
+        String selection = WorkoutSummaries.FILE_BASE_NAME + " IN (" + placeholders + ")";
         
-        try (Cursor cursor = getReadableDatabase().query(TABLE, new String[]{WorkoutSummaries.FILE_BASE_NAME, STRAVA_ACTIVITY_DATA}, selection, null, null, null, null)) {
+        try (Cursor cursor = getReadableDatabase().query(TABLE, new String[]{WorkoutSummaries.FILE_BASE_NAME, STRAVA_ACTIVITY_DATA}, selection, nameArray, null, null, null)) {
             int nameIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME);
             int dataIdx = cursor.getColumnIndexOrThrow(STRAVA_ACTIVITY_DATA);
 

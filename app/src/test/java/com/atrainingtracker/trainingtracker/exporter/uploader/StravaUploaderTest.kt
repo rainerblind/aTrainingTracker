@@ -29,6 +29,12 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import com.atrainingtracker.trainingtracker.exporter.BaseExporter.ExportResult
+import com.atrainingtracker.trainingtracker.exporter.ExportInfo
+import com.atrainingtracker.trainingtracker.exporter.ExportType
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
+import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -160,5 +166,235 @@ class StravaUploaderTest {
         assertNotNull(authHeader)
         assertEquals("Bearer valid_oauth_token_xyz", authHeader)
         assertFalse("Authorization header must NEVER contain 'Bearer null'", authHeader!!.contains("null"))
+    }
+
+    /**
+     * TST-EXP-018.1: HTTP 429 rate limit is classified as retryable, logs X-RateLimit-* headers.
+     */
+    @Test
+    fun testUploadToStravaRateLimit429ReturnsRetryTrueAndLogsHeaders() {
+        val testClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(429)
+                    .message("Too Many Requests")
+                    .header("X-RateLimit-Limit", "100,1000")
+                    .header("X-RateLimit-Usage", "105,950")
+                    .body("""{"message": "Rate Limit Exceeded"}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                    .build()
+            }
+            .build()
+
+        val uploader = StravaUploader(mockContext, testClient).apply {
+            sleepStrategy = {}
+        }
+        val tempFile = File.createTempFile("test_workout", ".tcx").apply {
+            writeText("<tcx>data</tcx>")
+            deleteOnExit()
+        }
+        val exportInfo = ExportInfo("test_workout", FileFormat.STRAVA, ExportType.COMMUNITY)
+
+        val result = uploader.uploadToStrava(exportInfo, tempFile, "mock_token")
+        assertFalse("Rate limit upload must not be marked success", result.success())
+        assertTrue("HTTP 429 must be classified as retryable", result.shallRetry())
+        assertTrue("Status message must mention 429", result.answer().contains("429"))
+        assertTrue("Status message must include rate limit info", result.answer().contains("105,950"))
+    }
+
+    /**
+     * TST-EXP-018.1: HTTP 503 service unavailable is classified as retryable server error.
+     */
+    @Test
+    fun testUploadToStravaServerError503ReturnsRetryTrue() {
+        val testClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(503)
+                    .message("Service Unavailable")
+                    .body("""{"message": "Strava is temporarily down"}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                    .build()
+            }
+            .build()
+
+        val uploader = StravaUploader(mockContext, testClient).apply {
+            sleepStrategy = {}
+        }
+        val tempFile = File.createTempFile("test_workout", ".tcx").apply {
+            writeText("<tcx>data</tcx>")
+            deleteOnExit()
+        }
+        val exportInfo = ExportInfo("test_workout", FileFormat.STRAVA, ExportType.COMMUNITY)
+
+        val result = uploader.uploadToStrava(exportInfo, tempFile, "mock_token")
+        assertFalse(result.success())
+        assertTrue("HTTP 503 must be classified as retryable", result.shallRetry())
+        assertTrue("Status message must mention 503", result.answer().contains("503"))
+    }
+
+    /**
+     * TST-EXP-018.1: HTTP 400 client error is classified as non-retryable fatal error.
+     */
+    @Test
+    fun testUploadToStravaClientError400ReturnsRetryFalse() {
+        val testClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(400)
+                    .message("Bad Request")
+                    .body("""{"message": "Malformed payload"}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                    .build()
+            }
+            .build()
+
+        val uploader = StravaUploader(mockContext, testClient).apply {
+            sleepStrategy = {}
+        }
+        val tempFile = File.createTempFile("test_workout", ".tcx").apply {
+            writeText("<tcx>data</tcx>")
+            deleteOnExit()
+        }
+        val exportInfo = ExportInfo("test_workout", FileFormat.STRAVA, ExportType.COMMUNITY)
+
+        val result = uploader.uploadToStrava(exportInfo, tempFile, "mock_token")
+        assertFalse(result.success())
+        assertFalse("HTTP 400 client error must NOT be retryable", result.shallRetry())
+        assertTrue("Status message must mention 400", result.answer().contains("400"))
+    }
+
+    /**
+     * TST-EXP-018.2: Polling loop recovers from transient null response on attempt 1
+     * and successfully completes when attempt 2 returns status = ready.
+     */
+    @Test
+    fun testPollingRecoversFromTransientNullGlitch() {
+        val mockDbHelper = mockk<StravaUploadDbHelper>(relaxed = true)
+        StravaUploadDbHelper.resetForTesting(mockDbHelper)
+
+        var requestStep = 0
+        val testClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                requestStep++
+                when (requestStep) {
+                    1 -> {
+                        // POST upload response
+                        Response.Builder()
+                            .request(chain.request())
+                            .protocol(Protocol.HTTP_1_1)
+                            .code(201)
+                            .message("Created")
+                            .body("""{"id": "upl_12345", "status": "Your activity is still being processed."}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                            .build()
+                    }
+                    2 -> {
+                        // GET upload status attempt 1: simulated server glitch (500), causing getStravaUploadStatus to return null
+                        Response.Builder()
+                            .request(chain.request())
+                            .protocol(Protocol.HTTP_1_1)
+                            .code(500)
+                            .message("Internal Server Error")
+                            .body("""{"message": "Transient error"}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                            .build()
+                    }
+                    3 -> {
+                        // GET upload status attempt 2: successful ready response
+                        Response.Builder()
+                            .request(chain.request())
+                            .protocol(Protocol.HTTP_1_1)
+                            .code(200)
+                            .message("OK")
+                            .body("""{"id": "upl_12345", "status": "Your activity is ready.", "activity_id": 998877}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                            .build()
+                    }
+                    else -> {
+                        Response.Builder()
+                            .request(chain.request())
+                            .protocol(Protocol.HTTP_1_1)
+                            .code(200)
+                            .message("OK")
+                            .body("""{}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                            .build()
+                    }
+                }
+            }
+            .build()
+
+        val uploader = object : StravaUploader(mockContext, testClient) {
+            override fun doUpdate(exportInfo: ExportInfo, isDuplicate: Boolean): ExportResult {
+                return ExportResult(true, false, "successfully updated")
+            }
+        }.apply {
+            sleepStrategy = {}
+        }
+
+        every { StravaHelper.getRefreshedAccessToken() } returns "mock_token"
+
+        val tempFile = File.createTempFile("test_workout", ".tcx").apply {
+            writeText("<tcx>data</tcx>")
+            deleteOnExit()
+        }
+        val exportInfo = ExportInfo("test_workout", FileFormat.STRAVA, ExportType.COMMUNITY)
+
+        val result = uploader.uploadToStrava(exportInfo, tempFile, "mock_token")
+        assertTrue("Upload must succeed despite attempt 1 glitch", result.success())
+        assertFalse("Successful upload must not retry", result.shallRetry())
+        assertEquals("successfully updated", result.answer())
+        assertTrue("Polling must have reached attempt 2 (request 3)", requestStep >= 3)
+    }
+
+    /**
+     * TST-EXP-018.2: Polling loop exhausting MAX_REQUESTS returns timeout with retry = true.
+     */
+    @Test
+    fun testPollingExhaustsMaxRequestsReturnsTimeoutRetryTrue() {
+        val mockDbHelper = mockk<StravaUploadDbHelper>(relaxed = true)
+        StravaUploadDbHelper.resetForTesting(mockDbHelper)
+
+        var requestStep = 0
+        val testClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                requestStep++
+                if (requestStep == 1) {
+                    // Initial POST
+                    Response.Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(201)
+                        .message("Created")
+                        .body("""{"id": "upl_timeout"}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                        .build()
+                } else {
+                    // Continuous processing status
+                    Response.Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body("""{"id": "upl_timeout", "status": "Your activity is still being processed."}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                        .build()
+                }
+            }
+            .build()
+
+        val uploader = StravaUploader(mockContext, testClient).apply {
+            sleepStrategy = {}
+        }
+        every { StravaHelper.getRefreshedAccessToken() } returns "mock_token"
+
+        val tempFile = File.createTempFile("test_workout", ".tcx").apply {
+            writeText("<tcx>data</tcx>")
+            deleteOnExit()
+        }
+        val exportInfo = ExportInfo("test_workout", FileFormat.STRAVA, ExportType.COMMUNITY)
+
+        val result = uploader.uploadToStrava(exportInfo, tempFile, "mock_token")
+        assertFalse("Timeout must not be marked success", result.success())
+        assertTrue("Timeout must be classified as retryable", result.shallRetry())
+        assertTrue("Status must mention timeout", result.answer().contains("Timeout waiting for Strava processing"))
     }
 }
