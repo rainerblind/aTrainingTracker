@@ -1370,12 +1370,22 @@ public class WorkoutSummariesDatabaseManager {
 
 
     /**
-     * Surgically deletes a workout and its related metadata from the summary and extrema tables.
-     * Note: This does NOT delete raw samples. Use [WorkoutDeletionHelper] for full cleanup.
+     * Surgically deletes a workout and its related metadata from the summary, accumulated sensors,
+     * and extrema tables.
      *
-     * @return true if the deletion was successful.
+     * <p><b>Security and Concurrency Notice:</b> This method only purges summary database tables.
+     * It does NOT purge raw sensor sample tables in {@code WorkoutSamples.db} or lap records in
+     * {@code Laps.db}. For complete user-initiated workout deletion across all databases, always
+     * invoke {@link WorkoutDeletionHelper#deleteWorkout(long)}.
+     * This method is exposed publicly to support low-level compensatory rollback during transactional
+     * import pipelines (e.g. {@code LegacyImportEngine}) and orphan data repair utilities
+     * (e.g. {@code OrphanDataDiagnosticHelper}). Callers are responsible for coordinating cross-database
+     * mutex synchronization.</p>
+     *
+     * @param workoutId The internal unique primary key (_id) of the workout summary to remove.
+     * @return true if the deletion operations completed without error.
      */
-    boolean deleteWorkout(long workoutId) {
+    public boolean deleteWorkout(long workoutId) {
         if (DEBUG) Log.i(TAG, "deleteWorkout: workoutId=" + workoutId);
 
         SQLiteDatabase dbSummaries = getDatabase();

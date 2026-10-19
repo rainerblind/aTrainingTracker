@@ -14,6 +14,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteDatabaseLockedException
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
@@ -23,14 +24,12 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.util.safeEnumValueOf
-import java.io.BufferedInputStream
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.util.zip.ZipInputStream
 
 /**
  * Handles incremental merging of workouts from an .attbackup archive.
+ * Enforces atomic cross-database transactions via SQLite ATTACH, insertOrThrow,
+ * static schema mapping, and cooperative coroutine cancellation (REQ-MIG-043).
  */
 object ImportEngine {
     private const val TAG = "ImportEngine"
@@ -57,6 +56,33 @@ object ImportEngine {
         val equipment: List<EquipmentInfo>
     )
 
+    internal val ALLOWED_EXTREMA_COLUMNS = setOf(
+        WorkoutSummaries.WORKOUT_ID,
+        WorkoutSummaries.EXTREMA_TYPE,
+        WorkoutSummaries.SENSOR_TYPE,
+        WorkoutSummaries.VALUE,
+        WorkoutSummaries.LATITUDE,
+        WorkoutSummaries.LONGITUDE,
+        WorkoutSummaries.SAMPLES_COLUMN_ID,
+        WorkoutSummaries.COUNT
+    )
+
+    internal val ALLOWED_ACCUMULATED_COLUMNS = setOf(
+        WorkoutSummaries.WORKOUT_ID,
+        WorkoutSummaries.SENSOR_TYPE
+    )
+
+    internal val ALLOWED_LAPS_COLUMNS = setOf(
+        LapsDatabaseManager.Laps.WORKOUT_ID,
+        LapsDatabaseManager.Laps.LAP_NR,
+        LapsDatabaseManager.Laps.TIME_START,
+        LapsDatabaseManager.Laps.TIME_TOTAL_s,
+        LapsDatabaseManager.Laps.DISTANCE_TOTAL_m,
+        LapsDatabaseManager.Laps.SPEED_AVERAGE_mps,
+        LapsDatabaseManager.Laps.NAME,
+        LapsDatabaseManager.Laps.DESCRIPTION
+    )
+
     /**
      * Analyzes the backup file to find all unique sport types and equipment used in the workouts.
      */
@@ -70,11 +96,11 @@ object ImportEngine {
 
             unzipBackup(backupFile, tempDir)
 
-            val srcSummariesDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/WorkoutSummaries.db").absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val srcSportDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/SportType.db").absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            val srcSummariesDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/WorkoutSummaries.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
+            val srcSportDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/SportType.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
             val srcEquipFile = File(tempDir, "databases/Equipment.db")
             val srcEquipDb = if (srcEquipFile.exists()) {
-                SQLiteDatabase.openDatabase(srcEquipFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+                SQLiteDatabase.openDatabase(srcEquipFile.canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
             } else null
 
             // 1. Get unique IDs from workouts
@@ -133,6 +159,14 @@ object ImportEngine {
         return AnalysisResult(sportTypes.values.toList(), equipment.values.toList())
     }
 
+    /**
+     * Performs incremental import from an .attbackup file.
+     * Enforces single cross-database transaction via SQLite ATTACH (REQ-MIG-043.1).
+     *
+     * @throws android.database.sqlite.SQLiteException If SQLite execution or constraint fails during import.
+     * @throws InterruptedException If the import operation is cancelled or interrupted.
+     * @throws SecurityException If database path verification fails.
+     */
     fun performIncrementalImport(
         context: Context, 
         backupFile: File, 
@@ -143,7 +177,12 @@ object ImportEngine {
         Log.i(TAG, "Starting incremental import from ${backupFile.absolutePath}")
         var importedCount = 0
 
+        val backupLock = BackupManager.acquireLock(context)
+            ?: throw SQLiteDatabaseLockedException("Database locked by concurrent operation")
+
         try {
+            DatabaseConnectionManager.checkpointAll(context)
+
             // 1. Unzip to temporary directory
             listener?.onStatus("Unpacking backup...")
             val tempDir = File(context.cacheDir, "import_temp")
@@ -152,86 +191,121 @@ object ImportEngine {
 
             unzipBackup(backupFile, tempDir)
 
-            // 2. Open source databases
+            // 2. Open source databases safely
             listener?.onStatus("Opening databases...")
-            val srcSummariesDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/WorkoutSummaries.db").absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val srcSamplesDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/WorkoutSamples.db").absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-            val srcLapsDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/Laps.db").absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            val srcSummariesDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/WorkoutSummaries.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
+            val srcSamplesDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/WorkoutSamples.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
+            val srcLapsDb = SQLiteDatabase.openDatabase(File(tempDir, "databases/Laps.db").canonicalPath, null, SQLiteDatabase.OPEN_READONLY)
 
-            // 3. Open target databases
-            val targetSummariesDb = WorkoutSummariesDatabaseManager.getInstance(context).database
-            val targetSamplesDb = WorkoutSamplesDatabaseManager.getInstance(context).database
-            val targetLapsDb = LapsDatabaseManager.getInstance(context).database
+            // 3. Open dedicated scoped connection for ATTACH
+            val canonicalSummariesPath = File(WorkoutSummariesDatabaseManager.getInstance(context).database.path).canonicalPath
+            val canonicalSamplesPath = File(WorkoutSamplesDatabaseManager.getInstance(context).database.path).canonicalPath
+            val canonicalLapsPath = File(LapsDatabaseManager.getInstance(context).database.path).canonicalPath
 
-            // 4. Iterate through source workouts
-            srcSummariesDb.query(WorkoutSummaries.TABLE, null, null, null, null, null, null).use { cursor ->
-                val total = cursor.count
-                var current = 0
-                
-                while (cursor.moveToNext()) {
-                    current++
-                    val fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME))
-                    val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
+            validateDatabasePath(context, canonicalSummariesPath, WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_NAME)
+            validateDatabasePath(context, canonicalSamplesPath, WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.DB_NAME)
+            validateDatabasePath(context, canonicalLapsPath, LapsDatabaseManager.LapsDbHelper.DB_NAME)
+
+            val dedicatedDb = SQLiteDatabase.openDatabase(canonicalSummariesPath, null, SQLiteDatabase.OPEN_READWRITE)
+            try {
+                dedicatedDb.execSQL("ATTACH DATABASE ? AS lapsDb", arrayOf(canonicalLapsPath))
+                dedicatedDb.execSQL("ATTACH DATABASE ? AS samplesDb", arrayOf(canonicalSamplesPath))
+
+                // 4. Iterate through source workouts
+                srcSummariesDb.query(WorkoutSummaries.TABLE, null, null, null, null, null, null).use { cursor ->
+                    val total = cursor.count
+                    var current = 0
                     
-                    listener?.onProgress(current, total, workoutName)
+                    while (cursor.moveToNext()) {
+                        if (Thread.currentThread().isInterrupted) {
+                            throw InterruptedException("Import cancelled")
+                        }
+                        current++
+                        val fileBaseName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME))
+                        val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
+                        
+                        listener?.onProgress(current, total, workoutName)
 
-                    val timeStart = try {
-                        cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_START))
-                    } catch (e: Exception) {
-                        null
-                    }
-
-                    if (isTrueDuplicate(targetSummariesDb, fileBaseName, timeStart)) {
-                        Log.i(TAG, "Skipping duplicate workout $fileBaseName (start time: $timeStart)")
-                        continue
-                    }
-
-                    val oldId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID))
-                    
-                    // Start transaction for this workout to ensure atomic disambiguation and insertion
-                    targetSummariesDb.beginTransaction()
-                    var effectiveBaseName = fileBaseName
-                    try {
-                        // Atomically determine effective base name if taken
-                        if (isBaseNameTaken(targetSummariesDb, targetSamplesDb, fileBaseName)) {
-                            effectiveBaseName = disambiguateBaseName(targetSummariesDb, targetSamplesDb, fileBaseName, timeStart)
+                        val timeStart = try {
+                            cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_START))
+                        } catch (e: Exception) {
+                            null
                         }
 
-                        // a. Insert Summary with resolution (SCRUM-117) and disambiguated base name
-                        val newId = insertSummaryWithResolution(
-                            context, 
-                            targetSummariesDb, 
-                            cursor, 
-                            sportTypeMapping, 
-                            equipmentMapping, 
-                            effectiveBaseName
-                        )
+                        if (isTrueDuplicate(dedicatedDb, fileBaseName, timeStart)) {
+                            Log.i(TAG, "Skipping duplicate workout $fileBaseName (start time: $timeStart)")
+                            continue
+                        }
+
+                        val oldId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID))
                         
-                        // b. Copy Extrema
-                        copyRelatedRows(srcSummariesDb, targetSummariesDb, WorkoutSummaries.TABLE_EXTREMA_VALUES, oldId, newId)
-                        
-                        // c. Copy Accumulated Sensors
-                        copyRelatedRows(srcSummariesDb, targetSummariesDb, WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, oldId, newId)
-                        
-                        // d. Copy Laps
-                        copyLaps(srcLapsDb, targetLapsDb, oldId, newId)
-                        
-                        // e. Copy Samples Table
-                        copySamplesTable(srcSamplesDb, targetSamplesDb, fileBaseName, effectiveBaseName)
-                        
-                        targetSummariesDb.setTransactionSuccessful()
-                        importedCount++
+                        // Single unified SQLite transaction across main, lapsDb, and samplesDb (REQ-MIG-043.1)
+                        dedicatedDb.beginTransaction()
+                        var effectiveBaseName = fileBaseName
+                        try {
+                            if (isBaseNameTakenAttached(dedicatedDb, fileBaseName)) {
+                                effectiveBaseName = disambiguateBaseNameAttached(dedicatedDb, fileBaseName, timeStart)
+                            }
+
+                            // a. Insert Summary with resolution via insertOrThrow (REQ-MIG-043.4)
+                            val newId = insertSummaryWithResolution(
+                                context, 
+                                dedicatedDb, 
+                                cursor, 
+                                sportTypeMapping, 
+                                equipmentMapping, 
+                                effectiveBaseName
+                            )
+                            require(newId > 0) { "Inserted summary returned non-positive id: $newId" }
+                            
+                            // b. Copy Extrema with static schema mapping (REQ-MIG-043.5)
+                            copyRelatedRows(srcSummariesDb, dedicatedDb, WorkoutSummaries.TABLE_EXTREMA_VALUES, oldId, newId)
+                            
+                            // c. Copy Accumulated Sensors with static schema mapping (REQ-MIG-043.5)
+                            copyRelatedRows(srcSummariesDb, dedicatedDb, WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, oldId, newId)
+                            
+                            // d. Copy Laps into attached lapsDb (REQ-MIG-043.1)
+                            copyLapsAttached(srcLapsDb, dedicatedDb, oldId, newId)
+                            
+                            // e. Copy Samples Table into attached samplesDb (REQ-MIG-043.1)
+                            copySamplesTableAttached(srcSamplesDb, dedicatedDb, fileBaseName, effectiveBaseName)
+                            
+                            dedicatedDb.setTransactionSuccessful()
+                            importedCount++
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to import workout $fileBaseName (effective: $effectiveBaseName)", e)
+                            if (e is InterruptedException) throw e
+                        } finally {
+                            dedicatedDb.endTransaction()
+                        }
+                    }
+                }
+            } finally {
+                // Hardened nested detach & close (REQ-MIG-043.1)
+                try {
+                    try {
+                        dedicatedDb.execSQL("DETACH DATABASE lapsDb")
                     } catch (e: Exception) {
-                        Log.e(TAG, "Failed to import workout $fileBaseName (effective: $effectiveBaseName)", e)
+                        Log.w(TAG, "Failed to detach lapsDb", e)
                     } finally {
-                        targetSummariesDb.endTransaction()
+                        try {
+                            dedicatedDb.execSQL("DETACH DATABASE samplesDb")
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to detach samplesDb", e)
+                        }
+                    }
+                } finally {
+                    try {
+                        dedicatedDb.close()
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to close dedicatedDb", e)
                     }
                 }
             }
 
-            srcSummariesDb.close()
-            srcSamplesDb.close()
-            srcLapsDb.close()
+            try { srcSummariesDb.close() } catch (_: Exception) {}
+            try { srcSamplesDb.close() } catch (_: Exception) {}
+            try { srcLapsDb.close() } catch (_: Exception) {}
             
             // 5. Update Clusters (SCRUM-117 refinement)
             if (importedCount > 0) {
@@ -247,6 +321,7 @@ object ImportEngine {
             if (tempDir.exists()) {
                 tempDir.deleteRecursively()
             }
+            backupLock.close()
         }
         return importedCount
     }
@@ -255,15 +330,26 @@ object ImportEngine {
         SecureZipExtractor.extractBackupArchive(backupFile, destDir)
     }
 
+    private fun validateDatabasePath(context: Context, canonicalPath: String, expectedDbName: String) {
+        val file = File(canonicalPath)
+        val expectedFile = try { context.getDatabasePath(expectedDbName) } catch (_: Throwable) { null }
+        val expectedParent = expectedFile?.parentFile?.canonicalPath
+        if (expectedParent != null && !file.canonicalPath.startsWith(expectedParent)) {
+            throw SecurityException("Security violation: Database path '$canonicalPath' is not inside application databases directory '$expectedParent'")
+        }
+        if (file.name != expectedDbName) {
+            throw SecurityException("Security violation: Database file '${file.name}' does not match expected '$expectedDbName'")
+        }
+    }
+
     private val importCounter = java.util.concurrent.atomic.AtomicInteger(0)
 
     private fun disambiguateBaseName(
-        targetSummariesDb: SQLiteDatabase,
-        targetSamplesDb: SQLiteDatabase,
+        summariesDb: SQLiteDatabase,
+        samplesDb: SQLiteDatabase,
         originalBaseName: String,
         timeStart: String?
     ): String {
-        // Calculate epoch timestamp (or fallback to current time)
         val epochSeconds = try {
             if (!timeStart.isNullOrBlank()) {
                 val format = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
@@ -275,11 +361,10 @@ object ImportEngine {
             System.currentTimeMillis() / 1000
         }
 
-        // Truncate base name to max 35 chars to keep total unquoted length <= 50 chars
         val truncatedBase = if (originalBaseName.length > 35) originalBaseName.substring(0, 35) else originalBaseName
         var candidate = "${truncatedBase}_$epochSeconds"
 
-        while (isBaseNameTaken(targetSummariesDb, targetSamplesDb, candidate)) {
+        while (isBaseNameTaken(summariesDb, samplesDb, candidate)) {
             val counter = importCounter.incrementAndGet()
             candidate = "${truncatedBase}_${epochSeconds}_$counter"
             if (candidate.length > 60) {
@@ -294,6 +379,44 @@ object ImportEngine {
         if (existsInTarget(summariesDb, baseName)) return true
         val tableName = WorkoutSamplesDatabaseManager.getTableName(baseName)
         samplesDb.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name=$tableName", null).use {
+            return it.count > 0
+        }
+    }
+
+    private fun disambiguateBaseNameAttached(
+        db: SQLiteDatabase,
+        originalBaseName: String,
+        timeStart: String?
+    ): String {
+        val epochSeconds = try {
+            if (!timeStart.isNullOrBlank()) {
+                val format = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+                (format.parse(timeStart)?.time ?: System.currentTimeMillis()) / 1000
+            } else {
+                System.currentTimeMillis() / 1000
+            }
+        } catch (e: Exception) {
+            System.currentTimeMillis() / 1000
+        }
+
+        val truncatedBase = if (originalBaseName.length > 35) originalBaseName.substring(0, 35) else originalBaseName
+        var candidate = "${truncatedBase}_$epochSeconds"
+
+        while (isBaseNameTakenAttached(db, candidate)) {
+            val counter = importCounter.incrementAndGet()
+            candidate = "${truncatedBase}_${epochSeconds}_$counter"
+            if (candidate.length > 60) {
+                candidate = "w_${epochSeconds}_$counter"
+            }
+        }
+
+        return candidate
+    }
+
+    private fun isBaseNameTakenAttached(db: SQLiteDatabase, baseName: String): Boolean {
+        if (existsInTarget(db, baseName)) return true
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseName)
+        db.rawQuery("SELECT name FROM samplesDb.sqlite_master WHERE type='table' AND name=$tableName", null).use {
             return it.count > 0
         }
     }
@@ -337,14 +460,12 @@ object ImportEngine {
             
             // RESOLUTION LOGIC (SCRUM-117): Handle cross-device ID mismatches
             if (name == WorkoutSummaries.SPORT_ID) {
-                // Use the user-provided mapping
                 val localSportId = sportTypeMapping[srcSportId] ?: SportTypeDatabaseManager.getDefaultSportTypeId()
                 values.put(name, localSportId)
                 continue
             }
 
             if (name == WorkoutSummaries.EQUIPMENT_ID) {
-                // Use the user-provided mapping
                 val localEquipId = equipmentMapping[srcEquipId] ?: -1L
                 if (localEquipId == -1L) values.putNull(name) else values.put(name, localEquipId)
                 continue
@@ -363,18 +484,26 @@ object ImportEngine {
                 Cursor.FIELD_TYPE_NULL -> values.putNull(name)
             }
         }
-        return db.insert(WorkoutSummaries.TABLE, null, values)
+        return db.insertOrThrow(WorkoutSummaries.TABLE, null, values)
     }
 
-    private fun copyRelatedRows(srcDb: SQLiteDatabase, targetDb: SQLiteDatabase, table: String, oldId: Long, newId: Long) {
+    internal fun copyRelatedRows(srcDb: SQLiteDatabase, targetDb: SQLiteDatabase, table: String, oldId: Long, newId: Long) {
+        require(newId > 0) { "Valid newWorkoutId (> 0) required: $newId" }
+        val allowedColumns = if (table == WorkoutSummaries.TABLE_EXTREMA_VALUES) {
+            ALLOWED_EXTREMA_COLUMNS
+        } else {
+            ALLOWED_ACCUMULATED_COLUMNS
+        }
+
         srcDb.query(table, null, "${WorkoutSummaries.WORKOUT_ID} = ?", arrayOf(oldId.toString()), null, null, null).use { cursor ->
             while (cursor.moveToNext()) {
                 val values = ContentValues()
+                values.put(WorkoutSummaries.WORKOUT_ID, newId)
                 for (i in 0 until cursor.columnCount) {
                     val name = cursor.getColumnName(i)
-                    if (name == WorkoutSummaries.C_ID) continue
-                    if (name == WorkoutSummaries.WORKOUT_ID) {
-                        values.put(name, newId)
+                    if (name == WorkoutSummaries.C_ID || name == WorkoutSummaries.WORKOUT_ID) continue
+                    if (!allowedColumns.contains(name)) {
+                        Log.w(TAG, "Schema evolution notice: Discarding unrecognized source column '$name' in table '$table' to preserve forward integrity.")
                         continue
                     }
                     when (cursor.getType(i)) {
@@ -385,20 +514,22 @@ object ImportEngine {
                         Cursor.FIELD_TYPE_NULL -> values.putNull(name)
                     }
                 }
-                targetDb.insert(table, null, values)
+                targetDb.insertOrThrow(table, null, values)
             }
         }
     }
 
-    private fun copyLaps(srcDb: SQLiteDatabase, targetDb: SQLiteDatabase, oldId: Long, newId: Long) {
+    internal fun copyLapsAttached(srcDb: SQLiteDatabase, targetDb: SQLiteDatabase, oldId: Long, newId: Long) {
+        require(newId > 0) { "Valid newWorkoutId (> 0) required: $newId" }
         srcDb.query(LapsDatabaseManager.Laps.TABLE, null, "${LapsDatabaseManager.Laps.WORKOUT_ID} = ?", arrayOf(oldId.toString()), null, null, null).use { cursor ->
             while (cursor.moveToNext()) {
                 val values = ContentValues()
+                values.put(LapsDatabaseManager.Laps.WORKOUT_ID, newId)
                 for (i in 0 until cursor.columnCount) {
                     val name = cursor.getColumnName(i)
-                    if (name == LapsDatabaseManager.Laps.C_ID) continue
-                    if (name == LapsDatabaseManager.Laps.WORKOUT_ID) {
-                        values.put(name, newId)
+                    if (name == LapsDatabaseManager.Laps.C_ID || name == LapsDatabaseManager.Laps.WORKOUT_ID) continue
+                    if (!ALLOWED_LAPS_COLUMNS.contains(name)) {
+                        Log.w(TAG, "Schema evolution notice: Discarding unrecognized source column '$name' in table '${LapsDatabaseManager.Laps.TABLE}' to preserve forward integrity.")
                         continue
                     }
                     when (cursor.getType(i)) {
@@ -409,7 +540,7 @@ object ImportEngine {
                         Cursor.FIELD_TYPE_NULL -> values.putNull(name)
                     }
                 }
-                targetDb.insert(LapsDatabaseManager.Laps.TABLE, null, values)
+                targetDb.insertOrThrow("lapsDb." + LapsDatabaseManager.Laps.TABLE, null, values)
             }
         }
     }
@@ -418,16 +549,29 @@ object ImportEngine {
         srcDb: SQLiteDatabase,
         targetDb: SQLiteDatabase,
         srcBaseName: String,
-        targetBaseName: String = srcBaseName
+        targetBaseName: String
+    ) {
+        copySamplesTable(srcDb, targetDb, srcBaseName, targetBaseName, "")
+    }
+
+    private fun copySamplesTable(
+        srcDb: SQLiteDatabase,
+        targetDb: SQLiteDatabase,
+        srcBaseName: String,
+        targetBaseName: String,
+        targetDbPrefix: String
     ) {
         val srcTableName = WorkoutSamplesDatabaseManager.getTableName(srcBaseName)
-        val targetTableName = WorkoutSamplesDatabaseManager.getTableName(targetBaseName)
+        val targetTableName = if (targetDbPrefix.isNotEmpty()) {
+            "$targetDbPrefix." + WorkoutSamplesDatabaseManager.getTableName(targetBaseName)
+        } else {
+            WorkoutSamplesDatabaseManager.getTableName(targetBaseName)
+        }
         
         // 1. Inspect source table schema via PRAGMA table_info
         val columnDefs = mutableListOf<String>()
         val columnNames = mutableListOf<String>()
         val allowedTypes = setOf("INTEGER", "REAL", "TEXT", "BLOB", "NUMERIC")
-        val identifierRegex = Regex("^[a-zA-Z0-9_]+$")
 
         srcDb.rawQuery("PRAGMA table_info($srcTableName)", null).use { cursor ->
             val nameIdx = cursor.getColumnIndexOrThrow("name")
@@ -444,7 +588,6 @@ object ImportEngine {
                 val dfltVal = cursor.getString(dfltIdx)
                 val isPk = cursor.getInt(pkIdx) > 0
 
-                // Escape double-quotes in column name to prevent SQL injection and support all legacy column names
                 val escapedColName = colName.replace("\"", "\"\"")
                 columnNames.add(colName)
                 val defBuilder = java.lang.StringBuilder("\"$escapedColName\" $colType")
@@ -455,7 +598,6 @@ object ImportEngine {
                     defBuilder.append(" NOT NULL")
                 }
                 if (dfltVal != null) {
-                    // Sanitize default value to only permit alphanumeric literals, quoted strings, or numeric expressions
                     val sanitizedDefault = when {
                         dfltVal.matches(Regex("^-?[0-9]+(\\.[0-9]+)?$")) -> dfltVal
                         dfltVal.equals("CURRENT_TIMESTAMP", ignoreCase = true) -> "CURRENT_TIMESTAMP"
@@ -494,9 +636,18 @@ object ImportEngine {
                             Cursor.FIELD_TYPE_NULL -> values.putNull(name)
                         }
                     }
-                    targetDb.insert(targetTableName, null, values)
+                    targetDb.insertOrThrow(targetTableName, null, values)
                 }
             }
         }
+    }
+
+    private fun copySamplesTableAttached(
+        srcDb: SQLiteDatabase,
+        targetDb: SQLiteDatabase,
+        srcBaseName: String,
+        targetBaseName: String = srcBaseName
+    ) {
+        copySamplesTable(srcDb, targetDb, srcBaseName, targetBaseName, targetDbPrefix = "samplesDb")
     }
 }

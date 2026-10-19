@@ -35,6 +35,11 @@ import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 object DatabaseConnectionManager {
     private const val TAG = "DatabaseConnectionManager"
 
+    @JvmStatic
+    fun checkpointAll(context: Context) {
+        quiesceAllDatabases(context, closeConnections = false)
+    }
+
     /**
      * Safely checkpoints write-ahead logs (WAL) to main database files using TRUNCATE,
      * and optionally closes open database handles to prevent file locks during replacement.
