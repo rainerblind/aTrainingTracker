@@ -61,6 +61,30 @@ public enum FileFormat {
         return mUiNameId;
     }
 
+    /**
+     * Returns the standardized MIME type for MediaStore public Downloads insertion
+     * and external Intent sharing (REQ-EXP-022, ATT-4013).
+     *
+     * @return the MIME type string matching the file format standard
+     */
+    public String getMimeType() {
+        switch (this) {
+            case GPX:
+                return "application/gpx+xml";
+            case TCX:
+            case STRAVA:
+                return "application/vnd.garmin.tcx+xml";
+            case FIT:
+                return "application/vnd.ant.fit";
+            case CSV:
+                return "text/csv";
+            case GC:
+                return "application/json";
+            default:
+                return "application/octet-stream";
+        }
+    }
+
     // public BaseExporter getFileExporter() { return mFileExporter; }
     // public BaseExporter getUploader() { return mUploader; }
 }

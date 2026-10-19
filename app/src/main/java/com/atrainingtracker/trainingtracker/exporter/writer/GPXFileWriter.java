@@ -37,8 +37,10 @@ import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Locale;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.concurrent.CancellationException;
 
 
@@ -46,9 +48,11 @@ public class GPXFileWriter extends BaseFileWriter {
     protected static final boolean WRITE_ONLY_ON_NEW_GEO_DATA = true;
     private static final String TAG = "GPXFileExporter";
     private static final boolean DEBUG = false;
-    // DateFormats to convert from Db style dates to XML style dates
-    protected static final SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
-    protected static final SimpleDateFormat msdfToXML = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
+    // DateFormats to convert from Db style dates to XML style dates (UTC)
+    private static final DateTimeFormatter DB_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC);
+    private static final DateTimeFormatter XML_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'").withZone(ZoneOffset.UTC);
 
     public GPXFileWriter(@NonNull Context context) {
         super(context);
@@ -57,7 +61,12 @@ public class GPXFileWriter extends BaseFileWriter {
     // convert from "2012-03-29 16:23:05" to "2012-03-29T16:23:05Z"
     @NonNull
     protected static String dbTime2XMLTime(@NonNull String dbTime) throws ParseException {
-        return msdfToXML.format(msdfFromDb.parse(dbTime)) + "Z";
+        try {
+            LocalDateTime ldt = LocalDateTime.parse(dbTime, DB_TIME_FORMATTER);
+            return ldt.atOffset(ZoneOffset.UTC).format(XML_TIME_FORMATTER);
+        } catch (DateTimeParseException e) {
+            throw new ParseException("Unparseable date: " + dbTime, 0);
+        }
     }
 
     @NonNull
@@ -87,6 +96,7 @@ public class GPXFileWriter extends BaseFileWriter {
 
             WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
             SQLiteDatabase db = databaseManager.getDatabase();
+            boolean isSegmentOpen = false;
             try (Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
                     null,
                     null,
@@ -101,7 +111,7 @@ public class GPXFileWriter extends BaseFileWriter {
                 double latitudeOld;
                 double longitudeOld;
 
-                long prevLineLap = BANALService.INIT_LAP_NR - 1;
+                long prevLineLap = -1;
 
                 while (cursor != null && cursor.moveToNext()) {
                     if (isCancelled()) {
@@ -111,7 +121,7 @@ public class GPXFileWriter extends BaseFileWriter {
                     int lap = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.LAP_NR.name()));
                     if (prevLineLap != lap) { // new lap
 
-                        if (lap != BANALService.INIT_LAP_NR) { // finish previous lap
+                        if (isSegmentOpen) { // finish previous lap segment
                             bufferedWriter.write("  </trkseg>\n");
                         }
 
@@ -140,6 +150,7 @@ public class GPXFileWriter extends BaseFileWriter {
                         }
 
                         bufferedWriter.write("  <trkseg>\n");
+                        isSegmentOpen = true;
 
                     }
                     prevLineLap = lap;
@@ -178,7 +189,9 @@ public class GPXFileWriter extends BaseFileWriter {
             }
 
             // now the tail
-            bufferedWriter.write("  </trkseg>\n");
+            if (isSegmentOpen) {
+                bufferedWriter.write("  </trkseg>\n");
+            }
             bufferedWriter.write(" </trk>\n");
             bufferedWriter.write("</gpx>\n");
         } catch (CancellationException e) {

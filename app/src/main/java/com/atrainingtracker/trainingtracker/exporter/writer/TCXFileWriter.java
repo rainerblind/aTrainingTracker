@@ -37,13 +37,17 @@ import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData;
 
+import com.atrainingtracker.BuildConfig;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 
@@ -52,9 +56,16 @@ public class TCXFileWriter extends BaseFileWriter {
     protected static final boolean WRITE_ONLY_ON_NEW_GEO_DATA = true;
     private static final String TAG = "TCXFileExporter";
     private static final boolean DEBUG = false;
-    // DateFormats to convert from Db style dates to XML style dates
-    protected static final SimpleDateFormat msdfFromDb = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
-    protected static final SimpleDateFormat msdfToXML = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
+    // DateFormats to convert from Db style dates to XML style dates (UTC)
+    private static final DateTimeFormatter DB_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC);
+    private static final DateTimeFormatter XML_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'").withZone(ZoneOffset.UTC);
+
+    private static final String GARMIN_AUTHOR_LANG_ID = "en";
+    private static final String GARMIN_AUTHOR_PART_NUMBER = "000-00000-00";
+    private static final int DEFAULT_VERSION_MAJOR = 4;
+    private static final int DEFAULT_VERSION_MINOR = 9;
 
     public TCXFileWriter(@NonNull Context context) {
         super(context);
@@ -63,7 +74,12 @@ public class TCXFileWriter extends BaseFileWriter {
     // convert from "2012-03-29 16:23:05" to "2012-03-29T16:23:05Z"
     @NonNull
     protected static String dbTime2XMLTime(@NonNull String dbTime) throws ParseException {
-        return msdfToXML.format(msdfFromDb.parse(dbTime)) + "Z";
+        try {
+            LocalDateTime ldt = LocalDateTime.parse(dbTime, DB_TIME_FORMATTER);
+            return ldt.atOffset(ZoneOffset.UTC).format(XML_TIME_FORMATTER);
+        } catch (DateTimeParseException e) {
+            throw new ParseException("Unparseable date: " + dbTime, 0);
+        }
     }
 
     @NonNull
@@ -74,6 +90,46 @@ public class TCXFileWriter extends BaseFileWriter {
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;")
                 .replace("'", "&apos;");
+    }
+
+    /**
+     * Extracts the major version number from the application version name.
+     * Guaranteed never to throw, falling back to {@link #DEFAULT_VERSION_MAJOR} on failure.
+     *
+     * @return parsed major version number
+     */
+    protected static int parseVersionMajor() {
+        try {
+            String versionName = BuildConfig.VERSION_NAME;
+            if (versionName != null && !versionName.isEmpty()) {
+                String[] parts = versionName.split("[.-]");
+                if (parts.length > 0 && !parts[0].isEmpty()) {
+                    return Integer.parseInt(parts[0]);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return DEFAULT_VERSION_MAJOR;
+    }
+
+    /**
+     * Extracts the minor version number from the application version name.
+     * Guaranteed never to throw, falling back to {@link #DEFAULT_VERSION_MINOR} on failure.
+     *
+     * @return parsed minor version number
+     */
+    protected static int parseVersionMinor() {
+        try {
+            String versionName = BuildConfig.VERSION_NAME;
+            if (versionName != null && !versionName.isEmpty()) {
+                String[] parts = versionName.split("[.-]");
+                if (parts.length > 1 && !parts[1].isEmpty()) {
+                    return Integer.parseInt(parts[1]);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return DEFAULT_VERSION_MINOR;
     }
 
     private void writeLapNotesAndExtensions(@NonNull BufferedWriter bufferedWriter, long lapNr, @NonNull Map<Long, LapData> lapDataMap) throws IOException {
@@ -309,7 +365,22 @@ public class TCXFileWriter extends BaseFileWriter {
                 noteContent = activityDesc;
             }
             bufferedWriter.write("      <Notes>" + escapeXml(noteContent) + "</Notes>\n");
+        }
 
+        // Creator is a child of Activity in TrainingCenterDatabasev2.xsd (placed before Extensions)
+        bufferedWriter.write("      <Creator xsi:type=\"Device_t\">\n");
+        bufferedWriter.write("        <Name>" + escapeXml(android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL) + "</Name>\n");
+        bufferedWriter.write("        <UnitId>0</UnitId>\n");
+        bufferedWriter.write("        <ProductID>1</ProductID>\n");
+        bufferedWriter.write("        <Version>\n");
+        bufferedWriter.write("          <VersionMajor>" + parseVersionMajor() + "</VersionMajor>\n");
+        bufferedWriter.write("          <VersionMinor>" + parseVersionMinor() + "</VersionMinor>\n");
+        bufferedWriter.write("          <BuildMajor>" + BuildConfig.VERSION_CODE + "</BuildMajor>\n");
+        bufferedWriter.write("          <BuildMinor>0</BuildMinor>\n");
+        bufferedWriter.write("        </Version>\n");
+        bufferedWriter.write("      </Creator>\n");
+
+        if (activityWorkoutName != null || activityDesc != null) {
             bufferedWriter.write("      <Extensions>\n");
             bufferedWriter.write("        <att:ActivityExtension xmlns:att=\"http://atrainingtracker.com/xmlschemas/TrainingCenterDatabaseExtensions/v1\">\n");
             if (activityWorkoutName != null) {
@@ -323,34 +394,23 @@ public class TCXFileWriter extends BaseFileWriter {
         }
         bufferedWriter.write("    </Activity>\n");
         bufferedWriter.write("  </Activities>\n");
-        bufferedWriter.write("  <Creator xsi:type=\"Device_t\">\n");
-        bufferedWriter.write("    <Name>" + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL + "</Name>\n");
-//        bufferedWriter.write("        <UnitId>0</UnitId>\n");
-//        bufferedWriter.write("        <ProductID>0</ProductID>\n");
-//        bufferedWriter.write("        <Version>\n");
-//        bufferedWriter.write("            <VersionMajor>" + TrainingApplication.getVersionMajor() + "</VersionMajor>\n");
-//        bufferedWriter.write("            <VersionMinor>" + TrainingApplication.getVersionMinor() + "</VersionMinor>\n");
-//        bufferedWriter.write("            <BuildMajor>0</BuildMajor>\n");
-//        bufferedWriter.write("            <BuildMinor>0</BuildMinor>\n");
-//        bufferedWriter.write("        </Version>\n");
-        bufferedWriter.write("  </Creator>\n");
         bufferedWriter.write("  <Author xsi:type=\"Application_t\">\n");
         String name = TrainingApplication.getAppName();
         if (HavePressureSensor.havePressureSensor(mContext)) {
             name += " with barometer";
         } // add "with barometer" when a barometer was/is available, see Strava API Documentations
-        bufferedWriter.write("    <Name>" + name + "</Name>\n");
-//        bufferedWriter.write("        <Build>\n");
-//        bufferedWriter.write("            <Version>\n");
-//        bufferedWriter.write("                <VersionMajor>" + TrainingApplication.getVersionMajor() + "</VersionMajor>\n");
-//        bufferedWriter.write("                <VersionMinor>" + TrainingApplication.getVersionMinor() + "</VersionMinor>\n");
-//        bufferedWriter.write("                <BuildMajor>0</BuildMajor>\n");
-//        bufferedWriter.write("                <BuildMinor>0</BuildMinor>\n");
-//        bufferedWriter.write("            </Version>\n");
-//        bufferedWriter.write("            <Type>Beta</Type>\n");
-//        bufferedWriter.write("        </Build>\n");
-//        bufferedWriter.write("        <LangID>en</LangID>\n");  // TODO: change LangID when necessary!
-//        bufferedWriter.write("        <PartNumber>0</PartNumber>\n");
+        bufferedWriter.write("    <Name>" + escapeXml(name) + "</Name>\n");
+        bufferedWriter.write("    <Build>\n");
+        bufferedWriter.write("      <Version>\n");
+        bufferedWriter.write("        <VersionMajor>" + parseVersionMajor() + "</VersionMajor>\n");
+        bufferedWriter.write("        <VersionMinor>" + parseVersionMinor() + "</VersionMinor>\n");
+        bufferedWriter.write("        <BuildMajor>" + BuildConfig.VERSION_CODE + "</BuildMajor>\n");
+        bufferedWriter.write("        <BuildMinor>0</BuildMinor>\n");
+        bufferedWriter.write("      </Version>\n");
+        bufferedWriter.write("      <Type>Release</Type>\n");
+        bufferedWriter.write("    </Build>\n");
+        bufferedWriter.write("    <LangID>" + GARMIN_AUTHOR_LANG_ID + "</LangID>\n");
+        bufferedWriter.write("    <PartNumber>" + GARMIN_AUTHOR_PART_NUMBER + "</PartNumber>\n");
         bufferedWriter.write("  </Author>\n");
         bufferedWriter.write("</TrainingCenterDatabase>\n");
 

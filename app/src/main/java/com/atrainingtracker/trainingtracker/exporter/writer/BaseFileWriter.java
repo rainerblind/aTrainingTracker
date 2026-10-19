@@ -65,10 +65,30 @@ public abstract class BaseFileWriter extends BaseExporter {
         }
     }
 
+    /**
+     * Determines whether copying exported files to the shared public Downloads directory
+     * is supported on the active Android runtime (Android 10+ / API 29+ Scoped Storage).
+     *
+     * @return true if running on Android Q or higher, false otherwise
+     */
+    protected boolean isDownloadsCopySupported() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q;
+    }
+
+    /**
+     * Post-export hook invoked upon successful export completion.
+     * Preserves public Downloads copy for explicit user file exports (CSV, TCX, GPX, FIT, GC)
+     * while strictly excluding internal uploads (STRAVA or COMMUNITY) to protect athlete privacy
+     * from leaking GPS traces into public shared storage (REQ-EXP-022, ATT-4013).
+     *
+     * @param exportInfo the completed export metadata descriptor
+     */
     @Override
     protected void onFinished(@NonNull ExportInfo exportInfo) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            copyFileToDownloads(exportInfo);
+        if (exportInfo.getFileFormat() != FileFormat.STRAVA && exportInfo.getExportType() != ExportType.COMMUNITY) {
+            if (isDownloadsCopySupported()) {
+                copyFileToDownloads(exportInfo);
+            }
         }
     }
 

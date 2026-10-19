@@ -188,10 +188,14 @@ public abstract class BaseExporter {
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, fileToCopy.getName());
-        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "application/gpx+xml");
+        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, exportInfo.getFileFormat().getMimeType());
         contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
 
         Uri targetUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues);
+        if (targetUri == null) {
+            Log.w(TAG, "MediaStore insert returned null for " + fileToCopy.getName());
+            return;
+        }
 
         try (InputStream in = new FileInputStream(fileToCopy);
              OutputStream out = resolver.openOutputStream(targetUri)) {
