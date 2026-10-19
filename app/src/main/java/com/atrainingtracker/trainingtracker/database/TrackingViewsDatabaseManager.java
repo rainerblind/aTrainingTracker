@@ -147,46 +147,62 @@ public class TrackingViewsDatabaseManager {
             FilterType filterType,
             double filterConstant) {
 
-        Log.i(TAG, "insertSensorFiledAt(" + tabViewId + ", " + rowNr + ", " + colNr + ", " + sensorType.name());
-
-        String sql;
-        if (colNr == -1) {  // new row -> add 1 to all rows with a larger rowNr
-            sql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
-                    " SET " + TrackingViewsDbHelper.ROW_NR + "=" + TrackingViewsDbHelper.ROW_NR + "+1" +
-                    " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=" + tabViewId +
-                    " AND " + TrackingViewsDbHelper.ROW_NR + " >= " + rowNr;
-            getDatabase().execSQL(sql);
-
-            // Shift section dividers at or below rowNr down by 1 (REQ-UI-411.2)
-            String shiftDividersSql = "UPDATE " + TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE +
-                    " SET " + TrackingViewsDbHelper.ROW_NR + "=" + TrackingViewsDbHelper.ROW_NR + "+1" +
-                    " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=" + tabViewId +
-                    " AND " + TrackingViewsDbHelper.ROW_NR + " >= " + rowNr;
-            getDatabase().execSQL(shiftDividersSql);
-
-            colNr = 1;  // now, that this row is freed, we can give the colNr the correct value.
-        }
-        else {  // new col -> add 1 to all cols with a larger colNr and the same rowNr
-            sql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
-                    " SET " + TrackingViewsDbHelper.COL_NR + "=" + TrackingViewsDbHelper.COL_NR + "+1" +
-                    " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=" + tabViewId +
-                    " AND " + TrackingViewsDbHelper.COL_NR + " >= " + colNr + " AND " + TrackingViewsDbHelper.ROW_NR + "=" + rowNr;
-            getDatabase().execSQL(sql);
+        if (tabViewId <= 0 || rowNr < 1) {
+            Log.w(TAG, "Invalid parameters for insertSensorFieldAt: tabViewId=" + tabViewId + ", rowNr=" + rowNr);
+            return;
         }
 
-        ContentValues values = new ContentValues();
-        values.put(TrackingViewsDbHelper.VIEW_ID, tabViewId);
-        values.put(TrackingViewsDbHelper.ROW_NR, rowNr);
-        values.put(TrackingViewsDbHelper.COL_NR, colNr);
-        values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
-        values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
-        if (sourceDeviceId != null && sourceDeviceId >= 0) {
-            values.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, sourceDeviceId);
+        if (DEBUG) {
+            Log.i(TAG, "insertSensorFieldAt(" + tabViewId + ", " + rowNr + ", " + colNr + ", " + sensorType.name() + ")");
         }
-        values.put(TrackingViewsDbHelper.FILTER_TYPE, filterType.name());
-        values.put(TrackingViewsDbHelper.FILTER_CONSTANT, filterConstant);
 
-        getDatabase().insert(TrackingViewsDbHelper.ROWS_TABLE, null, values);
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            if (colNr == -1) {  // new row -> add 1 to all rows with a larger rowNr
+                String shiftRowsSql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
+                        " SET " + TrackingViewsDbHelper.ROW_NR + "=" + TrackingViewsDbHelper.ROW_NR + "+1" +
+                        " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=?" +
+                        " AND " + TrackingViewsDbHelper.ROW_NR + " >= ?";
+                db.execSQL(shiftRowsSql, new Object[]{tabViewId, rowNr});
+
+                // Shift section dividers at or below rowNr down by 1 (REQ-UI-411.2, REQ-UI-413.4)
+                String shiftDividersSql = "UPDATE " + TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE +
+                        " SET " + TrackingViewsDbHelper.ROW_NR + "=" + TrackingViewsDbHelper.ROW_NR + "+1" +
+                        " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=?" +
+                        " AND " + TrackingViewsDbHelper.ROW_NR + " >= ?";
+                db.execSQL(shiftDividersSql, new Object[]{tabViewId, rowNr});
+
+                colNr = 1;  // now, that this row is freed, we can give the colNr the correct value.
+            } else {  // new col -> add 1 to all cols with a larger colNr and the same rowNr
+                String shiftColsSql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
+                        " SET " + TrackingViewsDbHelper.COL_NR + "=" + TrackingViewsDbHelper.COL_NR + "+1" +
+                        " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=?" +
+                        " AND " + TrackingViewsDbHelper.COL_NR + " >= ? AND " + TrackingViewsDbHelper.ROW_NR + "=?";
+                db.execSQL(shiftColsSql, new Object[]{tabViewId, colNr, rowNr});
+            }
+
+            ContentValues values = new ContentValues();
+            values.put(TrackingViewsDbHelper.VIEW_ID, tabViewId);
+            values.put(TrackingViewsDbHelper.ROW_NR, rowNr);
+            values.put(TrackingViewsDbHelper.COL_NR, colNr);
+            values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
+            values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
+            if (sourceDeviceId != null && sourceDeviceId >= 0) {
+                values.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, sourceDeviceId);
+            }
+            values.put(TrackingViewsDbHelper.FILTER_TYPE, filterType.name());
+            values.put(TrackingViewsDbHelper.FILTER_CONSTANT, filterConstant);
+
+            db.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, values);
+
+            // Normalize grid coordinates and synchronize section dividers (REQ-UI-413.5)
+            normalizeGrid(db, tabViewId);
+
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
     }
 
 

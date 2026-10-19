@@ -28,6 +28,9 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.banalservice.filters.FilterType
+import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import java.lang.reflect.Field
 
 /**
@@ -683,7 +686,7 @@ class TrackingViewsDatabaseManagerTest {
     }
 
     @Test
-    fun testInsertSensorFieldAt_newRow_shiftsSectionDividers() {
+    fun testInsertSensorFieldAt_newRow_shiftsSectionDividersAndExecutesTransactionally() {
         val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
         injectMockDatabase(manager, mockDb)
 
@@ -691,15 +694,80 @@ class TrackingViewsDatabaseManagerTest {
             10L,
             2,
             -1,
-            com.atrainingtracker.banalservice.sensor.SensorType.CADENCE,
-            com.atrainingtracker.trainingtracker.ui.tracking.ViewSize.NORMAL,
+            SensorType.CADENCE,
+            ViewSize.LARGE,
             null,
-            com.atrainingtracker.banalservice.filters.FilterType.INSTANTANEOUS,
+            FilterType.INSTANTANEOUS,
             1.0
         )
 
+        verify(exactly = 1) { mockDb.beginTransaction() }
         verify(atLeast = 1) {
-            mockDb.execSQL(match { it.contains("UPDATE SectionDividersTable SET RowNr=RowNr+1 WHERE ViewId=10 AND RowNr >= 2") })
+            mockDb.execSQL(
+                match { it.contains("UPDATE LayoutRowsTable SET RowNr=RowNr+1 WHERE ViewId=? AND RowNr >= ?") },
+                match<Array<Any>> { it.size == 2 && it[0] == 10L && it[1] == 2 }
+            )
         }
+        verify(atLeast = 1) {
+            mockDb.execSQL(
+                match { it.contains("UPDATE SectionDividersTable SET RowNr=RowNr+1 WHERE ViewId=? AND RowNr >= ?") },
+                match<Array<Any>> { it.size == 2 && it[0] == 10L && it[1] == 2 }
+            )
+        }
+        verify(exactly = 1) { mockDb.setTransactionSuccessful() }
+        verify(exactly = 1) { mockDb.endTransaction() }
+    }
+
+    @Test
+    fun testInsertSensorFieldAt_parameterAndBoundaryValidation() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        // Invalid tabViewId <= 0
+        manager.insertSensorFieldAt(
+            0L,
+            1,
+            -1,
+            SensorType.CADENCE,
+            ViewSize.LARGE,
+            null,
+            FilterType.INSTANTANEOUS,
+            0.0
+        )
+        manager.insertSensorFieldAt(
+            -5L,
+            1,
+            -1,
+            SensorType.CADENCE,
+            ViewSize.LARGE,
+            null,
+            FilterType.INSTANTANEOUS,
+            0.0
+        )
+
+        // Invalid rowNr < 1
+        manager.insertSensorFieldAt(
+            10L,
+            0,
+            -1,
+            SensorType.CADENCE,
+            ViewSize.LARGE,
+            null,
+            FilterType.INSTANTANEOUS,
+            0.0
+        )
+        manager.insertSensorFieldAt(
+            10L,
+            -1,
+            -1,
+            SensorType.CADENCE,
+            ViewSize.LARGE,
+            null,
+            FilterType.INSTANTANEOUS,
+            0.0
+        )
+
+        // Verify zero transactions or queries initiated for invalid inputs
+        verify(exactly = 0) { mockDb.beginTransaction() }
     }
 }
