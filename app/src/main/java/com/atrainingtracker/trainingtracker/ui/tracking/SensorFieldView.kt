@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking
 
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
+import com.atrainingtracker.trainingtracker.ui.components.WPrimeBatteryGaugeBar
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -47,6 +48,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -163,6 +165,18 @@ fun SensorFieldView(
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {}
 ) {
+    val isWarning = fieldState.wPrimeBatteryState?.isWarning == true
+    val warningBorderColor = MaterialTheme.colorScheme.error
+    val effectiveBorder = remember(border, isSelectedForMove, isWarning, warningBorderColor) {
+        if (isSelectedForMove) {
+            border
+        } else if (isWarning) {
+            BorderStroke(1.5.dp, warningBorderColor)
+        } else {
+            border
+        }
+    }
+
     val cockpitTypography = LocalCockpitTypography.current
     // Determine text styles based on the size parameter and configured cockpit typography.
     val valueStyle = getSensorValueTextStyle(
@@ -226,7 +240,7 @@ fun SensorFieldView(
                 MaterialTheme.colorScheme.surface
             }
         ),
-        border = border
+        border = effectiveBorder
     ) {
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             // 1. Left Indicator Strip
@@ -305,6 +319,18 @@ fun SensorFieldView(
                     Spacer(modifier = Modifier.height(4.dp))
                     PedalPowerBalanceBar(
                         state = fieldState.pedalBalanceState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp)
+                    )
+                }
+
+                // Optional W' Anaerobic Battery Gauge Bar (REQ-UI-416)
+                if (fieldState.wPrimeBatteryState != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    WPrimeBatteryGaugeBar(
+                        state = fieldState.wPrimeBatteryState,
+                        viewSize = fieldState.viewSize,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 4.dp)

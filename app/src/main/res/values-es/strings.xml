@@ -1925,6 +1925,8 @@
     <string name="athlete_profile_cp_estimator_apply">Aplicar estimación (%1$d W / %2$.1f kJ)</string>
     <string name="workout_w_prime_bal_min_format">Mín. W\'bal: %1$.1f kJ (%2$.0f%%)</string>
     <string name="workout_w_prime_empty_tank">Tanque vacío (&lt;10%%)</string>
+    <string name="w_prime_battery_pct">%1$d%%</string>
+    <string name="w_prime_warning_low_battery">Batería W\' baja (&lt;20%%)</string>
 
     <!-- ATT-3861: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400) -->
     <string name="efficiency_factor_short">EF</string>

@@ -533,4 +533,79 @@ class CyclingPowerMetricsDeviceTest {
         assertNull(deviceWithoutWPrime.wPrimeBalSensor.sensorData.value)
         deviceWithoutWPrime.shutDown()
     }
+
+    @Test
+    fun testResolveEffectiveCpWattsMultiTierFallback() {
+        var currentTime = 1_000_000L
+
+        // Tier 1: CP configured (280W) and FTP configured (250W) -> returns CP (280W)
+        val deviceTier1 = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { currentTime },
+            { 280 },
+            { 20.0f }
+        )
+        assertEquals(280, deviceTier1.resolveEffectiveCpWatts())
+        deviceTier1.shutDown()
+
+        // Tier 2: CP null/unconfigured (0W or null), FTP configured (250W) -> returns FTP (250W)
+        val deviceTier2 = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { currentTime },
+            { null },
+            { 20.0f }
+        )
+        assertEquals(250, deviceTier2.resolveEffectiveCpWatts())
+        deviceTier2.shutDown()
+
+        // Tier 3: CP null, FTP null/0 -> falls back to DEFAULT_FALLBACK_CP_WATTS (200W)
+        val deviceTier3 = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 0 },
+            { currentTime },
+            { 0 },
+            { 20.0f }
+        )
+        assertEquals(CyclingPowerMetricsDevice.DEFAULT_FALLBACK_CP_WATTS, deviceTier3.resolveEffectiveCpWatts())
+        deviceTier3.shutDown()
+    }
+
+    @Test
+    fun testResetSessionRestoresCapacityWithFtpFallback() {
+        var currentTime = 1_000_000L
+        every { powerSensorData.value } returns 350.0
+
+        // CP = null, FTP = 250W, W' = 15.0 kJ
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { currentTime },
+            { null },
+            { 15.0f }
+        )
+        // 1 tick depletion (350W vs 250W = 100W * 1s = 0.1 kJ)
+        currentTime += 1000L
+        device.calculateMetrics()
+        assertEquals(14.9, device.wPrimeBalSensor.sensorData.value as Double, 0.001)
+
+        // resetSession() must restore full 15.0 kJ capacity even when CP is null because FTP is configured
+        device.resetSession()
+        assertEquals(15.0, device.wPrimeBalSensor.sensorData.value as Double, 0.001)
+
+        device.shutDown()
+    }
 }
