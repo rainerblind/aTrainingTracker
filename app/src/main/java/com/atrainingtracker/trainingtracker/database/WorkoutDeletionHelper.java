@@ -55,7 +55,7 @@ public class WorkoutDeletionHelper {
                 LapsDatabaseManager.getInstance(context),
                 WorkoutSamplesDatabaseManager.getInstance(context),
                 ExportStatusDatabaseManager.getInstance(context),
-                new com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(context)
+                com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(context)
         );
     }
 
@@ -76,7 +76,7 @@ public class WorkoutDeletionHelper {
                 lapsManager,
                 samplesManager,
                 exportStatusRepo,
-                new com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(context)
+                com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(context)
         );
     }
 

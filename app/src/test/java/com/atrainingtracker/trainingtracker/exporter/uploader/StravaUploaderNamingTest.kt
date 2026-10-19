@@ -66,6 +66,8 @@ class StravaUploaderNamingTest {
     private lateinit var mockSportTypeDb: SportTypeDatabaseManager
     private lateinit var mockSegmentsDbManager: SegmentsDatabaseManager
     private lateinit var mockSegmentsRepository: SegmentsRepository
+    private lateinit var mockStravaUploadDbHelper: StravaUploadDbHelper
+    private lateinit var mockEquipmentDbHelper: EquipmentDbHelper
 
     private val capturedUpdatedValues = mutableListOf<ContentValues>()
     private val capturedStravaRequests = mutableListOf<Map<String, String>>()
@@ -202,18 +204,20 @@ class StravaUploaderNamingTest {
         every { mockSportTypeDb.getStravaName(any()) } returns "Ride"
         every { mockSportTypeDb.getSportTypeIdFromStravaName(any()) } returns -1L
 
-        mockkConstructor(EquipmentDbHelper::class)
-        every { anyConstructed<EquipmentDbHelper>().getIdFromStravaId(any()) } returns -1L
-        every { anyConstructed<EquipmentDbHelper>().addOrUpdateStravaGear(any(), any(), any(), any(), any()) } returns -1L
+        mockEquipmentDbHelper = mockk(relaxed = true)
+        every { mockEquipmentDbHelper.getIdFromStravaId(any()) } returns -1L
+        every { mockEquipmentDbHelper.addOrUpdateStravaGear(any(), any(), any(), any(), any()) } returns -1L
+        EquipmentDbHelper.resetForTesting(mockEquipmentDbHelper)
 
         mockkStatic(StravaHelper::class)
         every { StravaHelper.getRefreshedAccessToken() } returns "mock_strava_token"
 
-        mockkConstructor(StravaUploadDbHelper::class)
-        every { anyConstructed<StravaUploadDbHelper>().getActivityId(any()) } returns "987654321"
-        every { anyConstructed<StravaUploadDbHelper>().updateStravaActivityData(any(), any()) } returns Unit
-        every { anyConstructed<StravaUploadDbHelper>().updateAll(any(), any(), capture(capturedDuplicateActivityIds), any(), any()) } returns Unit
-        every { anyConstructed<StravaUploadDbHelper>().deleteWorkout(any()) } returns 1
+        mockStravaUploadDbHelper = mockk(relaxed = true)
+        every { mockStravaUploadDbHelper.getActivityId(any()) } returns "987654321"
+        every { mockStravaUploadDbHelper.updateStravaActivityData(any(), any()) } returns Unit
+        every { mockStravaUploadDbHelper.updateAll(any(), any(), capture(capturedDuplicateActivityIds), any(), any()) } returns Unit
+        every { mockStravaUploadDbHelper.deleteWorkout(any()) } returns 1
+        StravaUploadDbHelper.resetForTesting(mockStravaUploadDbHelper)
         every { mockSqlDb.update(WorkoutSummaries.TABLE, capture(capturedUpdatedValues), any(), any()) } returns 1
 
         mockSegmentsDbManager = mockk(relaxed = true)
@@ -233,6 +237,8 @@ class StravaUploaderNamingTest {
 
     @After
     fun tearDown() {
+        StravaUploadDbHelper.resetForTesting(null)
+        EquipmentDbHelper.resetForTesting(null)
         unmockkAll()
     }
 
@@ -713,8 +719,8 @@ class StravaUploaderNamingTest {
         setupMockCursor(workoutName = fileBaseName, fileBaseName = fileBaseName)
 
         var trackedActivityId: String? = null
-        every { anyConstructed<StravaUploadDbHelper>().getActivityId(fileBaseName) } answers { trackedActivityId }
-        every { anyConstructed<StravaUploadDbHelper>().updateAll(fileBaseName, any(), any(), any(), any()) } answers {
+        every { mockStravaUploadDbHelper.getActivityId(fileBaseName) } answers { trackedActivityId }
+        every { mockStravaUploadDbHelper.updateAll(fileBaseName, any(), any(), any(), any()) } answers {
             trackedActivityId = secondArg()
         }
 
@@ -756,8 +762,8 @@ class StravaUploaderNamingTest {
         setupMockCursor(workoutName = "Hausrunde #3", fileBaseName = fileBaseName)
 
         var trackedActivityId: String? = null
-        every { anyConstructed<StravaUploadDbHelper>().getActivityId(fileBaseName) } answers { trackedActivityId }
-        every { anyConstructed<StravaUploadDbHelper>().updateAll(fileBaseName, any(), any(), any(), any()) } answers {
+        every { mockStravaUploadDbHelper.getActivityId(fileBaseName) } answers { trackedActivityId }
+        every { mockStravaUploadDbHelper.updateAll(fileBaseName, any(), any(), any(), any()) } answers {
             trackedActivityId = secondArg()
         }
 
@@ -873,13 +879,13 @@ class StravaUploaderNamingTest {
         var trackedActivityId: String? = "stale_deleted_id_999"
         var deletedFileBaseName: String? = null
 
-        every { anyConstructed<StravaUploadDbHelper>().getActivityId(fileBaseName) } answers { trackedActivityId }
-        every { anyConstructed<StravaUploadDbHelper>().deleteWorkout(fileBaseName) } answers {
+        every { mockStravaUploadDbHelper.getActivityId(fileBaseName) } answers { trackedActivityId }
+        every { mockStravaUploadDbHelper.deleteWorkout(fileBaseName) } answers {
             deletedFileBaseName = firstArg()
             trackedActivityId = null
             1
         }
-        every { anyConstructed<StravaUploadDbHelper>().updateAll(fileBaseName, any(), any(), any(), any()) } answers {
+        every { mockStravaUploadDbHelper.updateAll(fileBaseName, any(), any(), any(), any()) } answers {
             trackedActivityId = secondArg()
         }
 
@@ -929,7 +935,7 @@ class StravaUploaderNamingTest {
             put("gear_id", "b888999")
         }
 
-        every { anyConstructed<EquipmentDbHelper>().getIdFromStravaId("b888999") } returns 42L
+        every { mockEquipmentDbHelper.getIdFromStravaId("b888999") } returns 42L
 
         val uploader = TestableStravaUploader(
             context = mockContext,
@@ -970,9 +976,9 @@ class StravaUploaderNamingTest {
             put("retired", true)
         }
 
-        every { anyConstructed<EquipmentDbHelper>().getIdFromStravaId("b_retired_123") } returns -1L
+        every { mockEquipmentDbHelper.getIdFromStravaId("b_retired_123") } returns -1L
         every {
-            anyConstructed<EquipmentDbHelper>().addOrUpdateStravaGear("b_retired_123", "My First MTB", 1, "BIKE", true)
+            mockEquipmentDbHelper.addOrUpdateStravaGear("b_retired_123", "My First MTB", 1, "BIKE", true)
         } returns 77L
 
         val uploader = TestableStravaUploader(

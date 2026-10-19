@@ -164,7 +164,8 @@ public class StravaEquipmentSynchronizeThread extends Thread {
             return "No gear returned (missing profile:read_all permission)";
         }
 
-        try (SQLiteDatabase equipmentDb = new EquipmentDbHelper(mContext).getWritableDatabase()) {
+        try {
+            SQLiteDatabase equipmentDb = EquipmentDbHelper.getInstance(mContext).getWritableDatabase();
             ContentValues values = new ContentValues();
 
             if (DEBUG) Log.d(TAG, "checking strava shoes");

@@ -57,8 +57,8 @@ class WorkoutClusterRepository internal constructor(
             context,
             summariesManager,
             SportTypeDatabaseManager.getInstance(context),
-            EquipmentDbHelper(context),
-            StravaUploadDbHelper(context)
+            EquipmentDbHelper.getInstance(context),
+            StravaUploadDbHelper.getInstance(context)
         )
     }
 
@@ -414,7 +414,7 @@ class WorkoutClusterRepository internal constructor(
 
             // 2. Perform Batch Metadata Lookups (ATT-359/388)
             val extremaList = summariesManager.getExtremaForWorkouts(batchKeys.idList)
-            val stravaDataMap = StravaUploadDbHelper(context).getStravaActivityDataForWorkouts(batchKeys.fileNameList)
+            val stravaDataMap = StravaUploadDbHelper.getInstance(context).getStravaActivityDataForWorkouts(batchKeys.fileNameList)
             val clusterNamesMap = clusterDb.getClusterNamesForIds(batchKeys.clusterIdList)
             
             val batchMetadata = WorkoutDataMapper.BatchMetadata(

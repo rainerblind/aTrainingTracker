@@ -59,7 +59,7 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
     private val dbSportTypeManager = SportTypeDatabaseManager.getInstance(application)
     private val dbSummariesManager = WorkoutSummariesDatabaseManager.getInstance(application)
     private val dbLinksHelper = SportTypeEquipmentLinkManager.getInstance(application)
-    private val dbEquipmentHelper = EquipmentDbHelper(application)
+    private val dbEquipmentHelper = EquipmentDbHelper.getInstance(application)
 
 
     private val _sportTypes = MutableStateFlow<List<SportTypeItem>>(emptyList())

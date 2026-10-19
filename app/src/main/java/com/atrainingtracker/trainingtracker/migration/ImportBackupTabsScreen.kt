@@ -858,7 +858,7 @@ fun ImportMappingDialog(
 ) {
     val context = LocalContext.current
     val localSportTypes = remember { SportTypeDatabaseManager.getInstance(context).getSportTypes(null) }
-    val localEquipment = remember { com.atrainingtracker.trainingtracker.database.EquipmentDbHelper(context).equipmentItems }
+    val localEquipment = remember { com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(context).equipmentItems }
 
     val sportMapping = remember {
         mutableStateMapOf<Long, Long>().apply {

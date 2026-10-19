@@ -111,11 +111,13 @@ class WorkoutRepositoryStreamTest {
         every { mockSportTypeDbManager.getUIName(any()) } returns "Running"
         every { mockSportTypeDbManager.getStravaName(any()) } returns "Run"
 
-        mockkConstructor(StravaUploadDbHelper::class)
-        every { anyConstructed<StravaUploadDbHelper>().getStravaActivityDataForWorkouts(any()) } returns emptyMap()
-        every { anyConstructed<StravaUploadDbHelper>().getStravaActivityData(any()) } returns null
+        every { mockStravaUploadDbHelper.getStravaActivityDataForWorkouts(any()) } returns emptyMap()
+        every { mockStravaUploadDbHelper.getStravaActivityData(any()) } returns null
+        StravaUploadDbHelper.resetForTesting(mockStravaUploadDbHelper)
 
-        mockkConstructor(EquipmentDbHelper::class)
+        val mockEquipmentDbHelperInstance = mockk<EquipmentDbHelper>(relaxed = true)
+        EquipmentDbHelper.resetForTesting(mockEquipmentDbHelperInstance)
+
         mockkConstructor(ExportManager::class)
 
         mockkConstructor(com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider::class)
@@ -130,6 +132,8 @@ class WorkoutRepositoryStreamTest {
     fun tearDown() {
         WorkoutRepository.resetForTesting(null)
         WorkoutClusterDatabaseManager.resetForTesting(null)
+        StravaUploadDbHelper.resetForTesting(null)
+        EquipmentDbHelper.resetForTesting(null)
         unmockkAll()
     }
 
@@ -190,7 +194,7 @@ class WorkoutRepositoryStreamTest {
 
         // Verify batch queries were executed in vectorized chunks
         verify(atLeast = 1) { mockSummariesManager.getExtremaForWorkouts(any()) }
-        verify(atLeast = 1) { anyConstructed<StravaUploadDbHelper>().getStravaActivityDataForWorkouts(any()) }
+        verify(atLeast = 1) { mockStravaUploadDbHelper.getStravaActivityDataForWorkouts(any()) }
     }
 
     @Test

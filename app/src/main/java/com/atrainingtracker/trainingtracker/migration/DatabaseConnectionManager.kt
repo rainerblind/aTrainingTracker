@@ -35,9 +35,49 @@ import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 object DatabaseConnectionManager {
     private const val TAG = "DatabaseConnectionManager"
 
+    @JvmField
+    val databaseLock = java.util.concurrent.locks.ReentrantReadWriteLock()
+
     @JvmStatic
     fun checkpointAll(context: Context) {
         quiesceAllDatabases(context, closeConnections = false)
+    }
+
+    /**
+     * Executes PRAGMA wal_checkpoint with retry backoff when BUSY (result == 1) is returned.
+     * Retries up to maxRetries times with exponential backoff (10ms, 25ms, 50ms).
+     */
+    @JvmStatic
+    fun checkpointWithRetry(db: SQLiteDatabase, mode: String = "TRUNCATE", maxRetries: Int = 3): Boolean {
+        if (!db.isOpen) return false
+        val backoffMs = longArrayOf(10L, 25L, 50L)
+        for (attempt in 0..maxRetries) {
+            try {
+                db.rawQuery("PRAGMA wal_checkpoint($mode);", null).use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val busy = cursor.getInt(0)
+                        if (busy == 0) {
+                            Log.v(TAG, "WAL Checkpoint $mode succeeded on attempt $attempt")
+                            return true
+                        } else {
+                            Log.w(TAG, "WAL Checkpoint $mode returned BUSY on attempt $attempt")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "WAL Checkpoint $mode exception on attempt $attempt", e)
+            }
+            if (attempt < maxRetries) {
+                val delay = if (attempt < backoffMs.size) backoffMs[attempt] else 50L
+                try {
+                    Thread.sleep(delay)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    break
+                }
+            }
+        }
+        return false
     }
 
     /**
@@ -51,11 +91,7 @@ object DatabaseConnectionManager {
             for (db in databases) {
                 try {
                     if (db.isOpen) {
-                        db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE);", null).use { cursor ->
-                            if (cursor.moveToFirst()) {
-                                Log.v(TAG, "WAL Checkpoint TRUNCATE result: ${cursor.getInt(0)}")
-                            }
-                        }
+                        checkpointWithRetry(db, mode = "TRUNCATE")
                         if (closeConnections) {
                             db.close()
                         }
@@ -69,7 +105,8 @@ object DatabaseConnectionManager {
         }
     }
 
-    private fun getActiveDatabases(context: Context): List<SQLiteDatabase> {
+    @JvmStatic
+    fun getActiveDatabases(context: Context): List<SQLiteDatabase> {
         return listOfNotNull(
             try { WorkoutSummariesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
             try { WorkoutSamplesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
@@ -81,11 +118,11 @@ object DatabaseConnectionManager {
             try { TrackingViewsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
             try { DevicesDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
             try { SportTypeDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-            try { StravaUploadDbHelper(context).writableDatabase } catch (_: Throwable) { null },
+            try { StravaUploadDbHelper.getInstance(context).writableDatabase } catch (_: Throwable) { null },
             try { ExportStatusDatabaseManager.getInstance(context)?.getDatabase() } catch (_: Throwable) { null },
             try { SegmentsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
-            try { EquipmentDbHelper(context).writableDatabase } catch (_: Throwable) { null },
-            try { ActiveDevicesDbHelper(context).writableDatabase } catch (_: Throwable) { null }
+            try { EquipmentDbHelper.getInstance(context).writableDatabase } catch (_: Throwable) { null },
+            try { ActiveDevicesDbHelper.getInstance(context).writableDatabase } catch (_: Throwable) { null }
         )
     }
 }

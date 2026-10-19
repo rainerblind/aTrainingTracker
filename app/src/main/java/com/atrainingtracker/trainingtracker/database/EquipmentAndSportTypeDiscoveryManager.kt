@@ -28,8 +28,8 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 class EquipmentAndSportTypeDiscoveryManager @androidx.annotation.VisibleForTesting internal constructor(
     context: Context,
     val sportTypeManager: SportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(context),
-    val activeDevicesHelper: ActiveDevicesDbHelper = ActiveDevicesDbHelper(context),
-    val equipmentDbHelper: EquipmentDbHelper = EquipmentDbHelper(context),
+    val activeDevicesHelper: ActiveDevicesDbHelper = ActiveDevicesDbHelper.getInstance(context),
+    val equipmentDbHelper: EquipmentDbHelper = EquipmentDbHelper.getInstance(context),
     val sportTypeEquipmentLinkHelper: SportTypeEquipmentLinkManager = SportTypeEquipmentLinkManager.getInstance(context),
     val workoutSummariesManager: WorkoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(context)
 ) {

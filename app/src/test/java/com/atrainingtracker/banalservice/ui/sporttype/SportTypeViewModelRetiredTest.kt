@@ -52,11 +52,13 @@ class SportTypeViewModelRetiredTest {
         every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockSummariesManager
         every { SportTypeEquipmentLinkManager.getInstance(any()) } returns mockLinksHelper
 
-        mockkConstructor(EquipmentDbHelper::class)
+        mockEquipmentDbHelper = mockk(relaxed = true)
+        EquipmentDbHelper.resetForTesting(mockEquipmentDbHelper)
     }
 
     @After
     fun tearDown() {
+        EquipmentDbHelper.resetForTesting(null)
         unmockkAll()
     }
 
@@ -67,13 +69,13 @@ class SportTypeViewModelRetiredTest {
         )
 
         every {
-            anyConstructed<EquipmentDbHelper>().getEquipmentItems(BSportType.BIKE, true)
+            mockEquipmentDbHelper.getEquipmentItems(BSportType.BIKE, true)
         } returns listOf(activeBike)
 
         val viewModel = SportTypeViewModel(mockApplication)
         val result = viewModel.availableEquipment(BSportType.BIKE)
 
         assertEquals(listOf(activeBike), result)
-        verify { anyConstructed<EquipmentDbHelper>().getEquipmentItems(BSportType.BIKE, true) }
+        verify { mockEquipmentDbHelper.getEquipmentItems(BSportType.BIKE, true) }
     }
 }

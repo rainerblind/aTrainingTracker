@@ -79,6 +79,37 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             + EQUIPMENT_ID + " int,"
             + ANT_DEVICE_ID + " int)";
     private final Context mContext;
+    private static volatile EquipmentDbHelper sInstance;
+
+    @NonNull
+    public static EquipmentDbHelper getInstance(@NonNull Context context) {
+        if (sInstance == null) {
+            synchronized (EquipmentDbHelper.class) {
+                if (sInstance == null) {
+                    sInstance = new EquipmentDbHelper(context.getApplicationContext());
+                }
+            }
+        }
+        return sInstance;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting() {
+        resetForTesting(null);
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting(EquipmentDbHelper newInstance) {
+        synchronized (EquipmentDbHelper.class) {
+            if (sInstance != null && sInstance != newInstance) {
+                try {
+                    sInstance.close();
+                } catch (Exception ignored) {
+                }
+            }
+            sInstance = newInstance;
+        }
+    }
 
     // Constructor
     public EquipmentDbHelper(Context context) {
@@ -91,7 +122,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public List<String> getLinkedEquipment(long workoutId) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment, workoutId=" + workoutId);
 
-        return getLinkedEquipment(new ActiveDevicesDbHelper(mContext).getDatabaseIdsOfActiveDevices(workoutId));
+        return getLinkedEquipment(ActiveDevicesDbHelper.getInstance(mContext).getDatabaseIdsOfActiveDevices(workoutId));
     }
 
     @NonNull

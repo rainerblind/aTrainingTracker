@@ -53,8 +53,39 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
             + STATUS + " text,"
             + STRAVA_ACTIVITY_DATA + " text)";
 
+    private static volatile StravaUploadDbHelper sInstance;
+
+    @NonNull
+    public static StravaUploadDbHelper getInstance(@NonNull Context context) {
+        if (sInstance == null) {
+            synchronized (StravaUploadDbHelper.class) {
+                if (sInstance == null) {
+                    sInstance = new StravaUploadDbHelper(context.getApplicationContext());
+                }
+            }
+        }
+        return sInstance;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting() {
+        resetForTesting(null);
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting(StravaUploadDbHelper newInstance) {
+        synchronized (StravaUploadDbHelper.class) {
+            if (sInstance != null && sInstance != newInstance) {
+                try {
+                    sInstance.close();
+                } catch (Exception ignored) {
+                }
+            }
+            sInstance = newInstance;
+        }
+    }
+
     // Constructor
-    // TODO: do we really need this??
     public StravaUploadDbHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
     }

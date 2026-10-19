@@ -1863,7 +1863,7 @@ public class TrackerService extends Service {
             } else {
                 updateActiveSessionDevices(banalService);
             }
-            ActiveDevicesDbHelper activeDevicesDbHelper = new ActiveDevicesDbHelper(this);
+            ActiveDevicesDbHelper activeDevicesDbHelper = ActiveDevicesDbHelper.getInstance(this);
             for (Long deviceDbId : mActiveSessionDeviceIds) {
                 if (deviceDbId != null && deviceDbId >= 0) {
                     activeDevicesDbHelper.addActiveDevice(mWorkoutID, deviceDbId);
@@ -1997,7 +1997,7 @@ public class TrackerService extends Service {
                 for (long deviceDbId : banalService.getDatabaseIdsOfActiveRemoteDevices()) {
                     if (deviceDbId >= 0 && mActiveSessionDeviceIds.add(deviceDbId)) {
                         if (DEBUG) Log.d(TAG, "New active session device detected: " + deviceDbId);
-                        new ActiveDevicesDbHelper(this).addActiveDevice(mWorkoutID, deviceDbId);
+                        ActiveDevicesDbHelper.getInstance(this).addActiveDevice(mWorkoutID, deviceDbId);
                     }
                 }
             } catch (Throwable t) {

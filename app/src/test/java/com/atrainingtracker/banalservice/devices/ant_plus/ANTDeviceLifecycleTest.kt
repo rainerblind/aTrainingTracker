@@ -98,7 +98,11 @@ class ANTDeviceLifecycleTest {
 
     @After
     fun tearDown() {
-        unmockkAll()
+        try {
+            unmockkAll()
+        } catch (_: ConcurrentModificationException) {
+            try { unmockkAll() } catch (_: Exception) {}
+        }
     }
 
     @Test

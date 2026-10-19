@@ -719,7 +719,7 @@ object LegacyImportEngine {
                 workoutId = getWorkoutId(summaryDb, effectiveBaseFileName)
                 if (workoutId == -1L) {
                     try {
-                        StravaUploadDbHelper(context).deleteWorkout(effectiveBaseFileName)
+                        StravaUploadDbHelper.getInstance(context).deleteWorkout(effectiveBaseFileName)
                     } catch (t: Throwable) {
                         Log.w(TAG, "Could not clean StravaUploadDb for $effectiveBaseFileName: ${t.message}")
                     }
