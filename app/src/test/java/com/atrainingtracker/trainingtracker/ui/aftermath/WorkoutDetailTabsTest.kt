@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -439,6 +440,55 @@ class WorkoutDetailTabsTest {
                     match != null && match.groupValues[1].isNotBlank()
                 )
             }
+        }
+    }
+
+    /**
+     * TST-UI-377.1: Authoritative Tab Data Availability & Section Activation.
+     * Evaluates that isSectionActive ignores legacy boolean flags in WorkoutDetailPreferences (REQ-UI-414.1).
+     */
+    @Test
+    fun `TST-UI-377_1 authoritative tab data availability ignores legacy detailPreferences boolean flags`() {
+        val availability = WorkoutDetailSectionAvailability(
+            hasDetails = true,
+            hasDescription = true,
+            hasExtrema = true,
+            hasMap = true,
+            hasElevation = true,
+            hasCharts = true,
+            hasZones = true,
+            hasLaps = true,
+            hasStrava = true,
+            hasExportStatus = true
+        )
+
+        // All legacy flags explicitly set to false
+        val disabledPrefs = WorkoutDetailPreferences(
+            showDescription = false,
+            showExtrema = false,
+            showMap = false,
+            showElevationProfile = false,
+            showTelemetryCharts = false,
+            showZoneAnalysis = false,
+            showLaps = false,
+            showStrava = false,
+            showExportStatus = false
+        )
+
+        for (section in WorkoutDetailSectionType.values()) {
+            assertTrue(
+                "Section $section must be active based on data presence regardless of disabledPrefs",
+                availability.isSectionActive(section, disabledPrefs)
+            )
+        }
+
+        // When data availability is false, section must NOT be active
+        val emptyAvailability = WorkoutDetailSectionAvailability(hasDetails = false)
+        for (section in WorkoutDetailSectionType.values()) {
+            assertFalse(
+                "Section $section must NOT be active when data availability is false",
+                emptyAvailability.isSectionActive(section, disabledPrefs)
+            )
         }
     }
 }

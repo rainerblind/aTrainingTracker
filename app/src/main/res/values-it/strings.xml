@@ -2019,5 +2019,9 @@
     <string name="devices_empty_state_search_hint">Cerca sensori Bluetooth LE o ANT+ nelle vicinanze</string>
     <string name="devices_action_search_sensors">+ Cerca sensori</string>
     <string name="error_workout_table_name_too_long">Il nome della tabella di allenamento supera il limite SQLite (64 caratteri)</string>
+
+    <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
+    <string name="workout_card_reorder_toggle">Ordine e visibilità schede (%1$d attive)</string>
+    <string name="settings_workout_details_title">Dettagli allenamento (schermo intero)</string>
 </resources>
 

@@ -2018,5 +2018,9 @@
     <string name="devices_empty_state_search_hint">Zoeken naar Bluetooth LE- of ANT+-sensoren in de buurt</string>
     <string name="devices_action_search_sensors">+ Sensoren zoeken</string>
     <string name="error_workout_table_name_too_long">Naam van trainingstabel overschrijdt SQLite-limiet (64 tekens)</string>
+
+    <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
+    <string name="workout_card_reorder_toggle">Kaartvolgorde en zichtbaarheid (%1$d actief)</string>
+    <string name="settings_workout_details_title">Workout-details (volledig scherm)</string>
 </resources>
 

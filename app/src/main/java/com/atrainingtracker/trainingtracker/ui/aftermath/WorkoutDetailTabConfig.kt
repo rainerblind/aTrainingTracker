@@ -132,22 +132,24 @@ data class WorkoutDetailSectionAvailability(
     val hasExportStatus: Boolean = false
 ) {
     /**
-     * Returns whether [section] is both enabled in [detailPreferences] and has non-empty data for the current workout.
+     * Returns whether [section] has non-empty data for the current workout (`REQ-UI-414.1`).
+     * Tab section assignment in [WorkoutDetailTabConfig] is the sole authoritative configuration
+     * source for the Workout Details screen; legacy boolean flags in [detailPreferences] are ignored.
      */
     fun isSectionActive(
         section: WorkoutDetailSectionType,
-        detailPreferences: WorkoutDetailPreferences = WorkoutDetailPreferences()
+        @Suppress("UNUSED_PARAMETER") detailPreferences: WorkoutDetailPreferences = WorkoutDetailPreferences()
     ): Boolean = when (section) {
         WorkoutDetailSectionType.DETAILS -> hasDetails
-        WorkoutDetailSectionType.DESCRIPTION -> detailPreferences.showDescription && hasDescription
-        WorkoutDetailSectionType.EXTREMA -> detailPreferences.showExtrema && hasExtrema
-        WorkoutDetailSectionType.MAP -> detailPreferences.showMap && hasMap
-        WorkoutDetailSectionType.ELEVATION -> detailPreferences.showElevationProfile && hasElevation
-        WorkoutDetailSectionType.CHARTS -> detailPreferences.showTelemetryCharts && hasCharts
-        WorkoutDetailSectionType.ZONES -> detailPreferences.showZoneAnalysis && hasZones
-        WorkoutDetailSectionType.LAPS -> detailPreferences.showLaps && hasLaps
-        WorkoutDetailSectionType.STRAVA -> detailPreferences.showStrava && hasStrava
-        WorkoutDetailSectionType.EXPORT_STATUS -> detailPreferences.showExportStatus && hasExportStatus
+        WorkoutDetailSectionType.DESCRIPTION -> hasDescription
+        WorkoutDetailSectionType.EXTREMA -> hasExtrema
+        WorkoutDetailSectionType.MAP -> hasMap
+        WorkoutDetailSectionType.ELEVATION -> hasElevation
+        WorkoutDetailSectionType.CHARTS -> hasCharts
+        WorkoutDetailSectionType.ZONES -> hasZones
+        WorkoutDetailSectionType.LAPS -> hasLaps
+        WorkoutDetailSectionType.STRAVA -> hasStrava
+        WorkoutDetailSectionType.EXPORT_STATUS -> hasExportStatus
     }
 
     companion object {
