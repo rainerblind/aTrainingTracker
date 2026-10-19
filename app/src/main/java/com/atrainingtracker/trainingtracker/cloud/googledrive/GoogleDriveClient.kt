@@ -30,7 +30,8 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.ConcurrentHashMap
+import java.security.MessageDigest
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 /**
@@ -41,6 +42,16 @@ data class DriveFileEntry(
     val name: String,
     val size: Long? = null,
     val mimeType: String? = null
+)
+
+/**
+ * Result of a recursive directory scan, exposing discovered entries, completion status,
+ * and optional failure exception (REQ-DAT-030.5).
+ */
+data class RecursiveScanResult(
+    val entries: List<DriveFileEntry>,
+    val isComplete: Boolean,
+    val error: Exception? = null
 )
 
 /**
@@ -57,7 +68,8 @@ class GoogleDriveClient(
         .writeTimeout(60, TimeUnit.SECONDS)
         .build(),
     private val baseUrl: String = "https://www.googleapis.com",
-    private val tokenRefresher: (() -> String?)? = null
+    private val tokenRefresher: (() -> String?)? = null,
+    private val accountProvider: (() -> String?)? = null
 ) {
 
     companion object {
@@ -66,11 +78,11 @@ class GoogleDriveClient(
         private const val JSON_MIME_TYPE = "application/json; charset=UTF-8"
 
         private val hierarchyLock = Any()
-        private val globalFolderIdCache = ConcurrentHashMap<String, String>()
+        private val globalFolderCache = GoogleDriveFolderCache()
 
         @androidx.annotation.VisibleForTesting
         fun clearFolderCache() {
-            globalFolderIdCache.clear()
+            globalFolderCache.clear()
         }
     }
 
@@ -86,6 +98,35 @@ class GoogleDriveClient(
 
     @Volatile
     private var activeToken: String? = null
+
+    internal fun resolveAccountKey(): String {
+        val email = accountProvider?.invoke()?.trim()
+        if (!email.isNullOrEmpty()) return email
+        val token = getAuthToken()
+        if (!token.isNullOrEmpty()) {
+            return try {
+                val digest = MessageDigest.getInstance("SHA-256").digest(token.toByteArray(StandardCharsets.UTF_8))
+                digest.take(8).joinToString("") { "%02x".format(it) }
+            } catch (e: Exception) {
+                "fallback_token"
+            }
+        }
+        return "primary_account"
+    }
+
+    /**
+     * Atomically evicts any cache entries referencing the given folder ID (REQ-DAT-030.2).
+     */
+    fun evictFolder(folderId: String) {
+        globalFolderCache.evictFolder(folderId)
+    }
+
+    /**
+     * Atomically invalidates a specific folder hierarchy for the current account (REQ-DAT-030.2).
+     */
+    fun invalidateFolderHierarchy(folderNames: List<String>) {
+        globalFolderCache.invalidateHierarchy(resolveAccountKey(), folderNames)
+    }
 
     private fun getAuthToken(): String? {
         return activeToken ?: tokenProvider().also { activeToken = it }
@@ -130,11 +171,11 @@ class GoogleDriveClient(
      * @return The Drive folder ID of the terminal segment, or null on failure.
      */
     fun ensureFolderHierarchy(folderNames: List<String>): String? {
-        val cacheKey = folderNames.joinToString("/")
-        globalFolderIdCache[cacheKey]?.let { return it }
+        val accountKey = resolveAccountKey()
+        globalFolderCache.get(accountKey, folderNames)?.let { return it }
 
         synchronized(hierarchyLock) {
-            globalFolderIdCache[cacheKey]?.let { return it }
+            globalFolderCache.get(accountKey, folderNames)?.let { return it }
 
             var currentParentId = "root"
             for (folderName in folderNames) {
@@ -142,16 +183,16 @@ class GoogleDriveClient(
                 currentParentId = existingId ?: createFolder(folderName, currentParentId) ?: return null
             }
 
-            globalFolderIdCache[cacheKey] = currentParentId
+            globalFolderCache.put(accountKey, folderNames, currentParentId)
             return currentParentId
         }
     }
 
     /**
-     * Finds a folder by name under the specified parent.
+     * Finds a folder by name under the specified parent using structured escaping (REQ-DAT-030.1).
      */
     fun findFolderIdByName(folderName: String, parentId: String): String? {
-        val query = "name = '$folderName' and '$parentId' in parents and mimeType = '$FOLDER_MIME_TYPE' and trashed = false"
+        val query = GoogleDriveQueryBuilder.buildFolderQuery(folderName, parentId)
         val encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.name())
         val url = "$baseUrl/drive/v3/files?q=$encodedQuery&fields=files(id,name)&spaces=drive"
 
@@ -226,10 +267,10 @@ class GoogleDriveClient(
     }
 
     /**
-     * Searches for a file by name within a folder.
+     * Searches for a file by name within a folder using structured escaping (REQ-DAT-030.1).
      */
     fun findFileIdByName(folderId: String, fileName: String): String? {
-        val query = "name = '$fileName' and '$folderId' in parents and trashed = false"
+        val query = GoogleDriveQueryBuilder.buildFileQuery(fileName, folderId)
         val encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.name())
         val url = "$baseUrl/drive/v3/files?q=$encodedQuery&fields=files(id,name)&spaces=drive"
 
@@ -243,6 +284,9 @@ class GoogleDriveClient(
             }.use { response ->
                 if (!response.isSuccessful) {
                     Log.e(TAG, "findFileIdByName failed with code: ${response.code}")
+                    if (response.code == 404) {
+                        evictFolder(folderId)
+                    }
                     return null
                 }
                 val bodyString = response.body?.string() ?: return null
@@ -299,6 +343,9 @@ class GoogleDriveClient(
             }.use { response ->
                 if (!response.isSuccessful) {
                     Log.e(TAG, "createMultipartFile failed with code: ${response.code}")
+                    if (response.code == 404) {
+                        evictFolder(folderId)
+                    }
                     return false
                 }
                 return true
@@ -341,32 +388,31 @@ class GoogleDriveClient(
      * @return The Drive folder ID of the terminal segment, or null if any segment does not exist.
      */
     fun resolveFolderHierarchy(folderNames: List<String>): String? {
-        val cacheKey = folderNames.joinToString("/")
-        globalFolderIdCache[cacheKey]?.let { return it }
+        val accountKey = resolveAccountKey()
+        globalFolderCache.get(accountKey, folderNames)?.let { return it }
 
-        var currentParentId = "root"
-        for (folderName in folderNames) {
-            val existingId = findFolderIdByName(folderName, currentParentId) ?: return null
-            currentParentId = existingId
+        synchronized(hierarchyLock) {
+            globalFolderCache.get(accountKey, folderNames)?.let { return it }
+
+            var currentParentId = "root"
+            for (folderName in folderNames) {
+                val existingId = findFolderIdByName(folderName, currentParentId) ?: return null
+                currentParentId = existingId
+            }
+
+            globalFolderCache.put(accountKey, folderNames, currentParentId)
+            return currentParentId
         }
-
-        globalFolderIdCache[cacheKey] = currentParentId
-        return currentParentId
     }
 
     /**
-     * Traverses the specified folder hierarchy recursively and returns all files matching
-     * the requested file extensions.
-     *
-     * @param folderId The root folder ID to start the scan from.
-     * @param extensions Optional list of file extensions to filter on (e.g. [".fit", ".tcx", ".gpx"]).
-     *                   If empty, all non-folder files are returned.
-     * @return List of matching [DriveFileEntry] objects.
+     * Traverses the specified folder hierarchy recursively and returns a structured [RecursiveScanResult]
+     * exposing all matching files, completion status, and error diagnostics (REQ-DAT-030.5).
      */
-    fun listFilesRecursively(
+    fun listFilesRecursivelyResult(
         folderId: String,
         extensions: List<String> = listOf(".fit", ".tcx", ".gpx")
-    ): List<DriveFileEntry> {
+    ): RecursiveScanResult {
         val results = mutableListOf<DriveFileEntry>()
         val folderQueue = ArrayDeque<String>()
         val visitedFolderIds = mutableSetOf<String>()
@@ -380,7 +426,7 @@ class GoogleDriveClient(
             var pageToken: String? = null
 
             do {
-                val query = "'$currentFolderId' in parents and trashed = false"
+                val query = GoogleDriveQueryBuilder.buildChildrenQuery(currentFolderId)
                 val encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.name())
                 var url = "$baseUrl/drive/v3/files?q=$encodedQuery&fields=nextPageToken,files(id,name,size,mimeType)&pageSize=1000&spaces=drive"
                 if (!pageToken.isNullOrBlank()) {
@@ -389,6 +435,7 @@ class GoogleDriveClient(
                 }
 
                 try {
+                    var pageFailure: Exception? = null
                     executeCallWithRetry { token ->
                         Request.Builder()
                             .url(url)
@@ -397,12 +444,15 @@ class GoogleDriveClient(
                             .build()
                     }.use { response ->
                         if (!response.isSuccessful) {
-                            Log.e(TAG, "listFilesRecursively failed for folder $currentFolderId with code: ${response.code}")
-                            pageToken = null
+                            val msg = "listFilesRecursively failed for folder $currentFolderId with code: ${response.code}: $lastErrorMessage"
+                            Log.e(TAG, msg)
+                            pageFailure = IOException(msg)
                             return@use
                         }
                         val bodyString = response.body?.string() ?: run {
-                            pageToken = null
+                            val msg = "listFilesRecursively received null body for folder $currentFolderId"
+                            Log.e(TAG, msg)
+                            pageFailure = IOException(msg)
                             return@use
                         }
                         val json = JSONObject(bodyString)
@@ -429,20 +479,51 @@ class GoogleDriveClient(
                             }
                         }
                     }
+                    if (pageFailure != null) {
+                        return RecursiveScanResult(entries = results, isComplete = false, error = pageFailure)
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error listing files in folder $currentFolderId: ${e.message}", e)
-                    pageToken = null
+                    return RecursiveScanResult(entries = results, isComplete = false, error = e)
                 }
             } while (pageToken != null)
         }
 
-        return results
+        return RecursiveScanResult(entries = results, isComplete = true, error = null)
     }
 
     /**
-     * Downloads a file by its Google Drive file ID directly into the destination file.
+     * Traverses the specified folder hierarchy recursively and returns all files matching
+     * the requested file extensions. Delegates to [listFilesRecursivelyResult].
+     *
+     * @param folderId The root folder ID to start the scan from.
+     * @param extensions Optional list of file extensions to filter on (e.g. [".fit", ".tcx", ".gpx"]).
+     *                   If empty, all non-folder files are returned.
+     * @return List of matching [DriveFileEntry] objects.
+     */
+    fun listFilesRecursively(
+        folderId: String,
+        extensions: List<String> = listOf(".fit", ".tcx", ".gpx")
+    ): List<DriveFileEntry> {
+        return listFilesRecursivelyResult(folderId, extensions).entries
+    }
+
+    /**
+     * Downloads a file by its Google Drive file ID atomically into the destination file (REQ-DAT-030.4).
+     *
+     * Streams into a temporary staging file co-located in the destination's parent directory,
+     * flushes durably via [java.io.FileDescriptor.sync], verifies length against contentLength,
+     * moves atomically to destination, and cleans up temporary files on any failure.
      */
     fun downloadFileById(fileId: String, destinationFile: File): Boolean {
+        val parentDir = destinationFile.parentFile ?: File(".")
+        purgeStalePartFiles(parentDir)
+
+        val tempFile = File(
+            parentDir,
+            "${destinationFile.name}.part_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(8)}"
+        )
+        var completed = false
         val url = "$baseUrl/drive/v3/files/$fileId?alt=media"
 
         try {
@@ -458,16 +539,60 @@ class GoogleDriveClient(
                     return false
                 }
                 val body = response.body ?: return false
-                FileOutputStream(destinationFile).use { out ->
-                    body.byteStream().use { input ->
-                        input.copyTo(out)
+                try {
+                    FileOutputStream(tempFile).use { fos ->
+                        body.byteStream().use { input ->
+                            input.copyTo(fos)
+                        }
+                        fos.fd.sync()
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Stream write or fd.sync failed for $fileId: ${e.message}", e)
+                    return false
+                }
+
+                val contentLength = body.contentLength()
+                if (contentLength > 0 && tempFile.length() != contentLength) {
+                    Log.e(TAG, "Incomplete download: expected $contentLength bytes, wrote ${tempFile.length()} bytes")
+                    return false
+                }
+
+                try {
+                    java.nio.file.Files.move(
+                        tempFile.toPath(),
+                        destinationFile.toPath(),
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                    )
+                } catch (e: Exception) {
+                    if (destinationFile.exists()) destinationFile.delete()
+                    if (!tempFile.renameTo(destinationFile)) {
+                        tempFile.copyTo(destinationFile, overwrite = true)
+                        tempFile.delete()
                     }
                 }
+                completed = true
                 return true
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error downloading file $fileId: ${e.message}", e)
             return false
+        } finally {
+            if (!completed && tempFile.exists()) {
+                tempFile.delete()
+            }
+        }
+    }
+
+    private fun purgeStalePartFiles(directory: File, maxAgeMillis: Long = 86_400_000L) {
+        try {
+            val now = System.currentTimeMillis()
+            val partFiles = directory.listFiles { file ->
+                file.name.contains(".part_") && (now - file.lastModified() > maxAgeMillis)
+            } ?: return
+            partFiles.take(50).forEach { it.delete() }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to purge stale part files: ${e.message}")
         }
     }
 

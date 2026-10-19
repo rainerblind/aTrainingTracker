@@ -40,12 +40,13 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import au.com.bytecode.opencsv.CSVWriter;
 
-public class CSVFileWriter extends BaseExporter {
+public class CSVFileWriter extends BaseFileWriter {
     private static final String TAG = "CSVFileExporter";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
@@ -69,95 +70,97 @@ public class CSVFileWriter extends BaseExporter {
 
         WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
         SQLiteDatabase db = databaseManager.getDatabase();
-        Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
+        try (Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
                 null,
                 null,
                 null,
                 null,
                 null,
-                null);  // sorting
+                null)) {  // sorting
 
+            // get column names, and sort them.  But only the ones with the source
+            String[] columnNames = cursor.getColumnNames();
 
-        // get column names, and sort them.  But only the ones with the source
-        String[] columnNames = cursor.getColumnNames();
+            List<String> sortedNames = new LinkedList<>();    // list for the sensors without the source.  Here, we want to keep the order
+            List<String> unsortedNames = new LinkedList<>();    // list for the sensors with the source.  Since they are added whenever they appear, they are unsorted
 
-        List<String> sortedNames = new LinkedList<>();    // list for the sensors without the source.  Here, we want to keep the order
-        List<String> unsortedNames = new LinkedList<>();    // list for the sensors with the source.  Since they are added whenever they appear, they are unsorted
+            Pattern pattern = Pattern.compile("(.*)( \\(.*\\)|_gps|_network|_google_fused)");
+            Map<String, SensorValueType> columnName2Type = new HashMap<>();
 
-        Pattern pattern = Pattern.compile("(.*)( \\(.*\\)|_gps|_network|_google_fused)");
-        Map<String, SensorValueType> columnName2Type = new HashMap<>();
-
-        for (int i = 0; i < columnNames.length; i++) {
-            String columnName = columnNames[i];
-            // reconstruct the original SensorType.
-            String sensorTypeName = "";
-            Matcher matcher = pattern.matcher(columnName);
-            if (matcher.find()) {  // one with the source
-                unsortedNames.add(columnName);
-                sensorTypeName = matcher.group(1);
-                if (DEBUG) Log.i(TAG, columnName + " is a " + sensorTypeName);
-            } else {     // one without source
-                if (DEBUG) Log.i(TAG, columnName + " is already a SensorType");
-                sortedNames.add(columnName);
-                sensorTypeName = columnName;
-            }
-
-            SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, sensorTypeName, TAG);
-            columnName2Type.put(columnName, sensorType != null ? sensorType.getSensorValueType() : SensorValueType.STRING);
-        }
-
-        // now, sort the ones with the source
-        Collections.sort(unsortedNames);
-
-        // and finally, append them to the sorted list
-        sortedNames.addAll(unsortedNames);
-
-
-        // now, we are ready to write to CSV
-
-        CSVWriter csvWrite = new CSVWriter(getBufferedWriter(exportInfo.getShortPath()));
-
-        // first of all: header with column names
-        csvWrite.writeNext(sortedNames.toArray(new String[sortedNames.size()]));
-
-        String[] columnString = new String[cursor.getColumnCount()];
-
-        int lines = cursor.getCount();
-        int count = 0;
-        int csvIndex = 0;
-
-        while (cursor.moveToNext()) {
-            csvIndex = 0;
-
-            for (String columnName : sortedNames) {
-                int columnIndex = cursor.getColumnIndex(columnName);
-
-                // previously, we simply had
-                // columnString[columnIndex] = cursor.getString(columnIndex);
-                // but this leads to problems because double values might be written with only 3 or 4 digits after the point
-                if (cursor.isNull(columnIndex)) {
-                    columnString[csvIndex] = "";
-                } else {
-                    switch (columnName2Type.get(columnName)) {
-                        case DOUBLE:
-                            columnString[csvIndex] = Double.toString(cursor.getDouble(columnIndex));
-                            break;
-                        case INTEGER:
-                            columnString[csvIndex] = Integer.toString(cursor.getInt(columnIndex));
-                            break;
-                        case STRING:
-                        default:
-                            columnString[csvIndex] = cursor.getString(columnIndex);
-                            break;
-                    }
+            for (int i = 0; i < columnNames.length; i++) {
+                String columnName = columnNames[i];
+                // reconstruct the original SensorType.
+                String sensorTypeName = "";
+                Matcher matcher = pattern.matcher(columnName);
+                if (matcher.find()) {  // one with the source
+                    unsortedNames.add(columnName);
+                    sensorTypeName = matcher.group(1);
+                    if (DEBUG) Log.i(TAG, columnName + " is a " + sensorTypeName);
+                } else {     // one without source
+                    if (DEBUG) Log.i(TAG, columnName + " is already a SensorType");
+                    sortedNames.add(columnName);
+                    sensorTypeName = columnName;
                 }
 
-                csvIndex++;
+                SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, sensorTypeName, TAG);
+                columnName2Type.put(columnName, sensorType != null ? sensorType.getSensorValueType() : SensorValueType.STRING);
             }
-            csvWrite.writeNext(columnString);
+
+            // now, sort the ones with the source
+            Collections.sort(unsortedNames);
+
+            // and finally, append them to the sorted list
+            sortedNames.addAll(unsortedNames);
+
+            // now, we are ready to write to CSV
+            try (CSVWriter csvWrite = new CSVWriter(getBufferedWriter(exportInfo.getShortPath()))) {
+                // first of all: header with column names
+                csvWrite.writeNext(sortedNames.toArray(new String[sortedNames.size()]));
+
+                String[] columnString = new String[cursor.getColumnCount()];
+
+                int lines = cursor.getCount();
+                int count = 0;
+                int csvIndex = 0;
+
+                while (cursor.moveToNext()) {
+                    if (isCancelled()) {
+                        throw new CancellationException("Export cancelled by WorkManager");
+                    }
+                    csvIndex = 0;
+
+                    for (String columnName : sortedNames) {
+                        int columnIndex = cursor.getColumnIndex(columnName);
+
+                        if (cursor.isNull(columnIndex)) {
+                            columnString[csvIndex] = "";
+                        } else {
+                            switch (columnName2Type.get(columnName)) {
+                                case DOUBLE:
+                                    columnString[csvIndex] = Double.toString(cursor.getDouble(columnIndex));
+                                    break;
+                                case INTEGER:
+                                    columnString[csvIndex] = Integer.toString(cursor.getInt(columnIndex));
+                                    break;
+                                case STRING:
+                                default:
+                                    columnString[csvIndex] = cursor.getString(columnIndex);
+                                    break;
+                            }
+                        }
+
+                        csvIndex++;
+                    }
+                    csvWrite.writeNext(columnString);
+                    if (isCancelled()) {
+                        throw new CancellationException("Export cancelled by WorkManager");
+                    }
+                }
+            } catch (CancellationException e) {
+                deleteOutputFileSafely(exportInfo);
+                throw e;
+            }
         }
-        csvWrite.close();
-        cursor.close();
 
         return new ExportResult(true, false, "Successfully exported to CSV");
     }

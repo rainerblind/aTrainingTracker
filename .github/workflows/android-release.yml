@@ -42,10 +42,6 @@ jobs:
           MAPS_API_KEY=ci-dummy-key
           STRAVA_CLIENT_ID=ci-dummy-id
           STRAVA_CLIENT_SECRET=ci-dummy-secret
-          TRAININGPEAKS_CLIENT_ID=ci-dummy-id
-          TRAININGPEAKS_CLIENT_SECRET=ci-dummy-secret
-          RUNKEEPER_CLIENT_ID=ci-dummy-id
-          RUNKEEPER_CLIENT_SECRET=ci-dummy-secret
           DROPBOX_APP_KEY=ci-dummy-key
           EOF
 

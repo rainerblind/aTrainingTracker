@@ -513,7 +513,7 @@ class SegmentsRepository private constructor(context: Context) {
     }
 
     companion object {
-        val DEBUG = true
+        val DEBUG = com.atrainingtracker.BuildConfig.DEBUG
         val TAG = "SegmentsRepository"
 
         @Volatile

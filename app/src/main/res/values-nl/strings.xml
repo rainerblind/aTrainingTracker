@@ -861,6 +861,8 @@
     <string name="sport_type_tab_bike">Fiets-types</string>
     <string name="sport_type_tab_run">Loop-types</string>
     <string name="sport_type_tab_unknown">Andere sporten</string>
+    <string name="sport_type_restored_placeholder">Herstelde sport %1$d</string>
+    <string name="sport_type_placeholder_badge">Hersteld (niet geconfigureerd)</string>
 
     <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">Alle</string>
@@ -928,6 +930,10 @@
     <string name="route_import">Importeren</string>
     <string name="route_saved_success">Route opgeslagen.</string>
     <string name="route_saved_failed">Fout bij opslaan.</string>
+    <string name="routes_import_progress">Routes importeren (%1$d van %2$d)…</string>
+    <string name="routes_import_success">%1$d routes succesvol geïmporteerd.</string>
+    <string name="routes_import_partial">%1$d routes geïmporteerd, %2$d mislukt.</string>
+    <string name="routes_import_all_failed">Kan routes niet importeren.</string>
     <string name="strava_sync_success">Strava routes bijgewerkt.</string>
     <string name="strava_sync_failed">Strava synchro mislukt.</string>
     <string name="save_as_local_route">Opslaan als lokale route</string>
@@ -1134,6 +1140,11 @@
     <string name="backup_failed">Back-up maken mislukt.</string>
     <string name="restore_success">Herstel succesvol. De app wordt nu herstart.</string>
     <string name="restore_failed">Herstel mislukt. Controleer of het bestand geldig is.</string>
+    <string name="backup_security_error">Beveiligingsfout: Ongeldig of beschadigd back-uparchief.</string>
+    <string name="backup_security_error_desc">Het back-uparchief bevat ongeautoriseerde paden, symbolische koppelingen of overschrijdt veilige groottelimieten en is afgewezen.</string>
+    <string name="backup_restore_error_missing_databases">Het back-uparchief mist de database-map.</string>
+    <string name="backup_restore_error_integrity_failed">De back-updatabase heeft de SQLite-integriteitscontrole niet doorstaan.</string>
+    <string name="backup_restore_error_schema_downgrade">De back-up is gemaakt door een nieuwere versie van de app en kan niet worden hersteld.</string>
     <string name="restore_warning_title">GEFAHR: Volledig herstel</string>
     <string name="restore_warning_message">Dit zal ALLE huidige trainingen, materiaal en instellingen op DEZE telefoon PERMANENT WISSEN en vervangen door de gegevens uit de back-up. Weet u het absoluut zeker?</string>
     <string name="import_finished_format">Import voltooid. %1$d nieuwe trainingen toegevoegd.</string>
@@ -1286,6 +1297,14 @@
     <string name="cluster_stats_yesterday">Gisteren</string>
     <string name="cluster_stats_days_ago">%1$d dagen geleden</string>
     <string name="cluster_stats_weeks_ago">%1$d weken geleden</string>
+
+    <!-- ATT-4067: Historical Effort Trend Chart for Workout Clusters -->
+    <string name="cluster_trend_title">Prestatieverloop</string>
+    <string name="cluster_trend_duration">Duur</string>
+    <string name="cluster_trend_speed">Snelheid</string>
+    <string name="cluster_trend_pace">Tempo</string>
+    <string name="cluster_trend_pr">Record</string>
+    <string name="cluster_trend_avg">Gem</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Ronden (%1$d)</string>
@@ -1909,6 +1928,8 @@
     <string name="athlete_profile_cp_estimator_apply">Schatting toepassen (%1$d W / %2$.1f kJ)</string>
     <string name="workout_w_prime_bal_min_format">Min. W\'bal: %1$.1f kJ (%2$.0f%%)</string>
     <string name="workout_w_prime_empty_tank">Tank leeg (&lt;10%%)</string>
+    <string name="w_prime_battery_pct">%1$d%%</string>
+    <string name="w_prime_warning_low_battery">W\'-accu bijna leeg (&lt;20%%)</string>
 
     <!-- ATT-3861: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400) -->
     <string name="efficiency_factor_short">EF</string>
@@ -1993,5 +2014,27 @@
     <string name="workout_detail_tabs_reset_defaults">Standaardtabbladen herstellen</string>
     <string name="workout_detail_tabs_sections_header">Toegewezen secties</string>
     <string name="workout_detail_tabs_map_pinned_hint">De kaart wordt altijd bovenaan het tabblad vastgezet</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">Sectiescheiding toevoegen</string>
+    <string name="cockpit_section_divider_edit">Sectiescheiding bewerken</string>
+    <string name="cockpit_section_divider_dialog_title">Sectiescheiding</string>
+    <string name="cockpit_section_divider_title_label">Minititel (optioneel)</string>
+    <string name="cockpit_section_divider_chip_power">Vermogen</string>
+    <string name="cockpit_section_divider_chip_heart_rate">Hartslag</string>
+    <string name="cockpit_section_divider_chip_lap">Ronde</string>
+    <string name="cockpit_section_divider_chip_pacing">Pacing</string>
+    <string name="cockpit_section_divider_chip_navigation">Navigatie</string>
+    <string name="cockpit_section_divider_chip_total">Totaal</string>
+    <string name="cockpit_section_divider_delete">Scheiding verwijderen</string>
+
+    <!-- Sensor Onboarding & Empty State (REQ-SEN-020 / ATT-4051) -->
+    <string name="onboarding_pair_sensor_action">+ Sensor koppelen</string>
+    <string name="devices_empty_state_search_hint">Zoeken naar Bluetooth LE- of ANT+-sensoren in de buurt</string>
+    <string name="devices_action_search_sensors">+ Sensoren zoeken</string>
+    <string name="error_workout_table_name_too_long">Naam van trainingstabel overschrijdt SQLite-limiet (64 tekens)</string>
+
+    <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
+    <string name="workout_card_reorder_toggle">Kaartvolgorde en zichtbaarheid (%1$d actief)</string>
+    <string name="settings_workout_details_title">Workout-details (volledig scherm)</string>
 </resources>
 

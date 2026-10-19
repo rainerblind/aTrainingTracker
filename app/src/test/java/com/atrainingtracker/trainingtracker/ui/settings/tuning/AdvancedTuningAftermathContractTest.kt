@@ -112,13 +112,13 @@ class AdvancedTuningAftermathContractTest {
             content.contains("workoutDetailPreferencesFlow.collectAsState(initial = null)")
         )
 
-        // 2. Matrix Table Columns
+        // 2. Matrix Table Columns (REQ-UI-240 / REQ-UI-414.1: single list column, details column excised)
         assertTrue(
             "AdvancedTuningDialog must reference tuning_matrix_col_list",
             content.contains("tuning_matrix_col_list")
         )
-        assertTrue(
-            "AdvancedTuningDialog must reference tuning_matrix_col_details",
+        assertFalse(
+            "AdvancedTuningDialog must NOT reference tuning_matrix_col_details per REQ-UI-414.1",
             content.contains("tuning_matrix_col_details")
         )
         assertTrue(

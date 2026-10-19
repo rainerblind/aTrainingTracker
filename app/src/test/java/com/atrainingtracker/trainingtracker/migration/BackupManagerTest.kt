@@ -135,6 +135,51 @@ class BackupManagerTest {
     }
 
     @Test
+    fun testCalculateTotalDatabaseSize_calculatesSumOfDbAndWalFiles() {
+        val databasesDir = File(fakeDataDir, "databases")
+        databasesDir.mkdirs()
+
+        val db1 = File(databasesDir, "WorkoutSummaries.db").apply { writeBytes(ByteArray(1024)) }
+        val wal1 = File(databasesDir, "WorkoutSummaries.db-wal").apply { writeBytes(ByteArray(2048)) }
+        val shm1 = File(databasesDir, "WorkoutSummaries.db-shm").apply { writeBytes(ByteArray(512)) } // excluded
+        val other = File(databasesDir, "other.txt").apply { writeBytes(ByteArray(256)) } // excluded
+
+        val totalSize = BackupManager.calculateTotalDatabaseSize(mockContext)
+        assertEquals("Total size must sum only .db and -wal files", 3072L, totalSize)
+    }
+
+    @Test
+    fun testCreateBackup_insufficientStorage_abortsCleanly() {
+        val databasesDir = File(fakeDataDir, "databases")
+        databasesDir.mkdirs()
+
+        // Create 10MB of databases
+        val db1 = File(databasesDir, "WorkoutSamples.db").apply { writeBytes(ByteArray(1024 * 1024 * 10)) }
+
+        // Mock usable space as only 5MB (less than 10MB * 1.5 = 15MB)
+        val spyFilesDir = spyk(fakeFilesDir)
+        every { spyFilesDir.usableSpace } returns 5L * 1024L * 1024L
+        every { mockContext.filesDir } returns spyFilesDir
+
+        var progressMessage: String? = null
+        val listener = object : BackupManager.ProgressListener {
+            override fun onProgress(message: String) {
+                progressMessage = message
+            }
+        }
+
+        val result = BackupManager.createBackup(mockContext, listener)
+        assertNull("Backup must abort and return null when storage is insufficient", result)
+        assertEquals("Storage full: cannot create backup", progressMessage)
+
+        val backupDir = File(fakeFilesDir, "backups")
+        val tmpFile = File(backupDir, "${BackupManager.BACKUP_FILENAME}.tmp")
+        val stagingDir = File(backupDir, "temp_db_snapshot")
+        assertFalse("Staging tmp file must not exist after abort", tmpFile.exists())
+        assertFalse("Staging snapshot directory must not exist after abort", stagingDir.exists())
+    }
+
+    @Test
     fun testSourceCodeInvariants_atomicMoveAndTryFinallyGuaranteed() {
         val rootDir = if (File("app").exists()) File(".") else File("..")
         val managerSource = File(rootDir, "app/src/main/java/com/atrainingtracker/trainingtracker/migration/BackupManager.kt").readText()
@@ -147,8 +192,20 @@ class BackupManagerTest {
             managerSource.contains("tempBackupFile.delete()")
         )
         assertTrue(
+            "BackupManager must have try-finally deleting tempSnapshotDir",
+            managerSource.contains("tempSnapshotDir.deleteRecursively()")
+        )
+        assertTrue(
             "BackupManager must store in context.filesDir",
             managerSource.contains("""File(context.filesDir, "backups")""")
+        )
+        assertTrue(
+            "BackupManager must execute VACUUM INTO on API 30+",
+            managerSource.contains("VACUUM INTO")
+        )
+        assertTrue(
+            "BackupManager must check usableSpace",
+            managerSource.contains("usableSpace")
         )
     }
 }

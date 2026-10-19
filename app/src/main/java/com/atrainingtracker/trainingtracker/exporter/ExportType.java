@@ -41,7 +41,8 @@ public enum ExportType {
     @NonNull
     @Override
     public String toString() {
-        return TrainingApplication.getAppContext().getString(uiId);
+        android.content.Context context = TrainingApplication.getAppContext();
+        return context != null ? context.getString(uiId) : name();
     }
 
     public int getUiId() {

@@ -184,9 +184,9 @@ public class MySensorManager extends MyDevice {
 
         String gcData = null;
         String accumulatedGCData = null;
+        final SensorType sensorType = mySensor.getSensorType();
 
         synchronized (this) {
-            SensorType sensorType = mySensor.getSensorType();
             DeviceType deviceType = mySensor.getDevice().getDeviceType();
 
             boolean newSensor = false;
@@ -204,8 +204,6 @@ public class MySensorManager extends MyDevice {
 
             mAllSensorsMapMap.get(sensorType).get(deviceType).addLast(mySensor);
 
-            setBestSensorForProxySensor(sensorType);
-
             if (newSensor) {
                 if (DEBUG) Log.d(TAG, "notifyNewSensor(" + mySensor.mSensorType.name() + ")");
                 mAccumulatedSensorTypeSet.add(sensorType);
@@ -214,6 +212,10 @@ public class MySensorManager extends MyDevice {
                 accumulatedGCData = mAccumulatedGCData.toString();
             }
         }
+
+        // Dispatch setBestSensorForProxySensor outside synchronized (this) to eliminate
+        // potential lock-order inversion with ProxySensor listeners (REQ-SEN-021.3).
+        setBestSensorForProxySensor(sensorType);
 
         if (gcData != null) {
             mSensorsSensor.newValue(gcData);
@@ -263,9 +265,10 @@ public class MySensorManager extends MyDevice {
         if (DEBUG) Log.d(TAG, "unregisterSensor(" + mySensor.getSensorType() + ")");
 
         String gcData = null;
+        final SensorType sensorType = mySensor.getSensorType();
+        boolean shouldUpdateProxy = false;
 
         synchronized (this) {
-            SensorType sensorType = mySensor.getSensorType();
             DeviceType deviceType = mySensor.getDevice().getDeviceType();
 
             EnumMap<DeviceType, LinkedList<MySensor>> deviceMap = mAllSensorsMapMap.get(sensorType);
@@ -282,7 +285,7 @@ public class MySensorManager extends MyDevice {
                         sensorRemoved = true;
                     }
 
-                    setBestSensorForProxySensor(sensorType);
+                    shouldUpdateProxy = true;
 
                     if (sensorRemoved) {
                         if (DEBUG) Log.d(TAG, "notifySensorRemoved");
@@ -290,6 +293,12 @@ public class MySensorManager extends MyDevice {
                     }
                 }
             }
+        }
+
+        // Dispatch setBestSensorForProxySensor outside synchronized (this) to eliminate
+        // potential lock-order inversion with ProxySensor listeners (REQ-SEN-021.3).
+        if (shouldUpdateProxy) {
+            setBestSensorForProxySensor(sensorType);
         }
 
         if (gcData != null) {
@@ -304,17 +313,24 @@ public class MySensorManager extends MyDevice {
     }
 
 
-    protected synchronized void setBestSensorForProxySensor(SensorType sensorType) {
+    protected void setBestSensorForProxySensor(SensorType sensorType) {
         if (DEBUG) Log.d(TAG, "setBestSensorForProxySensor(" + sensorType.name() + ")");
 
-        MySensor bestSensor = getBestSensor(sensorType);
-        if (bestSensor != null) {
-            MySensor proxy = getSensor(sensorType);
-            if (proxy instanceof ProxySensor) {
-                ((ProxySensor) proxy).setSourceSensor(bestSensor);
+        MySensor bestSensor;
+        MySensor proxy;
+        synchronized (this) {
+            bestSensor = getBestSensor(sensorType);
+            if (bestSensor != null) {
+                proxy = getSensor(sensorType);
+            } else {
+                removeSensor(sensorType);
+                proxy = null;
             }
-        } else {
-            removeSensor(sensorType);
+        }
+
+        // Invoke ProxySensor.setSourceSensor outside synchronized (this) (REQ-SEN-021.3)
+        if (bestSensor != null && proxy instanceof ProxySensor) {
+            ((ProxySensor) proxy).setSourceSensor(bestSensor);
         }
     }
 

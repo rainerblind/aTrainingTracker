@@ -8,6 +8,10 @@ description: Executes Stage 5 (Verification, Clean-Room Regression & Walkthrough
 ## Overview
 This skill guides the agent through **Stage 5 (Verification & Release Quality Gate)**. It validates the complete implementation across clean-room regression tests, updates living documents, documents the walkthrough, merges the verified feature branch into the sprint integration branch (`sprint/<sprint_id>`), and transitions the parent ticket to human review.
 
+## Subagent Model Pairing ("Zipper Principle" — Rule 46)
+- **Doing (`agent1`)**: **`flash`** (`invoke_subagent` with `Model: "flash"`) — Running `./gradlew testDebugUnitTest`, updating `docs/requirements.md` & `docs/tests.md` to `Verified`, authoring `walkthrough.md`, and squashing onto `sprint/<SPRINT_NAME>` are deterministic procedural steps.
+- **Gate 5 Review (`agent2`)**: **`pro`** (`tools/review_agent.py audit <KEY> --model pro` or independent `research` subagent with `Model: "pro"`) — Final autonomous "Chief Inspector" before `Final Review (Human)` (Ceremony 2).
+
 ## Key Responsibilities
 1. **Clean-Room Regression Suite**:
    - Execute the entire unit test suite from clean state:
@@ -25,7 +29,7 @@ This skill guides the agent through **Stage 5 (Verification & Release Quality Ga
    - Update test status in `docs/tests.md` to `Verified`.
 5. **Subtask Completion & Parent Handover (Rule 3 / Rule 45)**:
    - Update Stage 5 Jira subtask (`[Test]`) Description with the walkthrough text.
-   - Transition subtask to `In Überprüfung` and run Gate 5 audit (`tools/review_agent.py audit <KEY>`).
+   - Transition subtask to `In Überprüfung` and run Gate 5 audit (`tools/review_agent.py audit <KEY>` — defaults to `pro`).
    - Upon Gate 5 approval (`RECOMMEND PASS`), transition subtask directly to `Erledigt` via transition `freigabe`:
      ```bash
      python3 tools/jira_util.py move <TEST_SUBTASK_KEY> freigabe

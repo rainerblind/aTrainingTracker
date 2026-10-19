@@ -75,7 +75,7 @@ data class EquipmentItem(
 class EquipmentViewModel @JvmOverloads constructor(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val dbEquipmentHelper: EquipmentDbHelper = EquipmentDbHelper(application),
+    private val dbEquipmentHelper: EquipmentDbHelper = EquipmentDbHelper.getInstance(application),
     private val dbLinksHelper: SportTypeEquipmentLinkManager = SportTypeEquipmentLinkManager.getInstance(application),
     private val dbSportHelper: SportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application),
     private val dbDevicesHelper: DevicesDatabaseManager = DevicesDatabaseManager.getInstance(application),

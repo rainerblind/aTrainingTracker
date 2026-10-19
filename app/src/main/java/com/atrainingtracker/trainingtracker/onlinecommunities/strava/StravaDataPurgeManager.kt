@@ -102,7 +102,7 @@ object StravaDataPurgeManager {
 
         // 2. StravaUpload.db: Purge activity JSON, segment efforts, and Strava IDs, and flush WAL pages (REQ-EXP-013)
         try {
-            val uploadDb = StravaUploadDbHelper(context)
+            val uploadDb = StravaUploadDbHelper.getInstance(context)
             uploadDb.clearAllStravaData()
             uploadDb.checkpointWal()
             Log.d(TAG, "Purged StravaUploadDbHelper and checkpointed WAL")
@@ -132,7 +132,7 @@ object StravaDataPurgeManager {
 
         // 5. Equipment.db: Unlink Strava IDs and names (preserves local equipment & sensor links)
         try {
-            val equipmentDb = EquipmentDbHelper(context)
+            val equipmentDb = EquipmentDbHelper.getInstance(context)
             equipmentDb.unlinkAllStravaEquipment()
             Log.d(TAG, "Unlinked Strava equipment in EquipmentDbHelper")
         } catch (e: Exception) {

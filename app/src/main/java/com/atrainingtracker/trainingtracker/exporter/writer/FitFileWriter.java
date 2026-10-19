@@ -24,6 +24,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BSportType;
@@ -53,10 +54,14 @@ import com.garmin.fit.SubSport;
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CancellationException;
 
 /**
  * High-fidelity binary workout exporter implementing the Garmin FIT protocol
@@ -69,10 +74,20 @@ public class FitFileWriter extends BaseFileWriter {
     private static final boolean DEBUG = false;
 
     private static final double SEMICIRCLES_FACTOR = 2147483648.0 / 180.0;
-    private final SimpleDateFormat mDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US);
 
     public FitFileWriter(@NonNull Context context) {
-        super(context);
+        super(context.getApplicationContext() != null ? context.getApplicationContext() : context);
+    }
+
+    @Nullable
+    private static Date parseUtcTimestamp(@Nullable String timeStr) {
+        if (timeStr == null || timeStr.trim().isEmpty()) {
+            return null;
+        }
+        LocalDateTime ldt = LocalDateTime.parse(timeStr.trim(), DATE_TIME_FORMATTER);
+        return new Date(ldt.toInstant(ZoneOffset.UTC).toEpochMilli());
     }
 
     @NonNull
@@ -82,6 +97,40 @@ public class FitFileWriter extends BaseFileWriter {
 
         getHeaderData(exportInfo);
 
+        // Pre-flight header validation: fail-fast on invalid ground-truth parameters
+        if (startTime == null || startTime.trim().isEmpty()) {
+            return new ExportResult(false, false, "FIT export failed: missing or empty startTime");
+        }
+        Date startDate;
+        try {
+            startDate = parseUtcTimestamp(startTime);
+            if (startDate == null) {
+                return new ExportResult(false, false, "FIT export failed: empty startTime");
+            }
+        } catch (DateTimeParseException e) {
+            return new ExportResult(false, false, "FIT export failed: unparseable startTime: " + startTime);
+        }
+
+        double totalTimeSec = 0.0;
+        try {
+            if (totalTime != null && !totalTime.trim().isEmpty()) {
+                totalTimeSec = Double.parseDouble(totalTime);
+            }
+        } catch (NumberFormatException e) {
+            return new ExportResult(false, false, "FIT export failed: invalid totalTime: " + totalTime);
+        }
+        if (totalTimeSec < 0.0) {
+            return new ExportResult(false, false, "FIT export failed: negative totalTime: " + totalTimeSec);
+        }
+
+        double distTotal = 0.0;
+        try {
+            if (totalDistance != null && !totalDistance.trim().isEmpty()) {
+                distTotal = Double.parseDouble(totalDistance);
+            }
+        } catch (NumberFormatException ignored) {}
+        if (distTotal < 0.0) distTotal = 0.0;
+
         File outputFile = new File(getBaseDirFile(mContext), exportInfo.getShortPath());
         File parentDir = outputFile.getParentFile();
         if (parentDir != null && !parentDir.exists()) {
@@ -90,22 +139,12 @@ public class FitFileWriter extends BaseFileWriter {
             }
         }
 
-        FileEncoder encoder = new FileEncoder(outputFile, Fit.ProtocolVersion.V2_0);
+        FileEncoder encoder = null;
+        boolean success = false;
+        String errorMessage = null;
 
         try {
-            Date startDate;
-            try {
-                startDate = mDateFormat.parse(startTime);
-            } catch (Exception e) {
-                startDate = new Date();
-            }
-
-            double totalTimeSec = 0.0;
-            try {
-                totalTimeSec = Double.parseDouble(totalTime);
-            } catch (Exception ignored) {}
-
-            Date endDate = new Date(startDate.getTime() + (long) (totalTimeSec * 1000.0));
+            encoder = new FileEncoder(outputFile, Fit.ProtocolVersion.V2_0);
 
             // 1. FileIdMesg (mandatory first message)
             FileIdMesg fileIdMesg = new FileIdMesg();
@@ -150,22 +189,35 @@ public class FitFileWriter extends BaseFileWriter {
             SQLiteDatabase samplesDb = samplesDbManager.getDatabase();
             String tableName = WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName());
 
+            Date firstSampleDate = null;
+            Date lastSampleDate = null;
             long sampleCount = 0;
+
             try (Cursor cursor = samplesDb.query(tableName, null, null, null, null, null, null)) {
                 while (cursor.moveToNext()) {
+                    if (isCancelled()) {
+                        throw new CancellationException("FIT export cancelled at start of loop iteration");
+                    }
                     RecordMesg record = new RecordMesg();
 
                     Date sampleDate;
                     if (dataValid(cursor, WorkoutSamplesDbHelper.TIME)) {
                         String timeStr = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSamplesDbHelper.TIME));
                         try {
-                            sampleDate = mDateFormat.parse(timeStr);
+                            sampleDate = parseUtcTimestamp(timeStr);
+                            if (sampleDate == null) {
+                                sampleDate = new Date(startDate.getTime() + sampleCount * 1000L);
+                            }
                         } catch (Exception e) {
                             sampleDate = new Date(startDate.getTime() + sampleCount * 1000L);
                         }
                     } else {
                         sampleDate = new Date(startDate.getTime() + sampleCount * 1000L);
                     }
+
+                    if (firstSampleDate == null) firstSampleDate = sampleDate;
+                    lastSampleDate = sampleDate;
+
                     record.setTimestamp(new DateTime(sampleDate));
 
                     // Coordinates (only if not indoor session and coordinates are valid finite numbers)
@@ -241,13 +293,32 @@ public class FitFileWriter extends BaseFileWriter {
                     }
 
                     encoder.write(record);
+                    if (isCancelled()) {
+                        throw new CancellationException("FIT export cancelled post-I/O");
+                    }
                     sampleCount++;
                 }
+            } catch (CancellationException e) {
+                throw e;
             } catch (Exception e) {
-                Log.w(TAG, "Error querying samples for FIT export: " + e.getMessage());
+                Log.e(TAG, "Error querying samples for FIT export: " + e.getMessage(), e);
+                throw new IOException("FIT export failed during sample encoding: " + e.getMessage(), e);
             }
 
+            // Calculate timing metrics supporting pauses
+            double elapsedSampleSec = 0.0;
+            if (sampleCount > 0 && firstSampleDate != null && lastSampleDate != null) {
+                long elapsedMs = lastSampleDate.getTime() - firstSampleDate.getTime();
+                elapsedSampleSec = elapsedMs / 1000.0;
+            }
+            double totalTimerSec = totalTimeSec > 0.0 ? totalTimeSec : elapsedSampleSec;
+            double totalElapsedTimeSec = Math.max(totalTimerSec, elapsedSampleSec);
+            Date sessionEndDate = (lastSampleDate != null)
+                    ? lastSampleDate
+                    : new Date(startDate.getTime() + (long) (totalElapsedTimeSec * 1000.0));
+
             // 3. LapMesg entries
+            // Query laps from Laps.db (strictly read-only access)
             List<LapData> laps = LapsDatabaseManager.getInstance(mContext).getLaps(workoutID);
             if (laps != null && !laps.isEmpty()) {
                 for (LapData lap : laps) {
@@ -255,7 +326,8 @@ public class FitFileWriter extends BaseFileWriter {
                     Date lapStart = startDate;
                     if (lap.getTimeStart() != null) {
                         try {
-                            lapStart = mDateFormat.parse(lap.getTimeStart());
+                            Date parsed = parseUtcTimestamp(lap.getTimeStart());
+                            if (parsed != null) lapStart = parsed;
                         } catch (Exception ignored) {}
                     }
                     lapMesg.setStartTime(new DateTime(lapStart));
@@ -272,22 +344,33 @@ public class FitFileWriter extends BaseFileWriter {
                     lapMesg.setSubSport(subSport);
                     encoder.write(lapMesg);
                 }
+            } else {
+                // Transient representation for FIT protocol compliance; zero mutations to Laps.db (Laps.db is purely read-only)
+                LapMesg lapMesg = new LapMesg();
+                lapMesg.setStartTime(new DateTime(startDate));
+                lapMesg.setTimestamp(new DateTime(sessionEndDate));
+                lapMesg.setTotalElapsedTime((float) totalElapsedTimeSec);
+                lapMesg.setTotalTimerTime((float) totalTimerSec);
+                lapMesg.setTotalDistance((float) distTotal);
+                if (totalTimerSec > 0.0 && distTotal > 0.0) {
+                    lapMesg.setAvgSpeed((float) (distTotal / totalTimerSec));
+                }
+                lapMesg.setIntensity(Intensity.ACTIVE);
+                lapMesg.setSport(sport);
+                lapMesg.setSubSport(subSport);
+                encoder.write(lapMesg);
             }
 
             // 4. SessionMesg
             SessionMesg sessionMesg = new SessionMesg();
             sessionMesg.setStartTime(new DateTime(startDate));
-            sessionMesg.setTimestamp(new DateTime(endDate));
-            sessionMesg.setTotalElapsedTime((float) totalTimeSec);
-            sessionMesg.setTotalTimerTime((float) totalTimeSec);
-            double distTotal = 0.0;
-            try {
-                distTotal = Double.parseDouble(totalDistance);
-            } catch (Exception ignored) {}
+            sessionMesg.setTimestamp(new DateTime(sessionEndDate));
+            sessionMesg.setTotalElapsedTime((float) totalElapsedTimeSec);
+            sessionMesg.setTotalTimerTime((float) totalTimerSec);
             sessionMesg.setTotalDistance((float) distTotal);
             sessionMesg.setSport(sport);
             sessionMesg.setSubSport(subSport);
-            sessionMesg.setNumLaps(laps != null ? laps.size() : 1);
+            sessionMesg.setNumLaps(laps != null && !laps.isEmpty() ? laps.size() : 1);
 
             // Populate summary metrics from WorkoutSummaries table
             WorkoutSummariesDatabaseManager summaryDbManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
@@ -354,17 +437,47 @@ public class FitFileWriter extends BaseFileWriter {
 
             // 5. ActivityMesg
             ActivityMesg activityMesg = new ActivityMesg();
-            activityMesg.setTimestamp(new DateTime(endDate));
-            activityMesg.setTotalTimerTime((float) totalTimeSec);
+            activityMesg.setTimestamp(new DateTime(sessionEndDate));
+            activityMesg.setTotalTimerTime((float) totalTimerSec);
             activityMesg.setNumSessions(1);
             activityMesg.setType(Activity.MANUAL);
             encoder.write(activityMesg);
 
+            success = true;
+        } catch (CancellationException e) {
+            throw e;
+        } catch (Exception e) {
+            Log.e(TAG, "Error during FIT export: " + e.getMessage(), e);
+            errorMessage = e.getMessage() != null ? e.getMessage() : "FIT export failed: " + e.getClass().getSimpleName();
+            success = false;
         } finally {
-            encoder.close();
+            if (encoder != null) {
+                try {
+                    encoder.close();
+                } catch (Throwable t) {
+                    Log.w(TAG, "Error closing FileEncoder: " + t.getMessage(), t);
+                }
+            }
+            if (!success && outputFile.exists()) {
+                try {
+                    boolean deleted = outputFile.delete();
+                    if (!deleted) {
+                        Log.w(TAG, "Cleanup failure: failed to delete partial FIT file: " + outputFile.getAbsolutePath());
+                        errorMessage = (errorMessage != null ? errorMessage : "FIT export failed")
+                                + " (Cleanup failure: could not delete partial file)";
+                    } else {
+                        Log.d(TAG, "Partial FIT file cleaned up: " + outputFile.getAbsolutePath());
+                    }
+                } catch (Throwable t) {
+                    Log.w(TAG, "Exception during partial file deletion: " + t.getMessage(), t);
+                }
+            }
         }
 
-        return new ExportResult(true, false, null);
+        if (!success) {
+            return new ExportResult(false, false, errorMessage != null ? errorMessage : "FIT export failed");
+        }
+        return new ExportResult(true, false, "FIT export successful: " + outputFile.getAbsolutePath());
     }
 
     private int summaryCursorIndex(@NonNull Cursor cursor, @NonNull String columnName) {

@@ -21,9 +21,12 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.strava
 import android.util.Log
 import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
@@ -43,6 +46,17 @@ class StravaAuthRepository private constructor() {
     val authState = _authState.asStateFlow()
 
     private val client = OkHttpClient()
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    fun exchangeCodeForTokenAsync(code: String) {
+        repositoryScope.launch {
+            exchangeCodeForToken(code)
+        }
+    }
+
+    fun setAuthState(state: StravaAuthState) {
+        _authState.value = state
+    }
 
     suspend fun exchangeCodeForToken(code: String) {
         _authState.value = StravaAuthState.Loading

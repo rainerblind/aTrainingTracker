@@ -8,6 +8,10 @@ description: Executes Stage 1 (Problem Domain & Root Cause Analysis) of the agil
 ## Overview
 This skill guides the agent through **Stage 1 (Analysis)** of the engineering lifecycle. The objective is to understand the problem domain completely before proposing test specifications or implementation code.
 
+## Subagent Model Pairing ("Zipper Principle" — Rule 46)
+- **Doing (`agent1`)**: **`pro`** (`invoke_subagent` with `Model: "pro"`) — Open-ended forensic root-cause investigation, distinguishing symptoms from true causes, concurrency/lifecycle analysis, and blast-radius discovery require deep reasoning.
+- **Gate 1 Review (`agent2`)**: **`flash`** (`tools/review_agent.py audit <KEY> --model flash` or independent `research` subagent with `Model: "flash"`) — Strict factual & checklist verification of cited call sites, all 5 required analysis sections, and scope grounding.
+
 ## Key Responsibilities
 1. **Forensic Root Cause Analysis (RCA)**:
    - For defects: Investigate stack traces, system logs, SQLite table constraints, thread concurrency, and Android framework lifecycles.
@@ -25,7 +29,7 @@ This skill guides the agent through **Stage 1 (Analysis)** of the engineering li
 4. **Deliverable Production & Synchronous Parent Stage Progression (Rule 3 / Rule 45)**:
    - Author `docs/engineering/analysis/<TICKET_KEY>_analysis.md` using `templates/analysis_template.md`.
    - Update the Stage 1 Jira subtask (`[Analysis]`) Description with the complete text.
-   - Transition subtask to `In Überprüfung` and run Gate 1 audit (`tools/review_agent.py audit <KEY>`).
+   - Transition subtask to `In Überprüfung` and run Gate 1 audit (`tools/review_agent.py audit <KEY>` — defaults to `flash`).
    - Upon Gate 1 approval (`RECOMMEND PASS`), transition subtask directly to `Erledigt` via transition `freigabe` (`python3 tools/jira_util.py move <SUBTASK_KEY> freigabe`), which automatically advances the parent ticket from `Analysis` to `Test Spec`.
    - **One Commit per Ticket (Rule 44)**: Do not create a separate intermediate git commit for Stage 1; keep changes on the working branch until the single atomic ticket commit at the end of Stage 5 (or squash when merging into `sprint/<SPRINT_NAME>`).
 

@@ -573,13 +573,13 @@ class AutoPauseManagerTest {
     }
 
     @Test
-    fun `TST-TRK-020_4 stale non-zero speed after packet dropout decays to 0 and triggers AUTO_PAUSED`() {
+    fun `TST-TRK-020_4 standstill deceleration silence below resume threshold decays to 0 and triggers AUTO_PAUSED`() {
         val config = AutoPauseConfig(bikeEnabled = true, speedThresholdKmh = 1.5f, debounceSec = 2)
         val t0 = 200_000L
 
-        // Last packet had moving speed 5.0 m/s at t0, but sensor stopped transmitting for > 5000ms
+        // Last packet had slow decelerating speed 0.3 m/s (<= resume threshold) at t0, and sensor stopped transmitting for > 5000ms
         val tick1 = autoPauseManager.evaluateTick(
-            currentSpeedMps = 5.0,
+            currentSpeedMps = 0.3,
             packetTimestampMs = t0,
             currentTimestampMs = t0 + 6_000L,
             sportType = BSportType.BIKE,
@@ -592,7 +592,7 @@ class AutoPauseManagerTest {
         assertFalse(tick1.triggerPause)
 
         val tick2 = autoPauseManager.evaluateTick(
-            currentSpeedMps = 5.0,
+            currentSpeedMps = 0.3,
             packetTimestampMs = t0,
             currentTimestampMs = t0 + 7_000L,
             sportType = BSportType.BIKE,
@@ -687,6 +687,202 @@ class AutoPauseManagerTest {
         // Also verify AutoPauseManager.release() delegates to audioNotifier.release()
         autoPauseManager.release()
         assertEquals(1, mockAudioNotifier.releaseCount)
+    }
+
+    @Test
+    fun `TST-TRK-030_1 in-motion dropout above resumeThreshold transitions to SENSOR_LOST without pausing`() {
+        val config = AutoPauseConfig(bikeEnabled = true, speedThresholdKmh = 1.5f, debounceSec = 2)
+        val t0 = 100_000L
+
+        // Cruising at 8.0 m/s (28.8 km/h > resume threshold ~2.0 km/h)
+        val tick0 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 8.0,
+            packetTimestampMs = t0,
+            currentTimestampMs = t0,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.TRACKING, tick0.newState)
+        assertEquals(8.0, autoPauseManager.lastValidSpeedMps)
+
+        // Enter tunnel: packets stop arriving for 6 seconds (> 5000ms TTL)
+        val tick1 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 8.0,
+            packetTimestampMs = t0,
+            currentTimestampMs = t0 + 6000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.SENSOR_LOST, tick1.newState)
+        assertEquals("SENSOR_LOST_IN_MOTION_DROPOUT", tick1.auditLogEvent)
+        assertEquals(0, autoPauseManager.debounceCounter)
+        assertFalse(tick1.triggerPause)
+        assertEquals(8.0, autoPauseManager.lastValidSpeedMps)
+
+        // Subsequent stale ticks in tunnel remain in SENSOR_LOST, NOT transitioning to AUTO_PAUSED
+        val tick2 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 8.0,
+            packetTimestampMs = t0,
+            currentTimestampMs = t0 + 7000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.SENSOR_LOST, tick2.newState)
+        assertFalse(tick2.triggerPause)
+    }
+
+    @Test
+    fun `TST-TRK-030_2 standstill packet silence debounces to AUTO_PAUSED`() {
+        val config = AutoPauseConfig(bikeEnabled = true, speedThresholdKmh = 1.5f, debounceSec = 2)
+        val t0 = 100_000L
+
+        // Decelerating at red light: speed is 0.5 m/s (1.8 km/h > pause threshold 1.5 km/h, <= resume threshold 2.0 km/h)
+        val tick0 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 0.5,
+            packetTimestampMs = t0,
+            currentTimestampMs = t0,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.TRACKING, tick0.newState)
+        assertEquals(0.5, autoPauseManager.lastValidSpeedMps)
+
+        // Sensor ceases transmission at standstill (> 5000ms TTL)
+        val tick1 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 0.5,
+            packetTimestampMs = t0,
+            currentTimestampMs = t0 + 6000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.PAUSE_DEBOUNCE_PENDING, tick1.newState)
+        assertEquals(1, autoPauseManager.debounceCounter)
+        assertFalse(tick1.triggerPause)
+
+        // Second tick debounces to AUTO_PAUSED
+        val tick2 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 0.5,
+            packetTimestampMs = t0,
+            currentTimestampMs = t0 + 7000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.AUTO_PAUSED, tick2.newState)
+        assertTrue(tick2.triggerPause)
+        assertEquals("AUTO_PAUSED_SPEED_BELOW_THRESHOLD", tick2.auditLogEvent)
+    }
+
+    @Test
+    fun `TST-TRK-030_3 dynamic unpairing transitions to SENSOR_LOST and clears lastValidSpeedMps`() {
+        val config = AutoPauseConfig(bikeEnabled = true, speedThresholdKmh = 1.5f, debounceSec = 2)
+        val t0 = 100_000L
+
+        // Actively moving
+        autoPauseManager.evaluateTick(
+            currentSpeedMps = 6.0,
+            packetTimestampMs = t0,
+            currentTimestampMs = t0,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(6.0, autoPauseManager.lastValidSpeedMps)
+
+        // Sensor unpairs or powers off mid-session
+        val unpairTick = autoPauseManager.evaluateTick(
+            currentSpeedMps = null,
+            packetTimestampMs = 0L,
+            currentTimestampMs = t0 + 1000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = false
+        )
+        assertEquals(AutoPauseState.SENSOR_LOST, unpairTick.newState)
+        assertEquals("SENSOR_LOST_STALE_TTL_EXCEEDED", unpairTick.auditLogEvent)
+        assertNull(autoPauseManager.lastValidSpeedMps)
+
+        // Reset also clears lastValidSpeedMps
+        autoPauseManager.evaluateTick(
+            currentSpeedMps = 5.0,
+            packetTimestampMs = t0 + 2000L,
+            currentTimestampMs = t0 + 2000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(5.0, autoPauseManager.lastValidSpeedMps)
+        autoPauseManager.reset()
+        assertNull(autoPauseManager.lastValidSpeedMps)
+    }
+
+    @Test
+    fun `TST-TRK-030_4 sensor recovery hysteresis requires two consecutive valid packets`() {
+        val config = AutoPauseConfig(bikeEnabled = true, speedThresholdKmh = 1.5f, debounceSec = 2)
+        val t0 = 100_000L
+
+        // Force SENSOR_LOST state
+        autoPauseManager.setState(AutoPauseState.SENSOR_LOST)
+
+        // 1st valid packet arrives: remains SENSOR_LOST with recovery count 1
+        val recoveryTick1 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 7.0,
+            packetTimestampMs = t0,
+            currentTimestampMs = t0,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.SENSOR_LOST, recoveryTick1.newState)
+        assertEquals(1, autoPauseManager.sensorLostRecoveryTicks)
+
+        // 2nd valid packet arrives: recovers to TRACKING
+        val recoveryTick2 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 7.0,
+            packetTimestampMs = t0 + 1000L,
+            currentTimestampMs = t0 + 1000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.TRACKING, recoveryTick2.newState)
+        assertEquals("SENSOR_LOST_RECOVERED", recoveryTick2.auditLogEvent)
+        assertEquals(0, autoPauseManager.sensorLostRecoveryTicks)
+    }
+
+    @Test
+    fun `TST-TRK-030_5 decoupled onManualResume respects manualPauseLocked parameter`() {
+        // In AUTO_PAUSED state
+        autoPauseManager.setState(AutoPauseState.AUTO_PAUSED)
+
+        // Calling with manualPauseLocked = true is a no-op
+        autoPauseManager.onManualResume(manualPauseLocked = true)
+        assertEquals(AutoPauseState.AUTO_PAUSED, autoPauseManager.currentState)
+
+        // Calling with manualPauseLocked = false resumes to TRACKING
+        autoPauseManager.onManualResume(manualPauseLocked = false)
+        assertEquals(AutoPauseState.TRACKING, autoPauseManager.currentState)
+
+        // Default overload (manualPauseLocked = false) resumes to TRACKING
+        autoPauseManager.setState(AutoPauseState.AUTO_PAUSED)
+        autoPauseManager.onManualResume()
+        assertEquals(AutoPauseState.TRACKING, autoPauseManager.currentState)
     }
 }
 

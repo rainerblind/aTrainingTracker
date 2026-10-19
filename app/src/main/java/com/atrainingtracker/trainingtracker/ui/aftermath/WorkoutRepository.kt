@@ -171,10 +171,10 @@ class WorkoutRepository private constructor(private val application: Application
     private val deletionHelper by lazy { WorkoutDeletionHelper(application) }
     private val summariesManager by lazy { WorkoutSummariesDatabaseManager.getInstance(application) }
     private val samplesManager by lazy { WorkoutSamplesDatabaseManager.getInstance(application) }
-    private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
+    private val equipmentDbHelper by lazy { EquipmentDbHelper.getInstance(application) }
     private val sportTypeDatabaseManager by lazy { SportTypeDatabaseManager.getInstance(application) }
     private val exportManager by lazy { ExportManager(application) }
-    private val stravaUploadDbHelper by lazy { StravaUploadDbHelper(application) }
+    private val stravaUploadDbHelper by lazy { StravaUploadDbHelper.getInstance(application) }
     private val lapsDatabaseManager by lazy { LapsDatabaseManager.getInstance(application) }
 
     private val mapper by lazy {
@@ -1461,7 +1461,10 @@ class WorkoutRepository private constructor(private val application: Application
      * Replaces a workout in the memory list with a fresh instance.
      */
     private fun updateWorkoutInList(workoutId: Long, updatedWorkout: WorkoutData) {
-        Log.i(TAG, "updateWorkoutInList: workoutId=$workoutId (${updatedWorkout.fileBaseName}), mapPolyline: ${updatedWorkout.mapPolyline}, extremaRows: ${updatedWorkout.extremaRows}, exportStatuses: ${updatedWorkout.exportStatuses}")
+        if (com.atrainingtracker.BuildConfig.DEBUG) {
+            val hasRoute = !updatedWorkout.mapPolyline.isNullOrEmpty()
+            Log.d(TAG, "updateWorkoutInList: workoutId=$workoutId (${updatedWorkout.fileBaseName}), hasPolyline=$hasRoute, extremaRows: ${updatedWorkout.extremaRows}, exportStatuses: ${updatedWorkout.exportStatuses}")
+        }
         _allWorkouts.update { currentList ->
             currentList.map {
                 if (it.id == workoutId) updatedWorkout else it

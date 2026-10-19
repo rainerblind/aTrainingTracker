@@ -67,6 +67,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
+import java.util.concurrent.CancellationException;
 
 public abstract class BaseExporter {
     protected static final String PREFIX_NOT_FIRST = ",\n    ";
@@ -76,17 +77,46 @@ public abstract class BaseExporter {
     @NonNull
     protected final Context mContext;
 
+    /**
+     * Cooperative cancellation signal interface.
+     * Traceable to REQ-DAT-029.3.
+     */
+    public interface CancellationSignal {
+        boolean isCancelled();
+    }
+
+    @Nullable
+    protected volatile CancellationSignal mCancellationSignal;
+
+    public void setCancellationSignal(@Nullable CancellationSignal signal) {
+        this.mCancellationSignal = signal;
+    }
+
+    public boolean isCancelled() {
+        return mCancellationSignal != null && mCancellationSignal.isCancelled();
+    }
 
     /** method to be called by the ExportManager to start the export */
     public final ExportResult export(@NonNull ExportInfo exportInfo) {
         if (DEBUG) Log.d(TAG, "export: " + exportInfo.toString());
+        if (isCancelled()) {
+            Log.i(TAG, "Export cancelled before start: " + exportInfo);
+            return new ExportResult(false, false, "Export cancelled");
+        }
         try {
             ExportResult exportResult = doExport(exportInfo);
             onFinished(exportInfo);
-            return exportResult;
+            return exportResult != null ? exportResult : new ExportResult(false, false, "Export returned null result");
 
-        } catch (IOException | JSONException | ParseException e) {
-            return new ExportResult(false, true, e.getMessage());
+        } catch (CancellationException e) {
+            Log.i(TAG, "Export cancelled cooperatively: " + exportInfo);
+            return new ExportResult(false, false, "Export cancelled");
+        } catch (IOException e) {
+            Log.w(TAG, "Transient I/O failure during export: " + exportInfo, e);
+            return new ExportResult(false, true, "Transient I/O error: " + e.getMessage());
+        } catch (Throwable t) {
+            Log.e(TAG, "Deterministic or unexpected fatal error during export: " + exportInfo, t);
+            return new ExportResult(false, false, "Fatal error: " + t.getMessage());
         }
     }
 
@@ -158,10 +188,14 @@ public abstract class BaseExporter {
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, fileToCopy.getName());
-        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "application/gpx+xml");
+        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, exportInfo.getFileFormat().getMimeType());
         contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
 
         Uri targetUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues);
+        if (targetUri == null) {
+            Log.w(TAG, "MediaStore insert returned null for " + fileToCopy.getName());
+            return;
+        }
 
         try (InputStream in = new FileInputStream(fileToCopy);
              OutputStream out = resolver.openOutputStream(targetUri)) {

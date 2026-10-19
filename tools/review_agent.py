@@ -23,11 +23,12 @@ from jira_util import get_config, jira_request, add_comment, transition_issue, a
 AUDITOR_ROLE = "agent2"
 
 
-# Supported Gate Definitions
+# Supported Gate Definitions (Rule 46 Zipper Principle: Gate 1/3 -> flash, Gate 2/4/5 -> pro)
 GATE_DEFINITIONS = {
     "Gate 1": {
         "prefix": "[Analysis]",
         "name": "Gate 1: Problem Domain & Analysis Review",
+        "default_tier": "flash",
         "checklist": """1. Scrutinize Problem Domain & Analysis:
    - For bug tickets: Stress-test RCA conclusions (symptoms vs. cause, call-site audit, reproducible traces).
    - For features/improvements: Verify deep domain comprehension, user motivation, scope boundaries, and architectural side effects.
@@ -45,6 +46,7 @@ GATE_DEFINITIONS = {
     "Gate 2": {
         "prefix": "[Test-Spec]",
         "name": "Gate 2: Test Specification & Requirements Review",
+        "default_tier": "pro",
         "checklist": """1. Requirement Phrasing Standards:
    - Verify standard syntax: SHALL for functional behavior, MUST for technical constraints.
    - Verify atomic, unambiguous, system-centric, and state-oriented descriptions (not implementation steps).
@@ -68,6 +70,7 @@ GATE_DEFINITIONS = {
     "Gate 3": {
         "prefix": "[Impl-Plan]",
         "name": "Gate 3: Architectural & Invariant Plan Review",
+        "default_tier": "flash",
         "checklist": """1. Architectural Integrity & Layering:
    - Verify component boundaries, layering rules (SWE.2), and interface stability. Note: This gate audits the architectural implementation plan document (Stage 3). Under ASPICE / TDD process governance, production code implementation is strictly deferred to Stage 4 after the plan passes Gate 3 audit. Do not penalize Stage 3 for not yet having code modifications in the git diff.
 2. Invariant Verification:
@@ -80,6 +83,7 @@ GATE_DEFINITIONS = {
     "Gate 4": {
         "prefix": "[Implementation]",
         "name": "Gate 4: Code Quality, Localization & Side-Effect Review",
+        "default_tier": "pro",
         "checklist": """1. Diff Scrutiny:
    - Inspect git diff against the approved implementation plan. Confirm zero unapproved files or unintended modifications.
 2. Side-Effect Audit:
@@ -93,6 +97,7 @@ GATE_DEFINITIONS = {
     "Gate 5": {
         "prefix": "[Test]",
         "name": "Gate 5: Clean-Room Full-Suite Regression & Release Review",
+        "default_tier": "pro",
         "checklist": """1. Full-Suite Regression Execution:
    - Verify ./gradlew testDebugUnitTest executed with 100% success (0 failures, 0 regressions) across all project modules.
 2. Living Documentation Parity:
@@ -136,7 +141,8 @@ def call_gemini_api(prompt, system_instruction=None, explicit_model=None):
     if not api_key:
         raise ValueError("GEMINI_API_KEY not found in .env.gemini")
 
-    default_candidates = [
+    flash_candidates = [
+        "gemini-2.5-flash",
         "gemini-3.1-flash-lite",
         "gemini-flash-latest",
         "gemini-3.5-flash",
@@ -145,10 +151,19 @@ def call_gemini_api(prompt, system_instruction=None, explicit_model=None):
         "gemini-3.6-flash",
         "gemini-flash-lite-latest"
     ]
-    if explicit_model:
-        candidate_models = [explicit_model] + [m for m in default_candidates if m != explicit_model]
+    pro_candidates = [
+        "gemini-2.5-pro",
+        "gemini-pro-latest",
+        "gemini-3.1-pro",
+        "gemini-3.5-pro"
+    ] + flash_candidates
+
+    if explicit_model == "pro":
+        candidate_models = pro_candidates
+    elif explicit_model == "flash" or not explicit_model:
+        candidate_models = flash_candidates
     else:
-        candidate_models = default_candidates
+        candidate_models = [explicit_model] + [m for m in flash_candidates if m != explicit_model]
     last_error = None
 
     for model in candidate_models:
@@ -451,10 +466,11 @@ def audit_subtask(subtask_key, preferred_provider="gemini", explicit_model=None,
             review_body = f.read()
         model_name = "Local Independent Agent Instance"
     else:
-        # Build prompt and query external LLM
+        # Build prompt and query external LLM using Zipper Principle stage-aware default tier
+        effective_model = explicit_model or gate_info.get("default_tier", "flash")
         prompt, system_instruction = build_audit_prompt(gate_key, gate_info, subtask, parent_issue)
-        print(f"Invoking independent auditor model (preferred: {preferred_provider}, model: {explicit_model or 'auto'})...")
-        review_body, model_name = query_llm(prompt, system_instruction, preferred_provider, explicit_model=explicit_model)
+        print(f"Invoking independent auditor model (preferred: {preferred_provider}, model: {effective_model})...")
+        review_body, model_name = query_llm(prompt, system_instruction, preferred_provider, explicit_model=effective_model)
     print(f"Audit successfully generated via {model_name}.")
 
     if dry_run:

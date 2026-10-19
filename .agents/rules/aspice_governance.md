@@ -97,6 +97,18 @@ Engineering standards and guidelines in **aTrainingTracker** are decoupled into 
   * Visual / Theme / Chart / UI layout learnings -> `docs/design_guidelines.md`
   * Coding / API / Invariant / Architecture learnings -> `docs/coding_standards.md`
 
+## Rule 11b: Subagent Delegation & Asymmetric `pro` / `flash` Model Pairing ("Zipper Principle" / Reißverschluss-Prinzip — Rule 46)
+* **Fresh Context Per Stage via Subagents (`invoke_subagent`)**: To prevent context window bloat across multi-ticket sprints, the Sprint Coordinator delegates stage execution (`agent1`) and independent gate reviews (`agent2` / `tools/review_agent.py`) with isolated context per stage/ticket.
+* **Eliminating Self-Preference Bias via Asymmetric Model Pairing (`pro` vs. `flash`)**: Doing (`agent1`) and Reviewing (`agent2`) in every single stage **MUST** be performed by **different model tiers** (`pro` vs. `flash`). Rather than a static pairing, the role of `pro` and `flash` alternates by stage (**"Zipper Principle" / Reißverschluss-Prinzip**) so that `pro` is always assigned to deep cognitive synthesis or semantic code/test scrutiny, while `flash` handles structured drafting and strict checklist verification:
+
+| Stage | Doing (`agent1`) | Gate Review (`agent2`) | Engineering Rationale |
+| :--- | :---: | :---: | :--- |
+| **Stage 1: Analysis** (`[Analysis]` $\rightarrow$ **Gate 1**) | **`pro`** | **`flash`** | **Doing (`pro`)**: Open-ended forensic RCA, distinguishing symptoms from true causes, concurrency/lifecycle analysis, and blast-radius discovery.<br>**Review (`flash`)**: Strict factual & checklist audit (verifying cited call sites, presence of all 5 required sections, and scope grounding). |
+| **Stage 2: Req & Test Spec** (`[Req & Test Spec]` $\rightarrow$ **Gate 2**) | **`flash`** | **`pro`** | **Doing (`flash`)**: Structured translation of the approved Stage 1 analysis into formal `REQ-XXX` (`SHALL`), `TST-XXX` (`Given-When-Then`), and 9-locale string tables.<br>**Review (`pro`)**: Deep semantic scrutiny—challenging whether specified tests genuinely prove the fix/invariants and auditing all 4 fields of *Chesterton's Fence*. |
+| **Stage 3: Implementation Plan** (`[Impl-Plan]` $\rightarrow$ **Gate 3**) | **`pro`** | **`flash`** | **Doing (`pro`)**: SWE.2 architectural design (layer boundaries, thread safety, SQLite `onCreate`/`onUpgrade` parity, decomposition into atomic steps).<br>**Review (`flash`)**: Structural completeness audit (1:1 mapping of `REQ`/`TST` to atomic steps, DB migration checklist, and strict *Code Lock* verification). |
+| **Stage 4: Implementation** (`[Implementation]` $\rightarrow$ **Gate 4**) | **`flash`** *(Standard)*<br>**`pro`** *(High-Risk)* | **`pro`** *(Standard)*<br>**`flash`** *(High-Risk)* | **Doing (`flash` Standard / `pro` High-Risk)**: Rapid execution of the Stage 3 file-and-method blueprint and 9-locale XML updates.<br>**Review (`pro` Standard / `flash` High-Risk)**: Deep `git diff` scrutiny for race conditions, Compose recomposition traps, resource leaks, and side effects (or 1:1 plan fidelity & contract audit by `flash` when `pro` implemented a `HIGH`-risk ticket). |
+| **Stage 5: Verification** (`[Test]` $\rightarrow$ **Gate 5**) | **`flash`** | **`pro`** | **Doing (`flash`)**: Running `./gradlew testDebugUnitTest` & `./gradlew assembleDebug`, updating `docs/requirements.md` & `docs/tests.md` to `Verified`, authoring `walkthrough.md`, and squashing onto `sprint/<ID>`.<br>**Review (`pro`)**: Final autonomous "Chief Inspector" before `Final Review (Human)` (Ceremony 2)—verifying the single atomic commit and walkthrough accuracy. |
+
 ---
 
 # Tier 3: Standardized Project & Jira Hygiene
@@ -141,7 +153,7 @@ Engineering standards and guidelines in **aTrainingTracker** are decoupled into 
 
 # Historical Mapping Cross-Reference Table
 
-This table maps every legacy rule number (Rules 1 through 45) from historical sprint retrospectives to its consolidated home in the Document Triad:
+This table maps every legacy rule number (Rules 1 through 51) from historical sprint retrospectives to its consolidated home in the Document Triad:
 
 | Legacy Rule # | Original Title / Topic | Consolidated Status | New Document / Active Rule | Rationale / Mapping Notes |
 | :---: | :--- | :---: | :--- | :--- |
@@ -190,5 +202,12 @@ This table maps every legacy rule number (Rules 1 through 45) from historical sp
 | **Rule 43** | Single Unambiguous Configuration Surface (Retiring Redundant Legacy Controls) | **Migrated** | `docs/design_guidelines.md` **Sec 3.2** | UI & Settings: When adding a dedicated configuration sheet/editor for a view, retire any superseded overlapping settings matrix controls in the same change. |
 | **Rule 44** | Single Atomic Commit per Ticket ("One Commit per Ticket") | **Active** | `aspice_governance.md` **Rule 12** | Tier 3: Integrate each ticket as a single atomic commit (`git merge --squash` or single Stage 5 commit) rather than 5 separate stage commits. |
 | **Rule 45** | Synchronous Parent Stage Progression Upon Sub-Task Completion | **Active** | `aspice_governance.md` **Rule 3** | Tier 1: Advance the parent ticket one stage column immediately whenever a stage sub-task reaches `Erledigt` (`tools/jira_util.py move <SUBTASK_KEY> freigabe`). |
+| **Rule 46** | Subagent Delegation & Asymmetric `pro`/`flash` Zipper Principle | **Active** | `aspice_governance.md` **Rule 11b** | Tier 2: Alternate `pro` and `flash` across Doing (`agent1`) and Gate Review (`agent2`) across Stages 1–5 (`pro/flash`, `flash/pro`, `pro/flash`, `flash/pro`, `flash/pro`). |
+| **Rule 47** | Modal Overlay Composition Retention | **Migrated** | `docs/design_guidelines.md` **Sec 5.8** | UI & Layout: Render modal bottom sheets and dialogs as overlays alongside the underlying screen, never in an exclusive `if/else` branch that unmounts the host screen and resets tab/scroll state (`ATT-4285`). |
+| **Rule 48** | Mandatory Axis Scale Labels & Outlier-Resilient Y-Scaling on Charts | **Migrated** | `docs/design_guidelines.md` **Sec 2.6** | UI & Charts: Render explicit X/Y axis labels and clamp Y-axis scaling against isolated outliers (`ATT-4287`). |
+| **Rule 49** | Unambiguous Action Icons, No ASCII Symbol Prefixes in Strings, Centered Dividers | **Migrated** | `docs/design_guidelines.md` **Sec 5.5, 5.11** | UI & Icons: Never use `HorizontalRule` (`—`) as an insert action next to `+`, never include `"+ "` inside localized strings paired with `Icons.Default.Add`, and center titled section dividers with prominent contrast (`ATT-4286`, `ATT-4288`). |
+| **Rule 50** | Backend Filter Key Normalization & Post-Trim Empty Guard | **Migrated** | `docs/coding_standards.md` **Sec 1.7** | Software Engineering: Normalize sentinel IDs (`<= 0`) to `null` before constructing backend keys (never pass `"Best Sensor"` UI strings) and check `isEmpty()` after `trimValues()` before dividing (`ATT-4282`). |
+| **Rule 51** | Constructor State Seeding Parity with `resetSession()` | **Migrated** | `docs/coding_standards.md` **Sec 1.8** | Software Engineering: Seed initial state/capacity in metric device constructors so startup behavior matches `resetSession()` (`ATT-4283`). |
+
 
 

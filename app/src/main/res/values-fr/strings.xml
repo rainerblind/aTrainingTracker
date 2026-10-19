@@ -860,6 +860,8 @@
     <string name="sport_type_tab_bike">Cyclisme</string>
     <string name="sport_type_tab_run">Course à pied</string>
     <string name="sport_type_tab_unknown">Autres sports</string>
+    <string name="sport_type_restored_placeholder">Sport restauré %1$d</string>
+    <string name="sport_type_placeholder_badge">Restauré (non configuré)</string>
 
     <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">Tous</string>
@@ -927,6 +929,10 @@
     <string name="route_import">Importer</string>
     <string name="route_saved_success">Enregistré avec succès.</string>
     <string name="route_saved_failed">Échec de l\'enregistrement.</string>
+    <string name="routes_import_progress">Importation des itinéraires (%1$d sur %2$d)…</string>
+    <string name="routes_import_success">%1$d itinéraires importés avec succès.</string>
+    <string name="routes_import_partial">%1$d itinéraires importés, %2$d ont échoué.</string>
+    <string name="routes_import_all_failed">Échec de l\'importation des itinéraires.</string>
     <string name="strava_sync_success">Itinéraires Strava synchronisés.</string>
     <string name="strava_sync_failed">Échec synchro Strava.</string>
     <string name="save_as_local_route">Enregistrer comme itinéraire local</string>
@@ -1135,6 +1141,11 @@
     <string name="backup_failed">Échec de la création de la sauvegarde.</string>
     <string name="restore_success">Restauration réussie. L\'application va redémarrer.</string>
     <string name="restore_failed">Échec de la restauration. Vérifiez que le fichier est valide.</string>
+    <string name="backup_security_error">Erreur de sécurité : Archive de sauvegarde non valide ou corrompue.</string>
+    <string name="backup_security_error_desc">L\'archive de sauvegarde contient des chemins non autorisés, des liens symboliques ou dépasse les limites de taille sécurisées et a été rejetée.</string>
+    <string name="backup_restore_error_missing_databases">Le dossier des bases de données est manquant dans l\'archive de sauvegarde.</string>
+    <string name="backup_restore_error_integrity_failed">La base de données de sauvegarde a échoué à la vérification d\'intégrité SQLite.</string>
+    <string name="backup_restore_error_schema_downgrade">La sauvegarde a été créée par une version plus récente de l\'application et ne peut pas être restaurée.</string>
     <string name="restore_warning_title">DANGER : Restauration complète</string>
     <string name="restore_warning_message">Ceci EFFACERA DÉFINITIVEMENT tous les entraînements, équipements et réglages sur CE téléphone et les remplacera par les données de la sauvegarde. Êtes-vous sûr ?</string>
     <string name="import_finished_format">Importation terminée. %1$d nouveaux entraînements ajoutés.</string>
@@ -1287,6 +1298,14 @@
     <string name="cluster_stats_yesterday">Hier</string>
     <string name="cluster_stats_days_ago">il y a %1$d jours</string>
     <string name="cluster_stats_weeks_ago">il y a %1$d semaines</string>
+
+    <!-- ATT-4067: Historical Effort Trend Chart for Workout Clusters -->
+    <string name="cluster_trend_title">Évolution des performances</string>
+    <string name="cluster_trend_duration">Durée</string>
+    <string name="cluster_trend_speed">Vitesse</string>
+    <string name="cluster_trend_pace">Allure</string>
+    <string name="cluster_trend_pr">Record</string>
+    <string name="cluster_trend_avg">Moy</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Tours (%1$d)</string>
@@ -1909,6 +1928,8 @@
     <string name="athlete_profile_cp_estimator_apply">Appliquer l\'estimation (%1$d W / %2$.1f kJ)</string>
     <string name="workout_w_prime_bal_min_format">W\'bal min : %1$.1f kJ (%2$.0f%%)</string>
     <string name="workout_w_prime_empty_tank">Réservoir vide (&lt;10%%)</string>
+    <string name="w_prime_battery_pct">%1$d%%</string>
+    <string name="w_prime_warning_low_battery">Batterie W\' faible (&lt;20%%)</string>
 
     <!-- ATT-3861: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400) -->
     <string name="efficiency_factor_short">EF</string>
@@ -1993,4 +2014,26 @@
     <string name="workout_detail_tabs_reset_defaults">Réinitialiser les onglets par défaut</string>
     <string name="workout_detail_tabs_sections_header">Sections attribuées</string>
     <string name="workout_detail_tabs_map_pinned_hint">La carte est toujours fixée en haut lorsqu\'elle est activée dans un onglet</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">Ajouter un séparateur de section</string>
+    <string name="cockpit_section_divider_edit">Modifier le séparateur de section</string>
+    <string name="cockpit_section_divider_dialog_title">Séparateur de section</string>
+    <string name="cockpit_section_divider_title_label">Mini-titre (facultatif)</string>
+    <string name="cockpit_section_divider_chip_power">Puissance</string>
+    <string name="cockpit_section_divider_chip_heart_rate">Fréquence cardiaque</string>
+    <string name="cockpit_section_divider_chip_lap">Tour</string>
+    <string name="cockpit_section_divider_chip_pacing">Allure</string>
+    <string name="cockpit_section_divider_chip_navigation">Navigation</string>
+    <string name="cockpit_section_divider_chip_total">Total</string>
+    <string name="cockpit_section_divider_delete">Supprimer le séparateur</string>
+
+    <!-- Sensor Onboarding & Empty State (REQ-SEN-020 / ATT-4051) -->
+    <string name="onboarding_pair_sensor_action">+ Associer un capteur</string>
+    <string name="devices_empty_state_search_hint">Rechercher des capteurs Bluetooth LE ou ANT+ à proximité</string>
+    <string name="devices_action_search_sensors">+ Rechercher des capteurs</string>
+    <string name="error_workout_table_name_too_long">Le nom de la table d\'entraînement dépasse la limite SQLite (64 caractères)</string>
+
+    <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
+    <string name="workout_card_reorder_toggle">Ordre et visibilité des cartes (%1$d actives)</string>
+    <string name="settings_workout_details_title">Détails de l\'entraînement (plein écran)</string>
 </resources>

@@ -37,14 +37,14 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -203,12 +203,12 @@ class TrackingTabsViewModel(
 
     fun onEditDevice(deviceId: Long) {
         viewModelScope.launch {
-            _navigationEvent.emit(TabNavigationEvent.EditDevice(deviceId))
+            _navigationEvent.send(TabNavigationEvent.EditDevice(deviceId))
         }
     }
 
-    private val _navigationEvent = MutableSharedFlow<TabNavigationEvent>(extraBufferCapacity = 64)
-    val navigationEvent: SharedFlow<TabNavigationEvent> = _navigationEvent.asSharedFlow()
+    private val _navigationEvent = Channel<TabNavigationEvent>(Channel.BUFFERED)
+    val navigationEvent: Flow<TabNavigationEvent> = _navigationEvent.receiveAsFlow()
 
     val trackingViews: StateFlow<List<TrackingViewInfo>> = combine(
         activityType,
@@ -238,7 +238,7 @@ class TrackingTabsViewModel(
                     previousMode != TrackingMode.TRACKING
                 ) {
                     Log.i("TrackingTabsViewModel", "Tracking started (rising edge) -> navigating to cockpit tab")
-                    _navigationEvent.emit(TabNavigationEvent.NavigateTo(0))
+                    _navigationEvent.send(TabNavigationEvent.NavigateTo(0))
                 }
                 previousMode = mode
             }
@@ -394,7 +394,7 @@ class TrackingTabsViewModel(
                 } else {
                     indexToDelete
                 }
-                _navigationEvent.emit(TabNavigationEvent.NavigateTo(newTarget))
+                _navigationEvent.send(TabNavigationEvent.NavigateTo(newTarget))
             }
         }
     }

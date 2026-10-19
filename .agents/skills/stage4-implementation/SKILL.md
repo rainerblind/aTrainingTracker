@@ -8,6 +8,10 @@ description: Executes Stage 4 (Software Construction & Implementation) of the ag
 ## Overview
 This skill guides the agent through **Stage 4 (Implementation / Software Construction)**. It covers modifying production Android code (`app/src/main/...`) and unit tests (`app/src/test/...`) in strict accordance with the approved Stage 3 Implementation Plan.
 
+## Subagent Model Pairing ("Zipper Principle" — Rule 46)
+- **Doing (`agent1`)**: **`flash`** *(Standard)* / **`pro`** *(High-Risk)* (`invoke_subagent` with `Model: "flash"` for standard tickets, or `Model: "pro"` for `HIGH`-risk concurrency/DB/service lifecycle tickets) — Executes the Stage 3 file-and-method blueprint, unit tests, and 9-locale XML updates.
+- **Gate 4 Review (`agent2`)**: **`pro`** *(Standard)* / **`flash`** *(High-Risk)* (`tools/review_agent.py audit <KEY> --model pro` for standard tickets, or `--model flash` when `pro` authored a High-Risk implementation) — Audits the `git diff` for subtle race conditions, Compose recomposition traps, resource leaks, and side effects (or 1:1 plan fidelity & contract tests when `pro` wrote the code).
+
 ## Key Responsibilities
 1. **Pre-Implementation Gate Verification (`REQ-PRO-016`)**:
    - Before modifying any source files in `app/src/...`, verify that the Stage 3 Plan subtask is in status `Erledigt`:
@@ -28,6 +32,6 @@ This skill guides the agent through **Stage 4 (Implementation / Software Constru
    - Defer full test suite execution (`./gradlew testDebugUnitTest`) to Stage 5.
 4. **Subtask Completion & Synchronous Parent Stage Progression (Rule 3 / Rule 45)**:
    - Populate the Stage 4 Jira subtask (`[Implementation]`) Description with a concise summary of changes and targeted test results.
-   - Transition subtask to `In Überprüfung` and run Gate 4 audit (`tools/review_agent.py audit <KEY>`).
+   - Transition subtask to `In Überprüfung` and run Gate 4 audit (`tools/review_agent.py audit <KEY>` — defaults to `pro`).
    - Upon Gate 4 approval (`RECOMMEND PASS`), transition subtask directly to `Erledigt` via transition `freigabe` (`python3 tools/jira_util.py move <SUBTASK_KEY> freigabe`), which automatically advances the parent ticket from `Implementation` to `Test`.
    - **One Commit per Ticket (Rule 44)**: Defer committing until Stage 5 verification completes so the entire ticket (Stage 1–5 docs, living docs, production code, and unit tests) is committed as a single atomic commit per ticket (or squashed via `git merge --squash` when integrating into `sprint/<SPRINT_NAME>`).

@@ -1070,6 +1070,8 @@
     <string name="sport_type_tab_bike">Ride Types</string>
     <string name="sport_type_tab_run">Run Types</string>
     <string name="sport_type_tab_unknown">Other Sport Types</string>
+    <string name="sport_type_restored_placeholder">Restored Sport %1$d</string>
+    <string name="sport_type_placeholder_badge">Restored (Unconfigured)</string>
 
     <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">All</string>
@@ -1139,6 +1141,10 @@
     <string name="route_import">Import</string>
     <string name="route_saved_success">Route saved successfully.</string>
     <string name="route_saved_failed">Failed to save route.</string>
+    <string name="routes_import_progress">Importing routes (%1$d of %2$d)…</string>
+    <string name="routes_import_success">%1$d routes imported successfully.</string>
+    <string name="routes_import_partial">%1$d routes imported, %2$d failed.</string>
+    <string name="routes_import_all_failed">Failed to import routes.</string>
     <string name="strava_sync_success">Routes synced from Strava.</string>
     <string name="strava_sync_failed">Failed to sync routes from Strava.</string>
     <string name="save_as_local_route">Save as Local Route</string>
@@ -1344,6 +1350,11 @@
     <string name="backup_failed">Failed to create backup.</string>
     <string name="restore_success">Restore successful. The app will now restart.</string>
     <string name="restore_failed">Restore failed. Please ensure the file is valid.</string>
+    <string name="backup_security_error">Security error: Invalid or corrupted backup archive.</string>
+    <string name="backup_security_error_desc">The backup archive contains unauthorized paths, symbolic links, or exceeds safe size limits and was rejected.</string>
+    <string name="backup_restore_error_missing_databases">The backup archive is missing the databases directory.</string>
+    <string name="backup_restore_error_integrity_failed">The backup database failed SQLite integrity verification.</string>
+    <string name="backup_restore_error_schema_downgrade">The backup was created by a newer version of the app and cannot be restored.</string>
     <string name="restore_warning_title">DANGER: Full Restore</string>
     <string name="restore_warning_message">This will PERMANENTLY WIPE all current workouts, equipment, and settings on THIS phone and replace them with the data from the backup. Are you absolutely sure?</string>
     <string name="import_finished_format">Import finished. Added %1$d new workouts.</string>
@@ -1481,6 +1492,14 @@
     <string name="cluster_stats_yesterday">Yesterday</string>
     <string name="cluster_stats_days_ago">%1$d days ago</string>
     <string name="cluster_stats_weeks_ago">%1$d weeks ago</string>
+
+    <!-- ATT-4067: Historical Effort Trend Chart for Workout Clusters -->
+    <string name="cluster_trend_title">Effort Progression</string>
+    <string name="cluster_trend_duration">Duration</string>
+    <string name="cluster_trend_speed">Speed</string>
+    <string name="cluster_trend_pace">Pace</string>
+    <string name="cluster_trend_pr">PR</string>
+    <string name="cluster_trend_avg">Avg</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Laps (%1$d)</string>
@@ -2103,6 +2122,8 @@
     <string name="athlete_profile_cp_estimator_apply">Apply Estimate (%1$d W / %2$.1f kJ)</string>
     <string name="workout_w_prime_bal_min_format">Min W\'bal: %1$.1f kJ (%2$.0f%%)</string>
     <string name="workout_w_prime_empty_tank">Empty Tank (&lt;10%%)</string>
+    <string name="w_prime_battery_pct">%1$d%%</string>
+    <string name="w_prime_warning_low_battery">W\' Battery Low (&lt;20%%)</string>
 
     <!-- ATT-3861: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400) -->
     <string name="efficiency_factor_short">EF</string>
@@ -2187,6 +2208,28 @@
     <string name="workout_detail_tabs_reset_defaults">Reset to Default Tabs</string>
     <string name="workout_detail_tabs_sections_header">Assigned Sections</string>
     <string name="workout_detail_tabs_map_pinned_hint">Map is always anchored at the top when enabled in a tab</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">Add section divider</string>
+    <string name="cockpit_section_divider_edit">Edit section divider</string>
+    <string name="cockpit_section_divider_dialog_title">Section Divider</string>
+    <string name="cockpit_section_divider_title_label">Mini-title (optional)</string>
+    <string name="cockpit_section_divider_chip_power">Power</string>
+    <string name="cockpit_section_divider_chip_heart_rate">Heart Rate</string>
+    <string name="cockpit_section_divider_chip_lap">Lap</string>
+    <string name="cockpit_section_divider_chip_pacing">Pacing</string>
+    <string name="cockpit_section_divider_chip_navigation">Navigation</string>
+    <string name="cockpit_section_divider_chip_total">Total</string>
+    <string name="cockpit_section_divider_delete">Remove divider</string>
+
+    <!-- Sensor Onboarding & Empty State (REQ-SEN-020 / ATT-4051) -->
+    <string name="onboarding_pair_sensor_action">+ Pair Sensor</string>
+    <string name="devices_empty_state_search_hint">Scan for nearby Bluetooth LE or ANT+ sensors</string>
+    <string name="devices_action_search_sensors">+ Search for Sensors</string>
+    <string name="error_workout_table_name_too_long">Workout table name exceeds SQLite identifier limit (64 chars)</string>
+
+    <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
+    <string name="workout_card_reorder_toggle">Card Order &amp; Visibility (%1$d active)</string>
+    <string name="settings_workout_details_title">Workout Details (Full Screen)</string>
 </resources>
 
 

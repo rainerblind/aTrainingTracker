@@ -59,6 +59,19 @@ This document serves as the authoritative living source of truth for software en
   * Live rolling-window physiological metrics (such as 30-second Coggan Normalized Power, Intensity Factor, and TSS) **MUST** compute over the growing window ($1 \le k < W$) during the initial warm-up phase ($t < 30\text{ s}$) rather than emitting `null` (`"--"`) until the full window $W$ is reached.
   * Returning `"--"` for 30 seconds while a sensor is actively transmitting misleads the athlete into thinking the sensor connection is broken.
 
+### 1.7 Backend Filter & Service Key Normalization & Post-Trim Empty Guard in Rolling Filters (Rule 50 — ATT-4282)
+* **Never Pass Localized UI Sentinel Strings Into Backend Service or Filter Keys**:
+  * When a UI selector uses a sentinel ID (`selectedDeviceId <= 0`, e.g. `-1L`) paired with a localized display string (`context.getString(R.string.bestSensor)` / `"Best Sensor"`) to represent automatic `"Best Sensor"` selection, the ViewModel **MUST** normalize `deviceId <= 0` to `null` before constructing backend identifiers (`FilterData.deviceName = null`).
+  * Passing the localized UI string `"Best Sensor"` as `deviceName` into `BANALService.createFilter(FilterData)` registers the filter under `"Best Sensor"` while `TrackingViewModel` queries `getFilteredSensorData(FilterData(..., deviceName = null))`, causing live cockpit tiles to display `"--"` until tracking is restarted.
+* **Post-Trim Emptiness Guard in Rolling Window Filters**:
+  * Any rolling-window or moving-average filter (`TimedMovingAverageFilter`) that prunes expired samples (`trimValues()`) inside `getFilteredValue()` **MUST** check `if (mValues.isEmpty()) return null;` *after* calling `trimValues()` before dividing by `mValues.size()`.
+  * Checking `isEmpty()` only before `trimValues()` causes `0.0 / 0 = Double.NaN` (`"--"`) whenever all buffered samples in the time window expire simultaneously.
+
+### 1.8 Constructor State Seeding Parity with `resetSession()` in Stateful Metric Devices (Rule 51 — ATT-4283)
+* **Constructor Initialization Parity**:
+  * Any stateful virtual sensor or physiological metric device (such as `CyclingPowerMetricsDevice` tracking `W' Balance`, `NP`, `IF`, `TSS`) that initializes its baseline capacity in `resetSession()` **MUST** also invoke `resetSession()` (or seed the identical baseline state) inside its constructor.
+  * Unit tests that explicitly call `device.resetSession()` in `@Before` can mask uninitialized constructor state (`0.0` instead of full `W'` capacity) that occurs when the service instantiates the device in production.
+
 ---
 
 ## 2. Database & Data Transfer Object (DTO) Architecture

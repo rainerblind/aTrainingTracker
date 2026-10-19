@@ -40,8 +40,20 @@ class TrainingApplicationTrackingTest {
 
     private class TestableTrainingApplication : TrainingApplication() {
         var stateChangedNotified = false
+        var startedServiceIntent: Intent? = null
+        var stoppedServiceIntent: Intent? = null
 
         override fun getApplicationContext(): Context = this
+
+        override fun startService(service: Intent?): ComponentName? {
+            startedServiceIntent = service
+            return null
+        }
+
+        override fun stopService(name: Intent?): Boolean {
+            stoppedServiceIntent = name
+            return true
+        }
 
         override fun sendBroadcast(intent: Intent) {
             // No-op for unit tests
@@ -56,11 +68,16 @@ class TrainingApplicationTrackingTest {
         override fun startPebbleWatchapp() {
             // No-op for unit test
         }
+
+        override fun stopPebbleWatchapp() {
+            // No-op for unit test
+        }
     }
 
     private lateinit var app: TestableTrainingApplication
     private lateinit var mockPrefs: SharedPreferences
     private val intentExtras = mutableMapOf<String, String>()
+    private var intentAction: String? = null
 
     @Before
     fun setUp() {
@@ -81,8 +98,14 @@ class TrainingApplicationTrackingTest {
         every { com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.Companion.getInstance(any()) } returns mockRepo
 
         intentExtras.clear()
+        intentAction = null
         mockkConstructor(Intent::class)
         every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+        every { anyConstructed<Intent>().setAction(any()) } answers {
+            intentAction = firstArg()
+            self as Intent
+        }
+        every { anyConstructed<Intent>().action } answers { intentAction }
         every { anyConstructed<Intent>().putExtra(any<String>(), any<String>()) } answers {
             intentExtras[firstArg<String>()] = secondArg<String>()
             self as Intent
@@ -176,5 +199,51 @@ class TrainingApplicationTrackingTest {
 
         assertEquals(TrackingMode.TRACKING, TrainingApplication.cTrackingMode)
         assertTrue("notifyTrackingStateChanged must be invoked on setTracking", app.stateChangedNotified)
+    }
+
+    /**
+     * TST-TRK-026.4: Verifies that TrainingApplication.stopTracking() dispatches ACTION_STOP via startService()
+     * when TrackerService is running (REQ-TRK-034.1).
+     */
+    @Test
+    fun testStopTracking_whenTrackerServiceIsRunning_dispatchesActionStopViaStartService() {
+        val mockService = mockk<TrackerService>(relaxed = true)
+        TrackerService.setInstanceForTesting(mockService)
+        assertTrue(TrackerService.isRunning())
+
+        TrainingApplication.cTrackingMode = TrackingMode.TRACKING
+
+        val stopTrackingMethod = TrainingApplication::class.java.getDeclaredMethod("stopTracking")
+        stopTrackingMethod.isAccessible = true
+        stopTrackingMethod.invoke(app)
+
+        assertEquals("TrackingMode must transition to READY", TrackingMode.READY, TrainingApplication.cTrackingMode)
+        assertNotNull("startService must be invoked with Intent", app.startedServiceIntent)
+        assertEquals(TrackerService.ACTION_STOP, app.startedServiceIntent?.action)
+        assertNull("stopService must NOT be called when TrackerService is running", app.stoppedServiceIntent)
+        assertTrue("notifyTrackingStateChanged must be invoked", app.stateChangedNotified)
+
+        TrackerService.setInstanceForTesting(null)
+    }
+
+    /**
+     * TST-TRK-026.4: Verifies that TrainingApplication.stopTracking() falls back to stopService()
+     * when TrackerService is not running (REQ-TRK-034.1).
+     */
+    @Test
+    fun testStopTracking_whenTrackerServiceNotRunning_fallsBackToStopService() {
+        TrackerService.setInstanceForTesting(null)
+        assertFalse(TrackerService.isRunning())
+
+        TrainingApplication.cTrackingMode = TrackingMode.TRACKING
+
+        val stopTrackingMethod = TrainingApplication::class.java.getDeclaredMethod("stopTracking")
+        stopTrackingMethod.isAccessible = true
+        stopTrackingMethod.invoke(app)
+
+        assertEquals("TrackingMode must transition to READY", TrackingMode.READY, TrainingApplication.cTrackingMode)
+        assertNull("startService must NOT be called when TrackerService is not running", app.startedServiceIntent)
+        assertNotNull("stopService must be called as fallback", app.stoppedServiceIntent)
+        assertTrue("notifyTrackingStateChanged must be invoked", app.stateChangedNotified)
     }
 }

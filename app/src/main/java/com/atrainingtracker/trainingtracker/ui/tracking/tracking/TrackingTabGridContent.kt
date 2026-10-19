@@ -93,6 +93,14 @@ fun TrackingTabGridContent(
         override fun onMoveField(sourceFieldId: Long, targetRow: Int, targetCol: Int) {
             viewModel.onMoveField(sourceFieldId, targetRow, targetCol)
         }
+
+        override fun onSetSectionDivider(rowNr: Int, title: String?) {
+            viewModel.onSetSectionDivider(rowNr, title)
+        }
+
+        override fun onDeleteSectionDivider(rowNr: Int) {
+            viewModel.onDeleteSectionDivider(rowNr)
+        }
     }
 
     val tabToggleActions = remember(viewModel) {

@@ -8,6 +8,10 @@ description: Executes Stage 2 (Requirement & Test Specification) of the agile AS
 ## Overview
 This skill guides the agent through **Stage 2 (Requirement & Test Specification)**. It defines the formal requirement (`REQ-XXX`) and the concrete verification procedures (`TST-XXX`) required to validate the feature or fix prior to planning software construction.
 
+## Subagent Model Pairing ("Zipper Principle" — Rule 46)
+- **Doing (`agent1`)**: **`flash`** (`invoke_subagent` with `Model: "flash"`) — Translating the approved Stage 1 analysis into formal `REQ-XXX` (`SHALL`), `TST-XXX` (`Given-When-Then`), and 9-locale string tables is structured specification drafting.
+- **Gate 2 Review (`agent2`)**: **`pro`** (`tools/review_agent.py audit <KEY> --model pro` or independent `research` subagent with `Model: "pro"`) — Deep semantic scrutiny challenging whether the specified tests genuinely prove the fix/invariants and auditing all 4 fields of *Chesterton's Fence*.
+
 ## Key Responsibilities
 1. **Requirement Formulation (`REQ-XXX`)**:
    - Write clear SHALL/MUST clauses, structured architectural constraints, and Given-When-Then acceptance criteria.
@@ -22,7 +26,7 @@ This skill guides the agent through **Stage 2 (Requirement & Test Specification)
 4. **Deliverable Production, Gate Audit & Synchronous Parent Stage Progression (Rule 3 / Rule 45)**:
    - Author `docs/engineering/test_specs/<TICKET_KEY>_test_spec.md` using `templates/test_spec_template.md`.
    - Update Stage 2 Jira subtask (`[Req & Test Spec]`) Description with the complete text.
-   - Transition subtask to `In Überprüfung` and run Gate 2 audit (`tools/review_agent.py audit <KEY>`).
+   - Transition subtask to `In Überprüfung` and run Gate 2 audit (`tools/review_agent.py audit <KEY>` — defaults to `pro`).
    - Upon Gate 2 approval (`RECOMMEND PASS`), transition subtask directly to `Erledigt` via transition `freigabe` (`python3 tools/jira_util.py move <SUBTASK_KEY> freigabe`), which automatically advances the parent ticket from `Test Spec` to `Implementation Plan`.
    - **One Commit per Ticket (Rule 44)**: Do not create a separate intermediate git commit for Stage 2; keep changes on the working branch until the single atomic ticket commit at the end of Stage 5 (or squash when merging into `sprint/<SPRINT_NAME>`).
 

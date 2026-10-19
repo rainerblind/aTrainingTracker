@@ -102,13 +102,15 @@ class StravaUploaderRaceWorkoutTypeTest {
         mockkStatic(StravaHelper::class)
         every { StravaHelper.getRefreshedAccessToken() } returns "mock_access_token"
 
-        mockkConstructor(StravaUploadDbHelper::class)
-        every { anyConstructed<StravaUploadDbHelper>().getActivityId(any()) } returns "123456789"
-        every { anyConstructed<StravaUploadDbHelper>().updateStravaActivityData(any(), any()) } returns Unit
+        val mockStravaUploadDbHelper = mockk<StravaUploadDbHelper>(relaxed = true)
+        every { mockStravaUploadDbHelper.getActivityId(any()) } returns "123456789"
+        every { mockStravaUploadDbHelper.updateStravaActivityData(any(), any()) } returns Unit
+        StravaUploadDbHelper.resetForTesting(mockStravaUploadDbHelper)
     }
 
     @After
     fun tearDown() {
+        StravaUploadDbHelper.resetForTesting(null)
         unmockkAll()
     }
 

@@ -21,6 +21,8 @@ package com.atrainingtracker.banalservice.devices;
 import android.content.Context;
 import android.util.Log;
 
+import androidx.annotation.VisibleForTesting;
+
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.filters.FilterType;
@@ -56,6 +58,12 @@ public class CyclingPowerMetricsDevice extends MyDevice {
 
     private static final String TAG = "CyclingPowerMetricsDevice";
     private static final boolean DEBUG = BANALService.getDebug(false);
+
+    /**
+     * Default Critical Power (CP) fallback in Watts when neither CP nor FTP is configured.
+     * Decouples the low-level BANAL device driver from the UI settings layer.
+     */
+    public static final int DEFAULT_FALLBACK_CP_WATTS = 200;
 
     private final ScheduledExecutorService mScheduler = Executors.newSingleThreadScheduledExecutor();
     private MySensor<Double> mPowerToWeightSensor;
@@ -252,7 +260,7 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         if (mTssSensor != null) {
             mTssSensor.newValue(null);
         }
-        Integer cp = mCpProvider.getCpWatts(mContext);
+        Integer cp = resolveEffectiveCpWatts();
         float wPrimeKj = mWPrimeKjProvider.getWPrimeKj(mContext);
         if (cp != null && cp > 0 && wPrimeKj > 0.0f) {
             mCurrentWPrimeBalJoules = wPrimeKj * 1000.0;
@@ -439,12 +447,16 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         }
     }
 
-    private Integer resolveEffectiveCpWatts() {
+    @VisibleForTesting
+    Integer resolveEffectiveCpWatts() {
         Integer cp = mCpProvider != null ? mCpProvider.getCpWatts(mContext) : null;
         if (cp != null && cp > 0) {
             return cp;
         }
         Integer ftp = mFtpProvider != null ? mFtpProvider.getFtp(mContext) : null;
-        return (ftp != null && ftp > 0) ? ftp : null;
+        if (ftp != null && ftp > 0) {
+            return ftp;
+        }
+        return DEFAULT_FALLBACK_CP_WATTS;
     }
 }

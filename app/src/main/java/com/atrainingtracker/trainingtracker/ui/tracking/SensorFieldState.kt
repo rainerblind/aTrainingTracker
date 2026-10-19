@@ -62,6 +62,9 @@ data class SensorFieldState(
     // The optional state of the visual pedal power balance indicator bar (REQ-UI-377).
     val pedalBalanceState: PedalBalanceState? = null,
 
+    // The optional state of the W' anaerobic battery gauge bar (REQ-UI-416).
+    val wPrimeBatteryState: WPrimeBatteryState? = null,
+
     // The canonical sensor type for dynamic tuning visibility gating (REQ-UI-409.3).
     val sensorType: SensorType? = null
 )

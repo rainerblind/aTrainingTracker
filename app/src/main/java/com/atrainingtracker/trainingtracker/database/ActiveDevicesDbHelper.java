@@ -38,6 +38,38 @@ public class ActiveDevicesDbHelper extends SQLiteOpenHelper {
     private static final String TAG = "ActiveDevicesDbHelper";
     private static final boolean DEBUG = false;
 
+    private static volatile ActiveDevicesDbHelper sInstance;
+
+    @NonNull
+    public static ActiveDevicesDbHelper getInstance(@NonNull Context context) {
+        if (sInstance == null) {
+            synchronized (ActiveDevicesDbHelper.class) {
+                if (sInstance == null) {
+                    sInstance = new ActiveDevicesDbHelper(context.getApplicationContext());
+                }
+            }
+        }
+        return sInstance;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting() {
+        resetForTesting(null);
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting(ActiveDevicesDbHelper newInstance) {
+        synchronized (ActiveDevicesDbHelper.class) {
+            if (sInstance != null && sInstance != newInstance) {
+                try {
+                    sInstance.close();
+                } catch (Exception ignored) {
+                }
+            }
+            sInstance = newInstance;
+        }
+    }
+
     // Constructor
     public ActiveDevicesDbHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);

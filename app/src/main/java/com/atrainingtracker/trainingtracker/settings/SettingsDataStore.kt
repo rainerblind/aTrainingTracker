@@ -143,6 +143,7 @@ class SettingsDataStore(
         const val MIN_ATHLETE_WEIGHT_LBS = 66.0f
         const val MAX_ATHLETE_WEIGHT_LBS = 660.0f
         const val LBS_PER_KG = 2.20462262185f
+        const val DEFAULT_CYCLING_FTP = 200
         const val MIN_CP_WATTS = 50
         const val MAX_CP_WATTS = 1000
         const val MIN_W_PRIME_KJ = 5.0f

@@ -193,6 +193,8 @@ class WorkoutClustersViewModelTest {
         coEvery { mockClusterRepo.getUnclusteredWorkouts() } returns emptyList()
         coEvery { mockClusterRepo.refreshClusters() } just Runs
         coEvery { mockClusterRepo.refreshClusterStats() } just Runs
+        coEvery { mockClusterRepo.getWorkoutTrackPoints(any(), any()) } returns emptyList()
+        coEvery { mockWorkoutRepo.getWorkoutMarkers(any()) } returns emptyList()
     }
 
     private var activeViewModel: WorkoutClustersViewModel? = null

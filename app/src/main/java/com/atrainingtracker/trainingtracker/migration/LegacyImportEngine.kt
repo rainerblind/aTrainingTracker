@@ -49,9 +49,12 @@ import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClient
 import com.atrainingtracker.trainingtracker.cloud.googledrive.DriveFileEntry
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -208,6 +211,7 @@ object LegacyImportEngine {
                 (1..3).map {
                     launch(Dispatchers.IO) {
                         for ((_, entry) in channel) {
+                            coroutineContext.ensureActive()
                             val current = processedCount.incrementAndGet()
                             listener?.onProgress(current, entries.size, entry.name)
 
@@ -245,6 +249,8 @@ object LegacyImportEngine {
                                     ImportStatus.DUPLICATE_SKIPPED -> skippedCount.incrementAndGet()
                                     ImportStatus.FAILED -> failedCount.incrementAndGet()
                                 }
+                            } catch (ce: CancellationException) {
+                                throw ce
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to download/import ${entry.name}", e)
                                 failedCount.incrementAndGet()
@@ -256,6 +262,8 @@ object LegacyImportEngine {
                     }
                 }
             }
+        } catch (ce: CancellationException) {
+            throw ce
         } catch (e: Exception) {
             Log.e(TAG, "Bulk recovery failed", e)
         }
@@ -268,7 +276,7 @@ object LegacyImportEngine {
         )
     }
 
-    private fun downloadFileWithRetry(
+    private suspend fun downloadFileWithRetry(
         dbxClient: DbxClientV2,
         pathLower: String,
         targetFile: File,
@@ -285,11 +293,13 @@ object LegacyImportEngine {
             } catch (e: com.dropbox.core.RateLimitException) {
                 val backoffMs = e.backoffMillis + 500L
                 Log.w(TAG, "Dropbox rate limit hit for $pathLower. Backing off for ${backoffMs}ms (attempt $attempt/$maxRetries)...")
-                try { Thread.sleep(backoffMs) } catch (_: Exception) {}
+                delay(backoffMs)
+            } catch (ce: CancellationException) {
+                throw ce
             } catch (e: Exception) {
                 Log.e(TAG, "Transient download error for $pathLower (attempt $attempt/$maxRetries): ${e.message}")
                 if (attempt >= maxRetries) return false
-                try { Thread.sleep(1000L * attempt) } catch (_: Exception) {}
+                delay(1000L * attempt)
             }
         }
         return false
@@ -312,7 +322,10 @@ object LegacyImportEngine {
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
     ): RecoveryResult {
         val token = TrainingApplication.getGoogleDriveAuthToken() ?: return RecoveryResult(0, 0, 0, 0)
-        val driveClient = GoogleDriveClient(tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() })
+        val driveClient = GoogleDriveClient(
+            tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() },
+            accountProvider = { TrainingApplication.getGoogleDriveAccountEmail() }
+        )
 
         val targetExtensions = when (format.lowercase()) {
             "fit" -> listOf(".fit")
@@ -365,8 +378,12 @@ object LegacyImportEngine {
                 listener?.onStatus("Scanning Google Drive: $folderNameDisplay...")
                 val folderId = driveClient.resolveFolderHierarchy(hierarchy)
                 if (folderId != null && searchedFolderIds.add(folderId)) {
-                    val entries = driveClient.listFilesRecursively(folderId, targetExtensions)
-                    allEntries.addAll(entries)
+                    val scanResult = driveClient.listFilesRecursivelyResult(folderId, targetExtensions)
+                    allEntries.addAll(scanResult.entries)
+                    if (!scanResult.isComplete) {
+                        Log.w(TAG, "Google Drive folder scan incomplete for $folderNameDisplay: ${scanResult.error?.message}")
+                        listener?.onStatus("Google Drive scan incomplete: ${scanResult.error?.message ?: "unknown error"}")
+                    }
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Google Drive folder scan failed for ${hierarchy.joinToString("/")}: ${e.message}")
@@ -398,6 +415,7 @@ object LegacyImportEngine {
                 (1..3).map {
                     launch(Dispatchers.IO) {
                         for ((_, entry) in channel) {
+                            coroutineContext.ensureActive()
                             val current = processedCount.incrementAndGet()
                             listener?.onProgress(current, entries.size, entry.name)
 
@@ -410,7 +428,13 @@ object LegacyImportEngine {
 
                             listener?.onStatus(context.getString(R.string.legacy_import__downloading_google_drive, entry.name))
                             val workerDir = File(tempDir, "job_$current").apply { mkdirs() }
-                            val tempFile = File(workerDir, entry.name)
+                            val tempFile = try {
+                                SecureZipExtractor.sanitizeDriveFileName(entry.name, workerDir)
+                            } catch (e: SecurityException) {
+                                Log.e(TAG, "Security violation: Invalid remote file name: ${entry.name}", e)
+                                failedCount.incrementAndGet()
+                                continue
+                            }
                             try {
                                 val downloaded = downloadGoogleDriveFileWithRetry(driveClient, entry.id, tempFile)
                                 if (!downloaded) {
@@ -435,6 +459,8 @@ object LegacyImportEngine {
                                     ImportStatus.DUPLICATE_SKIPPED -> skippedCount.incrementAndGet()
                                     ImportStatus.FAILED -> failedCount.incrementAndGet()
                                 }
+                            } catch (ce: CancellationException) {
+                                throw ce
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to download/import ${entry.name}", e)
                                 failedCount.incrementAndGet()
@@ -446,6 +472,8 @@ object LegacyImportEngine {
                     }
                 }
             }
+        } catch (ce: CancellationException) {
+            throw ce
         } catch (e: Exception) {
             Log.e(TAG, "Google Drive bulk recovery failed", e)
         }
@@ -458,7 +486,7 @@ object LegacyImportEngine {
         )
     }
 
-    private fun downloadGoogleDriveFileWithRetry(
+    private suspend fun downloadGoogleDriveFileWithRetry(
         driveClient: GoogleDriveClient,
         fileId: String,
         targetFile: File,
@@ -471,11 +499,13 @@ object LegacyImportEngine {
                 val success = driveClient.downloadFileById(fileId, targetFile)
                 if (success) return true
                 if (attempt >= maxRetries) return false
-                try { Thread.sleep(1000L * attempt) } catch (_: Exception) {}
+                delay(1000L * attempt)
+            } catch (ce: CancellationException) {
+                throw ce
             } catch (e: Exception) {
                 Log.e(TAG, "Transient download error for Google Drive file $fileId (attempt $attempt/$maxRetries): ${e.message}")
                 if (attempt >= maxRetries) return false
-                try { Thread.sleep(1000L * attempt) } catch (_: Exception) {}
+                delay(1000L * attempt)
             }
         }
         return false
@@ -515,6 +545,8 @@ object LegacyImportEngine {
                 uploadToStrava = uploadToStrava,
                 listener = listener
             )
+        } catch (ce: CancellationException) {
+            throw ce
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import TCX: ${tcxFile.name}", e)
         }
@@ -577,6 +609,8 @@ object LegacyImportEngine {
                 uploadToStrava = uploadToStrava,
                 listener = listener
             )
+        } catch (ce: CancellationException) {
+            throw ce
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import GPX: ${gpxFile.name}", e)
         }
@@ -640,6 +674,8 @@ object LegacyImportEngine {
                 uploadToStrava = uploadToStrava,
                 listener = listener
             )
+        } catch (ce: CancellationException) {
+            throw ce
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import FIT: ${fitFile.name}", e)
         }
@@ -648,9 +684,9 @@ object LegacyImportEngine {
 
     /**
      * Persists in-memory parsed workout data into SQLite database tables and triggers
-     * stats recalculation and cloud synchronization (REQ-MIG-038).
+     * stats recalculation and cloud synchronization (REQ-MIG-038, REQ-MIG-043).
      */
-    private suspend fun persistParsedWorkout(
+    internal suspend fun persistParsedWorkout(
         context: Context,
         baseFileName: String,
         parsedWorkout: ParsedWorkoutData,
@@ -669,38 +705,28 @@ object LegacyImportEngine {
             effectiveBaseFileName = firstTime.replace(" ", "_").replace(":", "")
         }
 
+        // Fail-fast if workout has no valid start time to avoid orphan database rows (REQ-MIG-043)
+        if (firstTime == null) {
+            Log.w(TAG, "Cannot import workout without valid start time: $baseFileName")
+            return ImportResult(ImportStatus.FAILED)
+        }
+
         val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
         val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
         var workoutId = -1L
 
-        // Mutex-guarded multi-dimensional deduplication and atomic insertion (REQ-MIG-031)
-        val isDuplicate = importMutex.withLock {
-            if (isWorkoutExisting(summaryDb, effectiveBaseFileName, firstTime, parsedWorkout.bSportType)) {
-                if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $effectiveBaseFileName: Workout already exists.")
-                return@withLock true
-            }
-
-            // Post-parsing: Bulk insertion and dynamic table creation (ATT-357 / ATT-602)
-            if (parsedWorkout.bufferedSamples.isNotEmpty()) {
-                samplesDbManager.createNewTable(effectiveBaseFileName, SensorType.values().toList())
-                val targetDb = samplesDbManager.database
-                val tableName = WorkoutSamplesDatabaseManager.getTableName(effectiveBaseFileName)
-                targetDb.beginTransaction()
-                try {
-                    parsedWorkout.bufferedSamples.forEach { sampleValues ->
-                        targetDb.insert(tableName, null, sampleValues)
-                    }
-                    targetDb.setTransactionSuccessful()
-                } finally {
-                    targetDb.endTransaction()
+        // Mutex-guarded multi-dimensional deduplication and atomic insertion (REQ-MIG-031, REQ-MIG-043)
+        val isDuplicate = try {
+            importMutex.withLock {
+                if (isWorkoutExisting(summaryDb, effectiveBaseFileName, firstTime, parsedWorkout.bSportType)) {
+                    if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $effectiveBaseFileName: Workout already exists.")
+                    return@withLock true
                 }
-            }
 
-            if (firstTime != null) {
                 workoutId = getWorkoutId(summaryDb, effectiveBaseFileName)
                 if (workoutId == -1L) {
                     try {
-                        StravaUploadDbHelper(context).deleteWorkout(effectiveBaseFileName)
+                        StravaUploadDbHelper.getInstance(context).deleteWorkout(effectiveBaseFileName)
                     } catch (t: Throwable) {
                         Log.w(TAG, "Could not clean StravaUploadDb for $effectiveBaseFileName: ${t.message}")
                     }
@@ -724,16 +750,45 @@ object LegacyImportEngine {
                         }
                     }
                     workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
+                    require(workoutId > 0) { "Failed to insert summary row for $effectiveBaseFileName" }
                 }
+
+                // Post-parsing: Bulk insertion and dynamic table creation (ATT-357 / ATT-602)
+                if (parsedWorkout.bufferedSamples.isNotEmpty()) {
+                    try {
+                        samplesDbManager.createNewTable(effectiveBaseFileName, SensorType.values().toList())
+                        val targetDb = samplesDbManager.database
+                        val tableName = WorkoutSamplesDatabaseManager.getTableName(effectiveBaseFileName)
+                        targetDb.beginTransaction()
+                        try {
+                            parsedWorkout.bufferedSamples.forEach { sampleValues ->
+                                val rowId = targetDb.insert(tableName, null, sampleValues)
+                                require(rowId >= 0) { "Failed to insert sample into $tableName" }
+                            }
+                            targetDb.setTransactionSuccessful()
+                        } finally {
+                            targetDb.endTransaction()
+                        }
+                    } catch (t: Throwable) {
+                        // Compensatory cleanup: drop sample table and delete summary row
+                        executeCompensatoryCleanup(context, samplesDbManager, summaryDb, effectiveBaseFileName, workoutId)
+                        throw t
+                    }
+                }
+                false
             }
-            false
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed during mutex-guarded insertion for $effectiveBaseFileName", t)
+            return ImportResult(ImportStatus.FAILED)
         }
 
         if (isDuplicate) {
             return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
         }
 
-        if (firstTime != null) {
+        try {
             recalculateStats(
                 context = context,
                 workoutId = workoutId,
@@ -758,11 +813,41 @@ object LegacyImportEngine {
             )
 
             schedulePostImportCommunityUpload(context, workoutId, effectiveBaseFileName)
-
             return ImportResult(ImportStatus.SUCCESS, workoutId)
+        } catch (ce: CancellationException) {
+            executeCompensatoryCleanup(context, samplesDbManager, summaryDb, effectiveBaseFileName, workoutId)
+            throw ce
+        } catch (t: Throwable) {
+            Log.e(TAG, "recalculateStats failed for $effectiveBaseFileName", t)
+            executeCompensatoryCleanup(context, samplesDbManager, summaryDb, effectiveBaseFileName, workoutId)
+            return ImportResult(ImportStatus.FAILED)
         }
+    }
 
-        return ImportResult(ImportStatus.FAILED)
+    private fun executeCompensatoryCleanup(
+        context: Context,
+        samplesDbManager: WorkoutSamplesDatabaseManager,
+        summaryDb: WorkoutSummariesDatabaseManager,
+        baseFileName: String,
+        workoutId: Long
+    ) {
+        try {
+            samplesDbManager.deleteWorkout(baseFileName)
+        } catch (t: Throwable) {
+            Log.e(TAG, "CRITICAL: Compensatory cleanup failed to delete samples table for $baseFileName", t)
+        }
+        if (workoutId > 0) {
+            try {
+                summaryDb.deleteWorkout(workoutId)
+            } catch (t: Throwable) {
+                Log.e(TAG, "CRITICAL: Compensatory cleanup failed to delete summary row for $workoutId ($baseFileName)", t)
+            }
+            try {
+                LapsDatabaseManager.getInstance(context).deleteWorkout(workoutId)
+            } catch (t: Throwable) {
+                Log.e(TAG, "CRITICAL: Compensatory cleanup failed to delete laps for $workoutId ($baseFileName)", t)
+            }
+        }
     }
 
     /**
@@ -788,7 +873,7 @@ object LegacyImportEngine {
 
     private fun getWorkoutId(db: WorkoutSummariesDatabaseManager, fileBaseName: String): Long {
         db.database.query(WorkoutSummaries.TABLE, arrayOf(WorkoutSummaries.C_ID), 
-            "${WorkoutSummaries.FILE_BASE_NAME} = ?", arrayOf(fileBaseName), null, null, null).use {
+            "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE", arrayOf(fileBaseName), null, null, null).use {
             return if (it.moveToFirst()) it.getLong(0) else -1L
         }
     }
@@ -808,7 +893,7 @@ object LegacyImportEngine {
             db.database.query(
                 WorkoutSummaries.TABLE, 
                 arrayOf(WorkoutSummaries.C_ID), 
-                "${WorkoutSummaries.FILE_BASE_NAME} = ?", 
+                "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE", 
                 arrayOf(fileBaseName), 
                 null, null, null
             ).use {
@@ -818,11 +903,11 @@ object LegacyImportEngine {
 
         val hasSport = bSportType != null && bSportType != BSportType.UNKNOWN
         val selection = if (hasSport) {
-            "${WorkoutSummaries.FILE_BASE_NAME} = ? OR " +
+            "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE OR " +
                     "${WorkoutSummaries.TIME_START} = ? OR " +
                     "(${WorkoutSummaries.B_SPORT} = ? AND ${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
         } else {
-            "${WorkoutSummaries.FILE_BASE_NAME} = ? OR " +
+            "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE OR " +
                     "${WorkoutSummaries.TIME_START} = ? OR " +
                     "(${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
         }

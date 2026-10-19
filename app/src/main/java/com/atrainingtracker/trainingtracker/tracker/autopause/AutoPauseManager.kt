@@ -213,9 +213,21 @@ class AutoPauseManager(
     var lastValidSpeedPacketTimestampMs: Long = 0L
         private set
 
+    var lastValidSpeedMps: Double? = null
+        private set
+
     @Synchronized
     fun resetDebounceCounter() {
         debounceCounter = 0
+    }
+
+    @Synchronized
+    fun reset() {
+        currentState = AutoPauseState.TRACKING
+        debounceCounter = 0
+        sensorLostRecoveryTicks = 0
+        lastValidSpeedPacketTimestampMs = 0L
+        lastValidSpeedMps = null
     }
 
     @Synchronized
@@ -225,6 +237,9 @@ class AutoPauseManager(
             debounceCounter = 0
             sensorLostRecoveryTicks = 0
         }
+        if (state == AutoPauseState.TRACKING || state == AutoPauseState.MANUAL_PAUSED) {
+            lastValidSpeedMps = null
+        }
     }
 
     @Synchronized
@@ -232,15 +247,13 @@ class AutoPauseManager(
 
     /**
      * Synchronizes engine state when the user explicitly resumes from an auto-paused session
-     * via the UI or notification while [com.atrainingtracker.trainingtracker.TrainingApplication.isManualPauseLocked] is false
-     * (REQ-TRK-028.3).
+     * via the UI or notification while [manualPauseLocked] is false (REQ-TRK-028.3 / REQ-TRK-037.4).
      * If manual pause lock is active, this method is a safe no-op.
      */
+    @JvmOverloads
     @Synchronized
-    fun onManualResume() {
-        if (com.atrainingtracker.trainingtracker.TrainingApplication.isManualPauseLocked() ||
-            currentState == AutoPauseState.MANUAL_PAUSED
-        ) {
+    fun onManualResume(manualPauseLocked: Boolean = false) {
+        if (manualPauseLocked || currentState == AutoPauseState.MANUAL_PAUSED) {
             return
         }
         debounceCounter = 0
@@ -287,6 +300,7 @@ class AutoPauseManager(
             currentState = AutoPauseState.MANUAL_PAUSED
             debounceCounter = 0
             sensorLostRecoveryTicks = 0
+            lastValidSpeedMps = null
             return AutoPauseTransition(
                 previousState = prevState,
                 newState = AutoPauseState.MANUAL_PAUSED,
@@ -300,6 +314,7 @@ class AutoPauseManager(
             currentState = AutoPauseState.TRACKING
             debounceCounter = 0
             sensorLostRecoveryTicks = 0
+            lastValidSpeedMps = null
         }
 
         // 2. Check if Auto-Pause is enabled for this sport profile
@@ -332,6 +347,7 @@ class AutoPauseManager(
 
         if (isSpeedCorrupt || !hasSpeedSource) {
             // Speed source unregistered/disconnected or corrupt numeric reading -> SENSOR_LOST
+            lastValidSpeedMps = null
             if (currentState == AutoPauseState.TRACKING || currentState == AutoPauseState.PAUSE_DEBOUNCE_PENDING) {
                 currentState = AutoPauseState.SENSOR_LOST
                 debounceCounter = 0
@@ -351,6 +367,7 @@ class AutoPauseManager(
 
         if (hasFreshValidReading) {
             lastValidSpeedPacketTimestampMs = packetTimestampMs
+            lastValidSpeedMps = currentSpeedMps
         }
 
         // 5. Sensor Lost Recovery Contract: 2 consecutive seconds of fresh valid speed
@@ -373,17 +390,37 @@ class AutoPauseManager(
             return AutoPauseTransition(previousState = prevState, newState = AutoPauseState.SENSOR_LOST)
         }
 
-        // For a registered speed source (hasSpeedSource == true): if the sensor stopped emitting
-        // packets at standstill (isPacketStale) or ThresholdSensor zeroed out to null, treat
-        // effective speed as 0.0 m/s for pause evaluation while requiring a fresh reading to auto-resume.
-        val speedMps = if (hasFreshValidReading) currentSpeedMps else 0.0
-
         val sportThreshold = config.getSpeedThresholdForSport(sportType)
         val sportDebounceSec = config.getDebounceSecForSport(sportType)
         val unit = if (config.isMetric) MyUnits.METRIC else MyUnits.IMPERIAL
         val pauseThresholdMps = MyHelper.UserUnit2mps(sportThreshold, unit)
         val resumeThresholdUserUnit = calculateResumeSpeedThresholdUserUnit(sportThreshold, config.isMetric)
         val resumeThresholdMps = MyHelper.UserUnit2mps(resumeThresholdUserUnit, unit)
+
+        // 6. Stale Packet Classification (REQ-TRK-037.1 / ATT-4094):
+        // If speed packets stopped arriving while cruising in motion (> resumeThresholdMps),
+        // classify as SENSOR_LOST (tunnel/dropout) rather than falsely pausing.
+        if (!hasFreshValidReading && lastValidSpeedMps != null && lastValidSpeedMps!! > resumeThresholdMps) {
+            if (currentState == AutoPauseState.TRACKING || currentState == AutoPauseState.PAUSE_DEBOUNCE_PENDING) {
+                currentState = AutoPauseState.SENSOR_LOST
+                debounceCounter = 0
+                sensorLostRecoveryTicks = 0
+                return AutoPauseTransition(
+                    previousState = prevState,
+                    newState = AutoPauseState.SENSOR_LOST,
+                    auditLogEvent = "SENSOR_LOST_IN_MOTION_DROPOUT"
+                )
+            } else if (currentState == AutoPauseState.SENSOR_LOST) {
+                sensorLostRecoveryTicks = 0
+                return AutoPauseTransition(previousState = prevState, newState = AutoPauseState.SENSOR_LOST)
+            }
+            return AutoPauseTransition(previousState = prevState, newState = currentState)
+        }
+
+        // For a registered speed source (hasSpeedSource == true): if the sensor stopped emitting
+        // packets at standstill (lastValidSpeedMps <= resumeThresholdMps or null), treat
+        // effective speed as 0.0 m/s for pause evaluation while requiring a fresh reading to auto-resume.
+        val speedMps = if (hasFreshValidReading) currentSpeedMps else 0.0
 
         return when (currentState) {
             AutoPauseState.TRACKING -> {

@@ -53,6 +53,8 @@ class StravaDataPurgeManagerTest {
     private lateinit var mockRoutesRepo: RoutesRepository
     private lateinit var mockSegmentsRepo: SegmentsRepository
     private lateinit var mockAuthRepo: StravaAuthRepository
+    private lateinit var mockStravaUploadDbHelper: StravaUploadDbHelper
+    private lateinit var mockEquipmentDbHelper: EquipmentDbHelper
 
     @Before
     fun setUp() {
@@ -69,9 +71,10 @@ class StravaDataPurgeManagerTest {
         every { TrainingApplication.deleteStravaToken() } returns Unit
         every { TrainingApplication.getStravaAccessToken() } returns "mock_token"
 
-        mockkConstructor(StravaUploadDbHelper::class)
-        every { anyConstructed<StravaUploadDbHelper>().clearAllStravaData() } returns 5
-        every { anyConstructed<StravaUploadDbHelper>().checkpointWal() } returns Unit
+        mockStravaUploadDbHelper = mockk(relaxed = true)
+        every { mockStravaUploadDbHelper.clearAllStravaData() } returns 5
+        every { mockStravaUploadDbHelper.checkpointWal() } returns Unit
+        StravaUploadDbHelper.resetForTesting(mockStravaUploadDbHelper)
 
         mockSegmentsDb = mockk(relaxed = true)
         mockkStatic(SegmentsDatabaseManager::class)
@@ -86,8 +89,9 @@ class StravaDataPurgeManagerTest {
         mockSegmentsRepo = mockk(relaxed = true)
         SegmentsRepository.resetForTesting(mockSegmentsRepo)
 
-        mockkConstructor(EquipmentDbHelper::class)
-        every { anyConstructed<EquipmentDbHelper>().unlinkAllStravaEquipment() } returns 2
+        mockEquipmentDbHelper = mockk(relaxed = true)
+        every { mockEquipmentDbHelper.unlinkAllStravaEquipment() } returns 2
+        EquipmentDbHelper.resetForTesting(mockEquipmentDbHelper)
 
         mockWorkManager = mockk(relaxed = true)
         mockkObject(WorkManager.Companion)
@@ -104,6 +108,8 @@ class StravaDataPurgeManagerTest {
         RoutesDatabaseManager.resetForTesting(null)
         RoutesRepository.resetForTesting(null)
         SegmentsRepository.resetForTesting(null)
+        StravaUploadDbHelper.resetForTesting(null)
+        EquipmentDbHelper.resetForTesting(null)
         unmockkAll()
     }
 
@@ -115,8 +121,8 @@ class StravaDataPurgeManagerTest {
         verify { TrainingApplication.deleteStravaToken() }
 
         // 2. StravaUpload.db activity JSON and IDs purged & WAL checkpointed (REQ-EXP-013)
-        verify { anyConstructed<StravaUploadDbHelper>().clearAllStravaData() }
-        verify { anyConstructed<StravaUploadDbHelper>().checkpointWal() }
+        verify { mockStravaUploadDbHelper.clearAllStravaData() }
+        verify { mockStravaUploadDbHelper.checkpointWal() }
 
         // 3. Segments.db starred segments wiped & in-memory cache cleared
         verify { mockSegmentsDb.deleteAllTables() }
@@ -127,7 +133,7 @@ class StravaDataPurgeManagerTest {
         verify { mockRoutesRepo.refreshRoutes() }
 
         // 5. Equipment.db Strava IDs unlinked (NOT deleted)
-        verify { anyConstructed<EquipmentDbHelper>().unlinkAllStravaEquipment() }
+        verify { mockEquipmentDbHelper.unlinkAllStravaEquipment() }
 
         // 6. WorkManager periodic sync workers canceled
         verify { mockWorkManager.cancelUniqueWork("automated_strava_segments_sync_work") }
@@ -143,7 +149,7 @@ class StravaDataPurgeManagerTest {
         StravaDataPurgeManager.executeLocalDataPurge(mockContext)
 
         // Verifies that Equipment rows are UNLINKED rather than dropped
-        verify(exactly = 1) { anyConstructed<EquipmentDbHelper>().unlinkAllStravaEquipment() }
+        verify(exactly = 1) { mockEquipmentDbHelper.unlinkAllStravaEquipment() }
 
         // Verifies that ONLY Strava routes are deleted, preserving local GPX and workout routes
         verify(exactly = 1) { mockRoutesDb.deleteRoutesBySource(RouteSource.STRAVA) }

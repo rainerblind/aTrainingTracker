@@ -107,7 +107,7 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
 
     // access to the databases
     private val devicesDatabaseManager by lazy { DevicesDatabaseManager.getInstance(application) }
-    private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
+    private val equipmentDbHelper by lazy { EquipmentDbHelper.getInstance(application) }
     private val discoveryManager by lazy { EquipmentAndSportTypeDiscoveryManager.getInstance(application) }
     private val mapper by lazy { RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper, discoveryManager) }
 

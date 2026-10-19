@@ -173,7 +173,8 @@ fun DevicesTabbedScreen(
                                 appBarOffsetPx = connection.appBarOffset,
                                 headerHeightPx = appBarMaxHeightPx.toFloat(),
                                 onCheckAntInstallation = { showAntStatusSheet = true },
-                                filterCriteria = filterCriteria
+                                filterCriteria = filterCriteria,
+                                onScanForSensors = { showProtocolSheet = true }
                             )
                             1 -> DeviceListScreen(
                                 viewModel = listViewModel,
@@ -185,7 +186,8 @@ fun DevicesTabbedScreen(
                                 appBarOffsetPx = connection.appBarOffset,
                                 headerHeightPx = appBarMaxHeightPx.toFloat(),
                                 onCheckAntInstallation = { showAntStatusSheet = true },
-                                filterCriteria = filterCriteria
+                                filterCriteria = filterCriteria,
+                                onScanForSensors = { showProtocolSheet = true }
                             )
                             2 -> DeviceListScreen(
                                 viewModel = listViewModel,
@@ -197,7 +199,8 @@ fun DevicesTabbedScreen(
                                 appBarOffsetPx = connection.appBarOffset,
                                 headerHeightPx = appBarMaxHeightPx.toFloat(),
                                 onCheckAntInstallation = { showAntStatusSheet = true },
-                                filterCriteria = filterCriteria
+                                filterCriteria = filterCriteria,
+                                onScanForSensors = { showProtocolSheet = true }
                             )
                             3 -> EquipmentSportSensorMatrix(
                                 items = bikes,
@@ -401,7 +404,11 @@ fun DevicesTabbedScreen(
                 // Keep searching active while displaying tabs
                 DisposableEffect(Unit) {
                     tabViewModel.startSearching()
-                    onDispose { tabViewModel.stopSearching() }
+                    onDispose {
+                        tabViewModel.stopSearching()
+                        showProtocolSheet = false
+                        selectedPairingProtocol = null
+                    }
                 }
 
                 // Pairing Protocol Bottom Sheet (ATT-2189)

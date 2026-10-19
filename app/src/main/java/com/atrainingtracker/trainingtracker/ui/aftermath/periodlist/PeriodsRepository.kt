@@ -77,8 +77,8 @@ class PeriodsRepository private constructor(private val application: Application
                                 val mapper = WorkoutDataMapper(
                                     application, workoutSummariesManager,
                                     com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
-                                    com.atrainingtracker.trainingtracker.database.EquipmentDbHelper(application),
-                                    com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(application)
+                                    com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(application),
+                                    com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application)
                                 )
                                 val workout = mapper.fromCursor(cursor)
                                 if (workout.finished) {
@@ -202,8 +202,8 @@ class PeriodsRepository private constructor(private val application: Application
             val mapper = WorkoutDataMapper(
                 application, workoutSummariesManager,
                 com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
-                com.atrainingtracker.trainingtracker.database.EquipmentDbHelper(application),
-                com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(application)
+                com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(application),
+                com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application)
             )
 
             // --- PHASE 1: RAPID READ & GROUPING (O(N)) ---
@@ -217,7 +217,7 @@ class PeriodsRepository private constructor(private val application: Application
 
                 val total = cursor.count
                 val chunkSize = 100
-                val stravaUploadDbHelper = com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(application)
+                val stravaUploadDbHelper = com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application)
 
                 cursor.use { c ->
                     if (!c.moveToFirst()) return@withContext emptyList<WorkoutData>()
@@ -770,8 +770,8 @@ class PeriodsRepository private constructor(private val application: Application
         val mapper = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper(
             application, workoutSummariesManager,
             com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
-            com.atrainingtracker.trainingtracker.database.EquipmentDbHelper(application),
-            com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper(application)
+            com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(application),
+            com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application)
         )
         val list = mutableListOf<WorkoutData>()
         cursor?.use { c ->

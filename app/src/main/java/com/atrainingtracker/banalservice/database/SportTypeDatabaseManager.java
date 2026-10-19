@@ -22,6 +22,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
@@ -48,6 +49,8 @@ public class SportTypeDatabaseManager {
 
     private static final String TAG = "SportTypeDatabaseManager";
     private static final boolean DEBUG = TrainingApplication.getDebug(true);
+
+    public static final long SYSTEM_SPORT_ID_THRESHOLD = 5L;
 
     // --- Modern Singleton Pattern ---
     private static volatile SportTypeDatabaseManager cInstance;
@@ -109,7 +112,7 @@ public class SportTypeDatabaseManager {
 
         try (Cursor cursor = getDatabase().query(SportType.TABLE,
                 null,
-                null, null,
+                SportType.IS_PLACEHOLDER + "=0", null,
                 null, null, null)) {
             return CursorUtils.mapList(cursor, c -> c.getLong(c.getColumnIndex(SportType.C_ID)));
         }
@@ -120,7 +123,7 @@ public class SportTypeDatabaseManager {
 
         try (Cursor cursor = getDatabase().query(SportType.TABLE,
                 null,
-                null, null,
+                SportType.IS_PLACEHOLDER + "=0", null,
                 null, null, null)) {
             return CursorUtils.mapList(cursor, c -> c.getString(c.getColumnIndex(SportType.UI_NAME)));
         }
@@ -136,10 +139,10 @@ public class SportTypeDatabaseManager {
         String selection;
         String[] selectionArgs;
         if (bSportType == BSportType.UNKNOWN) {
-            selection = SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?";
+            selection = SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">? AND " + SportType.IS_PLACEHOLDER + "=0";
             selectionArgs = new String[]{Double.toString(avgSpd), Double.toString(avgSpd)};
         } else {
-            selection = SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?";
+            selection = SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">? AND " + SportType.IS_PLACEHOLDER + "=0";
             selectionArgs = new String[]{bSportType.name(), Double.toString(avgSpd), Double.toString(avgSpd)};
         }
 
@@ -168,10 +171,10 @@ public class SportTypeDatabaseManager {
         String selection;
         String[] selectionArgs;
         if (bSportType == BSportType.UNKNOWN) {
-            selection = SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?";
+            selection = SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">? AND " + SportType.IS_PLACEHOLDER + "=0";
             selectionArgs = new String[]{Double.toString(avgSpd), Double.toString(avgSpd)};
         } else {
-            selection = SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">?";
+            selection = SportType.BASE_SPORT_TYPE + "=? AND " + SportType.MIN_AVG_SPEED + "<=? AND " + SportType.MAX_AVG_SPEED + ">? AND " + SportType.IS_PLACEHOLDER + "=0";
             selectionArgs = new String[]{bSportType.name(), Double.toString(avgSpd), Double.toString(avgSpd)};
         }
 
@@ -196,7 +199,7 @@ public class SportTypeDatabaseManager {
 
         try (Cursor cursor = db.query(SportType.TABLE,
                 null,
-                SportType.BASE_SPORT_TYPE + "=?",
+                SportType.BASE_SPORT_TYPE + "=? AND " + SportType.IS_PLACEHOLDER + "=0",
                 new String[]{bSportType.name()},
                 null, null, null)) {
 
@@ -221,7 +224,7 @@ public class SportTypeDatabaseManager {
 
         try (Cursor cursor = getDatabase().query(SportType.TABLE,
                 null,
-                SportType.BASE_SPORT_TYPE + "=?",
+                SportType.BASE_SPORT_TYPE + "=? AND " + SportType.IS_PLACEHOLDER + "=0",
                 new String[]{bSportType.name()},
                 null, null, null)) {
 
@@ -235,6 +238,27 @@ public class SportTypeDatabaseManager {
         }
 
         return result;
+    }
+
+    /**
+     * Checks whether the sport type with the given ID is a temporary restored placeholder (REQ-MIG-044).
+     *
+     * @param id The sport type primary key ID.
+     * @return {@code true} if the sport type exists and has is_placeholder == 1, {@code false} otherwise.
+     */
+    public boolean isPlaceholder(long id) {
+        SQLiteDatabase db = getDatabase();
+        try (Cursor cursor = db.query(SportType.TABLE,
+                new String[]{SportType.IS_PLACEHOLDER},
+                SportType.C_ID + "=?",
+                new String[]{Long.toString(id)},
+                null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int colIdx = cursor.getColumnIndex(SportType.IS_PLACEHOLDER);
+                return colIdx >= 0 && cursor.getInt(colIdx) == 1;
+            }
+        }
+        return false;
     }
 
     @NonNull
@@ -388,6 +412,7 @@ public class SportTypeDatabaseManager {
         values.put(SportTypeDatabaseManager.SportType.STRAVA_NAME, stravaName);
         values.put(SportTypeDatabaseManager.SportType.TCX_NAME, tcxName);
         values.put(SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME, gcName);
+        values.put(SportTypeDatabaseManager.SportType.IS_PLACEHOLDER, 0);
 
         long resultId;
         if (id == -1L) {
@@ -660,6 +685,7 @@ public class SportTypeDatabaseManager {
         public static final String TRAINING_PEAKS_NAME = "trainingPeaksName";
         public static final String MIN_AVG_SPEED = "minSpeed";
         public static final String MAX_AVG_SPEED = "maxSpeed";
+        public static final String IS_PLACEHOLDER = "is_placeholder";
 
         public static final BSportType DEFAULT_BASE_SPORT_TYPE = BSportType.UNKNOWN;
         public static final String DEFAULT_GOLDEN_CHEETAH_NAME = "";
@@ -677,7 +703,7 @@ public class SportTypeDatabaseManager {
 
     public static class SportTypeDbHelper extends SQLiteOpenHelper {
         public static final String DB_NAME = "SportType.db";
-        public static final int DB_VERSION = 2;  // 08.02.2026: Changed the BSportType of a 'walk' to RUN instead of UNKNOWN.
+        public static final int DB_VERSION = 3;  // 19.10.2026: Added is_placeholder column and non-destructive migration (ATT-3993)
         protected static final String CREATE_TABLE = "create table " + SportType.TABLE + " ("
                 + SportType.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + SportType.UI_NAME + " text, "
@@ -688,7 +714,8 @@ public class SportTypeDatabaseManager {
                 + SportType.RUNKEEPER_NAME + " text, "
                 + SportType.TRAINING_PEAKS_NAME + " text, "
                 + SportType.MIN_AVG_SPEED + " real, "
-                + SportType.MAX_AVG_SPEED + " real)";
+                + SportType.MAX_AVG_SPEED + " real, "
+                + SportType.IS_PLACEHOLDER + " INTEGER DEFAULT 0)";
         private static final String TAG = "SportTypeDbHelper";
         private static final boolean DEBUG = false;
         Context mContext;
@@ -728,6 +755,7 @@ public class SportTypeDatabaseManager {
             cv.put(SportType.TRAINING_PEAKS_NAME, TTSportType.OTHER.getTrainingPeaksName());
             cv.put(SportType.MIN_AVG_SPEED, 0.0);
             cv.put(SportType.MAX_AVG_SPEED, TrainingApplication.getMinWalkSpeed_mps());
+            cv.put(SportType.IS_PLACEHOLDER, 0);
             long id = db.insert(SportType.TABLE, null, cv);
             if (DEBUG) Log.i(TAG, "other gets id=" + id);
 
@@ -742,6 +770,7 @@ public class SportTypeDatabaseManager {
             cv.put(SportType.TRAINING_PEAKS_NAME, TTSportType.RUN.getTrainingPeaksName());
             cv.put(SportType.MIN_AVG_SPEED, TrainingApplication.getMaxWalkSpeed_mps());
             cv.put(SportType.MAX_AVG_SPEED, TrainingApplication.getMaxRunSpeed_mps());
+            cv.put(SportType.IS_PLACEHOLDER, 0);
             id = db.insert(SportType.TABLE, null, cv);
             if (DEBUG) Log.i(TAG, "run gets id=" + id);
 
@@ -756,6 +785,7 @@ public class SportTypeDatabaseManager {
             cv.put(SportType.TRAINING_PEAKS_NAME, TTSportType.BIKE.getTrainingPeaksName());
             cv.put(SportType.MIN_AVG_SPEED, TrainingApplication.getMaxMTBSpeed_mps());
             cv.put(SportType.MAX_AVG_SPEED, TrainingApplication.getMaxBikeSpeed_mps());
+            cv.put(SportType.IS_PLACEHOLDER, 0);
             id = db.insert(SportType.TABLE, null, cv);
             if (DEBUG) Log.i(TAG, "bike gets id=" + id);
 
@@ -770,6 +800,7 @@ public class SportTypeDatabaseManager {
             cv.put(SportType.TRAINING_PEAKS_NAME, TTSportType.WALK.getTrainingPeaksName());
             cv.put(SportType.MIN_AVG_SPEED, TrainingApplication.getMinWalkSpeed_mps());
             cv.put(SportType.MAX_AVG_SPEED, TrainingApplication.getMaxWalkSpeed_mps());
+            cv.put(SportType.IS_PLACEHOLDER, 0);
             id = db.insert(SportType.TABLE, null, cv);
             if (DEBUG) Log.i(TAG, "walk gets id=" + id);
 
@@ -785,6 +816,7 @@ public class SportTypeDatabaseManager {
             cv.put(SportType.TRAINING_PEAKS_NAME, TTSportType.MTB.getTrainingPeaksName());
             cv.put(SportType.MIN_AVG_SPEED, TrainingApplication.getMaxRunSpeed_mps());
             cv.put(SportType.MAX_AVG_SPEED, TrainingApplication.getMaxMTBSpeed_mps());
+            cv.put(SportType.IS_PLACEHOLDER, 0);
             id = db.insert(SportType.TABLE, null, cv);
             if (DEBUG) Log.i(TAG, "MTB gets id=" + id);
 
@@ -795,12 +827,47 @@ public class SportTypeDatabaseManager {
         //Called whenever newVersion != oldVersion
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-            // TODO: alter table instead of deleting!
+            db.beginTransaction();
+            try {
+                // Ensure schema evolution (ALTER TABLE) is executed first before data updates
+                if (oldVersion < 3) {
+                    boolean columnExists = false;
+                    try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + SportType.TABLE + ")", null)) {
+                        int nameColIdx = cursor.getColumnIndex("name");
+                        while (cursor.moveToNext()) {
+                            if (SportType.IS_PLACEHOLDER.equalsIgnoreCase(cursor.getString(nameColIdx))) {
+                                columnExists = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!columnExists) {
+                        db.execSQL("ALTER TABLE " + SportType.TABLE + " ADD COLUMN " + SportType.IS_PLACEHOLDER + " INTEGER DEFAULT 0");
+                    }
+                }
 
-            db.execSQL("drop table if exists " + SportType.TABLE);
+                if (oldVersion < 2) {
+                    ContentValues cv = new ContentValues();
+                    cv.put(SportType.BASE_SPORT_TYPE, BSportType.RUN.name());
+                    db.update(
+                        SportType.TABLE,
+                        cv,
+                        "(" + SportType.C_ID + "=4 OR " + SportType.UI_NAME + "=? COLLATE NOCASE) AND " + SportType.BASE_SPORT_TYPE + "=?",
+                        new String[]{"walk", BSportType.UNKNOWN.name()}
+                    );
+                }
 
-            if (DEBUG) Log.d(TAG, "onUpgraded");
-            onCreate(db);  // run onCreate to get new database
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+
+            if (DEBUG) Log.d(TAG, "onUpgraded from " + oldVersion + " to " + newVersion);
+        }
+
+        @Override
+        public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            throw new SQLiteException("Downgrade from " + oldVersion + " to " + newVersion + " is not supported");
         }
 
 

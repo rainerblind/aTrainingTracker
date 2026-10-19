@@ -68,6 +68,9 @@
         android:icon="@drawable/logo"
         android:label="@string/app_name"
         android:largeHeap="true"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/full_backup_content"
         android:enableOnBackInvokedCallback="true"
         android:resizeableActivity="true"
         tools:targetApi="tiramisu">
@@ -118,6 +121,17 @@
                 <data android:pathPattern=".*\\.gpx" />
                 <data android:pathPattern=".*\\..*\\.gpx" />
                 <data android:pathSuffix=".gpx" />
+            </intent-filter>
+
+            <!-- Handle shared .gpx files via SEND and SEND_MULTIPLE -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/gpx+xml" />
+                <data android:mimeType="application/xml" />
+                <data android:mimeType="text/xml" />
+                <data android:mimeType="application/octet-stream" />
             </intent-filter>
         </activity>
 
@@ -182,17 +196,6 @@
             android:name=".banalservice.BANALService"
             android:foregroundServiceType="location|health" />
         <service android:name=".trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService" />
-
-        <!-- TODO: still necessary? -->
-        <provider
-            android:name=".trainingtracker.exporter.GenericFileProvider"
-            android:authorities="${applicationId}.com.atrainingtracker.file.provider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/provider_paths" />
-        </provider>
 
         <provider
             android:name="androidx.core.content.FileProvider"

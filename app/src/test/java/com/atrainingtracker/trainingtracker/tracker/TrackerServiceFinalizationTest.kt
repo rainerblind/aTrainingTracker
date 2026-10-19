@@ -75,14 +75,51 @@ class TrackerServiceFinalizationTest {
         var testSdkInt = Build.VERSION_CODES.UPSIDE_DOWN_CAKE
         var healthGranted = false
 
+        var performStopForegroundCalled = false
+        var performStopSelfCalled = false
+        var unbindServiceCalled = false
+        var banalServicePresentDuringEndWorkout: Boolean? = null
+        var endWorkoutLatchHook: (() -> Unit)? = null
+        var onEndWorkoutAction: (() -> Unit)? = null
+        var onUnbindServiceAction: (() -> Unit)? = null
+
+        var capturedSnapshot: TrackerService.BanalFinalizationSnapshot? = null
+        var savedLapNr: Long? = null
+        var savedLapTime: Int? = null
+        var savedLapDistance: Double? = null
+        var savedLapSpeed: Double? = null
+
         override fun getBuildVersionSdkInt(): Int = testSdkInt
         override fun hasHealthPermission(): Boolean = healthGranted
 
         override fun endWorkout() {
             endWorkoutCalled = true
+            banalServicePresentDuringEndWorkout = (mBanalService != null)
+            onEndWorkoutAction?.invoke()
+            endWorkoutLatchHook?.invoke()
             if (delegateToRealEndWorkout) {
                 super.endWorkout()
             }
+        }
+
+        override fun saveLap(lapNr: Long, lapTime: Int, lapDistance: Double, averageSpeed: Double) {
+            savedLapNr = lapNr
+            savedLapTime = lapTime
+            savedLapDistance = lapDistance
+            savedLapSpeed = averageSpeed
+        }
+
+        override fun performStopForeground() {
+            performStopForegroundCalled = true
+            super.performStopForeground()
+        }
+
+        override fun performStopSelf() {
+            performStopSelfCalled = true
+        }
+
+        override fun runOnMainThread(action: Runnable) {
+            action.run()
         }
 
         override fun getSportTypeId(): Long {
@@ -110,7 +147,8 @@ class TrackerServiceFinalizationTest {
         }
 
         override fun unbindService(conn: ServiceConnection) {
-            // No-op in unit tests
+            unbindServiceCalled = true
+            onUnbindServiceAction?.invoke()
         }
 
         override fun sendBroadcast(intent: Intent?) {
@@ -531,6 +569,323 @@ class TrackerServiceFinalizationTest {
         realService.finalizationFuture.get(2, java.util.concurrent.TimeUnit.SECONDS)
         assertFalse("endWorkout must NOT be called when mTrackingInterrupted is true", realService.endWorkoutCalled)
         org.junit.Assert.assertNull("mBanalService must be nulled in finally block", banalField.get(realService))
+    }
+
+    private fun createStopIntent(): Intent {
+        val intent = mockk<Intent>(relaxed = true)
+        every { intent.action } returns TrackerService.ACTION_STOP
+        return intent
+    }
+
+    /**
+     * TST-TRK-026.1: Verifies that when ACTION_STOP is received, performStopForeground() and
+     * performStopSelf() are NOT called while endWorkout() is executing on mDbExecutor, and are
+     * called on the main thread after the finalization task finishes (REQ-TRK-034.2, REQ-TRK-034.3).
+     */
+    @Test
+    fun testActionStop_MaintainsForegroundStatusDuringEndWorkoutAndStopsSelfAfterCompletion() {
+        val realService = TestableTrackerService()
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(realService, 1001L)
+        val baseFileNameField = TrackerService::class.java.getDeclaredField("mBaseFileName").apply { isAccessible = true }
+        baseFileNameField.set(realService, "2026-10-18_120000")
+
+        val endWorkoutStartedLatch = java.util.concurrent.CountDownLatch(1)
+        val endWorkoutBlockLatch = java.util.concurrent.CountDownLatch(1)
+
+        realService.endWorkoutLatchHook = {
+            endWorkoutStartedLatch.countDown()
+            endWorkoutBlockLatch.await(3, java.util.concurrent.TimeUnit.SECONDS)
+        }
+
+        val stopIntent = createStopIntent()
+        val result = realService.onStartCommand(stopIntent, 0, 1)
+        assertEquals(android.app.Service.START_NOT_STICKY, result)
+
+        // Wait until endWorkout() is currently executing on mDbExecutor
+        assertTrue("endWorkout must start executing", endWorkoutStartedLatch.await(2, java.util.concurrent.TimeUnit.SECONDS))
+
+        // Assert: While endWorkout() is running, stopForeground and stopSelf must NOT have been called
+        assertFalse("stopForeground must NOT be called while endWorkout is running", realService.performStopForegroundCalled)
+        assertFalse("stopSelf must NOT be called while endWorkout is running", realService.performStopSelfCalled)
+        assertTrue("isStopping must be true", realService.isStoppingForTesting)
+
+        // Release endWorkout to complete
+        endWorkoutBlockLatch.countDown()
+
+        // Wait for finalizationFuture
+        realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
+
+        // Assert: After completion, stopForeground and stopSelf were invoked
+        assertTrue("endWorkout must be called", realService.endWorkoutCalled)
+        assertTrue("performStopForeground must be called after finalization completes", realService.performStopForegroundCalled)
+        assertTrue("performStopSelf must be called after finalization completes", realService.performStopSelfCalled)
+    }
+
+    /**
+     * TST-TRK-026.2: Verifies that mBanalService remains non-null during endWorkout() execution,
+     * and safeUnbindBanalService() is called only after endWorkout() finishes (REQ-TRK-034.3).
+     */
+    @Test
+    fun testActionStop_KeepsBanalServiceBoundUntilEndWorkoutCompletes() {
+        val realService = TestableTrackerService()
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(realService, 2002L)
+        val baseFileNameField = TrackerService::class.java.getDeclaredField("mBaseFileName").apply { isAccessible = true }
+        baseFileNameField.set(realService, "2026-10-18_120000")
+
+        val mockBanal = mockk<com.atrainingtracker.banalservice.BANALService.BANALServiceComm>(relaxed = true)
+        val banalField = TrackerService::class.java.getDeclaredField("mBanalService").apply { isAccessible = true }
+        banalField.set(realService, mockBanal)
+        realService.setBanalBoundForTesting(true)
+
+        val unbindOrder = java.util.Collections.synchronizedList(mutableListOf<String>())
+        realService.onEndWorkoutAction = { unbindOrder.add("endWorkout") }
+        realService.onUnbindServiceAction = { unbindOrder.add("unbindService") }
+
+        val stopIntent = createStopIntent()
+        realService.onStartCommand(stopIntent, 0, 1)
+
+        realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
+
+        assertTrue("mBanalService must be non-null during endWorkout", realService.banalServicePresentDuringEndWorkout == true)
+        assertEquals("endWorkout must complete before unbindService", listOf("endWorkout", "unbindService"), unbindOrder)
+        assertTrue("unbindService must have been called", realService.unbindServiceCalled)
+        org.junit.Assert.assertNull("mBanalService must be cleared to null after completion", banalField.get(realService))
+    }
+
+    /**
+     * TST-TRK-026.3: Verifies that delivering a duplicate ACTION_STOP while stopping is already in progress
+     * safely returns START_NOT_STICKY and does not submit duplicate finalization tasks (REQ-TRK-034.2).
+     */
+    @Test
+    fun testActionStop_WhenDuplicateStopReceived_IgnoresSecondStopSafely() {
+        val realService = TestableTrackerService()
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(realService, 3003L)
+        val baseFileNameField = TrackerService::class.java.getDeclaredField("mBaseFileName").apply { isAccessible = true }
+        baseFileNameField.set(realService, "2026-10-18_120000")
+
+        val endWorkoutStartedLatch = java.util.concurrent.CountDownLatch(1)
+        val endWorkoutBlockLatch = java.util.concurrent.CountDownLatch(1)
+        var endWorkoutCount = 0
+
+        realService.endWorkoutLatchHook = {
+            endWorkoutCount++
+            endWorkoutStartedLatch.countDown()
+            endWorkoutBlockLatch.await(3, java.util.concurrent.TimeUnit.SECONDS)
+        }
+
+        // First stop
+        val res1 = realService.onStartCommand(createStopIntent(), 0, 1)
+        assertEquals(android.app.Service.START_NOT_STICKY, res1)
+        assertTrue(endWorkoutStartedLatch.await(2, java.util.concurrent.TimeUnit.SECONDS))
+
+        // Second duplicate stop while still running
+        val res2 = realService.onStartCommand(createStopIntent(), 0, 2)
+        assertEquals(android.app.Service.START_NOT_STICKY, res2)
+
+        endWorkoutBlockLatch.countDown()
+        realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
+
+        assertEquals("endWorkout must only be executed once", 1, endWorkoutCount)
+    }
+
+    /**
+     * TST-TRK-026.3: Verifies that if ACTION_STOP is received when not tracking, the service
+     * calls performStopSelf() immediately and does not run endWorkout().
+     */
+    @Test
+    fun testActionStop_WhenNotTracking_CallsStopSelfImmediately() {
+        val realService = TestableTrackerService()
+
+        val res = realService.onStartCommand(createStopIntent(), 0, 1)
+        assertEquals(android.app.Service.START_NOT_STICKY, res)
+        assertTrue("performStopSelf must be called", realService.performStopSelfCalled)
+        assertFalse("endWorkout must NOT be called", realService.endWorkoutCalled)
+    }
+
+    /**
+     * TST-TRK-026.4: Verifies TrackerService.isRunning() and setInstanceForTesting lifecycle (REQ-TRK-034.1).
+     */
+    @Test
+    fun testTrackerService_IsRunningLifecycle() {
+        TrackerService.setInstanceForTesting(null)
+        assertFalse("isRunning must be false when instance is null", TrackerService.isRunning())
+
+        val mockService = TestableTrackerService()
+        TrackerService.setInstanceForTesting(mockService)
+        assertTrue("isRunning must be true when instance is set", TrackerService.isRunning())
+        TrackerService.setInstanceForTesting(null)
+        assertFalse("isRunning must be false after reset", TrackerService.isRunning())
+    }
+
+    /**
+     * TST-TRK-027.1: Verifies that BanalFinalizationSnapshot captures all telemetry fields
+     * defensively and immutably from BANALServiceComm (REQ-TRK-035.1).
+     */
+    @Test
+    fun testBanalFinalizationSnapshot_capturesAllTelemetryCorrectly() {
+        val mockBanal = mockk<com.atrainingtracker.banalservice.BANALService.BANALServiceComm>(relaxed = true)
+        val mockLapNr = mockk<com.atrainingtracker.banalservice.sensor.SensorData<Int>>()
+        every { mockLapNr.value } returns 3
+        every { mockBanal.getBestSensorData(SensorType.LAP_NR) } returns mockLapNr
+
+        val mockLapTime = mockk<com.atrainingtracker.banalservice.sensor.SensorData<Int>>()
+        every { mockLapTime.value } returns 120
+        every { mockBanal.getBestSensorData(SensorType.TIME_LAP) } returns mockLapTime
+
+        val mockLapDist = mockk<com.atrainingtracker.banalservice.sensor.SensorData<Double>>()
+        every { mockLapDist.value } returns 850.5
+        every { mockBanal.getBestSensorData(SensorType.DISTANCE_m_LAP) } returns mockLapDist
+
+        every { mockBanal.databaseIdsOfActiveRemoteDevices } returns listOf(101L, 102L)
+        every { mockBanal.accumulatedSensorTypeSet } returns setOf(SensorType.HR, SensorType.SPEED_mps, SensorType.CADENCE)
+        every { mockBanal.accumulatedGCDataString } returns "HR=150,SPD=25"
+        every { mockBanal.bSportType } returns BSportType.BIKE
+        every { mockBanal.userSelectedBSportType } returns BSportType.BIKE
+
+        val mockContext = mockk<Context>(relaxed = true)
+
+        val snapshot = TrackerService.BanalFinalizationSnapshot.capture(
+            mockBanal,
+            mockContext,
+            7.5,
+            true
+        )
+
+        assertEquals(3, snapshot.lapNr)
+        assertEquals(120, snapshot.lapTime_s)
+        assertEquals(850.5, snapshot.lapDistance_m, 1e-6)
+        assertEquals(setOf(101L, 102L), snapshot.activeRemoteDeviceIds)
+        assertEquals(setOf(SensorType.HR, SensorType.SPEED_mps, SensorType.CADENCE), snapshot.accumulatedSensorTypes)
+        assertEquals("HR=150,SPD=25", snapshot.accumulatedGCDataString)
+        assertEquals(BSportType.BIKE, snapshot.bSportType)
+        assertEquals(BSportType.BIKE, snapshot.userSelectedSportType)
+    }
+
+    /**
+     * TST-TRK-027.2: Verifies that in-flight ticks and sample writes are aborted when mIsStopping is true (REQ-TRK-035.2).
+     */
+    @Test
+    fun testInFlightTick_whenIsStoppingTrue_abortsWithoutSampleWrite() {
+        val mockBanal = mockk<com.atrainingtracker.banalservice.BANALService.BANALServiceComm>(relaxed = true)
+        setField("mBanalService", mockBanal)
+        setField("mIsStopping", true)
+
+        // Run tracker tick
+        val trackerField = TrackerService::class.java.getDeclaredField("tracker").apply { isAccessible = true }
+        val trackerRunnable = trackerField.get(service) as Runnable
+        trackerRunnable.run()
+
+        // Call sampleAndWriteToDb directly as well
+        service.sampleAndWriteToDb(mockBanal)
+
+        // Verify no sensor data was queried
+        verify(exactly = 0) { mockBanal.getBestSensorData(any()) }
+        verify(exactly = 0) { mockBanal.databaseIdsOfActiveRemoteDevices }
+    }
+
+    /**
+     * TST-TRK-027.3: Verifies that endWorkout(snapshot) successfully persists the final lap,
+     * active devices, and accumulated sensors even if BANALService is already destroyed/null (REQ-TRK-035.3).
+     */
+    @Test
+    fun testEndWorkout_withSnapshot_persistsFinalLapAndAccumulatedSensorsEvenIfBanalServiceDestroyed() {
+        service.delegateToRealEndWorkout = true
+        val workoutId = 999L
+        setWorkoutId(workoutId)
+        setField("mBaseFileName", "test_file_name")
+
+        // Crucial: mBanalService is null to simulate BANALService already destroyed
+        setField("mBanalService", null)
+
+        mockkConstructor(ContentValues::class)
+        every { anyConstructed<ContentValues>().put(any(), any<Int>()) } returns Unit
+        every { anyConstructed<ContentValues>().put(any(), any<Long>()) } returns Unit
+        every { anyConstructed<ContentValues>().put(any(), any<String>()) } returns Unit
+        every { anyConstructed<ContentValues>().size() } returns 1
+
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any(), any<Long>()) } answers { self as Intent }
+
+        val summariesManagerMock = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
+        val mockDb = mockk<SQLiteDatabase>(relaxed = true)
+        every { summariesManagerMock.database } returns mockDb
+        mockkStatic(WorkoutSummariesDatabaseManager::class)
+        every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns summariesManagerMock
+
+        val snapshot = TrackerService.BanalFinalizationSnapshot(
+            4,
+            300,
+            2000.0,
+            setOf(200L),
+            setOf(SensorType.POWER),
+            "GC_SAMPLE",
+            BSportType.BIKE,
+            BSportType.BIKE,
+            1L
+        )
+
+        service.endWorkout(snapshot)
+
+        // Verify lap saved with snapshot metrics
+        assertEquals(4L, service.savedLapNr)
+        assertEquals(300, service.savedLapTime)
+        assertEquals(2000.0, service.savedLapDistance ?: 0.0, 1e-6)
+        assertEquals(2000.0 / 300.0, service.savedLapSpeed ?: 0.0, 1e-6)
+
+        // Verify accumulated sensors saved from snapshot
+        verify(exactly = 1) {
+            summariesManagerMock.saveAccumulatedSensorTypes(workoutId, setOf(SensorType.POWER))
+        }
+
+        // Verify FINISHED = 1 transaction executed
+        verify(atLeast = 1) {
+            mockDb.update(
+                eq(WorkoutSummaries.TABLE),
+                any(),
+                eq("${WorkoutSummaries.C_ID}=$workoutId"),
+                isNull()
+            )
+        }
+    }
+
+    /**
+     * TST-TRK-027.4: Verifies that onDestroy() defers safeUnbindBanalService() until after async
+     * finalization on mDbExecutor completes, keeping BANALService alive during endWorkout() (REQ-TRK-035.4).
+     */
+    @Test
+    fun testOnDestroy_defersUnbindBanalUntilAfterFinalization() {
+        val realService = TestableTrackerService()
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(realService, 888L)
+        val baseFileNameField = TrackerService::class.java.getDeclaredField("mBaseFileName").apply { isAccessible = true }
+        baseFileNameField.set(realService, "2026-10-18_test")
+
+        val mockBanal = mockk<com.atrainingtracker.banalservice.BANALService.BANALServiceComm>(relaxed = true)
+        val banalField = TrackerService::class.java.getDeclaredField("mBanalService").apply { isAccessible = true }
+        banalField.set(realService, mockBanal)
+        realService.setBanalBoundForTesting(true)
+
+        val executionOrder = java.util.Collections.synchronizedList(mutableListOf<String>())
+        realService.onEndWorkoutAction = {
+            executionOrder.add("endWorkout")
+            // Verify BANAL snapshot was captured
+            assertTrue(realService.finalizationSnapshotForTesting != null)
+        }
+        realService.onUnbindServiceAction = {
+            executionOrder.add("unbindService")
+        }
+
+        realService.onDestroy()
+
+        realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
+
+        assertTrue("endWorkout must be called during onDestroy", realService.endWorkoutCalled)
+        assertEquals("endWorkout must execute before unbindService", listOf("endWorkout", "unbindService"), executionOrder)
+        assertTrue("unbindService must be called", realService.unbindServiceCalled)
     }
 }
 

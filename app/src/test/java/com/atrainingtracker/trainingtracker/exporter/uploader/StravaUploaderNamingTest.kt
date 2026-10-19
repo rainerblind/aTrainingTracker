@@ -23,6 +23,7 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
@@ -66,6 +67,8 @@ class StravaUploaderNamingTest {
     private lateinit var mockSportTypeDb: SportTypeDatabaseManager
     private lateinit var mockSegmentsDbManager: SegmentsDatabaseManager
     private lateinit var mockSegmentsRepository: SegmentsRepository
+    private lateinit var mockStravaUploadDbHelper: StravaUploadDbHelper
+    private lateinit var mockEquipmentDbHelper: EquipmentDbHelper
 
     private val capturedUpdatedValues = mutableListOf<ContentValues>()
     private val capturedStravaRequests = mutableListOf<Map<String, String>>()
@@ -202,18 +205,20 @@ class StravaUploaderNamingTest {
         every { mockSportTypeDb.getStravaName(any()) } returns "Ride"
         every { mockSportTypeDb.getSportTypeIdFromStravaName(any()) } returns -1L
 
-        mockkConstructor(EquipmentDbHelper::class)
-        every { anyConstructed<EquipmentDbHelper>().getIdFromStravaId(any()) } returns -1L
-        every { anyConstructed<EquipmentDbHelper>().addOrUpdateStravaGear(any(), any(), any(), any(), any()) } returns -1L
+        mockEquipmentDbHelper = mockk(relaxed = true)
+        every { mockEquipmentDbHelper.getIdFromStravaId(any()) } returns -1L
+        every { mockEquipmentDbHelper.addOrUpdateStravaGear(any(), any(), any(), any(), any()) } returns -1L
+        EquipmentDbHelper.resetForTesting(mockEquipmentDbHelper)
 
         mockkStatic(StravaHelper::class)
         every { StravaHelper.getRefreshedAccessToken() } returns "mock_strava_token"
 
-        mockkConstructor(StravaUploadDbHelper::class)
-        every { anyConstructed<StravaUploadDbHelper>().getActivityId(any()) } returns "987654321"
-        every { anyConstructed<StravaUploadDbHelper>().updateStravaActivityData(any(), any()) } returns Unit
-        every { anyConstructed<StravaUploadDbHelper>().updateAll(any(), any(), capture(capturedDuplicateActivityIds), any(), any()) } returns Unit
-        every { anyConstructed<StravaUploadDbHelper>().deleteWorkout(any()) } returns 1
+        mockStravaUploadDbHelper = mockk(relaxed = true)
+        every { mockStravaUploadDbHelper.getActivityId(any()) } returns "987654321"
+        every { mockStravaUploadDbHelper.updateStravaActivityData(any(), any()) } returns Unit
+        every { mockStravaUploadDbHelper.updateAll(any(), any(), capture(capturedDuplicateActivityIds), any(), any()) } returns Unit
+        every { mockStravaUploadDbHelper.deleteWorkout(any()) } returns 1
+        StravaUploadDbHelper.resetForTesting(mockStravaUploadDbHelper)
         every { mockSqlDb.update(WorkoutSummaries.TABLE, capture(capturedUpdatedValues), any(), any()) } returns 1
 
         mockSegmentsDbManager = mockk(relaxed = true)
@@ -233,6 +238,8 @@ class StravaUploaderNamingTest {
 
     @After
     fun tearDown() {
+        StravaUploadDbHelper.resetForTesting(null)
+        EquipmentDbHelper.resetForTesting(null)
         unmockkAll()
     }
 
@@ -713,8 +720,8 @@ class StravaUploaderNamingTest {
         setupMockCursor(workoutName = fileBaseName, fileBaseName = fileBaseName)
 
         var trackedActivityId: String? = null
-        every { anyConstructed<StravaUploadDbHelper>().getActivityId(fileBaseName) } answers { trackedActivityId }
-        every { anyConstructed<StravaUploadDbHelper>().updateAll(fileBaseName, any(), any(), any(), any()) } answers {
+        every { mockStravaUploadDbHelper.getActivityId(fileBaseName) } answers { trackedActivityId }
+        every { mockStravaUploadDbHelper.updateAll(fileBaseName, any(), any(), any(), any()) } answers {
             trackedActivityId = secondArg()
         }
 
@@ -756,8 +763,8 @@ class StravaUploaderNamingTest {
         setupMockCursor(workoutName = "Hausrunde #3", fileBaseName = fileBaseName)
 
         var trackedActivityId: String? = null
-        every { anyConstructed<StravaUploadDbHelper>().getActivityId(fileBaseName) } answers { trackedActivityId }
-        every { anyConstructed<StravaUploadDbHelper>().updateAll(fileBaseName, any(), any(), any(), any()) } answers {
+        every { mockStravaUploadDbHelper.getActivityId(fileBaseName) } answers { trackedActivityId }
+        every { mockStravaUploadDbHelper.updateAll(fileBaseName, any(), any(), any(), any()) } answers {
             trackedActivityId = secondArg()
         }
 
@@ -873,13 +880,13 @@ class StravaUploaderNamingTest {
         var trackedActivityId: String? = "stale_deleted_id_999"
         var deletedFileBaseName: String? = null
 
-        every { anyConstructed<StravaUploadDbHelper>().getActivityId(fileBaseName) } answers { trackedActivityId }
-        every { anyConstructed<StravaUploadDbHelper>().deleteWorkout(fileBaseName) } answers {
+        every { mockStravaUploadDbHelper.getActivityId(fileBaseName) } answers { trackedActivityId }
+        every { mockStravaUploadDbHelper.deleteWorkout(fileBaseName) } answers {
             deletedFileBaseName = firstArg()
             trackedActivityId = null
             1
         }
-        every { anyConstructed<StravaUploadDbHelper>().updateAll(fileBaseName, any(), any(), any(), any()) } answers {
+        every { mockStravaUploadDbHelper.updateAll(fileBaseName, any(), any(), any(), any()) } answers {
             trackedActivityId = secondArg()
         }
 
@@ -929,7 +936,7 @@ class StravaUploaderNamingTest {
             put("gear_id", "b888999")
         }
 
-        every { anyConstructed<EquipmentDbHelper>().getIdFromStravaId("b888999") } returns 42L
+        every { mockEquipmentDbHelper.getIdFromStravaId("b888999") } returns 42L
 
         val uploader = TestableStravaUploader(
             context = mockContext,
@@ -970,9 +977,9 @@ class StravaUploaderNamingTest {
             put("retired", true)
         }
 
-        every { anyConstructed<EquipmentDbHelper>().getIdFromStravaId("b_retired_123") } returns -1L
+        every { mockEquipmentDbHelper.getIdFromStravaId("b_retired_123") } returns -1L
         every {
-            anyConstructed<EquipmentDbHelper>().addOrUpdateStravaGear("b_retired_123", "My First MTB", 1, "BIKE", true)
+            mockEquipmentDbHelper.addOrUpdateStravaGear("b_retired_123", "My First MTB", 1, "BIKE", true)
         } returns 77L
 
         val uploader = TestableStravaUploader(
@@ -1127,6 +1134,192 @@ class StravaUploaderNamingTest {
 
         io.mockk.verify(exactly = 1) { mockSegmentsDbManager.updateSegmentPrTime(3003L, 200) }
         io.mockk.verify(exactly = 0) { mockSegmentsRepository.updateSegmentPr(any(), any()) }
+    }
+
+    /**
+     * TST-EXP-018.3: Activities with unparseable start_date are skipped and never matched.
+     */
+    @Test
+    fun testFindExistingStravaActivity_skipsUnparseableDate() {
+        val targetEpoch = 1715508930L // 2024-05-12T10:15:30Z
+        val actCorrupted = JSONObject().apply {
+            put("id", 123L)
+            put("name", "Corrupted Date Activity")
+            put("start_date", "not-a-valid-date-format")
+        }
+        val uploader = TestableStravaUploader(
+            context = mockContext,
+            stravaActivityResponse = null,
+            mockExistingActivitiesArray = JSONArray().apply { put(actCorrupted) }
+        )
+
+        val matched = uploader.findExistingStravaActivity(targetEpoch)
+        assertNull("Activity with unparseable start_date must be skipped and not matched", matched)
+    }
+
+    /**
+     * TST-EXP-018.3: False-start candidate (e.g. 2 min vs 2 hr) is rejected by duration tolerance guard.
+     */
+    @Test
+    fun testFindExistingStravaActivity_rejectsFalseStartDurationMismatch() {
+        val targetEpoch = 1715508930L // 2024-05-12T10:15:30Z
+        val localDuration = 7200L // 2-hour workout
+
+        // False start: 2-minute activity (120s) recorded at nearly the same start time
+        val actFalseStart = JSONObject().apply {
+            put("id", 456L)
+            put("name", "Quick abort")
+            put("start_date", "2024-05-12T10:15:45Z") // +15s
+            put("type", "Ride")
+            put("sport_type", "Ride")
+            put("elapsed_time", 120L)
+        }
+        val uploader = TestableStravaUploader(
+            context = mockContext,
+            stravaActivityResponse = null,
+            mockExistingActivitiesArray = JSONArray().apply { put(actFalseStart) }
+        )
+
+        val matched = uploader.findExistingStravaActivity(
+            startEpochSeconds = targetEpoch,
+            bSportType = BSportType.BIKE,
+            durationSeconds = localDuration
+        )
+        assertNull("False start candidate (120s vs 7200s) must be rejected", matched)
+    }
+
+    /**
+     * TST-EXP-018.3: Cross-sport candidate (Run vs local BIKE) is rejected by sport compatibility guard.
+     */
+    @Test
+    fun testFindExistingStravaActivity_rejectsCrossSportMismatch() {
+        val targetEpoch = 1715508930L
+        val actRun = JSONObject().apply {
+            put("id", 789L)
+            put("name", "Morning Run")
+            put("start_date", "2024-05-12T10:15:35Z")
+            put("type", "Run")
+            put("sport_type", "Run")
+            put("elapsed_time", 3600L)
+        }
+        val uploader = TestableStravaUploader(
+            context = mockContext,
+            stravaActivityResponse = null,
+            mockExistingActivitiesArray = JSONArray().apply { put(actRun) }
+        )
+
+        val matched = uploader.findExistingStravaActivity(
+            startEpochSeconds = targetEpoch,
+            bSportType = BSportType.BIKE,
+            durationSeconds = 3600L
+        )
+        assertNull("Cross-sport candidate (Run vs local BIKE) must be rejected", matched)
+    }
+
+    /**
+     * TST-EXP-018.3: Multi-candidate evaluation skips corrupted dates, false starts, and sport mismatches,
+     * matching the genuine compatible activity.
+     */
+    @Test
+    fun testFindExistingStravaActivity_filtersAllCandidatesAndMatchesCompatible() {
+        val targetEpoch = 1715508930L
+        val localDuration = 7200L // 2 hours
+
+        // Candidate 1: 120s false-start BIKE -> rejected due to duration
+        val cand1 = JSONObject().apply {
+            put("id", 101L)
+            put("name", "False start")
+            put("start_date", "2024-05-12T10:15:35Z")
+            put("type", "Ride")
+            put("elapsed_time", 120L)
+        }
+        // Candidate 2: 7200s RUN -> rejected due to sport
+        val cand2 = JSONObject().apply {
+            put("id", 102L)
+            put("name", "Run at same time")
+            put("start_date", "2024-05-12T10:15:35Z")
+            put("type", "Run")
+            put("elapsed_time", 7200L)
+        }
+        // Candidate 3: unparseable date -> rejected
+        val cand3 = JSONObject().apply {
+            put("id", 103L)
+            put("name", "Corrupt date")
+            put("start_date", "invalid_date")
+            put("type", "Ride")
+            put("elapsed_time", 7100L)
+        }
+        // Candidate 4: 7100s BIKE -> matching!
+        val cand4 = JSONObject().apply {
+            put("id", 104L)
+            put("name", "Target Ride")
+            put("start_date", "2024-05-12T10:16:00Z") // +30s
+            put("type", "Ride")
+            put("sport_type", "GravelRide")
+            put("elapsed_time", 7100L)
+        }
+
+        val jsonArray = JSONArray().apply {
+            put(cand1)
+            put(cand2)
+            put(cand3)
+            put(cand4)
+        }
+
+        val uploader = TestableStravaUploader(
+            context = mockContext,
+            stravaActivityResponse = null,
+            mockExistingActivitiesArray = jsonArray
+        )
+
+        val matched = uploader.findExistingStravaActivity(
+            startEpochSeconds = targetEpoch,
+            bSportType = BSportType.BIKE,
+            durationSeconds = localDuration
+        )
+        assertNotNull("Must match compatible candidate 4", matched)
+        assertEquals(104L, matched!!.optLong("id"))
+        assertEquals("Target Ride", matched.optString("name"))
+    }
+
+    /**
+     * TST-EXP-018.3: findExistingStravaActivityForWorkout queries metadata from database
+     * and filters correctly.
+     */
+    @Test
+    fun testFindExistingStravaActivityForWorkout_queriesMetadataFromDatabase() {
+        val fileBaseName = "2024-05-12_10-15-30"
+        setupMockCursor(workoutName = "Morning Ride", fileBaseName = fileBaseName)
+
+        val colSport = 8
+        val colTotalTime = 9
+        val mockCursor = mockSqlDb.query(WorkoutSummaries.TABLE, null, null, null, null, null, null)
+        every { mockCursor.getColumnIndex(WorkoutSummaries.B_SPORT) } returns colSport
+        every { mockCursor.getString(colSport) } returns "BIKE"
+        every { mockCursor.isNull(colSport) } returns false
+
+        every { mockCursor.getColumnIndex(WorkoutSummaries.TIME_TOTAL_s) } returns colTotalTime
+        every { mockCursor.getLong(colTotalTime) } returns 7200L
+        every { mockCursor.isNull(colTotalTime) } returns false
+
+        val candBike = JSONObject().apply {
+            put("id", 999L)
+            put("name", "Existing Strava Ride")
+            put("start_date", "2024-05-12T10:15:30Z")
+            put("type", "Ride")
+            put("sport_type", "Ride")
+            put("elapsed_time", 7200L)
+        }
+
+        val uploader = TestableStravaUploader(
+            context = mockContext,
+            stravaActivityResponse = null,
+            mockExistingActivitiesArray = JSONArray().apply { put(candBike) }
+        )
+
+        val matched = uploader.findExistingStravaActivityForWorkout(fileBaseName)
+        assertNotNull("Must match activity using queried DB metadata", matched)
+        assertEquals(999L, matched!!.optLong("id"))
     }
 }
 

@@ -914,7 +914,7 @@ class MainActivityWithNavigation :
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val activeDeviceIds = if (workoutId > 0) {
-                    ActiveDevicesDbHelper(applicationContext).getDatabaseIdsOfActiveDevices(workoutId)
+                    ActiveDevicesDbHelper.getInstance(applicationContext).getDatabaseIdsOfActiveDevices(workoutId)
                 } else {
                     emptyList()
                 }

@@ -208,4 +208,22 @@ class TrackingViewModelGridTest {
         testDispatcher.scheduler.advanceUntilIdle()
         coVerify(exactly = 1) { mockTrackingViewsRepo.deleteSensorField(40L) }
     }
+
+    @Test
+    fun testSetSectionDivider_dispatchesToRepository() = runTest {
+        val viewModel = createViewModel()
+        viewModel.onSetSectionDivider(2, "POWER")
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { mockTrackingViewsRepo.setSectionDivider(1L, 2, "POWER") }
+    }
+
+    @Test
+    fun testDeleteSectionDivider_dispatchesToRepository() = runTest {
+        val viewModel = createViewModel()
+        viewModel.onDeleteSectionDivider(2)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { mockTrackingViewsRepo.deleteSectionDivider(1L, 2) }
+    }
 }

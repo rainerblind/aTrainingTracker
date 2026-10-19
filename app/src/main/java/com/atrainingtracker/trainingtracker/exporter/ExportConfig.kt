@@ -16,14 +16,22 @@
  * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
-package com.atrainingtracker.trainingtracker.exporter;
-
-import androidx.core.content.FileProvider;
+package com.atrainingtracker.trainingtracker.exporter
 
 /**
- * Created by rainer on 22.02.18.
+ * Centralized operational parameters and timeout bounds for export and upload workflows.
+ * Traceable to REQ-DAT-029.
  */
-// TODO: Do we still need this?
-// probably, it was necessary to do the e-Mail export.  Currently, this feature is removed.  -> This class might also be removed.
-public class GenericFileProvider extends FileProvider {
+object ExportConfig {
+    /** Maximum number of retry attempts for transient worker failures. */
+    const val MAX_RETRIES: Int = 3
+
+    /** Periodic liveness heartbeat interval for executing export workers. */
+    const val HEARTBEAT_INTERVAL_MS: Long = 15_000L // 15 seconds
+
+    /** Maximum expected active export duration before considered stranded. */
+    const val MAX_EXPORT_DURATION_MS: Long = 15 * 60 * 1000L // 15 minutes
+
+    /** Safety grace period padding applied before executing lazy recovery on stranded rows. */
+    const val RECOVERY_GRACE_PERIOD_MS: Long = 30_000L // 30 seconds
 }

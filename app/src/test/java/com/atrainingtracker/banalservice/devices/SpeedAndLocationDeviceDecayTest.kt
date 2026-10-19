@@ -109,7 +109,11 @@ class SpeedAndLocationDeviceDecayTest {
 
     @After
     fun tearDown() {
-        unmockkAll()
+        try {
+            unmockkAll()
+        } catch (_: ConcurrentModificationException) {
+            // Guard against MockK internal cancellation registry concurrency race during parallel test disposal
+        }
     }
 
     private fun createMockLocation(speed: Float, accuracy: Float = 5.0f, distanceDelta: Float = 0.0f): Location {

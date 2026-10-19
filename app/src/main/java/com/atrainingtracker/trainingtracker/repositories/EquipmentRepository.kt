@@ -41,7 +41,7 @@ class EquipmentRepository private constructor(private val application: Applicati
     override val coroutineContext = Dispatchers.Main + job
 
     // Helper instances, initialized lazily
-    private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
+    private val equipmentDbHelper by lazy { EquipmentDbHelper.getInstance(application) }
 
     val equipmentList: List<EquipmentDbHelper.EquipmentData>
 

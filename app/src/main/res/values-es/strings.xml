@@ -864,6 +864,8 @@
     <string name="sport_type_tab_bike">Tipos de ciclismo</string>
     <string name="sport_type_tab_run">Tipos de carrera</string>
     <string name="sport_type_tab_unknown">Otros deportes</string>
+    <string name="sport_type_restored_placeholder">Deporte restaurado %1$d</string>
+    <string name="sport_type_placeholder_badge">Restaurado (sin configurar)</string>
 
     <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">Todo</string>
@@ -931,6 +933,10 @@
     <string name="route_import">Importar</string>
     <string name="route_saved_success">Ruta guardada con éxito.</string>
     <string name="route_saved_failed">Error al guardar la ruta.</string>
+    <string name="routes_import_progress">Importando rutas (%1$d de %2$d)…</string>
+    <string name="routes_import_success">%1$d rutas importadas con éxito.</string>
+    <string name="routes_import_partial">%1$d rutas importadas, %2$d fallidas.</string>
+    <string name="routes_import_all_failed">Error al importar rutas.</string>
     <string name="strava_sync_success">Rutas sincronizadas de Strava.</string>
     <string name="strava_sync_failed">Error al sincronizar con Strava.</string>
     <string name="save_as_local_route">Guardar como ruta local</string>
@@ -1136,6 +1142,11 @@
     <string name="backup_failed">Error al crear la copia.</string>
     <string name="restore_success">Restauración con éxito. La aplicación se reiniciará.</string>
     <string name="restore_failed">Error de restauración. Asegúrese de que el archivo es válido.</string>
+    <string name="backup_security_error">Error de seguridad: Archivo de copia de seguridad no válido o dañado.</string>
+    <string name="backup_security_error_desc">El archivo de copia de seguridad contiene rutas no autorizadas, enlaces simbólicos o supera los límites de tamaño seguros y fue rechazado.</string>
+    <string name="backup_restore_error_missing_databases">Al archivo de copia de seguridad le falta el directorio de bases de datos.</string>
+    <string name="backup_restore_error_integrity_failed">La base de datos de la copia de seguridad falló la verificación de integridad de SQLite.</string>
+    <string name="backup_restore_error_schema_downgrade">La copia de seguridad fue creada por una versión más reciente de la aplicación y no se puede restaurar.</string>
     <string name="restore_warning_title">PELIGRO: Restauración total</string>
     <string name="restore_warning_message">Esto ELIMINARÁ PERMANENTEMENTE todos los entrenamientos, equipo y ajustes en ESTE teléfono y los reemplazará con los datos de la copia. ¿Está seguro?</string>
     <string name="import_finished_format">Importación finalizada. %1$d entrenamientos añadidos.</string>
@@ -1288,6 +1299,14 @@
     <string name="cluster_stats_yesterday">Ayer</string>
     <string name="cluster_stats_days_ago">hace %1$d días</string>
     <string name="cluster_stats_weeks_ago">hace %1$d semanas</string>
+
+    <!-- ATT-4067: Historical Effort Trend Chart for Workout Clusters -->
+    <string name="cluster_trend_title">Evolución del rendimiento</string>
+    <string name="cluster_trend_duration">Duración</string>
+    <string name="cluster_trend_speed">Velocidad</string>
+    <string name="cluster_trend_pace">Ritmo</string>
+    <string name="cluster_trend_pr">Récord</string>
+    <string name="cluster_trend_avg">Med</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Vueltas (%1$d)</string>
@@ -1910,6 +1929,8 @@
     <string name="athlete_profile_cp_estimator_apply">Aplicar estimación (%1$d W / %2$.1f kJ)</string>
     <string name="workout_w_prime_bal_min_format">Mín. W\'bal: %1$.1f kJ (%2$.0f%%)</string>
     <string name="workout_w_prime_empty_tank">Tanque vacío (&lt;10%%)</string>
+    <string name="w_prime_battery_pct">%1$d%%</string>
+    <string name="w_prime_warning_low_battery">Batería W\' baja (&lt;20%%)</string>
 
     <!-- ATT-3861: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400) -->
     <string name="efficiency_factor_short">EF</string>
@@ -1994,4 +2015,26 @@
     <string name="workout_detail_tabs_reset_defaults">Restaurar pestañas predeterminadas</string>
     <string name="workout_detail_tabs_sections_header">Secciones asignadas</string>
     <string name="workout_detail_tabs_map_pinned_hint">El mapa siempre se fija en la parte superior de la pestaña</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">Añadir separador de sección</string>
+    <string name="cockpit_section_divider_edit">Editar separador de sección</string>
+    <string name="cockpit_section_divider_dialog_title">Separador de sección</string>
+    <string name="cockpit_section_divider_title_label">Minitítulo (opcional)</string>
+    <string name="cockpit_section_divider_chip_power">Potencia</string>
+    <string name="cockpit_section_divider_chip_heart_rate">Pulso</string>
+    <string name="cockpit_section_divider_chip_lap">Vuelta</string>
+    <string name="cockpit_section_divider_chip_pacing">Ritmo</string>
+    <string name="cockpit_section_divider_chip_navigation">Navegación</string>
+    <string name="cockpit_section_divider_chip_total">Total</string>
+    <string name="cockpit_section_divider_delete">Eliminar separador</string>
+
+    <!-- Sensor Onboarding & Empty State (REQ-SEN-020 / ATT-4051) -->
+    <string name="onboarding_pair_sensor_action">+ Vincular sensor</string>
+    <string name="devices_empty_state_search_hint">Buscar sensores Bluetooth LE o ANT+ cercanos</string>
+    <string name="devices_action_search_sensors">+ Buscar sensores</string>
+    <string name="error_workout_table_name_too_long">El nombre de la tabla de entrenamiento supera el límite de SQLite (64 caracteres)</string>
+
+    <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
+    <string name="workout_card_reorder_toggle">Orden y visibilidad de tarjetas (%1$d activas)</string>
+    <string name="settings_workout_details_title">Detalles del entrenamiento (pantalla completa)</string>
 </resources>

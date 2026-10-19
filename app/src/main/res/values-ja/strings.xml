@@ -843,6 +843,8 @@
     <string name="sport_type_tab_bike">バイク系</string>
     <string name="sport_type_tab_run">ラン系</string>
     <string name="sport_type_tab_unknown">その他</string>
+    <string name="sport_type_restored_placeholder">復元されたスポーツ %1$d</string>
+    <string name="sport_type_placeholder_badge">復元済み（未設定）</string>
 
     <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">すべて</string>
@@ -910,6 +912,10 @@
     <string name="route_import">インポート</string>
     <string name="route_saved_success">ルートを保存しました。</string>
     <string name="route_saved_failed">保存に失敗しました。</string>
+    <string name="routes_import_progress">ルートをインポートしています (%1$d / %2$d)…</string>
+    <string name="routes_import_success">%1$d 件のルートを正常にインポートしました。</string>
+    <string name="routes_import_partial">%1$d 件のルートをインポート、%2$d 件失敗しました。</string>
+    <string name="routes_import_all_failed">ルートをインポートできませんでした。</string>
     <string name="strava_sync_success">Strava ルートを同期しました。</string>
     <string name="strava_sync_failed">Strava 同期失敗。</string>
     <string name="save_as_local_route">ローカルルートとして保存</string>
@@ -1116,6 +1122,11 @@
     <string name="backup_failed">バックアップの作成に失敗しました。</string>
     <string name="restore_success">復元が完了しました。アプリを再起動します。</string>
     <string name="restore_failed">復元の実行に失敗しました。ファイルが有効か確認してください。</string>
+    <string name="backup_security_error">セキュリティエラー: バックアップアーカイブが無効または破損しています。</string>
+    <string name="backup_security_error_desc">バックアップアーカイブに不正なパスやシンボリックリンクが含まれているか、安全なサイズ制限を超過しているため拒否されました。</string>
+    <string name="backup_restore_error_missing_databases">バックアップアーカイブにデータベースディレクトリがありません。</string>
+    <string name="backup_restore_error_integrity_failed">バックアップデータベースのSQLite整合性チェックに失敗しました。</string>
+    <string name="backup_restore_error_schema_downgrade">バックアップはより新しいバージョンのアプリで作成されたため、復元できません。</string>
     <string name="restore_warning_title">危険: 全復元</string>
     <string name="restore_warning_message">この操作により、この端末にあるすべてのワークアウト、装備、設定がバックアップデータで上書きされ、永久に削除されます。本当によろしいですか？</string>
     <string name="import_finished_format">インポート完了。%1$d 件のワークアウトを追加しました。</string>
@@ -1268,6 +1279,14 @@
     <string name="cluster_stats_yesterday">昨日</string>
     <string name="cluster_stats_days_ago">%1$d日前</string>
     <string name="cluster_stats_weeks_ago">%1$d週間前</string>
+
+    <!-- ATT-4067: Historical Effort Trend Chart for Workout Clusters -->
+    <string name="cluster_trend_title">パフォーマンス推移</string>
+    <string name="cluster_trend_duration">時間</string>
+    <string name="cluster_trend_speed">速度</string>
+    <string name="cluster_trend_pace">ペース</string>
+    <string name="cluster_trend_pr">自己ベスト</string>
+    <string name="cluster_trend_avg">平均</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">ラップ (%1$d)</string>
@@ -1889,6 +1908,8 @@
     <string name="athlete_profile_cp_estimator_apply">推定値を適用 (%1$d W / %2$.1f kJ)</string>
     <string name="workout_w_prime_bal_min_format">最小 W\'bal: %1$.1f kJ (%2$.0f%%)</string>
     <string name="workout_w_prime_empty_tank">タンク空 (&lt;10%%)</string>
+    <string name="w_prime_battery_pct">%1$d%%</string>
+    <string name="w_prime_warning_low_battery">W\'バッテリー残量低下 (&lt;20%%)</string>
 
     <!-- ATT-3861: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400) -->
     <string name="efficiency_factor_short">EF</string>
@@ -1973,5 +1994,27 @@
     <string name="workout_detail_tabs_reset_defaults">デフォルトのタブに戻す</string>
     <string name="workout_detail_tabs_sections_header">割り当てられたセクション</string>
     <string name="workout_detail_tabs_map_pinned_hint">地図が有効な場合、常にタブの上部に固定されます</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">セクション区切り線を追加</string>
+    <string name="cockpit_section_divider_edit">セクション区切り線を編集</string>
+    <string name="cockpit_section_divider_dialog_title">セクション区切り線</string>
+    <string name="cockpit_section_divider_title_label">ミニタイトル（省略可能）</string>
+    <string name="cockpit_section_divider_chip_power">パワー</string>
+    <string name="cockpit_section_divider_chip_heart_rate">心拍数</string>
+    <string name="cockpit_section_divider_chip_lap">ラップ</string>
+    <string name="cockpit_section_divider_chip_pacing">ペーシング</string>
+    <string name="cockpit_section_divider_chip_navigation">ナビゲーション</string>
+    <string name="cockpit_section_divider_chip_total">合計</string>
+    <string name="cockpit_section_divider_delete">区切り線を削除</string>
+
+    <!-- Sensor Onboarding & Empty State (REQ-SEN-020 / ATT-4051) -->
+    <string name="onboarding_pair_sensor_action">+ センサーをペアリング</string>
+    <string name="devices_empty_state_search_hint">近くのBluetooth LEまたはANT+センサーをスキャン</string>
+    <string name="devices_action_search_sensors">+ センサーを検索</string>
+    <string name="error_workout_table_name_too_long">ワークアウトテーブル名がSQLite識別子の制限（64文字）を超えています</string>
+
+    <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
+    <string name="workout_card_reorder_toggle">カードの順序と表示（%1$d件有効）</string>
+    <string name="settings_workout_details_title">ワークアウト詳細（全画面）</string>
 </resources>
 

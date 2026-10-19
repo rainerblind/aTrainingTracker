@@ -10,10 +10,16 @@
 
 package com.atrainingtracker.trainingtracker.cloud.googledrive
 
+import android.util.Log
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.After
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -27,6 +33,22 @@ class GoogleDriveClientRecursiveListingTest {
 
     @get:Rule
     val tempFolder = TemporaryFolder()
+
+    @Before
+    fun setUp() {
+        mockkStatic(Log::class)
+        every { Log.v(any<String>(), any<String>()) } returns 0
+        every { Log.d(any<String>(), any<String>()) } returns 0
+        every { Log.i(any<String>(), any<String>()) } returns 0
+        every { Log.w(any<String>(), any<String>()) } returns 0
+        every { Log.e(any<String>(), any<String>()) } returns 0
+        every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
+    }
+
+    @After
+    fun tearDown() {
+        unmockkStatic(Log::class)
+    }
 
     @Test
     fun testListFilesRecursively_filtersByTargetExtensionsAndTraversesSubfolders() {
@@ -205,5 +227,84 @@ class GoogleDriveClientRecursiveListingTest {
 
         val resolved = client.resolveFolderHierarchy(listOf("NonExistentFolder", "SubFolder"))
         assertNull("Non-existent folder hierarchy should resolve to null", resolved)
+    }
+
+    @Test
+    fun testListFilesRecursivelyResult_onHttpError_returnsIncompleteScanResultWithError() {
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                val url = request.url.toString()
+
+                if (url.contains("root_folder_id")) {
+                    Response.Builder()
+                        .request(request)
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body("""
+                            {
+                                "files": [
+                                    {"id": "file_1", "name": "workout1.fit", "mimeType": "application/octet-stream"},
+                                    {"id": "sub_folder_id", "name": "BrokenSub", "mimeType": "application/vnd.google-apps.folder"}
+                                ]
+                            }
+                        """.trimIndent().toResponseBody("application/json".toMediaTypeOrNull()))
+                        .build()
+                } else {
+                    // Subfolder query fails with HTTP 500
+                    Response.Builder()
+                        .request(request)
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(500)
+                        .message("Internal Server Error")
+                        .body("""{"error": {"message": "Drive temporary error"}}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                        .build()
+                }
+            }
+            .build()
+
+        val client = GoogleDriveClient(
+            tokenProvider = { "token" },
+            client = okHttpClient
+        )
+
+        val scanResult = client.listFilesRecursivelyResult("root_folder_id", listOf(".fit"))
+        assertFalse("Scan must be marked incomplete on error", scanResult.isComplete)
+        assertNotNull("Scan must expose failure exception", scanResult.error)
+        assertEquals("Should contain files discovered before failure", 1, scanResult.entries.size)
+        assertEquals("workout1.fit", scanResult.entries[0].name)
+    }
+
+    @Test
+    fun testListFilesRecursivelyResult_onSuccess_returnsCompleteScanResult() {
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body("""
+                        {
+                            "files": [
+                                {"id": "f1", "name": "ride.fit", "mimeType": "application/octet-stream"},
+                                {"id": "f2", "name": "run.tcx", "mimeType": "application/vnd.garmin.tcx+xml"}
+                            ]
+                        }
+                    """.trimIndent().toResponseBody("application/json".toMediaTypeOrNull()))
+                    .build()
+            }
+            .build()
+
+        val client = GoogleDriveClient(
+            tokenProvider = { "token" },
+            client = okHttpClient
+        )
+
+        val scanResult = client.listFilesRecursivelyResult("healthy_folder", listOf(".fit", ".tcx"))
+        assertTrue("Scan must be complete", scanResult.isComplete)
+        assertNull("Error must be null on success", scanResult.error)
+        assertEquals(2, scanResult.entries.size)
     }
 }

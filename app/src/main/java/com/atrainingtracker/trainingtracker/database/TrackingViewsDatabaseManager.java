@@ -147,37 +147,62 @@ public class TrackingViewsDatabaseManager {
             FilterType filterType,
             double filterConstant) {
 
-        Log.i(TAG, "insertSensorFiledAt(" + tabViewId + ", " + rowNr + ", " + colNr + ", " + sensorType.name());
-
-        String sql;
-        if (colNr == -1) {  // new row -> add 1 to all rows with a larger rowNr
-            sql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
-                    " SET " + TrackingViewsDbHelper.ROW_NR + "=" + TrackingViewsDbHelper.ROW_NR + "+1" +
-                    " WHERE " + TrackingViewsDbHelper.ROW_NR + " >= " + rowNr;
-            colNr = 1;  // now, that this row is freed, we can give the colNr the correct value.
-        }
-        else {  // new col -> add 1 to all cols with a larger colNr and the same rowNr
-            sql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
-                    " SET " + TrackingViewsDbHelper.COL_NR + "=" + TrackingViewsDbHelper.COL_NR + "+1" +
-                    " WHERE " + TrackingViewsDbHelper.COL_NR + " >= " + colNr + " AND " + TrackingViewsDbHelper.ROW_NR + "=" + rowNr;
+        if (tabViewId <= 0 || rowNr < 1) {
+            Log.w(TAG, "Invalid parameters for insertSensorFieldAt: tabViewId=" + tabViewId + ", rowNr=" + rowNr);
+            return;
         }
 
-        Log.i(TAG, sql);
-        getDatabase().execSQL(sql);
-
-        ContentValues values = new ContentValues();
-        values.put(TrackingViewsDbHelper.VIEW_ID, tabViewId);
-        values.put(TrackingViewsDbHelper.ROW_NR, rowNr);
-        values.put(TrackingViewsDbHelper.COL_NR, colNr);
-        values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
-        values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
-        if (sourceDeviceId != null && sourceDeviceId >= 0) {
-            values.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, sourceDeviceId);
+        if (DEBUG) {
+            Log.i(TAG, "insertSensorFieldAt(" + tabViewId + ", " + rowNr + ", " + colNr + ", " + sensorType.name() + ")");
         }
-        values.put(TrackingViewsDbHelper.FILTER_TYPE, filterType.name());
-        values.put(TrackingViewsDbHelper.FILTER_CONSTANT, filterConstant);
 
-        getDatabase().insert(TrackingViewsDbHelper.ROWS_TABLE, null, values);
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            if (colNr == -1) {  // new row -> add 1 to all rows with a larger rowNr
+                String shiftRowsSql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
+                        " SET " + TrackingViewsDbHelper.ROW_NR + "=" + TrackingViewsDbHelper.ROW_NR + "+1" +
+                        " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=?" +
+                        " AND " + TrackingViewsDbHelper.ROW_NR + " >= ?";
+                db.execSQL(shiftRowsSql, new Object[]{tabViewId, rowNr});
+
+                // Shift section dividers at or below rowNr down by 1 (REQ-UI-411.2, REQ-UI-413.4)
+                String shiftDividersSql = "UPDATE " + TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE +
+                        " SET " + TrackingViewsDbHelper.ROW_NR + "=" + TrackingViewsDbHelper.ROW_NR + "+1" +
+                        " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=?" +
+                        " AND " + TrackingViewsDbHelper.ROW_NR + " >= ?";
+                db.execSQL(shiftDividersSql, new Object[]{tabViewId, rowNr});
+
+                colNr = 1;  // now, that this row is freed, we can give the colNr the correct value.
+            } else {  // new col -> add 1 to all cols with a larger colNr and the same rowNr
+                String shiftColsSql = "UPDATE " + TrackingViewsDbHelper.ROWS_TABLE +
+                        " SET " + TrackingViewsDbHelper.COL_NR + "=" + TrackingViewsDbHelper.COL_NR + "+1" +
+                        " WHERE " + TrackingViewsDbHelper.VIEW_ID + "=?" +
+                        " AND " + TrackingViewsDbHelper.COL_NR + " >= ? AND " + TrackingViewsDbHelper.ROW_NR + "=?";
+                db.execSQL(shiftColsSql, new Object[]{tabViewId, colNr, rowNr});
+            }
+
+            ContentValues values = new ContentValues();
+            values.put(TrackingViewsDbHelper.VIEW_ID, tabViewId);
+            values.put(TrackingViewsDbHelper.ROW_NR, rowNr);
+            values.put(TrackingViewsDbHelper.COL_NR, colNr);
+            values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
+            values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
+            if (sourceDeviceId != null && sourceDeviceId >= 0) {
+                values.put(TrackingViewsDbHelper.SOURCE_DEVICE_ID, sourceDeviceId);
+            }
+            values.put(TrackingViewsDbHelper.FILTER_TYPE, filterType.name());
+            values.put(TrackingViewsDbHelper.FILTER_CONSTANT, filterConstant);
+
+            db.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, values);
+
+            // Normalize grid coordinates and synchronize section dividers (REQ-UI-413.5)
+            normalizeGrid(db, tabViewId);
+
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
     }
 
 
@@ -467,6 +492,36 @@ public class TrackingViewsDatabaseManager {
                 }
             }
         }
+
+        // 3. Re-map section dividers (REQ-UI-411.2)
+        // Existing dividers for tabViewId mapped to matching new row index (1..N).
+        // If an original row no longer exists or newRow <= 1, delete it.
+        try (Cursor divCursor = db.query(TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE,
+                new String[]{TrackingViewsDbHelper.C_ID, TrackingViewsDbHelper.ROW_NR, TrackingViewsDbHelper.TITLE},
+                TrackingViewsDbHelper.VIEW_ID + "=?",
+                new String[]{String.valueOf(tabViewId)},
+                null, null, null)) {
+            if (divCursor != null) {
+                while (divCursor.moveToNext()) {
+                    long divId = divCursor.getLong(0);
+                    int origRow = divCursor.getInt(1);
+                    int newRowIndex = distinctRows.indexOf(origRow) + 1; // 1-based new row index
+                    if (newRowIndex <= 1) {
+                        // Orphaned or now at row 1 (section dividers are between rows, row >= 2)
+                        db.delete(TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE,
+                                TrackingViewsDbHelper.C_ID + "=?",
+                                new String[]{String.valueOf(divId)});
+                    } else if (newRowIndex != origRow) {
+                        ContentValues divVal = new ContentValues();
+                        divVal.put(TrackingViewsDbHelper.ROW_NR, newRowIndex);
+                        db.update(TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE,
+                                divVal,
+                                TrackingViewsDbHelper.C_ID + "=?",
+                                new String[]{String.valueOf(divId)});
+                    }
+                }
+            }
+        }
     }
 
     @NonNull
@@ -507,9 +562,10 @@ public class TrackingViewsDatabaseManager {
         SQLiteDatabase db = getDatabase();
         int layoutNr = getLayoutNr(viewId);
 
-        // delete from both tables
+        // delete from views, rows, and section dividers tables (REQ-UI-411.2)
         db.delete(TrackingViewsDbHelper.VIEWS_TABLE, TrackingViewsDbHelper.C_ID + "=?", new String[]{viewId + ""});
         db.delete(TrackingViewsDbHelper.ROWS_TABLE, TrackingViewsDbHelper.VIEW_ID + "=?", new String[]{viewId + ""});
+        db.delete(TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE, TrackingViewsDbHelper.VIEW_ID + "=?", new String[]{viewId + ""});
 
         // reduce layoutNr of all views with a larger layoutNr
         String execsql = "UPDATE " + TrackingViewsDbHelper.VIEWS_TABLE
@@ -594,6 +650,65 @@ public class TrackingViewsDatabaseManager {
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
+    // Section Dividers (REQ-UI-411)
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public record SectionDividerData(long id, long viewId, int rowNr, @Nullable String title) {
+    }
+
+    @NonNull
+    public List<SectionDividerData> getSectionDividers(long tabViewId) {
+        SQLiteDatabase db = getDatabase();
+        try (Cursor cursor = db.query(
+                TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE,
+                new String[]{TrackingViewsDbHelper.C_ID, TrackingViewsDbHelper.VIEW_ID, TrackingViewsDbHelper.ROW_NR, TrackingViewsDbHelper.TITLE},
+                TrackingViewsDbHelper.VIEW_ID + "=?",
+                new String[]{String.valueOf(tabViewId)},
+                null, null, TrackingViewsDbHelper.ROW_NR + " ASC")) {
+            return CursorUtils.mapList(cursor, c -> {
+                long id = c.getLong(0);
+                long viewId = c.getLong(1);
+                int rowNr = c.getInt(2);
+                String title = c.isNull(3) ? null : c.getString(3);
+                return new SectionDividerData(id, viewId, rowNr, title);
+            });
+        }
+    }
+
+    public void setSectionDivider(long viewId, int rowNr, @Nullable String title) {
+        ContentValues values = new ContentValues();
+        values.put(TrackingViewsDbHelper.VIEW_ID, viewId);
+        values.put(TrackingViewsDbHelper.ROW_NR, rowNr);
+        if (title != null && !title.trim().isEmpty()) {
+            values.put(TrackingViewsDbHelper.TITLE, title.trim());
+        } else {
+            values.putNull(TrackingViewsDbHelper.TITLE);
+        }
+        getDatabase().insertWithOnConflict(
+                TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE,
+                null,
+                values,
+                SQLiteDatabase.CONFLICT_REPLACE
+        );
+    }
+
+    public void deleteSectionDivider(long viewId, int rowNr) {
+        getDatabase().delete(
+                TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE,
+                TrackingViewsDbHelper.VIEW_ID + "=? AND " + TrackingViewsDbHelper.ROW_NR + "=?",
+                new String[]{String.valueOf(viewId), String.valueOf(rowNr)}
+        );
+    }
+
+    public void deleteSectionDividersForView(long viewId) {
+        getDatabase().delete(
+                TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE,
+                TrackingViewsDbHelper.VIEW_ID + "=?",
+                new String[]{String.valueOf(viewId)}
+        );
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     public static class TrackingViewsDbHelper extends SQLiteOpenHelper {
         public static final String DB_NAME = "FlexibleGenericView.db";
@@ -609,12 +724,15 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 10; // upgraded to version 10 at 08.06.2026: Adding Elevation Profile
         // public static final int DB_VERSION = 11; // upgraded to version 11 at 03.10.2026: Repair missing ViewSize defaults in rows
         // public static final int DB_VERSION = 12; // upgraded to version 12 at 06.10.2026: Adding Live Climbs & Navigation Hints (ATT-2360)
-        public static final int DB_VERSION = 13; // upgraded to version 13 at 13.10.2026: Adding Elevation Profile Scope & Lookahead (ATT-3317)
+        // public static final int DB_VERSION = 13; // upgraded to version 13 at 13.10.2026: Adding Elevation Profile Scope & Lookahead (ATT-3317)
+        public static final int DB_VERSION = 14; // upgraded to version 14 at 18.10.2026: Adding Section Dividers Table (ATT-4055)
         public static final String VIEWS_TABLE = "ViewsTable";                // the table for the different 'tabs'
         public static final String ROWS_TABLE = "LayoutRowsTable";            // the table for the sensor fields within each tab
+        public static final String SECTION_DIVIDERS_TABLE = "SectionDividersTable"; // new in version 14 (ATT-4055)
         public static final String C_ID = BaseColumns._ID;
         public static final String VIEW_ID = "ViewId";                        // for each sensor field, the id of the tab where it is embedded
         public static final String ROW_ID = "RowId";                          // the ID of each sensor field.  Due to historic reasons, the name is misleading.
+        public static final String TITLE = "Title";                           // new in version 14: optional title for section divider
         // new in version 4
         public static final String ROW_NR = "RowNr";
         public static final String COL_NR = "ColNr";
@@ -813,6 +931,14 @@ public class TrackingViewsDatabaseManager {
                 + FILTER_TYPE + " text, "
                 + FILTER_CONSTANT + " real)";
 
+        protected static final String CREATE_SECTION_DIVIDERS_TABLE_V14 = "CREATE TABLE IF NOT EXISTS "
+                + SECTION_DIVIDERS_TABLE + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + VIEW_ID + " INTEGER NOT NULL, "
+                + ROW_NR + " INTEGER NOT NULL, "
+                + TITLE + " TEXT, "
+                + "UNIQUE(" + VIEW_ID + ", " + ROW_NR + ") ON CONFLICT REPLACE)";
+
         private final String TAG = TrackingViewsDbHelper.class.getName();
         private final Context mContext;
         private boolean mHavePressureSensor = false;
@@ -833,9 +959,11 @@ public class TrackingViewsDatabaseManager {
         public void onCreate(@NonNull SQLiteDatabase db) {
             db.execSQL(CREATE_VIEWS_TABLE_V13);
             db.execSQL(CREATE_LAYOUTS_TABLE_V8);
+            db.execSQL(CREATE_SECTION_DIVIDERS_TABLE_V14);
 
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V13);
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V8);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_SECTION_DIVIDERS_TABLE_V14);
 
 
             if (DEBUG) Log.d(TAG, "filling db");
@@ -1146,6 +1274,15 @@ public class TrackingViewsDatabaseManager {
                 }
                 db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + ELEVATION_PROFILE_SCOPE + " = 0 WHERE " + ELEVATION_PROFILE_SCOPE + " IS NULL;");
                 db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + ELEVATION_PROFILE_LOOKAHEAD + " = 2000 WHERE " + ELEVATION_PROFILE_LOOKAHEAD + " IS NULL;");
+            }
+
+            if (oldVersion < 14) {
+                Log.i(TAG, "Upgrading database to version 14: Creating SectionDividersTable");
+                try {
+                    db.execSQL(CREATE_SECTION_DIVIDERS_TABLE_V14);
+                } catch (Exception e) {
+                    Log.w(TAG, "SectionDividersTable might already exist.", e);
+                }
             }
         }
 

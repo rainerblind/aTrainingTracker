@@ -65,7 +65,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     static final String DB_NAME = "Equipment.db";
     static final int DB_VERSION = 2;
     private static final String TAG = "EquipmentDbHelper";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = com.atrainingtracker.BuildConfig.DEBUG;
     private static final String CREATE_EQUIPMENT_TABLE = "create table " + EQUIPMENT + " ("
             + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
             + NAME + " text,"
@@ -79,6 +79,37 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             + EQUIPMENT_ID + " int,"
             + ANT_DEVICE_ID + " int)";
     private final Context mContext;
+    private static volatile EquipmentDbHelper sInstance;
+
+    @NonNull
+    public static EquipmentDbHelper getInstance(@NonNull Context context) {
+        if (sInstance == null) {
+            synchronized (EquipmentDbHelper.class) {
+                if (sInstance == null) {
+                    sInstance = new EquipmentDbHelper(context.getApplicationContext());
+                }
+            }
+        }
+        return sInstance;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting() {
+        resetForTesting(null);
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting(EquipmentDbHelper newInstance) {
+        synchronized (EquipmentDbHelper.class) {
+            if (sInstance != null && sInstance != newInstance) {
+                try {
+                    sInstance.close();
+                } catch (Exception ignored) {
+                }
+            }
+            sInstance = newInstance;
+        }
+    }
 
     // Constructor
     public EquipmentDbHelper(Context context) {
@@ -91,7 +122,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public List<String> getLinkedEquipment(long workoutId) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment, workoutId=" + workoutId);
 
-        return getLinkedEquipment(new ActiveDevicesDbHelper(mContext).getDatabaseIdsOfActiveDevices(workoutId));
+        return getLinkedEquipment(ActiveDevicesDbHelper.getInstance(mContext).getDatabaseIdsOfActiveDevices(workoutId));
     }
 
     @NonNull

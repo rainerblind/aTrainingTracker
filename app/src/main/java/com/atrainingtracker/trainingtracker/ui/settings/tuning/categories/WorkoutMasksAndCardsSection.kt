@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.settings.tuning.categories
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -52,31 +53,27 @@ private data class MatrixFeatureRow(
     val sectionType: WorkoutSectionType,
     val titleRes: Int,
     val listChecked: Boolean,
-    val onListChange: (Boolean) -> Unit,
-    val detailChecked: Boolean,
-    val onDetailChange: (Boolean) -> Unit
+    val onListChange: (Boolean) -> Unit
 )
 
 private fun buildMatrixFeatureRow(
     type: WorkoutSectionType,
-    workoutCardPrefs: WorkoutCardSectionPreferences,
-    onWorkoutCardPrefsChange: (WorkoutCardSectionPreferences) -> Unit,
-    workoutDetailPrefs: WorkoutDetailPreferences,
-    onWorkoutDetailPrefsChange: (WorkoutDetailPreferences) -> Unit
+    prefs: WorkoutCardSectionPreferences,
+    onPrefsChange: (WorkoutCardSectionPreferences) -> Unit
 ): MatrixFeatureRow = when (type) {
-    WorkoutSectionType.DESCRIPTION -> MatrixFeatureRow(type, R.string.settings_workout_card_description, workoutCardPrefs.showDescription, { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showDescription = it)) }, workoutDetailPrefs.showDescription, { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showDescription = it)) })
-    WorkoutSectionType.EXTREMA -> MatrixFeatureRow(type, R.string.settings_workout_card_extrema, workoutCardPrefs.showExtrema, { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showExtrema = it)) }, workoutDetailPrefs.showExtrema, { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showExtrema = it)) })
-    WorkoutSectionType.LAPS -> MatrixFeatureRow(type, R.string.settings_workout_card_laps, workoutCardPrefs.showLaps, { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showLaps = it)) }, workoutDetailPrefs.showLaps, { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showLaps = it)) })
-    WorkoutSectionType.STRAVA -> MatrixFeatureRow(type, R.string.settings_workout_card_strava, workoutCardPrefs.showStrava, { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showStrava = it)) }, workoutDetailPrefs.showStrava, { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showStrava = it)) })
-    WorkoutSectionType.MAP -> MatrixFeatureRow(type, R.string.settings_workout_card_map, workoutCardPrefs.showMapPreview, { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showMapPreview = it)) }, workoutDetailPrefs.showMap, { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showMap = it)) })
-    WorkoutSectionType.ELEVATION -> MatrixFeatureRow(type, R.string.settings_workout_card_elevation, workoutCardPrefs.showElevationProfile, { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showElevationProfile = it)) }, workoutDetailPrefs.showElevationProfile, { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showElevationProfile = it)) })
-    WorkoutSectionType.CHARTS -> MatrixFeatureRow(type, R.string.settings_workout_card_charts, workoutCardPrefs.showTelemetryCharts, { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showTelemetryCharts = it)) }, workoutDetailPrefs.showTelemetryCharts, { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showTelemetryCharts = it)) })
-    WorkoutSectionType.ZONES -> MatrixFeatureRow(type, R.string.settings_workout_card_zones, workoutCardPrefs.showZoneAnalysis, { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showZoneAnalysis = it)) }, workoutDetailPrefs.showZoneAnalysis, { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showZoneAnalysis = it)) })
-    WorkoutSectionType.EXPORT_STATUS -> MatrixFeatureRow(type, R.string.export_status, workoutCardPrefs.showExportStatus, { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showExportStatus = it)) }, workoutDetailPrefs.showExportStatus, { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showExportStatus = it)) })
+    WorkoutSectionType.DESCRIPTION -> MatrixFeatureRow(type, R.string.settings_workout_card_description, prefs.showDescription) { onPrefsChange(prefs.copy(showDescription = it)) }
+    WorkoutSectionType.EXTREMA -> MatrixFeatureRow(type, R.string.settings_workout_card_extrema, prefs.showExtrema) { onPrefsChange(prefs.copy(showExtrema = it)) }
+    WorkoutSectionType.LAPS -> MatrixFeatureRow(type, R.string.settings_workout_card_laps, prefs.showLaps) { onPrefsChange(prefs.copy(showLaps = it)) }
+    WorkoutSectionType.STRAVA -> MatrixFeatureRow(type, R.string.settings_workout_card_strava, prefs.showStrava) { onPrefsChange(prefs.copy(showStrava = it)) }
+    WorkoutSectionType.MAP -> MatrixFeatureRow(type, R.string.settings_workout_card_map, prefs.showMapPreview) { onPrefsChange(prefs.copy(showMapPreview = it)) }
+    WorkoutSectionType.ELEVATION -> MatrixFeatureRow(type, R.string.settings_workout_card_elevation, prefs.showElevationProfile) { onPrefsChange(prefs.copy(showElevationProfile = it)) }
+    WorkoutSectionType.CHARTS -> MatrixFeatureRow(type, R.string.settings_workout_card_charts, prefs.showTelemetryCharts) { onPrefsChange(prefs.copy(showTelemetryCharts = it)) }
+    WorkoutSectionType.ZONES -> MatrixFeatureRow(type, R.string.settings_workout_card_zones, prefs.showZoneAnalysis) { onPrefsChange(prefs.copy(showZoneAnalysis = it)) }
+    WorkoutSectionType.EXPORT_STATUS -> MatrixFeatureRow(type, R.string.export_status, prefs.showExportStatus) { onPrefsChange(prefs.copy(showExportStatus = it)) }
 }
 
 /**
- * Reusable 3-way [ZoneCardDisplayMode] segmented button selector (REQ-UI-386 / REQ-UI-388).
+ * Reusable 3-way [ZoneCardDisplayMode] segmented button selector (REQ-UI-386 / REQ-UI-388 / REQ-UI-414.4).
  */
 @Composable
 private fun ZoneDisplayModeSelector(
@@ -89,12 +86,7 @@ private fun ZoneDisplayModeSelector(
         ZoneCardDisplayMode.COLUMNS to R.string.zone_mode_columns,
         ZoneCardDisplayMode.HISTOGRAM to R.string.zone_mode_histogram
     )
-    Text(
-        text = label,
-        style = MaterialTheme.typography.bodySmall,
-        fontWeight = FontWeight.Medium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
+    Text(text = label, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
         zoneModes.forEachIndexed { index, (mode, labelRes) ->
             val selected = selectedMode == mode
@@ -119,8 +111,9 @@ private fun ZoneDisplayModeSelector(
 }
 
 /**
- * Workout cards, detail masks, and section reordering tuning category composable (REQ-UI-262 / REQ-UI-388).
- * Encapsulates the feature matrix, section reordering list controls, lap display mode, and independent Summary/Details zone display mode selectors.
+ * Workout cards and detail settings tuning category composable (REQ-UI-262 / REQ-UI-414).
+ * Encapsulates the collapsible summary cards reorder list, domain-scoped zone display mode selectors,
+ * and the workout detail tabs configuration launcher.
  */
 @Composable
 fun WorkoutMasksAndCardsSection(
@@ -137,6 +130,16 @@ fun WorkoutMasksAndCardsSection(
         present + missing
     }
 
+    var isSummaryListExpanded by remember { mutableStateOf(false) }
+
+    val activeCardCount = remember(workoutCardPrefs) {
+        listOf(
+            workoutCardPrefs.showDescription, workoutCardPrefs.showExtrema, workoutCardPrefs.showLaps,
+            workoutCardPrefs.showStrava, workoutCardPrefs.showMapPreview, workoutCardPrefs.showElevationProfile,
+            workoutCardPrefs.showTelemetryCharts, workoutCardPrefs.showZoneAnalysis, workoutCardPrefs.showExportStatus
+        ).count { it }
+    }
+
     fun moveSection(index: Int, targetIndex: Int) {
         if (index !in resolvedOrder.indices || targetIndex !in resolvedOrder.indices) return
         val mutable = resolvedOrder.toMutableList()
@@ -147,136 +150,127 @@ fun WorkoutMasksAndCardsSection(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Section Header Subtitle
+        // ==========================================
+        // PART 1: Trainingsliste (Summary-Karten)
+        // ==========================================
         Text(
             text = stringResource(R.string.settings_workout_card_title),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary
         )
 
-        // Matrix Table Column Headers (REQ-UI-240-E / REQ-UI-255)
-        Row(
+        // Collapsible Summary Cards Header / Toggle Card (REQ-UI-414.3)
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { isSummaryListExpanded = !isSummaryListExpanded },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         ) {
-            Spacer(modifier = Modifier.width(32.dp))
-            Text(
-                text = stringResource(R.string.tuning_matrix_feature),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 4.dp)
-            )
-            Box(
-                modifier = Modifier.width(50.dp),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = stringResource(R.string.tuning_matrix_col_list),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    text = stringResource(R.string.workout_card_reorder_toggle, activeCardCount),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
                 )
-            }
-            Box(
-                modifier = Modifier.width(50.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.tuning_matrix_col_details),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                Icon(
+                    imageVector = if (isSummaryListExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-        // Feature Matrix Rows with Alternating Backgrounds & 48dp Touch Targets
-        val features = resolvedOrder.map { type ->
-            buildMatrixFeatureRow(
-                type = type,
-                workoutCardPrefs = workoutCardPrefs,
-                onWorkoutCardPrefsChange = onWorkoutCardPrefsChange,
-                workoutDetailPrefs = workoutDetailPrefs,
-                onWorkoutDetailPrefsChange = onWorkoutDetailPrefsChange
-            )
-        }
-
-        features.forEachIndexed { index, feature ->
-            val rowBg = if (index % 2 == 0) {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
-            } else {
-                Color.Transparent
-            }
-
+        // Expanded 9-Row Reorderable Section Table (Single List Checkbox Column, REQ-UI-414.1 / REQ-UI-414.3)
+        if (isSummaryListExpanded) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(rowBg)
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        modifier = Modifier.width(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        IconButton(onClick = { moveSection(index, index - 1) }, enabled = index > 0, modifier = Modifier.size(22.dp)) {
-                            Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.action_move_up), Modifier.size(18.dp))
-                        }
-                        IconButton(onClick = { moveSection(index, index + 1) }, enabled = index < features.size - 1, modifier = Modifier.size(22.dp)) {
-                            Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.action_move_down), Modifier.size(18.dp))
-                        }
-                    }
-
+                    Spacer(modifier = Modifier.width(32.dp))
                     Text(
-                        text = stringResource(feature.titleRes),
-                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 18.sp),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 4.dp)
+                        text = stringResource(R.string.tuning_matrix_feature),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
                     )
-                    Box(modifier = Modifier.size(50.dp, 44.dp), contentAlignment = Alignment.Center) {
-                        Checkbox(checked = feature.listChecked, onCheckedChange = feature.onListChange)
+                    Box(modifier = Modifier.width(50.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = stringResource(R.string.tuning_matrix_col_list),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-                    Box(modifier = Modifier.size(50.dp, 44.dp), contentAlignment = Alignment.Center) {
-                        Checkbox(checked = feature.detailChecked, onCheckedChange = feature.onDetailChange)
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                val features = resolvedOrder.map { type ->
+                    buildMatrixFeatureRow(type, workoutCardPrefs, onWorkoutCardPrefsChange)
+                }
+
+                features.forEachIndexed { index, feature ->
+                    val rowBg = if (index % 2 == 0) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f) else Color.Transparent
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(rowBg)
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier.width(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            IconButton(onClick = { moveSection(index, index - 1) }, enabled = index > 0, modifier = Modifier.size(22.dp)) {
+                                Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.action_move_up), Modifier.size(18.dp))
+                            }
+                            IconButton(onClick = { moveSection(index, index + 1) }, enabled = index < features.size - 1, modifier = Modifier.size(22.dp)) {
+                                Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.action_move_down), Modifier.size(18.dp))
+                            }
+                        }
+
+                        Text(
+                            text = stringResource(feature.titleRes),
+                            style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 18.sp),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
+                        )
+                        Box(modifier = Modifier.size(50.dp, 44.dp), contentAlignment = Alignment.Center) {
+                            Checkbox(checked = feature.listChecked, onCheckedChange = feature.onListChange)
+                        }
                     }
                 }
             }
         }
 
-        // Dedicated Lap Display Mode Sub-Setting Section (Decoupled from reorderable rows)
-        if (workoutCardPrefs.showLaps || workoutDetailPrefs.showLaps) {
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 4.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-            )
+        // Summary Lap Display Mode Sub-Setting Section (REQ-UI-414.4)
+        if (workoutCardPrefs.showLaps) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
@@ -285,69 +279,66 @@ fun WorkoutMasksAndCardsSection(
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     SegmentedButton(
                         selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.TABLE_ONLY,
                         onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.TABLE_ONLY)) },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                    ) {
-                        Text(stringResource(R.string.settings_lap_display_mode_table))
-                    }
+                    ) { Text(stringResource(R.string.settings_lap_display_mode_table)) }
                     SegmentedButton(
                         selected = workoutCardPrefs.lapDisplayMode == LapDisplayMode.VISUALIZER_ONLY,
                         onClick = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(lapDisplayMode = LapDisplayMode.VISUALIZER_ONLY)) },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                    ) {
-                        Text(stringResource(R.string.settings_lap_display_mode_visualizer))
-                    }
+                    ) { Text(stringResource(R.string.settings_lap_display_mode_visualizer)) }
                 }
             }
         }
 
-        // Dedicated Zone Card Display Mode Sub-Setting Section for Summary & Details (REQ-UI-372.8 / REQ-UI-388)
-        if (workoutCardPrefs.showZoneAnalysis || workoutDetailPrefs.showZoneAnalysis) {
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 4.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-            )
+        // Summary Zone Card Display Mode Sub-Setting Section (REQ-UI-414.4)
+        if (workoutCardPrefs.showZoneAnalysis) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                val baseTitle = stringResource(R.string.settings_zone_card_display_mode_title)
-                if (workoutCardPrefs.showZoneAnalysis) {
-                    ZoneDisplayModeSelector(
-                        label = "$baseTitle (${stringResource(R.string.tuning_matrix_col_list)})",
-                        selectedMode = workoutCardPrefs.zoneCardDisplayMode,
-                        onModeSelected = { mode -> onWorkoutCardPrefsChange(workoutCardPrefs.copy(zoneCardDisplayMode = mode)) }
-                    )
-                }
-                if (workoutDetailPrefs.showZoneAnalysis) {
-                    ZoneDisplayModeSelector(
-                        label = "$baseTitle (${stringResource(R.string.tuning_matrix_col_details)})",
-                        selectedMode = workoutDetailPrefs.zoneCardDisplayMode,
-                        onModeSelected = { mode -> onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(zoneCardDisplayMode = mode)) }
-                    )
-                }
+                ZoneDisplayModeSelector(
+                    label = stringResource(R.string.settings_zone_card_display_mode_title),
+                    selectedMode = workoutCardPrefs.zoneCardDisplayMode,
+                    onModeSelected = { mode -> onWorkoutCardPrefsChange(workoutCardPrefs.copy(zoneCardDisplayMode = mode)) }
+                )
             }
         }
 
-        // Workout Detail Tabs Configuration Launcher (REQ-UI-408)
+        // ==========================================
+        // PART 2: Trainings-Details (Detail-Ansicht)
+        // ==========================================
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 4.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+
+        Text(
+            text = stringResource(R.string.settings_workout_details_title),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        // Workout Detail Tabs Configuration Launcher (REQ-UI-408 / REQ-UI-414.2)
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         val prefMgr = remember(context) { MyPreferenceManager(context) }
         val detailTabs by prefMgr.workoutDetailTabsOrderFlow.collectAsState(initial = remember(prefMgr) { prefMgr.getWorkoutDetailTabs() })
         var showTabsConfigSheet by remember { mutableStateOf(false) }
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-        OutlinedButton(onClick = { showTabsConfigSheet = true }, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp)) {
+
+        OutlinedButton(
+            onClick = { showTabsConfigSheet = true },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp)
+        ) {
             Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringResource(R.string.workout_detail_tabs_config_title))
         }
+
         if (showTabsConfigSheet) {
             WorkoutDetailTabsConfigSheet(
                 tabs = detailTabs,
@@ -355,6 +346,20 @@ fun WorkoutMasksAndCardsSection(
                 onResetDefaults = { scope.launch { prefMgr.resetWorkoutDetailTabs() } },
                 onDismiss = { showTabsConfigSheet = false }
             )
+        }
+
+        // Details Zone Card Display Mode Sub-Setting Section (REQ-UI-414.4)
+        if (workoutDetailPrefs.showZoneAnalysis) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                ZoneDisplayModeSelector(
+                    label = stringResource(R.string.settings_zone_card_display_mode_title),
+                    selectedMode = workoutDetailPrefs.zoneCardDisplayMode,
+                    onModeSelected = { mode -> onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(zoneCardDisplayMode = mode)) }
+                )
+            }
         }
     }
 }

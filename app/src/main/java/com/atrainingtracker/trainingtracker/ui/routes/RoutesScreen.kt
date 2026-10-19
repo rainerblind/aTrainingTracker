@@ -22,17 +22,25 @@ import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,10 +50,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
@@ -64,12 +75,15 @@ fun RoutesScreen(
 ) {
     val context = LocalContext.current
 
-    val gpxPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
+    val gpxPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        if (uris.size == 1) {
             val intent = Intent(context, GpxImportActivity::class.java).apply {
-                data = it
+                data = uris.first()
             }
             context.startActivity(intent)
+        } else {
+            viewModel.importRoutesBatch(uris)
         }
     }
 
@@ -82,6 +96,8 @@ fun RoutesScreen(
     val syncStravaStatus by viewModel.syncStravaStatus.collectAsStateWithLifecycle()
     val tuningConfig by viewModel.tuningConfig.collectAsStateWithLifecycle()
     val activeNavigatedRouteId by viewModel.activeNavigatedRouteId.collectAsStateWithLifecycle()
+    val batchImportProgress by viewModel.batchImportProgress.collectAsStateWithLifecycle()
+    val batchImportResult by viewModel.batchImportResult.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -94,6 +110,50 @@ fun RoutesScreen(
             val message = if (success) successMsg else errorMsg
             snackbarHostState.showSnackbar(message)
             viewModel.resetSyncStravaStatus()
+        }
+    }
+
+    LaunchedEffect(batchImportResult) {
+        batchImportResult?.let { result ->
+            val message = when {
+                result.failedCount == 0 -> context.getString(R.string.routes_import_success, result.importedCount)
+                result.importedCount > 0 -> context.getString(R.string.routes_import_partial, result.importedCount, result.failedCount)
+                else -> context.getString(R.string.routes_import_all_failed)
+            }
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearBatchImportResult()
+        }
+    }
+
+    if (batchImportProgress != null) {
+        val progress = batchImportProgress!!
+        Dialog(
+            onDismissRequest = {},
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.routes_import_progress,
+                            progress.current,
+                            progress.total
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
         }
     }
 

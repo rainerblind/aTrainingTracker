@@ -66,13 +66,20 @@ import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.HorizontalRule
+import androidx.compose.material.icons.filled.Title
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
@@ -143,6 +150,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.LightWarningBorder
 import com.atrainingtracker.trainingtracker.ui.theme.LightWarningContainer
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
+import com.atrainingtracker.trainingtracker.ui.tracking.SectionDividerInfo
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyle
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
@@ -162,6 +170,8 @@ interface GridActions {
     fun onCancelMove() {}
     fun onSwapFields(sourceFieldId: Long, targetFieldId: Long) {}
     fun onMoveField(sourceFieldId: Long, targetRow: Int, targetCol: Int) {}
+    fun onSetSectionDivider(rowNr: Int, title: String?) {}
+    fun onDeleteSectionDivider(rowNr: Int) {}
 }
 
 interface TabToggleActions {
@@ -343,6 +353,30 @@ fun SensorGridScreen(
             }
         ) { paddingValues ->
         if (screenMode == ScreenMode.CONFIGURATION) {
+            var editingDividerRow by remember { mutableStateOf<Int?>(null) }
+            val dividerMap = remember(state.sectionDividers) {
+                state.sectionDividers.associateBy { it.rowNr }
+            }
+
+            if (editingDividerRow != null) {
+                val row = editingDividerRow!!
+                val existingDivider = dividerMap[row]
+                EditSectionDividerDialog(
+                    initialTitle = existingDivider?.title,
+                    onConfirm = { newTitle ->
+                        gridActions.onSetSectionDivider(row, newTitle)
+                        editingDividerRow = null
+                    },
+                    onDelete = if (existingDivider != null) {
+                        {
+                            gridActions.onDeleteSectionDivider(row)
+                            editingDividerRow = null
+                        }
+                    } else null,
+                    onDismiss = { editingDividerRow = null }
+                )
+            }
+
             // UNIFIED SCROLLABLE CONFIGURATION CONTAINER (REQ-UI-295 / ATT-2620)
             Column(
                 modifier = Modifier
@@ -408,13 +442,52 @@ fun SensorGridScreen(
 
                     sortedRows.forEach { rowNr ->
                         maxRowNr = rowNr
-                        RowAdder(onClick = {
-                            if (selectedFieldForMove != null) {
-                                gridActions.onMoveField(selectedFieldForMove.sensorFieldId, rowNr, -1)
-                            } else {
-                                gridActions.onAddRow(rowNr)
+                        val existingDivider = dividerMap[rowNr]
+
+                        if (rowNr > 1) {
+                            // Inter-row controls: Add Row + Section Divider toggle/indicator
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    RowAdder(onClick = {
+                                        if (selectedFieldForMove != null) {
+                                            gridActions.onMoveField(selectedFieldForMove.sensorFieldId, rowNr, -1)
+                                        } else {
+                                            gridActions.onAddRow(rowNr)
+                                        }
+                                    })
+                                }
+                                IconButton(onClick = { editingDividerRow = rowNr }) {
+                                    Icon(
+                                        imageVector = if (existingDivider != null) Icons.Default.Title else Icons.Default.HorizontalRule,
+                                        contentDescription = stringResource(
+                                            if (existingDivider != null) R.string.cockpit_section_divider_edit
+                                            else R.string.cockpit_section_divider_add
+                                        ),
+                                        tint = if (existingDivider != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                    )
+                                }
                             }
-                        })
+
+                            if (existingDivider != null) {
+                                CockpitSectionDivider(
+                                    divider = existingDivider,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+                                )
+                            }
+                        } else {
+                            RowAdder(onClick = {
+                                if (selectedFieldForMove != null) {
+                                    gridActions.onMoveField(selectedFieldForMove.sensorFieldId, rowNr, -1)
+                                } else {
+                                    gridActions.onAddRow(rowNr)
+                                }
+                            })
+                        }
 
                         val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
                         Row(
@@ -593,6 +666,9 @@ fun SensorGridScreen(
                     val packedRows = remember(state.fields, tuningConfig, screenMode) {
                         packVisibleRowsForTuning(state.fields, tuningConfig, screenMode)
                     }
+                    val trackingDividerMap = remember(state.sectionDividers) {
+                        state.sectionDividers.associateBy { it.rowNr }
+                    }
 
                     Column(
                         modifier = sensorGridModifier,
@@ -600,6 +676,17 @@ fun SensorGridScreen(
                         verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
                     ) {
                         packedRows.forEach { fieldsInThisRow ->
+                            val firstField = fieldsInThisRow.firstOrNull()
+                            if (firstField != null && firstField.rowNr > 1) {
+                                val divider = trackingDividerMap[firstField.rowNr]
+                                if (divider != null) {
+                                    CockpitSectionDivider(
+                                        divider = divider,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.height(IntrinsicSize.Min),
@@ -985,6 +1072,147 @@ fun SpatialCockpitToggleCard(
             }
         }
     }
+}
+
+@Composable
+fun CockpitSectionDivider(
+    divider: SectionDividerInfo,
+    modifier: Modifier = Modifier
+) {
+    val title = divider.title?.trim()
+    if (title.isNullOrEmpty()) {
+        HorizontalDivider(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            thickness = 1.5.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+    } else {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .heightIn(max = 20.dp)
+                .padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HorizontalDivider(
+                modifier = Modifier.weight(0.12f),
+                thickness = 1.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+            Text(
+                text = title.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 6.dp)
+            )
+            HorizontalDivider(
+                modifier = Modifier.weight(0.88f),
+                thickness = 1.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun EditSectionDividerDialog(
+    initialTitle: String?,
+    onConfirm: (String?) -> Unit,
+    onDelete: (() -> Unit)?,
+    onDismiss: () -> Unit
+) {
+    var titleText by remember { mutableStateOf(initialTitle ?: "") }
+    val presetChips = listOf(
+        R.string.cockpit_section_divider_chip_power,
+        R.string.cockpit_section_divider_chip_heart_rate,
+        R.string.cockpit_section_divider_chip_lap,
+        R.string.cockpit_section_divider_chip_pacing,
+        R.string.cockpit_section_divider_chip_navigation,
+        R.string.cockpit_section_divider_chip_total
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.cockpit_section_divider_dialog_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = titleText,
+                    onValueChange = { titleText = it },
+                    label = { Text(stringResource(R.string.cockpit_section_divider_title_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text(
+                    text = "Presets",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // 2 rows of preset chips for fast tap-selection
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    presetChips.take(3).forEach { resId ->
+                        val chipLabel = stringResource(resId)
+                        FilterChip(
+                            selected = titleText.equals(chipLabel, ignoreCase = true),
+                            onClick = { titleText = chipLabel },
+                            label = { Text(chipLabel, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    presetChips.drop(3).forEach { resId ->
+                        val chipLabel = stringResource(resId)
+                        FilterChip(
+                            selected = titleText.equals(chipLabel, ignoreCase = true),
+                            onClick = { titleText = chipLabel },
+                            label = { Text(chipLabel, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(titleText.ifBlank { null }) }) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (onDelete != null) {
+                    TextButton(onClick = onDelete) {
+                        Text(
+                            text = stringResource(R.string.cockpit_section_divider_delete),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        }
+    )
 }
 
 @Composable

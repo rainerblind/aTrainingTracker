@@ -265,6 +265,90 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
             }
             return WorkoutBatchKeys(idList, fileNameList, clusterIdList)
         }
+
+        /**
+         * Backfills 3D altitude extrema for route clusters whose extrema are unpopulated (REQ-MIG-046.3).
+         * Strictly idempotent: queries only clusters WHERE min_alt_lat IS NULL.
+         */
+        @JvmStatic
+        fun backfillAltitudeExtrema(context: Context, db: SQLiteDatabase) {
+            try {
+                val clusterIds = mutableListOf<Long>()
+                db.query(
+                    WorkoutClusterContract.TABLE_NAME,
+                    arrayOf(BaseColumns._ID),
+                    "${WorkoutClusterContract.COLUMN_MIN_ALT_LAT} IS NULL",
+                    null, null, null, null
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        clusterIds.add(cursor.getLong(0))
+                    }
+                }
+                if (clusterIds.isEmpty()) return
+
+                val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+                val summariesDb = summariesManager.database
+
+                for (clusterId in clusterIds) {
+                    val workoutIds = mutableListOf<Long>()
+                    summariesDb.query(
+                        WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                        arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID),
+                        "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?",
+                        arrayOf(clusterId.toString()),
+                        null, null, null
+                    ).use { wCursor ->
+                        while (wCursor.moveToNext()) {
+                            workoutIds.add(wCursor.getLong(0))
+                        }
+                    }
+                    if (workoutIds.isEmpty()) continue
+
+                    var minAltLatSum = 0.0
+                    var minAltLngSum = 0.0
+                    var minAltCount = 0
+
+                    var maxAltLatSum = 0.0
+                    var maxAltLngSum = 0.0
+                    var maxAltCount = 0
+
+                    for (wId in workoutIds) {
+                        val minPos = summariesManager.getExtremaPosition(wId, SensorType.ALTITUDE, ExtremaType.MIN)
+                        if (minPos != null) {
+                            minAltLatSum += minPos.latitude
+                            minAltLngSum += minPos.longitude
+                            minAltCount++
+                        }
+                        val maxPos = summariesManager.getExtremaPosition(wId, SensorType.ALTITUDE, ExtremaType.MAX)
+                        if (maxPos != null) {
+                            maxAltLatSum += maxPos.latitude
+                            maxAltLngSum += maxPos.longitude
+                            maxAltCount++
+                        }
+                    }
+
+                    val cv = ContentValues()
+                    if (minAltCount > 0) {
+                        cv.put(WorkoutClusterContract.COLUMN_MIN_ALT_LAT, minAltLatSum / minAltCount)
+                        cv.put(WorkoutClusterContract.COLUMN_MIN_ALT_LNG, minAltLngSum / minAltCount)
+                    }
+                    if (maxAltCount > 0) {
+                        cv.put(WorkoutClusterContract.COLUMN_MAX_ALT_LAT, maxAltLatSum / maxAltCount)
+                        cv.put(WorkoutClusterContract.COLUMN_MAX_ALT_LNG, maxAltLngSum / maxAltCount)
+                    }
+                    if (cv.size() > 0) {
+                        db.update(
+                            WorkoutClusterContract.TABLE_NAME,
+                            cv,
+                            "${BaseColumns._ID} = ?",
+                            arrayOf(clusterId.toString())
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("WorkoutClusterDatabaseManager", "Altitude extrema backfill migration failed", e)
+            }
+        }
     }
 
     /**
@@ -548,11 +632,38 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         """
     }
 
-    private class WorkoutClusterDbHelper(private val context: Context) : SQLiteOpenHelper(
+    internal class WorkoutClusterDbHelper(private val context: Context) : SQLiteOpenHelper(
         context, "RouteClusters.db", null, 11
     ) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(WorkoutClusterContract.CREATE_TABLE)
+        }
+
+        private fun addColumnIfNotExists(
+            db: SQLiteDatabase,
+            tableName: String,
+            columnName: String,
+            columnType: String,
+            defaultValue: String? = null
+        ) {
+            try {
+                db.rawQuery("PRAGMA table_info($tableName)", null).use { cursor ->
+                    val nameIdx = cursor.getColumnIndex("name")
+                    while (cursor.moveToNext()) {
+                        if (nameIdx != -1 && columnName.equals(cursor.getString(nameIdx), ignoreCase = true)) {
+                            return
+                        }
+                    }
+                }
+                var sql = "ALTER TABLE $tableName ADD COLUMN $columnName $columnType"
+                if (defaultValue != null) {
+                    sql += " DEFAULT $defaultValue"
+                }
+                db.execSQL(sql)
+                Log.i("WorkoutClusterDbHelper", "Added missing column [$columnName] to table [$tableName]")
+            } catch (e: Exception) {
+                Log.e("WorkoutClusterDbHelper", "Error checking/adding column: $columnName", e)
+            }
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -571,15 +682,15 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
             // v7 ensures all columns exist and triggers a repository-led re-aggregation if empty.
             if (oldVersion < 7) {
                 // Final safety check: ensure all spatial columns exist without dropping
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LAT} REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LNG} REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LAT} REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LNG} REAL") } catch (e: Exception) {}
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_BOUND_MIN_LAT, "REAL")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_BOUND_MIN_LNG, "REAL")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_BOUND_MAX_LAT, "REAL")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_BOUND_MAX_LNG, "REAL")
             }
             
             if (oldVersion < 8) {
-                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_PREVIEW_PATHS} TEXT")
-                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_ROUTE_POLYLINE} TEXT")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_PREVIEW_PATHS, "TEXT")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_ROUTE_POLYLINE, "TEXT")
             }
 
             if (oldVersion < 9) {
@@ -589,95 +700,21 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
 
             // ATT-502 / REQ-SET-065: Upgrade to Version 10 with 3D altitude extrema columns and automated backfill
             if (oldVersion < 10) {
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_MIN_ALT_LAT} REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_MIN_ALT_LNG} REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_MAX_ALT_LAT} REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_MAX_ALT_LNG} REAL") } catch (e: Exception) {}
-                backfillAltitudeExtrema(context, db)
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_MIN_ALT_LAT, "REAL")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_MIN_ALT_LNG, "REAL")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_MAX_ALT_LAT, "REAL")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_MAX_ALT_LNG, "REAL")
+                // REQ-MIG-046.2: Heavy backfill excised from synchronous onUpgrade; managed asynchronously by DatabaseBackfillManager.
             }
 
             // ATT-714 / REQ-SET-067: Upgrade to Version 11 with has_counter column
             if (oldVersion < 11) {
-                try {
-                    db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_HAS_COUNTER} INTEGER DEFAULT 1")
-                } catch (e: Exception) {
-                    Log.w("WorkoutClusterDbHelper", "Failed to add has_counter column", e)
-                }
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_HAS_COUNTER, "INTEGER", "1")
             }
         }
 
         private fun backfillAltitudeExtrema(context: Context, db: SQLiteDatabase) {
-            try {
-                val clusterIds = mutableListOf<Long>()
-                db.query(WorkoutClusterContract.TABLE_NAME, arrayOf(BaseColumns._ID), null, null, null, null, null).use { cursor ->
-                    while (cursor.moveToNext()) {
-                        clusterIds.add(cursor.getLong(0))
-                    }
-                }
-                if (clusterIds.isEmpty()) return
-
-                val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
-                val summariesDb = summariesManager.database
-
-                for (clusterId in clusterIds) {
-                    val workoutIds = mutableListOf<Long>()
-                    summariesDb.query(
-                        WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
-                        arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID),
-                        "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?",
-                        arrayOf(clusterId.toString()),
-                        null, null, null
-                    ).use { wCursor ->
-                        while (wCursor.moveToNext()) {
-                            workoutIds.add(wCursor.getLong(0))
-                        }
-                    }
-                    if (workoutIds.isEmpty()) continue
-
-                    var minAltLatSum = 0.0
-                    var minAltLngSum = 0.0
-                    var minAltCount = 0
-
-                    var maxAltLatSum = 0.0
-                    var maxAltLngSum = 0.0
-                    var maxAltCount = 0
-
-                    for (wId in workoutIds) {
-                        val minPos = summariesManager.getExtremaPosition(wId, SensorType.ALTITUDE, ExtremaType.MIN)
-                        if (minPos != null) {
-                            minAltLatSum += minPos.latitude
-                            minAltLngSum += minPos.longitude
-                            minAltCount++
-                        }
-                        val maxPos = summariesManager.getExtremaPosition(wId, SensorType.ALTITUDE, ExtremaType.MAX)
-                        if (maxPos != null) {
-                            maxAltLatSum += maxPos.latitude
-                            maxAltLngSum += maxPos.longitude
-                            maxAltCount++
-                        }
-                    }
-
-                    val cv = ContentValues()
-                    if (minAltCount > 0) {
-                        cv.put(WorkoutClusterContract.COLUMN_MIN_ALT_LAT, minAltLatSum / minAltCount)
-                        cv.put(WorkoutClusterContract.COLUMN_MIN_ALT_LNG, minAltLngSum / minAltCount)
-                    }
-                    if (maxAltCount > 0) {
-                        cv.put(WorkoutClusterContract.COLUMN_MAX_ALT_LAT, maxAltLatSum / maxAltCount)
-                        cv.put(WorkoutClusterContract.COLUMN_MAX_ALT_LNG, maxAltLngSum / maxAltCount)
-                    }
-                    if (cv.size() > 0) {
-                        db.update(
-                            WorkoutClusterContract.TABLE_NAME,
-                            cv,
-                            "${BaseColumns._ID} = ?",
-                            arrayOf(clusterId.toString())
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w("WorkoutClusterDbHelper", "Altitude extrema backfill migration failed", e)
-            }
+            WorkoutClusterDatabaseManager.backfillAltitudeExtrema(context, db)
         }
     }
 }
