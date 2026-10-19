@@ -26,8 +26,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -785,6 +787,7 @@ fun TrackingTabsScreen(
                                     tabViewId = viewInfo.tabViewId,
                                     screenMode = screenMode,
                                     isTabActive = pagerState.currentPage == page,
+                                    onRingBikeBell = { trackingTabsViewModel.triggerBellRing(isLongPress = false) }
                                 )
                             } else {
                                 // Optional: Show a placeholder or empty box while loading
@@ -820,9 +823,10 @@ fun TrackingTabsScreen(
                 }
             }
 
-            // --- Conditionally show the Lap Button (suppressed in CONFIGURATION mode per REQ-UI-295)
+            // --- Conditionally show the Lap Button and Bike Bell Button (suppressed in CONFIGURATION mode per REQ-UI-295)
             val shouldShowLapButton = currentViewInfo?.showLapButton == true && screenMode != ScreenMode.CONFIGURATION
-            if (shouldShowLapButton) {
+            val shouldShowBikeBell = currentViewInfo?.showBikeBell == true && screenMode != ScreenMode.CONFIGURATION
+            if (shouldShowLapButton || shouldShowBikeBell) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -830,13 +834,46 @@ fun TrackingTabsScreen(
                         .padding(bottom = 8.dp), // Space from bottom of screen
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    LapButton(
-                        modifier = Modifier
-                            .wrapContentSize() // Don't fill width anymore
-                            .padding(horizontal = 16.dp),
-                        trackingMode = trackingMode,
-                        onClick = { trackingTabsViewModel.onLapButtonClick() }
-                    )
+                    if (shouldShowLapButton && shouldShowBikeBell) {
+                        Row(
+                            modifier = Modifier
+                                .wrapContentSize()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            LapButton(
+                                modifier = Modifier.wrapContentSize(),
+                                trackingMode = trackingMode,
+                                onClick = { trackingTabsViewModel.onLapButtonClick() }
+                            )
+                            BikeBellButton(
+                                modifier = Modifier.wrapContentSize(),
+                                trackingMode = trackingMode,
+                                onSingleRing = { trackingTabsViewModel.triggerBellRing(isLongPress = false) },
+                                onContinuousRingStart = { trackingTabsViewModel.triggerBellRoll() },
+                                onContinuousRingStop = { trackingTabsViewModel.stopBellRoll() }
+                            )
+                        }
+                    } else if (shouldShowLapButton) {
+                        LapButton(
+                            modifier = Modifier
+                                .wrapContentSize()
+                                .padding(horizontal = 16.dp),
+                            trackingMode = trackingMode,
+                            onClick = { trackingTabsViewModel.onLapButtonClick() }
+                        )
+                    } else {
+                        BikeBellButton(
+                            modifier = Modifier
+                                .wrapContentSize()
+                                .padding(horizontal = 16.dp),
+                            trackingMode = trackingMode,
+                            onSingleRing = { trackingTabsViewModel.triggerBellRing(isLongPress = false) },
+                            onContinuousRingStart = { trackingTabsViewModel.triggerBellRoll() },
+                            onContinuousRingStop = { trackingTabsViewModel.stopBellRoll() }
+                        )
+                    }
                 }
             }
 
@@ -859,7 +896,7 @@ fun TrackingTabsScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(bottom = if (shouldShowLapButton) 64.dp else 8.dp)
+                    .padding(bottom = if (shouldShowLapButton || shouldShowBikeBell) 64.dp else 8.dp)
             ) { data ->
                 val visuals = data.visuals as? WorkoutNavigationEvents.BatterySnackbarVisuals
                 if (visuals != null) {

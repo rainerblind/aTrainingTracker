@@ -483,4 +483,94 @@ class TrackingViewsRealSqliteMigrationTest {
             assertEquals("Middle Divider", cursor.getString(1))
         }
     }
+
+    /**
+     * TST-UI-384.1: Database migration v14 -> v15 adds SHOW_BIKE_BELL column and sets cycling defaults.
+     */
+    @Test
+    fun testTrackingViewsDbHelper_v14ToV15Migration_addsShowBikeBellColumnAndSetsCyclingDefaults() {
+        val database = checkNotNull(db)
+        database.execSQL(TrackingViewsDbHelper.CREATE_VIEWS_TABLE_V13)
+        database.execSQL(TrackingViewsDbHelper.CREATE_SECTION_DIVIDERS_TABLE_V14)
+        database.version = 14
+
+        // Insert cycling tabs and running tab at v14
+        val bikeSpeedCadenceView = ContentValues().apply {
+            put(TrackingViewsDbHelper.NAME, "Bike Speed/Cadence")
+            put(TrackingViewsDbHelper.ACTIVITY_TYPE, "BIKE_SPEED_AND_CADENCE")
+            put(TrackingViewsDbHelper.LAYOUT_NR, 1)
+        }
+        val bikePowerView = ContentValues().apply {
+            put(TrackingViewsDbHelper.NAME, "Bike Power")
+            put(TrackingViewsDbHelper.ACTIVITY_TYPE, "BIKE_POWER")
+            put(TrackingViewsDbHelper.LAYOUT_NR, 2)
+        }
+        val runView = ContentValues().apply {
+            put(TrackingViewsDbHelper.NAME, "Running")
+            put(TrackingViewsDbHelper.ACTIVITY_TYPE, "RUN")
+            put(TrackingViewsDbHelper.LAYOUT_NR, 3)
+        }
+
+        val id1 = database.insertOrThrow(TrackingViewsDbHelper.VIEWS_TABLE, null, bikeSpeedCadenceView)
+        val id2 = database.insertOrThrow(TrackingViewsDbHelper.VIEWS_TABLE, null, bikePowerView)
+        val id3 = database.insertOrThrow(TrackingViewsDbHelper.VIEWS_TABLE, null, runView)
+
+        // Execute upgrade v14 -> v15
+        helper.onUpgrade(database, 14, 15)
+        database.version = 15
+
+        // Verify column exists
+        assertTrue(
+            "Column SHOW_BIKE_BELL must exist",
+            RealSqliteTestHelper.hasColumn(database, TrackingViewsDbHelper.VIEWS_TABLE, TrackingViewsDbHelper.SHOW_BIKE_BELL)
+        )
+
+        // Verify default = 1 for cycling tabs
+        database.query(
+            TrackingViewsDbHelper.VIEWS_TABLE,
+            arrayOf(TrackingViewsDbHelper.SHOW_BIKE_BELL),
+            "${TrackingViewsDbHelper.C_ID} = ?",
+            arrayOf(id1.toString()),
+            null, null, null
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("BIKE_SPEED_AND_CADENCE must default showBikeBell to 1", 1, cursor.getInt(0))
+        }
+
+        database.query(
+            TrackingViewsDbHelper.VIEWS_TABLE,
+            arrayOf(TrackingViewsDbHelper.SHOW_BIKE_BELL),
+            "${TrackingViewsDbHelper.C_ID} = ?",
+            arrayOf(id2.toString()),
+            null, null, null
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("BIKE_POWER must default showBikeBell to 1", 1, cursor.getInt(0))
+        }
+
+        // Verify default = 0 for running tab
+        database.query(
+            TrackingViewsDbHelper.VIEWS_TABLE,
+            arrayOf(TrackingViewsDbHelper.SHOW_BIKE_BELL),
+            "${TrackingViewsDbHelper.C_ID} = ?",
+            arrayOf(id3.toString()),
+            null, null, null
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("RUN must default showBikeBell to 0", 0, cursor.getInt(0))
+        }
+
+        // Verify idempotency (re-running onUpgrade must not throw)
+        helper.onUpgrade(database, 14, 15)
+
+        // Verify DatabaseSchemaRegistry versions
+        assertEquals(
+            15,
+            com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry.getMaxSupportedVersion("FlexibleGenericView.db")
+        )
+        assertEquals(
+            15,
+            com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry.getMaxSupportedVersion("TrackingViews.db")
+        )
+    }
 }

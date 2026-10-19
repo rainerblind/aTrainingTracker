@@ -57,7 +57,8 @@ data class TrackingViewInfo(
     val showLiveClimbs: Boolean = true,
     val showNavigationHints: Boolean = true,
     val elevationProfileScope: ElevationProfileScope = ElevationProfileScope.FULL_ROUTE,
-    val elevationProfileLookahead: Int = 2000
+    val elevationProfileLookahead: Int = 2000,
+    val showBikeBell: Boolean = false
 )
 
 /**
@@ -149,7 +150,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL
             ),
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
             arrayOf(tabViewId.toString()),
@@ -172,7 +174,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 val elevationProfileScope = if (scopeIndex != -1) ElevationProfileScope.fromDbValue(it.getInt(scopeIndex)) else ElevationProfileScope.FULL_ROUTE
                 val lookaheadIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD)
                 val elevationProfileLookahead = if (lookaheadIndex != -1) it.getInt(lookaheadIndex).coerceAtLeast(500) else 2000
-                return TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints, elevationProfileScope, elevationProfileLookahead)
+                val bellIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL)
+                val showBikeBell = if (bellIndex != -1) it.getInt(bellIndex) == 1 else false
+                return TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints, elevationProfileScope, elevationProfileLookahead, showBikeBell)
             }
         }
         return null
@@ -208,7 +212,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL
             ),
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE}=?",
             arrayOf(activityType.name),
@@ -234,8 +239,10 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     val elevationProfileScope = if (scopeIndex != -1) ElevationProfileScope.fromDbValue(it.getInt(scopeIndex)) else ElevationProfileScope.FULL_ROUTE
                     val lookaheadIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD)
                     val elevationProfileLookahead = if (lookaheadIndex != -1) it.getInt(lookaheadIndex).coerceAtLeast(500) else 2000
+                    val bellIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL)
+                    val showBikeBell = if (bellIndex != -1) it.getInt(bellIndex) == 1 else false
 
-                    viewList.add(TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints, elevationProfileScope, elevationProfileLookahead))
+                    viewList.add(TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints, elevationProfileScope, elevationProfileLookahead, showBikeBell))
                 } while (it.moveToNext())
             }
         }
@@ -542,6 +549,17 @@ class TrackingViewsRepository private constructor(private val context: Context) 
     suspend fun updateShowNavigationHints(tabViewId: Long, showNavigationHints: Boolean) {
         withContext(Dispatchers.IO) {
             viewsDbManager.updateShowNavigationHints(tabViewId, showNavigationHints)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun updateShowBikeBell(tabViewId: Long, showBikeBell: Boolean) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateShowBikeBell(tabViewId, showBikeBell)
         }
 
         // trigger recreation of UI

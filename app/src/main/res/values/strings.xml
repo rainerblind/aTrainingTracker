@@ -757,6 +757,8 @@
     <string name="config_tracking__elevation_profile_scope_rolling_window">Rolling Window</string>
     <string name="config_tracking__elevation_profile_lookahead">Lookahead</string>
     <string name="config_tracking__showLapButton">Lap Button</string>
+    <string name="config_tracking__showBikeBell">Show Bike Bell</string>
+    <string name="config_tracking__showBikeBell_subtitle">Tap or hold the bell button, or double-tap anywhere on the Cockpit to ring</string>
     <string name="config_tracking__show_navigation_hints">Turn Prompts</string>
     <string name="config_tracking__show_live_climbs">Live Climbs</string>
     <string name="config_tracking__wysiwyg_active">Active</string>

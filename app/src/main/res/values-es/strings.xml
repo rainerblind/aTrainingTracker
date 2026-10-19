@@ -600,6 +600,8 @@
     <string name="config_tracking__show_map">Mapa</string>
     <string name="config_tracking__showLiveSegments">Segmentos en vivo</string>
     <string name="config_tracking__showLapButton">Botón de vuelta</string>
+    <string name="config_tracking__showBikeBell">Mostrar timbre de bicicleta</string>
+    <string name="config_tracking__showBikeBell_subtitle">Toca o mantén pulsado el botón del timbre, o toca dos veces en el Cockpit</string>
     <string name="config_tracking__show_navigation_hints">Indicaciones de giro</string>
     <string name="config_tracking__show_live_climbs">Subidas en vivo</string>
     <string name="config_tracking__wysiwyg_active">Activo</string>

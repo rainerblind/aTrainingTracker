@@ -86,6 +86,7 @@ data class TrackingScreenState(
     val showLiveClimbs: Boolean = true,
     val showNavigationHints: Boolean = true,
     val showLapButton: Boolean = true,
+    val showBikeBell: Boolean = false,
     val elevationProfileScope: ElevationProfileScope = ElevationProfileScope.FULL_ROUTE,
     val elevationProfileLookahead: Int = 2000,
     val fields: List<SensorFieldState> = emptyList(),
@@ -552,6 +553,7 @@ class TrackingViewModel(
                     showLiveClimbs = viewInfo?.showLiveClimbs ?: true,
                     showNavigationHints = viewInfo?.showNavigationHints ?: true,
                     showLapButton = viewInfo?.showLapButton ?: true,
+                    showBikeBell = viewInfo?.showBikeBell ?: false,
                     elevationProfileScope = viewInfo?.elevationProfileScope ?: ElevationProfileScope.FULL_ROUTE,
                     elevationProfileLookahead = viewInfo?.elevationProfileLookahead ?: 2000,
                     pathPoints = livePathPoints,
@@ -837,6 +839,12 @@ class TrackingViewModel(
     fun onUpdateShowLapButton(show: Boolean) {
         viewModelScope.launch {
             trackingViewsRepository.updateShowLapButton(viewId, show)
+        }
+    }
+
+    fun onUpdateShowBikeBell(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowBikeBell(viewId, show)
         }
     }
 

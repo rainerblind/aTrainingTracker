@@ -197,10 +197,10 @@ class BikePowerCockpitDefaultsAndGatingTest {
         // 5. Verify onCreate seeds all 4 tabs in order for BIKE_POWER
         dbHelper.onCreate(mockDb)
         verify(exactly = 1) {
-            dbHelper.addDefaultTab(mockDb, ActivityType.BIKE_POWER, "Standard", 1, false, false, true, true, true, expectedStandard)
-            dbHelper.addDefaultTab(mockDb, ActivityType.BIKE_POWER, "Power", 2, false, false, false, false, true, expectedPower)
-            dbHelper.addDefaultTab(mockDb, ActivityType.BIKE_POWER, "Map", 3, false, true, false, false, true, expectedMap)
-            dbHelper.addDefaultTab(mockDb, ActivityType.BIKE_POWER, "Laps", 4, true, false, false, false, false, expectedLaps)
+            dbHelper.addDefaultTab(mockDb, ActivityType.BIKE_POWER, "Standard", 1, false, false, true, true, true, true, expectedStandard)
+            dbHelper.addDefaultTab(mockDb, ActivityType.BIKE_POWER, "Power", 2, false, false, false, false, true, true, expectedPower)
+            dbHelper.addDefaultTab(mockDb, ActivityType.BIKE_POWER, "Map", 3, false, true, false, false, true, true, expectedMap)
+            dbHelper.addDefaultTab(mockDb, ActivityType.BIKE_POWER, "Laps", 4, true, false, false, false, false, true, expectedLaps)
         }
     }
 
@@ -252,6 +252,7 @@ class BikePowerCockpitDefaultsAndGatingTest {
                 false,
                 false,
                 true,
+                true,
                 expectedPowerRows
             )
         }
@@ -288,6 +289,7 @@ class BikePowerCockpitDefaultsAndGatingTest {
                 false,
                 false,
                 false,
+                true,
                 true,
                 any()
             )

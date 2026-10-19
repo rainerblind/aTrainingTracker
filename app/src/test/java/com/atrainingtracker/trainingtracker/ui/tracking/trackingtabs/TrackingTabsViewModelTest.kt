@@ -27,6 +27,7 @@ import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import io.mockk.*
@@ -231,5 +232,60 @@ class TrackingTabsViewModelTest {
 
         val previewOffset = if (ScreenMode.PREVIEW == ScreenMode.TRACKING) 1 else 0
         assertEquals(0, targetIndex + previewOffset)
+    }
+
+    /**
+     * TST-UI-384.4: Progressive loudness escalation, silence reset, and lifecycle teardown.
+     */
+    @Test
+    fun testTrackingTabsViewModel_bellVolumeEscalationAndSilenceReset() = runTest {
+        val mockSynthesizer = mockk<BikeBellAudioSynthesizer>(relaxed = true)
+        var currentTime = 10000L
+
+        val viewModel = TrackingTabsViewModel(
+            application = mockApplication,
+            trackingViewsRepository = mockTrackingViewsRepo,
+            banalServiceRepository = mockBanalRepo,
+            devicesRepository = mockDevicesRepo,
+            bikeBellAudioSynthesizer = mockSynthesizer,
+            timeProvider = { currentTime }
+        )
+
+        // 1. Initial ring after > 5s silence -> 0.70f polite volume
+        viewModel.triggerBellRing(isLongPress = false)
+        verify(exactly = 1) { mockSynthesizer.ring(0.70f) }
+
+        // 2. Second ring within <= 5s (2s later) -> 1.0f escalated volume
+        currentTime += 2000L
+        viewModel.triggerBellRing(isLongPress = false)
+        verify(exactly = 1) { mockSynthesizer.ring(1.0f) }
+
+        // 3. Third ring after > 5s of silence (6s later) -> resets to 0.70f polite volume
+        currentTime += 6000L
+        viewModel.triggerBellRing(isLongPress = false)
+        verify(exactly = 2) { mockSynthesizer.ring(0.70f) }
+
+        // 4. Long-press ring -> immediate 1.0f maximum volume
+        currentTime += 10000L
+        viewModel.triggerBellRing(isLongPress = true)
+        verify(exactly = 2) { mockSynthesizer.ring(1.0f) }
+
+        // 5. Continuous roll triggers
+        viewModel.triggerBellRoll()
+        verify(exactly = 1) { mockSynthesizer.startRoll(1.0f) }
+
+        viewModel.stopBellRoll()
+        verify(exactly = 1) { mockSynthesizer.stopRoll() }
+
+        // 6. Config update
+        viewModel.onUpdateShowBikeBell(42L, true)
+        testScheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { mockTrackingViewsRepo.updateShowBikeBell(42L, true) }
+
+        // 7. ViewModel onCleared releases synthesizer
+        val onClearedMethod = androidx.lifecycle.ViewModel::class.java.getDeclaredMethod("onCleared")
+        onClearedMethod.isAccessible = true
+        onClearedMethod.invoke(viewModel)
+        verify(exactly = 1) { mockSynthesizer.close() }
     }
 }

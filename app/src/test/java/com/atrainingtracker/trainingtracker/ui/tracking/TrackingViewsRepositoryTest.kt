@@ -354,4 +354,57 @@ class TrackingViewsRepositoryTest {
             mockViewsDbManager.deleteSectionDivider(42L, 3)
         }
     }
+
+    /**
+     * TST-UI-384.2: TrackingViewsRepository DTO mapping symmetry and showBikeBell update.
+     */
+    @Test
+    fun testTrackingViewsRepository_dtoMappingAndShowBikeBellUpdate() = runBlocking {
+        val repository = TrackingViewsRepository.getInstance(mockContext)
+
+        val cursor = mockk<Cursor>(relaxed = true)
+        every { cursor.moveToFirst() } returns true
+
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID) } returns 0
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.NAME) } returns 1
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MAP) } returns 2
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LAP_BUTTON) } returns 3
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_SEGMENTS) } returns 4
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE) } returns 5
+        every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_LIVE_CLIMBS) } returns 6
+        every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS) } returns 7
+        every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL) } returns 8
+
+        every { cursor.getLong(0) } returns 77L
+        every { cursor.getString(1) } returns "Bike Bell Cockpit"
+        every { cursor.getInt(2) } returns 1
+        every { cursor.getInt(3) } returns 1
+        every { cursor.getInt(4) } returns 0
+        every { cursor.getInt(5) } returns 0
+        every { cursor.getInt(6) } returns 0
+        every { cursor.getInt(7) } returns 0
+        every { cursor.getInt(8) } returns 1 // showBikeBell = true
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
+                arrayOf("77"),
+                null, null, null
+            )
+        } returns cursor
+
+        val info = repository.getTrackingViewInfoFlow(77L).first()
+
+        assertNotNull(info)
+        assertEquals(77L, info!!.tabViewId)
+        assertTrue(info.showBikeBell)
+
+        // Test updateShowBikeBell delegation
+        repository.updateShowBikeBell(77L, false)
+        verify(exactly = 1) {
+            mockViewsDbManager.updateShowBikeBell(77L, false)
+        }
+    }
 }

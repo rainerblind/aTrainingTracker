@@ -66,9 +66,15 @@ import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.HorizontalRule
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetScaffold
@@ -183,6 +189,8 @@ interface TabToggleActions {
     fun onToggleLiveClimbs(enabled: Boolean) {}
     fun onToggleNavigationHints(enabled: Boolean) {}
     fun onToggleLapButton(enabled: Boolean) {}
+    fun onToggleBikeBell(enabled: Boolean) {}
+    fun onRingBikeBell() {}
 
     companion object {
         val Empty: TabToggleActions = object : TabToggleActions {}
@@ -634,13 +642,33 @@ fun SensorGridScreen(
                         icon = Icons.Default.Timer,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    SpatialCockpitToggleCard(
+                        title = stringResource(R.string.config_tracking__showBikeBell),
+                        subtitle = stringResource(R.string.config_tracking__showBikeBell_subtitle),
+                        isActive = state.showBikeBell,
+                        onToggle = { tabToggleActions.onToggleBikeBell(it) },
+                        icon = Icons.Default.Notifications,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         } else {
             // TRACKING & PREVIEW MODES (Top-level spatial Box overlay, independent inner sensor scroll, weighted map)
+            val isTracking = screenMode == ScreenMode.TRACKING
+            val haptic = LocalHapticFeedback.current
+            val doubleTapModifier = if (isTracking && state.showBikeBell) {
+                Modifier.detectCockpitDoubleTap(enabled = true) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    tabToggleActions.onRingBikeBell()
+                }
+            } else {
+                Modifier
+            }
+
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
+                    .then(doubleTapModifier)
                     .padding(top = paddingValues.calculateTopPadding()) // Only pad the top
             ) {
                 val availableHeight = maxHeight
@@ -988,6 +1016,7 @@ fun SpatialCockpitToggleCard(
     isActive: Boolean,
     onToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     icon: ImageVector? = null,
     accentColor: Color? = null
 ) {
@@ -1036,13 +1065,24 @@ fun SpatialCockpitToggleCard(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = contentColor.copy(alpha = 0.8f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
 
             Surface(
@@ -1069,6 +1109,66 @@ fun SpatialCockpitToggleCard(
                     },
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                 )
+            }
+        }
+    }
+}
+
+/**
+ * Zero-Look Double-Tap gesture detector for the Cockpit sensor grid (REQ-UI-421.3).
+ * Evaluates pointer events in PointerEventPass.Main without consuming initial pointer down events,
+ * strictly preserving screen wakefulness in BatterySaverController (PointerEventPass.Initial),
+ * vertical sensor grid scrolling, and horizontal tab swiping in HorizontalPager.
+ */
+internal fun Modifier.detectCockpitDoubleTap(
+    enabled: Boolean,
+    onDoubleTap: () -> Unit
+): Modifier = if (!enabled) this else pointerInput(Unit) {
+    var lastTapTime = 0L
+    var lastTapPosition = Offset.Zero
+    val doubleTapTimeout = viewConfiguration.doubleTapTimeoutMillis
+    val doubleTapMinTime = 40L
+    val touchSlop = viewConfiguration.touchSlop
+
+    awaitPointerEventScope {
+        while (true) {
+            val down = awaitFirstDown(pass = PointerEventPass.Main, requireUnconsumed = false)
+            val downTime = System.currentTimeMillis()
+            val downPos = down.position
+            var isDrag = false
+
+            while (true) {
+                val event = awaitPointerEvent(pass = PointerEventPass.Main)
+                val pressed = event.changes.filter { it.pressed }
+                if (pressed.isEmpty()) {
+                    // All pointers up
+                    val upTime = System.currentTimeMillis()
+                    val upChange = event.changes.firstOrNull()
+                    if (!isDrag && (upTime - downTime) < doubleTapTimeout) {
+                        val isCloseToFirst = (downPos - lastTapPosition).getDistance() < touchSlop * 2
+                        val isSecondTap = (upTime - lastTapTime) in doubleTapMinTime..doubleTapTimeout && isCloseToFirst
+
+                        if (isSecondTap) {
+                            upChange?.consume()
+                            onDoubleTap()
+                            lastTapTime = 0L
+                            lastTapPosition = Offset.Zero
+                        } else {
+                            lastTapTime = upTime
+                            lastTapPosition = downPos
+                        }
+                    } else {
+                        lastTapTime = 0L
+                    }
+                    break
+                }
+
+                // Check if pointer moved beyond touch slop (indicating scroll/drag/swipe)
+                val currentPos = pressed[0].position
+                if ((currentPos - downPos).getDistance() > touchSlop) {
+                    isDrag = true
+                    lastTapTime = 0L
+                }
             }
         }
     }
