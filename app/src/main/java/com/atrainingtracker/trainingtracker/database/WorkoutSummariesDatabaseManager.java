@@ -1755,6 +1755,30 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
 
+        private boolean doesTableExist(@NonNull SQLiteDatabase db, @NonNull String tableName) {
+            try (Cursor cursor = db.rawQuery("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", new String[]{tableName})) {
+                return cursor != null && cursor.moveToFirst();
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        private boolean doesColumnExist(@NonNull SQLiteDatabase db, @NonNull String tableName, @NonNull String columnName) {
+            try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + tableName + ")", null)) {
+                if (cursor != null) {
+                    int nameIdx = cursor.getColumnIndex("name");
+                    while (cursor.moveToNext()) {
+                        if (nameIdx != -1 && columnName.equalsIgnoreCase(cursor.getString(nameIdx))) {
+                            return true;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Table might not exist
+            }
+            return false;
+        }
+
         //Called whenever newVersion != oldVersion
         @Override
         public void onUpgrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
@@ -1807,46 +1831,57 @@ public class WorkoutSummariesDatabaseManager {
 
             if (oldVersion < 11) {
                 Log.i(TAG, "upgrading to DB version 11");
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.SPORT_ID, "int", "0");
-                // addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.B_SPORT,  "text");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.SPORT_ID, "int", "0");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.B_SPORT, "text", null);
 
-                ContentValues contentValues = new ContentValues();
-                try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
-                        new String[]{WorkoutSummaries.C_ID, "sport"},
-                        null, null,
-                        null, null, null)) {
+                if (doesColumnExist(db, WorkoutSummaries.TABLE, "sport")) {
+                    ContentValues contentValues = new ContentValues();
+                    try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
+                            new String[]{WorkoutSummaries.C_ID, "sport"},
+                            null, null,
+                            null, null, null)) {
 
-                    if (cursor != null) {
-                        int idCol = cursor.getColumnIndex(WorkoutSummaries.C_ID);
-                        int sportCol = cursor.getColumnIndex("sport");
-                        while (cursor.moveToNext()) {
-                            contentValues.clear();
-                            long id = idCol != -1 ? cursor.getLong(idCol) : -1L;
-                            String sport = sportCol != -1 ? cursor.getString(sportCol) : "";
-                            contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
-                            contentValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sport).name());
-                            db.update(WorkoutSummaries.TABLE, contentValues,
-                                    WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                        if (cursor != null) {
+                            int idCol = cursor.getColumnIndex(WorkoutSummaries.C_ID);
+                            int sportCol = cursor.getColumnIndex("sport");
+                            while (cursor.moveToNext()) {
+                                contentValues.clear();
+                                long id = idCol != -1 ? cursor.getLong(idCol) : -1L;
+                                String sport = sportCol != -1 ? cursor.getString(sportCol) : "";
+                                contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
+                                contentValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sport).name());
+                                db.update(WorkoutSummaries.TABLE, contentValues,
+                                        WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                            }
                         }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error migrating sport to sportId in WorkoutSummaries", e);
                     }
                 }
 
-                addColumn(db, "WorkoutNamePatterns", "sportId", "text", "???");
+                if (doesTableExist(db, "WorkoutNamePatterns")) {
+                    addColumnIfNotExists(db, "WorkoutNamePatterns", "sportId", "text", "'???'");
 
-                try (Cursor cursor = db.query("WorkoutNamePatterns",
-                        new String[]{WorkoutSummaries.C_ID, "sport"},
-                        null, null,
-                        null, null, null)) {
+                    if (doesColumnExist(db, "WorkoutNamePatterns", "sport")) {
+                        ContentValues contentValues = new ContentValues();
+                        try (Cursor cursor = db.query("WorkoutNamePatterns",
+                                new String[]{WorkoutSummaries.C_ID, "sport"},
+                                null, null,
+                                null, null, null)) {
 
-                    if (cursor != null) {
-                        int idCol = cursor.getColumnIndex(WorkoutSummaries.C_ID);
-                        int sportCol = cursor.getColumnIndex("sport");
-                        while (cursor.moveToNext()) {
-                            long id = idCol != -1 ? cursor.getLong(idCol) : -1L;
-                            String sport = sportCol != -1 ? cursor.getString(sportCol) : "";
-                            contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
-                            db.update("WorkoutNamePatterns", contentValues,
-                                    WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                            if (cursor != null) {
+                                int idCol = cursor.getColumnIndex(WorkoutSummaries.C_ID);
+                                int sportCol = cursor.getColumnIndex("sport");
+                                while (cursor.moveToNext()) {
+                                    long id = idCol != -1 ? cursor.getLong(idCol) : -1L;
+                                    String sport = sportCol != -1 ? cursor.getString(sportCol) : "";
+                                    contentValues.put("sportId", String.valueOf(SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport)));
+                                    db.update("WorkoutNamePatterns", contentValues,
+                                            WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error migrating sport in WorkoutNamePatterns", e);
                         }
                     }
                 }
@@ -1874,9 +1909,8 @@ public class WorkoutSummariesDatabaseManager {
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.DISTANCE_STREAM, "text", "''");
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.ALTITUDE_STREAM, "text", "''");
 
-                // Combined migration to avoid multiple passes and ANRs.
-                // If oldVersion < 15, we must recalculate everything due to step size change.
-                migrateExistingWorkouts(db, oldVersion < 15);
+                // REQ-MIG-046.2: Heavy cross-database backfill excised from synchronous onUpgrade.
+                // Dispatched asynchronously off UI thread by DatabaseBackfillManager.
             }
 
             // 18 failed due ot a bug
@@ -1885,8 +1919,8 @@ public class WorkoutSummariesDatabaseManager {
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.LATITUDE, "real", null);
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.LONGITUDE, "real", null);
 
-                // Populate new columns for existing data
-                migrateExtremaPositions(db);
+                // REQ-MIG-046.2: Heavy cross-database backfill excised from synchronous onUpgrade.
+                // Dispatched asynchronously off UI thread by DatabaseBackfillManager.
             }
 
             if (oldVersion < 20) {
@@ -1905,7 +1939,8 @@ public class WorkoutSummariesDatabaseManager {
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.BOUND_MAX_LAT, "real", null);
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.BOUND_MAX_LNG, "real", null);
 
-                migrateSpatialBounds(db);
+                // REQ-MIG-046.2: Heavy cross-database backfill excised from synchronous onUpgrade.
+                // Dispatched asynchronously off UI thread by DatabaseBackfillManager.
             }
 
             if (oldVersion < 22) {
@@ -1930,11 +1965,18 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
 
-        private void migrateSpatialBounds(SQLiteDatabase db) {
+        public void migrateSpatialBounds(SQLiteDatabase db) {
+            migrateSpatialBoundsStatic(db);
+        }
+
+        public static void migrateSpatialBoundsStatic(@NonNull SQLiteDatabase db) {
             Log.i(TAG, "Populating spatial bounds for existing workouts...");
+            String selection = WorkoutSummaries.BOUND_MIN_LAT + " IS NULL AND "
+                    + WorkoutSummaries.MAP_POLYLINE + " IS NOT NULL AND "
+                    + WorkoutSummaries.MAP_POLYLINE + " != ''";
             try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
                     new String[]{WorkoutSummaries.C_ID, WorkoutSummaries.MAP_POLYLINE},
-                    null, null, null, null, null)) {
+                    selection, null, null, null, null)) {
                 int idIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID);
                 int polylineIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE);
 
@@ -1965,11 +2007,15 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
 
-        private void migrateExtremaPositions(SQLiteDatabase summariesDb) {
+        public void migrateExtremaPositions(SQLiteDatabase summariesDb) {
+            migrateExtremaPositions(mContext, summariesDb);
+        }
+
+        public static void migrateExtremaPositions(@NonNull Context context, @NonNull SQLiteDatabase summariesDb) {
             Log.i(TAG, "Starting migration of extrema positions...");
 
-            WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
-            WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
+            WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(context);
+            WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(context);
 
             String selection = WorkoutSummaries.LATITUDE + " IS NULL AND " + WorkoutSummaries.EXTREMA_TYPE + " != ?";
             String[] selectionArgs = {ExtremaType.AVG.name()};
@@ -2014,7 +2060,11 @@ public class WorkoutSummariesDatabaseManager {
          * Combined migration for polylines and numerical streams.
          * Only one pass through the summaries table is performed.
          */
-        private void migrateExistingWorkouts(SQLiteDatabase db, boolean forceRecalc) {
+        public void migrateExistingWorkouts(SQLiteDatabase db, boolean forceRecalc) {
+            migrateExistingWorkouts(mContext, db, forceRecalc);
+        }
+
+        public static void migrateExistingWorkouts(@NonNull Context context, @NonNull SQLiteDatabase db, boolean forceRecalc) {
             Log.i(TAG, "Starting combined migration (forceRecalc=" + forceRecalc + ")...");
 
             String selection = null;
@@ -2034,7 +2084,7 @@ public class WorkoutSummariesDatabaseManager {
                     long workoutId = summaryCursor.getLong(idIdx);
                     String baseFileName = summaryCursor.getString(fileIdx);
                     if (baseFileName != null) {
-                        migrateOneWorkout(db, workoutId, baseFileName);
+                        migrateOneWorkout(context, db, workoutId, baseFileName);
                     }
                 }
             } catch (Exception e) {
@@ -2042,12 +2092,12 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
 
-        private void migrateOneWorkout(SQLiteDatabase db, long workoutId, String baseFileName) {
+        public static void migrateOneWorkout(@NonNull Context context, @NonNull SQLiteDatabase db, long workoutId, @NonNull String baseFileName) {
             List<LatLng> latLngs = new ArrayList<>();
             List<Double> altitudes = new ArrayList<>();
             List<Double> distances = new ArrayList<>();
 
-            SQLiteDatabase samplesDb = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();
+            SQLiteDatabase samplesDb = WorkoutSamplesDatabaseManager.getInstance(context).getDatabase();
             String tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName);
 
             try (Cursor cursor = samplesDb.query(tableName, null, null, null, null, null, null)) {

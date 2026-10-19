@@ -307,4 +307,142 @@ class WorkoutSummariesRealSqliteMigrationTest {
             assertEquals(3600, cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.COUNT)))
         }
     }
+
+    @Test
+    fun testLegacyUpgradeV3ToV25RealSqlite() {
+        val database = checkNotNull(db)
+
+        // Scaffold v3 table
+        database.execSQL("""
+            CREATE TABLE ${WorkoutSummaries.TABLE} (
+                ${WorkoutSummaries.C_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+                ${WorkoutSummaries.WORKOUT_NAME} text,
+                ${WorkoutSummaries.FILE_BASE_NAME} text,
+                ${WorkoutSummaries.DESCRIPTION} text,
+                ${WorkoutSummaries.GOAL} text,
+                ${WorkoutSummaries.METHOD} text,
+                sport text,
+                ${WorkoutSummaries.TIME_START} DATETIME DEFAULT CURRENT_TIMESTAMP,
+                ${WorkoutSummaries.TIME_ACTIVE_s} int,
+                ${WorkoutSummaries.TIME_TOTAL_s} int,
+                ${WorkoutSummaries.DISTANCE_TOTAL_m} real,
+                ${WorkoutSummaries.SPEED_AVERAGE_mps} real,
+                ${WorkoutSummaries.GC_DATA} text,
+                ${WorkoutSummaries.CALORIES} int
+            )
+        """.trimIndent())
+        database.version = 3
+
+        // Insert legacy v3 row
+        val cv = ContentValues().apply {
+            put(WorkoutSummaries.WORKOUT_NAME, "Legacy Morning Run")
+            put("sport", "RUNNING")
+            put(WorkoutSummaries.DISTANCE_TOTAL_m, 5000.0)
+            put(WorkoutSummaries.CALORIES, 350)
+        }
+        val insertedId = database.insertOrThrow(WorkoutSummaries.TABLE, null, cv)
+        assertEquals(1L, insertedId)
+
+        // Perform full upgrade v3 -> v25
+        helper.onUpgrade(database, 3, 25)
+        database.version = 25
+
+        // Verify newly added columns exist
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE, WorkoutSummaries.SPORT_ID))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE, WorkoutSummaries.B_SPORT))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE, WorkoutSummaries.RACE))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE, WorkoutSummaries.SOURCE))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.COUNT))
+
+        // Verify data preservation and column population
+        database.query(WorkoutSummaries.TABLE, null, "${WorkoutSummaries.C_ID} = ?", arrayOf("1"), null, null, null).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("Legacy Morning Run", cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME)))
+            assertEquals(5000.0, cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m)), 0.001)
+            assertEquals(350, cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.CALORIES)))
+            assertEquals(0, cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutSummaries.RACE)))
+            assertEquals("TRACKED", cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.SOURCE)))
+        }
+    }
+
+    @Test
+    fun testLegacyUpgradeV10ToV25SyntaxAndColumnGuards() {
+        val database = checkNotNull(db)
+
+        // Scaffold v10 tables
+        database.execSQL("""
+            CREATE TABLE ${WorkoutSummaries.TABLE} (
+                ${WorkoutSummaries.C_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+                ${WorkoutSummaries.WORKOUT_NAME} text,
+                ${WorkoutSummaries.FILE_BASE_NAME} text,
+                ${WorkoutSummaries.DESCRIPTION} text,
+                ${WorkoutSummaries.GOAL} text,
+                ${WorkoutSummaries.METHOD} text,
+                sport text,
+                ${WorkoutSummaries.TIME_START} DATETIME DEFAULT CURRENT_TIMESTAMP,
+                ${WorkoutSummaries.TIME_ACTIVE_s} int,
+                ${WorkoutSummaries.TIME_TOTAL_s} int,
+                ${WorkoutSummaries.DISTANCE_TOTAL_m} real,
+                ${WorkoutSummaries.SPEED_AVERAGE_mps} real,
+                ${WorkoutSummaries.GC_DATA} text,
+                ${WorkoutSummaries.CALORIES} int,
+                ${WorkoutSummaries.COMMUTE} int,
+                ${WorkoutSummaries.TRAINER} int,
+                ${WorkoutSummaries.ASCENDING} int,
+                ${WorkoutSummaries.DESCENDING} int,
+                ${WorkoutSummaries.EXTREMA_VALUES_CALCULATED} int
+            )
+        """.trimIndent())
+        database.execSQL(createV22ExtremaTable)
+        database.execSQL(createAccumulatedSensorsTable)
+
+        // v10 WorkoutNamePatterns table
+        database.execSQL("""
+            CREATE TABLE WorkoutNamePatterns (
+                _id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sportId int,
+                startLocationName text,
+                endLocationName text,
+                fancyName text,
+                addCounter int,
+                counter int,
+                addVia int
+            )
+        """.trimIndent())
+        database.version = 10
+
+        val patternCv = ContentValues().apply {
+            put("sportId", 1)
+            put("fancyName", "Morning Commute")
+        }
+        database.insertOrThrow("WorkoutNamePatterns", null, patternCv)
+
+        // Perform full upgrade v10 -> v25 (must not crash with syntax error near '?')
+        helper.onUpgrade(database, 10, 25)
+        database.version = 25
+
+        // Verify columns and data
+        assertTrue(RealSqliteTestHelper.hasColumn(database, "WorkoutNamePatterns", "sportId"))
+        database.query("WorkoutNamePatterns", null, "_id = ?", arrayOf("1"), null, null, null).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("Morning Commute", cursor.getString(cursor.getColumnIndexOrThrow("fancyName")))
+        }
+
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE, WorkoutSummaries.RACE))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE, WorkoutSummaries.SOURCE))
+    }
+
+    @Test
+    fun testDatabaseOpenIsInstantaneousWithoutSynchronousBackfill() {
+        val database = checkNotNull(db)
+        scaffoldV22Schema(database)
+
+        // Measure onUpgrade duration - DDL-only must be instantaneous (< 500ms)
+        val startTime = System.currentTimeMillis()
+        helper.onUpgrade(database, 22, 25)
+        val durationMs = System.currentTimeMillis() - startTime
+
+        assertTrue("onUpgrade DDL should execute instantaneously (took ${durationMs}ms)", durationMs < 500)
+    }
 }
+
