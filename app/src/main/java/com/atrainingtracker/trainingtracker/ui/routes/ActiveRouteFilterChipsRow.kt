@@ -46,7 +46,8 @@ fun ActiveRouteFilterChipsRow(
     onRemoveQuery: () -> Unit,
     onRemoveSource: () -> Unit,
     onRemoveSelected: () -> Unit,
-    onRemoveMinDistance: () -> Unit,
+    onRemoveDistanceRange: () -> Unit = {},
+    onRemoveMinDistance: () -> Unit = onRemoveDistanceRange,
     onRemoveMinElevation: () -> Unit,
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier
@@ -91,13 +92,19 @@ fun ActiveRouteFilterChipsRow(
             }
         }
 
-        // Min Distance Chip
-        if (criteria.minDistanceMeters != null) {
-            item("minDistance") {
-                val km = (criteria.minDistanceMeters / 1000.0).toInt()
+        // Distance Interval Chip (REQ-UI-417.3)
+        if (criteria.minDistanceMeters != null || criteria.maxDistanceMeters != null) {
+            item("distance") {
+                val minKm = criteria.minDistanceMeters?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } }
+                val maxKm = criteria.maxDistanceMeters?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } }
+                val label = when {
+                    minKm != null && maxKm != null -> stringResource(R.string.filter_distance_interval_format, minKm, maxKm)
+                    minKm != null -> stringResource(R.string.filter_min_distance_format, minKm)
+                    else -> stringResource(R.string.filter_max_distance_format, maxKm!!)
+                }
                 RemovableFilterChip(
-                    label = stringResource(R.string.filter_min_distance_format, km.toString()),
-                    onRemove = onRemoveMinDistance
+                    label = label,
+                    onRemove = onRemoveDistanceRange
                 )
             }
         }

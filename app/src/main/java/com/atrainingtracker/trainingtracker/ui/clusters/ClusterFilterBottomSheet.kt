@@ -22,9 +22,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
@@ -40,19 +42,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterBottomSheetScaffold
 
 /**
- * Material 3 modal bottom sheet for multi-dimensional Favorite Tracks / Workout Clusters filtering (REQ-UI-187).
+ * Material 3 modal bottom sheet for multi-dimensional Favorite Tracks / Workout Clusters filtering (REQ-UI-187, REQ-UI-417.2).
  *
  * Employs [FilterBottomSheetScaffold] for strict consistency with workout, route, and segment filtering.
  * Allows users to search by keyword (track name), filter by favorite starting locations (Lieblingsorte),
- * filter by linked equipment, choose minimum reference distance thresholds (10km, 25km, 50km, 100km),
+ * filter by linked equipment, configure distance intervals (presets & custom min/max km),
  * and choose minimum recordings count thresholds (≥ 3, 5, 10, 25).
  *
  * @param criteria Active filter criteria to initialize local UI state.
@@ -75,6 +79,13 @@ fun ClusterFilterBottomSheet(
     var localQuery by remember(criteria.query) { mutableStateOf(criteria.query) }
     var localEquipmentName by remember(criteria.equipmentName) { mutableStateOf(criteria.equipmentName) }
     var localMinDistanceMeters by remember(criteria.minDistanceMeters) { mutableStateOf(criteria.minDistanceMeters) }
+    var localMaxDistanceMeters by remember(criteria.maxDistanceMeters) { mutableStateOf(criteria.maxDistanceMeters) }
+    var minDistanceText by remember(criteria.minDistanceMeters) {
+        mutableStateOf(criteria.minDistanceMeters?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } } ?: "")
+    }
+    var maxDistanceText by remember(criteria.maxDistanceMeters) {
+        mutableStateOf(criteria.maxDistanceMeters?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } } ?: "")
+    }
     var localMinHitCount by remember(criteria.minHitCount) { mutableStateOf(criteria.minHitCount) }
     var localStartLocationName by remember(criteria.startLocationName) { mutableStateOf(criteria.startLocationName) }
     var localStartLocationLat by remember(criteria.startLocationLat) { mutableStateOf(criteria.startLocationLat) }
@@ -88,6 +99,9 @@ fun ClusterFilterBottomSheet(
             localQuery = ""
             localEquipmentName = null
             localMinDistanceMeters = null
+            localMaxDistanceMeters = null
+            minDistanceText = ""
+            maxDistanceText = ""
             localMinHitCount = null
             localStartLocationName = null
             localStartLocationLat = null
@@ -100,6 +114,7 @@ fun ClusterFilterBottomSheet(
                 query = localQuery.trim(),
                 equipmentName = localEquipmentName,
                 minDistanceMeters = localMinDistanceMeters,
+                maxDistanceMeters = localMaxDistanceMeters,
                 minHitCount = localMinHitCount,
                 startLocationName = localStartLocationName,
                 startLocationLat = localStartLocationLat,
@@ -161,10 +176,10 @@ fun ClusterFilterBottomSheet(
             }
         }
 
-        // 3. Minimum Reference Distance Thresholds
+        // 3. Distance Interval (REQ-UI-417.2)
         Column {
             Text(
-                text = stringResource(R.string.filter_section_thresholds),
+                text = stringResource(R.string.filter_section_distance),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -173,17 +188,62 @@ fun ClusterFilterBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Distance Thresholds: 10km, 25km, 50km, 100km
-                listOf(10.0, 25.0, 50.0, 100.0).forEach { km ->
-                    val meters = km * 1000.0
+                val distancePresets = listOf(
+                    Triple("< 10 km", null, 10000.0),
+                    Triple("10 - 25 km", 10000.0, 25000.0),
+                    Triple("25 - 50 km", 25000.0, 50000.0),
+                    Triple("50 - 100 km", 50000.0, 100000.0),
+                    Triple("> 100 km", 100000.0, null)
+                )
+                distancePresets.forEach { (label, minM, maxM) ->
+                    val isSelected = localMinDistanceMeters == minM && localMaxDistanceMeters == maxM
                     FilterChip(
-                        selected = (localMinDistanceMeters == meters),
+                        selected = isSelected,
                         onClick = {
-                            localMinDistanceMeters = if (localMinDistanceMeters == meters) null else meters
+                            if (isSelected) {
+                                localMinDistanceMeters = null
+                                localMaxDistanceMeters = null
+                                minDistanceText = ""
+                                maxDistanceText = ""
+                            } else {
+                                localMinDistanceMeters = minM
+                                localMaxDistanceMeters = maxM
+                                minDistanceText = minM?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } } ?: ""
+                                maxDistanceText = maxM?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } } ?: ""
+                            }
                         },
-                        label = { Text(stringResource(R.string.filter_min_distance_format, km.toInt().toString())) }
+                        label = { Text(label) }
                     )
                 }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = minDistanceText,
+                    onValueChange = { str ->
+                        minDistanceText = str
+                        localMinDistanceMeters = str.toDoubleOrNull()?.times(1000.0)
+                    },
+                    label = { Text("${stringResource(R.string.filter_min_label)} (km)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = maxDistanceText,
+                    onValueChange = { str ->
+                        maxDistanceText = str
+                        localMaxDistanceMeters = str.toDoubleOrNull()?.times(1000.0)
+                    },
+                    label = { Text("${stringResource(R.string.filter_max_label)} (km)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 

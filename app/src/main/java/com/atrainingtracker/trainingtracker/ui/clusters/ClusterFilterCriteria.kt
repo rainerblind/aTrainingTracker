@@ -31,6 +31,7 @@ import org.json.JSONObject
  * - [query]: Case-insensitive substring match against cluster name.
  * - [equipmentName]: Linked gear name inferred via the cluster's sport type.
  * - [minDistanceMeters]: Minimum reference distance threshold in meters.
+ * - [maxDistanceMeters]: Maximum reference distance threshold in meters (REQ-UI-417.1).
  * - [minHitCount]: Minimum number of recorded workouts associated with the cluster.
  * - [startLocationName], [startLocationLat], [startLocationLng], [startLocationRadiusM]: Spatial geofence filter around starting hub (REQ-UI-186).
  *
@@ -42,6 +43,7 @@ data class ClusterFilterCriteria(
     val query: String = "",
     val equipmentName: String? = null,
     val minDistanceMeters: Double? = null,
+    val maxDistanceMeters: Double? = null,
     val minHitCount: Int? = null,
     val startLocationName: String? = null,
     val startLocationLat: Double? = null,
@@ -50,13 +52,14 @@ data class ClusterFilterCriteria(
 ) {
     /**
      * Total count of distinct active filter dimensions.
+     * Distance interval (min or max) counts as a single active filter dimension (REQ-UI-417.1).
      */
     val activeFilterCount: Int
         get() {
             var count = 0
             if (query.isNotBlank()) count++
             if (equipmentName != null) count++
-            if (minDistanceMeters != null) count++
+            if (minDistanceMeters != null || maxDistanceMeters != null) count++
             if (minHitCount != null) count++
             if (startLocationLat != null && startLocationLng != null) count++
             return count
@@ -103,6 +106,11 @@ data class ClusterFilterCriteria(
             return false
         }
 
+        // Maximum Reference Distance threshold (meters) (REQ-UI-417.1)
+        if (maxDistanceMeters != null && cluster.refDistance > maxDistanceMeters) {
+            return false
+        }
+
         // Minimum Recordings / Hit Count threshold
         if (minHitCount != null && cluster.hitCount < minHitCount) {
             return false
@@ -130,6 +138,7 @@ data class ClusterFilterCriteria(
         if (query.isNotBlank()) json.put("query", query)
         equipmentName?.let { json.put("equipmentName", it) }
         minDistanceMeters?.let { json.put("minDistanceMeters", it) }
+        maxDistanceMeters?.let { json.put("maxDistanceMeters", it) }
         minHitCount?.let { json.put("minHitCount", it) }
         startLocationName?.let { json.put("startLocationName", it) }
         startLocationLat?.let { json.put("startLocationLat", it) }
@@ -142,6 +151,7 @@ data class ClusterFilterCriteria(
         /**
          * Reconstructs a [ClusterFilterCriteria] instance from its persisted JSON representation.
          * Returns an empty criteria instance if [jsonStr] is null, empty, or unparseable.
+         * Gracefully handles legacy JSON missing [maxDistanceMeters] by falling back to null (REQ-UI-417.1).
          */
         fun fromJson(jsonStr: String?): ClusterFilterCriteria {
             if (jsonStr.isNullOrBlank()) return ClusterFilterCriteria()
@@ -151,6 +161,7 @@ data class ClusterFilterCriteria(
                     query = json.optString("query", ""),
                     equipmentName = if (json.has("equipmentName")) json.getString("equipmentName") else null,
                     minDistanceMeters = if (json.has("minDistanceMeters")) json.getDouble("minDistanceMeters") else null,
+                    maxDistanceMeters = if (json.has("maxDistanceMeters")) json.getDouble("maxDistanceMeters") else null,
                     minHitCount = if (json.has("minHitCount")) json.getInt("minHitCount") else null,
                     startLocationName = if (json.has("startLocationName")) json.getString("startLocationName") else null,
                     startLocationLat = if (json.has("startLocationLat")) json.getDouble("startLocationLat") else null,

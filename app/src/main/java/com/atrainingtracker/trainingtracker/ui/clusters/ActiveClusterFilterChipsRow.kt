@@ -45,7 +45,8 @@ fun ActiveClusterFilterChipsRow(
     criteria: ClusterFilterCriteria,
     onRemoveQuery: () -> Unit,
     onRemoveEquipment: () -> Unit,
-    onRemoveMinDistance: () -> Unit,
+    onRemoveDistanceRange: () -> Unit = {},
+    onRemoveMinDistance: () -> Unit = onRemoveDistanceRange,
     onRemoveMinHitCount: () -> Unit,
     onRemoveStartLocation: () -> Unit = {},
     onClearAll: () -> Unit,
@@ -96,13 +97,19 @@ fun ActiveClusterFilterChipsRow(
             }
         }
 
-        // 3. Minimum Distance Chip
-        criteria.minDistanceMeters?.let { meters ->
-            val km = (meters / 1000.0).toInt()
-            item(key = "min_distance") {
+        // 3. Distance Interval Chip (REQ-UI-417.3)
+        if (criteria.minDistanceMeters != null || criteria.maxDistanceMeters != null) {
+            item(key = "distance") {
+                val minKm = criteria.minDistanceMeters?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } }
+                val maxKm = criteria.maxDistanceMeters?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } }
+                val label = when {
+                    minKm != null && maxKm != null -> stringResource(R.string.filter_distance_interval_format, minKm, maxKm)
+                    minKm != null -> stringResource(R.string.filter_min_distance_format, minKm)
+                    else -> stringResource(R.string.filter_max_distance_format, maxKm!!)
+                }
                 RemovableFilterChip(
-                    label = stringResource(R.string.filter_min_distance_format, km.toString()),
-                    onRemove = onRemoveMinDistance
+                    label = label,
+                    onRemove = onRemoveDistanceRange
                 )
             }
         }
