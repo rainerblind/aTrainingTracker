@@ -114,7 +114,20 @@ public class WorkoutDeletionHelper {
         mSummariesManager.deleteWorkout(workoutId);
         mLapsManager.deleteWorkout(workoutId);
 
-        if (fileBaseName != null) {
+        if (ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            try {
+                if (mContext != null) {
+                    androidx.work.WorkManager wm = androidx.work.WorkManager.getInstance(mContext);
+                    wm.cancelAllWorkByTag(fileBaseName);
+                    wm.cancelUniqueWork("export_" + fileBaseName);
+                    for (com.atrainingtracker.trainingtracker.exporter.FileFormat format : com.atrainingtracker.trainingtracker.exporter.FileFormat.values()) {
+                        wm.cancelUniqueWork(com.atrainingtracker.trainingtracker.exporter.ExportManager.getUniqueWorkName(fileBaseName, format));
+                    }
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "Could not cancel WorkManager tasks on deletion for " + fileBaseName + ": " + t.getMessage());
+            }
+
             mSamplesManager.deleteWorkout(fileBaseName);
             mExportStatusRepo.deleteWorkout(fileBaseName);
             if (mStravaUploadDbHelper != null) {

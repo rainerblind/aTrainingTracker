@@ -23,6 +23,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.exporter.ExportConfig
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
 import com.atrainingtracker.trainingtracker.exporter.ExportStatus
 import com.atrainingtracker.trainingtracker.exporter.ExportType
@@ -321,6 +322,219 @@ class ExportStatusDatabaseManagerTest {
                 "${WorkoutSummaries.FILE_BASE_NAME}=? AND ${ExportStatusDatabaseManager.TYPE}=? AND ${ExportStatusDatabaseManager.FORMAT}=?",
                 arrayOf(fileBaseName, ExportType.FILE.name, FileFormat.FIT.name)
             )
+        }
+    }
+
+    @Test
+    fun testMarkDependentUploadsFailed_transactionalAtomicUpdate_TST_DAT_024_5() {
+        val fileBaseName = "2026-10-19_08-00-00"
+        val format = FileFormat.TCX
+
+        every { mockDb.inTransaction() } returns true
+        val capturedCv = slot<ContentValues>()
+        every {
+            mockDb.update(
+                ExportStatusDatabaseManager.ExportStatusDbHelper.TABLE,
+                capture(capturedCv),
+                any(),
+                any()
+            )
+        } returns 2
+
+        dbManager.markDependentUploadsFailed(fileBaseName, format, "Local disk error")
+
+        verifyOrder {
+            mockDb.beginTransaction()
+            mockDb.update(
+                ExportStatusDatabaseManager.ExportStatusDbHelper.TABLE,
+                any(),
+                "${WorkoutSummaries.FILE_BASE_NAME}=? AND ${ExportStatusDatabaseManager.FORMAT}=? AND ${ExportStatusDatabaseManager.TYPE}!=? AND ${ExportStatusDatabaseManager.EXPORT_STATUS}=?",
+                arrayOf<String>(fileBaseName, format.name, ExportType.FILE.name, ExportStatus.WAITING.name)
+            )
+            mockDb.setTransactionSuccessful()
+            mockDb.endTransaction()
+        }
+        assertEquals(ExportStatus.FINISHED_FAILED.name, capturedCv.captured.getAsString(ExportStatusDatabaseManager.EXPORT_STATUS))
+        assertEquals("Local disk error", capturedCv.captured.getAsString(ExportStatusDatabaseManager.ANSWER))
+    }
+
+    @Test
+    fun testStaleProcessingRecovery_healsStaleRows_TST_DAT_024_11() {
+        val fileBaseName = "2026-10-19_08-00-00"
+        val staleTimestamp = System.currentTimeMillis() - ExportConfig.MAX_EXPORT_DURATION_MS - 5000L
+
+        // Phase 1 cursor mock
+        val mockCursor1 = mockk<android.database.Cursor>(relaxed = true)
+        every { mockCursor1.moveToNext() } returns true andThen false
+        every { mockCursor1.getString(0) } returns fileBaseName
+        every { mockCursor1.getString(1) } returns ExportType.FILE.name
+        every { mockCursor1.getString(2) } returns FileFormat.GPX.name
+        every { mockCursor1.isNull(3) } returns false
+        every { mockCursor1.getLong(3) } returns staleTimestamp
+        every { mockCursor1.isNull(4) } returns false
+        every { mockCursor1.getInt(4) } returns 0
+
+        // Phase 3 cursor mock
+        val mockCursor3 = mockk<android.database.Cursor>(relaxed = true)
+        every { mockCursor3.moveToFirst() } returns true
+        every { mockCursor3.isNull(0) } returns false
+        every { mockCursor3.getLong(0) } returns staleTimestamp
+        every { mockCursor3.isNull(1) } returns false
+        every { mockCursor3.getInt(1) } returns 0
+
+        every {
+            mockDb.query(
+                ExportStatusDatabaseManager.ExportStatusDbHelper.TABLE,
+                arrayOf(WorkoutSummaries.FILE_BASE_NAME, ExportStatusDatabaseManager.TYPE, ExportStatusDatabaseManager.FORMAT, ExportStatusDatabaseManager.LAST_UPDATED, ExportStatusDatabaseManager.RUN_ATTEMPT_COUNT),
+                any(), any(), null, null, null
+            )
+        } returns mockCursor1
+
+        every {
+            mockDb.query(
+                ExportStatusDatabaseManager.ExportStatusDbHelper.TABLE,
+                arrayOf(ExportStatusDatabaseManager.LAST_UPDATED, ExportStatusDatabaseManager.RUN_ATTEMPT_COUNT),
+                any(), any(), null, null, null
+            )
+        } returns mockCursor3
+
+        every { mockDb.inTransaction() } returns true
+        val capturedCv = slot<ContentValues>()
+        every {
+            mockDb.update(
+                ExportStatusDatabaseManager.ExportStatusDbHelper.TABLE,
+                capture(capturedCv),
+                any(),
+                any()
+            )
+        } returns 1
+
+        dbManager.healStaleProcessingRows(fileBaseName)
+
+        verify {
+            mockDb.update(
+                ExportStatusDatabaseManager.ExportStatusDbHelper.TABLE,
+                any(),
+                "${WorkoutSummaries.FILE_BASE_NAME}=? AND ${ExportStatusDatabaseManager.TYPE}=? AND ${ExportStatusDatabaseManager.FORMAT}=?",
+                arrayOf(fileBaseName, ExportType.FILE.name, FileFormat.GPX.name)
+            )
+        }
+        assertEquals(ExportStatus.FINISHED_FAILED.name, capturedCv.captured.getAsString(ExportStatusDatabaseManager.EXPORT_STATUS))
+    }
+
+    @Test
+    fun testStaleProcessingRecovery_longRunningWithHeartbeat_doesNotTimeout_TST_DAT_024_12() {
+        val fileBaseName = "2026-10-19_08-00-00"
+        // Heartbeat updated 1 minute ago (well within 15 min bound)
+        val freshTimestamp = System.currentTimeMillis() - 60_000L
+
+        val mockCursor = mockk<android.database.Cursor>(relaxed = true)
+        every { mockCursor.moveToNext() } returns true andThen false
+        every { mockCursor.getString(0) } returns fileBaseName
+        every { mockCursor.getString(1) } returns ExportType.FILE.name
+        every { mockCursor.getString(2) } returns FileFormat.GPX.name
+        every { mockCursor.isNull(3) } returns false
+        every { mockCursor.getLong(3) } returns freshTimestamp
+        every { mockCursor.isNull(4) } returns false
+        every { mockCursor.getInt(4) } returns 0
+
+        every {
+            mockDb.query(
+                ExportStatusDatabaseManager.ExportStatusDbHelper.TABLE,
+                arrayOf(WorkoutSummaries.FILE_BASE_NAME, ExportStatusDatabaseManager.TYPE, ExportStatusDatabaseManager.FORMAT, ExportStatusDatabaseManager.LAST_UPDATED, ExportStatusDatabaseManager.RUN_ATTEMPT_COUNT),
+                any(), any(), null, null, null
+            )
+        } returns mockCursor
+
+        dbManager.healStaleProcessingRows(fileBaseName)
+
+        // Should not update to FINISHED_FAILED
+        verify(exactly = 0) {
+            mockDb.update(
+                ExportStatusDatabaseManager.ExportStatusDbHelper.TABLE,
+                match { it.getAsString(ExportStatusDatabaseManager.EXPORT_STATUS) == ExportStatus.FINISHED_FAILED.name },
+                any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun testStaleProcessingRecovery_abortsIfHeartbeatUpdatedDuringCheck_TST_DAT_024_14() {
+        val fileBaseName = "2026-10-19_08-00-00"
+        val oldTimestamp = System.currentTimeMillis() - ExportConfig.MAX_EXPORT_DURATION_MS - 10000L
+        val freshTimestamp = System.currentTimeMillis()
+
+        // Phase 1 cursor mock: sees old timestamp
+        val mockCursor1 = mockk<android.database.Cursor>(relaxed = true)
+        every { mockCursor1.moveToNext() } returns true andThen false
+        every { mockCursor1.getString(0) } returns fileBaseName
+        every { mockCursor1.getString(1) } returns ExportType.FILE.name
+        every { mockCursor1.getString(2) } returns FileFormat.GPX.name
+        every { mockCursor1.isNull(3) } returns false
+        every { mockCursor1.getLong(3) } returns oldTimestamp
+        every { mockCursor1.isNull(4) } returns false
+        every { mockCursor1.getInt(4) } returns 0
+
+        // Phase 3 cursor mock: concurrent worker has updated timestamp
+        val mockCursor3 = mockk<android.database.Cursor>(relaxed = true)
+        every { mockCursor3.moveToFirst() } returns true
+        every { mockCursor3.isNull(0) } returns false
+        every { mockCursor3.getLong(0) } returns freshTimestamp // changed!
+        every { mockCursor3.isNull(1) } returns false
+        every { mockCursor3.getInt(1) } returns 0
+
+        every {
+            mockDb.query(
+                ExportStatusDatabaseManager.ExportStatusDbHelper.TABLE,
+                arrayOf(WorkoutSummaries.FILE_BASE_NAME, ExportStatusDatabaseManager.TYPE, ExportStatusDatabaseManager.FORMAT, ExportStatusDatabaseManager.LAST_UPDATED, ExportStatusDatabaseManager.RUN_ATTEMPT_COUNT),
+                any(), any(), null, null, null
+            )
+        } returns mockCursor1
+
+        every {
+            mockDb.query(
+                ExportStatusDatabaseManager.ExportStatusDbHelper.TABLE,
+                arrayOf(ExportStatusDatabaseManager.LAST_UPDATED, ExportStatusDatabaseManager.RUN_ATTEMPT_COUNT),
+                any(), any(), null, null, null
+            )
+        } returns mockCursor3
+
+        every { mockDb.inTransaction() } returns true
+
+        dbManager.healStaleProcessingRows(fileBaseName)
+
+        // Aborted due to concurrent heartbeat update: no update executed
+        verify(exactly = 0) {
+            mockDb.update(
+                ExportStatusDatabaseManager.ExportStatusDbHelper.TABLE,
+                match { it.getAsString(ExportStatusDatabaseManager.EXPORT_STATUS) == ExportStatus.FINISHED_FAILED.name },
+                any(), any()
+            )
+        }
+    }
+
+    @Test
+    fun testInputSanitization_rejectsInvalidFileBaseName() {
+        val invalidNames = listOf(null, "", "   ", "null", "NULL")
+
+        for (invalid in invalidNames) {
+            assertFalse(ExportStatusDatabaseManager.isValidFileBaseName(invalid))
+
+            if (invalid != null) {
+                dbManager.workoutFinished(invalid)
+                dbManager.deleteWorkout(invalid)
+                dbManager.recordWorkerAttempt(invalid, ExportType.FILE, FileFormat.GPX, 1)
+                dbManager.updateHeartbeat(invalid, ExportType.FILE, FileFormat.GPX)
+                dbManager.markDependentUploadsFailed(invalid, FileFormat.GPX, "Fail")
+            }
+        }
+
+        // Verify zero database updates occurred for invalid names
+        verify(exactly = 0) {
+            mockDb.update(any(), any(), any(), any())
+        }
+        verify(exactly = 0) {
+            mockDb.delete(any(), any(), any())
         }
     }
 }

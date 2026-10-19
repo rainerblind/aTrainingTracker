@@ -44,6 +44,7 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.CancellationException;
 
 /**
  * Exporter responsible for generating GoldenCheetah-compatible JSON ride files (.json).
@@ -187,6 +188,9 @@ public class GCFileWriter extends BaseFileWriter {
                     double longitudeOld;
 
                     while (cursor.moveToNext()) {
+                        if (isCancelled()) {
+                            throw new CancellationException("Export cancelled by WorkManager");
+                        }
                         if (dataValid(cursor, SensorType.TIME_TOTAL.name())) {
                             sample = new JSONObject();
 
@@ -254,6 +258,9 @@ public class GCFileWriter extends BaseFileWriter {
 
                             bufferedWriter.write(getSamplePrefix(isFirst) + sample.toString());
                             isFirst = false;
+                            if (isCancelled()) {
+                                throw new CancellationException("Export cancelled by WorkManager");
+                            }
                         }
                     }
                 }
@@ -262,6 +269,9 @@ public class GCFileWriter extends BaseFileWriter {
             bufferedWriter.write("\n    ]\n");
             bufferedWriter.write("  }\n");
             bufferedWriter.write("}\n");
+        } catch (CancellationException e) {
+            deleteOutputFileSafely(exportInfo);
+            throw e;
         }
 
         return new ExportResult(true, false, "Successfully exported to GC File");

@@ -28,7 +28,11 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.domain.crop.CropCoordinator
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportNotificationManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONException
@@ -45,47 +49,97 @@ class ExportWorker(
     private val repository = ExportStatusDatabaseManager.getInstance(applicationContext)
 
     @SuppressLint("MissingPermission")
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val inputData = inputData
         val exportInfoJson = inputData.getString(KEY_EXPORT_INFO) ?: run {
             Log.e(TAG, "Cannot perform export: ExportInfo was not provided.")
-            return Result.failure()
+            return@withContext Result.failure()
         }
 
         try {
             mExportInfo = ExportInfo.fromJson(exportInfoJson)
         } catch (e: JSONException) {
-            return Result.failure()
+            return@withContext Result.failure()
+        }
+
+        val fileBaseName = mExportInfo.fileBaseName
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            Log.e(TAG, "Invalid fileBaseName in ExportWorker: $fileBaseName")
+            return@withContext Result.failure()
+        }
+
+        if (runAttemptCount >= ExportConfig.MAX_RETRIES) {
+            Log.w(TAG, "ExportWorker exceeded max retries ($runAttemptCount >= ${ExportConfig.MAX_RETRIES}): $mExportInfo")
+            informOthersFailed("Export exceeded maximum retry attempts ($runAttemptCount)")
+            if (mExportInfo.exportType == ExportType.FILE) {
+                repository.markDependentUploadsFailed(mExportInfo.fileBaseName, mExportInfo.fileFormat, "File export failed after max retries")
+            }
+            return@withContext Result.failure()
+        }
+
+        if (isStopped) {
+            Log.w(TAG, "ExportWorker stopped before starting: $mExportInfo")
+            return@withContext Result.failure()
         }
 
         mExporter = ExportManager.getExporter(applicationContext, mExportInfo)
         Log.i(TAG, "Resolved exporter: ${mExporter.javaClass.simpleName} for $mExportInfo")
 
-        if (isStopped) {
-            Log.w(TAG, "ExportWorker stopped before starting: $mExportInfo")
-            return Result.failure()
-        }
+        mExporter.setCancellationSignal { isStopped }
+
+        repository.recordWorkerAttempt(mExportInfo.fileBaseName, mExportInfo.exportType, mExportInfo.fileFormat, runAttemptCount)
 
         informOthersStarted()
 
-        Log.i(TAG, "Starting export execution for $mExportInfo")
-        val result = CropCoordinator.mutex.withLock {
-            if (isStopped) {
-                Log.w(TAG, "ExportWorker stopped while awaiting cropMutex lock: $mExportInfo")
-                return Result.failure()
-            }
-            withContext(Dispatchers.IO) {
-                mExporter.export(mExportInfo)
+        val heartbeatJob = CoroutineScope(Dispatchers.IO).launch {
+            while (isActive && !isStopped) {
+                delay(ExportConfig.HEARTBEAT_INTERVAL_MS)
+                if (isActive && !isStopped) {
+                    repository.updateHeartbeat(mExportInfo.fileBaseName, mExportInfo.exportType, mExportInfo.fileFormat)
+                }
             }
         }
-        Log.i(TAG, "Export execution finished for $mExportInfo: success=${result.success()}, retry=${result.shallRetry()}, answer=${result.answer()}")
 
-        return if (result.success()) {
-            informOthersSuccess(result.answer())
-            Result.success()
-        } else {
-            informOthersFailed(result.answer())
-            if (result.shallRetry()) Result.retry() else Result.failure()
+        try {
+            val result = CropCoordinator.mutex.withLock {
+                if (isStopped) {
+                    Log.w(TAG, "ExportWorker stopped while awaiting cropMutex lock: $mExportInfo")
+                    return@withLock null
+                }
+                withContext(Dispatchers.IO) {
+                    mExporter.export(mExportInfo)
+                }
+            }
+
+            if (isStopped || result == null) {
+                Log.w(TAG, "ExportWorker stopped during/after execution: $mExportInfo")
+                return@withContext Result.failure()
+            }
+
+            Log.i(TAG, "Export execution finished for $mExportInfo: success=${result.success()}, retry=${result.shallRetry()}, answer=${result.answer()}")
+
+            if (result.success()) {
+                informOthersSuccess(result.answer())
+                Result.success()
+            } else if (result.shallRetry() && runAttemptCount < ExportConfig.MAX_RETRIES - 1) {
+                informOthersWaiting("Retry attempt ${runAttemptCount + 1}/${ExportConfig.MAX_RETRIES}: ${result.answer()}")
+                Result.retry()
+            } else {
+                informOthersFailed(result.answer())
+                if (mExportInfo.exportType == ExportType.FILE) {
+                    repository.markDependentUploadsFailed(mExportInfo.fileBaseName, mExportInfo.fileFormat, result.answer())
+                }
+                Result.failure()
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "Uncaught exception in ExportWorker: $mExportInfo", t)
+            informOthersFailed("Unexpected worker error: ${t.message}")
+            if (::mExportInfo.isInitialized && mExportInfo.exportType == ExportType.FILE) {
+                repository.markDependentUploadsFailed(mExportInfo.fileBaseName, mExportInfo.fileFormat, t.message)
+            }
+            Result.failure()
+        } finally {
+            heartbeatJob.cancel()
         }
     }
 
@@ -93,6 +147,11 @@ class ExportWorker(
         Log.i(TAG, "Export started: $mExportInfo")
         updateStatus(mExportInfo.fileBaseName, ExportStatus.PROCESSING, "Export is being prepared...")
         mExportNotificationManager.updateNotification(mExportInfo, false)
+    }
+
+    private fun informOthersWaiting(answer: String?) {
+        Log.i(TAG, "Export waiting/retrying: $mExportInfo Answer: $answer")
+        updateStatus(mExportInfo.fileBaseName, ExportStatus.WAITING, answer)
     }
 
     private fun informOthersSuccess(answer: String?) {
@@ -113,6 +172,7 @@ class ExportWorker(
             if (answer != null) {
                 put(ExportStatusDatabaseManager.ANSWER, answer)
             }
+            put(ExportStatusDatabaseManager.LAST_UPDATED, System.currentTimeMillis())
         }
         repository.updateExportStatus(values, mExportInfo)
         ExportStatusChangedBroadcaster.broadcastExportStatusChanged(applicationContext, fileBaseName)

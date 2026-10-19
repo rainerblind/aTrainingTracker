@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
+import java.util.concurrent.CancellationException;
 
 
 public class GPXFileWriter extends BaseFileWriter {
@@ -67,119 +68,122 @@ public class GPXFileWriter extends BaseFileWriter {
 
         getHeaderData(exportInfo);
 
-        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath());
+        try (BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath())) {
+            // write the header data to the file
+            bufferedWriter.write("<?xml version=\"1.0\"?>\n");
+            String name = TrainingApplication.getAppName();
+            if (HavePressureSensor.havePressureSensor(mContext)) {
+                name += " with barometer";
+            } // add "with barometer" when a barometer was/is available, see Strava API Documentations
+            bufferedWriter.write("<gpx xmlns=\"http://www.topografix.com/GPX/1/1\" creator=\"" + name + "\" version=\"1.1\" "
+                    + "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
+                    + "xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\"> \n");
 
+            bufferedWriter.write(" <metadata>\n");
+            bufferedWriter.write("  <time>" + dbTime2XMLTime(startTime) + "</time>\n");
+            bufferedWriter.write(" </metadata>\n");
+            bufferedWriter.write(" <trk>\n");
+            bufferedWriter.write("  <name>" + startTime + "</name>\n");
 
-        // write the header data to the file
-        bufferedWriter.write("<?xml version=\"1.0\"?>\n");
-        String name = TrainingApplication.getAppName();
-        if (HavePressureSensor.havePressureSensor(mContext)) {
-            name += " with barometer";
-        } // add "with barometer" when a barometer was/is available, see Strava API Documentations
-        bufferedWriter.write("<gpx xmlns=\"http://www.topografix.com/GPX/1/1\" creator=\"" + name + "\" version=\"1.1\" "
-                + "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
-                + "xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\"> \n");
+            WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
+            SQLiteDatabase db = databaseManager.getDatabase();
+            try (Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null)) {
 
-        bufferedWriter.write(" <metadata>\n");
-        bufferedWriter.write("  <time>" + dbTime2XMLTime(startTime) + "</time>\n");
-        bufferedWriter.write(" </metadata>\n");
-        bufferedWriter.write(" <trk>\n");
-        bufferedWriter.write("  <name>" + startTime + "</name>\n");
+                double altitude;
+                double latitude = 0.0;
+                double longitude = 0.0;
+                double latitudeOld;
+                double longitudeOld;
 
-        WorkoutSamplesDatabaseManager databaseManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
-        SQLiteDatabase db = databaseManager.getDatabase();
-        try (Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null)) {
+                long prevLineLap = BANALService.INIT_LAP_NR - 1;
 
-            double altitude;
-            double latitude = 0.0;
-            double longitude = 0.0;
-            double latitudeOld;
-            double longitudeOld;
-
-            long prevLineLap = BANALService.INIT_LAP_NR - 1;
-
-            int lines = cursor != null ? cursor.getCount() : 0;
-
-            int count = 0;
-            while (cursor != null && cursor.moveToNext()) {
-
-                int lap = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.LAP_NR.name()));
-                if (prevLineLap != lap) { // new lap
-
-                    if (lap != BANALService.INIT_LAP_NR) { // finish previous lap
-                        bufferedWriter.write("  </trkseg>\n");
+                while (cursor != null && cursor.moveToNext()) {
+                    if (isCancelled()) {
+                        throw new CancellationException("GPX export cancelled at start of loop iteration");
                     }
 
-                    // get the lap data
-                    SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(mContext).getDatabase();
+                    int lap = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.LAP_NR.name()));
+                    if (prevLineLap != lap) { // new lap
 
-                    try (Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
-                            null,
-                            LapsDatabaseManager.Laps.WORKOUT_ID + "=? AND " + LapsDatabaseManager.Laps.LAP_NR + "=?",
-                            new String[]{workoutID + "", lap + ""},
-                            null,
-                            null,
-                            null)) {
-                        if (DEBUG)
-                            Log.d(TAG, "getting lap data: workoutID: " + workoutID + ", lapNr: " + lap + " found: "
-                                    + (lapCursor != null ? lapCursor.getCount() : 0) + ", " + (lapCursor != null ? lapCursor.getColumnCount() : 0));
+                        if (lap != BANALService.INIT_LAP_NR) { // finish previous lap
+                            bufferedWriter.write("  </trkseg>\n");
+                        }
 
-                        if (lapCursor != null && lapCursor.moveToFirst()) {
-                            // get the data for the lap
-                            totalTime = myGet(lapCursor, LapsDatabaseManager.Laps.TIME_TOTAL_s, "0");
-                            totalDistance = myGet(lapCursor, LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, "0");
+                        // get the lap data
+                        SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(mContext).getDatabase();
+
+                        try (Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
+                                null,
+                                LapsDatabaseManager.Laps.WORKOUT_ID + "=? AND " + LapsDatabaseManager.Laps.LAP_NR + "=?",
+                                new String[]{workoutID + "", lap + ""},
+                                null,
+                                null,
+                                null)) {
+                            if (DEBUG)
+                                Log.d(TAG, "getting lap data: workoutID: " + workoutID + ", lapNr: " + lap + " found: "
+                                        + (lapCursor != null ? lapCursor.getCount() : 0) + ", " + (lapCursor != null ? lapCursor.getColumnCount() : 0));
+
+                            if (lapCursor != null && lapCursor.moveToFirst()) {
+                                // get the data for the lap
+                                totalTime = myGet(lapCursor, LapsDatabaseManager.Laps.TIME_TOTAL_s, "0");
+                                totalDistance = myGet(lapCursor, LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, "0");
+                            } else {
+                                totalTime = "0";
+                                totalDistance = "0";
+                            }
+                        }
+
+                        bufferedWriter.write("  <trkseg>\n");
+
+                    }
+                    prevLineLap = lap;
+
+                    // TODO: extensions with atemp, hr, cadence, distance, hr, temp as described on http://strava.github.io/api/v3/uploads/
+                    if (haveGeo && dataValid(cursor, SensorType.LATITUDE.name()) && dataValid(cursor, SensorType.LONGITUDE.name())) {
+                        latitudeOld = latitude;
+                        longitudeOld = longitude;
+                        latitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.LATITUDE.name()));
+                        longitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.LONGITUDE.name()));
+
+                        if (WRITE_ONLY_ON_NEW_GEO_DATA && latitude == latitudeOld && longitude == longitudeOld) {
+                            // do nothing
                         } else {
-                            totalTime = "0";
-                            totalDistance = "0";
+                            bufferedWriter.write("   <trkpt lat=\"" + latitude + "\" lon=\"" + longitude + "\">\n");
+
+                            if (haveAltitude && dataValid(cursor, SensorType.ALTITUDE.name())) {
+                                altitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.ALTITUDE.name()));
+                                if (altitude >= -500.0 && altitude <= 9000.0) {
+                                    bufferedWriter.write("    <ele>" + altitude + "</ele>\n");
+                                }
+                            }
+
+                            bufferedWriter.write("    <time>"
+                                    + dbTime2XMLTime(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSamplesDbHelper.TIME)))
+                                    + "</time>\n");
+
+                            bufferedWriter.write("   </trkpt>\n");
                         }
                     }
 
-                    bufferedWriter.write("  <trkseg>\n");
-
-                }
-            prevLineLap = lap;
-
-
-            // TODO: extensions with atemp, hr, cadence, distance, hr, temp as described on http://strava.github.io/api/v3/uploads/
-            if (haveGeo && dataValid(cursor, SensorType.LATITUDE.name()) && dataValid(cursor, SensorType.LONGITUDE.name())) {
-                latitudeOld = latitude;
-                longitudeOld = longitude;
-                latitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.LATITUDE.name()));
-                longitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.LONGITUDE.name()));
-
-                if (WRITE_ONLY_ON_NEW_GEO_DATA && latitude == latitudeOld && longitude == longitudeOld) {
-                    // do nothing
-                } else {
-                    bufferedWriter.write("   <trkpt lat=\"" + latitude + "\" lon=\"" + longitude + "\">\n");
-
-                    if (haveAltitude && dataValid(cursor, SensorType.ALTITUDE.name())) {
-                        altitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.ALTITUDE.name()));
-                        if (altitude >= -500.0 && altitude <= 9000.0) {
-                            bufferedWriter.write("    <ele>" + altitude + "</ele>\n");
-                        }
+                    if (isCancelled()) {
+                        throw new CancellationException("GPX export cancelled post-I/O");
                     }
-
-                    bufferedWriter.write("    <time>"
-                            + dbTime2XMLTime(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSamplesDbHelper.TIME)))
-                            + "</time>\n");
-
-                    bufferedWriter.write("   </trkpt>\n");
                 }
             }
-        }
 
-        // now the tail
-        bufferedWriter.write("  </trkseg>\n");
-        bufferedWriter.write(" </trk>\n");
-        bufferedWriter.write("</gpx>\n");
-
-        bufferedWriter.close();
+            // now the tail
+            bufferedWriter.write("  </trkseg>\n");
+            bufferedWriter.write(" </trk>\n");
+            bufferedWriter.write("</gpx>\n");
+        } catch (CancellationException e) {
+            deleteOutputFileSafely(exportInfo);
+            throw e;
         }
 
         return new ExportResult(true, false, "Successfully exported to GPX File");

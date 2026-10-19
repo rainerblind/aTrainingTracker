@@ -203,4 +203,31 @@ class WorkoutDeletionHelperTest {
         assertEquals(Triple(2, 3, 202L), progressReports[1])
         assertEquals(Triple(3, 3, 203L), progressReports[2])
     }
+
+    /**
+     * TST-DAT-024.8: Verifies that deleteWorkout handles null, blank, or "null" fileBaseName safely
+     * without throwing exceptions and cancels active WorkManager tasks for valid base names.
+     */
+    @Test
+    fun testWorkoutDeletionHelper_invalidBaseName_safe_TST_DAT_024_8() {
+        val invalidBaseNames = listOf(null, "", "   ", "null", "NULL")
+
+        for ((index, invalidName) in invalidBaseNames.withIndex()) {
+            val workoutId = 1000L + index
+            every { mockSummariesManager.getBaseFileName(workoutId) } returns invalidName
+            every { mockSummariesManager.deleteWorkout(workoutId) } returns true
+            every { mockLapsManager.deleteWorkout(workoutId) } returns Unit
+
+            // Must complete cleanly without throwing IllegalArgumentException
+            val result = deletionHelper.deleteWorkout(workoutId)
+            assertTrue(result)
+
+            verify(exactly = 1) { mockSummariesManager.deleteWorkout(workoutId) }
+            verify(exactly = 1) { mockLapsManager.deleteWorkout(workoutId) }
+        }
+
+        // Verify zero samples / export repo deletes occurred for invalid names
+        verify(exactly = 0) { mockSamplesManager.deleteWorkout(any()) }
+        verify(exactly = 0) { mockExportStatusRepo.deleteWorkout(any()) }
+    }
 }

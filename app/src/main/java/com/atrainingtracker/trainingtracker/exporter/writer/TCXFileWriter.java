@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 
 
 public class TCXFileWriter extends BaseFileWriter {
@@ -116,52 +117,51 @@ public class TCXFileWriter extends BaseFileWriter {
 
         getHeaderData(exportInfo);
 
-        BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath());
+        try (BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath())) {
+            // write the header data to the file
+            bufferedWriter.write("<?xml version=\"1.0\"?>\n");
+            bufferedWriter.write("<TrainingCenterDatabase xmlns=\"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.garmin.com/xmlschemas/ActivityExtension/v2 http://www.garmin.com/xmlschemas/ActivityExtensionv2.xsd http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd\">\n");
+            bufferedWriter.write("  <Activities>\n");
+            bufferedWriter.write("    <Activity Sport=\"" + SportTypeDatabaseManager.getInstance(mContext).getTcxName(sportTypeId) + "\">\n");
+            bufferedWriter.write("      <Id>" + dbTime2XMLTime(startTime) + "</Id>\n");
 
-        // write the header data to the file
-        bufferedWriter.write("<?xml version=\"1.0\"?>\n");
-        bufferedWriter.write("<TrainingCenterDatabase xmlns=\"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.garmin.com/xmlschemas/ActivityExtension/v2 http://www.garmin.com/xmlschemas/ActivityExtensionv2.xsd http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd\">\n");
-        bufferedWriter.write("  <Activities>\n");
-        bufferedWriter.write("    <Activity Sport=\"" + SportTypeDatabaseManager.getInstance(mContext).getTcxName(sportTypeId) + "\">\n");
-        bufferedWriter.write("      <Id>" + dbTime2XMLTime(startTime) + "</Id>\n");
+            List<LapData> lapsList = LapsDatabaseManager.getInstance(mContext).getLaps(workoutID);
+            Map<Long, LapData> lapDataMap = new HashMap<>();
+            for (LapData lapData : lapsList) {
+                lapDataMap.put(lapData.getLapNr(), lapData);
+            }
 
-        List<LapData> lapsList = LapsDatabaseManager.getInstance(mContext).getLaps(workoutID);
-        Map<Long, LapData> lapDataMap = new HashMap<>();
-        for (LapData lapData : lapsList) {
-            lapDataMap.put(lapData.getLapNr(), lapData);
-        }
+            SQLiteDatabase db = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();
+            try (Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null)) {
 
-        SQLiteDatabase db = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();
-        Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+                int hr;
+                double distance, speed, power, cadence, altitude;
+                double latitude = 0.0;
+                double longitude = 0.0;
+                double latitudeOld;
+                double longitudeOld;
 
-        int hr;
-        double distance, speed, power, cadence, altitude;
-        double latitude = 0.0;
-        double longitude = 0.0;
-        double latitudeOld;
-        double longitudeOld;
+                long prevLineLap = BANALService.INIT_LAP_NR - 1;
 
-        long prevLineLap = BANALService.INIT_LAP_NR - 1;
+                while (cursor != null && cursor.moveToNext()) {
+                    if (isCancelled()) {
+                        throw new CancellationException("TCX export cancelled at start of loop iteration");
+                    }
 
-        int lines = cursor.getCount();
+                    // TODO: avoid writing laps with zero distance and time and ...
 
-        int count = 0;
-        while (cursor.moveToNext()) {
+                    int lap = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.LAP_NR.name()));
+                    if (prevLineLap != lap) { // new lap
 
-            // TODO: avoid writing laps with zero distance and time and ...
-
-            int lap = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.LAP_NR.name()));
-            if (prevLineLap != lap) { // new lap
-
-                if (prevLineLap != BANALService.INIT_LAP_NR - 1) { // finish previous lap
-                    bufferedWriter.write("        </Track>\n");
-                    writeLapNotesAndExtensions(bufferedWriter, prevLineLap, lapDataMap);
+                        if (prevLineLap != BANALService.INIT_LAP_NR - 1) { // finish previous lap
+                            bufferedWriter.write("        </Track>\n");
+                            writeLapNotesAndExtensions(bufferedWriter, prevLineLap, lapDataMap);
                     bufferedWriter.write("      </Lap>\n");
                 }
 
@@ -282,6 +282,10 @@ public class TCXFileWriter extends BaseFileWriter {
                 bufferedWriter.write("            </Extensions>\n");
             }
             bufferedWriter.write("          </Trackpoint>\n");
+
+            if (isCancelled()) {
+                throw new CancellationException("TCX export cancelled post-I/O");
+            }
         }
 
         // now the tail
@@ -350,9 +354,11 @@ public class TCXFileWriter extends BaseFileWriter {
         bufferedWriter.write("  </Author>\n");
         bufferedWriter.write("</TrainingCenterDatabase>\n");
 
-        bufferedWriter.close();
-
-        cursor.close();
+        } // close cursor try
+        } catch (CancellationException e) {
+            deleteOutputFileSafely(exportInfo);
+            throw e;
+        }
 
         return new ExportResult(true, false, "Successfully exported to TCX File");
     }

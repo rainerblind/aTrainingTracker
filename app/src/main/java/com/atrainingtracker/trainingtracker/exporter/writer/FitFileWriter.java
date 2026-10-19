@@ -61,6 +61,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CancellationException;
 
 /**
  * High-fidelity binary workout exporter implementing the Garmin FIT protocol
@@ -194,6 +195,9 @@ public class FitFileWriter extends BaseFileWriter {
 
             try (Cursor cursor = samplesDb.query(tableName, null, null, null, null, null, null)) {
                 while (cursor.moveToNext()) {
+                    if (isCancelled()) {
+                        throw new CancellationException("FIT export cancelled at start of loop iteration");
+                    }
                     RecordMesg record = new RecordMesg();
 
                     Date sampleDate;
@@ -289,8 +293,13 @@ public class FitFileWriter extends BaseFileWriter {
                     }
 
                     encoder.write(record);
+                    if (isCancelled()) {
+                        throw new CancellationException("FIT export cancelled post-I/O");
+                    }
                     sampleCount++;
                 }
+            } catch (CancellationException e) {
+                throw e;
             } catch (Exception e) {
                 Log.e(TAG, "Error querying samples for FIT export: " + e.getMessage(), e);
                 throw new IOException("FIT export failed during sample encoding: " + e.getMessage(), e);
@@ -435,6 +444,8 @@ public class FitFileWriter extends BaseFileWriter {
             encoder.write(activityMesg);
 
             success = true;
+        } catch (CancellationException e) {
+            throw e;
         } catch (Exception e) {
             Log.e(TAG, "Error during FIT export: " + e.getMessage(), e);
             errorMessage = e.getMessage() != null ? e.getMessage() : "FIT export failed: " + e.getClass().getSimpleName();

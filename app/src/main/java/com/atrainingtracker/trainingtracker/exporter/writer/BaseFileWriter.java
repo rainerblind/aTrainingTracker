@@ -38,6 +38,8 @@ import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import com.atrainingtracker.trainingtracker.exporter.ExportType;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
 
+import java.io.File;
+
 public abstract class BaseFileWriter extends BaseExporter {
     protected static final int MIN_DATA_POINTS_FOR_UPLOAD = 10;
     private static final String TAG = "BaseFileExporter";
@@ -48,6 +50,19 @@ public abstract class BaseFileWriter extends BaseExporter {
 
     public BaseFileWriter(@NonNull Context context) {
         super(context);
+    }
+
+    @NonNull
+    public File getOutputFile(@NonNull ExportInfo exportInfo) {
+        return new File(getBaseDirFile(mContext), exportInfo.getShortPath());
+    }
+
+    public void deleteOutputFileSafely(@NonNull ExportInfo exportInfo) {
+        File file = getOutputFile(exportInfo);
+        if (file.exists()) {
+            boolean deleted = file.delete();
+            Log.i(TAG, "Deleted output file on cancellation or failure: " + file.getAbsolutePath() + " (success=" + deleted + ")");
+        }
     }
 
     @Override

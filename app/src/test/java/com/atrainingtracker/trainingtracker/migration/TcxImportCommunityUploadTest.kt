@@ -100,7 +100,7 @@ class TcxImportCommunityUploadTest {
 
         // Verifies no export or upload tasks are scheduled
         verify(exactly = 0) {
-            mockExportManager.exportWorkoutTo(any(), any())
+            mockExportManager.exportWorkoutTo(any<Long>(), any<FileFormat>())
         }
     }
 
@@ -110,7 +110,7 @@ class TcxImportCommunityUploadTest {
         val baseFileName = "2026-09-03-16-00-00"
 
         every { TrainingApplication.uploadToCommunity(FileFormat.STRAVA) } returns true
-        every { mockExportManager.exportWorkoutTo(any(), any()) } throws RuntimeException("Simulated WorkManager failure")
+        every { mockExportManager.exportWorkoutTo(any<Long>(), any<FileFormat>()) } throws RuntimeException("Simulated WorkManager failure")
 
         // Must catch the exception gracefully without propagating or crashing
         LegacyImportEngine.schedulePostImportCommunityUpload(
@@ -160,7 +160,7 @@ class TcxImportCommunityUploadTest {
 
         // When UPLOAD_TO_STRAVA == 0, Strava export must be bypassed
         verify(exactly = 0) {
-            mockExportManager.exportWorkoutTo(any(), any())
+            mockExportManager.exportWorkoutTo(any<Long>(), any<FileFormat>())
         }
     }
 

@@ -28,6 +28,7 @@ import android.util.Log;
 
 import androidx.work.Constraints;
 import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
 import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
@@ -70,6 +71,10 @@ public class ExportManager {
         exportStatusDatabaseManager = ExportStatusDatabaseManager.getInstance(context);
     }
 
+    public static String getUniqueWorkName(@NonNull String fileBaseName, @NonNull FileFormat fileFormat) {
+        return "export_" + fileBaseName + "_" + fileFormat.name();
+    }
+
 
     public static BaseExporter getExporter(@NonNull Context context, @NonNull ExportInfo exportInfo) {
         switch (exportInfo.getExportType()) {
@@ -109,6 +114,10 @@ public class ExportManager {
      * @param fileBaseName The unique identifier for the new workout.
      */
     public void newWorkout(String fileBaseName) {
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            Log.w(TAG, "Cannot start newWorkout for invalid fileBaseName: " + fileBaseName);
+            return;
+        }
         if (DEBUG) Log.d(TAG, "newWorkout: " + fileBaseName);
 
         // initialize all with UNWANTED
@@ -171,6 +180,10 @@ public class ExportManager {
      * @param fileBaseName The unique identifier for the finished workout.
      */
     public void workoutFinished(String fileBaseName) {
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            Log.w(TAG, "Cannot finish workout for invalid fileBaseName: " + fileBaseName);
+            return;
+        }
         if (DEBUG) Log.d(TAG, "workoutFinished: " + fileBaseName);
 
         // simply delegate to the repository.
@@ -186,6 +199,10 @@ public class ExportManager {
      * @param workoutData
      */
     public void exportWorkout(WorkoutData workoutData) {
+        if (workoutData == null || !ExportStatusDatabaseManager.isValidFileBaseName(workoutData.getFileBaseName())) {
+            Log.w(TAG, "Cannot exportWorkout for null or invalid workoutData");
+            return;
+        }
         if (DEBUG) Log.d(TAG, "exportWorkout: " + workoutData.getFileBaseName());
 
         for (FileFormat fileFormat : FileFormat.values()) {
@@ -198,6 +215,21 @@ public class ExportManager {
         }
     }
 
+    /**
+     * Overload to trigger export directly with fileBaseName and FileFormat.
+     */
+    public void exportWorkoutTo(@NonNull String fileBaseName, @NonNull FileFormat fileFormat) {
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            Log.w(TAG, "Cannot exportWorkoutTo for invalid fileBaseName: " + fileBaseName);
+            return;
+        }
+        ContentValues values = new ContentValues();
+        values.put(ExportStatusDatabaseManager.ANSWER, "");
+        exportStatusDatabaseManager.updateExportStatus(values, fileBaseName, ExportType.FILE, fileFormat);
+        startFullExportProcess(fileBaseName, fileFormat);
+        broadcastExportStatusChanged(mContext, fileBaseName);
+    }
+
     /** method to trigger the ExportManager to export a specific workout and FileFormat
      *
      * @param workoutId: The workout ID
@@ -208,25 +240,14 @@ public class ExportManager {
 
         String fileBaseName = getFileBaseName(workoutId);
 
-        if (fileBaseName == null) {
-            Log.e(TAG, "could not find the fileBaseName of workout " + workoutId);
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            Log.e(TAG, "could not find valid fileBaseName of workout " + workoutId + ": " + fileBaseName);
             return;
         } else {
             Log.i(TAG, "exportWorkoutTo resolved fileBaseName: " + fileBaseName);
         }
 
-
-        ContentValues values = new ContentValues();
-
-        // user explicitly wants this.  So, we do not check whether we normally do this.  I.e. no if (TrainingApplication.exportToFile(fileFormat))
-        // -> simply reset the answer and start the full export.
-        values.put(ExportStatusDatabaseManager.ANSWER, "");
-        exportStatusDatabaseManager.updateExportStatus(values, fileBaseName, ExportType.FILE, fileFormat);
-
-        // trigger the export
-        startFullExportProcess(fileBaseName, fileFormat);
-
-        broadcastExportStatusChanged(mContext, fileBaseName);
+        exportWorkoutTo(fileBaseName, fileFormat);
     }
 
     /**
@@ -238,11 +259,19 @@ public class ExportManager {
     public void invalidateWorkoutExport(@NonNull String fileBaseName) {
         if (DEBUG) Log.d(TAG, "invalidateWorkoutExport: " + fileBaseName);
         if (mContext == null) return;
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            Log.w(TAG, "Cannot invalidate export for invalid fileBaseName: " + fileBaseName);
+            return;
+        }
 
         // 1. Cancel running / scheduled WorkManager tasks for this workout
         try {
-            WorkManager.getInstance(mContext).cancelAllWorkByTag(fileBaseName);
-            WorkManager.getInstance(mContext).cancelUniqueWork("export_" + fileBaseName);
+            WorkManager workManager = WorkManager.getInstance(mContext);
+            workManager.cancelAllWorkByTag(fileBaseName);
+            workManager.cancelUniqueWork("export_" + fileBaseName);
+            for (FileFormat format : FileFormat.values()) {
+                workManager.cancelUniqueWork(getUniqueWorkName(fileBaseName, format));
+            }
         } catch (Throwable t) {
             Log.w(TAG, "Could not cancel WorkManager tasks for " + fileBaseName, t);
         }
@@ -280,6 +309,10 @@ public class ExportManager {
      **********************************************************************************************/
 
     private void startFullExportProcess(String fileBaseName, FileFormat fileFormat) {
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            Log.w(TAG, "Cannot startFullExportProcess for invalid fileBaseName: " + fileBaseName);
+            return;
+        }
         Log.i(TAG, "startFullExportProcess: fileBaseName=" + fileBaseName + ", format=" + fileFormat);
 
         try {
@@ -330,15 +363,16 @@ public class ExportManager {
             }
 
             // create the queue and start.
+            String uniqueWorkName = getUniqueWorkName(fileBaseName, fileFormat);
             if (uploadWorks.isEmpty()) {
-                Log.i(TAG, "Enqueuing file-only export for " + fileBaseName);
+                Log.i(TAG, "Enqueuing unique file-only export for " + fileBaseName + " (" + fileFormat + ")");
                 WorkManager.getInstance(mContext)
-                        .beginWith(fileCreationWork)
+                        .beginUniqueWork(uniqueWorkName, ExistingWorkPolicy.REPLACE, fileCreationWork)
                         .enqueue();
             } else {
-                Log.i(TAG, "Enqueuing fileCreationWork followed by " + uploadWorks.size() + " uploadWorks for " + fileBaseName);
+                Log.i(TAG, "Enqueuing unique fileCreationWork followed by " + uploadWorks.size() + " uploadWorks for " + fileBaseName + " (" + fileFormat + ")");
                 WorkManager.getInstance(mContext)
-                        .beginWith(fileCreationWork)
+                        .beginUniqueWork(uniqueWorkName, ExistingWorkPolicy.REPLACE, fileCreationWork)
                         .then(uploadWorks)
                         .enqueue();
             }
@@ -395,6 +429,7 @@ public class ExportManager {
         return new OneTimeWorkRequest.Builder(ExportWorker.class)
                 .setInputData(inputData)
                 .setConstraints(constraints)
+                .addTag(exportInfo.getFileBaseName())
                 .addTag(exportInfo.toString())
                 .build();
     }
