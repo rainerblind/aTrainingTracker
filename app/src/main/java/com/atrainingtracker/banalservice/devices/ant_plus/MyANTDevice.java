@@ -103,11 +103,19 @@ public abstract class MyANTDevice extends MyRemoteDevice {
         subscribeSpecificEvents();
     }
 
+    /**
+     * Initiates search for the ANT+ device.
+     * Safely releases any active {@link PccReleaseHandle} before invoking {@link #requestAccess()}
+     * to eliminate DEVICE_ALREADY_IN_USE conflicts across repeated search cycles (REQ-CON-020.4).
+     */
     @Override
     public void startSearching() {
         myLog("startSearching()");
         super.notifyStartSearching();
 
+        if (pccReleaseHandle != null) {
+            releaseAccess();
+        }
         pccReleaseHandle = requestAccess();
     }
 
@@ -148,7 +156,8 @@ public abstract class MyANTDevice extends MyRemoteDevice {
 
             case DEAD: //  The device is no longer usable and will not respond to commands.
                 unregisterSensors();
-                // TODO: something else?
+                releaseAccess();
+                notifyStopSearching(false);
                 break;
 
             case PROCESSING_REQUEST: //  The plugin is currently processing a command request from a client.
@@ -362,14 +371,37 @@ public abstract class MyANTDevice extends MyRemoteDevice {
         myLog("releaseAccess()");
 
         if (pccReleaseHandle != null) {
-            pccReleaseHandle.close();
+            try {
+                pccReleaseHandle.close();
+            } catch (Exception e) {
+                Log.w(TAG, "Error closing pccReleaseHandle", e);
+            }
+            pccReleaseHandle = null;
         }
         if (mLegacyCommonPcc != null) {
-            mLegacyCommonPcc.releaseAccess();
+            try {
+                mLegacyCommonPcc.releaseAccess();
+            } catch (Exception e) {
+                Log.w(TAG, "Error releasing mLegacyCommonPcc", e);
+            }
+            mLegacyCommonPcc = null;
         }
         if (mCommonPcc != null) {
-            mCommonPcc.releaseAccess();
+            try {
+                mCommonPcc.releaseAccess();
+            } catch (Exception e) {
+                Log.w(TAG, "Error releasing mCommonPcc", e);
+            }
+            mCommonPcc = null;
         }
+    }
+
+    PccReleaseHandle getPccReleaseHandle() {
+        return pccReleaseHandle;
+    }
+
+    void setPccReleaseHandleForTesting(PccReleaseHandle handle) {
+        this.pccReleaseHandle = handle;
     }
 
 
