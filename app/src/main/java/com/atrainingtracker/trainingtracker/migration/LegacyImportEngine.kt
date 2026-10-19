@@ -322,7 +322,10 @@ object LegacyImportEngine {
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
     ): RecoveryResult {
         val token = TrainingApplication.getGoogleDriveAuthToken() ?: return RecoveryResult(0, 0, 0, 0)
-        val driveClient = GoogleDriveClient(tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() })
+        val driveClient = GoogleDriveClient(
+            tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() },
+            accountProvider = { TrainingApplication.getGoogleDriveAccountEmail() }
+        )
 
         val targetExtensions = when (format.lowercase()) {
             "fit" -> listOf(".fit")
@@ -375,8 +378,12 @@ object LegacyImportEngine {
                 listener?.onStatus("Scanning Google Drive: $folderNameDisplay...")
                 val folderId = driveClient.resolveFolderHierarchy(hierarchy)
                 if (folderId != null && searchedFolderIds.add(folderId)) {
-                    val entries = driveClient.listFilesRecursively(folderId, targetExtensions)
-                    allEntries.addAll(entries)
+                    val scanResult = driveClient.listFilesRecursivelyResult(folderId, targetExtensions)
+                    allEntries.addAll(scanResult.entries)
+                    if (!scanResult.isComplete) {
+                        Log.w(TAG, "Google Drive folder scan incomplete for $folderNameDisplay: ${scanResult.error?.message}")
+                        listener?.onStatus("Google Drive scan incomplete: ${scanResult.error?.message ?: "unknown error"}")
+                    }
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Google Drive folder scan failed for ${hierarchy.joinToString("/")}: ${e.message}")
