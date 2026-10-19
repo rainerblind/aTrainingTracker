@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.zones
 
+import androidx.compose.ui.graphics.Color
+import com.atrainingtracker.trainingtracker.ui.theme.DarkOutline
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 /**
@@ -26,6 +28,10 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
  * Divides continuous metric ranges into narrow bins (e.g. 2 bpm for Heart Rate, 10 W for Power),
  * accumulates active duration spent in each bin, and maps each bin's midpoint to the athlete's
  * active training zone thresholds with matching color shading.
+ *
+ * For Cycling Power histograms, automatically identifies heavy right-tailed distributions and
+ * folds rare sprint spikes above a statistical 99th percentile cutoff (P99, floored at Zone 4
+ * upper boundary and rounded to 50 W) into an overflow bar with a linked Sprint Tail dataset (REQ-UI-419).
  */
 object TelemetryHistogramCalculator {
 
@@ -33,6 +39,11 @@ object TelemetryHistogramCalculator {
     const val DEFAULT_POWER_BIN_WIDTH = 10
     private const val MAX_DELTA_T_SEC = 5L
     private const val DEFAULT_LAST_SAMPLE_DURATION_SEC = 1L
+
+    private const val MIN_TAIL_BINS = 10
+    private const val MIN_TAIL_RATIO = 1.25f
+    private const val CUTOFF_ROUNDING_W = 50
+    private const val TAIL_PERCENTILE_RATIO = 0.985
 
     private val ZONE_COLORS = arrayOf(
         TTColor.Zone1,
@@ -70,10 +81,15 @@ object TelemetryHistogramCalculator {
     }
 
     /**
-     * Calculates a fine-grained frequency histogram for Cycling Power telemetry.
+     * Calculates a fine-grained frequency histogram for Cycling Power telemetry, with optional
+     * sprint tail folding (REQ-UI-419).
+     *
+     * If the workout exhibits an extended high-power tail (P99 <= tailCutoff and spikes >= 1.25 * cutoff),
+     * rare sprint spikes are folded into a rightmost overflow bar in the Main View and an interactive
+     * Sprint Tail View dataset is generated. Otherwise, returns a standard uniform linear histogram.
      *
      * @param samples Timestamped power telemetry samples.
-     * @param thresholds Athlete power thresholds for Zones 1 through 4.
+     * @param thresholds Athlete power thresholds for Zones 1 through 6.
      * @param binWidth Width of each frequency bin in Watts (default: 10 W).
      * @return [TelemetryHistogramData] or null if insufficient valid samples.
      */
@@ -82,7 +98,7 @@ object TelemetryHistogramCalculator {
         thresholds: PowerZoneThresholds,
         binWidth: Int = DEFAULT_POWER_BIN_WIDTH
     ): TelemetryHistogramData? {
-        return calculateHistogram(
+        val linearData = calculateHistogram(
             samples = samples,
             binWidth = binWidth.coerceAtLeast(1)
         ) { pwr ->
@@ -95,7 +111,135 @@ object TelemetryHistogramCalculator {
                 pwr <= thresholds.z6Max -> 5
                 else -> 6
             }
+        } ?: return null
+
+        val tailCutoff = calculateTailCutoff(
+            bins = linearData.bins,
+            totalDuration = linearData.totalActiveTimeSec,
+            thresholds = thresholds,
+            binWidth = linearData.binWidth,
+            dataMax = linearData.dataMax
+        ) ?: return linearData
+
+        val regularBins = linearData.bins.filter { it.rangeMax <= tailCutoff }
+        val tailBins = linearData.bins.filter { it.rangeMin >= tailCutoff }
+        val tailDuration = tailBins.sumOf { it.durationSec }
+        val regularDuration = regularBins.sumOf { it.durationSec }
+        val totalDuration = linearData.totalActiveTimeSec
+
+        // Rightmost Overflow Bin for Main View
+        val overflowBin = TelemetryHistogramBin(
+            binIndex = regularBins.size,
+            rangeMin = tailCutoff,
+            rangeMax = linearData.dataMax,
+            durationSec = tailDuration,
+            percentage = if (totalDuration > 0L) (tailDuration.toFloat() / totalDuration) * 100f else 0f,
+            zoneIndex = 5,
+            color = TTColor.Zone5,
+            isOverflow = true,
+            isReturn = false
+        )
+
+        // Leftmost Return Bin for Sprint Tail View
+        val returnBin = TelemetryHistogramBin(
+            binIndex = 0,
+            rangeMin = linearData.dataMin,
+            rangeMax = tailCutoff,
+            durationSec = regularDuration,
+            percentage = if (totalDuration > 0L) (regularDuration.toFloat() / totalDuration) * 100f else 0f,
+            zoneIndex = 1,
+            color = DarkOutline,
+            isOverflow = false,
+            isReturn = true
+        )
+
+        val sprintBins = tailBins.mapIndexed { idx, bin ->
+            bin.copy(
+                binIndex = idx + 1,
+                isOverflow = false,
+                isReturn = false
+            )
         }
+
+        val sprintTailData = TelemetryHistogramData(
+            binWidth = linearData.binWidth,
+            dataMin = tailCutoff,
+            dataMax = linearData.dataMax,
+            totalActiveTimeSec = totalDuration,
+            bins = listOf(returnBin) + sprintBins,
+            tailCutoff = tailCutoff,
+            sprintTail = null
+        )
+
+        return linearData.copy(
+            bins = regularBins + overflowBin,
+            tailCutoff = tailCutoff,
+            sprintTail = sprintTailData
+        )
+    }
+
+    /**
+     * Determines whether cycling power telemetry exhibits an extended sprint tail eligible for folding.
+     *
+     * Computes the 99th percentile active duration threshold (P99), enforces athlete Zone 4 upper boundary
+     * ([PowerZoneThresholds.z4Max]) as a floor, and rounds up to the nearest 50 W boundary. Evaluates three gating
+     * conditions:
+     * 1. `dataMax - tailCutoff >= MIN_TAIL_BINS * binWidth` (at least 100 W in tail);
+     * 2. `dataMax >= tailCutoff * MIN_TAIL_RATIO` (tail exceeds cutoff by at least 25%);
+     * 3. Active duration in bins > tailCutoff is strictly > 0.
+     *
+     * @param bins Raw frequency bins covering the workout power range.
+     * @param totalDuration Total active workout duration across all bins.
+     * @param thresholds Athlete power zone thresholds.
+     * @param binWidth Width of each bin in Watts.
+     * @param dataMax Maximum power value recorded in the workout.
+     * @return The 50 W aligned tail cutoff Wattage, or null if gating conditions are not met.
+     */
+    fun calculateTailCutoff(
+        bins: List<TelemetryHistogramBin>,
+        totalDuration: Long,
+        thresholds: PowerZoneThresholds,
+        binWidth: Int,
+        dataMax: Int
+    ): Int? {
+        if (bins.isEmpty() || totalDuration <= 0L) return null
+
+        val targetDuration = TAIL_PERCENTILE_RATIO * totalDuration.toDouble()
+        var accumulatedDuration = 0L
+        var p99Candidate = bins.first().rangeMin
+
+        for (bin in bins) {
+            accumulatedDuration += bin.durationSec
+            if (accumulatedDuration.toDouble() >= targetDuration) {
+                p99Candidate = bin.rangeMax
+                break
+            }
+        }
+
+        // Floor at athlete's Zone 4 upper boundary (thresholds.z4Max)
+        val rawCutoff = maxOf(p99Candidate, thresholds.z4Max)
+
+        // Round up to clean 50 W boundary
+        val tailCutoff = ((rawCutoff + CUTOFF_ROUNDING_W - 1) / CUTOFF_ROUNDING_W) * CUTOFF_ROUNDING_W
+
+        // Gating Condition 1: At least MIN_TAIL_BINS (10 bins = 100 W) in the tail
+        val tailWidth = dataMax - tailCutoff
+        if (tailWidth < MIN_TAIL_BINS * binWidth) {
+            return null
+        }
+
+        // Gating Condition 2: dataMax >= tailCutoff * 1.25
+        if (dataMax.toFloat() < tailCutoff * MIN_TAIL_RATIO) {
+            return null
+        }
+
+        // Gating Condition 3: Active duration in tail is strictly > 0
+        val tailDuration = bins.filter { it.rangeMin >= tailCutoff }.sumOf { it.durationSec }
+        if (tailDuration <= 0L) {
+            return null
+        }
+
+        return tailCutoff
     }
 
     /**

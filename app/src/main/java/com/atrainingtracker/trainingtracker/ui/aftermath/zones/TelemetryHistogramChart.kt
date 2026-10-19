@@ -19,10 +19,15 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.zones
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,9 +40,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
 import java.util.Locale
 
 /**
@@ -46,6 +53,11 @@ import java.util.Locale
  * Renders discrete vertical bars with 1 dp spacing shaded with active athlete zone colors.
  * Supports interactive touch tapping and drag scrubbing to inspect individual bin ranges,
  * exact duration, percentage of active time, and training zone index.
+ *
+ * For Cycling Power with an extended sprint tail (REQ-UI-419), seamlessly toggles between
+ * the Main View (aerobic and threshold distribution with rightmost overflow bar) and an
+ * expanded Sprint Tail View (high-wattage spikes with independent local Y-axis scaling and
+ * leftmost return bar).
  */
 @Composable
 fun TelemetryHistogramChart(
@@ -69,9 +81,23 @@ fun TelemetryHistogramChart(
         return
     }
 
-    var selectedBinIndex by remember { mutableStateOf<Int?>(null) }
-    val maxDuration = remember(histogram) {
-        histogram.bins.maxOfOrNull { it.durationSec }?.coerceAtLeast(1L) ?: 1L
+    var isSprintTailView by remember(histogram) { mutableStateOf(false) }
+    var selectedBinIndex by remember(histogram, isSprintTailView) { mutableStateOf<Int?>(null) }
+
+    val activeHistogram = if (isSprintTailView && histogram.sprintTail != null) {
+        histogram.sprintTail
+    } else {
+        histogram
+    }
+    val bins = activeHistogram.bins
+    val numBins = bins.size
+
+    val maxDuration = remember(activeHistogram, isSprintTailView) {
+        if (isSprintTailView) {
+            bins.filter { !it.isReturn }.maxOfOrNull { it.durationSec }?.coerceAtLeast(1L) ?: 1L
+        } else {
+            bins.maxOfOrNull { it.durationSec }?.coerceAtLeast(1L) ?: 1L
+        }
     }
 
     Column(
@@ -92,7 +118,7 @@ fun TelemetryHistogramChart(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 val selectedBin = selectedBinIndex?.let { idx ->
-                    histogram.bins.getOrNull(idx)
+                    bins.getOrNull(idx)
                 }
 
                 if (selectedBin != null) {
@@ -116,11 +142,109 @@ fun TelemetryHistogramChart(
                         fontWeight = FontWeight.Bold,
                         color = selectedBin.color
                     )
-                } else {
+                } else if (histogram.tailCutoff == null) {
                     Text(
                         text = "${histogram.dataMin}–${histogram.dataMax} $unit",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Δ ${histogram.binWidth} $unit",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else if (!isSprintTailView) {
+                    // Main View with interactive Overflow Chip
+                    Text(
+                        text = "${histogram.dataMin}–${histogram.tailCutoff} $unit",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        modifier = Modifier.clickable {
+                            isSprintTailView = true
+                            selectedBinIndex = null
+                        }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    R.string.power_histogram_overflow_label,
+                                    histogram.tailCutoff,
+                                    unit
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = stringResource(
+                                    R.string.power_histogram_overflow_desc,
+                                    histogram.tailCutoff,
+                                    unit
+                                ),
+                                modifier = Modifier.size(12.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Δ ${histogram.binWidth} $unit",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    // Sprint Tail View with interactive Return Chip
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.clickable {
+                            isSprintTailView = false
+                            selectedBinIndex = null
+                        }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(
+                                    R.string.power_histogram_return_desc,
+                                    histogram.tailCutoff,
+                                    unit
+                                ),
+                                modifier = Modifier.size(12.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = stringResource(
+                                    R.string.power_histogram_return_label,
+                                    histogram.dataMin,
+                                    histogram.tailCutoff,
+                                    unit
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Text(
+                        text = "${histogram.tailCutoff}–${histogram.dataMax} $unit",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Δ ${histogram.binWidth} $unit",
@@ -133,31 +257,57 @@ fun TelemetryHistogramChart(
         }
 
         // Discrete Histogram Bars Canvas with Touch/Drag Scrubbing
-        val bins = histogram.bins
-        val numBins = bins.size
-
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(96.dp)
-                .pointerInput(bins) {
+                .pointerInput(bins, isSprintTailView) {
                     detectTapGestures(
                         onTap = { offset ->
                             val binWidthWithGap = size.width / numBins.toFloat()
                             val clickedIndex = (offset.x / binWidthWithGap).toInt().coerceIn(0, numBins - 1)
-                            selectedBinIndex = if (selectedBinIndex == clickedIndex) null else clickedIndex
+                            val clickedBin = bins.getOrNull(clickedIndex)
+                            if (clickedBin?.isOverflow == true) {
+                                isSprintTailView = true
+                                selectedBinIndex = null
+                            } else if (clickedBin?.isReturn == true) {
+                                isSprintTailView = false
+                                selectedBinIndex = null
+                            } else {
+                                selectedBinIndex = if (selectedBinIndex == clickedIndex) null else clickedIndex
+                            }
                         }
                     )
                 }
-                .pointerInput(bins) {
+                .pointerInput(bins, isSprintTailView) {
                     detectDragGestures(
                         onDragStart = { offset ->
                             val binWidthWithGap = size.width / numBins.toFloat()
-                            selectedBinIndex = (offset.x / binWidthWithGap).toInt().coerceIn(0, numBins - 1)
+                            val scrubIndex = (offset.x / binWidthWithGap).toInt().coerceIn(0, numBins - 1)
+                            val scrubBin = bins.getOrNull(scrubIndex)
+                            if (scrubBin?.isOverflow == true) {
+                                isSprintTailView = true
+                                selectedBinIndex = null
+                            } else if (scrubBin?.isReturn == true) {
+                                isSprintTailView = false
+                                selectedBinIndex = null
+                            } else {
+                                selectedBinIndex = scrubIndex
+                            }
                         },
                         onDrag = { change, _ ->
                             val binWidthWithGap = size.width / numBins.toFloat()
-                            selectedBinIndex = (change.position.x / binWidthWithGap).toInt().coerceIn(0, numBins - 1)
+                            val scrubIndex = (change.position.x / binWidthWithGap).toInt().coerceIn(0, numBins - 1)
+                            val scrubBin = bins.getOrNull(scrubIndex)
+                            if (scrubBin?.isOverflow == true) {
+                                isSprintTailView = true
+                                selectedBinIndex = null
+                            } else if (scrubBin?.isReturn == true) {
+                                isSprintTailView = false
+                                selectedBinIndex = null
+                            } else {
+                                selectedBinIndex = scrubIndex
+                            }
                             change.consume()
                         }
                     )
@@ -174,36 +324,55 @@ fun TelemetryHistogramChart(
                 val left = i * (barWidthPx + spacingPx)
                 val isSelected = (selectedBinIndex == i)
 
-                val heightFraction = (bin.durationSec.toFloat() / maxDuration.toFloat()).coerceIn(0f, 1f)
-                val barHeightPx = if (bin.durationSec > 0L) {
-                    (heightFraction * totalHeight).coerceAtLeast(2.dp.toPx())
-                } else {
-                    1.dp.toPx() // baseline tick for zero duration bins
-                }
-                val top = totalHeight - barHeightPx
-
-                val alpha = when {
-                    isSelected -> 1.0f
-                    selectedBinIndex != null -> 0.45f
-                    bin.durationSec == 0L -> 0.20f
-                    else -> 0.90f
-                }
-
-                drawRoundRect(
-                    color = bin.color.copy(alpha = alpha),
-                    topLeft = Offset(left, top),
-                    size = Size(barWidthPx, barHeightPx),
-                    cornerRadius = CornerRadius(1.5.dp.toPx(), 1.5.dp.toPx())
-                )
-
-                if (isSelected) {
+                if (bin.isReturn) {
+                    // Return Bar: full-height neutral outline pillar
+                    val returnHeightPx = totalHeight
+                    val returnTop = 0f
                     drawRoundRect(
-                        color = Color.White,
-                        topLeft = Offset(left - 0.5f, top - 1f),
-                        size = Size(barWidthPx + 1f, barHeightPx + 1f),
+                        color = bin.color.copy(alpha = 0.20f),
+                        topLeft = Offset(left, returnTop),
+                        size = Size(barWidthPx, returnHeightPx),
+                        cornerRadius = CornerRadius(1.5.dp.toPx(), 1.5.dp.toPx())
+                    )
+                    drawRoundRect(
+                        color = bin.color.copy(alpha = 0.70f),
+                        topLeft = Offset(left, returnTop),
+                        size = Size(barWidthPx, returnHeightPx),
                         cornerRadius = CornerRadius(1.5.dp.toPx(), 1.5.dp.toPx()),
                         style = Stroke(width = 1.5.dp.toPx())
                     )
+                } else {
+                    val heightFraction = (bin.durationSec.toFloat() / maxDuration.toFloat()).coerceIn(0f, 1f)
+                    val barHeightPx = when {
+                        bin.isOverflow -> (heightFraction * totalHeight).coerceAtLeast(6.dp.toPx())
+                        bin.durationSec > 0L -> (heightFraction * totalHeight).coerceAtLeast(2.dp.toPx())
+                        else -> 1.dp.toPx() // baseline tick for zero duration bins
+                    }
+                    val top = totalHeight - barHeightPx
+
+                    val alpha = when {
+                        isSelected -> 1.0f
+                        selectedBinIndex != null -> 0.45f
+                        bin.durationSec == 0L -> 0.20f
+                        else -> 0.90f
+                    }
+
+                    drawRoundRect(
+                        color = bin.color.copy(alpha = alpha),
+                        topLeft = Offset(left, top),
+                        size = Size(barWidthPx, barHeightPx),
+                        cornerRadius = CornerRadius(1.5.dp.toPx(), 1.5.dp.toPx())
+                    )
+
+                    if (isSelected) {
+                        drawRoundRect(
+                            color = Color.White,
+                            topLeft = Offset(left - 0.5f, top - 1f),
+                            size = Size(barWidthPx + 1f, barHeightPx + 1f),
+                            cornerRadius = CornerRadius(1.5.dp.toPx(), 1.5.dp.toPx()),
+                            style = Stroke(width = 1.5.dp.toPx())
+                        )
+                    }
                 }
             }
         }
@@ -213,19 +382,37 @@ fun TelemetryHistogramChart(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            val minText: String
+            val midText: String
+            val maxText: String
+
+            if (histogram.tailCutoff == null) {
+                minText = "${histogram.dataMin} $unit"
+                midText = "${(histogram.dataMin + histogram.dataMax) / 2} $unit"
+                maxText = "${histogram.dataMax} $unit"
+            } else if (!isSprintTailView) {
+                minText = "${histogram.dataMin} $unit"
+                midText = "${(histogram.dataMin + histogram.tailCutoff) / 2} $unit"
+                maxText = "${histogram.tailCutoff} $unit"
+            } else {
+                minText = "${histogram.tailCutoff} $unit"
+                midText = "${(histogram.tailCutoff + histogram.dataMax) / 2} $unit"
+                maxText = "${histogram.dataMax} $unit"
+            }
+
             Text(
-                text = "${histogram.dataMin} $unit",
+                text = minText,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "${(histogram.dataMin + histogram.dataMax) / 2} $unit",
+                text = midText,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outlineVariant,
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "${histogram.dataMax} $unit",
+                text = maxText,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

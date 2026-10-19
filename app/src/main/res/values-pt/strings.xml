@@ -1514,6 +1514,10 @@
     <string name="zone_mode_columns">Colunas</string>
     <string name="zone_mode_stacked_bar">Barra</string>
     <string name="zone_mode_histogram">Histograma</string>
+    <string name="power_histogram_overflow_label">&gt; %1$d %2$s</string>
+    <string name="power_histogram_return_label">%1$d–%2$d %3$s</string>
+    <string name="power_histogram_overflow_desc">Mudar para a vista de sprint acima de %1$d %2$s</string>
+    <string name="power_histogram_return_desc">Voltar ao histograma principal de 0 a %1$d %2$s</string>
     <string name="aftermath_laps_splits_title">Voltas e tempos parciais</string>
     <string name="split_badge_best">Melhor</string>
     <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->

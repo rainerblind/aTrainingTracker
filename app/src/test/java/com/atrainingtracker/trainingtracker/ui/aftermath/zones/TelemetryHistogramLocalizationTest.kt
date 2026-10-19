@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.zones
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -36,7 +37,11 @@ class TelemetryHistogramLocalizationTest {
 
     private val requiredKeys = listOf(
         "zone_mode_5_zones",
-        "zone_mode_histogram"
+        "zone_mode_histogram",
+        "power_histogram_overflow_label",
+        "power_histogram_return_label",
+        "power_histogram_overflow_desc",
+        "power_histogram_return_desc"
     )
 
     private fun findResDir(): File {
@@ -80,6 +85,38 @@ class TelemetryHistogramLocalizationTest {
                 assertNotNull("Missing key '$key' in values$suffix/strings.xml", value)
                 assertTrue("Value for '$key' in values$suffix/strings.xml should not be blank", value!!.isNotBlank())
             }
+        }
+    }
+
+    @Test
+    fun testPowerHistogramStringsFormatSpecifierParity_tst_ui_382_6() {
+        val resDir = findResDir()
+
+        for (suffix in locales) {
+            val valuesDir = File(resDir, "values$suffix")
+            val stringsFile = File(valuesDir, "strings.xml")
+
+            val overflowLabel = parseStringResource(stringsFile, "power_histogram_overflow_label")!!
+            assertTrue("values$suffix overflow_label must contain %1\$d", overflowLabel.contains("%1\$d"))
+            assertTrue("values$suffix overflow_label must contain %2\$s", overflowLabel.contains("%2\$s"))
+            assertTrue("values$suffix overflow_label must start with >", overflowLabel.startsWith(">"))
+
+            val returnLabel = parseStringResource(stringsFile, "power_histogram_return_label")!!
+            assertTrue("values$suffix return_label must contain %1\$d", returnLabel.contains("%1\$d"))
+            assertTrue("values$suffix return_label must contain %2\$d", returnLabel.contains("%2\$d"))
+            assertTrue("values$suffix return_label must contain %3\$s", returnLabel.contains("%3\$s"))
+
+            val overflowDesc = parseStringResource(stringsFile, "power_histogram_overflow_desc")!!
+            assertTrue("values$suffix overflow_desc must contain %1\$d", overflowDesc.contains("%1\$d"))
+            assertTrue("values$suffix overflow_desc must contain %2\$s", overflowDesc.contains("%2\$s"))
+
+            val returnDesc = parseStringResource(stringsFile, "power_histogram_return_desc")!!
+            assertTrue("values$suffix return_desc must contain %1\$d", returnDesc.contains("%1\$d"))
+            assertTrue("values$suffix return_desc must contain %2\$s", returnDesc.contains("%2\$s"))
+
+            // Rule 49: Do not include leading ASCII arrow symbols in description strings
+            assertFalse("values$suffix overflow_desc must not start with arrow", overflowDesc.startsWith("→") || overflowDesc.startsWith("->"))
+            assertFalse("values$suffix return_desc must not start with arrow", returnDesc.startsWith("←") || returnDesc.startsWith("<-"))
         }
     }
 }

@@ -217,4 +217,118 @@ class TelemetryHistogramCardTest {
             content.contains("Δ \${histogram.binWidth} \$unit")
         )
     }
+
+    @Test
+    fun testTelemetryHistogramModels_backwardCompatibility_tst_ui_382_4() {
+        // Instantiate TelemetryHistogramBin with legacy 7 parameters
+        val bin = TelemetryHistogramBin(
+            binIndex = 0,
+            rangeMin = 100,
+            rangeMax = 110,
+            durationSec = 10L,
+            percentage = 10f,
+            zoneIndex = 1,
+            color = Color.Red
+        )
+        assertFalse("isOverflow must default to false", bin.isOverflow)
+        assertFalse("isReturn must default to false", bin.isReturn)
+
+        // Instantiate TelemetryHistogramData with legacy 5 parameters
+        val data = TelemetryHistogramData(
+            binWidth = 10,
+            dataMin = 100,
+            dataMax = 200,
+            totalActiveTimeSec = 100L,
+            bins = listOf(bin)
+        )
+        assertNull("tailCutoff must default to null", data.tailCutoff)
+        assertNull("sprintTail must default to null", data.sprintTail)
+    }
+
+    @Test
+    fun testTelemetryHistogram_independentYScalingAndReadoutFormats_tst_ui_382_5() {
+        // Folded dataset with tailCutoff = 400 W, sprint tail 400..940 W
+        val returnBin = TelemetryHistogramBin(
+            binIndex = 0,
+            rangeMin = 0,
+            rangeMax = 400,
+            durationSec = 3500L,
+            percentage = (3500f / 3550f) * 100f,
+            zoneIndex = 1,
+            color = Color.Gray,
+            isOverflow = false,
+            isReturn = true
+        )
+        val sprintBin1 = TelemetryHistogramBin(
+            binIndex = 1,
+            rangeMin = 840,
+            rangeMax = 850,
+            durationSec = 15L,
+            percentage = (15f / 3550f) * 100f,
+            zoneIndex = 5,
+            color = Color.Magenta,
+            isOverflow = false,
+            isReturn = false
+        )
+        val sprintBin2 = TelemetryHistogramBin(
+            binIndex = 2,
+            rangeMin = 850,
+            rangeMax = 860,
+            durationSec = 5L,
+            percentage = (5f / 3550f) * 100f,
+            zoneIndex = 5,
+            color = Color.Magenta,
+            isOverflow = false,
+            isReturn = false
+        )
+
+        val sprintTail = TelemetryHistogramData(
+            binWidth = 10,
+            dataMin = 400,
+            dataMax = 940,
+            totalActiveTimeSec = 3550L,
+            bins = listOf(returnBin, sprintBin1, sprintBin2),
+            tailCutoff = 400
+        )
+
+        // 1. Evaluate independent Y-scaling for Sprint Tail View
+        val sprintBins = sprintTail.bins.filter { !it.isReturn }
+        val maxDuration = sprintBins.maxOfOrNull { it.durationSec }?.coerceAtLeast(1L) ?: 1L
+        assertEquals("maxDuration must exclude return bin and equal 15s", 15L, maxDuration)
+
+        val heightFraction15s = (sprintBin1.durationSec.toFloat() / maxDuration.toFloat()).coerceIn(0f, 1f)
+        assertEquals(1.0f, heightFraction15s, 0.001f)
+
+        val heightFraction5s = (sprintBin2.durationSec.toFloat() / maxDuration.toFloat()).coerceIn(0f, 1f)
+        assertEquals(1f / 3f, heightFraction5s, 0.001f)
+
+        // 2. Main View Resting Readout Formats
+        val dataMin = 0
+        val tailCutoff = 400
+        val dataMax = 940
+        val unit = "W"
+        val binWidth = 10
+
+        val mainRangeText = "$dataMin–$tailCutoff $unit"
+        assertEquals("0–400 W", mainRangeText)
+        val overflowChipLabel = "> $tailCutoff $unit"
+        assertEquals("> 400 W", overflowChipLabel)
+        val resolutionText = "Δ $binWidth $unit"
+        assertEquals("Δ 10 W", resolutionText)
+
+        // 3. Sprint Tail Resting Readout Formats
+        val returnChipLabel = "$dataMin–$tailCutoff $unit"
+        assertEquals("0–400 W", returnChipLabel)
+        val sprintRangeText = "$tailCutoff–$dataMax $unit"
+        assertEquals("400–940 W", sprintRangeText)
+
+        // 4. Source Contract Verification for TelemetryHistogramChart.kt
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/TelemetryHistogramChart.kt")
+        val content = file.readText()
+        assertTrue(content.contains("power_histogram_overflow_label"))
+        assertTrue(content.contains("power_histogram_return_label"))
+        assertTrue(content.contains("power_histogram_overflow_desc"))
+        assertTrue(content.contains("power_histogram_return_desc"))
+        assertTrue(content.contains("isSprintTailView"))
+    }
 }

@@ -1711,6 +1711,10 @@
     <string name="zone_mode_columns">Columns</string>
     <string name="zone_mode_stacked_bar">Stacked Bar</string>
     <string name="zone_mode_histogram">Histogram</string>
+    <string name="power_histogram_overflow_label">&gt; %1$d %2$s</string>
+    <string name="power_histogram_return_label">%1$d–%2$d %3$s</string>
+    <string name="power_histogram_overflow_desc">Switch to sprint tail view above %1$d %2$s</string>
+    <string name="power_histogram_return_desc">Return to main histogram 0 to %1$d %2$s</string>
     <string name="aftermath_laps_splits_title">Laps &amp; Splits</string>
     <string name="split_badge_best">Best</string>
     <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->

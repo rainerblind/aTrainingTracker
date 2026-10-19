@@ -65,6 +65,9 @@ data class ZoneTimeEntry(
 
 /**
  * Individual frequency bin for fine-grained telemetry histograms.
+ *
+ * @property isOverflow True if this bin represents a folded rightmost high-wattage sprint overflow bar.
+ * @property isReturn True if this bin represents a folded leftmost return bar navigating back to main view.
  */
 data class TelemetryHistogramBin(
     val binIndex: Int,
@@ -73,18 +76,27 @@ data class TelemetryHistogramBin(
     val durationSec: Long,
     val percentage: Float,
     val zoneIndex: Int, // 1..5
-    val color: Color
+    val color: Color,
+    val isOverflow: Boolean = false,
+    val isReturn: Boolean = false
 )
 
 /**
  * Complete fine-grained telemetry histogram dataset for a workout metric (HR or Power).
+ *
+ * @property tailCutoff Power threshold (in Watts) where rare sprint spikes were folded into an overflow bar,
+ *                      or null if the histogram is rendered linearly across the full data range.
+ * @property sprintTail Linked dataset representing the expanded high-power sprint tail view,
+ *                      or null if no sprint tail was folded.
  */
 data class TelemetryHistogramData(
     val binWidth: Int,
     val dataMin: Int,
     val dataMax: Int,
     val totalActiveTimeSec: Long,
-    val bins: List<TelemetryHistogramBin>
+    val bins: List<TelemetryHistogramBin>,
+    val tailCutoff: Int? = null,
+    val sprintTail: TelemetryHistogramData? = null
 )
 
 /**
