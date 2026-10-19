@@ -590,11 +590,16 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
 
     internal open fun updateStravaActivity(stravaActivityId: String, requestBody: RequestBody): JSONObject? {
         Log.i(TAG, "updateStravaActivity $stravaActivityId")
+        val token = StravaHelper.getRefreshedAccessToken()
+        if (token.isNullOrBlank()) {
+            Log.e(TAG, "Cannot update activity $stravaActivityId: missing valid access token")
+            return null
+        }
 
         val request = Request.Builder()
             .url(URL_STRAVA_ACTIVITY + stravaActivityId)
             .put(requestBody)
-            .addHeader("Authorization", "Bearer ${StravaHelper.getRefreshedAccessToken()}")
+            .addHeader("Authorization", "Bearer $token")
             .build()
 
         return try {
@@ -629,10 +634,16 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
     }
 
     private fun getStravaJson(url: String): JSONObject? {
+        val token = StravaHelper.getRefreshedAccessToken()
+        if (token.isNullOrBlank()) {
+            Log.w(TAG, "Cannot fetch JSON from $url: missing valid access token")
+            return null
+        }
+
         val request = Request.Builder()
             .url(url)
             .get()
-            .addHeader("Authorization", "Bearer ${StravaHelper.getRefreshedAccessToken()}")
+            .addHeader("Authorization", "Bearer $token")
             .build()
 
         return try {
@@ -650,10 +661,16 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
     }
 
     internal open fun getStravaJsonArray(url: String): JSONArray? {
+        val token = StravaHelper.getRefreshedAccessToken()
+        if (token.isNullOrBlank()) {
+            Log.w(TAG, "Cannot fetch JSONArray from $url: missing valid access token")
+            return null
+        }
+
         val request = Request.Builder()
             .url(url)
             .get()
-            .addHeader("Authorization", "Bearer ${StravaHelper.getRefreshedAccessToken()}")
+            .addHeader("Authorization", "Bearer $token")
             .build()
 
         return try {
