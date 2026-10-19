@@ -56,7 +56,7 @@ data class ZoneSample(
  * Metric breakdown for an individual training zone.
  */
 data class ZoneTimeEntry(
-    val zoneIndex: Int, // 1..5
+    val zoneIndex: Int, // 1..5 for HR/Pace, 1..7 for Cycling Power
     val zoneLabelResId: Int,
     val durationSec: Long,
     val percentage: Float,
@@ -75,7 +75,7 @@ data class TelemetryHistogramBin(
     val rangeMax: Int,
     val durationSec: Long,
     val percentage: Float,
-    val zoneIndex: Int, // 1..5
+    val zoneIndex: Int, // 1..5 for HR, 1..7 for Cycling Power
     val color: Color,
     val isOverflow: Boolean = false,
     val isReturn: Boolean = false
@@ -118,7 +118,8 @@ enum class ZoneCardDisplayMode {
 }
 
 /**
- * Aggregate 5-zone time distribution data for a workout, optionally containing fine-grained histogram data.
+ * Aggregate time distribution data for a workout (5 zones for HR/Pace, 7 zones for Cycling Power),
+ * optionally containing fine-grained histogram data.
  */
 data class ZoneDistributionData(
     val totalActiveTimeSec: Long,

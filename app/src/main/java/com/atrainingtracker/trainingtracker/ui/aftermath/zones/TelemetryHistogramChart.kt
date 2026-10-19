@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import java.util.Locale
 
 /**
@@ -124,11 +125,16 @@ fun TelemetryHistogramChart(
                 if (selectedBin != null) {
                     val durationFormatted = ZoneDistributionChartMath.formatZoneDuration(selectedBin.durationSec)
                     val pctFormatted = String.format(Locale.getDefault(), "%.1f", selectedBin.percentage)
+                    val readoutColor = if (selectedBin.color == TTColor.Zone7) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        selectedBin.color
+                    }
                     Text(
                         text = "${selectedBin.rangeMin}–${selectedBin.rangeMax} $unit",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = selectedBin.color
+                        color = readoutColor
                     )
                     Text(
                         text = "$durationFormatted ($pctFormatted%)",
@@ -140,7 +146,7 @@ fun TelemetryHistogramChart(
                         text = "Z${selectedBin.zoneIndex}",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
-                        color = selectedBin.color
+                        color = readoutColor
                     )
                 } else if (histogram.tailCutoff == null) {
                     Text(
@@ -255,6 +261,8 @@ fun TelemetryHistogramChart(
                 }
             }
         }
+
+        val outlineVariantColor = MaterialTheme.colorScheme.outlineVariant
 
         // Discrete Histogram Bars Canvas with Touch/Drag Scrubbing
         Canvas(
@@ -371,6 +379,14 @@ fun TelemetryHistogramChart(
                             size = Size(barWidthPx + 1f, barHeightPx + 1f),
                             cornerRadius = CornerRadius(1.5.dp.toPx(), 1.5.dp.toPx()),
                             style = Stroke(width = 1.5.dp.toPx())
+                        )
+                    } else if (bin.color == TTColor.Zone7 || bin.color == TTColor.Zone6) {
+                        drawRoundRect(
+                            color = outlineVariantColor,
+                            topLeft = Offset(left, top),
+                            size = Size(barWidthPx, barHeightPx),
+                            cornerRadius = CornerRadius(1.5.dp.toPx(), 1.5.dp.toPx()),
+                            style = Stroke(width = 0.75.dp.toPx())
                         )
                     }
                 }

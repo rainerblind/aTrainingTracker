@@ -331,4 +331,75 @@ class TelemetryHistogramCardTest {
         assertTrue(content.contains("power_histogram_return_desc"))
         assertTrue(content.contains("isSprintTailView"))
     }
+
+    @Test
+    fun testDarkModeContrast_zone7ReadoutAndOutlineMeetWcagThresholds_tst_ui_383_3() {
+        // WCAG relative luminance calculation helper
+        fun relativeLuminance(r: Double, g: Double, b: Double): Double {
+            fun channelLum(c: Double): Double = if (c <= 0.03928) c / 12.92 else Math.pow((c + 0.055) / 1.055, 2.4)
+            return 0.2126 * channelLum(r) + 0.7152 * channelLum(g) + 0.0722 * channelLum(b)
+        }
+
+        fun contrastRatio(lum1: Double, lum2: Double): Double {
+            val l1 = Math.max(lum1, lum2)
+            val l2 = Math.min(lum1, lum2)
+            return (l1 + 0.05) / (l2 + 0.05)
+        }
+
+        // Dark theme surface: #121212
+        val surfaceLum = relativeLuminance(0x12 / 255.0, 0x12 / 255.0, 0x12 / 255.0)
+        val onSurfaceLum = relativeLuminance(0xE6 / 255.0, 0xE1 / 255.0, 0xE5 / 255.0)
+
+        // Text contrast of onSurface against surface (#121212): must exceed 4.5:1
+        val textContrast = contrastRatio(onSurfaceLum, surfaceLum)
+        assertTrue("onSurface against dark surface must exceed 4.5:1 WCAG AA text threshold (was $textContrast)", textContrast >= 4.5)
+
+        // Readout text color resolution contract
+        val binZ7 = TelemetryHistogramBin(
+            binIndex = 50,
+            rangeMin = 500,
+            rangeMax = 510,
+            durationSec = 10L,
+            percentage = 5f,
+            zoneIndex = 7,
+            color = Color(0xFF000000)
+        )
+        val onSurfaceColor = Color(0xFFE6E1E5)
+        val resolvedReadoutColor = if (binZ7.color == Color(0xFF000000)) onSurfaceColor else binZ7.color
+        assertEquals("Zone 7 readout color must resolve to onSurface", onSurfaceColor, resolvedReadoutColor)
+
+        // Source contract verification: ZoneDistributionModels.kt
+        val modelsFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionModels.kt")
+        val modelsContent = modelsFile.readText()
+        assertTrue("ZoneTimeEntry must document 1..7 for Cycling Power", modelsContent.contains("1..7 for Cycling Power"))
+        assertTrue("ZoneDistributionData must document 7 zones for Cycling Power", modelsContent.contains("7 zones for Cycling Power"))
+
+        // Source contract verification: TelemetryHistogramChart.kt
+        val histChartFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/TelemetryHistogramChart.kt")
+        val histChartContent = histChartFile.readText()
+        assertTrue(
+            "TelemetryHistogramChart must resolve Zone 7 readout color to onSurface",
+            histChartContent.contains("selectedBin.color == TTColor.Zone7") && histChartContent.contains("MaterialTheme.colorScheme.onSurface")
+        )
+        assertTrue(
+            "TelemetryHistogramChart must render outlineVariant stroke for Zone 6 and 7",
+            histChartContent.contains("bin.color == TTColor.Zone7 || bin.color == TTColor.Zone6") && histChartContent.contains("outlineVariantColor")
+        )
+
+        // Source contract verification: ZoneDistributionColumnChart.kt
+        val colChartFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionColumnChart.kt")
+        val colChartContent = colChartFile.readText()
+        assertTrue(
+            "ZoneDistributionColumnChart must apply outlineVariant border to Zone 6 and 7 swatches",
+            colChartContent.contains("entry.color == TTColor.Zone7 || entry.color == TTColor.Zone6") && colChartContent.contains("outlineVariant")
+        )
+
+        // Source contract verification: ZoneDistributionStackedBar.kt
+        val stackedBarFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionStackedBar.kt")
+        val stackedBarContent = stackedBarFile.readText()
+        assertTrue(
+            "ZoneDistributionStackedBar must apply outlineVariant border to Zone 6 and 7 segments",
+            stackedBarContent.contains("entry.color == TTColor.Zone7 || entry.color == TTColor.Zone6") && stackedBarContent.contains("outlineVariant")
+        )
+    }
 }

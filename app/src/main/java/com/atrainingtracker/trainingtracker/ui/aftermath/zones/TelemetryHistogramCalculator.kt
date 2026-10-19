@@ -50,7 +50,9 @@ object TelemetryHistogramCalculator {
         TTColor.Zone2,
         TTColor.Zone3,
         TTColor.Zone4,
-        TTColor.Zone5
+        TTColor.Zone5,
+        TTColor.Zone6,
+        TTColor.Zone7
     )
 
     /**
@@ -81,12 +83,13 @@ object TelemetryHistogramCalculator {
     }
 
     /**
-     * Calculates a fine-grained frequency histogram for Cycling Power telemetry, with optional
-     * sprint tail folding (REQ-UI-419).
+     * Calculates a fine-grained frequency histogram for Cycling Power telemetry across all 7
+     * Coggan power zones (Z1–Z7, REQ-UI-420), with optional sprint tail folding (REQ-UI-419).
      *
      * If the workout exhibits an extended high-power tail (P99 <= tailCutoff and spikes >= 1.25 * cutoff),
-     * rare sprint spikes are folded into a rightmost overflow bar in the Main View and an interactive
-     * Sprint Tail View dataset is generated. Otherwise, returns a standard uniform linear histogram.
+     * rare sprint spikes are folded into a rightmost overflow bar in the Main View (dynamically reflecting
+     * the peak sprint zone) and an interactive Sprint Tail View dataset is generated. Otherwise, returns
+     * a standard uniform linear histogram.
      *
      * @param samples Timestamped power telemetry samples.
      * @param thresholds Athlete power thresholds for Zones 1 through 6.
@@ -128,14 +131,15 @@ object TelemetryHistogramCalculator {
         val totalDuration = linearData.totalActiveTimeSec
 
         // Rightmost Overflow Bin for Main View
+        val peakTailBin = tailBins.maxByOrNull { it.zoneIndex }
         val overflowBin = TelemetryHistogramBin(
             binIndex = regularBins.size,
             rangeMin = tailCutoff,
             rangeMax = linearData.dataMax,
             durationSec = tailDuration,
             percentage = if (totalDuration > 0L) (tailDuration.toFloat() / totalDuration) * 100f else 0f,
-            zoneIndex = 5,
-            color = TTColor.Zone5,
+            zoneIndex = peakTailBin?.zoneIndex ?: 7,
+            color = peakTailBin?.color ?: TTColor.Zone7,
             isOverflow = true,
             isReturn = false
         )
@@ -292,7 +296,7 @@ object TelemetryHistogramCalculator {
             val rangeMin = dataMin + idx * binWidth
             val rangeMax = rangeMin + binWidth
             val midpoint = (rangeMin + rangeMax) / 2
-            val zoneIdx = getZoneForValue(midpoint).coerceIn(0, 4)
+            val zoneIdx = getZoneForValue(midpoint).coerceIn(0, ZONE_COLORS.lastIndex)
             val duration = binDurations[idx]
             val percentage = if (totalDuration > 0L) (duration.toFloat() / totalDuration) * 100f else 0f
 

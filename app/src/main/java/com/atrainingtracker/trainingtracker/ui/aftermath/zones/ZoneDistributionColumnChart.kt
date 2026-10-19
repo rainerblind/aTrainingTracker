@@ -19,9 +19,11 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.zones
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -120,6 +122,11 @@ fun ZoneDistributionColumnChart(
                         modifier = Modifier
                             .size(7.dp)
                             .clip(CircleShape)
+                            .then(
+                                if (entry.color == TTColor.Zone7 || entry.color == TTColor.Zone6) {
+                                    Modifier.border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                } else Modifier
+                            )
                             .background(entry.color)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -186,12 +193,18 @@ private fun ZoneColumnItem(
 
             // Active bar
             if (entry.durationSec > 0) {
+                val barShape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(0.55f)
                         .fillMaxHeight(heightFraction)
                         .defaultMinSize(minHeight = 4.dp)
-                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                        .clip(barShape)
+                        .then(
+                            if (entry.color == TTColor.Zone7 || entry.color == TTColor.Zone6) {
+                                Modifier.border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, barShape)
+                            } else Modifier
+                        )
                         .background(entry.color)
                 )
             }

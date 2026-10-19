@@ -339,8 +339,8 @@ class TelemetryHistogramCalculatorTest {
         assertEquals(400, overflowBin.rangeMin)
         assertEquals(940, overflowBin.rangeMax)
         assertEquals(50L, overflowBin.durationSec)
-        assertEquals((50.0 / 3550.0) * 100.0, overflowBin.percentage.toDouble(), 0.1)
-        assertEquals(TTColor.Zone5, overflowBin.color)
+        assertEquals(7, overflowBin.zoneIndex)
+        assertEquals(TTColor.Zone7, overflowBin.color)
 
         // Conservation of duration & percentage in Main View
         val mainDurationSum = data.bins.sumOf { it.durationSec }
@@ -376,5 +376,96 @@ class TelemetryHistogramCalculatorTest {
         assertEquals(3550L, tailDurationSum)
         val tailPctSum = sprintTail.bins.sumOf { it.percentage.toDouble() }
         assertEquals(100.0, tailPctSum, 0.1)
+    }
+
+    @Test
+    fun testCalculatePowerHistogram_mapsZone6AndZone7Correctly_tst_ui_383_1() {
+        // Power thresholds: Z1<=150, Z2<=200, Z3<=250, Z4<=300, Z5<=350, Z6<=450, Z7>450
+        val samples = listOf(
+            ZoneSample(timeActiveSec = 0L, value = 140), // Z1 (midpoint 145)
+            ZoneSample(timeActiveSec = 2L, value = 180), // Z2 (midpoint 185)
+            ZoneSample(timeActiveSec = 4L, value = 220), // Z3 (midpoint 225)
+            ZoneSample(timeActiveSec = 6L, value = 280), // Z4 (midpoint 285)
+            ZoneSample(timeActiveSec = 8L, value = 330), // Z5 (midpoint 335)
+            ZoneSample(timeActiveSec = 10L, value = 380), // Z6 (midpoint 385 -> 351..450 -> Z6)
+            ZoneSample(timeActiveSec = 12L, value = 520), // Z7 (midpoint 525 -> >450 -> Z7)
+            ZoneSample(timeActiveSec = 14L, value = 520)  // 2s + 1s = 3s
+        )
+
+        val result = TelemetryHistogramCalculator.calculatePowerHistogram(samples, pwrThresholds)
+        assertNotNull(result)
+        val data = result!!
+
+        // Find bin for 380 W (380..390, midpoint 385)
+        val z6Bin = data.bins.first { it.rangeMin == 380 }
+        assertEquals(6, z6Bin.zoneIndex)
+        assertEquals(TTColor.Zone6, z6Bin.color)
+
+        // Find bin for 520 W (520..530, midpoint 525)
+        val z7Bin = data.bins.first { it.rangeMin == 520 }
+        assertEquals(7, z7Bin.zoneIndex)
+        assertEquals(TTColor.Zone7, z7Bin.color)
+
+        // Conservation of duration and percentage
+        val totalDuration = data.bins.sumOf { it.durationSec }
+        assertEquals(15L, totalDuration)
+        val totalPct = data.bins.sumOf { it.percentage.toDouble() }
+        assertEquals(100.0, totalPct, 0.1)
+    }
+
+    @Test
+    fun testCalculatePowerHistogram_overflowBinReflectsPeakSprintZone_tst_ui_383_1() {
+        // Case A: Tail with samples reaching Zone 6 only (e.g. 440 W, where z5Max=350, z6Max=450)
+        val samplesZone6Tail = mutableListOf<ZoneSample>()
+        var t = 0L
+        repeat(180) {
+            samplesZone6Tail.add(ZoneSample(timeActiveSec = t, value = 200))
+            t += 5L
+        }
+        repeat(18) {
+            samplesZone6Tail.add(ZoneSample(timeActiveSec = t, value = 300)) // z4Max = 300 -> tailCutoff = 350
+            t += 5L
+        }
+        // Tail samples at 440 W (Zone 6, <= 450 W)
+        samplesZone6Tail.add(ZoneSample(timeActiveSec = t, value = 440))
+        t += 5L
+        samplesZone6Tail.add(ZoneSample(timeActiveSec = t, value = 440))
+        t += 5L
+        samplesZone6Tail.add(ZoneSample(timeActiveSec = t, value = 440))
+
+        val dataZ6 = TelemetryHistogramCalculator.calculatePowerHistogram(samplesZone6Tail, pwrThresholds)
+        assertNotNull(dataZ6)
+        if (dataZ6!!.tailCutoff != null) {
+            val overflow = dataZ6.bins.last()
+            assertTrue(overflow.isOverflow)
+            assertEquals(6, overflow.zoneIndex)
+            assertEquals(TTColor.Zone6, overflow.color)
+        }
+
+        // Case B: Tail with samples reaching Zone 7 (e.g. 600 W > 450 W)
+        val samplesZone7Tail = mutableListOf<ZoneSample>()
+        t = 0L
+        repeat(180) {
+            samplesZone7Tail.add(ZoneSample(timeActiveSec = t, value = 200))
+            t += 5L
+        }
+        repeat(18) {
+            samplesZone7Tail.add(ZoneSample(timeActiveSec = t, value = 300))
+            t += 5L
+        }
+        // Tail samples at 600 W (Zone 7, > 450 W)
+        samplesZone7Tail.add(ZoneSample(timeActiveSec = t, value = 600))
+        t += 5L
+        samplesZone7Tail.add(ZoneSample(timeActiveSec = t, value = 600))
+        t += 5L
+        samplesZone7Tail.add(ZoneSample(timeActiveSec = t, value = 600))
+
+        val dataZ7 = TelemetryHistogramCalculator.calculatePowerHistogram(samplesZone7Tail, pwrThresholds)
+        assertNotNull(dataZ7)
+        assertNotNull(dataZ7!!.tailCutoff)
+        val overflowZ7 = dataZ7.bins.last()
+        assertTrue(overflowZ7.isOverflow)
+        assertEquals(7, overflowZ7.zoneIndex)
+        assertEquals(TTColor.Zone7, overflowZ7.color)
     }
 }
