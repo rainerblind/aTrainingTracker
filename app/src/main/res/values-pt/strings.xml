@@ -1294,6 +1294,14 @@
     <string name="cluster_stats_days_ago">há %1$d dias</string>
     <string name="cluster_stats_weeks_ago">há %1$d semanas</string>
 
+    <!-- ATT-4067: Historical Effort Trend Chart for Workout Clusters -->
+    <string name="cluster_trend_title">Evolução do desempenho</string>
+    <string name="cluster_trend_duration">Duração</string>
+    <string name="cluster_trend_speed">Velocidade</string>
+    <string name="cluster_trend_pace">Ritmo</string>
+    <string name="cluster_trend_pr">Recorde</string>
+    <string name="cluster_trend_avg">Méd</string>
+
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Voltas (%1$d)</string>
     <string name="show_all_laps">Mostrar todas as %1$d voltas</string>

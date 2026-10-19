@@ -802,6 +802,7 @@ fun WorkoutClusterDetailDashboard(
 
     val statsMap by viewModel.clusterStats.collectAsState()
     val stats = statsMap[cluster.id] ?: WorkoutClusterStats.EMPTY
+    val clusterWorkouts by viewModel.clusterWorkouts.collectAsState()
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         // Base metadata row
@@ -909,6 +910,24 @@ fun WorkoutClusterDetailDashboard(
                     )
                 }
             }
+        }
+
+        // --- TIER 1.5: Historical Effort Progression Trend Chart (REQ-SET-078) ---
+        val validTrendWorkoutsCount = remember(clusterWorkouts) {
+            clusterWorkouts.count { it.activeTimeSec > 0 && it.avgSpeedMps > 0.0 }
+        }
+        if (validTrendWorkoutsCount >= 2) {
+            WorkoutClusterTrendChartCard(
+                workouts = clusterWorkouts,
+                sportType = bSportType,
+                onSelectWorkout = { workoutId ->
+                    viewModel.selectWorkoutForPeek(workoutId)
+                }
+            )
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(vertical = 2.dp)
+            )
         }
 
         // --- TIER 2: Cumulative Volume Card (Distance, Ascent, Active Time) ---

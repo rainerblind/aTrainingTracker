@@ -1276,6 +1276,14 @@
     <string name="cluster_stats_days_ago">%1$d日前</string>
     <string name="cluster_stats_weeks_ago">%1$d週間前</string>
 
+    <!-- ATT-4067: Historical Effort Trend Chart for Workout Clusters -->
+    <string name="cluster_trend_title">パフォーマンス推移</string>
+    <string name="cluster_trend_duration">時間</string>
+    <string name="cluster_trend_speed">速度</string>
+    <string name="cluster_trend_pace">ペース</string>
+    <string name="cluster_trend_pr">自己ベスト</string>
+    <string name="cluster_trend_avg">平均</string>
+
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">ラップ (%1$d)</string>
     <string name="show_all_laps">すべての %1$d ラップを表示</string>
