@@ -2034,9 +2034,9 @@
     <string name="cockpit_section_divider_delete">Scheiding verwijderen</string>
 
     <!-- Sensor Onboarding & Empty State (REQ-SEN-020 / ATT-4051) -->
-    <string name="onboarding_pair_sensor_action">+ Sensor koppelen</string>
+    <string name="onboarding_pair_sensor_action">Sensor koppelen</string>
     <string name="devices_empty_state_search_hint">Zoeken naar Bluetooth LE- of ANT+-sensoren in de buurt</string>
-    <string name="devices_action_search_sensors">+ Sensoren zoeken</string>
+    <string name="devices_action_search_sensors">Sensoren zoeken</string>
     <string name="error_workout_table_name_too_long">Naam van trainingstabel overschrijdt SQLite-limiet (64 tekens)</string>
 
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->

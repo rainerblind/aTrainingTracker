@@ -2035,9 +2035,9 @@
     <string name="cockpit_section_divider_delete">Eliminar separador</string>
 
     <!-- Sensor Onboarding & Empty State (REQ-SEN-020 / ATT-4051) -->
-    <string name="onboarding_pair_sensor_action">+ Vincular sensor</string>
+    <string name="onboarding_pair_sensor_action">Vincular sensor</string>
     <string name="devices_empty_state_search_hint">Buscar sensores Bluetooth LE o ANT+ cercanos</string>
-    <string name="devices_action_search_sensors">+ Buscar sensores</string>
+    <string name="devices_action_search_sensors">Buscar sensores</string>
     <string name="error_workout_table_name_too_long">El nombre de la tabla de entrenamiento supera el límite de SQLite (64 caracteres)</string>
 
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->

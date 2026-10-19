@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.localization
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,8 +27,9 @@ import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * Localization verification test for Sensor Onboarding and Empty State strings (REQ-SEN-020, TST-SEN-020.5).
- * Validates 9-locale parity for onboarding_pair_sensor_action, devices_empty_state_search_hint, and devices_action_search_sensors.
+ * Localization verification test for Sensor Onboarding and Empty State strings (REQ-SEN-020, TST-SEN-020.5, TST-SEN-020.12).
+ * Validates 9-locale parity for onboarding_pair_sensor_action, devices_empty_state_search_hint, and devices_action_search_sensors,
+ * and asserts that action buttons do not embed literal '+' symbol prefixes (Rule 49 & Design Guidelines Sec 5.5).
  */
 class SensorOnboardingLocalizationTest {
 
@@ -82,4 +84,32 @@ class SensorOnboardingLocalizationTest {
             }
         }
     }
+
+    /**
+     * TST-SEN-020.12: Action buttons with Icons.Default.Add vector icons must not embed
+     * literal '+' prefixes in strings.xml (Rule 49 & Design Guidelines Sec 5.5).
+     */
+    @Test
+    fun testActionStringsDoNotContainPlusPrefixAcrossAllLocales() {
+        val resDir = findResDir()
+        val actionKeys = listOf(
+            "onboarding_pair_sensor_action",
+            "devices_action_search_sensors"
+        )
+
+        for (locale in locales) {
+            val valuesDir = File(resDir, "values$locale")
+            val stringsFile = File(valuesDir, "strings.xml")
+
+            for (key in actionKeys) {
+                val value = parseStringResource(stringsFile, key)
+                assertNotNull("Missing key '$key' in values$locale/strings.xml", value)
+                assertFalse(
+                    "Key '$key' in values$locale/strings.xml should not start with '+' (Rule 49 / Sec 5.5 violation): '$value'",
+                    value!!.trim().startsWith("+")
+                )
+            }
+        }
+    }
 }
+
