@@ -426,7 +426,7 @@ public class TrackerService extends Service {
     public static void notifyManualResume() {
         TrackerService service = sInstance;
         if (service != null) {
-            service.mAutoPauseManager.onManualResume();
+            service.mAutoPauseManager.onManualResume(TrainingApplication.isManualPauseLocked());
         }
     }
 
@@ -832,7 +832,7 @@ public class TrackerService extends Service {
 
             case RESUME_BY_USER:
                 Log.d(TAG, "resuming by user request");
-                mAutoPauseManager.onManualResume();
+                mAutoPauseManager.onManualResume(TrainingApplication.isManualPauseLocked());
                 if (mTableInitializationFuture == null || mTableInitializationFuture.isDone()) {
                     mTableInitializationFuture = new CompletableFuture<>();
                 }
@@ -2323,7 +2323,7 @@ public class TrackerService extends Service {
         AutoPauseConfig config = getAutoPauseConfig();
         boolean manualPauseLocked = TrainingApplication.isManualPauseLocked();
         if (mAutoPauseManager.isAutoPaused() && !TrainingApplication.isAutoPaused() && !manualPauseLocked) {
-            mAutoPauseManager.onManualResume();
+            mAutoPauseManager.onManualResume(manualPauseLocked);
         }
         boolean hasSpeedSource = (speedData != null);
 
