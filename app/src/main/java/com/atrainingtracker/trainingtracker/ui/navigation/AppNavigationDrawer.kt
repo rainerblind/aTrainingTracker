@@ -176,7 +176,7 @@ fun isDrawerGroupInitiallyExpanded(group: DrawerGroup, selectedItemId: Int): Boo
     !group.collapsible || group.items.any { isDrawerItemSelected(it.id, selectedItemId) }
 
 /**
- * Creates the list of [DrawerGroup] objects defining the drawer layout and items (REQ-UI-397, REQ-UI-405).
+ * Creates the list of [DrawerGroup] objects defining the drawer layout and items (REQ-UI-397, REQ-UI-405, REQ-UI-422).
  */
 @VisibleForTesting
 fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
@@ -207,8 +207,7 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
             collapsible = true,
             items = listOf(
                 DrawerItemConfig(R.id.drawer_my_sensors, R.drawable.ic_my_paired_devices, R.string.devices_myRemoteDevices),
-                DrawerItemConfig(R.id.drawer_equipment, R.drawable.ic_equipment_combined, R.string.equipment_management_title),
-                DrawerItemConfig(R.id.drawer_sport_types, R.drawable.ic_sports_combined, R.string.sport_types)
+                DrawerItemConfig(R.id.drawer_equipment, R.drawable.ic_equipment_combined, R.string.equipment_management_title)
             )
         ),
         DrawerGroup(
@@ -228,6 +227,7 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
                 DrawerItemConfig(R.id.drawer_units, R.drawable.ic_square_foot, R.string.prefsUnitsTitle),
                 DrawerItemConfig(R.id.drawer_display_settings, R.drawable.ic_display_settings, R.string.Display),
                 DrawerItemConfig(R.id.drawer_tracking_layouts, R.drawable.ic_table_edit, R.string.prefsConfigureDisplaysTitle),
+                DrawerItemConfig(R.id.drawer_sport_types, R.drawable.ic_sports_combined, R.string.sport_types),
                 DrawerItemConfig(R.id.drawer_backup_restore, R.drawable.ic_save_to_disc, R.string.import_backup),
                 DrawerItemConfig(R.id.drawer_privacy_policy, R.drawable.ic_privacy, R.string.privacy_policy),
                 DrawerItemConfig(R.id.drawer_advanced_tuning, R.drawable.ic_tune, R.string.advanced_tuning_title)

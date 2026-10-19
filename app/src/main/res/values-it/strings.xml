@@ -820,7 +820,7 @@
     <string name="tab_name">Nome</string>
 
     <!-- Equipment -->
-    <string name="equipment_management_title">Attrezzatura</string>
+    <string name="equipment_management_title">Bici e scarpe</string>
     <string name="equipment_management_summary">Configura attrezzatura</string>
     <string name="prefs_manage_bikes_title">Biciclette</string>
     <string name="prefs_manage_bikes_summary">Configura le tue bici</string>

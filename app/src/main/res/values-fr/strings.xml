@@ -819,7 +819,7 @@
     <string name="tab_name">Nom</string>
 
     <!-- Equipment -->
-    <string name="equipment_management_title">Équipement</string>
+    <string name="equipment_management_title">Vélos et chaussures</string>
     <string name="equipment_management_summary">Configurez vos équipements</string>
     <string name="prefs_manage_bikes_title">Vélos</string>
     <string name="prefs_manage_bikes_summary">Configurez vos vélos</string>

@@ -893,7 +893,7 @@
     <string name="tab_name">Name</string>
 
     <!-- equipment -->
-    <string name="equipment_management_title">Ausrüstung</string>
+    <string name="equipment_management_title">Räder &amp; Schuhe</string>
     <string name="equipment_management_summary">Ausrüstung bearbeiten</string>
     <string name="prefs_manage_bikes_title">Räder</string>
     <string name="prefs_manage_bikes_summary">Konfiguriere all deine Fahrräder</string>

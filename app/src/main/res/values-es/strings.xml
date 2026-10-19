@@ -823,7 +823,7 @@
     <string name="tab_name">Nombre</string>
 
     <!-- Equipment -->
-    <string name="equipment_management_title">Equipamiento</string>
+    <string name="equipment_management_title">Bicicletas y zapatillas</string>
     <string name="equipment_management_summary">Configura tus bicis y calzado</string>
     <string name="prefs_manage_bikes_title">Bicicletas</string>
     <string name="prefs_manage_bikes_summary">Configura todas tus bicis</string>
