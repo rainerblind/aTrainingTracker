@@ -381,4 +381,26 @@ class StravaHelperTest {
         val sanitizedLong = StravaHelper.sanitizeForLog(longInput)
         assertTrue(sanitizedLong.contains("[truncated]"))
     }
+
+    /**
+     * TST-EXT-009.2: getAuthorizationUrl includes state query parameter when provided.
+     */
+    @Test
+    fun testAuthorizationUrl_withState_includesStateParameter() {
+        val testState = "a1b2c3d4e5f6789012345678abcdef01"
+        val url = StravaHelper.getAuthorizationUrl(testState)
+
+        assertTrue("URL must contain state parameter", url.contains("state=$testState"))
+        assertTrue("URL must contain redirect_uri", url.contains("redirect_uri=strava%3A%2F%2Frainerblind.github.io") || url.contains("redirect_uri=strava://rainerblind.github.io"))
+        assertTrue("URL must contain scope", url.contains("scope=read%2Cread_all%2Cprofile%3Aread_all%2Cactivity%3Aread_all%2Cactivity%3Awrite") || url.contains("scope=read,read_all,profile:read_all,activity:read_all,activity:write"))
+    }
+
+    @Test
+    fun testAuthorizationUrl_withoutState_preservesBackwardCompatibility() {
+        val url = StravaHelper.getAuthorizationUrl()
+
+        assertFalse("URL without state must not have state query parameter", url.contains("state="))
+        assertTrue("URL must contain client_id", url.contains("client_id="))
+        assertTrue("URL must contain response_type=code", url.contains("response_type=code"))
+    }
 }

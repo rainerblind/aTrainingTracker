@@ -123,7 +123,8 @@ object StravaHelper {
     }
 
     @JvmStatic
-    fun getAuthorizationUrl(): String {
+    @JvmOverloads
+    fun getAuthorizationUrl(state: String? = null): String {
         return try {
             Uri.Builder().apply {
                 scheme(HTTPS)
@@ -136,9 +137,13 @@ object StravaHelper {
                 appendQueryParameter(RESPONSE_TYPE, CODE)
                 appendQueryParameter(APPROVAL_PROMPT, AUTO)
                 appendQueryParameter(SCOPE, "read,read_all,profile:read_all,activity:read_all,activity:write")
+                if (!state.isNullOrBlank()) {
+                    appendQueryParameter("state", state)
+                }
             }.build().toString()
         } catch (e: RuntimeException) {
-            "$HTTPS://$STRAVA_AUTHORITY/$OAUTH/$MOBILE/$AUTHORIZE?$CLIENT_ID=$MY_CLIENT_ID&$REDIRECT_URI=${getRedirectUri()}&$RESPONSE_TYPE=$CODE&$APPROVAL_PROMPT=$AUTO&$SCOPE=read,read_all,profile:read_all,activity:read_all,activity:write"
+            val base = "$HTTPS://$STRAVA_AUTHORITY/$OAUTH/$MOBILE/$AUTHORIZE?$CLIENT_ID=$MY_CLIENT_ID&$REDIRECT_URI=${getRedirectUri()}&$RESPONSE_TYPE=$CODE&$APPROVAL_PROMPT=$AUTO&$SCOPE=read,read_all,profile:read_all,activity:read_all,activity:write"
+            if (!state.isNullOrBlank()) "$base&state=$state" else base
         }
     }
 
@@ -146,7 +151,8 @@ object StravaHelper {
     fun requestAccessToken(context: Context) {
         if (DEBUG) Log.i(TAG, "requestAccessToken")
 
-        val authUrl = getAuthorizationUrl()
+        val state = StravaOAuthStateManager.generateAndSaveState(context)
+        val authUrl = getAuthorizationUrl(state)
         if (DEBUG) Log.i(TAG, "Launching Custom Tab with url: $authUrl")
 
         val customTabsIntent = CustomTabsIntent.Builder()

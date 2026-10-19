@@ -131,6 +131,8 @@ public class TrainingApplication extends Application {
     public static final String SP_STRAVA_TOKEN = "stravaToken";
     public static final String SP_STRAVA_REFRESH_TOKEN = "stravaRefreshToken";
     public static final String SP_STRAVA_TOKEN_EXPIRES_AT = "stravaTokenExpiresAt";
+    public static final String SP_STRAVA_OAUTH_STATE = "SP_STRAVA_OAUTH_STATE";
+    public static final String SP_STRAVA_OAUTH_STATE_TIMESTAMP = "SP_STRAVA_OAUTH_STATE_TIMESTAMP";
     public static final String SP_STRAVA_DEMO_MODE = "stravaDemoMode";
     public static final String SP_CLUSTER_TOL_ENDPOINTS = "clusterTolEndpoints";
     public static final String SP_CLUSTER_TOL_APEX = "clusterTolApex";
@@ -823,6 +825,8 @@ public class TrainingApplication extends Application {
                 .remove(SP_STRAVA_REFRESH_TOKEN)
                 .remove(SP_STRAVA_TOKEN_EXPIRES_AT)
                 .remove(SP_STRAVA_ATHLETE_ID)
+                .remove(SP_STRAVA_OAUTH_STATE)
+                .remove(SP_STRAVA_OAUTH_STATE_TIMESTAMP)
                 .putBoolean(SP_UPLOAD_TO_STRAVA, false)
                 .putBoolean(SP_STRAVA_DEMO_MODE, false)
                 .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT)
