@@ -51,7 +51,8 @@ data class SportTypeItem(
     val isEditable: Boolean,
     val firstUsed: String?,
     val lastUsed: String?,
-    val statsData: StatsData
+    val statsData: StatsData,
+    val isPlaceholder: Boolean = false
 )
 
 class SportTypeViewModel(application: Application) : AndroidViewModel(application) {
@@ -93,6 +94,8 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
 
                     val stats = dbSummariesManager.getSportTypeStats(id)
                     val sportTypeName = it.getString(it.getColumnIndexOrThrow(SportTypeDatabaseManager.SportType.UI_NAME))
+                    val placeholderCol = it.getColumnIndex(SportTypeDatabaseManager.SportType.IS_PLACEHOLDER)
+                    val isPlaceholder = placeholderCol != -1 && it.getInt(placeholderCol) == 1
 
                     list.add(SportTypeItem(
                         id = id,
@@ -117,7 +120,8 @@ class SportTypeViewModel(application: Application) : AndroidViewModel(applicatio
                             secondaryTitle = getApplication<Application>().getString(R.string.stats_total),
                             stats = stats,
                             sportTypeId = id
-                        )
+                        ),
+                        isPlaceholder = isPlaceholder
                     ))
                 }
             }

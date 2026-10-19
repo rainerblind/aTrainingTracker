@@ -864,6 +864,8 @@
     <string name="sport_type_tab_bike">Tipos de ciclismo</string>
     <string name="sport_type_tab_run">Tipos de carrera</string>
     <string name="sport_type_tab_unknown">Otros deportes</string>
+    <string name="sport_type_restored_placeholder">Deporte restaurado %1$d</string>
+    <string name="sport_type_placeholder_badge">Restaurado (sin configurar)</string>
 
     <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">Todo</string>

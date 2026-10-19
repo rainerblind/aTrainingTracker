@@ -861,6 +861,8 @@
     <string name="sport_type_tab_bike">Ciclismo</string>
     <string name="sport_type_tab_run">Corsa</string>
     <string name="sport_type_tab_unknown">Altri sport</string>
+    <string name="sport_type_restored_placeholder">Sport ripristinato %1$d</string>
+    <string name="sport_type_placeholder_badge">Ripristinato (non configurato)</string>
 
     <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">Tutti</string>

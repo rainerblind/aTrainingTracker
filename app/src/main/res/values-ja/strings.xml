@@ -843,6 +843,8 @@
     <string name="sport_type_tab_bike">バイク系</string>
     <string name="sport_type_tab_run">ラン系</string>
     <string name="sport_type_tab_unknown">その他</string>
+    <string name="sport_type_restored_placeholder">復元されたスポーツ %1$d</string>
+    <string name="sport_type_placeholder_badge">復元済み（未設定）</string>
 
     <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">すべて</string>

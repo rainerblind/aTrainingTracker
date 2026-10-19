@@ -861,6 +861,8 @@
     <string name="sport_type_tab_bike">Ciclismo</string>
     <string name="sport_type_tab_run">Corrida</string>
     <string name="sport_type_tab_unknown">Outros desportos</string>
+    <string name="sport_type_restored_placeholder">Desporto restaurado %1$d</string>
+    <string name="sport_type_placeholder_badge">Restaurado (não configurado)</string>
 
     <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">Todos</string>

@@ -1070,6 +1070,8 @@
     <string name="sport_type_tab_bike">Ride Types</string>
     <string name="sport_type_tab_run">Run Types</string>
     <string name="sport_type_tab_unknown">Other Sport Types</string>
+    <string name="sport_type_restored_placeholder">Restored Sport %1$d</string>
+    <string name="sport_type_placeholder_badge">Restored (Unconfigured)</string>
 
     <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">All</string>

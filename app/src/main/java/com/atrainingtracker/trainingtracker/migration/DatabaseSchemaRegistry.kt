@@ -34,7 +34,7 @@ object DatabaseSchemaRegistry {
         "KnownLocations.db" to 6,
         "TrackingViews.db" to 14,
         "Devices.db" to 7,
-        "SportType.db" to 2,
+        "SportType.db" to 3,
         "Segments.db" to 9,
         "StravaUpload.db" to 6,
         "Equipment.db" to 2,

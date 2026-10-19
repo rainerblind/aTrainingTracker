@@ -630,6 +630,8 @@
     <string name="sport_type_tab_bike">Kolarstwo</string>
     <string name="sport_type_tab_run">Bieganie</string>
     <string name="sport_type_tab_unknown">Inne sporty</string>
+    <string name="sport_type_restored_placeholder">Przywrócony sport %1$d</string>
+    <string name="sport_type_placeholder_badge">Przywrócony (nieskonfigurowany)</string>
 
     <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">Wszystko</string>
