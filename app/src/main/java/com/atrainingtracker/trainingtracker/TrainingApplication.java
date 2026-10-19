@@ -35,6 +35,8 @@ import android.preference.PreferenceManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
+import com.atrainingtracker.trainingtracker.security.AuthCredentialsStore;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -370,6 +372,16 @@ public class TrainingApplication extends Application {
         return cAppContext;
     }
 
+    @VisibleForTesting
+    public static void setAppContextForTesting(Context context) {
+        cAppContext = context;
+    }
+
+    @VisibleForTesting
+    public static void setSharedPreferencesForTesting(SharedPreferences preferences) {
+        cSharedPreferences = preferences;
+    }
+
     public static boolean showInstallPlayServicesDialog() {
         int tries = cSharedPreferences.getInt(SP_PLAY_SERVICE_INSTALLATION_TRIES, 0);
 
@@ -643,14 +655,19 @@ public class TrainingApplication extends Application {
     }
 
     public static void storeDropboxCredential(DbxCredential dbxCredential) {
-        cSharedPreferences.edit().putString(SP_DROPBOX_CREDENTIAL, DbxCredential.Writer.writeToString(dbxCredential)).apply();
+        String credentialString = (dbxCredential != null) ? DbxCredential.Writer.writeToString(dbxCredential) : null;
+        if (cAppContext != null) {
+            AuthCredentialsStore.storeDropboxCredential(cAppContext, credentialString);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().remove(SP_DROPBOX_CREDENTIAL).apply();
+        }
     }
 
     public static DbxCredential readDropboxCredential() {
-        if (cSharedPreferences == null) {
-            return null;
-        }
-        String credential = cSharedPreferences.getString(SP_DROPBOX_CREDENTIAL, null);
+        String credential = (cAppContext != null)
+                ? AuthCredentialsStore.readDropboxCredential(cAppContext)
+                : (cSharedPreferences != null ? cSharedPreferences.getString(SP_DROPBOX_CREDENTIAL, null) : null);
         if (credential == null || credential.trim().isEmpty()) {
             return null;
         }
@@ -664,7 +681,12 @@ public class TrainingApplication extends Application {
     }
 
     public static void deleteDropboxCredential() {
-        cSharedPreferences.edit().remove(SP_DROPBOX_CREDENTIAL).apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.deleteDropboxCredential(cAppContext);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().remove(SP_DROPBOX_CREDENTIAL).apply();
+        }
     }
 
     /*
@@ -711,33 +733,53 @@ public class TrainingApplication extends Application {
     }
 
     public static void storeGoogleDriveCredential(String email, String token) {
-        if (cSharedPreferences == null) return;
-        cSharedPreferences.edit()
-                .putString(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL, email)
-                .putString(SP_GOOGLE_DRIVE_AUTH_TOKEN, token)
-                .putBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, true)
-                .apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.storeGoogleDriveCredential(cAppContext, email, token);
+            if (cSharedPreferences != null) {
+                cSharedPreferences.edit()
+                        .remove(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL)
+                        .remove(SP_GOOGLE_DRIVE_AUTH_TOKEN)
+                        .putBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, true)
+                        .apply();
+            }
+        } else if (cSharedPreferences != null) {
+            cSharedPreferences.edit()
+                    .putString(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL, email)
+                    .putString(SP_GOOGLE_DRIVE_AUTH_TOKEN, token)
+                    .putBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, true)
+                    .apply();
+        }
     }
 
     public static String getGoogleDriveAccountEmail() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getGoogleDriveAccountEmail(cAppContext);
+        }
         if (cSharedPreferences == null) return null;
         String email = cSharedPreferences.getString(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL, null);
         return (email == null || email.trim().isEmpty()) ? null : email;
     }
 
     public static String getGoogleDriveAuthToken() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getGoogleDriveAuthToken(cAppContext);
+        }
         if (cSharedPreferences == null) return null;
         String token = cSharedPreferences.getString(SP_GOOGLE_DRIVE_AUTH_TOKEN, null);
         return (token == null || token.trim().isEmpty()) ? null : token;
     }
 
     public static void deleteGoogleDriveCredential() {
-        if (cSharedPreferences == null) return;
-        cSharedPreferences.edit()
-                .remove(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL)
-                .remove(SP_GOOGLE_DRIVE_AUTH_TOKEN)
-                .putBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, false)
-                .apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.deleteGoogleDriveCredential(cAppContext);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit()
+                    .remove(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL)
+                    .remove(SP_GOOGLE_DRIVE_AUTH_TOKEN)
+                    .putBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, false)
+                    .apply();
+        }
     }
 
     public static long getGoogleDriveLastSyncTimestamp() {
@@ -792,6 +834,9 @@ public class TrainingApplication extends Application {
 
     @Nullable
     public static String getStravaAccessToken() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getStravaAccessToken(cAppContext);
+        }
         if (cSharedPreferences == null) {
             return null;
         }
@@ -800,39 +845,71 @@ public class TrainingApplication extends Application {
     }
 
     public static void setStravaAccessToken(String token) {
-        cSharedPreferences.edit().putString(SP_STRAVA_TOKEN, token).apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.setStravaAccessToken(cAppContext, token);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().remove(SP_STRAVA_TOKEN).apply();
+        }
     }
 
     public static void setStravaRefreshToken(String refreshToken) {
-        cSharedPreferences.edit().putString(SP_STRAVA_REFRESH_TOKEN, refreshToken).apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.setStravaRefreshToken(cAppContext, refreshToken);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().remove(SP_STRAVA_REFRESH_TOKEN).apply();
+        }
     }
     @Nullable
     public static String getStravaRefreshToken() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getStravaRefreshToken(cAppContext);
+        }
+        if (cSharedPreferences == null) {
+            return null;
+        }
         return cSharedPreferences.getString(SP_STRAVA_REFRESH_TOKEN, null);
     }
 
     public static void setStravaTokenExpiresAt(int expiresAt) {
-        cSharedPreferences.edit().putInt(SP_STRAVA_TOKEN_EXPIRES_AT, expiresAt).apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.setStravaTokenExpiresAt(cAppContext, expiresAt);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().remove(SP_STRAVA_TOKEN_EXPIRES_AT).apply();
+        }
     }
     public static int getStravaTokenExpiresAt() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getStravaTokenExpiresAt(cAppContext);
+        }
+        if (cSharedPreferences == null) {
+            return 0;
+        }
         return cSharedPreferences.getInt(SP_STRAVA_TOKEN_EXPIRES_AT, 0);
     }
 
     public static void deleteStravaToken() {
         if (DEBUG) Log.i(TAG, "deleteStravaToken");
-        cSharedPreferences.edit()
-                .remove(SP_STRAVA_TOKEN)
-                .remove(SP_STRAVA_REFRESH_TOKEN)
-                .remove(SP_STRAVA_TOKEN_EXPIRES_AT)
-                .remove(SP_STRAVA_ATHLETE_ID)
-                .remove(SP_STRAVA_OAUTH_STATE)
-                .remove(SP_STRAVA_OAUTH_STATE_TIMESTAMP)
-                .putBoolean(SP_UPLOAD_TO_STRAVA, false)
-                .putBoolean(SP_STRAVA_DEMO_MODE, false)
-                .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT)
-                .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES)
-                .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS)
-                .apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.clearStravaCredentials(cAppContext);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit()
+                    .remove(SP_STRAVA_TOKEN)
+                    .remove(SP_STRAVA_REFRESH_TOKEN)
+                    .remove(SP_STRAVA_TOKEN_EXPIRES_AT)
+                    .remove(SP_STRAVA_ATHLETE_ID)
+                    .remove(SP_STRAVA_OAUTH_STATE)
+                    .remove(SP_STRAVA_OAUTH_STATE_TIMESTAMP)
+                    .putBoolean(SP_UPLOAD_TO_STRAVA, false)
+                    .putBoolean(SP_STRAVA_DEMO_MODE, false)
+                    .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT)
+                    .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES)
+                    .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS)
+                    .apply();
+        }
         if (DEBUG) Log.i(TAG, "end of deleteStravaToken");
     }
 
@@ -841,14 +918,22 @@ public class TrainingApplication extends Application {
     }
 
     public static void injectMockStravaAccount() {
-        cSharedPreferences.edit()
-                .putString(SP_STRAVA_TOKEN, "mock_access_token")
-                .putString(SP_STRAVA_REFRESH_TOKEN, "mock_refresh_token")
-                .putInt(SP_STRAVA_TOKEN_EXPIRES_AT, (int) (System.currentTimeMillis() / 1000 + 3600))
-                .putInt(SP_STRAVA_ATHLETE_ID, 12345)
-                .putBoolean(SP_UPLOAD_TO_STRAVA, true)
-                .putBoolean(SP_STRAVA_DEMO_MODE, true)
-                .apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.setStravaAccessToken(cAppContext, "mock_access_token");
+            AuthCredentialsStore.setStravaRefreshToken(cAppContext, "mock_refresh_token");
+            AuthCredentialsStore.setStravaTokenExpiresAt(cAppContext, (int) (System.currentTimeMillis() / 1000 + 3600));
+            AuthCredentialsStore.setStravaAthleteId(cAppContext, 12345);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit()
+                    .remove(SP_STRAVA_TOKEN)
+                    .remove(SP_STRAVA_REFRESH_TOKEN)
+                    .remove(SP_STRAVA_TOKEN_EXPIRES_AT)
+                    .remove(SP_STRAVA_ATHLETE_ID)
+                    .putBoolean(SP_UPLOAD_TO_STRAVA, true)
+                    .putBoolean(SP_STRAVA_DEMO_MODE, true)
+                    .apply();
+        }
     }
 
     public static float getClusterTolEndpoints() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_ENDPOINTS, 200f); }
@@ -1049,11 +1134,22 @@ public class TrainingApplication extends Application {
     }
 
     public static int getStravaAthleteId() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getStravaAthleteId(cAppContext);
+        }
+        if (cSharedPreferences == null) {
+            return 0;
+        }
         return cSharedPreferences.getInt(SP_STRAVA_ATHLETE_ID, 0);
     }
 
     public static void setStravaAthleteId(int stravaAthleteId) {
-        cSharedPreferences.edit().putInt(SP_STRAVA_ATHLETE_ID, stravaAthleteId).apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.setStravaAthleteId(cAppContext, stravaAthleteId);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().remove(SP_STRAVA_ATHLETE_ID).apply();
+        }
     }
 
     public static boolean uploadStravaGPS() {
@@ -1262,6 +1358,8 @@ public class TrainingApplication extends Application {
         PreferenceManager.setDefaultValues(this, R.xml.prefs_strava, false);
         PreferenceManager.setDefaultValues(this, R.xml.prefs_dropbox, false);
         cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        // ATT-4023 / REQ-DAT-032.1: Migrate legacy credentials to isolated auth_credentials_prefs
+        AuthCredentialsStore.migrateLegacyCredentials(this);
         mManualPauseLock.set(cSharedPreferences.getBoolean(SP_MANUAL_PAUSE_LOCK, false));
         mIsAutoPaused.set(cSharedPreferences.getBoolean(SP_IS_AUTO_PAUSED, false));
 

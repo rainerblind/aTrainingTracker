@@ -23,6 +23,7 @@ import android.content.SharedPreferences
 import android.preference.PreferenceManager
 import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.security.AuthCredentialsStore
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -48,7 +49,7 @@ object StravaOAuthStateManager {
     private fun getPrefs(context: Context? = null): SharedPreferences? {
         val ctx = context?.applicationContext ?: TrainingApplication.getAppContext()
         return if (ctx != null) {
-            PreferenceManager.getDefaultSharedPreferences(ctx)
+            AuthCredentialsStore.getPrefs(ctx)
         } else {
             null
         }

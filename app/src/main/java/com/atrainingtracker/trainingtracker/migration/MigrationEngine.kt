@@ -264,6 +264,8 @@ object MigrationEngine {
 
                 val restoredPrefs = File(tempDir, "shared_prefs")
                 if (restoredPrefs.exists()) {
+                    // ATT-4023 / REQ-DAT-032.3: Discard auth_credentials_prefs.xml and purge legacy credential keys
+                    com.atrainingtracker.trainingtracker.security.AuthCredentialsStore.sanitizeStagedPreferencesDirectory(restoredPrefs)
                     if (!restoredPrefs.renameTo(sharedPrefsDir)) {
                         restoredPrefs.copyRecursively(sharedPrefsDir, overwrite = true)
                     }
@@ -280,6 +282,9 @@ object MigrationEngine {
                 dbTrash.deleteRecursively()
                 prefsTrash.deleteRecursively()
                 datastoreTrash.deleteRecursively()
+
+                // ATT-4023 / REQ-DAT-032.3: Enforce clean re-authentication invariant across application preferences
+                com.atrainingtracker.trainingtracker.security.AuthCredentialsStore.sanitizeAfterRestore(context)
             } catch (swapError: Throwable) {
                 Log.e(TAG, "Error during atomic swap, attempting immediate recovery from staging trash", swapError)
                 if (dbTrash.exists()) {

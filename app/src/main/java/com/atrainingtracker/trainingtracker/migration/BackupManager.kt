@@ -149,6 +149,9 @@ object BackupManager {
                 }
 
                 // 5. Define non-database source directories
+                // ATT-4023 / REQ-DAT-032.3: Ensure legacy credential keys are stripped from default prefs
+                com.atrainingtracker.trainingtracker.security.AuthCredentialsStore.migrateLegacyCredentials(context)
+
                 val dataDir = context.applicationInfo.dataDir
                 val sharedPrefsDir = File(dataDir, "shared_prefs")
                 val datastoreDir = File(context.filesDir, "datastore")
@@ -319,6 +322,10 @@ object BackupManager {
                 continue
             }
             if (file.name.endsWith("-journal") || file.name.endsWith("-shm") || (!includeWal && file.name.endsWith("-wal"))) {
+                continue
+            }
+            // ATT-4023 / REQ-DAT-032.3: Exclude OAuth credentials from .attbackup archives
+            if (file.name == "auth_credentials_prefs.xml" || file.name.startsWith("auth_credentials_prefs.xml.") || file.name.startsWith("auth_credentials_prefs")) {
                 continue
             }
             val entryPath = "$internalPath/${file.name}"
