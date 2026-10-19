@@ -1003,6 +1003,10 @@
     <string name="route_import">Import</string>
     <string name="route_saved_success">Route erfolgreich gespeichert.</string>
     <string name="route_saved_failed">Speichern der Route fehlgeschlagen.</string>
+    <string name="routes_import_progress">Routen werden importiert (%1$d von %2$d)…</string>
+    <string name="routes_import_success">%1$d Routen erfolgreich importiert.</string>
+    <string name="routes_import_partial">%1$d Routen importiert, %2$d fehlgeschlagen.</string>
+    <string name="routes_import_all_failed">Routen konnten nicht importiert werden.</string>
     <string name="strava_sync_success">Routen von Strava synchronisiert.</string>
     <string name="strava_sync_failed">Synchronisierung der Routen von Strava fehlgeschlagen.</string>
     <string name="save_as_local_route">Als lokale Route speichern</string>

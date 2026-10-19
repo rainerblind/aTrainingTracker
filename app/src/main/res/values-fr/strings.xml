@@ -929,6 +929,10 @@
     <string name="route_import">Importer</string>
     <string name="route_saved_success">Enregistré avec succès.</string>
     <string name="route_saved_failed">Échec de l\'enregistrement.</string>
+    <string name="routes_import_progress">Importation des itinéraires (%1$d sur %2$d)…</string>
+    <string name="routes_import_success">%1$d itinéraires importés avec succès.</string>
+    <string name="routes_import_partial">%1$d itinéraires importés, %2$d ont échoué.</string>
+    <string name="routes_import_all_failed">Échec de l\'importation des itinéraires.</string>
     <string name="strava_sync_success">Itinéraires Strava synchronisés.</string>
     <string name="strava_sync_failed">Échec synchro Strava.</string>
     <string name="save_as_local_route">Enregistrer comme itinéraire local</string>

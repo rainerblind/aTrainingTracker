@@ -1141,6 +1141,10 @@
     <string name="route_import">Import</string>
     <string name="route_saved_success">Route saved successfully.</string>
     <string name="route_saved_failed">Failed to save route.</string>
+    <string name="routes_import_progress">Importing routes (%1$d of %2$d)…</string>
+    <string name="routes_import_success">%1$d routes imported successfully.</string>
+    <string name="routes_import_partial">%1$d routes imported, %2$d failed.</string>
+    <string name="routes_import_all_failed">Failed to import routes.</string>
     <string name="strava_sync_success">Routes synced from Strava.</string>
     <string name="strava_sync_failed">Failed to sync routes from Strava.</string>
     <string name="save_as_local_route">Save as Local Route</string>

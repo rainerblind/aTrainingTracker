@@ -933,6 +933,10 @@
     <string name="route_import">Importar</string>
     <string name="route_saved_success">Ruta guardada con éxito.</string>
     <string name="route_saved_failed">Error al guardar la ruta.</string>
+    <string name="routes_import_progress">Importando rutas (%1$d de %2$d)…</string>
+    <string name="routes_import_success">%1$d rutas importadas con éxito.</string>
+    <string name="routes_import_partial">%1$d rutas importadas, %2$d fallidas.</string>
+    <string name="routes_import_all_failed">Error al importar rutas.</string>
     <string name="strava_sync_success">Rutas sincronizadas de Strava.</string>
     <string name="strava_sync_failed">Error al sincronizar con Strava.</string>
     <string name="save_as_local_route">Guardar como ruta local</string>

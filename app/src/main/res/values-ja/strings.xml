@@ -912,6 +912,10 @@
     <string name="route_import">インポート</string>
     <string name="route_saved_success">ルートを保存しました。</string>
     <string name="route_saved_failed">保存に失敗しました。</string>
+    <string name="routes_import_progress">ルートをインポートしています (%1$d / %2$d)…</string>
+    <string name="routes_import_success">%1$d 件のルートを正常にインポートしました。</string>
+    <string name="routes_import_partial">%1$d 件のルートをインポート、%2$d 件失敗しました。</string>
+    <string name="routes_import_all_failed">ルートをインポートできませんでした。</string>
     <string name="strava_sync_success">Strava ルートを同期しました。</string>
     <string name="strava_sync_failed">Strava 同期失敗。</string>
     <string name="save_as_local_route">ローカルルートとして保存</string>

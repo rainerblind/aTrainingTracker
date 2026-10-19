@@ -699,6 +699,10 @@
     <string name="route_import">Importuj</string>
     <string name="route_saved_success">Trasa zapisana.</string>
     <string name="route_saved_failed">Błąd zapisu trasy.</string>
+    <string name="routes_import_progress">Importowanie tras (%1$d z %2$d)…</string>
+    <string name="routes_import_success">Pomyślnie zaimportowano %1$d tras.</string>
+    <string name="routes_import_partial">Zaimportowano %1$d tras, %2$d nie powiodło się.</string>
+    <string name="routes_import_all_failed">Nie udało się zaimportować tras.</string>
     <string name="strava_sync_success">Trasy Strava zsynchronizowane.</string>
     <string name="strava_sync_failed">Błąd synchronizacji Strava.</string>
     <string name="save_as_local_route">Zapisz jako trasę lokalną</string>

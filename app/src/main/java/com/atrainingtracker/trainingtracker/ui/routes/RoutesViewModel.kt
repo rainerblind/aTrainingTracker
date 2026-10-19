@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.ui.routes
 
 import android.app.Application
+import android.net.Uri
+import android.util.Log
 import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +35,7 @@ import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.routes.GpxRouteImporter
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
@@ -55,11 +58,16 @@ enum class RouteSortOrder(@StringRes override val labelResId: Int) : MappableSor
     NAME(R.string.sort_name)
 }
 
-class RoutesViewModel(application: Application) : 
-    BaseMappableListViewModel<RouteWithPath, RouteSortOrder>(application, RouteSortOrder.DISTANCE_TO_USER, RouteSortOrder.DISTANCE_TO_USER) {
-    private val routesRepository = RoutesRepository.getInstance(application)
-    private val banalServiceRepository = BANALServiceRepository.getInstance(application)
-    private val segmentsRepository = SegmentsRepository.getInstance(application)
+data class BatchImportProgress(val current: Int, val total: Int)
+data class BatchImportResult(val importedCount: Int, val failedCount: Int, val totalCount: Int)
+
+class RoutesViewModel @JvmOverloads constructor(
+    application: Application,
+    private val routesRepository: RoutesRepository = RoutesRepository.getInstance(application),
+    private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application),
+    private val segmentsRepository: SegmentsRepository = SegmentsRepository.getInstance(application),
+    private val gpxRouteImporter: GpxRouteImporter = GpxRouteImporter(application)
+) : BaseMappableListViewModel<RouteWithPath, RouteSortOrder>(application, RouteSortOrder.DISTANCE_TO_USER, RouteSortOrder.DISTANCE_TO_USER) {
     private val preferenceManager = MyPreferenceManager(application)
     private val tuningDataStore = TuningPreferencesDataStore(application)
 
@@ -240,5 +248,59 @@ class RoutesViewModel(application: Application) :
                 _isSyncingStrava.value = false
             }
         }
+    }
+
+    private val _batchImportProgress = MutableStateFlow<BatchImportProgress?>(null)
+    val batchImportProgress: StateFlow<BatchImportProgress?> = _batchImportProgress.asStateFlow()
+
+    private val _batchImportResult = MutableStateFlow<BatchImportResult?>(null)
+    val batchImportResult: StateFlow<BatchImportResult?> = _batchImportResult.asStateFlow()
+
+    fun clearBatchImportResult() {
+        _batchImportResult.value = null
+    }
+
+    /**
+     * Imports multiple route files in batch on Dispatchers.IO (REQ-MAP-053.3).
+     * Reports live progress via batchImportProgress and final tally via batchImportResult.
+     */
+    fun importRoutesBatch(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            var imported = 0
+            var failed = 0
+            val total = uris.size
+            for ((index, uri) in uris.withIndex()) {
+                _batchImportProgress.value = BatchImportProgress(current = index + 1, total = total)
+                try {
+                    val result = gpxRouteImporter.importRouteFromGpx(uri)
+                    if (result.isSuccess) {
+                        val data = result.getOrNull()
+                        if (data != null) {
+                            routesRepository.insertRoute(data.summary, data.pathPoints, data.waypoints)
+                            imported++
+                        } else {
+                            failed++
+                        }
+                    } else {
+                        Log.w(TAG, "Failed to parse route from $uri: ${result.exceptionOrNull()?.message}")
+                        failed++
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Exception importing route from $uri: ${e.message}", e)
+                    failed++
+                }
+            }
+            _batchImportProgress.value = null
+            _batchImportResult.value = BatchImportResult(
+                importedCount = imported,
+                failedCount = failed,
+                totalCount = total
+            )
+        }
+    }
+
+    companion object {
+        private const val TAG = "RoutesViewModel"
     }
 }

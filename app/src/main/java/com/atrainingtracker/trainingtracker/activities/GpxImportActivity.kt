@@ -53,8 +53,21 @@ class GpxImportActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // Handle the incoming intent data
-        val uri = intent.data ?: intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM)
-        viewModel.handleIntent(uri)
+        val uris: List<android.net.Uri> = when (intent.action) {
+            android.content.Intent.ACTION_SEND_MULTIPLE -> {
+                intent.getParcelableArrayListExtra<android.net.Uri>(android.content.Intent.EXTRA_STREAM)?.filterNotNull() ?: emptyList()
+            }
+            else -> {
+                val single = intent.data ?: intent.getParcelableExtra<android.net.Uri>(android.content.Intent.EXTRA_STREAM)
+                listOfNotNull(single)
+            }
+        }
+
+        if (uris.size > 1) {
+            viewModel.handleBatchUris(uris)
+        } else {
+            viewModel.handleIntent(uris.firstOrNull())
+        }
 
         setContent {
             ATrainingTrackerTheme {
@@ -97,7 +110,41 @@ class GpxImportActivity : ComponentActivity() {
                     }
                     is GpxImportViewModel.ImportState.Success -> {
                         LaunchedEffect(Unit) {
-                            Toast.makeText(this@GpxImportActivity, "Route Imported!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@GpxImportActivity, getString(R.string.route_saved_success), Toast.LENGTH_SHORT).show()
+                            finish()
+                        }
+                    }
+                    is GpxImportViewModel.ImportState.BatchProgress -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                CircularProgressIndicator()
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = stringResource(
+                                        R.string.routes_import_progress,
+                                        state.current,
+                                        state.total
+                                    ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    is GpxImportViewModel.ImportState.BatchSuccess -> {
+                        LaunchedEffect(Unit) {
+                            val message = when {
+                                state.failedCount == 0 -> getString(R.string.routes_import_success, state.importedCount)
+                                state.importedCount > 0 -> getString(R.string.routes_import_partial, state.importedCount, state.failedCount)
+                                else -> getString(R.string.routes_import_all_failed)
+                            }
+                            Toast.makeText(this@GpxImportActivity, message, Toast.LENGTH_SHORT).show()
                             finish()
                         }
                     }

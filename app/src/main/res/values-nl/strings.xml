@@ -930,6 +930,10 @@
     <string name="route_import">Importeren</string>
     <string name="route_saved_success">Route opgeslagen.</string>
     <string name="route_saved_failed">Fout bij opslaan.</string>
+    <string name="routes_import_progress">Routes importeren (%1$d van %2$d)…</string>
+    <string name="routes_import_success">%1$d routes succesvol geïmporteerd.</string>
+    <string name="routes_import_partial">%1$d routes geïmporteerd, %2$d mislukt.</string>
+    <string name="routes_import_all_failed">Kan routes niet importeren.</string>
     <string name="strava_sync_success">Strava routes bijgewerkt.</string>
     <string name="strava_sync_failed">Strava synchro mislukt.</string>
     <string name="save_as_local_route">Opslaan als lokale route</string>

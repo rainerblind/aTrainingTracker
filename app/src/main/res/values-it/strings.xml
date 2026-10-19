@@ -930,6 +930,10 @@
     <string name="route_import">Importa</string>
     <string name="route_saved_success">Percorso salvato.</string>
     <string name="route_saved_failed">Errore salvataggio.</string>
+    <string name="routes_import_progress">Importazione percorsi (%1$d di %2$d)…</string>
+    <string name="routes_import_success">%1$d percorsi importati con successo.</string>
+    <string name="routes_import_partial">%1$d percorsi importati, %2$d non riusciti.</string>
+    <string name="routes_import_all_failed">Impossibile importare i percorsi.</string>
     <string name="strava_sync_success">Percorsi Strava sincronizzati.</string>
     <string name="strava_sync_failed">Errore sincronizzazione Strava.</string>
     <string name="save_as_local_route">Salva come percorso locale</string>

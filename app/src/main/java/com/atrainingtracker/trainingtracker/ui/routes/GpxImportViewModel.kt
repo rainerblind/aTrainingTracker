@@ -52,7 +52,45 @@ class GpxImportViewModel(
         ) : ImportState()
         object Saving : ImportState()
         object Success : ImportState()
+        data class BatchProgress(val current: Int, val total: Int) : ImportState()
+        data class BatchSuccess(val importedCount: Int, val failedCount: Int) : ImportState()
         data class Error(val message: String) : ImportState()
+    }
+
+    fun handleBatchUris(uris: List<Uri>) {
+        if (uris.isEmpty()) {
+            uiState = ImportState.Error("No files provided")
+            return
+        }
+        if (uris.size == 1) {
+            handleIntent(uris.first())
+            return
+        }
+        viewModelScope.launch {
+            var imported = 0
+            var failed = 0
+            val total = uris.size
+            for ((index, uri) in uris.withIndex()) {
+                uiState = ImportState.BatchProgress(index + 1, total)
+                try {
+                    val result = importer.importRouteFromGpx(uri)
+                    if (result.isSuccess) {
+                        val data = result.getOrNull()
+                        if (data != null) {
+                            repository.insertRoute(data.summary, data.pathPoints, data.waypoints)
+                            imported++
+                        } else {
+                            failed++
+                        }
+                    } else {
+                        failed++
+                    }
+                } catch (e: Exception) {
+                    failed++
+                }
+            }
+            uiState = ImportState.BatchSuccess(imported, failed)
+        }
     }
 
     fun handleIntent(uri: Uri?) {
