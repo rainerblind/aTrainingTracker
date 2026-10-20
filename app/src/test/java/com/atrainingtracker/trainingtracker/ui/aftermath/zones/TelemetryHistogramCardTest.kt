@@ -322,7 +322,7 @@ class TelemetryHistogramCardTest {
         val sprintRangeText = "$tailCutoff–$dataMax $unit"
         assertEquals("400–940 W", sprintRangeText)
 
-        // 4. Source Contract Verification for TelemetryHistogramChart.kt
+        // 4. Source Contract Verification for TelemetryHistogramChart.kt (REQ-UI-419.3)
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/TelemetryHistogramChart.kt")
         val content = file.readText()
         assertTrue(content.contains("power_histogram_overflow_label"))
@@ -330,6 +330,12 @@ class TelemetryHistogramCardTest {
         assertTrue(content.contains("power_histogram_overflow_desc"))
         assertTrue(content.contains("power_histogram_return_desc"))
         assertTrue(content.contains("isSprintTailView"))
+        // Symmetrical 2-segment toggle styling contract (REQ-UI-419.3 / ATT-4370)
+        assertTrue("Active segment must use primaryContainer highlighting", content.contains("primaryContainer"))
+        assertTrue("Active segment text must use onPrimaryContainer", content.contains("onPrimaryContainer"))
+        assertTrue("Inactive switch segment must use surfaceVariant styling", content.contains("surfaceVariant"))
+        assertTrue("Inactive switch segment text must use onSurfaceVariant", content.contains("onSurfaceVariant"))
+        assertTrue("Navigation arrows must use AutoMirrored directional icons", content.contains("ArrowForward") && content.contains("ArrowBack"))
     }
 
     @Test
