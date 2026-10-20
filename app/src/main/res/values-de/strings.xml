@@ -1394,6 +1394,7 @@
     <string name="cluster_trend_pace">Pace</string>
     <string name="cluster_trend_pr">Bestzeit</string>
     <string name="cluster_trend_avg">Ø</string>
+    <string name="cluster_trend_outlier">Ausreißer</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Runden (%1$d)</string>

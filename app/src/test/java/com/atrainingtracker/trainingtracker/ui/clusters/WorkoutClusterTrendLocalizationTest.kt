@@ -39,7 +39,8 @@ class WorkoutClusterTrendLocalizationTest {
         "cluster_trend_speed",
         "cluster_trend_pace",
         "cluster_trend_pr",
-        "cluster_trend_avg"
+        "cluster_trend_avg",
+        "cluster_trend_outlier"
     )
 
     private fun findResDir(): File {

@@ -1308,6 +1308,7 @@
     <string name="cluster_trend_pace">Allure</string>
     <string name="cluster_trend_pr">Record</string>
     <string name="cluster_trend_avg">Moy</string>
+    <string name="cluster_trend_outlier">Valeur aberrante</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Tours (%1$d)</string>

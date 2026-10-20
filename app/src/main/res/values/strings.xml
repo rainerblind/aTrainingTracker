@@ -1502,6 +1502,7 @@
     <string name="cluster_trend_pace">Pace</string>
     <string name="cluster_trend_pr">PR</string>
     <string name="cluster_trend_avg">Avg</string>
+    <string name="cluster_trend_outlier">Outlier</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Laps (%1$d)</string>

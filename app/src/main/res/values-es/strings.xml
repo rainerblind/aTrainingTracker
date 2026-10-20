@@ -1309,6 +1309,7 @@
     <string name="cluster_trend_pace">Ritmo</string>
     <string name="cluster_trend_pr">Récord</string>
     <string name="cluster_trend_avg">Med</string>
+    <string name="cluster_trend_outlier">Atípico</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Vueltas (%1$d)</string>

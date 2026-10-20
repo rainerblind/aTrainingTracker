@@ -1307,6 +1307,7 @@
     <string name="cluster_trend_pace">Ritmo</string>
     <string name="cluster_trend_pr">Record</string>
     <string name="cluster_trend_avg">Med</string>
+    <string name="cluster_trend_outlier">Anomalo</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Giri (%1$d)</string>

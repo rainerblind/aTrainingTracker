@@ -1305,6 +1305,7 @@
     <string name="cluster_trend_pace">Tempo</string>
     <string name="cluster_trend_pr">Rekord</string>
     <string name="cluster_trend_avg">Śr</string>
+    <string name="cluster_trend_outlier">Wartość odstająca</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Okrążenia (%1$d)</string>

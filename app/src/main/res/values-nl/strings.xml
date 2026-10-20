@@ -1307,6 +1307,7 @@
     <string name="cluster_trend_pace">Tempo</string>
     <string name="cluster_trend_pr">Record</string>
     <string name="cluster_trend_avg">Gem</string>
+    <string name="cluster_trend_outlier">Uitschieter</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Ronden (%1$d)</string>
