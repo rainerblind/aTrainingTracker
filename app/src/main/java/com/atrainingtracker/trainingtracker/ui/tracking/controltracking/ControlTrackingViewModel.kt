@@ -110,6 +110,21 @@ class ControlTrackingViewModel(
             initialValue = devicesDatabaseManager.hasPairedRemoteDevices()
         )
 
+    /**
+     * Emits `true` if at least one paired Bluetooth LE remote device
+     * exists in the database, false otherwise (ATT-3998 / REQ-PRI-006).
+     * Seeded synchronously from SQLite on cold start to prevent UI flicker.
+     */
+    val hasPairedBluetoothSensors: StateFlow<Boolean> = allDevicesFromDb
+        .map { devices ->
+            devices.any { it.isPaired && it.protocol == Protocol.BLUETOOTH_LE }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = devicesDatabaseManager.hasPairedBluetoothDevices()
+        )
+
     // 2. Combine the IDs from the BANALService with the Data from the Database
     val remoteDevices: StateFlow<List<RemoteDeviceUIData>> = banalServiceRepository.activeRemoteDevicesIds
         .combine(allDevicesFromDb) { ids, dbDevices ->

@@ -30,7 +30,7 @@ MANDATORY_FIELDS = [
 ]
 
 HEADER_PATTERN = re.compile(
-    r"(?:###|h3\.)\s*Requirement Archaeology & Chesterton's Fence Audit",
+    r"(?:#{2,3}|h[23]\.)\s*(?:\d+(?:\.\d+)*[.\)]\s*)?Requirement Archaeology & Chesterton's Fence Audit",
     re.IGNORECASE,
 )
 
@@ -45,6 +45,23 @@ def get_git_diff(base_ref="develop", target_file="docs/requirements.md"):
     Retrieves the git diff for target_file against base_ref (or merge-base with base_ref).
     If base_ref is not resolvable or in detached HEAD, falls back to diff against HEAD or staged/working tree.
     """
+    if base_ref == "develop":
+        try:
+            sprint_branches = subprocess.check_output(
+                ["git", "for-each-ref", "--format=%(refname:short)", "refs/heads/sprint/*"],
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8").strip().splitlines()
+            for sb in sprint_branches:
+                ret = subprocess.call(
+                    ["git", "merge-base", "--is-ancestor", sb, "HEAD"],
+                    stderr=subprocess.DEVNULL,
+                )
+                if ret == 0:
+                    base_ref = sb
+                    break
+        except Exception:
+            pass
+
     # Try merge-base first
     try:
         mb = subprocess.check_output(

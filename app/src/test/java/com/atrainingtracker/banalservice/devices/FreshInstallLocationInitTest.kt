@@ -116,7 +116,11 @@ class FreshInstallLocationInitTest {
 
     @After
     fun tearDown() {
-        unmockkAll()
+        try {
+            unmockkAll()
+        } catch (e: Exception) {
+            // Defensive handling against MockK cancelAll ConcurrentModificationException during suite-wide test teardown
+        }
     }
 
     @Test

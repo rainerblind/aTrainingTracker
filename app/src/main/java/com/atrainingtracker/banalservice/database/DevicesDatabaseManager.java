@@ -272,6 +272,34 @@ public class DevicesDatabaseManager {
         }
     }
 
+    /**
+     * Checks whether at least one paired Bluetooth LE device exists in the database (ATT-3998 / REQ-PRI-006).
+     *
+     * @return true if at least one paired Bluetooth LE device is registered in SQLite, false otherwise.
+     */
+    public boolean hasPairedBluetoothDevices() {
+        if (DEBUG) Log.d(TAG, "hasPairedBluetoothDevices()");
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return false;
+        }
+        try (Cursor cursor = db.query(
+                DevicesDbHelper.DEVICES,
+                new String[]{DevicesDbHelper.C_ID},
+                DevicesDbHelper.PAIRED + " > 0 AND " + DevicesDbHelper.PROTOCOL + "=?",
+                new String[]{Protocol.BLUETOOTH_LE.name()},
+                null,
+                null,
+                null,
+                "1"
+        )) {
+            return cursor != null && cursor.moveToFirst();
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking paired Bluetooth devices", e);
+            return false;
+        }
+    }
+
     public DeviceIdAndNameLists getDeviceIdAndNameLists(SensorType sensorType) {
         if (DEBUG) Log.i(TAG, "getDeviceIdAndNameLists(" + sensorType + ")");
 

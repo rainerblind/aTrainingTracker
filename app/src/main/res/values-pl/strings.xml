@@ -1583,6 +1583,11 @@
     <string name="permission_rationale_open_settings">Otwórz ustawienia</string>
     <string name="permission_rationale_settings_explanation">Uprawnienie do lokalizacji zostało odrzucone. Bez dostępu do lokalizacji rejestrowanie trasy GPS jest niedostępne. Możesz przyznać uprawnienie w ustawieniach aplikacji.</string>
     <string name="permission_rationale_precise_location_explanation">Dokładna lokalizacja (GPS) jest wymagana do rejestrowania treningu. Przybliżona lokalizacja nie pozwala na zapisywanie dystansu, prędkości, trasy ani przewyższenia. Wybierz \'Dokładna\' w uprawnieniach.</string>
+    <!-- Decoupled Multi-Permission Cascade & Sensor Discovery (ATT-3998 / REQ-PRI-006) -->
+    <string name="bluetooth_permission_scan_required">Uprawnienie Bluetooth jest wymagane do wyszukiwania pobliskich czujników.</string>
+    <string name="grant_permission">Przyznaj</string>
+    <string name="permission_rationale_notification_subtitle">Powiadomienia zapewniają dostęp do czasu treningu, dystansu, alertów okrążeń i szybkich elementów sterujących podczas rejestrowania w tle.</string>
+    <string name="permission_rationale_bluetooth_subtitle">Uprawnienie Urządzenia w pobliżu łączy aTrainingTracker ze sparowanymi czujnikami tętna, mocy, prędkości i kadencji.</string>
     <string name="action_view_workout">Pokaż</string>
     <string name="permission_warning_badge_desc">Brak uprawnienia do lokalizacji</string>
 

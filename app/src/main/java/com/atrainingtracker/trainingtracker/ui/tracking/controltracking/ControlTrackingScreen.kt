@@ -75,6 +75,7 @@ fun ControlTrackingScreen(
     onResume: () -> Unit,
     onStop: () -> Unit,
     showResearchButton: Boolean = true,
+    hasPairedBluetoothSensors: Boolean = false,
     locationCalibrationStatus: com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus? = null,
     modifier: Modifier = Modifier,
     onPairSensor: () -> Unit = {},
@@ -99,6 +100,39 @@ fun ControlTrackingScreen(
             context,
             android.Manifest.permission.ACCESS_FINE_LOCATION
         ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    val checkHasNotification = {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    val checkHasBluetoothConnect = {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.BLUETOOTH_CONNECT
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    val checkHasBluetoothScan = {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.BLUETOOTH_SCAN
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
     }
 
     val checkHasBackgroundLocation = {
@@ -127,10 +161,22 @@ fun ControlTrackingScreen(
     var isCoarseOnly by remember {
         mutableStateOf(checkIsCoarseOnly())
     }
+    var hasNotificationPermission by remember {
+        mutableStateOf(checkHasNotification())
+    }
+    var hasBluetoothPermission by remember {
+        mutableStateOf(checkHasBluetoothConnect())
+    }
     var isIgnoringBatteryOptimizations by remember {
         mutableStateOf(checkIsIgnoringBatteryOptimizations())
     }
     var isBatteryBannerDismissed by androidx.compose.runtime.saveable.rememberSaveable {
+        mutableStateOf(false)
+    }
+    var isNotificationDismissed by androidx.compose.runtime.saveable.rememberSaveable {
+        mutableStateOf(false)
+    }
+    var isBluetoothDismissed by androidx.compose.runtime.saveable.rememberSaveable {
         mutableStateOf(false)
     }
     var pendingStartAfterBatteryExemption by androidx.compose.runtime.saveable.rememberSaveable {
@@ -143,7 +189,13 @@ fun ControlTrackingScreen(
     var isPermanentlyDenied by remember { mutableStateOf(false) }
 
     val proceedAfterPermissions: () -> Unit = {
-        if (!checkHasBackgroundLocation()) {
+        if (!checkHasNotification() && !isNotificationDismissed) {
+            isPermanentlyDenied = false
+            rationaleStep = RationaleStep.NOTIFICATION
+        } else if (hasPairedBluetoothSensors && !checkHasBluetoothConnect() && !isBluetoothDismissed) {
+            isPermanentlyDenied = false
+            rationaleStep = RationaleStep.BLUETOOTH
+        } else if (!checkHasBackgroundLocation()) {
             val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
             val hasRequestedBg = prefs.getBoolean("pref_has_requested_bg_perms", false)
             val activity = context as? android.app.Activity
@@ -191,6 +243,41 @@ fun ControlTrackingScreen(
         }
     }
 
+    val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasNotificationPermission = granted || checkHasNotification()
+        proceedAfterPermissions()
+    }
+
+    val bluetoothPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        hasBluetoothPermission = checkHasBluetoothConnect()
+        proceedAfterPermissions()
+    }
+
+    val bluetoothScanPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        if (checkHasBluetoothScan()) {
+            onSearch()
+        }
+    }
+
+    val handleSearchClick = {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && !checkHasBluetoothScan()) {
+            bluetoothScanPermissionLauncher.launch(
+                arrayOf(
+                    android.Manifest.permission.BLUETOOTH_CONNECT,
+                    android.Manifest.permission.BLUETOOTH_SCAN
+                )
+            )
+        } else {
+            onSearch()
+        }
+    }
+
     val bgLocationLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -223,12 +310,20 @@ fun ControlTrackingScreen(
                 val permitted = checkHasLocation()
                 hasLocationPermission = permitted
                 isCoarseOnly = checkIsCoarseOnly()
+                hasNotificationPermission = checkHasNotification()
+                hasBluetoothPermission = checkHasBluetoothConnect()
                 val batteryExempt = checkIsIgnoringBatteryOptimizations()
                 isIgnoringBatteryOptimizations = batteryExempt
                 if (permitted) {
                     com.atrainingtracker.banalservice.BANALService.checkOrInitializeLocationDevices()
                 }
                 if (permitted && rationaleStep == RationaleStep.FOREGROUND) {
+                    isPermanentlyDenied = false
+                    proceedAfterPermissions()
+                } else if (hasNotificationPermission && rationaleStep == RationaleStep.NOTIFICATION) {
+                    isPermanentlyDenied = false
+                    proceedAfterPermissions()
+                } else if (hasBluetoothPermission && rationaleStep == RationaleStep.BLUETOOTH) {
                     isPermanentlyDenied = false
                     proceedAfterPermissions()
                 } else if (checkHasBackgroundLocation() && rationaleStep == RationaleStep.BACKGROUND_LOCATION) {
@@ -302,7 +397,7 @@ fun ControlTrackingScreen(
                 if (showResearchButton) {
                     ResearchButton(
                         isEnabled = searchingFor == null,
-                        onClick = onSearch
+                        onClick = handleSearchClick
                     )
                 }
                 RemoteDevices(
@@ -334,7 +429,7 @@ fun ControlTrackingScreen(
             ) {
                 ResearchButton(
                     isEnabled = searchingFor == null,
-                    onClick = onSearch
+                    onClick = handleSearchClick
                 )
             }
         } else if (searchingFor == null) {
@@ -369,7 +464,8 @@ fun ControlTrackingScreen(
             modifier = Modifier.fillMaxWidth(),
             mode = trackingMode,
             enabled = true,
-            hasPermissionWarning = !hasLocationPermission || !isIgnoringBatteryOptimizations,
+            hasPermissionWarning = !hasLocationPermission || !isIgnoringBatteryOptimizations ||
+                                   (hasPairedBluetoothSensors && !hasBluetoothPermission),
             onStart = handleStartClick,
             onPause = onPause,
             onResume = onResume,
@@ -394,22 +490,16 @@ fun ControlTrackingScreen(
     // Material 3 Permission Rationale Sheet (REQ-PRI-003, ATT-2075)
     if (rationaleStep != RationaleStep.NONE) {
         val permissionsToRequest = remember {
-            val perms = mutableListOf(
+            arrayOf(
                 android.Manifest.permission.ACCESS_FINE_LOCATION,
                 android.Manifest.permission.ACCESS_COARSE_LOCATION
             )
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                perms.add(android.Manifest.permission.POST_NOTIFICATIONS)
-            }
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                perms.add(android.Manifest.permission.BLUETOOTH_CONNECT)
-                perms.add(android.Manifest.permission.BLUETOOTH_SCAN)
-            }
-            perms.toTypedArray()
         }
 
         val rationaleType = when (rationaleStep) {
             RationaleStep.FOREGROUND -> RationaleType.FOREGROUND
+            RationaleStep.NOTIFICATION -> RationaleType.NOTIFICATION
+            RationaleStep.BLUETOOTH -> RationaleType.BLUETOOTH
             RationaleStep.BACKGROUND_LOCATION -> RationaleType.BACKGROUND_LOCATION
             RationaleStep.BATTERY_OPTIMIZATION -> RationaleType.BATTERY_OPTIMIZATION
             RationaleStep.NONE -> RationaleType.FOREGROUND
@@ -433,6 +523,25 @@ fun ControlTrackingScreen(
                         val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
                         prefs.edit().putBoolean("pref_has_requested_foreground_perms", true).apply()
                         permissionLauncher.launch(permissionsToRequest)
+                    }
+                    RationaleStep.NOTIFICATION -> {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            proceedAfterPermissions()
+                        }
+                    }
+                    RationaleStep.BLUETOOTH -> {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                            bluetoothPermissionLauncher.launch(
+                                arrayOf(
+                                    android.Manifest.permission.BLUETOOTH_CONNECT,
+                                    android.Manifest.permission.BLUETOOTH_SCAN
+                                )
+                            )
+                        } else {
+                            proceedAfterPermissions()
+                        }
                     }
                     RationaleStep.BACKGROUND_LOCATION -> {
                         if (isPermanentlyDenied) {
@@ -460,6 +569,14 @@ fun ControlTrackingScreen(
                 when (rationaleStep) {
                     RationaleStep.FOREGROUND -> {
                         rationaleStep = RationaleStep.NONE
+                    }
+                    RationaleStep.NOTIFICATION -> {
+                        isNotificationDismissed = true
+                        proceedAfterPermissions()
+                    }
+                    RationaleStep.BLUETOOTH -> {
+                        isBluetoothDismissed = true
+                        proceedAfterPermissions()
                     }
                     RationaleStep.BACKGROUND_LOCATION -> {
                         // User chose "Not now" for background location; proceed gracefully
@@ -489,6 +606,8 @@ fun ControlTrackingScreen(
 enum class RationaleStep {
     NONE,
     FOREGROUND,
+    NOTIFICATION,
+    BLUETOOTH,
     BACKGROUND_LOCATION,
     BATTERY_OPTIMIZATION
 }

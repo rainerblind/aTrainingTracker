@@ -1581,6 +1581,11 @@
     <string name="permission_rationale_open_settings">Abrir configurações</string>
     <string name="permission_rationale_settings_explanation">A permissão de localização foi negada. Sem acesso à localização, a gravação de rotas e pontos GPS não fica disponível. Você pode conceder a permissão nas configurações do app.</string>
     <string name="permission_rationale_precise_location_explanation">A localização precisa (GPS) é necessária para registrar o treino. A localização aproximada não registra distância, velocidade, rota ou altitude. Selecione \'Precisa\' nas permissões.</string>
+    <!-- Decoupled Multi-Permission Cascade & Sensor Discovery (ATT-3998 / REQ-PRI-006) -->
+    <string name="bluetooth_permission_scan_required">A permissão de Bluetooth é necessária para buscar sensores próximos.</string>
+    <string name="grant_permission">Conceder</string>
+    <string name="permission_rationale_notification_subtitle">As notificações mantêm acessíveis a duração do treino, a distância, os alertas de voltas e os controles rápidos durante a gravação em segundo plano.</string>
+    <string name="permission_rationale_bluetooth_subtitle">A permissão de Dispositivos próximos conecta o aTrainingTracker aos seus sensores emparelhados de frequência cardíaca, potência, velocidade e cadência.</string>
     <string name="action_view_workout">Visualizar</string>
     <string name="permission_warning_badge_desc">Permissão de localização ausente</string>
 

@@ -1584,6 +1584,11 @@
     <string name="permission_rationale_open_settings">Ouvrir les paramètres</string>
     <string name="permission_rationale_settings_explanation">L\'autorisation de localisation a été refusée. Sans accès à la localisation, l\'enregistrement de l\'itinéraire GPS est indisponible. Vous pouvez activer l\'autorisation dans les paramètres de l\'application.</string>
     <string name="permission_rationale_precise_location_explanation">La position exacte (GPS) est requise pour l\'enregistrement de l\'entraînement. La position approximative ne permet pas d\'enregistrer la distance, la vitesse, le parcours ou l\'altitude. Veuillez sélectionner \'Précise\' dans les autorisations.</string>
+    <!-- Decoupled Multi-Permission Cascade & Sensor Discovery (ATT-3998 / REQ-PRI-006) -->
+    <string name="bluetooth_permission_scan_required">L\'autorisation Bluetooth est requise pour rechercher des capteurs à proximité.</string>
+    <string name="grant_permission">Accorder</string>
+    <string name="permission_rationale_notification_subtitle">Les notifications gardent la durée de l\'entraînement, la distance, les alertes de fractionné et les commandes rapides accessibles pendant l\'enregistrement en arrière-plan.</string>
+    <string name="permission_rationale_bluetooth_subtitle">L\'autorisation Appareils à proximité connecte aTrainingTracker à vos capteurs couplés de fréquence cardiaque, puissance, vitesse et cadence.</string>
     <string name="action_view_workout">Afficher</string>
     <string name="permission_warning_badge_desc">Autorisation de localisation manquante</string>
 

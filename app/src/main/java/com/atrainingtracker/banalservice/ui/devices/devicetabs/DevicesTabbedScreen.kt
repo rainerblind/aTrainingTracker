@@ -58,6 +58,10 @@ import androidx.compose.foundation.rememberScrollState
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSportSensorMatrix
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModel
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusSheet
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
@@ -91,12 +95,62 @@ fun DevicesTabbedScreen(
     var showProtocolSheet by remember { mutableStateOf(false) }
     var showFilterSheet by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var selectedPairingProtocol by remember { mutableStateOf<Protocol?>(null) }
+    var pendingPairingProtocol by remember { mutableStateOf<Protocol?>(null) }
     var showAntStatusSheet by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val checkHasBluetoothScan = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_SCAN
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    var hasBluetoothScanPermission by remember {
+        mutableStateOf(checkHasBluetoothScan())
+    }
+
+    val bluetoothScanLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        val granted = checkHasBluetoothScan()
+        hasBluetoothScanPermission = granted
+        if (granted) {
+            tabViewModel.startSearching()
+            pendingPairingProtocol?.let { protocolToPair ->
+                pendingPairingProtocol = null
+                selectedPairingProtocol = protocolToPair
+            }
+        }
+    }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                val granted = checkHasBluetoothScan()
+                hasBluetoothScanPermission = granted
+                if (granted) {
+                    tabViewModel.startSearching()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     val density = LocalDensity.current
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val chipsRowHeight = if (filterCriteria.isNotEmpty) 40.dp else 0.dp
-    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + chipsRowHeight).roundToPx() }
+    val showScanWarningBanner = !hasBluetoothScanPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val bannerHeight = if (showScanWarningBanner) 56.dp else 0.dp
+    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + chipsRowHeight + bannerHeight).roundToPx() }
     
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
@@ -117,7 +171,6 @@ fun DevicesTabbedScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val haptic = LocalHapticFeedback.current
-    val context = LocalContext.current
 
     LaunchedEffect(tabViewModel) {
         tabViewModel.newDeviceDiscoveredEvent.collect { deviceName ->
@@ -372,6 +425,49 @@ fun DevicesTabbedScreen(
                                     )
                                 }
                             }
+
+                            // Bluetooth Scan Permission Warning Banner (ATT-3998 / REQ-PRI-006)
+                            if (showScanWarningBanner) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.errorContainer,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.bluetooth_permission_scan_required),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onErrorContainer,
+                                            modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                        )
+                                        Button(
+                                            onClick = {
+                                                bluetoothScanLauncher.launch(
+                                                    arrayOf(
+                                                        Manifest.permission.BLUETOOTH_SCAN,
+                                                        Manifest.permission.BLUETOOTH_CONNECT
+                                                    )
+                                                )
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.error,
+                                                contentColor = MaterialTheme.colorScheme.onError
+                                            ),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.grant_permission),
+                                                style = MaterialTheme.typography.labelMedium
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -401,9 +497,11 @@ fun DevicesTabbedScreen(
                     )
                 }
                 
-                // Keep searching active while displaying tabs
-                DisposableEffect(Unit) {
-                    tabViewModel.startSearching()
+                // Keep searching active while displaying tabs (only when scan permission is held)
+                DisposableEffect(hasBluetoothScanPermission) {
+                    if (hasBluetoothScanPermission) {
+                        tabViewModel.startSearching()
+                    }
                     onDispose {
                         tabViewModel.stopSearching()
                         showProtocolSheet = false
@@ -416,7 +514,17 @@ fun DevicesTabbedScreen(
                     PairingProtocolBottomSheet(
                         onProtocolSelected = { selectedProtocol ->
                             showProtocolSheet = false
-                            selectedPairingProtocol = selectedProtocol
+                            if (selectedProtocol == Protocol.BLUETOOTH_LE && !hasBluetoothScanPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                pendingPairingProtocol = selectedProtocol
+                                bluetoothScanLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.BLUETOOTH_SCAN,
+                                        Manifest.permission.BLUETOOTH_CONNECT
+                                    )
+                                )
+                            } else {
+                                selectedPairingProtocol = selectedProtocol
+                            }
                         },
                         onAntServicesMissing = {
                             showProtocolSheet = false

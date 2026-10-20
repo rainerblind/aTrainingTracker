@@ -228,6 +228,7 @@ fun TrackingTabsScreen(
     val activeSensors by controlViewModel.activeSensors.collectAsState()
     val bSportType by controlViewModel.bSportType.collectAsState()
     val hasPairedRemoteDevices by controlViewModel.hasPairedRemoteDevices.collectAsState()
+    val hasPairedBluetoothSensors by controlViewModel.hasPairedBluetoothSensors.collectAsState()
     val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
 
     // Battery Saver Telemetry & Event Subscriptions
@@ -757,6 +758,7 @@ fun TrackingTabsScreen(
                                 onResume = { controlViewModel.onResumeTracking() },
                                 onStop = { controlViewModel.onStopTracking() },
                                 showResearchButton = hasPairedRemoteDevices,
+                                hasPairedBluetoothSensors = hasPairedBluetoothSensors,
                                 locationCalibrationStatus = locationCalibrationStatus,
                                 onPairSensor = { (activity as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors) },
                                 bottomContent = {
