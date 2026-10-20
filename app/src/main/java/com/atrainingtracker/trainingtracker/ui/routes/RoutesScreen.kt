@@ -66,7 +66,11 @@ import com.atrainingtracker.trainingtracker.ui.map.toMapSegment
 import kotlinx.coroutines.launch
 
 /**
- * Top-level Composable for Routes tabbed list, detail map view, and editing (REQ-UI-159).
+ * Top-level Composable for Routes tabbed list, detail map view, and editing (REQ-UI-159, REQ-UI-423).
+ *
+ * Renders [RouteTabbedScreen] continuously in composition when not inspecting a route on full-screen map,
+ * and overlays [EditRouteScreen] modal bottom sheet alongside it to prevent horizontal tab bar scroll jumping
+ * and collapsing app bar offset loss upon sheet dismissal (Rule 47 / REQ-UI-423).
  */
 @Composable
 fun RoutesScreen(
@@ -213,24 +217,6 @@ fun RoutesScreen(
                         selectedRouteIdForDetails = null
                     }
                 }
-            } else if (selectedRouteIdForEdit != null) {
-                val routeToEdit = routes.find { it.summary.id == selectedRouteIdForEdit }
-                if (routeToEdit != null) {
-                    EditRouteScreen(
-                        routeSummary = routeToEdit.summary,
-                        onSave = {
-                            viewModel.updateRoute(it)
-                            selectedRouteIdForEdit = null
-                        },
-                        onCancel = {
-                            selectedRouteIdForEdit = null
-                        }
-                    )
-
-                    BackHandler {
-                        selectedRouteIdForEdit = null
-                    }
-                }
             } else {
                 RouteTabbedScreen(
                     routesWithPath = routes,
@@ -273,6 +259,26 @@ fun RoutesScreen(
                     onClearAllFilters = { viewModel.clearFilterCriteria() },
                     onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) }
                 )
+
+                if (selectedRouteIdForEdit != null) {
+                    val routeToEdit = routes.find { it.summary.id == selectedRouteIdForEdit }
+                    if (routeToEdit != null) {
+                        EditRouteScreen(
+                            routeSummary = routeToEdit.summary,
+                            onSave = {
+                                viewModel.updateRoute(it)
+                                selectedRouteIdForEdit = null
+                            },
+                            onCancel = {
+                                selectedRouteIdForEdit = null
+                            }
+                        )
+
+                        BackHandler {
+                            selectedRouteIdForEdit = null
+                        }
+                    }
+                }
             }
         }
     }

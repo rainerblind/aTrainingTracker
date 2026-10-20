@@ -38,7 +38,8 @@ import java.io.File
 
 /**
  * Architectural and contract tests verifying that [RoutesScreen] and [RoutesViewModel]
- * decouple route preview polyline styling from hardcoded active navigation (REQ-UI-347 / TST-UI-307 / ATT-3172).
+ * decouple route preview polyline styling from hardcoded active navigation (REQ-UI-347 / TST-UI-307 / ATT-3172),
+ * and retain [RouteTabbedScreen] in composition while [EditRouteScreen] bottom sheet is open (REQ-UI-423 / TST-UI-387 / ATT-4285).
  */
 class RoutesScreenContractTest {
 
@@ -180,4 +181,98 @@ class RoutesScreenContractTest {
         assertFalse(unselectedMapRoute.color == selectedMapRoute.color)
         assertTrue(selectedMapRoute.width > unselectedMapRoute.width)
     }
+
+    /**
+     * Verifies that RouteTabbedScreen is continuously retained in composition when not inspecting details,
+     * and EditRouteScreen is composed conditionally as an overlay (REQ-UI-423.1, REQ-UI-423.2 / TST-UI-387.1).
+     */
+    @Test
+    fun testRoutesScreen_compositionRetention_routeTabbedScreenMountedWhenEditing() {
+        assertTrue("RoutesScreen.kt must exist", routesScreenFile.exists())
+        val content = routesScreenFile.readText()
+
+        // 1. REQ-UI-423.2: Strict absence of exclusive "else if (selectedRouteIdForEdit != null)" branch
+        assertFalse(
+            "RoutesScreen.kt must not contain exclusive branching 'else if (selectedRouteIdForEdit != null)' (REQ-UI-423.2 / TST-UI-387.1)",
+            content.contains("else if (selectedRouteIdForEdit != null)")
+        )
+
+        // 2. REQ-UI-423.1: RouteTabbedScreen must be mounted unconditionally in the non-details branch
+        assertTrue(
+            "RoutesScreen.kt must host RouteTabbedScreen in the else branch (REQ-UI-423.1)",
+            content.contains("RouteTabbedScreen(")
+        )
+
+        // 3. REQ-UI-423.2: EditRouteScreen must be conditionally composed as an overlay
+        assertTrue(
+            "RoutesScreen.kt must compose EditRouteScreen inside if (selectedRouteIdForEdit != null) (REQ-UI-423.2)",
+            content.contains("if (selectedRouteIdForEdit != null)") &&
+                content.contains("EditRouteScreen(")
+        )
+
+        // 4. Verify ordering: In the else branch, RouteTabbedScreen appears before EditRouteScreen
+        val routeTabbedIndex = content.indexOf("RouteTabbedScreen(")
+        val editRouteIndex = content.indexOf("EditRouteScreen(")
+        assertTrue(
+            "RouteTabbedScreen must appear before EditRouteScreen overlay in composition (Rule 47)",
+            routeTabbedIndex in 0 until editRouteIndex
+        )
+    }
+
+    /**
+     * Verifies that EditRouteScreen dismissal contracts (onSave, onCancel, BackHandler) cleanly reset
+     * selectedRouteIdForEdit to null and invoke viewModel.updateRoute on save (REQ-UI-423.3, REQ-UI-423.4 / TST-UI-387.2).
+     */
+    @Test
+    fun testRoutesScreen_editRouteScreen_overlayContractsAndDismissal() {
+        assertTrue("RoutesScreen.kt must exist", routesScreenFile.exists())
+        val content = routesScreenFile.readText()
+
+        // REQ-UI-423.3 & REQ-UI-423.4: onSave invokes viewModel.updateRoute and resets selectedRouteIdForEdit to null
+        assertTrue(
+            "EditRouteScreen onSave must call viewModel.updateRoute (REQ-UI-423.4 / TST-UI-387.2)",
+            content.contains("viewModel.updateRoute(it)")
+        )
+
+        // Verify dismissal contracts reset selectedRouteIdForEdit = null
+        val editBlockStart = content.indexOf("if (selectedRouteIdForEdit != null)")
+        assertTrue("if (selectedRouteIdForEdit != null) block must exist", editBlockStart != -1)
+        val editBlock = content.substring(editBlockStart)
+
+        assertTrue(
+            "onSave must clear selectedRouteIdForEdit (REQ-UI-423.3)",
+            editBlock.contains("onSave = {") && editBlock.contains("selectedRouteIdForEdit = null")
+        )
+        assertTrue(
+            "onCancel must clear selectedRouteIdForEdit (REQ-UI-423.3)",
+            editBlock.contains("onCancel = {") && editBlock.contains("selectedRouteIdForEdit = null")
+        )
+        assertTrue(
+            "BackHandler must clear selectedRouteIdForEdit (REQ-UI-423.3)",
+            editBlock.contains("BackHandler {") && editBlock.contains("selectedRouteIdForEdit = null")
+        )
+    }
+
+    /**
+     * Verifies that all route editing string resources have 100% translation parity and non-blank values
+     * across all 9 canonical application locales (REQ-UI-423.5 / REQ-LOC-001 / TST-UI-387.3).
+     */
+    @Test
+    fun testRouteEditingStrings_9LanguageParity() {
+        val requiredKeys = listOf("route_edit", "name", "route_sport_type", "route_description", "save", "cancel")
+        val locales = listOf("", "-de", "-es", "-fr", "-it", "-ja", "-nl", "-pl", "-pt")
+
+        for (locale in locales) {
+            val stringsFile = File(projectRoot, "app/src/main/res/values$locale/strings.xml")
+            assertTrue("strings.xml must exist for locale values$locale (TST-UI-387.3)", stringsFile.exists())
+            val xml = stringsFile.readText()
+            for (key in requiredKeys) {
+                val pattern = Regex("<string name=\"$key\">([^<]+)</string>")
+                val match = pattern.find(xml)
+                assertNotNull("Key '$key' must exist in values$locale/strings.xml (REQ-UI-423.5)", match)
+                assertTrue("Key '$key' must not be blank in values$locale/strings.xml", match!!.groupValues[1].isNotBlank())
+            }
+        }
+    }
 }
+
