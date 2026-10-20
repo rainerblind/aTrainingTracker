@@ -235,6 +235,13 @@ class WorkoutDataMappingSymmetryTest {
                 com.atrainingtracker.trainingtracker.database.ExtremaType.MIN
             )
         } returns 1.5
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.AVG
+            )
+        } returns 200.0
 
         val singleData = mapper.fromCursor(cursor)
         val batchMetadata = WorkoutDataMapper.BatchMetadata(
@@ -245,6 +252,13 @@ class WorkoutDataMappingSymmetryTest {
                         com.atrainingtracker.banalservice.sensor.SensorType.W_PRIME_BAL,
                         com.atrainingtracker.trainingtracker.database.ExtremaType.MIN,
                         1.5,
+                        null
+                    ),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(
+                        5023L,
+                        com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                        com.atrainingtracker.trainingtracker.database.ExtremaType.AVG,
+                        200.0,
                         null
                     )
                 )
@@ -266,6 +280,69 @@ class WorkoutDataMappingSymmetryTest {
         assertEquals(singleData.isEmptyTankWarning, snapshotData.isEmptyTankWarning)
         assertEquals(singleData.detailsData.minWPrimeBalKj, batchData.detailsData.minWPrimeBalKj)
         assertEquals(singleData.detailsData.minWPrimeBalKj, snapshotData.detailsData.minWPrimeBalKj)
+    }
+
+    @Test
+    fun testRule20_wPrimeBalSummary_noPowerData_suppressesWPrimeBalSymmetrically() {
+        // [TST-TRK-031.6] / REQ-TRK-038.5 (Rule 20 & Rule 52)
+        // Given legacy SQLite extrema for W_PRIME_BAL, but zero power data
+        val cursor = createMockCursor(sourceString = "FIT", raceInt = 0)
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.W_PRIME_BAL,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.MIN
+            )
+        } returns 20.0
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.AVG
+            )
+        } returns null
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.MAX
+            )
+        } returns null
+
+        val singleData = mapper.fromCursor(cursor)
+        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+            extrema = mapOf(
+                5023L to listOf(
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(
+                        5023L,
+                        com.atrainingtracker.banalservice.sensor.SensorType.W_PRIME_BAL,
+                        com.atrainingtracker.trainingtracker.database.ExtremaType.MIN,
+                        20.0,
+                        null
+                    )
+                )
+            ),
+            stravaData = emptyMap(),
+            clusterNames = mapOf(42L to "Test Cluster"),
+            laps = emptyMap()
+        )
+        val batchData = mapper.fromCursor(cursor, batchMetadata)
+        val snapshot = mapper.readCursorSnapshot(cursor)
+        val snapshotData = mapper.fromSnapshot(snapshot, batchMetadata)
+
+        // Then all pathways MUST symmetrically suppress minWPrimeBal (null)
+        org.junit.Assert.assertNull("Single minWPrimeBalKj must be null", singleData.minWPrimeBalKj)
+        org.junit.Assert.assertNull("Batch minWPrimeBalKj must be null", batchData.minWPrimeBalKj)
+        org.junit.Assert.assertNull("Snapshot minWPrimeBalKj must be null", snapshotData.minWPrimeBalKj)
+        org.junit.Assert.assertNull("Single minWPrimeBalPct must be null", singleData.minWPrimeBalPct)
+        org.junit.Assert.assertNull("Batch minWPrimeBalPct must be null", batchData.minWPrimeBalPct)
+        org.junit.Assert.assertNull("Snapshot minWPrimeBalPct must be null", snapshotData.minWPrimeBalPct)
+        org.junit.Assert.assertFalse("Single isEmptyTankWarning must be false", singleData.isEmptyTankWarning)
+        org.junit.Assert.assertFalse("Batch isEmptyTankWarning must be false", batchData.isEmptyTankWarning)
+        org.junit.Assert.assertFalse("Snapshot isEmptyTankWarning must be false", snapshotData.isEmptyTankWarning)
+        org.junit.Assert.assertNull("DetailsData minWPrimeBalKj must be null", singleData.detailsData.minWPrimeBalKj)
+        org.junit.Assert.assertNull("DetailsData minWPrimeBalKj must be null", batchData.detailsData.minWPrimeBalKj)
+        org.junit.Assert.assertNull("DetailsData minWPrimeBalKj must be null", snapshotData.detailsData.minWPrimeBalKj)
     }
 
     @Test

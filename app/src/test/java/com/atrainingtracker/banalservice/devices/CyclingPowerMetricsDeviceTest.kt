@@ -652,6 +652,33 @@ class CyclingPowerMetricsDeviceTest {
     }
 
     @Test
+    fun testStartup_noPowerSensor_doesNotPublishWPrimeBalSensor() {
+        // [TST-TRK-031.1] / REQ-TRK-038.1, REQ-TRK-038.4 (Rule 52)
+        // Given no power sensor registered in sensorManager
+        every { sensorManager.getSensor(SensorType.POWER) } returns null
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { true }, // Suspended
+            { 75.0f },
+            { 250 },
+            { 1_000_000L },
+            { 280 },
+            { 20.0f }
+        )
+
+        // Then wPrimeBalSensor MUST remain null upon instantiation (Rule 52)
+        assertNull(device.wPrimeBalSensor.sensorData.value)
+
+        // And calculateMetrics while suspended must also NOT publish to wPrimeBalSensor
+        device.calculateMetrics()
+        assertNull(device.wPrimeBalSensor.sensorData.value)
+
+        device.shutDown()
+    }
+
+    @Test
     fun testStartup_constructorWithFtpFallback_seedsInitialWPrimeCapacity() {
         // [TST-TRK-031.2] / REQ-TRK-038.1
         // Given CP = null, FTP = 250W, and W' = 15.0 kJ

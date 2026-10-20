@@ -304,4 +304,29 @@ class WorkoutDetailsLayoutTest {
             lineCount < 500
         )
     }
+
+    @Test
+    fun `TST-TRK-031_7 testWorkoutDetails_noPowerData_omitsAnaerobicBatteryRowAndDivider`() {
+        // [TST-TRK-031.7] / REQ-TRK-038.5
+        val candidates = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutdetails/WorkoutDetails.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutdetails/WorkoutDetails.kt")
+        )
+        val file = candidates.firstOrNull { it.exists() }
+        assertTrue("WorkoutDetails.kt must exist", file != null && file.exists())
+        val content = file!!.readText()
+
+        // 1. Verify AnaerobicBatteryRow requires non-null minWPrimeBalKj and minWPrimeBalPct
+        assertTrue(
+            "AnaerobicBatteryRow must be gated on non-null minWPrimeBalKj and minWPrimeBalPct",
+            content.contains("data.minWPrimeBalKj != null && data.minWPrimeBalPct != null")
+        )
+
+        // 2. Modularity budget invariant: strictly < 500 lines
+        val lineCount = content.lines().size
+        assertTrue(
+            "WorkoutDetails.kt must remain strictly < 500 lines (actual: $lineCount)",
+            lineCount < 500
+        )
+    }
 }
