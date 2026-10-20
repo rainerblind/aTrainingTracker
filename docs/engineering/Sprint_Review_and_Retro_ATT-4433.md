@@ -30,4 +30,5 @@ Sprint `2026-43.3` was concluded early after completing 4 high-priority tickets 
 * **Canonical Sport Type Ordering (`Bike, Run, Other` — Rule 57)**: User clarified during Ceremony 1 that sport selector chips across the app always follow the canonical `Bike, Run, Other` (`listOf(BSportType.BIKE, BSportType.RUN, BSportType.UNKNOWN)`) sequence.
 
 ### 2.2 Process Improvements & Hygiene
+* **Relative Control Scaling (`ATT-4464` / Rule 59)**: When specifying a scaled-down subordinate control (`SubordinateTuningToggleItem`), always inspect the parent control (`TuningToggleItem`) first—because `TuningToggleItem` already applied `Modifier.scale(0.8f)`, applying `Modifier.scale(0.8f)` to the subordinate switch resulted in identical switch sizes (`ATT-4464` created to reduce subordinate switch size/weight significantly, e.g. `0.6f`).
 * **Canonical Deliverable Directory Naming**: Ensure Stage 2 and Stage 3 subagent prompts always reference the exact plural repository directories (`docs/engineering/test_specs/` and `docs/engineering/plans/`) so subagents never create parallel `test_spec/` or `impl_plans/` directories.

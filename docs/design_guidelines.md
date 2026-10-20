@@ -158,10 +158,10 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
   * When introducing a dedicated configuration sheet or editor for a view (such as `WorkoutDetailTabsConfigSheet` for `DetailedWorkoutView` tab ordering and visibility), any legacy settings controls that previously toggled the same view (such as the `Details` column in the 2-column `WorkoutMasksAndCardsSection` matrix) **MUST** be retired and cleaned up in the same change.
   * Never keep two competing UI surfaces in the same settings screen that toggle the same underlying preferences; doing so confuses the athlete about which control is authoritative.
 
-### 3.3 Subordinate Settings Toggles: Lighter Visual Weight & Compact Switches (Rule 59 — ATT-4369 / ATT-4432)
+### 3.3 Subordinate Settings Toggles: Lighter Visual Weight & Compact Switches (Rule 59 — ATT-4369 / ATT-4432 / ATT-4464)
 * **Clear Parent-Child Hierarchy**:
-  * Subordinate child toggles nested under a primary feature/model toggle (such as `"Show in Workout Summary"` / `"In Workout-Übersicht anzeigen"` under a Physiology Model toggle) **MUST NOT** reuse the full-sized primary `TuningToggleItem` row with only a `16.dp` left indent, which visually competes with the parent header.
-  * Render subordinate toggles with a distinctly lighter visual weight: smaller/lighter text (`MaterialTheme.typography.bodySmall` or `labelMedium` with `MaterialTheme.colorScheme.onSurfaceVariant`), compact vertical padding, and a scaled-down `Switch` (`Modifier.scale(0.8f)`).
+  * Subordinate child toggles nested under a primary feature/model toggle (such as `"Show in Workout Summary"` / `"In Workout-Zusammenfassung anzeigen"` under a Physiology Model toggle) **MUST NOT** reuse the full-sized primary `TuningToggleItem` row or the same `Switch` scale (`0.8f`) as `TuningToggleItem`, which visually competes with the parent header.
+  * Because `TuningToggleItem` already scales its primary `Switch` to `0.8f`, subordinate toggles (`SubordinateTuningToggleItem`) **MUST** render with a significantly smaller/lighter control (e.g., `Modifier.scale(0.6f)` with muted/secondary colors or a compact `Checkbox`), smaller/lighter text (`MaterialTheme.typography.bodySmall` or `labelMedium` with `MaterialTheme.colorScheme.onSurfaceVariant`), and compact vertical padding.
 * **No Unrequested Top-Level Model Toggles**:
   * Do not invent extra top-level settings toggles for baseline metrics (e.g. `"Basic Power Metrics (Work, W/kg)"`) that were not requested in the ticket specification.
 
