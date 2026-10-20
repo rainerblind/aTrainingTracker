@@ -146,6 +146,20 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         this(context, mySensorManager, recordingStateProvider, weightProvider, ftpProvider, timeProvider, null, SettingsDataStoreJavaHelper::getEffectiveWPrimeKj);
     }
 
+    /**
+     * Constructs a new {@link CyclingPowerMetricsDevice} telemetry provider.
+     * Seeds initial session state and full W'bal anaerobic work capacity parity with {@link #resetSession()}
+     * immediately upon registration (Rule 51 / REQ-TRK-038.1).
+     *
+     * @param context App context
+     * @param mySensorManager Sensor manager hosting paired sensors
+     * @param recordingStateProvider Provider for active pause/suspended state
+     * @param weightProvider Provider for athlete body mass in kg
+     * @param ftpProvider Provider for functional threshold power (FTP)
+     * @param timeProvider Provider for current wall-clock epoch time
+     * @param cpProvider Provider for critical power (CP)
+     * @param wPrimeKjProvider Provider for configured W' anaerobic capacity in kJ
+     */
     public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager,
                                      RecordingStateProvider recordingStateProvider,
                                      AthleteWeightProvider weightProvider,
@@ -173,6 +187,9 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         }
 
         registerSensors();
+
+        // Seed initial session state & W'bal capacity parity with resetSession() (Rule 51 / REQ-TRK-038.1)
+        resetSession();
 
         mScheduler.scheduleWithFixedDelay(this::calculateMetrics, 1, 1, TimeUnit.SECONDS);
     }
@@ -286,11 +303,47 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         boolean isSuspended = mRecordingStateProvider.isRecordingSuspended();
         long now = mTimeProvider.currentTimeMillis();
 
+        // Query filtered power (3-second moving average)
+        FilteredSensorData<Double> powerFiltered = null;
+        try {
+            powerFiltered = BANALService.getFilteredSensorData(cPowerFilter);
+        } catch (Throwable t) {
+            // ignore
+        }
+        Double power = (powerFiltered != null) ? powerFiltered.getValue() : null;
+
+        // Fallback to raw power if filtered data is not yet available
+        if (power == null && mMySensorManager != null) {
+            MySensor<?> rawSensor = mMySensorManager.getSensor(SensorType.POWER);
+            if (rawSensor != null && rawSensor.getSensorData() != null && rawSensor.getSensorData().getValue() != null) {
+                Object val = rawSensor.getSensorData().getValue();
+                if (val instanceof Number) {
+                    power = ((Number) val).doubleValue();
+                }
+            }
+        }
+
+        float athleteWeightKg = mWeightProvider.getAthleteWeightKg(mContext);
+
         if (isSuspended) {
             if (!mWasSuspended) {
                 mWasSuspended = true;
                 mSuspendedStartMs = now;
             }
+
+            // Stationary & Paused W/kg Alignment (REQ-TRK-038.2)
+            Double wPerKg = null;
+            if (athleteWeightKg > 0.0f) {
+                if (power != null && power >= 0.0) {
+                    wPerKg = PowerPhysiologyCalculator.calculatePowerToWeight(power, athleteWeightKg);
+                } else if (power == null && mMySensorManager != null && mMySensorManager.getSensor(SensorType.POWER) != null) {
+                    wPerKg = 0.0;
+                }
+            }
+            if (mPowerToWeightSensor != null) {
+                mPowerToWeightSensor.newValue(wPerKg);
+            }
+
             if (mCurrentWPrimeBalJoules != null) {
                 Integer cp = resolveEffectiveCpWatts();
                 float wPrimeKj = mWPrimeKjProvider.getWPrimeKj(mContext);
@@ -321,49 +374,18 @@ public class CyclingPowerMetricsDevice extends MyDevice {
             mSuspendedStartMs = 0L;
         }
 
-        // Query filtered power (3-second moving average)
-        FilteredSensorData<Double> powerFiltered = null;
-        try {
-            powerFiltered = BANALService.getFilteredSensorData(cPowerFilter);
-        } catch (Throwable t) {
-            // ignore
-        }
-        Double power = (powerFiltered != null) ? powerFiltered.getValue() : null;
-
-        // Fallback to raw power if filtered data is not yet available
-        if (power == null && mMySensorManager != null) {
-            MySensor<?> rawSensor = mMySensorManager.getSensor(SensorType.POWER);
-            if (rawSensor != null && rawSensor.getSensorData() != null && rawSensor.getSensorData().getValue() != null) {
-                Object val = rawSensor.getSensorData().getValue();
-                if (val instanceof Number) {
-                    power = ((Number) val).doubleValue();
-                }
-            }
-        }
-
-        // 1. Power-to-Weight Ratio Calculation (REQ-TRK-019, REQ-MIG-039.1)
-        float athleteWeightKg = mWeightProvider.getAthleteWeightKg(mContext);
-        Double wPerKg = (power != null && athleteWeightKg > 0.0f)
+        // 1. Power-to-Weight Ratio Calculation (REQ-TRK-019, REQ-MIG-039.1, REQ-TRK-038.2)
+        Double wPerKg = (power != null && power >= 0.0 && athleteWeightKg > 0.0f)
                 ? PowerPhysiologyCalculator.calculatePowerToWeight(power, athleteWeightKg)
                 : null;
         if (mPowerToWeightSensor != null) {
             mPowerToWeightSensor.newValue(wPerKg);
         }
 
-        // 2. Power Validation for NP, IF, Mechanical Work, TSS & W'bal
+        // 2. Power Validation for NP, IF, Mechanical Work, TSS & W'bal (REQ-TRK-038.3)
         if (power == null || Double.isNaN(power) || Double.isInfinite(power) || power < 0.0) {
-            if (mNormalizedPowerSensor != null) {
-                mNormalizedPowerSensor.newValue(null);
-            }
-            if (mIntensityFactorSensor != null) {
-                mIntensityFactorSensor.newValue(null);
-            }
-            if (mTssSensor != null) {
-                mTssSensor.newValue(null);
-            }
-            if (mWPrimeBalSensor != null) {
-                mWPrimeBalSensor.newValue(null);
-            }
+            // Do NOT wipe sensors to null on transient 1-second dropouts.
+            // Let TrackingViewModel's 3-second stale timer govern UI staleness gracefully.
             return;
         }
 
