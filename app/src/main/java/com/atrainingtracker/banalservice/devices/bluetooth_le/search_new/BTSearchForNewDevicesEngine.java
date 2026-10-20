@@ -59,6 +59,19 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.UUID;
 
+/**
+ * Asynchronous Bluetooth Low Energy (BLE) peripheral discovery engine.
+ *
+ * <p>Architectural Role: Responsible for initiating BLE advertisement scans, filtering peripherals
+ * by GATT service UUIDs corresponding to requested {@link DeviceType}s, connecting to newly discovered
+ * devices, querying device name, manufacturer, and battery characteristics, and notifying the host service
+ * via {@link IBTSearchForNewDevicesEngineInterface}. Handles Android version-specific permissions
+ * (BLUETOOTH_ADMIN and ACCESS_FINE_LOCATION on API &lt; 31, BLUETOOTH_SCAN on API 31+).
+ *
+ * <p>Threading Constraints: Public control methods ({@link #startAsyncSearch()}, {@link #stopAsyncSearch()})
+ * are called from the service main/worker thread. GATT callbacks and asynchronous discovery events are
+ * posted to {@link #mHandler} associated with the service looper.
+ */
 public class BTSearchForNewDevicesEngine
         implements SearchForNewDevicesInterface {
     private static final String TAG = "BTSearchForNewDevicesE";
@@ -322,6 +335,29 @@ public class BTSearchForNewDevicesEngine
         mBatteryPercentage.clear();
     }
 
+    /**
+     * Returns the active Android platform API version code.
+     *
+     * <p>Architectural Role: Overridable in test suites to verify version-gated BLE permission and scan behavior
+     * across pre-Android 12 (API &lt; 31) and Android 12+ (API 31+) environments.
+     *
+     * <p>Threading Constraints: Thread-safe, non-blocking.
+     *
+     * @return active Android Build SDK version code (Build.VERSION.SDK_INT)
+     */
+    protected int getBuildVersionSdkInt() {
+        return Build.VERSION.SDK_INT;
+    }
+
+    /**
+     * Initiates asynchronous Bluetooth Low Energy scanning for sensors matching {@link #getDeviceType()}.
+     *
+     * <p>Architectural Role: Verifies platform permissions (BLUETOOTH_SCAN on API 31+, BLUETOOTH_ADMIN
+     * and ACCESS_FINE_LOCATION on API &lt; 31), configures low-latency aggressive scan settings,
+     * and registers the BLE scan callback with defensive error handling to prevent state lockups.
+     *
+     * <p>Threading Constraints: Must be invoked from the main thread or service handler thread.
+     */
     @Override
     public void startAsyncSearch() {
         if (DEBUG) Log.i(TAG, "startAsyncSearch()");
@@ -329,12 +365,16 @@ public class BTSearchForNewDevicesEngine
         if (!scanning) {
             resetTrackingState();
             if (DEBUG) Log.i(TAG, "starting to search for " + getDeviceType().name() + " devices");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (getBuildVersionSdkInt() >= Build.VERSION_CODES.S) {
                 if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
                     Log.w(TAG, "BLUETOOTH_SCAN permission not granted");
                     return;
                 }
             } else {
+                if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_ADMIN) != PackageManager.PERMISSION_GRANTED) {
+                    Log.w(TAG, "BLUETOOTH_ADMIN permission not granted");
+                    return;
+                }
                 if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     Log.w(TAG, "ACCESS_FINE_LOCATION permission not granted");
                     return;
@@ -364,16 +404,30 @@ public class BTSearchForNewDevicesEngine
                     .setNumOfMatches(ScanSettings.MATCH_NUM_ONE_ADVERTISEMENT)
                     .build();
 
-            scanner.startScan(filters, settings, mScanCallback);
+            try {
+                scanner.startScan(filters, settings, mScanCallback);
+            } catch (SecurityException | IllegalStateException e) {
+                Log.e(TAG, "Failed to start BLE scan: " + e.getMessage(), e);
+                scanning = false;
+            }
         } else if (DEBUG) {
             Log.i(TAG, "already searching");
         }
     }
 
+    /**
+     * Terminates active Bluetooth Low Energy peripheral discovery and resets internal tracking state.
+     *
+     * <p>Architectural Role: Deregisters the active BLE scan callback with defensive error handling
+     * (catching platform {@link SecurityException} or {@link IllegalStateException} if Bluetooth was disabled
+     * or permissions were revoked concurrently) and guarantees clean teardown via {@link #resetTrackingState()}.
+     *
+     * <p>Threading Constraints: May be called from any thread; internal GATT disconnections are scheduled via handler.
+     */
     @Override
     public void stopAsyncSearch() {
         if (DEBUG) Log.i(TAG, "stopAsyncSearch()");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (getBuildVersionSdkInt() >= Build.VERSION_CODES.S) {
             if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
                 return;
             }
@@ -383,7 +437,11 @@ public class BTSearchForNewDevicesEngine
             scanning = false;
             BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
             if (scanner != null) {
-                scanner.stopScan(mScanCallback);
+                try {
+                    scanner.stopScan(mScanCallback);
+                } catch (SecurityException | IllegalStateException e) {
+                    Log.w(TAG, "Failed to stop BLE scan: " + e.getMessage(), e);
+                }
             }
         }
 
