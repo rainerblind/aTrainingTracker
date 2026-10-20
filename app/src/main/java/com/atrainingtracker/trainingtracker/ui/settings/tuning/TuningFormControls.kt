@@ -109,11 +109,12 @@ fun TuningToggleItem(
     isChecked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     summary: String? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     val contentAlpha = if (enabled) 1f else TTAlpha.Disabled
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 48.dp)
             .padding(vertical = 2.dp),

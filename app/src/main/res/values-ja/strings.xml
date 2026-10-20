@@ -1979,6 +1979,10 @@
     <string name="tuning_physiology_ef_desc">効率係数 (EF) と有酸素デカップリング (Pw:Hr / Pa:Hr) をワークアウト概要と詳細に表示します</string>
     <string name="tuning_physiology_cp_title">クリティカルパワー＆無酸素バッテリー (CP, W\', W\'bal)</string>
     <string name="tuning_physiology_cp_desc">クリティカルパワー、W\'、W\'balバッテリーをプロフィール、コックピット、ワークアウト分析に表示します</string>
+    <string name="tuning_physiology_basic_power_title">基本パワーメトリクス (仕事量、W/kg)</string>
+    <string name="tuning_physiology_basic_power_desc">ワークアウトおよびコックピットで機械的仕事量 (kJ) とパワーウェイトレシオ (W/kg) を記録</string>
+    <string name="tuning_physiology_show_in_workout_summary">ワークアウト概要に表示</string>
+    <string name="tuning_physiology_show_in_workout_summary_desc">ワークアウト概要カードにサマリーテレメトリ行を表示</string>
     <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
     <string name="workout_domain_efficiency">効率</string>
     <string name="workout_ef_short">EF</string>

@@ -2000,6 +2000,10 @@
     <string name="tuning_physiology_ef_desc">Mostra il fattore di efficienza (EF) e il disaccoppiamento aerobico (Pw:Hr / Pa:Hr) nei riepiloghi e nei dettagli</string>
     <string name="tuning_physiology_cp_title">Potenza critica e batteria anaerobica (CP, W\', W\'bal)</string>
     <string name="tuning_physiology_cp_desc">Mostra potenza critica, W\' e batteria W\'bal in Profilo e zone, cockpit e analisi degli allenamenti</string>
+    <string name="tuning_physiology_basic_power_title">Metriche di potenza di base (Lavoro, W/kg)</string>
+    <string name="tuning_physiology_basic_power_desc">Registra il lavoro meccanico (kJ) e il rapporto peso/potenza (W/kg) negli allenamenti e nel cockpit</string>
+    <string name="tuning_physiology_show_in_workout_summary">Mostra nel riepilogo dell\'allenamento</string>
+    <string name="tuning_physiology_show_in_workout_summary_desc">Mostra la riga di telemetria riassuntiva nella scheda panoramica</string>
     <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
     <string name="workout_domain_efficiency">Efficienza</string>
     <string name="workout_ef_short">EF</string>

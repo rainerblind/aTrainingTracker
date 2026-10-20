@@ -1999,6 +1999,10 @@
     <string name="tuning_physiology_ef_desc">Toon efficiëntiefactor (EF) en aerobe ontkoppeling (Pw:Hr / Pa:Hr) in overzichten en details</string>
     <string name="tuning_physiology_cp_title">Critical Power &amp; anaerobe batterij (CP, W\', W\'bal)</string>
     <string name="tuning_physiology_cp_desc">Toon Critical Power, W\' en W\'bal-batterij in Profiel &amp; zones, cockpit en trainingsanalyse</string>
+    <string name="tuning_physiology_basic_power_title">Basis vermogensstatistieken (Arbeid, W/kg)</string>
+    <string name="tuning_physiology_basic_power_desc">Mechanische arbeid (kJ) en vermogen-gewichtsverhouding (W/kg) bijhouden in trainingen en cockpit</string>
+    <string name="tuning_physiology_show_in_workout_summary">Weergeven in trainingsoverzicht</string>
+    <string name="tuning_physiology_show_in_workout_summary_desc">Telemetrierij weergeven op de trainingsoverzichtskaart</string>
     <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
     <string name="workout_domain_efficiency">Efficiëntie</string>
     <string name="workout_ef_short">EF</string>

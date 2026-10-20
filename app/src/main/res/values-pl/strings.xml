@@ -2000,6 +2000,10 @@
     <string name="tuning_physiology_ef_desc">Pokaż współczynnik wydajności (EF) i dryf tlenowy (Pw:Hr / Pa:Hr) w podsumowaniach i szczegółach</string>
     <string name="tuning_physiology_cp_title">Moc krytyczna i bateria beztlenowa (CP, W\', W\'bal)</string>
     <string name="tuning_physiology_cp_desc">Pokaż moc krytyczną, W\' i baterię W\'bal w Profilu i strefach, kokpicie oraz analizie treningu</string>
+    <string name="tuning_physiology_basic_power_title">Podstawowe wskaźniki mocy (Praca, W/kg)</string>
+    <string name="tuning_physiology_basic_power_desc">Rejestruj pracę mechaniczną (kJ) i stosunek mocy do masy (W/kg) podczas treningów i w kokpicie</string>
+    <string name="tuning_physiology_show_in_workout_summary">Pokaż w podsumowaniu treningu</string>
+    <string name="tuning_physiology_show_in_workout_summary_desc">Wyświetl wiersz telemetryczny na karcie przeglądu treningu</string>
     <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
     <string name="workout_domain_efficiency">Wydajność</string>
     <string name="workout_ef_short">EF</string>

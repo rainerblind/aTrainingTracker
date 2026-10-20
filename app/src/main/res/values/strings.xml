@@ -2193,6 +2193,10 @@
     <string name="tuning_physiology_ef_desc">Show Efficiency Factor (EF) and Aerobic Decoupling (Pw:Hr / Pa:Hr) in workout summaries and details</string>
     <string name="tuning_physiology_cp_title">Critical Power &amp; Anaerobic Battery (CP, W\', W\'bal)</string>
     <string name="tuning_physiology_cp_desc">Show Critical Power, W\', and dynamic W\'bal battery in Profile &amp; Zones, cockpit, and workout analytics</string>
+    <string name="tuning_physiology_basic_power_title">Basic Power Metrics (Work, W/kg)</string>
+    <string name="tuning_physiology_basic_power_desc">Track mechanical work (kJ) and power-to-weight ratio (W/kg) in workouts and cockpit</string>
+    <string name="tuning_physiology_show_in_workout_summary">Show in Workout Summary</string>
+    <string name="tuning_physiology_show_in_workout_summary_desc">Display summary telemetry row on the workout overview card</string>
     <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
     <string name="workout_domain_efficiency">Efficiency</string>
     <string name="workout_ef_short">EF</string>
