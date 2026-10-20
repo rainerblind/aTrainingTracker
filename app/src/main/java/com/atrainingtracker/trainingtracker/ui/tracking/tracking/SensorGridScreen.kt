@@ -67,7 +67,7 @@ import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.HorizontalRule
+import androidx.compose.material.icons.filled.HorizontalSplit
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -471,7 +471,7 @@ fun SensorGridScreen(
                                 }
                                 IconButton(onClick = { editingDividerRow = rowNr }) {
                                     Icon(
-                                        imageVector = if (existingDivider != null) Icons.Default.Title else Icons.Default.HorizontalRule,
+                                        imageVector = if (existingDivider != null) Icons.Default.Title else Icons.Default.HorizontalSplit,
                                         contentDescription = stringResource(
                                             if (existingDivider != null) R.string.cockpit_section_divider_edit
                                             else R.string.cockpit_section_divider_add
@@ -1174,6 +1174,21 @@ internal fun Modifier.detectCockpitDoubleTap(
     }
 }
 
+/**
+ * Renders a horizontal section divider within the cockpit sensor grid (REQ-UI-411.4).
+ *
+ * When unlabeled, renders a prominent 2.5 dp stroke in [MaterialTheme.colorScheme.outline]
+ * to ensure high contrast against dark/AMOLED backgrounds and clear differentiation from
+ * adjacent 1 dp cell borders while riding.
+ *
+ * When labeled with an optional title, centers the uppercase text horizontally across the full row,
+ * flanked symmetrically by left and right divider segments with equal weight (1f) and 2 dp thickness,
+ * strictly forbidding asymmetric weights (Rule 49, Design Guidelines Sec 5.11).
+ * Total vertical footprint is bounded by compact padding and a max 20 dp height constraint.
+ *
+ * @param divider Metadata representing the section divider, including optional title.
+ * @param modifier Composable modifier for styling and layout positioning.
+ */
 @Composable
 fun CockpitSectionDivider(
     divider: SectionDividerInfo,
@@ -1185,8 +1200,8 @@ fun CockpitSectionDivider(
             modifier = modifier
                 .fillMaxWidth()
                 .padding(vertical = 4.dp),
-            thickness = 1.5.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
+            thickness = 2.5.dp,
+            color = MaterialTheme.colorScheme.outline
         )
     } else {
         Row(
@@ -1197,9 +1212,9 @@ fun CockpitSectionDivider(
             verticalAlignment = Alignment.CenterVertically
         ) {
             HorizontalDivider(
-                modifier = Modifier.weight(0.12f),
-                thickness = 1.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant
+                modifier = Modifier.weight(1f),
+                thickness = 2.dp,
+                color = MaterialTheme.colorScheme.outline
             )
             Text(
                 text = title.uppercase(),
@@ -1211,9 +1226,9 @@ fun CockpitSectionDivider(
                 modifier = Modifier.padding(horizontal = 6.dp)
             )
             HorizontalDivider(
-                modifier = Modifier.weight(0.88f),
-                thickness = 1.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant
+                modifier = Modifier.weight(1f),
+                thickness = 2.dp,
+                color = MaterialTheme.colorScheme.outline
             )
         }
     }
