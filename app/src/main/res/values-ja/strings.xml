@@ -1147,6 +1147,17 @@
     <string name="automated_backups_summary">定期的に Dropbox へバックアップをアップロード</string>
     <string name="backup_now">今すぐバックアップ</string>
     <string name="last_backup">最終バックアップ: %1$s</string>
+    <string name="last_backup_local_success">最終バックアップ: %1$s (ローカルのみ)</string>
+    <string name="last_backup_partial_success">最終バックアップ: %1$s (一部成功)</string>
+    <string name="last_backup_failed_format">最後のバックアップに失敗しました: %1$s</string>
+    <string name="restore_automatic_local_backup">自動ローカルバックアップから復元</string>
+    <string name="restore_automatic_local_backup_format">自動バックアップ (%1$s)</string>
+    <string name="restore_automatic_backup_not_found">自動ローカルバックアップが見つかりません</string>
+    <string name="restore_from_file">ローカル: 完全復元（移行）</string>
+    <string name="restore_from_dropbox">Dropbox: 完全復元（移行）</string>
+    <string name="backup_target_local">ローカル</string>
+    <string name="backup_target_dropbox">Dropbox</string>
+    <string name="backup_target_google_drive">Google ドライブ</string>
     <string name="backup_interval">バックアップ間隔</string>
     <string name="backup_interval_daily">毎日</string>
     <string name="backup_interval_3days">3日ごと</string>

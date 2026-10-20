@@ -1165,6 +1165,17 @@
     <string name="automated_backups_summary">Carica regolarmente i backup su Dropbox</string>
     <string name="backup_now">Esegui backup ora</string>
     <string name="last_backup">Ultimo backup: %1$s</string>
+    <string name="last_backup_local_success">Ultimo backup: %1$s (Solo locale)</string>
+    <string name="last_backup_partial_success">Ultimo backup: %1$s (Parziale)</string>
+    <string name="last_backup_failed_format">Ultimo backup non riuscito: %1$s</string>
+    <string name="restore_automatic_local_backup">Ripristina dal backup locale automatico</string>
+    <string name="restore_automatic_local_backup_format">Backup automatico (%1$s)</string>
+    <string name="restore_automatic_backup_not_found">Nessun backup locale automatico trovato</string>
+    <string name="restore_from_file">Locale: Ripristino completo (Migrazione)</string>
+    <string name="restore_from_dropbox">Dropbox: Ripristino completo (Migrazione)</string>
+    <string name="backup_target_local">Locale</string>
+    <string name="backup_target_dropbox">Dropbox</string>
+    <string name="backup_target_google_drive">Google Drive</string>
     <string name="backup_interval">Intervallo di backup</string>
     <string name="backup_interval_daily">Giornaliero</string>
     <string name="backup_interval_3days">Ogni 3 giorni</string>
