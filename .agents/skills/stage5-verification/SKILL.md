@@ -8,11 +8,12 @@ description: Executes Stage 5 (Verification, Clean-Room Regression & Walkthrough
 ## Overview
 This skill guides the agent through **Stage 5 (Verification & Release Quality Gate)**. It validates the complete implementation across clean-room regression tests, updates living documents, documents the walkthrough, merges the verified feature branch into the sprint integration branch (`sprint/<sprint_id>`), and transitions the parent ticket to human review.
 
-## Subagent Model Pairing ("Zipper Principle" — Core Rule 7)
-- **Doing (`agent1`)**: **`flash`** (`invoke_subagent` with `Model: "flash"`) — Running `./gradlew testDebugUnitTest`, updating `docs/requirements.md` & `docs/tests.md` to `Verified`, authoring `walkthrough.md`, and squashing onto `sprint/<SPRINT_NAME>` are deterministic procedural steps.
-- **Gate 5 Review (`agent2`)**: **`pro`** (`invoke_subagent` with `TypeName: "research"`, `Model: "pro"`) — Final autonomous "Chief Inspector" before `Final Review (Human)` (Ceremony 2).
+## Subagent Model Pairing ("Zipper Principle" & Persistent Ping-Pong — Core Rule 7)
+Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message`:
+- **Doing (`--as agent1`)**: **`subagent_flash`** (`send_message` to the ticket's `flash` subagent) — Running `./gradlew testDebugUnitTest`, updating `docs/requirements.md` & `docs/tests.md` to `Verified`, authoring `walkthrough.md`, and submitting Stage 5 via `submit-stage` are deterministic procedural steps.
+- **Gate 5 Review (`--as agent2`)**: **`subagent_pro`** (`send_message` to the ticket's `pro` subagent) — Final autonomous "Chief Inspector" before `Final Review (Human)` (Ceremony 2), executing `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...`. After squashing the branch onto `sprint/<SPRINT_NAME>`, terminate both ticket subagents via `manage_subagents(Action="kill", ConversationIds=[...])`.
 
-## Key Responsibilities (`agent1` — `flash`)
+## Key Responsibilities (`subagent_flash` as `agent1` — `flash`)
 1. **Clean-Room Regression Suite**:
    - Execute the entire unit test suite from clean state:
      ```bash
@@ -32,8 +33,8 @@ This skill guides the agent through **Stage 5 (Verification & Release Quality Ga
      python3 tools/jira_util.py --as agent1 submit-stage <TICKET_KEY> 5 @docs/engineering/walkthroughs/<TICKET_KEY>_walkthrough.md
      ```
 
-## Gate 5 Independent Review Checklist (`agent2` — `pro` `research` Subagent)
-Spawn an independent `research` subagent (`Model: "pro"`) to audit the Stage 5 walkthrough and repository state against this checklist:
+## Gate 5 Independent Review Checklist (`subagent_pro` as `agent2` — `pro`)
+Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Stage 5 walkthrough and repository state against this checklist and record the verdict via `--as agent2 gate-verdict`:
 1. **Full-Suite Regression Execution**: Verify `./gradlew testDebugUnitTest` executed with 100% success (0 failures, 0 regressions) across all project modules.
 2. **Living Documentation Parity**: Confirm `docs/requirements.md` and `docs/tests.md` status fields are updated to `Verified`.
 3. **Mandatory Lösungsversion (Fix Version/s) Governance Audit**:

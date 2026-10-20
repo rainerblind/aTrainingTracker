@@ -8,11 +8,12 @@ description: Executes Stage 3 (Implementation Plan) of the agile ASPICE lifecycl
 ## Overview
 This skill guides the agent through **Stage 3 (Implementation Planning)**. It produces a detailed, step-by-step engineering plan defining the exact components, classes, SQLite migrations, and test mappings before writing production code.
 
-## Subagent Model Pairing ("Zipper Principle" — Core Rule 7)
-- **Doing (`agent1`)**: **`pro`** (`invoke_subagent` with `Model: "pro"`) — SWE.2 architectural design (layer boundaries, thread safety, SQLite `onCreate`/`onUpgrade` parity, decomposition into atomic steps) is authored by the senior reasoning model.
-- **Gate 3 Review (`agent2`)**: **`flash`** (`invoke_subagent` with `TypeName: "research"`, `Model: "flash"`) — Audits structural completeness (1:1 mapping of `REQ`/`TST` to atomic steps, DB migration checklist, and strict *Code Lock* verification).
+## Subagent Model Pairing ("Zipper Principle" & Persistent Ping-Pong — Core Rule 7)
+Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message`:
+- **Doing (`--as agent1`)**: **`subagent_pro`** (`send_message` to the ticket's `pro` subagent, which is already warm from authoring Stage 1 and auditing Gate 2!) — SWE.2 architectural design (layer boundaries, thread safety, SQLite `onCreate`/`onUpgrade` parity, decomposition into atomic steps) is authored by the senior reasoning model.
+- **Gate 3 Review (`--as agent2`)**: **`subagent_flash`** (`send_message` to the ticket's `flash` subagent, which authored Stage 2!) — Audits structural completeness (1:1 mapping of `REQ`/`TST` to atomic steps, DB migration checklist, and strict *Code Lock* verification), followed by executing `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...` (warming `subagent_flash` for Stage 4 implementation!).
 
-## Key Responsibilities (`agent1` — `pro`)
+## Key Responsibilities (`subagent_pro` as `agent1` — `pro`)
 1. **Architectural Decomposition (SWE.2)**:
    - Identify clean architecture boundaries: UI (Jetpack Compose), ViewModel (`StateFlow`), Repository, Database (SQLite / Room / ContentProvider), Service (`TrackerService`).
    - Define thread dispatchers (`dbDispatcher`, `Dispatchers.Main`, `Dispatchers.IO`).
@@ -30,8 +31,8 @@ This skill guides the agent through **Stage 3 (Implementation Planning)**. It pr
      ```
    - **One Commit per Ticket (Core Rule 8)**: Do not create an intermediate git commit for Stage 3; keep changes on the working branch until Stage 5.
 
-## Gate 3 Independent Review Checklist (`agent2` — `flash` `research` Subagent)
-Spawn an independent `research` subagent (`Model: "flash"`) to audit the Stage 3 plan against this checklist:
+## Gate 3 Independent Review Checklist (`subagent_flash` as `agent2` — `flash`)
+Message the ticket's persistent `subagent_flash` (`send_message`) to audit the Stage 3 plan against this checklist and record the verdict via `--as agent2 gate-verdict`:
 1. **Architectural Integrity & Layering**:
    - Verify component boundaries, layering rules (SWE.2), and interface stability. Note: This gate audits the architectural implementation plan document (Stage 3). Under ASPICE / TDD process governance, production code implementation is strictly deferred to Stage 4 after the plan passes Gate 3 audit. Do not penalize Stage 3 for not yet having code modifications in the git diff.
 2. **Invariant Verification**:

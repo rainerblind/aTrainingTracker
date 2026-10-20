@@ -8,11 +8,12 @@ description: Executes Stage 2 (Requirement & Test Specification) of the agile AS
 ## Overview
 This skill guides the agent through **Stage 2 (Requirement & Test Specification)**. It defines the formal requirement (`REQ-XXX`) and the concrete verification procedures (`TST-XXX`) required to validate the feature or fix prior to planning software construction.
 
-## Subagent Model Pairing ("Zipper Principle" — Core Rule 7)
-- **Doing (`agent1`)**: **`flash`** (`invoke_subagent` with `Model: "flash"`) — Translating the approved Stage 1 analysis into formal `REQ-XXX` (`SHALL`), `TST-XXX` (`Given-When-Then`), and 9-locale string tables is structured specification drafting.
-- **Gate 2 Review (`agent2`)**: **`pro`** (`invoke_subagent` with `TypeName: "research"`, `Model: "pro"`) — Deep semantic scrutiny challenging whether the specified tests genuinely prove the fix/invariants and auditing all 4 fields of *Chesterton's Fence*.
+## Subagent Model Pairing ("Zipper Principle" & Persistent Ping-Pong — Core Rule 7)
+Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message`:
+- **Doing (`--as agent1`)**: **`subagent_flash`** (`send_message` to the ticket's `flash` subagent, which is already warm from auditing Gate 1!) — Translating the approved Stage 1 analysis into formal `REQ-XXX` (`SHALL`), `TST-XXX` (`Given-When-Then`), and 9-locale string tables is structured specification drafting.
+- **Gate 2 Review (`--as agent2`)**: **`subagent_pro`** (`send_message` to the ticket's `pro` subagent, which authored Stage 1!) — Deep semantic scrutiny challenging whether the specified tests genuinely prove the fix/invariants and auditing all 4 fields of *Chesterton's Fence*, followed by executing `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...`.
 
-## Key Responsibilities (`agent1` — `flash`)
+## Key Responsibilities (`subagent_flash` as `agent1` — `flash`)
 1. **Requirement Formulation (`REQ-XXX`)**:
    - Write clear SHALL/MUST clauses, structured architectural constraints, and Given-When-Then acceptance criteria.
    - Insert new requirement rows into `docs/requirements.md` (or conduct Chesterton's Fence archaeology if modifying existing lines).
@@ -31,8 +32,8 @@ This skill guides the agent through **Stage 2 (Requirement & Test Specification)
      ```
    - **One Commit per Ticket (Core Rule 8)**: Do not create an intermediate git commit for Stage 2; keep changes on the working branch until Stage 5.
 
-## Gate 2 Independent Review Checklist (`agent2` — `pro` `research` Subagent)
-Spawn an independent `research` subagent (`Model: "pro"`) to audit the Stage 2 deliverable and living documentation against this checklist:
+## Gate 2 Independent Review Checklist (`subagent_pro` as `agent2` — `pro`)
+Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Stage 2 deliverable and living documentation against this checklist and record the verdict via `--as agent2 gate-verdict`:
 1. **Requirement Phrasing Standards**:
    - Verify standard syntax: `SHALL` for functional behavior, `MUST` for technical constraints.
    - Verify atomic, unambiguous, system-centric, and state-oriented descriptions (not implementation steps).

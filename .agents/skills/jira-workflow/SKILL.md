@@ -8,9 +8,16 @@ description: Guides role-safe Jira operations, composite stage transitions (subm
 ## Overview
 This skill provides standardized guidance for interacting with Jira in accordance with the project's Scrum/ASPICE workflow rules and multi-account CLI tooling (`tools/jira_util.py`).
 
-## Roles & Conventions
-* **`agent1` (Implementer)**: Default role for authoring deliverables, submitting stages (`submit-stage`), and moving tickets between work states.
-* **`agent2` (Auditor)**: Independent role for executing automated ASPICE Gate 1–5 reviews via read-only `research` subagents (`invoke_subagent`) and recording verdicts via `gate-verdict`. Hardwired to prevent impersonation.
+## Roles & Persistent `pro` / `flash` Ping-Pong Subagents (Core Rule 7)
+* **`agent1` (Implementer)**: Role used during a stage's Doing turn for authoring deliverables, submitting stages (`--as agent1 submit-stage`), and moving tickets between work states.
+* **`agent2` (Auditor)**: Independent role used during a stage's Gate 1–5 Review turn (`--as agent2 gate-verdict`). Hardwired in `gate-verdict` to prevent impersonation.
+* **Persistent Ping-Pong Pattern**: At ticket start (`ATT-XXXX`), spawn **two persistent `TypeName: "self"` subagents** — `subagent_pro` (`Model: "pro"`) and `subagent_flash` (`Model: "flash"`) — and reuse their `conversationId`s across all 5 stages via `send_message`, alternating which subagent acts as `--as agent1` (Doing) and `--as agent2` (Gate Review):
+  * **Stage 1**: `subagent_pro` (`agent1` Doing) $\rightarrow$ `subagent_flash` (`agent2` Gate 1)
+  * **Stage 2**: `subagent_flash` (`agent1` Doing) $\rightarrow$ `subagent_pro` (`agent2` Gate 2)
+  * **Stage 3**: `subagent_pro` (`agent1` Doing) $\rightarrow$ `subagent_flash` (`agent2` Gate 3)
+  * **Stage 4**: `subagent_flash` (`agent1` Doing) $\rightarrow$ `subagent_pro` (`agent2` Gate 4) *(or `pro`/`flash` for High-Risk)*
+  * **Stage 5**: `subagent_flash` (`agent1` Doing) $\rightarrow$ `subagent_pro` (`agent2` Gate 5)
+  * Terminate both subagents via `manage_subagents` once the ticket reaches `Final Review (Human)`.
 * **`coordinator` (Orchestrator)**: Backlog grooming, subtask creation, sprint queries. Cannot close tickets or override auditor verdicts.
 * **`human` (User / Gatekeeper)**: Holds exclusive authority for approving release gates and transitioning parent tickets to `Erledigt`.
 
@@ -21,6 +28,7 @@ This skill provides standardized guidance for interacting with Jira in accordanc
 python3 tools/jira_util.py --as agent1 submit-stage <PARENT_KEY> <STAGE> <TEXT_OR_@FILE>
 
 # 2. Record an independent Gate 1-5 audit verdict as agent2 (PASS or REVISION):
+#    Executed directly by the reviewing persistent subagent (subagent_flash or subagent_pro).
 #    Atomically assigns subtask to agent2, posts role-attributed audit comment, and either:
 #    - PASS: moves subtask via 'freigabe' to Erledigt, advances parent ticket to next stage, and injects next stage SKILL.md!
 #    - REVISION: moves subtask back to In Bearbeitung and reassigns to agent1.

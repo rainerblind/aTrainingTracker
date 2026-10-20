@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.routes
 
 import com.atrainingtracker.banalservice.BSportType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -59,8 +60,8 @@ class BatchImportSportTypeDialogTest {
         assertTrue("BatchImportSportTypeDialog.kt must exist", dialogSourceFile.exists())
         val content = dialogSourceFile.readText()
 
-        // 1. Must use Material 3 AlertDialog
-        assertTrue("Must use Material 3 AlertDialog", content.contains("AlertDialog("))
+        // 1. Must use AppModalBottomSheet (replaces legacy AlertDialog)
+        assertTrue("Must use AppModalBottomSheet", content.contains("AppModalBottomSheet("))
 
         // 2. Title format specifier
         assertTrue(
@@ -86,20 +87,32 @@ class BatchImportSportTypeDialogTest {
             content.contains("SegmentedButtonDefaults.itemShape(")
         )
         assertTrue(
-            "Must enforce maxLines = 1 and softWrap = false on segmented buttons (Rule 38)",
-            content.contains("maxLines = 1") && content.contains("softWrap = false")
+            "Must configure multi-line text with maxLines = 2 and labelMedium (REQ-MAP-053.6.2)",
+            content.contains("maxLines = 2") && content.contains("labelMedium")
+        )
+        assertFalse(
+            "Must not enforce rigid softWrap = false on segmented buttons",
+            content.contains("softWrap = false")
         )
 
-        // 4. Sport Type Selection Chips in ALL mode
+        // 4. Sport Type Selection Chips in ALL mode using FlowRow and defaulting to UNKNOWN
         assertTrue(
             "Must render FilterChip items for sport types in ALL mode",
             content.contains("FilterChip(")
         )
         assertTrue(
-            "Must include BSportType.BIKE, BSportType.RUN, BSportType.UNKNOWN",
-            content.contains("BSportType.BIKE") &&
-                    content.contains("BSportType.RUN") &&
-                    content.contains("BSportType.UNKNOWN")
+            "Must use FlowRow for sport chips (Rule 54 / REQ-MAP-053.6.3)",
+            content.contains("FlowRow(")
+        )
+        assertTrue(
+            "Must default preselection to BSportType.UNKNOWN (REQ-MAP-053.6.4)",
+            content.contains("mutableStateOf(BSportType.UNKNOWN)")
+        )
+        assertTrue(
+            "Must include BSportType.UNKNOWN, BSportType.BIKE, BSportType.RUN",
+            content.contains("BSportType.UNKNOWN") &&
+                    content.contains("BSportType.BIKE") &&
+                    content.contains("BSportType.RUN")
         )
 
         // 5. Explanatory hint in INDIVIDUAL mode

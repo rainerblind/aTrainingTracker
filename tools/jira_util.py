@@ -559,7 +559,7 @@ def inject_stage_context(stage_name_lower, config=None):
         print("4. Rule 4 (Code Lock Until Gate 3): Run 'jira_util.py check-gate <Impl-Plan-Key>' before any Stage 4 production code edits.")
         print("5. Rule 5 (Ticket Creation Stops): Creating a backlog/follow-up ticket never triggers implementation.")
         print("6. Rule 6 (Unattended Escalation): Assign blocked sub-task to 'human' with question comment and continue with next ticket.")
-        print("7. Rule 7 (Zipper Principle): S1 pro/flash | S2 flash/pro | S3 pro/flash | S4 flash/pro (or pro/flash High-Risk) | S5 flash/pro.")
+        print("7. Rule 7 (Zipper Ping-Pong): 2 persistent self subagents per ticket (subagent_pro & subagent_flash) reused via send_message (S1 pro/flash | S2 flash/pro | S3 pro/flash | S4 flash/pro | S5 flash/pro) and killed after Stage 5.")
         print("8. Rule 8 (One Commit & Hygiene): Use 'submit-stage' (agent1) and 'gate-verdict' (agent2); 1 squashed commit per ticket on sprint/<ID>.")
         print(f"{'=' * 72}\n")
     except Exception as e:

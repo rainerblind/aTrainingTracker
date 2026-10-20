@@ -8,11 +8,12 @@ description: Executes Stage 4 (Software Construction & Implementation) of the ag
 ## Overview
 This skill guides the agent through **Stage 4 (Implementation / Software Construction)**. It covers modifying production Android code (`app/src/main/...`) and unit tests (`app/src/test/...`) in strict accordance with the approved Stage 3 Implementation Plan.
 
-## Subagent Model Pairing ("Zipper Principle" — Core Rule 7)
-- **Doing (`agent1`)**: **`flash`** *(Standard)* / **`pro`** *(High-Risk)* (`invoke_subagent` with `Model: "flash"` for standard tickets, or `Model: "pro"` for `HIGH`-risk concurrency/DB/service lifecycle tickets) — Executes the Stage 3 file-and-method blueprint, unit tests, and 9-locale XML updates.
-- **Gate 4 Review (`agent2`)**: **`pro`** *(Standard)* / **`flash`** *(High-Risk)* (`invoke_subagent` with `TypeName: "research"`, `Model: "pro"` for standard tickets, or `Model: "flash"` when `pro` authored a High-Risk implementation) — Audits the `git diff` for subtle race conditions, Compose recomposition traps, resource leaks, and side effects (or 1:1 plan fidelity & contract tests when `pro` wrote the code).
+## Subagent Model Pairing ("Zipper Principle" & Persistent Ping-Pong — Core Rule 7)
+Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message`:
+- **Doing (`--as agent1`)**: **`subagent_flash`** *(Standard)* / **`subagent_pro`** *(High-Risk)* (`send_message` to the ticket's `flash` subagent — which just audited the Stage 3 plan in Gate 3! — or `subagent_pro` for `HIGH`-risk concurrency/DB/service lifecycle tickets) — Executes the Stage 3 file-and-method blueprint, unit tests, and 9-locale XML updates.
+- **Gate 4 Review (`--as agent2`)**: **`subagent_pro`** *(Standard)* / **`subagent_flash`** *(High-Risk)* (`send_message` to the ticket's `pro` subagent — which authored the Stage 3 plan! — or `subagent_flash` when `pro` authored a High-Risk implementation) — Audits the `git diff` for subtle race conditions, Compose recomposition traps, resource leaks, and side effects against its own Stage 3 plan, followed by executing `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...`.
 
-## Key Responsibilities (`agent1`)
+## Key Responsibilities (`subagent_flash` / `subagent_pro` as `agent1`)
 1. **Pre-Implementation Gate Verification (Core Rule 4 — `REQ-PRO-016`)**:
    - Before modifying any source files in `app/src/...`, verify that the Stage 3 Plan subtask is in status `Erledigt`:
      ```bash
@@ -37,8 +38,8 @@ This skill guides the agent through **Stage 4 (Implementation / Software Constru
      ```
    - **One Commit per Ticket (Core Rule 8)**: Defer committing until Stage 5 verification completes so the entire ticket is committed as a single atomic commit on `sprint/<SPRINT_NAME>`.
 
-## Gate 4 Independent Review Checklist (`agent2` — `pro`/`flash` `research` Subagent)
-Spawn an independent `research` subagent (`Model: "pro"` for Standard tickets, `Model: "flash"` for High-Risk tickets authored by `pro`) to audit the `git diff` against this checklist:
+## Gate 4 Independent Review Checklist (`subagent_pro` / `subagent_flash` as `agent2`)
+Message the ticket's reviewing persistent subagent (`send_message` to `subagent_pro` for Standard tickets, `subagent_flash` for High-Risk tickets authored by `pro`) to audit the `git diff` against this checklist and record the verdict via `--as agent2 gate-verdict`:
 1. **Diff Scrutiny**: Inspect `git diff` against the approved Stage 3 implementation plan. Confirm zero unapproved files or unintended modifications.
 2. **Side-Effect Audit**: Verify adjacent callers, interfaces, and non-target metrics/features were NOT altered or broken.
 3. **Quality & Compliance**:
