@@ -52,7 +52,7 @@ def get_git_diff(base_ref="develop", target_file="docs/requirements.md"):
             stderr=subprocess.DEVNULL,
         ).decode("utf-8").strip()
         diff = subprocess.check_output(
-            ["git", "diff", f"{mb}..HEAD", "--", target_file],
+            ["git", "diff", f"{mb}", "--", target_file],
             stderr=subprocess.DEVNULL,
         ).decode("utf-8")
         if diff.strip():
@@ -63,7 +63,7 @@ def get_git_diff(base_ref="develop", target_file="docs/requirements.md"):
     # Fallback to direct diff with base_ref
     try:
         diff = subprocess.check_output(
-            ["git", "diff", f"{base_ref}..HEAD", "--", target_file],
+            ["git", "diff", f"{base_ref}", "--", target_file],
             stderr=subprocess.DEVNULL,
         ).decode("utf-8")
         if diff.strip():
@@ -254,6 +254,30 @@ def main():
             text_content = f.read()
     elif not sys.stdin.isatty():
         text_content = sys.stdin.read()
+
+    if not text_content:
+        # Attempt auto-discovery based on current branch or engineering docs
+        try:
+            branch = subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8").strip()
+            ticket_m = re.search(r"(?:feature|bugfix|hotfix)/([A-Z]+-\d+)", branch)
+            ticket_key = ticket_m.group(1) if ticket_m else None
+            if ticket_key:
+                candidates = [
+                    f"docs/engineering/test_specs/{ticket_key}_test_spec.md",
+                    f"docs/engineering/plans/{ticket_key}_plan.md",
+                    f"docs/engineering/walkthroughs/{ticket_key}_walkthrough.md",
+                    f"docs/engineering/analysis/{ticket_key}_analysis.md",
+                ]
+                for cand in candidates:
+                    if os.path.exists(cand):
+                        with open(cand, "r", encoding="utf-8") as f:
+                            text_content = f.read()
+                        break
+        except Exception:
+            pass
 
     diff_content = None
     if args.diff_file:

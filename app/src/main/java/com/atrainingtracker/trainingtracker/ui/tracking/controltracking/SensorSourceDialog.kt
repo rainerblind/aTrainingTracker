@@ -125,7 +125,7 @@ fun SensorSourceDialog(
                         text = stringResource(id = R.string.source_device),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = TTColor.RouteSelected
+                        color = TTColor.SensorSourceActive
                     )
                     DeviceIdentityBlock(
                         device = sourceDevice, 
@@ -146,7 +146,7 @@ fun SensorSourceDialog(
                         text = stringResource(id = R.string.source_active_backups),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = TTColor.RouteUnselected
+                        color = TTColor.SensorBackupActive
                     )
                     activeBackups.forEach { telemetry ->
                         val device = allDevices.find { it.id == telemetry.deviceId }
