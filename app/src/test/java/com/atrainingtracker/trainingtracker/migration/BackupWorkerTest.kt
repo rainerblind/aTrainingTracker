@@ -25,6 +25,7 @@ import androidx.preference.PreferenceManager
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.dropbox.core.oauth.DbxCredential
 import io.mockk.*
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -68,6 +69,8 @@ class BackupWorkerTest {
 
         mockkStatic(PreferenceManager::class)
         every { PreferenceManager.getDefaultSharedPreferences(any()) } returns mockPrefs
+
+        mockkStatic(TrainingApplication::class)
 
         every { mockContext.applicationContext } returns mockContext
         every { mockPrefs.edit() } returns mockEditor
@@ -161,6 +164,7 @@ class BackupWorkerTest {
         every { mockPrefs.getBoolean("automated_backups", true) } returns true
         every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_DROPBOX, false) } returns true
         every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns false
+        every { TrainingApplication.readDropboxCredential() } returns mockk<DbxCredential>(relaxed = true)
 
         val dummyBackupFile = tempFolder.newFile("test.attbackup")
         mockkObject(BackupManager)
@@ -176,6 +180,27 @@ class BackupWorkerTest {
 
         assertEquals(ListenableWorker.Result.retry(), result)
         verify { mockEditor.putString("last_backup_status", "Upload failed") }
+        verify(exactly = 1) { mockLock.close() }
+    }
+
+    @Test
+    fun testDoWork_whenDropboxEnabledWithoutCredentials_skipsDropboxAndSucceedsLocally() = runBlocking {
+        every { mockPrefs.getBoolean("automated_backups", true) } returns true
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_DROPBOX, false) } returns true
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns false
+        every { TrainingApplication.readDropboxCredential() } returns null
+
+        val dummyBackupFile = tempFolder.newFile("test_no_cred.attbackup")
+        mockkObject(BackupManager)
+        val mockLock = mockk<BackupManager.BackupLock>(relaxed = true)
+        every { BackupManager.acquireLock(any()) } returns mockLock
+        every { BackupManager.createBackup(any()) } returns dummyBackupFile
+
+        val worker = BackupWorker(mockContext, mockParams)
+        val result = worker.doWork()
+
+        assertEquals(ListenableWorker.Result.success(), result)
+        verify { mockEditor.putString("last_backup_status", "LOCAL_SUCCESS") }
         verify(exactly = 1) { mockLock.close() }
     }
 

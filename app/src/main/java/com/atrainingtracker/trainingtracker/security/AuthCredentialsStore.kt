@@ -52,6 +52,19 @@ object AuthCredentialsStore {
     // Dropbox credential keys
     const val KEY_DROPBOX_CREDENTIAL = "sp_dropbox_credential"
 
+    // Legacy credential keys from TrainingApplication.java
+    const val LEGACY_KEY_DROPBOX_CREDENTIAL = "dropboxCredential"
+    const val LEGACY_KEY_GOOGLE_DRIVE_ACCOUNT_EMAIL = "googleDriveAccountEmail"
+    const val LEGACY_KEY_STRAVA_OAUTH_STATE = "SP_STRAVA_OAUTH_STATE"
+    const val LEGACY_KEY_STRAVA_OAUTH_STATE_TIMESTAMP = "SP_STRAVA_OAUTH_STATE_TIMESTAMP"
+
+    val LEGACY_KEY_MIGRATION_MAP = mapOf(
+        LEGACY_KEY_DROPBOX_CREDENTIAL to KEY_DROPBOX_CREDENTIAL,
+        LEGACY_KEY_GOOGLE_DRIVE_ACCOUNT_EMAIL to KEY_GOOGLE_DRIVE_ACCOUNT_EMAIL,
+        LEGACY_KEY_STRAVA_OAUTH_STATE to KEY_STRAVA_OAUTH_STATE,
+        LEGACY_KEY_STRAVA_OAUTH_STATE_TIMESTAMP to KEY_STRAVA_OAUTH_STATE_TIMESTAMP
+    )
+
     val ALL_CREDENTIAL_KEYS = setOf(
         KEY_STRAVA_TOKEN,
         KEY_STRAVA_REFRESH_TOKEN,
@@ -63,6 +76,8 @@ object AuthCredentialsStore {
         KEY_GOOGLE_DRIVE_AUTH_TOKEN,
         KEY_DROPBOX_CREDENTIAL
     )
+
+    val ALL_CREDENTIAL_KEYS_TO_SANITIZE: Set<String> = ALL_CREDENTIAL_KEYS + LEGACY_KEY_MIGRATION_MAP.keys
 
     fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -92,7 +107,7 @@ object AuthCredentialsStore {
         try {
             val defaultPrefs = getDefaultPrefs(context)
             if (defaultPrefs != null) {
-                val keysToRemove = ALL_CREDENTIAL_KEYS.filter { 
+                val keysToRemove = ALL_CREDENTIAL_KEYS_TO_SANITIZE.filter { 
                     try { defaultPrefs.contains(it) } catch (_: Throwable) { false } 
                 }
                 if (keysToRemove.isNotEmpty()) {
@@ -136,7 +151,7 @@ object AuthCredentialsStore {
                 var modified = false
                 val sanitizedLines = mutableListOf<String>()
                 for (line in lines) {
-                    val containsCredKey = ALL_CREDENTIAL_KEYS.any { key ->
+                    val containsCredKey = ALL_CREDENTIAL_KEYS_TO_SANITIZE.any { key ->
                         line.contains("name=\"$key\"")
                     }
                     if (containsCredKey) {
@@ -165,7 +180,7 @@ object AuthCredentialsStore {
             val defaultPrefs = getDefaultPrefs(context) ?: return
             val credPrefs = getPrefs(context)
 
-            val keysToMigrate = ALL_CREDENTIAL_KEYS.filter { 
+            val keysToMigrate = ALL_CREDENTIAL_KEYS_TO_SANITIZE.filter { 
                 try { defaultPrefs.contains(it) } catch (_: Throwable) { false } 
             }
             if (keysToMigrate.isEmpty()) {
@@ -179,12 +194,13 @@ object AuthCredentialsStore {
             for (key in keysToMigrate) {
                 val allEntries = try { defaultPrefs.all } catch (_: Throwable) { null } ?: emptyMap()
                 val value = allEntries[key]
+                val targetKey = LEGACY_KEY_MIGRATION_MAP[key] ?: key
                 when (value) {
-                    is String -> credEditor.putString(key, value)
-                    is Int -> credEditor.putInt(key, value)
-                    is Long -> credEditor.putLong(key, value)
-                    is Boolean -> credEditor.putBoolean(key, value)
-                    is Float -> credEditor.putFloat(key, value)
+                    is String -> credEditor.putString(targetKey, value)
+                    is Int -> credEditor.putInt(targetKey, value)
+                    is Long -> credEditor.putLong(targetKey, value)
+                    is Boolean -> credEditor.putBoolean(targetKey, value)
+                    is Float -> credEditor.putFloat(targetKey, value)
                 }
                 defaultEditor.remove(key)
             }
@@ -272,7 +288,9 @@ object AuthCredentialsStore {
     fun clearStravaOAuthState(context: Context) {
         getPrefs(context).edit()
             .remove(KEY_STRAVA_OAUTH_STATE)
+            .remove(LEGACY_KEY_STRAVA_OAUTH_STATE)
             .remove(KEY_STRAVA_OAUTH_STATE_TIMESTAMP)
+            .remove(LEGACY_KEY_STRAVA_OAUTH_STATE_TIMESTAMP)
             .apply()
     }
 
@@ -284,7 +302,9 @@ object AuthCredentialsStore {
             .remove(KEY_STRAVA_TOKEN_EXPIRES_AT)
             .remove(KEY_STRAVA_ATHLETE_ID)
             .remove(KEY_STRAVA_OAUTH_STATE)
+            .remove(LEGACY_KEY_STRAVA_OAUTH_STATE)
             .remove(KEY_STRAVA_OAUTH_STATE_TIMESTAMP)
+            .remove(LEGACY_KEY_STRAVA_OAUTH_STATE_TIMESTAMP)
             .apply()
     }
 
@@ -323,7 +343,11 @@ object AuthCredentialsStore {
     @JvmStatic
     fun readDropboxCredential(context: Context): String? {
         val credential = getPrefs(context).getString(KEY_DROPBOX_CREDENTIAL, null)
-        return if (credential.isNullOrBlank()) null else credential
+        if (!credential.isNullOrBlank()) {
+            return credential
+        }
+        val legacyCredential = getPrefs(context).getString(LEGACY_KEY_DROPBOX_CREDENTIAL, null)
+        return if (legacyCredential.isNullOrBlank()) null else legacyCredential
     }
 
     @JvmStatic

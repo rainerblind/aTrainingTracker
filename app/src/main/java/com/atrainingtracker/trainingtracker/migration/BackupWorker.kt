@@ -36,7 +36,7 @@ class BackupWorker(
         
         val prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val automatedEnabled = prefs.getBoolean("automated_backups", true)
-        val dropboxConnected = TrainingApplication.uploadToDropbox()
+        val dropboxConnected = TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
         val googleDriveConnected = TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
 
         if (!automatedEnabled) {

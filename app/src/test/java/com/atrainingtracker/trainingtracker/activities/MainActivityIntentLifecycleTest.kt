@@ -22,6 +22,7 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import androidx.preference.PreferenceManager
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -253,5 +254,29 @@ class MainActivityIntentLifecycleTest {
             "REQUEST_START_TRACKING broadcast must be dispatched",
             shadowApp.broadcastIntents.any { it.action == TrainingApplication.REQUEST_START_TRACKING }
         )
+    }
+
+    @Test
+    fun testCheckPreferences_whenDropboxEnabledWithoutCredentials_resetsUploadToDropboxToFalse() {
+        val defaultPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+        defaultPrefs.edit()
+            .putBoolean(TrainingApplication.SP_UPLOAD_TO_DROPBOX, true)
+            .putBoolean(TrainingApplication.SP_UPLOAD_TO_STRAVA, false)
+            .commit()
+
+        val field = TrainingApplication::class.java.getDeclaredField("cSharedPreferences")
+        field.isAccessible = true
+        field.set(null, defaultPrefs)
+
+        try {
+            val activity = Robolectric.buildActivity(MainActivityWithNavigation::class.java).get()
+            val checkPrefsMethod = MainActivityWithNavigation::class.java.getDeclaredMethod("checkPreferences")
+            checkPrefsMethod.isAccessible = true
+            checkPrefsMethod.invoke(activity)
+
+            assertFalse("uploadToDropbox must be reset to false when credentials are null", TrainingApplication.uploadToDropbox())
+        } finally {
+            field.set(null, null)
+        }
     }
 }
