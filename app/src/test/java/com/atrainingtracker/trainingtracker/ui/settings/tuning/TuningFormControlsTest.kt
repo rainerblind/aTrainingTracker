@@ -131,4 +131,45 @@ class TuningFormControlsTest {
         gatedCallback()
         assertFalse("Disabled component must not fire callback", callbackFired)
     }
+
+    @Test
+    fun testSubordinateTuningToggleItem_appliesDownscale0_6fCompactHeightAndSecondaryColors() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "SubordinateTuningToggleItem must declare Switch with scale(0.6f)",
+            content.contains(".scale(0.6f)")
+        )
+        assertTrue(
+            "SubordinateTuningToggleItem must declare Switch with height(24.dp)",
+            content.contains(".height(24.dp)")
+        )
+        assertTrue(
+            "SubordinateTuningToggleItem must style Switch with secondary color tokens",
+            content.contains("checkedThumbColor = MaterialTheme.colorScheme.onSecondary") &&
+                    content.contains("checkedTrackColor = MaterialTheme.colorScheme.secondary")
+        )
+        assertTrue(
+            "SubordinateTuningToggleItem must use bodySmall typography and onSurfaceVariant color",
+            content.contains("style = MaterialTheme.typography.bodySmall") &&
+                    content.contains("color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)")
+        )
+    }
+
+    @Test
+    fun testSubordinateTuningToggleItem_declaresTrailingDefaultEnabledAndForwardsState() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "SubordinateTuningToggleItem must declare enabled parameter with default true",
+            content.contains("fun SubordinateTuningToggleItem(") &&
+                    content.contains("enabled: Boolean = true")
+        )
+        assertTrue(
+            "SubordinateTuningToggleItem must forward enabled parameter to Switch",
+            content.contains("Switch(") && content.contains("enabled = enabled")
+        )
+    }
 }
