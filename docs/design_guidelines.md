@@ -52,6 +52,8 @@ SingleChoiceSegmentedButtonRow(
   * Filtering lists by categories (e.g. Sport Types: All, Run, Bike, Hike).
   * Selecting multiple non-exclusive tags.
   * Selecting among 3 to 4 distinct discrete states where each option has descriptive context.
+* **Canonical Sport Type Chip Ordering (`Other` Always on the Far Right — Rule 57, ATT-4372 / ATT-4430)**:
+  * Across all sport type selector rows (`FilterChip` rows, segmented buttons), specific primary sports (`Run`, `Bike` / `Bike`, `Run`) **MUST** appear first, and the catch-all `Other` (`BSportType.UNKNOWN` / `"Andere"`) **MUST** always be positioned on the **far right** (`[Bike, Run, Other]` or `[Run, Bike, Other]`), even when `Other` is preselected as the default value. Never move `Other` to the leftmost position just because it is the default selection.
 
 ### 1.3 Large Option Sets ($> 4$ Options)
 * **Standard Control**: Exposed Dropdown Menu (`ExposedDropdownMenuBox`) or Modal Selection Dialog.
@@ -155,6 +157,13 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Retire Overlapping Matrix Columns When Adding Dedicated Config Sheets (ATT-3920 / ATT-4043)**:
   * When introducing a dedicated configuration sheet or editor for a view (such as `WorkoutDetailTabsConfigSheet` for `DetailedWorkoutView` tab ordering and visibility), any legacy settings controls that previously toggled the same view (such as the `Details` column in the 2-column `WorkoutMasksAndCardsSection` matrix) **MUST** be retired and cleaned up in the same change.
   * Never keep two competing UI surfaces in the same settings screen that toggle the same underlying preferences; doing so confuses the athlete about which control is authoritative.
+
+### 3.3 Subordinate Settings Toggles: Lighter Visual Weight & Compact Switches (Rule 59 — ATT-4369 / ATT-4432)
+* **Clear Parent-Child Hierarchy**:
+  * Subordinate child toggles nested under a primary feature/model toggle (such as `"Show in Workout Summary"` / `"In Workout-Übersicht anzeigen"` under a Physiology Model toggle) **MUST NOT** reuse the full-sized primary `TuningToggleItem` row with only a `16.dp` left indent, which visually competes with the parent header.
+  * Render subordinate toggles with a distinctly lighter visual weight: smaller/lighter text (`MaterialTheme.typography.bodySmall` or `labelMedium` with `MaterialTheme.colorScheme.onSurfaceVariant`), compact vertical padding, and a scaled-down `Switch` (`Modifier.scale(0.8f)`).
+* **No Unrequested Top-Level Model Toggles**:
+  * Do not invent extra top-level settings toggles for baseline metrics (e.g. `"Basic Power Metrics (Work, W/kg)"`) that were not requested in the ticket specification.
 
 ---
 
@@ -328,11 +337,12 @@ Row(
 * **Centered Section Titles**:
   * When a section divider includes a title, the title **MUST** be horizontally centered across the full row width (flanked by symmetric `HorizontalDivider(modifier = Modifier.weight(1f))` segments on both left and right, or centered inside a full-width section header bar), never left-aligned with a single trailing line.
 
-### 5.12 Cockpit Utility Button Availability & Click/Pointer Gesture Isolation (Rule 53 — ATT-4371)
+### 5.12 Cockpit Utility Button Availability & Click/Pointer Gesture Isolation (Rules 53 & 58 — ATT-4371, ATT-4431)
 * **Availability Across `READY`, `TRACKING`, and `PAUSED` Modes**:
   * Unlike `LapButton` (which records a workout lap split and therefore requires `TrackingMode.TRACKING`), auxiliary Cockpit utility controls such as the **Bike Bell** (`BikeBellButton`) **MUST** remain enabled across `READY`, `TRACKING`, and `PAUSED` modes (`enabled = isConfigureMode || trackingMode in setOf(READY, TRACKING, PAUSED)`) so athletes can test or ring the bell while stationary or before pressing Start.
-* **Never Nest `ElevatedButton(onClick)` Inside `Modifier.pointerInput(detectTapGestures)`**:
-  * Do not wrap a Material `Button`/`ElevatedButton` with its own `onClick` handler inside a parent `Box(Modifier.pointerInput { detectTapGestures(...) })`, which causes pointer event contention and swallows clicks. Handle single-tap actions directly inside `onClick` (and track multi-tap escalation via timestamp deltas inside the ViewModel/synthesizer).
+* **Never Nest `ElevatedButton(onClick)` Inside `Modifier.pointerInput(detectTapGestures)` — Preserve Press-and-Hold via `InteractionSource` (Rules 53 & 58)**:
+  * Do not wrap a Material `Button`/`ElevatedButton` with its own `onClick` handler inside a parent `Box(Modifier.pointerInput { detectTapGestures(...) })`, which causes pointer event contention and swallows clicks.
+  * When a button supports both single-tap (`onClick`) and press-and-hold / long-press actions (such as `BikeBellButton`'s continuous `"Brriiiing!"` roll), never delete the long-press capability to fix click contention; instead observe `PressInteraction.Press` / `Release` / `Cancel` on the button's `MutableInteractionSource` (or use a `Surface` with `combinedClickable`) so both single-tap and press-and-hold work reliably.
 
 ### 5.13 Dialog Width Budgets, Multi-Chip `FlowRow` Wrapping & Long-Locale (`de`) Verification (Rule 54 — ATT-4372)
 * **No Non-Wrapping 3+ Chip `Row` Inside `AlertDialog`**:

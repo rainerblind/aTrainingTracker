@@ -49,6 +49,7 @@ These **8 Core Rules** are strictly binding on all AI agents during in-sprint ex
 | **Stage 4: Implementation** (`[Implementation]` $\rightarrow$ Gate 4) | **`subagent_flash`** *(Standard)* / **`subagent_pro`** *(High-Risk)* | **`subagent_pro`** *(Standard)* / **`subagent_flash`** *(High-Risk)* | `subagent_flash` codes directly from warm Gate 3 plan; `subagent_pro` audits `git diff` against its Stage 3 plan |
 | **Stage 5: Verification** (`[Test]` $\rightarrow$ Gate 5) | **`subagent_flash`** *(via `send_message`)* | **`subagent_pro`** *(via `send_message`)* | `subagent_flash` runs clean-room suite & walkthrough; `subagent_pro` executes Gate 5 `PASS` |
 
+* **Reactive Turn Boundaries (No Polling Loops or Premature `send_message` Queueing, Rule 56)**: After invoking or messaging a subagent for the active stage, immediately stop calling tools to end the turn and wait for the subagent's completion message. Never poll `manage_subagents(Action="list")` or `manage_task(Action="status")` in a loop, and never send next-stage `send_message` instructions before the current stage has completed and created its Jira subtask.
 * **Ticket Cleanup**: Once `ATT-XXXX` reaches `Final Review (Human)` and its branch is squashed onto `sprint/<SPRINT_NAME>`, terminate the ticket's subagents via `manage_subagents(Action="kill", ConversationIds=[...])` (or `kill_all`) so the next ticket starts with a clean context.
 
 ## Rule 8: One Atomic Commit per Ticket & Clean Jira Hygiene
