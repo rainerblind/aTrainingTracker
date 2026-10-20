@@ -1580,6 +1580,23 @@
     <string name="action_view_workout">表示</string>
     <string name="permission_warning_badge_desc">位置情報の権限がありません</string>
 
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">アプリの権限</string>
+    <string name="permission_onboarding_step_format">ステップ %1$d / %2$d</string>
+    <string name="permission_onboarding_skip_setup">設定をスキップ</string>
+    <string name="permission_onboarding_skip_step">このステップをスキップ</string>
+    <string name="permission_onboarding_grant">権限を許可</string>
+    <string name="permission_onboarding_continue">次へ</string>
+    <string name="permission_onboarding_finish">設定を完了</string>
+    <string name="permission_onboarding_location_title">位置情報とGPS記録</string>
+    <string name="permission_onboarding_location_desc">画面オフ時やバックグラウンドでも、トレーニングルート、距離、速度、標高を正確に記録できます。</string>
+    <string name="permission_onboarding_bluetooth_title">Bluetoothセンサー</string>
+    <string name="permission_onboarding_bluetooth_desc">心拍計、パワーメーター、スマートトレーナー、速度・ケイデンスセンサーの検索と接続を可能にします。</string>
+    <string name="permission_onboarding_notification_title">トレーニング通知</string>
+    <string name="permission_onboarding_notification_desc">通知バーおよびロック画面に、アクティブなトレーニング状況、ラップタイム、センサーのバッテリー残量を表示します。</string>
+    <string name="permission_onboarding_battery_title">バッテリー最適化の除外</string>
+    <string name="permission_onboarding_battery_desc">画面がオフになっている長時間のライドやランニング中に、Androidシステムがバックグラウンド記録を強制停止するのを防ぎます。</string>
+
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">トレーニングが中断されました</string>
     <string name="unfinished_workout_title_battery">ワークアウト中断: バッテリー最適化</string>

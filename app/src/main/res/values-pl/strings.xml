@@ -1602,6 +1602,23 @@
     <string name="action_view_workout">Pokaż</string>
     <string name="permission_warning_badge_desc">Brak uprawnienia do lokalizacji</string>
 
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">Uprawnienia aplikacji</string>
+    <string name="permission_onboarding_step_format">Krok %1$d z %2$d</string>
+    <string name="permission_onboarding_skip_setup">Pomiń konfigurację</string>
+    <string name="permission_onboarding_skip_step">Pomiń ten krok</string>
+    <string name="permission_onboarding_grant">Przyznaj uprawnienie</string>
+    <string name="permission_onboarding_continue">Dalej</string>
+    <string name="permission_onboarding_finish">Zakończ konfigurację</string>
+    <string name="permission_onboarding_location_title">Lokalizacja i rejestracja GPS</string>
+    <string name="permission_onboarding_location_desc">Umożliwia precyzyjne rejestrowanie trasy treningu, dystansu, prędkości i przewyższenia – również przy zablokowanym ekranie w tle.</string>
+    <string name="permission_onboarding_bluetooth_title">Czujniki Bluetooth</string>
+    <string name="permission_onboarding_bluetooth_desc">Umożliwia wyszukiwanie i łączenie czujników tętna, mierników mocy, trenażerów smart oraz czujników prędkości i kadencji.</string>
+    <string name="permission_onboarding_notification_title">Powiadomienia treningowe</string>
+    <string name="permission_onboarding_notification_desc">Wyświetla stan aktywnego treningu, czasy okrążeń i poziom naładowania baterii czujników na pasku powiadomień i na ekranie blokady.</string>
+    <string name="permission_onboarding_battery_title">Wyłączenie optymalizacji baterii</string>
+    <string name="permission_onboarding_battery_desc">Zapobiega nieoczekiwanemu zatrzymaniu rejestracji w tle przez system Android podczas długich treningów przy wyłączonym ekranie.</string>
+
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Trening przerwany</string>
     <string name="unfinished_workout_title_battery">Trening przerwany: Optymalizacja baterii</string>

@@ -205,6 +205,9 @@ object TuningPreferencesDefaults {
     /** First-time stop tracking coachmark banner acknowledgement default (REQ-UI-367 / ATT-3387). */
     const val DEFAULT_HAS_SEEN_STOP_TRACKING_HINT = false
 
+    /** First-install permission onboarding flow completion default (REQ-PRI-007 / ATT-4455). */
+    const val DEFAULT_HAS_COMPLETED_PERMISSION_ONBOARDING = false
+
     const val DEFAULT_AUTO_PAUSE_BIKE_ENABLED = true
     const val DEFAULT_AUTO_PAUSE_RUN_ENABLED = false
     const val DEFAULT_AUTO_PAUSE_OTHER_ENABLED = false
@@ -435,6 +438,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_CLUSTER_USE_SPORT_TYPE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_sport_type")
         val KEY_CLUSTER_USE_ALTITUDE_POS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_altitude_pos")
         val KEY_HAS_SEEN_STOP_TRACKING_HINT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_has_seen_stop_tracking_hint")
+        val KEY_HAS_COMPLETED_PERMISSION_ONBOARDING: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_has_completed_permission_onboarding")
         val KEY_AUTO_PAUSE_BIKE_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_bike_enabled")
         val KEY_AUTO_PAUSE_RUN_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_run_enabled")
         val KEY_AUTO_PAUSE_OTHER_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_other_enabled")
@@ -501,6 +505,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_CLUSTER_USE_SPORT_TYPE,
             KEY_CLUSTER_USE_ALTITUDE_POS,
             KEY_HAS_SEEN_STOP_TRACKING_HINT,
+            KEY_HAS_COMPLETED_PERMISSION_ONBOARDING,
             KEY_AUTO_PAUSE_BIKE_ENABLED,
             KEY_AUTO_PAUSE_RUN_ENABLED,
             KEY_AUTO_PAUSE_OTHER_ENABLED,
@@ -1231,6 +1236,22 @@ data class AutoPausePreferences(
     suspend fun setHasSeenStopTrackingHint(seen: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_HAS_SEEN_STOP_TRACKING_HINT] = seen
+        }
+    }
+
+    /**
+     * Reactive flow emitting whether the first-install permission onboarding flow has been completed or dismissed (REQ-PRI-007 / ATT-4455).
+     */
+    val hasCompletedPermissionOnboardingFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_HAS_COMPLETED_PERMISSION_ONBOARDING] ?: TuningPreferencesDefaults.DEFAULT_HAS_COMPLETED_PERMISSION_ONBOARDING
+    }
+
+    /**
+     * Atomically persists whether the first-install permission onboarding flow has been completed or dismissed (REQ-PRI-007 / ATT-4455).
+     */
+    suspend fun setHasCompletedPermissionOnboarding(completed: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_HAS_COMPLETED_PERMISSION_ONBOARDING] = completed
         }
     }
 

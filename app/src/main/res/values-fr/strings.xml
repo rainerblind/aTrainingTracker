@@ -1603,6 +1603,23 @@
     <string name="action_view_workout">Afficher</string>
     <string name="permission_warning_badge_desc">Autorisation de localisation manquante</string>
 
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">Autorisations de l\'application</string>
+    <string name="permission_onboarding_step_format">Étape %1$d sur %2$d</string>
+    <string name="permission_onboarding_skip_setup">Ignorer la configuration</string>
+    <string name="permission_onboarding_skip_step">Ignorer cette étape</string>
+    <string name="permission_onboarding_grant">Accorder l\'autorisation</string>
+    <string name="permission_onboarding_continue">Continuer</string>
+    <string name="permission_onboarding_finish">Terminer la configuration</string>
+    <string name="permission_onboarding_location_title">Position et suivi GPS</string>
+    <string name="permission_onboarding_location_desc">Permet d\'enregistrer avec précision votre itinéraire, distance, vitesse et altitude, même avec l\'écran verrouillé ou en arrière-plan.</string>
+    <string name="permission_onboarding_bluetooth_title">Capteurs Bluetooth</string>
+    <string name="permission_onboarding_bluetooth_desc">Permet de rechercher et de connecter les ceintures cardiaques, capteurs de puissance, home-trainers connectés et capteurs de vitesse/cadence.</string>
+    <string name="permission_onboarding_notification_title">Notifications d\'entraînement</string>
+    <string name="permission_onboarding_notification_desc">Affiche le statut de l\'entraînement en cours, les temps au tour et l\'état de la batterie des capteurs dans la barre de notifications et sur l\'écran de verrouillage.</string>
+    <string name="permission_onboarding_battery_title">Exemption d\'optimisation de batterie</string>
+    <string name="permission_onboarding_battery_desc">Empêche Android d\'interrompre le suivi en arrière-plan pendant les longues sorties lorsque l\'écran est éteint.</string>
+
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Entraînement interrompu</string>
     <string name="unfinished_workout_title_battery">Entraînement interrompu : Optimisation de la batterie</string>

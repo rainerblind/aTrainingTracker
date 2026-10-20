@@ -1600,6 +1600,23 @@
     <string name="action_view_workout">Bekijken</string>
     <string name="permission_warning_badge_desc">Locatietoestemming ontbreekt</string>
 
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">App-machtigingen</string>
+    <string name="permission_onboarding_step_format">Stap %1$d van %2$d</string>
+    <string name="permission_onboarding_skip_setup">Configuratie overslaan</string>
+    <string name="permission_onboarding_skip_step">Deze stap overslaan</string>
+    <string name="permission_onboarding_grant">Machtiging verlenen</string>
+    <string name="permission_onboarding_continue">Doorgaan</string>
+    <string name="permission_onboarding_finish">Configuratie voltooien</string>
+    <string name="permission_onboarding_location_title">Locatie &amp; GPS-registratie</string>
+    <string name="permission_onboarding_location_desc">Maakt nauwkeurige registratie van je trainingsroute, afstand, snelheid en hoogte mogelijk – ook bij vergrendeld scherm op de achtergrond.</string>
+    <string name="permission_onboarding_bluetooth_title">Bluetooth-sensoren</string>
+    <string name="permission_onboarding_bluetooth_desc">Maakt het zoeken en verbinden van hartslagbanden, vermogensmeters, smart trainers en snelheids-/cadanssensoren mogelijk.</string>
+    <string name="permission_onboarding_notification_title">Trainingsmeldingen</string>
+    <string name="permission_onboarding_notification_desc">Toont de actieve trainingsstatus, rondetijden en batterijniveaus van sensoren in de meldingsbalk en op het vergrendelscherm.</string>
+    <string name="permission_onboarding_battery_title">Uitzondering batterij-optimalisatie</string>
+    <string name="permission_onboarding_battery_desc">Voorkomt dat Android de registratie op de achtergrond beëindigt tijdens lange ritten of lopen wanneer het scherm is uitgeschakeld.</string>
+
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Training onderbroken</string>
     <string name="unfinished_workout_title_battery">Training onderbroken: Batterijoptimalisatie</string>

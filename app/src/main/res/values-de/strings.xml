@@ -1689,6 +1689,23 @@
     <string name="action_view_workout">Anzeigen</string>
     <string name="permission_warning_badge_desc">Standortberechtigung fehlt</string>
 
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">App-Berechtigungen</string>
+    <string name="permission_onboarding_step_format">Schritt %1$d von %2$d</string>
+    <string name="permission_onboarding_skip_setup">Einrichtung überspringen</string>
+    <string name="permission_onboarding_skip_step">Diesen Schritt überspringen</string>
+    <string name="permission_onboarding_grant">Berechtigung erteilen</string>
+    <string name="permission_onboarding_continue">Weiter</string>
+    <string name="permission_onboarding_finish">Einrichtung abschließen</string>
+    <string name="permission_onboarding_location_title">Standort &amp; GPS-Aufzeichnung</string>
+    <string name="permission_onboarding_location_desc">Ermöglicht die präzise Aufzeichnung deiner Trainingsroute, Distanz, Geschwindigkeit und Höhenmeter – auch bei gesperrtem Bildschirm im Hintergrund.</string>
+    <string name="permission_onboarding_bluetooth_title">Bluetooth-Sensoren</string>
+    <string name="permission_onboarding_bluetooth_desc">Ermöglicht die Suche und Verbindung von Herzfrequenzgurten, Leistungsmessern, Smart-Trainern sowie Geschwindigkeits- und Trittfrequenzsensoren.</string>
+    <string name="permission_onboarding_notification_title">Trainings-Benachrichtigungen</string>
+    <string name="permission_onboarding_notification_desc">Zeigt den aktiven Trainingsstatus, Rundenzeiten und Sensor-Akkustände in der Benachrichtigungsleiste und auf dem Sperrbildschirm an.</string>
+    <string name="permission_onboarding_battery_title">Akku-Optimierungsausnahme</string>
+    <string name="permission_onboarding_battery_desc">Verhindert, dass das Android-System die Aufzeichnung während langer Einheiten im Hintergrund oder bei ausgeschaltetem Bildschirm unerwartet beendet.</string>
+
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Training unterbrochen</string>
     <string name="unfinished_workout_title_battery">Training unterbrochen: Akku-Optimierung</string>

@@ -1797,6 +1797,23 @@
     <string name="action_view_workout">View</string>
     <string name="permission_warning_badge_desc">Location permission missing</string>
 
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">App Permissions</string>
+    <string name="permission_onboarding_step_format">Step %1$d of %2$d</string>
+    <string name="permission_onboarding_skip_setup">Skip Setup</string>
+    <string name="permission_onboarding_skip_step">Skip this step</string>
+    <string name="permission_onboarding_grant">Grant Permission</string>
+    <string name="permission_onboarding_continue">Continue</string>
+    <string name="permission_onboarding_finish">Finish Setup</string>
+    <string name="permission_onboarding_location_title">Location &amp; GPS Tracking</string>
+    <string name="permission_onboarding_location_desc">Enables accurate tracking of your route, distance, speed, and elevation – even when the screen is locked or in the background.</string>
+    <string name="permission_onboarding_bluetooth_title">Bluetooth Sensors</string>
+    <string name="permission_onboarding_bluetooth_desc">Enables searching and connecting heart rate monitors, power meters, smart trainers, and speed/cadence sensors.</string>
+    <string name="permission_onboarding_notification_title">Workout Notifications</string>
+    <string name="permission_onboarding_notification_desc">Displays active workout status, lap splits, and sensor battery levels in the notification bar and on the lock screen.</string>
+    <string name="permission_onboarding_battery_title">Battery Optimization Exemption</string>
+    <string name="permission_onboarding_battery_desc">Prevents Android from killing background tracking during long rides or runs when the screen is turned off.</string>
+
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Workout Interrupted</string>
     <string name="unfinished_workout_title_battery">Workout Interrupted: Battery Optimization</string>

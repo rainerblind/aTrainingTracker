@@ -1604,6 +1604,23 @@
     <string name="action_view_workout">Ver</string>
     <string name="permission_warning_badge_desc">Falta el permiso de ubicación</string>
 
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">Permisos de la app</string>
+    <string name="permission_onboarding_step_format">Paso %1$d de %2$d</string>
+    <string name="permission_onboarding_skip_setup">Omitir configuración</string>
+    <string name="permission_onboarding_skip_step">Omitir este paso</string>
+    <string name="permission_onboarding_grant">Conceder permiso</string>
+    <string name="permission_onboarding_continue">Continuar</string>
+    <string name="permission_onboarding_finish">Finalizar configuración</string>
+    <string name="permission_onboarding_location_title">Ubicación y seguimiento GPS</string>
+    <string name="permission_onboarding_location_desc">Permite registrar con precisión tu ruta, distancia, velocidad y altitud, incluso con la pantalla bloqueada o en segundo plano.</string>
+    <string name="permission_onboarding_bluetooth_title">Sensores Bluetooth</string>
+    <string name="permission_onboarding_bluetooth_desc">Permite buscar y conectar pulsómetros, potenciómetros, rodillos inteligentes y sensores de velocidad y cadencia.</string>
+    <string name="permission_onboarding_notification_title">Notificaciones de entrenamiento</string>
+    <string name="permission_onboarding_notification_desc">Muestra el estado del entrenamiento activo, tiempos por vuelta y niveles de batería de los sensores en la barra de notificaciones y en la pantalla de bloqueo.</string>
+    <string name="permission_onboarding_battery_title">Exención de optimización de batería</string>
+    <string name="permission_onboarding_battery_desc">Evita que Android detenga el seguimiento en segundo plano durante recorridos largos o carreras cuando la pantalla está apagada.</string>
+
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Entrenamiento interrumpido</string>
     <string name="unfinished_workout_title_battery">Entrenamiento interrumpido: Optimización de batería</string>

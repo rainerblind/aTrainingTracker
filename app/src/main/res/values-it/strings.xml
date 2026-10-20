@@ -1600,6 +1600,23 @@
     <string name="action_view_workout">Visualizza</string>
     <string name="permission_warning_badge_desc">Autorizzazione di posizione mancante</string>
 
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">Autorizzazioni dell\'app</string>
+    <string name="permission_onboarding_step_format">Passaggio %1$d di %2$d</string>
+    <string name="permission_onboarding_skip_setup">Salta configurazione</string>
+    <string name="permission_onboarding_skip_step">Salta questo passaggio</string>
+    <string name="permission_onboarding_grant">Concedi autorizzazione</string>
+    <string name="permission_onboarding_continue">Continua</string>
+    <string name="permission_onboarding_finish">Completa configurazione</string>
+    <string name="permission_onboarding_location_title">Posizione e tracciamento GPS</string>
+    <string name="permission_onboarding_location_desc">Consente la registrazione precisa del percorso, della distanza, della velocità e del dislivello, anche a schermo bloccato o in background.</string>
+    <string name="permission_onboarding_bluetooth_title">Sensori Bluetooth</string>
+    <string name="permission_onboarding_bluetooth_desc">Consente la ricerca e il collegamento di fasce cardio, misuratori di potenza, smart trainer e sensori di velocità/cadenza.</string>
+    <string name="permission_onboarding_notification_title">Notifiche di allenamento</string>
+    <string name="permission_onboarding_notification_desc">Mostra lo stato dell\'allenamento attivo, i tempi sul giro e il livello della batteria dei sensori nella barra delle notifiche e nella schermata di blocco.</string>
+    <string name="permission_onboarding_battery_title">Esenzione ottimizzazione batteria</string>
+    <string name="permission_onboarding_battery_desc">Impedisce ad Android di interrompere la registrazione in background durante sessioni lunghe quando lo schermo è spento.</string>
+
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Allenamento interrotto</string>
     <string name="unfinished_workout_title_battery">Allenamento interrotto: Ottimizzazione batteria</string>
