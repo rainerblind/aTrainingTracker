@@ -42,6 +42,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
@@ -71,12 +72,29 @@ fun SensorSourceDialog(
     }
     val activeDeviceIds = remember(allActiveTelemetries) { allActiveTelemetries.map { it.deviceId }.toSet() }
     
-    val activeBackups = remember(allActiveTelemetries, sourceDevice) {
-        allActiveTelemetries.filter { it.deviceId != sourceDevice?.id }
+    val activeBackups = remember(allActiveTelemetries, sourceDevice, allDevices, sensorType) {
+        allActiveTelemetries
+            .filter { it.deviceId != sourceDevice?.id }
+            .sortedWith(
+                compareBy<DeviceTelemetry> { telemetry ->
+                    val dev = allDevices.find { it.id == telemetry.deviceId }
+                    MySensorManager.getPriorityRank(sensorType, dev?.deviceType)
+                }
+                .thenBy { telemetry ->
+                    allDevices.find { it.id == telemetry.deviceId }?.deviceName ?: ""
+                }
+                .thenBy { it.deviceId }
+            )
     }
     
-    val notConnected = remember(allDevices, activeDeviceIds, potentialTypes) {
-        allDevices.filter { potentialTypes.contains(it.deviceType) && !activeDeviceIds.contains(it.id) }
+    val notConnected = remember(allDevices, activeDeviceIds, potentialTypes, sensorType) {
+        allDevices
+            .filter { potentialTypes.contains(it.deviceType) && !activeDeviceIds.contains(it.id) }
+            .sortedWith(
+                compareBy<DeviceUiData> { MySensorManager.getPriorityRank(sensorType, it.deviceType) }
+                    .thenBy { it.deviceName }
+                    .thenBy { it.id }
+            )
     }
 
     val unitRes = MyHelper.getUnitsId(sensorType)

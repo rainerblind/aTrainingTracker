@@ -1181,7 +1181,7 @@ public class DevicesDatabaseManager {
             }
         }
 
-        private void addLocationDevicesToDb(SQLiteDatabase db) {
+        void addLocationDevicesToDb(SQLiteDatabase db) {
             ContentValues contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GPS.name());
@@ -1192,17 +1192,17 @@ public class DevicesDatabaseManager {
 
             contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
-            contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_NETWORK.name());
-            contentValues.put(PAIRED, false);
-            contentValues.put(NAME, mContext.getString(R.string.devices_location_Network));
+            contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name());
+            contentValues.put(PAIRED, true);
+            contentValues.put(NAME, mContext.getString(R.string.devices_location_GoogleFused));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 
             contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
-            contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name());
-            contentValues.put(PAIRED, true);
-            contentValues.put(NAME, mContext.getString(R.string.devices_location_GoogleFused));
+            contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_NETWORK.name());
+            contentValues.put(PAIRED, false);
+            contentValues.put(NAME, mContext.getString(R.string.devices_location_Network));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 
