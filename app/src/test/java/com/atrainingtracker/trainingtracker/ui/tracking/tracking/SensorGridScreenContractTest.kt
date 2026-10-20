@@ -96,8 +96,8 @@ class SensorGridScreenContractTest {
 
         // 3. Must trigger tabToggleActions.onRingBikeBell() and haptic click on confirmed double-tap
         assertTrue(
-            "Tracking mode BoxWithConstraints must apply detectCockpitDoubleTap when state.showBikeBell == true",
-            content.contains("if (isTracking && state.showBikeBell)") &&
+            "Tracking and preview mode BoxWithConstraints must apply detectCockpitDoubleTap when state.showBikeBell == true and screenMode != CONFIGURATION (REQ-UI-421.3)",
+            content.contains("if (isAvailable && state.showBikeBell)") &&
                 content.contains("Modifier.detectCockpitDoubleTap(enabled = true)") &&
                 content.contains("tabToggleActions.onRingBikeBell()")
         )

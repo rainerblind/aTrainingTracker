@@ -31,7 +31,7 @@ import android.util.Log
  * 3.84 kHz, 5.28 kHz, and 7.6 kHz overtones with exponential decay envelopes) pre-loaded in memory
  * via [AudioTrack.MODE_STATIC] for zero-latency instant playback without disk I/O.
  *
- * Configured with [AudioAttributes.USAGE_ASSISTANCE_SONIFICATION] without audio focus ducking to
+ * Configured with [AudioAttributes.USAGE_MEDIA] without audio focus ducking to
  * guarantee non-intrusive coexistence with turn-by-turn spoken prompts and music playback.
  * All public operations are thread-safe ([synchronized]), and resources are cleanly released via [close].
  */
@@ -160,6 +160,16 @@ class BikeBellAudioSynthesizer(
             }
             return pcmBytes
         }
+        /**
+         * Creates [AudioAttributes] for bike bell playback configured with [AudioAttributes.USAGE_MEDIA]
+         * and [AudioAttributes.CONTENT_TYPE_SONIFICATION] (REQ-UI-421.4).
+         */
+        fun createAudioAttributes(): AudioAttributes {
+            return AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+        }
     }
 
     val doubleStrikePcm: ByteArray = synthesizeDoubleStrikePcm()
@@ -184,10 +194,7 @@ class BikeBellAudioSynthesizer(
 
     private fun createStaticTrack(pcmData: ByteArray): AudioTrack? {
         return try {
-            val attributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
+            val attributes = createAudioAttributes()
             val format = AudioFormat.Builder()
                 .setSampleRate(SAMPLE_RATE)
                 .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
@@ -220,7 +227,7 @@ class BikeBellAudioSynthesizer(
                 val track = singleStrikeTrack ?: return
                 val clamped = volume.coerceIn(0.0f, 1.0f)
                 track.setVolume(clamped)
-                track.pause()
+                track.stop()
                 track.playbackHeadPosition = 0
                 track.play()
             } catch (e: Exception) {
@@ -239,7 +246,7 @@ class BikeBellAudioSynthesizer(
                 val track = rollTrack ?: return
                 val clamped = volume.coerceIn(0.0f, 1.0f)
                 track.setVolume(clamped)
-                track.pause()
+                track.stop()
                 track.playbackHeadPosition = 0
                 track.play()
             } catch (e: Exception) {
@@ -255,7 +262,7 @@ class BikeBellAudioSynthesizer(
         synchronized(lock) {
             if (isClosed) return
             try {
-                rollTrack?.pause()
+                rollTrack?.stop()
                 rollTrack?.playbackHeadPosition = 0
             } catch (e: Exception) {
                 Log.w(TAG, "Error stopping bell roll", e)
