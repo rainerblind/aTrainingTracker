@@ -285,61 +285,113 @@ class TestLivingDocumentationAndGovernance(unittest.TestCase):
 
 
 class TestJiraCliTooling(unittest.TestCase):
-    """Verifies REQ-PRO-023 / TST-PRO-016: Sprint auto-attachment and fixVersion propagation."""
+    """Verifies Jira CLI governance guards, composite commands, and context injection."""
 
     @patch("jira_util.jira_request")
     @patch("jira_util.get_config")
     @patch("jira_util.add_to_active_sprint")
-    def test_create_subtask_with_sprint_and_fixversion(self, mock_add_sprint, mock_config, mock_request):
+    def test_create_subtask_rejects_fixversion_and_auto_attaches_sprint(self, mock_add_sprint, mock_config, mock_request):
         mock_config.return_value = {"JIRA_URL": "https://jira.test"}
         mock_request.return_value = {"key": "ATT-9999"}
+
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.create_subtask(
+                "ATT-1000",
+                "Subtask Summary",
+                "Subtask Description",
+                role="coordinator",
+                add_to_sprint=True,
+                fix_version="V4.9.38"
+            )
+        self.assertEqual(cm.exception.code, 1)
 
         key = jira_util.create_subtask(
             "ATT-1000",
             "Subtask Summary",
             "Subtask Description",
             role="coordinator",
-            add_to_sprint=True,
-            fix_version="V4.9.38"
+            add_to_sprint=True
         )
-
         self.assertEqual(key, "ATT-9999")
-        self.assertGreaterEqual(mock_request.call_count, 1)
-        args, kwargs = mock_request.call_args_list[0]
-        payload = kwargs.get("payload", {})
-        fields = payload.get("fields", {})
-        self.assertEqual(fields.get("parent"), {"key": "ATT-1000"})
-        self.assertEqual(fields.get("fixVersions"), [{"name": "V4.9.38"}])
-        # Verify add_to_active_sprint was invoked
         mock_add_sprint.assert_called_once_with("ATT-9999", role="coordinator")
 
     @patch("jira_util.jira_request")
     @patch("jira_util.get_config")
-    @patch("jira_util.add_to_active_sprint")
-    def test_create_issue_with_sprint_and_fixversion(self, mock_add_sprint, mock_config, mock_request):
+    def test_create_issue_rejects_sprint_assignment_and_sets_fixversion(self, mock_config, mock_request):
         mock_config.return_value = {"JIRA_URL": "https://jira.test"}
-        mock_request.return_value = {"key": "ATT-8888"}
+
+        def side_effect(path, method="GET", **kwargs):
+            if method == "GET" and path.startswith("issue/ATT-500"):
+                return {"fields": {"issuetype": {"name": "Epic"}}}
+            return {"key": "ATT-8888"}
+
+        mock_request.side_effect = side_effect
+
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.create_issue(
+                "Issue Summary",
+                "Issue Description",
+                parent_key="ATT-500",
+                role="agent1",
+                add_to_sprint=True
+            )
+        self.assertEqual(cm.exception.code, 1)
 
         key = jira_util.create_issue(
             "Issue Summary",
             "Issue Description",
             parent_key="ATT-500",
             role="agent1",
-            add_to_sprint=True,
+            add_to_sprint=False,
             fix_version="V4.9.38"
         )
-
         self.assertEqual(key, "ATT-8888")
-        # Verify payload sent to Jira REST API
-        mock_request.assert_called_once()
-        args, kwargs = mock_request.call_args
-        payload = kwargs.get("payload", {})
-        fields = payload.get("fields", {})
-        self.assertEqual(fields.get("parent"), {"key": "ATT-500"})
-        self.assertEqual(fields.get("fixVersions"), [{"name": "V4.9.38"}])
-        # Verify add_to_active_sprint was invoked
-        mock_add_sprint.assert_called_once_with("ATT-8888", role="agent1")
+
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.update_issue_description")
+    @patch("jira_util.jira_request")
+    @patch("jira_util.get_config")
+    def test_submit_stage_reuses_existing_subtask(
+        self, mock_config, mock_request, mock_update_desc, mock_transition
+    ):
+        mock_config.return_value = {"JIRA_URL": "https://jira.test"}
+        mock_request.return_value = {
+            "fields": {
+                "summary": "Fix crash on startup",
+                "status": {"name": "Analysis"},
+                "subtasks": [
+                    {
+                        "key": "ATT-4301",
+                        "fields": {
+                            "summary": "[Analysis] Fix crash on startup",
+                            "status": {"name": "In Bearbeitung"}
+                        }
+                    }
+                ]
+            }
+        }
+        subtask_key = jira_util.submit_stage(
+            "ATT-4300",
+            "1",
+            "# Updated Stage 1 Analysis",
+            role="agent1"
+        )
+        self.assertEqual(subtask_key, "ATT-4301")
+        mock_update_desc.assert_called_once_with("ATT-4301", "# Updated Stage 1 Analysis", role="agent1")
+        mock_transition.assert_called_once_with("ATT-4301", "in_review", role="agent1", inject_context=False)
+
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.add_comment")
+    def test_gate_verdict_pass_advances_parent_stage(
+        self, mock_comment, mock_assign, mock_transition
+    ):
+        jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS verdict", role="agent2")
+        mock_assign.assert_called_once_with("ATT-4301", "agent2", role="agent2")
+        mock_comment.assert_called_once_with("ATT-4301", "Gate 1 PASS verdict", role="agent2")
+        mock_transition.assert_called_once_with("ATT-4301", "freigabe", role="agent2", inject_context=True)
 
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -8,15 +8,14 @@ description: Executes Stage 1 (Problem Domain & Root Cause Analysis) of the agil
 ## Overview
 This skill guides the agent through **Stage 1 (Analysis)** of the engineering lifecycle. The objective is to understand the problem domain completely before proposing test specifications or implementation code.
 
-## Subagent Model Pairing ("Zipper Principle" — Rule 46)
+## Subagent Model Pairing ("Zipper Principle" — Core Rule 7)
 - **Doing (`agent1`)**: **`pro`** (`invoke_subagent` with `Model: "pro"`) — Open-ended forensic root-cause investigation, distinguishing symptoms from true causes, concurrency/lifecycle analysis, and blast-radius discovery require deep reasoning.
-- **Gate 1 Review (`agent2`)**: **`flash`** (`tools/review_agent.py audit <KEY> --model flash` or independent `research` subagent with `Model: "flash"`) — Strict factual & checklist verification of cited call sites, all 5 required analysis sections, and scope grounding.
+- **Gate 1 Review (`agent2`)**: **`flash`** (`invoke_subagent` with `TypeName: "research"`, `Model: "flash"`) — Independent read-only codebase verification of cited call sites, all 5 required analysis sections, and scope grounding.
 
-## Key Responsibilities
+## Key Responsibilities (`agent1` — `pro`)
 1. **Forensic Root Cause Analysis (RCA)**:
    - For defects: Investigate stack traces, system logs, SQLite table constraints, thread concurrency, and Android framework lifecycles.
    - For features: Perform gap analysis against current architectural components.
-   - **Avoid Redundant Diagnostic Builds (Rule 24)**: Before invoking heavy Gradle tasks (e.g. `./gradlew signingReport`, dependency trees), check ticket comments, previous sprint retro documents, git logs, and local configuration.
 2. **Chesterton's Fence Archaeology (`REQ-PRO-022`)**:
    - Inspect git history (`git log -S <REQ-ID> docs/requirements.md`) before proposing modifications to existing requirements.
    - If modifying an existing requirement, populate the 4 mandatory fields:
@@ -26,12 +25,29 @@ This skill guides the agent through **Stage 1 (Analysis)** of the engineering li
      - `Preservation of Core Invariants`
 3. **User Scope Grounding (`ATT-1250`)**:
    - Explicitly delineate in-scope objectives from out-of-scope adjacent refactorings to prevent scope creep.
-4. **Deliverable Production & Synchronous Parent Stage Progression (Rule 3 / Rule 45)**:
+4. **Single-Turn Stage Submission (`submit-stage`)**:
    - Author `docs/engineering/analysis/<TICKET_KEY>_analysis.md` using `templates/analysis_template.md`.
-   - Update the Stage 1 Jira subtask (`[Analysis]`) Description with the complete text.
-   - Transition subtask to `In Überprüfung` and run Gate 1 audit (`tools/review_agent.py audit <KEY>` — defaults to `flash`).
-   - Upon Gate 1 approval (`RECOMMEND PASS`), transition subtask directly to `Erledigt` via transition `freigabe` (`python3 tools/jira_util.py move <SUBTASK_KEY> freigabe`), which automatically advances the parent ticket from `Analysis` to `Test Spec`.
-   - **One Commit per Ticket (Rule 44)**: Do not create a separate intermediate git commit for Stage 1; keep changes on the working branch until the single atomic ticket commit at the end of Stage 5 (or squash when merging into `sprint/<SPRINT_NAME>`).
+   - Submit Stage 1 in a single composite CLI call (creates/updates `[Analysis]` sub-task and moves it to `In Überprüfung`):
+     ```bash
+     python3 tools/jira_util.py --as agent1 submit-stage <TICKET_KEY> 1 @docs/engineering/analysis/<TICKET_KEY>_analysis.md
+     ```
+   - **One Commit per Ticket (Core Rule 8)**: Do not create an intermediate git commit for Stage 1; keep changes on the working branch until Stage 5.
+
+## Gate 1 Independent Review Checklist (`agent2` — `flash` `research` Subagent)
+Spawn an independent `research` subagent (`Model: "flash"`) to audit the Stage 1 deliverable against the codebase using this checklist:
+1. **Scrutinize Problem Domain & Analysis**:
+   - For bug tickets: Stress-test RCA conclusions (symptoms vs. cause, call-site audit, reproducible traces).
+   - For features/improvements: Verify deep domain comprehension, user motivation, scope boundaries, and architectural side effects.
+   - **User Scope Grounding (`ATT-1250`)**: Ground review expectations strictly in the user's specific problem statement and parent ticket description. Do NOT challenge deliverables or mandate out-of-scope refactorings, speculative edge cases, or theoretical redesigns not requested by the user.
+2. **Call Site Audit**: Verify that all affected callers, classes, and resources are identified in the codebase.
+3. **Requirement Mapping Audit**: Check mapped Requirement IDs against `docs/requirements.md`.
+4. **System Invariants Verification**: Confirm explicit system invariants (what existing behavior, data precision, schema, or API contracts MUST NOT change).
+5. **Risk Rating & Gate Verdict (`gate-verdict`)**:
+   - Assign risk rating (`LOW`, `MEDIUM`, `HIGH`) with technical justification and record the verdict in a single composite CLI call (which closes the sub-task to `Erledigt`, advances the parent ticket to `Test Spec`, and automatically injects `stage2-req-test-spec/SKILL.md` into stdout):
+     ```bash
+     python3 tools/jira_util.py --as agent2 gate-verdict <ANALYSIS_SUBTASK_KEY> PASS "<Audit Report>"
+     ```
+     *(Or `REVISION` if changes are required.)*
 
 ## Deliverable Template
 Use the standardized markdown template located at:

@@ -127,6 +127,8 @@ Jointly review all completed sprint tickets with the human user against expectat
          python3 tools/jira_util.py upload <NEW_KEY> <SCREENSHOT_PATH>
          ```
        * Set Fix Version on the current sprint ticket (`python3 tools/jira_util.py set-fixversion <KEY> <VERSION>`), have the human user transition the current sprint ticket to `Erledigt`, and proceed strictly to the next ticket.
+     * **Deferred Review State for Field-Tested Features**:
+       * When a sprint ticket modifies in-ride GPS dynamics, algorithmic filtering, sensor connectivity, or real-time cycling cockpit prompts requiring outdoor rides or real-world physical activities to evaluate, the ticket may remain in `Final Review (Human)` across sprint close while `sprint/<SPRINT_NAME>` is merged to `develop`.
      * **Nicht in Ordnung (n.i.O. / Rejection of Core Scope)**:
        * Move ticket back to `Analysis` with explicit human feedback:
          ```bash
@@ -134,10 +136,10 @@ Jointly review all completed sprint tickets with the human user against expectat
          python3 tools/jira_util.py move <KEY> "analysis"
          ```
 4. **Sprint Retrospective & Process Hardening ("Retro Before Merge")**:
-   * **Mandate**: Conduct the Retrospective and update governance documents on `sprint/<SPRINT_NAME>` **BEFORE** merging into `develop` (`"During the last sprint, we learned that we should do the retro before the merge. During the retro, we probably change some files. :)"`).
+   * **Mandate**: Conduct the Retrospective and update governance documents on `sprint/<SPRINT_NAME>` **BEFORE** merging into `develop`.
    * Synthesize real-time comments logged during the sprint in the `Review & Retro` ticket into actionable root cause analyses.
    * Document insights in `docs/engineering/Sprint_Review_and_Retro_<KEY>.md`.
-   * Update `.agents/rules/aspice_governance.md`, relevant skills, and `docs/project_protocol.md` with permanent countermeasures.
+   * Update `.agents/rules/aspice_governance.md`, relevant skills, `docs/coding_standards.md`, `docs/design_guidelines.md`, and `docs/engineering/rule_history_archive.md` with permanent countermeasures.
    * Commit retrospective deliverables to `sprint/<SPRINT_NAME>`.
 5. **Sprint Closure & Merge to `develop`**:
    * Once all tickets and the Retrospective are signed off:
@@ -150,5 +152,5 @@ Jointly review all completed sprint tickets with the human user against expectat
    # Post-condition verification: ensure no merged sprint branches remain locally
    git branch --list 'sprint/*'
    ```
-   * Transition the sprint's `Review & Retro` ticket to `Erledigt` with the human user.
+   * Transition the sprint's `Review & Retro` ticket to `Final Review (Human)` (for human closure to `Erledigt`).
    * Post final integration notice to Jira.

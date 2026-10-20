@@ -253,7 +253,16 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
      ```bash
      python3 tools/jira_util.py comment <KEY> "h4. Release 4.9.38 Cycle Complete\n* Develop incremented to 4.9.39-dev (code 263)\n* All 10 release gates verified and completed."
      ```
-   * Transition ticket to `Erledigt`:
-     ```bash
-     python3 tools/jira_util.py move <RELEASE_TICKET_KEY> "done"
-     ```
+   * Transition ticket to `Final Review (Human)` for human closure to `Erledigt`.
+
+---
+
+## Phase 6: Formal GitFlow Hotfix & Dual-Branch Protocol
+
+When an emergency production regression or fatal crash occurs in a deployed release:
+1. **Hotfix Branching**: Branch directly from `master` (or the affected release tag): `hotfix/V<VERSION>__<BUILD>`.
+2. **Streamlined ASPICE Governance**: Hotfixes strictly execute Stages 1 through 5 (Analysis, Test-Spec, Impl-Plan, Implementation, Verification), producing targeted engineering deliverables in `docs/engineering/`.
+3. **Dual GitFlow Integration**: Upon Gate 5 sign-off and production APK release, merge the hotfix back into `master` (with a version tag) and back-merge into `develop`.
+4. **Active Sprint Rebase / Merge**: If an active sprint branch (`sprint/<ID>`) is in flight during the hotfix, immediately merge the hotfix changes into `sprint/<ID>` so in-flight sprint feature branches build upon the hotfix baseline.
+5. **Dual Branch Cherry-Picking for In-Sprint Hotfixes**: When an in-sprint ticket has a `FixVersion` targeting an active hotfix release, backport/cherry-pick the verified code, resources, and deliverables onto the active hotfix branch immediately following Stage 5 verification on the sprint branch.
+

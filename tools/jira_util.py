@@ -465,6 +465,106 @@ PARENT_STAGE_ORDER = [
     "final review (human)"
 ]
 
+STAGE_SPECS = {
+    "1": {
+        "prefix": "[Analysis]",
+        "pattern": r'^\[analysis\]',
+        "parent_stage": "analysis",
+        "skill_dir": "stage1-analysis",
+        "gate": "Gate 1 (flash)"
+    },
+    "2": {
+        "prefix": "[Req & Test Spec]",
+        "pattern": r'^\[(req\s*&\s*test\s*spec|req/test\s*spec|test-spec|test\s*spec|specification|spec)\]',
+        "parent_stage": "test spec",
+        "skill_dir": "stage2-req-test-spec",
+        "gate": "Gate 2 (pro)"
+    },
+    "3": {
+        "prefix": "[Impl-Plan]",
+        "pattern": r'^\[(impl-plan|impl\s*plan|implementation\s*plan|design|plan)\]',
+        "parent_stage": "implementation plan",
+        "skill_dir": "stage3-impl-plan",
+        "gate": "Gate 3 (flash)"
+    },
+    "4": {
+        "prefix": "[Implementation]",
+        "pattern": r'^\[(implementation|impl)\]',
+        "parent_stage": "implementation",
+        "skill_dir": "stage4-implementation",
+        "gate": "Gate 4 (pro)"
+    },
+    "5": {
+        "prefix": "[Test]",
+        "pattern": r'^\[(test|verification)\]',
+        "parent_stage": "test",
+        "skill_dir": "stage5-verification",
+        "gate": "Gate 5 (pro)"
+    },
+}
+
+STAGE_ALIASES = {
+    "1": "1", "stage1": "1", "analysis": "1",
+    "2": "2", "stage2": "2", "test-spec": "2", "test_spec": "2", "test spec": "2", "req-test-spec": "2", "spec": "2",
+    "3": "3", "stage3": "3", "impl-plan": "3", "impl_plan": "3", "implementation plan": "3", "plan": "3",
+    "4": "4", "stage4": "4", "impl": "4", "implementation": "4",
+    "5": "5", "stage5": "5", "test": "5", "verification": "5",
+}
+
+STAGE_TO_SKILL_DIR = {
+    "analysis": "stage1-analysis",
+    "test spec": "stage2-req-test-spec",
+    "implementation plan": "stage3-impl-plan",
+    "implementation": "stage4-implementation",
+    "test": "stage5-verification",
+}
+
+def inject_stage_context(stage_name_lower, config=None):
+    """
+    Automatic Stage-Skill & Rule Context Injection (ATT-4290 Process Improvement #3).
+    Prints the target stage's SKILL.md and compact governance reminder to stdout
+    whenever a parent ticket enters a lifecycle stage.
+    """
+    skill_dir = STAGE_TO_SKILL_DIR.get((stage_name_lower or "").strip().lower())
+    if not skill_dir:
+        return
+    if os.environ.get("JIRA_SUPPRESS_CONTEXT_INJECTION") == "1":
+        return
+    if config is None:
+        try:
+            config = get_config()
+        except Exception:
+            config = {}
+    jira_url = config.get("JIRA_URL", "")
+    if "example.atlassian.net" in jira_url or "jira.test" in jira_url:
+        return
+
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    skill_path = os.path.join(repo_root, ".agents", "skills", skill_dir, "SKILL.md")
+    if not os.path.exists(skill_path):
+        return
+
+    try:
+        with open(skill_path, "r", encoding="utf-8") as f:
+            skill_text = f.read().strip()
+        print(f"\n{'=' * 72}")
+        print(f"=== AUTOMATIC STAGE CONTEXT INJECTION: {stage_name_lower.upper()} ({skill_dir}) ===")
+        print(f"{'=' * 72}\n")
+        print(skill_text)
+        print(f"\n{'=' * 72}")
+        print("=== CORE IN-SPRINT GOVERNANCE REMINDER (8 CORE RULES) ===")
+        print("1. Rule 1 (Obey the Rules): Explicit view_file of aspice_governance.md + domain doc at Ticket Start / Post-Compaction; stage SKILL.md injected above.")
+        print("2. Rule 2 (Autonomous Execution): Proceed continuously through Stages 1-5 and across sprint tickets without pausing.")
+        print("3. Rule 3 (Human Gate): Agents end at 'Final Review (Human)'; never transition parent tickets to 'Erledigt'.")
+        print("4. Rule 4 (Code Lock Until Gate 3): Run 'jira_util.py check-gate <Impl-Plan-Key>' before any Stage 4 production code edits.")
+        print("5. Rule 5 (Ticket Creation Stops): Creating a backlog/follow-up ticket never triggers implementation.")
+        print("6. Rule 6 (Unattended Escalation): Assign blocked sub-task to 'human' with question comment and continue with next ticket.")
+        print("7. Rule 7 (Zipper Principle): S1 pro/flash | S2 flash/pro | S3 pro/flash | S4 flash/pro (or pro/flash High-Risk) | S5 flash/pro.")
+        print("8. Rule 8 (One Commit & Hygiene): Use 'submit-stage' (agent1) and 'gate-verdict' (agent2); 1 squashed commit per ticket on sprint/<ID>.")
+        print(f"{'=' * 72}\n")
+    except Exception as e:
+        print(f"Notice: Could not inject stage context for {skill_dir}: {e}", file=sys.stderr)
+
 def resolve_desired_parent_stage_for_subtask(subtask_summary):
     s = (subtask_summary or "").strip().lower()
     if re.match(r'^\[analysis\]', s):
@@ -479,7 +579,7 @@ def resolve_desired_parent_stage_for_subtask(subtask_summary):
         return "final review (human)"
     return None
 
-def sync_parent_stage_on_subtask_done(parent_key, subtask_summary, role="agent1"):
+def sync_parent_stage_on_subtask_done(parent_key, subtask_summary, role="agent1", inject_context=True):
     desired_stage = resolve_desired_parent_stage_for_subtask(subtask_summary)
     if not desired_stage or not parent_key:
         return
@@ -489,17 +589,24 @@ def sync_parent_stage_on_subtask_done(parent_key, subtask_summary, role="agent1"
         parent_info = jira_request(parent_url, role=role)
         current_parent_status = parent_info.get("fields", {}).get("status", {}).get("name", "").strip().lower()
         if current_parent_status in ("erledigt", "done", desired_stage):
+            if inject_context and current_parent_status == desired_stage:
+                inject_stage_context(desired_stage, config=config)
             return
         if current_parent_status in PARENT_STAGE_ORDER and desired_stage in PARENT_STAGE_ORDER:
             curr_idx = PARENT_STAGE_ORDER.index(current_parent_status)
             target_idx = PARENT_STAGE_ORDER.index(desired_stage)
             if curr_idx < target_idx:
                 for step_stage in PARENT_STAGE_ORDER[curr_idx + 1 : target_idx + 1]:
-                    transition_issue(parent_key, step_stage, role=role)
+                    transition_issue(
+                        parent_key,
+                        step_stage,
+                        role=role,
+                        inject_context=(inject_context and step_stage == desired_stage)
+                    )
     except Exception as e:
         print(f"Warning: Could not auto-advance parent {parent_key} to '{desired_stage}': {e}", file=sys.stderr)
 
-def transition_issue(issue_key, status_name, role="agent1"):
+def transition_issue(issue_key, status_name, role="agent1", inject_context=True):
     config = get_config()
     # Check if issue is a subtask, its current status, summary, and parent
     issue_info_url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=issuetype,status,summary,parent"
@@ -628,10 +735,113 @@ def transition_issue(issue_key, status_name, role="agent1"):
     elif "bearbeitung" in norm_target_lower or "progress" in norm_target_lower:
         assign_issue(issue_key, "agent1", role=role)
 
+    # Automatic Stage-Skill & Rule Context Injection when parent ticket enters a lifecycle stage
+    if not is_subtask and inject_context and norm_target_lower in STAGE_TO_SKILL_DIR:
+        inject_stage_context(norm_target_lower, config=config)
+
     # Mandate ("Move main ticket forward once the sub-ticket is finished"):
     # When a stage subtask transitions to Erledigt, synchronously advance its parent ticket to the next stage column.
     if is_subtask and (norm_target_lower == "erledigt" or trans_name == "freigabe"):
-        sync_parent_stage_on_subtask_done(parent_key, issue_summary, role=role)
+        sync_parent_stage_on_subtask_done(parent_key, issue_summary, role=role, inject_context=inject_context)
+
+def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, role="agent1"):
+    """
+    Composite Stage-Submission Command for agent1 (ATT-4290 Process Improvement #2).
+    1. Resolves stage (1..5) and ensures parent ticket is in the matching stage status.
+    2. Finds existing stage sub-task under parent_key or creates it with canonical prefix and --add-to-sprint.
+    3. Updates the sub-task description with text_or_file.
+    4. Transitions the sub-task to 'In Überprüfung' (in_review) and outputs SUBTASK_KEY.
+    """
+    stage_id = STAGE_ALIASES.get((stage_arg or "").strip().lower())
+    if not stage_id or stage_id not in STAGE_SPECS:
+        print(f"Error: Invalid stage '{stage_arg}'. Use 1|analysis, 2|test-spec, 3|impl-plan, 4|impl, or 5|test.", file=sys.stderr)
+        sys.exit(1)
+
+    spec = STAGE_SPECS[stage_id]
+    if text_or_file.startswith("@") and os.path.exists(text_or_file[1:]):
+        with open(text_or_file[1:], "r", encoding="utf-8") as f:
+            description_text = f.read()
+    else:
+        description_text = text_or_file
+
+    config = get_config()
+    parent_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=summary,status,subtasks"
+    parent_info = jira_request(parent_url, role=role)
+    parent_fields = parent_info.get("fields", {})
+    parent_summary = parent_fields.get("summary", "")
+    current_parent_status = parent_fields.get("status", {}).get("name", "").strip().lower()
+    desired_parent_stage = spec["parent_stage"]
+
+    # Ensure parent is in the matching stage status
+    if current_parent_status in PARENT_STAGE_ORDER and desired_parent_stage in PARENT_STAGE_ORDER:
+        curr_idx = PARENT_STAGE_ORDER.index(current_parent_status)
+        target_idx = PARENT_STAGE_ORDER.index(desired_parent_stage)
+        if curr_idx < target_idx:
+            for step_stage in PARENT_STAGE_ORDER[curr_idx + 1 : target_idx + 1]:
+                transition_issue(parent_key, step_stage, role=role, inject_context=False)
+
+    # Check if sub-task for this stage already exists
+    subtasks = parent_fields.get("subtasks", [])
+    existing_subtask_key = None
+    existing_subtask_status = None
+    for st in subtasks:
+        st_summary = st.get("fields", {}).get("summary", "").strip()
+        if re.search(spec["pattern"], st_summary, re.IGNORECASE):
+            existing_subtask_key = st.get("key")
+            existing_subtask_status = st.get("fields", {}).get("status", {}).get("name", "").strip().lower()
+            break
+
+    if existing_subtask_key:
+        subtask_key = existing_subtask_key
+        print(f"Found existing {spec['prefix']} sub-task {subtask_key} for {parent_key}.")
+        update_issue_description(subtask_key, description_text, role=role)
+    else:
+        raw_summary = summary_override if summary_override else f"{spec['prefix']} {parent_summary}"
+        subtask_key = create_subtask(
+            parent_key,
+            raw_summary,
+            description_text,
+            role="coordinator",
+            add_to_sprint=True
+        )
+        existing_subtask_status = "zu erledigen"
+
+    # Transition sub-task to in_review (stepping through in_progress if currently in 'zu erledigen')
+    if existing_subtask_status in ("zu erledigen", "to do", "open"):
+        transition_issue(subtask_key, "in_progress", role=role, inject_context=False)
+    transition_issue(subtask_key, "in_review", role=role, inject_context=False)
+    print(f"SUBTASK_KEY: {subtask_key} ready for {spec['gate']} review.")
+    return subtask_key
+
+def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
+    """
+    Composite Gate-Verdict Command for agent2 (ATT-4290 Process Improvement #2).
+    Hardwired to role='agent2' (Anti-Spoofing lock).
+    1. Assigns subtask_key to agent2.
+    2. Posts text_or_file as a role-attributed agent2 audit comment on subtask_key.
+    3. If PASS: transitions subtask_key via 'freigabe' (closes sub-task to Erledigt, advances parent, and injects next stage SKILL.md).
+    4. If REVISION: transitions subtask_key back to 'in_progress' and assigns to agent1.
+    """
+    auditor_role = "agent2"
+    verdict_norm = (verdict_arg or "").strip().upper()
+    if verdict_norm in ("PASS", "RECOMMEND PASS", "FREIGABE", "APPROVED"):
+        is_pass = True
+    elif verdict_norm in ("REVISION", "RECOMMEND REVISION", "CHALLENGED", "REWORK", "FAIL"):
+        is_pass = False
+    else:
+        print(f"Error: Invalid verdict '{verdict_arg}'. Expected PASS or REVISION.", file=sys.stderr)
+        sys.exit(1)
+
+    assign_issue(subtask_key, auditor_role, role=auditor_role)
+    add_comment(subtask_key, text_or_file, role=auditor_role)
+
+    if is_pass:
+        transition_issue(subtask_key, "freigabe", role=auditor_role, inject_context=True)
+        print(f"GATE_VERDICT: PASS recorded on {subtask_key} by {auditor_role}.")
+    else:
+        transition_issue(subtask_key, "in_progress", role=auditor_role, inject_context=False)
+        assign_issue(subtask_key, "agent1", role=auditor_role)
+        print(f"GATE_VERDICT: REVISION recorded on {subtask_key} by {auditor_role} (reassigned to agent1).")
 
 def add_comment(issue_key, text, role="agent1"):
     if text.startswith("@") and os.path.exists(text[1:]):
@@ -1012,6 +1222,9 @@ USAGE_TEXT = (
     "  search JQL                                            Search issues using JQL\n"
     "  ensure-retro                                          Check/create 'Review & Retro' ticket in the active sprint\n"
     "  check-gate KEY                                        Verify Impl-Plan subtask is Erledigt (Gate 3)\n"
+    "  submit-stage PARENT_KEY STAGE TEXT_OR_@FILE [--summary \"...\"]\n"
+    "                                                        Create/update stage subtask (1..5) and move to In Überprüfung\n"
+    "  gate-verdict SUBTASK_KEY PASS|REVISION TEXT_OR_@FILE  Record agent2 gate verdict, close/advance on PASS or reopen on REVISION\n"
     "  move KEY <target>                                     Transition issue (todo|in_progress|in_review|freigabe|analysis|test|final review)\n"
     "  comment KEY TEXT_OR_@FILE                             Add role-attributed comment\n"
     "  update-desc KEY TEXT_OR_@FILE                         Update issue description\n"
@@ -1047,6 +1260,23 @@ if __name__ == "__main__":
         print_status(remaining_argv[1], role=active_role)
     elif cmd == "check-gate" and len(remaining_argv) == 2:
         check_gate(remaining_argv[1], role=active_role)
+    elif cmd in ("submit-stage", "submit_stage") and len(remaining_argv) >= 4:
+        parent_k = remaining_argv[1]
+        stage_arg = remaining_argv[2]
+        text_arg = remaining_argv[3]
+        summ_override = None
+        idx = 4
+        while idx < len(remaining_argv):
+            arg = remaining_argv[idx]
+            if arg.startswith("--summary="):
+                summ_override = arg.split("=", 1)[1]
+            elif arg == "--summary" and idx + 1 < len(remaining_argv):
+                summ_override = remaining_argv[idx + 1]
+                idx += 1
+            idx += 1
+        submit_stage(parent_k, stage_arg, text_arg, summary_override=summ_override, role=active_role)
+    elif cmd in ("gate-verdict", "gate_verdict") and len(remaining_argv) == 4:
+        gate_verdict(remaining_argv[1], remaining_argv[2], remaining_argv[3], role="agent2")
     elif cmd == "versions":
         list_versions(role=active_role)
     elif cmd in ("set-fixversion", "set-fix-version") and len(remaining_argv) == 3:
