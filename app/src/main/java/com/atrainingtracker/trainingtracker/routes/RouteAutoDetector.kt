@@ -168,11 +168,16 @@ class RouteAutoDetector(
             return (earthRadius * c).toFloat()
         }
 
-        fun computeBearing(from: LatLng, to: LatLng): Float {
-            val lat1 = Math.toRadians(from.latitude)
-            val lon1 = Math.toRadians(from.longitude)
-            val lat2 = Math.toRadians(to.latitude)
-            val lon2 = Math.toRadians(to.longitude)
+        fun computeBearing(
+            lat1Deg: Double,
+            lon1Deg: Double,
+            lat2Deg: Double,
+            lon2Deg: Double
+        ): Float {
+            val lat1 = Math.toRadians(lat1Deg)
+            val lon1 = Math.toRadians(lon1Deg)
+            val lat2 = Math.toRadians(lat2Deg)
+            val lon2 = Math.toRadians(lon2Deg)
 
             val dLon = lon2 - lon1
             val y = sin(dLon) * cos(lat2)
@@ -180,6 +185,9 @@ class RouteAutoDetector(
             var bearing = Math.toDegrees(atan2(y, x)).toFloat()
             return (bearing + 360f) % 360f
         }
+
+        fun computeBearing(from: LatLng, to: LatLng): Float =
+            computeBearing(from.latitude, from.longitude, to.latitude, to.longitude)
 
         fun computeAngleDifference(angle1: Float, angle2: Float): Float {
             val diff = abs(angle1 - angle2) % 360f

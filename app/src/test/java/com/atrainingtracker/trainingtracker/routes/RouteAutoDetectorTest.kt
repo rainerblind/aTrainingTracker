@@ -180,4 +180,41 @@ class RouteAutoDetectorTest {
         assertEquals(1, matches.size)
         assertEquals(30L, matches[0].summary.id)
     }
+
+    @Test
+    fun testRouteAutoDetector_computeBearingPrimitiveOverload_matchesLatLng() {
+        val testPairs = listOf(
+            // North
+            Pair(LatLng(48.0, 11.0), LatLng(48.01, 11.0)),
+            // East
+            Pair(LatLng(48.0, 11.0), LatLng(48.0, 11.01)),
+            // South
+            Pair(LatLng(48.0, 11.0), LatLng(47.99, 11.0)),
+            // West
+            Pair(LatLng(48.0, 11.0), LatLng(48.0, 10.99)),
+            // Northeast
+            Pair(LatLng(48.0, 11.0), LatLng(48.01, 11.01)),
+            // Northwest
+            Pair(LatLng(48.0, 11.0), LatLng(48.01, 10.99)),
+            // Southeast
+            Pair(LatLng(48.0, 11.0), LatLng(47.99, 11.01)),
+            // Southwest
+            Pair(LatLng(48.0, 11.0), LatLng(47.99, 10.99))
+        )
+
+        for ((p1, p2) in testPairs) {
+            val bearingLatLng = RouteAutoDetector.computeBearing(p1, p2)
+            val bearingPrimitive = RouteAutoDetector.computeBearing(
+                p1.latitude, p1.longitude,
+                p2.latitude, p2.longitude
+            )
+            assertEquals(
+                "Bearing mismatch for $p1 -> $p2",
+                bearingLatLng,
+                bearingPrimitive,
+                0.001f
+            )
+        }
+    }
 }
+

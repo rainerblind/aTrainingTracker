@@ -19,6 +19,7 @@ import com.google.android.gms.maps.model.LatLng
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -258,6 +259,80 @@ class TurnCueDetectorTest {
 
         val cues = TurnCueDetector.detectGeometricCuesFromLatLng(pts)
         assertTrue("High-frequency +-3m GPS jitter must produce 0 cues", cues.isEmpty())
+    }
+
+    @Test
+    fun testDetectGeometricCues_sparseVertexOutboundSegment_interpolatesExactBoundary() {
+        // 30m North (5m steps), 5m East (sharp 90 deg turn), 100m East (sparse straightaway)
+        val pts = mutableListOf<LatLng>()
+        for (i in 0..6) {
+            pts.add(offsetLatLng(origin, i * 5.0, 0.0))
+        }
+        pts.add(offsetLatLng(origin, 30.0, 5.0))
+        pts.add(offsetLatLng(origin, 30.0, 105.0))
+
+        val cues = TurnCueDetector.detectGeometricCuesFromLatLng(pts)
+        assertEquals(1, cues.size)
+        assertEquals(TurnDirection.RIGHT, cues[0].direction)
+        assertTrue("Apex anchored at corner (~30m)", abs(cues[0].distanceFromStart - 30.0) <= 5.0)
+    }
+
+    @Test
+    fun testDetectGeometricCues_sparseVertexInboundSegment_interpolatesExactBoundary() {
+        // 100m North (sparse approach), 5m East (sharp 90 deg turn), 30m East (5m steps)
+        val pts = mutableListOf<LatLng>()
+        pts.add(offsetLatLng(origin, 0.0, 0.0))
+        pts.add(offsetLatLng(origin, 100.0, 0.0))
+        pts.add(offsetLatLng(origin, 100.0, 5.0))
+        for (i in 2..7) {
+            pts.add(offsetLatLng(origin, 100.0, i * 5.0))
+        }
+
+        val cues = TurnCueDetector.detectGeometricCuesFromLatLng(pts)
+        assertEquals(1, cues.size)
+        assertEquals(TurnDirection.RIGHT, cues[0].direction)
+        assertTrue("Apex anchored at corner (~100m)", abs(cues[0].distanceFromStart - 100.0) <= 5.0)
+    }
+
+    @Test
+    fun testTurnCueDetector_deadCodeAndBuffersRetirementContract() {
+        val candidatePaths = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/routes/TurnCueDetector.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/routes/TurnCueDetector.kt")
+        )
+        val file = candidatePaths.firstOrNull { it.exists() }
+        assertTrue("TurnCueDetector.kt source file must exist", file != null && file.exists())
+        val source = file!!.readText()
+
+        assertTrue("smoothedBearings buffer must be removed", !source.contains("smoothedBearings"))
+        assertTrue("calcWindowBearing helper must be removed", !source.contains("calcWindowBearing"))
+        assertTrue("inBearings buffer must be removed", !source.contains("inBearings"))
+
+        // TurnCueDetectorConfig must retain smoothingRadiusMeters with default 2.5
+        val config = TurnCueDetectorConfig()
+        assertEquals(2.5, config.smoothingRadiusMeters, 0.001)
+    }
+
+    @Test
+    fun testDetectGeometricCues_performanceBenchmark5000Points() {
+        val pts = ArrayList<LatLng>(5000)
+        var curN = 0.0
+        var curE = 0.0
+        for (i in 0 until 5000) {
+            // Alternate straight North and East every 500 points
+            if ((i / 500) % 2 == 0) {
+                curN += 5.0
+            } else {
+                curE += 5.0
+            }
+            pts.add(offsetLatLng(origin, curN, curE))
+        }
+
+        val duration = measureTimeMillis {
+            val cues = TurnCueDetector.detectGeometricCuesFromLatLng(pts)
+            assertTrue("Detected turns along 5,000pt track", cues.isNotEmpty())
+        }
+        assertTrue("5,000 points processed in < 100ms, was ${duration}ms", duration < 100)
     }
 
     @Test
