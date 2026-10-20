@@ -241,8 +241,6 @@ object TuningPreferencesDefaults {
     const val MAX_AUTO_PAUSE_DEBOUNCE_SEC = 5
     const val STEP_AUTO_PAUSE_DEBOUNCE_SEC = 1
 
-    const val DEFAULT_ENABLE_BASIC_POWER_METRICS = true
-    const val DEFAULT_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY = true
     const val DEFAULT_ENABLE_COGGAN_POWER_METRICS = true
     const val DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY = true
     const val DEFAULT_ENABLE_PMC_MODEL = false
@@ -312,8 +310,6 @@ data class TuningConfig(
     val autoPauseOtherDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
     val autoPauseSpeedThresholdKmh: Float = autoPauseBikeSpeedThreshold.toFloat(),
     val autoPauseDebounceSec: Int = autoPauseBikeDebounceSec,
-    val enableBasicPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_BASIC_POWER_METRICS,
-    val showBasicPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY,
     val enableCogganPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS,
     val showCogganPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY,
     val enablePmcModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL,
@@ -450,8 +446,6 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_other_debounce_sec")
         val KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH: Preferences.Key<Float> = floatPreferencesKey("tuning_auto_pause_speed_threshold_kmh")
         val KEY_AUTO_PAUSE_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_debounce_sec")
-        val KEY_ENABLE_BASIC_POWER_METRICS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_basic_power_metrics")
-        val KEY_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_basic_power_in_workout_summary")
         val KEY_ENABLE_COGGAN_POWER_METRICS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_coggan_power_metrics")
         val KEY_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_coggan_power_in_workout_summary")
         val KEY_ENABLE_PMC_MODEL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_pmc_model")
@@ -518,8 +512,6 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
             KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
             KEY_AUTO_PAUSE_DEBOUNCE_SEC,
-            KEY_ENABLE_BASIC_POWER_METRICS,
-            KEY_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY,
             KEY_ENABLE_COGGAN_POWER_METRICS,
             KEY_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY,
             KEY_ENABLE_PMC_MODEL,
@@ -859,8 +851,6 @@ data class AutoPausePreferences(
             autoPauseOtherDebounceSec = autoPausePrefs.otherDebounceSec,
             autoPauseSpeedThresholdKmh = autoPausePrefs.bikeSpeedThreshold.toFloat(),
             autoPauseDebounceSec = autoPausePrefs.bikeDebounceSec,
-            enableBasicPowerMetrics = prefs[KEY_ENABLE_BASIC_POWER_METRICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_BASIC_POWER_METRICS,
-            showBasicPowerInWorkoutSummary = prefs[KEY_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY,
             enableCogganPowerMetrics = prefs[KEY_ENABLE_COGGAN_POWER_METRICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS,
             showCogganPowerInWorkoutSummary = prefs[KEY_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY,
             enablePmcModel = prefs[KEY_ENABLE_PMC_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL,
@@ -869,10 +859,6 @@ data class AutoPausePreferences(
             enableCriticalPowerModel = prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL,
             showCriticalPowerInWorkoutSummary = prefs[KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY
         )
-    }
-
-    val enableBasicPowerMetricsFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[KEY_ENABLE_BASIC_POWER_METRICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_BASIC_POWER_METRICS
     }
 
     val enableCogganPowerMetricsFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -1084,8 +1070,6 @@ data class AutoPausePreferences(
             prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] = clampedRunDebounce
             prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] = clampedOtherSpeedThreshold
             prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] = clampedOtherDebounce
-            prefs[KEY_ENABLE_BASIC_POWER_METRICS] = config.enableBasicPowerMetrics
-            prefs[KEY_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY] = config.showBasicPowerInWorkoutSummary
             prefs[KEY_ENABLE_COGGAN_POWER_METRICS] = config.enableCogganPowerMetrics
             prefs[KEY_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY] = config.showCogganPowerInWorkoutSummary
             prefs[KEY_ENABLE_PMC_MODEL] = config.enablePmcModel

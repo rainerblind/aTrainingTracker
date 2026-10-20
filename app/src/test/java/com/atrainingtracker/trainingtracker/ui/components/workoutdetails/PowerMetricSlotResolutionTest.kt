@@ -24,7 +24,8 @@ import org.junit.Test
 
 /**
  * Unit test suite for power metric slot resolution with granular model enablement
- * and workout summary visibility flags (`REQ-UI-424.3`, `TST-UI-388.1`).
+ * and workout summary visibility flags (`REQ-UI-424.3`, `REQ-UI-415.1`, `TST-UI-388.1`, `TST-UI-378.1`).
+ * Verifies Coggan-only resolution without basic power fallback.
  */
 class PowerMetricSlotResolutionTest {
 
@@ -60,9 +61,7 @@ class PowerMetricSlotResolutionTest {
         val slots = resolvePowerMetricSlots(
             data = data,
             enableCogganPower = true,
-            showCogganPower = true,
-            enableBasicPower = true,
-            showBasicPower = true
+            showCogganPower = true
         )
         assertEquals(
             listOf(
@@ -75,49 +74,7 @@ class PowerMetricSlotResolutionTest {
     }
 
     @Test
-    fun `TST-UI-388_1 Case 2 Coggan summary disabled falls back to Basic Physics Work kJ and W per kg`() {
-        val data = createBaseData()
-        val slots = resolvePowerMetricSlots(
-            data = data,
-            enableCogganPower = true,
-            showCogganPower = false,
-            enableBasicPower = true,
-            showBasicPower = true
-        )
-        assertEquals(
-            listOf(
-                PowerMetricSlot.WORK_KJ,
-                PowerMetricSlot.POWER_TO_WEIGHT
-            ),
-            slots
-        )
-    }
-
-    @Test
-    fun `TST-UI-388_1 Case 3 Coggan summary disabled and Basic Power disabled returns empty list`() {
-        val data = createBaseData()
-        val slots = resolvePowerMetricSlots(
-            data = data,
-            enableCogganPower = true,
-            showCogganPower = false,
-            enableBasicPower = false
-        )
-        assertEquals(emptyList<PowerMetricSlot>(), slots)
-    }
-
-    @Test
-    fun `TST-UI-388_1 Case 4 Both Coggan and Basic Power summary disabled returns empty list`() {
-        val data = createBaseData()
-        val slots = resolvePowerMetricSlots(
-            data = data,
-            showCogganPower = false,
-            showBasicPower = false
-        )
-        assertEquals(emptyList<PowerMetricSlot>(), slots)
-    }
-
-    @Test
-    fun `TST-UI-388_1 Case 5 Coggan enabled without FTP fills available slots from basic power when showBasicPower is true`() {
+    fun `TST-UI-388_1 Case 2 Missing FTP returns strictly Normalized Power without basic power fallback`() {
         val data = createBaseData(
             normalizedPowerWatts = 220.0,
             intensityFactor = null,
@@ -128,37 +85,90 @@ class PowerMetricSlotResolutionTest {
         val slots = resolvePowerMetricSlots(
             data = data,
             enableCogganPower = true,
-            showCogganPower = true,
-            showBasicPower = true
-        )
-        assertEquals(
-            listOf(
-                PowerMetricSlot.NORMALIZED_POWER,
-                PowerMetricSlot.WORK_KJ,
-                PowerMetricSlot.POWER_TO_WEIGHT
-            ),
-            slots
-        )
-    }
-
-    @Test
-    fun `TST-UI-388_1 Case 6 Coggan enabled without FTP does not fill from basic power when showBasicPower is false`() {
-        val data = createBaseData(
-            normalizedPowerWatts = 220.0,
-            intensityFactor = null,
-            tss = null,
-            workKj = 1100.0,
-            avgPowerToWeight = 3.1
-        )
-        val slots = resolvePowerMetricSlots(
-            data = data,
-            enableCogganPower = true,
-            showCogganPower = true,
-            showBasicPower = false
+            showCogganPower = true
         )
         assertEquals(
             listOf(
                 PowerMetricSlot.NORMALIZED_POWER
+            ),
+            slots
+        )
+    }
+
+    @Test
+    fun `TST-UI-388_1 Case 3 Coggan summary disabled returns empty list`() {
+        val data = createBaseData()
+        val slots = resolvePowerMetricSlots(
+            data = data,
+            enableCogganPower = true,
+            showCogganPower = false
+        )
+        assertEquals(emptyList<PowerMetricSlot>(), slots)
+    }
+
+    @Test
+    fun `TST-UI-388_1 Case 4 Coggan master disabled returns empty list`() {
+        val data = createBaseData()
+        val slots = resolvePowerMetricSlots(
+            data = data,
+            enableCogganPower = false,
+            showCogganPower = true
+        )
+        assertEquals(emptyList<PowerMetricSlot>(), slots)
+    }
+
+    @Test
+    fun `TST-UI-388_1 Case 5 Missing Normalized Power returns empty list`() {
+        val data = createBaseData(
+            normalizedPowerWatts = null,
+            intensityFactor = 0.85,
+            tss = 95.0
+        )
+        val slots = resolvePowerMetricSlots(
+            data = data,
+            enableCogganPower = true,
+            showCogganPower = true
+        )
+        assertEquals(emptyList<PowerMetricSlot>(), slots)
+    }
+
+    @Test
+    fun `TST-UI-388_1 Case 6 Partial FTP with only IF present returns NP and IF`() {
+        val data = createBaseData(
+            normalizedPowerWatts = 220.0,
+            intensityFactor = 0.82,
+            tss = null
+        )
+        val slots = resolvePowerMetricSlots(
+            data = data,
+            enableCogganPower = true,
+            showCogganPower = true
+        )
+        assertEquals(
+            listOf(
+                PowerMetricSlot.NORMALIZED_POWER,
+                PowerMetricSlot.INTENSITY_FACTOR
+            ),
+            slots
+        )
+    }
+
+    @Test
+    fun `TST-UI-388_1 Case 7 Partial FTP with only TSS present returns NP and TSS`() {
+        val data = createBaseData(
+            normalizedPowerWatts = 220.0,
+            intensityFactor = null,
+            tss = 75.0
+        )
+        val slots = resolvePowerMetricSlots(
+            data = data,
+            enableCogganPower = true,
+            showCogganPower = true
+        )
+        assertEquals(
+            listOf(
+                PowerMetricSlot.NORMALIZED_POWER,
+                PowerMetricSlot.TSS
             ),
             slots
         )

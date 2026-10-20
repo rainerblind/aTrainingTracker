@@ -75,6 +75,8 @@ enum class BatchSportMode {
  * Uses [AppModalBottomSheet] for presentation consistency with [EditRouteScreen] and [RouteFilterBottomSheet].
  * Employs [FlowRow] per Rule 54 to ensure sport type chips wrap intact without vertical text crushing,
  * and configures multi-line centered text on segmented buttons to prevent mid-word truncation across locales.
+ * Orders sport selection chips canonically as [BSportType.BIKE], [BSportType.RUN], and [BSportType.UNKNOWN]
+ * with catch-all Other on the far right per Rule 57 and [EditRouteScreen] parity.
  * Defaults sport preselection neutrally to [BSportType.UNKNOWN].
  * Must be invoked on the Android UI thread.
  *
@@ -162,7 +164,7 @@ fun BatchImportSportTypeDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf(BSportType.UNKNOWN, BSportType.BIKE, BSportType.RUN).forEach { sport ->
+                        listOf(BSportType.BIKE, BSportType.RUN, BSportType.UNKNOWN).forEach { sport ->
                             FilterChip(
                                 selected = selectedSport == sport,
                                 onClick = { selectedSport = sport },

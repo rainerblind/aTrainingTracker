@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -36,13 +38,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -50,15 +58,18 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * Floating Cockpit Bike Bell Button (REQ-UI-421.2, Governance Rule 53).
+ * Floating Cockpit Bike Bell Button (REQ-UI-421.2, Governance Rules 53 & 58).
  * Styled as a Material 3 ElevatedButton (height 72.dp, RoundedCornerShape(12.dp)) matching LapButton.
  * Enabled across READY, TRACKING, and PAUSED modes so cyclists can test or ring the bell
  * while stationary or before pressing Start.
- * Features rotation shake animation on ring, haptic feedback, and isolated onClick tap handling
- * without nested pointer input contention.
+ * Features rotation shake animation on ring, continuous looping shake on press-and-hold,
+ * haptic feedback, and isolated onClick tap handling without nested pointer input contention.
  */
 @Composable
 fun BikeBellButton(
@@ -72,6 +83,11 @@ fun BikeBellButton(
     val coroutineScope = rememberCoroutineScope()
     val rotation = remember { Animatable(0f) }
     val haptic = LocalHapticFeedback.current
+    val viewConfiguration = LocalViewConfiguration.current
+    val interactionSource = remember { MutableInteractionSource() }
+
+    var isContinuousRingActive by remember { mutableStateOf(false) }
+    var wasLongPressHandled by remember { mutableStateOf(false) }
 
     fun triggerShakeAnimation() {
         coroutineScope.launch {
@@ -84,15 +100,82 @@ fun BikeBellButton(
         }
     }
 
+    LaunchedEffect(interactionSource, isAvailable) {
+        if (!isAvailable) {
+            if (isContinuousRingActive) {
+                isContinuousRingActive = false
+                onContinuousRingStop()
+                rotation.snapTo(0f)
+            }
+            return@LaunchedEffect
+        }
+        var longPressJob: Job? = null
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    wasLongPressHandled = false
+                    longPressJob?.cancel()
+                    longPressJob = launch {
+                        delay(viewConfiguration.longPressTimeoutMillis)
+                        wasLongPressHandled = true
+                        isContinuousRingActive = true
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onContinuousRingStart()
+                        while (isActive) {
+                            rotation.animateTo(-15f, animationSpec = tween(40))
+                            rotation.animateTo(15f, animationSpec = tween(60))
+                            rotation.animateTo(-10f, animationSpec = tween(50))
+                            rotation.animateTo(10f, animationSpec = tween(50))
+                        }
+                    }
+                }
+                is PressInteraction.Release -> {
+                    longPressJob?.cancel()
+                    if (isContinuousRingActive) {
+                        isContinuousRingActive = false
+                        onContinuousRingStop()
+                        coroutineScope.launch {
+                            rotation.animateTo(0f, animationSpec = tween(40))
+                        }
+                    }
+                }
+                is PressInteraction.Cancel -> {
+                    longPressJob?.cancel()
+                    if (isContinuousRingActive) {
+                        isContinuousRingActive = false
+                        onContinuousRingStop()
+                        coroutineScope.launch {
+                            rotation.animateTo(0f, animationSpec = tween(40))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            if (isContinuousRingActive) {
+                isContinuousRingActive = false
+                onContinuousRingStop()
+            }
+        }
+    }
+
     ElevatedButton(
         onClick = {
             if (isAvailable) {
-                triggerShakeAnimation()
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onSingleRing()
+                if (wasLongPressHandled) {
+                    wasLongPressHandled = false
+                } else {
+                    triggerShakeAnimation()
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onSingleRing()
+                }
             }
         },
         enabled = isAvailable,
+        interactionSource = interactionSource,
         modifier = modifier.height(72.dp),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.elevatedButtonColors(

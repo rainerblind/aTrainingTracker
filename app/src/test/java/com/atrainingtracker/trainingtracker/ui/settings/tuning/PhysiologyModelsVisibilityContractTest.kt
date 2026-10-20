@@ -37,15 +37,13 @@ import java.io.File
 
 /**
  * Unit tests verifying Physiology & Training Models defaults, consumer visibility contracts,
- * sensor filtering, and 9-locale localization parity (`REQ-UI-403`, `TST-UI-366`).
+ * sensor filtering, Rule 59 subordinate hierarchy, and 9-locale localization parity (`REQ-UI-403`, `REQ-UI-424`, `TST-UI-366`, `TST-UI-388`).
  */
 class PhysiologyModelsVisibilityContractTest {
 
     @Test
     fun `TST-UI-366_1 default TuningConfig enables only Coggan power metrics`() {
         val defaultConfig = TuningConfig()
-        assertTrue(TuningPreferencesDefaults.DEFAULT_ENABLE_BASIC_POWER_METRICS)
-        assertTrue(TuningPreferencesDefaults.DEFAULT_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY)
         assertTrue(TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS)
         assertTrue(TuningPreferencesDefaults.DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY)
         assertFalse(TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL)
@@ -54,8 +52,6 @@ class PhysiologyModelsVisibilityContractTest {
         assertFalse(TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL)
         assertTrue(TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY)
 
-        assertTrue(defaultConfig.enableBasicPowerMetrics)
-        assertTrue(defaultConfig.showBasicPowerInWorkoutSummary)
         assertTrue(defaultConfig.enableCogganPowerMetrics)
         assertTrue(defaultConfig.showCogganPowerInWorkoutSummary)
         assertFalse(defaultConfig.enablePmcModel)
@@ -195,6 +191,7 @@ class PhysiologyModelsVisibilityContractTest {
         assertTrue(detailsContent.contains("enableCogganPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS"))
         assertTrue(detailsContent.contains("enableAerobicEfficiencyModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL"))
         assertTrue(detailsContent.contains("enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL"))
+        assertFalse("WorkoutDetails must not declare basic power metrics", detailsContent.contains("enableBasicPowerMetrics"))
         assertFalse("WorkoutDetails must not use FlowRow pill badges (Section 5.10)", detailsContent.contains("FlowRow("))
         assertFalse("WorkoutDetails must not use surfaceContainerHighest pills (Section 5.10)", detailsContent.contains("surfaceContainerHighest"))
         assertTrue(detailsContent.contains("fun WorkoutDomainRow("))
@@ -240,10 +237,7 @@ class PhysiologyModelsVisibilityContractTest {
             "tuning_physiology_ef_desc",
             "tuning_physiology_cp_title",
             "tuning_physiology_cp_desc",
-            "tuning_physiology_basic_power_title",
-            "tuning_physiology_basic_power_desc",
             "tuning_physiology_show_in_workout_summary",
-            "tuning_physiology_show_in_workout_summary_desc",
             "workout_domain_efficiency",
             "workout_ef_short",
             "workout_pwhr_short",
@@ -262,6 +256,12 @@ class PhysiologyModelsVisibilityContractTest {
             "workout_power_value_work_format"
         )
 
+        val deadKeys = listOf(
+            "tuning_physiology_basic_power_title",
+            "tuning_physiology_basic_power_desc",
+            "tuning_physiology_show_in_workout_summary_desc"
+        )
+
         val resBase = listOf(
             File("app/src/main/res"),
             File("src/main/res")
@@ -277,14 +277,21 @@ class PhysiologyModelsVisibilityContractTest {
                     xml.contains("name=\"$key\"")
                 )
             }
+            for (deadKey in deadKeys) {
+                assertFalse(
+                    "Locale $locale must NOT contain dead string key '$deadKey' (REQ-UI-424.6)",
+                    xml.contains("name=\"$deadKey\"")
+                )
+            }
         }
     }
 
     @Test
     fun `TST-UI-388_3 testTuningConfig_persistenceAndModularity`() {
         val allKeys = TuningPreferencesDataStore.ALL_KEYS
-        assertTrue(allKeys.contains(TuningPreferencesDataStore.KEY_ENABLE_BASIC_POWER_METRICS))
-        assertTrue(allKeys.contains(TuningPreferencesDataStore.KEY_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY))
+        val keyNames = allKeys.map { it.name }
+        assertFalse(keyNames.contains("enable_basic_power_metrics"))
+        assertFalse(keyNames.contains("show_basic_power_in_workout_summary"))
         assertTrue(allKeys.contains(TuningPreferencesDataStore.KEY_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY))
         assertTrue(allKeys.contains(TuningPreferencesDataStore.KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY))
         assertTrue(allKeys.contains(TuningPreferencesDataStore.KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY))
@@ -302,23 +309,24 @@ class PhysiologyModelsVisibilityContractTest {
         val sectionFile = resolveFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/PhysiologyModelsSection.kt")
         assertTrue(sectionFile.exists())
         val sectionContent = sectionFile.readText()
-        assertTrue(sectionContent.contains("enableBasicPowerMetrics: Boolean"))
-        assertTrue(sectionContent.contains("showBasicPowerInWorkoutSummary: Boolean"))
+        assertFalse("PhysiologyModelsSection must not contain enableBasicPowerMetrics", sectionContent.contains("enableBasicPowerMetrics"))
+        assertFalse("PhysiologyModelsSection must not contain showBasicPowerInWorkoutSummary", sectionContent.contains("showBasicPowerInWorkoutSummary"))
         assertTrue(sectionContent.contains("showCogganPowerInWorkoutSummary: Boolean"))
         assertTrue(sectionContent.contains("showAerobicEfficiencyInWorkoutSummary: Boolean"))
         assertTrue(sectionContent.contains("showCriticalPowerInWorkoutSummary: Boolean"))
-        assertTrue(sectionContent.contains("Modifier.padding(start = 16.dp)"))
+        assertTrue("Subordinate toggles must use SubordinateTuningToggleItem (Rule 59)", sectionContent.contains("SubordinateTuningToggleItem("))
 
         val filesToCheck = listOf(
             "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/PhysiologyModelsSection.kt",
             "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningScreen.kt",
-            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"
+            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt",
+            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt"
         )
         for (filePath in filesToCheck) {
             val f = resolveFile(filePath)
             assertTrue("File must exist: $filePath", f.exists())
             val lineCount = f.readLines().size
-            assertTrue("File $filePath must be < 400 lines (was: $lineCount)", lineCount < 400)
+            assertTrue("File $filePath must be < 400 lines (actual: $lineCount)", lineCount < 400)
         }
     }
 

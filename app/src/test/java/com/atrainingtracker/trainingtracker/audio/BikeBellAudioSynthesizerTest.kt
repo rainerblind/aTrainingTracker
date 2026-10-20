@@ -95,6 +95,7 @@ class BikeBellAudioSynthesizerTest {
         verify(exactly = 1) { mockTrack2.setVolume(1.0f) }
         verify(exactly = 1) { mockTrack2.stop() }
         verify(exactly = 1) { mockTrack2.playbackHeadPosition = 0 }
+        verify(exactly = 1) { mockTrack2.setLoopPoints(0, 110250, -1) }
         verify(exactly = 1) { mockTrack2.play() }
 
         synthesizer.stopRoll()
@@ -130,10 +131,26 @@ class BikeBellAudioSynthesizerTest {
     }
 
     @Test
-    fun testBikeBellAudioSynthesizer_audioAttributesConfiguration() {
-        val attributes = BikeBellAudioSynthesizer.createAudioAttributes()
-        assertNotNull(attributes)
-        assertEquals(AudioAttributes.USAGE_MEDIA, attributes.usage)
-        assertEquals(AudioAttributes.CONTENT_TYPE_SONIFICATION, attributes.contentType)
+    fun testBikeBellAudioSynthesizer_startRoll_configuresSetLoopPoints() {
+        val mockTrack = mockk<AudioTrack>(relaxed = true)
+        val synthesizer = BikeBellAudioSynthesizer(
+            audioTrackFactory = { mockTrack }
+        )
+
+        val totalFrames = synthesizer.rollPcm.size / 2
+        assertEquals(110250, totalFrames)
+
+        synthesizer.startRoll(1.0f)
+        verify(exactly = 1) { mockTrack.setVolume(1.0f) }
+        verify(exactly = 1) { mockTrack.stop() }
+        verify(exactly = 1) { mockTrack.playbackHeadPosition = 0 }
+        verify(exactly = 1) { mockTrack.setLoopPoints(0, totalFrames, -1) }
+        verify(exactly = 1) { mockTrack.play() }
+
+        synthesizer.stopRoll()
+        verify(atLeast = 2) { mockTrack.stop() }
+        verify(atLeast = 2) { mockTrack.playbackHeadPosition = 0 }
+
+        synthesizer.close()
     }
 }

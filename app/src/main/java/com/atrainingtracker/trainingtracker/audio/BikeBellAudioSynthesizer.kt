@@ -237,7 +237,8 @@ class BikeBellAudioSynthesizer(
     }
 
     /**
-     * Starts continuous striker roll (*"Brriiiing!"*) playback at the specified [volume].
+     * Starts continuous striker roll (*"Brriiiing!"*) playback at the specified [volume]
+     * looping indefinitely until [stopRoll] is invoked (REQ-UI-421.4).
      */
     fun startRoll(volume: Float = 1.0f) {
         synchronized(lock) {
@@ -248,6 +249,8 @@ class BikeBellAudioSynthesizer(
                 track.setVolume(clamped)
                 track.stop()
                 track.playbackHeadPosition = 0
+                val totalFrames = rollPcm.size / 2
+                track.setLoopPoints(0, totalFrames, -1)
                 track.play()
             } catch (e: Exception) {
                 Log.w(TAG, "Error starting bell roll", e)

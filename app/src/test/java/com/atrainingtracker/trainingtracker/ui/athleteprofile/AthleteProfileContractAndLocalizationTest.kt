@@ -286,9 +286,9 @@ class AthleteProfileContractAndLocalizationTest {
                 detailsSource.contains("R.string.workout_power_value_watts_format") &&
                 detailsSource.contains("R.string.workout_power_value_if_format") &&
                 detailsSource.contains("R.string.workout_power_value_tss_format") &&
-                detailsSource.contains("R.string.workout_power_value_work_format") &&
-                detailsSource.contains("R.string.workout_power_metrics_wkg_format") &&
-                detailsSource.contains("R.string.workout_power_metrics_vi_format")
+                detailsSource.contains("R.string.workout_power_metrics_vi_format") &&
+                !detailsSource.contains("R.string.workout_power_value_work_format") &&
+                !detailsSource.contains("R.string.workout_power_metrics_wkg_format")
         )
     }
 }

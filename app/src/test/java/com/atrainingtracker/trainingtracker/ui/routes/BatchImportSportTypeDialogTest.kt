@@ -109,10 +109,8 @@ class BatchImportSportTypeDialogTest {
             content.contains("mutableStateOf(BSportType.UNKNOWN)")
         )
         assertTrue(
-            "Must include BSportType.UNKNOWN, BSportType.BIKE, BSportType.RUN",
-            content.contains("BSportType.UNKNOWN") &&
-                    content.contains("BSportType.BIKE") &&
-                    content.contains("BSportType.RUN")
+            "Must order sport chips as Bike, Run, Other per Rule 57 and EditRouteScreen",
+            content.contains("listOf(BSportType.BIKE, BSportType.RUN, BSportType.UNKNOWN)")
         )
 
         // 5. Explanatory hint in INDIVIDUAL mode
