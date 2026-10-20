@@ -194,6 +194,12 @@ class MainActivityWithNavigation :
 
     protected lateinit var mTrainingApplication: TrainingApplication
     protected var mSelectedFragmentId: Int = DEFAULT_SELECTED_FRAGMENT_ID
+
+    @get:VisibleForTesting
+    @set:VisibleForTesting
+    internal var selectedFragmentIdForTesting: Int
+        get() = mSelectedFragmentId
+        set(value) { mSelectedFragmentId = value }
     protected var mDrawerLayout: DrawerLayout? = null
     protected val mDrawerController: NavigationDrawerController =
         NavigationDrawerController(DEFAULT_SELECTED_FRAGMENT_ID, R.string.tab_start)
@@ -296,19 +302,22 @@ class MainActivityWithNavigation :
         antDialogState = AntDialogState.MissingAdapter
     }
 
-    override fun onNewIntent(intent: Intent) {
+    public override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (DEBUG) Log.d(TAG, "onNewIntent")
         setIntent(intent)
         handleIntent(intent)
     }
 
-    private fun handleIntent(intent: Intent?) {
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal fun handleIntent(intent: Intent?) {
         if (intent == null) {
             return
         }
         if (intent.getBooleanExtra(EXTRA_RESUME_INTERRUPTED_WORKOUT, false)) {
             intent.removeExtra(EXTRA_RESUME_INTERRUPTED_WORKOUT)
+            intent.removeExtra(SELECTED_FRAGMENT)
+            intent.removeExtra(EXTRA_DRAWER_ITEM_ID)
             mResumingFromInterruptedNotification = true
             try {
                 NotificationManagerCompat.from(this).cancel(TrackerService.TRACKING_INTERRUPTED_NOTIFICATION_ID)
@@ -320,31 +329,38 @@ class MainActivityWithNavigation :
             chooseResume()
         } else if (intent.hasExtra(EXTRA_DRAWER_ITEM_ID)) {
             val drawerItemId = intent.getIntExtra(EXTRA_DRAWER_ITEM_ID, -1)
+            intent.removeExtra(EXTRA_DRAWER_ITEM_ID)
             if (drawerItemId != -1) {
                 mSelectedFragmentId = drawerItemId
                 navigateToDrawerItem(mSelectedFragmentId)
             }
         } else if (intent.hasExtra(SELECTED_FRAGMENT)) {
-            try {
-                val selectedName = intent.getStringExtra(SELECTED_FRAGMENT)
-                if (selectedName != null) {
+            val selectedName = intent.getStringExtra(SELECTED_FRAGMENT)
+            intent.removeExtra(SELECTED_FRAGMENT)
+            if (selectedName != null) {
+                try {
                     val selected = SelectedFragment.valueOf(selectedName)
-                    if (selected == SelectedFragment.WORKOUT_LIST) {
-                        mSelectedFragmentId = R.id.drawer_workouts
-                        navigateToDrawerItem(mSelectedFragmentId)
-                    } else if (selected == SelectedFragment.START_OR_TRACKING) {
-                        mSelectedFragmentId = R.id.drawer_start_tracking
-                        navigateToDrawerItem(mSelectedFragmentId)
-                    } else if (selected == SelectedFragment.SENSORS) {
-                        mSelectedFragmentId = R.id.drawer_my_sensors
-                        navigateToDrawerItem(mSelectedFragmentId)
+                    when (selected) {
+                        SelectedFragment.WORKOUT_LIST -> {
+                            mSelectedFragmentId = R.id.drawer_workouts
+                            navigateToDrawerItem(mSelectedFragmentId)
+                        }
+                        SelectedFragment.START_OR_TRACKING -> {
+                            mSelectedFragmentId = R.id.drawer_start_tracking
+                            navigateToDrawerItem(mSelectedFragmentId)
+                        }
+                        SelectedFragment.SENSORS -> {
+                            mSelectedFragmentId = R.id.drawer_my_sensors
+                            navigateToDrawerItem(mSelectedFragmentId)
+                        }
                     }
+                } catch (ignored: IllegalArgumentException) {
                 }
-            } catch (ignored: IllegalArgumentException) {
             }
         }
 
         if (intent.getBooleanExtra(EXTRA_FILTER_CRITICAL_BATTERY, false)) {
+            intent.removeExtra(EXTRA_FILTER_CRITICAL_BATTERY)
             try {
                 val tabViewModel = ViewModelProvider(this)[DevicesTabbedViewModel::class.java]
                 tabViewModel.setCriticalBatteryFilter()
@@ -352,6 +368,8 @@ class MainActivityWithNavigation :
                 Log.e(TAG, "Error applying critical battery filter from intent: " + e.message, e)
             }
         }
+
+        setIntent(intent)
     }
 
     private lateinit var mStartTrackingFilter: IntentFilter
@@ -428,7 +446,9 @@ class MainActivityWithNavigation :
             }
         }
 
-        handleIntent(intent)
+        if (savedInstanceState == null) {
+            handleIntent(intent)
+        }
 
         checkGpsEnabledIfPermitted()
 
@@ -1051,6 +1071,14 @@ class MainActivityWithNavigation :
             NotificationManagerCompat.from(this).cancel(TrackerService.TRACKING_INTERRUPTED_NOTIFICATION_ID)
         } catch (e: Exception) {
             Log.e(TAG, "Error cancelling tracking interrupted notification: " + e.message, e)
+        }
+        if (TrainingApplication.isTracking()) {
+            Log.w(TAG, "chooseResume: already tracking, ignoring duplicate resume request")
+            return
+        }
+        if (!WorkoutSummariesDatabaseManager.getInstance(this).hasUnfinishedWorkout()) {
+            Log.w(TAG, "chooseResume: no unfinished workout found in database, ignoring resume request")
+            return
         }
         TrainingApplication.setResumeFromCrash(true)
         sendBroadcast(Intent(TrainingApplication.REQUEST_START_TRACKING).setPackage(packageName))
