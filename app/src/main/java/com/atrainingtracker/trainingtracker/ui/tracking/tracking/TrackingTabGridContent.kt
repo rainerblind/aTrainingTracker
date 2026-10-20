@@ -40,6 +40,7 @@ fun TrackingTabGridContent(
     tabViewId: Long,
     screenMode: ScreenMode,
     isTabActive: Boolean = true,
+    onRingBikeBell: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as? ComponentActivity
@@ -103,7 +104,7 @@ fun TrackingTabGridContent(
         }
     }
 
-    val tabToggleActions = remember(viewModel) {
+    val tabToggleActions = remember(viewModel, onRingBikeBell) {
         object : TabToggleActions {
             override fun onToggleMap(enabled: Boolean) {
                 viewModel.onUpdateShowMap(enabled)
@@ -128,6 +129,12 @@ fun TrackingTabGridContent(
             }
             override fun onToggleLapButton(enabled: Boolean) {
                 viewModel.onUpdateShowLapButton(enabled)
+            }
+            override fun onToggleBikeBell(enabled: Boolean) {
+                viewModel.onUpdateShowBikeBell(enabled)
+            }
+            override fun onRingBikeBell() {
+                onRingBikeBell()
             }
         }
     }

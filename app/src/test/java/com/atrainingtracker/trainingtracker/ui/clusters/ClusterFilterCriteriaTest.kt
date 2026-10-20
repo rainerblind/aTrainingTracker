@@ -171,14 +171,19 @@ class ClusterFilterCriteriaTest {
         assertEquals(1, ClusterFilterCriteria(query = "loop").activeFilterCount)
         assertEquals(1, ClusterFilterCriteria(equipmentName = "Bike").activeFilterCount)
         assertEquals(1, ClusterFilterCriteria(minDistanceMeters = 10000.0).activeFilterCount)
+        assertEquals(1, ClusterFilterCriteria(maxDistanceMeters = 25000.0).activeFilterCount)
+        assertEquals(1, ClusterFilterCriteria(minDistanceMeters = 10000.0, maxDistanceMeters = 25000.0).activeFilterCount)
         assertEquals(1, ClusterFilterCriteria(minHitCount = 5).activeFilterCount)
 
         val multi = ClusterFilterCriteria(
             query = "loop",
             equipmentName = "Bike",
+            minDistanceMeters = 10000.0,
+            maxDistanceMeters = 25000.0,
             minHitCount = 3
         )
-        assertEquals(3, multi.activeFilterCount)
+        // query (1) + equipment (1) + distance interval (1) + hitCount (1) = 4
+        assertEquals(4, multi.activeFilterCount)
     }
 
     @Test
@@ -187,6 +192,7 @@ class ClusterFilterCriteriaTest {
             query = "mountain pass",
             equipmentName = "BMC Teammachine",
             minDistanceMeters = 50000.0,
+            maxDistanceMeters = 90000.0,
             minHitCount = 5
         )
 
@@ -196,6 +202,7 @@ class ClusterFilterCriteriaTest {
         assertEquals(original.query, restored.query)
         assertEquals(original.equipmentName, restored.equipmentName)
         assertEquals(original.minDistanceMeters, restored.minDistanceMeters)
+        assertEquals(original.maxDistanceMeters, restored.maxDistanceMeters)
         assertEquals(original.minHitCount, restored.minHitCount)
         assertEquals(original.activeFilterCount, restored.activeFilterCount)
     }
@@ -206,6 +213,7 @@ class ClusterFilterCriteriaTest {
         assertTrue(emptyNull.isEmpty)
         assertNull(emptyNull.equipmentName)
         assertNull(emptyNull.minDistanceMeters)
+        assertNull(emptyNull.maxDistanceMeters)
         assertNull(emptyNull.minHitCount)
 
         val emptyBlank = ClusterFilterCriteria.fromJson("   ")
@@ -213,5 +221,102 @@ class ClusterFilterCriteriaTest {
 
         val corrupted = ClusterFilterCriteria.fromJson("{ invalid json !!!")
         assertTrue(corrupted.isEmpty)
+    }
+
+    /**
+     * TST-UI-380.3: Favorite Tracks (Cluster) Distance Interval & Filter Count.
+     * Verifies bounded interval matching, upper-bound only, lower-bound only,
+     * and strictly single-dimension counting for activeFilterCount.
+     */
+    @Test
+    fun testDistanceIntervalMatching_andActiveFilterCount_TST_UI_380_3() {
+        val c8k = createCluster(id = 1L, refDistance = 8000.0)
+        val c12_5k = createCluster(id = 2L, refDistance = 12500.0)
+        val c25k = createCluster(id = 3L, refDistance = 25000.0)
+        val c35k = createCluster(id = 4L, refDistance = 35000.0)
+        val c50k = createCluster(id = 5L, refDistance = 50000.0)
+        val c75k = createCluster(id = 6L, refDistance = 75000.0)
+
+        // 1. Bounded interval [10 km, 35 km]
+        val intervalFilter = ClusterFilterCriteria(minDistanceMeters = 10000.0, maxDistanceMeters = 35000.0)
+        assertFalse("8 km cluster should not match [10k, 35k]", intervalFilter.matches(c8k))
+        assertTrue("12.5 km cluster should match [10k, 35k]", intervalFilter.matches(c12_5k))
+        assertTrue("25 km cluster should match [10k, 35k]", intervalFilter.matches(c25k))
+        assertTrue("35 km cluster should match [10k, 35k] (inclusive max)", intervalFilter.matches(c35k))
+        assertFalse("50 km cluster should not match [10k, 35k]", intervalFilter.matches(c50k))
+        assertFalse("75 km cluster should not match [10k, 35k]", intervalFilter.matches(c75k))
+
+        // 2. Upper bound only < 10 km
+        val maxOnlyFilter = ClusterFilterCriteria(minDistanceMeters = null, maxDistanceMeters = 10000.0)
+        assertTrue("8 km cluster should match < 10 km", maxOnlyFilter.matches(c8k))
+        assertFalse("12.5 km cluster should not match < 10 km", maxOnlyFilter.matches(c12_5k))
+        assertFalse("25 km cluster should not match < 10 km", maxOnlyFilter.matches(c25k))
+
+        // 3. Lower bound only > 50 km
+        val minOnlyFilter = ClusterFilterCriteria(minDistanceMeters = 50000.0, maxDistanceMeters = null)
+        assertFalse("35 km cluster should not match > 50 km", minOnlyFilter.matches(c35k))
+        assertTrue("50 km cluster should match > 50 km (inclusive min)", minOnlyFilter.matches(c50k))
+        assertTrue("75 km cluster should match > 50 km", minOnlyFilter.matches(c75k))
+
+        // 4. activeFilterCount derivation: distance interval must strictly contribute 1
+        assertEquals("minOnly should have activeFilterCount = 1", 1, minOnlyFilter.activeFilterCount)
+        assertEquals("maxOnly should have activeFilterCount = 1", 1, maxOnlyFilter.activeFilterCount)
+        assertEquals("both bounds should still have activeFilterCount = 1", 1, intervalFilter.activeFilterCount)
+    }
+
+    /**
+     * TST-UI-380.4: Cluster Criteria JSON Roundtrip & Backward Compatibility.
+     */
+    @Test
+    fun testJsonSerializationRoundtrip_withDistanceInterval_andLegacyCompatibility_TST_UI_380_4() {
+        val original = ClusterFilterCriteria(
+            minDistanceMeters = 15000.0,
+            maxDistanceMeters = 40000.0
+        )
+        val jsonStr = original.toJson()
+        val restored = ClusterFilterCriteria.fromJson(jsonStr)
+
+        assertEquals(15000.0, restored.minDistanceMeters)
+        assertEquals(40000.0, restored.maxDistanceMeters)
+        assertEquals(1, restored.activeFilterCount)
+
+        // Legacy JSON without maxDistanceMeters
+        val legacyJson = """{"query":"Isar","equipmentName":"Pegasus","minDistanceMeters":15000.0,"minHitCount":3}"""
+        val fromLegacy = ClusterFilterCriteria.fromJson(legacyJson)
+
+        assertEquals("Isar", fromLegacy.query)
+        assertEquals("Pegasus", fromLegacy.equipmentName)
+        assertEquals(15000.0, fromLegacy.minDistanceMeters)
+        assertNull("maxDistanceMeters should be null for legacy JSON", fromLegacy.maxDistanceMeters)
+        assertEquals(3, fromLegacy.minHitCount)
+        assertEquals(4, fromLegacy.activeFilterCount)
+    }
+
+    /**
+     * TST-UI-380.5: Active Distance Filter Chip Formatting & Dismissal Contract for Clusters.
+     */
+    @Test
+    fun testActiveDistanceFilterChipFormatting_andDismissalContract_TST_UI_380_5() {
+        fun formatChip(minM: Double?, maxM: Double?): String {
+            val minKm = minM?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } }
+            val maxKm = maxM?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } }
+            return when {
+                minKm != null && maxKm != null -> "$minKm - $maxKm km"
+                minKm != null -> "> $minKm km"
+                else -> "< $maxKm km"
+            }
+        }
+
+        assertEquals("10 - 35 km", formatChip(10000.0, 35000.0))
+        assertEquals("> 50 km", formatChip(50000.0, null))
+        assertEquals("< 10 km", formatChip(null, 10000.0))
+        assertEquals("12.5 - 25 km", formatChip(12500.0, 25000.0))
+
+        // Dismissal contract: clearing distance range resets both bounds
+        val criteria = ClusterFilterCriteria(minDistanceMeters = 10000.0, maxDistanceMeters = 35000.0)
+        val cleared = criteria.copy(minDistanceMeters = null, maxDistanceMeters = null)
+        assertNull(cleared.minDistanceMeters)
+        assertNull(cleared.maxDistanceMeters)
+        assertTrue(cleared.isEmpty)
     }
 }

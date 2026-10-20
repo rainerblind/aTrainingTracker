@@ -66,9 +66,15 @@ import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.HorizontalRule
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.HorizontalSplit
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetScaffold
@@ -183,6 +189,8 @@ interface TabToggleActions {
     fun onToggleLiveClimbs(enabled: Boolean) {}
     fun onToggleNavigationHints(enabled: Boolean) {}
     fun onToggleLapButton(enabled: Boolean) {}
+    fun onToggleBikeBell(enabled: Boolean) {}
+    fun onRingBikeBell() {}
 
     companion object {
         val Empty: TabToggleActions = object : TabToggleActions {}
@@ -463,7 +471,7 @@ fun SensorGridScreen(
                                 }
                                 IconButton(onClick = { editingDividerRow = rowNr }) {
                                     Icon(
-                                        imageVector = if (existingDivider != null) Icons.Default.Title else Icons.Default.HorizontalRule,
+                                        imageVector = if (existingDivider != null) Icons.Default.Title else Icons.Default.HorizontalSplit,
                                         contentDescription = stringResource(
                                             if (existingDivider != null) R.string.cockpit_section_divider_edit
                                             else R.string.cockpit_section_divider_add
@@ -634,13 +642,33 @@ fun SensorGridScreen(
                         icon = Icons.Default.Timer,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    SpatialCockpitToggleCard(
+                        title = stringResource(R.string.config_tracking__showBikeBell),
+                        subtitle = stringResource(R.string.config_tracking__showBikeBell_subtitle),
+                        isActive = state.showBikeBell,
+                        onToggle = { tabToggleActions.onToggleBikeBell(it) },
+                        icon = Icons.Default.Notifications,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         } else {
             // TRACKING & PREVIEW MODES (Top-level spatial Box overlay, independent inner sensor scroll, weighted map)
+            val isTracking = screenMode == ScreenMode.TRACKING
+            val haptic = LocalHapticFeedback.current
+            val doubleTapModifier = if (isTracking && state.showBikeBell) {
+                Modifier.detectCockpitDoubleTap(enabled = true) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    tabToggleActions.onRingBikeBell()
+                }
+            } else {
+                Modifier
+            }
+
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
+                    .then(doubleTapModifier)
                     .padding(top = paddingValues.calculateTopPadding()) // Only pad the top
             ) {
                 val availableHeight = maxHeight
@@ -988,6 +1016,7 @@ fun SpatialCockpitToggleCard(
     isActive: Boolean,
     onToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     icon: ImageVector? = null,
     accentColor: Color? = null
 ) {
@@ -1036,13 +1065,24 @@ fun SpatialCockpitToggleCard(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = contentColor.copy(alpha = 0.8f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
 
             Surface(
@@ -1074,6 +1114,81 @@ fun SpatialCockpitToggleCard(
     }
 }
 
+/**
+ * Zero-Look Double-Tap gesture detector for the Cockpit sensor grid (REQ-UI-421.3).
+ * Evaluates pointer events in PointerEventPass.Main without consuming initial pointer down events,
+ * strictly preserving screen wakefulness in BatterySaverController (PointerEventPass.Initial),
+ * vertical sensor grid scrolling, and horizontal tab swiping in HorizontalPager.
+ */
+internal fun Modifier.detectCockpitDoubleTap(
+    enabled: Boolean,
+    onDoubleTap: () -> Unit
+): Modifier = if (!enabled) this else pointerInput(Unit) {
+    var lastTapTime = 0L
+    var lastTapPosition = Offset.Zero
+    val doubleTapTimeout = viewConfiguration.doubleTapTimeoutMillis
+    val doubleTapMinTime = 40L
+    val touchSlop = viewConfiguration.touchSlop
+
+    awaitPointerEventScope {
+        while (true) {
+            val down = awaitFirstDown(pass = PointerEventPass.Main, requireUnconsumed = false)
+            val downTime = System.currentTimeMillis()
+            val downPos = down.position
+            var isDrag = false
+
+            while (true) {
+                val event = awaitPointerEvent(pass = PointerEventPass.Main)
+                val pressed = event.changes.filter { it.pressed }
+                if (pressed.isEmpty()) {
+                    // All pointers up
+                    val upTime = System.currentTimeMillis()
+                    val upChange = event.changes.firstOrNull()
+                    if (!isDrag && (upTime - downTime) < doubleTapTimeout) {
+                        val isCloseToFirst = (downPos - lastTapPosition).getDistance() < touchSlop * 2
+                        val isSecondTap = (upTime - lastTapTime) in doubleTapMinTime..doubleTapTimeout && isCloseToFirst
+
+                        if (isSecondTap) {
+                            upChange?.consume()
+                            onDoubleTap()
+                            lastTapTime = 0L
+                            lastTapPosition = Offset.Zero
+                        } else {
+                            lastTapTime = upTime
+                            lastTapPosition = downPos
+                        }
+                    } else {
+                        lastTapTime = 0L
+                    }
+                    break
+                }
+
+                // Check if pointer moved beyond touch slop (indicating scroll/drag/swipe)
+                val currentPos = pressed[0].position
+                if ((currentPos - downPos).getDistance() > touchSlop) {
+                    isDrag = true
+                    lastTapTime = 0L
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Renders a horizontal section divider within the cockpit sensor grid (REQ-UI-411.4).
+ *
+ * When unlabeled, renders a prominent 2.5 dp stroke in [MaterialTheme.colorScheme.outline]
+ * to ensure high contrast against dark/AMOLED backgrounds and clear differentiation from
+ * adjacent 1 dp cell borders while riding.
+ *
+ * When labeled with an optional title, centers the uppercase text horizontally across the full row,
+ * flanked symmetrically by left and right divider segments with equal weight (1f) and 2 dp thickness,
+ * strictly forbidding asymmetric weights (Rule 49, Design Guidelines Sec 5.11).
+ * Total vertical footprint is bounded by compact padding and a max 20 dp height constraint.
+ *
+ * @param divider Metadata representing the section divider, including optional title.
+ * @param modifier Composable modifier for styling and layout positioning.
+ */
 @Composable
 fun CockpitSectionDivider(
     divider: SectionDividerInfo,
@@ -1085,8 +1200,8 @@ fun CockpitSectionDivider(
             modifier = modifier
                 .fillMaxWidth()
                 .padding(vertical = 4.dp),
-            thickness = 1.5.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
+            thickness = 2.5.dp,
+            color = MaterialTheme.colorScheme.outline
         )
     } else {
         Row(
@@ -1097,9 +1212,9 @@ fun CockpitSectionDivider(
             verticalAlignment = Alignment.CenterVertically
         ) {
             HorizontalDivider(
-                modifier = Modifier.weight(0.12f),
-                thickness = 1.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant
+                modifier = Modifier.weight(1f),
+                thickness = 2.dp,
+                color = MaterialTheme.colorScheme.outline
             )
             Text(
                 text = title.uppercase(),
@@ -1111,9 +1226,9 @@ fun CockpitSectionDivider(
                 modifier = Modifier.padding(horizontal = 6.dp)
             )
             HorizontalDivider(
-                modifier = Modifier.weight(0.88f),
-                thickness = 1.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant
+                modifier = Modifier.weight(1f),
+                thickness = 2.dp,
+                color = MaterialTheme.colorScheme.outline
             )
         }
     }

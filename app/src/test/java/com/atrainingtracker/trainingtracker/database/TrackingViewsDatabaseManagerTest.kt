@@ -318,7 +318,8 @@ class TrackingViewsDatabaseManagerTest {
         )
 
         for (activityType in nonPowerActivities) {
-            // Standard Tab: layoutNr 1, live segments, live climbs, nav hints
+            val isCycling = activityType == com.atrainingtracker.banalservice.ActivityType.BIKE_SPEED_AND_CADENCE
+            // Standard Tab: layoutNr 1, live segments, live climbs, nav hints, showBikeBell = isCycling
             verify(atLeast = 1) {
                 dbHelper.addDefaultTab(
                     mockDb,
@@ -330,10 +331,11 @@ class TrackingViewsDatabaseManagerTest {
                     true,
                     true,
                     true,
+                    isCycling,
                     any()
                 )
             }
-            // Map Tab: layoutNr 2, map, elevation profile, nav hints, no live climbs or segments
+            // Map Tab: layoutNr 2, map, elevation profile, nav hints, no live climbs or segments, showBikeBell = isCycling
             verify(atLeast = 1) {
                 dbHelper.addDefaultTab(
                     mockDb,
@@ -345,10 +347,11 @@ class TrackingViewsDatabaseManagerTest {
                     false,
                     false,
                     true,
+                    isCycling,
                     any()
                 )
             }
-            // Laps Tab: layoutNr 3, lap button only, no live climbs, nav hints, or segments
+            // Laps Tab: layoutNr 3, lap button only, no live climbs, nav hints, or segments, showBikeBell = isCycling
             verify(atLeast = 1) {
                 dbHelper.addDefaultTab(
                     mockDb,
@@ -360,18 +363,19 @@ class TrackingViewsDatabaseManagerTest {
                     false,
                     false,
                     false,
+                    isCycling,
                     any()
                 )
             }
         }
 
-        // BIKE_POWER (REQ-UI-409.2): 4 tabs (1 = Standard, 2 = Power, 3 = Map, 4 = Laps)
+        // BIKE_POWER (REQ-UI-409.2): 4 tabs (1 = Standard, 2 = Power, 3 = Map, 4 = Laps), all have showBikeBell = true
         val bikePower = com.atrainingtracker.banalservice.ActivityType.BIKE_POWER
         verify(atLeast = 1) {
-            dbHelper.addDefaultTab(mockDb, bikePower, any(), 1, false, false, true, true, true, any())
-            dbHelper.addDefaultTab(mockDb, bikePower, any(), 2, false, false, false, false, true, any())
-            dbHelper.addDefaultTab(mockDb, bikePower, any(), 3, false, true, false, false, true, any())
-            dbHelper.addDefaultTab(mockDb, bikePower, any(), 4, true, false, false, false, false, any())
+            dbHelper.addDefaultTab(mockDb, bikePower, any(), 1, false, false, true, true, true, true, any())
+            dbHelper.addDefaultTab(mockDb, bikePower, any(), 2, false, false, false, false, true, true, any())
+            dbHelper.addDefaultTab(mockDb, bikePower, any(), 3, false, true, false, false, true, true, any())
+            dbHelper.addDefaultTab(mockDb, bikePower, any(), 4, true, false, false, false, false, true, any())
         }
     }
 
@@ -528,8 +532,8 @@ class TrackingViewsDatabaseManagerTest {
     }
 
     @Test
-    fun testDatabaseVersionIs14() {
-        assertEquals(14, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    fun testDatabaseVersionIs15() {
+        assertEquals(15, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
     }
 
     @Test

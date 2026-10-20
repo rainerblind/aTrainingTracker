@@ -328,6 +328,19 @@ Row(
 * **Centered Section Titles**:
   * When a section divider includes a title, the title **MUST** be horizontally centered across the full row width (flanked by symmetric `HorizontalDivider(modifier = Modifier.weight(1f))` segments on both left and right, or centered inside a full-width section header bar), never left-aligned with a single trailing line.
 
+### 5.12 Cockpit Utility Button Availability & Click/Pointer Gesture Isolation (Rule 53 — ATT-4371)
+* **Availability Across `READY`, `TRACKING`, and `PAUSED` Modes**:
+  * Unlike `LapButton` (which records a workout lap split and therefore requires `TrackingMode.TRACKING`), auxiliary Cockpit utility controls such as the **Bike Bell** (`BikeBellButton`) **MUST** remain enabled across `READY`, `TRACKING`, and `PAUSED` modes (`enabled = isConfigureMode || trackingMode in setOf(READY, TRACKING, PAUSED)`) so athletes can test or ring the bell while stationary or before pressing Start.
+* **Never Nest `ElevatedButton(onClick)` Inside `Modifier.pointerInput(detectTapGestures)`**:
+  * Do not wrap a Material `Button`/`ElevatedButton` with its own `onClick` handler inside a parent `Box(Modifier.pointerInput { detectTapGestures(...) })`, which causes pointer event contention and swallows clicks. Handle single-tap actions directly inside `onClick` (and track multi-tap escalation via timestamp deltas inside the ViewModel/synthesizer).
+
+### 5.13 Dialog Width Budgets, Multi-Chip `FlowRow` Wrapping & Long-Locale (`de`) Verification (Rule 54 — ATT-4372)
+* **No Non-Wrapping 3+ Chip `Row` Inside `AlertDialog`**:
+  * Standard Material 3 `AlertDialog` containers have a narrow horizontal width (`~280.dp–320.dp`). Placing 3 or more `FilterChip`s (e.g., `Cycling`, `Running`, `Other` / `Radfahren`, `Laufen`, `Andere`) inside a single non-wrapping `Row(Modifier.fillMaxWidth())` crushes the trailing chip into a 1-character-per-line vertical stack (`A / n / d / e / r / e`).
+  * Multi-chip selectors inside dialogs **MUST** use `FlowRow` (so chips wrap cleanly as intact horizontal pills) or `AppModalBottomSheet`.
+* **Verbose Locale (`de`) Segmented Button Width Check**:
+  * Avoid squeezing long multi-word labels (`"Auf alle anwenden"`) into a 2-button `SingleChoiceSegmentedButtonRow` inside a narrow `AlertDialog` where labels truncate mid-word (`"Auf alle anwen"`). Prefer concise localized labels, stacked radio/card rows, or a full-width `AppModalBottomSheet`.
+
 ---
 
 ## 6. Map Viewport & Camera Guidelines

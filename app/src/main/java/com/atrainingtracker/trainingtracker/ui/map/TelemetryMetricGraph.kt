@@ -225,7 +225,7 @@ fun TelemetryMetricGraph(
                 TelemetryZoneMath.calculateThresholdDashes(it.z1Max, it.z2Max, it.z3Max, it.z4Max, dataMin, dataMax)
             } ?: emptyList()
             TelemetryMetricType.POWER -> effectivePowerThresholds?.let {
-                TelemetryZoneMath.calculateThresholdDashes(it.z1Max, it.z2Max, it.z3Max, it.z4Max, dataMin, dataMax)
+                TelemetryZoneMath.calculatePowerThresholdDashes(it, dataMin, dataMax)
             } ?: emptyList()
             else -> emptyList()
         }

@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.zones
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -169,6 +170,11 @@ fun ZoneDistributionStackedBar(
                                 modifier = Modifier
                                     .weight(entry.percentage)
                                     .fillMaxHeight()
+                                    .then(
+                                        if (entry.color == TTColor.Zone7 || entry.color == TTColor.Zone6) {
+                                            Modifier.border(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+                                        } else Modifier
+                                    )
                                     .background(entry.color)
                             )
                             if (index < activeEntries.lastIndex) {

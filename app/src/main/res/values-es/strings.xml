@@ -600,6 +600,8 @@
     <string name="config_tracking__show_map">Mapa</string>
     <string name="config_tracking__showLiveSegments">Segmentos en vivo</string>
     <string name="config_tracking__showLapButton">Botón de vuelta</string>
+    <string name="config_tracking__showBikeBell">Mostrar timbre de bicicleta</string>
+    <string name="config_tracking__showBikeBell_subtitle">Toca o mantén pulsado el botón del timbre, o toca dos veces en el Cockpit</string>
     <string name="config_tracking__show_navigation_hints">Indicaciones de giro</string>
     <string name="config_tracking__show_live_climbs">Subidas en vivo</string>
     <string name="config_tracking__wysiwyg_active">Activo</string>
@@ -821,7 +823,7 @@
     <string name="tab_name">Nombre</string>
 
     <!-- Equipment -->
-    <string name="equipment_management_title">Equipamiento</string>
+    <string name="equipment_management_title">Bicicletas y zapatillas</string>
     <string name="equipment_management_summary">Configura tus bicis y calzado</string>
     <string name="prefs_manage_bikes_title">Bicicletas</string>
     <string name="prefs_manage_bikes_summary">Configura todas tus bicis</string>
@@ -937,6 +939,15 @@
     <string name="routes_import_success">%1$d rutas importadas con éxito.</string>
     <string name="routes_import_partial">%1$d rutas importadas, %2$d fallidas.</string>
     <string name="routes_import_all_failed">Error al importar rutas.</string>
+    <!-- Batch GPX Route Import Sport Type Selection (REQ-MAP-053 / ATT-4284) -->
+    <string name="batch_import_dialog_title_format">Importar %1$d rutas</string>
+    <string name="batch_import_mode_all">Aplicar a todas</string>
+    <string name="batch_import_mode_individual">Configurar individualmente</string>
+    <string name="batch_import_individual_hint">Cada ruta se abrirá secuencialmente para su revisión y edición antes de guardar.</string>
+    <string name="batch_import_action_import">Importar</string>
+    <string name="batch_import_action_continue">Continuar</string>
+    <string name="batch_import_individual_progress_format">Ruta %1$d de %2$d</string>
+    <string name="batch_import_skip_route">Omitir</string>
     <string name="strava_sync_success">Rutas sincronizadas de Strava.</string>
     <string name="strava_sync_failed">Error al sincronizar con Strava.</string>
     <string name="save_as_local_route">Guardar como ruta local</string>
@@ -1307,6 +1318,7 @@
     <string name="cluster_trend_pace">Ritmo</string>
     <string name="cluster_trend_pr">Récord</string>
     <string name="cluster_trend_avg">Med</string>
+    <string name="cluster_trend_outlier">Atípico</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Vueltas (%1$d)</string>
@@ -1518,6 +1530,10 @@
     <string name="zone_mode_columns">Columnas</string>
     <string name="zone_mode_stacked_bar">Barra</string>
     <string name="zone_mode_histogram">Histograma</string>
+    <string name="power_histogram_overflow_label">&gt; %1$d %2$s</string>
+    <string name="power_histogram_return_label">%1$d–%2$d %3$s</string>
+    <string name="power_histogram_overflow_desc">Cambiar a vista de sprint por encima de %1$d %2$s</string>
+    <string name="power_histogram_return_desc">Volver al histograma principal de 0 a %1$d %2$s</string>
     <string name="aftermath_laps_splits_title">Vueltas y divisiones</string>
     <string name="split_badge_best">Mejor</string>
     <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
@@ -1928,9 +1944,9 @@
     <string name="athlete_profile_cp_estimator_long_sec">Duración larga (s)</string>
     <string name="athlete_profile_cp_estimator_apply">Aplicar estimación (%1$d W / %2$.1f kJ)</string>
     <string name="workout_w_prime_bal_min_format">Mín. W\'bal: %1$.1f kJ (%2$.0f%%)</string>
-    <string name="workout_w_prime_empty_tank">Tanque vacío (&lt;10%%)</string>
+    <string name="workout_w_prime_empty_tank">Tanque vacío (&lt;10%)</string>
     <string name="w_prime_battery_pct">%1$d%%</string>
-    <string name="w_prime_warning_low_battery">Batería W\' baja (&lt;20%%)</string>
+    <string name="w_prime_warning_low_battery">Batería W\' baja (&lt;20%)</string>
 
     <!-- ATT-3861: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400) -->
     <string name="efficiency_factor_short">EF</string>
@@ -1939,8 +1955,8 @@
     <string name="workout_ef_pahr_format">EF: %1$.2f m/min/bpm • Pa:Hr: %2$.1f%%</string>
     <string name="workout_ef_only_pw_format">EF: %1$.2f W/bpm</string>
     <string name="workout_ef_only_pa_format">EF: %1$.2f m/min/bpm</string>
-    <string name="workout_decoupling_coupled">Acoplado (&lt;5%%)</string>
-    <string name="workout_decoupling_drift">Deriva alta (≥5%%)</string>
+    <string name="workout_decoupling_coupled">Acoplado (&lt;5%)</string>
+    <string name="workout_decoupling_drift">Deriva alta (≥5%)</string>
 
     <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
     <string name="athlete_profile_pmc_title">Gestión del rendimiento (CTL / ATL / TSB)</string>
@@ -1993,7 +2009,7 @@
     <string name="workout_ef_value_pa_format">%1$.2f m/min/bpm</string>
     <string name="workout_decoupling_pct_format">%1$.1f%%</string>
     <string name="workout_w_prime_min_kj_label">Mín. W\'bal</string>
-    <string name="workout_w_prime_min_pct_label">Mín. %%</string>
+    <string name="workout_w_prime_min_pct_label">Mín. %</string>
     <string name="workout_w_prime_min_kj_value_format">%1$.1f kJ</string>
     <string name="workout_w_prime_min_pct_value_format">%1$.0f%%</string>
     <string name="workout_power_label_work">Trabajo</string>
@@ -2029,9 +2045,9 @@
     <string name="cockpit_section_divider_delete">Eliminar separador</string>
 
     <!-- Sensor Onboarding & Empty State (REQ-SEN-020 / ATT-4051) -->
-    <string name="onboarding_pair_sensor_action">+ Vincular sensor</string>
+    <string name="onboarding_pair_sensor_action">Vincular sensor</string>
     <string name="devices_empty_state_search_hint">Buscar sensores Bluetooth LE o ANT+ cercanos</string>
-    <string name="devices_action_search_sensors">+ Buscar sensores</string>
+    <string name="devices_action_search_sensors">Buscar sensores</string>
     <string name="error_workout_table_name_too_long">El nombre de la tabla de entrenamiento supera el límite de SQLite (64 caracteres)</string>
 
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->

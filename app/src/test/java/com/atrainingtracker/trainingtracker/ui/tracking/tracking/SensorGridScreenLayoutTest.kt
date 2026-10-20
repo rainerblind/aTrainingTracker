@@ -197,5 +197,65 @@ class SensorGridScreenLayoutTest {
             content.contains("bottom = paddingValues.calculateBottomPadding()")
         )
     }
+
+    @Test
+    fun testCockpitSectionDivider_unlabeledProminenceAndContrast() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        // REQ-UI-411.4 / TST-UI-386.1: Unlabeled divider must use prominent 2.5.dp stroke and outline color
+        assertTrue(
+            "CockpitSectionDivider unlabeled branch must specify thickness = 2.5.dp (TST-UI-386.1)",
+            content.contains("thickness = 2.5.dp")
+        )
+        assertTrue(
+            "CockpitSectionDivider unlabeled branch must specify color = MaterialTheme.colorScheme.outline (TST-UI-386.1)",
+            content.contains("color = MaterialTheme.colorScheme.outline")
+        )
+        assertTrue(
+            "CockpitSectionDivider unlabeled branch must keep compact vertical padding (TST-UI-386.1)",
+            content.contains(".padding(vertical = 4.dp)")
+        )
+    }
+
+    @Test
+    fun testCockpitSectionDivider_labeledCenteredTitleSymmetricWeights() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        // REQ-UI-411.4 / TST-UI-386.2: Centered section title with symmetric weight(1f) flanking lines and 2.dp thickness
+        assertTrue(
+            "CockpitSectionDivider titled branch must flank title with symmetric weight(1f) lines (TST-UI-386.2)",
+            content.contains("modifier = Modifier.weight(1f)")
+        )
+        assertTrue(
+            "CockpitSectionDivider titled branch must specify thickness = 2.dp for flanking lines (TST-UI-386.2)",
+            content.contains("thickness = 2.dp")
+        )
+        assertFalse(
+            "CockpitSectionDivider must strictly forbid asymmetric left weight 0.12f (TST-UI-386.2)",
+            content.contains("weight(0.12f)")
+        )
+        assertFalse(
+            "CockpitSectionDivider must strictly forbid asymmetric right weight 0.88f (TST-UI-386.2)",
+            content.contains("weight(0.88f)")
+        )
+    }
+
+    @Test
+    fun testConfigurationMode_dividerButtonUsesHorizontalSplitAndExcludesHorizontalRule() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        // REQ-UI-411.5 / TST-UI-386.3: Use HorizontalSplit, forbid HorizontalRule
+        assertTrue(
+            "Configuration mode inter-row control must use Icons.Default.HorizontalSplit (TST-UI-386.3)",
+            content.contains("Icons.Default.HorizontalSplit")
+        )
+        assertFalse(
+            "SensorGridScreen must NOT use or import Icons.Default.HorizontalRule (TST-UI-386.3 / Rule 49)",
+            content.contains("HorizontalRule")
+        )
+    }
 }
 

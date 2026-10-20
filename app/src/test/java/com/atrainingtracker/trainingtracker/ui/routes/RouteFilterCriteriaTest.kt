@@ -206,6 +206,10 @@ class RouteFilterCriteriaTest {
         criteria = criteria.copy(minDistanceMeters = 15_000.0)
         assertEquals(4, criteria.activeFilterCount)
 
+        // Setting maxDistanceMeters as well should still count as 4 (distance is 1 dimension) (REQ-UI-417.1)
+        criteria = criteria.copy(maxDistanceMeters = 30_000.0)
+        assertEquals(4, criteria.activeFilterCount)
+
         criteria = criteria.copy(minElevationGainMeters = 300.0)
         assertEquals(5, criteria.activeFilterCount)
 
@@ -221,6 +225,7 @@ class RouteFilterCriteriaTest {
             source = RouteSource.STRAVA,
             isSelected = true,
             minDistanceMeters = 50_000.0,
+            maxDistanceMeters = 120_000.0,
             minElevationGainMeters = 1000.0
         )
 
@@ -231,6 +236,7 @@ class RouteFilterCriteriaTest {
         assertEquals(original.source, restored.source)
         assertEquals(original.isSelected, restored.isSelected)
         assertEquals(original.minDistanceMeters, restored.minDistanceMeters)
+        assertEquals(original.maxDistanceMeters, restored.maxDistanceMeters)
         assertEquals(original.minElevationGainMeters, restored.minElevationGainMeters)
         assertEquals(original.activeFilterCount, restored.activeFilterCount)
     }
@@ -245,5 +251,108 @@ class RouteFilterCriteriaTest {
 
         val fromMalformed = RouteFilterCriteria.fromJson("{not valid json}")
         assertTrue(fromMalformed.isEmpty)
+    }
+
+    /**
+     * TST-UI-380.1: Route Distance Interval & Filter Count.
+     * Verifies bounded interval matching, upper-bound only, lower-bound only,
+     * and strictly single-dimension counting for activeFilterCount.
+     */
+    @Test
+    fun testDistanceIntervalMatching_andActiveFilterCount_TST_UI_380_1() {
+        val r5k = createRoute(id = 1L, distance = 5000.0)
+        val r10k = createRoute(id = 2L, distance = 10000.0)
+        val r25k = createRoute(id = 3L, distance = 25000.0)
+        val r45k = createRoute(id = 4L, distance = 45000.0)
+        val r50k = createRoute(id = 5L, distance = 50000.0)
+        val r80k = createRoute(id = 6L, distance = 80000.0)
+
+        // 1. Bounded interval [25 km, 50 km]
+        val intervalFilter = RouteFilterCriteria(minDistanceMeters = 25000.0, maxDistanceMeters = 50000.0)
+        assertFalse("5 km route should not match [25k, 50k]", intervalFilter.matches(r5k))
+        assertFalse("10 km route should not match [25k, 50k]", intervalFilter.matches(r10k))
+        assertTrue("25 km route should match [25k, 50k] (inclusive min)", intervalFilter.matches(r25k))
+        assertTrue("45 km route should match [25k, 50k]", intervalFilter.matches(r45k))
+        assertTrue("50 km route should match [25k, 50k] (inclusive max)", intervalFilter.matches(r50k))
+        assertFalse("80 km route should not match [25k, 50k]", intervalFilter.matches(r80k))
+
+        // 2. Upper bound only < 10 km
+        val maxOnlyFilter = RouteFilterCriteria(minDistanceMeters = null, maxDistanceMeters = 10000.0)
+        assertTrue("5 km route should match < 10 km", maxOnlyFilter.matches(r5k))
+        assertTrue("10 km route should match < 10 km (inclusive max)", maxOnlyFilter.matches(r10k))
+        assertFalse("25 km route should not match < 10 km", maxOnlyFilter.matches(r25k))
+        assertFalse("45 km route should not match < 10 km", maxOnlyFilter.matches(r45k))
+        assertFalse("50 km route should not match < 10 km", maxOnlyFilter.matches(r50k))
+        assertFalse("80 km route should not match < 10 km", maxOnlyFilter.matches(r80k))
+
+        // 3. Lower bound only > 50 km
+        val minOnlyFilter = RouteFilterCriteria(minDistanceMeters = 50000.0, maxDistanceMeters = null)
+        assertFalse("5 km route should not match > 50 km", minOnlyFilter.matches(r5k))
+        assertFalse("10 km route should not match > 50 km", minOnlyFilter.matches(r10k))
+        assertFalse("25 km route should not match > 50 km", minOnlyFilter.matches(r25k))
+        assertFalse("45 km route should not match > 50 km", minOnlyFilter.matches(r45k))
+        assertTrue("50 km route should match > 50 km (inclusive min)", minOnlyFilter.matches(r50k))
+        assertTrue("80 km route should match > 50 km", minOnlyFilter.matches(r80k))
+
+        // 4. activeFilterCount derivation: distance interval must strictly contribute 1
+        assertEquals("minOnly should have activeFilterCount = 1", 1, minOnlyFilter.activeFilterCount)
+        assertEquals("maxOnly should have activeFilterCount = 1", 1, maxOnlyFilter.activeFilterCount)
+        assertEquals("both bounds should still have activeFilterCount = 1", 1, intervalFilter.activeFilterCount)
+    }
+
+    /**
+     * TST-UI-380.2: Route Criteria JSON Roundtrip & Backward Compatibility.
+     * Tests two-bound JSON persistence roundtrip and validates that legacy payloads
+     * lacking maxDistanceMeters deserialize cleanly with maxDistanceMeters = null.
+     */
+    @Test
+    fun testJsonSerializationRoundtrip_withDistanceInterval_andLegacyCompatibility_TST_UI_380_2() {
+        val twoBoundsCriteria = RouteFilterCriteria(
+            minDistanceMeters = 25000.0,
+            maxDistanceMeters = 50000.0
+        )
+        val jsonStr = twoBoundsCriteria.toJson()
+        val restored = RouteFilterCriteria.fromJson(jsonStr)
+
+        assertEquals(25000.0, restored.minDistanceMeters)
+        assertEquals(50000.0, restored.maxDistanceMeters)
+        assertEquals(1, restored.activeFilterCount)
+
+        // Legacy JSON without maxDistanceMeters
+        val legacyJson = """{"query":"Alps","minDistanceMeters":10000.0}"""
+        val fromLegacy = RouteFilterCriteria.fromJson(legacyJson)
+
+        assertEquals("Alps", fromLegacy.query)
+        assertEquals(10000.0, fromLegacy.minDistanceMeters)
+        assertNull("maxDistanceMeters should be null for legacy JSON", fromLegacy.maxDistanceMeters)
+        assertEquals(2, fromLegacy.activeFilterCount)
+    }
+
+    /**
+     * TST-UI-380.5: Active Distance Filter Chip Formatting & Dismissal Contract.
+     */
+    @Test
+    fun testActiveDistanceFilterChipFormatting_andDismissalContract_TST_UI_380_5() {
+        fun formatChip(minM: Double?, maxM: Double?): String {
+            val minKm = minM?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } }
+            val maxKm = maxM?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } }
+            return when {
+                minKm != null && maxKm != null -> "$minKm - $maxKm km"
+                minKm != null -> "> $minKm km"
+                else -> "< $maxKm km"
+            }
+        }
+
+        assertEquals("25 - 50 km", formatChip(25000.0, 50000.0))
+        assertEquals("> 25 km", formatChip(25000.0, null))
+        assertEquals("< 50 km", formatChip(null, 50000.0))
+        assertEquals("12.5 - 37.5 km", formatChip(12500.0, 37500.0))
+
+        // Dismissal contract: clearing distance range resets both bounds
+        val criteria = RouteFilterCriteria(minDistanceMeters = 25000.0, maxDistanceMeters = 50000.0)
+        val cleared = criteria.copy(minDistanceMeters = null, maxDistanceMeters = null)
+        assertNull(cleared.minDistanceMeters)
+        assertNull(cleared.maxDistanceMeters)
+        assertTrue(cleared.isEmpty)
     }
 }

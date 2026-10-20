@@ -360,7 +360,8 @@ fun WorkoutClustersTabsScreen(
                                 criteria = filterCriteria,
                                 onRemoveQuery = { viewModel.updateFilterCriteria { it.copy(query = "") } },
                                 onRemoveEquipment = { viewModel.updateFilterCriteria { it.copy(equipmentName = null) } },
-                                onRemoveMinDistance = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null) } },
+                                onRemoveDistanceRange = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
+                                onRemoveMinDistance = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
                                 onRemoveMinHitCount = { viewModel.updateFilterCriteria { it.copy(minHitCount = null) } },
                                 onRemoveStartLocation = {
                                     viewModel.updateFilterCriteria {

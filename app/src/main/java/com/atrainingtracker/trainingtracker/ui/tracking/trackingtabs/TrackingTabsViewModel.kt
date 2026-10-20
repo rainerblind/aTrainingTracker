@@ -62,8 +62,15 @@ class TrackingTabsViewModel(
     private val banalServiceRepository: BANALServiceRepository,
     private val devicesRepository: DeviceDataRepository,
     liveSegmentsRepository: com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository? = null,
-    knownLocationsRepository: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository? = null
+    knownLocationsRepository: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository? = null,
+    bikeBellAudioSynthesizer: com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer? = null,
+    private val timeProvider: () -> Long = { android.os.SystemClock.elapsedRealtime() }
 ) : AndroidViewModel(application) {
+
+    val bikeBellSynthesizer: com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer =
+        bikeBellAudioSynthesizer ?: com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer()
+
+    private var lastRingTimestampMs: Long = -10000L
 
     // State to hold the explicitly selected ActivityType
     private val _explicitActivityType = MutableStateFlow<ActivityType?>(null)
@@ -291,6 +298,7 @@ class TrackingTabsViewModel(
         super.onCleared()
         // unbind from the BANALService
         banalServiceRepository.unbindFromBANALService()
+        bikeBellSynthesizer.close()
     }
 
     // Method for the Fragment to set the explicit ActivityType
@@ -402,6 +410,44 @@ class TrackingTabsViewModel(
 
     fun onLapButtonClick() {
         trackingViewsRepository.requestNewLap()
+    }
+
+    /**
+     * Triggers electronic bike bell ring with progressive loudness escalation (REQ-UI-421.5).
+     *
+     * Initial ring sounds at polite volume (70%). Rapid repeated rings within <= 5s or long-press
+     * escalate to 100% volume. Volume resets to polite after 5s of silence.
+     */
+    fun triggerBellRing(isLongPress: Boolean = false) {
+        val now = timeProvider()
+        val isEscalated = isLongPress || (now - lastRingTimestampMs <= 5000L)
+        lastRingTimestampMs = now
+        val volume = if (isEscalated) 1.0f else 0.70f
+        bikeBellSynthesizer.ring(volume)
+    }
+
+    /**
+     * Starts continuous urgent striker roll (*"Brriiiing!"*) at 100% volume (REQ-UI-421.2).
+     */
+    fun triggerBellRoll() {
+        lastRingTimestampMs = timeProvider()
+        bikeBellSynthesizer.startRoll(1.0f)
+    }
+
+    /**
+     * Stops continuous striker roll playback.
+     */
+    fun stopBellRoll() {
+        bikeBellSynthesizer.stopRoll()
+    }
+
+    /**
+     * Persists per-tab bike bell configuration state (REQ-UI-421.1).
+     */
+    fun onUpdateShowBikeBell(tabViewId: Long, show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowBikeBell(tabViewId, show)
+        }
     }
 }
 

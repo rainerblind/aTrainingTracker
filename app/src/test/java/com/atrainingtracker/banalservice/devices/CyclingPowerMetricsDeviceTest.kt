@@ -154,8 +154,12 @@ class CyclingPowerMetricsDeviceTest {
         device.calculateMetrics()
 
         val ptwSensor = device.powerToWeightSensor
-        // Value should remain unassigned / null because recording is suspended
-        assertNull(ptwSensor.sensorData.value)
+        // REQ-TRK-038.2: W/kg is updated during pause (300W / 75kg = 4.0 W/kg) to prevent filter starvation
+        assertEquals(4.0, ptwSensor.sensorData.value as Double, 0.001)
+        // REQ-TRK-038.4: Cumulative metrics remain strictly gated and do not accumulate
+        assertNull(device.normalizedPowerSensor.sensorData.value)
+        assertNull(device.workKjSensor.sensorData.value)
+        assertNull(device.tssSensor.sensorData.value)
 
         device.shutDown()
     }
@@ -607,5 +611,201 @@ class CyclingPowerMetricsDeviceTest {
         assertEquals(15.0, device.wPrimeBalSensor.sensorData.value as Double, 0.001)
 
         device.shutDown()
+    }
+
+    // --- ATT-4283: REQ-TRK-038 & TST-TRK-031 Tests ---
+
+    @Test
+    fun testStartup_constructorSeedsInitialWPrimeCapacity_publishesFullCapacityImmediately() {
+        // [TST-TRK-031.1] / REQ-TRK-038.1 (Rule 51 Parity)
+        // Given CP = 280W and W' = 20.0 kJ
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { 1_000_000L },
+            { 280 },
+            { 20.0f }
+        )
+
+        // Then wPrimeBalSensor emits 20.0 immediately without calling calculateMetrics() or resetSession()
+        assertNotNull(device.wPrimeBalSensor.sensorData.value)
+        assertEquals(20.0, device.wPrimeBalSensor.sensorData.value as Double, 0.001)
+
+        device.shutDown()
+
+        // Unconfigured capacity (wPrimeKj <= 0.0f) emits null
+        val unconfiguredDevice = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { 1_000_000L },
+            { 280 },
+            { 0.0f }
+        )
+        assertNull(unconfiguredDevice.wPrimeBalSensor.sensorData.value)
+        unconfiguredDevice.shutDown()
+    }
+
+    @Test
+    fun testStartup_constructorWithFtpFallback_seedsInitialWPrimeCapacity() {
+        // [TST-TRK-031.2] / REQ-TRK-038.1
+        // Given CP = null, FTP = 250W, and W' = 15.0 kJ
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { 1_000_000L },
+            { null },
+            { 15.0f }
+        )
+
+        // Then wPrimeBalSensor immediately emits 15.0 using FTP fallback
+        assertNotNull(device.wPrimeBalSensor.sensorData.value)
+        assertEquals(15.0, device.wPrimeBalSensor.sensorData.value as Double, 0.001)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_recordingSuspended_stationaryZeroPower_updatesPowerToWeightSensor() {
+        // [TST-TRK-031.3] / REQ-TRK-038.2, REQ-TRK-038.4
+        // Given an active ride entering auto-pause/stationary with power = 0W and weight = 75kg
+        every { powerSensorData.value } returns 0.0
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { true }, // Suspended
+            { 75.0f },
+            { 250 },
+            { 1_000_000L },
+            { 250 },
+            { 20.0f }
+        )
+        device.calculateMetrics()
+
+        // Then powerToWeightSensor updates to 0.0 W/kg (preventing TimedMovingAverageFilter expiration to --)
+        assertEquals(0.0, device.powerToWeightSensor.sensorData.value as Double, 0.001)
+
+        // Cumulative metrics do NOT accumulate while paused
+        assertNull(device.normalizedPowerSensor.sensorData.value)
+        assertNull(device.workKjSensor.sensorData.value)
+        assertNull(device.tssSensor.sensorData.value)
+
+        // W'bal remains at full capacity (or reconstitutes at 0W)
+        assertEquals(20.0, device.wPrimeBalSensor.sensorData.value as Double, 0.001)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_recordingSuspended_coastingOrMovingPower_updatesPowerToWeightSensor() {
+        // [TST-TRK-031.4] / REQ-TRK-038.2, REQ-TRK-038.4
+        // Given suspended recording with coasting/moving power = 150W and weight = 75kg
+        every { powerSensorData.value } returns 150.0
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { true }, // Suspended
+            { 75.0f },
+            { 250 },
+            { 1_000_000L },
+            { 250 },
+            { 20.0f }
+        )
+        device.calculateMetrics()
+
+        // Then powerToWeightSensor emits 150.0 / 75.0 = 2.0 W/kg
+        assertEquals(2.0, device.powerToWeightSensor.sensorData.value as Double, 0.001)
+
+        // Cumulative metrics do NOT accumulate
+        assertNull(device.normalizedPowerSensor.sensorData.value)
+        assertNull(device.workKjSensor.sensorData.value)
+        assertNull(device.tssSensor.sensorData.value)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_transientInvalidPowerDrop_preservesWPrimeBalanceAndCumulativeSensors() {
+        // [TST-TRK-031.5] / REQ-TRK-038.3
+        // Given active tracking with power = 300W
+        var currentTime = 1_000_000L
+        every { powerSensorData.value } returns 300.0
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { currentTime },
+            { 250 },
+            { 20.0f }
+        )
+
+        // Tick 1: active 300W sample (depletes W'bal, accumulates work and NP)
+        currentTime += 1000L
+        device.calculateMetrics()
+
+        val wPrimeBefore = device.wPrimeBalSensor.sensorData.value
+        val npBefore = device.normalizedPowerSensor.sensorData.value
+        val workBefore = device.workKjSensor.sensorData.value
+        val ifBefore = device.intensityFactorSensor.sensorData.value
+        val tssBefore = device.tssSensor.sensorData.value
+
+        assertNotNull(wPrimeBefore)
+        assertNotNull(npBefore)
+        assertNotNull(workBefore)
+
+        // Tick 2: transient 1-second BLE packet loss (power == null)
+        currentTime += 1000L
+        every { powerSensorData.value } returns null
+        device.calculateMetrics()
+
+        // Then W'bal and cumulative metrics MUST be preserved (NOT wiped to null)
+        assertEquals(wPrimeBefore as Double, device.wPrimeBalSensor.sensorData.value as Double, 0.001)
+        assertEquals(npBefore as Double, device.normalizedPowerSensor.sensorData.value as Double, 0.001)
+        assertEquals(workBefore as Double, device.workKjSensor.sensorData.value as Double, 0.001)
+        assertEquals(ifBefore as Double, device.intensityFactorSensor.sensorData.value as Double, 0.001)
+        assertEquals(tssBefore as Double, device.tssSensor.sensorData.value as Double, 0.001)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCalculateMetrics_unconfiguredAthleteWeight_publishesNullPowerToWeightEvenWhenSuspended() {
+        // [TST-TRK-031.6] / REQ-TRK-038.2
+        every { powerSensorData.value } returns 200.0
+
+        // Active state with unconfigured weight (0.0f)
+        val activeDevice = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 0.0f }
+        )
+        activeDevice.calculateMetrics()
+        assertNull(activeDevice.powerToWeightSensor.sensorData.value)
+        activeDevice.shutDown()
+
+        // Suspended state with unconfigured weight (0.0f)
+        val suspendedDevice = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { true },
+            { 0.0f }
+        )
+        suspendedDevice.calculateMetrics()
+        assertNull(suspendedDevice.powerToWeightSensor.sensorData.value)
+        suspendedDevice.shutDown()
     }
 }

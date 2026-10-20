@@ -100,4 +100,48 @@ class FilterNullSafetyTest {
         filter.newValue(null)
         assertEquals(100.0, filter.filteredValue.toDouble(), 0.01)
     }
+
+    /**
+     * TST-FIL-014.4: Verifies that when all samples age past the moving time window,
+     * trimValues() evacuates the queue and getFilteredValue() returns null instead
+     * of evaluating 0.0 / 0 = Double.NaN (Rule 50 / REQ-FIL-014.2).
+     */
+    @Test
+    fun timedMovingAverageFilter_expiredSamples_shouldReturnNullNotNaN() {
+        val filter = TestableTimedMovingAverageFilter("test", SensorType.POWER, 1)
+        
+        // Add sample aged 2000ms in the past (window threshold is 1000ms)
+        filter.addAgedSample(2000, 250)
+
+        // getFilteredValue() should prune expired samples and return null (not Double.NaN)
+        val result = filter.filteredValue
+        assertNull("Expired samples must return null instead of Double.NaN", result)
+        assertFalse("Filter must not return Double.NaN", result?.toDouble()?.isNaN() ?: false)
+    }
+
+    /**
+     * TST-FIL-014.5: Verifies that valid samples within the active time window
+     * compute the correct arithmetic average.
+     */
+    @Test
+    fun timedMovingAverageFilter_freshSamples_shouldCalculateAccurateAverage() {
+        val filter = TimedMovingAverageFilter("test", SensorType.POWER, 10)
+        
+        filter.newValue(100)
+        filter.newValue(200)
+
+        assertNotNull(filter.filteredValue)
+        assertEquals(150.0, filter.filteredValue.toDouble(), 0.01)
+    }
+
+    private class TestableTimedMovingAverageFilter(
+        deviceName: String,
+        sensorType: SensorType,
+        seconds: Long
+    ) : TimedMovingAverageFilter(deviceName, sensorType, seconds) {
+        fun addAgedSample(ageMillis: Long, value: Number) {
+            val timestamp = System.currentTimeMillis() - ageMillis
+            mTimestampedValues.add(TimestampedValue(timestamp, value))
+        }
+    }
 }

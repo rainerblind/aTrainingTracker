@@ -240,6 +240,10 @@ public class TrackingViewsDatabaseManager {
         updateBoolean(viewId, TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS, showNavigationHints);
     }
 
+    public void updateShowBikeBell(long viewId, boolean showBikeBell) {
+        updateBoolean(viewId, TrackingViewsDbHelper.SHOW_BIKE_BELL, showBikeBell);
+    }
+
     public void updateElevationProfileScope(long viewId, int scope) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE, scope);
@@ -604,6 +608,7 @@ public class TrackingViewsDatabaseManager {
         values.put(TrackingViewsDbHelper.SHOW_ELEVATION_PROFILE, 0);
         values.put(TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE, 0);
         values.put(TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD, 2000);
+        values.put(TrackingViewsDbHelper.SHOW_BIKE_BELL, 0);
 
         db.insert(TrackingViewsDbHelper.VIEWS_TABLE, null, values);
     }
@@ -725,7 +730,8 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 11; // upgraded to version 11 at 03.10.2026: Repair missing ViewSize defaults in rows
         // public static final int DB_VERSION = 12; // upgraded to version 12 at 06.10.2026: Adding Live Climbs & Navigation Hints (ATT-2360)
         // public static final int DB_VERSION = 13; // upgraded to version 13 at 13.10.2026: Adding Elevation Profile Scope & Lookahead (ATT-3317)
-        public static final int DB_VERSION = 14; // upgraded to version 14 at 18.10.2026: Adding Section Dividers Table (ATT-4055)
+        // public static final int DB_VERSION = 14; // upgraded to version 14 at 18.10.2026: Adding Section Dividers Table (ATT-4055)
+        public static final int DB_VERSION = 15; // upgraded to version 15 at 19.10.2026: Adding ShowBikeBell column (ATT-4281)
         public static final String VIEWS_TABLE = "ViewsTable";                // the table for the different 'tabs'
         public static final String ROWS_TABLE = "LayoutRowsTable";            // the table for the sensor fields within each tab
         public static final String SECTION_DIVIDERS_TABLE = "SectionDividersTable"; // new in version 14 (ATT-4055)
@@ -773,6 +779,8 @@ public class TrackingViewsDatabaseManager {
         // new in V13 -> Elevation Profile Scope & Lookahead (ATT-3317)
         public static final String ELEVATION_PROFILE_SCOPE = "ElevationProfileScope";
         public static final String ELEVATION_PROFILE_LOOKAHEAD = "ElevationProfileLookahead";
+        // new in V15 -> Show Bike Bell (ATT-4281)
+        public static final String SHOW_BIKE_BELL = "ShowBikeBell";
 
         @Deprecated
         protected static final String CREATE_VIEWS_TABLE_V1 = "create table " + VIEWS_TABLE + " ("
@@ -882,6 +890,26 @@ public class TrackingViewsDatabaseManager {
                 + ELEVATION_PROFILE_SCOPE + " int, "
                 + ELEVATION_PROFILE_LOOKAHEAD + " int)";
 
+        protected static final String CREATE_VIEWS_TABLE_V15 = "create table " + VIEWS_TABLE + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + ACTIVITY_TYPE + " text, "
+                + NAME + " text, "
+                + LAYOUT_NR + " int, "
+                + NEXT_POSITION + " int, "
+                + SHOW_LAP_BUTTON + " int, "
+                + SHOW_MAP + " int, "
+                + FULL_SCREEN + " int, "
+                + SYSTEM_SETTING + " int, "
+                + DAY + " int, "
+                + NIGHT + " int, "
+                + SHOW_LIVE_SEGMENTS + " int, "
+                + SHOW_ELEVATION_PROFILE + " int, "
+                + SHOW_LIVE_CLIMBS + " int, "
+                + SHOW_NAVIGATION_HINTS + " int, "
+                + ELEVATION_PROFILE_SCOPE + " int, "
+                + ELEVATION_PROFILE_LOOKAHEAD + " int, "
+                + SHOW_BIKE_BELL + " int)";
+
         @Deprecated
         protected static final String CREATE_LAYOUTS_TABLE_V3 = "create table " + ROWS_TABLE + " ("
                 + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -957,11 +985,11 @@ public class TrackingViewsDatabaseManager {
 
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
-            db.execSQL(CREATE_VIEWS_TABLE_V13);
+            db.execSQL(CREATE_VIEWS_TABLE_V15);
             db.execSQL(CREATE_LAYOUTS_TABLE_V8);
             db.execSQL(CREATE_SECTION_DIVIDERS_TABLE_V14);
 
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V13);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V15);
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V8);
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_SECTION_DIVIDERS_TABLE_V14);
 
@@ -970,20 +998,21 @@ public class TrackingViewsDatabaseManager {
 
             EnumMap<ActivityType, List<RowData>> viewMap = createViewMap();
             for (ActivityType activityType : viewMap.keySet()) {
-                // Standard Tab: layoutNr 1, live segments, live climbs, nav hints
-                addDefaultTab(db, activityType, mContext.getString(R.string.text_default), 1, false, false, true, true, true, viewMap.get(activityType));
+                boolean isCycling = activityType == ActivityType.BIKE_SPEED_AND_CADENCE || activityType == ActivityType.BIKE_POWER;
+                // Standard Tab: layoutNr 1, live segments, live climbs, nav hints, bike bell for cycling
+                addDefaultTab(db, activityType, mContext.getString(R.string.text_default), 1, false, false, true, true, true, isCycling, viewMap.get(activityType));
                 if (activityType == ActivityType.BIKE_POWER) {
-                    // Dedicated Power Tab: layoutNr 2, nav hints only (REQ-UI-409.2)
-                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_power), 2, false, false, false, false, true, getDefaultPowerRowDataList());
-                    // Map Tab: layoutNr 3, map, elevation profile, nav hints
-                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 3, false, true, false, false, true, getDefaultMapRowDataList(activityType));
-                    // Laps Tab: layoutNr 4, lap button only
-                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 4, true, false, false, false, false, getDefaultLapRowDataList(activityType));
+                    // Dedicated Power Tab: layoutNr 2, nav hints only (REQ-UI-409.2), bike bell enabled
+                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_power), 2, false, false, false, false, true, true, getDefaultPowerRowDataList());
+                    // Map Tab: layoutNr 3, map, elevation profile, nav hints, bike bell enabled
+                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 3, false, true, false, false, true, true, getDefaultMapRowDataList(activityType));
+                    // Laps Tab: layoutNr 4, lap button only, bike bell enabled
+                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 4, true, false, false, false, false, true, getDefaultLapRowDataList(activityType));
                 } else {
                     // Map Tab: layoutNr 2, map, elevation profile, nav hints
-                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 2, false, true, false, false, true, getDefaultMapRowDataList(activityType));
+                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_map), 2, false, true, false, false, true, isCycling, getDefaultMapRowDataList(activityType));
                     // Laps Tab: layoutNr 3, lap button only
-                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 3, true, false, false, false, false, getDefaultLapRowDataList(activityType));
+                    addDefaultTab(db, activityType, mContext.getString(R.string.tab_laps), 3, true, false, false, false, false, isCycling, getDefaultLapRowDataList(activityType));
                 }
             }
             if (DEBUG) Log.d(TAG, "filled db");
@@ -1032,6 +1061,7 @@ public class TrackingViewsDatabaseManager {
                             false,
                             false,
                             true,
+                            true,
                             getDefaultPowerRowDataList()
                     );
                 }
@@ -1049,6 +1079,25 @@ public class TrackingViewsDatabaseManager {
         }
 
         /**
+         * Backward-compatible overload for seeding default tracking views with live climbs and navigation hints enabled.
+         */
+        public long addDefaultTab(
+                @NonNull SQLiteDatabase db,
+                @NonNull ActivityType activityType,
+                String name,
+                int layoutNr,
+                boolean showLapButton,
+                boolean showMap,
+                boolean showLiveSegments,
+                boolean showLiveClimbs,
+                boolean showNavigationHints,
+                List<RowData> rowDataList
+        ) {
+            boolean isCycling = activityType == ActivityType.BIKE_SPEED_AND_CADENCE || activityType == ActivityType.BIKE_POWER;
+            return addDefaultTab(db, activityType, name, layoutNr, showLapButton, showMap, showLiveSegments, showLiveClimbs, showNavigationHints, isCycling, rowDataList);
+        }
+
+        /**
          * Seeds a default tracking view tab in SQLite with explicit toggles for live telemetry, segments, climbs, and navigation cues.
          *
          * @param db SQLite database instance.
@@ -1060,6 +1109,7 @@ public class TrackingViewsDatabaseManager {
          * @param showLiveSegments Whether Strava live segment bottom sheets are enabled.
          * @param showLiveClimbs Whether Live ClimbPro bottom sheets are enabled.
          * @param showNavigationHints Whether turn prompts and navigation cues are enabled.
+         * @param showBikeBell Whether the electronic bike bell is enabled.
          * @param rowDataList Initial sensor grid field layout.
          * @return New view ID in {@link #VIEWS_TABLE}.
          */
@@ -1073,6 +1123,7 @@ public class TrackingViewsDatabaseManager {
                 boolean showLiveSegments,
                 boolean showLiveClimbs,
                 boolean showNavigationHints,
+                boolean showBikeBell,
                 List<RowData> rowDataList
         ) {
             if (DEBUG)
@@ -1097,6 +1148,7 @@ public class TrackingViewsDatabaseManager {
             values.put(SHOW_NAVIGATION_HINTS, showNavigationHints ? 1 : 0);
             values.put(ELEVATION_PROFILE_SCOPE, 0);
             values.put(ELEVATION_PROFILE_LOOKAHEAD, 2000);
+            values.put(SHOW_BIKE_BELL, showBikeBell ? 1 : 0);
             newViewId = db.insert(VIEWS_TABLE, null, values);
 
             for (RowData rowData : rowDataList) {
@@ -1282,6 +1334,33 @@ public class TrackingViewsDatabaseManager {
                     db.execSQL(CREATE_SECTION_DIVIDERS_TABLE_V14);
                 } catch (Exception e) {
                     Log.w(TAG, "SectionDividersTable might already exist.", e);
+                }
+            }
+
+            if (oldVersion < 15) {
+                Log.i(TAG, "Upgrading database to version 15: Adding ShowBikeBell column");
+                db.beginTransaction();
+                try {
+                    boolean columnExists = false;
+                    try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + VIEWS_TABLE + ")", null)) {
+                        if (cursor != null) {
+                            int nameIndex = cursor.getColumnIndex("name");
+                            while (cursor.moveToNext()) {
+                                if (SHOW_BIKE_BELL.equalsIgnoreCase(cursor.getString(nameIndex))) {
+                                    columnExists = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!columnExists) {
+                        addColumn(db, VIEWS_TABLE, SHOW_BIKE_BELL, "int DEFAULT 0");
+                    }
+                    db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + SHOW_BIKE_BELL + " = 1 WHERE "
+                            + ACTIVITY_TYPE + " IN ('" + ActivityType.BIKE_SPEED_AND_CADENCE.name() + "', '" + ActivityType.BIKE_POWER.name() + "') AND (" + SHOW_BIKE_BELL + " IS NULL OR " + SHOW_BIKE_BELL + " = 0);");
+                    db.setTransactionSuccessful();
+                } finally {
+                    db.endTransaction();
                 }
             }
         }

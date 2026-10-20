@@ -153,6 +153,37 @@ class TelemetryZoneMathTest {
     }
 
     @Test
+    fun testCalculatePowerThresholdDashes_returnsAll6Thresholds_tst_ui_383_2() {
+        // powerThresholds: z1=150, z2=200, z3=250, z4=300, z5=350, z6=450
+        // Full range covering all 6 thresholds: 50.0..600.0
+        val allDashes = TelemetryZoneMath.calculatePowerThresholdDashes(
+            thresholds = powerThresholds,
+            dataMin = 50.0,
+            dataMax = 600.0
+        )
+        assertEquals(listOf(150.0, 200.0, 250.0, 300.0, 350.0, 450.0), allDashes)
+
+        // Bounded range: 220.0..380.0 (intersects z3Max=250, z4Max=300, z5Max=350)
+        val boundedDashes = TelemetryZoneMath.calculatePowerThresholdDashes(
+            thresholds = powerThresholds,
+            dataMin = 220.0,
+            dataMax = 380.0
+        )
+        assertEquals(listOf(250.0, 300.0, 350.0), boundedDashes)
+
+        // HR threshold dashes invariance: strictly 4 thresholds
+        val hrDashes = TelemetryZoneMath.calculateThresholdDashes(
+            z1Max = 120,
+            z2Max = 140,
+            z3Max = 160,
+            z4Max = 180,
+            dataMin = 50.0,
+            dataMax = 600.0
+        )
+        assertEquals(listOf(120.0, 140.0, 160.0, 180.0), hrDashes)
+    }
+
+    @Test
     fun testShouldRenderZoneLabel_clearanceThreshold() {
         assertTrue("Height >= 28f must render label", TelemetryZoneMath.shouldRenderZoneLabel(28f, 28f))
         assertTrue("Height > 28f must render label", TelemetryZoneMath.shouldRenderZoneLabel(45f, 28f))

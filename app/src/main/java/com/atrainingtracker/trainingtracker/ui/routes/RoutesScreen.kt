@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.routes
 
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -66,7 +67,11 @@ import com.atrainingtracker.trainingtracker.ui.map.toMapSegment
 import kotlinx.coroutines.launch
 
 /**
- * Top-level Composable for Routes tabbed list, detail map view, and editing (REQ-UI-159).
+ * Top-level Composable for Routes tabbed list, detail map view, and editing (REQ-UI-159, REQ-UI-423).
+ *
+ * Renders [RouteTabbedScreen] continuously in composition when not inspecting a route on full-screen map,
+ * and overlays [EditRouteScreen] modal bottom sheet alongside it to prevent horizontal tab bar scroll jumping
+ * and collapsing app bar offset loss upon sheet dismissal (Rule 47 / REQ-UI-423).
  */
 @Composable
 fun RoutesScreen(
@@ -74,6 +79,8 @@ fun RoutesScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+
+    var pendingBatchUris by rememberSaveable { mutableStateOf<ArrayList<Uri>?>(null) }
 
     val gpxPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
@@ -83,7 +90,7 @@ fun RoutesScreen(
             }
             context.startActivity(intent)
         } else {
-            viewModel.importRoutesBatch(uris)
+            pendingBatchUris = ArrayList(uris)
         }
     }
 
@@ -213,24 +220,6 @@ fun RoutesScreen(
                         selectedRouteIdForDetails = null
                     }
                 }
-            } else if (selectedRouteIdForEdit != null) {
-                val routeToEdit = routes.find { it.summary.id == selectedRouteIdForEdit }
-                if (routeToEdit != null) {
-                    EditRouteScreen(
-                        routeSummary = routeToEdit.summary,
-                        onSave = {
-                            viewModel.updateRoute(it)
-                            selectedRouteIdForEdit = null
-                        },
-                        onCancel = {
-                            selectedRouteIdForEdit = null
-                        }
-                    )
-
-                    BackHandler {
-                        selectedRouteIdForEdit = null
-                    }
-                }
             } else {
                 RouteTabbedScreen(
                     routesWithPath = routes,
@@ -273,6 +262,51 @@ fun RoutesScreen(
                     onClearAllFilters = { viewModel.clearFilterCriteria() },
                     onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) }
                 )
+
+                if (selectedRouteIdForEdit != null) {
+                    val routeToEdit = routes.find { it.summary.id == selectedRouteIdForEdit }
+                    if (routeToEdit != null) {
+                        EditRouteScreen(
+                            routeSummary = routeToEdit.summary,
+                            onSave = {
+                                viewModel.updateRoute(it)
+                                selectedRouteIdForEdit = null
+                            },
+                            onCancel = {
+                                selectedRouteIdForEdit = null
+                            }
+                        )
+
+                        BackHandler {
+                            selectedRouteIdForEdit = null
+                        }
+                    }
+                }
+
+                pendingBatchUris?.let { uris ->
+                    BatchImportSportTypeDialog(
+                        routeCount = uris.size,
+                        onConfirm = { mode, selectedSport ->
+                            when (mode) {
+                                BatchSportMode.ALL -> {
+                                    viewModel.importRoutesBatch(uris, selectedSport)
+                                }
+                                BatchSportMode.INDIVIDUAL -> {
+                                    val intent = Intent(context, GpxImportActivity::class.java).apply {
+                                        action = Intent.ACTION_SEND_MULTIPLE
+                                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                                        putExtra(GpxImportActivity.EXTRA_INDIVIDUAL_MODE, true)
+                                    }
+                                    context.startActivity(intent)
+                                }
+                            }
+                            pendingBatchUris = null
+                        },
+                        onDismiss = {
+                            pendingBatchUris = null
+                        }
+                    )
+                }
             }
         }
     }

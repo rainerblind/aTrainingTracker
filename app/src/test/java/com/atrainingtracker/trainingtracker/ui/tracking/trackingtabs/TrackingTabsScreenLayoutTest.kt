@@ -81,10 +81,48 @@ class TrackingTabsScreenLayoutTest {
             content.contains("SnackbarHost(") && content.contains(".navigationBarsPadding()")
         )
 
-        // 5. Must provide clearance above LapButton when visible
+        // 5. Must provide clearance above LapButton or BikeBellButton when visible
         assertTrue(
-            "TrackingTabsScreen.kt must apply bottom padding conditional on shouldShowLapButton",
-            content.contains("padding(bottom = if (shouldShowLapButton) 64.dp else 8.dp)")
+            "TrackingTabsScreen.kt must apply bottom padding conditional on shouldShowLapButton || shouldShowBikeBell",
+            content.contains("padding(bottom = if (shouldShowLapButton || shouldShowBikeBell) 64.dp else 8.dp)")
+        )
+    }
+
+    /**
+     * TST-UI-384.5: Bottom overlay layout, button combinations, and configuration mode suppression.
+     */
+    @Test
+    fun testTrackingTabsScreen_bottomOverlayLayoutAndConfigurationSuppression() {
+        assertTrue("TrackingTabsScreen.kt must exist", trackingTabsScreenFile.exists())
+        val content = trackingTabsScreenFile.readText()
+
+        // 1. Both buttons must be suppressed in ScreenMode.CONFIGURATION per REQ-UI-295
+        assertTrue(
+            "shouldShowLapButton must check screenMode != ScreenMode.CONFIGURATION",
+            content.contains("val shouldShowLapButton = currentViewInfo?.showLapButton == true && screenMode != ScreenMode.CONFIGURATION")
+        )
+        assertTrue(
+            "shouldShowBikeBell must check screenMode != ScreenMode.CONFIGURATION",
+            content.contains("val shouldShowBikeBell = currentViewInfo?.showBikeBell == true && screenMode != ScreenMode.CONFIGURATION")
+        )
+
+        // 2. Both buttons rendered side-by-side in horizontal Row with 16.dp spacing when both active
+        assertTrue(
+            "TrackingTabsScreen must arrange LapButton and BikeBellButton in horizontal Row with 16.dp spacing",
+            content.contains("shouldShowLapButton && shouldShowBikeBell") &&
+                content.contains("horizontalArrangement = Arrangement.spacedBy(16.dp)")
+        )
+
+        // 3. BikeBellButton must be rendered when only shouldShowBikeBell is active
+        assertTrue(
+            "TrackingTabsScreen must render BikeBellButton",
+            content.contains("BikeBellButton(")
+        )
+
+        // 4. SnackbarHost must apply dynamic bottom padding of 64.dp when either button is active
+        assertTrue(
+            "SnackbarHost must apply bottom padding of 64.dp when shouldShowLapButton || shouldShowBikeBell",
+            content.contains("padding(bottom = if (shouldShowLapButton || shouldShowBikeBell) 64.dp else 8.dp)")
         )
     }
 

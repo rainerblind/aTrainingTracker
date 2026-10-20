@@ -137,4 +137,44 @@ class WorkoutClusterTrendLayoutAndVisibilityTest {
         assertTrue("WorkoutClusterTrendMath.kt ($mathLines lines) must be strictly < 500 lines", mathLines < 500)
         assertTrue("WorkoutClusterTrendChartCard.kt ($chartLines lines) must be strictly < 500 lines", chartLines < 500)
     }
+
+    @Test
+    fun testDensityAdaptivePointSizingAndOutlierVisualContract() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterTrendChartCard.kt")
+        val content = file.readText()
+
+        // Verify adaptive point sizing condition for N > 20
+        assertTrue(
+            "WorkoutClusterTrendChartCard must adapt point radius when points.size > 20",
+            content.contains("points.size > 20") && content.contains("2.dp") && content.contains("4.dp")
+        )
+
+        // Verify PR gold point
+        assertTrue(
+            "WorkoutClusterTrendChartCard must retain gold PR point",
+            content.contains("TTColor.Gold") && content.contains("6.dp")
+        )
+
+        // Verify clamped outlier rendering
+        assertTrue(
+            "WorkoutClusterTrendChartCard must visually differentiate isClampedOutlier points",
+            content.contains("p.isClampedOutlier")
+        )
+
+        // Verify outlier badge in callout card
+        assertTrue(
+            "WorkoutClusterTrendChartCard must display cluster_trend_outlier badge in callout",
+            content.contains("R.string.cluster_trend_outlier")
+        )
+
+        // Verify X and Y axis scale label rendering
+        assertTrue(
+            "WorkoutClusterTrendChartCard must render yAxisTopLabel and yAxisBottomLabel",
+            content.contains("yAxisTopLabel") && content.contains("yAxisBottomLabel")
+        )
+        assertTrue(
+            "WorkoutClusterTrendChartCard must render xAxisStartLabel and xAxisEndLabel",
+            content.contains("xAxisStartLabel") && content.contains("xAxisEndLabel")
+        )
+    }
 }

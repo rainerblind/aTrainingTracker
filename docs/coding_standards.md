@@ -67,10 +67,18 @@ This document serves as the authoritative living source of truth for software en
   * Any rolling-window or moving-average filter (`TimedMovingAverageFilter`) that prunes expired samples (`trimValues()`) inside `getFilteredValue()` **MUST** check `if (mValues.isEmpty()) return null;` *after* calling `trimValues()` before dividing by `mValues.size()`.
   * Checking `isEmpty()` only before `trimValues()` causes `0.0 / 0 = Double.NaN` (`"--"`) whenever all buffered samples in the time window expire simultaneously.
 
-### 1.8 Constructor State Seeding Parity with `resetSession()` in Stateful Metric Devices (Rule 51 — ATT-4283)
+### 1.8 Constructor State Seeding Parity & Sensor-Presence Gating in Stateful Metric Devices (Rules 51 & 52 — ATT-4283, ATT-4368)
 * **Constructor Initialization Parity**:
   * Any stateful virtual sensor or physiological metric device (such as `CyclingPowerMetricsDevice` tracking `W' Balance`, `NP`, `IF`, `TSS`) that initializes its baseline capacity in `resetSession()` **MUST** also invoke `resetSession()` (or seed the identical baseline state) inside its constructor.
   * Unit tests that explicitly call `device.resetSession()` in `@Before` can mask uninitialized constructor state (`0.0` instead of full `W'` capacity) that occurs when the service instantiates the device in production.
+* **Sensor-Presence Gating Before Publishing to `MySensor` & Summary Persistence (Rule 52 — ATT-4368)**:
+  * While internal accumulator variables (`currentWPrimeBalance = wPrimeCapacity`) should be initialized immediately, virtual metric devices **MUST NOT** call `MySensor.newValue(...)` until the underlying physical/source sensor (`SensorType.POWER`) is registered or emits a real sample, and `WorkoutDataMapper` **MUST** gate derived summary rows (`W'bal`, `NP`, `EF`) on the presence of recorded source telemetry (`avgPower != null || maxPower != null`).
+  * Unconditionally publishing a seeded value to `MySensor` during `resetSession()` causes `TrackerService` to persist phantom `EXTREMA` rows (e.g., `W'bal = 100% / 20.0 kJ`) on non-power workouts such as walks or runs.
+
+### 1.9 Origin-Aware Cockpit Tab Navigation on `TrackingMode.TRACKING` Transitions (Rule 55 — ATT-4373)
+* **Preserve Active Cockpit Tab When Auto-Pause Ends**:
+  * Rising-edge transitions to `TrackingMode.TRACKING` in `TrackingTabsViewModel` **MUST** distinguish between an initial workout start (`READY -> TRACKING`) / manual resume from the **Control** tab (`Page 0`) versus an **Auto-Pause** resume (`PAUSED (isAutoPaused) -> TRACKING`).
+  * Emitting `TabNavigationEvent.NavigateTo(0)` when Auto-Pause finishes pulls the athlete away from whichever secondary telemetry or Map tab they were viewing. Auto-scroll to the first telemetry tab (`NavigateTo(0)`) is only permitted when starting tracking or resuming from the **Control** tab (`Page 0`).
 
 ---
 
@@ -114,6 +122,13 @@ This document serves as the authoritative living source of truth for software en
   * When an entity (such as a paired sensor or bike profile) is deleted from local persistence (database), the background service managing active hardware connections (`BANALService`) **MUST** be immediately notified to cleanly disconnect and unregister the hardware resource.
 * **Orphan Defense in UI ViewModels**:
   * ViewModels **MUST** defensively discard orphaned IDs that do not exist in the database rather than constructing invalid fallback data models (`DeviceType.DUMMY`) that open broken, empty, or dimmed modal dialogs.
+
+### 3.4 Audible Outdoor Safety Alerts (`USAGE_MEDIA`) & Static `AudioTrack` Replay (Rule 53 — ATT-4371)
+* **Media Stream Routing Over Sonification**:
+  * Explicit user-triggered outdoor audio utilities (such as the Cockpit Bike Bell or acoustic safety warnings) **MUST** configure `AudioAttributes` with `AudioAttributes.USAGE_MEDIA` (or `AudioAttributes.USAGE_ALARM`), **NEVER** `AudioAttributes.USAGE_ASSISTANCE_SONIFICATION`.
+  * Android routes `USAGE_ASSISTANCE_SONIFICATION` to the system ringer/notification stream, which is completely silenced whenever the phone is on Vibrate or Silent mode.
+* **Reliable `MODE_STATIC` Replay**:
+  * When re-triggering a `MODE_STATIC` `AudioTrack` (or overlapping rapid chimes), always call `stop()` and `reloadStaticData()` (or instantiate a fresh `AudioTrack` per strike and release on completion) so subsequent taps never silently no-op.
 
 ---
 

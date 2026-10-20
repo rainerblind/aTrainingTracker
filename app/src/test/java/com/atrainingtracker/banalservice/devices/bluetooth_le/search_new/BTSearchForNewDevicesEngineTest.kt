@@ -33,6 +33,7 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -54,6 +55,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.File
 import java.util.LinkedList
 import java.util.Queue
 import java.util.UUID
@@ -77,6 +79,9 @@ class BTSearchForNewDevicesEngineTest {
         deviceType: DeviceType,
         callback: IBTSearchForNewDevicesEngineInterface
     ) : BTSearchForNewDevicesEngine(context, deviceType, callback) {
+
+        var testSdkInt: Int = Build.VERSION_CODES.S
+        override fun getBuildVersionSdkInt(): Int = testSdkInt
 
         fun getGattsMap(): MutableMap<String, BluetoothGatt> = mBTGatts
         fun getInformedMap(): MutableMap<String, Boolean> = mInformedDevices
@@ -116,7 +121,9 @@ class BTSearchForNewDevicesEngineTest {
         every { Log.d(any<String>(), any<String>()) } returns 0
         every { Log.i(any<String>(), any<String>()) } returns 0
         every { Log.w(any<String>(), any<String>()) } returns 0
+        every { Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
+        every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
 
         mockkStatic(ContextCompat::class)
         every {
@@ -382,6 +389,175 @@ class BTSearchForNewDevicesEngineTest {
         verify(exactly = 1) { anyConstructed<ScanSettings.Builder>().setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES) }
         verify(exactly = 1) { anyConstructed<ScanSettings.Builder>().setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE) }
         verify(exactly = 1) { anyConstructed<ScanSettings.Builder>().setNumOfMatches(ScanSettings.MATCH_NUM_ONE_ADVERTISEMENT) }
+    }
+
+    /**
+     * REQ-CON-021.2 / TST-CON-021.1: Pre-API 31 scan must abort gracefully without initiating
+     * a platform scan if BLUETOOTH_ADMIN permission is denied.
+     */
+    @Test
+    fun testStartAsyncSearch_onApiBelow31_missingBluetoothAdminPermission_abortsGracefully() {
+        every {
+            ContextCompat.checkSelfPermission(mockContext, Manifest.permission.BLUETOOTH_ADMIN)
+        } returns PackageManager.PERMISSION_DENIED
+        every {
+            ContextCompat.checkSelfPermission(mockContext, Manifest.permission.ACCESS_FINE_LOCATION)
+        } returns PackageManager.PERMISSION_GRANTED
+
+        val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+        engine.testSdkInt = Build.VERSION_CODES.R
+
+        engine.startAsyncSearch()
+
+        assertFalse("Scanning flag must remain false when BLUETOOTH_ADMIN is denied on API < 31", engine.isScanning())
+        verify(exactly = 0) { mockScanner.startScan(any<List<ScanFilter>>(), any<ScanSettings>(), any<ScanCallback>()) }
+    }
+
+    /**
+     * REQ-CON-021.2 / TST-CON-021.2: Pre-API 31 scan must abort gracefully without initiating
+     * a platform scan if ACCESS_FINE_LOCATION permission is denied.
+     */
+    @Test
+    fun testStartAsyncSearch_onApiBelow31_missingFineLocationPermission_abortsGracefully() {
+        every {
+            ContextCompat.checkSelfPermission(mockContext, Manifest.permission.BLUETOOTH_ADMIN)
+        } returns PackageManager.PERMISSION_GRANTED
+        every {
+            ContextCompat.checkSelfPermission(mockContext, Manifest.permission.ACCESS_FINE_LOCATION)
+        } returns PackageManager.PERMISSION_DENIED
+
+        val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+        engine.testSdkInt = Build.VERSION_CODES.R
+
+        engine.startAsyncSearch()
+
+        assertFalse("Scanning flag must remain false when ACCESS_FINE_LOCATION is denied on API < 31", engine.isScanning())
+        verify(exactly = 0) { mockScanner.startScan(any<List<ScanFilter>>(), any<ScanSettings>(), any<ScanCallback>()) }
+    }
+
+    /**
+     * REQ-CON-021.3 / TST-CON-021.3: startScan throwing SecurityException must be caught,
+     * resetting scanning flag to false and preventing permanent engine lockup.
+     */
+    @Test
+    fun testStartAsyncSearch_startScanThrowsSecurityException_catchesAndResetsScanning() {
+        every {
+            mockScanner.startScan(any<List<ScanFilter>>(), any<ScanSettings>(), any<ScanCallback>())
+        } throws SecurityException("Need BLUETOOTH_ADMIN permission")
+
+        val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+        engine.startAsyncSearch()
+
+        assertFalse("Scanning flag must be reset to false when startScan throws SecurityException", engine.isScanning())
+
+        // Verify engine is not permanently locked in 'already searching' state:
+        // A subsequent scan call when scanner succeeds must start cleanly.
+        every {
+            mockScanner.startScan(any<List<ScanFilter>>(), any<ScanSettings>(), any<ScanCallback>())
+        } returns Unit
+
+        engine.startAsyncSearch()
+        assertTrue("Subsequent startAsyncSearch must succeed and set scanning to true", engine.isScanning())
+    }
+
+    /**
+     * REQ-CON-021.3 / TST-CON-021.4: startScan throwing IllegalStateException (e.g. BT adapter disabled)
+     * must be caught and reset scanning flag to false.
+     */
+    @Test
+    fun testStartAsyncSearch_startScanThrowsIllegalStateException_catchesAndResetsScanning() {
+        every {
+            mockScanner.startScan(any<List<ScanFilter>>(), any<ScanSettings>(), any<ScanCallback>())
+        } throws IllegalStateException("BT adapter not turned ON")
+
+        val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+        engine.startAsyncSearch()
+
+        assertFalse("Scanning flag must be reset to false when startScan throws IllegalStateException", engine.isScanning())
+    }
+
+    /**
+     * REQ-CON-021.4 / TST-CON-021.5: stopScan throwing SecurityException must be caught gracefully,
+     * ensuring scanning is set to false and resetTrackingState executes cleanly.
+     */
+    @Test
+    fun testStopAsyncSearch_stopScanThrowsSecurityException_catchesGracefully() {
+        val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+        every {
+            mockScanner.startScan(any<List<ScanFilter>>(), any<ScanSettings>(), any<ScanCallback>())
+        } returns Unit
+        engine.startAsyncSearch()
+        assertTrue(engine.isScanning())
+
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        engine.getGattsMap()["AA:BB:CC:DD:EE:05"] = mockGatt
+
+        every {
+            mockScanner.stopScan(any<ScanCallback>())
+        } throws SecurityException("Permission revoked")
+
+        engine.stopAsyncSearch()
+
+        assertFalse("Scanning flag must be false after stopAsyncSearch", engine.isScanning())
+        assertTrue("resetTrackingState must have cleared GATT map even after exception", engine.getGattsMap().isEmpty())
+    }
+
+    /**
+     * REQ-CON-021.4 / TST-CON-021.6: stopScan throwing IllegalStateException (e.g. BT adapter turned off)
+     * must be caught gracefully without crashing.
+     */
+    @Test
+    fun testStopAsyncSearch_stopScanThrowsIllegalStateException_catchesGracefully() {
+        val engine = TestSearchEngine(mockContext, DeviceType.HRM, mockCallback)
+        every {
+            mockScanner.startScan(any<List<ScanFilter>>(), any<ScanSettings>(), any<ScanCallback>())
+        } returns Unit
+        engine.startAsyncSearch()
+        assertTrue(engine.isScanning())
+
+        every {
+            mockScanner.stopScan(any<ScanCallback>())
+        } throws IllegalStateException("BT adapter off")
+
+        engine.stopAsyncSearch()
+
+        assertFalse("Scanning flag must be false after stopAsyncSearch", engine.isScanning())
+    }
+
+    /**
+     * REQ-CON-021.1 / TST-CON-021.7: AndroidManifest.xml must actively declare BLUETOOTH_ADMIN
+     * bounded with android:maxSdkVersion="30" (not commented out).
+     */
+    @Test
+    fun testManifest_declaresBluetoothAdminPermissionWithMaxSdkVersion30() {
+        val candidates = listOf(
+            File("src/main/AndroidManifest.xml"),
+            File("app/src/main/AndroidManifest.xml"),
+            File("../app/src/main/AndroidManifest.xml")
+        )
+        val manifestFile = candidates.firstOrNull { it.exists() }
+            ?: throw IllegalStateException("Could not locate AndroidManifest.xml in any candidate path: $candidates")
+
+        val content = manifestFile.readText()
+        assertTrue(
+            "AndroidManifest.xml must declare active BLUETOOTH_ADMIN permission (REQ-CON-021.1)",
+            content.contains("android.permission.BLUETOOTH_ADMIN")
+        )
+        assertFalse(
+            "BLUETOOTH_ADMIN permission must NOT be commented out in AndroidManifest.xml",
+            content.contains("<!-- uses-permission android:name=\"android.permission.BLUETOOTH_ADMIN\"") ||
+                content.contains("<!--uses-permission android:name=\"android.permission.BLUETOOTH_ADMIN\"")
+        )
+
+        val pattern = Regex(
+            """<uses-permission\s+[^>]*android:name="android\.permission\.BLUETOOTH_ADMIN"[^>]*android:maxSdkVersion="30"[^>]*/>""" +
+                """|<uses-permission\s+[^>]*android:maxSdkVersion="30"[^>]*android:name="android\.permission\.BLUETOOTH_ADMIN"[^>]*/>""",
+            RegexOption.DOT_MATCHES_ALL
+        )
+        assertTrue(
+            "AndroidManifest.xml must declare BLUETOOTH_ADMIN with android:maxSdkVersion=\"30\" attribute",
+            pattern.containsMatchIn(content)
+        )
     }
 }
 

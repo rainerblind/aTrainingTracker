@@ -26,6 +26,18 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.LinkedList;
 
+/**
+ * Moving average filter that calculates the arithmetic mean of sample values
+ * received within a sliding time window (specified in seconds).
+ *
+ * <p>Thread Safety: All state-mutating operations and value queries are synchronized
+ * on the filter instance monitor to ensure concurrent safety between background sensor
+ * ingestion threads and UI telemetry queries.</p>
+ *
+ * <p>Null Safety: Returns {@code null} when no samples exist or all buffered samples
+ * expire past the time window threshold, avoiding division by zero ({@link Double#NaN})
+ * per REQ-FIL-014.2 and Rule 50.</p>
+ */
 public class TimedMovingAverageFilter
         extends MovingAverageFilter {
     private static final boolean DEBUG = BANALService.getDebug(false);
@@ -33,6 +45,13 @@ public class TimedMovingAverageFilter
     protected long mSeconds;
     protected LinkedList<TimestampedValue> mTimestampedValues = new LinkedList<>();
 
+    /**
+     * Constructs a timed moving average filter for the given device and sensor type.
+     *
+     * @param deviceName the name of the sensor device, or null for best/proxy sensor.
+     * @param sensorType the sensor telemetry type to filter.
+     * @param seconds the duration of the rolling time window in seconds.
+     */
     public TimedMovingAverageFilter(String deviceName, SensorType sensorType, long seconds) {
         super(deviceName, sensorType);
 
@@ -66,13 +85,23 @@ public class TimedMovingAverageFilter
         }
     }
 
+    /**
+     * Calculates the arithmetic mean of all non-expired samples within the time window.
+     *
+     * <p>Purges expired samples via {@link #trimValues()} first. If all samples have aged out
+     * or the buffer is empty, returns {@code null} to prevent {@code 0.0 / 0 = Double.NaN}
+     * division by zero (Rule 50 / REQ-FIL-014.2).</p>
+     *
+     * @return the arithmetic average of current values within the time window, or {@code null}
+     *         if no valid unexpired samples exist.
+     */
     @Override
     public synchronized Number getFilteredValue() {
-        if (mTimestampedValues.size() == 0) {
+        trimValues();
+
+        if (mTimestampedValues.isEmpty()) {
             return null;
         }
-
-        trimValues();
 
         double sum = 0;
         for (TimestampedValue timestampedValue : mTimestampedValues) {
