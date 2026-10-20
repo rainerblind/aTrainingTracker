@@ -705,6 +705,15 @@
     <string name="routes_import_success">Pomyślnie zaimportowano %1$d tras.</string>
     <string name="routes_import_partial">Zaimportowano %1$d tras, %2$d nie powiodło się.</string>
     <string name="routes_import_all_failed">Nie udało się zaimportować tras.</string>
+    <!-- Batch GPX Route Import Sport Type Selection (REQ-MAP-053 / ATT-4284) -->
+    <string name="batch_import_dialog_title_format">Importuj %1$d tras</string>
+    <string name="batch_import_mode_all">Zastosuj do wszystkich</string>
+    <string name="batch_import_mode_individual">Konfiguruj indywidualnie</string>
+    <string name="batch_import_individual_hint">Każda trasa zostanie otwarta sekwencyjnie do przejrzenia i edycji przed zapisaniem.</string>
+    <string name="batch_import_action_import">Importuj</string>
+    <string name="batch_import_action_continue">Kontynuuj</string>
+    <string name="batch_import_individual_progress_format">Trasa %1$d z %2$d</string>
+    <string name="batch_import_skip_route">Pomiń</string>
     <string name="strava_sync_success">Trasy Strava zsynchronizowane.</string>
     <string name="strava_sync_failed">Błąd synchronizacji Strava.</string>
     <string name="save_as_local_route">Zapisz jako trasę lokalną</string>

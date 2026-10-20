@@ -274,5 +274,63 @@ class RoutesScreenContractTest {
             }
         }
     }
+
+    /**
+     * Verifies that [RoutesScreen] discriminates between single-file and multi-file route picking,
+     * launching [GpxImportActivity] directly for single-file and presenting [BatchImportSportTypeDialog]
+     * for multi-file with appropriate delegation (REQ-MAP-053.2, TST-MAP-056.5).
+     */
+    @Test
+    fun testMultiFileRouteSelection_flowDiscrimination_TST_MAP_056_5() {
+        assertTrue("RoutesScreen.kt must exist", routesScreenFile.exists())
+        val content = routesScreenFile.readText()
+
+        // 1. Multi-file contract launcher
+        assertTrue(
+            "RoutesScreen.kt must use GetMultipleContents() for route picking",
+            content.contains("ActivityResultContracts.GetMultipleContents()")
+        )
+
+        // 2. Single-file discrimination: launches GpxImportActivity directly
+        val singleFileBranch = content.contains("uris.size == 1") &&
+                content.contains("GpxImportActivity::class.java") &&
+                content.contains("data = uris.first()")
+        assertTrue("Single file selection must directly launch GpxImportActivity with data = uris.first()", singleFileBranch)
+
+        // 3. Multi-file discrimination: assigns pendingBatchUris
+        assertTrue(
+            "Multi-file selection must assign pendingBatchUris",
+            content.contains("pendingBatchUris = ArrayList(uris)")
+        )
+
+        // 4. BatchImportSportTypeDialog overlay presence
+        assertTrue(
+            "RoutesScreen.kt must compose BatchImportSportTypeDialog when pendingBatchUris != null",
+            content.contains("pendingBatchUris?.let") &&
+                    content.contains("BatchImportSportTypeDialog(")
+        )
+
+        // 5. Confirm ALL mode delegates to viewModel.importRoutesBatch(uris, selectedSport)
+        assertTrue(
+            "Confirm ALL mode must invoke viewModel.importRoutesBatch(uris, selectedSport)",
+            content.contains("BatchSportMode.ALL") &&
+                    content.contains("viewModel.importRoutesBatch(uris, selectedSport)")
+        )
+
+        // 6. Confirm INDIVIDUAL mode launches GpxImportActivity with EXTRA_INDIVIDUAL_MODE
+        assertTrue(
+            "Confirm INDIVIDUAL mode must launch GpxImportActivity with EXTRA_INDIVIDUAL_MODE",
+            content.contains("BatchSportMode.INDIVIDUAL") &&
+                    content.contains("GpxImportActivity.EXTRA_INDIVIDUAL_MODE") &&
+                    content.contains("Intent.ACTION_SEND_MULTIPLE")
+        )
+
+        // 7. Dialog dismissal resets pendingBatchUris to null
+        assertTrue(
+            "Dismissing dialog must reset pendingBatchUris to null",
+            content.contains("onDismiss = {") &&
+                    content.contains("pendingBatchUris = null")
+        )
+    }
 }
 

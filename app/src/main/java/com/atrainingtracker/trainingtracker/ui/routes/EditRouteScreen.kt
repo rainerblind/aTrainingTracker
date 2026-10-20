@@ -47,35 +47,87 @@ import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+
+/**
+ * Bottom sheet editor for route details (name, sport type, description).
+ *
+ * Can be used in standard single-route edit mode, or enhanced for sequential individual
+ * review during batch import with custom [title] (e.g. "Route 1 of 5") and [onSkip] action (REQ-MAP-053.5).
+ *
+ * @param routeSummary Initial route metadata to edit.
+ * @param onSave Callback dispatched when the athlete saves the route changes.
+ * @param onCancel Callback dispatched when the editor is canceled or dismissed.
+ * @param title Optional title override (defaults to [R.string.route_edit]).
+ * @param onSkip Optional callback to skip the current route during batch sequential review.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditRouteScreen(
     routeSummary: RouteSummary,
     onSave: (RouteSummary) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    title: String? = null,
+    onSkip: (() -> Unit)? = null
 ) {
     var name by remember { mutableStateOf(routeSummary.name) }
     var description by remember { mutableStateOf(routeSummary.description) }
     var selectedSport by remember { mutableStateOf(routeSummary.bSportType) }
 
     AppModalBottomSheet(
-        title = stringResource(R.string.route_edit),
+        title = title ?: stringResource(R.string.route_edit),
         icon = Icons.Default.Edit,
         onDismissRequest = onCancel,
         actions = {
-            AppDialogActions.SaveCancel(
-                onSave = {
-                    onSave(
-                        routeSummary.copy(
-                            name = name,
-                            description = description,
-                            bSportType = selectedSport
+            if (onSkip != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onCancel) {
+                        Text(stringResource(R.string.Cancel))
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = onSkip) {
+                            Text(stringResource(R.string.batch_import_skip_route))
+                        }
+                        Button(
+                            onClick = {
+                                onSave(
+                                    routeSummary.copy(
+                                        name = name,
+                                        description = description,
+                                        bSportType = selectedSport
+                                    )
+                                )
+                            },
+                            enabled = name.isNotBlank()
+                        ) {
+                            Text(stringResource(R.string.save))
+                        }
+                    }
+                }
+            } else {
+                AppDialogActions.SaveCancel(
+                    onSave = {
+                        onSave(
+                            routeSummary.copy(
+                                name = name,
+                                description = description,
+                                bSportType = selectedSport
+                            )
                         )
-                    )
-                },
-                onCancel = onCancel,
-                saveEnabled = name.isNotBlank()
-            )
+                    },
+                    onCancel = onCancel,
+                    saveEnabled = name.isNotBlank()
+                )
+            }
         }
     ) {
         Column(

@@ -935,6 +935,15 @@
     <string name="routes_import_success">%1$d itinéraires importés avec succès.</string>
     <string name="routes_import_partial">%1$d itinéraires importés, %2$d ont échoué.</string>
     <string name="routes_import_all_failed">Échec de l\'importation des itinéraires.</string>
+    <!-- Batch GPX Route Import Sport Type Selection (REQ-MAP-053 / ATT-4284) -->
+    <string name="batch_import_dialog_title_format">Importer %1$d itinéraires</string>
+    <string name="batch_import_mode_all">Appliquer à tous</string>
+    <string name="batch_import_mode_individual">Configurer individuellement</string>
+    <string name="batch_import_individual_hint">Chaque itinéraire sera ouvert séquentiellement pour révision et modification avant enregistrement.</string>
+    <string name="batch_import_action_import">Importer</string>
+    <string name="batch_import_action_continue">Continuer</string>
+    <string name="batch_import_individual_progress_format">Itinéraire %1$d sur %2$d</string>
+    <string name="batch_import_skip_route">Ignorer</string>
     <string name="strava_sync_success">Itinéraires Strava synchronisés.</string>
     <string name="strava_sync_failed">Échec synchro Strava.</string>
     <string name="save_as_local_route">Enregistrer comme itinéraire local</string>

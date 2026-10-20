@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.routes
 
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -79,6 +80,8 @@ fun RoutesScreen(
 ) {
     val context = LocalContext.current
 
+    var pendingBatchUris by rememberSaveable { mutableStateOf<ArrayList<Uri>?>(null) }
+
     val gpxPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
         if (uris.size == 1) {
@@ -87,7 +90,7 @@ fun RoutesScreen(
             }
             context.startActivity(intent)
         } else {
-            viewModel.importRoutesBatch(uris)
+            pendingBatchUris = ArrayList(uris)
         }
     }
 
@@ -278,6 +281,31 @@ fun RoutesScreen(
                             selectedRouteIdForEdit = null
                         }
                     }
+                }
+
+                pendingBatchUris?.let { uris ->
+                    BatchImportSportTypeDialog(
+                        routeCount = uris.size,
+                        onConfirm = { mode, selectedSport ->
+                            when (mode) {
+                                BatchSportMode.ALL -> {
+                                    viewModel.importRoutesBatch(uris, selectedSport)
+                                }
+                                BatchSportMode.INDIVIDUAL -> {
+                                    val intent = Intent(context, GpxImportActivity::class.java).apply {
+                                        action = Intent.ACTION_SEND_MULTIPLE
+                                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                                        putExtra(GpxImportActivity.EXTRA_INDIVIDUAL_MODE, true)
+                                    }
+                                    context.startActivity(intent)
+                                }
+                            }
+                            pendingBatchUris = null
+                        },
+                        onDismiss = {
+                            pendingBatchUris = null
+                        }
+                    )
                 }
             }
         }

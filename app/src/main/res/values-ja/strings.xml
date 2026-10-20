@@ -918,6 +918,15 @@
     <string name="routes_import_success">%1$d 件のルートを正常にインポートしました。</string>
     <string name="routes_import_partial">%1$d 件のルートをインポート、%2$d 件失敗しました。</string>
     <string name="routes_import_all_failed">ルートをインポートできませんでした。</string>
+    <!-- Batch GPX Route Import Sport Type Selection (REQ-MAP-053 / ATT-4284) -->
+    <string name="batch_import_dialog_title_format">%1$d 件のルートをインポート</string>
+    <string name="batch_import_mode_all">すべてに適用</string>
+    <string name="batch_import_mode_individual">個別に設定</string>
+    <string name="batch_import_individual_hint">保存する前に、各ルートが順番に開かれ確認および編集できます。</string>
+    <string name="batch_import_action_import">インポート</string>
+    <string name="batch_import_action_continue">続行</string>
+    <string name="batch_import_individual_progress_format">ルート %1$d / %2$d</string>
+    <string name="batch_import_skip_route">スキップ</string>
     <string name="strava_sync_success">Strava ルートを同期しました。</string>
     <string name="strava_sync_failed">Strava 同期失敗。</string>
     <string name="save_as_local_route">ローカルルートとして保存</string>

@@ -38,11 +38,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.routes.BatchImportSportTypeDialog
+import com.atrainingtracker.trainingtracker.ui.routes.BatchSportMode
 import com.atrainingtracker.trainingtracker.ui.routes.EditRouteScreen
 import com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModel
 import com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelFactory
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
+/**
+ * Activity handling external file intents and multi-route sequential editing (REQ-MAP-053).
+ */
 class GpxImportActivity : ComponentActivity() {
 
     private val viewModel: GpxImportViewModel by viewModels {
@@ -63,8 +68,13 @@ class GpxImportActivity : ComponentActivity() {
             }
         }
 
+        val isIndividualMode = intent.getBooleanExtra(EXTRA_INDIVIDUAL_MODE, false)
         if (uris.size > 1) {
-            viewModel.handleBatchUris(uris)
+            if (isIndividualMode) {
+                viewModel.startIndividualImport(uris)
+            } else {
+                viewModel.promptSportType(uris)
+            }
         } else {
             viewModel.handleIntent(uris.firstOrNull())
         }
@@ -91,6 +101,22 @@ class GpxImportActivity : ComponentActivity() {
                             }
                         }
                     }
+                    is GpxImportViewModel.ImportState.PromptSportType -> {
+                        BatchImportSportTypeDialog(
+                            routeCount = state.uris.size,
+                            onConfirm = { mode, selectedSport ->
+                                when (mode) {
+                                    BatchSportMode.ALL -> {
+                                        viewModel.handleBatchUris(state.uris, selectedSport)
+                                    }
+                                    BatchSportMode.INDIVIDUAL -> {
+                                        viewModel.startIndividualImport(state.uris)
+                                    }
+                                }
+                            },
+                            onDismiss = { finish() }
+                        )
+                    }
                     is GpxImportViewModel.ImportState.Editing -> {
                         EditRouteScreen(
                             routeSummary = state.summary,
@@ -98,6 +124,23 @@ class GpxImportActivity : ComponentActivity() {
                                 viewModel.saveRoute(updatedSummary, state.points, state.waypoints)
                             },
                             onCancel = { finish() }
+                        )
+                    }
+                    is GpxImportViewModel.ImportState.EditingIndividual -> {
+                        EditRouteScreen(
+                            routeSummary = state.summary,
+                            onSave = { updatedSummary ->
+                                viewModel.saveCurrentIndividualRoute(updatedSummary)
+                            },
+                            onCancel = { finish() },
+                            title = stringResource(
+                                R.string.batch_import_individual_progress_format,
+                                state.current,
+                                state.total
+                            ),
+                            onSkip = {
+                                viewModel.skipCurrentIndividualRoute()
+                            }
                         )
                     }
                     is GpxImportViewModel.ImportState.Saving -> {
@@ -156,5 +199,10 @@ class GpxImportActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        /** Intent extra indicating that multi-file batch import should start directly in sequential review mode. */
+        const val EXTRA_INDIVIDUAL_MODE = "com.atrainingtracker.extra.INDIVIDUAL_MODE"
     }
 }

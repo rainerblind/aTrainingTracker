@@ -259,4 +259,60 @@ class RoutesViewModelTest {
         viewModel.clearBatchImportResult()
         assertNull(viewModel.batchImportResult.value)
     }
+
+    /**
+     * Verifies that [RoutesViewModel.importRoutesBatch] overrides the parsed sport type
+     * when a specific [BSportType] is provided, and preserves the original parsed sport
+     * type when [BSportType.UNKNOWN] is passed or defaulted (REQ-MAP-053.3, TST-MAP-056.1).
+     */
+    @Test
+    fun testBatchImport_withSportTypeOverride_TST_MAP_056_1() = runTest(testDispatcher) {
+        val uri1 = mockk<Uri>()
+        val uri2 = mockk<Uri>()
+        val uri3 = mockk<Uri>()
+        val uri4 = mockk<Uri>()
+
+        val baseSummary = RouteSummary(
+            id = 0,
+            externalId = "test.gpx",
+            name = "Test Route",
+            description = "Test Description",
+            isSelected = false,
+            distance = 5000.0,
+            elevationGain = 100.0,
+            bSportType = BSportType.UNKNOWN,
+            source = RouteSource.LOCAL_GPX
+        )
+        val route1 = RouteImportResult(summary = baseSummary.copy(externalId = "1.gpx"), pathPoints = emptyList(), waypoints = emptyList())
+        val route2 = RouteImportResult(summary = baseSummary.copy(externalId = "2.gpx"), pathPoints = emptyList(), waypoints = emptyList())
+        val route3 = RouteImportResult(summary = baseSummary.copy(externalId = "3.gpx"), pathPoints = emptyList(), waypoints = emptyList())
+        val route4 = RouteImportResult(summary = baseSummary.copy(externalId = "4.gpx"), pathPoints = emptyList(), waypoints = emptyList())
+
+        coEvery { mockImporter.importRouteFromGpx(uri1) } returns Result.success(route1)
+        coEvery { mockImporter.importRouteFromGpx(uri2) } returns Result.success(route2)
+        coEvery { mockImporter.importRouteFromGpx(uri3) } returns Result.success(route3)
+        coEvery { mockImporter.importRouteFromGpx(uri4) } returns Result.success(route4)
+        coEvery { mockRoutesRepo.insertRoute(any(), any(), any()) } returns 1L
+
+        val viewModel = createViewModel()
+
+        // 1. Override with BSportType.BIKE
+        viewModel.importRoutesBatch(listOf(uri1, uri2), sportType = BSportType.BIKE)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { mockRoutesRepo.insertRoute(match { it.externalId == "1.gpx" && it.bSportType == BSportType.BIKE }, any(), any()) }
+        coVerify(exactly = 1) { mockRoutesRepo.insertRoute(match { it.externalId == "2.gpx" && it.bSportType == BSportType.BIKE }, any(), any()) }
+
+        // 2. Override with BSportType.RUN
+        viewModel.importRoutesBatch(listOf(uri3), sportType = BSportType.RUN)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { mockRoutesRepo.insertRoute(match { it.externalId == "3.gpx" && it.bSportType == BSportType.RUN }, any(), any()) }
+
+        // 3. Default fallback with BSportType.UNKNOWN (no override)
+        viewModel.importRoutesBatch(listOf(uri4))
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { mockRoutesRepo.insertRoute(match { it.externalId == "4.gpx" && it.bSportType == BSportType.UNKNOWN }, any(), any()) }
+    }
 }

@@ -936,6 +936,15 @@
     <string name="routes_import_success">%1$d rotas importadas com sucesso.</string>
     <string name="routes_import_partial">%1$d rotas importadas, %2$d falharam.</string>
     <string name="routes_import_all_failed">Falha ao importar rotas.</string>
+    <!-- Batch GPX Route Import Sport Type Selection (REQ-MAP-053 / ATT-4284) -->
+    <string name="batch_import_dialog_title_format">Importar %1$d rotas</string>
+    <string name="batch_import_mode_all">Aplicar a todas</string>
+    <string name="batch_import_mode_individual">Configurar individualmente</string>
+    <string name="batch_import_individual_hint">Cada rota será aberta sequencialmente para revisão e edição antes de salvar.</string>
+    <string name="batch_import_action_import">Importar</string>
+    <string name="batch_import_action_continue">Continuar</string>
+    <string name="batch_import_individual_progress_format">Rota %1$d de %2$d</string>
+    <string name="batch_import_skip_route">Pular</string>
     <string name="strava_sync_success">Rotas Strava sincronizadas.</string>
     <string name="strava_sync_failed">Erro sincronização Strava.</string>
     <string name="save_as_local_route">Salvar como rota local</string>

@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.database.RouteSource
@@ -262,9 +263,14 @@ class RoutesViewModel @JvmOverloads constructor(
 
     /**
      * Imports multiple route files in batch on Dispatchers.IO (REQ-MAP-053.3).
-     * Reports live progress via batchImportProgress and final tally via batchImportResult.
+     *
+     * Optionally overrides the route sport type with [sportType] when specified (not [BSportType.UNKNOWN]).
+     * Reports live progress via [batchImportProgress] and final tally via [batchImportResult].
+     *
+     * @param uris List of route [Uri]s to parse and persist.
+     * @param sportType Target sport type to assign to all imported routes, defaulting to [BSportType.UNKNOWN].
      */
-    fun importRoutesBatch(uris: List<Uri>) {
+    fun importRoutesBatch(uris: List<Uri>, sportType: BSportType = BSportType.UNKNOWN) {
         if (uris.isEmpty()) return
         viewModelScope.launch {
             var imported = 0
@@ -277,7 +283,12 @@ class RoutesViewModel @JvmOverloads constructor(
                     if (result.isSuccess) {
                         val data = result.getOrNull()
                         if (data != null) {
-                            routesRepository.insertRoute(data.summary, data.pathPoints, data.waypoints)
+                            val targetSummary = if (sportType != BSportType.UNKNOWN) {
+                                data.summary.copy(bSportType = sportType)
+                            } else {
+                                data.summary
+                            }
+                            routesRepository.insertRoute(targetSummary, data.pathPoints, data.waypoints)
                             imported++
                         } else {
                             failed++
