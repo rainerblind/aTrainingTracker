@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -28,8 +29,12 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -587,7 +592,36 @@ class TuningPreferencesDataStore(private val context: Context) {
                 prefs.remove(key)
             }
         }
+
+        @Volatile
+        private var INSTANCE: TuningPreferencesDataStore? = null
+
+        @JvmStatic
+        fun getInstance(context: Context): TuningPreferencesDataStore {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: TuningPreferencesDataStore(context.applicationContext ?: context).also { INSTANCE = it }
+            }
+        }
+
+        @VisibleForTesting
+        fun setInstanceForTesting(instance: TuningPreferencesDataStore?) {
+            synchronized(this) {
+                INSTANCE = instance
+            }
+        }
     }
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    val tuningConfigStateFlow: StateFlow<TuningConfig> by lazy {
+        tuningConfigFlow.stateIn(
+            scope = appScope,
+            started = SharingStarted.Eagerly,
+            initialValue = TuningConfig()
+        )
+    }
+
+    fun getTuningConfig(): TuningConfig = tuningConfigStateFlow.value
 
     init {
         CoroutineScope(Dispatchers.IO).launch {

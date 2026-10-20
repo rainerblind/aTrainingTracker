@@ -92,6 +92,7 @@ import com.atrainingtracker.trainingtracker.batterysaver.TelemetrySnapshot
 import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
 import com.atrainingtracker.trainingtracker.batterysaver.calculateZoneIndex
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.routes.TurnByTurnNavigationRepository
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -314,11 +315,22 @@ fun TrackingTabsScreen(
         val isCycling = activityType.sportType == BSportType.BIKE
         val hrZone = if (hrValue != null && hrValue > 0) {
             val zoneType = if (isCycling) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
-            calculateZoneIndex(context, zoneType, hrValue)
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            calculateZoneIndex(hrValue, listOf(z1, z2, z3, z4))
         } else null
 
         val powerZone = if (isCycling && powerValue != null && powerValue > 0) {
-            calculateZoneIndex(context, SettingsDataStore.ZoneType.PWR_BIKE, powerValue)
+            val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            val z5 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 5)
+            val z6 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 6)
+            calculateZoneIndex(powerValue, listOf(z1, z2, z3, z4, z5, z6))
         } else null
 
         batterySaverController.updateTelemetry(
