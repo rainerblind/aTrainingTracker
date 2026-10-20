@@ -400,6 +400,7 @@ fun TrackingTabsScreen(
     // Update the tracker whenever the pager settles on a new page
     LaunchedEffect(pagerState.currentPage) {
         lastKnownPage = pagerState.currentPage
+        trackingTabsViewModel.onPageSelected(pagerState.currentPage)
     }
 
     val cockpitThemeState = resolveEffectiveCockpitThemeState(

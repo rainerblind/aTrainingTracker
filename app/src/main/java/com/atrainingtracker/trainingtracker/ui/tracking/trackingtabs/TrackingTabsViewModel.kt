@@ -214,6 +214,13 @@ class TrackingTabsViewModel(
         }
     }
 
+    private val _currentPage = MutableStateFlow(0)
+    val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
+
+    fun onPageSelected(page: Int) {
+        _currentPage.value = page
+    }
+
     private val _navigationEvent = Channel<TabNavigationEvent>(Channel.BUFFERED)
     val navigationEvent: Flow<TabNavigationEvent> = _navigationEvent.receiveAsFlow()
 
@@ -240,12 +247,23 @@ class TrackingTabsViewModel(
                 if (mode == TrackingMode.READY) {
                     _hasRenderedCoachmarkInSession.value = false
                 }
-                if (mode == TrackingMode.TRACKING &&
-                    previousMode != null &&
-                    previousMode != TrackingMode.TRACKING
+                if (shouldNavigateToFirstCockpitTab(
+                        previousMode = previousMode,
+                        currentMode = mode,
+                        wasAutoPaused = banalServiceRepository.wasAutoPaused.value,
+                        currentPage = _currentPage.value
+                    )
                 ) {
-                    Log.i("TrackingTabsViewModel", "Tracking started (rising edge) -> navigating to cockpit tab")
+                    Log.i(
+                        "TrackingTabsViewModel",
+                        "Tracking started (rising edge) -> navigating to cockpit tab (prevMode=$previousMode, wasAuto=${banalServiceRepository.wasAutoPaused.value}, page=${_currentPage.value})"
+                    )
                     _navigationEvent.send(TabNavigationEvent.NavigateTo(0))
+                } else if (mode == TrackingMode.TRACKING && previousMode != null && previousMode != TrackingMode.TRACKING) {
+                    Log.i(
+                        "TrackingTabsViewModel",
+                        "Suppressed cockpit navigation on resume (prevMode=$previousMode, wasAuto=${banalServiceRepository.wasAutoPaused.value}, page=${_currentPage.value})"
+                    )
                 }
                 previousMode = mode
             }
@@ -253,6 +271,32 @@ class TrackingTabsViewModel(
     }
 
     companion object {
+        /**
+         * Pure domain predicate determining whether rising-edge tracking mode transition
+         * should navigate to the first cockpit tab (REQ-UI-163).
+         *
+         * @param previousMode TrackingMode prior to the transition (nullable for initial emission).
+         * @param currentMode New TrackingMode.
+         * @param wasAutoPaused Whether the paused state originated from auto-pause.
+         * @param currentPage The active pager page index (0 = Control Tab, >= 1 = Telemetry/Map Tabs).
+         * @return True if navigation to first Cockpit tab should be executed.
+         */
+        fun shouldNavigateToFirstCockpitTab(
+            previousMode: TrackingMode?,
+            currentMode: TrackingMode,
+            wasAutoPaused: Boolean,
+            currentPage: Int
+        ): Boolean {
+            if (currentMode != TrackingMode.TRACKING || previousMode == null || previousMode == TrackingMode.TRACKING) {
+                return false
+            }
+            return when (previousMode) {
+                TrackingMode.READY -> true
+                TrackingMode.PAUSED -> !wasAutoPaused && currentPage == 0
+                else -> false
+            }
+        }
+
         /**
          * Pure domain predicate determining whether the first-time stop tracking coachmark banner
          * should be displayed on the cockpit screen (REQ-UI-367 / ATT-3387).

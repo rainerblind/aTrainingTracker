@@ -97,6 +97,7 @@ class StopTrackingCoachmarkTest {
 
         every { mockBanalRepo.trackingMode } returns trackingModeLiveData
         every { mockBanalRepo.activityType } returns activityTypeFlow
+        every { mockBanalRepo.wasAutoPaused } returns MutableStateFlow(false)
         every { mockBanalRepo.bindToBANALService() } just Runs
         every { mockTrackingViewsRepo.getTrackingViewsFlow(any()) } returns flowOf(emptyList())
         every { mockDevicesRepo.allDevices } returns MutableStateFlow(emptyList())

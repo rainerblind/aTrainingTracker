@@ -109,6 +109,7 @@ class TrackingTabsViewModelLocationTest {
         isAltimeterCalibratedFlow.value = true
         every { mockBanalRepo.trackingMode } returns trackingModeLiveData
         every { mockBanalRepo.activityType } returns activityTypeFlow
+        every { mockBanalRepo.wasAutoPaused } returns MutableStateFlow(false)
         every { mockBanalRepo.currentLocation } returns currentLocationFlow
         every { mockBanalRepo.isAltimeterCalibrated } returns isAltimeterCalibratedFlow
         every { mockBanalRepo.calibrateAltimeter(any()) } returns true
