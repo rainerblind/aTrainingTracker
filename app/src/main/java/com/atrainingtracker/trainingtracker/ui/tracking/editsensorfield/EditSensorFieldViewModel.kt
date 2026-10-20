@@ -133,6 +133,13 @@ data class EditDialogUiState(
         }
 }
 
+/**
+ * ViewModel managing the editing and creation lifecycle of cockpit sensor field configurations,
+ * including sensor type selection, view size, device source selection, and filter smoothing presets.
+ *
+ * <p>Thread Safety: State mutations execute on Dispatchers.Main via [StateFlow], while persistence
+ * operations are dispatched asynchronously via repository coroutines.</p>
+ */
 class EditSensorFieldViewModel(
     application: Application,
     private val trackingViewsRepository: TrackingViewsRepository,
@@ -533,12 +540,26 @@ class EditSensorFieldViewModel(
         }
     }
 
+    /**
+     * Persists the configured sensor field changes to local database storage via [TrackingViewsRepository]
+     * and registers the corresponding runtime telemetry filter in [BANALServiceRepository].
+     *
+     * <p>Sentinel ID Normalization (Rule 50 / REQ-FIL-014.1): When [EditDialogUiState.selectedDeviceId]
+     * is &lt;= 0 (sentinel {@code -1L} representing "Best Sensor"), [newSourceDeviceName] and
+     * [newSourceDeviceId] are normalized to {@code null} so [FilterData] resolves the proxy sensor
+     * in BANALService and matches database query hashes. Explicit device selections (&gt; 0) retain
+     * their device ID and name.</p>
+     *
+     * Threading: Reads UI state on the main thread and launches asynchronous persistence writes
+     * onto [viewModelScope].
+     */
     fun saveChanges() {
         Log.i("EditSensorFieldViewModel", "saveChanges(): $tabViewId, $rowNr, $colNr")
         val currentState = _uiState.value
         val sensorType = currentState.selectedSensorType ?: return
 
-        val newSourceDeviceName = currentState.selectedDeviceName
+        val newSourceDeviceName = if (currentState.selectedDeviceId > 0) currentState.selectedDeviceName else null
+        val newSourceDeviceId = if (currentState.selectedDeviceId > 0) currentState.selectedDeviceId else null
         val newSensorType = sensorType
         val newFilterType = getFinalFilterType()
         val newFilterConstant = getFinalFilterConstant()
@@ -555,7 +576,7 @@ class EditSensorFieldViewModel(
                     colNr = colNr,
                     newSensorType = newSensorType,
                     newViewSize = currentState.selectedViewSize,
-                    newSourceDeviceId = currentState.selectedDeviceId,
+                    newSourceDeviceId = newSourceDeviceId,
                     newSourceDeviceName = newSourceDeviceName,
                     newFilterType = newFilterType,
                     newFilterConstant = newFilterConstant
@@ -565,7 +586,7 @@ class EditSensorFieldViewModel(
                     sensorFieldId = sensorFieldId,
                     newSensorType = newSensorType,
                     newViewSize = currentState.selectedViewSize,
-                    newSourceDeviceId = currentState.selectedDeviceId,
+                    newSourceDeviceId = newSourceDeviceId,
                     newSourceDeviceName = newSourceDeviceName,
                     newFilterType = newFilterType,
                     newFilterConstant = newFilterConstant
