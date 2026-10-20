@@ -56,8 +56,6 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 fun WorkoutDetails(
     data: WorkoutDetailsData,
     modifier: Modifier = Modifier,
-    enableBasicPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_BASIC_POWER_METRICS,
-    showBasicPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY,
     enableCogganPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS,
     showCogganPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY,
     enableAerobicEfficiencyModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL,
@@ -67,8 +65,6 @@ fun WorkoutDetails(
 ) {
     val visibleSections = buildVisibleWorkoutDetailSections(
         data = data,
-        enableBasicPowerMetrics = enableBasicPowerMetrics,
-        showBasicPowerInWorkoutSummary = showBasicPowerInWorkoutSummary,
         enableCogganPowerMetrics = enableCogganPowerMetrics,
         showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary,
         enableAerobicEfficiencyModel = enableAerobicEfficiencyModel,
@@ -108,8 +104,6 @@ fun WorkoutDetails(
 @Composable
 private fun buildVisibleWorkoutDetailSections(
     data: WorkoutDetailsData,
-    enableBasicPowerMetrics: Boolean,
-    showBasicPowerInWorkoutSummary: Boolean,
     enableCogganPowerMetrics: Boolean,
     showCogganPowerInWorkoutSummary: Boolean,
     enableAerobicEfficiencyModel: Boolean,
@@ -125,13 +119,11 @@ private fun buildVisibleWorkoutDetailSections(
         add { AltitudeRow(ascentMeters = data.ascentMeters, descentMeters = data.descentMeters) }
     }
 
-    // Section 3: Power Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) (REQ-UI-402, REQ-UI-403, REQ-UI-404, REQ-UI-415, REQ-UI-424)
+    // Section 3: Power Training Metrics (NP, IF, TSS, VI) (REQ-UI-402, REQ-UI-403, REQ-UI-404, REQ-UI-415, REQ-UI-424)
     val powerSlots = resolvePowerMetricSlots(
         data = data,
         enableCogganPowerMetrics = enableCogganPowerMetrics,
-        showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary,
-        enableBasicPowerMetrics = enableBasicPowerMetrics,
-        showBasicPowerInWorkoutSummary = showBasicPowerInWorkoutSummary
+        showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary
     )
     if (powerSlots.isNotEmpty()) {
         add {
@@ -269,9 +261,9 @@ private fun AltitudeRow(
 }
 
 /**
- * Grouped Power & Coggan Load row (`REQ-UI-404.2`, `REQ-UI-415.1`, `docs/design_guidelines.md` Section 5.10).
- * Displays Coggan metrics (`NP` with `VI` secondary subtitle, `IF`, `TSS`) when `enableCogganPowerMetrics` is enabled,
- * falling back to basic physics (`Work kJ`, `W/kg`) in a single horizontal row of balanced equal-weight `MetricItem` columns.
+ * Grouped Power & Coggan Load row (`REQ-UI-404.2`, `REQ-UI-415.1`, `REQ-UI-424.4`, `docs/design_guidelines.md` Section 5.10).
+ * Displays exclusively Coggan metrics (`NP` with `VI` secondary subtitle, `IF`, `TSS`) when `enableCogganPowerMetrics`
+ * and `showCogganPowerInWorkoutSummary` are enabled in a single horizontal row of balanced equal-weight `MetricItem` columns.
  */
 @Composable
 private fun PowerTrainingMetricsSection(
@@ -321,28 +313,6 @@ private fun PowerTrainingMetricsSection(
                                 iconRes = null,
                                 label = stringResource(R.string.tss_short),
                                 value = stringResource(R.string.workout_power_value_tss_format, tssVal),
-                                layout = MetricLayout.VERTICAL,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                    PowerMetricSlot.WORK_KJ -> {
-                        data.workKj?.let { work ->
-                            MetricItem(
-                                iconRes = null,
-                                label = stringResource(R.string.workout_power_label_work),
-                                value = stringResource(R.string.workout_power_value_work_format, work),
-                                layout = MetricLayout.VERTICAL,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                    PowerMetricSlot.POWER_TO_WEIGHT -> {
-                        data.avgPowerToWeight?.let { wkg ->
-                            MetricItem(
-                                iconRes = null,
-                                label = stringResource(R.string.power_to_weight_short),
-                                value = stringResource(R.string.workout_power_metrics_wkg_format, wkg),
                                 layout = MetricLayout.VERTICAL,
                                 modifier = Modifier.weight(1f)
                             )

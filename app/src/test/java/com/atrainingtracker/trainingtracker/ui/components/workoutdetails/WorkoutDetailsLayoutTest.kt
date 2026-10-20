@@ -27,7 +27,7 @@ import java.io.File
 
 /**
  * Verification suite for WorkoutDetails single-line power row and domain row visual separation
- * (`REQ-UI-415`, `TST-UI-378`, ATT-4042).
+ * (`REQ-UI-415`, `REQ-UI-424`, `TST-UI-378`, `TST-UI-388`, ATT-4042, ATT-4432).
  */
 class WorkoutDetailsLayoutTest {
 
@@ -81,9 +81,9 @@ class WorkoutDetailsLayoutTest {
     }
 
     @Test
-    fun `TST-UI-378_1 testResolvePowerMetricSlots MissingFtpFallback`() {
+    fun `TST-UI-378_1 testResolvePowerMetricSlots MissingFtpReturnsOnlyNPWithoutBasicPowerFallback`() {
         // When athlete has no FTP configured in profile, IF and TSS are null.
-        // Fallback should prioritize NP followed by Work kJ and W/kg up to 3 slots.
+        // Under REQ-UI-424.3, returns strictly Normalized Power without falling back to basic power.
         val data = createBaseData(
             normalizedPowerWatts = 220.0,
             intensityFactor = null,
@@ -97,9 +97,7 @@ class WorkoutDetailsLayoutTest {
 
         assertEquals(
             listOf(
-                PowerMetricSlot.NORMALIZED_POWER,
-                PowerMetricSlot.WORK_KJ,
-                PowerMetricSlot.POWER_TO_WEIGHT
+                PowerMetricSlot.NORMALIZED_POWER
             ),
             slots
         )
@@ -107,7 +105,7 @@ class WorkoutDetailsLayoutTest {
 
     @Test
     fun `TST-UI-378_1 testResolvePowerMetricSlots MissingFtpPartialPhysics`() {
-        // NP present, IF/TSS null, only Work kJ present (no weight configured)
+        // NP present, IF/TSS null
         val data = createBaseData(
             normalizedPowerWatts = 220.0,
             intensityFactor = null,
@@ -120,16 +118,15 @@ class WorkoutDetailsLayoutTest {
 
         assertEquals(
             listOf(
-                PowerMetricSlot.NORMALIZED_POWER,
-                PowerMetricSlot.WORK_KJ
+                PowerMetricSlot.NORMALIZED_POWER
             ),
             slots
         )
     }
 
     @Test
-    fun `TST-UI-378_1 testResolvePowerMetricSlots BasicPhysicsOnly`() {
-        // When Coggan power metrics is disabled or NP is null
+    fun `TST-UI-378_1 testResolvePowerMetricSlots DisabledCogganOrMissingNpReturnsEmpty`() {
+        // When Coggan NP is null, returns emptyList() (zero basic power fallback)
         val data = createBaseData(
             normalizedPowerWatts = null,
             workKj = 1100.0,
@@ -138,15 +135,9 @@ class WorkoutDetailsLayoutTest {
 
         val slots = resolvePowerMetricSlots(data, enableCogganPowerMetrics = true)
 
-        assertEquals(
-            listOf(
-                PowerMetricSlot.WORK_KJ,
-                PowerMetricSlot.POWER_TO_WEIGHT
-            ),
-            slots
-        )
+        assertTrue(slots.isEmpty())
 
-        // Same when Coggan is disabled even if NP is present
+        // When Coggan is disabled even if NP is present, returns emptyList()
         val dataWithNp = createBaseData(
             normalizedPowerWatts = 220.0,
             intensityFactor = 0.85,
@@ -156,13 +147,7 @@ class WorkoutDetailsLayoutTest {
         )
         val slotsDisabled = resolvePowerMetricSlots(dataWithNp, enableCogganPowerMetrics = false)
 
-        assertEquals(
-            listOf(
-                PowerMetricSlot.WORK_KJ,
-                PowerMetricSlot.POWER_TO_WEIGHT
-            ),
-            slotsDisabled
-        )
+        assertTrue(slotsDisabled.isEmpty())
     }
 
     @Test
@@ -212,6 +197,10 @@ class WorkoutDetailsLayoutTest {
         assertTrue("Must declare resolvePowerMetricSlots", allContent.contains("fun resolvePowerMetricSlots("))
         assertTrue("Must declare enum PowerMetricSlot", allContent.contains("enum class PowerMetricSlot"))
 
+        // PowerTrainingMetricsSection must handle exclusively Coggan slots (zero basic power branches)
+        assertFalse("PowerTrainingMetricsSection must not contain WORK_KJ", powerSectionContent.contains("WORK_KJ"))
+        assertFalse("PowerTrainingMetricsSection must not contain POWER_TO_WEIGHT", powerSectionContent.contains("POWER_TO_WEIGHT"))
+
         // Count Row calls in PowerTrainingMetricsSection - should be exactly 1 horizontal Row (inside WorkoutDomainRow)
         val rowOccurrences = Regex("\\bRow\\s*\\(").findAll(powerSectionContent).count()
         assertEquals(
@@ -245,8 +234,6 @@ class WorkoutDetailsLayoutTest {
 
     @Test
     fun `TST-UI-378_4 Divider count invariant guarantees zero dividers for single section and N-1 dividers for N sections`() {
-        // Pure algorithm verification matching WorkoutDetails:
-        // visibleSections.forEachIndexed { index, _ -> if (index > 0) dividerCount++ }
         fun countDividers(sectionCount: Int): Int {
             var dividers = 0
             for (index in 0 until sectionCount) {
@@ -257,16 +244,9 @@ class WorkoutDetailsLayoutTest {
             return dividers
         }
 
-        // Single section (e.g. only Active Time & Distance, zero metrics):
         assertEquals("Single section must render exactly 0 dividers (no leading/trailing)", 0, countDividers(1))
-
-        // Two sections:
         assertEquals("Two sections must render exactly 1 divider", 1, countDividers(2))
-
-        // Five sections:
         assertEquals("Five sections must render exactly 4 dividers", 4, countDividers(5))
-
-        // Empty section boundary (never occurs since Section 1 is always added, but verified for safety):
         assertEquals("Zero sections must render exactly 0 dividers", 0, countDividers(0))
     }
 
@@ -280,9 +260,9 @@ class WorkoutDetailsLayoutTest {
         assertTrue("WorkoutDetails.kt must exist", file != null && file.exists())
         val content = file!!.readText()
 
-        // 1. Signature checks for new summary toggles (REQ-UI-424.4)
-        assertTrue("Must declare enableBasicPowerMetrics in WorkoutDetails", content.contains("enableBasicPowerMetrics: Boolean"))
-        assertTrue("Must declare showBasicPowerInWorkoutSummary in WorkoutDetails", content.contains("showBasicPowerInWorkoutSummary: Boolean"))
+        // 1. Signature checks: basic power parameters completely removed (REQ-UI-424.4)
+        assertFalse("Must NOT declare enableBasicPowerMetrics in WorkoutDetails", content.contains("enableBasicPowerMetrics"))
+        assertFalse("Must NOT declare showBasicPowerInWorkoutSummary in WorkoutDetails", content.contains("showBasicPowerInWorkoutSummary"))
         assertTrue("Must declare showCogganPowerInWorkoutSummary in WorkoutDetails", content.contains("showCogganPowerInWorkoutSummary: Boolean"))
         assertTrue("Must declare showAerobicEfficiencyInWorkoutSummary in WorkoutDetails", content.contains("showAerobicEfficiencyInWorkoutSummary: Boolean"))
         assertTrue("Must declare showCriticalPowerInWorkoutSummary in WorkoutDetails", content.contains("showCriticalPowerInWorkoutSummary: Boolean"))
@@ -307,7 +287,6 @@ class WorkoutDetailsLayoutTest {
 
     @Test
     fun `TST-TRK-031_7 testWorkoutDetails_noPowerData_omitsAnaerobicBatteryRowAndDivider`() {
-        // [TST-TRK-031.7] / REQ-TRK-038.5
         val candidates = listOf(
             File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutdetails/WorkoutDetails.kt"),
             File("src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutdetails/WorkoutDetails.kt")

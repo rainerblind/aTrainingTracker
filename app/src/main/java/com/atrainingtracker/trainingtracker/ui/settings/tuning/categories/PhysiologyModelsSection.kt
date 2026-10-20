@@ -33,29 +33,24 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.SubordinateTuningToggleItem
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
  * Physiology & Training Models accordion category in Advanced Settings (REQ-UI-403 / REQ-UI-424).
  *
- * Provides progressive disclosure toggles for training science models:
- * 1. Basic Power Metrics (Work kJ, W/kg) — Default: ON
- *    - Show in Workout Summary subordinate toggle — Default: ON
- * 2. Coggan Power Metrics (NP, IF, TSS, VI) — Default: ON
- *    - Show in Workout Summary subordinate toggle — Default: ON
- * 3. Performance Management (PMC: ATL, CTL, TSB, ACWR, Ramp Rate) — Default: OFF
- * 4. Aerobic Efficiency & Decoupling (EF, Pw:Hr %, Pa:Hr %) — Default: OFF
- *    - Show in Workout Summary subordinate toggle — Default: ON
- * 5. Critical Power & Anaerobic Battery (CP, W', W'bal) — Default: OFF
- *    - Show in Workout Summary subordinate toggle — Default: ON
+ * Provides progressive disclosure toggles for 4 training science models:
+ * 1. Coggan Power Metrics (NP, IF, TSS, VI) — Default: ON
+ *    - Show in Workout Summary subordinate toggle — Default: ON (Rule 59)
+ * 2. Performance Management (PMC: ATL, CTL, TSB, ACWR, Ramp Rate) — Default: OFF
+ * 3. Aerobic Efficiency & Decoupling (EF, Pw:Hr %, Pa:Hr %) — Default: OFF
+ *    - Show in Workout Summary subordinate toggle — Default: ON (Rule 59)
+ * 4. Critical Power & Anaerobic Battery (CP, W', W'bal) — Default: OFF
+ *    - Show in Workout Summary subordinate toggle — Default: ON (Rule 59)
  */
 @Composable
 fun PhysiologyModelsSection(
-    enableBasicPowerMetrics: Boolean = true,
-    onEnableBasicPowerMetricsChange: (Boolean) -> Unit = {},
-    showBasicPowerInWorkoutSummary: Boolean = true,
-    onShowBasicPowerInWorkoutSummaryChange: (Boolean) -> Unit = {},
     enableCogganPowerMetrics: Boolean,
     onEnableCogganPowerMetricsChange: (Boolean) -> Unit,
     showCogganPowerInWorkoutSummary: Boolean = true,
@@ -71,8 +66,6 @@ fun PhysiologyModelsSection(
     showCriticalPowerInWorkoutSummary: Boolean = true,
     onShowCriticalPowerInWorkoutSummaryChange: (Boolean) -> Unit = {}
 ) {
-    val basicPowerCallback = remember(onEnableBasicPowerMetricsChange) { onEnableBasicPowerMetricsChange }
-    val showBasicPowerCallback = remember(onShowBasicPowerInWorkoutSummaryChange) { onShowBasicPowerInWorkoutSummaryChange }
     val cogganCallback = remember(onEnableCogganPowerMetricsChange) { onEnableCogganPowerMetricsChange }
     val showCogganPowerCallback = remember(onShowCogganPowerInWorkoutSummaryChange) { onShowCogganPowerInWorkoutSummaryChange }
     val pmcCallback = remember(onEnablePmcModelChange) { onEnablePmcModelChange }
@@ -87,26 +80,7 @@ fun PhysiologyModelsSection(
             .padding(vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Model 1: Basic Power Metrics
-        TuningToggleItem(
-            title = stringResource(R.string.tuning_physiology_basic_power_title),
-            isChecked = enableBasicPowerMetrics,
-            onCheckedChange = basicPowerCallback,
-            summary = stringResource(R.string.tuning_physiology_basic_power_desc)
-        )
-        if (enableBasicPowerMetrics) {
-            TuningToggleItem(
-                modifier = Modifier.padding(start = 16.dp),
-                title = stringResource(R.string.tuning_physiology_show_in_workout_summary),
-                isChecked = showBasicPowerInWorkoutSummary,
-                onCheckedChange = showBasicPowerCallback,
-                summary = stringResource(R.string.tuning_physiology_show_in_workout_summary_desc)
-            )
-        }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-        // Model 2: Coggan Power Metrics
+        // Model 1: Coggan Power Metrics
         TuningToggleItem(
             title = stringResource(R.string.tuning_physiology_coggan_title),
             isChecked = enableCogganPowerMetrics,
@@ -114,18 +88,16 @@ fun PhysiologyModelsSection(
             summary = stringResource(R.string.tuning_physiology_coggan_desc)
         )
         if (enableCogganPowerMetrics) {
-            TuningToggleItem(
-                modifier = Modifier.padding(start = 16.dp),
+            SubordinateTuningToggleItem(
                 title = stringResource(R.string.tuning_physiology_show_in_workout_summary),
                 isChecked = showCogganPowerInWorkoutSummary,
-                onCheckedChange = showCogganPowerCallback,
-                summary = stringResource(R.string.tuning_physiology_show_in_workout_summary_desc)
+                onCheckedChange = showCogganPowerCallback
             )
         }
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-        // Model 3: PMC
+        // Model 2: PMC
         TuningToggleItem(
             title = stringResource(R.string.tuning_physiology_pmc_title),
             isChecked = enablePmcModel,
@@ -135,7 +107,7 @@ fun PhysiologyModelsSection(
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-        // Model 4: Aerobic Efficiency & Decoupling
+        // Model 3: Aerobic Efficiency & Decoupling
         TuningToggleItem(
             title = stringResource(R.string.tuning_physiology_ef_title),
             isChecked = enableAerobicEfficiencyModel,
@@ -143,18 +115,16 @@ fun PhysiologyModelsSection(
             summary = stringResource(R.string.tuning_physiology_ef_desc)
         )
         if (enableAerobicEfficiencyModel) {
-            TuningToggleItem(
-                modifier = Modifier.padding(start = 16.dp),
+            SubordinateTuningToggleItem(
                 title = stringResource(R.string.tuning_physiology_show_in_workout_summary),
                 isChecked = showAerobicEfficiencyInWorkoutSummary,
-                onCheckedChange = showEfCallback,
-                summary = stringResource(R.string.tuning_physiology_show_in_workout_summary_desc)
+                onCheckedChange = showEfCallback
             )
         }
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-        // Model 5: Critical Power & Anaerobic Battery
+        // Model 4: Critical Power & Anaerobic Battery
         TuningToggleItem(
             title = stringResource(R.string.tuning_physiology_cp_title),
             isChecked = enableCriticalPowerModel,
@@ -162,28 +132,22 @@ fun PhysiologyModelsSection(
             summary = stringResource(R.string.tuning_physiology_cp_desc)
         )
         if (enableCriticalPowerModel) {
-            TuningToggleItem(
-                modifier = Modifier.padding(start = 16.dp),
+            SubordinateTuningToggleItem(
                 title = stringResource(R.string.tuning_physiology_show_in_workout_summary),
                 isChecked = showCriticalPowerInWorkoutSummary,
-                onCheckedChange = showCpCallback,
-                summary = stringResource(R.string.tuning_physiology_show_in_workout_summary_desc)
+                onCheckedChange = showCpCallback
             )
         }
     }
 }
 
-@Preview(name = "Default (Coggan & Basic Only) - Light", showBackground = true)
-@Preview(name = "Default (Coggan & Basic Only) - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Preview(name = "Default (Coggan Only) - Light", showBackground = true)
+@Preview(name = "Default (Coggan Only) - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
 private fun PhysiologyModelsSectionDefaultPreview() {
     ATrainingTrackerTheme {
         Surface {
             PhysiologyModelsSection(
-                enableBasicPowerMetrics = true,
-                onEnableBasicPowerMetricsChange = {},
-                showBasicPowerInWorkoutSummary = true,
-                onShowBasicPowerInWorkoutSummaryChange = {},
                 enableCogganPowerMetrics = true,
                 onEnableCogganPowerMetricsChange = {},
                 showCogganPowerInWorkoutSummary = true,
@@ -209,10 +173,6 @@ private fun PhysiologyModelsSectionAllEnabledPreview() {
     ATrainingTrackerTheme {
         Surface {
             PhysiologyModelsSection(
-                enableBasicPowerMetrics = true,
-                onEnableBasicPowerMetricsChange = {},
-                showBasicPowerInWorkoutSummary = true,
-                onShowBasicPowerInWorkoutSummaryChange = {},
                 enableCogganPowerMetrics = true,
                 onEnableCogganPowerMetricsChange = {},
                 showCogganPowerInWorkoutSummary = true,

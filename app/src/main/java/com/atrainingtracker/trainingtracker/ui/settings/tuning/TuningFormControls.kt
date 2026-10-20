@@ -207,3 +207,40 @@ fun TuningResetDefaultsButton(
     }
 }
 
+/**
+ * Compact subordinate toggle switch for secondary child settings (Rule 59, ATT-4432).
+ * Displays lighter typography without a heavy subtitle and a scaled-down switch.
+ */
+@Composable
+fun SubordinateTuningToggleItem(
+    title: String,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    val contentAlpha = if (enabled) 1f else TTAlpha.Disabled
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, top = 2.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 12.dp)
+        )
+        Switch(
+            checked = isChecked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
+            modifier = Modifier.scale(0.8f)
+        )
+    }
+}
+

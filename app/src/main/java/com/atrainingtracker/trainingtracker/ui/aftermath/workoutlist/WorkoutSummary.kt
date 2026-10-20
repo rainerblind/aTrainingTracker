@@ -200,8 +200,6 @@ fun WorkoutSummary(
         WorkoutDetails(
             data = workoutData.detailsData,
             modifier = mapClickModifier,
-            enableBasicPowerMetrics = effectiveTuningConfig.enableBasicPowerMetrics,
-            showBasicPowerInWorkoutSummary = effectiveTuningConfig.showBasicPowerInWorkoutSummary,
             enableCogganPowerMetrics = effectiveTuningConfig.enableCogganPowerMetrics,
             showCogganPowerInWorkoutSummary = effectiveTuningConfig.showCogganPowerInWorkoutSummary,
             enableAerobicEfficiencyModel = effectiveTuningConfig.enableAerobicEfficiencyModel,
