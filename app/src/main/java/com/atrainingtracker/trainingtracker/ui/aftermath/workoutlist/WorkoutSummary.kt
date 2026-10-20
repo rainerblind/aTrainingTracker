@@ -200,9 +200,14 @@ fun WorkoutSummary(
         WorkoutDetails(
             data = workoutData.detailsData,
             modifier = mapClickModifier,
+            enableBasicPowerMetrics = effectiveTuningConfig.enableBasicPowerMetrics,
+            showBasicPowerInWorkoutSummary = effectiveTuningConfig.showBasicPowerInWorkoutSummary,
             enableCogganPowerMetrics = effectiveTuningConfig.enableCogganPowerMetrics,
+            showCogganPowerInWorkoutSummary = effectiveTuningConfig.showCogganPowerInWorkoutSummary,
             enableAerobicEfficiencyModel = effectiveTuningConfig.enableAerobicEfficiencyModel,
-            enableCriticalPowerModel = effectiveTuningConfig.enableCriticalPowerModel
+            showAerobicEfficiencyInWorkoutSummary = effectiveTuningConfig.showAerobicEfficiencyInWorkoutSummary,
+            enableCriticalPowerModel = effectiveTuningConfig.enableCriticalPowerModel,
+            showCriticalPowerInWorkoutSummary = effectiveTuningConfig.showCriticalPowerInWorkoutSummary
         )
 
         // 2. Dynamic Section Rendering Loop (REQ-UI-255)

@@ -1246,6 +1246,8 @@
     <string name="filter_route_source">Źródło</string>
     <string name="filter_route_selected">Tylko wybrane</string>
     <string name="filter_min_elevation_format">&gt; %1$s m</string>
+    <string name="filter_max_elevation_format">&lt; %1$s m</string>
+    <string name="filter_elevation_interval_format">%1$s - %2$s m</string>
     <string name="filter_no_matching_routes">Brak tras pasujących do aktywnych filtrów</string>
     <!-- Segment Filtering (ATT-735) -->
     <string name="filter_segments_title">Filtruj segmenty</string>
@@ -1581,6 +1583,11 @@
     <string name="permission_rationale_open_settings">Otwórz ustawienia</string>
     <string name="permission_rationale_settings_explanation">Uprawnienie do lokalizacji zostało odrzucone. Bez dostępu do lokalizacji rejestrowanie trasy GPS jest niedostępne. Możesz przyznać uprawnienie w ustawieniach aplikacji.</string>
     <string name="permission_rationale_precise_location_explanation">Dokładna lokalizacja (GPS) jest wymagana do rejestrowania treningu. Przybliżona lokalizacja nie pozwala na zapisywanie dystansu, prędkości, trasy ani przewyższenia. Wybierz \'Dokładna\' w uprawnieniach.</string>
+    <!-- Decoupled Multi-Permission Cascade & Sensor Discovery (ATT-3998 / REQ-PRI-006) -->
+    <string name="bluetooth_permission_scan_required">Uprawnienie Bluetooth jest wymagane do wyszukiwania pobliskich czujników.</string>
+    <string name="grant_permission">Przyznaj</string>
+    <string name="permission_rationale_notification_subtitle">Powiadomienia zapewniają dostęp do czasu treningu, dystansu, alertów okrążeń i szybkich elementów sterujących podczas rejestrowania w tle.</string>
+    <string name="permission_rationale_bluetooth_subtitle">Uprawnienie Urządzenia w pobliżu łączy aTrainingTracker ze sparowanymi czujnikami tętna, mocy, prędkości i kadencji.</string>
     <string name="action_view_workout">Pokaż</string>
     <string name="permission_warning_badge_desc">Brak uprawnienia do lokalizacji</string>
 
@@ -2000,6 +2007,10 @@
     <string name="tuning_physiology_ef_desc">Pokaż współczynnik wydajności (EF) i dryf tlenowy (Pw:Hr / Pa:Hr) w podsumowaniach i szczegółach</string>
     <string name="tuning_physiology_cp_title">Moc krytyczna i bateria beztlenowa (CP, W\', W\'bal)</string>
     <string name="tuning_physiology_cp_desc">Pokaż moc krytyczną, W\' i baterię W\'bal w Profilu i strefach, kokpicie oraz analizie treningu</string>
+    <string name="tuning_physiology_basic_power_title">Podstawowe wskaźniki mocy (Praca, W/kg)</string>
+    <string name="tuning_physiology_basic_power_desc">Rejestruj pracę mechaniczną (kJ) i stosunek mocy do masy (W/kg) podczas treningów i w kokpicie</string>
+    <string name="tuning_physiology_show_in_workout_summary">Pokaż w podsumowaniu treningu</string>
+    <string name="tuning_physiology_show_in_workout_summary_desc">Wyświetl wiersz telemetryczny na karcie przeglądu treningu</string>
     <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
     <string name="workout_domain_efficiency">Wydajność</string>
     <string name="workout_ef_short">EF</string>

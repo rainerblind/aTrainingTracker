@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.settings.tuning
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.athleteprofile.PlotMetricType
 import com.atrainingtracker.trainingtracker.ui.athleteprofile.resolveEffectiveHistoryFilter
@@ -43,15 +44,25 @@ class PhysiologyModelsVisibilityContractTest {
     @Test
     fun `TST-UI-366_1 default TuningConfig enables only Coggan power metrics`() {
         val defaultConfig = TuningConfig()
+        assertTrue(TuningPreferencesDefaults.DEFAULT_ENABLE_BASIC_POWER_METRICS)
+        assertTrue(TuningPreferencesDefaults.DEFAULT_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY)
         assertTrue(TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS)
+        assertTrue(TuningPreferencesDefaults.DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY)
         assertFalse(TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL)
         assertFalse(TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL)
+        assertTrue(TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY)
         assertFalse(TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL)
+        assertTrue(TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY)
 
+        assertTrue(defaultConfig.enableBasicPowerMetrics)
+        assertTrue(defaultConfig.showBasicPowerInWorkoutSummary)
         assertTrue(defaultConfig.enableCogganPowerMetrics)
+        assertTrue(defaultConfig.showCogganPowerInWorkoutSummary)
         assertFalse(defaultConfig.enablePmcModel)
         assertFalse(defaultConfig.enableAerobicEfficiencyModel)
+        assertTrue(defaultConfig.showAerobicEfficiencyInWorkoutSummary)
         assertFalse(defaultConfig.enableCriticalPowerModel)
+        assertTrue(defaultConfig.showCriticalPowerInWorkoutSummary)
     }
 
     @Test
@@ -229,6 +240,10 @@ class PhysiologyModelsVisibilityContractTest {
             "tuning_physiology_ef_desc",
             "tuning_physiology_cp_title",
             "tuning_physiology_cp_desc",
+            "tuning_physiology_basic_power_title",
+            "tuning_physiology_basic_power_desc",
+            "tuning_physiology_show_in_workout_summary",
+            "tuning_physiology_show_in_workout_summary_desc",
             "workout_domain_efficiency",
             "workout_ef_short",
             "workout_pwhr_short",
@@ -263,5 +278,83 @@ class PhysiologyModelsVisibilityContractTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun `TST-UI-388_3 testTuningConfig_persistenceAndModularity`() {
+        val allKeys = TuningPreferencesDataStore.ALL_KEYS
+        assertTrue(allKeys.contains(TuningPreferencesDataStore.KEY_ENABLE_BASIC_POWER_METRICS))
+        assertTrue(allKeys.contains(TuningPreferencesDataStore.KEY_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY))
+        assertTrue(allKeys.contains(TuningPreferencesDataStore.KEY_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY))
+        assertTrue(allKeys.contains(TuningPreferencesDataStore.KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY))
+        assertTrue(allKeys.contains(TuningPreferencesDataStore.KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY))
+
+        fun resolveFile(relPath: String): File {
+            val candidates = listOf(
+                File(relPath),
+                File(relPath.removePrefix("app/")),
+                File("app/$relPath")
+            )
+            return candidates.firstOrNull { it.exists() }
+                ?: error("File not found: $relPath in candidates: $candidates")
+        }
+
+        val sectionFile = resolveFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/PhysiologyModelsSection.kt")
+        assertTrue(sectionFile.exists())
+        val sectionContent = sectionFile.readText()
+        assertTrue(sectionContent.contains("enableBasicPowerMetrics: Boolean"))
+        assertTrue(sectionContent.contains("showBasicPowerInWorkoutSummary: Boolean"))
+        assertTrue(sectionContent.contains("showCogganPowerInWorkoutSummary: Boolean"))
+        assertTrue(sectionContent.contains("showAerobicEfficiencyInWorkoutSummary: Boolean"))
+        assertTrue(sectionContent.contains("showCriticalPowerInWorkoutSummary: Boolean"))
+        assertTrue(sectionContent.contains("Modifier.padding(start = 16.dp)"))
+
+        val filesToCheck = listOf(
+            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/PhysiologyModelsSection.kt",
+            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningScreen.kt",
+            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"
+        )
+        for (filePath in filesToCheck) {
+            val f = resolveFile(filePath)
+            assertTrue("File must exist: $filePath", f.exists())
+            val lineCount = f.readLines().size
+            assertTrue("File $filePath must be < 400 lines (was: $lineCount)", lineCount < 400)
+        }
+    }
+
+    @Test
+    fun `TST-UI-388_4 testLiveCockpitAndBackgroundPersistenceInvariants`() {
+        assertTrue(
+            shouldIncludeSensorType(
+                type = SensorType.NORMALIZED_POWER,
+                initialSensorType = SensorType.SPEED_mps,
+                enableCogganPowerMetrics = true,
+                enableCriticalPowerModel = false
+            )
+        )
+        assertFalse(
+            shouldIncludeSensorType(
+                type = SensorType.NORMALIZED_POWER,
+                initialSensorType = SensorType.SPEED_mps,
+                enableCogganPowerMetrics = false,
+                enableCriticalPowerModel = true
+            )
+        )
+        assertTrue(
+            shouldIncludeSensorType(
+                type = SensorType.W_PRIME_BAL,
+                initialSensorType = SensorType.SPEED_mps,
+                enableCogganPowerMetrics = false,
+                enableCriticalPowerModel = true
+            )
+        )
+        assertFalse(
+            shouldIncludeSensorType(
+                type = SensorType.W_PRIME_BAL,
+                initialSensorType = SensorType.SPEED_mps,
+                enableCogganPowerMetrics = true,
+                enableCriticalPowerModel = false
+            )
+        )
     }
 }

@@ -186,18 +186,20 @@ object TelemetryHistogramCalculator {
      * Determines whether cycling power telemetry exhibits an extended sprint tail eligible for folding.
      *
      * Computes the 99th percentile active duration threshold (P99), enforces athlete Zone 4 upper boundary
-     * ([PowerZoneThresholds.z4Max]) as a floor, and rounds up to the nearest 50 W boundary. Evaluates three gating
+     * ([PowerZoneThresholds.z4Max]) as a floor, snaps upward to the enclosing upper Power Zone boundary
+     * ([PowerZoneThresholds.z4Max], [PowerZoneThresholds.z5Max], or [PowerZoneThresholds.z6Max]), falling back
+     * to the nearest 50 W boundary if above Zone 6, and aligns to [binWidth] (REQ-UI-419.1). Evaluates three gating
      * conditions:
      * 1. `dataMax - tailCutoff >= MIN_TAIL_BINS * binWidth` (at least 100 W in tail);
      * 2. `dataMax >= tailCutoff * MIN_TAIL_RATIO` (tail exceeds cutoff by at least 25%);
-     * 3. Active duration in bins > tailCutoff is strictly > 0.
+     * 3. Active duration in bins >= tailCutoff is strictly > 0.
      *
      * @param bins Raw frequency bins covering the workout power range.
      * @param totalDuration Total active workout duration across all bins.
      * @param thresholds Athlete power zone thresholds.
      * @param binWidth Width of each bin in Watts.
      * @param dataMax Maximum power value recorded in the workout.
-     * @return The 50 W aligned tail cutoff Wattage, or null if gating conditions are not met.
+     * @return The zone-aligned tail cutoff Wattage, or null if gating conditions are not met.
      */
     fun calculateTailCutoff(
         bins: List<TelemetryHistogramBin>,
@@ -221,10 +223,22 @@ object TelemetryHistogramCalculator {
         }
 
         // Floor at athlete's Zone 4 upper boundary (thresholds.z4Max)
-        val rawCutoff = maxOf(p99Candidate, thresholds.z4Max)
+        val candidate = maxOf(p99Candidate, thresholds.z4Max)
 
-        // Round up to clean 50 W boundary
-        val tailCutoff = ((rawCutoff + CUTOFF_ROUNDING_W - 1) / CUTOFF_ROUNDING_W) * CUTOFF_ROUNDING_W
+        // Snap upward to enclosing upper Power Zone boundary, falling back to 50 W multiple if > z6Max
+        val rawCutoff = when {
+            candidate <= thresholds.z4Max -> thresholds.z4Max
+            candidate <= thresholds.z5Max -> thresholds.z5Max
+            candidate <= thresholds.z6Max -> thresholds.z6Max
+            else -> ((candidate + CUTOFF_ROUNDING_W - 1) / CUTOFF_ROUNDING_W) * CUTOFF_ROUNDING_W
+        }
+
+        // Align to histogram bin width (e.g. 10 W)
+        val tailCutoff = if (binWidth > 1) {
+            ((rawCutoff + binWidth - 1) / binWidth) * binWidth
+        } else {
+            rawCutoff
+        }
 
         // Gating Condition 1: At least MIN_TAIL_BINS (10 bins = 100 W) in the tail
         val tailWidth = dataMax - tailCutoff

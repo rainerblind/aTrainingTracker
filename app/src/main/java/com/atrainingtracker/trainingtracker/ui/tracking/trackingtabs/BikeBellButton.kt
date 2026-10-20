@@ -20,7 +20,6 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -43,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
@@ -55,10 +53,12 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import kotlinx.coroutines.launch
 
 /**
- * Floating Cockpit Bike Bell Button (REQ-UI-421.2).
+ * Floating Cockpit Bike Bell Button (REQ-UI-421.2, Governance Rule 53).
  * Styled as a Material 3 ElevatedButton (height 72.dp, RoundedCornerShape(12.dp)) matching LapButton.
- * Features rotation shake animation on ring, tap for double-strike ("Ding-Ding!"),
- * and long-press for urgent continuous striker roll ("Brriiiing!").
+ * Enabled across READY, TRACKING, and PAUSED modes so cyclists can test or ring the bell
+ * while stationary or before pressing Start.
+ * Features rotation shake animation on ring, haptic feedback, and isolated onClick tap handling
+ * without nested pointer input contention.
  */
 @Composable
 fun BikeBellButton(
@@ -68,7 +68,7 @@ fun BikeBellButton(
     onContinuousRingStart: () -> Unit = {},
     onContinuousRingStop: () -> Unit = {}
 ) {
-    val isTracking = trackingMode == TrackingMode.TRACKING
+    val isAvailable = trackingMode in setOf(TrackingMode.READY, TrackingMode.TRACKING, TrackingMode.PAUSED)
     val coroutineScope = rememberCoroutineScope()
     val rotation = remember { Animatable(0f) }
     val haptic = LocalHapticFeedback.current
@@ -86,39 +86,14 @@ fun BikeBellButton(
 
     ElevatedButton(
         onClick = {
-            if (isTracking) {
+            if (isAvailable) {
                 triggerShakeAnimation()
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onSingleRing()
             }
         },
-        enabled = isTracking,
-        modifier = modifier
-            .height(72.dp)
-            .pointerInput(isTracking) {
-                if (!isTracking) return@pointerInput
-                var isLongPress = false
-                detectTapGestures(
-                    onPress = {
-                        isLongPress = false
-                        val released = tryAwaitRelease()
-                        if (isLongPress) {
-                            onContinuousRingStop()
-                        }
-                    },
-                    onTap = {
-                        triggerShakeAnimation()
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onSingleRing()
-                    },
-                    onLongPress = {
-                        isLongPress = true
-                        triggerShakeAnimation()
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onContinuousRingStart()
-                    }
-                )
-            },
+        enabled = isAvailable,
+        modifier = modifier.height(72.dp),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.elevatedButtonColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -127,7 +102,7 @@ fun BikeBellButton(
             disabledContentColor = colorResource(R.color.lap_button_disabled_text)
         ),
         elevation = ButtonDefaults.elevatedButtonElevation(
-            defaultElevation = if (isTracking) 6.dp else 0.dp,
+            defaultElevation = if (isAvailable) 6.dp else 0.dp,
             disabledElevation = 0.dp
         ),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp)
@@ -142,7 +117,7 @@ fun BikeBellButton(
                 modifier = Modifier
                     .size(40.dp)
                     .graphicsLayer { rotationZ = rotation.value },
-                tint = if (isTracking)
+                tint = if (isAvailable)
                     MaterialTheme.colorScheme.onPrimaryContainer
                 else
                     colorResource(R.color.lap_button_disabled_text)
@@ -165,9 +140,21 @@ fun PreviewBikeBellButton() {
                 onSingleRing = {}
             )
 
-            Text("Ghosted (Stopped/Paused)", style = MaterialTheme.typography.labelSmall)
+            Text("Active (Ready Mode)", style = MaterialTheme.typography.labelSmall)
+            BikeBellButton(
+                trackingMode = TrackingMode.READY,
+                onSingleRing = {}
+            )
+
+            Text("Active (Paused Mode)", style = MaterialTheme.typography.labelSmall)
             BikeBellButton(
                 trackingMode = TrackingMode.PAUSED,
+                onSingleRing = {}
+            )
+
+            Text("Ghosted (Idle Mode)", style = MaterialTheme.typography.labelSmall)
+            BikeBellButton(
+                trackingMode = TrackingMode.IDLE,
                 onSingleRing = {}
             )
         }

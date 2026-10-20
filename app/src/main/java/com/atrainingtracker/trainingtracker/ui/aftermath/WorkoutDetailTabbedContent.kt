@@ -484,9 +484,14 @@ private fun RenderWorkoutDetailCardSections(
             WorkoutDetailSectionType.DETAILS -> {
                 WorkoutDetails(
                     data = workoutData.detailsData,
+                    enableBasicPowerMetrics = tuningConfig.enableBasicPowerMetrics,
+                    showBasicPowerInWorkoutSummary = tuningConfig.showBasicPowerInWorkoutSummary,
                     enableCogganPowerMetrics = tuningConfig.enableCogganPowerMetrics,
+                    showCogganPowerInWorkoutSummary = tuningConfig.showCogganPowerInWorkoutSummary,
                     enableAerobicEfficiencyModel = tuningConfig.enableAerobicEfficiencyModel,
+                    showAerobicEfficiencyInWorkoutSummary = tuningConfig.showAerobicEfficiencyInWorkoutSummary,
                     enableCriticalPowerModel = tuningConfig.enableCriticalPowerModel,
+                    showCriticalPowerInWorkoutSummary = tuningConfig.showCriticalPowerInWorkoutSummary,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

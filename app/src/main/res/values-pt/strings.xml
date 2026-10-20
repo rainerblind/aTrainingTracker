@@ -1248,6 +1248,8 @@
     <string name="filter_route_source">Fonte</string>
     <string name="filter_route_selected">Apenas selecionados</string>
     <string name="filter_min_elevation_format">&gt; %1$s m</string>
+    <string name="filter_max_elevation_format">&lt; %1$s m</string>
+    <string name="filter_elevation_interval_format">%1$s - %2$s m</string>
     <string name="filter_no_matching_routes">Nenhum percurso corresponde aos filtros ativos</string>
     <!-- Segment Filtering (ATT-735) -->
     <string name="filter_segments_title">Filtrar segmentos</string>
@@ -1579,6 +1581,11 @@
     <string name="permission_rationale_open_settings">Abrir configurações</string>
     <string name="permission_rationale_settings_explanation">A permissão de localização foi negada. Sem acesso à localização, a gravação de rotas e pontos GPS não fica disponível. Você pode conceder a permissão nas configurações do app.</string>
     <string name="permission_rationale_precise_location_explanation">A localização precisa (GPS) é necessária para registrar o treino. A localização aproximada não registra distância, velocidade, rota ou altitude. Selecione \'Precisa\' nas permissões.</string>
+    <!-- Decoupled Multi-Permission Cascade & Sensor Discovery (ATT-3998 / REQ-PRI-006) -->
+    <string name="bluetooth_permission_scan_required">A permissão de Bluetooth é necessária para buscar sensores próximos.</string>
+    <string name="grant_permission">Conceder</string>
+    <string name="permission_rationale_notification_subtitle">As notificações mantêm acessíveis a duração do treino, a distância, os alertas de voltas e os controles rápidos durante a gravação em segundo plano.</string>
+    <string name="permission_rationale_bluetooth_subtitle">A permissão de Dispositivos próximos conecta o aTrainingTracker aos seus sensores emparelhados de frequência cardíaca, potência, velocidade e cadência.</string>
     <string name="action_view_workout">Visualizar</string>
     <string name="permission_warning_badge_desc">Permissão de localização ausente</string>
 
@@ -1998,6 +2005,10 @@
     <string name="tuning_physiology_ef_desc">Mostrar fator de eficiência (EF) e desacoplamento aeróbico (Pw:Hr / Pa:Hr) nos resumos e detalhes</string>
     <string name="tuning_physiology_cp_title">Potência crítica e bateria anaeróbica (CP, W\', W\'bal)</string>
     <string name="tuning_physiology_cp_desc">Mostrar potência crítica, W\' e bateria W\'bal em Perfil e zonas, cockpit e análise de treino</string>
+    <string name="tuning_physiology_basic_power_title">Métricas básicas de potência (Trabalho, W/kg)</string>
+    <string name="tuning_physiology_basic_power_desc">Registar trabalho mecânico (kJ) e relação peso-potência (W/kg) em treinos e cockpit</string>
+    <string name="tuning_physiology_show_in_workout_summary">Mostrar no resumo do treino</string>
+    <string name="tuning_physiology_show_in_workout_summary_desc">Apresentar linha de telemetria no cartão de visão geral do treino</string>
     <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
     <string name="workout_domain_efficiency">Eficiência</string>
     <string name="workout_ef_short">EF</string>

@@ -654,9 +654,9 @@ fun SensorGridScreen(
             }
         } else {
             // TRACKING & PREVIEW MODES (Top-level spatial Box overlay, independent inner sensor scroll, weighted map)
-            val isTracking = screenMode == ScreenMode.TRACKING
+            val isAvailable = screenMode != ScreenMode.CONFIGURATION
             val haptic = LocalHapticFeedback.current
-            val doubleTapModifier = if (isTracking && state.showBikeBell) {
+            val doubleTapModifier = if (isAvailable && state.showBikeBell) {
                 Modifier.detectCockpitDoubleTap(enabled = true) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     tabToggleActions.onRingBikeBell()

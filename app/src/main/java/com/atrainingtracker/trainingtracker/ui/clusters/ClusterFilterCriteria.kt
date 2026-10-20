@@ -44,6 +44,8 @@ data class ClusterFilterCriteria(
     val equipmentName: String? = null,
     val minDistanceMeters: Double? = null,
     val maxDistanceMeters: Double? = null,
+    val minElevationGainMeters: Double? = null,
+    val maxElevationGainMeters: Double? = null,
     val minHitCount: Int? = null,
     val startLocationName: String? = null,
     val startLocationLat: Double? = null,
@@ -52,7 +54,7 @@ data class ClusterFilterCriteria(
 ) {
     /**
      * Total count of distinct active filter dimensions.
-     * Distance interval (min or max) counts as a single active filter dimension (REQ-UI-417.1).
+     * Distance interval (min or max) and elevation interval (min or max) each count as a single active filter dimension (REQ-UI-417.1, REQ-UI-425).
      */
     val activeFilterCount: Int
         get() {
@@ -60,6 +62,7 @@ data class ClusterFilterCriteria(
             if (query.isNotBlank()) count++
             if (equipmentName != null) count++
             if (minDistanceMeters != null || maxDistanceMeters != null) count++
+            if (minElevationGainMeters != null || maxElevationGainMeters != null) count++
             if (minHitCount != null) count++
             if (startLocationLat != null && startLocationLng != null) count++
             return count
@@ -87,7 +90,11 @@ data class ClusterFilterCriteria(
      * @param linkedEquipment The set of equipment names associated with the cluster's sport.
      * @return True if the cluster matches all active criteria; false otherwise.
      */
-    fun matches(cluster: WorkoutCluster, linkedEquipment: Set<String> = emptySet()): Boolean {
+    fun matches(
+        cluster: WorkoutCluster,
+        linkedEquipment: Set<String> = emptySet(),
+        elevationGainMeters: Double? = null
+    ): Boolean {
         // Text Query match (case-insensitive substring across cluster name)
         if (query.isNotBlank()) {
             val q = query.trim().lowercase()
@@ -109,6 +116,13 @@ data class ClusterFilterCriteria(
         // Maximum Reference Distance threshold (meters) (REQ-UI-417.1)
         if (maxDistanceMeters != null && cluster.refDistance > maxDistanceMeters) {
             return false
+        }
+
+        // Elevation Gain Interval threshold (meters) (REQ-UI-425)
+        if (minElevationGainMeters != null || maxElevationGainMeters != null) {
+            val elev = elevationGainMeters ?: 0.0
+            if (minElevationGainMeters != null && elev < minElevationGainMeters) return false
+            if (maxElevationGainMeters != null && elev > maxElevationGainMeters) return false
         }
 
         // Minimum Recordings / Hit Count threshold
@@ -139,6 +153,8 @@ data class ClusterFilterCriteria(
         equipmentName?.let { json.put("equipmentName", it) }
         minDistanceMeters?.let { json.put("minDistanceMeters", it) }
         maxDistanceMeters?.let { json.put("maxDistanceMeters", it) }
+        minElevationGainMeters?.let { json.put("minElevationGainMeters", it) }
+        maxElevationGainMeters?.let { json.put("maxElevationGainMeters", it) }
         minHitCount?.let { json.put("minHitCount", it) }
         startLocationName?.let { json.put("startLocationName", it) }
         startLocationLat?.let { json.put("startLocationLat", it) }
@@ -151,7 +167,7 @@ data class ClusterFilterCriteria(
         /**
          * Reconstructs a [ClusterFilterCriteria] instance from its persisted JSON representation.
          * Returns an empty criteria instance if [jsonStr] is null, empty, or unparseable.
-         * Gracefully handles legacy JSON missing [maxDistanceMeters] by falling back to null (REQ-UI-417.1).
+         * Gracefully handles legacy JSON missing [maxDistanceMeters] or elevation bounds by falling back to null (REQ-UI-417.1, REQ-UI-425).
          */
         fun fromJson(jsonStr: String?): ClusterFilterCriteria {
             if (jsonStr.isNullOrBlank()) return ClusterFilterCriteria()
@@ -162,6 +178,8 @@ data class ClusterFilterCriteria(
                     equipmentName = if (json.has("equipmentName")) json.getString("equipmentName") else null,
                     minDistanceMeters = if (json.has("minDistanceMeters")) json.getDouble("minDistanceMeters") else null,
                     maxDistanceMeters = if (json.has("maxDistanceMeters")) json.getDouble("maxDistanceMeters") else null,
+                    minElevationGainMeters = if (json.has("minElevationGainMeters")) json.getDouble("minElevationGainMeters") else null,
+                    maxElevationGainMeters = if (json.has("maxElevationGainMeters")) json.getDouble("maxElevationGainMeters") else null,
                     minHitCount = if (json.has("minHitCount")) json.getInt("minHitCount") else null,
                     startLocationName = if (json.has("startLocationName")) json.getString("startLocationName") else null,
                     startLocationLat = if (json.has("startLocationLat")) json.getDouble("startLocationLat") else null,

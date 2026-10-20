@@ -272,6 +272,34 @@ public class DevicesDatabaseManager {
         }
     }
 
+    /**
+     * Checks whether at least one paired Bluetooth LE device exists in the database (ATT-3998 / REQ-PRI-006).
+     *
+     * @return true if at least one paired Bluetooth LE device is registered in SQLite, false otherwise.
+     */
+    public boolean hasPairedBluetoothDevices() {
+        if (DEBUG) Log.d(TAG, "hasPairedBluetoothDevices()");
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return false;
+        }
+        try (Cursor cursor = db.query(
+                DevicesDbHelper.DEVICES,
+                new String[]{DevicesDbHelper.C_ID},
+                DevicesDbHelper.PAIRED + " > 0 AND " + DevicesDbHelper.PROTOCOL + "=?",
+                new String[]{Protocol.BLUETOOTH_LE.name()},
+                null,
+                null,
+                null,
+                "1"
+        )) {
+            return cursor != null && cursor.moveToFirst();
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking paired Bluetooth devices", e);
+            return false;
+        }
+    }
+
     public DeviceIdAndNameLists getDeviceIdAndNameLists(SensorType sensorType) {
         if (DEBUG) Log.i(TAG, "getDeviceIdAndNameLists(" + sensorType + ")");
 
@@ -1181,7 +1209,7 @@ public class DevicesDatabaseManager {
             }
         }
 
-        private void addLocationDevicesToDb(SQLiteDatabase db) {
+        void addLocationDevicesToDb(SQLiteDatabase db) {
             ContentValues contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GPS.name());
@@ -1192,17 +1220,17 @@ public class DevicesDatabaseManager {
 
             contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
-            contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_NETWORK.name());
-            contentValues.put(PAIRED, false);
-            contentValues.put(NAME, mContext.getString(R.string.devices_location_Network));
+            contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name());
+            contentValues.put(PAIRED, true);
+            contentValues.put(NAME, mContext.getString(R.string.devices_location_GoogleFused));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 
             contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
-            contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name());
-            contentValues.put(PAIRED, true);
-            contentValues.put(NAME, mContext.getString(R.string.devices_location_GoogleFused));
+            contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_NETWORK.name());
+            contentValues.put(PAIRED, false);
+            contentValues.put(NAME, mContext.getString(R.string.devices_location_Network));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 

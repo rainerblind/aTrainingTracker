@@ -47,6 +47,7 @@ fun ActiveClusterFilterChipsRow(
     onRemoveEquipment: () -> Unit,
     onRemoveDistanceRange: () -> Unit = {},
     onRemoveMinDistance: () -> Unit = onRemoveDistanceRange,
+    onRemoveElevationRange: () -> Unit = {},
     onRemoveMinHitCount: () -> Unit,
     onRemoveStartLocation: () -> Unit = {},
     onClearAll: () -> Unit,
@@ -110,6 +111,23 @@ fun ActiveClusterFilterChipsRow(
                 RemovableFilterChip(
                     label = label,
                     onRemove = onRemoveDistanceRange
+                )
+            }
+        }
+
+        // Elevation Interval Chip (REQ-UI-425)
+        if (criteria.minElevationGainMeters != null || criteria.maxElevationGainMeters != null) {
+            item(key = "elevation") {
+                val minM = criteria.minElevationGainMeters?.toInt()?.toString()
+                val maxM = criteria.maxElevationGainMeters?.toInt()?.toString()
+                val label = when {
+                    minM != null && maxM != null -> stringResource(R.string.filter_elevation_interval_format, minM, maxM)
+                    minM != null -> stringResource(R.string.filter_min_elevation_format, minM)
+                    else -> stringResource(R.string.filter_max_elevation_format, maxM!!)
+                }
+                RemovableFilterChip(
+                    label = label,
+                    onRemove = onRemoveElevationRange
                 )
             }
         }

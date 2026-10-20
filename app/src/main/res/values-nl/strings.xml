@@ -1248,6 +1248,8 @@
     <string name="filter_route_source">Bron</string>
     <string name="filter_route_selected">Alleen geselecteerde</string>
     <string name="filter_min_elevation_format">&gt; %1$s m</string>
+    <string name="filter_max_elevation_format">&lt; %1$s m</string>
+    <string name="filter_elevation_interval_format">%1$s - %2$s m</string>
     <string name="filter_no_matching_routes">Geen routes komen overeen met de actieve filters</string>
     <!-- Segment Filtering (ATT-735) -->
     <string name="filter_segments_title">Segmenten filteren</string>
@@ -1579,6 +1581,11 @@
     <string name="permission_rationale_open_settings">Instellingen openen</string>
     <string name="permission_rationale_settings_explanation">Locatietoestemming is geweigerd. Zonder locatietoegang kunnen er geen GPS-routegegevens worden vastgelegd. Je kunt toestemming geven in de app-instellingen.</string>
     <string name="permission_rationale_precise_location_explanation">Precieze locatie (gps) is vereist voor het vastleggen van de training. Geschatte locatie kan geen afstand, snelheid, route of hoogte registreren. Selecteer \'Precies\' bij machtigingen.</string>
+    <!-- Decoupled Multi-Permission Cascade & Sensor Discovery (ATT-3998 / REQ-PRI-006) -->
+    <string name="bluetooth_permission_scan_required">Bluetooth-toestemming is vereist om naar sensoren in de buurt te zoeken.</string>
+    <string name="grant_permission">Toestaan</string>
+    <string name="permission_rationale_notification_subtitle">Meldingen houden trainingsduur, afstand, tussentijd-meldingen en snelle bedieningselementen toegankelijk tijdens registratie op de achtergrond.</string>
+    <string name="permission_rationale_bluetooth_subtitle">Toestemming voor apparaten in de buurt verbindt aTrainingTracker met uw gekoppelde hartslag-, vermogens-, snelheids- en cadanssensoren.</string>
     <string name="action_view_workout">Bekijken</string>
     <string name="permission_warning_badge_desc">Locatietoestemming ontbreekt</string>
 
@@ -1999,6 +2006,10 @@
     <string name="tuning_physiology_ef_desc">Toon efficiëntiefactor (EF) en aerobe ontkoppeling (Pw:Hr / Pa:Hr) in overzichten en details</string>
     <string name="tuning_physiology_cp_title">Critical Power &amp; anaerobe batterij (CP, W\', W\'bal)</string>
     <string name="tuning_physiology_cp_desc">Toon Critical Power, W\' en W\'bal-batterij in Profiel &amp; zones, cockpit en trainingsanalyse</string>
+    <string name="tuning_physiology_basic_power_title">Basis vermogensstatistieken (Arbeid, W/kg)</string>
+    <string name="tuning_physiology_basic_power_desc">Mechanische arbeid (kJ) en vermogen-gewichtsverhouding (W/kg) bijhouden in trainingen en cockpit</string>
+    <string name="tuning_physiology_show_in_workout_summary">Weergeven in trainingsoverzicht</string>
+    <string name="tuning_physiology_show_in_workout_summary_desc">Telemetrierij weergeven op de trainingsoverzichtskaart</string>
     <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
     <string name="workout_domain_efficiency">Efficiëntie</string>
     <string name="workout_ef_short">EF</string>

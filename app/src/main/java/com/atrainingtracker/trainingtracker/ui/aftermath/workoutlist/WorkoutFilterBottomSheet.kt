@@ -176,6 +176,15 @@ fun WorkoutFilterBottomSheet(
         mutableStateOf(criteria.maxDurationSec?.let { (it / 60L).toString() } ?: "")
     }
 
+    var localMinElevationGainMeters by remember(criteria.minElevationGainMeters) { mutableStateOf(criteria.minElevationGainMeters) }
+    var localMaxElevationGainMeters by remember(criteria.maxElevationGainMeters) { mutableStateOf(criteria.maxElevationGainMeters) }
+    var minElevationText by remember(criteria.minElevationGainMeters) {
+        mutableStateOf(criteria.minElevationGainMeters?.toInt()?.toString() ?: "")
+    }
+    var maxElevationText by remember(criteria.maxElevationGainMeters) {
+        mutableStateOf(criteria.maxElevationGainMeters?.toInt()?.toString() ?: "")
+    }
+
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
 
@@ -285,6 +294,10 @@ fun WorkoutFilterBottomSheet(
             localMaxDurationSec = null
             minDurationText = ""
             maxDurationText = ""
+            localMinElevationGainMeters = null
+            localMaxElevationGainMeters = null
+            minElevationText = ""
+            maxElevationText = ""
             localStartLocationName = null
             localStartLocationLat = null
             localStartLocationLng = null
@@ -308,6 +321,8 @@ fun WorkoutFilterBottomSheet(
                 maxDistanceMeters = localMaxDistanceMeters,
                 minDurationSec = localMinDurationSec,
                 maxDurationSec = localMaxDurationSec,
+                minElevationGainMeters = localMinElevationGainMeters,
+                maxElevationGainMeters = localMaxElevationGainMeters,
                 startLocationName = localStartLocationName,
                 startLocationLat = localStartLocationLat,
                 startLocationLng = localStartLocationLng,
@@ -687,6 +702,77 @@ fun WorkoutFilterBottomSheet(
                         localMaxDurationSec = str.toLongOrNull()?.times(60L)
                     },
                     label = { Text("${stringResource(R.string.filter_max_label)} (min)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // 7b. Elevation Gain Interval (REQ-UI-425)
+        Column {
+            Text(
+                text = stringResource(R.string.sort_elevation_gain),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                val elevationPresets = listOf(
+                    Triple("< 100 m", null, 100.0),
+                    Triple("100 - 250 m", 100.0, 250.0),
+                    Triple("250 - 500 m", 250.0, 500.0),
+                    Triple("500 - 1000 m", 500.0, 1000.0),
+                    Triple("> 1000 m", 1000.0, null)
+                )
+                elevationPresets.forEach { (label, minM, maxM) ->
+                    val isSelected = localMinElevationGainMeters == minM && localMaxElevationGainMeters == maxM
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = {
+                            if (isSelected) {
+                                localMinElevationGainMeters = null
+                                localMaxElevationGainMeters = null
+                                minElevationText = ""
+                                maxElevationText = ""
+                            } else {
+                                localMinElevationGainMeters = minM
+                                localMaxElevationGainMeters = maxM
+                                minElevationText = minM?.toInt()?.toString() ?: ""
+                                maxElevationText = maxM?.toInt()?.toString() ?: ""
+                            }
+                        },
+                        label = { Text(label) }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = minElevationText,
+                    onValueChange = { str ->
+                        minElevationText = str
+                        localMinElevationGainMeters = str.toDoubleOrNull()
+                    },
+                    label = { Text("${stringResource(R.string.filter_min_label)} (m)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = maxElevationText,
+                    onValueChange = { str ->
+                        maxElevationText = str
+                        localMaxElevationGainMeters = str.toDoubleOrNull()
+                    },
+                    label = { Text("${stringResource(R.string.filter_max_label)} (m)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.weight(1f)

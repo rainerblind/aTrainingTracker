@@ -181,7 +181,6 @@ class MainActivityWithNavigation :
         private const val TAG = "MainActivityWithNavigat"
         private const val DEFAULT_SELECTED_FRAGMENT_ID = R.id.drawer_start_tracking
         private const val REQUEST_INSTALL_GOOGLE_PLAY_SERVICE = 2
-        private const val MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1
         private const val WAITING_TIME_BEFORE_DISCONNECTING = 5L * 60 * 1000 // 5 min
         const val LOW_BATTERY_WARNING_LEVEL = 20
         const val CRITICAL_BATTERY_LEVEL = 10
@@ -501,122 +500,6 @@ class MainActivityWithNavigation :
             repeatOnLifecycle(Lifecycle.State.CREATED) {
                 tuningPreferencesDataStore.suppressAntMissingAdapterDialogFlow.collect { suppressed ->
                     isAntMissingAdapterDialogSuppressed = suppressed
-                }
-            }
-        }
-    }
-
-    private fun getPermissions(): List<String> {
-        val requiredPerms = ArrayList<String>()
-        requiredPerms.add(Manifest.permission.ACCESS_FINE_LOCATION)
-        requiredPerms.add(Manifest.permission.ACCESS_COARSE_LOCATION)
-
-        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
-            requiredPerms.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            (packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE) ||
-             packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH))) {
-            requiredPerms.add(Manifest.permission.BLUETOOTH_CONNECT)
-            requiredPerms.add(Manifest.permission.BLUETOOTH_SCAN)
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requiredPerms.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-
-        return requiredPerms
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION) {
-            var fineLocationGranted = false
-            for (i in permissions.indices) {
-                if (permissions[i] == Manifest.permission.ACCESS_FINE_LOCATION &&
-                    grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                    fineLocationGranted = true
-                    break
-                }
-            }
-
-            if (fineLocationGranted) {
-                BANALService.checkOrInitializeLocationDevices()
-                checkGpsEnabledIfPermitted()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                        showBackgroundLocationDialog()
-                    }
-                }
-            }
-        }
-    }
-
-    private fun showBackgroundLocationDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.background_location_permission_title)
-            .setMessage(R.string.background_location_permission_text)
-            .setPositiveButton(R.string.OK) { _, _ ->
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), 0)
-            }
-            .setNegativeButton(R.string.Cancel) { dialog, _ -> dialog.dismiss() }
-            .show()
-    }
-
-    fun getPermissions(popup: Boolean) {
-        if (!popup) return
-        var missingAnyPermission = false
-        val requiredPerms = getPermissions()
-        val requestPerms = ArrayList<String>()
-
-        for (perm in requiredPerms) {
-            if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
-                missingAnyPermission = true
-                if (ActivityCompat.shouldShowRequestPermissionRationale(this, perm)) {
-                    val s = "Permission $perm is explicitly denied"
-                    Log.i(javaClass.name, s)
-                } else {
-                    requestPerms.add(perm)
-                }
-            }
-        }
-
-        if (missingAnyPermission) {
-            val permissions = requestPerms.toTypedArray()
-
-            if (popup || requestPerms.isNotEmpty()) {
-                val baseMessage = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    getString(R.string.location_permission_text_Android12)
-                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    getString(R.string.location_permission_text)
-                } else {
-                    getString(R.string.location_permission_text_pre_Android10)
-                }
-
-                val builder = AlertDialog.Builder(this)
-                    .setTitle(R.string.location_permission_required)
-                    .setNegativeButton(R.string.Cancel) { dialog, _ -> dialog.dismiss() }
-
-                if (requestPerms.isNotEmpty()) {
-                    builder.setPositiveButton(R.string.OK) { _, _ ->
-                        ActivityCompat.requestPermissions(this, permissions, MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION)
-                    }.setMessage(baseMessage + "\n" + getString(R.string.Request_permission_text))
-                } else {
-                    val intent = Intent()
-                        .setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                        .setData(Uri.fromParts("package", packageName, null))
-                    builder.setPositiveButton(R.string.OK) { _, _ -> startActivity(intent) }
-                        .setMessage(baseMessage + "\n\n" + getString(R.string.Request_permission_text))
-                }
-                builder.show()
-            }
-        } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    if (popup) {
-                        showBackgroundLocationDialog()
-                    }
                 }
             }
         }

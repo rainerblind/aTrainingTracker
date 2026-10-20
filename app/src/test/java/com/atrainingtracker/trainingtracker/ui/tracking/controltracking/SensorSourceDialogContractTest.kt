@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -85,6 +86,38 @@ class SensorSourceDialogContractTest {
             content.contains("device = device, \n                            isConnected = false,") ||
             content.contains("device = device,\n                            isConnected = false") ||
             content.contains("device = device, \n                            isConnected = false")
+        )
+    }
+
+    @Test
+    fun testSensorSourceDialog_hasZeroReferencesToRouteTokens() {
+        val content = sourceFile.readText()
+
+        assertFalse(
+            "SensorSourceDialog must not reference TTColor.RouteSelected (REQ-UI-051, ATT-4374)",
+            content.contains("RouteSelected")
+        )
+        assertFalse(
+            "SensorSourceDialog must not reference TTColor.RouteUnselected (REQ-UI-051, ATT-4374)",
+            content.contains("RouteUnselected")
+        )
+    }
+
+    @Test
+    fun testSensorSourceDialog_usesDedicatedSensorSourceTokens() {
+        val content = sourceFile.readText()
+
+        assertTrue(
+            "SensorSourceDialog must reference TTColor.SensorSourceActive for source device header (REQ-UI-051, ATT-4374)",
+            content.contains("color = TTColor.SensorSourceActive")
+        )
+        assertTrue(
+            "SensorSourceDialog must reference TTColor.SensorBackupActive for active backups header (REQ-UI-051, ATT-4374)",
+            content.contains("color = TTColor.SensorBackupActive")
+        )
+        assertTrue(
+            "SensorSourceDialog must retain MaterialTheme.colorScheme.onSurfaceVariant for not connected header",
+            content.contains("color = MaterialTheme.colorScheme.onSurfaceVariant")
         )
     }
 }

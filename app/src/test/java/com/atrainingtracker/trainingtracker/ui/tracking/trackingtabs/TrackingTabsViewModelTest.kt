@@ -39,6 +39,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -58,6 +59,7 @@ class TrackingTabsViewModelTest {
 
     private val trackingModeLiveData = MutableLiveData<TrackingMode>()
     private val activityTypeFlow = MutableStateFlow(ActivityType.getDefaultActivityType())
+    private val wasAutoPausedFlow = MutableStateFlow(false)
 
     @Before
     fun setUp() {
@@ -77,13 +79,16 @@ class TrackingTabsViewModelTest {
 
         every { mockBanalRepo.trackingMode } returns trackingModeLiveData
         every { mockBanalRepo.activityType } returns activityTypeFlow
+        every { mockBanalRepo.wasAutoPaused } returns wasAutoPausedFlow
         every { mockBanalRepo.bindToBANALService() } just Runs
         every { mockTrackingViewsRepo.getTrackingViewsFlow(any()) } returns flowOf(emptyList())
         every { mockDevicesRepo.allDevices } returns MutableStateFlow(emptyList())
+        wasAutoPausedFlow.value = false
     }
 
     @After
     fun tearDown() {
+        wasAutoPausedFlow.value = false
         Dispatchers.resetMain()
         ArchTaskExecutor.getInstance().setDelegate(null)
         unmockkAll()
@@ -170,6 +175,188 @@ class TrackingTabsViewModelTest {
         assertEquals(TabNavigationEvent.NavigateTo(0), events[1])
 
         job.cancel()
+    }
+
+    /**
+     * TST-UI-115.2: Verifies that resumption from Auto-Pause (speed recovery or banner resume)
+     * suppresses NavigateTo(0) and preserves the athlete's active telemetry tab (REQ-UI-163.4).
+     */
+    @Test
+    fun testAutoPauseResumePreservesCurrentTab() = runTest(testDispatcher) {
+        trackingModeLiveData.value = TrackingMode.READY
+        val viewModel = createViewModel()
+
+        val events = mutableListOf<TabNavigationEvent>()
+        val job = launch {
+            viewModel.navigationEvent.collect { events.add(it) }
+        }
+        testScheduler.advanceUntilIdle()
+
+        // 1. Start tracking -> NavigateTo(0) emitted
+        trackingModeLiveData.value = TrackingMode.TRACKING
+        testScheduler.advanceUntilIdle()
+        assertEquals(1, events.size)
+        assertEquals(TabNavigationEvent.NavigateTo(0), events[0])
+
+        // 2. Athlete selects Page 2 (Telemetry/Map tab)
+        viewModel.onPageSelected(2)
+        assertEquals(2, viewModel.currentPage.value)
+
+        // 3. Auto-pause triggers
+        wasAutoPausedFlow.value = true
+        trackingModeLiveData.value = TrackingMode.PAUSED
+        testScheduler.advanceUntilIdle()
+        assertEquals(1, events.size)
+
+        // 4. Auto-pause ends -> resume tracking
+        trackingModeLiveData.value = TrackingMode.TRACKING
+        testScheduler.advanceUntilIdle()
+
+        // MUST NOT emit any new navigation event!
+        assertEquals("Resuming from auto-pause must preserve active tab and suppress NavigateTo", 1, events.size)
+
+        job.cancel()
+    }
+
+    /**
+     * TST-UI-115.3: Verifies that resuming a manual pause while viewing the Control tab (Page 0)
+     * emits NavigateTo(0) (REQ-UI-163.3, ATT-1340).
+     */
+    @Test
+    fun testManualResumeFromControlTabNavigatesToFirstCockpitTab() = runTest(testDispatcher) {
+        trackingModeLiveData.value = TrackingMode.READY
+        val viewModel = createViewModel()
+
+        val events = mutableListOf<TabNavigationEvent>()
+        val job = launch {
+            viewModel.navigationEvent.collect { events.add(it) }
+        }
+        testScheduler.advanceUntilIdle()
+
+        // 1. Start tracking -> NavigateTo(0) emitted
+        trackingModeLiveData.value = TrackingMode.TRACKING
+        testScheduler.advanceUntilIdle()
+        assertEquals(1, events.size)
+
+        // 2. Athlete remains on Control tab (Page 0)
+        viewModel.onPageSelected(0)
+
+        // 3. Manual pause
+        wasAutoPausedFlow.value = false
+        trackingModeLiveData.value = TrackingMode.PAUSED
+        testScheduler.advanceUntilIdle()
+        assertEquals(1, events.size)
+
+        // 4. Manual resume from Control tab
+        trackingModeLiveData.value = TrackingMode.TRACKING
+        testScheduler.advanceUntilIdle()
+
+        assertEquals("Resuming manual pause from Control tab must navigate to cockpit tab", 2, events.size)
+        assertEquals(TabNavigationEvent.NavigateTo(0), events[1])
+
+        job.cancel()
+    }
+
+    /**
+     * TST-UI-115.4: Verifies that resuming a manual pause while viewing a Telemetry/Map tab (Page >= 1)
+     * suppresses NavigateTo(0) and preserves the athlete's active tab (REQ-UI-163.5).
+     */
+    @Test
+    fun testManualResumeFromTelemetryTabPreservesCurrentTab() = runTest(testDispatcher) {
+        trackingModeLiveData.value = TrackingMode.READY
+        val viewModel = createViewModel()
+
+        val events = mutableListOf<TabNavigationEvent>()
+        val job = launch {
+            viewModel.navigationEvent.collect { events.add(it) }
+        }
+        testScheduler.advanceUntilIdle()
+
+        // 1. Start tracking -> NavigateTo(0) emitted
+        trackingModeLiveData.value = TrackingMode.TRACKING
+        testScheduler.advanceUntilIdle()
+        assertEquals(1, events.size)
+
+        // 2. Athlete selects Page 2 (Telemetry/Map tab)
+        viewModel.onPageSelected(2)
+
+        // 3. Manual pause
+        wasAutoPausedFlow.value = false
+        trackingModeLiveData.value = TrackingMode.PAUSED
+        testScheduler.advanceUntilIdle()
+        assertEquals(1, events.size)
+
+        // 4. Manual resume while on Page 2
+        trackingModeLiveData.value = TrackingMode.TRACKING
+        testScheduler.advanceUntilIdle()
+
+        assertEquals("Manual resume while viewing telemetry tab must preserve active tab", 1, events.size)
+
+        job.cancel()
+    }
+
+    /**
+     * Verifies that resuming auto-pause while viewing Control tab (Page 0) suppresses NavigateTo(0)
+     * because wasAutoPaused is true (REQ-UI-163.4).
+     */
+    @Test
+    fun testAutoPauseResumeFromControlTabPreservesCurrentTab() = runTest(testDispatcher) {
+        trackingModeLiveData.value = TrackingMode.READY
+        val viewModel = createViewModel()
+
+        val events = mutableListOf<TabNavigationEvent>()
+        val job = launch {
+            viewModel.navigationEvent.collect { events.add(it) }
+        }
+        testScheduler.advanceUntilIdle()
+
+        // 1. Start tracking -> NavigateTo(0) emitted
+        trackingModeLiveData.value = TrackingMode.TRACKING
+        testScheduler.advanceUntilIdle()
+        assertEquals(1, events.size)
+
+        // 2. Athlete is on Control tab (Page 0)
+        viewModel.onPageSelected(0)
+
+        // 3. Auto-pause triggers
+        wasAutoPausedFlow.value = true
+        trackingModeLiveData.value = TrackingMode.PAUSED
+        testScheduler.advanceUntilIdle()
+        assertEquals(1, events.size)
+
+        // 4. Auto-pause ends while on Page 0
+        trackingModeLiveData.value = TrackingMode.TRACKING
+        testScheduler.advanceUntilIdle()
+
+        assertEquals("Resuming auto-pause while on Control tab must suppress navigation", 1, events.size)
+
+        job.cancel()
+    }
+
+    /**
+     * Verifies the pure domain decision predicate TrackingTabsViewModel.shouldNavigateToFirstCockpitTab.
+     */
+    @Test
+    fun testShouldNavigateToFirstCockpitTab_predicateLogic() {
+        // READY -> TRACKING always navigates regardless of page or wasAutoPaused
+        assertTrue(TrackingTabsViewModel.shouldNavigateToFirstCockpitTab(TrackingMode.READY, TrackingMode.TRACKING, wasAutoPaused = false, currentPage = 0))
+        assertTrue(TrackingTabsViewModel.shouldNavigateToFirstCockpitTab(TrackingMode.READY, TrackingMode.TRACKING, wasAutoPaused = true, currentPage = 0))
+        assertTrue(TrackingTabsViewModel.shouldNavigateToFirstCockpitTab(TrackingMode.READY, TrackingMode.TRACKING, wasAutoPaused = false, currentPage = 2))
+
+        // PAUSED -> TRACKING: Only navigates when NOT auto-paused AND on Page 0
+        assertTrue(TrackingTabsViewModel.shouldNavigateToFirstCockpitTab(TrackingMode.PAUSED, TrackingMode.TRACKING, wasAutoPaused = false, currentPage = 0))
+        assertFalse(TrackingTabsViewModel.shouldNavigateToFirstCockpitTab(TrackingMode.PAUSED, TrackingMode.TRACKING, wasAutoPaused = true, currentPage = 0))
+        assertFalse(TrackingTabsViewModel.shouldNavigateToFirstCockpitTab(TrackingMode.PAUSED, TrackingMode.TRACKING, wasAutoPaused = false, currentPage = 1))
+        assertFalse(TrackingTabsViewModel.shouldNavigateToFirstCockpitTab(TrackingMode.PAUSED, TrackingMode.TRACKING, wasAutoPaused = false, currentPage = 2))
+        assertFalse(TrackingTabsViewModel.shouldNavigateToFirstCockpitTab(TrackingMode.PAUSED, TrackingMode.TRACKING, wasAutoPaused = true, currentPage = 2))
+
+        // Non-TRACKING current mode never navigates
+        assertFalse(TrackingTabsViewModel.shouldNavigateToFirstCockpitTab(TrackingMode.TRACKING, TrackingMode.PAUSED, wasAutoPaused = false, currentPage = 0))
+        assertFalse(TrackingTabsViewModel.shouldNavigateToFirstCockpitTab(TrackingMode.TRACKING, TrackingMode.READY, wasAutoPaused = false, currentPage = 0))
+
+        // Same mode / null previous mode never navigates
+        assertFalse(TrackingTabsViewModel.shouldNavigateToFirstCockpitTab(TrackingMode.TRACKING, TrackingMode.TRACKING, wasAutoPaused = false, currentPage = 0))
+        assertFalse(TrackingTabsViewModel.shouldNavigateToFirstCockpitTab(null, TrackingMode.TRACKING, wasAutoPaused = false, currentPage = 0))
     }
 
     @Test

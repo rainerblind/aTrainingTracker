@@ -79,6 +79,13 @@ fun RouteFilterBottomSheet(
         mutableStateOf(criteria.maxDistanceMeters?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } } ?: "")
     }
     var localMinElevationGainMeters by remember(criteria.minElevationGainMeters) { mutableStateOf(criteria.minElevationGainMeters) }
+    var localMaxElevationGainMeters by remember(criteria.maxElevationGainMeters) { mutableStateOf(criteria.maxElevationGainMeters) }
+    var minElevationText by remember(criteria.minElevationGainMeters) {
+        mutableStateOf(criteria.minElevationGainMeters?.toInt()?.toString() ?: "")
+    }
+    var maxElevationText by remember(criteria.maxElevationGainMeters) {
+        mutableStateOf(criteria.maxElevationGainMeters?.toInt()?.toString() ?: "")
+    }
 
     FilterBottomSheetScaffold(
         title = stringResource(R.string.filter_routes_title),
@@ -92,6 +99,9 @@ fun RouteFilterBottomSheet(
             minDistanceText = ""
             maxDistanceText = ""
             localMinElevationGainMeters = null
+            localMaxElevationGainMeters = null
+            minElevationText = ""
+            maxElevationText = ""
             onClearAll()
         },
         onApply = {
@@ -101,7 +111,8 @@ fun RouteFilterBottomSheet(
                 isSelected = localIsSelected,
                 minDistanceMeters = localMinDistanceMeters,
                 maxDistanceMeters = localMaxDistanceMeters,
-                minElevationGainMeters = localMinElevationGainMeters
+                minElevationGainMeters = localMinElevationGainMeters,
+                maxElevationGainMeters = localMaxElevationGainMeters
             )
             onApplyCriteria(updated)
             onDismissRequest()
@@ -245,7 +256,7 @@ fun RouteFilterBottomSheet(
             }
         }
 
-        // 5. Elevation Gain Thresholds (REQ-UI-417.2)
+        // 5. Elevation Gain Thresholds (REQ-UI-417.2, REQ-UI-425)
         Column {
             Text(
                 text = stringResource(R.string.sort_elevation_gain),
@@ -257,16 +268,62 @@ fun RouteFilterBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Elevation Gain Thresholds: 100m, 250m, 500m, 1000m
-                listOf(100.0, 250.0, 500.0, 1000.0).forEach { m ->
+                val elevationPresets = listOf(
+                    Triple("< 100 m", null, 100.0),
+                    Triple("100 - 250 m", 100.0, 250.0),
+                    Triple("250 - 500 m", 250.0, 500.0),
+                    Triple("500 - 1000 m", 500.0, 1000.0),
+                    Triple("> 1000 m", 1000.0, null)
+                )
+                elevationPresets.forEach { (label, minM, maxM) ->
+                    val isSelected = localMinElevationGainMeters == minM && localMaxElevationGainMeters == maxM
                     FilterChip(
-                        selected = (localMinElevationGainMeters == m),
+                        selected = isSelected,
                         onClick = {
-                            localMinElevationGainMeters = if (localMinElevationGainMeters == m) null else m
+                            if (isSelected) {
+                                localMinElevationGainMeters = null
+                                localMaxElevationGainMeters = null
+                                minElevationText = ""
+                                maxElevationText = ""
+                            } else {
+                                localMinElevationGainMeters = minM
+                                localMaxElevationGainMeters = maxM
+                                minElevationText = minM?.toInt()?.toString() ?: ""
+                                maxElevationText = maxM?.toInt()?.toString() ?: ""
+                            }
                         },
-                        label = { Text(stringResource(R.string.filter_min_elevation_format, m.toInt().toString())) }
+                        label = { Text(label) }
                     )
                 }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = minElevationText,
+                    onValueChange = { str ->
+                        minElevationText = str
+                        localMinElevationGainMeters = str.toDoubleOrNull()
+                    },
+                    label = { Text("${stringResource(R.string.filter_min_label)} (m)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = maxElevationText,
+                    onValueChange = { str ->
+                        maxElevationText = str
+                        localMaxElevationGainMeters = str.toDoubleOrNull()
+                    },
+                    label = { Text("${stringResource(R.string.filter_max_label)} (m)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }

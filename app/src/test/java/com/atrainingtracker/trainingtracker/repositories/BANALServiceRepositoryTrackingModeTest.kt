@@ -79,6 +79,7 @@ class BANALServiceRepositoryTrackingModeTest {
         Dispatchers.resetMain()
         unmockkAll()
         setTrackingMode(TrackingMode.READY)
+        setWasAutoPaused(false)
     }
 
     private fun resetSingleton() {
@@ -96,6 +97,12 @@ class BANALServiceRepositoryTrackingModeTest {
         field.set(null, mode)
     }
 
+    private fun setWasAutoPaused(wasAuto: Boolean) {
+        val field: Field = TrainingApplication::class.java.getDeclaredField("mWasAutoPaused")
+        field.isAccessible = true
+        (field.get(null) as java.util.concurrent.atomic.AtomicBoolean).set(wasAuto)
+    }
+
     @Test
     fun testInit_initializesTrackingModeFromTrainingApplication() {
         setTrackingMode(TrackingMode.TRACKING)
@@ -110,6 +117,19 @@ class BANALServiceRepositoryTrackingModeTest {
     }
 
     @Test
+    fun testInit_initializesWasAutoPausedFromTrainingApplication() {
+        setWasAutoPaused(true)
+
+        val repository = BANALServiceRepository.getInstance(mockContext)
+
+        assertEquals(
+            "BANALServiceRepository must initialize wasAutoPaused with current TrainingApplication state",
+            true,
+            repository.wasAutoPaused.value
+        )
+    }
+
+    @Test
     fun testTrackingModeReceiver_updatesTrackingModeOnBroadcast() {
         setTrackingMode(TrackingMode.READY)
         val repository = BANALServiceRepository.getInstance(mockContext)
@@ -119,13 +139,55 @@ class BANALServiceRepositoryTrackingModeTest {
         receiverField.isAccessible = true
         val receiver = receiverField.get(repository) as BroadcastReceiver
 
+        val mockIntent = mockk<Intent>(relaxed = true)
+        every { mockIntent.getBooleanExtra(TrainingApplication.EXTRA_WAS_AUTO_PAUSED, any()) } returns false
+
         setTrackingMode(TrackingMode.PAUSED)
-        receiver.onReceive(mockContext, Intent(TrainingApplication.TRACKING_STATE_CHANGED))
+        receiver.onReceive(mockContext, mockIntent)
 
         assertEquals(
             "BANALServiceRepository must update _trackingMode when TRACKING_STATE_CHANGED broadcast is received",
             TrackingMode.PAUSED,
             repository.trackingMode.value
+        )
+    }
+
+    @Test
+    fun testTrackingModeReceiver_updatesWasAutoPausedFromIntentExtra() {
+        val repository = BANALServiceRepository.getInstance(mockContext)
+        assertEquals(false, repository.wasAutoPaused.value)
+
+        val receiverField = BANALServiceRepository::class.java.getDeclaredField("trackingModeReceiver")
+        receiverField.isAccessible = true
+        val receiver = receiverField.get(repository) as BroadcastReceiver
+
+        val mockIntent = mockk<Intent>(relaxed = true)
+        every { mockIntent.getBooleanExtra(TrainingApplication.EXTRA_WAS_AUTO_PAUSED, false) } returns true
+
+        receiver.onReceive(mockContext, mockIntent)
+
+        assertEquals(
+            "BANALServiceRepository must update wasAutoPaused from EXTRA_WAS_AUTO_PAUSED",
+            true,
+            repository.wasAutoPaused.value
+        )
+    }
+
+    @Test
+    fun testTrackingModeReceiver_nullIntentFallbackToTrainingApplication() {
+        setWasAutoPaused(true)
+        val repository = BANALServiceRepository.getInstance(mockContext)
+
+        val receiverField = BANALServiceRepository::class.java.getDeclaredField("trackingModeReceiver")
+        receiverField.isAccessible = true
+        val receiver = receiverField.get(repository) as BroadcastReceiver
+
+        receiver.onReceive(mockContext, null)
+
+        assertEquals(
+            "BANALServiceRepository must fallback to TrainingApplication.wasAutoPaused() when intent is null",
+            true,
+            repository.wasAutoPaused.value
         )
     }
 }

@@ -8,11 +8,12 @@ description: Executes Stage 1 (Problem Domain & Root Cause Analysis) of the agil
 ## Overview
 This skill guides the agent through **Stage 1 (Analysis)** of the engineering lifecycle. The objective is to understand the problem domain completely before proposing test specifications or implementation code.
 
-## Subagent Model Pairing ("Zipper Principle" — Core Rule 7)
-- **Doing (`agent1`)**: **`pro`** (`invoke_subagent` with `Model: "pro"`) — Open-ended forensic root-cause investigation, distinguishing symptoms from true causes, concurrency/lifecycle analysis, and blast-radius discovery require deep reasoning.
-- **Gate 1 Review (`agent2`)**: **`flash`** (`invoke_subagent` with `TypeName: "research"`, `Model: "flash"`) — Independent read-only codebase verification of cited call sites, all 5 required analysis sections, and scope grounding.
+## Subagent Model Pairing ("Zipper Principle" & Persistent Ping-Pong — Core Rule 7)
+At Ticket Start (`ATT-XXXX`), spawn two persistent `TypeName: "self"` subagents (`subagent_pro` with `Model: "pro"` and `subagent_flash` with `Model: "flash"`) that will be reused across all 5 stages via `send_message`:
+- **Doing (`--as agent1`)**: **`subagent_pro`** (`TypeName: "self"`, `Model: "pro"`) — Open-ended forensic root-cause investigation, distinguishing symptoms from true causes, concurrency/lifecycle analysis, and blast-radius discovery require deep reasoning.
+- **Gate 1 Review (`--as agent2`)**: **`subagent_flash`** (`TypeName: "self"`, `Model: "flash"`) — Independent verification of cited call sites, all 5 required analysis sections, and scope grounding, followed by executing `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...` (warming `subagent_flash`'s context for Stage 2 Doing!).
 
-## Key Responsibilities (`agent1` — `pro`)
+## Key Responsibilities (`subagent_pro` as `agent1` — `pro`)
 1. **Forensic Root Cause Analysis (RCA)**:
    - For defects: Investigate stack traces, system logs, SQLite table constraints, thread concurrency, and Android framework lifecycles.
    - For features: Perform gap analysis against current architectural components.
@@ -33,8 +34,8 @@ This skill guides the agent through **Stage 1 (Analysis)** of the engineering li
      ```
    - **One Commit per Ticket (Core Rule 8)**: Do not create an intermediate git commit for Stage 1; keep changes on the working branch until Stage 5.
 
-## Gate 1 Independent Review Checklist (`agent2` — `flash` `research` Subagent)
-Spawn an independent `research` subagent (`Model: "flash"`) to audit the Stage 1 deliverable against the codebase using this checklist:
+## Gate 1 Independent Review Checklist (`subagent_flash` as `agent2` — `flash`)
+Instruct the ticket's persistent `subagent_flash` (`Model: "flash"`) to audit the Stage 1 deliverable against the codebase using this checklist and record the verdict via `--as agent2 gate-verdict`:
 1. **Scrutinize Problem Domain & Analysis**:
    - For bug tickets: Stress-test RCA conclusions (symptoms vs. cause, call-site audit, reproducible traces).
    - For features/improvements: Verify deep domain comprehension, user motivation, scope boundaries, and architectural side effects.

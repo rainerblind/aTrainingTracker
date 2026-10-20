@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.audio
 
+import android.media.AudioAttributes
 import android.media.AudioTrack
 import io.mockk.*
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -25,11 +26,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.Executors
 
 /**
  * Unit and concurrency test suite for BikeBellAudioSynthesizer (REQ-UI-421.4, TST-UI-384.3).
  */
+@RunWith(RobolectricTestRunner::class)
 class BikeBellAudioSynthesizerTest {
 
     @Test
@@ -76,20 +80,25 @@ class BikeBellAudioSynthesizerTest {
         // 1. Single ring at polite volume
         synthesizer.ring(0.70f)
         verify(exactly = 1) { mockTrack1.setVolume(0.70f) }
+        verify(exactly = 1) { mockTrack1.stop() }
+        verify(exactly = 1) { mockTrack1.playbackHeadPosition = 0 }
         verify(exactly = 1) { mockTrack1.play() }
 
         // 2. Single ring at escalated volume
         synthesizer.ring(1.0f)
         verify(exactly = 1) { mockTrack1.setVolume(1.0f) }
+        verify(atLeast = 2) { mockTrack1.stop() }
         verify(atLeast = 2) { mockTrack1.play() }
 
         // 3. Roll start and stop
         synthesizer.startRoll(1.0f)
         verify(exactly = 1) { mockTrack2.setVolume(1.0f) }
+        verify(exactly = 1) { mockTrack2.stop() }
+        verify(exactly = 1) { mockTrack2.playbackHeadPosition = 0 }
         verify(exactly = 1) { mockTrack2.play() }
 
         synthesizer.stopRoll()
-        verify(atLeast = 1) { mockTrack2.pause() }
+        verify(atLeast = 1) { mockTrack2.stop() }
 
         // 4. Concurrent calls from 10 threads
         val threadPool = Executors.newFixedThreadPool(10).asCoroutineDispatcher()
@@ -118,5 +127,13 @@ class BikeBellAudioSynthesizerTest {
         synthesizer.startRoll(1.0f)
         synthesizer.stopRoll()
         synthesizer.close() // Idempotent close
+    }
+
+    @Test
+    fun testBikeBellAudioSynthesizer_audioAttributesConfiguration() {
+        val attributes = BikeBellAudioSynthesizer.createAudioAttributes()
+        assertNotNull(attributes)
+        assertEquals(AudioAttributes.USAGE_MEDIA, attributes.usage)
+        assertEquals(AudioAttributes.CONTENT_TYPE_SONIFICATION, attributes.contentType)
     }
 }

@@ -23,64 +23,45 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 
 /**
- * A helper object to allow synchronous access to DataStore values from Java code.
- * NOTE: This uses runBlocking and should be used carefully to avoid blocking the UI thread.
- * It is acceptable for reading small, cached preference values.
+ * A helper object to allow synchronous, non-blocking access to DataStore values from Java code.
+ * (REQ-SET-079 / ATT-3999).
+ * All queries execute in O(1) from thread-safe in-memory StateFlow caches without blocking caller threads.
  */
 object SettingsDataStoreJavaHelper {
 
     /**
      * Generic helper to get a max zone value for a specific profile (Run, Bike, Power).
+     * Non-blocking O(1) in-memory lookup.
      * @param context The application context
      * @param zoneType The ZoneType
-     * @param zoneIndex The zone number (1-4). Zone 5 is usually > Zone 4.
+     * @param zoneIndex The zone number (1-4 for HR, 1-6 for Power).
      * @return The max value for that zone.
      */
     @JvmStatic
     fun getZoneMax(context: Context, zoneType: SettingsDataStore.ZoneType, zoneIndex: Int): Int {
-        val dataStore = SettingsDataStore(context)
-
-        return runBlocking {
-            when (zoneIndex) {
-                1 -> dataStore.getZone1MaxFlow(zoneType).first()
-                2 -> dataStore.getZone2MaxFlow(zoneType).first()
-                3 -> dataStore.getZone3MaxFlow(zoneType).first()
-                4 -> dataStore.getZone4MaxFlow(zoneType).first()
-                5 -> if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) dataStore.getZone5MaxFlow(zoneType).first() else 0
-                6 -> if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) dataStore.getZone6MaxFlow(zoneType).first() else 0
-                else -> 0 // Fallback for open-ended or out-of-bounds zones
-            }
-        }
+        return SettingsDataStore.getInstance(context).getZoneMaxSync(zoneType, zoneIndex)
     }
 
     /**
      * Synchronous bridge for legacy Java or non-coroutine callers to fetch zone display options.
-     * Executes safely on Dispatchers.IO to prevent UI thread blocking.
+     * Non-blocking O(1) in-memory lookup.
      */
     @JvmStatic
     fun getZoneDisplayOptions(context: Context, zoneType: SettingsDataStore.ZoneType): ZoneDisplayOptions {
-        val dataStore = SettingsDataStore(context)
-        return runBlocking(Dispatchers.IO) {
-            dataStore.getZoneDisplayOptionsFlow(zoneType).first()
-        }
+        return SettingsDataStore.getInstance(context).getZoneDisplayOptionsSync(zoneType)
     }
 
     /**
      * Synchronous bridge for legacy Java sensor drivers to fetch the active tuning configuration.
+     * Non-blocking O(1) in-memory lookup from TuningPreferencesDataStore.
      */
     @JvmStatic
     fun getTuningConfig(context: Context): TuningConfig {
         return try {
-            val tuningDataStore = TuningPreferencesDataStore(context)
-            runBlocking(Dispatchers.IO) {
-                tuningDataStore.tuningConfigFlow.first()
-            }
-        } catch (t: Throwable) {
+            TuningPreferencesDataStore.getInstance(context).getTuningConfig()
+        } catch (_: Throwable) {
             TuningConfig()
         }
     }
@@ -111,16 +92,13 @@ object SettingsDataStoreJavaHelper {
 
     /**
      * Synchronous bridge to fetch athlete Functional Threshold Power (FTP) in Watts.
-     * Returns null if unconfigured or <= 0.
+     * Returns null if unconfigured or <= 0. Non-blocking in-memory read.
      */
     @JvmStatic
     fun getFtp(context: Context): Int? {
         return try {
-            val dataStore = SettingsDataStore(context)
-            runBlocking(Dispatchers.IO) {
-                dataStore.ftpFlow.first()
-            }
-        } catch (t: Throwable) {
+            SettingsDataStore.getInstance(context).getFtpSync()
+        } catch (_: Throwable) {
             null
         }
     }
@@ -178,46 +156,39 @@ object SettingsDataStoreJavaHelper {
 
     /**
      * Synchronous bridge to fetch athlete body weight in kilograms (REQ-TRK-019).
-     * Returns 0.0f if unconfigured or <= 0.
+     * Returns 0.0f if unconfigured or <= 0. Non-blocking in-memory read.
      */
     @JvmStatic
     fun getAthleteWeightKg(context: Context): Float {
         return try {
-            val dataStore = SettingsDataStore.getInstance(context)
-            runBlocking(Dispatchers.IO) {
-                dataStore.athleteWeightKgFlow.first()
-            }
-        } catch (t: Throwable) {
+            SettingsDataStore.getInstance(context).getAthleteWeightKgSync()
+        } catch (_: Throwable) {
             0.0f
         }
     }
 
     /**
-     * Synchronous bridge to persist athlete body weight in kilograms (REQ-TRK-019).
+     * Asynchronous bridge to persist athlete body weight in kilograms (REQ-TRK-019).
+     * Dispatches to application coroutine scope without blocking the caller thread.
      */
     @JvmStatic
     fun setAthleteWeightKg(context: Context, weightKg: Float) {
         try {
-            val dataStore = SettingsDataStore.getInstance(context)
-            runBlocking(Dispatchers.IO) {
-                dataStore.setAthleteWeightKg(weightKg)
-            }
-        } catch (t: Throwable) {
+            SettingsDataStore.getInstance(context).launchSetAthleteWeightKg(weightKg)
+        } catch (_: Throwable) {
             // ignore in tests or headless contexts
         }
     }
 
     /**
      * Synchronous bridge to fetch configured Critical Power (CP) in Watts (`REQ-UI-399.1`), or `null` if unconfigured.
+     * Non-blocking in-memory read.
      */
     @JvmStatic
     fun getCpWatts(context: Context): Int? {
         return try {
-            val dataStore = SettingsDataStore.getInstance(context)
-            runBlocking(Dispatchers.IO) {
-                dataStore.cpWattsFlow.first()
-            }
-        } catch (t: Throwable) {
+            SettingsDataStore.getInstance(context).getCpWattsSync()
+        } catch (_: Throwable) {
             null
         }
     }
@@ -233,15 +204,13 @@ object SettingsDataStoreJavaHelper {
 
     /**
      * Synchronous bridge to fetch configured Anaerobic Work Capacity ($W'$) in kJ (`REQ-UI-399.1`), or `null` if unconfigured.
+     * Non-blocking in-memory read.
      */
     @JvmStatic
     fun getWPrimeKj(context: Context): Float? {
         return try {
-            val dataStore = SettingsDataStore.getInstance(context)
-            runBlocking(Dispatchers.IO) {
-                dataStore.wPrimeKjFlow.first()
-            }
-        } catch (t: Throwable) {
+            SettingsDataStore.getInstance(context).getWPrimeKjSync()
+        } catch (_: Throwable) {
             null
         }
     }

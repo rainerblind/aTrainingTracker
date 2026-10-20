@@ -269,4 +269,64 @@ class WorkoutDetailsLayoutTest {
         // Empty section boundary (never occurs since Section 1 is always added, but verified for safety):
         assertEquals("Zero sections must render exactly 0 dividers", 0, countDividers(0))
     }
+
+    @Test
+    fun `TST-UI-388_2 testWorkoutDetails_gatingAndDividerIntegrity`() {
+        val candidates = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutdetails/WorkoutDetails.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutdetails/WorkoutDetails.kt")
+        )
+        val file = candidates.firstOrNull { it.exists() }
+        assertTrue("WorkoutDetails.kt must exist", file != null && file.exists())
+        val content = file!!.readText()
+
+        // 1. Signature checks for new summary toggles (REQ-UI-424.4)
+        assertTrue("Must declare enableBasicPowerMetrics in WorkoutDetails", content.contains("enableBasicPowerMetrics: Boolean"))
+        assertTrue("Must declare showBasicPowerInWorkoutSummary in WorkoutDetails", content.contains("showBasicPowerInWorkoutSummary: Boolean"))
+        assertTrue("Must declare showCogganPowerInWorkoutSummary in WorkoutDetails", content.contains("showCogganPowerInWorkoutSummary: Boolean"))
+        assertTrue("Must declare showAerobicEfficiencyInWorkoutSummary in WorkoutDetails", content.contains("showAerobicEfficiencyInWorkoutSummary: Boolean"))
+        assertTrue("Must declare showCriticalPowerInWorkoutSummary in WorkoutDetails", content.contains("showCriticalPowerInWorkoutSummary: Boolean"))
+
+        // 2. Gating checks
+        assertTrue(
+            "AerobicEfficiencyRow must be gated on showAerobicEfficiencyInWorkoutSummary",
+            content.contains("enableAerobicEfficiencyModel && showAerobicEfficiencyInWorkoutSummary")
+        )
+        assertTrue(
+            "AnaerobicBatteryRow must be gated on showCriticalPowerInWorkoutSummary",
+            content.contains("enableCriticalPowerModel && showCriticalPowerInWorkoutSummary")
+        )
+
+        // 3. Strict modularity limit: strictly < 500 lines (REQ-UI-415.3, REQ-UI-424.5)
+        val lineCount = content.lines().size
+        assertTrue(
+            "WorkoutDetails.kt must remain strictly < 500 lines (actual: $lineCount)",
+            lineCount < 500
+        )
+    }
+
+    @Test
+    fun `TST-TRK-031_7 testWorkoutDetails_noPowerData_omitsAnaerobicBatteryRowAndDivider`() {
+        // [TST-TRK-031.7] / REQ-TRK-038.5
+        val candidates = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutdetails/WorkoutDetails.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutdetails/WorkoutDetails.kt")
+        )
+        val file = candidates.firstOrNull { it.exists() }
+        assertTrue("WorkoutDetails.kt must exist", file != null && file.exists())
+        val content = file!!.readText()
+
+        // 1. Verify AnaerobicBatteryRow requires non-null minWPrimeBalKj and minWPrimeBalPct
+        assertTrue(
+            "AnaerobicBatteryRow must be gated on non-null minWPrimeBalKj and minWPrimeBalPct",
+            content.contains("data.minWPrimeBalKj != null && data.minWPrimeBalPct != null")
+        )
+
+        // 2. Modularity budget invariant: strictly < 500 lines
+        val lineCount = content.lines().size
+        assertTrue(
+            "WorkoutDetails.kt must remain strictly < 500 lines (actual: $lineCount)",
+            lineCount < 500
+        )
+    }
 }

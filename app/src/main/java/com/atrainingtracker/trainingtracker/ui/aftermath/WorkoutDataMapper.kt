@@ -116,13 +116,14 @@ class WorkoutDataMapper(
         val startLocationName = resolveLocationName(startLatLng)
         val endLocationName = resolveLocationName(endLatLng)
 
-        val rawMinWPrimeBal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.MIN)
-        val (minWPrimeBalKj, minWPrimeBalPct, isEmptyTankWarning) = resolveWPrimeBalSummary(rawMinWPrimeBal)
-
         val activeTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s))
         val avgSpeedMpsVal = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps))
         val avgPowerWattsVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.AVG)
         val maxPowerWattsVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.MAX)
+        val hasPowerData = (avgPowerWattsVal != null && avgPowerWattsVal > 0.0) || (maxPowerWattsVal != null && maxPowerWattsVal > 0.0)
+
+        val rawMinWPrimeBal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.MIN)
+        val (minWPrimeBalKj, minWPrimeBalPct, isEmptyTankWarning) = resolveWPrimeBalSummary(rawMinWPrimeBal, hasPowerData = hasPowerData)
         val aerobicSummary = resolveAerobicEfficiencySummary(
             powerEf = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.EFFICIENCY_FACTOR),
             powerDecouplingPct = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.AEROBIC_DECOUPLING),
@@ -260,12 +261,15 @@ class WorkoutDataMapper(
     }
 
     /**
-     * Resolves minimum $W'_{\text{bal}}$ (`kJ`), percentage of $W'$, and the $< 10\%$ empty-tank warning (`REQ-UI-399.3`).
+     * Resolves minimum $W'_{\text{bal}}$ (`kJ`), percentage of $W'$, and the $< 10\%$ empty-tank warning (`REQ-UI-399.3`, `REQ-TRK-038.5`).
+     * Strictly gated on presence of recorded power telemetry (`hasPowerData`) to hide the row on non-power workouts (Rule 52).
      */
     internal fun resolveWPrimeBalSummary(
         rawMinWPrimeBalKj: Double?,
-        effectiveWPrimeKj: Double = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getEffectiveWPrimeKj(context).toDouble()
+        effectiveWPrimeKj: Double = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getEffectiveWPrimeKj(context).toDouble(),
+        hasPowerData: Boolean = false
     ): Triple<Double?, Double?, Boolean> {
+        if (!hasPowerData) return Triple(null, null, false)
         val validMinKj = rawMinWPrimeBalKj?.takeIf { !it.isNaN() && !it.isInfinite() && it >= 0.0 && it < Double.MAX_VALUE }
             ?: return Triple(null, null, false)
         val pct = if (effectiveWPrimeKj > 0.0) {
@@ -646,11 +650,12 @@ class WorkoutDataMapper(
         val startLocationName = resolveLocationName(startLatLng)
         val endLocationName = resolveLocationName(endLatLng)
 
-        val rawMinWPrimeBal = getBatchVal(SensorType.W_PRIME_BAL, ExtremaType.MIN)
-        val (minWPrimeBalKj, minWPrimeBalPct, isEmptyTankWarning) = resolveWPrimeBalSummary(rawMinWPrimeBal)
-
         val avgPowerWattsBatch = getBatchVal(SensorType.POWER, ExtremaType.AVG)
         val maxPowerWattsBatch = getBatchVal(SensorType.POWER, ExtremaType.MAX)
+        val hasPowerData = (avgPowerWattsBatch != null && avgPowerWattsBatch > 0.0) || (maxPowerWattsBatch != null && maxPowerWattsBatch > 0.0)
+
+        val rawMinWPrimeBal = getBatchVal(SensorType.W_PRIME_BAL, ExtremaType.MIN)
+        val (minWPrimeBalKj, minWPrimeBalPct, isEmptyTankWarning) = resolveWPrimeBalSummary(rawMinWPrimeBal, hasPowerData = hasPowerData)
         val aerobicSummary = resolveAerobicEfficiencySummary(
             powerEf = getBatchVal(SensorType.POWER, ExtremaType.EFFICIENCY_FACTOR),
             powerDecouplingPct = getBatchVal(SensorType.POWER, ExtremaType.AEROBIC_DECOUPLING),

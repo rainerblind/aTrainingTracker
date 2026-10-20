@@ -35,16 +35,22 @@ These **8 Core Rules** are strictly binding on all AI agents during in-sprint ex
   2. `python3 tools/jira_util.py assign <SUBTASK_KEY> human`
   3. Immediately continue with the next unblocked ticket in the sprint backlog.
 
-## Rule 7: Asymmetric `pro` / `flash` Zipper Principle (Reißverschluss-Prinzip)
-* Delegate each stage's Doing (`agent1`) and independent read-only Gate Review (`agent2`, spawned via `invoke_subagent` with `TypeName: "research"`) to **alternating model tiers** so no model tier audits its own tier:
+## Rule 7: Asymmetric `pro` / `flash` Zipper Principle & Persistent Ping-Pong Subagents per Ticket
+* **Two Persistent Subagents per Ticket**: At the start of each ticket (`ATT-XXXX`), spawn **exactly two persistent `self` subagents** (`invoke_subagent` with `TypeName: "self"`):
+  * `subagent_pro` (`Model: "pro"`, `Role: "ATT-XXXX Pro Agent"`)
+  * `subagent_flash` (`Model: "flash"`, `Role: "ATT-XXXX Flash Agent"`)
+* **Context-Warm Ping-Pong via `send_message`**: Reuse their `conversationId`s across all 5 stages via `send_message`, swapping their roles (`--as agent1` Doing vs. `--as agent2` Gate Review) on every stage so no model tier audits its own tier and each subagent enters its Doing turn already warm from auditing the previous Gate:
 
-| Stage | Doing (`agent1`) | Gate Review (`agent2` `research` subagent) |
-| :--- | :---: | :---: |
-| **Stage 1: Analysis** (`[Analysis]` $\rightarrow$ Gate 1) | **`pro`** | **`flash`** |
-| **Stage 2: Req & Test Spec** (`[Req & Test Spec]` $\rightarrow$ Gate 2) | **`flash`** | **`pro`** |
-| **Stage 3: Implementation Plan** (`[Impl-Plan]` $\rightarrow$ Gate 3) | **`pro`** | **`flash`** |
-| **Stage 4: Implementation** (`[Implementation]` $\rightarrow$ Gate 4) | **`flash`** *(Standard)* / **`pro`** *(High-Risk)* | **`pro`** *(Standard)* / **`flash`** *(High-Risk)* |
-| **Stage 5: Verification** (`[Test]` $\rightarrow$ Gate 5) | **`flash`** | **`pro`** |
+| Stage | Doing (`--as agent1` `submit-stage`) | Gate Review (`--as agent2` `gate-verdict`) | Context Synergy |
+| :--- | :---: | :---: | :--- |
+| **Stage 1: Analysis** (`[Analysis]` $\rightarrow$ Gate 1) | **`subagent_pro`** | **`subagent_flash`** | `subagent_flash` absorbs Stage 1 RCA & source files during Gate 1 audit |
+| **Stage 2: Req & Test Spec** (`[Req & Test Spec]` $\rightarrow$ Gate 2) | **`subagent_flash`** *(via `send_message`)* | **`subagent_pro`** *(via `send_message`)* | `subagent_flash` writes Stage 2 from warm Gate 1 context; `subagent_pro` audits against its own Stage 1 RCA |
+| **Stage 3: Implementation Plan** (`[Impl-Plan]` $\rightarrow$ Gate 3) | **`subagent_pro`** *(via `send_message`)* | **`subagent_flash`** *(via `send_message`)* | `subagent_pro` plans Stage 3 from warm Stage 1+Gate 2 context; `subagent_flash` audits the plan it will code |
+| **Stage 4: Implementation** (`[Implementation]` $\rightarrow$ Gate 4) | **`subagent_flash`** *(Standard)* / **`subagent_pro`** *(High-Risk)* | **`subagent_pro`** *(Standard)* / **`subagent_flash`** *(High-Risk)* | `subagent_flash` codes directly from warm Gate 3 plan; `subagent_pro` audits `git diff` against its Stage 3 plan |
+| **Stage 5: Verification** (`[Test]` $\rightarrow$ Gate 5) | **`subagent_flash`** *(via `send_message`)* | **`subagent_pro`** *(via `send_message`)* | `subagent_flash` runs clean-room suite & walkthrough; `subagent_pro` executes Gate 5 `PASS` |
+
+* **Reactive Turn Boundaries (No Polling Loops or Premature `send_message` Queueing, Rule 56)**: After invoking or messaging a subagent for the active stage, immediately stop calling tools to end the turn and wait for the subagent's completion message. Never poll `manage_subagents(Action="list")` or `manage_task(Action="status")` in a loop, and never send next-stage `send_message` instructions before the current stage has completed and created its Jira subtask.
+* **Ticket Cleanup**: Once `ATT-XXXX` reaches `Final Review (Human)` and its branch is squashed onto `sprint/<SPRINT_NAME>`, terminate the ticket's subagents via `manage_subagents(Action="kill", ConversationIds=[...])` (or `kill_all`) so the next ticket starts with a clean context.
 
 ## Rule 8: One Atomic Commit per Ticket & Clean Jira Hygiene
 * **Composite Stage CLI**: Use `python3 tools/jira_util.py --as agent1 submit-stage <PARENT_KEY> <1..5> <TEXT_OR_@FILE>` to submit a stage in 1 call, and `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> <PASS|REVISION> <TEXT_OR_@FILE>` to record Gate 1–5 verdicts in 1 call.

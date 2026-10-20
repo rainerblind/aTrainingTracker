@@ -59,6 +59,8 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
  */
 enum class RationaleType {
     FOREGROUND,
+    NOTIFICATION,
+    BLUETOOTH,
     BACKGROUND_LOCATION,
     BATTERY_OPTIMIZATION
 }
@@ -117,6 +119,8 @@ fun PermissionRationaleContent(
     ) {
         val headerIconRes = when (rationaleType) {
             RationaleType.FOREGROUND -> R.drawable.my_locations
+            RationaleType.NOTIFICATION -> R.drawable.ic_lap_timer
+            RationaleType.BLUETOOTH -> R.drawable.ic_my_paired_devices
             RationaleType.BACKGROUND_LOCATION -> R.drawable.ic_location
             RationaleType.BATTERY_OPTIMIZATION -> R.drawable.ic_battery_full
         }
@@ -132,6 +136,8 @@ fun PermissionRationaleContent(
 
         val titleText = when (rationaleType) {
             RationaleType.FOREGROUND -> stringResource(id = R.string.permission_rationale_title)
+            RationaleType.NOTIFICATION -> stringResource(id = R.string.permission_rationale_notification_title)
+            RationaleType.BLUETOOTH -> stringResource(id = R.string.permission_rationale_bluetooth_title)
             RationaleType.BACKGROUND_LOCATION -> stringResource(id = R.string.background_location_permission_title)
             RationaleType.BATTERY_OPTIMIZATION -> stringResource(id = R.string.battery_optimization_title)
         }
@@ -154,6 +160,12 @@ fun PermissionRationaleContent(
                 } else {
                     stringResource(id = R.string.permission_rationale_subtitle)
                 }
+            }
+            RationaleType.NOTIFICATION -> {
+                stringResource(id = R.string.permission_rationale_notification_subtitle)
+            }
+            RationaleType.BLUETOOTH -> {
+                stringResource(id = R.string.permission_rationale_bluetooth_subtitle)
             }
             RationaleType.BACKGROUND_LOCATION -> {
                 stringResource(id = R.string.background_location_permission_text)
@@ -196,6 +208,20 @@ fun PermissionRationaleContent(
                     iconRes = R.drawable.ic_lap_timer,
                     title = stringResource(id = R.string.permission_rationale_notification_title),
                     description = stringResource(id = R.string.permission_rationale_notification_desc)
+                )
+            }
+            RationaleType.NOTIFICATION -> {
+                RationaleValueItem(
+                    iconRes = R.drawable.ic_lap_timer,
+                    title = stringResource(id = R.string.permission_rationale_notification_title),
+                    description = stringResource(id = R.string.permission_rationale_notification_desc)
+                )
+            }
+            RationaleType.BLUETOOTH -> {
+                RationaleValueItem(
+                    iconRes = R.drawable.ic_my_paired_devices,
+                    title = stringResource(id = R.string.permission_rationale_bluetooth_title),
+                    description = stringResource(id = R.string.permission_rationale_bluetooth_desc)
                 )
             }
             RationaleType.BACKGROUND_LOCATION -> {
@@ -378,3 +404,36 @@ fun PreviewPermissionRationaleContentDenied() {
         }
     }
 }
+
+@Preview(name = "Notification Rationale", showBackground = true)
+@Composable
+fun PreviewPermissionRationaleContentNotification() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        Surface {
+            PermissionRationaleContent(
+                rationaleType = RationaleType.NOTIFICATION,
+                isPermanentlyDenied = false,
+                onContinue = {},
+                onOpenSettings = {},
+                onDismissRequest = {}
+            )
+        }
+    }
+}
+
+@Preview(name = "Bluetooth Rationale", showBackground = true)
+@Composable
+fun PreviewPermissionRationaleContentBluetooth() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        Surface {
+            PermissionRationaleContent(
+                rationaleType = RationaleType.BLUETOOTH,
+                isPermanentlyDenied = false,
+                onContinue = {},
+                onOpenSettings = {},
+                onDismissRequest = {}
+            )
+        }
+    }
+}
+

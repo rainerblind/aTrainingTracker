@@ -161,45 +161,60 @@ fun TelemetryHistogramChart(
                         color = MaterialTheme.colorScheme.primary
                     )
                 } else if (!isSprintTailView) {
-                    // Main View with interactive Overflow Chip
-                    Text(
-                        text = "${histogram.dataMin}–${histogram.tailCutoff} $unit",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                        modifier = Modifier.clickable {
-                            isSprintTailView = true
-                            selectedBinIndex = null
-                        }
+                    // Main View with symmetrical 2-segment Range Toggle (REQ-UI-419.3)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        // Segment 1: Main Range (Active - highlighted, non-clickable)
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
                         ) {
                             Text(
-                                text = stringResource(
-                                    R.string.power_histogram_overflow_label,
-                                    histogram.tailCutoff,
-                                    unit
-                                ),
+                                text = "${histogram.dataMin}–${histogram.tailCutoff} $unit",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = stringResource(
-                                    R.string.power_histogram_overflow_desc,
-                                    histogram.tailCutoff,
-                                    unit
-                                ),
-                                modifier = Modifier.size(12.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                        }
+
+                        // Segment 2: Sprint Tail Range (Inactive - clickable switch chip)
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.clickable {
+                                isSprintTailView = true
+                                selectedBinIndex = null
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(
+                                        R.string.power_histogram_overflow_label,
+                                        histogram.tailCutoff,
+                                        unit
+                                    ),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = stringResource(
+                                        R.string.power_histogram_overflow_desc,
+                                        histogram.tailCutoff,
+                                        unit
+                                    ),
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                     Text(
@@ -209,49 +224,63 @@ fun TelemetryHistogramChart(
                         color = MaterialTheme.colorScheme.primary
                     )
                 } else {
-                    // Sprint Tail View with interactive Return Chip
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.clickable {
-                            isSprintTailView = false
-                            selectedBinIndex = null
-                        }
+                    // Sprint Tail View with symmetrical 2-segment Range Toggle (REQ-UI-419.3)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        // Segment 1: Main Range (Inactive - clickable return chip)
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.clickable {
+                                isSprintTailView = false
+                                selectedBinIndex = null
+                            }
                         ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(
-                                    R.string.power_histogram_return_desc,
-                                    histogram.tailCutoff,
-                                    unit
-                                ),
-                                modifier = Modifier.size(12.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(
+                                        R.string.power_histogram_return_desc,
+                                        histogram.tailCutoff,
+                                        unit
+                                    ),
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = stringResource(
+                                        R.string.power_histogram_return_label,
+                                        histogram.dataMin,
+                                        histogram.tailCutoff,
+                                        unit
+                                    ),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Segment 2: Sprint Tail Range (Active - highlighted, non-clickable)
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                        ) {
                             Text(
-                                text = stringResource(
-                                    R.string.power_histogram_return_label,
-                                    histogram.dataMin,
-                                    histogram.tailCutoff,
-                                    unit
-                                ),
+                                text = "${histogram.tailCutoff}–${histogram.dataMax} $unit",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     }
-                    Text(
-                        text = "${histogram.tailCutoff}–${histogram.dataMax} $unit",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
                     Text(
                         text = "Δ ${histogram.binWidth} $unit",
                         style = MaterialTheme.typography.labelSmall,

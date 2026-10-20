@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -28,8 +29,12 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -236,10 +241,15 @@ object TuningPreferencesDefaults {
     const val MAX_AUTO_PAUSE_DEBOUNCE_SEC = 5
     const val STEP_AUTO_PAUSE_DEBOUNCE_SEC = 1
 
+    const val DEFAULT_ENABLE_BASIC_POWER_METRICS = true
+    const val DEFAULT_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY = true
     const val DEFAULT_ENABLE_COGGAN_POWER_METRICS = true
+    const val DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY = true
     const val DEFAULT_ENABLE_PMC_MODEL = false
     const val DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL = false
+    const val DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY = true
     const val DEFAULT_ENABLE_CRITICAL_POWER_MODEL = false
+    const val DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY = true
 }
 
 /**
@@ -302,10 +312,15 @@ data class TuningConfig(
     val autoPauseOtherDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
     val autoPauseSpeedThresholdKmh: Float = autoPauseBikeSpeedThreshold.toFloat(),
     val autoPauseDebounceSec: Int = autoPauseBikeDebounceSec,
+    val enableBasicPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_BASIC_POWER_METRICS,
+    val showBasicPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY,
     val enableCogganPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS,
+    val showCogganPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY,
     val enablePmcModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL,
     val enableAerobicEfficiencyModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL,
-    val enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
+    val showAerobicEfficiencyInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
+    val enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL,
+    val showCriticalPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -435,10 +450,15 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_other_debounce_sec")
         val KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH: Preferences.Key<Float> = floatPreferencesKey("tuning_auto_pause_speed_threshold_kmh")
         val KEY_AUTO_PAUSE_DEBOUNCE_SEC: Preferences.Key<Int> = intPreferencesKey("tuning_auto_pause_debounce_sec")
+        val KEY_ENABLE_BASIC_POWER_METRICS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_basic_power_metrics")
+        val KEY_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_basic_power_in_workout_summary")
         val KEY_ENABLE_COGGAN_POWER_METRICS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_coggan_power_metrics")
+        val KEY_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_coggan_power_in_workout_summary")
         val KEY_ENABLE_PMC_MODEL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_pmc_model")
         val KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_aerobic_efficiency_model")
+        val KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_aerobic_efficiency_in_workout_summary")
         val KEY_ENABLE_CRITICAL_POWER_MODEL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_critical_power_model")
+        val KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_critical_power_in_workout_summary")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -498,10 +518,15 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
             KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH,
             KEY_AUTO_PAUSE_DEBOUNCE_SEC,
+            KEY_ENABLE_BASIC_POWER_METRICS,
+            KEY_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY,
             KEY_ENABLE_COGGAN_POWER_METRICS,
+            KEY_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY,
             KEY_ENABLE_PMC_MODEL,
             KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL,
-            KEY_ENABLE_CRITICAL_POWER_MODEL
+            KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
+            KEY_ENABLE_CRITICAL_POWER_MODEL,
+            KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY
         )
 
         /**
@@ -567,7 +592,36 @@ class TuningPreferencesDataStore(private val context: Context) {
                 prefs.remove(key)
             }
         }
+
+        @Volatile
+        private var INSTANCE: TuningPreferencesDataStore? = null
+
+        @JvmStatic
+        fun getInstance(context: Context): TuningPreferencesDataStore {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: TuningPreferencesDataStore(context.applicationContext ?: context).also { INSTANCE = it }
+            }
+        }
+
+        @VisibleForTesting
+        fun setInstanceForTesting(instance: TuningPreferencesDataStore?) {
+            synchronized(this) {
+                INSTANCE = instance
+            }
+        }
     }
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    val tuningConfigStateFlow: StateFlow<TuningConfig> by lazy {
+        tuningConfigFlow.stateIn(
+            scope = appScope,
+            started = SharingStarted.Eagerly,
+            initialValue = TuningConfig()
+        )
+    }
+
+    fun getTuningConfig(): TuningConfig = tuningConfigStateFlow.value
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
@@ -805,11 +859,20 @@ data class AutoPausePreferences(
             autoPauseOtherDebounceSec = autoPausePrefs.otherDebounceSec,
             autoPauseSpeedThresholdKmh = autoPausePrefs.bikeSpeedThreshold.toFloat(),
             autoPauseDebounceSec = autoPausePrefs.bikeDebounceSec,
+            enableBasicPowerMetrics = prefs[KEY_ENABLE_BASIC_POWER_METRICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_BASIC_POWER_METRICS,
+            showBasicPowerInWorkoutSummary = prefs[KEY_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY,
             enableCogganPowerMetrics = prefs[KEY_ENABLE_COGGAN_POWER_METRICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS,
+            showCogganPowerInWorkoutSummary = prefs[KEY_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY,
             enablePmcModel = prefs[KEY_ENABLE_PMC_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL,
             enableAerobicEfficiencyModel = prefs[KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL,
-            enableCriticalPowerModel = prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
+            showAerobicEfficiencyInWorkoutSummary = prefs[KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
+            enableCriticalPowerModel = prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL,
+            showCriticalPowerInWorkoutSummary = prefs[KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY
         )
+    }
+
+    val enableBasicPowerMetricsFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_ENABLE_BASIC_POWER_METRICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_BASIC_POWER_METRICS
     }
 
     val enableCogganPowerMetricsFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -1021,10 +1084,15 @@ data class AutoPausePreferences(
             prefs[KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC] = clampedRunDebounce
             prefs[KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD] = clampedOtherSpeedThreshold
             prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] = clampedOtherDebounce
+            prefs[KEY_ENABLE_BASIC_POWER_METRICS] = config.enableBasicPowerMetrics
+            prefs[KEY_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY] = config.showBasicPowerInWorkoutSummary
             prefs[KEY_ENABLE_COGGAN_POWER_METRICS] = config.enableCogganPowerMetrics
+            prefs[KEY_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY] = config.showCogganPowerInWorkoutSummary
             prefs[KEY_ENABLE_PMC_MODEL] = config.enablePmcModel
             prefs[KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL] = config.enableAerobicEfficiencyModel
+            prefs[KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY] = config.showAerobicEfficiencyInWorkoutSummary
             prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] = config.enableCriticalPowerModel
+            prefs[KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY] = config.showCriticalPowerInWorkoutSummary
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)

@@ -91,6 +91,7 @@ public class TrainingApplication extends Application {
     public static final String REQUEST_START_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING";
     public static final String REQUEST_PAUSE_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_PAUSE_TRACKING";
     public static final String EXTRA_IS_AUTO_PAUSE = "com.atrainingtracker.trainingapplication.EXTRA_IS_AUTO_PAUSE";
+    public static final String EXTRA_WAS_AUTO_PAUSED = "com.atrainingtracker.trainingapplication.EXTRA_WAS_AUTO_PAUSED";
     public static final String SP_MANUAL_PAUSE_LOCK = "manual_pause_lock";
     public static final String SP_IS_AUTO_PAUSED = "is_auto_paused";
     public static final String REQUEST_RESUME_FROM_PAUSED = "com.atrainingtracker.trainingapplication.REQUEST_RESUME_FROM_PAUSED";
@@ -221,6 +222,7 @@ public class TrainingApplication extends Application {
     protected static volatile TrackingMode cTrackingMode = TrackingMode.READY;
     private static final AtomicBoolean mManualPauseLock = new AtomicBoolean(false);
     private static final AtomicBoolean mIsAutoPaused = new AtomicBoolean(false);
+    private static final AtomicBoolean mWasAutoPaused = new AtomicBoolean(false);
     protected static boolean cResumeFromCrash = false;
     private static SharedPreferences cSharedPreferences;
     private final IntentFilter mSearchingFinishedFilter = new IntentFilter(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
@@ -1269,6 +1271,14 @@ public class TrainingApplication extends Application {
         return mIsAutoPaused.get();
     }
 
+    /**
+     * Returns true if the most recent resumption to {@link TrackingMode#TRACKING} originated
+     * from an auto-pause state (REQ-UI-163).
+     */
+    public static boolean wasAutoPaused() {
+        return mWasAutoPaused.get();
+    }
+
     public static void setAutoPaused(boolean autoPaused, Context context) {
         mIsAutoPaused.set(autoPaused);
         if (context != null) {
@@ -1594,6 +1604,7 @@ public class TrainingApplication extends Application {
     }
 
     public void setTracking() {
+        mWasAutoPaused.set(false);
         cTrackingMode = TrackingMode.TRACKING;
         notifyTrackingStateChanged();
     }
@@ -1602,6 +1613,7 @@ public class TrainingApplication extends Application {
     /***********************************************************************************************/
     /*  Broadcast Receivers for handling the tracking state                                        */
     protected void startTracking() {
+        mWasAutoPaused.set(false);
         // ATT-3045: Ensure location devices are checked/initialized defensively when starting tracking
         BANALService.checkOrInitializeLocationDevices();
 
@@ -1655,6 +1667,8 @@ public class TrainingApplication extends Application {
     public void pauseTracking(boolean isAutoPause) {
         if (DEBUG) Log.d(TAG, "pause tracking (isAutoPause=" + isAutoPause + ")");
 
+        mWasAutoPaused.set(false);
+
         if (isAutoPause) {
             setAutoPaused(true, this);
         } else {
@@ -1678,6 +1692,9 @@ public class TrainingApplication extends Application {
     public void resumeFromPaused() {
         if (DEBUG) Log.d(TAG, "resume tracking");
 
+        boolean wasAuto = mIsAutoPaused.get();
+        mWasAutoPaused.set(wasAuto);
+
         setManualPauseLock(false, this);
         setAutoPaused(false, this);
         TrackerService.notifyManualResume();
@@ -1692,6 +1709,7 @@ public class TrainingApplication extends Application {
     }
 
     protected void stopTracking() {
+        mWasAutoPaused.set(false);
         setManualPauseLock(false, this);
         setAutoPaused(false, this);
 
@@ -1719,6 +1737,7 @@ public class TrainingApplication extends Application {
      * backed by {@link AtomicBoolean}.
      */
     public static void resetTrackingStateOnAbort() {
+        mWasAutoPaused.set(false);
         setManualPauseLock(false, cAppContext);
         setAutoPaused(false, cAppContext);
         cTrackingMode = TrackingMode.READY;
@@ -1733,6 +1752,7 @@ public class TrainingApplication extends Application {
      */
     public void onTrackingAborted() {
         if (DEBUG) Log.w(TAG, "onTrackingAborted: resetting tracking state to READY");
+        mWasAutoPaused.set(false);
         setManualPauseLock(false, this);
         setAutoPaused(false, this);
 
@@ -1775,6 +1795,7 @@ public class TrainingApplication extends Application {
         updateNotificationSummary();
 
         sendBroadcast(new Intent(TRACKING_STATE_CHANGED)
+                .putExtra(EXTRA_WAS_AUTO_PAUSED, mWasAutoPaused.get())
                 .setPackage(getPackageName()));
     }
 

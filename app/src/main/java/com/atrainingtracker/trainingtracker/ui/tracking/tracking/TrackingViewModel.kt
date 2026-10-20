@@ -38,7 +38,6 @@ import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
-import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
@@ -210,6 +209,11 @@ class TrackingViewModel(
     private val _tuningConfig = MutableStateFlow(TuningConfig())
     val tuningConfig: StateFlow<TuningConfig> = _tuningConfig.asStateFlow()
     private val zoneDisplayOptionsMap = mutableMapOf<SettingsDataStore.ZoneType, ZoneDisplayOptions>()
+    private val zoneCutoffsMap = mutableMapOf<SettingsDataStore.ZoneType, List<Int>>(
+        SettingsDataStore.ZoneType.HR_RUN to listOf(135, 155, 175, 185),
+        SettingsDataStore.ZoneType.HR_BIKE to listOf(130, 150, 170, 180),
+        SettingsDataStore.ZoneType.PWR_BIKE to listOf(150, 200, 250, 300, 350, 450)
+    )
     private val defaultZoneColor = Color.Transparent
 
     private var currentEffectiveWPrimeKj: Double = SettingsDataStore.DEFAULT_W_PRIME_KJ.toDouble()
@@ -272,15 +276,14 @@ class TrackingViewModel(
 
         viewModelScope.launch {
             try {
-                combine(
-                    settingsDataStore.getZoneDisplayOptionsFlow(SettingsDataStore.ZoneType.HR_RUN),
-                    settingsDataStore.getZoneDisplayOptionsFlow(SettingsDataStore.ZoneType.HR_BIKE),
-                    settingsDataStore.getZoneDisplayOptionsFlow(SettingsDataStore.ZoneType.PWR_BIKE)
-                ) { hrRun, hrBike, pwrBike ->
-                    zoneDisplayOptionsMap[SettingsDataStore.ZoneType.HR_RUN] = hrRun
-                    zoneDisplayOptionsMap[SettingsDataStore.ZoneType.HR_BIKE] = hrBike
-                    zoneDisplayOptionsMap[SettingsDataStore.ZoneType.PWR_BIKE] = pwrBike
-                }.collect()
+                settingsDataStore.snapshotFlow.collect { snapshot ->
+                    zoneDisplayOptionsMap[SettingsDataStore.ZoneType.HR_RUN] = snapshot.hrRunDisplayOptions
+                    zoneDisplayOptionsMap[SettingsDataStore.ZoneType.HR_BIKE] = snapshot.hrBikeDisplayOptions
+                    zoneDisplayOptionsMap[SettingsDataStore.ZoneType.PWR_BIKE] = snapshot.pwrBikeDisplayOptions
+                    zoneCutoffsMap[SettingsDataStore.ZoneType.HR_RUN] = snapshot.hrRunZoneMax
+                    zoneCutoffsMap[SettingsDataStore.ZoneType.HR_BIKE] = snapshot.hrBikeZoneMax
+                    zoneCutoffsMap[SettingsDataStore.ZoneType.PWR_BIKE] = snapshot.pwrBikeZoneMax
+                }
             } catch (_: Throwable) {
                 // Graceful fallback in test environments without DataStore file storage
             }
@@ -664,33 +667,19 @@ class TrackingViewModel(
         val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
 
         if (zoneType != null && currentValue is Number) {
-            val z1Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
-            val z2Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
-            val z3Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
-            val z4Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+            val cutoffs = zoneCutoffsMap[zoneType] ?: when (zoneType) {
+                SettingsDataStore.ZoneType.PWR_BIKE -> listOf(150, 200, 250, 300, 350, 450)
+                SettingsDataStore.ZoneType.HR_RUN -> listOf(135, 155, 175, 185)
+                SettingsDataStore.ZoneType.HR_BIKE -> listOf(130, 150, 170, 180)
+            }
             val numericValue = currentValue.toDouble()
 
-            if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) {
-                val z5Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 5)
-                val z6Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6)
-                return when {
-                    numericValue <= z1Max -> zoneColors[0]
-                    numericValue <= z2Max -> zoneColors[1]
-                    numericValue <= z3Max -> zoneColors[2]
-                    numericValue <= z4Max -> zoneColors[3]
-                    numericValue <= z5Max -> zoneColors[4]
-                    numericValue <= z6Max -> zoneColors[5]
-                    else -> zoneColors[6]
+            for (i in cutoffs.indices) {
+                if (numericValue <= cutoffs[i]) {
+                    return zoneColors.getOrElse(i) { defaultZoneColor }
                 }
             }
-
-            return when {
-                numericValue <= z1Max -> zoneColors[0]
-                numericValue <= z2Max -> zoneColors[1]
-                numericValue <= z3Max -> zoneColors[2]
-                numericValue <= z4Max -> zoneColors[3]
-                else -> zoneColors[4]
-            }
+            return zoneColors.getOrElse(cutoffs.size) { defaultZoneColor }
         }
         return defaultZoneColor
     }
@@ -702,17 +691,10 @@ class TrackingViewModel(
     ): ZoneGaugeState? {
         if (!displayOptions.showGauge || zoneType == null) return null
 
-        val z1Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
-        val z2Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
-        val z3Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
-        val z4Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
-
-        val cutoffs = if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) {
-            val z5Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 5)
-            val z6Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6)
-            listOf(z1Max, z2Max, z3Max, z4Max, z5Max, z6Max)
-        } else {
-            listOf(z1Max, z2Max, z3Max, z4Max)
+        val cutoffs = zoneCutoffsMap[zoneType] ?: when (zoneType) {
+            SettingsDataStore.ZoneType.PWR_BIKE -> listOf(150, 200, 250, 300, 350, 450)
+            SettingsDataStore.ZoneType.HR_RUN -> listOf(135, 155, 175, 185)
+            SettingsDataStore.ZoneType.HR_BIKE -> listOf(130, 150, 170, 180)
         }
 
         return ZoneGaugeMath.calculateZoneGaugeState(

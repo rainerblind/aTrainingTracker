@@ -231,6 +231,21 @@ object TTColor {
     val StravaOrange = Color(0xFFFC4C02)
     val ConnectionStatusGreen = Color(0xFF4CAF50)
 
+    // Sensor Source Availability (REQ-UI-051, ATT-4374)
+    /**
+     * Primary active sensor source section header color ("Quelle" / R.string.source_device).
+     * Material Green 800 (#2E7D32) provides strong contrast (>= 3.5:1 on dark, >= 5.1:1 on light)
+     * and aligns with [StartPoint], [ConnectionConnected], and [PmcFreshGreen].
+     */
+    val SensorSourceActive = Color(0xFF2E7D32)
+
+    /**
+     * Active standby backup sensor source section header color ("Aktive Backups" / R.string.source_active_backups).
+     * Material Green 600 (#43A047) provides a visibly lighter green tone while meeting WCAG AA
+     * bold contrast (>= 3.3:1 on light, >= 5.4:1 on dark) and harmonizing with [ConnectionStatusGreen].
+     */
+    val SensorBackupActive = Color(0xFF43A047)
+
     // Route Visualization
     val RouteSelected = Color(0xFF1565C0) // Material Blue 800 (Royal Blue)
     val RouteUnselected = Color(0xFF90CAF9) // Material Blue 200 (Soft Steel Blue)

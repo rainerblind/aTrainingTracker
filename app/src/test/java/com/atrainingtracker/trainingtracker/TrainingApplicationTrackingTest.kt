@@ -117,6 +117,7 @@ class TrainingApplicationTrackingTest {
         mockkStatic(ContextCompat::class)
         mockkStatic(TrackerService::class)
         every { TrackerService.showTrackingInterruptedNotification(any()) } just Runs
+        every { TrackerService.notifyManualResume() } just Runs
 
         app = TestableTrainingApplication()
         TrainingApplication.cTrackingMode = TrackingMode.READY
@@ -246,4 +247,66 @@ class TrainingApplicationTrackingTest {
         assertNotNull("stopService must be called as fallback", app.stoppedServiceIntent)
         assertTrue("notifyTrackingStateChanged must be invoked", app.stateChangedNotified)
     }
+
+    @Test
+    fun testResumeFromPaused_whenAutoPaused_setsWasAutoPausedTrue() {
+        TrainingApplication.setAutoPaused(true, app)
+        assertTrue(TrainingApplication.isAutoPaused())
+
+        app.resumeFromPaused()
+
+        assertTrue("wasAutoPaused must be true when resuming from auto-pause", TrainingApplication.wasAutoPaused())
+        assertFalse("isAutoPaused must be cleared to false", TrainingApplication.isAutoPaused())
+        assertEquals(TrackingMode.TRACKING, TrainingApplication.cTrackingMode)
+        assertTrue(app.stateChangedNotified)
+    }
+
+    @Test
+    fun testResumeFromPaused_whenManualPaused_setsWasAutoPausedFalse() {
+        TrainingApplication.setAutoPaused(false, app)
+        assertFalse(TrainingApplication.isAutoPaused())
+
+        app.resumeFromPaused()
+
+        assertFalse("wasAutoPaused must be false when resuming from manual pause", TrainingApplication.wasAutoPaused())
+        assertFalse(TrainingApplication.isAutoPaused())
+        assertEquals(TrackingMode.TRACKING, TrainingApplication.cTrackingMode)
+        assertTrue(app.stateChangedNotified)
+    }
+
+    @Test
+    fun testStopTracking_resetsWasAutoPaused() {
+        TrainingApplication.setAutoPaused(true, app)
+        app.resumeFromPaused()
+        assertTrue(TrainingApplication.wasAutoPaused())
+
+        val stopTrackingMethod = TrainingApplication::class.java.getDeclaredMethod("stopTracking")
+        stopTrackingMethod.isAccessible = true
+        stopTrackingMethod.invoke(app)
+
+        assertFalse("wasAutoPaused must be reset to false on stopTracking", TrainingApplication.wasAutoPaused())
+    }
+
+    @Test
+    fun testResetTrackingStateOnAbort_resetsWasAutoPaused() {
+        TrainingApplication.setAutoPaused(true, app)
+        app.resumeFromPaused()
+        assertTrue(TrainingApplication.wasAutoPaused())
+
+        TrainingApplication.resetTrackingStateOnAbort()
+
+        assertFalse("wasAutoPaused must be reset to false on resetTrackingStateOnAbort", TrainingApplication.wasAutoPaused())
+    }
+
+    @Test
+    fun testOnTrackingAborted_resetsWasAutoPaused() {
+        TrainingApplication.setAutoPaused(true, app)
+        app.resumeFromPaused()
+        assertTrue(TrainingApplication.wasAutoPaused())
+
+        app.onTrackingAborted()
+
+        assertFalse("wasAutoPaused must be reset to false on onTrackingAborted", TrainingApplication.wasAutoPaused())
+    }
 }
+

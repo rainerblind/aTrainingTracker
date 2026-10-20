@@ -105,8 +105,10 @@ fun AdvancedTuningDialog(
     var autoPauseBikeSpeedThreshold by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC) }; var autoPauseBikeDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC) }
     var autoPauseRunSpeedThreshold by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC) }; var autoPauseRunDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC) }
     var autoPauseOtherSpeedThreshold by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC) }; var autoPauseOtherDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC) }
-    var enableCogganPowerMetrics by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS) }; var enablePmcModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL) }
-    var enableAerobicEfficiencyModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL) }; var enableCriticalPowerModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL) }
+    var enableBasicPowerMetrics by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_BASIC_POWER_METRICS) }; var showBasicPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY) }
+    var enableCogganPowerMetrics by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS) }; var showCogganPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY) }; var enablePmcModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL) }
+    var enableAerobicEfficiencyModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL) }; var showAerobicEfficiencyInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY) }
+    var enableCriticalPowerModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL) }; var showCriticalPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -153,8 +155,10 @@ fun AdvancedTuningDialog(
         autoPauseBikeSpeedThreshold = config.autoPauseBikeSpeedThreshold; autoPauseBikeDebounceSec = config.autoPauseBikeDebounceSec
         autoPauseRunSpeedThreshold = config.autoPauseRunSpeedThreshold; autoPauseRunDebounceSec = config.autoPauseRunDebounceSec
         autoPauseOtherSpeedThreshold = config.autoPauseOtherSpeedThreshold; autoPauseOtherDebounceSec = config.autoPauseOtherDebounceSec
-        enableCogganPowerMetrics = config.enableCogganPowerMetrics; enablePmcModel = config.enablePmcModel
-        enableAerobicEfficiencyModel = config.enableAerobicEfficiencyModel; enableCriticalPowerModel = config.enableCriticalPowerModel
+        enableBasicPowerMetrics = config.enableBasicPowerMetrics; showBasicPowerInWorkoutSummary = config.showBasicPowerInWorkoutSummary; enablePmcModel = config.enablePmcModel
+        enableCogganPowerMetrics = config.enableCogganPowerMetrics; showCogganPowerInWorkoutSummary = config.showCogganPowerInWorkoutSummary
+        enableAerobicEfficiencyModel = config.enableAerobicEfficiencyModel; showAerobicEfficiencyInWorkoutSummary = config.showAerobicEfficiencyInWorkoutSummary
+        enableCriticalPowerModel = config.enableCriticalPowerModel; showCriticalPowerInWorkoutSummary = config.showCriticalPowerInWorkoutSummary
     }
 
     LaunchedEffect(persistedConfig) { applyConfig(persistedConfig) }
@@ -180,8 +184,10 @@ fun AdvancedTuningDialog(
                         autoPauseBikeSpeedThreshold = autoPauseBikeSpeedThreshold, autoPauseBikeDebounceSec = autoPauseBikeDebounceSec,
                         autoPauseRunSpeedThreshold = autoPauseRunSpeedThreshold, autoPauseRunDebounceSec = autoPauseRunDebounceSec,
                         autoPauseOtherSpeedThreshold = autoPauseOtherSpeedThreshold, autoPauseOtherDebounceSec = autoPauseOtherDebounceSec,
-                        enableCogganPowerMetrics = enableCogganPowerMetrics, enablePmcModel = enablePmcModel,
-                        enableAerobicEfficiencyModel = enableAerobicEfficiencyModel, enableCriticalPowerModel = enableCriticalPowerModel
+                        enableBasicPowerMetrics = enableBasicPowerMetrics, showBasicPowerInWorkoutSummary = showBasicPowerInWorkoutSummary,
+                        enableCogganPowerMetrics = enableCogganPowerMetrics, showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary, enablePmcModel = enablePmcModel,
+                        enableAerobicEfficiencyModel = enableAerobicEfficiencyModel, showAerobicEfficiencyInWorkoutSummary = showAerobicEfficiencyInWorkoutSummary,
+                        enableCriticalPowerModel = enableCriticalPowerModel, showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
@@ -299,10 +305,15 @@ fun AdvancedTuningDialog(
                 isExpanded = isSectionExpanded(TuningSection.PHYSIOLOGY_MODELS), onToggle = { toggleSection(TuningSection.PHYSIOLOGY_MODELS) }
             ) {
                 PhysiologyModelsSection(
+                    enableBasicPowerMetrics = enableBasicPowerMetrics, onEnableBasicPowerMetricsChange = { enableBasicPowerMetrics = it },
+                    showBasicPowerInWorkoutSummary = showBasicPowerInWorkoutSummary, onShowBasicPowerInWorkoutSummaryChange = { showBasicPowerInWorkoutSummary = it },
                     enableCogganPowerMetrics = enableCogganPowerMetrics, onEnableCogganPowerMetricsChange = { enableCogganPowerMetrics = it },
+                    showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary, onShowCogganPowerInWorkoutSummaryChange = { showCogganPowerInWorkoutSummary = it },
                     enablePmcModel = enablePmcModel, onEnablePmcModelChange = { enablePmcModel = it },
                     enableAerobicEfficiencyModel = enableAerobicEfficiencyModel, onEnableAerobicEfficiencyModelChange = { enableAerobicEfficiencyModel = it },
-                    enableCriticalPowerModel = enableCriticalPowerModel, onEnableCriticalPowerModelChange = { enableCriticalPowerModel = it }
+                    showAerobicEfficiencyInWorkoutSummary = showAerobicEfficiencyInWorkoutSummary, onShowAerobicEfficiencyInWorkoutSummaryChange = { showAerobicEfficiencyInWorkoutSummary = it },
+                    enableCriticalPowerModel = enableCriticalPowerModel, onEnableCriticalPowerModelChange = { enableCriticalPowerModel = it },
+                    showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary, onShowCriticalPowerInWorkoutSummaryChange = { showCriticalPowerInWorkoutSummary = it }
                 )
             }
 

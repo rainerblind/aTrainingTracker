@@ -56,15 +56,25 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 fun WorkoutDetails(
     data: WorkoutDetailsData,
     modifier: Modifier = Modifier,
+    enableBasicPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_BASIC_POWER_METRICS,
+    showBasicPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_BASIC_POWER_IN_WORKOUT_SUMMARY,
     enableCogganPowerMetrics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS,
+    showCogganPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY,
     enableAerobicEfficiencyModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL,
-    enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
+    showAerobicEfficiencyInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
+    enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL,
+    showCriticalPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY
 ) {
     val visibleSections = buildVisibleWorkoutDetailSections(
         data = data,
+        enableBasicPowerMetrics = enableBasicPowerMetrics,
+        showBasicPowerInWorkoutSummary = showBasicPowerInWorkoutSummary,
         enableCogganPowerMetrics = enableCogganPowerMetrics,
+        showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary,
         enableAerobicEfficiencyModel = enableAerobicEfficiencyModel,
-        enableCriticalPowerModel = enableCriticalPowerModel
+        showAerobicEfficiencyInWorkoutSummary = showAerobicEfficiencyInWorkoutSummary,
+        enableCriticalPowerModel = enableCriticalPowerModel,
+        showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary
     )
 
     Column(
@@ -87,7 +97,7 @@ fun WorkoutDetails(
 
 /**
  * Builds the list of non-empty visible telemetry domain row composables for [WorkoutDetails] based on
- * available data fields and feature flag toggles (`REQ-UI-415.2`).
+ * available data fields and feature flag toggles (`REQ-UI-415.2`, `REQ-UI-424.4`).
  *
  * Contract:
  * - Returns a guaranteed non-empty list of `@Composable () -> Unit` lambdas (Section 1 Active Time & Distance is always present).
@@ -98,27 +108,31 @@ fun WorkoutDetails(
 @Composable
 private fun buildVisibleWorkoutDetailSections(
     data: WorkoutDetailsData,
+    enableBasicPowerMetrics: Boolean,
+    showBasicPowerInWorkoutSummary: Boolean,
     enableCogganPowerMetrics: Boolean,
+    showCogganPowerInWorkoutSummary: Boolean,
     enableAerobicEfficiencyModel: Boolean,
-    enableCriticalPowerModel: Boolean
+    showAerobicEfficiencyInWorkoutSummary: Boolean,
+    enableCriticalPowerModel: Boolean,
+    showCriticalPowerInWorkoutSummary: Boolean
 ): List<@Composable () -> Unit> = buildList {
     // Section 1: Active Time & Distance (always visible)
-    add {
-        MetricsTimeDistanceRow(data = data)
-    }
+    add { MetricsTimeDistanceRow(data = data) }
 
     // Section 2: Altitude (Ascent and Descent)
     if (data.ascentMeters > 0 || data.descentMeters > 0) {
-        add {
-            AltitudeRow(
-                ascentMeters = data.ascentMeters,
-                descentMeters = data.descentMeters
-            )
-        }
+        add { AltitudeRow(ascentMeters = data.ascentMeters, descentMeters = data.descentMeters) }
     }
 
-    // Section 3: Power Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) (REQ-UI-402, REQ-UI-403, REQ-UI-404, REQ-UI-415)
-    val powerSlots = resolvePowerMetricSlots(data, enableCogganPowerMetrics)
+    // Section 3: Power Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) (REQ-UI-402, REQ-UI-403, REQ-UI-404, REQ-UI-415, REQ-UI-424)
+    val powerSlots = resolvePowerMetricSlots(
+        data = data,
+        enableCogganPowerMetrics = enableCogganPowerMetrics,
+        showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary,
+        enableBasicPowerMetrics = enableBasicPowerMetrics,
+        showBasicPowerInWorkoutSummary = showBasicPowerInWorkoutSummary
+    )
     if (powerSlots.isNotEmpty()) {
         add {
             PowerTrainingMetricsSection(
@@ -129,18 +143,14 @@ private fun buildVisibleWorkoutDetailSections(
         }
     }
 
-    // Section 4: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400, REQ-UI-403, REQ-UI-404)
-    if (enableAerobicEfficiencyModel && data.efficiencyFactor != null) {
-        add {
-            AerobicEfficiencyRow(data = data)
-        }
+    // Section 4: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400, REQ-UI-403, REQ-UI-404, REQ-UI-424)
+    if (enableAerobicEfficiencyModel && showAerobicEfficiencyInWorkoutSummary && data.efficiencyFactor != null) {
+        add { AerobicEfficiencyRow(data = data) }
     }
 
-    // Section 5: Anaerobic Battery (W'bal) Minimum & Empty-Tank Status (REQ-UI-399, REQ-UI-403, REQ-UI-404)
-    if (enableCriticalPowerModel && data.minWPrimeBalKj != null && data.minWPrimeBalPct != null) {
-        add {
-            AnaerobicBatteryRow(data = data)
-        }
+    // Section 5: Anaerobic Battery (W'bal) Minimum & Empty-Tank Status (REQ-UI-399, REQ-UI-403, REQ-UI-404, REQ-UI-424)
+    if (enableCriticalPowerModel && showCriticalPowerInWorkoutSummary && data.minWPrimeBalKj != null && data.minWPrimeBalPct != null) {
+        add { AnaerobicBatteryRow(data = data) }
     }
 }
 

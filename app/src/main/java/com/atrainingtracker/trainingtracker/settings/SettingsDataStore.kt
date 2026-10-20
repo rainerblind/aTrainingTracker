@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -30,10 +31,48 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.atrainingtracker.trainingtracker.zones.ValidationResult
 import com.atrainingtracker.trainingtracker.zones.ZoneValidator
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+/**
+ * Immutable in-memory snapshot of all zone thresholds, baselines, and display options.
+ * Eagerly cached for instant O(1) non-blocking access (REQ-SET-079).
+ */
+data class SettingsSnapshot(
+    val hrRunZoneMax: List<Int>,
+    val hrBikeZoneMax: List<Int>,
+    val pwrBikeZoneMax: List<Int>,
+    val ftp: Int?,
+    val athleteWeightKg: Float,
+    val cpWatts: Int?,
+    val wPrimeKj: Float?,
+    val hrRunDisplayOptions: ZoneDisplayOptions,
+    val hrBikeDisplayOptions: ZoneDisplayOptions,
+    val pwrBikeDisplayOptions: ZoneDisplayOptions
+) {
+    companion object {
+        val DEFAULT = SettingsSnapshot(
+            hrRunZoneMax = listOf(135, 155, 175, 185),
+            hrBikeZoneMax = listOf(130, 150, 170, 180),
+            pwrBikeZoneMax = listOf(150, 200, 250, 300, 350, 450),
+            ftp = null,
+            athleteWeightKg = SettingsDataStore.DEFAULT_ATHLETE_WEIGHT_KG,
+            cpWatts = null,
+            wPrimeKj = null,
+            hrRunDisplayOptions = ZoneDisplayOptions(),
+            hrBikeDisplayOptions = ZoneDisplayOptions(),
+            pwrBikeDisplayOptions = ZoneDisplayOptions()
+        )
+    }
+}
 
 // Create a single instance of DataStore for the entire app context
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_settings")
@@ -74,6 +113,13 @@ class SettingsDataStore(
         fun getInstance(context: Context): SettingsDataStore {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: SettingsDataStore(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+
+        @VisibleForTesting
+        fun setInstanceForTesting(instance: SettingsDataStore?) {
+            synchronized(this) {
+                INSTANCE = instance
             }
         }
 
@@ -456,18 +502,121 @@ class SettingsDataStore(
         }
     }
 
-    // -- Helper: getSummary
-    fun getSummary(zoneType: ZoneType): String = runBlocking {
-        val z1Max = getZone1MaxFlow(zoneType).first()
-        val z2Max = getZone2MaxFlow(zoneType).first()
-        val z3Max = getZone3MaxFlow(zoneType).first()
-        val z4Max = getZone4MaxFlow(zoneType).first()
-        if (zoneType == ZoneType.PWR_BIKE) {
-            val z5Max = getZone5MaxFlow(zoneType).first()
-            val z6Max = getZone6MaxFlow(zoneType).first()
-            "Z1: <$z1Max, Z2: <$z2Max, Z3: <$z3Max, Z4: <$z4Max, Z5: <$z5Max, Z6: <$z6Max"
+    // --- NON-BLOCKING IN-MEMORY SNAPSHOT & SYNCHRONOUS GETTERS (REQ-SET-079) ---
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    private fun mapSettingsSnapshot(prefs: Preferences): SettingsSnapshot {
+        val hrRunZ1 = prefs[HR_RUN_ZONE1_MAX] ?: 135
+        val hrRunZ2 = prefs[HR_RUN_ZONE2_MAX] ?: 155
+        val hrRunZ3 = prefs[HR_RUN_ZONE3_MAX] ?: 175
+        val hrRunZ4 = prefs[HR_RUN_ZONE4_MAX] ?: 185
+
+        val hrBikeZ1 = prefs[HR_BIKE_ZONE1_MAX] ?: 130
+        val hrBikeZ2 = prefs[HR_BIKE_ZONE2_MAX] ?: 150
+        val hrBikeZ3 = prefs[HR_BIKE_ZONE3_MAX] ?: 170
+        val hrBikeZ4 = prefs[HR_BIKE_ZONE4_MAX] ?: 180
+
+        val pwrBikeZ1 = prefs[PWR_BIKE_ZONE1_MAX] ?: 150
+        val pwrBikeZ2 = prefs[PWR_BIKE_ZONE2_MAX] ?: 200
+        val pwrBikeZ3 = prefs[PWR_BIKE_ZONE3_MAX] ?: 250
+        val pwrBikeZ4 = prefs[PWR_BIKE_ZONE4_MAX] ?: 300
+
+        val pwrBikeZ5 = if (prefs.contains(PWR_BIKE_ZONE5_MAX)) {
+            prefs[PWR_BIKE_ZONE5_MAX] ?: 350
+        } else if (prefs.contains(PWR_BIKE_ZONE4_MAX)) {
+            calculateProportionalPowerDefaults(pwrBikeZ4).first
         } else {
-            "Z1: <$z1Max, Z2: <$z2Max, Z3: <$z3Max, Z4: <$z4Max"
+            350
+        }
+
+        val pwrBikeZ6 = if (prefs.contains(PWR_BIKE_ZONE6_MAX)) {
+            prefs[PWR_BIKE_ZONE6_MAX] ?: 450
+        } else if (prefs.contains(PWR_BIKE_ZONE4_MAX)) {
+            calculateProportionalPowerDefaults(pwrBikeZ4).second
+        } else {
+            450
+        }
+
+        val hrRunKeys = getZoneDisplayKeys(ZoneType.HR_RUN)
+        val hrRunDisplay = ZoneDisplayOptions(
+            showBackground = prefs[hrRunKeys.bgKey] ?: true,
+            showLeftBar = prefs[hrRunKeys.leftBarKey] ?: true,
+            showRightBar = prefs[hrRunKeys.rightBarKey] ?: false,
+            showTextColor = prefs[hrRunKeys.textColorKey] ?: false,
+            showGauge = prefs[hrRunKeys.gaugeKey] ?: false
+        )
+
+        val hrBikeKeys = getZoneDisplayKeys(ZoneType.HR_BIKE)
+        val hrBikeDisplay = ZoneDisplayOptions(
+            showBackground = prefs[hrBikeKeys.bgKey] ?: true,
+            showLeftBar = prefs[hrBikeKeys.leftBarKey] ?: true,
+            showRightBar = prefs[hrBikeKeys.rightBarKey] ?: false,
+            showTextColor = prefs[hrBikeKeys.textColorKey] ?: false,
+            showGauge = prefs[hrBikeKeys.gaugeKey] ?: false
+        )
+
+        val pwrBikeKeys = getZoneDisplayKeys(ZoneType.PWR_BIKE)
+        val pwrBikeDisplay = ZoneDisplayOptions(
+            showBackground = prefs[pwrBikeKeys.bgKey] ?: true,
+            showLeftBar = prefs[pwrBikeKeys.leftBarKey] ?: true,
+            showRightBar = prefs[pwrBikeKeys.rightBarKey] ?: false,
+            showTextColor = prefs[pwrBikeKeys.textColorKey] ?: false,
+            showGauge = prefs[pwrBikeKeys.gaugeKey] ?: false
+        )
+
+        return SettingsSnapshot(
+            hrRunZoneMax = listOf(hrRunZ1, hrRunZ2, hrRunZ3, hrRunZ4),
+            hrBikeZoneMax = listOf(hrBikeZ1, hrBikeZ2, hrBikeZ3, hrBikeZ4),
+            pwrBikeZoneMax = listOf(pwrBikeZ1, pwrBikeZ2, pwrBikeZ3, pwrBikeZ4, pwrBikeZ5, pwrBikeZ6),
+            ftp = prefs[KEY_CYCLING_FTP]?.takeIf { it > 0 },
+            athleteWeightKg = prefs[KEY_ATHLETE_WEIGHT_KG] ?: DEFAULT_ATHLETE_WEIGHT_KG,
+            cpWatts = prefs[KEY_CYCLING_CP_WATTS]?.takeIf { it > 0 },
+            wPrimeKj = prefs[KEY_CYCLING_W_PRIME_KJ]?.takeIf { it > 0.0f },
+            hrRunDisplayOptions = hrRunDisplay,
+            hrBikeDisplayOptions = hrBikeDisplay,
+            pwrBikeDisplayOptions = pwrBikeDisplay
+        )
+    }
+
+    val snapshotFlow: Flow<SettingsSnapshot> = dataStore.data.map { prefs ->
+        mapSettingsSnapshot(prefs)
+    }
+
+    val snapshotStateFlow: StateFlow<SettingsSnapshot> by lazy {
+        snapshotFlow.stateIn(
+            scope = appScope,
+            started = SharingStarted.Eagerly,
+            initialValue = SettingsSnapshot.DEFAULT
+        )
+    }
+
+    fun getZoneMaxSync(zoneType: ZoneType, zoneIndex: Int): Int {
+        val snapshot = snapshotStateFlow.value
+        return when (zoneType) {
+            ZoneType.HR_RUN -> snapshot.hrRunZoneMax.getOrElse(zoneIndex - 1) { 0 }
+            ZoneType.HR_BIKE -> snapshot.hrBikeZoneMax.getOrElse(zoneIndex - 1) { 0 }
+            ZoneType.PWR_BIKE -> snapshot.pwrBikeZoneMax.getOrElse(zoneIndex - 1) { 0 }
+        }
+    }
+
+    fun getZoneDisplayOptionsSync(zoneType: ZoneType): ZoneDisplayOptions {
+        val snapshot = snapshotStateFlow.value
+        return when (zoneType) {
+            ZoneType.HR_RUN -> snapshot.hrRunDisplayOptions
+            ZoneType.HR_BIKE -> snapshot.hrBikeDisplayOptions
+            ZoneType.PWR_BIKE -> snapshot.pwrBikeDisplayOptions
+        }
+    }
+
+    fun getFtpSync(): Int? = snapshotStateFlow.value.ftp
+    fun getAthleteWeightKgSync(): Float = snapshotStateFlow.value.athleteWeightKg
+    fun getCpWattsSync(): Int? = snapshotStateFlow.value.cpWatts
+    fun getWPrimeKjSync(): Float? = snapshotStateFlow.value.wPrimeKj
+
+    fun launchSetAthleteWeightKg(weightKg: Float) {
+        appScope.launch {
+            setAthleteWeightKg(weightKg)
         }
     }
 

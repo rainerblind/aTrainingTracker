@@ -71,6 +71,7 @@ fun WorkoutClustersTabsScreen(
     val currentLocation by viewModel.currentLocation.collectAsState()
     val isLocationAvailable by viewModel.isLocationAvailable.collectAsState()
     val knownLocations by viewModel.knownLocations.collectAsState()
+    val clusterStats by viewModel.clusterStats.collectAsState()
 
     var showFilterBottomSheet by rememberSaveable { mutableStateOf(false) }
     var showInfoDialog by rememberSaveable { mutableStateOf(false) }
@@ -160,7 +161,8 @@ fun WorkoutClustersTabsScreen(
                     } else {
                         sportFilteredClusters.filter { cluster ->
                             val linkedEquipment = viewModel.getLinkedEquipmentSet(cluster.probableSportId)
-                            filterCriteria.matches(cluster, linkedEquipment)
+                            val elevation = clusterStats[cluster.id]?.avgAscentMeters?.toDouble() ?: 0.0
+                            filterCriteria.matches(cluster, linkedEquipment, elevation)
                         }
                     }
 
@@ -362,6 +364,7 @@ fun WorkoutClustersTabsScreen(
                                 onRemoveEquipment = { viewModel.updateFilterCriteria { it.copy(equipmentName = null) } },
                                 onRemoveDistanceRange = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
                                 onRemoveMinDistance = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
+                                onRemoveElevationRange = { viewModel.updateFilterCriteria { it.copy(minElevationGainMeters = null, maxElevationGainMeters = null) } },
                                 onRemoveMinHitCount = { viewModel.updateFilterCriteria { it.copy(minHitCount = null) } },
                                 onRemoveStartLocation = {
                                     viewModel.updateFilterCriteria {

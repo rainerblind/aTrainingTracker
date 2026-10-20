@@ -108,6 +108,7 @@ public class MySensorManager extends MyDevice {
         setPriorityList(SensorType.BEARING, LOCATION_PRIORITY);
         setPriorityList(SensorType.LATITUDE, LOCATION_PRIORITY);
         setPriorityList(SensorType.LONGITUDE, LOCATION_PRIORITY);
+        setPriorityList(SensorType.LINE_DISTANCE_m, LOCATION_PRIORITY);
 
         mInitialValues.put(SensorType.LAP_NR, BANALService.INIT_LAP_NR);
 
@@ -433,5 +434,62 @@ public class MySensorManager extends MyDevice {
         } else {
             mInitialValues.put(key, value);
         }
+    }
+
+    /**
+     * Returns the canonical priority array of {@link DeviceType}s for the given {@link SensorType},
+     * or {@code null} if no explicit priority list is registered.
+     *
+     * @param sensorType the sensor type to query
+     * @return the priority array of {@link DeviceType}s, or {@code null}
+     */
+    public static DeviceType[] getPriorityArray(SensorType sensorType) {
+        if (sensorType == null) {
+            return null;
+        }
+        switch (sensorType) {
+            case SPEED_mps:
+            case PACE_spm:
+            case DISTANCE_m:
+            case DISTANCE_m_LAP:
+                return SPEED_PRIORITY;
+            case CADENCE:
+                return CADENCE_PRIORITY;
+            case ALTITUDE:
+                return ALTITUDE_PRIORITY;
+            case ACCURACY:
+            case BEARING:
+            case LATITUDE:
+            case LONGITUDE:
+            case LINE_DISTANCE_m:
+                return LOCATION_PRIORITY;
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Returns the 0-based canonical priority rank of {@code deviceType} for {@code sensorType}.
+     * Lower values indicate higher operational priority in sensor redundancy resolution.
+     * If {@code deviceType} is not in the priority array, returns a fallback rank of {@code 1000 + ordinal}.
+     * If {@code deviceType} is {@code null}, returns {@link Integer#MAX_VALUE}.
+     *
+     * @param sensorType the sensor type being queried
+     * @param deviceType the device type whose priority rank is requested
+     * @return 0-based priority rank, fallback rank, or {@link Integer#MAX_VALUE}
+     */
+    public static int getPriorityRank(SensorType sensorType, DeviceType deviceType) {
+        if (deviceType == null) {
+            return Integer.MAX_VALUE;
+        }
+        DeviceType[] priority = getPriorityArray(sensorType);
+        if (priority != null) {
+            for (int i = 0; i < priority.length; i++) {
+                if (priority[i] == deviceType) {
+                    return i;
+                }
+            }
+        }
+        return 1000 + deviceType.ordinal();
     }
 }
