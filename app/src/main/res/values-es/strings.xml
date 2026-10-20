@@ -1250,6 +1250,8 @@
     <string name="filter_route_source">Origen</string>
     <string name="filter_route_selected">Solo seleccionadas</string>
     <string name="filter_min_elevation_format">&gt; %1$s m</string>
+    <string name="filter_max_elevation_format">&lt; %1$s m</string>
+    <string name="filter_elevation_interval_format">%1$s - %2$s m</string>
     <string name="filter_no_matching_routes">Ninguna ruta coincide con los filtros activos</string>
     <!-- Segment Filtering (ATT-735) -->
     <string name="filter_segments_title">Filtrar segmentos</string>

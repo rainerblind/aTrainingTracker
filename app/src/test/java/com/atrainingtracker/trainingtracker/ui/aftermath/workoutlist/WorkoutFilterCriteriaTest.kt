@@ -48,6 +48,7 @@ class WorkoutFilterCriteriaTest {
         mapPolyline: String = "polyline_coordinates_string",
         totalDistance: Double = 65000.0, // 65 km
         activeTimeSec: Long = 7200L, // 2 hours
+        ascentMeters: Long = 800L,
         description: String? = "Hilly route through the Black Forest",
         goal: String? = "Threshold pace",
         method: String? = "Interval training",
@@ -78,7 +79,7 @@ class WorkoutFilterCriteriaTest {
             activeTimeSec = activeTimeSec,
             totalTimeSec = activeTimeSec,
             avgSpeedMps = totalDistance / activeTimeSec,
-            ascentMeters = 800L,
+            ascentMeters = ascentMeters,
             descentMeters = 800L,
             minAltitude = 200.0,
             maxAltitude = 900.0,
@@ -509,5 +510,130 @@ class WorkoutFilterCriteriaTest {
         val malformedSourceJson = """{"source":"UNKNOWN_VAL"}"""
         val deserializedMalformed = WorkoutFilterCriteria.fromJson(malformedSourceJson)
         assertEquals(null, deserializedMalformed.source)
+    }
+
+    /**
+     * TST-UI-389.5: Workout Elevation Gain Interval Matching & Active Filter Count.
+     */
+    @Test
+    fun testElevationGainIntervalFiltering_andActiveFilterCount_TST_UI_389_5() {
+        val w50m = createWorkout(id = 1L, ascentMeters = 50L)
+        val w100m = createWorkout(id = 2L, ascentMeters = 100L)
+        val w200m = createWorkout(id = 3L, ascentMeters = 200L)
+        val w250m = createWorkout(id = 4L, ascentMeters = 250L)
+        val w400m = createWorkout(id = 5L, ascentMeters = 400L)
+        val w500m = createWorkout(id = 6L, ascentMeters = 500L)
+        val w750m = createWorkout(id = 7L, ascentMeters = 750L)
+        val w1000m = createWorkout(id = 8L, ascentMeters = 1000L)
+        val w1500m = createWorkout(id = 9L, ascentMeters = 1500L)
+
+        // 1. Preset "< 100 m" (max only)
+        val under100 = WorkoutFilterCriteria(maxElevationGainMeters = 100.0)
+        assertTrue(under100.matches(w50m))
+        assertTrue(under100.matches(w100m))
+        assertFalse(under100.matches(w200m))
+        assertEquals(1, under100.activeFilterCount)
+
+        // 2. Preset "100 - 250 m" (bounded)
+        val between100and250 = WorkoutFilterCriteria(minElevationGainMeters = 100.0, maxElevationGainMeters = 250.0)
+        assertFalse(between100and250.matches(w50m))
+        assertTrue(between100and250.matches(w100m))
+        assertTrue(between100and250.matches(w200m))
+        assertTrue(between100and250.matches(w250m))
+        assertFalse(between100and250.matches(w400m))
+        assertEquals(1, between100and250.activeFilterCount)
+
+        // 3. Preset "250 - 500 m" (bounded)
+        val between250and500 = WorkoutFilterCriteria(minElevationGainMeters = 250.0, maxElevationGainMeters = 500.0)
+        assertFalse(between250and500.matches(w200m))
+        assertTrue(between250and500.matches(w250m))
+        assertTrue(between250and500.matches(w400m))
+        assertTrue(between250and500.matches(w500m))
+        assertFalse(between250and500.matches(w750m))
+        assertEquals(1, between250and500.activeFilterCount)
+
+        // 4. Preset "500 - 1000 m" (bounded)
+        val between500and1000 = WorkoutFilterCriteria(minElevationGainMeters = 500.0, maxElevationGainMeters = 1000.0)
+        assertFalse(between500and1000.matches(w400m))
+        assertTrue(between500and1000.matches(w500m))
+        assertTrue(between500and1000.matches(w750m))
+        assertTrue(between500and1000.matches(w1000m))
+        assertFalse(between500and1000.matches(w1500m))
+        assertEquals(1, between500and1000.activeFilterCount)
+
+        // 5. Preset "> 1000 m" (min only)
+        val over1000 = WorkoutFilterCriteria(minElevationGainMeters = 1000.0)
+        assertFalse(over1000.matches(w750m))
+        assertTrue(over1000.matches(w1000m))
+        assertTrue(over1000.matches(w1500m))
+        assertEquals(1, over1000.activeFilterCount)
+
+        // Conjunction with distance interval and duration interval: each counts as 1 dimension -> 3 active dimensions
+        val triadIntervalCriteria = WorkoutFilterCriteria(
+            minDistanceMeters = 20000.0,
+            maxDistanceMeters = 50000.0,
+            minDurationSec = 3600L,
+            maxDurationSec = 7200L,
+            minElevationGainMeters = 250.0,
+            maxElevationGainMeters = 500.0
+        )
+        assertEquals(3, triadIntervalCriteria.activeFilterCount)
+    }
+
+    /**
+     * TST-UI-389.6: Workout Criteria JSON Roundtrip & Backward Compatibility with Elevation Interval.
+     */
+    @Test
+    fun testJsonSerializationRoundtrip_withElevationGainInterval_andLegacyCompatibility_TST_UI_389_6() {
+        val original = WorkoutFilterCriteria(
+            query = "Alpine Pass Ride",
+            minElevationGainMeters = 500.0,
+            maxElevationGainMeters = 1000.0
+        )
+        val jsonStr = original.toJson()
+        val restored = WorkoutFilterCriteria.fromJson(jsonStr)
+
+        assertEquals("Alpine Pass Ride", restored.query)
+        assertEquals(500.0, restored.minElevationGainMeters)
+        assertEquals(1000.0, restored.maxElevationGainMeters)
+        assertEquals(2, restored.activeFilterCount)
+
+        // Legacy JSON without elevation bounds
+        val legacyJson = """{"query":"Trail Run","minDistanceMeters":5000.0,"minDurationSec":1800}"""
+        val fromLegacy = WorkoutFilterCriteria.fromJson(legacyJson)
+
+        assertEquals("Trail Run", fromLegacy.query)
+        assertEquals(5000.0, fromLegacy.minDistanceMeters)
+        assertEquals(1800L, fromLegacy.minDurationSec)
+        assertEquals(null, fromLegacy.minElevationGainMeters)
+        assertEquals(null, fromLegacy.maxElevationGainMeters)
+        assertEquals(3, fromLegacy.activeFilterCount)
+    }
+
+    /**
+     * TST-UI-389.7: Active Elevation Filter Chip Formatting & Dismissal Contract for Workouts.
+     */
+    @Test
+    fun testActiveElevationFilterChipFormatting_andDismissalContract_TST_UI_389_7() {
+        fun formatChip(minM: Double?, maxM: Double?): String {
+            val minStr = minM?.toInt()?.toString()
+            val maxStr = maxM?.toInt()?.toString()
+            return when {
+                minStr != null && maxStr != null -> "$minStr - $maxStr m"
+                minStr != null -> "> $minStr m"
+                else -> "< $maxStr m"
+            }
+        }
+
+        assertEquals("500 - 1000 m", formatChip(500.0, 1000.0))
+        assertEquals("> 1000 m", formatChip(1000.0, null))
+        assertEquals("< 100 m", formatChip(null, 100.0))
+
+        // Dismissal contract: clearing elevation range resets both bounds
+        val criteria = WorkoutFilterCriteria(minElevationGainMeters = 500.0, maxElevationGainMeters = 1000.0)
+        val cleared = criteria.copy(minElevationGainMeters = null, maxElevationGainMeters = null)
+        assertEquals(null, cleared.minElevationGainMeters)
+        assertEquals(null, cleared.maxElevationGainMeters)
+        assertTrue(cleared.isEmpty)
     }
 }

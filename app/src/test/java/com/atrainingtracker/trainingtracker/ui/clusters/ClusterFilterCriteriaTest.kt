@@ -319,4 +319,123 @@ class ClusterFilterCriteriaTest {
         assertNull(cleared.maxDistanceMeters)
         assertTrue(cleared.isEmpty)
     }
+
+    /**
+     * TST-UI-389.3: Favorite Tracks (Cluster) Elevation Gain Interval & Filter Count.
+     */
+    @Test
+    fun testElevationGainIntervalMatching_andActiveFilterCount_TST_UI_389_3() {
+        val cluster = createCluster()
+
+        // 1. Preset "< 100 m" (max only)
+        val under100 = ClusterFilterCriteria(maxElevationGainMeters = 100.0)
+        assertTrue(under100.matches(cluster, elevationGainMeters = 50.0))
+        assertTrue(under100.matches(cluster, elevationGainMeters = 100.0))
+        assertFalse(under100.matches(cluster, elevationGainMeters = 200.0))
+        assertEquals(1, under100.activeFilterCount)
+
+        // 2. Preset "100 - 250 m" (bounded)
+        val between100and250 = ClusterFilterCriteria(minElevationGainMeters = 100.0, maxElevationGainMeters = 250.0)
+        assertFalse(between100and250.matches(cluster, elevationGainMeters = 50.0))
+        assertTrue(between100and250.matches(cluster, elevationGainMeters = 100.0))
+        assertTrue(between100and250.matches(cluster, elevationGainMeters = 200.0))
+        assertTrue(between100and250.matches(cluster, elevationGainMeters = 250.0))
+        assertFalse(between100and250.matches(cluster, elevationGainMeters = 400.0))
+        assertEquals(1, between100and250.activeFilterCount)
+
+        // 3. Preset "250 - 500 m" (bounded)
+        val between250and500 = ClusterFilterCriteria(minElevationGainMeters = 250.0, maxElevationGainMeters = 500.0)
+        assertFalse(between250and500.matches(cluster, elevationGainMeters = 200.0))
+        assertTrue(between250and500.matches(cluster, elevationGainMeters = 250.0))
+        assertTrue(between250and500.matches(cluster, elevationGainMeters = 400.0))
+        assertTrue(between250and500.matches(cluster, elevationGainMeters = 500.0))
+        assertFalse(between250and500.matches(cluster, elevationGainMeters = 750.0))
+        assertEquals(1, between250and500.activeFilterCount)
+
+        // 4. Preset "500 - 1000 m" (bounded)
+        val between500and1000 = ClusterFilterCriteria(minElevationGainMeters = 500.0, maxElevationGainMeters = 1000.0)
+        assertFalse(between500and1000.matches(cluster, elevationGainMeters = 400.0))
+        assertTrue(between500and1000.matches(cluster, elevationGainMeters = 500.0))
+        assertTrue(between500and1000.matches(cluster, elevationGainMeters = 750.0))
+        assertTrue(between500and1000.matches(cluster, elevationGainMeters = 1000.0))
+        assertFalse(between500and1000.matches(cluster, elevationGainMeters = 1500.0))
+        assertEquals(1, between500and1000.activeFilterCount)
+
+        // 5. Preset "> 1000 m" (min only)
+        val over1000 = ClusterFilterCriteria(minElevationGainMeters = 1000.0)
+        assertFalse(over1000.matches(cluster, elevationGainMeters = 750.0))
+        assertTrue(over1000.matches(cluster, elevationGainMeters = 1000.0))
+        assertTrue(over1000.matches(cluster, elevationGainMeters = 1500.0))
+        assertEquals(1, over1000.activeFilterCount)
+
+        // Default null elevationGainMeters treats elevation as 0.0
+        assertTrue("Null elevation defaults to 0.0, matching < 100 m", under100.matches(cluster, elevationGainMeters = null))
+        assertFalse("Null elevation defaults to 0.0, failing > 1000 m", over1000.matches(cluster, elevationGainMeters = null))
+
+        // Conjunction with distance interval: each counts as 1 dimension -> 2 active dimensions
+        val distanceAndElevation = ClusterFilterCriteria(
+            minDistanceMeters = 10000.0,
+            maxDistanceMeters = 35000.0,
+            minElevationGainMeters = 250.0,
+            maxElevationGainMeters = 500.0
+        )
+        assertEquals(2, distanceAndElevation.activeFilterCount)
+    }
+
+    /**
+     * TST-UI-389.4: Cluster Criteria JSON Roundtrip & Backward Compatibility with Elevation Interval.
+     */
+    @Test
+    fun testJsonSerializationRoundtrip_withElevationGainInterval_andLegacyCompatibility_TST_UI_389_4() {
+        val original = ClusterFilterCriteria(
+            query = "Isar Hills",
+            minElevationGainMeters = 250.0,
+            maxElevationGainMeters = 500.0
+        )
+        val jsonStr = original.toJson()
+        val restored = ClusterFilterCriteria.fromJson(jsonStr)
+
+        assertEquals("Isar Hills", restored.query)
+        assertEquals(250.0, restored.minElevationGainMeters)
+        assertEquals(500.0, restored.maxElevationGainMeters)
+        assertEquals(2, restored.activeFilterCount)
+
+        // Legacy JSON without elevation bounds
+        val legacyJson = """{"query":"Isar","equipmentName":"Pegasus","minDistanceMeters":15000.0}"""
+        val fromLegacy = ClusterFilterCriteria.fromJson(legacyJson)
+
+        assertEquals("Isar", fromLegacy.query)
+        assertEquals("Pegasus", fromLegacy.equipmentName)
+        assertEquals(15000.0, fromLegacy.minDistanceMeters)
+        assertNull("minElevationGainMeters should default to null for legacy JSON", fromLegacy.minElevationGainMeters)
+        assertNull("maxElevationGainMeters should default to null for legacy JSON", fromLegacy.maxElevationGainMeters)
+        assertEquals(3, fromLegacy.activeFilterCount)
+    }
+
+    /**
+     * TST-UI-389.7: Active Elevation Filter Chip Formatting & Dismissal Contract for Clusters.
+     */
+    @Test
+    fun testActiveElevationFilterChipFormatting_andDismissalContract_TST_UI_389_7() {
+        fun formatChip(minM: Double?, maxM: Double?): String {
+            val minStr = minM?.toInt()?.toString()
+            val maxStr = maxM?.toInt()?.toString()
+            return when {
+                minStr != null && maxStr != null -> "$minStr - $maxStr m"
+                minStr != null -> "> $minStr m"
+                else -> "< $maxStr m"
+            }
+        }
+
+        assertEquals("250 - 500 m", formatChip(250.0, 500.0))
+        assertEquals("> 1000 m", formatChip(1000.0, null))
+        assertEquals("< 100 m", formatChip(null, 100.0))
+
+        // Dismissal contract: clearing elevation range resets both bounds
+        val criteria = ClusterFilterCriteria(minElevationGainMeters = 250.0, maxElevationGainMeters = 500.0)
+        val cleared = criteria.copy(minElevationGainMeters = null, maxElevationGainMeters = null)
+        assertNull(cleared.minElevationGainMeters)
+        assertNull(cleared.maxElevationGainMeters)
+        assertTrue(cleared.isEmpty)
+    }
 }

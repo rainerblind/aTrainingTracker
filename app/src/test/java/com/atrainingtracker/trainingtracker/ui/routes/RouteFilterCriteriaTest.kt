@@ -355,4 +355,125 @@ class RouteFilterCriteriaTest {
         assertNull(cleared.maxDistanceMeters)
         assertTrue(cleared.isEmpty)
     }
+
+    /**
+     * TST-UI-389.1: Route Elevation Gain Interval Matching & Active Filter Count.
+     */
+    @Test
+    fun testElevationGainIntervalMatching_andActiveFilterCount_TST_UI_389_1() {
+        val r50m = createRoute(id = 1L, elevationGain = 50.0)
+        val r100m = createRoute(id = 2L, elevationGain = 100.0)
+        val r200m = createRoute(id = 3L, elevationGain = 200.0)
+        val r250m = createRoute(id = 4L, elevationGain = 250.0)
+        val r400m = createRoute(id = 5L, elevationGain = 400.0)
+        val r500m = createRoute(id = 6L, elevationGain = 500.0)
+        val r750m = createRoute(id = 7L, elevationGain = 750.0)
+        val r1000m = createRoute(id = 8L, elevationGain = 1000.0)
+        val r1500m = createRoute(id = 9L, elevationGain = 1500.0)
+
+        // 1. Preset "< 100 m" (max only)
+        val under100 = RouteFilterCriteria(maxElevationGainMeters = 100.0)
+        assertTrue(under100.matches(r50m))
+        assertTrue(under100.matches(r100m))
+        assertFalse(under100.matches(r200m))
+        assertEquals(1, under100.activeFilterCount)
+
+        // 2. Preset "100 - 250 m" (bounded)
+        val between100and250 = RouteFilterCriteria(minElevationGainMeters = 100.0, maxElevationGainMeters = 250.0)
+        assertFalse(between100and250.matches(r50m))
+        assertTrue(between100and250.matches(r100m))
+        assertTrue(between100and250.matches(r200m))
+        assertTrue(between100and250.matches(r250m))
+        assertFalse(between100and250.matches(r400m))
+        assertEquals(1, between100and250.activeFilterCount)
+
+        // 3. Preset "250 - 500 m" (bounded)
+        val between250and500 = RouteFilterCriteria(minElevationGainMeters = 250.0, maxElevationGainMeters = 500.0)
+        assertFalse(between250and500.matches(r200m))
+        assertTrue(between250and500.matches(r250m))
+        assertTrue(between250and500.matches(r400m))
+        assertTrue(between250and500.matches(r500m))
+        assertFalse(between250and500.matches(r750m))
+        assertEquals(1, between250and500.activeFilterCount)
+
+        // 4. Preset "500 - 1000 m" (bounded)
+        val between500and1000 = RouteFilterCriteria(minElevationGainMeters = 500.0, maxElevationGainMeters = 1000.0)
+        assertFalse(between500and1000.matches(r400m))
+        assertTrue(between500and1000.matches(r500m))
+        assertTrue(between500and1000.matches(r750m))
+        assertTrue(between500and1000.matches(r1000m))
+        assertFalse(between500and1000.matches(r1500m))
+        assertEquals(1, between500and1000.activeFilterCount)
+
+        // 5. Preset "> 1000 m" (min only)
+        val over1000 = RouteFilterCriteria(minElevationGainMeters = 1000.0)
+        assertFalse(over1000.matches(r750m))
+        assertTrue(over1000.matches(r1000m))
+        assertTrue(over1000.matches(r1500m))
+        assertEquals(1, over1000.activeFilterCount)
+
+        // Conjunction with distance interval: each counts as 1 dimension -> 2 active dimensions
+        val distanceAndElevation = RouteFilterCriteria(
+            minDistanceMeters = 20000.0,
+            maxDistanceMeters = 50000.0,
+            minElevationGainMeters = 250.0,
+            maxElevationGainMeters = 500.0
+        )
+        assertEquals(2, distanceAndElevation.activeFilterCount)
+    }
+
+    /**
+     * TST-UI-389.2: Route Criteria JSON Roundtrip & Backward Compatibility with Elevation Interval.
+     */
+    @Test
+    fun testJsonSerializationRoundtrip_withElevationGainInterval_andLegacyCompatibility_TST_UI_389_2() {
+        val original = RouteFilterCriteria(
+            query = "Grimsel Pass",
+            minElevationGainMeters = 250.0,
+            maxElevationGainMeters = 1000.0
+        )
+        val jsonStr = original.toJson()
+        val restored = RouteFilterCriteria.fromJson(jsonStr)
+
+        assertEquals("Grimsel Pass", restored.query)
+        assertEquals(250.0, restored.minElevationGainMeters)
+        assertEquals(1000.0, restored.maxElevationGainMeters)
+        assertEquals(2, restored.activeFilterCount)
+
+        // Legacy JSON without maxElevationGainMeters
+        val legacyJson = """{"query":"Alps","minElevationGainMeters":250.0}"""
+        val fromLegacy = RouteFilterCriteria.fromJson(legacyJson)
+
+        assertEquals("Alps", fromLegacy.query)
+        assertEquals(250.0, fromLegacy.minElevationGainMeters)
+        assertNull("maxElevationGainMeters should default to null for legacy JSON", fromLegacy.maxElevationGainMeters)
+        assertEquals(2, fromLegacy.activeFilterCount)
+    }
+
+    /**
+     * TST-UI-389.7: Active Elevation Filter Chip Formatting & Dismissal Contract.
+     */
+    @Test
+    fun testActiveElevationFilterChipFormatting_andDismissalContract_TST_UI_389_7() {
+        fun formatChip(minM: Double?, maxM: Double?): String {
+            val minStr = minM?.toInt()?.toString()
+            val maxStr = maxM?.toInt()?.toString()
+            return when {
+                minStr != null && maxStr != null -> "$minStr - $maxStr m"
+                minStr != null -> "> $minStr m"
+                else -> "< $maxStr m"
+            }
+        }
+
+        assertEquals("100 - 250 m", formatChip(100.0, 250.0))
+        assertEquals("> 1000 m", formatChip(1000.0, null))
+        assertEquals("< 100 m", formatChip(null, 100.0))
+
+        // Dismissal contract: clearing elevation range resets both bounds
+        val criteria = RouteFilterCriteria(minElevationGainMeters = 250.0, maxElevationGainMeters = 500.0)
+        val cleared = criteria.copy(minElevationGainMeters = null, maxElevationGainMeters = null)
+        assertNull(cleared.minElevationGainMeters)
+        assertNull(cleared.maxElevationGainMeters)
+        assertTrue(cleared.isEmpty)
+    }
 }

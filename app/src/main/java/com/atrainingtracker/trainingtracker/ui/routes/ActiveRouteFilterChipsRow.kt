@@ -48,7 +48,8 @@ fun ActiveRouteFilterChipsRow(
     onRemoveSelected: () -> Unit,
     onRemoveDistanceRange: () -> Unit = {},
     onRemoveMinDistance: () -> Unit = onRemoveDistanceRange,
-    onRemoveMinElevation: () -> Unit,
+    onRemoveElevationRange: () -> Unit = {},
+    onRemoveMinElevation: () -> Unit = onRemoveElevationRange,
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -109,13 +110,19 @@ fun ActiveRouteFilterChipsRow(
             }
         }
 
-        // Min Elevation Gain Chip
-        if (criteria.minElevationGainMeters != null) {
-            item("minElevation") {
-                val meters = criteria.minElevationGainMeters.toInt()
+        // Elevation Gain Interval Chip (REQ-UI-425)
+        if (criteria.minElevationGainMeters != null || criteria.maxElevationGainMeters != null) {
+            item("elevation") {
+                val minM = criteria.minElevationGainMeters?.toInt()?.toString()
+                val maxM = criteria.maxElevationGainMeters?.toInt()?.toString()
+                val label = when {
+                    minM != null && maxM != null -> stringResource(R.string.filter_elevation_interval_format, minM, maxM)
+                    minM != null -> stringResource(R.string.filter_min_elevation_format, minM)
+                    else -> stringResource(R.string.filter_max_elevation_format, maxM!!)
+                }
                 RemovableFilterChip(
-                    label = stringResource(R.string.filter_min_elevation_format, meters.toString()),
-                    onRemove = onRemoveMinElevation
+                    label = label,
+                    onRemove = onRemoveElevationRange
                 )
             }
         }
