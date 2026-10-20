@@ -321,20 +321,24 @@ class TrackingTabsViewModel(
 
         /**
          * Pure domain predicate determining whether settling on `Page 0` (`Control` tab) should
-         * automatically acknowledge and permanently dismiss the stop tracking coachmark (REQ-UI-367 / ATT-3387).
+         * automatically acknowledge and permanently dismiss the stop tracking coachmark (REQ-UI-367 / ATT-3387, ATT-4456).
          * Requires [hasRenderedCoachmarkInSession] to be `true` so the initial `READY -> TRACKING` transition
-         * while still on `Page 0` never prematurely dismisses the coachmark before the user sees it.
+         * while still on `Page 0` never prematurely dismisses the coachmark before the user sees it,
+         * and strictly enforces [currentPage] == 0, [settledPage] == 0, and `![isScrollInProgress]` to avoid
+         * race conditions during scroll transitions away from `Page 0`.
          */
         fun shouldAutoAcknowledgeStopTrackingCoachmark(
             trackingMode: TrackingMode,
+            currentPage: Int,
             settledPage: Int,
+            isScrollInProgress: Boolean,
             hasSeenHint: Boolean?,
             hasRenderedCoachmarkInSession: Boolean,
             isDismissPending: Boolean = false
         ): Boolean {
             if (hasSeenHint != false || !hasRenderedCoachmarkInSession || isDismissPending) return false
             val isActiveWorkout = trackingMode == TrackingMode.TRACKING || trackingMode == TrackingMode.PAUSED
-            return isActiveWorkout && settledPage == 0
+            return isActiveWorkout && currentPage == 0 && settledPage == 0 && !isScrollInProgress
         }
     }
 

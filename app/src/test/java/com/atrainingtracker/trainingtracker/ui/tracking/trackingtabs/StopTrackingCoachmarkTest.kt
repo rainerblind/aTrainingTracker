@@ -134,7 +134,9 @@ class StopTrackingCoachmarkTest {
             "Auto-acknowledge must not fire while DataStore is still loading (null)",
             TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(
                 trackingMode = TrackingMode.TRACKING,
+                currentPage = 0,
                 settledPage = 0,
+                isScrollInProgress = false,
                 hasSeenHint = null,
                 hasRenderedCoachmarkInSession = true
             )
@@ -213,7 +215,9 @@ class StopTrackingCoachmarkTest {
         assertFalse(
             TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(
                 trackingMode = TrackingMode.TRACKING,
+                currentPage = 0,
                 settledPage = 0,
+                isScrollInProgress = false,
                 hasSeenHint = false,
                 hasRenderedCoachmarkInSession = false
             )
@@ -223,7 +227,9 @@ class StopTrackingCoachmarkTest {
         assertTrue(
             TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(
                 trackingMode = TrackingMode.TRACKING,
+                currentPage = 0,
                 settledPage = 0,
+                isScrollInProgress = false,
                 hasSeenHint = false,
                 hasRenderedCoachmarkInSession = true
             )
@@ -231,7 +237,9 @@ class StopTrackingCoachmarkTest {
         assertTrue(
             TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(
                 trackingMode = TrackingMode.PAUSED,
+                currentPage = 0,
                 settledPage = 0,
+                isScrollInProgress = false,
                 hasSeenHint = false,
                 hasRenderedCoachmarkInSession = true
             )
@@ -241,7 +249,65 @@ class StopTrackingCoachmarkTest {
         assertFalse(
             TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(
                 trackingMode = TrackingMode.TRACKING,
+                currentPage = 1,
                 settledPage = 1,
+                isScrollInProgress = false,
+                hasSeenHint = false,
+                hasRenderedCoachmarkInSession = true
+            )
+        )
+    }
+
+    @Test
+    fun `shouldAutoAcknowledgeStopTrackingCoachmark suppresses dismissal during in-flight pager scroll animations`() {
+        // Midpoint crossing during animateScrollToPage(1) from Page 0 to Page 1:
+        // currentPage flips to 1 while settledPage is still 0 and isScrollInProgress is true
+        assertFalse(
+            "Auto-acknowledgement must not fire mid-scroll when currentPage flips to 1 before settling",
+            TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(
+                trackingMode = TrackingMode.TRACKING,
+                currentPage = 1,
+                settledPage = 0,
+                isScrollInProgress = true,
+                hasSeenHint = false,
+                hasRenderedCoachmarkInSession = true
+            )
+        )
+
+        // Pre-midpoint crossing during animateScrollToPage(1) from Page 0 to Page 1:
+        assertFalse(
+            "Auto-acknowledgement must not fire during initial scroll movement away from Page 0",
+            TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(
+                trackingMode = TrackingMode.TRACKING,
+                currentPage = 0,
+                settledPage = 0,
+                isScrollInProgress = true,
+                hasSeenHint = false,
+                hasRenderedCoachmarkInSession = true
+            )
+        )
+
+        // In-flight swipe back toward Page 0 (before settling on Page 0):
+        assertFalse(
+            "Auto-acknowledgement must not fire during in-flight return swipe until completely settled",
+            TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(
+                trackingMode = TrackingMode.TRACKING,
+                currentPage = 0,
+                settledPage = 1,
+                isScrollInProgress = true,
+                hasSeenHint = false,
+                hasRenderedCoachmarkInSession = true
+            )
+        )
+
+        // Fully settled on Page 0 after viewing cockpit -> true
+        assertTrue(
+            "Auto-acknowledgement must fire only when fully stationary and settled on Page 0",
+            TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(
+                trackingMode = TrackingMode.TRACKING,
+                currentPage = 0,
+                settledPage = 0,
+                isScrollInProgress = false,
                 hasSeenHint = false,
                 hasRenderedCoachmarkInSession = true
             )
@@ -276,7 +342,9 @@ class StopTrackingCoachmarkTest {
             "Duplicate auto-acknowledgement must be suppressed while dismiss is already pending",
             TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(
                 trackingMode = TrackingMode.TRACKING,
+                currentPage = 0,
                 settledPage = 0,
+                isScrollInProgress = false,
                 hasSeenHint = false,
                 hasRenderedCoachmarkInSession = viewModel.hasRenderedCoachmarkInSession.value,
                 isDismissPending = viewModel.isCoachmarkDismissPending.value
@@ -389,6 +457,18 @@ class StopTrackingCoachmarkTest {
         assertTrue(
             "TrackingTabsScreen must synchronously invoke markCoachmarkDismissPending() before async DataStore persistence",
             screenContent.contains("trackingTabsViewModel.markCoachmarkDismissPending()")
+        )
+
+        // 3. Settled cockpit session render gating & parameter forwarding (REQ-UI-367 / ATT-4456)
+        assertTrue(
+            "TrackingTabsScreen must gate markCoachmarkRenderedInSession on settled cockpit page and !isScrollInProgress",
+            screenContent.contains("if (showStopTrackingCoachmark && pagerState.settledPage > 0 && !pagerState.isScrollInProgress)")
+        )
+        assertTrue(
+            "TrackingTabsScreen must pass currentPage, settledPage, and isScrollInProgress to shouldAutoAcknowledgeStopTrackingCoachmark",
+            screenContent.contains("currentPage = pagerState.currentPage") &&
+                screenContent.contains("settledPage = pagerState.settledPage") &&
+                screenContent.contains("isScrollInProgress = pagerState.isScrollInProgress")
         )
     }
 
