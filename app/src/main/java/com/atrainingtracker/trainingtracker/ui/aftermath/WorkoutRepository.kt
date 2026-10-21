@@ -169,7 +169,9 @@ class WorkoutRepository private constructor(private val application: Application
     override val coroutineContext = Dispatchers.Main + job
 
     // Helper instances, initialized lazily
-    private val deletionHelper by lazy { WorkoutDeletionHelper(application) }
+    @VisibleForTesting
+    internal var deletionHelperInstance: WorkoutDeletionHelper? = null
+    private val deletionHelper get() = deletionHelperInstance ?: WorkoutDeletionHelper(application)
     private val summariesManager by lazy { WorkoutSummariesDatabaseManager.getInstance(application) }
     private val samplesManager by lazy { WorkoutSamplesDatabaseManager.getInstance(application) }
     private val equipmentDbHelper by lazy { EquipmentDbHelper.getInstance(application) }
@@ -196,7 +198,8 @@ class WorkoutRepository private constructor(private val application: Application
      */
     private val _allWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val allWorkouts: StateFlow<List<WorkoutData>> = _allWorkouts.asStateFlow()
-    private val reloadingWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
+    private val activeReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
+    private val dirtyReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
 
     /**
      * Provides a reactive stream for a specific workout ID.
@@ -1383,7 +1386,43 @@ class WorkoutRepository private constructor(private val application: Application
     val exportStatusDataProvider = ExportStatusDataProvider(application)
     val orderedExportTypes = listOf(ExportType.FILE, ExportType.DROPBOX, ExportType.GOOGLE_DRIVE, ExportType.COMMUNITY)
 
-    private var isListLoading = false
+    private val isListLoading = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val deletedDuringLoadIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
+
+    /**
+     * Merges freshly streamed workout entities from local persistence into [_allWorkouts],
+     * strictly excluding sessions deleted via [deleteWorkout] during loading and preserving
+     * active in-memory transient fields (REQ-STB-018.2).
+     */
+    private fun emitMergedWorkouts(loadedWorkouts: List<WorkoutData>) {
+        val deleted = deletedDuringLoadIds.toSet()
+        _allWorkouts.update { currentMemoryList ->
+            val memoryMap = currentMemoryList.associateBy { it.id }
+            val mergedLoaded = loadedWorkouts
+                .filterNot { it.id in deleted }
+                .map { loaded ->
+                    val existing = memoryMap[loaded.id]
+                    if (existing != null) {
+                        loaded.copy(
+                            mapPolyline = if (loaded.mapPolyline.isEmpty()) existing.mapPolyline else loaded.mapPolyline,
+                            encodedAltitudes = if (loaded.encodedAltitudes.isEmpty()) existing.encodedAltitudes else loaded.encodedAltitudes,
+                            encodedDistances = if (loaded.encodedDistances.isEmpty()) existing.encodedDistances else loaded.encodedDistances,
+                            extremaRows = if (loaded.extremaRows.isEmpty()) existing.extremaRows else loaded.extremaRows,
+                            exportStatuses = if (loaded.exportStatuses.isEmpty()) existing.exportStatuses else loaded.exportStatuses
+                        )
+                    } else {
+                        loaded
+                    }
+                }
+            val loadedIds = mergedLoaded.map { it.id }.toSet()
+            val unstreamed = currentMemoryList.filter { it.id !in deleted && it.id !in loadedIds }
+            if (unstreamed.isEmpty()) {
+                mergedLoaded
+            } else {
+                (unstreamed + mergedLoaded).sortedByDescending { it.headerData.startTimeS }
+            }
+        }
+    }
 
     /**
      * Performs a progressive background scan of the entire workout history.
@@ -1395,13 +1434,13 @@ class WorkoutRepository private constructor(private val application: Application
      * 4. Batches are emitted into [allWorkouts] as they are ready, providing immediate feedback.
      */
     suspend fun loadAllWorkouts() {
-        if (isListLoading) {
+        if (!isListLoading.compareAndSet(false, true)) {
             if (DEBUG) Log.d(TAG, "loadAllWorkouts: already in progress, skipping redundant call.")
             return
         }
 
         Log.i(TAG, "loadAllWorkouts: starting optimized progressive streaming load.")
-        isListLoading = true
+        deletedDuringLoadIds.clear()
         try {
             withContext(Dispatchers.IO) {
                 val cursor = summariesManager.getCursorForAllWorkouts()
@@ -1450,36 +1489,46 @@ class WorkoutRepository private constructor(private val application: Application
                             laps = lapsMap
                         )
 
-                        // 3. Map the chunk in memory without cursor seeking (ATT-2309)
+                        // 3. Map the chunk in memory without cursor seeking (ATT-2309 / REQ-STB-018.2)
                         for (snapshot in snapshots) {
-                            val workoutData = mapper.fromSnapshot(snapshot, batchMetadata)
+                            try {
+                                val workoutData = mapper.fromSnapshot(snapshot, batchMetadata)
 
-                            // Add Export Statuses (Fast from memory-only providers if possible)
-                            val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
-                            if (workoutData.fileBaseName != null) {
-                                for (type in orderedExportTypes) {
-                                    val groupData = exportStatusDataProvider.createGroupData(workoutData.fileBaseName, type)
-                                    if (groupData.hasContent) exportStatuses.add(groupData)
+                                // Add Export Statuses (Fast from memory-only providers if possible)
+                                val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
+                                if (workoutData.fileBaseName != null) {
+                                    for (type in orderedExportTypes) {
+                                        try {
+                                            val groupData = exportStatusDataProvider.createGroupData(workoutData.fileBaseName, type)
+                                            if (groupData.hasContent) exportStatuses.add(groupData)
+                                        } catch (e: Exception) {
+                                            Log.w(TAG, "loadAllWorkouts: error creating export status group data for type $type", e)
+                                        }
+                                    }
                                 }
-                            }
 
-                            allLoadedWorkouts.add(workoutData.copy(exportStatuses = exportStatuses))
-                            processedCount++
+                                allLoadedWorkouts.add(workoutData.copy(exportStatuses = exportStatuses))
+                                processedCount++
+                            } catch (e: Exception) {
+                                Log.e(TAG, "loadAllWorkouts: error mapping snapshot for workout ${snapshot.workoutId}, skipping", e)
+                            }
                         }
 
                         // 4. PROGRESSIVE UI PUMP (ATT-346 Style)
                         // Emit updates to provide immediate feedback
                         if (processedCount <= 10 || processedCount % batchSize == 0 || processedCount == totalCount) {
-                            val currentList = allLoadedWorkouts.toList() // Copy for thread safety
                             Log.d(TAG, "Streaming batch to UI: $processedCount items.")
-                            _allWorkouts.value = currentList
+                            emitMergedWorkouts(allLoadedWorkouts)
                         }
                     }
                 }
+                // Unconditional terminal batch publication (REQ-STB-018.2)
+                emitMergedWorkouts(allLoadedWorkouts)
                 Log.i(TAG, "Load complete. Total workouts: ${allLoadedWorkouts.size}")
             }
         } finally {
-            isListLoading = false
+            deletedDuringLoadIds.clear()
+            isListLoading.set(false)
         }
     }
 
@@ -1611,34 +1660,39 @@ class WorkoutRepository private constructor(private val application: Application
     /**
      * Atomically updates a workout session in memory while handling potential race conditions.
      *
-     * Implementation: If the workout is already cached, it applies the [block] transform.
-     * If not, it fetches the session from the database first, ensuring no updates are lost.
+     * Implementation: If the workout is already cached, it applies the [block] transform purely in-place
+     * with zero coroutine launches inside CAS (REQ-STB-018.3). If not, it fetches the session from the
+     * database asynchronously outside CAS retry loops, ensuring pure functional invariants.
      */
     private fun updateWorkoutInMemory(workoutId: Long, block: (WorkoutData) -> WorkoutData) {
-        _allWorkouts.update { currentList ->
-            val index = currentList.indexOfFirst { it.id == workoutId }
-            if (index != -1) {
-                // Workout is already in the list, update it in place
-                currentList.map { if (it.id == workoutId) block(it) else it }
-            } else {
-                // Workout is NOT in the list yet (e.g. background worker finished before UI load)
-                launch(Dispatchers.IO) {
-                    summariesManager.getWorkoutCursor(workoutId).use { cursor ->
-                        if (cursor?.moveToFirst() == true) {
-                            val freshWorkout = mapper.fromCursor(cursor)
-                            val updatedWorkout = block(freshWorkout)
+        val isCached = _allWorkouts.value.any { it.id == workoutId }
+        if (isCached) {
+            _allWorkouts.update { currentList ->
+                val index = currentList.indexOfFirst { it.id == workoutId }
+                if (index != -1) {
+                    currentList.map { if (it.id == workoutId) block(it) else it }
+                } else {
+                    currentList
+                }
+            }
+            return
+        }
 
-                            _allWorkouts.update { list ->
-                                if (list.any { it.id == workoutId }) {
-                                    list.map { if (it.id == workoutId) updatedWorkout else it }
-                                } else {
-                                    (list + updatedWorkout).sortedByDescending { it.headerData.startTimeS }
-                                }
-                            }
+        // Workout is NOT in the list yet (e.g. background worker finished before UI load)
+        launch(Dispatchers.IO) {
+            summariesManager.getWorkoutCursor(workoutId).use { cursor ->
+                if (cursor?.moveToFirst() == true) {
+                    val freshWorkout = mapper.fromCursor(cursor)
+                    val updatedWorkout = block(freshWorkout)
+
+                    _allWorkouts.update { list ->
+                        if (list.any { it.id == workoutId }) {
+                            list.map { if (it.id == workoutId) updatedWorkout else it }
+                        } else {
+                            (list + updatedWorkout).sortedByDescending { it.headerData.startTimeS }
                         }
                     }
                 }
-                currentList
             }
         }
     }
@@ -1703,44 +1757,67 @@ class WorkoutRepository private constructor(private val application: Application
     /**
      * Public accessor to force a reload of a single workout from the database.
      *
-     * Implementation: Fetches the latest summary and triggers surgical updates for
-     * dependent modules (Periods, Clusters) if the workout has just been finalized.
+     * Implementation: Uses a conflated reload pipeline (REQ-STB-018.1). If a reload for [workoutId]
+     * is already active, concurrent reload requests are flagged as dirty rather than dropped,
+     * guaranteeing a sequential re-query pass that catches trailing state transitions
+     * (e.g. TRACKING_FINISHED_INTENT) and triggers lifecycle observers on finalization.
      *
      * @param workoutId The primary key of the session to reload.
      */
     suspend fun reloadWorkoutData(workoutId: Long) {
-        if (!reloadingWorkoutIds.add(workoutId)) {
-            if (DEBUG) Log.d(TAG, "reloadWorkoutData: workoutId=$workoutId already reloading, skipping duplicate pass")
+        val shouldStart = synchronized(activeReloadWorkoutIds) {
+            if (!activeReloadWorkoutIds.add(workoutId)) {
+                dirtyReloadWorkoutIds.add(workoutId)
+                false
+            } else {
+                true
+            }
+        }
+        if (!shouldStart) {
+            if (DEBUG) Log.d(TAG, "reloadWorkoutData: workoutId=$workoutId already reloading, marked dirty for sequential pass")
             return
         }
+
         try {
-            if (DEBUG) Log.i(TAG, "reloadWorkoutData: workoutId=$workoutId")
+            do {
+                if (DEBUG) Log.i(TAG, "reloadWorkoutData: executing pass for workoutId=$workoutId")
 
-            withContext(Dispatchers.IO) {
-                summariesManager.getWorkoutCursor(workoutId).use { cursor ->
-                    if (cursor?.moveToFirst() == true) {
-                        // Get the fresh data from the database.
-                        val freshWorkoutData = mapper.fromCursor(cursor)
-                        
-                        // --- SURGICAL PERIOD UPDATE (ATT-346) & CLUSTER UPDATE (ATT-354 / REQ-MIG-025) ---
-                        val existing = allWorkouts.value.find { it.id == workoutId }
-                        val isLiveSessionFinish = (existing != null && !existing.finished) && freshWorkoutData.finished
-                        val isNewImportOrFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
-                        
-                        if (isNewImportOrFinish) {
-                            PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
+                withContext(Dispatchers.IO) {
+                    summariesManager.getWorkoutCursor(workoutId).use { cursor ->
+                        if (cursor?.moveToFirst() == true) {
+                            // Get the fresh data from the database.
+                            val freshWorkoutData = mapper.fromCursor(cursor)
+                            
+                            // --- SURGICAL PERIOD UPDATE (ATT-346) & CLUSTER UPDATE (ATT-354 / REQ-MIG-025) ---
+                            val existing = _allWorkouts.value.find { it.id == workoutId }
+                            val isLiveSessionFinish = (existing != null && !existing.finished) && freshWorkoutData.finished
+                            val isNewImportOrFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
+                            
+                            if (isNewImportOrFinish) {
+                                PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
+                            }
+
+                            if (isLiveSessionFinish && freshWorkoutData.clusterId != -1L) {
+                                WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
+                            }
+
+                            addOrUpdateWorkout(freshWorkoutData)
                         }
-
-                        if (isLiveSessionFinish && freshWorkoutData.clusterId != -1L) {
-                            WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
-                        }
-
-                        addOrUpdateWorkout(freshWorkoutData)
                     }
                 }
-            }
+            } while (synchronized(activeReloadWorkoutIds) {
+                if (dirtyReloadWorkoutIds.remove(workoutId)) {
+                    true
+                } else {
+                    activeReloadWorkoutIds.remove(workoutId)
+                    false
+                }
+            })
         } finally {
-            reloadingWorkoutIds.remove(workoutId)
+            synchronized(activeReloadWorkoutIds) {
+                activeReloadWorkoutIds.remove(workoutId)
+                dirtyReloadWorkoutIds.remove(workoutId)
+            }
         }
     }
 
@@ -1797,11 +1874,10 @@ class WorkoutRepository private constructor(private val application: Application
 
             // 3. Update memory surgically - perform the merge ATOMICALLY inside update
             Log.i(TAG, "update from saveWorkout")
-            var oldWorkout: WorkoutData? = null
+            val oldWorkout = _allWorkouts.value.find { it.id == workoutId }
             _allWorkouts.update { currentList ->
                 currentList.map { current ->
                     if (current.id == workoutId) {
-                        oldWorkout = current
                         current.copy(
                             workoutName = userEditedWorkout.workoutName,
                             sportId = userEditedWorkout.sportId,
@@ -1852,6 +1928,9 @@ class WorkoutRepository private constructor(private val application: Application
      * @param id The unique identifier of the workout to delete.
      */
     fun deleteWorkout(id: Long) {
+        if (isListLoading.get()) {
+            deletedDuringLoadIds.add(id)
+        }
         launch(Dispatchers.IO) {
             // Find the workout name *before* deleting it.
             val workout = _allWorkouts.value.find { it.id == id }
@@ -1861,28 +1940,36 @@ class WorkoutRepository private constructor(private val application: Application
             // Post the detailed progress to the LiveData.
             _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, id))
 
-            // Perform the actual deletion in the database first
-            val success = deletionHelper.deleteWorkout(id)
-            if (success) {
-                // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
-                workout?.let { 
-                    PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
-                    WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it)
-                }
+            try {
+                // Perform the actual deletion in the database first
+                val success = deletionHelper.deleteWorkout(id)
+                if (success) {
+                    if (isListLoading.get()) {
+                        deletedDuringLoadIds.add(id)
+                    }
+                    // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
+                    workout?.let { 
+                        PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
+                        WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it)
+                    }
 
-                // Now, update the in-memory list
-                _allWorkouts.update { currentList ->
-                    currentList.filterNot { it.id == id }
-                }
+                    // Now, update the in-memory list
+                    _allWorkouts.update { currentList ->
+                        currentList.filterNot { it.id == id }
+                    }
 
-                // Post event for UI to react (e.g., close screen)
-                deleteFinishedEvent.postValue(Pair(id, true))
-            } else {
-                deleteFinishedEvent.postValue(Pair(id, true))
+                    // Post event for UI to react (e.g., close screen)
+                    deleteFinishedEvent.postValue(Pair(id, true))
+                } else {
+                    deleteFinishedEvent.postValue(Pair(id, false))
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "deleteWorkout: exception deleting workoutId=$id", e)
+                deleteFinishedEvent.postValue(Pair(id, false))
+            } finally {
+                // Reset the state to Idle when done or if an error occurs.
+                _deletionProgress.postValue(DeletionProgress.Idle)
             }
-
-            // Reset the state to Idle when done or if an error occurs.
-            _deletionProgress.postValue(DeletionProgress.Idle)
         }
     }
 
