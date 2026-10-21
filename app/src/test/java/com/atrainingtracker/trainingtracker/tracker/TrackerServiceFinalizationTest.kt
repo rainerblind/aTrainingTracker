@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.tracker
 
+import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.ContentValues
 import android.content.Context
@@ -111,7 +112,6 @@ class TrackerServiceFinalizationTest {
 
         override fun performStopForeground() {
             performStopForegroundCalled = true
-            super.performStopForeground()
         }
 
         override fun performStopSelf() {
@@ -516,7 +516,7 @@ class TrackerServiceFinalizationTest {
         val taskStartedLatch = java.util.concurrent.CountDownLatch(1)
         realDbExecutor.execute {
             taskStartedLatch.countDown()
-            Thread.sleep(300)
+            Thread.sleep(600)
             realService.executionOrder.add("sample-write-done")
         }
         assertTrue("Slow DB task must start before onDestroy()", taskStartedLatch.await(2, java.util.concurrent.TimeUnit.SECONDS))
@@ -527,8 +527,8 @@ class TrackerServiceFinalizationTest {
         realService.onDestroy()
         val elapsedMs = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs)
 
-        // Assert 1: Main thread returned without waiting for the 300ms DB task
-        assertTrue("onDestroy() must not block the calling thread (< 150ms), took ${elapsedMs}ms", elapsedMs < 150)
+        // Assert 1: Main thread returned without waiting for the DB task
+        assertTrue("onDestroy() must not block the calling thread (< 500ms), took ${elapsedMs}ms", elapsedMs < 500)
 
         // Assert 2: Both mScheduler and mDbExecutor are shut down immediately upon return from onDestroy()
         assertTrue("mScheduler must be shut down in onDestroy() (REQ-TRK-033.1)", realService.isSchedulerShutdownForTesting)

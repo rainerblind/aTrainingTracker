@@ -1257,15 +1257,12 @@ public class TrainingApplication extends Application {
 
     public static void setManualPauseLock(boolean locked, Context context) {
         mManualPauseLock.set(locked);
-        if (context != null) {
-            try {
-                PreferenceManager.getDefaultSharedPreferences(context)
-                        .edit()
-                        .putBoolean(SP_MANUAL_PAUSE_LOCK, locked)
-                        .apply();
-            } catch (Throwable ignored) {
-                // Ignore in unmocked unit test environments
-            }
+        SharedPreferences prefs = cSharedPreferences != null ? cSharedPreferences
+                : (context != null ? PreferenceManager.getDefaultSharedPreferences(context) : null);
+        if (prefs != null) {
+            prefs.edit()
+                    .putBoolean(SP_MANUAL_PAUSE_LOCK, locked)
+                    .apply();
         }
     }
 
@@ -1283,15 +1280,12 @@ public class TrainingApplication extends Application {
 
     public static void setAutoPaused(boolean autoPaused, Context context) {
         mIsAutoPaused.set(autoPaused);
-        if (context != null) {
-            try {
-                PreferenceManager.getDefaultSharedPreferences(context)
-                        .edit()
-                        .putBoolean(SP_IS_AUTO_PAUSED, autoPaused)
-                        .apply();
-            } catch (Throwable ignored) {
-                // Ignore in unmocked unit test environments
-            }
+        SharedPreferences prefs = cSharedPreferences != null ? cSharedPreferences
+                : (context != null ? PreferenceManager.getDefaultSharedPreferences(context) : null);
+        if (prefs != null) {
+            prefs.edit()
+                    .putBoolean(SP_IS_AUTO_PAUSED, autoPaused)
+                    .apply();
         }
     }
 
@@ -1758,26 +1752,17 @@ public class TrainingApplication extends Application {
         setManualPauseLock(false, this);
         setAutoPaused(false, this);
 
-        try {
-            stopPebbleWatchapp();
-        } catch (Throwable ignored) {
-        }
+        stopPebbleWatchapp();
 
         cTrackingMode = TrackingMode.READY;
         sActiveWorkoutId = -1;
         mWorkoutID = -1;
 
-        try {
-            if (mNotificationManager != null) {
-                mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
-            }
-        } catch (Throwable ignored) {
+        if (mNotificationManager != null) {
+            mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
         }
 
-        try {
-            notifyTrackingStateChanged();
-        } catch (Throwable ignored) {
-        }
+        notifyTrackingStateChanged();
     }
 
     protected void trackingStopped() {

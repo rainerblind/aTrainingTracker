@@ -931,13 +931,7 @@ public class TrackerService extends Service {
     }
 
     protected void performStopForeground() {
-        try {
-            if (getBaseContext() != null) {
-                stopForeground(true);
-            }
-        } catch (Throwable ignored) {
-            // Safe fallback in unmocked unit test environments
-        }
+        stopForeground(true);
     }
 
     protected synchronized void safeUnbindBanalService() {
@@ -1042,8 +1036,8 @@ public class TrackerService extends Service {
                     return;
                 }
             }
-        } catch (Throwable ignored) {
-            // Fallback to inline execution in unmocked unit test environments
+        } catch (Exception ignored) {
+            // Fallback to inline execution if main thread handler dispatch fails
         }
         action.run();
     }
@@ -1057,13 +1051,6 @@ public class TrackerService extends Service {
         TrainingApplication.resetTrackingStateOnAbort();
         if (mTrainingApplication != null) {
             mTrainingApplication.onTrackingAborted();
-        } else {
-            try {
-                if (getBaseContext() != null && getApplication() instanceof TrainingApplication) {
-                    ((TrainingApplication) getApplication()).onTrackingAborted();
-                }
-            } catch (Throwable ignored) {
-            }
         }
         notifyTrackingAborted();
     }
@@ -1073,13 +1060,8 @@ public class TrackerService extends Service {
             Intent abortedIntent = new Intent(TRACKING_ABORTED_INTENT)
                     .setPackage(this.getPackageName());
             this.sendBroadcast(abortedIntent);
-        } catch (Throwable e) {
-            try {
-                if (getBaseContext() != null) {
-                    Log.w(TAG, "Failed to broadcast TRACKING_ABORTED_INTENT", e);
-                }
-            } catch (Throwable ignored) {
-            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to broadcast TRACKING_ABORTED_INTENT", e);
         }
     }
 
@@ -1141,10 +1123,8 @@ public class TrackerService extends Service {
                     .putExtra(WorkoutSummaries.WORKOUT_ID, workoutId)
                     .setPackage(this.getPackageName());
             this.sendBroadcast(trackingStartedIntent);
-        } catch (NullPointerException e) {
-            if (getBaseContext() != null) {
-                throw e;
-            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to broadcast TRACKING_STARTED_INTENT", e);
         }
     }
 
@@ -2287,9 +2267,7 @@ public class TrackerService extends Service {
                 try {
                     LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra("WORKOUT_ID", workoutId));
                 } catch (Exception e) {
-                    if (getBaseContext() != null) {
-                        Log.w(TAG, "Failed to broadcast WORKOUT_UPDATED_INTENT", e);
-                    }
+                    Log.w(TAG, "Failed to broadcast WORKOUT_UPDATED_INTENT", e);
                 }
             }
         }, mDbExecutor).exceptionally(ex -> {

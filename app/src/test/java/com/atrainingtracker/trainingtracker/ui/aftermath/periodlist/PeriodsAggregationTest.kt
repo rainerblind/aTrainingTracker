@@ -12,16 +12,32 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Before
 import org.junit.Test
 import java.time.LocalDateTime
+import java.util.TimeZone
 
 /**
  * Unit tests verifying longest workout resolution integrity across multi-workout periods.
  * Fulfills REQ-PER-011 / TST-PER-016 for ATT-579.
  */
 class PeriodsAggregationTest {
+
+    private lateinit var originalTimeZone: TimeZone
+
+    @Before
+    fun setUp() {
+        originalTimeZone = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+    }
+
+    @After
+    fun tearDown() {
+        TimeZone.setDefault(originalTimeZone)
+    }
 
     private fun createDummyWorkout(
         id: Long,

@@ -65,6 +65,10 @@ class WorkoutClusterEngineOptimizationTest {
         every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportDb
         every { mockSportDb.getBSportType(any()) } returns BSportType.RUN
 
+        val mockKnownLocationsDb = mockk<KnownLocationsDatabaseManager>(relaxed = true)
+        mockkStatic(KnownLocationsDatabaseManager::class)
+        every { KnownLocationsDatabaseManager.getInstance(any()) } returns mockKnownLocationsDb
+
         context.deleteDatabase("WorkoutClusters.db")
         context.deleteDatabase("Routes.db")
         context.deleteDatabase("WorkoutSummaries.db")

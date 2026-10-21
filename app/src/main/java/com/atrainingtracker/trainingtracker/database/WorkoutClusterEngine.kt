@@ -273,13 +273,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
      * If no location exists within the geofence radius of [start], automatically seeds a new location.
      */
     fun ensureStartingLocationAnchor(start: LatLng) {
-        try {
-            val knownLocManager = KnownLocationsDatabaseManager.getInstance(appContext)
-            if (knownLocManager.getMyLocation(start) == null) {
-                knownLocManager.recordWorkoutStart(start, null)
-            }
-        } catch (_: Throwable) {
-            // Silently ignore in pure JVM test environments where Android database or Log is unmocked
+        val knownLocManager = KnownLocationsDatabaseManager.getInstance(appContext)
+        if (knownLocManager.getMyLocation(start) == null) {
+            knownLocManager.recordWorkoutStart(start, null)
         }
     }
 
