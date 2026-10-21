@@ -744,18 +744,69 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True)
     if is_subtask and (norm_target_lower == "erledigt" or trans_name == "freigabe"):
         sync_parent_stage_on_subtask_done(parent_key, issue_summary, role=role, inject_context=inject_context)
 
+def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
+    """
+    Automatically flips 'Planned' / 'Status: Planned (<KEY>)' status cells to 'Verified'
+    in docs/requirements.md and docs/tests.md when submitting Stage 5 (Rule 60).
+    """
+    if not parent_key:
+        return 0
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    trailing_planned_re = re.compile(
+        r"\|\s*(?:Status:\s*)?Planned(?:\s*\([^)]*\))?\s*\|(\s*)$",
+        re.IGNORECASE,
+    )
+    inline_planned_key_re = re.compile(
+        r"(?:Status:\s*)?Planned\s*\(\s*" + re.escape(parent_key) + r"\s*\)",
+        re.IGNORECASE,
+    )
+
+    total_updated = 0
+    for rel_path in ("docs/requirements.md", "docs/tests.md"):
+        abs_path = os.path.join(repo_root, rel_path)
+        if not os.path.exists(abs_path):
+            continue
+        try:
+            with open(abs_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            updated_count = 0
+            new_lines = []
+            for line in lines:
+                new_line = line
+                if line.lstrip().startswith("|") and trailing_planned_re.search(line):
+                    new_line = trailing_planned_re.sub(r"| Verified |\1", line)
+                elif parent_key in line and inline_planned_key_re.search(line):
+                    new_line = inline_planned_key_re.sub("Verified", line)
+                if new_line != line:
+                    updated_count += 1
+                new_lines.append(new_line)
+            if updated_count > 0:
+                with open(abs_path, "w", encoding="utf-8") as f:
+                    f.writelines(new_lines)
+                print(f"Auto-updated {updated_count} row(s) from Planned to Verified in {rel_path} for {parent_key}.")
+                total_updated += updated_count
+        except Exception as e:
+            print(f"Warning: Could not auto-update {rel_path} for {parent_key}: {e}", file=sys.stderr)
+    return total_updated
+
 def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, role="agent1"):
     """
     Composite Stage-Submission Command for agent1 (ATT-4290 Process Improvement #2).
     1. Resolves stage (1..5) and ensures parent ticket is in the matching stage status.
-    2. Finds existing stage sub-task under parent_key or creates it with canonical prefix and --add-to-sprint.
-    3. Updates the sub-task description with text_or_file.
-    4. Transitions the sub-task to 'In Überprüfung' (in_review) and outputs SUBTASK_KEY.
+    2. If stage == 5, automatically flips Planned -> Verified in docs/requirements.md and docs/tests.md.
+    3. Finds existing stage sub-task under parent_key or creates it with canonical prefix and --add-to-sprint.
+    4. Updates the sub-task description with text_or_file.
+    5. Transitions the sub-task to 'In Überprüfung' (in_review) and outputs SUBTASK_KEY.
     """
     stage_id = STAGE_ALIASES.get((stage_arg or "").strip().lower())
     if not stage_id or stage_id not in STAGE_SPECS:
         print(f"Error: Invalid stage '{stage_arg}'. Use 1|analysis, 2|test-spec, 3|impl-plan, 4|impl, or 5|test.", file=sys.stderr)
         sys.exit(1)
+
+    if stage_id == "5":
+        auto_verify_living_docs_on_stage5(parent_key)
 
     spec = STAGE_SPECS[stage_id]
     if text_or_file.startswith("@") and os.path.exists(text_or_file[1:]):

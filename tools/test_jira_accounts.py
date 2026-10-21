@@ -391,6 +391,34 @@ class TestJiraCliTooling(unittest.TestCase):
         mock_comment.assert_called_once_with("ATT-4301", "Gate 1 PASS verdict", role="agent2")
         mock_transition.assert_called_once_with("ATT-4301", "freigabe", role="agent2", inject_context=True)
 
+    def test_auto_verify_living_docs_on_stage5(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            docs_dir = os.path.join(tmpdir, "docs")
+            os.makedirs(docs_dir, exist_ok=True)
+            req_path = os.path.join(docs_dir, "requirements.md")
+            tst_path = os.path.join(docs_dir, "tests.md")
+            with open(req_path, "w", encoding="utf-8") as f:
+                f.write(
+                    "| **REQ-UI-001** | `ATT-4400` | Desc | Crit | Status: Planned (ATT-4450) |\n"
+                    "| **REQ-UI-002** | `ATT-4450` | Desc | Crit | Planned |\n"
+                    "| **REQ-UI-003** | `ATT-4399` | Desc | Crit | Verified |\n"
+                )
+            with open(tst_path, "w", encoding="utf-8") as f:
+                f.write(
+                    "| **TST-UI-001** | `ATT-4450` | Desc | `REQ-UI-001` | Proc | Res | Planned (ATT-4450) |\n"
+                )
+            count = jira_util.auto_verify_living_docs_on_stage5("ATT-4450", repo_root=tmpdir)
+            self.assertEqual(count, 3)
+            with open(req_path, "r", encoding="utf-8") as f:
+                req_content = f.read()
+            with open(tst_path, "r", encoding="utf-8") as f:
+                tst_content = f.read()
+            self.assertNotIn("Planned", req_content)
+            self.assertEqual(req_content.count("| Verified |"), 3)
+            self.assertNotIn("Planned", tst_content)
+            self.assertIn("| Verified |", tst_content)
+
 
 if __name__ == "__main__":
     unittest.main()

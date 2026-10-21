@@ -31,12 +31,11 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
 2. **Conditional On-Device / Physical Verification (Rule 60)**:
    - **UI / Compose / Resource / Navigation / Foreground Service Tickets**: Deploy debug APK to Pixel 10 (`./gradlew installDebug`) and verify live rendering, navigation, and absence of crash loops. Capture on-device screenshots (`adb exec-out screencap -p > docs/engineering/walkthroughs/img/<KEY>_<name>.png`) of the new/changed UI and reference screen, and compare against `docs/design_guidelines.md` Section 5.
    - **Non-UI Backend / Algorithm / DB Query / Dead-Code Cleanup Tickets**: Skip physical APK deployment in Stage 5 and rely on targeted unit/contract tests + `./gradlew assembleDebug` compilation verification.
-3. **Walkthrough Documentation & Living Documentation Synchronization (Concise Cap $\le 60\text{--}80$ Lines)**:
+3. **Walkthrough Documentation & Automatic Living Documentation Synchronization (Concise Cap $\le 60\text{--}80$ Lines)**:
    - Author `docs/engineering/walkthroughs/<TICKET_KEY>_walkthrough.md` using `templates/walkthrough_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**.
-   - Update requirement status in `docs/requirements.md` to `Verified`.
-   - Update test status in `docs/tests.md` to `Verified`.
+   - Note: `submit-stage <TICKET_KEY> 5` **automatically** flips `Planned` / `Status: Planned (<TICKET_KEY>)` rows in `docs/requirements.md` and `docs/tests.md` to `Verified`—no manual `replace_file_content` calls are needed just to flip the status column.
 4. **Single-Turn Stage Submission (`submit-stage`)**:
-   - Submit Stage 5 walkthrough in a single composite CLI call (creates/updates `[Test]` sub-task and moves it to `In Überprüfung`):
+   - Submit Stage 5 walkthrough in a single composite CLI call (auto-flips `Planned` $\rightarrow$ `Verified` in living docs, creates/updates `[Test]` sub-task, and moves it to `In Überprüfung`):
      ```bash
      python3 tools/jira_util.py --as agent1 submit-stage <TICKET_KEY> 5 @docs/engineering/walkthroughs/<TICKET_KEY>_walkthrough.md
      ```
