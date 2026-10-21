@@ -88,18 +88,25 @@ enum class PolylineTrackingState {
 object PolylineProgressTracker {
 
     /**
-     * Computes the 2D vector cross-product (z-component) of vector AB and AC in latitude/longitude coordinates:
-     * cross(A, B, C) = (B.lat - A.lat) * (C.lng - A.lng) - (B.lng - A.lng) * (C.lat - A.lat)
+     * Computes the 2D vector cross-product (z-component) of vector AB and AC in local equirectangular coordinates
+     * scaled by cos(meanLatitude) (REQ-GEO-001, REQ-GEO-002):
+     * cross(A, B, C) = (B.lat - A.lat) * (C.lng - A.lng)*cosPhi - (B.lng - A.lng)*cosPhi * (C.lat - A.lat)
      *
      * A sign change in this product indicates crossing the line AB.
      */
     fun crossProduct(a: LatLng, b: LatLng, c: LatLng): Double {
-        return (b.latitude - a.latitude) * (c.longitude - a.longitude) -
-                (b.longitude - a.longitude) * (c.latitude - a.latitude)
+        val meanLatRad = Math.toRadians((a.latitude + b.latitude + c.latitude) / 3.0)
+        val cosPhi = Math.cos(meanLatRad).coerceAtLeast(1e-6)
+        val abLat = b.latitude - a.latitude
+        val abLng = (b.longitude - a.longitude) * cosPhi
+        val acLat = c.latitude - a.latitude
+        val acLng = (c.longitude - a.longitude) * cosPhi
+        return abLat * acLng - abLng * acLat
     }
 
     /**
-     * Calculates perpendicular virtual gates (start or finish lines) for a polyline path.
+     * Calculates perpendicular virtual gates (start or finish lines) for a polyline path with
+     * local equirectangular coordinate scaling for true physical 90-degree orthogonality (REQ-GEO-002).
      *
      * @param points Ordered list of [PathPoint] defining the track.
      * @param isStartGate True to construct start gate at path start; false for finish gate at path end.
@@ -118,8 +125,14 @@ object PolylineProgressTracker {
         return if (isStartGate) {
             val start = points.first().latLng
             val next = points[effectiveOffset].latLng
-            val startA = LatLng(start.latitude + (start.longitude - next.longitude), start.longitude - (start.latitude - next.latitude))
-            val startB = LatLng(start.latitude - (start.longitude - next.longitude), start.longitude + (start.latitude - next.latitude))
+            val meanLatRad = Math.toRadians((start.latitude + next.latitude) / 2.0)
+            val cosPhi = Math.cos(meanLatRad).coerceAtLeast(1e-6)
+
+            val dX = (next.longitude - start.longitude) * cosPhi
+            val dY = next.latitude - start.latitude
+
+            val startA = LatLng(start.latitude - dX, start.longitude + dY / cosPhi)
+            val startB = LatLng(start.latitude + dX, start.longitude - dY / cosPhi)
             val bearing = SphericalUtil.computeHeading(start, next)
             val startCrossN = crossProduct(startA, startB, next)
             PolylineGate(
@@ -133,8 +146,14 @@ object PolylineProgressTracker {
         } else {
             val end = points.last().latLng
             val prevToEnd = points[points.size - 1 - effectiveOffset].latLng
-            val endA = LatLng(end.latitude + (end.longitude - prevToEnd.longitude), end.longitude - (end.latitude - prevToEnd.latitude))
-            val endB = LatLng(end.latitude - (end.longitude - prevToEnd.longitude), end.longitude + (end.latitude - prevToEnd.latitude))
+            val meanLatRad = Math.toRadians((prevToEnd.latitude + end.latitude) / 2.0)
+            val cosPhi = Math.cos(meanLatRad).coerceAtLeast(1e-6)
+
+            val dX = (end.longitude - prevToEnd.longitude) * cosPhi
+            val dY = end.latitude - prevToEnd.latitude
+
+            val endA = LatLng(end.latitude - dX, end.longitude + dY / cosPhi)
+            val endB = LatLng(end.latitude + dX, end.longitude - dY / cosPhi)
             val bearing = SphericalUtil.computeHeading(prevToEnd, end)
             val endCrossP = crossProduct(endA, endB, prevToEnd)
             PolylineGate(
@@ -180,13 +199,75 @@ object PolylineProgressTracker {
         return PolyUtil.distanceToLine(location, gate.gateStart, gate.gateEnd)
     }
 
+    private data class SegmentCandidate(
+        val segmentIndex: Int,
+        val t: Double,
+        val crossTrackDistanceMeters: Double,
+        val projectedLatLng: LatLng
+    )
+
+    private fun findBestProjection(
+        path: List<PathPoint>,
+        location: LatLng,
+        range: IntProgression
+    ): SegmentCandidate {
+        var bestSegIdx = range.first
+        var bestT = 0.0
+        var minCrossTrackDist = Double.MAX_VALUE
+        var bestProjectedLatLng = path[bestSegIdx].latLng
+
+        for (i in range) {
+            val p1 = path[i]
+            val p2 = path[i + 1]
+            val meanLatRad = Math.toRadians((p1.latLng.latitude + p2.latLng.latitude) / 2.0)
+            val cosPhi = Math.cos(meanLatRad).coerceAtLeast(1e-6)
+
+            val dX = (p2.latLng.longitude - p1.latLng.longitude) * cosPhi
+            val dY = p2.latLng.latitude - p1.latLng.latitude
+            val segLenSq = dX * dX + dY * dY
+
+            val t = if (segLenSq > 0.0) {
+                val pX = (location.longitude - p1.latLng.longitude) * cosPhi
+                val pY = location.latitude - p1.latLng.latitude
+                val u = (pX * dX + pY * dY) / segLenSq
+                u.coerceIn(0.0, 1.0)
+            } else {
+                0.0
+            }
+
+            val projLat = p1.latLng.latitude + t * (p2.latLng.latitude - p1.latLng.latitude)
+            val projLng = p1.latLng.longitude + t * (p2.latLng.longitude - p1.latLng.longitude)
+            val projPoint = LatLng(projLat, projLng)
+
+            val d = SphericalUtil.computeDistanceBetween(location, projPoint)
+            if (d < minCrossTrackDist) {
+                minCrossTrackDist = d
+                bestSegIdx = i
+                bestT = t
+                bestProjectedLatLng = projPoint
+            }
+        }
+        return SegmentCandidate(bestSegIdx, bestT, minCrossTrackDist, bestProjectedLatLng)
+    }
+
     /**
-     * Projects a coordinate orthogonally onto the nearest segment of a polyline track,
-     * calculating completed along-track distance, cross-track error, progress fraction, altitude, and grade.
+     * Projects a coordinate orthogonally onto a polyline track using local equirectangular coordinate scaling
+     * and windowed forward segment continuity search (REQ-GEO-001, REQ-GEO-002).
+     *
+     * @param path Ordered list of [PathPoint] defining the track.
+     * @param location Coordinate to project.
+     * @param lastSegmentIndex Previous segment index if tracking progress, or null for global unwindowed search.
+     * @param searchWindowBackward Number of segments backward from [lastSegmentIndex] to search (default 2).
+     * @param searchWindowForward Number of segments forward from [lastSegmentIndex] to search (default 10).
+     * @param maxCorridorMeters Maximum cross-track tolerance in meters before falling back to global search (default 50.0m).
      */
     fun projectLocation(
         path: List<PathPoint>,
-        location: LatLng
+        location: LatLng,
+        lastSegmentIndex: Int? = null,
+        searchWindowBackward: Int = 2,
+        searchWindowForward: Int = 10,
+        maxCorridorMeters: Double = 50.0
     ): PolylineProjection? {
         if (path.isEmpty()) return null
         if (path.size == 1) {
@@ -204,53 +285,37 @@ object PolylineProgressTracker {
             )
         }
 
-        var bestSegIdx = 0
-        var bestT = 0.0
-        var minCrossTrackDist = Double.MAX_VALUE
-        var bestProjectedLatLng = path.first().latLng
-
-        for (i in 0 until path.size - 1) {
-            val p1 = path[i]
-            val p2 = path[i + 1]
-            val dLat = p2.latLng.latitude - p1.latLng.latitude
-            val dLng = p2.latLng.longitude - p1.latLng.longitude
-            val segLenSq = dLat * dLat + dLng * dLng
-
-            val t = if (segLenSq > 0.0) {
-                val u = ((location.latitude - p1.latLng.latitude) * dLat +
-                        (location.longitude - p1.latLng.longitude) * dLng) / segLenSq
-                u.coerceIn(0.0, 1.0)
+        val bestCandidate = if (lastSegmentIndex != null && path.size >= 2) {
+            val startIdx = (lastSegmentIndex - searchWindowBackward).coerceIn(0, path.size - 2)
+            val endIdx = (lastSegmentIndex + searchWindowForward).coerceIn(0, path.size - 2)
+            val windowCandidate = if (startIdx <= endIdx) {
+                findBestProjection(path, location, startIdx..endIdx)
             } else {
-                0.0
+                null
             }
-
-            val projLat = p1.latLng.latitude + t * dLat
-            val projLng = p1.latLng.longitude + t * dLng
-            val projPoint = LatLng(projLat, projLng)
-
-            val d = SphericalUtil.computeDistanceBetween(location, projPoint)
-            if (d < minCrossTrackDist) {
-                minCrossTrackDist = d
-                bestSegIdx = i
-                bestT = t
-                bestProjectedLatLng = projPoint
+            if (windowCandidate != null && windowCandidate.crossTrackDistanceMeters <= maxCorridorMeters) {
+                windowCandidate
+            } else {
+                findBestProjection(path, location, 0 until path.size - 1)
             }
+        } else {
+            findBestProjection(path, location, 0 until path.size - 1)
         }
 
-        val p1 = path[bestSegIdx]
-        val p2 = path[bestSegIdx + 1]
+        val p1 = path[bestCandidate.segmentIndex]
+        val p2 = path[bestCandidate.segmentIndex + 1]
         val segDist = p2.distance - p1.distance
         val segAlt = p2.altitude - p1.altitude
 
         val totalPathDist = (path.last().distance - path.first().distance).coerceAtLeast(0.0)
-        val alongTrackDist = ((p1.distance - path.first().distance) + bestT * segDist).coerceAtLeast(0.0)
+        val alongTrackDist = ((p1.distance - path.first().distance) + bestCandidate.t * segDist).coerceAtLeast(0.0)
         val progressFraction = if (totalPathDist > 0.0) {
             (alongTrackDist / totalPathDist).coerceIn(0.0, 1.0).toFloat()
         } else {
             0f
         }
 
-        val interpolatedAlt = p1.altitude + bestT * segAlt
+        val interpolatedAlt = p1.altitude + bestCandidate.t * segAlt
         val grade = if (segDist > 0.0) {
             (segAlt / segDist) * 100.0
         } else {
@@ -258,11 +323,11 @@ object PolylineProgressTracker {
         }
 
         return PolylineProjection(
-            projectedLatLng = bestProjectedLatLng,
-            segmentIndex = bestSegIdx,
-            t = bestT,
+            projectedLatLng = bestCandidate.projectedLatLng,
+            segmentIndex = bestCandidate.segmentIndex,
+            t = bestCandidate.t,
             alongTrackDistance = alongTrackDist,
-            crossTrackDistanceMeters = minCrossTrackDist,
+            crossTrackDistanceMeters = bestCandidate.crossTrackDistanceMeters,
             progressFraction = progressFraction,
             interpolatedAltitude = interpolatedAlt,
             instantaneousGradePercent = grade
