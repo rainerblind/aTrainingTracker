@@ -1623,8 +1623,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 21; // 25.07.2026 Added bounding box for performance (ATT-352)
         // public static final int DB_VERSION = 22; // 01.10.2026 Added composite index on extrema table for start location queries (ATT-1734)
         // public static final int DB_VERSION = 23; // 02.10.2026 Added race column (ATT-2005)
-        // public static final int DB_VERSION = 24; // 03.10.2026 Added source column (ATT-2186)
-        public static final int DB_VERSION = 25; // 18.10.2026 Added count column to extrema table (ATT-3987)
+        // public static final int DB_VERSION = 25; // 18.10.2026 Added count column to extrema table (ATT-3987)
+        public static final int DB_VERSION = 26; // 21.10.2026 Added missing indexes on extrema and summaries tables (REQ-DAT-034, ATT-4008)
         
 
 
@@ -1717,6 +1717,14 @@ public class WorkoutSummariesDatabaseManager {
             // index for start location queries (ATT-1734)
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_extrema_sensor_extrema ON " + WorkoutSummaries.TABLE_EXTREMA_VALUES
                     + " (" + WorkoutSummaries.SENSOR_TYPE + ", " + WorkoutSummaries.EXTREMA_TYPE + ")");
+
+            // composite index prefixed by workoutId for extrema lookup (REQ-DAT-034 / ATT-4008)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_extrema_workout_sensor_extrema ON " + WorkoutSummaries.TABLE_EXTREMA_VALUES
+                    + " (" + WorkoutSummaries.WORKOUT_ID + ", " + WorkoutSummaries.SENSOR_TYPE + ", " + WorkoutSummaries.EXTREMA_TYPE + ")");
+
+            // index on clusterId for cluster workouts lookup (REQ-DAT-034 / ATT-4008)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_summaries_cluster_id ON " + WorkoutSummaries.TABLE
+                    + " (" + WorkoutSummaries.CLUSTER_ID + ")");
 
             // case-insensitive index for deduplication and lookup (REQ-MIG-042 / ATT-3991)
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_summaries_file_base_name_nocase ON "
@@ -1962,6 +1970,20 @@ public class WorkoutSummariesDatabaseManager {
             if (oldVersion < 25) {
                 Log.i(TAG, "upgrading to DB version 25 (Adding count column to extrema table)");
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.COUNT, "int", null);
+            }
+
+            if (oldVersion < 26) {
+                Log.i(TAG, "upgrading to DB version 26 (Adding composite extrema index, clusterId index, and fileBaseName NOCASE index)");
+                try {
+                    db.execSQL("CREATE INDEX IF NOT EXISTS idx_extrema_workout_sensor_extrema ON " + WorkoutSummaries.TABLE_EXTREMA_VALUES
+                            + " (" + WorkoutSummaries.WORKOUT_ID + ", " + WorkoutSummaries.SENSOR_TYPE + ", " + WorkoutSummaries.EXTREMA_TYPE + ")");
+                    db.execSQL("CREATE INDEX IF NOT EXISTS idx_summaries_cluster_id ON " + WorkoutSummaries.TABLE
+                            + " (" + WorkoutSummaries.CLUSTER_ID + ")");
+                    db.execSQL("CREATE INDEX IF NOT EXISTS idx_summaries_file_base_name_nocase ON "
+                            + WorkoutSummaries.TABLE + " (" + WorkoutSummaries.FILE_BASE_NAME + " COLLATE NOCASE)");
+                } catch (Exception e) {
+                    Log.e(TAG, "Error creating indexes in onUpgrade to v26", e);
+                }
             }
         }
 

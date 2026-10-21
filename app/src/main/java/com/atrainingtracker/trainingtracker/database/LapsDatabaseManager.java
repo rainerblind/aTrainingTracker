@@ -427,7 +427,7 @@ public class LapsDatabaseManager {
 
     public static class LapsDbHelper extends SQLiteOpenHelper {
         public static final String DB_NAME = "Laps.db";
-        public static final int DB_VERSION = 2;
+        public static final int DB_VERSION = 3; // Bumped to 3 for idx_laps_workout_id (REQ-DAT-034, ATT-4008)
         protected static final String CREATE_TABLE = "create table " + Laps.TABLE + " ("
                 + Laps.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + Laps.WORKOUT_ID + " int,"
@@ -438,6 +438,8 @@ public class LapsDatabaseManager {
                 + Laps.SPEED_AVERAGE_mps + " real,"
                 + Laps.NAME + " TEXT,"
                 + Laps.DESCRIPTION + " TEXT)";
+        public static final String CREATE_INDEX_WORKOUT_ID = "CREATE INDEX IF NOT EXISTS idx_laps_workout_id ON "
+                + Laps.TABLE + " (" + Laps.WORKOUT_ID + ");";
         private static final String TAG = "LapsDbHelper";
         private static final boolean DEBUG = false;
 
@@ -451,6 +453,7 @@ public class LapsDatabaseManager {
         public void onCreate(@NonNull SQLiteDatabase db) {
 
             db.execSQL(CREATE_TABLE);
+            db.execSQL(CREATE_INDEX_WORKOUT_ID);
 
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_TABLE);
         }
@@ -468,6 +471,14 @@ public class LapsDatabaseManager {
                     db.execSQL("ALTER TABLE " + Laps.TABLE + " ADD COLUMN " + Laps.DESCRIPTION + " TEXT;");
                 } catch (Exception e) {
                     Log.w(TAG, "Failed adding column " + Laps.DESCRIPTION + ", may already exist", e);
+                }
+            }
+
+            if (oldVersion < 3) {
+                try {
+                    db.execSQL(CREATE_INDEX_WORKOUT_ID);
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed creating index idx_laps_workout_id", e);
                 }
             }
 

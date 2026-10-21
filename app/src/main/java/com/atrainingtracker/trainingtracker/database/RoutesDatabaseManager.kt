@@ -333,31 +333,80 @@ class RoutesDatabaseManager private constructor(context: Context) {
         )
     }
 
-    fun getAllRoutes(): List<RouteWithPath> {
-        val routes = mutableListOf<RouteWithPath>()
+    /**
+     * Retrieves all route summaries without loading heavy path points or waypoint geometries (REQ-DAT-034, ATT-4008).
+     * Eliminates N+1 query amplification for metadata-only consumers.
+     */
+    fun getAllRouteSummaries(): List<RouteSummary> {
         val db = getDatabase()
-
-        // Index for the polyline column
         db.query(
             RouteContract.TABLE_ROUTES,
-            null, // all columns
+            null,
             null,
             null,
             null,
             null,
             null
         ).use { cursor ->
+            return mapCursorToRouteSummaries(cursor)
+        }
+    }
 
+    /**
+     * Retrieves all routes with their full coordinate path and waypoints.
+     * Uses batched queries for path points and waypoints to eliminate N+1 query amplification (REQ-DAT-034, ATT-4008).
+     */
+    fun getAllRoutes(): List<RouteWithPath> {
+        val summaries = getAllRouteSummaries()
+        if (summaries.isEmpty()) return emptyList()
+
+        val db = getDatabase()
+        val pathPointsByRoute = mutableMapOf<Long, MutableList<PathPoint>>()
+        db.query(
+            RouteContract.TABLE_ROUTE_POINTS,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "${RouteContract.COLUMN_ROUTE_ID_FK} ASC, ${RouteContract.COLUMN_POINT_ID} ASC"
+        ).use { cursor ->
+            val indices = PathPointIndices(cursor)
+            val routeIdIdx = cursor.getColumnIndexOrThrow(RouteContract.COLUMN_ROUTE_ID_FK)
             while (cursor.moveToNext()) {
-                val routeSummary = mapCursorToRouteSummary(cursor)
-                val pathPoints = getRoutePath(routeSummary.id)
-                val waypoints = getWaypointsForRoute(routeSummary.id)
-
-                routes.add(RouteWithPath(routeSummary, pathPoints, waypoints))
+                val routeId = cursor.getLong(routeIdIdx)
+                val point = mapCursorToPathPoint(cursor, indices)
+                pathPointsByRoute.getOrPut(routeId) { mutableListOf() }.add(point)
             }
         }
-        return routes
+
+        val waypointsByRoute = mutableMapOf<Long, MutableList<RouteWaypoint>>()
+        db.query(
+            RouteContract.TABLE_ROUTE_WAYPOINTS,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "${RouteContract.COLUMN_WAYPOINT_ROUTE_ID_FK} ASC, ${RouteContract.COLUMN_WAYPOINT_ID} ASC"
+        ).use { cursor ->
+            val indices = WaypointIndices(cursor)
+            while (cursor.moveToNext()) {
+                val routeId = cursor.getLong(indices.routeIdIdx)
+                val waypoint = mapCursorToRouteWaypoint(cursor, indices)
+                waypointsByRoute.getOrPut(routeId) { mutableListOf() }.add(waypoint)
+            }
+        }
+
+        return summaries.map { summary ->
+            RouteWithPath(
+                summary = summary,
+                path = pathPointsByRoute[summary.id] ?: emptyList(),
+                waypoints = waypointsByRoute[summary.id] ?: emptyList()
+            )
+        }
     }
+
 
     /**
      * Retrieves a route by its database ID.
@@ -843,6 +892,10 @@ class RoutesDatabaseManager private constructor(context: Context) {
         const val CREATE_INDEX_ROUTE_WAYPOINTS = """
         CREATE INDEX IF NOT EXISTS idx_route_waypoints_route_id ON $TABLE_ROUTE_WAYPOINTS ($COLUMN_WAYPOINT_ROUTE_ID_FK);
     """
+
+        const val CREATE_INDEX_ROUTE_POINTS = """
+        CREATE INDEX IF NOT EXISTS idx_route_points_route_id ON $TABLE_ROUTE_POINTS ($COLUMN_ROUTE_ID_FK);
+    """
     }
 
     class RoutesDbHelper(context: Context) : SQLiteOpenHelper(
@@ -860,7 +913,8 @@ class RoutesDatabaseManager private constructor(context: Context) {
             // const val DB_VERSION = 7    // Added spatial bounds (ATT-352)
             // const val DB_VERSION = 8    // Added synced_at for 7-day TTL cache retention (ATT-1177)
             // const val DB_VERSION = 9    // Ensure valid synced_at timestamp for existing Strava routes
-            const val DB_VERSION = 10   // Added route_waypoints table (REQ-MAP-026, ATT-58)
+            // const val DB_VERSION = 10   // Added route_waypoints table (REQ-MAP-026, ATT-58)
+            const val DB_VERSION = 11   // Added idx_route_points_route_id on route_points(route_id_fk) (REQ-DAT-034, ATT-4008)
 
             private const val TAG = "RoutesDbHelper"
             private val DEBUG = TrainingApplication.getDebug(true)
@@ -870,6 +924,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(RouteContract.CREATE_TABLE_ROUTES)
             db.execSQL(RouteContract.CREATE_TABLE_ROUTE_POINTS)
+            db.execSQL(RouteContract.CREATE_INDEX_ROUTE_POINTS)
             db.execSQL(RouteContract.CREATE_TABLE_ROUTE_WAYPOINTS)
             db.execSQL(RouteContract.CREATE_INDEX_ROUTE_WAYPOINTS)
         }
@@ -932,6 +987,15 @@ class RoutesDatabaseManager private constructor(context: Context) {
                     db.execSQL(RouteContract.CREATE_INDEX_ROUTE_WAYPOINTS)
                 } catch (e: Exception) {
                     Log.w(TAG, "Error creating route_waypoints table: ${e.message}")
+                }
+            }
+
+            if (oldVersion < 11) {
+                Log.i(TAG, "Upgrading Routes DB to Version 11 (Adding idx_route_points_route_id)")
+                try {
+                    db.execSQL(RouteContract.CREATE_INDEX_ROUTE_POINTS)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error creating idx_route_points_route_id index: ${e.message}")
                 }
             }
         }
