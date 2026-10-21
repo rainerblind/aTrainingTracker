@@ -36,6 +36,7 @@ import com.google.maps.android.PolyUtil
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -92,8 +93,13 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
         }
     }
 
+    private var loadJob: Job? = null
+    @androidx.annotation.VisibleForTesting
+    internal val currentLoadJob: Job? get() = loadJob
+
     fun loadAftermathData(workoutData: WorkoutData) {
-        viewModelScope.launch(ioDispatcher) {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch(ioDispatcher) {
             val workoutId = workoutData.id
             val bSportType = workoutData.bSportType
 

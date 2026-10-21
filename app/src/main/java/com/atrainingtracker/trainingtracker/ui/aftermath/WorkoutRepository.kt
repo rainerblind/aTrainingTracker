@@ -74,9 +74,11 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionD
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneSample
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -1385,6 +1387,8 @@ class WorkoutRepository private constructor(private val application: Application
                 Log.e(TAG, "Disk full during crop operation for workout $workoutId", e)
                 reloadWorkoutData(workoutId)
                 Result.failure(e)
+            } catch (ce: CancellationException) {
+                throw ce
             } catch (t: Throwable) {
                 Log.e(TAG, "Unexpected error during crop operation for workout $workoutId", t)
                 reloadWorkoutData(workoutId)
@@ -2042,15 +2046,17 @@ class WorkoutRepository private constructor(private val application: Application
 
                 val success = deletionHelper.deleteOldWorkouts(daysToKeep, progressCallback)
 
-                // After deleting, reload workouts and resynchronize downstream analytical caches (REQ-DAT-011).
+                // After deleting, reload workouts and resynchronize downstream analytical caches (REQ-DAT-011, REQ-UI-427.4).
                 if (success) {
-                    _deletionProgress.postValue(DeletionProgress.Resyncing)
-                    notificationManager.showResyncNotification()
+                    withContext(NonCancellable) {
+                        _deletionProgress.postValue(DeletionProgress.Resyncing)
+                        notificationManager.showResyncNotification()
 
-                    loadAllWorkouts()
-                    PeriodsRepository.getInstance(application).resyncAllPeriods()
-                    WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false, forceCheckIntegrity = true)
-                    WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)
+                        loadAllWorkouts()
+                        PeriodsRepository.getInstance(application).resyncAllPeriods()
+                        WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false, forceCheckIntegrity = true)
+                        WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)
+                    }
                 }
             } finally {
                 // Reset the state to Idle when done or if an error occurs.

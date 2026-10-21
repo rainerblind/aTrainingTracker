@@ -130,4 +130,28 @@ class WorkoutSummariesTabbedScreenTest {
             content.contains("contentWindowInsets = WindowInsets(0.dp)")
         )
     }
+
+    @Test
+    fun testWorkoutSummariesTabbedScreen_processDeathRestore_triggersLoadAftermathData() {
+        assertTrue("WorkoutSummariesTabbedScreen.kt must exist", workoutSummariesTabbedScreenFile.exists())
+        val content = workoutSummariesTabbedScreenFile.readText()
+
+        assertTrue(
+            "WorkoutSummariesTabbedScreen must observe selectedWorkoutIdForDetails and restore aftermath data (REQ-UI-427.2, TST-UI-392.2)",
+            content.contains("LaunchedEffect(selectedWorkoutIdForDetails, selectedWorkoutForDetails)") &&
+            content.contains("trackOnMapViewModel.loadAftermathData(selectedWorkoutForDetails)")
+        )
+    }
+
+    @Test
+    fun testWorkoutSummariesTabbedScreen_editWorkout_scopesViewModelStoreOwner() {
+        assertTrue("WorkoutSummariesTabbedScreen.kt must exist", workoutSummariesTabbedScreenFile.exists())
+        val content = workoutSummariesTabbedScreenFile.readText()
+
+        assertTrue(
+            "WorkoutSummariesTabbedScreen must scope EditWorkoutViewModel to a disposable ViewModelStoreOwner (REQ-UI-427.5, TST-UI-392.6)",
+            content.contains("LocalViewModelStoreOwner provides editStoreOwner") &&
+            content.contains("editStoreOwner.viewModelStore.clear()")
+        )
+    }
 }

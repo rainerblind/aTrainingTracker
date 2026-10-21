@@ -271,6 +271,41 @@ class WorkoutClustersViewModelTest {
     }
 
     @Test
+    fun selectWorkoutForPeek_cancelsPreviousInFlightJob() = runTest(testDispatcher) {
+        val cluster = createCluster(10L, "Isar Trail")
+        val workout1 = createWorkout(101L, 10L)
+        val workout2 = createWorkout(102L, 10L)
+
+        coEvery { mockClusterRepo.getWorkoutsForCluster(10L) } returns listOf(workout1, workout2)
+        coEvery { mockRoutesRepo.getRouteByClusterId(10L) } returns null
+        coEvery { mockClusterRepo.getWorkoutTrackPoints(any(), any()) } coAnswers {
+            kotlinx.coroutines.delay(1000)
+            emptyList()
+        }
+        coEvery { mockWorkoutRepo.getWorkoutMarkers(any()) } returns emptyList()
+
+        val viewModel = WorkoutClustersViewModel(mockApplication)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        viewModel.selectCluster(cluster)
+        viewModel.mapState.first { !it.isLoading && it.tracks.isNotEmpty() }
+        advanceUntilIdle()
+
+        viewModel.selectWorkoutForPeek(101L)
+        val firstJob = viewModel.currentPeekJob
+        assertNotNull(firstJob)
+        assertTrue(firstJob!!.isActive)
+
+        viewModel.selectWorkoutForPeek(102L)
+        assertTrue("Previous peek job must be cancelled", firstJob.isCancelled)
+        val secondJob = viewModel.currentPeekJob
+        assertNotNull(secondJob)
+        assertTrue(secondJob!!.isActive)
+        advanceUntilIdle()
+    }
+
+    @Test
     fun selectCluster_whenNull_clearsClusterWorkoutsAndPeekSelection() = runTest(testDispatcher) {
         val cluster = createCluster(10L, "Isar Trail")
         val workout = createWorkout(101L, 10L)

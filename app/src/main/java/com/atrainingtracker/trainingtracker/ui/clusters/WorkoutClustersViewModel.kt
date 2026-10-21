@@ -378,11 +378,16 @@ class WorkoutClustersViewModel(
     }
 
     // --- PEEK / BOTTOM SHEET STATE (SCRUM-196) ---
+    private var peekJob: Job? = null
+    @androidx.annotation.VisibleForTesting
+    internal val currentPeekJob: Job? get() = peekJob
+
     private val _peekedWorkoutDataWithTrack = MutableStateFlow<WorkoutDataWithTrack?>(null)
     val peekedWorkoutDataWithTrack: StateFlow<WorkoutDataWithTrack?> = _peekedWorkoutDataWithTrack.asStateFlow()
 
     fun selectWorkoutForPeek(id: Long) {
-        viewModelScope.launch {
+        peekJob?.cancel()
+        peekJob = viewModelScope.launch {
             val workout = _clusterWorkouts.value.find { it.id == id } 
                 ?: _unclusteredWorkouts.value.find { it.id == id }
 
@@ -395,6 +400,7 @@ class WorkoutClustersViewModel(
     }
 
     fun clearPeekSelection() {
+        peekJob?.cancel()
         _peekedWorkoutDataWithTrack.value = null
     }
 

@@ -129,8 +129,10 @@ class CropWorkoutViewModel(
         val current = _uiState.value
         if (!current.isValid || current.isCropping) return
 
+        // Synchronous double-tap guard (REQ-UI-427.4)
+        _uiState.update { it.copy(isCropping = true) }
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isCropping = true) }
             val result = repository.cropWorkout(workoutId, current.startIndex, current.endIndex)
             _uiState.update { it.copy(isCropping = false) }
 

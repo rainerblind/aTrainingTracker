@@ -365,6 +365,7 @@ fun ElevationProfile(
     val currentUpdateZoomState by rememberUpdatedState(updateZoom)
     val currentOnDistanceSelectedState by rememberUpdatedState(onDistanceSelected)
     val currentOnPointSelectedState by rememberUpdatedState(onPointSelected)
+    val currentPathPointsState by rememberUpdatedState(pathPoints)
 
     var lastTapTime by remember { mutableLongStateOf(0L) }
 
@@ -589,12 +590,13 @@ fun ElevationProfile(
                                         canvasWidth = chartWidthPx,
                                         totalDist = totalSpan
                                     )
+                                    val activePoints = currentPathPointsState
                                     val activeIndex = if (isTimeDomain) {
-                                        pathPoints.indexOfLast { it.timeSec.toDouble() <= selectedValue }.coerceAtLeast(0)
+                                        activePoints.indexOfLast { it.timeSec.toDouble() <= selectedValue }.coerceAtLeast(0)
                                     } else {
-                                        pathPoints.indexOfLast { it.distance <= selectedValue }.coerceAtLeast(0)
+                                        activePoints.indexOfLast { it.distance <= selectedValue }.coerceAtLeast(0)
                                     }
-                                    val activePoint = pathPoints.getOrNull(activeIndex) ?: pathPoints.firstOrNull()
+                                    val activePoint = activePoints.getOrNull(activeIndex) ?: activePoints.firstOrNull()
                                     currentOnDistanceSelectedState(activePoint?.distance ?: selectedValue)
                                     currentOnPointSelectedState?.invoke(activePoint)
                                 }
@@ -633,12 +635,13 @@ fun ElevationProfile(
                                     canvasWidth = chartWidthPx,
                                     totalDist = totalSpan
                                 )
+                                val activePoints = currentPathPointsState
                                 val activeIndex = if (isTimeDomain) {
-                                    pathPoints.indexOfLast { it.timeSec.toDouble() <= selectedValue }.coerceAtLeast(0)
+                                    activePoints.indexOfLast { it.timeSec.toDouble() <= selectedValue }.coerceAtLeast(0)
                                 } else {
-                                    pathPoints.indexOfLast { it.distance <= selectedValue }.coerceAtLeast(0)
+                                    activePoints.indexOfLast { it.distance <= selectedValue }.coerceAtLeast(0)
                                 }
-                                val activePoint = pathPoints.getOrNull(activeIndex) ?: pathPoints.firstOrNull()
+                                val activePoint = activePoints.getOrNull(activeIndex) ?: activePoints.firstOrNull()
                                 currentOnDistanceSelectedState(activePoint?.distance ?: selectedValue)
                                 currentOnPointSelectedState?.invoke(activePoint)
                             }
