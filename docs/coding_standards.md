@@ -150,16 +150,20 @@ This document serves as the authoritative living source of truth for software en
   * Enabling default return values causes unmocked Android framework methods to silently return `null`, `0`, or `false`, masking severe regressions, null pointer exceptions, and incorrect control flow.
   * Every Android SDK dependency in unit tests must be explicitly mocked (e.g. via MockK, Robolectric, or clean architectural abstraction).
 
-### 5.2 Phased Execution: Stage 4 vs Stage 5
-* **Stage 4 Construction (Fast Unit Loop)**:
-  * During Stage 4 implementation, execute targeted unit test classes (5–15 seconds):
+### 5.2 Two-Tier Unit Test Execution Strategy: Per-Ticket vs Sprint Integration Gate (Rule 60 — ATT-4465)
+* **Tier 1 — Per-Ticket Verification (Stages 4 & 5, ~10–20 Seconds)**:
+  * During Stage 4 construction and Stage 5 ticket verification, execute targeted unit and contract test classes covering all modified and directly adjacent packages:
     ```bash
     ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.specific.*"
     ```
-  * Maintain rapid developer velocity without running the full 430+ class test suite on every minor code edit.
-* **Stage 5 Verification (Clean-Room Full Suite)**:
-  * In Stage 5, execute the full clean-room test suite:
+  * Whenever any `strings.xml` resource file is modified, also run `TranslationParityTest` (~3s):
+    ```bash
+    ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"
+    ```
+  * **High-Risk Exception**: Run the full `./gradlew testDebugUnitTest` suite per-ticket *only* for High-Risk cross-cutting changes touching core shared infrastructure (`TrainingApplication`, `TrackerService`, `BANALService`, or SQLite database schema migrations).
+* **Tier 2 — Sprint Integration Gate (Once per Sprint in `Review & Retro` Before Merging `sprint/<ID>` into `develop`, ~4 Minutes)**:
+  * During the Sprint `Review & Retro` ceremony before merging `sprint/<SPRINT_NAME>` into `develop`, execute the full clean-room test suite:
     ```bash
     ./gradlew testDebugUnitTest
     ```
-  * Verify 100% pass rate across all project modules before presenting the ticket for Human Review.
+  * Verify 100% pass rate across all 3,660+ unit tests across all project modules. Because each ticket is squashed into a single atomic commit on `sprint/<SPRINT_NAME>` (Core Rule 8), any cross-package regression caught at the Sprint Integration Gate can be pinpointed immediately.

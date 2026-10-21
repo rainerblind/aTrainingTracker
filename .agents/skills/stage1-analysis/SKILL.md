@@ -26,16 +26,16 @@ At Ticket Start (`ATT-XXXX`), spawn two persistent `TypeName: "self"` subagents 
      - `Preservation of Core Invariants`
 3. **User Scope Grounding (`ATT-1250`)**:
    - Explicitly delineate in-scope objectives from out-of-scope adjacent refactorings to prevent scope creep.
-4. **Single-Turn Stage Submission (`submit-stage`)**:
-   - Author `docs/engineering/analysis/<TICKET_KEY>_analysis.md` using `templates/analysis_template.md`.
+4. **Single-Turn Stage Submission (`submit-stage`) & Concise Deliverable Cap (Rule 60)**:
+   - Author `docs/engineering/analysis/<TICKET_KEY>_analysis.md` using `templates/analysis_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**—do not repeat the ticket description verbatim or add narrative filler.
    - Submit Stage 1 in a single composite CLI call (creates/updates `[Analysis]` sub-task and moves it to `In Überprüfung`):
      ```bash
      python3 tools/jira_util.py --as agent1 submit-stage <TICKET_KEY> 1 @docs/engineering/analysis/<TICKET_KEY>_analysis.md
      ```
    - **One Commit per Ticket (Core Rule 8)**: Do not create an intermediate git commit for Stage 1; keep changes on the working branch until Stage 5.
 
-## Gate 1 Independent Review Checklist (`subagent_flash` as `agent2` — `flash`)
-Instruct the ticket's persistent `subagent_flash` (`Model: "flash"`) to audit the Stage 1 deliverable against the codebase using this checklist and record the verdict via `--as agent2 gate-verdict`:
+## Gate 1 Independent Review Checklist (`subagent_flash` as `agent2` — `flash`, Fused with Stage 2 Doing)
+Instruct the ticket's persistent `subagent_flash` (`Model: "flash"`) to audit the Stage 1 deliverable against the codebase using this checklist, record the verdict via `--as agent2 gate-verdict`, and **immediately execute Stage 2 Doing (`--as agent1`) in the same turn if Gate 1 is `PASS`**:
 1. **Scrutinize Problem Domain & Analysis**:
    - For bug tickets: Stress-test RCA conclusions (symptoms vs. cause, call-site audit, reproducible traces).
    - For features/improvements: Verify deep domain comprehension, user motivation, scope boundaries, and architectural side effects.
@@ -43,12 +43,12 @@ Instruct the ticket's persistent `subagent_flash` (`Model: "flash"`) to audit th
 2. **Call Site Audit**: Verify that all affected callers, classes, and resources are identified in the codebase.
 3. **Requirement Mapping Audit**: Check mapped Requirement IDs against `docs/requirements.md`.
 4. **System Invariants Verification**: Confirm explicit system invariants (what existing behavior, data precision, schema, or API contracts MUST NOT change).
-5. **Risk Rating & Gate Verdict (`gate-verdict`)**:
+5. **Risk Rating & Gate Verdict (`gate-verdict`) + Fused Stage 2 Continuation (Rule 60)**:
    - Assign risk rating (`LOW`, `MEDIUM`, `HIGH`) with technical justification and record the verdict in a single composite CLI call (which closes the sub-task to `Erledigt`, advances the parent ticket to `Test Spec`, and automatically injects `stage2-req-test-spec/SKILL.md` into stdout):
      ```bash
      python3 tools/jira_util.py --as agent2 gate-verdict <ANALYSIS_SUBTASK_KEY> PASS "<Audit Report>"
      ```
-     *(Or `REVISION` if changes are required.)*
+   - If `PASS`, **immediately proceed in the same turn** to execute Stage 2 (`--as agent1`) following the injected `stage2-req-test-spec/SKILL.md`. *(If `REVISION`, stop and report back.)*
 
 ## Deliverable Template
 Use the standardized markdown template located at:

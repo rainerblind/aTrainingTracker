@@ -135,8 +135,8 @@ Jointly review all completed sprint tickets with the human user against expectat
          python3 tools/jira_util.py comment <KEY> "Revision needed: [Human feedback]"
          python3 tools/jira_util.py move <KEY> "analysis"
          ```
-4. **Sprint Retrospective & Process Hardening ("Retro Before Merge")**:
-   * **Mandate**: Conduct the Retrospective and update governance documents on `sprint/<SPRINT_NAME>` **BEFORE** merging into `develop`.
+4. **Sprint Retrospective, Tier 2 Sprint Integration Gate & Process Hardening ("Retro Before Merge")**:
+   * **Mandate**: Conduct the Retrospective, run the Tier 2 Sprint Integration Gate (`./gradlew testDebugUnitTest` if not already verified on the head of `sprint/<SPRINT_NAME>`), and update governance documents on `sprint/<SPRINT_NAME>` **BEFORE** merging into `develop`.
    * Synthesize real-time comments logged during the sprint in the `Review & Retro` ticket into actionable root cause analyses.
    * Document insights in `docs/engineering/Sprint_Review_and_Retro_<KEY>.md`.
    * Update `.agents/rules/aspice_governance.md`, relevant skills, `docs/coding_standards.md`, `docs/design_guidelines.md`, and `docs/engineering/rule_history_archive.md` with permanent countermeasures.

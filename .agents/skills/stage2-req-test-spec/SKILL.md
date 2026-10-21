@@ -24,16 +24,16 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
    - Synchronize `docs/tests.md` with the new test definition.
 3. **Traceability Matrix**:
    - Map all test cases to requirement IDs in a structured markdown table.
-4. **Single-Turn Stage Submission (`submit-stage`)**:
-   - Author `docs/engineering/test_specs/<TICKET_KEY>_test_spec.md` using `templates/test_spec_template.md`.
+4. **Single-Turn Stage Submission (`submit-stage`) & Concise Deliverable Cap (Rule 60)**:
+   - Author `docs/engineering/test_specs/<TICKET_KEY>_test_spec.md` using `templates/test_spec_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**.
    - Submit Stage 2 in a single composite CLI call (creates/updates `[Req & Test Spec]` sub-task and moves it to `In Überprüfung`):
      ```bash
      python3 tools/jira_util.py --as agent1 submit-stage <TICKET_KEY> 2 @docs/engineering/test_specs/<TICKET_KEY>_test_spec.md
      ```
    - **One Commit per Ticket (Core Rule 8)**: Do not create an intermediate git commit for Stage 2; keep changes on the working branch until Stage 5.
 
-## Gate 2 Independent Review Checklist (`subagent_pro` as `agent2` — `pro`)
-Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Stage 2 deliverable and living documentation against this checklist and record the verdict via `--as agent2 gate-verdict`:
+## Gate 2 Independent Review Checklist (`subagent_pro` as `agent2` — `pro`, Fused with Stage 3 Doing)
+Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Stage 2 deliverable and living documentation against this checklist, record the verdict via `--as agent2 gate-verdict`, and **immediately execute Stage 3 Doing (`--as agent1`) in the same turn if Gate 2 is `PASS`**:
 1. **Requirement Phrasing Standards**:
    - Verify standard syntax: `SHALL` for functional behavior, `MUST` for technical constraints.
    - Verify atomic, unambiguous, system-centric, and state-oriented descriptions (not implementation steps).
@@ -50,12 +50,12 @@ Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Sta
      - `Root Reason for Existing Formulation` ("Why was this fence built?")
      - `Preservation of Core Invariants` ("Why is it safe to modify now?")
    - Net-new requirements (novel IDs absent from base) are exempt from this hurdle.
-4. **Gate Verdict (`gate-verdict`)**:
+4. **Gate Verdict (`gate-verdict`) + Fused Stage 3 Continuation (Rule 60)**:
    - Record the verdict in a single composite CLI call (which closes the sub-task to `Erledigt`, advances the parent ticket to `Implementation Plan`, and automatically injects `stage3-impl-plan/SKILL.md` into stdout):
      ```bash
      python3 tools/jira_util.py --as agent2 gate-verdict <TEST_SPEC_SUBTASK_KEY> PASS "<Audit Report>"
      ```
-     *(Or `REVISION` if changes are required.)*
+   - If `PASS`, **immediately proceed in the same turn** to execute Stage 3 (`--as agent1`) following the injected `stage3-impl-plan/SKILL.md`. *(If `REVISION`, stop and report back.)*
 
 ## Deliverable Template
 Use the standardized markdown template located at:
