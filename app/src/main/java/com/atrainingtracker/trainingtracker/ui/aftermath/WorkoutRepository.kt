@@ -62,6 +62,7 @@ import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
+import com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMath
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -316,6 +317,32 @@ class WorkoutRepository private constructor(private val application: Application
      * @param trackType The specific track provider to retrieve (BEST, GPS, FUSED, NETWORK).
      * @return A list of [PathPoint] objects containing distance, location, and altitude.
      */
+    /**
+     * DTO containing consolidated telemetry tracks and zone distributions (ATT-4003 / REQ-DAT-033).
+     */
+    data class WorkoutDetailTelemetry(
+        val tracks: Map<TrackType, List<PathPoint>>,
+        val hrZoneDistribution: ZoneDistributionData?,
+        val powerZoneDistribution: ZoneDistributionData?
+    )
+
+    private fun getExistingColumns(db: android.database.sqlite.SQLiteDatabase, tableName: String): Set<String> {
+        val cols = mutableSetOf<String>()
+        try {
+            db.rawQuery("PRAGMA table_info($tableName)", null).use { c ->
+                val nameIdx = c.getColumnIndex("name")
+                if (nameIdx >= 0) {
+                    while (c.moveToNext()) {
+                        cols.add(c.getString(nameIdx))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to inspect columns for table $tableName", e)
+        }
+        return cols
+    }
+
     suspend fun getWorkoutTrackPoints(
         workoutId: Long,
         trackType: TrackType
@@ -335,11 +362,29 @@ class WorkoutRepository private constructor(private val application: Application
             return@withContext emptyList()
         }
 
+        val existingColumns = getExistingColumns(db, tableName)
         val latName = trackType.latitudeColumn
         val lonName = trackType.longitudeColumn
+        if (latName !in existingColumns || lonName !in existingColumns) {
+            return@withContext emptyList()
+        }
 
+        val candidateCols = listOf(
+            latName, lonName,
+            SensorType.ALTITUDE.name,
+            SensorType.DISTANCE_m.name,
+            SensorType.TIME_ACTIVE.name,
+            SensorType.TIME_TOTAL.name,
+            WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME,
+            SensorType.HR.name,
+            SensorType.POWER.name,
+            SensorType.SPEED_mps.name,
+            SensorType.SLOPE.name,
+            SensorType.W_PRIME_BAL.name
+        )
+        val projection = candidateCols.filter { it in existingColumns }.toTypedArray()
 
-        db.query(tableName, null, null, null, null, null, null).use { cursor ->
+        db.query(tableName, projection, null, null, null, null, null).use { cursor ->
 
             val latIdx = cursor.getColumnIndex(latName)
             val lonIdx = cursor.getColumnIndex(lonName)
@@ -520,7 +565,11 @@ class WorkoutRepository private constructor(private val application: Application
         val baseFileName = summariesManager.getBaseFileName(workoutId) ?: return@withContext null
         if (!samplesManager.existsTable(baseFileName)) return@withContext null
 
+        val db = samplesManager.database
         val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val existingColumns = getExistingColumns(db, tableName)
+        if (SensorType.HR.name !in existingColumns) return@withContext null
+
         val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
 
         val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
@@ -529,10 +578,16 @@ class WorkoutRepository private constructor(private val application: Application
         val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
         val thresholds = HeartRateZoneThresholds(z1, z2, z3, z4)
 
+        val candidateCols = listOf(
+            SensorType.HR.name,
+            SensorType.TIME_ACTIVE.name,
+            SensorType.TIME_TOTAL.name,
+            WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME
+        )
+        val projection = candidateCols.filter { it in existingColumns }.toTypedArray()
         val samples = mutableListOf<ZoneSample>()
-        val db = samplesManager.database
 
-        db.query(tableName, null, null, null, null, null, null).use { cursor ->
+        db.query(tableName, projection, null, null, null, null, null).use { cursor ->
             val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
             if (hrIdx == -1) return@withContext null
 
@@ -581,7 +636,11 @@ class WorkoutRepository private constructor(private val application: Application
         val baseFileName = summariesManager.getBaseFileName(workoutId) ?: return@withContext null
         if (!samplesManager.existsTable(baseFileName)) return@withContext null
 
+        val db = samplesManager.database
         val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val existingColumns = getExistingColumns(db, tableName)
+        if (SensorType.POWER.name !in existingColumns) return@withContext null
+
         val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
 
         val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
@@ -592,10 +651,16 @@ class WorkoutRepository private constructor(private val application: Application
         val z6 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6)
         val thresholds = PowerZoneThresholds(z1, z2, z3, z4, z5, z6)
 
+        val candidateCols = listOf(
+            SensorType.POWER.name,
+            SensorType.TIME_ACTIVE.name,
+            SensorType.TIME_TOTAL.name,
+            WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME
+        )
+        val projection = candidateCols.filter { it in existingColumns }.toTypedArray()
         val samples = mutableListOf<ZoneSample>()
-        val db = samplesManager.database
 
-        db.query(tableName, null, null, null, null, null, null).use { cursor ->
+        db.query(tableName, projection, null, null, null, null, null).use { cursor ->
             val pwrIdx = cursor.getColumnIndex(SensorType.POWER.name)
             if (pwrIdx == -1) return@withContext null
 
@@ -629,6 +694,169 @@ class WorkoutRepository private constructor(private val application: Application
         }
 
         ZoneDistributionCalculator.calculatePowerDistribution(samples, thresholds)
+    }
+
+    /**
+     * ATT-4003 / REQ-DAT-033: Consolidated single-pass extraction of tracks and zone telemetry.
+     * Replaces multiple unprojected table scans across track types and zone distributions
+     * with a single projected query over the workout's samples table.
+     */
+    suspend fun loadWorkoutDetailTelemetry(
+        workoutId: Long,
+        bSportType: BSportType?
+    ): WorkoutDetailTelemetry = withContext(Dispatchers.IO) {
+        val baseFileName = summariesManager.getBaseFileName(workoutId)
+            ?: return@withContext WorkoutDetailTelemetry(emptyMap(), null, null)
+
+        val db = samplesManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        if (!samplesManager.existsTable(baseFileName)) {
+            return@withContext WorkoutDetailTelemetry(emptyMap(), null, null)
+        }
+
+        val existingColumns = getExistingColumns(db, tableName)
+
+        val availableTrackTypes = TrackType.entries.filter { type ->
+            type.latitudeColumn in existingColumns && type.longitudeColumn in existingColumns
+        }
+
+        val hasHr = SensorType.HR.name in existingColumns
+        val hasPower = SensorType.POWER.name in existingColumns
+
+        if (availableTrackTypes.isEmpty() && !hasHr && !hasPower) {
+            return@withContext WorkoutDetailTelemetry(emptyMap(), null, null)
+        }
+
+        val hrThresholds = if (hasHr) {
+            val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+            HeartRateZoneThresholds(z1, z2, z3, z4)
+        } else null
+
+        val powerThresholds = if (hasPower) {
+            val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+            val z5 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 5)
+            val z6 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6)
+            PowerZoneThresholds(z1, z2, z3, z4, z5, z6)
+        } else null
+
+        val projectionSet = mutableSetOf<String>()
+        for (type in availableTrackTypes) {
+            projectionSet.add(type.latitudeColumn)
+            projectionSet.add(type.longitudeColumn)
+        }
+        val commonCols = listOf(
+            SensorType.ALTITUDE.name,
+            SensorType.DISTANCE_m.name,
+            SensorType.TIME_ACTIVE.name,
+            SensorType.TIME_TOTAL.name,
+            WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME,
+            SensorType.HR.name,
+            SensorType.POWER.name,
+            SensorType.SPEED_mps.name,
+            SensorType.SLOPE.name,
+            SensorType.W_PRIME_BAL.name
+        )
+        for (col in commonCols) {
+            if (col in existingColumns) projectionSet.add(col)
+        }
+
+        val projection = projectionSet.toTypedArray()
+        val trackPointsMap = availableTrackTypes.associateWith { ArrayList<PathPoint>() }
+        val hrSamples = if (hasHr) mutableListOf<ZoneSample>() else null
+        val powerSamples = if (hasPower) mutableListOf<ZoneSample>() else null
+
+        db.query(tableName, projection, null, null, null, null, null).use { cursor ->
+            val colIndices = availableTrackTypes.associateWith { type ->
+                Pair(cursor.getColumnIndex(type.latitudeColumn), cursor.getColumnIndex(type.longitudeColumn))
+            }
+            val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
+            val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
+            val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
+            val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+            val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+            val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+            val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+            val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
+            val slopeIdx = cursor.getColumnIndex(SensorType.SLOPE.name)
+            val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
+
+            var initialEpochSec: Long? = null
+            var sampleIndex = 0L
+
+            while (cursor.moveToNext()) {
+                val timeSec = when {
+                    timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                    timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                    timeIdx != -1 && !cursor.isNull(timeIdx) -> {
+                        val (offset, anchor) = parseTimestampOffset(cursor.getString(timeIdx), initialEpochSec)
+                        initialEpochSec = anchor
+                        offset ?: sampleIndex
+                    }
+                    else -> sampleIndex
+                }
+
+                val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
+                val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else 0.0
+                val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
+                val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
+                val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
+                val slope = if (slopeIdx != -1 && !cursor.isNull(slopeIdx)) cursor.getDouble(slopeIdx) else null
+                val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
+
+                for (type in availableTrackTypes) {
+                    val (latIdx, lonIdx) = colIndices[type] ?: continue
+                    if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                        trackPointsMap[type]?.add(
+                            PathPoint(
+                                distance = dist,
+                                latLng = LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)),
+                                altitude = alt,
+                                timeSec = timeSec,
+                                hr = hr,
+                                power = power,
+                                speedMps = speed,
+                                slope = slope,
+                                wPrimeBalKj = wPrimeBal
+                            )
+                        )
+                    }
+                }
+
+                if (hr != null && hr > 0) {
+                    hrSamples?.add(ZoneSample(timeActiveSec = timeSec, value = hr))
+                }
+                if (power != null && power > 0) {
+                    powerSamples?.add(ZoneSample(timeActiveSec = timeSec, value = power))
+                }
+                sampleIndex++
+            }
+        }
+
+        val enrichedTracks = availableTrackTypes.associateWith { type ->
+            enrichPointsWithWPrimeBal(trackPointsMap[type] ?: emptyList())
+        }
+
+        val hrDistribution = if (hrSamples != null && hrThresholds != null) {
+            ZoneDistributionCalculator.calculateHeartRateDistribution(hrSamples, hrThresholds)
+        } else null
+
+        val powerDistribution = if (powerSamples != null && powerThresholds != null) {
+            ZoneDistributionCalculator.calculatePowerDistribution(powerSamples, powerThresholds)
+        } else null
+
+        WorkoutDetailTelemetry(
+            tracks = enrichedTracks,
+            hrZoneDistribution = hrDistribution,
+            powerZoneDistribution = powerDistribution
+        )
     }
 
     private val extremaSensorTypes = arrayOf(

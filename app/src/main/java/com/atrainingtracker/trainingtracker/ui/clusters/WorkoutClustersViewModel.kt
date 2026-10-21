@@ -45,6 +45,7 @@ import com.atrainingtracker.trainingtracker.ui.map.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -82,7 +83,10 @@ data class ClusterMapState(
  * Architectural Role: Presentation layer for recurring spatial patterns.
  * Threading: Intensive map data processing is offloaded to [Dispatchers.Default].
  */
-class WorkoutClustersViewModel(application: Application) : AndroidViewModel(application) {
+class WorkoutClustersViewModel(
+    application: Application,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : AndroidViewModel(application) {
 
     private val repository = WorkoutClusterRepository.getInstance(application)
     private val routesRepository = RoutesRepository.getInstance(application)
@@ -94,6 +98,21 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     val allClusters: StateFlow<List<WorkoutCluster>> = repository.allClusters
     val knownLocations: StateFlow<List<KnownLocationItem>> = knownLocationsRepo.locationsFlow
     val currentLocation: StateFlow<LatLng?> = banalRepository.currentLocation
+
+    val linkedEquipmentBySport: StateFlow<Map<Long, Set<String>>> = allClusters
+        .map { clusters ->
+            val sportIds = clusters.map { it.probableSportId }.toSet()
+            sportIds.associateWith { sportId ->
+                val sportName = repository.getSportName(sportId)
+                discoveryManager.getEquipmentNamesForSport(sportName)
+            }
+        }
+        .flowOn(ioDispatcher)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = emptyMap()
+        )
 
     private val _clusterWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val clusterWorkouts: StateFlow<List<WorkoutData>> = _clusterWorkouts.asStateFlow()
@@ -486,6 +505,13 @@ class WorkoutClustersViewModel(application: Application) : AndroidViewModel(appl
     fun getLinkedEquipmentSet(sportId: Long): Set<String> {
         val sportName = getSportName(sportId)
         return discoveryManager.getEquipmentNamesForSport(sportName)
+    }
+
+    /**
+     * Non-blocking cached accessor for sport-to-equipment associations (REQ-DAT-033 / ATT-4003).
+     */
+    fun getLinkedEquipmentSetCached(sportId: Long): Set<String> {
+        return linkedEquipmentBySport.value[sportId] ?: getLinkedEquipmentSet(sportId)
     }
 
     /**

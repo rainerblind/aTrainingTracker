@@ -44,7 +44,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -329,6 +332,30 @@ class WorkoutClustersViewModelTest {
 
         assertEquals(99L, viewModel.selectedCluster.value?.id)
         assertEquals("Evening Commute", viewModel.selectedCluster.value?.name)
+    }
+
+    @Test
+    fun testLinkedEquipmentBySport_precomputesEquipmentMappingWithoutMainThreadDb() = runTest(testDispatcher) {
+        val cluster1 = createCluster(101L, "Isar Trail").copy(probableSportId = 2L)
+        val cluster2 = createCluster(102L, "Forstenrieder").copy(probableSportId = 3L)
+        allClustersFlow.value = listOf(cluster1, cluster2)
+
+        every { mockClusterRepo.getSportName(2L) } returns "Running"
+        every { mockClusterRepo.getSportName(3L) } returns "Cycling"
+        every { mockDiscovery.getEquipmentNamesForSport("Running") } returns setOf("Running Shoes A", "Running Shoes B")
+        every { mockDiscovery.getEquipmentNamesForSport("Cycling") } returns setOf("Road Bike")
+
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        val map = viewModel.linkedEquipmentBySport.value
+        assertEquals(2, map.size)
+        assertEquals(setOf("Running Shoes A", "Running Shoes B"), map[2L])
+        assertEquals(setOf("Road Bike"), map[3L])
+
+        // Cached accessor returns precomputed set
+        assertEquals(setOf("Road Bike"), viewModel.getLinkedEquipmentSetCached(3L))
     }
 }
 

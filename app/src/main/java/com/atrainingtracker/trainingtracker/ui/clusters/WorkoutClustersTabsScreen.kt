@@ -72,6 +72,7 @@ fun WorkoutClustersTabsScreen(
     val isLocationAvailable by viewModel.isLocationAvailable.collectAsState()
     val knownLocations by viewModel.knownLocations.collectAsState()
     val clusterStats by viewModel.clusterStats.collectAsState()
+    val linkedEquipmentBySport by viewModel.linkedEquipmentBySport.collectAsState()
 
     var showFilterBottomSheet by rememberSaveable { mutableStateOf(false) }
     var showInfoDialog by rememberSaveable { mutableStateOf(false) }
@@ -160,7 +161,7 @@ fun WorkoutClustersTabsScreen(
                         sportFilteredClusters
                     } else {
                         sportFilteredClusters.filter { cluster ->
-                            val linkedEquipment = viewModel.getLinkedEquipmentSet(cluster.probableSportId)
+                            val linkedEquipment = linkedEquipmentBySport[cluster.probableSportId] ?: emptySet()
                             val elevation = clusterStats[cluster.id]?.avgAscentMeters?.toDouble() ?: 0.0
                             filterCriteria.matches(cluster, linkedEquipment, elevation)
                         }
@@ -387,10 +388,7 @@ fun WorkoutClustersTabsScreen(
             // Synchronized look & feel (SCRUM-208): Using default M3 colors to match SportTypes/Equipment
             FloatingActionButton(
                 onClick = onAddClick,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-                    .navigationBarsPadding()
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).navigationBarsPadding()
             ) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
             }

@@ -762,24 +762,107 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     /**
-     * ATT-440: Direct database-driven workout fetching for a specific time range.
-     * Guaranteed "Source of Truth" independent of progressive history scans.
+     * ATT-440 / ATT-4003 / REQ-DAT-033: Direct database-driven workout fetching for a specific time range.
+     * Uses batch snapshot extraction, pre-fetched metadata, and non-reconciling mapping (reconcile = false)
+     * to eliminate N+1 database queries and read-time SQLite writes.
      */
     fun getWorkoutsForRange(startS: Long, endS: Long): List<WorkoutData> {
-        val cursor = workoutSummariesManager.getWorkoutsInRangeCursor(startS, endS)
+        val cursor = workoutSummariesManager.getWorkoutsInRangeCursor(startS, endS) ?: return emptyList()
         val mapper = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper(
             application, workoutSummariesManager,
             com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
             com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(application),
             com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application)
         )
-        val list = mutableListOf<WorkoutData>()
-        cursor?.use { c ->
+        val snapshots = mutableListOf<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper.RawCursorSnapshot>()
+        cursor.use { c ->
             if (c.moveToFirst()) {
                 do {
-                    list.add(mapper.fromCursor(c))
+                    try {
+                        snapshots.add(mapper.readCursorSnapshot(c))
+                    } catch (e: Exception) {
+                        Log.e(TAG, "getWorkoutsForRange: error reading row at position ${c.position}", e)
+                    }
                 } while (c.moveToNext())
             }
+        }
+
+        if (snapshots.isEmpty()) return emptyList()
+
+        val chunkIds = snapshots.map { it.workoutId }
+        val chunkNames = snapshots.mapNotNull { it.fileBaseName }
+        val chunkClusterIds = snapshots.mapNotNull { if (it.clusterId != -1L) it.clusterId else null }.toSet()
+
+        val extremaList = workoutSummariesManager.getExtremaForWorkouts(chunkIds)
+        val stravaDataMap = com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application).getStravaActivityDataForWorkouts(chunkNames)
+        val clusterNamesMap = com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkClusterIds)
+        val lapsMap = com.atrainingtracker.trainingtracker.database.LapsDatabaseManager.getInstance(application).getLapsForWorkouts(chunkIds)
+
+        val sportTypeDb = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application)
+        val sportIds = snapshots.map { it.sportId }.toSet()
+        val sportTypesMap = sportIds.associateWith { id ->
+            com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper.SportTypeInfo(
+                bSportType = sportTypeDb.getBSportType(id),
+                sportName = sportTypeDb.getUIName(id),
+                stravaSportName = sportTypeDb.getStravaName(id)
+            )
+        }
+
+        val equipDb = com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(application)
+        val equipmentMap = try {
+            equipDb.getEquipmentItems().associate { it.id to it.name }
+        } catch (_: Throwable) {
+            emptyMap()
+        }
+
+        val knownLocs = try {
+            com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(application).allLocations
+        } catch (_: Throwable) {
+            emptyList()
+        }
+
+        val extremaByWorkout = extremaList.groupBy { it.workoutId }
+        val locationNamesMap = mutableMapOf<LatLng, String>()
+        val startLoc = android.location.Location("")
+        val candidateLoc = android.location.Location("")
+        for (record in extremaList) {
+            if (record.sensorType == com.atrainingtracker.banalservice.sensor.SensorType.LATITUDE && record.position != null) {
+                val pos = record.position
+                if (!locationNamesMap.containsKey(pos)) {
+                    candidateLoc.latitude = pos.latitude
+                    candidateLoc.longitude = pos.longitude
+                    var minDistance = Double.MAX_VALUE
+                    var bestLoc: com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.MyLocation? = null
+                    for (loc in knownLocs) {
+                        startLoc.latitude = loc.latLng.latitude
+                        startLoc.longitude = loc.latLng.longitude
+                        val d = candidateLoc.distanceTo(startLoc)
+                        if (d < loc.radius && d < minDistance) {
+                            minDistance = d.toDouble()
+                            bestLoc = loc
+                        }
+                    }
+                    val name = bestLoc?.let { com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper.getDisplayName(application, it) }
+                    if (name != null) {
+                        locationNamesMap[pos] = name
+                    }
+                }
+            }
+        }
+
+        val batchMetadata = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper.BatchMetadata(
+            extrema = extremaByWorkout,
+            stravaData = stravaDataMap,
+            clusterNames = clusterNamesMap,
+            laps = lapsMap,
+            sportTypes = sportTypesMap,
+            equipmentNames = equipmentMap,
+            locationNames = locationNamesMap
+        )
+
+        val list = ArrayList<WorkoutData>(snapshots.size)
+        for (snapshot in snapshots) {
+            list.add(mapper.fromSnapshot(snapshot, batchMetadata, reconcile = false))
         }
         return list
     }
