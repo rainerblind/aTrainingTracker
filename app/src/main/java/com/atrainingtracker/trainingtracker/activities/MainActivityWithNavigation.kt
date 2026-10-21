@@ -110,10 +110,12 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsFragm
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesTabbedFragment
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummariesViewModel
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Collections
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersFragment
@@ -184,6 +186,12 @@ class MainActivityWithNavigation :
         private const val WAITING_TIME_BEFORE_DISCONNECTING = 5L * 60 * 1000 // 5 min
         const val LOW_BATTERY_WARNING_LEVEL = 20
         const val CRITICAL_BATTERY_LEVEL = 10
+
+        internal val sInRideAlertedSensorIds: MutableSet<Long> = Collections.synchronizedSet(mutableSetOf())
+        internal val sInRideCriticalAlertedSensorIds: MutableSet<Long> = Collections.synchronizedSet(mutableSetOf())
+
+        @VisibleForTesting
+        internal var defaultIoDispatcher: CoroutineDispatcher = Dispatchers.IO
     }
 
     enum class SelectedFragment {
@@ -200,6 +208,15 @@ class MainActivityWithNavigation :
     internal var selectedFragmentIdForTesting: Int
         get() = mSelectedFragmentId
         set(value) { mSelectedFragmentId = value }
+
+    internal val mInRideAlertedSensorIds: MutableSet<Long> get() = sInRideAlertedSensorIds
+    internal val mInRideCriticalAlertedSensorIds: MutableSet<Long> get() = sInRideCriticalAlertedSensorIds
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal var ioDispatcher: CoroutineDispatcher = defaultIoDispatcher
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
+    internal var mPlayServicesErrorDialog: Dialog? = null
     protected var mDrawerLayout: DrawerLayout? = null
     protected val mDrawerController: NavigationDrawerController =
         NavigationDrawerController(DEFAULT_SELECTED_FRAGMENT_ID, R.string.tab_start)
@@ -218,7 +235,8 @@ class MainActivityWithNavigation :
             navigateToDrawerItem(pendingId)
         }
     }
-    protected val mHandler: Handler = Handler(Looper.getMainLooper())
+    @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
+    internal val mHandler: Handler = Handler(Looper.getMainLooper())
     protected var mStartAndNotResume: Boolean = true
     private var mResumingFromInterruptedNotification: Boolean = false
     protected var mBanalServiceComm: BANALService.BANALServiceComm? = null
@@ -375,7 +393,8 @@ class MainActivityWithNavigation :
     private lateinit var mStartTrackingFilter: IntentFilter
     private var mAlreadyTriedToRequestDropboxToken: Boolean = false
 
-    private val mBanalConnection = object : ServiceConnection {
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal val mBanalConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             if (DEBUG) Log.i(TAG, "onServiceConnected")
 
@@ -383,9 +402,12 @@ class MainActivityWithNavigation :
 
             // create all the filters
             mBanalServiceComm?.let { comm ->
-                val devicesDatabaseManager = DevicesDatabaseManager.getInstance(applicationContext)
-                for (filterData in TrackingViewsDatabaseManager.getInstance(applicationContext).getAllFilterData(devicesDatabaseManager)) {
-                    comm.createFilter(filterData)
+                lifecycleScope.launch(ioDispatcher) {
+                    val devicesDatabaseManager = DevicesDatabaseManager.getInstance(applicationContext)
+                    val filters = TrackingViewsDatabaseManager.getInstance(applicationContext).getAllFilterData(devicesDatabaseManager)
+                    for (filterData in filters) {
+                        comm.createFilter(filterData)
+                    }
                 }
             }
 
@@ -407,7 +429,8 @@ class MainActivityWithNavigation :
         }
     }
 
-    protected val mDisconnectFromBANALServiceRunnable: Runnable = Runnable {
+    @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
+    internal val mDisconnectFromBANALServiceRunnable: Runnable = Runnable {
         disconnectFromBANALService()
     }
 
@@ -425,8 +448,7 @@ class MainActivityWithNavigation :
             }
         }
 
-        // initialization
-        mTrainingApplication = application as TrainingApplication
+        (application as? TrainingApplication)?.let { mTrainingApplication = it }
 
         mStartTrackingFilter = IntentFilter(TrainingApplication.REQUEST_START_TRACKING).apply {
             addAction(TrainingApplication.REQUEST_RESUME_FROM_PAUSED)
@@ -437,20 +459,26 @@ class MainActivityWithNavigation :
             mDrawerController.selectedItemId = mSelectedFragmentId
         }
 
-        setContent {
-            ATrainingTrackerTheme {
-                ATrainingTrackerApp(
-                    activity = this,
-                    drawerController = mDrawerController
-                )
+        try {
+            setContent {
+                ATrainingTrackerTheme {
+                    ATrainingTrackerApp(
+                        activity = this,
+                        drawerController = mDrawerController
+                    )
+                }
             }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error initializing Compose content: ${e.message}")
         }
 
         if (savedInstanceState == null) {
             handleIntent(intent)
         }
 
-        checkGpsEnabledIfPermitted()
+        lifecycleScope.launch(ioDispatcher) {
+            checkGpsEnabledIfPermitted()
+        }
 
         val dialog = GooglePlayServicesUtil.getErrorDialog(
             GooglePlayServicesUtil.isGooglePlayServicesAvailable(this),
@@ -458,6 +486,7 @@ class MainActivityWithNavigation :
             REQUEST_INSTALL_GOOGLE_PLAY_SERVICE
         )
         if (dialog != null) {
+            mPlayServicesErrorDialog = dialog
             if (TrainingApplication.showInstallPlayServicesDialog()) {
                 dialog.show()
             }
@@ -567,15 +596,23 @@ class MainActivityWithNavigation :
         }
     }
 
-    private fun checkUnfinishedWorkout() {
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal fun checkUnfinishedWorkout() {
         if (mResumingFromInterruptedNotification) {
             mResumingFromInterruptedNotification = false
             return
         }
         if (!TrainingApplication.isTracking()) {
-            if (WorkoutSummariesDatabaseManager.getInstance(this).hasUnfinishedWorkout()) {
-                if (supportFragmentManager.findFragmentByTag(StartOrResumeDialog.TAG) == null) {
-                    showStartOrResumeDialog()
+            lifecycleScope.launch(ioDispatcher) {
+                val hasUnfinished = WorkoutSummariesDatabaseManager.getInstance(applicationContext).hasUnfinishedWorkout()
+                if (hasUnfinished) {
+                    withContext(Dispatchers.Main) {
+                        if (!isFinishing && !isDestroyed && !supportFragmentManager.isStateSaved) {
+                            if (supportFragmentManager.findFragmentByTag(StartOrResumeDialog.TAG) == null) {
+                                showStartOrResumeDialog()
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -658,7 +695,7 @@ class MainActivityWithNavigation :
         super.onSaveInstanceState(savedInstanceState)
     }
 
-    override fun onPause() {
+    public override fun onPause() {
         super.onPause()
         if (DEBUG) Log.d(TAG, "onPause")
 
@@ -669,19 +706,29 @@ class MainActivityWithNavigation :
         safeUnregisterReceiver(mAntDependencyReceiver, TAG)
         safeUnregisterReceiver(mAntAdapterMissingReceiver, TAG)
 
-        stopInRideBatteryMonitoring()
+        if (!TrainingApplication.isTracking()) {
+            stopInRideBatteryMonitoring()
+        }
 
         if (!isChangingConfigurations) {
             mHandler.postDelayed(mDisconnectFromBANALServiceRunnable, WAITING_TIME_BEFORE_DISCONNECTING)
         }
     }
 
-    override fun onDestroy() {
+    public override fun onDestroy() {
         super.onDestroy()
         if (DEBUG) Log.d(TAG, "onDestroy")
 
-        if (!isChangingConfigurations) {
-            disconnectFromBANALService()
+        stopInRideBatteryMonitoring()
+
+        mHandler.removeCallbacks(mDisconnectFromBANALServiceRunnable)
+        disconnectFromBANALService()
+
+        mPlayServicesErrorDialog?.let { dialog ->
+            if (dialog.isShowing) {
+                dialog.dismiss()
+            }
+            mPlayServicesErrorDialog = null
         }
     }
 
@@ -819,7 +866,7 @@ class MainActivityWithNavigation :
     }
 
     internal fun checkSensorBatteryAfterWorkout(workoutId: Long) {
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch(ioDispatcher) {
             try {
                 val activeDeviceIds = if (workoutId > 0) {
                     ActiveDevicesDbHelper.getInstance(applicationContext).getDatabaseIdsOfActiveDevices(workoutId)
@@ -870,14 +917,13 @@ class MainActivityWithNavigation :
         }
     }
 
-    private var mInRideBatteryMonitoringJob: Job? = null
-    internal val mInRideAlertedSensorIds: MutableSet<Long> = Collections.synchronizedSet(mutableSetOf())
-    internal val mInRideCriticalAlertedSensorIds: MutableSet<Long> = Collections.synchronizedSet(mutableSetOf())
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal var mInRideBatteryMonitoringJob: Job? = null
 
     internal fun checkSensorBatteryOnStart() {
         mInRideAlertedSensorIds.clear()
         mInRideCriticalAlertedSensorIds.clear()
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch(ioDispatcher) {
             try {
                 val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
                 val allCritical = devDbManager.getCriticalBatteryDevices(LOW_BATTERY_WARNING_LEVEL)
@@ -920,7 +966,7 @@ class MainActivityWithNavigation :
 
     internal fun startInRideBatteryMonitoring() {
         if (mInRideBatteryMonitoringJob?.isActive == true) return
-        mInRideBatteryMonitoringJob = CoroutineScope(Dispatchers.IO).launch {
+        mInRideBatteryMonitoringJob = lifecycleScope.launch(ioDispatcher) {
             DeviceDataRepository.deviceBatteryUpdates.collect { (deviceId, percentage) ->
                 try {
                     val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
@@ -1003,7 +1049,8 @@ class MainActivityWithNavigation :
         return mBanalServiceComm
     }
 
-    private fun disconnectFromBANALService() {
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal fun disconnectFromBANALService() {
         if (DEBUG) Log.i(TAG, "disconnectFromBANALService")
 
         if (mBanalServiceComm != null) {
@@ -1044,11 +1091,13 @@ class MainActivityWithNavigation :
     }
 
     private fun showGPSDisabledAlertToUser() {
-        if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) {
-            return
+        runOnUiThread {
+            if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) {
+                return@runOnUiThread
+            }
+            val gpsDisabledDialog = GPSDisabledDialog()
+            gpsDisabledDialog.show(supportFragmentManager, GPSDisabledDialog.TAG)
         }
-        val gpsDisabledDialog = GPSDisabledDialog()
-        gpsDisabledDialog.show(supportFragmentManager, GPSDisabledDialog.TAG)
     }
 
     private fun showInstallANTShitDialog() {
@@ -1068,7 +1117,9 @@ class MainActivityWithNavigation :
             Log.e(TAG, "Error cancelling tracking interrupted notification: " + e.message, e)
         }
         TrainingApplication.setResumeFromCrash(false)
-        WorkoutSummariesDatabaseManager.getInstance(this).discardOrFinishUnfinishedWorkout()
+        lifecycleScope.launch(ioDispatcher) {
+            WorkoutSummariesDatabaseManager.getInstance(applicationContext).discardOrFinishUnfinishedWorkout()
+        }
     }
 
     override fun chooseResume() {
@@ -1081,11 +1132,15 @@ class MainActivityWithNavigation :
             Log.w(TAG, "chooseResume: already tracking, ignoring duplicate resume request")
             return
         }
-        if (!WorkoutSummariesDatabaseManager.getInstance(this).hasUnfinishedWorkout()) {
-            Log.w(TAG, "chooseResume: no unfinished workout found in database, ignoring resume request")
-            return
+        lifecycleScope.launch(ioDispatcher) {
+            if (!WorkoutSummariesDatabaseManager.getInstance(applicationContext).hasUnfinishedWorkout()) {
+                Log.w(TAG, "chooseResume: no unfinished workout found in database, ignoring resume request")
+                return@launch
+            }
+            withContext(Dispatchers.Main) {
+                TrainingApplication.setResumeFromCrash(true)
+                sendBroadcast(Intent(TrainingApplication.REQUEST_START_TRACKING).setPackage(packageName))
+            }
         }
-        TrainingApplication.setResumeFromCrash(true)
-        sendBroadcast(Intent(TrainingApplication.REQUEST_START_TRACKING).setPackage(packageName))
     }
 }

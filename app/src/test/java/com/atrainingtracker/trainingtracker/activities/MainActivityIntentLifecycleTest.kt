@@ -32,6 +32,11 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -48,15 +53,19 @@ import org.robolectric.annotation.Config
  * Unit test suite verifying launch intent lifecycle isolation, transient extra consumption,
  * and defensive resumption state guards in [MainActivityWithNavigation] (REQ-STB-017, TST-STB-017, ATT-4001).
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class MainActivityIntentLifecycleTest {
 
+    private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var context: Context
     private lateinit var dbManagerMock: WorkoutSummariesDatabaseManager
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+        MainActivityWithNavigation.defaultIoDispatcher = testDispatcher
         context = ApplicationProvider.getApplicationContext()
         mockkStatic(WorkoutSummariesDatabaseManager::class)
         dbManagerMock = mockk(relaxed = true)
@@ -68,6 +77,8 @@ class MainActivityIntentLifecycleTest {
     @After
     fun tearDown() {
         unmockkAll()
+        MainActivityWithNavigation.defaultIoDispatcher = Dispatchers.IO
+        Dispatchers.resetMain()
         TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
         TrainingApplication.setResumeFromCrash(false)
     }
