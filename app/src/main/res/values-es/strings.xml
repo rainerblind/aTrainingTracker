@@ -1195,7 +1195,7 @@
     <string name="import_backup_summary">Gestione las importaciones de entrenamientos, las copias de seguridad y la restauración de datos</string>
 
     <string name="create_and_upload_to_dropbox">Crear \u0026 subir a Dropbox</string>
-    <string name="create_and_upload_to_both">Crear \u0026 subir (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_both">Crear \u0026 subir\n(Dropbox \u0026 Google Drive)</string>
     <string name="create_and_upload_to_google_drive">Crear \u0026 subir a Google Drive</string>
     <string name="create_and_upload_to_cloud">Crear \u0026 subir a la nube</string>
     <string name="cloud_backup_no_provider_dialog_title">Copia de seguridad en la nube</string>

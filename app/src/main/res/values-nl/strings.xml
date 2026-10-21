@@ -1193,7 +1193,7 @@
     <string name="import_backup_summary">Beheer workout-import, back-ups en gegevensherstel</string>
 
     <string name="create_and_upload_to_dropbox">Maken \u0026 Dropbox-upload</string>
-    <string name="create_and_upload_to_both">Maken \u0026 upload (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_both">Maken \u0026 upload\n(Dropbox \u0026 Google Drive)</string>
     <string name="create_and_upload_to_google_drive">Maken \u0026 Google Drive-upload</string>
     <string name="create_and_upload_to_cloud">Maken \u0026 cloud-upload</string>
     <string name="cloud_backup_no_provider_dialog_title">Cloudback-up</string>

@@ -1193,7 +1193,7 @@
     <string name="import_backup_summary">Gestire le importazioni di allenamenti, i backup e il ripristino dei dati</string>
 
     <string name="create_and_upload_to_dropbox">Crea \u0026 carica su Dropbox</string>
-    <string name="create_and_upload_to_both">Crea \u0026 carica (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_both">Crea \u0026 carica\n(Dropbox \u0026 Google Drive)</string>
     <string name="create_and_upload_to_google_drive">Crea \u0026 carica su Google Drive</string>
     <string name="create_and_upload_to_cloud">Crea \u0026 carica sul cloud</string>
     <string name="cloud_backup_no_provider_dialog_title">Backup sul cloud</string>

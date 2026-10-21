@@ -1280,7 +1280,7 @@
     <string name="backup_interval_weekly">Wöchentlich</string>
     <string name="backup_interval_monthly">Monatlich</string>
     <string name="create_and_upload_to_dropbox">Erstellen \u0026 Dropbox-Upload</string>
-    <string name="create_and_upload_to_both">Erstellen \u0026 Upload (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_both">Erstellen \u0026 Upload\n(Dropbox \u0026 Google Drive)</string>
     <string name="create_and_upload_to_google_drive">Erstellen \u0026 Google Drive-Upload</string>
     <string name="create_and_upload_to_cloud">Erstellen \u0026 Cloud-Upload</string>
     <string name="cloud_backup_no_provider_dialog_title">Cloud-Backup</string>

@@ -1194,7 +1194,7 @@
     <string name="import_backup_summary">Gérer les importations d\'entraînements, les sauvegardes et la restauration des données</string>
 
     <string name="create_and_upload_to_dropbox">Créer \u0026 envoyer vers Dropbox</string>
-    <string name="create_and_upload_to_both">Créer \u0026 envoyer (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_both">Créer \u0026 envoyer\n(Dropbox \u0026 Google Drive)</string>
     <string name="create_and_upload_to_google_drive">Créer \u0026 envoyer vers Google Drive</string>
     <string name="create_and_upload_to_cloud">Créer \u0026 envoyer vers le cloud</string>
     <string name="cloud_backup_no_provider_dialog_title">Sauvegarde dans le cloud</string>

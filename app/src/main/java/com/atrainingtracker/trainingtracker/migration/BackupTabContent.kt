@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -143,7 +144,10 @@ internal fun BackupTabContentLayout(
                 ) {
                     Icon(Icons.Default.CloudUpload, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(cloudButtonTextRes))
+                    Text(
+                        text = stringResource(cloudButtonTextRes),
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }

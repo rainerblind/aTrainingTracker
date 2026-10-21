@@ -1192,7 +1192,7 @@
     <string name="import_backup_summary">Zarządzaj importem treningów, kopiami zapasowymi i przywracaniem danych</string>
 
     <string name="create_and_upload_to_dropbox">Utwórz \u0026 prześlij do Dropbox</string>
-    <string name="create_and_upload_to_both">Utwórz \u0026 prześlij (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_both">Utwórz \u0026 prześlij\n(Dropbox \u0026 Google Drive)</string>
     <string name="create_and_upload_to_google_drive">Utwórz \u0026 prześlij do Google Drive</string>
     <string name="create_and_upload_to_cloud">Utwórz \u0026 prześlij do chmury</string>
     <string name="cloud_backup_no_provider_dialog_title">Kopia w chmurze</string>

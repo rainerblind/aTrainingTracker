@@ -1175,7 +1175,7 @@
     <string name="import_backup_summary">ワークアウトのインポート、バックアップ、データの復元を管理します</string>
 
     <string name="create_and_upload_to_dropbox">作成 \u0026 Dropboxへ送る</string>
-    <string name="create_and_upload_to_both">作成 \u0026 送信 (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_both">作成 \u0026 送信\n(Dropbox \u0026 Google Drive)</string>
     <string name="create_and_upload_to_google_drive">作成 \u0026 Google Driveへ送る</string>
     <string name="create_and_upload_to_cloud">作成 \u0026 クラウドへ送る</string>
     <string name="cloud_backup_no_provider_dialog_title">クラウドバックアップ</string>

@@ -1193,7 +1193,7 @@
     <string name="import_backup_summary">Gerir importações de treinos, backups e restauração de dados</string>
 
     <string name="create_and_upload_to_dropbox">Criar \u0026 Enviar p/ Dropbox</string>
-    <string name="create_and_upload_to_both">Criar \u0026 Enviar (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_both">Criar \u0026 Enviar\n(Dropbox \u0026 Google Drive)</string>
     <string name="create_and_upload_to_google_drive">Criar \u0026 Enviar p/ Google Drive</string>
     <string name="create_and_upload_to_cloud">Criar \u0026 Enviar p/ nuvem</string>
     <string name="cloud_backup_no_provider_dialog_title">Backup na nuvem</string>

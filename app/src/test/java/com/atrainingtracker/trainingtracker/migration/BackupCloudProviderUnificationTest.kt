@@ -43,6 +43,8 @@ import javax.xml.parsers.DocumentBuilderFactory
  * - TST-MIG-036.2: 4-state dynamic automated backup subtitle resolution
  * - TST-MIG-036.3: No-cloud connected explanatory dialog prompt contract & 9-locale parity
  * - TST-MIG-036.4: BackupRestoreViewModel.uploadToCloud() mutex locking, dual-provider dispatch, and persistence parity
+ * - TST-MIG-036.7: Centered text alignment on manual cloud backup button (ATT-4587)
+ * - TST-MIG-036.8: Newline preceding (Dropbox & Google Drive) in create_and_upload_to_both across all 9 locales (ATT-4587)
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class BackupCloudProviderUnificationTest {
@@ -282,6 +284,42 @@ class BackupCloudProviderUnificationTest {
                 assertNotNull("Missing key '$key' in locale '$loc'", value)
                 assertFalse("Empty key '$key' in locale '$loc'", value!!.trim().isEmpty())
             }
+        }
+    }
+
+    // =========================================================================
+    // TST-MIG-036.7 & TST-MIG-036.8: Centered Text & Newline Parity (ATT-4587)
+    // =========================================================================
+
+    @Test
+    fun testCloudBackupButton_hasCenteredTextAlignment() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/migration/BackupTabContent.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "Must set textAlign = TextAlign.Center on manual cloud backup button text",
+            content.contains("textAlign = TextAlign.Center")
+        )
+    }
+
+    @Test
+    fun testCreateAndUploadToBoth_hasNewlineBeforeDropboxGoogleDrive_acrossAll9Locales() {
+        val resDir = findResDirectory()
+        val locales = listOf("", "-de", "-es", "-fr", "-it", "-ja", "-nl", "-pl", "-pt")
+
+        for (loc in locales) {
+            val valuesDir = File(resDir, if (loc.isEmpty()) "values" else "values$loc")
+            val stringsFile = File(valuesDir, "strings.xml")
+            val content = stringsFile.readText()
+
+            val match = Regex("""<string name="create_and_upload_to_both">([^<]+)</string>""").find(content)
+            assertNotNull("create_and_upload_to_both not found in locale '$loc'", match)
+            val text = match!!.groupValues[1]
+
+            assertTrue(
+                "create_and_upload_to_both in locale '$loc' must contain '\\n(Dropbox' immediately before providers: '$text'",
+                text.contains("""\n(Dropbox""")
+            )
         }
     }
 
