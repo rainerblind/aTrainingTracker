@@ -194,7 +194,6 @@
         <service
             android:name=".banalservice.BANALService"
             android:foregroundServiceType="location|health" />
-        <service android:name=".trainingtracker.onlinecommunities.strava.StravaSegmentsIntentService" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

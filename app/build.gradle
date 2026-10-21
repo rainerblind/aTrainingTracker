@@ -91,7 +91,11 @@ android {
     lint {
         baseline = file('lint-baseline.xml')
         checkReleaseBuilds = true
-        // TODO fix Range, some hundred occurrences
+        // Lint suppressions rationale (REQ-BLD-002.2 / TST-BLD-002.3):
+        // 1. DuplicatePlatformClasses: Justified due to legacy third-party library classpath overlaps (Apache HTTP/XML).
+        // 2. MissingTranslation: Safely suppressed here because TranslationParityTest.kt (TST-STR-018 under REQ-LOC-001)
+        //    strictly enforces complete 9-language translation coverage, format specifiers, and plural consistency in testDebugUnitTest.
+        // 3. Range: Suppressed due to historical parameter annotation warnings in legacy calculation routines; targeted for incremental burn-down.
         disable = ['DuplicatePlatformClasses', 'MissingTranslation', 'Range']
         showAll = true
         textReport = true
