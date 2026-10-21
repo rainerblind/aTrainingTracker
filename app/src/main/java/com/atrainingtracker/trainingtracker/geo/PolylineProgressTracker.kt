@@ -305,7 +305,9 @@ object PolylineProgressTracker {
         val p1 = path[bestCandidate.segmentIndex]
         val p2 = path[bestCandidate.segmentIndex + 1]
         val segDist = p2.distance - p1.distance
-        val segAlt = p2.altitude - p1.altitude
+        val alt1 = p1.altitude
+        val alt2 = p2.altitude
+        val segAlt = if (alt1 != null && alt2 != null) alt2 - alt1 else null
 
         val totalPathDist = (path.last().distance - path.first().distance).coerceAtLeast(0.0)
         val alongTrackDist = ((p1.distance - path.first().distance) + bestCandidate.t * segDist).coerceAtLeast(0.0)
@@ -315,8 +317,12 @@ object PolylineProgressTracker {
             0f
         }
 
-        val interpolatedAlt = p1.altitude + bestCandidate.t * segAlt
-        val grade = if (segDist > 0.0) {
+        val interpolatedAlt = if (alt1 != null && alt2 != null && segAlt != null) {
+            alt1 + bestCandidate.t * segAlt
+        } else {
+            alt1 ?: alt2
+        }
+        val grade = if (segDist > 0.0 && segAlt != null) {
             (segAlt / segDist) * 100.0
         } else {
             p1.slope

@@ -107,7 +107,11 @@ object TrackingElevationProfileResolver {
                 val ratio = if (p2.distance > p1.distance) (startDist - p1.distance) / (p2.distance - p1.distance) else 0.0
                 val lat = p1.latLng.latitude + ratio * (p2.latLng.latitude - p1.latLng.latitude)
                 val lng = p1.latLng.longitude + ratio * (p2.latLng.longitude - p1.latLng.longitude)
-                val alt = p1.altitude + ratio * (p2.altitude - p1.altitude)
+                val alt = if (p1.altitude != null && p2.altitude != null) {
+                    p1.altitude + ratio * (p2.altitude - p1.altitude)
+                } else {
+                    p1.altitude ?: p2.altitude
+                }
                 val time = p1.timeSec + (ratio * (p2.timeSec - p1.timeSec)).toLong()
                 result.add(PathPoint(distance = startDist, latLng = LatLng(lat, lng), altitude = alt, timeSec = time))
             }
@@ -135,7 +139,11 @@ object TrackingElevationProfileResolver {
                 val ratio = if (p2.distance > p1.distance) (endDist - p1.distance) / (p2.distance - p1.distance) else 0.0
                 val lat = p1.latLng.latitude + ratio * (p2.latLng.latitude - p1.latLng.latitude)
                 val lng = p1.latLng.longitude + ratio * (p2.latLng.longitude - p1.latLng.longitude)
-                val alt = p1.altitude + ratio * (p2.altitude - p1.altitude)
+                val alt = if (p1.altitude != null && p2.altitude != null) {
+                    p1.altitude + ratio * (p2.altitude - p1.altitude)
+                } else {
+                    p1.altitude ?: p2.altitude
+                }
                 val time = p1.timeSec + (ratio * (p2.timeSec - p1.timeSec)).toLong()
                 result.add(PathPoint(distance = endDist, latLng = LatLng(lat, lng), altitude = alt, timeSec = time))
             }

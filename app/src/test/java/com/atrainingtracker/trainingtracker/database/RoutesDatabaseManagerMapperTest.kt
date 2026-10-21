@@ -162,7 +162,7 @@ class RoutesDatabaseManagerMapperTest {
         assertEquals(48.137154, pathPoint.latLng.latitude, 0.00001)
         assertEquals(11.576124, pathPoint.latLng.longitude, 0.00001)
         assertEquals(1200.5, pathPoint.distance, 0.001)
-        assertEquals(520.0, pathPoint.altitude, 0.001)
+        assertEquals(520.0, pathPoint.altitude!!, 0.001)
     }
 
     @Test

@@ -158,7 +158,7 @@ class WorkoutRepositoryTelemetryTest {
         assertEquals(220, points[0].power)
         assertEquals(0.0, points[0].distance, 0.0)
         assertEquals(LatLng(0.0, 0.0), points[0].latLng)
-        assertEquals(0.0, points[0].altitude, 0.0)
+        assertNull(points[0].altitude)
     }
 
     @Test
@@ -207,9 +207,9 @@ class WorkoutRepositoryTelemetryTest {
 
         val points = repository.getWorkoutTelemetryPoints(400L)
         assertEquals(3, points.size)
-        assertEquals(450.5, points[0].altitude, 0.001)
-        assertEquals(452.0, points[1].altitude, 0.001)
-        assertEquals(455.2, points[2].altitude, 0.001)
+        assertEquals(450.5, points[0].altitude!!, 0.001)
+        assertEquals(452.0, points[1].altitude!!, 0.001)
+        assertEquals(455.2, points[2].altitude!!, 0.001)
     }
 
     @Test
@@ -233,12 +233,38 @@ class WorkoutRepositoryTelemetryTest {
         val points = repository.getWorkoutTelemetryPoints(500L)
         assertEquals(2, points.size)
         assertEquals(0L, points[0].timeSec)
-        assertEquals(510.0, points[0].altitude, 0.001)
+        assertEquals(510.0, points[0].altitude!!, 0.001)
         assertNull(points[0].hr)
         assertNull(points[0].power)
         assertNull(points[0].speedMps)
         assertEquals(10L, points[1].timeSec)
-        assertEquals(515.5, points[1].altitude, 0.001)
+        assertEquals(515.5, points[1].altitude!!, 0.001)
+    }
+
+    @Test
+    fun testExtractTelemetryPoints_retainsSeaLevelZeroAltitude_withoutHrPowerSpeed() = runBlocking {
+        val baseFileName = "2026-10-02-19-00-00"
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        every { mockSummariesDb.getBaseFileName(800L) } returns baseFileName
+        every { mockSamplesDb.existsTable(baseFileName) } returns true
+
+        val columns = listOf(
+            SensorType.TIME_ACTIVE.name,
+            SensorType.ALTITUDE.name
+        )
+        val rows = listOf(
+            listOf(0L, 0.0),
+            listOf(10L, 0.0)
+        )
+        val cursor = MockCursorFactory.create(columns, rows)
+        every { mockSqliteDb.query(tableName, null, null, null, null, null, null) } returns cursor
+
+        val points = repository.getWorkoutTelemetryPoints(800L)
+        assertEquals(2, points.size)
+        assertEquals(0L, points[0].timeSec)
+        assertEquals(0.0, points[0].altitude!!, 0.001)
+        assertEquals(10L, points[1].timeSec)
+        assertEquals(0.0, points[1].altitude!!, 0.001)
     }
 
     @Test

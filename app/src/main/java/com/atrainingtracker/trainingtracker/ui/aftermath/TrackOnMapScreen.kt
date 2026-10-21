@@ -172,8 +172,8 @@ fun TrackOnMapScreen(
     val isElevationPostMap = postMapSections.contains(WorkoutSectionType.ELEVATION)
     val isChartsPostMap = postMapSections.contains(WorkoutSectionType.CHARTS)
 
-    val hasTracklessAltitude = !hasGpsTrack && (activeScrubPath?.any { it.altitude != 0.0 } == true)
-    val hasAltitudeData = workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != 0.0 } == true)
+    val hasTracklessAltitude = !hasGpsTrack && (activeScrubPath?.any { it.altitude != null } == true)
+    val hasAltitudeData = workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != null } == true)
 
     val enableCpModel = tuningConfig.enableCriticalPowerModel
     val hasTelemetrySeries = remember(activeScrubPath, enableCpModel) {

@@ -125,7 +125,8 @@ fun calculateElevationBounds(
     outlierToleranceMeters: Double = 15.0,
     minSpanMeters: Double = 20.0
 ): ElevationBounds {
-    if (pathPoints.isEmpty()) {
+    val nonNullPoints = pathPoints.filter { it.altitude != null && !it.altitude.isNaN() }
+    if (nonNullPoints.isEmpty()) {
         val fallbackMin = minAltitudeOverride ?: 0.0
         val fallbackMax = maxAltitudeOverride ?: (fallbackMin + minSpanMeters)
         val range = (fallbackMax - fallbackMin).coerceAtLeast(1.0)
@@ -133,20 +134,20 @@ fun calculateElevationBounds(
     }
 
     // REQ-CON-017: Filter extreme non-physical altitude outliers (e.g. 7300m calibration staircase)
-    val validPoints = if (pathPoints.size >= 5) {
-        val sortedAlts = pathPoints.map { it.altitude }.sorted()
+    val validPoints = if (nonNullPoints.size >= 5) {
+        val sortedAlts = nonNullPoints.map { it.altitude!! }.sorted()
         val medianAlt = sortedAlts[sortedAlts.size / 2]
-        if (medianAlt < 1500.0 && pathPoints.any { it.altitude > 3000.0 }) {
-            pathPoints.filter { it.altitude in -500.0..3000.0 }.ifEmpty { pathPoints }
+        if (medianAlt < 1500.0 && nonNullPoints.any { it.altitude!! > 3000.0 }) {
+            nonNullPoints.filter { it.altitude!! in -500.0..3000.0 }.ifEmpty { nonNullPoints }
         } else {
-            pathPoints
+            nonNullPoints
         }
     } else {
-        pathPoints
+        nonNullPoints
     }
 
-    val streamMin = validPoints.minOf { it.altitude }
-    val streamMax = validPoints.maxOf { it.altitude }
+    val streamMin = validPoints.minOf { it.altitude!! }
+    val streamMax = validPoints.maxOf { it.altitude!! }
 
     // Sanitize min override:
     // If override is an outlier (< streamMin - 15) OR higher than stream points (> streamMin),
@@ -770,10 +771,11 @@ fun ElevationProfile(
                 // Render Summit Category Badges (REQ-UI-274)
                 if (!isTimeDomain && climbs.isNotEmpty()) {
                     climbs.forEach { climb ->
-                        val summitPt = climb.pathPoints.maxByOrNull { it.altitude } ?: climb.pathPoints.lastOrNull()
+                        val summitPt = climb.pathPoints.maxByOrNull { it.altitude ?: Double.NEGATIVE_INFINITY } ?: climb.pathPoints.lastOrNull()
                         if (summitPt != null && summitPt.distance in currentStartDist..(currentStartDist + visibleSpan)) {
+                            val summitAlt = summitPt.altitude ?: cachedData.minAlt
                             val summitX = ElevationProfileZoomMath.distanceToCanvasX(summitPt.distance, currentStartDist, visibleSpan, width)
-                            val summitY = height - (((summitPt.altitude - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
+                            val summitY = height - (((summitAlt - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
 
                             val (bgColor, textColor, labelRes) = getClimbCategoryColors(climb.category)
                             val badgeText = context.getString(labelRes)
@@ -897,16 +899,17 @@ fun ElevationProfile(
                 val activePoint = pathPoints.getOrNull(activeIndex) ?: pathPoints.firstOrNull()
                 val pLeft = pathPoints[activeIndex]
                 val pRight = pathPoints.getOrNull(activeIndex + 1)
-                val interAlt = if (pRight != null && pRight.distance > pLeft.distance) {
-                    pLeft.altitude + ((dist - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude - pLeft.altitude)
+                val interAlt = if (pRight != null && pRight.distance > pLeft.distance && pLeft.altitude != null && pRight.altitude != null) {
+                    pLeft.altitude!! + ((dist - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude!! - pLeft.altitude!!)
                 } else {
-                    pLeft.altitude
+                    pLeft.altitude ?: pRight?.altitude
                 }
 
                 val markerVal = if (isTimeDomain) (activePoint?.timeSec?.toDouble() ?: 0.0) else dist
                 if (markerVal in currentStartDist..(currentStartDist + visibleSpan)) {
+                    val markerAlt = interAlt ?: cachedData.minAlt
                     val markerX = ElevationProfileZoomMath.distanceToCanvasX(markerVal, currentStartDist, visibleSpan, width)
-                    val markerY = height - (((interAlt - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
+                    val markerY = height - (((markerAlt - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
 
                     drawLine(
                         color = colorScheme.primary,
@@ -917,7 +920,8 @@ fun ElevationProfile(
                     )
                     if (!showZoomControls) {
                         drawIntoCanvas { canvas ->
-                            val combinedLabel = "${distanceFormatter.format_with_units(dist)} | ${altitudeFormatter.format_with_units(interAlt)}"
+                            val altStr = if (interAlt != null) altitudeFormatter.format_with_units(interAlt) else "--"
+                            val combinedLabel = "${distanceFormatter.format_with_units(dist)} | $altStr"
                             val lWidth = highlightPaint.measureText(combinedLabel)
                             canvas.nativeCanvas.drawText(
                                 combinedLabel,
@@ -940,10 +944,10 @@ fun ElevationProfile(
             if (activePoint != null) {
                 val pLeft = pathPoints[activeIndex]
                 val pRight = pathPoints.getOrNull(activeIndex + 1)
-                val interAlt = if (pRight != null && pRight.distance > pLeft.distance) {
-                    pLeft.altitude + ((currentDistance - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude - pLeft.altitude)
+                val interAlt = if (pRight != null && pRight.distance > pLeft.distance && pLeft.altitude != null && pRight.altitude != null) {
+                    pLeft.altitude!! + ((currentDistance - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude!! - pLeft.altitude!!)
                 } else {
-                    pLeft.altitude
+                    pLeft.altitude ?: pRight?.altitude
                 }
 
                 ScrubbingTelemetryBadge(
@@ -985,7 +989,7 @@ fun ElevationProfile(
 fun ScrubbingTelemetryBadge(
     point: PathPoint,
     bSportType: BSportType,
-    altitude: Double,
+    altitude: Double? = null,
     unit: MyUnits,
     xAxisDomain: ProfileXAxisDomain,
     modifier: Modifier = Modifier,
@@ -1045,7 +1049,7 @@ fun ScrubbingTelemetryBadge(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                val altStr = altitudeFormatter.format_with_units(altitude)
+                val altStr = if (altitude != null) altitudeFormatter.format_with_units(altitude) else "--"
                 val slopeVal = point.slope
                 val slopeStr = if (slopeVal != null) {
                     val sign = if (slopeVal > 0) "+" else ""

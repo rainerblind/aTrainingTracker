@@ -142,8 +142,8 @@ class ElevationProfileBoundsTest {
 
         // Verify that every single point in the route is inside [bounds.min, bounds.max]
         for (point in pathPoints) {
-            assertTrue("Point altitude (${point.altitude}) must be >= bounds.min (${bounds.min})", point.altitude >= bounds.min)
-            assertTrue("Point altitude (${point.altitude}) must be <= bounds.max (${bounds.max})", point.altitude <= bounds.max)
+            assertTrue("Point altitude (${point.altitude}) must be >= bounds.min (${bounds.min})", point.altitude!! >= bounds.min)
+            assertTrue("Point altitude (${point.altitude}) must be <= bounds.max (${bounds.max})", point.altitude!! <= bounds.max)
         }
     }
 
@@ -169,7 +169,7 @@ class ElevationProfileBoundsTest {
 
         assertTrue("bounds.max (${bounds.max}) must be >= stream peak (385.0)", bounds.max >= 385.0)
         for (point in pathPoints) {
-            assertTrue("Point altitude (${point.altitude}) must be <= bounds.max (${bounds.max})", point.altitude <= bounds.max)
+            assertTrue("Point altitude (${point.altitude}) must be <= bounds.max (${bounds.max})", point.altitude!! <= bounds.max)
         }
     }
 

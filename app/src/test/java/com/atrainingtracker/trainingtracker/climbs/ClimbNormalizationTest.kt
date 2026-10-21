@@ -62,13 +62,13 @@ class ClimbNormalizationTest {
 
         // Geographical and elevation data must remain unchanged
         assertEquals(p1.latLng, normalized[0].latLng)
-        assertEquals(p1.altitude, normalized[0].altitude, 0.001)
+        assertEquals(p1.altitude, normalized[0].altitude)
 
         assertEquals(p2.latLng, normalized[1].latLng)
-        assertEquals(p2.altitude, normalized[1].altitude, 0.001)
+        assertEquals(p2.altitude, normalized[1].altitude)
 
         assertEquals(p3.latLng, normalized[2].latLng)
-        assertEquals(p3.altitude, normalized[2].altitude, 0.001)
+        assertEquals(p3.altitude, normalized[2].altitude)
 
         // Original climb.pathPoints must remain immutable
         assertEquals(27380.0, climb.pathPoints[0].distance, 0.001)
@@ -147,7 +147,7 @@ class ClimbNormalizationTest {
         val nearest = TelemetryMetricUtils.findNearestPoint(normalized, 320.0)
         assertNotNull("Nearest point must not be null", nearest)
         assertEquals(LatLng(47.105, 11.205), nearest!!.latLng)
-        assertEquals(640.0, nearest.altitude, 0.001)
+        assertEquals(640.0, nearest.altitude!!, 0.001)
 
         // Scrubbing near start (10m) should locate p1
         val nearestStart = TelemetryMetricUtils.findNearestPoint(normalized, 10.0)

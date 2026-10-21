@@ -266,7 +266,7 @@ class WorkoutClustersViewModelTest {
         assertNotNull("Peeked workout data should not be null", peeked)
         assertEquals(101L, peeked!!.workoutData?.id)
         assertEquals(2, peeked.trackPoints.size)
-        assertEquals(310.0, peeked.trackPoints[0].altitude, 0.01)
+        assertEquals(310.0, peeked.trackPoints[0].altitude!!, 0.01)
         assertEquals(1, peeked.markers.size)
     }
 

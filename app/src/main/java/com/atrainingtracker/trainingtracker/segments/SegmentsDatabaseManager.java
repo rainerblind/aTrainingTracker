@@ -130,7 +130,7 @@ public class SegmentsDatabaseManager {
                                     new LatLng(
                                             c.getDouble(lat_index),
                                             c.getDouble(lon_index)),
-                                    c.getFloat(alt_index)
+                                    c.isNull(alt_index) ? null : c.getDouble(alt_index)
                             )
                     );
                 }

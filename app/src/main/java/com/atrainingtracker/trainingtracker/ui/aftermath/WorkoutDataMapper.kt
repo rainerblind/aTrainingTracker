@@ -1038,11 +1038,27 @@ class WorkoutDataMapper(
             val streamMin = streamPoints.minOrNull() ?: return Pair(recordedMin, recordedMax)
             val streamMax = streamPoints.maxOrNull() ?: return Pair(recordedMin, recordedMax)
 
+            val nonZeroPoints = streamPoints.filter { it != 0.0 && !it.isNaN() }
+            val effectiveStreamMin = if (streamMin == 0.0 && recordedMin != null && recordedMin > 15.0) {
+                if (nonZeroPoints.isEmpty()) {
+                    recordedMin
+                } else {
+                    val nonZeroMin = nonZeroPoints.min()
+                    if (nonZeroMin > 15.0) {
+                        minOf(recordedMin, nonZeroMin)
+                    } else {
+                        streamMin
+                    }
+                }
+            } else {
+                streamMin
+            }
+
             var needUpdate = false
 
-            val authoritativeMin = if (recordedMin == null || recordedMin < streamMin - 15.0 || recordedMin > streamMin) {
+            val authoritativeMin = if (recordedMin == null || recordedMin < effectiveStreamMin - 15.0 || recordedMin > effectiveStreamMin) {
                 needUpdate = true
-                streamMin
+                effectiveStreamMin
             } else {
                 recordedMin
             }

@@ -111,8 +111,8 @@ class GpxImportViewModelTest {
         assertEquals("Test Route", editing.summary.name)
         assertEquals(120.0, editing.summary.elevationGain, 0.001)
         assertEquals(2, editing.points.size)
-        assertEquals(500.0, editing.points[0].altitude, 0.001)
-        assertEquals(620.0, editing.points[1].altitude, 0.001)
+        assertEquals(500.0, editing.points[0].altitude!!, 0.001)
+        assertEquals(620.0, editing.points[1].altitude!!, 0.001)
     }
 
     @Test

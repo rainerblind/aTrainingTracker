@@ -286,10 +286,10 @@ class TrackingElevationProfileResolutionTest {
 
         // At 250m: ratio 0.25 -> alt 125m
         assertEquals(250.0, sliced.first().distance, 0.001)
-        assertEquals(125.0, sliced.first().altitude, 0.001)
+        assertEquals(125.0, sliced.first().altitude!!, 0.001)
 
         // At 750m: ratio 0.75 -> alt 175m
         assertEquals(750.0, sliced.last().distance, 0.001)
-        assertEquals(175.0, sliced.last().altitude, 0.001)
+        assertEquals(175.0, sliced.last().altitude!!, 0.001)
     }
 }

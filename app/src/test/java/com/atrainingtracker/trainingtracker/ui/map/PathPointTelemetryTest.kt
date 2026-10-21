@@ -37,7 +37,7 @@ class PathPointTelemetryTest {
         )
 
         assertEquals(1200.0, point.distance, 0.001)
-        assertEquals(450.0, point.altitude, 0.001)
+        assertEquals(450.0, point.altitude!!, 0.001)
         assertEquals(48.137, point.latLng.latitude, 0.0001)
         assertEquals(11.575, point.latLng.longitude, 0.0001)
 
@@ -63,7 +63,7 @@ class PathPointTelemetryTest {
         )
 
         assertEquals(5000.0, point.distance, 0.001)
-        assertEquals(620.5, point.altitude, 0.001)
+        assertEquals(620.5, point.altitude!!, 0.001)
         assertEquals(47.5, point.latLng.latitude, 0.0001)
         assertEquals(10.2, point.latLng.longitude, 0.0001)
         assertEquals(750L, point.timeSec)

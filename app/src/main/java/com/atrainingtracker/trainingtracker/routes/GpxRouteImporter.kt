@@ -214,8 +214,12 @@ class GpxRouteImporter @JvmOverloads constructor(
     private fun calculateElevationGain(points: List<PathPoint>): Double {
         var gain = 0.0
         for (i in 1 until points.size) {
-            val diff = points[i].altitude - points[i - 1].altitude
-            if (diff > 0) gain += diff
+            val curr = points[i].altitude
+            val prev = points[i - 1].altitude
+            if (curr != null && prev != null) {
+                val diff = curr - prev
+                if (diff > 0) gain += diff
+            }
         }
         return gain
     }

@@ -127,7 +127,7 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                     PathPoint(
                         distance = dists.getOrElse(index) { 0.0 },
                         latLng = latLng,
-                        altitude = alts.getOrElse(index) { 0.0 }
+                        altitude = alts.getOrNull(index)
                     )
                 }
 

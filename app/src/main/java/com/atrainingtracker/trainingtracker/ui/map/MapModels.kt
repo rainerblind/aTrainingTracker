@@ -168,7 +168,7 @@ data class LocationMarker(
 data class PathPoint @JvmOverloads constructor(
     val distance: Double,
     val latLng: LatLng,
-    val altitude: Double,
+    val altitude: Double? = null,
     val timeSec: Long = 0L,
     val hr: Int? = null,
     val power: Int? = null,
@@ -409,7 +409,7 @@ fun WorkoutData.toMapTrack(): MapTrack {
         PathPoint(
             distance = dists.getOrElse(index) { 0.0 },
             latLng = latLng,
-            altitude = alts.getOrElse(index) { 0.0 }
+            altitude = alts.getOrNull(index)
         )
     }
 

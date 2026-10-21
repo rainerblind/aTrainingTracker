@@ -72,18 +72,24 @@ object ElevationAwareEtaCalculator {
         // 1. Initial segment interpolation
         val p1 = path[startIndex]
         val p2 = path[startIndex + 1]
-        val interpolatedAlt = p1.altitude + tFraction.coerceIn(0.0, 1.0) * (p2.altitude - p1.altitude)
-        if (p2.altitude > interpolatedAlt) {
-            totalClimb += (p2.altitude - interpolatedAlt)
+        val alt1 = p1.altitude
+        val alt2 = p2.altitude
+        if (alt1 != null && alt2 != null) {
+            val interpolatedAlt = alt1 + tFraction.coerceIn(0.0, 1.0) * (alt2 - alt1)
+            if (alt2 > interpolatedAlt) {
+                totalClimb += (alt2 - interpolatedAlt)
+            }
         }
 
         // 2. Subsequent segments
         for (i in (startIndex + 1) until (path.size - 1)) {
-            val curr = path[i]
-            val next = path[i + 1]
-            val delta = next.altitude - curr.altitude
-            if (delta > 0.0) {
-                totalClimb += delta
+            val currAlt = path[i].altitude
+            val nextAlt = path[i + 1].altitude
+            if (currAlt != null && nextAlt != null) {
+                val delta = nextAlt - currAlt
+                if (delta > 0.0) {
+                    totalClimb += delta
+                }
             }
         }
 
@@ -107,19 +113,25 @@ object ElevationAwareEtaCalculator {
         if (endIndex < path.size - 1) {
             val p1 = path[endIndex]
             val p2 = path[endIndex + 1]
-            val interpolatedAlt = p1.altitude + tFraction.coerceIn(0.0, 1.0) * (p2.altitude - p1.altitude)
-            if (p1.altitude > interpolatedAlt) {
-                totalClimb += (p1.altitude - interpolatedAlt)
+            val alt1 = p1.altitude
+            val alt2 = p2.altitude
+            if (alt1 != null && alt2 != null) {
+                val interpolatedAlt = alt1 + tFraction.coerceIn(0.0, 1.0) * (alt2 - alt1)
+                if (alt1 > interpolatedAlt) {
+                    totalClimb += (alt1 - interpolatedAlt)
+                }
             }
         }
 
         // 2. Preceding segments moving backwards: (i+1) -> i
         for (i in (endIndex - 1) downTo 0) {
-            val fromPoint = path[i + 1]
-            val toPoint = path[i]
-            val delta = toPoint.altitude - fromPoint.altitude
-            if (delta > 0.0) {
-                totalClimb += delta
+            val fromAlt = path[i + 1].altitude
+            val toAlt = path[i].altitude
+            if (fromAlt != null && toAlt != null) {
+                val delta = toAlt - fromAlt
+                if (delta > 0.0) {
+                    totalClimb += delta
+                }
             }
         }
 

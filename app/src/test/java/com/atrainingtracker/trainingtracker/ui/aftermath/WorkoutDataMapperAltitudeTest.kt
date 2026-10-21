@@ -222,4 +222,60 @@ class WorkoutDataMapperAltitudeTest {
             mockSummariesDb.updateExtremaValue(any(), any(), any(), any(), any())
         }
     }
+
+    /**
+     * Verifies that a mountain workout with positive recordedMin (>15m) does not have its
+     * minimum corrupted to 0.0 by a single-point missing altitude gap artifact (TST-DAT-030.3).
+     */
+    @Test
+    fun testReconcileAltitudeExtrema_MountainZeroGapArtifact_PreservesRecordedMin() {
+        val workoutId = 511L
+        val streamAltitudes = listOf(450.0, 460.0, 0.0, 455.0, 465.0)
+        val encodedStream = NumericalEncodingUtils.encodeDoubles(streamAltitudes)
+        val recordedMin = 450.0
+        val recordedMax = 465.0
+
+        val (reconciledMin, reconciledMax) = mapper.reconcileAltitudeExtrema(
+            workoutId = workoutId,
+            encodedAltitudes = encodedStream,
+            recordedMin = recordedMin,
+            recordedMax = recordedMax
+        )
+
+        assertEquals("Mountain workout min altitude must not be corrupted to 0.0 m by gap artifact", 450.0, reconciledMin!!, 0.001)
+        assertEquals(465.0, reconciledMax!!, 0.001)
+
+        // Ensure updateExtremaValue is NOT called with 0.0 for MIN
+        verify(exactly = 0) {
+            mockSummariesDb.updateExtremaValue(
+                workoutId,
+                SensorType.ALTITUDE,
+                ExtremaType.MIN,
+                0.0,
+                any()
+            )
+        }
+    }
+
+    /**
+     * Verifies that genuine sea-level sessions (recordedMin <= 15m) reconcile properly to 0.0 m (TST-DAT-030.3).
+     */
+    @Test
+    fun testReconcileAltitudeExtrema_GenuineSeaLevel_ReconcilesToZero() {
+        val workoutId = 512L
+        val streamAltitudes = listOf(0.0, 2.0, 4.0, 1.0)
+        val encodedStream = NumericalEncodingUtils.encodeDoubles(streamAltitudes)
+        val recordedMin = 2.0
+        val recordedMax = 4.0
+
+        val (reconciledMin, reconciledMax) = mapper.reconcileAltitudeExtrema(
+            workoutId = workoutId,
+            encodedAltitudes = encodedStream,
+            recordedMin = recordedMin,
+            recordedMax = recordedMax
+        )
+
+        assertEquals("Genuine sea level workout should reconcile min to 0.0 m", 0.0, reconciledMin!!, 0.001)
+        assertEquals(4.0, reconciledMax!!, 0.001)
+    }
 }

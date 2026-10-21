@@ -161,7 +161,7 @@ class RoutesDatabaseManagerOptimizationTest {
                 assertEquals("Path Lat parity at $i", individualPath[i].latLng.latitude, route.path[i].latLng.latitude, 0.00001)
                 assertEquals("Path Lng parity at $i", individualPath[i].latLng.longitude, route.path[i].latLng.longitude, 0.00001)
                 assertEquals("Path Dist parity at $i", individualPath[i].distance, route.path[i].distance, 0.00001)
-                assertEquals("Path Alt parity at $i", individualPath[i].altitude, route.path[i].altitude, 0.00001)
+                assertEquals("Path Alt parity at $i", individualPath[i].altitude, route.path[i].altitude)
             }
 
             // Verify Waypoint count, coordinates, and sequential order

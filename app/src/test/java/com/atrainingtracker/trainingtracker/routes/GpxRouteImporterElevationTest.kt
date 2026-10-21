@@ -127,9 +127,9 @@ class GpxRouteImporterElevationTest {
         coVerify(exactly = 0) { mockElevationService.getBatchElevationsAsync(any()) }
 
         assertEquals(3, points.size)
-        assertEquals(650.0, points[0].altitude, 0.001)
-        assertEquals(720.0, points[1].altitude, 0.001)
-        assertEquals(810.0, points[2].altitude, 0.001)
+        assertEquals(650.0, points[0].altitude!!, 0.001)
+        assertEquals(720.0, points[1].altitude!!, 0.001)
+        assertEquals(810.0, points[2].altitude!!, 0.001)
 
         // Elevation gain: (720 - 650) + (810 - 720) = 70 + 90 = 160.0m
         assertEquals(160.0, summary.elevationGain, 0.001)
@@ -172,10 +172,10 @@ class GpxRouteImporterElevationTest {
         coVerify(exactly = 1) { mockElevationService.getBatchElevationsAsync(any()) }
 
         assertEquals(4, points.size)
-        assertEquals(500.0, points[0].altitude, 0.001)
-        assertEquals(520.0, points[1].altitude, 0.001)
-        assertEquals(515.0, points[2].altitude, 0.001)
-        assertEquals(540.0, points[3].altitude, 0.001)
+        assertEquals(500.0, points[0].altitude!!, 0.001)
+        assertEquals(520.0, points[1].altitude!!, 0.001)
+        assertEquals(515.0, points[2].altitude!!, 0.001)
+        assertEquals(540.0, points[3].altitude!!, 0.001)
 
         // Gain: (520 - 500 = +20) + (515 - 520 = -5, omitted) + (540 - 515 = +25) = 45.0m
         assertEquals(45.0, summary.elevationGain, 0.001)
@@ -252,8 +252,8 @@ class GpxRouteImporterElevationTest {
         val (summary, points) = result.getOrThrow()
 
         assertEquals(2, points.size)
-        assertEquals(0.0, points[0].altitude, 0.001)
-        assertEquals(0.0, points[1].altitude, 0.001)
+        assertEquals(0.0, points[0].altitude!!, 0.001)
+        assertEquals(0.0, points[1].altitude!!, 0.001)
         assertEquals(0.0, summary.elevationGain, 0.001)
     }
 
@@ -286,8 +286,8 @@ class GpxRouteImporterElevationTest {
         assertTrue(result.isSuccess)
         val (summary, points) = result.getOrThrow()
 
-        assertEquals(0.0, points[0].altitude, 0.001)
-        assertEquals(0.0, points[1].altitude, 0.001)
+        assertEquals(0.0, points[0].altitude!!, 0.001)
+        assertEquals(0.0, points[1].altitude!!, 0.001)
         assertEquals(0.0, summary.elevationGain, 0.001)
     }
 }

@@ -420,7 +420,7 @@ class WorkoutRepository private constructor(private val application: Application
 
                 if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
                     val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
-                    val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else 0.0
+                    val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null
                     val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
                     val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
                     val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
@@ -498,11 +498,11 @@ class WorkoutRepository private constructor(private val application: Application
                 val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
                 val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
                 val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
-                val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else 0.0
+                val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null
                 val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
                 val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
 
-                if (hr != null || power != null || speed != null || alt != 0.0) {
+                if (hr != null || power != null || speed != null || alt != null) {
                     points.add(
                         PathPoint(
                             distance = dist,
@@ -1212,13 +1212,58 @@ class WorkoutRepository private constructor(private val application: Application
                 }
 
                 // Downsample streams for summary
+                val hasAnyAltitude = retainedSamples.any { it.altitude != null && !it.altitude.isNaN() }
                 val sampledAltitudes = mutableListOf<Double>()
                 val sampledDistances = mutableListOf<Double>()
-                for (i in retainedSamples.indices) {
-                    if (i % WorkoutSummariesDatabaseManager.WorkoutSummaries.ENCODING_STEP_SIZE == 0 || i == retainedSamples.lastIndex) {
-                        val s = retainedSamples[i]
-                        sampledAltitudes.add(s.altitude ?: 0.0)
-                        sampledDistances.add((s.distanceTotalM - startSample.distanceTotalM).coerceAtLeast(0.0))
+                if (hasAnyAltitude) {
+                    for (i in retainedSamples.indices) {
+                        if (i % WorkoutSummariesDatabaseManager.WorkoutSummaries.ENCODING_STEP_SIZE == 0 || i == retainedSamples.lastIndex) {
+                            val s = retainedSamples[i]
+                            val alt = s.altitude ?: run {
+                                var prevAlt: Double? = null
+                                var prevDist = 0.0
+                                for (k in i - 1 downTo 0) {
+                                    val a = retainedSamples[k].altitude
+                                    if (a != null && !a.isNaN()) {
+                                        prevAlt = a
+                                        prevDist = retainedSamples[k].distanceTotalM
+                                        break
+                                    }
+                                }
+                                var nextAlt: Double? = null
+                                var nextDist = 0.0
+                                for (k in i + 1 until retainedSamples.size) {
+                                    val a = retainedSamples[k].altitude
+                                    if (a != null && !a.isNaN()) {
+                                        nextAlt = a
+                                        nextDist = retainedSamples[k].distanceTotalM
+                                        break
+                                    }
+                                }
+                                when {
+                                    prevAlt != null && nextAlt != null -> {
+                                        val distSpan = nextDist - prevDist
+                                        if (distSpan > 1e-6) {
+                                            prevAlt + (nextAlt - prevAlt) * ((s.distanceTotalM - prevDist) / distSpan)
+                                        } else {
+                                            prevAlt
+                                        }
+                                    }
+                                    prevAlt != null -> prevAlt
+                                    nextAlt != null -> nextAlt
+                                    else -> 0.0
+                                }
+                            }
+                            sampledAltitudes.add(alt)
+                            sampledDistances.add((s.distanceTotalM - startSample.distanceTotalM).coerceAtLeast(0.0))
+                        }
+                    }
+                } else {
+                    for (i in retainedSamples.indices) {
+                        if (i % WorkoutSummariesDatabaseManager.WorkoutSummaries.ENCODING_STEP_SIZE == 0 || i == retainedSamples.lastIndex) {
+                            val s = retainedSamples[i]
+                            sampledDistances.add((s.distanceTotalM - startSample.distanceTotalM).coerceAtLeast(0.0))
+                        }
                     }
                 }
                 val encodedAltitudes = if (sampledAltitudes.isNotEmpty()) com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils.encodeDoubles(sampledAltitudes) else null

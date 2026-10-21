@@ -242,8 +242,8 @@ class LiveClimbsRepository private constructor(
 
         val completedDist = projection.alongTrackDistance
         val remainingDist = (climb.distanceMeters - completedDist).coerceAtLeast(0.0)
-        val currentAlt = projection.interpolatedAltitude ?: path.first().altitude
-        val summitAlt = path.last().altitude
+        val currentAlt = projection.interpolatedAltitude ?: path.first().altitude ?: 0.0
+        val summitAlt = path.last().altitude ?: currentAlt
         val remainingGain = (summitAlt - currentAlt).coerceAtLeast(0.0)
         val progressFraction = (completedDist / climb.distanceMeters).coerceIn(0.0, 1.0).toFloat()
         val grade = projection.instantaneousGradePercent ?: climb.avgGradePercent
