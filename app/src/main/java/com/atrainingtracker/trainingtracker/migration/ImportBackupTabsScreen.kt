@@ -19,12 +19,15 @@
 package com.atrainingtracker.trainingtracker.migration
 
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import android.util.Log
+import androidx.preference.PreferenceManager
 import java.text.DateFormat
 import java.util.Date
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.security.AuthCredentialsStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -43,6 +46,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
@@ -126,10 +132,33 @@ fun ImportBackupTabsScreen(
     var pendingDirectoryFormat by remember { mutableStateOf("fit") }
     var showDropboxDisconnectedDialog by remember { mutableStateOf(false) }
     var showNoCloudConnectedDialog by remember { mutableStateOf(false) }
-    val isDropboxConnected = remember(uiState) {
+    var resumeTrigger by remember { mutableIntStateOf(0) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, context) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                resumeTrigger++
+            }
+        }
+        val defaultPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val authPrefs = AuthCredentialsStore.getPrefs(context)
+        val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+            resumeTrigger++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        defaultPrefs.registerOnSharedPreferenceChangeListener(prefListener)
+        authPrefs.registerOnSharedPreferenceChangeListener(prefListener)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            defaultPrefs.unregisterOnSharedPreferenceChangeListener(prefListener)
+            authPrefs.unregisterOnSharedPreferenceChangeListener(prefListener)
+        }
+    }
+
+    val isDropboxConnected = remember(uiState, resumeTrigger, showDropboxDisconnectedDialog, showNoCloudConnectedDialog) {
         TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
     }
-    val isGoogleDriveConnected = remember(uiState) {
+    val isGoogleDriveConnected = remember(uiState, resumeTrigger, showNoCloudConnectedDialog) {
         TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
     }
     

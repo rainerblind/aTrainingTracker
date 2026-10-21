@@ -23,10 +23,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
-import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetDialogFragment
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
-import com.dropbox.core.android.Auth
 
 /**
  * DialogFragment hosting the modernized [DropboxSettingsDialog] composable modal bottom sheet.
@@ -34,7 +32,7 @@ import com.dropbox.core.android.Auth
  * Architectural Role:
  * - Bridges the Android Fragment lifecycle and navigation hierarchy with the Material 3 Compose dialog.
  * - Inherits [AppBottomSheetDialogFragment] to render edge-to-edge transparent system bars without flicker.
- * - Captures OAuth PKCE credentials upon resumption via [onResume] when returning from the browser flow.
+ * - Centralizes credential capture directly within [DropboxSettingsDialog] to avoid race conditions.
  */
 class DropboxSettingsDialogFragment : AppBottomSheetDialogFragment() {
 
@@ -51,15 +49,6 @@ class DropboxSettingsDialogFragment : AppBottomSheetDialogFragment() {
                     )
                 }
             }
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        val dbxCredential = Auth.getDbxCredential()
-        if (dbxCredential != null) {
-            TrainingApplication.storeDropboxCredential(dbxCredential)
-            TrainingApplication.setUploadToDropbox(true)
         }
     }
 
