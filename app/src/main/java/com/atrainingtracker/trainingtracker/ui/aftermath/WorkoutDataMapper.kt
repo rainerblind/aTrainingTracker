@@ -948,7 +948,7 @@ class WorkoutDataMapper(
             )
         } catch (e: ParseException) {
             Log.e("WorkoutHeaderProvider", "Failed to parse date string: $startTimeString", e)
-            DateTimeResult(context.getString(R.string.invalid_date), "", 0L, java.time.LocalDateTime.now())
+            DateTimeResult(context.getString(R.string.invalid_date), "", 0L, java.time.LocalDateTime.ofInstant(java.time.Instant.EPOCH, java.time.ZoneId.systemDefault()))
         }
     }
 

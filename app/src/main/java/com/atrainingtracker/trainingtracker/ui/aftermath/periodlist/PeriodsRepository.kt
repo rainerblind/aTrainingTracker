@@ -35,7 +35,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.IsoFields
 import java.time.temporal.TemporalAdjusters
@@ -141,6 +143,14 @@ class PeriodsRepository private constructor(private val application: Application
                 PeriodType.YEAR -> dt.year.toString()
             }
         }
+
+        @androidx.annotation.VisibleForTesting
+        fun calculateDayEnd(startS: Long, zone: ZoneId = ZoneId.systemDefault()): Long =
+            Instant.ofEpochSecond(startS).atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toEpochSecond() - 1
+
+        @androidx.annotation.VisibleForTesting
+        fun calculateWeekEnd(startS: Long, zone: ZoneId = ZoneId.systemDefault()): Long =
+            Instant.ofEpochSecond(startS).atZone(zone).toLocalDate().plusWeeks(1).atStartOfDay(zone).toEpochSecond() - 1
     }
 
     init {
@@ -250,7 +260,10 @@ class PeriodsRepository private constructor(private val application: Application
                         c.moveToPosition(currentChunkStartPos)
                         var j = 0
                         while (j < chunkSize && !c.isAfterLast) {
-                            list.add(mapper.fromCursor(c, batchMetadata))
+                            val workout = mapper.fromCursor(c, batchMetadata)
+                            if (workout.startTimeS > 0L) {
+                                list.add(workout)
+                            }
                             c.moveToNext()
                             j++
                         }
@@ -335,10 +348,11 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     private fun processMonthBucket(db: android.database.sqlite.SQLiteDatabase, workouts: List<WorkoutData>) {
-        if (workouts.isEmpty()) return
+        val validWorkouts = workouts.filter { it.startTimeS > 0L }
+        if (validWorkouts.isEmpty()) return
         
         // 1. Build DAYS from Workouts
-        val daysInMonth = workouts.groupBy { 
+        val daysInMonth = validWorkouts.groupBy { 
             it.localDateTime.toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond() 
         }
         daysInMonth.forEach { (startS, dayWorkouts) ->
@@ -348,7 +362,7 @@ class PeriodsRepository private constructor(private val application: Application
         }
 
         // 2. Roll up WEEKs and MONTH from these DAYs
-        val firstW = workouts.first()
+        val firstW = validWorkouts.first()
         val monthStart = firstW.localDateTime.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
         val monthEnd = firstW.localDateTime.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
         rollupDaysToParentPeriods(db, monthStart, monthEnd)
@@ -404,6 +418,7 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     private suspend fun onWorkoutFinishedInternal(workout: WorkoutData) {
+        if (workout.startTimeS <= 0L) return
         val ldt = workout.localDateTime
         val dayStart = ldt.toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
 
@@ -427,6 +442,7 @@ class PeriodsRepository private constructor(private val application: Application
      * Hierarchical Deletion: Recalculate Day -> Propagate Up.
      */
     fun onWorkoutDeleted(workout: WorkoutData) {
+        if (workout.startTimeS <= 0L) return
         scope.launch {
             rebuildMutex.withLock {
                 val ldt = workout.localDateTime
@@ -454,6 +470,7 @@ class PeriodsRepository private constructor(private val application: Application
      * Atomic Sport Transition (ATT-346 Suggested Algorithm).
      */
     fun onWorkoutSportChanged(newWorkout: WorkoutData, oldWorkout: WorkoutData) {
+        if (newWorkout.startTimeS <= 0L) return
         scope.launch {
             rebuildMutex.withLock {
                 Log.d(TAG, "onWorkoutSportChanged: ${oldWorkout.bSportType} -> ${newWorkout.bSportType}")
@@ -608,7 +625,7 @@ class PeriodsRepository private constructor(private val application: Application
         val yearStart = ldt.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
 
         // 1. Recalculate Week from Days
-        val weekEnd = weekStart + (7 * 86400) - 1
+        val weekEnd = calculateWeekEnd(weekStart)
         val daysInWeek = dbManager.getSummariesInRange(PeriodType.DAY, weekStart, weekEnd)
         if (daysInWeek.isEmpty()) dbManager.deletePeriod(db, PeriodType.WEEK, weekStart)
         else aggregateChildrenToParent(daysInWeek, PeriodType.WEEK, weekStart, weekEnd)?.let { dbManager.upsertPeriod(db, it) }
@@ -643,9 +660,10 @@ class PeriodsRepository private constructor(private val application: Application
                 .toEpochSecond() 
         }.distinct()
         weekStarts.forEach { ws ->
-            val daysInWeek = dbManager.getSummariesInRange(PeriodType.DAY, ws, ws + (7 * 86400) - 1)
+            val weekEnd = calculateWeekEnd(ws)
+            val daysInWeek = dbManager.getSummariesInRange(PeriodType.DAY, ws, weekEnd)
             if (daysInWeek.isNotEmpty()) {
-                aggregateChildrenToParent(daysInWeek, PeriodType.WEEK, ws, ws + (7 * 86400) - 1)?.let { dbManager.upsertPeriod(db, it) }
+                aggregateChildrenToParent(daysInWeek, PeriodType.WEEK, ws, weekEnd)?.let { dbManager.upsertPeriod(db, it) }
             }
         }
     }
@@ -682,7 +700,7 @@ class PeriodsRepository private constructor(private val application: Application
 
         return PeriodSummary(
             periodLabel = workouts.first().localDateTime.format(dayFormatter), periodDateRange = "", periodType = PeriodType.DAY,
-            startTimestampS = startS, endTimestampS = startS + 86399, totalWorkouts = workouts.size,
+            startTimestampS = startS, endTimestampS = calculateDayEnd(startS), totalWorkouts = workouts.size,
             totalDurationSec = workouts.sumOf { it.activeTimeSec }, totalDistance = workouts.sumOf { it.totalDistance },
             sportStats = sportStats, sortKey = getPeriodSortKey(startS, PeriodType.DAY),
             minLat = bounds?.southwest?.latitude ?: 90.0, 
@@ -758,7 +776,7 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     private fun fetchWorkoutsInDay(startS: Long): List<WorkoutData> {
-        return getWorkoutsForRange(startS, startS + 86399)
+        return getWorkoutsForRange(startS, calculateDayEnd(startS))
     }
 
     /**
@@ -862,7 +880,10 @@ class PeriodsRepository private constructor(private val application: Application
 
         val list = ArrayList<WorkoutData>(snapshots.size)
         for (snapshot in snapshots) {
-            list.add(mapper.fromSnapshot(snapshot, batchMetadata, reconcile = false))
+            val workout = mapper.fromSnapshot(snapshot, batchMetadata, reconcile = false)
+            if (workout.startTimeS > 0L) {
+                list.add(workout)
+            }
         }
         return list
     }
@@ -937,11 +958,12 @@ class PeriodsRepository private constructor(private val application: Application
     }
 
     private fun precalculateGroups(workouts: List<WorkoutData>): WorkoutGroups {
+        val validWorkouts = workouts.filter { it.startTimeS > 0L }
         return WorkoutGroups(
-            days = workouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.DAY) },
-            weeks = workouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.WEEK) },
-            months = workouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.MONTH) },
-            years = workouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.YEAR) }
+            days = validWorkouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.DAY) },
+            weeks = validWorkouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.WEEK) },
+            months = validWorkouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.MONTH) },
+            years = validWorkouts.groupBy { getPeriodSortKey(it.startTimeS, PeriodType.YEAR) }
         )
     }
 
@@ -1056,8 +1078,8 @@ class PeriodsRepository private constructor(private val application: Application
         val yearStart = ldt.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
 
         return listOf(
-            Triple(PeriodType.DAY, dayStart, dayStart + 86399),
-            Triple(PeriodType.WEEK, weekStart, weekStart + (7 * 86400) - 1),
+            Triple(PeriodType.DAY, dayStart, calculateDayEnd(dayStart)),
+            Triple(PeriodType.WEEK, weekStart, calculateWeekEnd(weekStart)),
             Triple(PeriodType.MONTH, monthStart, ldt.with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()),
             Triple(PeriodType.YEAR, yearStart, ldt.with(TemporalAdjusters.lastDayOfYear()).toLocalDate().atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toEpochSecond())
         )
