@@ -18,6 +18,9 @@
 
 package com.atrainingtracker.trainingtracker.activities
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -49,12 +52,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Zone
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
+import com.atrainingtracker.trainingtracker.settings.ZoneProfileState
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
 import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitDarkTheme
@@ -73,6 +78,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/**
+ * Traverses context hierarchy to safely resolve [Activity] without unsafe casting (REQ-UI-428.4).
+ */
+tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
 
 class ZonesSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -94,25 +108,14 @@ class ZonesSettingsActivity : ComponentActivity() {
     }
 }
 
-// Data class to hold the full state of a profile
-data class ZoneProfileState(
-    val type: ZoneType,
-    val z1: Int,
-    val z2: Int,
-    val z3: Int,
-    val z4: Int,
-    val z5: Int = 0,
-    val z6: Int = 0,
-    val displayOptions: ZoneDisplayOptions = ZoneDisplayOptions()
-)
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ZoneSettingsScreen(
     initialTab: Int = 0,
     promptReason: String? = null,
-    onFinish: () -> Unit = {}
+    onFinish: () -> Unit = {},
+    viewModel: ZonesSettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
 
@@ -122,12 +125,14 @@ fun ZoneSettingsScreen(
     // Force status bar icons to be dark when in Light Mode
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (context as android.app.Activity).window
-            val windowInsetsController = androidx.core.view.WindowCompat.getInsetsController(window, view)
+            val window = context.findActivity()?.window
+            if (window != null) {
+                val windowInsetsController = androidx.core.view.WindowCompat.getInsetsController(window, view)
 
-            // appearanceLightStatusBars = true makes icons DARK
-            // appearanceLightStatusBars = false makes icons WHITE
-            windowInsetsController.isAppearanceLightStatusBars = !isDarkTheme
+                // appearanceLightStatusBars = true makes icons DARK
+                // appearanceLightStatusBars = false makes icons WHITE
+                windowInsetsController.isAppearanceLightStatusBars = !isDarkTheme
+            }
         }
     }
 
@@ -141,61 +146,7 @@ fun ZoneSettingsScreen(
     )
     val zoneTypes = listOf(ZoneType.HR_RUN, ZoneType.HR_BIKE, ZoneType.PWR_BIKE)
 
-    // Local state to hold data for swiping performance
-    var allProfilesData by remember { mutableStateOf<List<ZoneProfileState>>(emptyList()) }
-
-    // save helper
-    val saveProfile = { profile: ZoneProfileState ->
-        scope.launch(Dispatchers.IO) {
-            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_1, profile.z1)
-            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_2, profile.z2)
-            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_3, profile.z3)
-            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_4, profile.z4)
-            if (profile.type == ZoneType.PWR_BIKE) {
-                dataStore.saveHrZoneMax(profile.type, Zone.ZONE_5, profile.z5)
-                dataStore.saveHrZoneMax(profile.type, Zone.ZONE_6, profile.z6)
-            }
-            dataStore.saveZoneDisplayOptions(profile.type, profile.displayOptions)
-        }
-    }
-
-    val reloadProfiles = {
-        scope.launch(Dispatchers.IO) {
-            val loadedData = zoneTypes.mapIndexed { _, type ->
-                ZoneProfileState(
-                    type = type,
-                    z1 = dataStore.getZone1MaxFlow(type).first(),
-                    z2 = dataStore.getZone2MaxFlow(type).first(),
-                    z3 = dataStore.getZone3MaxFlow(type).first(),
-                    z4 = dataStore.getZone4MaxFlow(type).first(),
-                    z5 = if (type == ZoneType.PWR_BIKE) dataStore.getZone5MaxFlow(type).first() else 0,
-                    z6 = if (type == ZoneType.PWR_BIKE) dataStore.getZone6MaxFlow(type).first() else 0,
-                    displayOptions = dataStore.getZoneDisplayOptionsFlow(type).first()
-                )
-            }
-            allProfilesData = loadedData
-        }
-    }
-
-    // Initial Load & Migration
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            dataStore.checkAndMigratePowerZones()
-            val loadedData = zoneTypes.mapIndexed { _, type ->
-                ZoneProfileState(
-                    type = type,
-                    z1 = dataStore.getZone1MaxFlow(type).first(),
-                    z2 = dataStore.getZone2MaxFlow(type).first(),
-                    z3 = dataStore.getZone3MaxFlow(type).first(),
-                    z4 = dataStore.getZone4MaxFlow(type).first(),
-                    z5 = if (type == ZoneType.PWR_BIKE) dataStore.getZone5MaxFlow(type).first() else 0,
-                    z6 = if (type == ZoneType.PWR_BIKE) dataStore.getZone6MaxFlow(type).first() else 0,
-                    displayOptions = dataStore.getZoneDisplayOptionsFlow(type).first()
-                )
-            }
-            allProfilesData = loadedData
-        }
-    }
+    val allProfilesData by viewModel.allProfiles.collectAsState()
 
     // Update the Pager State to start at initialTab
     val pagerState = rememberPagerState(
@@ -303,7 +254,7 @@ fun ZoneSettingsScreen(
                     beyondViewportPageCount = 1
                 ) { page ->
                     // Get the specific state for this page
-                    val profileState = allProfilesData[page]
+                    val profileState = allProfilesData.getOrNull(page) ?: return@HorizontalPager
 
                     SettingsScreenContent(
                         z1Max = profileState.z1,
@@ -315,53 +266,13 @@ fun ZoneSettingsScreen(
                         displayOptions = profileState.displayOptions,
                         zoneType = profileState.type,
 
-                        onUpdateZone1Max = { new ->
-                            val updated = updateProfile(allProfilesData, page) { it.copy(z1 = new) }
-                            allProfilesData = updated
-                            if (isProfileMonotonic(updated[page])) {
-                                saveProfile(updated[page])
-                            }
-                        },
-                        onUpdateZone2Max = { new ->
-                            val updated = updateProfile(allProfilesData, page) { it.copy(z2 = new) }
-                            allProfilesData = updated
-                            if (isProfileMonotonic(updated[page])) {
-                                saveProfile(updated[page])
-                            }
-                        },
-                        onUpdateZone3Max = { new ->
-                            val updated = updateProfile(allProfilesData, page) { it.copy(z3 = new) }
-                            allProfilesData = updated
-                            if (isProfileMonotonic(updated[page])) {
-                                saveProfile(updated[page])
-                            }
-                        },
-                        onUpdateZone4Max = { new ->
-                            val updated = updateProfile(allProfilesData, page) { it.copy(z4 = new) }
-                            allProfilesData = updated
-                            if (isProfileMonotonic(updated[page])) {
-                                saveProfile(updated[page])
-                            }
-                        },
-                        onUpdateZone5Max = { new ->
-                            val updated = updateProfile(allProfilesData, page) { it.copy(z5 = new) }
-                            allProfilesData = updated
-                            if (isProfileMonotonic(updated[page])) {
-                                saveProfile(updated[page])
-                            }
-                        },
-                        onUpdateZone6Max = { new ->
-                            val updated = updateProfile(allProfilesData, page) { it.copy(z6 = new) }
-                            allProfilesData = updated
-                            if (isProfileMonotonic(updated[page])) {
-                                saveProfile(updated[page])
-                            }
-                        },
-                        onUpdateDisplayOptions = { newOptions ->
-                            val updated = updateProfile(allProfilesData, page) { it.copy(displayOptions = newOptions) }
-                            allProfilesData = updated
-                            saveProfile(updated[page])
-                        }
+                        onUpdateZone1Max = { new -> viewModel.updateThreshold(profileState.type, 1, new) },
+                        onUpdateZone2Max = { new -> viewModel.updateThreshold(profileState.type, 2, new) },
+                        onUpdateZone3Max = { new -> viewModel.updateThreshold(profileState.type, 3, new) },
+                        onUpdateZone4Max = { new -> viewModel.updateThreshold(profileState.type, 4, new) },
+                        onUpdateZone5Max = { new -> viewModel.updateThreshold(profileState.type, 5, new) },
+                        onUpdateZone6Max = { new -> viewModel.updateThreshold(profileState.type, 6, new) },
+                        onUpdateDisplayOptions = { newOptions -> viewModel.updateDisplayOptions(profileState.type, newOptions) }
                     )
                 }
             }
@@ -395,7 +306,7 @@ fun ZoneSettingsScreen(
                                 holder.onSaveCompleted()
                                 showCalculatorDialog = false
                             }
-                            reloadProfiles()
+                            viewModel.reloadProfileFromDataStore(ZoneType.PWR_BIKE)
                         } catch (e: Exception) {
                             withContext(Dispatchers.Main) {
                                 holder.onSaveFailed()
@@ -419,7 +330,7 @@ fun ZoneSettingsScreen(
                                 holder.onSaveCompleted()
                                 showCalculatorDialog = false
                             }
-                            reloadProfiles()
+                            viewModel.reloadProfileFromDataStore(zType)
                         } catch (e: Exception) {
                             withContext(Dispatchers.Main) {
                                 holder.onSaveFailed()
@@ -432,25 +343,7 @@ fun ZoneSettingsScreen(
     }
 }
 
-private fun isProfileMonotonic(p: ZoneProfileState): Boolean {
-    return if (p.type == ZoneType.PWR_BIKE) {
-        p.z1 > 0 && p.z2 > p.z1 && p.z3 > p.z2 && p.z4 > p.z3 && p.z5 > p.z4 && p.z6 > p.z5
-    } else {
-        p.z1 > 0 && p.z2 > p.z1 && p.z3 > p.z2 && p.z4 > p.z3
-    }
-}
-
-// Helper to update one item in the list immutably
-private fun updateProfile(
-    list: List<ZoneProfileState>,
-    index: Int,
-    update: (ZoneProfileState) -> ZoneProfileState
-): List<ZoneProfileState> {
-    val mutable = list.toMutableList()
-    val item = mutable[index]
-    mutable[index] = update(item)
-    return mutable
-}
+fun isProfileMonotonic(p: ZoneProfileState): Boolean = p.isMonotonic()
 
 // ... SettingsScreenContent, ZoneRow, and IntegerInputField remain unchanged ...
 // (Include them below if copying the whole file, they are identical to previous version)
@@ -977,45 +870,15 @@ fun SettingsScreenPreview() {
 fun ZoneProfileTabContent(
     zoneType: ZoneType,
     showCalculatorDialog: Boolean,
-    onDismissCalculatorDialog: () -> Unit
+    onDismissCalculatorDialog: () -> Unit,
+    viewModel: ZonesSettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val dataStore = remember { SettingsDataStore(context) }
     val scope = rememberCoroutineScope()
 
-    var profileState by remember(zoneType) { mutableStateOf<ZoneProfileState?>(null) }
-
-    val loadProfile: suspend () -> ZoneProfileState = {
-        dataStore.checkAndMigratePowerZones()
-        ZoneProfileState(
-            type = zoneType,
-            z1 = dataStore.getZone1MaxFlow(zoneType).first(),
-            z2 = dataStore.getZone2MaxFlow(zoneType).first(),
-            z3 = dataStore.getZone3MaxFlow(zoneType).first(),
-            z4 = dataStore.getZone4MaxFlow(zoneType).first(),
-            z5 = if (zoneType == ZoneType.PWR_BIKE) dataStore.getZone5MaxFlow(zoneType).first() else 0,
-            z6 = if (zoneType == ZoneType.PWR_BIKE) dataStore.getZone6MaxFlow(zoneType).first() else 0,
-            displayOptions = dataStore.getZoneDisplayOptionsFlow(zoneType).first()
-        )
-    }
-
-    LaunchedEffect(zoneType) {
-        profileState = withContext(Dispatchers.IO) { loadProfile() }
-    }
-
-    val saveSingleProfile: (ZoneProfileState) -> Unit = { profile ->
-        scope.launch(Dispatchers.IO) {
-            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_1, profile.z1)
-            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_2, profile.z2)
-            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_3, profile.z3)
-            dataStore.saveHrZoneMax(profile.type, Zone.ZONE_4, profile.z4)
-            if (profile.type == ZoneType.PWR_BIKE) {
-                dataStore.saveHrZoneMax(profile.type, Zone.ZONE_5, profile.z5)
-                dataStore.saveHrZoneMax(profile.type, Zone.ZONE_6, profile.z6)
-            }
-            dataStore.saveZoneDisplayOptions(profile.type, profile.displayOptions)
-        }
-    }
+    val allProfiles by viewModel.allProfiles.collectAsState()
+    val currentProfile = allProfiles.find { it.type == zoneType }
 
     val isCustomized by dataStore.isZoneCustomizedFlow(zoneType).collectAsState(initial = false)
     val storedFtp by dataStore.ftpFlow.collectAsState(initial = null)
@@ -1023,7 +886,6 @@ fun ZoneProfileTabContent(
     val storedHrRest by dataStore.hrRestFlow.collectAsState(initial = null)
     val storedHrMethod by dataStore.hrCalcMethodFlow.collectAsState(initial = null)
 
-    val currentProfile = profileState
     if (currentProfile == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -1038,41 +900,13 @@ fun ZoneProfileTabContent(
             z6Max = currentProfile.z6,
             displayOptions = currentProfile.displayOptions,
             zoneType = currentProfile.type,
-            onUpdateZone1Max = { new ->
-                val updated = currentProfile.copy(z1 = new)
-                profileState = updated
-                if (isProfileMonotonic(updated)) saveSingleProfile(updated)
-            },
-            onUpdateZone2Max = { new ->
-                val updated = currentProfile.copy(z2 = new)
-                profileState = updated
-                if (isProfileMonotonic(updated)) saveSingleProfile(updated)
-            },
-            onUpdateZone3Max = { new ->
-                val updated = currentProfile.copy(z3 = new)
-                profileState = updated
-                if (isProfileMonotonic(updated)) saveSingleProfile(updated)
-            },
-            onUpdateZone4Max = { new ->
-                val updated = currentProfile.copy(z4 = new)
-                profileState = updated
-                if (isProfileMonotonic(updated)) saveSingleProfile(updated)
-            },
-            onUpdateZone5Max = { new ->
-                val updated = currentProfile.copy(z5 = new)
-                profileState = updated
-                if (isProfileMonotonic(updated)) saveSingleProfile(updated)
-            },
-            onUpdateZone6Max = { new ->
-                val updated = currentProfile.copy(z6 = new)
-                profileState = updated
-                if (isProfileMonotonic(updated)) saveSingleProfile(updated)
-            },
-            onUpdateDisplayOptions = { newOptions ->
-                val updated = currentProfile.copy(displayOptions = newOptions)
-                profileState = updated
-                saveSingleProfile(updated)
-            }
+            onUpdateZone1Max = { new -> viewModel.updateThreshold(zoneType, 1, new) },
+            onUpdateZone2Max = { new -> viewModel.updateThreshold(zoneType, 2, new) },
+            onUpdateZone3Max = { new -> viewModel.updateThreshold(zoneType, 3, new) },
+            onUpdateZone4Max = { new -> viewModel.updateThreshold(zoneType, 4, new) },
+            onUpdateZone5Max = { new -> viewModel.updateThreshold(zoneType, 5, new) },
+            onUpdateZone6Max = { new -> viewModel.updateThreshold(zoneType, 6, new) },
+            onUpdateDisplayOptions = { newOptions -> viewModel.updateDisplayOptions(zoneType, newOptions) }
         )
     }
 
@@ -1100,12 +934,11 @@ fun ZoneProfileTabContent(
                                 metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.FTP_WATTS,
                                 value = ftp.toDouble()
                             )
-                        val reloaded = loadProfile()
                         withContext(Dispatchers.Main) {
-                            profileState = reloaded
                             holder.onSaveCompleted()
                             onDismissCalculatorDialog()
                         }
+                        viewModel.reloadProfileFromDataStore(ZoneType.PWR_BIKE)
                     } catch (_: Exception) {
                         withContext(Dispatchers.Main) {
                             holder.onSaveFailed()
@@ -1125,12 +958,11 @@ fun ZoneProfileTabContent(
                                     value = hrRest.toDouble()
                                 )
                         }
-                        val reloaded = loadProfile()
                         withContext(Dispatchers.Main) {
-                            profileState = reloaded
                             holder.onSaveCompleted()
                             onDismissCalculatorDialog()
                         }
+                        viewModel.reloadProfileFromDataStore(zType)
                     } catch (_: Exception) {
                         withContext(Dispatchers.Main) {
                             holder.onSaveFailed()
