@@ -50,7 +50,7 @@ enum class HrMethod {
 data class ZoneCalculatorUiState(
     val zoneType: ZoneType,
     val isCustomized: Boolean,
-    val ftpInput: String = "240",
+    val ftpInput: String = "270",
     val ftpErrorResId: Int? = null,
     val hrMaxInput: String = "185",
     val hrRestInput: String = "55",

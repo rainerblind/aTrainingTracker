@@ -62,7 +62,7 @@ data class SettingsSnapshot(
         val DEFAULT = SettingsSnapshot(
             hrRunZoneMax = listOf(132, 145, 158, 171),
             hrBikeZoneMax = listOf(127, 140, 153, 166),
-            pwrBikeZoneMax = listOf(132, 180, 216, 252, 288, 360),
+            pwrBikeZoneMax = listOf(149, 203, 243, 284, 324, 405),
             ftp = null,
             athleteWeightKg = SettingsDataStore.DEFAULT_ATHLETE_WEIGHT_KG,
             cpWatts = null,
@@ -189,7 +189,7 @@ class SettingsDataStore(
         const val MIN_ATHLETE_WEIGHT_LBS = 66.0f
         const val MAX_ATHLETE_WEIGHT_LBS = 660.0f
         const val LBS_PER_KG = 2.20462262185f
-        const val DEFAULT_CYCLING_FTP = 240
+        const val DEFAULT_CYCLING_FTP = 270
         const val DEFAULT_HR_MAX = 185
         const val DEFAULT_HR_REST = 55
         const val MIN_CP_WATTS = 50
@@ -249,12 +249,12 @@ class SettingsDataStore(
             }
             // Power defaults (Watts)
             ZoneType.PWR_BIKE -> when (zone) {
-                Zone.ZONE_1 -> 132 // Active Recovery
-                Zone.ZONE_2 -> 180 // Endurance
-                Zone.ZONE_3 -> 216 // Tempo
-                Zone.ZONE_4 -> 252 // Threshold (FTP)
-                Zone.ZONE_5 -> 288 // VO2 Max
-                Zone.ZONE_6 -> 360 // Anaerobic Capacity
+                Zone.ZONE_1 -> 149 // Active Recovery
+                Zone.ZONE_2 -> 203 // Endurance
+                Zone.ZONE_3 -> 243 // Tempo
+                Zone.ZONE_4 -> 284 // Threshold (FTP)
+                Zone.ZONE_5 -> 324 // VO2 Max
+                Zone.ZONE_6 -> 405 // Anaerobic Capacity
             }
         }
     }
@@ -264,7 +264,7 @@ class SettingsDataStore(
      */
     fun calculateProportionalPowerDefaults(z4Max: Int): Pair<Int, Int> {
         if (z4Max <= 0) {
-            return Pair(288, 360)
+            return Pair(324, 405)
         }
         val estimatedFtp = maxOf(50, kotlin.math.round(z4Max / 1.05).toInt())
         val defaultZ5 = maxOf(z4Max + 10, kotlin.math.round(estimatedFtp * 1.20).toInt())
@@ -293,7 +293,7 @@ class SettingsDataStore(
                 stored
             } else if (zoneType == ZoneType.PWR_BIKE && (zone == Zone.ZONE_5 || zone == Zone.ZONE_6) && prefs.contains(PWR_BIKE_ZONE4_MAX)) {
                 // Dynamic proportional migration from existing z4Max
-                val z4Max = prefs[PWR_BIKE_ZONE4_MAX] ?: 252
+                val z4Max = prefs[PWR_BIKE_ZONE4_MAX] ?: 284
                 val (propZ5, propZ6) = calculateProportionalPowerDefaults(z4Max)
                 if (zone == Zone.ZONE_5) propZ5 else propZ6
             } else {
@@ -519,25 +519,25 @@ class SettingsDataStore(
         val hrBikeZ3 = prefs[HR_BIKE_ZONE3_MAX] ?: 153
         val hrBikeZ4 = prefs[HR_BIKE_ZONE4_MAX] ?: 166
 
-        val pwrBikeZ1 = prefs[PWR_BIKE_ZONE1_MAX] ?: 132
-        val pwrBikeZ2 = prefs[PWR_BIKE_ZONE2_MAX] ?: 180
-        val pwrBikeZ3 = prefs[PWR_BIKE_ZONE3_MAX] ?: 216
-        val pwrBikeZ4 = prefs[PWR_BIKE_ZONE4_MAX] ?: 252
+        val pwrBikeZ1 = prefs[PWR_BIKE_ZONE1_MAX] ?: 149
+        val pwrBikeZ2 = prefs[PWR_BIKE_ZONE2_MAX] ?: 203
+        val pwrBikeZ3 = prefs[PWR_BIKE_ZONE3_MAX] ?: 243
+        val pwrBikeZ4 = prefs[PWR_BIKE_ZONE4_MAX] ?: 284
 
         val pwrBikeZ5 = if (prefs.contains(PWR_BIKE_ZONE5_MAX)) {
-            prefs[PWR_BIKE_ZONE5_MAX] ?: 288
+            prefs[PWR_BIKE_ZONE5_MAX] ?: 324
         } else if (prefs.contains(PWR_BIKE_ZONE4_MAX)) {
             calculateProportionalPowerDefaults(pwrBikeZ4).first
         } else {
-            288
+            324
         }
 
         val pwrBikeZ6 = if (prefs.contains(PWR_BIKE_ZONE6_MAX)) {
-            prefs[PWR_BIKE_ZONE6_MAX] ?: 360
+            prefs[PWR_BIKE_ZONE6_MAX] ?: 405
         } else if (prefs.contains(PWR_BIKE_ZONE4_MAX)) {
             calculateProportionalPowerDefaults(pwrBikeZ4).second
         } else {
-            360
+            405
         }
 
         val hrRunKeys = getZoneDisplayKeys(ZoneType.HR_RUN)
@@ -716,10 +716,10 @@ class SettingsDataStore(
             val hasZ5 = prefs.contains(PWR_BIKE_ZONE5_MAX)
             val hasZ6 = prefs.contains(PWR_BIKE_ZONE6_MAX)
             if (!hasZ5 || !hasZ6) {
-                val z1 = prefs[PWR_BIKE_ZONE1_MAX] ?: 132
-                val z2 = prefs[PWR_BIKE_ZONE2_MAX] ?: 180
-                val z3 = prefs[PWR_BIKE_ZONE3_MAX] ?: 216
-                val z4 = prefs[PWR_BIKE_ZONE4_MAX] ?: 252
+                val z1 = prefs[PWR_BIKE_ZONE1_MAX] ?: 149
+                val z2 = prefs[PWR_BIKE_ZONE2_MAX] ?: 203
+                val z3 = prefs[PWR_BIKE_ZONE3_MAX] ?: 243
+                val z4 = prefs[PWR_BIKE_ZONE4_MAX] ?: 284
                 val (migratedZ5, migratedZ6) = calculateProportionalPowerDefaults(z4)
                 
                 // Sanity check: verify monotonic consistency
@@ -728,12 +728,12 @@ class SettingsDataStore(
                     prefs[PWR_BIKE_ZONE6_MAX] = migratedZ6
                 } else {
                     // Fallback to canonical defaults if existing data was corrupt
-                    prefs[PWR_BIKE_ZONE1_MAX] = 132
-                    prefs[PWR_BIKE_ZONE2_MAX] = 180
-                    prefs[PWR_BIKE_ZONE3_MAX] = 216
-                    prefs[PWR_BIKE_ZONE4_MAX] = 252
-                    prefs[PWR_BIKE_ZONE5_MAX] = 288
-                    prefs[PWR_BIKE_ZONE6_MAX] = 360
+                    prefs[PWR_BIKE_ZONE1_MAX] = 149
+                    prefs[PWR_BIKE_ZONE2_MAX] = 203
+                    prefs[PWR_BIKE_ZONE3_MAX] = 243
+                    prefs[PWR_BIKE_ZONE4_MAX] = 284
+                    prefs[PWR_BIKE_ZONE5_MAX] = 324
+                    prefs[PWR_BIKE_ZONE6_MAX] = 405
                 }
             }
         }
@@ -759,12 +759,12 @@ class SettingsDataStore(
                     prefs[HR_BIKE_ZONE4_MAX] = 166
                 }
                 ZoneType.PWR_BIKE -> {
-                    prefs[PWR_BIKE_ZONE1_MAX] = 132
-                    prefs[PWR_BIKE_ZONE2_MAX] = 180
-                    prefs[PWR_BIKE_ZONE3_MAX] = 216
-                    prefs[PWR_BIKE_ZONE4_MAX] = 252
-                    prefs[PWR_BIKE_ZONE5_MAX] = 288
-                    prefs[PWR_BIKE_ZONE6_MAX] = 360
+                    prefs[PWR_BIKE_ZONE1_MAX] = 149
+                    prefs[PWR_BIKE_ZONE2_MAX] = 203
+                    prefs[PWR_BIKE_ZONE3_MAX] = 243
+                    prefs[PWR_BIKE_ZONE4_MAX] = 284
+                    prefs[PWR_BIKE_ZONE5_MAX] = 324
+                    prefs[PWR_BIKE_ZONE6_MAX] = 405
                 }
             }
         }

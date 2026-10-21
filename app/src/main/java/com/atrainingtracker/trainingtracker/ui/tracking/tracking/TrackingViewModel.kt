@@ -212,7 +212,7 @@ class TrackingViewModel(
     private val zoneCutoffsMap = mutableMapOf<SettingsDataStore.ZoneType, List<Int>>(
         SettingsDataStore.ZoneType.HR_RUN to listOf(132, 145, 158, 171),
         SettingsDataStore.ZoneType.HR_BIKE to listOf(127, 140, 153, 166),
-        SettingsDataStore.ZoneType.PWR_BIKE to listOf(132, 180, 216, 252, 288, 360)
+        SettingsDataStore.ZoneType.PWR_BIKE to listOf(149, 203, 243, 284, 324, 405)
     )
     private val defaultZoneColor = Color.Transparent
 
@@ -668,7 +668,7 @@ class TrackingViewModel(
 
         if (zoneType != null && currentValue is Number) {
             val cutoffs = zoneCutoffsMap[zoneType] ?: when (zoneType) {
-                SettingsDataStore.ZoneType.PWR_BIKE -> listOf(132, 180, 216, 252, 288, 360)
+                SettingsDataStore.ZoneType.PWR_BIKE -> listOf(149, 203, 243, 284, 324, 405)
                 SettingsDataStore.ZoneType.HR_RUN -> listOf(132, 145, 158, 171)
                 SettingsDataStore.ZoneType.HR_BIKE -> listOf(127, 140, 153, 166)
             }
@@ -692,7 +692,7 @@ class TrackingViewModel(
         if (!displayOptions.showGauge || zoneType == null) return null
 
         val cutoffs = zoneCutoffsMap[zoneType] ?: when (zoneType) {
-            SettingsDataStore.ZoneType.PWR_BIKE -> listOf(132, 180, 216, 252, 288, 360)
+            SettingsDataStore.ZoneType.PWR_BIKE -> listOf(149, 203, 243, 284, 324, 405)
             SettingsDataStore.ZoneType.HR_RUN -> listOf(132, 145, 158, 171)
             SettingsDataStore.ZoneType.HR_BIKE -> listOf(127, 140, 153, 166)
         }

@@ -106,7 +106,7 @@ class BatterySaverModelPureTest {
         assertEquals(4, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.HR_RUN, 165.0))
         assertEquals(5, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.HR_RUN, 180.0))
 
-        // PWR_BIKE defaults: 132, 180, 216, 252, 288, 360
+        // PWR_BIKE defaults: 149, 203, 243, 284, 324, 405
         assertEquals(1, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 100.0))
         assertEquals(7, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 500.0))
     }

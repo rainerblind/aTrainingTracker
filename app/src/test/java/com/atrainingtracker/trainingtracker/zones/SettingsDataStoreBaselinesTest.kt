@@ -175,14 +175,14 @@ class SettingsDataStoreBaselinesTest {
 
     @Test
     fun defaultConstantsAndSnapshot_matchCanonicalBaselines() {
-        assertEquals(240, SettingsDataStore.DEFAULT_CYCLING_FTP)
+        assertEquals(270, SettingsDataStore.DEFAULT_CYCLING_FTP)
         assertEquals(185, SettingsDataStore.DEFAULT_HR_MAX)
         assertEquals(55, SettingsDataStore.DEFAULT_HR_REST)
 
         val snapshot = SettingsSnapshot.DEFAULT
         assertEquals(listOf(132, 145, 158, 171), snapshot.hrRunZoneMax)
         assertEquals(listOf(127, 140, 153, 166), snapshot.hrBikeZoneMax)
-        assertEquals(listOf(132, 180, 216, 252, 288, 360), snapshot.pwrBikeZoneMax)
+        assertEquals(listOf(149, 203, 243, 284, 324, 405), snapshot.pwrBikeZoneMax)
     }
 
     @Test
@@ -208,7 +208,7 @@ class SettingsDataStoreBaselinesTest {
         )
         assertEquals(hrBikeExpected, hrBikeActual)
 
-        val pwrBikeExpected = listOf(132, 180, 216, 252, 288, 360)
+        val pwrBikeExpected = listOf(149, 203, 243, 284, 324, 405)
         val pwrBikeActual = listOf(
             dataStore.getDefaultValue(ZoneType.PWR_BIKE, Zone.ZONE_1),
             dataStore.getDefaultValue(ZoneType.PWR_BIKE, Zone.ZONE_2),
@@ -239,11 +239,11 @@ class SettingsDataStoreBaselinesTest {
         dataStore.saveHrZoneMax(ZoneType.PWR_BIKE, Zone.ZONE_1, 140)
         dataStore.resetToDefaults(ZoneType.PWR_BIKE)
         assertFalse(dataStore.isZoneCustomizedFlow(ZoneType.PWR_BIKE).first())
-        assertEquals(132, dataStore.getZone1MaxFlow(ZoneType.PWR_BIKE).first())
-        assertEquals(180, dataStore.getZone2MaxFlow(ZoneType.PWR_BIKE).first())
-        assertEquals(216, dataStore.getZone3MaxFlow(ZoneType.PWR_BIKE).first())
-        assertEquals(252, dataStore.getZone4MaxFlow(ZoneType.PWR_BIKE).first())
-        assertEquals(288, dataStore.getZone5MaxFlow(ZoneType.PWR_BIKE).first())
-        assertEquals(360, dataStore.getZone6MaxFlow(ZoneType.PWR_BIKE).first())
+        assertEquals(149, dataStore.getZone1MaxFlow(ZoneType.PWR_BIKE).first())
+        assertEquals(203, dataStore.getZone2MaxFlow(ZoneType.PWR_BIKE).first())
+        assertEquals(243, dataStore.getZone3MaxFlow(ZoneType.PWR_BIKE).first())
+        assertEquals(284, dataStore.getZone4MaxFlow(ZoneType.PWR_BIKE).first())
+        assertEquals(324, dataStore.getZone5MaxFlow(ZoneType.PWR_BIKE).first())
+        assertEquals(405, dataStore.getZone6MaxFlow(ZoneType.PWR_BIKE).first())
     }
 }
