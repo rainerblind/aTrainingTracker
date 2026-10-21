@@ -321,7 +321,7 @@ class PhysiologyModelsVisibilityContractTest {
         val formControlsContent = formControlsFile.readText()
         assertTrue("Subordinate switch must scale to 0.6f (Rule 59, ATT-4464)", formControlsContent.contains(".scale(0.6f)"))
         assertTrue("Subordinate switch must enforce compact height 24.dp (Rule 59, ATT-4464)", formControlsContent.contains(".height(24.dp)"))
-        assertTrue("Subordinate switch must use secondary color tokens (Rule 59, ATT-4464)", formControlsContent.contains("checkedTrackColor = MaterialTheme.colorScheme.secondary"))
+        assertTrue("Subordinate switch must use lighter primary alpha track color (Rule 59, ATT-4513)", formControlsContent.contains("checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)"))
 
         val filesToCheck = listOf(
             "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/PhysiologyModelsSection.kt",
