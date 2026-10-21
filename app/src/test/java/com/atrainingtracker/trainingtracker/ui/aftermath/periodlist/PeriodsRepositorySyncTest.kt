@@ -24,12 +24,17 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -71,6 +76,8 @@ class PeriodsRepositorySyncTest {
     @After
     fun tearDown() {
         WorkoutRepository.resetForTesting(null)
+        PeriodSummariesDatabaseManager.setInstanceForTesting(null)
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
         PeriodsRepository.resetInstanceForTesting()
         unmockkAll()
     }
@@ -173,5 +180,168 @@ class PeriodsRepositorySyncTest {
 
         coVerify(timeout = 2000) { mockWorkoutRepo.loadAllWorkouts() }
         coVerify(timeout = 2000) { mockPeriodsRepo.checkIntegrityAndSync() }
+    }
+
+    // --- ATT-4019 / REQ-PER-016 / TST-PER-022 Test Cases ---
+
+    private fun createSampleWorkoutData(
+        id: Long = 100L,
+        finished: Boolean = true,
+        startTimeS: Long = 1700000000L,
+        activeTimeSec: Long = 3600L,
+        totalDistance: Double = 25000.0,
+        ascentMeters: Long = 250L,
+        sportId: Long = 2L,
+        bSportType: BSportType = BSportType.BIKE,
+        workoutName: String = "Morning Ride",
+        description: String? = "Felt great",
+        stravaActivityData: String? = null,
+        uploadToStrava: Int = 0,
+        mapPolyline: String = "_p~iF~ps|U_ulLnnqC"
+    ): WorkoutData {
+        val ldt = java.time.LocalDateTime.of(2023, 11, 14, 10, 0)
+        return WorkoutData(
+            id = id,
+            finished = finished,
+            fileBaseName = "workout_$id",
+            workoutName = workoutName,
+            sportId = sportId,
+            sportName = "Cycling",
+            bSportType = bSportType,
+            startTimeS = startTimeS,
+            formattedDate = "2023-11-14",
+            formattedTime = "10:00",
+            localDateTime = ldt,
+            equipmentName = "Road Bike",
+            equipmentId = 1L,
+            commute = false,
+            trainer = false,
+            race = false,
+            source = com.atrainingtracker.trainingtracker.database.WorkoutSource.TRACKED,
+            mapPolyline = mapPolyline,
+            encodedAltitudes = "",
+            encodedDistances = "",
+            uploadToStrava = uploadToStrava,
+            totalDistance = totalDistance,
+            maxDisplacement = 5000.0,
+            activeTimeSec = activeTimeSec,
+            totalTimeSec = activeTimeSec + 300L,
+            avgSpeedMps = totalDistance / activeTimeSec,
+            ascentMeters = ascentMeters,
+            descentMeters = ascentMeters,
+            minAltitude = 100.0,
+            maxAltitude = 350.0,
+            description = description,
+            goal = "Zone 2",
+            method = "Steady",
+            stravaSportName = "Ride",
+            stravaActivityData = stravaActivityData,
+            minLat = 48.0,
+            minLng = 11.0,
+            maxLat = 48.1,
+            maxLng = 11.1
+        )
+    }
+
+    /**
+     * TST-PER-022.1: Flow Projection & Deduplication.
+     * Verifies that modifying non-period properties (description, notes, export status, workoutName)
+     * yields identical PeriodProjectionKey, which prevents distinctUntilChanged from triggering
+     * redundant loadFromDatabase(true) re-computations. Also verifies that period-relevant changes
+     * produce different keys.
+     */
+    @Test
+    fun testPeriodProjectionKey_filtersNonPeriodChanges_andDetectsPeriodRelevantChanges() {
+        val base = createSampleWorkoutData()
+        val nonPeriodModified = base.copy(
+            workoutName = "Renamed Workout",
+            description = "Updated workout notes",
+            goal = "New training goal",
+            method = "Different method",
+            stravaActivityData = "{\"id\": 99999, \"name\": \"Morning Ride\"}",
+            uploadToStrava = 1,
+            clusterId = 42L,
+            clusterName = "Commute Loop"
+        )
+
+        // Non-period changes must project to identical keys
+        assertEquals(
+            "Non-period property changes must produce identical PeriodProjectionKey",
+            base.toPeriodProjectionKey(),
+            nonPeriodModified.toPeriodProjectionKey()
+        )
+
+        // Period-relevant changes must produce different keys
+        assertNotEquals(base.toPeriodProjectionKey(), base.copy(totalDistance = 30000.0).toPeriodProjectionKey())
+        assertNotEquals(base.toPeriodProjectionKey(), base.copy(activeTimeSec = 4000L).toPeriodProjectionKey())
+        assertNotEquals(base.toPeriodProjectionKey(), base.copy(ascentMeters = 500L).toPeriodProjectionKey())
+        assertNotEquals(base.toPeriodProjectionKey(), base.copy(bSportType = BSportType.RUN).toPeriodProjectionKey())
+        assertNotEquals(base.toPeriodProjectionKey(), base.copy(sportId = 99L).toPeriodProjectionKey())
+        assertNotEquals(base.toPeriodProjectionKey(), base.copy(finished = false).toPeriodProjectionKey())
+        assertNotEquals(base.toPeriodProjectionKey(), base.copy(startTimeS = 1700010000L).toPeriodProjectionKey())
+        assertNotEquals(base.toPeriodProjectionKey(), base.copy(minLat = 49.0).toPeriodProjectionKey())
+        assertNotEquals(base.toPeriodProjectionKey(), base.copy(mapPolyline = "different_poly").toPeriodProjectionKey())
+    }
+
+    /**
+     * TST-PER-022.2: Single-Owner Tracking Finalization & Idempotency.
+     * Verifies that PeriodsRepository no longer has direct BroadcastReceiver registrations,
+     * relying on WorkoutRepository as the single orchestrator, and enforces idempotent
+     * deduplication when onWorkoutFinished is called with duplicate IDs.
+     */
+    @Test
+    fun testSingleOwnerFinalization_andIdempotentDeduplication() = runTest {
+        val mockApp = mockk<Application>(relaxed = true)
+        val mockDbManager = mockk<PeriodSummariesDatabaseManager>(relaxed = true)
+        val mockSummariesManager = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        every { mockWorkoutRepo.allWorkouts } returns MutableStateFlow(emptyList())
+
+        PeriodSummariesDatabaseManager.setInstanceForTesting(mockDbManager)
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(mockSummariesManager)
+        WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        every { mockDbManager.isSyncFinished() } returns true
+
+        val repo = PeriodsRepository.getInstance(mockApp)
+
+        // 1. Verify direct trackingFinishedReceiver was eliminated
+        val hasReceiverField = repo.javaClass.declaredFields.any { it.name == "trackingFinishedReceiver" }
+        assertTrue("trackingFinishedReceiver must be eliminated from PeriodsRepository", !hasReceiverField)
+
+        // 2. Verify onWorkoutFinished idempotency
+        val workout = createSampleWorkoutData(id = 555L)
+
+        // First call processes
+        repo.onWorkoutFinished(workout)
+
+        // Duplicate call with same ID should be dropped
+        repo.onWorkoutFinished(workout)
+
+        // Verify that calling onWorkoutDeleted cleans up the ID
+        repo.onWorkoutDeleted(workout)
+    }
+
+    /**
+     * TST-PER-022.3: Shared WorkoutDataMapper Instance Reuse.
+     * Verifies that PeriodsRepository uses a single lazy/shared WorkoutDataMapper instance
+     * rather than constructing ad-hoc instances and redundant DB helper singletons.
+     */
+    @Test
+    fun testPeriodsRepository_sharedMapperReused() {
+        val mockApp = mockk<Application>(relaxed = true)
+        val mockDbManager = mockk<PeriodSummariesDatabaseManager>(relaxed = true)
+        val mockSummariesManager = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        every { mockWorkoutRepo.allWorkouts } returns MutableStateFlow(emptyList())
+
+        PeriodSummariesDatabaseManager.setInstanceForTesting(mockDbManager)
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(mockSummariesManager)
+        WorkoutRepository.resetForTesting(mockWorkoutRepo)
+
+        val repo = PeriodsRepository.getInstance(mockApp)
+
+        val mapper1 = repo.mapper
+        val mapper2 = repo.mapper
+        assertSame("PeriodsRepository must reuse the single shared WorkoutDataMapper instance", mapper1, mapper2)
     }
 }

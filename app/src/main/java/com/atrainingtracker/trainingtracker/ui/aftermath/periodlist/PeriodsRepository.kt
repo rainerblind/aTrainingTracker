@@ -11,17 +11,10 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import android.app.Application
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.util.Log
-import androidx.core.content.ContextCompat
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
-import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
@@ -31,9 +24,12 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.*
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.Collections
+import java.util.LinkedHashSet
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -52,6 +48,7 @@ import java.time.temporal.TemporalAdjusters
  * Architectural Role: Aggregation layer for long-term historical trends.
  * Threading: Intensive database rollups are offloaded to [Dispatchers.IO].
  */
+@OptIn(FlowPreview::class)
 class PeriodsRepository private constructor(private val application: Application) {
 
     internal val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -67,32 +64,31 @@ class PeriodsRepository private constructor(private val application: Application
 
     private val rebuildMutex = Mutex()
 
-    private val trackingFinishedReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val workoutId = intent.getLongExtra(TrackerService.WORKOUT_ID, -1L)
-            if (workoutId != -1L) {
-                Log.d(TAG, "TRACKING_FINISHED_INTENT received for workoutId=$workoutId")
-                scope.launch {
-                    withContext(Dispatchers.IO) {
-                        workoutSummariesManager.getWorkoutCursor(workoutId)?.use { cursor ->
-                            if (cursor.moveToFirst()) {
-                                val mapper = WorkoutDataMapper(
-                                    application, workoutSummariesManager,
-                                    com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
-                                    com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(application),
-                                    com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application)
-                                )
-                                val workout = mapper.fromCursor(cursor)
-                                if (workout.finished) {
-                                    onWorkoutFinished(workout)
-                                }
-                            }
-                        }
-                    }
+    // ATT-4019 / REQ-PER-016.3: Consolidated lazy WorkoutDataMapper instance
+    // Replaces repeated ad-hoc instantiations and duplicate DB helper singletons.
+    internal val mapper by lazy {
+        WorkoutDataMapper(
+            application,
+            workoutSummariesManager,
+            com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
+            com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(application),
+            com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application)
+        )
+    }
+
+    // ATT-4019 / REQ-PER-016.2: Idempotent recent-workout guard for workout completion
+    private val recentlyFinishedWorkoutIds = Collections.synchronizedSet(object : LinkedHashSet<Long>() {
+        override fun add(element: Long): Boolean {
+            if (size >= 50) {
+                val iterator = iterator()
+                if (iterator.hasNext()) {
+                    iterator.next()
+                    iterator.remove()
                 }
             }
+            return super.add(element)
         }
-    }
+    })
 
     private val dayFormatter = DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG)
     private val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy")
@@ -169,23 +165,17 @@ class PeriodsRepository private constructor(private val application: Application
             }
         }
 
-        // 3. Reactive Enrichment (ATT-440 Refinement)
-        // Observe workout history and re-enrich periods whenever data arrives.
+        // 3. Reactive Enrichment (ATT-440 Refinement / ATT-4019 / REQ-PER-016.1)
+        // Observe workout history and re-enrich periods whenever period-relevant data arrives.
+        // Projects to period-relevant fields and debounces progressive stream bursts.
         scope.launch {
-            workoutRepo.allWorkouts.collectLatest {
-                // Always try to reload/enrich when history changes.
-                // This ensures maps pop in as soon as the first few workouts are loaded.
-                loadFromDatabase(forceIncremental = true)
-            }
-        }
-
-        // 4. Direct Finalization Broadcast Listening (ATT-3056 / REQ-PER-014)
-        try {
-            val filter = IntentFilter(TrackerService.TRACKING_FINISHED_INTENT)
-            LocalBroadcastManager.getInstance(application).registerReceiver(trackingFinishedReceiver, filter)
-            ContextCompat.registerReceiver(application, trackingFinishedReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-        } catch (t: Throwable) {
-            Log.w(TAG, "Failed to register trackingFinishedReceiver", t)
+            workoutRepo.allWorkouts
+                .map { list -> list.map { it.toPeriodProjectionKey() } }
+                .distinctUntilChanged()
+                .debounce(200L)
+                .collectLatest {
+                    loadFromDatabase(forceIncremental = true)
+                }
         }
     }
 
@@ -209,12 +199,7 @@ class PeriodsRepository private constructor(private val application: Application
             Log.i(TAG, "Starting Dual-Phase Hierarchical Migration.")
             val startTime = System.currentTimeMillis()
 
-            val mapper = WorkoutDataMapper(
-                application, workoutSummariesManager,
-                com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
-                com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(application),
-                com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application)
-            )
+
 
             // --- PHASE 1: RAPID READ & GROUPING (O(N)) ---
             val allWorkouts = withContext(Dispatchers.IO) {
@@ -408,10 +393,20 @@ class PeriodsRepository private constructor(private val application: Application
 
     /**
      * O(1) Hierarchical Add: Workout -> Day -> Week/Month -> Year.
+     * ATT-4019 / REQ-PER-016.2: Single-owner finalization with idempotent duplicate protection.
      */
     fun onWorkoutFinished(workout: WorkoutData) {
+        if (workout.startTimeS <= 0L) return
+        if (workout.id > 0L && recentlyFinishedWorkoutIds.contains(workout.id)) {
+            Log.d(TAG, "Workout ${workout.id} already processed for period finalization, ignoring duplicate call.")
+            return
+        }
         scope.launch {
             rebuildMutex.withLock {
+                if (workout.id > 0L && !recentlyFinishedWorkoutIds.add(workout.id)) {
+                    Log.d(TAG, "Workout ${workout.id} already processed under lock, ignoring duplicate.")
+                    return@withLock
+                }
                 onWorkoutFinishedInternal(workout)
             }
         }
@@ -443,6 +438,9 @@ class PeriodsRepository private constructor(private val application: Application
      */
     fun onWorkoutDeleted(workout: WorkoutData) {
         if (workout.startTimeS <= 0L) return
+        if (workout.id > 0L) {
+            recentlyFinishedWorkoutIds.remove(workout.id)
+        }
         scope.launch {
             rebuildMutex.withLock {
                 val ldt = workout.localDateTime
@@ -786,12 +784,7 @@ class PeriodsRepository private constructor(private val application: Application
      */
     fun getWorkoutsForRange(startS: Long, endS: Long): List<WorkoutData> {
         val cursor = workoutSummariesManager.getWorkoutsInRangeCursor(startS, endS) ?: return emptyList()
-        val mapper = com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper(
-            application, workoutSummariesManager,
-            com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(application),
-            com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(application),
-            com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(application)
-        )
+
         val snapshots = mutableListOf<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper.RawCursorSnapshot>()
         cursor.use { c ->
             if (c.moveToFirst()) {
@@ -1085,6 +1078,29 @@ class PeriodsRepository private constructor(private val application: Application
         )
     }
 
+    /**
+     * ATT-4019 / REQ-PER-016.1: Lightweight projection key containing only properties
+     * that impact historical period aggregation and card statistics.
+     * Excludes non-period properties (description, notes, goal, method, export status, workoutName)
+     * so reactive flow emissions from edit/upload events do not trigger full period rebuilds.
+     */
+    internal data class PeriodProjectionKey(
+        val id: Long,
+        val finished: Boolean,
+        val startTimeS: Long,
+        val activeTimeSec: Long,
+        val totalTimeSec: Long,
+        val totalDistance: Double,
+        val ascentMeters: Long,
+        val sportId: Long,
+        val bSportType: BSportType,
+        val minLat: Double?,
+        val minLng: Double?,
+        val maxLat: Double?,
+        val maxLng: Double?,
+        val polylineHash: Int
+    )
+
     private data class WorkoutGroups(
         val days: Map<String, List<WorkoutData>>,
         val weeks: Map<String, List<WorkoutData>>,
@@ -1092,3 +1108,24 @@ class PeriodsRepository private constructor(private val application: Application
         val years: Map<String, List<WorkoutData>>
     )
 }
+
+/**
+ * ATT-4019 / REQ-PER-016.1: Maps WorkoutData to its period-relevant projection key.
+ */
+internal fun WorkoutData.toPeriodProjectionKey(): PeriodsRepository.PeriodProjectionKey =
+    PeriodsRepository.PeriodProjectionKey(
+        id = id,
+        finished = finished,
+        startTimeS = startTimeS,
+        activeTimeSec = activeTimeSec,
+        totalTimeSec = totalTimeSec,
+        totalDistance = totalDistance,
+        ascentMeters = ascentMeters,
+        sportId = sportId,
+        bSportType = bSportType,
+        minLat = minLat,
+        minLng = minLng,
+        maxLat = maxLat,
+        maxLng = maxLng,
+        polylineHash = mapPolyline.hashCode()
+    )
