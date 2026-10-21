@@ -498,15 +498,19 @@ fun DevicesTabbedScreen(
                     )
                 }
                 
-                // Keep searching active while displaying tabs (only when scan permission is held)
-                DisposableEffect(hasBluetoothScanPermission) {
-                    if (hasBluetoothScanPermission) {
-                        tabViewModel.startSearching()
-                    }
+                // Screen lifecycle cleanup: stop search and dismiss pairing sheets when leaving screen
+                DisposableEffect(Unit) {
                     onDispose {
                         tabViewModel.stopSearching()
                         showProtocolSheet = false
                         selectedPairingProtocol = null
+                    }
+                }
+
+                // Reactively start searching whenever scan permission is granted
+                LaunchedEffect(hasBluetoothScanPermission) {
+                    if (hasBluetoothScanPermission) {
+                        tabViewModel.startSearching()
                     }
                 }
 
