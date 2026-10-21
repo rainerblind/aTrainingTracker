@@ -316,6 +316,13 @@ class PhysiologyModelsVisibilityContractTest {
         assertTrue(sectionContent.contains("showCriticalPowerInWorkoutSummary: Boolean"))
         assertTrue("Subordinate toggles must use SubordinateTuningToggleItem (Rule 59)", sectionContent.contains("SubordinateTuningToggleItem("))
 
+        val formControlsFile = resolveFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt")
+        assertTrue(formControlsFile.exists())
+        val formControlsContent = formControlsFile.readText()
+        assertTrue("Subordinate switch must scale to 0.6f (Rule 59, ATT-4464)", formControlsContent.contains(".scale(0.6f)"))
+        assertTrue("Subordinate switch must enforce compact height 24.dp (Rule 59, ATT-4464)", formControlsContent.contains(".height(24.dp)"))
+        assertTrue("Subordinate switch must use secondary color tokens (Rule 59, ATT-4464)", formControlsContent.contains("checkedTrackColor = MaterialTheme.colorScheme.secondary"))
+
         val filesToCheck = listOf(
             "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/PhysiologyModelsSection.kt",
             "app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningScreen.kt",

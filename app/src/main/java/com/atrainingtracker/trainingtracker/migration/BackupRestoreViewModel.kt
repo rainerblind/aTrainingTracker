@@ -93,13 +93,17 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    data class LastBackupInfo(val timestamp: Long, val status: String)
+    data class LastBackupInfo(
+        val timestamp: Long,
+        val status: String,
+        val targets: Map<String, Boolean> = emptyMap()
+    )
 
     private val prefs = PreferenceManager.getDefaultSharedPreferences(application)
 
     val lastBackupInfo: StateFlow<LastBackupInfo?> = callbackFlow {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
-            if (key == "last_backup_timestamp" || key == "last_backup_status") {
+            if (key == "last_backup_timestamp" || key == "last_backup_status" || key == "last_backup_targets") {
                 trySend(readLastBackupInfo(p))
             }
         }
@@ -111,7 +115,28 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     private fun readLastBackupInfo(p: SharedPreferences): LastBackupInfo? {
         val ts = p.getLong("last_backup_timestamp", 0L)
         val st = p.getString("last_backup_status", null)
-        return if (ts == 0L && st == null) null else LastBackupInfo(ts, st ?: "UNKNOWN")
+        val targetsStr = p.getString("last_backup_targets", null)
+        if (ts == 0L && st == null) return null
+
+        val targets = if (!targetsStr.isNullOrBlank()) {
+            targetsStr.split(";").mapNotNull { entry ->
+                val parts = entry.split(":")
+                if (parts.size == 2) parts[0].trim() to (parts[1].trim() == "SUCCESS") else null
+            }.toMap()
+        } else {
+            inferTargetsFromStatus(st)
+        }
+        return LastBackupInfo(ts, st ?: "UNKNOWN", targets)
+    }
+
+    private fun inferTargetsFromStatus(status: String?): Map<String, Boolean> {
+        return when (status) {
+            "LOCAL_SUCCESS" -> mapOf("local" to true)
+            "SUCCESS" -> mapOf("local" to true)
+            "Upload failed" -> mapOf("local" to true)
+            "Local backup creation failed" -> mapOf("local" to false)
+            else -> emptyMap()
+        }
     }
 
     var automatedBackupsEnabled by mutableStateOf(prefs.getBoolean("automated_backups", true))
@@ -311,6 +336,34 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
                 // If success, the app restarts, so we don't need to update state
             } catch (e: Exception) {
                 _uiState.value = UiState.Error("Failed to process backup file: ${e.message}")
+            }
+        }
+    }
+
+    fun getAutomaticBackupTimestamp(context: Context): Long? {
+        val backupFile = File(BackupManager.getBackupDir(context), BackupManager.BACKUP_FILENAME)
+        return if (backupFile.exists() && backupFile.length() > 0) backupFile.lastModified() else null
+    }
+
+    fun restoreFromLocalBackup(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val backupFile = File(BackupManager.getBackupDir(context), BackupManager.BACKUP_FILENAME)
+            if (!backupFile.exists() || backupFile.length() == 0L) {
+                _uiState.value = UiState.Error(context.getString(R.string.restore_automatic_backup_not_found))
+                return@launch
+            }
+            _uiState.value = UiState.Loading("Processing backup file...")
+            try {
+                val success = MigrationEngine.performFullRestore(context, backupFile, object : MigrationEngine.ProgressListener {
+                    override fun onProgress(message: String) {
+                        _uiState.value = UiState.Loading(message)
+                    }
+                })
+                if (!success) {
+                    _uiState.value = UiState.Error(context.getString(R.string.restore_failed))
+                }
+            } catch (e: Exception) {
+                _uiState.value = UiState.Error("Failed to restore local backup: ${e.message}")
             }
         }
     }

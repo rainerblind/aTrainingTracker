@@ -161,8 +161,7 @@ class BikePowerCockpitDefaultsAndGatingTest {
             RowData(SensorType.TSS, ViewSize.NORMAL, 4, 2),
             RowData(SensorType.WORK_KJ, ViewSize.NORMAL, 4, 3),
             RowData(SensorType.W_PRIME_BAL, ViewSize.LARGE, 5, 1),
-            RowData(SensorType.PEDAL_POWER_BALANCE, ViewSize.SMALL, 6, 1),
-            RowData(SensorType.TORQUE, ViewSize.SMALL, 6, 2)
+            RowData(SensorType.PEDAL_POWER_BALANCE, ViewSize.SMALL, 6, 1)
         )
         assertEquals("Power tab layout must match REQ-UI-409.2", expectedPower, powerRows)
 
@@ -336,8 +335,7 @@ class BikePowerCockpitDefaultsAndGatingTest {
             createField(8, 4, 2, SensorType.TSS, ViewSize.NORMAL),
             createField(9, 4, 3, SensorType.WORK_KJ, ViewSize.NORMAL),
             createField(10, 5, 1, SensorType.W_PRIME_BAL, ViewSize.LARGE),
-            createField(11, 6, 1, SensorType.PEDAL_POWER_BALANCE, ViewSize.SMALL),
-            createField(12, 6, 2, SensorType.TORQUE, ViewSize.SMALL)
+            createField(11, 6, 1, SensorType.PEDAL_POWER_BALANCE, ViewSize.SMALL)
         )
 
         // Snapshot original coordinates to verify strict immutability
@@ -350,7 +348,7 @@ class BikePowerCockpitDefaultsAndGatingTest {
         assertEquals(5, packedDefault.size)
         assertEquals(listOf(SensorType.POWER_TO_WEIGHT, SensorType.NORMALIZED_POWER), packedDefault[2].map { it.sensorType })
         assertEquals(listOf(SensorType.INTENSITY_FACTOR, SensorType.TSS, SensorType.WORK_KJ), packedDefault[3].map { it.sensorType })
-        assertEquals(listOf(SensorType.PEDAL_POWER_BALANCE, SensorType.TORQUE), packedDefault[4].map { it.sensorType })
+        assertEquals(listOf(SensorType.PEDAL_POWER_BALANCE), packedDefault[4].map { it.sensorType })
 
         // 2. Both models OFF: enableCogganPowerMetrics = false, enableCriticalPowerModel = false
         // NP is hidden in Row 3 (leaving POWER_TO_WEIGHT full-width); IF & TSS hidden in Row 4 (leaving WORK_KJ full-width); Row 5 hidden
@@ -359,18 +357,18 @@ class BikePowerCockpitDefaultsAndGatingTest {
         assertEquals(5, packedBothOff.size)
         assertEquals(listOf(SensorType.POWER_TO_WEIGHT), packedBothOff[2].map { it.sensorType })
         assertEquals(listOf(SensorType.WORK_KJ), packedBothOff[3].map { it.sensorType })
-        assertEquals(listOf(SensorType.PEDAL_POWER_BALANCE, SensorType.TORQUE), packedBothOff[4].map { it.sensorType })
+        assertEquals(listOf(SensorType.PEDAL_POWER_BALANCE), packedBothOff[4].map { it.sensorType })
 
         // 3. Round-trip back to Both ON: enableCogganPowerMetrics = true, enableCriticalPowerModel = true
-        // All 6 rows and all 12 fields are immediately restored with their original rowNr and colNr untouched
+        // All 6 rows and all 11 fields are immediately restored with their original rowNr and colNr untouched
         val bothOnConfig = TuningConfig(enableCogganPowerMetrics = true, enableCriticalPowerModel = true)
         val packedBothOn = packVisibleRowsForTuning(powerTabFields, bothOnConfig, ScreenMode.TRACKING)
         assertEquals(6, packedBothOn.size)
-        assertEquals(12, packedBothOn.flatten().size)
+        assertEquals(11, packedBothOn.flatten().size)
         assertEquals(listOf(SensorType.POWER_TO_WEIGHT, SensorType.NORMALIZED_POWER), packedBothOn[2].map { it.sensorType })
         assertEquals(listOf(SensorType.INTENSITY_FACTOR, SensorType.TSS, SensorType.WORK_KJ), packedBothOn[3].map { it.sensorType })
         assertEquals(listOf(SensorType.W_PRIME_BAL), packedBothOn[4].map { it.sensorType })
-        assertEquals(listOf(SensorType.PEDAL_POWER_BALANCE, SensorType.TORQUE), packedBothOn[5].map { it.sensorType })
+        assertEquals(listOf(SensorType.PEDAL_POWER_BALANCE), packedBothOn[5].map { it.sensorType })
 
         // Verify zero mutation of SensorFieldState.rowNr and colNr across the round-trip
         val currentCoordinates = powerTabFields.map { Triple(it.sensorFieldId, it.rowNr, it.colNr) }
@@ -379,7 +377,7 @@ class BikePowerCockpitDefaultsAndGatingTest {
         // 4. Verify ScreenMode.CONFIGURATION never hides any field regardless of TuningConfig
         val packedConfigMode = packVisibleRowsForTuning(powerTabFields, bothOffConfig, ScreenMode.CONFIGURATION)
         assertEquals(6, packedConfigMode.size)
-        assertEquals(12, packedConfigMode.flatten().size)
+        assertEquals(11, packedConfigMode.flatten().size)
     }
 
     /**

@@ -79,6 +79,8 @@ class BackupManagerCredentialExclusionTest {
         defaultPrefs.edit()
             .putString(AuthCredentialsStore.KEY_STRAVA_TOKEN, "secret_strava_token")
             .putString(AuthCredentialsStore.KEY_DROPBOX_CREDENTIAL, "secret_dropbox_token")
+            .putString(AuthCredentialsStore.LEGACY_KEY_DROPBOX_CREDENTIAL, "secret_legacy_dropbox_token")
+            .putString(AuthCredentialsStore.LEGACY_KEY_GOOGLE_DRIVE_ACCOUNT_EMAIL, "secret_legacy_drive_email")
             .putString("athlete_display_name", "Test Athlete")
             .commit()
 
@@ -123,6 +125,8 @@ class BackupManagerCredentialExclusionTest {
         // 3. Default preferences must have legacy credential keys purged by migrateLegacyCredentials
         assertFalse(defaultPrefs.contains(AuthCredentialsStore.KEY_STRAVA_TOKEN))
         assertFalse(defaultPrefs.contains(AuthCredentialsStore.KEY_DROPBOX_CREDENTIAL))
+        assertFalse(defaultPrefs.contains(AuthCredentialsStore.LEGACY_KEY_DROPBOX_CREDENTIAL))
+        assertFalse(defaultPrefs.contains(AuthCredentialsStore.LEGACY_KEY_GOOGLE_DRIVE_ACCOUNT_EMAIL))
         assertTrue(defaultPrefs.contains("athlete_display_name"))
     }
 }

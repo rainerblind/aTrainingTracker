@@ -90,6 +90,8 @@ class MigrationEngineCredentialSanitizationTest {
                 <string name="stravaRefreshToken">staged_refresh</string>
                 <string name="googleDriveAuthToken">staged_drive</string>
                 <string name="sp_dropbox_credential">staged_dropbox</string>
+                <string name="dropboxCredential">staged_legacy_dropbox</string>
+                <string name="googleDriveAccountEmail">staged_legacy_drive_email</string>
                 <string name="preferred_units">metric</string>
             </map>
             """.trimIndent()
@@ -107,6 +109,8 @@ class MigrationEngineCredentialSanitizationTest {
         assertFalse(sanitizedContent.contains("stravaRefreshToken"))
         assertFalse(sanitizedContent.contains("googleDriveAuthToken"))
         assertFalse(sanitizedContent.contains("sp_dropbox_credential"))
+        assertFalse(sanitizedContent.contains("dropboxCredential"))
+        assertFalse(sanitizedContent.contains("googleDriveAccountEmail"))
 
         // 3. general settings must be preserved
         assertTrue(sanitizedContent.contains("athlete_name"))

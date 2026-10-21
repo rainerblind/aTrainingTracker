@@ -1147,6 +1147,17 @@
     <string name="automated_backups_summary">定期的に Dropbox へバックアップをアップロード</string>
     <string name="backup_now">今すぐバックアップ</string>
     <string name="last_backup">最終バックアップ: %1$s</string>
+    <string name="last_backup_local_success">最終バックアップ: %1$s (ローカルのみ)</string>
+    <string name="last_backup_partial_success">最終バックアップ: %1$s (一部成功)</string>
+    <string name="last_backup_failed_format">最後のバックアップに失敗しました: %1$s</string>
+    <string name="restore_automatic_local_backup">自動ローカルバックアップから復元</string>
+    <string name="restore_automatic_local_backup_format">自動バックアップ (%1$s)</string>
+    <string name="restore_automatic_backup_not_found">自動ローカルバックアップが見つかりません</string>
+    <string name="restore_from_file">ローカル: 完全復元（移行）</string>
+    <string name="restore_from_dropbox">Dropbox: 完全復元（移行）</string>
+    <string name="backup_target_local">ローカル</string>
+    <string name="backup_target_dropbox">Dropbox</string>
+    <string name="backup_target_google_drive">Google ドライブ</string>
     <string name="backup_interval">バックアップ間隔</string>
     <string name="backup_interval_daily">毎日</string>
     <string name="backup_interval_3days">3日ごと</string>
@@ -1569,6 +1580,23 @@
     <string name="action_view_workout">表示</string>
     <string name="permission_warning_badge_desc">位置情報の権限がありません</string>
 
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">アプリの権限</string>
+    <string name="permission_onboarding_step_format">ステップ %1$d / %2$d</string>
+    <string name="permission_onboarding_skip_setup">設定をスキップ</string>
+    <string name="permission_onboarding_skip_step">このステップをスキップ</string>
+    <string name="permission_onboarding_grant">権限を許可</string>
+    <string name="permission_onboarding_continue">次へ</string>
+    <string name="permission_onboarding_finish">設定を完了</string>
+    <string name="permission_onboarding_location_title">位置情報とGPS記録</string>
+    <string name="permission_onboarding_location_desc">画面オフ時やバックグラウンドでも、トレーニングルート、距離、速度、標高を正確に記録できます。</string>
+    <string name="permission_onboarding_bluetooth_title">Bluetoothセンサー</string>
+    <string name="permission_onboarding_bluetooth_desc">心拍計、パワーメーター、スマートトレーナー、速度・ケイデンスセンサーの検索と接続を可能にします。</string>
+    <string name="permission_onboarding_notification_title">トレーニング通知</string>
+    <string name="permission_onboarding_notification_desc">通知バーおよびロック画面に、アクティブなトレーニング状況、ラップタイム、センサーのバッテリー残量を表示します。</string>
+    <string name="permission_onboarding_battery_title">バッテリー最適化の除外</string>
+    <string name="permission_onboarding_battery_desc">画面がオフになっている長時間のライドやランニング中に、Androidシステムがバックグラウンド記録を強制停止するのを防ぎます。</string>
+
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">トレーニングが中断されました</string>
     <string name="unfinished_workout_title_battery">ワークアウト中断: バッテリー最適化</string>
@@ -1851,6 +1879,12 @@
     <string name="zone_onboarding_hr_banner">新しい心拍数センサーがペアリングされました。パーソナライズされたトレーニングフィードバックのために心拍ゾーンを設定してください。</string>
     <string name="zone_onboarding_pwr_banner">新しいパワーメーターがペアリングされました。パワーゾーンを設定するか、FTPから計算してください。</string>
     <string name="zone_onboarding_dismiss">了解</string>
+    <string name="zone_onboarding_prompt_hr_title">心拍数センサーがペアリングされました</string>
+    <string name="zone_onboarding_prompt_hr_message">今すぐ心拍ゾーンを設定しますか？</string>
+    <string name="zone_onboarding_prompt_pwr_title">パワーメーターがペアリングされました</string>
+    <string name="zone_onboarding_prompt_pwr_message">今すぐサイクリングパワーゾーンを設定しますか？</string>
+    <string name="zone_onboarding_action_configure">ゾーンを設定</string>
+    <string name="zone_onboarding_action_later">後で</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
     <string name="tuning_auto_pause_title">オートポーズ</string>

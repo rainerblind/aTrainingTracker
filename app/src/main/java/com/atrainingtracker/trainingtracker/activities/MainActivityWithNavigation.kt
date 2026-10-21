@@ -586,6 +586,11 @@ class MainActivityWithNavigation :
             TrainingApplication.setUploadToStrava(false)
         }
 
+        if (TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() == null) {
+            Log.i(TAG, "Dropbox enabled but credentials missing; resetting uploadToDropbox to false")
+            TrainingApplication.setUploadToDropbox(false)
+        }
+
         if (TrainingApplication.uploadToStrava() && TrainingApplication.getStravaTokenExpiresAt() == 0) {
             Log.i(TAG, "migrating to new Strava OAuth")
             StravaHelper.requestAccessToken(this)

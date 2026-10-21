@@ -672,14 +672,20 @@ fun TrackingTabsScreen(
                     isDismissPending = isCoachmarkDismissPending
                 )
 
-                LaunchedEffect(showStopTrackingCoachmark) {
-                    if (showStopTrackingCoachmark) {
+                LaunchedEffect(
+                    pagerState.settledPage,
+                    pagerState.isScrollInProgress,
+                    showStopTrackingCoachmark
+                ) {
+                    if (showStopTrackingCoachmark && pagerState.settledPage > 0 && !pagerState.isScrollInProgress) {
                         trackingTabsViewModel.markCoachmarkRenderedInSession()
                     }
                 }
 
                 LaunchedEffect(
+                    pagerState.currentPage,
                     pagerState.settledPage,
+                    pagerState.isScrollInProgress,
                     trackingMode,
                     hasSeenStopTrackingHint,
                     hasRenderedCoachmarkInSession,
@@ -687,7 +693,9 @@ fun TrackingTabsScreen(
                 ) {
                     if (TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(
                             trackingMode = trackingMode,
+                            currentPage = pagerState.currentPage,
                             settledPage = pagerState.settledPage,
+                            isScrollInProgress = pagerState.isScrollInProgress,
                             hasSeenHint = hasSeenStopTrackingHint,
                             hasRenderedCoachmarkInSession = hasRenderedCoachmarkInSession,
                             isDismissPending = isCoachmarkDismissPending

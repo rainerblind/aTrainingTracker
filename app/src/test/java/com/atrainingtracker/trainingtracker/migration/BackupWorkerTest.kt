@@ -23,8 +23,10 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.preference.PreferenceManager
 import androidx.work.ListenableWorker
+import androidx.work.NetworkType
 import androidx.work.WorkerParameters
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.dropbox.core.oauth.DbxCredential
 import io.mockk.*
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -68,6 +70,8 @@ class BackupWorkerTest {
 
         mockkStatic(PreferenceManager::class)
         every { PreferenceManager.getDefaultSharedPreferences(any()) } returns mockPrefs
+
+        mockkStatic(TrainingApplication::class)
 
         every { mockContext.applicationContext } returns mockContext
         every { mockPrefs.edit() } returns mockEditor
@@ -135,6 +139,7 @@ class BackupWorkerTest {
 
         assertEquals(ListenableWorker.Result.success(), result)
         verify { mockEditor.putString("last_backup_status", "LOCAL_SUCCESS") }
+        verify { mockEditor.putString("last_backup_targets", "local:SUCCESS") }
         verify { mockEditor.putLong("last_backup_timestamp", any()) }
         verify(exactly = 1) { mockLock.close() }
     }
@@ -153,6 +158,7 @@ class BackupWorkerTest {
 
         assertEquals(ListenableWorker.Result.retry(), result)
         verify { mockEditor.putString("last_backup_status", "Local backup creation failed") }
+        verify { mockEditor.putString("last_backup_targets", "local:FAILED") }
         verify(exactly = 1) { mockLock.close() }
     }
 
@@ -161,6 +167,7 @@ class BackupWorkerTest {
         every { mockPrefs.getBoolean("automated_backups", true) } returns true
         every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_DROPBOX, false) } returns true
         every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns false
+        every { TrainingApplication.readDropboxCredential() } returns mockk<DbxCredential>(relaxed = true)
 
         val dummyBackupFile = tempFolder.newFile("test.attbackup")
         mockkObject(BackupManager)
@@ -176,7 +183,105 @@ class BackupWorkerTest {
 
         assertEquals(ListenableWorker.Result.retry(), result)
         verify { mockEditor.putString("last_backup_status", "Upload failed") }
+        verify { mockEditor.putString("last_backup_targets", "local:SUCCESS;dropbox:FAILED") }
         verify(exactly = 1) { mockLock.close() }
+    }
+
+    @Test
+    fun testDoWork_whenDropboxEnabledWithoutCredentials_skipsDropboxAndSucceedsLocally() = runBlocking {
+        every { mockPrefs.getBoolean("automated_backups", true) } returns true
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_DROPBOX, false) } returns true
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns false
+        every { TrainingApplication.readDropboxCredential() } returns null
+
+        val dummyBackupFile = tempFolder.newFile("test_no_cred.attbackup")
+        mockkObject(BackupManager)
+        val mockLock = mockk<BackupManager.BackupLock>(relaxed = true)
+        every { BackupManager.acquireLock(any()) } returns mockLock
+        every { BackupManager.createBackup(any()) } returns dummyBackupFile
+
+        val worker = BackupWorker(mockContext, mockParams)
+        val result = worker.doWork()
+
+        assertEquals(ListenableWorker.Result.success(), result)
+        verify { mockEditor.putString("last_backup_status", "LOCAL_SUCCESS") }
+        verify { mockEditor.putString("last_backup_targets", "local:SUCCESS") }
+        verify(exactly = 1) { mockLock.close() }
+    }
+
+    @Test
+    fun testDoWork_whenOneCloudSucceedsAndOneFails_setsPartialSuccess() = runBlocking {
+        every { mockPrefs.getBoolean("automated_backups", true) } returns true
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_DROPBOX, false) } returns true
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_BACKUP_TO_GOOGLE_DRIVE, true) } returns true
+        every { TrainingApplication.readDropboxCredential() } returns mockk<DbxCredential>(relaxed = true)
+
+        val dummyBackupFile = tempFolder.newFile("test_partial.attbackup")
+        mockkObject(BackupManager)
+        val mockLock = mockk<BackupManager.BackupLock>(relaxed = true)
+        every { BackupManager.acquireLock(any()) } returns mockLock
+        every { BackupManager.createBackup(any()) } returns dummyBackupFile
+
+        mockkObject(DropboxBackupManager)
+        coEvery { DropboxBackupManager.uploadBackup(any(), dummyBackupFile) } returns true
+
+        mockkObject(GoogleDriveBackupManager)
+        coEvery { GoogleDriveBackupManager.uploadBackup(any(), dummyBackupFile) } returns false
+
+        val worker = BackupWorker(mockContext, mockParams)
+        val result = worker.doWork()
+
+        assertEquals(ListenableWorker.Result.success(), result)
+        verify { mockEditor.putString("last_backup_status", "PARTIAL_SUCCESS") }
+        verify { mockEditor.putString("last_backup_targets", "local:SUCCESS;dropbox:SUCCESS;google_drive:FAILED") }
+        verify(exactly = 1) { mockLock.close() }
+    }
+
+    @Test
+    fun testBuildConstraints_whenCloudDisabled_setsNetworkTypeNotRequired() {
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_DROPBOX, false) } returns false
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns false
+
+        val constraints = BackupWorker.buildConstraints(mockContext)
+
+        assertEquals(NetworkType.NOT_REQUIRED, constraints.requiredNetworkType)
+        assertTrue(constraints.requiresBatteryNotLow())
+    }
+
+    @Test
+    fun testBuildConstraints_whenDropboxEnabledWithCredential_setsNetworkTypeUnmetered() {
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_DROPBOX, false) } returns true
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns false
+        every { TrainingApplication.readDropboxCredential() } returns mockk<DbxCredential>(relaxed = true)
+
+        val constraints = BackupWorker.buildConstraints(mockContext)
+
+        assertEquals(NetworkType.UNMETERED, constraints.requiredNetworkType)
+        assertTrue(constraints.requiresBatteryNotLow())
+    }
+
+    @Test
+    fun testBuildConstraints_whenGoogleDriveBackupEnabled_setsNetworkTypeUnmetered() {
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_DROPBOX, false) } returns false
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_BACKUP_TO_GOOGLE_DRIVE, true) } returns true
+
+        val constraints = BackupWorker.buildConstraints(mockContext)
+
+        assertEquals(NetworkType.UNMETERED, constraints.requiredNetworkType)
+        assertTrue(constraints.requiresBatteryNotLow())
+    }
+
+    @Test
+    fun testFormatTargets_formatsSuccessAndFailedEntriesCorrectly() {
+        val targets = mapOf(
+            "local" to true,
+            "dropbox" to true,
+            "google_drive" to false
+        )
+        val formatted = BackupWorker.formatTargets(targets)
+        assertEquals("local:SUCCESS;dropbox:SUCCESS;google_drive:FAILED", formatted)
     }
 
     @Test

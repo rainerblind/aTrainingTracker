@@ -1375,6 +1375,17 @@
     <string name="automated_backups_summary">Regularly upload backups to Dropbox</string>
     <string name="backup_now">Backup Now</string>
     <string name="last_backup">Last backup: %1$s</string>
+    <string name="last_backup_local_success">Last backup: %1$s (Local only)</string>
+    <string name="last_backup_partial_success">Last backup: %1$s (Partial)</string>
+    <string name="last_backup_failed_format">Last backup failed: %1$s</string>
+    <string name="restore_automatic_local_backup">Restore from Automatic Local Backup</string>
+    <string name="restore_automatic_local_backup_format">Automatic Backup (%1$s)</string>
+    <string name="restore_automatic_backup_not_found">No automatic local backup found</string>
+    <string name="restore_from_file">Local: Full Restore (Migration)</string>
+    <string name="restore_from_dropbox">Dropbox: Full Restore (Migration)</string>
+    <string name="backup_target_local">Local</string>
+    <string name="backup_target_dropbox">Dropbox</string>
+    <string name="backup_target_google_drive">Google Drive</string>
     <string name="backup_interval">Backup Interval</string>
     <string name="backup_interval_daily">Daily</string>
     <string name="backup_interval_3days">Every 3 days</string>
@@ -1786,6 +1797,23 @@
     <string name="action_view_workout">View</string>
     <string name="permission_warning_badge_desc">Location permission missing</string>
 
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">App Permissions</string>
+    <string name="permission_onboarding_step_format">Step %1$d of %2$d</string>
+    <string name="permission_onboarding_skip_setup">Skip Setup</string>
+    <string name="permission_onboarding_skip_step">Skip this step</string>
+    <string name="permission_onboarding_grant">Grant Permission</string>
+    <string name="permission_onboarding_continue">Continue</string>
+    <string name="permission_onboarding_finish">Finish Setup</string>
+    <string name="permission_onboarding_location_title">Location &amp; GPS Tracking</string>
+    <string name="permission_onboarding_location_desc">Enables accurate tracking of your route, distance, speed, and elevation – even when the screen is locked or in the background.</string>
+    <string name="permission_onboarding_bluetooth_title">Bluetooth Sensors</string>
+    <string name="permission_onboarding_bluetooth_desc">Enables searching and connecting heart rate monitors, power meters, smart trainers, and speed/cadence sensors.</string>
+    <string name="permission_onboarding_notification_title">Workout Notifications</string>
+    <string name="permission_onboarding_notification_desc">Displays active workout status, lap splits, and sensor battery levels in the notification bar and on the lock screen.</string>
+    <string name="permission_onboarding_battery_title">Battery Optimization Exemption</string>
+    <string name="permission_onboarding_battery_desc">Prevents Android from killing background tracking during long rides or runs when the screen is turned off.</string>
+
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Workout Interrupted</string>
     <string name="unfinished_workout_title_battery">Workout Interrupted: Battery Optimization</string>
@@ -2065,6 +2093,12 @@
     <string name="zone_onboarding_hr_banner">New heart rate sensor paired. Set your heart rate zones for personalized training feedback.</string>
     <string name="zone_onboarding_pwr_banner">New power meter paired. Set your power zones or calculate them from your FTP.</string>
     <string name="zone_onboarding_dismiss">Dismiss</string>
+    <string name="zone_onboarding_prompt_hr_title">Heart Rate Monitor paired</string>
+    <string name="zone_onboarding_prompt_hr_message">Would you like to configure your Heart Rate zones now?</string>
+    <string name="zone_onboarding_prompt_pwr_title">Power Meter paired</string>
+    <string name="zone_onboarding_prompt_pwr_message">Would you like to configure your Cycling Power zones now?</string>
+    <string name="zone_onboarding_action_configure">Configure Zones</string>
+    <string name="zone_onboarding_action_later">Not Now</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
     <string name="tuning_auto_pause_title">Auto-Pause</string>

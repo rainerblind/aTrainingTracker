@@ -1163,6 +1163,17 @@
     <string name="automated_backups_summary">Regularnie przesyłaj kopie zapasowe do Dropbox</string>
     <string name="backup_now">Utwórz kopię teraz</string>
     <string name="last_backup">Ostatnia kopia: %1$s</string>
+    <string name="last_backup_local_success">Ostatnia kopia: %1$s (Tylko lokalna)</string>
+    <string name="last_backup_partial_success">Ostatnia kopia: %1$s (Częściowa)</string>
+    <string name="last_backup_failed_format">Ostatnia kopia nie powiodła się: %1$s</string>
+    <string name="restore_automatic_local_backup">Przywróć z automatycznej kopii lokalnej</string>
+    <string name="restore_automatic_local_backup_format">Automatyczna kopia zapasowa (%1$s)</string>
+    <string name="restore_automatic_backup_not_found">Nie znaleziono automatycznej kopii lokalnej</string>
+    <string name="restore_from_file">Lokalnie: Pełne przywrócenie (Migracja)</string>
+    <string name="restore_from_dropbox">Dropbox: Pełne przywrócenie (Migracja)</string>
+    <string name="backup_target_local">Lokalnie</string>
+    <string name="backup_target_dropbox">Dropbox</string>
+    <string name="backup_target_google_drive">Dysk Google</string>
     <string name="backup_interval">Interwał kopii</string>
     <string name="backup_interval_daily">Codziennie</string>
     <string name="backup_interval_3days">Co 3 dni</string>
@@ -1591,6 +1602,23 @@
     <string name="action_view_workout">Pokaż</string>
     <string name="permission_warning_badge_desc">Brak uprawnienia do lokalizacji</string>
 
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">Uprawnienia aplikacji</string>
+    <string name="permission_onboarding_step_format">Krok %1$d z %2$d</string>
+    <string name="permission_onboarding_skip_setup">Pomiń konfigurację</string>
+    <string name="permission_onboarding_skip_step">Pomiń ten krok</string>
+    <string name="permission_onboarding_grant">Przyznaj uprawnienie</string>
+    <string name="permission_onboarding_continue">Dalej</string>
+    <string name="permission_onboarding_finish">Zakończ konfigurację</string>
+    <string name="permission_onboarding_location_title">Lokalizacja i rejestracja GPS</string>
+    <string name="permission_onboarding_location_desc">Umożliwia precyzyjne rejestrowanie trasy treningu, dystansu, prędkości i przewyższenia – również przy zablokowanym ekranie w tle.</string>
+    <string name="permission_onboarding_bluetooth_title">Czujniki Bluetooth</string>
+    <string name="permission_onboarding_bluetooth_desc">Umożliwia wyszukiwanie i łączenie czujników tętna, mierników mocy, trenażerów smart oraz czujników prędkości i kadencji.</string>
+    <string name="permission_onboarding_notification_title">Powiadomienia treningowe</string>
+    <string name="permission_onboarding_notification_desc">Wyświetla stan aktywnego treningu, czasy okrążeń i poziom naładowania baterii czujników na pasku powiadomień i na ekranie blokady.</string>
+    <string name="permission_onboarding_battery_title">Wyłączenie optymalizacji baterii</string>
+    <string name="permission_onboarding_battery_desc">Zapobiega nieoczekiwanemu zatrzymaniu rejestracji w tle przez system Android podczas długich treningów przy wyłączonym ekranie.</string>
+
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Trening przerwany</string>
     <string name="unfinished_workout_title_battery">Trening przerwany: Optymalizacja baterii</string>
@@ -1873,6 +1901,12 @@
     <string name="zone_onboarding_hr_banner">Sparowano nowy czujnik tętna. Skonfiguruj strefy tętna, aby uzyskać spersonalizowaną analizę treningu.</string>
     <string name="zone_onboarding_pwr_banner">Sparowano nowy miernik mocy. Skonfiguruj strefy mocy lub oblicz je na podstawie swojego FTP.</string>
     <string name="zone_onboarding_dismiss">Rozumiem</string>
+    <string name="zone_onboarding_prompt_hr_title">Czujnik tętna sparowany</string>
+    <string name="zone_onboarding_prompt_hr_message">Czy chcesz teraz skonfigurować strefy tętna?</string>
+    <string name="zone_onboarding_prompt_pwr_title">Miernik mocy sparowany</string>
+    <string name="zone_onboarding_prompt_pwr_message">Czy chcesz teraz skonfigurować strefy mocy kolarskiej?</string>
+    <string name="zone_onboarding_action_configure">Konfiguruj strefy</string>
+    <string name="zone_onboarding_action_later">Nie teraz</string>
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
     <string name="tuning_auto_pause_title">Autopauza</string>
     <string name="tuning_auto_pause_desc">Automatyczne wstrzymywanie nagrywania podczas postoju</string>

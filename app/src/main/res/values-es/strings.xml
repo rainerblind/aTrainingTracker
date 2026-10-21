@@ -1167,6 +1167,17 @@
     <string name="automated_backups_summary">Subir copias a Dropbox periódicamente</string>
     <string name="backup_now">Hacer copia ahora</string>
     <string name="last_backup">Última copia: %1$s</string>
+    <string name="last_backup_local_success">Última copia: %1$s (Solo local)</string>
+    <string name="last_backup_partial_success">Última copia: %1$s (Parcial)</string>
+    <string name="last_backup_failed_format">Última copia fallida: %1$s</string>
+    <string name="restore_automatic_local_backup">Restaurar desde copia local automática</string>
+    <string name="restore_automatic_local_backup_format">Copia de seguridad automática (%1$s)</string>
+    <string name="restore_automatic_backup_not_found">No se encontró copia local automática</string>
+    <string name="restore_from_file">Local: Restauración completa (Migración)</string>
+    <string name="restore_from_dropbox">Dropbox: Restauración completa (Migración)</string>
+    <string name="backup_target_local">Local</string>
+    <string name="backup_target_dropbox">Dropbox</string>
+    <string name="backup_target_google_drive">Google Drive</string>
     <string name="backup_interval">Intervalo de copia</string>
     <string name="backup_interval_daily">Diario</string>
     <string name="backup_interval_3days">Cada 3 días</string>
@@ -1593,6 +1604,23 @@
     <string name="action_view_workout">Ver</string>
     <string name="permission_warning_badge_desc">Falta el permiso de ubicación</string>
 
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">Permisos de la app</string>
+    <string name="permission_onboarding_step_format">Paso %1$d de %2$d</string>
+    <string name="permission_onboarding_skip_setup">Omitir configuración</string>
+    <string name="permission_onboarding_skip_step">Omitir este paso</string>
+    <string name="permission_onboarding_grant">Conceder permiso</string>
+    <string name="permission_onboarding_continue">Continuar</string>
+    <string name="permission_onboarding_finish">Finalizar configuración</string>
+    <string name="permission_onboarding_location_title">Ubicación y seguimiento GPS</string>
+    <string name="permission_onboarding_location_desc">Permite registrar con precisión tu ruta, distancia, velocidad y altitud, incluso con la pantalla bloqueada o en segundo plano.</string>
+    <string name="permission_onboarding_bluetooth_title">Sensores Bluetooth</string>
+    <string name="permission_onboarding_bluetooth_desc">Permite buscar y conectar pulsómetros, potenciómetros, rodillos inteligentes y sensores de velocidad y cadencia.</string>
+    <string name="permission_onboarding_notification_title">Notificaciones de entrenamiento</string>
+    <string name="permission_onboarding_notification_desc">Muestra el estado del entrenamiento activo, tiempos por vuelta y niveles de batería de los sensores en la barra de notificaciones y en la pantalla de bloqueo.</string>
+    <string name="permission_onboarding_battery_title">Exención de optimización de batería</string>
+    <string name="permission_onboarding_battery_desc">Evita que Android detenga el seguimiento en segundo plano durante recorridos largos o carreras cuando la pantalla está apagada.</string>
+
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Entrenamiento interrumpido</string>
     <string name="unfinished_workout_title_battery">Entrenamiento interrumpido: Optimización de batería</string>
@@ -1872,6 +1900,12 @@
     <string name="zone_onboarding_hr_banner">Nuevo sensor de frecuencia cardíaca vinculado. Configure sus zonas de FC para recibir información de entrenamiento personalizada.</string>
     <string name="zone_onboarding_pwr_banner">Nuevo potenciómetro vinculado. Configure sus zonas de potencia o calcúlelas a partir de su FTP.</string>
     <string name="zone_onboarding_dismiss">Entendido</string>
+    <string name="zone_onboarding_prompt_hr_title">Sensor de frecuencia cardíaca vinculado</string>
+    <string name="zone_onboarding_prompt_hr_message">¿Deseas configurar tus zonas de frecuencia cardíaca ahora?</string>
+    <string name="zone_onboarding_prompt_pwr_title">Potenciómetro vinculado</string>
+    <string name="zone_onboarding_prompt_pwr_message">¿Deseas configurar tus zonas de potencia de ciclismo ahora?</string>
+    <string name="zone_onboarding_action_configure">Configurar zonas</string>
+    <string name="zone_onboarding_action_later">Ahora no</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
     <string name="tuning_auto_pause_title">Pausa automática</string>

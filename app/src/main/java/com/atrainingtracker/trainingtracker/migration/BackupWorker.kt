@@ -36,7 +36,7 @@ class BackupWorker(
         
         val prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val automatedEnabled = prefs.getBoolean("automated_backups", true)
-        val dropboxConnected = TrainingApplication.uploadToDropbox()
+        val dropboxConnected = TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
         val googleDriveConnected = TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
 
         if (!automatedEnabled) {
@@ -52,12 +52,17 @@ class BackupWorker(
 
         return lock.use {
             val backupFile = BackupManager.createBackup(applicationContext)
+            val targets = mutableMapOf<String, Boolean>()
+            targets["local"] = (backupFile != null)
+
             if (backupFile != null) {
                 if (!dropboxConnected && !googleDriveConnected) {
                     Log.i(TAG, "Local backup created successfully without cloud providers.")
+                    val targetsStr = formatTargets(targets)
                     prefs.edit(commit = true) {
                         putLong("last_backup_timestamp", System.currentTimeMillis())
                         putString("last_backup_status", "LOCAL_SUCCESS")
+                        putString("last_backup_targets", targetsStr)
                     }
                     return@use Result.success()
                 }
@@ -67,6 +72,7 @@ class BackupWorker(
 
                 if (dropboxConnected) {
                     val dbxSuccess = DropboxBackupManager.uploadBackup(applicationContext, backupFile)
+                    targets["dropbox"] = dbxSuccess
                     if (dbxSuccess) {
                         anyUploadSuccess = true
                     } else {
@@ -76,6 +82,7 @@ class BackupWorker(
 
                 if (googleDriveConnected) {
                     val gdSuccess = GoogleDriveBackupManager.uploadBackup(applicationContext, backupFile)
+                    targets["google_drive"] = gdSuccess
                     if (gdSuccess) {
                         anyUploadSuccess = true
                     } else {
@@ -83,21 +90,27 @@ class BackupWorker(
                     }
                 }
 
+                val targetsStr = formatTargets(targets)
                 if (anyUploadSuccess) {
+                    val status = if (anyUploadFailed) "PARTIAL_SUCCESS" else "SUCCESS"
                     prefs.edit(commit = true) {
                         putLong("last_backup_timestamp", System.currentTimeMillis())
-                        putString("last_backup_status", if (anyUploadFailed) "PARTIAL_SUCCESS" else "SUCCESS")
+                        putString("last_backup_status", status)
+                        putString("last_backup_targets", targetsStr)
                     }
                     Result.success()
                 } else {
                     prefs.edit(commit = true) {
                         putString("last_backup_status", "Upload failed")
+                        putString("last_backup_targets", targetsStr)
                     }
                     Result.retry()
                 }
             } else {
+                val targetsStr = formatTargets(targets)
                 prefs.edit(commit = true) {
                     putString("last_backup_status", "Local backup creation failed")
+                    putString("last_backup_targets", targetsStr)
                 }
                 Result.retry()
             }
@@ -107,6 +120,21 @@ class BackupWorker(
     companion object {
         private const val TAG = "BackupWorker"
         private const val WORK_NAME = "automated_backup_work"
+
+        fun formatTargets(targets: Map<String, Boolean>): String {
+            return targets.entries.joinToString(";") { "${it.key}:${if (it.value) "SUCCESS" else "FAILED"}" }
+        }
+
+        fun buildConstraints(context: Context): Constraints {
+            val cloudBackupEnabled = (TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null) ||
+                (TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive())
+            val networkType = if (cloudBackupEnabled) NetworkType.UNMETERED else NetworkType.NOT_REQUIRED
+
+            return Constraints.Builder()
+                .setRequiredNetworkType(networkType)
+                .setRequiresBatteryNotLow(true)
+                .build()
+        }
 
         fun schedule(context: Context) {
             try {
@@ -131,10 +159,7 @@ class BackupWorker(
                     return
                 }
 
-                val constraints = Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.UNMETERED) // Only on Wi-Fi
-                    .setRequiresBatteryNotLow(true)
-                    .build()
+                val constraints = buildConstraints(context)
 
                 val workRequest = PeriodicWorkRequestBuilder<BackupWorker>(intervalDays, TimeUnit.DAYS)
                     .setConstraints(constraints)

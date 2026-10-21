@@ -23,28 +23,28 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
 3. **Invariant Protection & Rollback Safety**:
    - Explicitly list non-negotiable invariants (backward compatibility, null safety, human decision gate).
    - **UI Consistency**: If the ticket adds or changes UI, read `docs/design_guidelines.md` (Section 5) and fill the plan's `UI Consistency` section: closest existing reference screen, reused components (`ui/components/`), theme tokens (shapes, spacing, `MaterialTheme.colorScheme`, `TTColor`), and a justification for any new one-off style.
-4. **Single-Turn Stage Submission (`submit-stage`)**:
-   - Author `docs/engineering/plans/<TICKET_KEY>_plan.md` using `templates/plan_template.md`.
+4. **Single-Turn Stage Submission (`submit-stage`) & Concise Deliverable Cap (Rule 60)**:
+   - Author `docs/engineering/plans/<TICKET_KEY>_plan.md` using `templates/plan_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**.
    - Submit Stage 3 in a single composite CLI call (creates/updates `[Impl-Plan]` sub-task and moves it to `In Überprüfung`):
      ```bash
      python3 tools/jira_util.py --as agent1 submit-stage <TICKET_KEY> 3 @docs/engineering/plans/<TICKET_KEY>_plan.md
      ```
    - **One Commit per Ticket (Core Rule 8)**: Do not create an intermediate git commit for Stage 3; keep changes on the working branch until Stage 5.
 
-## Gate 3 Independent Review Checklist (`subagent_flash` as `agent2` — `flash`)
-Message the ticket's persistent `subagent_flash` (`send_message`) to audit the Stage 3 plan against this checklist and record the verdict via `--as agent2 gate-verdict`:
+## Gate 3 Independent Review Checklist (`subagent_flash` as `agent2` — `flash`, Fused with Stage 4 Doing on Standard Tickets)
+Message the ticket's persistent `subagent_flash` (`send_message`) to audit the Stage 3 plan against this checklist, record the verdict via `--as agent2 gate-verdict`, and (for Standard tickets) **immediately execute Stage 4 Doing (`--as agent1`) in the same turn if Gate 3 is `PASS`**:
 1. **Architectural Integrity & Layering**:
    - Verify component boundaries, layering rules (SWE.2), and interface stability. Note: This gate audits the architectural implementation plan document (Stage 3). Under ASPICE / TDD process governance, production code implementation is strictly deferred to Stage 4 after the plan passes Gate 3 audit. Do not penalize Stage 3 for not yet having code modifications in the git diff.
 2. **Invariant Verification**:
    - Confirm all system invariants, non-target metrics, and file schemas are explicitly protected.
 3. **Verification Coverage**:
    - Ensure every proposed change maps to an automated or manual test case in `docs/tests.md`.
-4. **Gate Verdict (`gate-verdict`)**:
+4. **Gate Verdict (`gate-verdict`) + Fused Stage 4 Continuation (Rule 60)**:
    - Record the verdict in a single composite CLI call (which closes the sub-task to `Erledigt`, advances the parent ticket to `Implementation`, and automatically injects `stage4-implementation/SKILL.md` into stdout):
      ```bash
      python3 tools/jira_util.py --as agent2 gate-verdict <IMPL_PLAN_SUBTASK_KEY> PASS "<Audit Report>"
      ```
-     *(Or `REVISION` if changes are required.)*
+   - For Standard (`LOW`/`MEDIUM` risk) tickets, if `PASS`, **immediately proceed in the same turn** to run `python3 tools/jira_util.py check-gate <IMPL_PLAN_SUBTASK_KEY>` and execute Stage 4 (`--as agent1`) following the injected `stage4-implementation/SKILL.md`. *(If `REVISION` or `HIGH`-risk role inversion, stop and report back.)*
 
 ## Deliverable Template
 Use the standardized markdown template located at:

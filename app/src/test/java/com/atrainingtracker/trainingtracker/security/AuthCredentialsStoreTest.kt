@@ -172,11 +172,62 @@ class AuthCredentialsStoreTest {
     }
 
     @Test
+    fun testLegacyKeyNormalizationAndDualKeyMigration() {
+        val defaultPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+        defaultPrefs.edit()
+            .putString(AuthCredentialsStore.LEGACY_KEY_DROPBOX_CREDENTIAL, "{\"access_token\":\"legacy_dbx\"}")
+            .putString(AuthCredentialsStore.LEGACY_KEY_GOOGLE_DRIVE_ACCOUNT_EMAIL, "drive_legacy@example.com")
+            .putString(AuthCredentialsStore.LEGACY_KEY_STRAVA_OAUTH_STATE, "legacy_oauth_state_val")
+            .putLong(AuthCredentialsStore.LEGACY_KEY_STRAVA_OAUTH_STATE_TIMESTAMP, 1725000000L)
+            .putString("app_user_theme", "dark_mode")
+            .commit()
+
+        AuthCredentialsStore.migrateLegacyCredentials(context)
+
+        // Verify default preferences purged all legacy keys
+        for (legacyKey in AuthCredentialsStore.LEGACY_KEY_MIGRATION_MAP.keys) {
+            assertFalse("Default preferences should not contain legacy key $legacyKey", defaultPrefs.contains(legacyKey))
+        }
+
+        // Verify regular preferences preserved
+        assertEquals("dark_mode", defaultPrefs.getString("app_user_theme", null))
+
+        // Verify credentials stored under canonical keys in AuthCredentialsStore
+        assertEquals("{\"access_token\":\"legacy_dbx\"}", AuthCredentialsStore.readDropboxCredential(context))
+        assertEquals("{\"access_token\":\"legacy_dbx\"}", AuthCredentialsStore.getPrefs(context).getString(AuthCredentialsStore.KEY_DROPBOX_CREDENTIAL, null))
+        assertEquals("drive_legacy@example.com", AuthCredentialsStore.getGoogleDriveAccountEmail(context))
+        assertEquals("drive_legacy@example.com", AuthCredentialsStore.getPrefs(context).getString(AuthCredentialsStore.KEY_GOOGLE_DRIVE_ACCOUNT_EMAIL, null))
+        assertEquals("legacy_oauth_state_val", AuthCredentialsStore.getPrefs(context).getString(AuthCredentialsStore.KEY_STRAVA_OAUTH_STATE, null))
+        assertEquals(1725000000L, AuthCredentialsStore.getPrefs(context).getLong(AuthCredentialsStore.KEY_STRAVA_OAUTH_STATE_TIMESTAMP, 0L))
+    }
+
+    @Test
+    fun testReadDropboxCredential_fallbackToLegacyKey() {
+        val credPrefs = AuthCredentialsStore.getPrefs(context)
+        
+        // When only legacy key exists in credPrefs
+        credPrefs.edit()
+            .putString(AuthCredentialsStore.LEGACY_KEY_DROPBOX_CREDENTIAL, "{\"access_token\":\"dbx_fallback\"}")
+            .commit()
+        assertEquals("{\"access_token\":\"dbx_fallback\"}", AuthCredentialsStore.readDropboxCredential(context))
+
+        // When canonical key exists, it takes precedence
+        credPrefs.edit()
+            .putString(AuthCredentialsStore.KEY_DROPBOX_CREDENTIAL, "{\"access_token\":\"dbx_canonical\"}")
+            .commit()
+        assertEquals("{\"access_token\":\"dbx_canonical\"}", AuthCredentialsStore.readDropboxCredential(context))
+    }
+
+    @Test
     fun testSanitizeAfterRestoreRemovesLegacyKeysAndClearsAuthStore() {
         val defaultPrefs = PreferenceManager.getDefaultSharedPreferences(context)
         defaultPrefs.edit()
             .putString(AuthCredentialsStore.KEY_STRAVA_TOKEN, "restored_legacy_token")
-            .putString(AuthCredentialsStore.KEY_DROPBOX_CREDENTIAL, "restored_legacy_dropbox")
+            .putString(AuthCredentialsStore.KEY_DROPBOX_CREDENTIAL, "restored_store_dropbox")
+            .putString(AuthCredentialsStore.LEGACY_KEY_DROPBOX_CREDENTIAL, "restored_legacy_dropbox")
+            .putString(AuthCredentialsStore.LEGACY_KEY_GOOGLE_DRIVE_ACCOUNT_EMAIL, "restored_legacy_drive_email")
+            .putString(AuthCredentialsStore.LEGACY_KEY_STRAVA_OAUTH_STATE, "restored_legacy_oauth_state")
+            .putLong(AuthCredentialsStore.LEGACY_KEY_STRAVA_OAUTH_STATE_TIMESTAMP, 123456L)
             .putString("restored_setting", "value_retained")
             .commit()
 
@@ -184,13 +235,15 @@ class AuthCredentialsStoreTest {
 
         AuthCredentialsStore.sanitizeAfterRestore(context)
 
-        // Legacy credential keys in default prefs should be removed
-        assertFalse(defaultPrefs.contains(AuthCredentialsStore.KEY_STRAVA_TOKEN))
-        assertFalse(defaultPrefs.contains(AuthCredentialsStore.KEY_DROPBOX_CREDENTIAL))
+        // All credential keys in default prefs (canonical and legacy) should be removed
+        for (key in AuthCredentialsStore.ALL_CREDENTIAL_KEYS_TO_SANITIZE) {
+            assertFalse("Default preferences should not contain key $key", defaultPrefs.contains(key))
+        }
         // Regular restored setting should remain
         assertEquals("value_retained", defaultPrefs.getString("restored_setting", null))
 
         // AuthCredentialsStore should be cleared
         assertNull(AuthCredentialsStore.getStravaAccessToken(context))
+        assertNull(AuthCredentialsStore.readDropboxCredential(context))
     }
 }

@@ -1409,9 +1409,8 @@ public class TrackingViewsDatabaseManager {
             rowDataList.add(new RowData(SensorType.WORK_KJ, ViewSize.NORMAL, 4, 3));
             // Row 5: W_PRIME_BAL (LARGE, col 1)
             rowDataList.add(new RowData(SensorType.W_PRIME_BAL, ViewSize.LARGE, 5, 1));
-            // Row 6: PEDAL_POWER_BALANCE (SMALL, col 1), TORQUE (SMALL, col 2)
+            // Row 6: PEDAL_POWER_BALANCE (SMALL, col 1) — spans full width for balance bar
             rowDataList.add(new RowData(SensorType.PEDAL_POWER_BALANCE, ViewSize.SMALL, 6, 1));
-            rowDataList.add(new RowData(SensorType.TORQUE, ViewSize.SMALL, 6, 2));
             return rowDataList;
         }
 

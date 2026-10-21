@@ -175,9 +175,7 @@ object TurnCueDetector {
         // 3. Pre-allocated flat primitive buffers & spherical geodesics
         val m = sanitized.size
         val distances = DoubleArray(m)
-        val segmentLengths = DoubleArray(m - 1)
         val rawBearings = FloatArray(m - 1)
-        val smoothedBearings = FloatArray(m - 1)
 
         distances[0] = 0.0
         for (k in 0 until m - 1) {
@@ -187,9 +185,11 @@ object TurnCueDetector {
                 p1.latitude, p1.longitude,
                 p2.latitude, p2.longitude
             ).toDouble()
-            segmentLengths[k] = segLen
             distances[k + 1] = distances[k] + segLen
-            rawBearings[k] = RouteAutoDetector.computeBearing(p1, p2)
+            rawBearings[k] = RouteAutoDetector.computeBearing(
+                p1.latitude, p1.longitude,
+                p2.latitude, p2.longitude
+            )
         }
 
         val totalDistance = distances[m - 1]
@@ -197,75 +197,8 @@ object TurnCueDetector {
             return emptyList()
         }
 
-        // 4. Distance-weighted spatial circular vector mean smoothing over envelope
-        for (k in 0 until m - 1) {
-            val sMid = (distances[k] + distances[k + 1]) / 2.0
-            val sMin = sMid - config.smoothingRadiusMeters
-            val sMax = sMid + config.smoothingRadiusMeters
-
-            var sumX = 0.0
-            var sumY = 0.0
-            var totalW = 0.0
-
-            var j = k
-            while (j >= 0 && distances[j + 1] >= sMin) {
-                val segStart = distances[j]
-                val segEnd = distances[j + 1]
-                val overlap = maxOf(0.0, minOf(segEnd, sMax) - maxOf(segStart, sMin))
-                if (overlap > 0.0) {
-                    val rad = Math.toRadians(rawBearings[j].toDouble())
-                    sumX += overlap * cos(rad)
-                    sumY += overlap * sin(rad)
-                    totalW += overlap
-                }
-                j--
-            }
-
-            j = k + 1
-            while (j < m - 1 && distances[j] <= sMax) {
-                val segStart = distances[j]
-                val segEnd = distances[j + 1]
-                val overlap = maxOf(0.0, minOf(segEnd, sMax) - maxOf(segStart, sMin))
-                if (overlap > 0.0) {
-                    val rad = Math.toRadians(rawBearings[j].toDouble())
-                    sumX += overlap * cos(rad)
-                    sumY += overlap * sin(rad)
-                    totalW += overlap
-                }
-                j++
-            }
-
-            if (totalW <= 1e-4) {
-                smoothedBearings[k] = rawBearings[k]
-            } else {
-                var deg = Math.toDegrees(Math.atan2(sumY, sumX)).toFloat()
-                deg = (deg % 360f + 360f) % 360f
-                smoothedBearings[k] = deg
-            }
-        }
-
-        // Helper: distance-weighted circular mean of smoothed bearings over segment index range
-        fun calcWindowBearing(fromIdx: Int, toIdx: Int): Float {
-            if (fromIdx > toIdx) return 0f
-            if (fromIdx == toIdx) return smoothedBearings[fromIdx]
-            var sumX = 0.0
-            var sumY = 0.0
-            var totalW = 0.0
-            for (idx in fromIdx..toIdx) {
-                val w = segmentLengths[idx]
-                val rad = Math.toRadians(smoothedBearings[idx].toDouble())
-                sumX += w * cos(rad)
-                sumY += w * sin(rad)
-                totalW += w
-            }
-            if (totalW <= 1e-4) return smoothedBearings[fromIdx]
-            var deg = Math.toDegrees(Math.atan2(sumY, sumX)).toFloat()
-            return (deg % 360f + 360f) % 360f
-        }
-
-        // 5. Multi-scale lookaround chords with monotonic pointers
+        // 4. Multi-scale lookaround chords with monotonic pointers & continuous boundary interpolation
         val deltaArray = FloatArray(m)
-        val inBearings = FloatArray(m)
 
         var prevShort = 0
         var nextShort = 0
@@ -274,33 +207,94 @@ object TurnCueDetector {
 
         for (i in 1 until m - 1) {
             val dCur = distances[i]
+            val curLat = sanitized[i].latLng.latitude
+            val curLon = sanitized[i].latLng.longitude
+            val isDepartureZone = dCur <= config.startDepartureWindowMeters
 
-            // Advance short window pointers
-            while (prevShort < i - 1 && (dCur - distances[prevShort + 1]) >= config.shortWindowMeters) {
+            // --- Short Window (W = config.shortWindowMeters) ---
+            val dInShort = maxOf(0.0, dCur - config.shortWindowMeters)
+            while (prevShort < i - 1 && distances[prevShort + 1] <= dInShort) {
                 prevShort++
             }
-            if (nextShort < i) nextShort = i
-            while (nextShort < m - 1 && (distances[nextShort] - dCur) < config.shortWindowMeters) {
+            val bInShort = if (isDepartureZone || prevShort + 1 == i || (dCur - dInShort) <= 1e-4) {
+                rawBearings[maxOf(0, i - 1)]
+            } else {
+                val p0 = sanitized[prevShort].latLng
+                val p1 = sanitized[prevShort + 1].latLng
+                val segLen = distances[prevShort + 1] - distances[prevShort]
+                if (segLen > config.shortWindowMeters) {
+                    val t = if (segLen > 1e-6) ((dInShort - distances[prevShort]) / segLen).coerceIn(0.0, 1.0) else 0.0
+                    val latIn = p0.latitude + t * (p1.latitude - p0.latitude)
+                    val lonIn = p0.longitude + t * (p1.longitude - p0.longitude)
+                    RouteAutoDetector.computeBearing(latIn, lonIn, curLat, curLon)
+                } else {
+                    RouteAutoDetector.computeBearing(p0.latitude, p0.longitude, curLat, curLon)
+                }
+            }
+
+            val dOutShort = minOf(totalDistance, dCur + config.shortWindowMeters)
+            if (nextShort < i + 1) nextShort = i + 1
+            while (nextShort < m - 1 && distances[nextShort] < dOutShort) {
                 nextShort++
             }
-
-            // Advance long window pointers
-            while (prevLong < i - 1 && (dCur - distances[prevLong + 1]) >= config.longWindowMeters) {
-                prevLong++
+            val bOutShort = if (nextShort == i + 1 || (dOutShort - dCur) <= 1e-4) {
+                rawBearings[minOf(m - 2, i)]
+            } else {
+                val p0 = sanitized[nextShort - 1].latLng
+                val p1 = sanitized[nextShort].latLng
+                val segLen = distances[nextShort] - distances[nextShort - 1]
+                if (segLen > config.shortWindowMeters) {
+                    val t = if (segLen > 1e-6) ((dOutShort - distances[nextShort - 1]) / segLen).coerceIn(0.0, 1.0) else 0.0
+                    val latOut = p0.latitude + t * (p1.latitude - p0.latitude)
+                    val lonOut = p0.longitude + t * (p1.longitude - p0.longitude)
+                    RouteAutoDetector.computeBearing(curLat, curLon, latOut, lonOut)
+                } else {
+                    RouteAutoDetector.computeBearing(curLat, curLon, p1.latitude, p1.longitude)
+                }
             }
-            if (nextLong < i) nextLong = i
-            while (nextLong < m - 1 && (distances[nextLong] - dCur) < config.longWindowMeters) {
-                nextLong++
-            }
-
-            val isDepartureZone = dCur <= config.startDepartureWindowMeters
-            val bInShort = if (prevShort >= i || isDepartureZone) rawBearings[maxOf(0, i - 1)] else RouteAutoDetector.computeBearing(sanitized[prevShort].latLng, sanitized[i].latLng)
-            val bOutShort = if (nextShort <= i) rawBearings[minOf(m - 2, i)] else RouteAutoDetector.computeBearing(sanitized[i].latLng, sanitized[nextShort].latLng)
-            inBearings[i] = bInShort
             val deltaShort = computeSignedAngleDelta(bInShort, bOutShort)
 
-            val bInLong = if (prevLong >= i || isDepartureZone) rawBearings[maxOf(0, i - 1)] else RouteAutoDetector.computeBearing(sanitized[prevLong].latLng, sanitized[i].latLng)
-            val bOutLong = if (nextLong <= i) rawBearings[minOf(m - 2, i)] else RouteAutoDetector.computeBearing(sanitized[i].latLng, sanitized[nextLong].latLng)
+            // --- Long Window (W = config.longWindowMeters) ---
+            val dInLong = maxOf(0.0, dCur - config.longWindowMeters)
+            while (prevLong < i - 1 && distances[prevLong + 1] <= dInLong) {
+                prevLong++
+            }
+            val bInLong = if (isDepartureZone || prevLong + 1 == i || (dCur - dInLong) <= 1e-4) {
+                rawBearings[maxOf(0, i - 1)]
+            } else {
+                val p0 = sanitized[prevLong].latLng
+                val p1 = sanitized[prevLong + 1].latLng
+                val segLen = distances[prevLong + 1] - distances[prevLong]
+                if (segLen > config.longWindowMeters) {
+                    val t = if (segLen > 1e-6) ((dInLong - distances[prevLong]) / segLen).coerceIn(0.0, 1.0) else 0.0
+                    val latIn = p0.latitude + t * (p1.latitude - p0.latitude)
+                    val lonIn = p0.longitude + t * (p1.longitude - p0.longitude)
+                    RouteAutoDetector.computeBearing(latIn, lonIn, curLat, curLon)
+                } else {
+                    RouteAutoDetector.computeBearing(p0.latitude, p0.longitude, curLat, curLon)
+                }
+            }
+
+            val dOutLong = minOf(totalDistance, dCur + config.longWindowMeters)
+            if (nextLong < i + 1) nextLong = i + 1
+            while (nextLong < m - 1 && distances[nextLong] < dOutLong) {
+                nextLong++
+            }
+            val bOutLong = if (nextLong == i + 1 || (dOutLong - dCur) <= 1e-4) {
+                rawBearings[minOf(m - 2, i)]
+            } else {
+                val p0 = sanitized[nextLong - 1].latLng
+                val p1 = sanitized[nextLong].latLng
+                val segLen = distances[nextLong] - distances[nextLong - 1]
+                if (segLen > config.longWindowMeters) {
+                    val t = if (segLen > 1e-6) ((dOutLong - distances[nextLong - 1]) / segLen).coerceIn(0.0, 1.0) else 0.0
+                    val latOut = p0.latitude + t * (p1.latitude - p0.latitude)
+                    val lonOut = p0.longitude + t * (p1.longitude - p0.longitude)
+                    RouteAutoDetector.computeBearing(curLat, curLon, latOut, lonOut)
+                } else {
+                    RouteAutoDetector.computeBearing(curLat, curLon, p1.latitude, p1.longitude)
+                }
+            }
             val deltaLong = computeSignedAngleDelta(bInLong, bOutLong)
 
             // Multi-scale selection: Local corners take precedence, long window for sweeping curves

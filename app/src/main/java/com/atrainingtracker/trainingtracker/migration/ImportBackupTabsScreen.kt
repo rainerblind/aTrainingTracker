@@ -110,6 +110,8 @@ fun ImportBackupTabsScreen(
 
     var showRestoreConfirm by remember { mutableStateOf(false) }
     var showDropboxRestoreConfirm by remember { mutableStateOf(false) }
+    var showAutomaticBackupRestoreConfirm by remember { mutableStateOf(false) }
+    var showGoogleDriveRestoreConfirm by remember { mutableStateOf(false) }
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
     var showMappingDialog by remember { mutableStateOf<MappingData?>(null) }
     
@@ -125,6 +127,9 @@ fun ImportBackupTabsScreen(
     var showDropboxDisconnectedDialog by remember { mutableStateOf(false) }
     val isDropboxConnected = remember(uiState) {
         TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
+    }
+    val isGoogleDriveConnected = remember(uiState) {
+        TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
     }
     
     val isBusy = uiState is BackupRestoreViewModel.UiState.Loading || uiState is BackupRestoreViewModel.UiState.Progress
@@ -320,19 +325,30 @@ fun ImportBackupTabsScreen(
                             }
                         }
                     )
-                    2 -> RestoreTabContent(
-                        isBusy = isBusy,
-                        isDropboxConnected = isDropboxConnected,
-                        onIncrementalImportClick = { pickImportLauncher.launch(arrayOf("*/*")) },
-                        onLocalRestoreClick = { pickFullRestoreLauncher.launch(arrayOf("*/*")) },
-                        onDropboxRestoreClick = {
-                            if (isDropboxConnected) {
-                                showDropboxRestoreConfirm = true
-                            } else {
-                                showDropboxDisconnectedDialog = true
-                            }
+                    2 -> {
+                        val autoBackupTimestamp = remember(pagerState.currentPage, isBusy) {
+                            viewModel.getAutomaticBackupTimestamp(context)
                         }
-                    )
+                        RestoreTabContent(
+                            isBusy = isBusy,
+                            isDropboxConnected = isDropboxConnected,
+                            isGoogleDriveConnected = isGoogleDriveConnected,
+                            automaticBackupTimestamp = autoBackupTimestamp,
+                            onIncrementalImportClick = { pickImportLauncher.launch(arrayOf("*/*")) },
+                            onAutomaticBackupRestoreClick = { showAutomaticBackupRestoreConfirm = true },
+                            onLocalRestoreClick = { pickFullRestoreLauncher.launch(arrayOf("*/*")) },
+                            onDropboxRestoreClick = {
+                                if (isDropboxConnected) {
+                                    showDropboxRestoreConfirm = true
+                                } else {
+                                    showDropboxDisconnectedDialog = true
+                                }
+                            },
+                            onGoogleDriveRestoreClick = {
+                                showGoogleDriveRestoreConfirm = true
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -365,6 +381,32 @@ fun ImportBackupTabsScreen(
         )
     }
 
+    if (showAutomaticBackupRestoreConfirm) {
+        AlertDialog(
+            onDismissRequest = { showAutomaticBackupRestoreConfirm = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+            title = { Text(stringResource(R.string.restore_warning_title)) },
+            text = { Text(stringResource(R.string.restore_warning_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showAutomaticBackupRestoreConfirm = false
+                        viewModel.restoreFromLocalBackup(context)
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.restore_backup))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAutomaticBackupRestoreConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
     if (showDropboxRestoreConfirm) {
         AlertDialog(
             onDismissRequest = { showDropboxRestoreConfirm = false },
@@ -385,6 +427,32 @@ fun ImportBackupTabsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDropboxRestoreConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showGoogleDriveRestoreConfirm) {
+        AlertDialog(
+            onDismissRequest = { showGoogleDriveRestoreConfirm = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+            title = { Text(stringResource(R.string.restore_warning_title)) },
+            text = { Text(stringResource(R.string.restore_warning_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showGoogleDriveRestoreConfirm = false
+                        viewModel.restoreFromGoogleDrive(context)
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.restore_backup))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGoogleDriveRestoreConfirm = false }) {
                     Text(stringResource(R.string.cancel))
                 }
             }
@@ -1175,172 +1243,3 @@ private fun ImportTabContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun BackupTabContent(
-    viewModel: BackupRestoreViewModel,
-    isBusy: Boolean,
-    isDropboxConnected: Boolean,
-    onCreateBackupClick: () -> Unit,
-    onUploadToDropboxClick: () -> Unit
-) {
-    val lastBackupInfo by viewModel.lastBackupInfo.collectAsState()
-    val uploadButtonColors = if (isDropboxConnected) {
-        ButtonDefaults.buttonColors()
-    } else {
-        ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-        )
-    }
-    
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // --- Backup Card ---
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = stringResource(R.string.create_backup), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onCreateBackupClick, modifier = Modifier.fillMaxWidth(), enabled = !isBusy) {
-                    Icon(Icons.Default.Save, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.create_backup))
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = onUploadToDropboxClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isBusy,
-                    colors = uploadButtonColors
-                ) {
-                    Icon(Icons.Default.CloudUpload, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.create_and_upload_to_dropbox))
-                }
-            }
-        }
-
-        // --- Automated Backups Card ---
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = stringResource(R.string.automated_backups), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.automated_backups))
-                        Text(text = stringResource(R.string.automated_backups_summary), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(checked = viewModel.automatedBackupsEnabled, onCheckedChange = { viewModel.updateAutomatedBackupsEnabled(it) }, modifier = Modifier.scale(0.8f))
-                }
-
-                if (viewModel.automatedBackupsEnabled) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(stringResource(R.string.backup_interval), style = MaterialTheme.typography.labelLarge)
-                    val intervals = listOf(1, 3, 7, 30)
-                    val labels = listOf(stringResource(R.string.backup_interval_daily), stringResource(R.string.backup_interval_3days), stringResource(R.string.backup_interval_weekly), stringResource(R.string.backup_interval_monthly))
-                    var expanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-                        val currentLabel = labels[intervals.indexOf(viewModel.backupIntervalDays).coerceAtLeast(0)]
-                        TextField(value = currentLabel, onValueChange = {}, readOnly = true, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, modifier = Modifier.menuAnchor().fillMaxWidth(), colors = ExposedDropdownMenuDefaults.textFieldColors(focusedContainerColor = MaterialTheme.colorScheme.surface, unfocusedContainerColor = MaterialTheme.colorScheme.surface))
-                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            intervals.forEachIndexed { index, days ->
-                                DropdownMenuItem(text = { Text(labels[index]) }, onClick = { viewModel.updateBackupIntervalDays(days); expanded = false })
-                            }
-                        }
-                    }
-                    lastBackupInfo?.let { info ->
-                        Spacer(modifier = Modifier.height(12.dp))
-                        val dateStr = DateFormat.getDateTimeInstance().format(Date(info.timestamp))
-                        val isSuccess = info.status == "SUCCESS"
-                        Text(text = if (isSuccess) stringResource(R.string.last_backup, dateStr) else "Last backup failed: ${info.status}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = if (isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RestoreTabContent(
-    isBusy: Boolean,
-    isDropboxConnected: Boolean,
-    onIncrementalImportClick: () -> Unit,
-    onLocalRestoreClick: () -> Unit,
-    onDropboxRestoreClick: () -> Unit
-) {
-    val dropboxRestoreColors = if (isDropboxConnected) {
-        ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-    } else {
-        ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
-    }
-    val dropboxRestoreBorder = if (isDropboxConnected) {
-        ButtonDefaults.outlinedButtonBorder(enabled = !isBusy)
-    } else {
-        BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
-    }
-
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // --- Import Card (Moved here from Import tab) ---
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = stringResource(R.string.import_workouts), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = stringResource(R.string.incremental_import_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = onIncrementalImportClick, modifier = Modifier.fillMaxWidth(), enabled = !isBusy) {
-                    Icon(Icons.Default.Backup, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.import_workouts))
-                }
-            }
-        }
-
-        // --- Restore Card ---
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = stringResource(R.string.restore_backup), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = stringResource(R.string.full_restore_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = onLocalRestoreClick, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error), enabled = !isBusy) {
-                    Icon(Icons.Default.Restore, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Local: " + stringResource(R.string.restore_backup))
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onDropboxRestoreClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = dropboxRestoreColors,
-                    border = dropboxRestoreBorder,
-                    enabled = !isBusy
-                ) {
-                    Icon(Icons.Default.CloudUpload, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Dropbox: " + stringResource(R.string.restore_backup))
-                }
-            }
-        }
-    }
-}

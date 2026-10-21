@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RestartAlt
@@ -29,8 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
 /**
@@ -208,8 +211,9 @@ fun TuningResetDefaultsButton(
 }
 
 /**
- * Compact subordinate toggle switch for secondary child settings (Rule 59, ATT-4432).
- * Displays lighter typography without a heavy subtitle and a scaled-down switch.
+ * Compact subordinate toggle switch for secondary child settings (Rule 59, ATT-4432, ATT-4464).
+ * Displays lighter typography without a heavy subtitle and a significantly downscaled switch
+ * with compact vertical height and secondary color tokens.
  */
 @Composable
 fun SubordinateTuningToggleItem(
@@ -239,8 +243,37 @@ fun SubordinateTuningToggleItem(
             checked = isChecked,
             onCheckedChange = onCheckedChange,
             enabled = enabled,
-            modifier = Modifier.scale(0.8f)
+            modifier = Modifier
+                .scale(0.6f)
+                .height(24.dp),
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                checkedTrackColor = MaterialTheme.colorScheme.secondary
+            )
         )
+    }
+}
+
+@Preview(name = "SubordinateTuningToggleItem - Light", showBackground = true)
+@Preview(name = "SubordinateTuningToggleItem - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Composable
+private fun SubordinateTuningToggleItemPreview() {
+    ATrainingTrackerTheme {
+        Surface {
+            Column(modifier = Modifier.padding(16.dp)) {
+                SubordinateTuningToggleItem(
+                    title = "Show in Workout Summary",
+                    isChecked = true,
+                    onCheckedChange = {}
+                )
+                SubordinateTuningToggleItem(
+                    title = "Show in Workout Summary (Disabled)",
+                    isChecked = false,
+                    onCheckedChange = {},
+                    enabled = false
+                )
+            }
+        }
     }
 }
 

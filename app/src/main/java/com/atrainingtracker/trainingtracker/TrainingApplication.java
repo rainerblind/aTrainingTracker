@@ -649,10 +649,12 @@ public class TrainingApplication extends Application {
      * Dropbox helpers
      */
     public static boolean uploadToDropbox() {
+        if (cSharedPreferences == null) return false;
         return cSharedPreferences.getBoolean(SP_UPLOAD_TO_DROPBOX, false);
     }
 
     public static void setUploadToDropbox(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_DROPBOX, value).apply();
     }
 
