@@ -1879,6 +1879,12 @@
     <string name="zone_onboarding_hr_banner">新しい心拍数センサーがペアリングされました。パーソナライズされたトレーニングフィードバックのために心拍ゾーンを設定してください。</string>
     <string name="zone_onboarding_pwr_banner">新しいパワーメーターがペアリングされました。パワーゾーンを設定するか、FTPから計算してください。</string>
     <string name="zone_onboarding_dismiss">了解</string>
+    <string name="zone_onboarding_prompt_hr_title">心拍数センサーがペアリングされました</string>
+    <string name="zone_onboarding_prompt_hr_message">今すぐ心拍ゾーンを設定しますか？</string>
+    <string name="zone_onboarding_prompt_pwr_title">パワーメーターがペアリングされました</string>
+    <string name="zone_onboarding_prompt_pwr_message">今すぐサイクリングパワーゾーンを設定しますか？</string>
+    <string name="zone_onboarding_action_configure">ゾーンを設定</string>
+    <string name="zone_onboarding_action_later">後で</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
     <string name="tuning_auto_pause_title">オートポーズ</string>

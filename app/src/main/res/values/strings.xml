@@ -2093,6 +2093,12 @@
     <string name="zone_onboarding_hr_banner">New heart rate sensor paired. Set your heart rate zones for personalized training feedback.</string>
     <string name="zone_onboarding_pwr_banner">New power meter paired. Set your power zones or calculate them from your FTP.</string>
     <string name="zone_onboarding_dismiss">Dismiss</string>
+    <string name="zone_onboarding_prompt_hr_title">Heart Rate Monitor paired</string>
+    <string name="zone_onboarding_prompt_hr_message">Would you like to configure your Heart Rate zones now?</string>
+    <string name="zone_onboarding_prompt_pwr_title">Power Meter paired</string>
+    <string name="zone_onboarding_prompt_pwr_message">Would you like to configure your Cycling Power zones now?</string>
+    <string name="zone_onboarding_action_configure">Configure Zones</string>
+    <string name="zone_onboarding_action_later">Not Now</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
     <string name="tuning_auto_pause_title">Auto-Pause</string>

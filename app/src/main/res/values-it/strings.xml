@@ -1900,6 +1900,12 @@
     <string name="zone_onboarding_hr_banner">Nuovo sensore di frequenza cardiaca associato. Imposta le tue zone FC per un feedback di allenamento personalizzato.</string>
     <string name="zone_onboarding_pwr_banner">Nuovo misuratore di potenza associato. Imposta le tue zone di potenza o calcolale dal tuo FTP.</string>
     <string name="zone_onboarding_dismiss">Ho capito</string>
+    <string name="zone_onboarding_prompt_hr_title">Sensore di frequenza cardiaca associato</string>
+    <string name="zone_onboarding_prompt_hr_message">Vuoi configurare adesso le tue zone di frequenza cardiaca?</string>
+    <string name="zone_onboarding_prompt_pwr_title">Misuratore di potenza associato</string>
+    <string name="zone_onboarding_prompt_pwr_message">Vuoi configurare adesso le tue zone di potenza ciclistica?</string>
+    <string name="zone_onboarding_action_configure">Configura zone</string>
+    <string name="zone_onboarding_action_later">Non ora</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
     <string name="tuning_auto_pause_title">Pausa automatica</string>

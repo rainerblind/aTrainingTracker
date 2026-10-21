@@ -38,6 +38,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicelist.BatteryFilter
 import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterCriteria
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -46,6 +47,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -58,18 +60,38 @@ sealed class UiState {
 }
 
 /**
+ * Represents a pending prompt asking the athlete to configure training zones
+ * after a new physiological sensor was discovered and auto-paired (REQ-UI-374.6).
+ */
+data class ZoneOnboardingPrompt(
+    val deviceType: DeviceType,
+    val deviceName: String
+)
+
+/**
  * ViewModel for the DevicesTabbedContainerFragment.
  * It manages UI state and business logic, surviving configuration changes.
  */
-class DevicesTabbedViewModel(
+class DevicesTabbedViewModel @JvmOverloads constructor(
     application: Application,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    private val settingsDataStore: SettingsDataStore = SettingsDataStore(application),
+    private val deviceDBRepository: DeviceDataRepository = DeviceDataRepository.getInstance(application),
+    private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application)
 ) : AndroidViewModel(application) {
-
-    private val deviceDBRepository = DeviceDataRepository.getInstance(application)
 
     private val _newDeviceDiscoveredEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val newDeviceDiscoveredEvent: SharedFlow<String> = _newDeviceDiscoveredEvent.asSharedFlow()
+
+    private val _zonePromptState = MutableStateFlow<ZoneOnboardingPrompt?>(null)
+    val zonePromptState: StateFlow<ZoneOnboardingPrompt?> = _zonePromptState.asStateFlow()
+
+    /**
+     * Dismisses the active zone onboarding confirmation prompt.
+     */
+    fun dismissZonePrompt() {
+        _zonePromptState.value = null
+    }
 
     private val deviceDiscoveryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -79,21 +101,50 @@ class DevicesTabbedViewModel(
 
                 val deviceId = intent.getLongExtra(BANALService.DEVICE_ID, -1L)
                 viewModelScope.launch {
-                    val resolvedName = if (deviceId != -1L) {
-                        deviceDBRepository.getDeviceSnapshotById(deviceId)?.deviceName
-                            ?: withContext(Dispatchers.IO) {
+                    val snapshot = if (deviceId != -1L) {
+                        deviceDBRepository.getDeviceSnapshotById(deviceId)
+                    } else null
+
+                    val resolvedName = snapshot?.deviceName
+                        ?: if (deviceId != -1L) {
+                            withContext(Dispatchers.IO) {
                                 runCatching {
                                     DevicesDatabaseManager.getInstance(getApplication()).getDeviceName(deviceId)
                                 }.getOrNull()
                             } ?: "Sensor"
-                    } else "Sensor"
+                        } else "Sensor"
                     _newDeviceDiscoveredEvent.emit(resolvedName)
+
+                    val resolvedType = snapshot?.deviceType
+                        ?: if (deviceId != -1L) {
+                            withContext(Dispatchers.IO) {
+                                runCatching {
+                                    DevicesDatabaseManager.getInstance(getApplication()).getDeviceType(deviceId)
+                                }.getOrNull()
+                            }
+                        } else null
+
+                    when (resolvedType) {
+                        DeviceType.HRM -> {
+                            val isConfigured = settingsDataStore.isHrZonesConfigured.first()
+                            if (!isConfigured) {
+                                _zonePromptState.value = ZoneOnboardingPrompt(DeviceType.HRM, resolvedName)
+                            }
+                        }
+                        DeviceType.BIKE_POWER -> {
+                            val isConfigured = settingsDataStore.isPwrZonesConfigured.first()
+                            if (!isConfigured) {
+                                _zonePromptState.value = ZoneOnboardingPrompt(DeviceType.BIKE_POWER, resolvedName)
+                            }
+                        }
+                        else -> {
+                            // Non-physiological sensors remain silent (REQ-UI-374.6)
+                        }
+                    }
                 }
             }
         }
     }
-
-    private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application)
     val searchingFor: StateFlow<String?> = banalServiceRepository.searchingForDevice
     val isSearchingForNewDevices: StateFlow<Boolean> = banalServiceRepository.isSearchingForNewDevices
 

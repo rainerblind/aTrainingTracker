@@ -1899,6 +1899,12 @@
     <string name="zone_onboarding_hr_banner">Nieuwe hartslagsensor gekoppeld. Stel je hartslagzones in voor gepersonaliseerde trainingsfeedback.</string>
     <string name="zone_onboarding_pwr_banner">Nieuwe vermogensmeter gekoppeld. Stel je vermogenszones in of bereken ze op basis van je FTP.</string>
     <string name="zone_onboarding_dismiss">Begrepen</string>
+    <string name="zone_onboarding_prompt_hr_title">Hartslagsensor gekoppeld</string>
+    <string name="zone_onboarding_prompt_hr_message">Wil je nu je hartslagzones configureren?</string>
+    <string name="zone_onboarding_prompt_pwr_title">Vermogensmeter gekoppeld</string>
+    <string name="zone_onboarding_prompt_pwr_message">Wil je nu je fietsvermogenszones configureren?</string>
+    <string name="zone_onboarding_action_configure">Zones configureren</string>
+    <string name="zone_onboarding_action_later">Niet nu</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
     <string name="tuning_auto_pause_title">Automatisch pauzeren</string>

@@ -1901,6 +1901,12 @@
     <string name="zone_onboarding_hr_banner">Sparowano nowy czujnik tętna. Skonfiguruj strefy tętna, aby uzyskać spersonalizowaną analizę treningu.</string>
     <string name="zone_onboarding_pwr_banner">Sparowano nowy miernik mocy. Skonfiguruj strefy mocy lub oblicz je na podstawie swojego FTP.</string>
     <string name="zone_onboarding_dismiss">Rozumiem</string>
+    <string name="zone_onboarding_prompt_hr_title">Czujnik tętna sparowany</string>
+    <string name="zone_onboarding_prompt_hr_message">Czy chcesz teraz skonfigurować strefy tętna?</string>
+    <string name="zone_onboarding_prompt_pwr_title">Miernik mocy sparowany</string>
+    <string name="zone_onboarding_prompt_pwr_message">Czy chcesz teraz skonfigurować strefy mocy kolarskiej?</string>
+    <string name="zone_onboarding_action_configure">Konfiguruj strefy</string>
+    <string name="zone_onboarding_action_later">Nie teraz</string>
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
     <string name="tuning_auto_pause_title">Autopauza</string>
     <string name="tuning_auto_pause_desc">Automatyczne wstrzymywanie nagrywania podczas postoju</string>

@@ -1899,6 +1899,12 @@
     <string name="zone_onboarding_hr_banner">Nouveau capteur de fréquence cardiaque appairé. Définissez vos zones de FC pour un suivi personnalisé.</string>
     <string name="zone_onboarding_pwr_banner">Nouveau capteur de puissance appairé. Définissez vos zones de puissance ou calculez-les à partir de votre FTP.</string>
     <string name="zone_onboarding_dismiss">Compris</string>
+    <string name="zone_onboarding_prompt_hr_title">Capteur de fréquence cardiaque appairé</string>
+    <string name="zone_onboarding_prompt_hr_message">Souhaitez-vous configurer vos zones de fréquence cardiaque maintenant ?</string>
+    <string name="zone_onboarding_prompt_pwr_title">Capteur de puissance appairé</string>
+    <string name="zone_onboarding_prompt_pwr_message">Souhaitez-vous configurer vos zones de puissance cycliste maintenant ?</string>
+    <string name="zone_onboarding_action_configure">Configurer les zones</string>
+    <string name="zone_onboarding_action_later">Plus tard</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
     <string name="tuning_auto_pause_title">Pause automatique</string>

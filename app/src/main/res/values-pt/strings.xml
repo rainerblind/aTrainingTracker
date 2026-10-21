@@ -1899,6 +1899,12 @@
     <string name="zone_onboarding_hr_banner">Novo sensor de frequência cardíaca emparelhado. Configure suas zonas de FC para obter feedback personalizado.</string>
     <string name="zone_onboarding_pwr_banner">Novo medidor de potência emparelhado. Configure suas zonas de potência ou calcule-as a partir do seu FTP.</string>
     <string name="zone_onboarding_dismiss">Entendido</string>
+    <string name="zone_onboarding_prompt_hr_title">Sensor de frequência cardíaca emparelhado</string>
+    <string name="zone_onboarding_prompt_hr_message">Deseja configurar as suas zonas de frequência cardíaca agora?</string>
+    <string name="zone_onboarding_prompt_pwr_title">Sensor de potência emparelhado</string>
+    <string name="zone_onboarding_prompt_pwr_message">Deseja configurar as suas zonas de potência de ciclismo agora?</string>
+    <string name="zone_onboarding_action_configure">Configurar zonas</string>
+    <string name="zone_onboarding_action_later">Agora não</string>
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
     <string name="tuning_auto_pause_title">Pausa automática</string>
     <string name="tuning_auto_pause_desc">Pausar gravação automaticamente quando parado</string>

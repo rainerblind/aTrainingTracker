@@ -87,6 +87,7 @@ fun DevicesTabbedScreen(
     val scanningProtocol by tabViewModel.scanningProtocol.collectAsState()
     val scanningDeviceType by tabViewModel.scanningDeviceType.collectAsState()
     val filterCriteria by tabViewModel.filterCriteria.collectAsState()
+    val zonePrompt by tabViewModel.zonePromptState.collectAsState()
     
     val protocol = tabViewModel.protocol
     var showDeleteConfirmFor by remember { mutableStateOf<DeviceUiData?>(null) }
@@ -605,6 +606,27 @@ fun DevicesTabbedScreen(
             onDismiss = { editingDeviceId = null }
         )
     }
+
+    // Zone Onboarding Prompt Dialog (REQ-UI-374.6)
+    zonePrompt?.let { prompt ->
+        val isHr = prompt.deviceType == DeviceType.HRM
+        val titleRes = if (isHr) R.string.zone_onboarding_prompt_hr_title else R.string.zone_onboarding_prompt_pwr_title
+        val messageRes = if (isHr) R.string.zone_onboarding_prompt_hr_message else R.string.zone_onboarding_prompt_pwr_message
+        val initialTab = if (isHr) 0 else 2
+        val promptReason = if (isHr) DeviceListViewModel.PROMPT_REASON_HR_PAIRED else DeviceListViewModel.PROMPT_REASON_PWR_PAIRED
+
+        ZoneOnboardingPromptDialog(
+            title = stringResource(titleRes),
+            message = stringResource(messageRes),
+            onConfigure = {
+                tabViewModel.dismissZonePrompt()
+                onNavigateToZones?.invoke(initialTab, promptReason)
+            },
+            onDismiss = {
+                tabViewModel.dismissZonePrompt()
+            }
+        )
+    }
 }
 
 @Composable
@@ -613,5 +635,53 @@ private fun getTabTitle(spec: DeviceFilterSpec): String {
         DeviceFilterType.CONNECTED -> stringResource(R.string.devices_tab_available)
         DeviceFilterType.PAIRED -> stringResource(R.string.devices_tab_paired)
         DeviceFilterType.ALL_KNOWN -> stringResource(R.string.devices_tab_known)
+    }
+}
+
+/**
+ * Dialog prompting athlete to configure physiological zones upon auto-pairing discovery (REQ-UI-374.6).
+ */
+@Composable
+fun ZoneOnboardingPromptDialog(
+    title: String,
+    message: String,
+    onConfigure: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+        title = { Text(title) },
+        text = { Text(message) },
+        confirmButton = {
+            Button(onClick = onConfigure) {
+                Text(stringResource(R.string.zone_onboarding_action_configure))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.zone_onboarding_action_later))
+            }
+        }
+    )
+}
+
+@androidx.compose.ui.tooling.preview.Preview(name = "Light Mode")
+@androidx.compose.ui.tooling.preview.Preview(
+    name = "Dark Mode",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+private fun ZoneOnboardingPromptDialogPreview() {
+    com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme {
+        ZoneOnboardingPromptDialog(
+            title = "Heart Rate Monitor paired",
+            message = "Would you like to configure your Heart Rate zones now?",
+            onConfigure = {},
+            onDismiss = {}
+        )
     }
 }

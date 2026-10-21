@@ -1900,6 +1900,12 @@
     <string name="zone_onboarding_hr_banner">Nuevo sensor de frecuencia cardíaca vinculado. Configure sus zonas de FC para recibir información de entrenamiento personalizada.</string>
     <string name="zone_onboarding_pwr_banner">Nuevo potenciómetro vinculado. Configure sus zonas de potencia o calcúlelas a partir de su FTP.</string>
     <string name="zone_onboarding_dismiss">Entendido</string>
+    <string name="zone_onboarding_prompt_hr_title">Sensor de frecuencia cardíaca vinculado</string>
+    <string name="zone_onboarding_prompt_hr_message">¿Deseas configurar tus zonas de frecuencia cardíaca ahora?</string>
+    <string name="zone_onboarding_prompt_pwr_title">Potenciómetro vinculado</string>
+    <string name="zone_onboarding_prompt_pwr_message">¿Deseas configurar tus zonas de potencia de ciclismo ahora?</string>
+    <string name="zone_onboarding_action_configure">Configurar zonas</string>
+    <string name="zone_onboarding_action_later">Ahora no</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
     <string name="tuning_auto_pause_title">Pausa automática</string>

@@ -28,6 +28,7 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -53,6 +54,7 @@ class DevicesTabbedViewModelTest {
     private lateinit var mockApplication: Application
     private lateinit var mockDeviceDataRepository: DeviceDataRepository
     private lateinit var mockBanalServiceRepository: BANALServiceRepository
+    private lateinit var mockSettingsDataStore: SettingsDataStore
 
     @Before
     fun setUp() {
@@ -85,6 +87,10 @@ class DevicesTabbedViewModelTest {
         every { mockBanalServiceRepository.searchingForDevice } returns MutableStateFlow<String?>(null)
         every { mockBanalServiceRepository.isSearchingForNewDevices } returns MutableStateFlow<Boolean>(false)
         every { mockBanalServiceRepository.bindToBANALService() } just Runs
+
+        mockSettingsDataStore = mockk(relaxed = true)
+        every { mockSettingsDataStore.isHrZonesConfigured } returns MutableStateFlow(false)
+        every { mockSettingsDataStore.isPwrZonesConfigured } returns MutableStateFlow(false)
     }
 
     @After
@@ -286,6 +292,173 @@ class DevicesTabbedViewModelTest {
         assertFalse(viewModel.isSearchingForNewDevices.value)
         assertNull(viewModel.scanningProtocol.value)
         assertNull(viewModel.scanningDeviceType.value)
+    }
+
+    private fun createDevice(id: Long, type: DeviceType, name: String) =
+        com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData(
+            id = id,
+            protocol = Protocol.ANT_PLUS,
+            deviceType = type,
+            lastSeen = null,
+            manufacturer = "TestManufacturer",
+            deviceName = name,
+            isPaired = false,
+            linkedEquipment = emptyList(),
+            availableEquipment = emptyList(),
+            powerFeaturesFlags = null,
+            batteryPercentage = 100,
+            linkedSportTypes = emptyList(),
+            deviceTypeIconRes = 0,
+            batteryStatusIconRes = 0,
+            onEquipmentResId = 0,
+            wheelCircumference = null,
+            calibrationFactor = null,
+            powerFeatures = null,
+            isConnected = false,
+            mainValue = null,
+            allValues = null,
+            isNewlyDiscovered = true
+        )
+
+    @Test
+    fun testDiscovery_unconfiguredHrm_emitsZonePrompt() = kotlinx.coroutines.test.runTest {
+        val receiverSlot = slot<android.content.BroadcastReceiver>()
+        every { mockApplication.registerReceiver(capture(receiverSlot), any(), any()) } returns null
+        every { mockApplication.registerReceiver(capture(receiverSlot), any()) } returns null
+
+        val device = createDevice(101L, DeviceType.HRM, "Polar H10")
+        every { mockDeviceDataRepository.getDeviceSnapshotById(101L) } returns device
+        every { mockSettingsDataStore.isHrZonesConfigured } returns MutableStateFlow(false)
+
+        val viewModel = DevicesTabbedViewModel(mockApplication, SavedStateHandle(), settingsDataStore = mockSettingsDataStore)
+        val receiver = receiverSlot.captured
+
+        val mockIntent = mockk<android.content.Intent>()
+        every { mockIntent.action } returns BANALService.NEW_DEVICE_FOUND_INTENT
+        every { mockIntent.getLongExtra(BANALService.DEVICE_ID, -1L) } returns 101L
+
+        receiver.onReceive(mockApplication, mockIntent)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(ZoneOnboardingPrompt(DeviceType.HRM, "Polar H10"), viewModel.zonePromptState.value)
+    }
+
+    @Test
+    fun testDiscovery_unconfiguredPower_emitsZonePrompt() = kotlinx.coroutines.test.runTest {
+        val receiverSlot = slot<android.content.BroadcastReceiver>()
+        every { mockApplication.registerReceiver(capture(receiverSlot), any(), any()) } returns null
+        every { mockApplication.registerReceiver(capture(receiverSlot), any()) } returns null
+
+        val device = createDevice(102L, DeviceType.BIKE_POWER, "Stages Power")
+        every { mockDeviceDataRepository.getDeviceSnapshotById(102L) } returns device
+        every { mockSettingsDataStore.isPwrZonesConfigured } returns MutableStateFlow(false)
+
+        val viewModel = DevicesTabbedViewModel(mockApplication, SavedStateHandle(), settingsDataStore = mockSettingsDataStore)
+        val receiver = receiverSlot.captured
+
+        val mockIntent = mockk<android.content.Intent>()
+        every { mockIntent.action } returns BANALService.NEW_DEVICE_FOUND_INTENT
+        every { mockIntent.getLongExtra(BANALService.DEVICE_ID, -1L) } returns 102L
+
+        receiver.onReceive(mockApplication, mockIntent)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(ZoneOnboardingPrompt(DeviceType.BIKE_POWER, "Stages Power"), viewModel.zonePromptState.value)
+    }
+
+    @Test
+    fun testDiscovery_configuredHrm_doesNotEmitZonePrompt() = kotlinx.coroutines.test.runTest {
+        val receiverSlot = slot<android.content.BroadcastReceiver>()
+        every { mockApplication.registerReceiver(capture(receiverSlot), any(), any()) } returns null
+        every { mockApplication.registerReceiver(capture(receiverSlot), any()) } returns null
+
+        val device = createDevice(103L, DeviceType.HRM, "Wahoo TICKR")
+        every { mockDeviceDataRepository.getDeviceSnapshotById(103L) } returns device
+        every { mockSettingsDataStore.isHrZonesConfigured } returns MutableStateFlow(true)
+
+        val viewModel = DevicesTabbedViewModel(mockApplication, SavedStateHandle(), settingsDataStore = mockSettingsDataStore)
+        val receiver = receiverSlot.captured
+
+        val mockIntent = mockk<android.content.Intent>()
+        every { mockIntent.action } returns BANALService.NEW_DEVICE_FOUND_INTENT
+        every { mockIntent.getLongExtra(BANALService.DEVICE_ID, -1L) } returns 103L
+
+        receiver.onReceive(mockApplication, mockIntent)
+        testScheduler.advanceUntilIdle()
+
+        assertNull(viewModel.zonePromptState.value)
+    }
+
+    @Test
+    fun testDiscovery_configuredPower_doesNotEmitZonePrompt() = kotlinx.coroutines.test.runTest {
+        val receiverSlot = slot<android.content.BroadcastReceiver>()
+        every { mockApplication.registerReceiver(capture(receiverSlot), any(), any()) } returns null
+        every { mockApplication.registerReceiver(capture(receiverSlot), any()) } returns null
+
+        val device = createDevice(104L, DeviceType.BIKE_POWER, "Garmin Rally")
+        every { mockDeviceDataRepository.getDeviceSnapshotById(104L) } returns device
+        every { mockSettingsDataStore.isPwrZonesConfigured } returns MutableStateFlow(true)
+
+        val viewModel = DevicesTabbedViewModel(mockApplication, SavedStateHandle(), settingsDataStore = mockSettingsDataStore)
+        val receiver = receiverSlot.captured
+
+        val mockIntent = mockk<android.content.Intent>()
+        every { mockIntent.action } returns BANALService.NEW_DEVICE_FOUND_INTENT
+        every { mockIntent.getLongExtra(BANALService.DEVICE_ID, -1L) } returns 104L
+
+        receiver.onReceive(mockApplication, mockIntent)
+        testScheduler.advanceUntilIdle()
+
+        assertNull(viewModel.zonePromptState.value)
+    }
+
+    @Test
+    fun testDiscovery_nonPhysiologicalSensor_doesNotEmitZonePrompt() = kotlinx.coroutines.test.runTest {
+        val receiverSlot = slot<android.content.BroadcastReceiver>()
+        every { mockApplication.registerReceiver(capture(receiverSlot), any(), any()) } returns null
+        every { mockApplication.registerReceiver(capture(receiverSlot), any()) } returns null
+
+        val device = createDevice(105L, DeviceType.BIKE_SPEED, "Speed Sensor")
+        every { mockDeviceDataRepository.getDeviceSnapshotById(105L) } returns device
+        every { mockSettingsDataStore.isHrZonesConfigured } returns MutableStateFlow(false)
+        every { mockSettingsDataStore.isPwrZonesConfigured } returns MutableStateFlow(false)
+
+        val viewModel = DevicesTabbedViewModel(mockApplication, SavedStateHandle(), settingsDataStore = mockSettingsDataStore)
+        val receiver = receiverSlot.captured
+
+        val mockIntent = mockk<android.content.Intent>()
+        every { mockIntent.action } returns BANALService.NEW_DEVICE_FOUND_INTENT
+        every { mockIntent.getLongExtra(BANALService.DEVICE_ID, -1L) } returns 105L
+
+        receiver.onReceive(mockApplication, mockIntent)
+        testScheduler.advanceUntilIdle()
+
+        assertNull(viewModel.zonePromptState.value)
+    }
+
+    @Test
+    fun testDismissZonePrompt_resetsPromptStateToNull() = kotlinx.coroutines.test.runTest {
+        val receiverSlot = slot<android.content.BroadcastReceiver>()
+        every { mockApplication.registerReceiver(capture(receiverSlot), any(), any()) } returns null
+        every { mockApplication.registerReceiver(capture(receiverSlot), any()) } returns null
+
+        val device = createDevice(106L, DeviceType.HRM, "Garmin Dual")
+        every { mockDeviceDataRepository.getDeviceSnapshotById(106L) } returns device
+        every { mockSettingsDataStore.isHrZonesConfigured } returns MutableStateFlow(false)
+
+        val viewModel = DevicesTabbedViewModel(mockApplication, SavedStateHandle(), settingsDataStore = mockSettingsDataStore)
+        val receiver = receiverSlot.captured
+
+        val mockIntent = mockk<android.content.Intent>()
+        every { mockIntent.action } returns BANALService.NEW_DEVICE_FOUND_INTENT
+        every { mockIntent.getLongExtra(BANALService.DEVICE_ID, -1L) } returns 106L
+
+        receiver.onReceive(mockApplication, mockIntent)
+        testScheduler.advanceUntilIdle()
+
+        assertNotNull(viewModel.zonePromptState.value)
+        viewModel.dismissZonePrompt()
+        assertNull(viewModel.zonePromptState.value)
     }
 }
 
