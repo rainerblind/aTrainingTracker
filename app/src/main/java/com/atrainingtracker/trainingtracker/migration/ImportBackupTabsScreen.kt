@@ -125,6 +125,7 @@ fun ImportBackupTabsScreen(
     var pendingDirectoryUri by remember { mutableStateOf<Uri?>(null) }
     var pendingDirectoryFormat by remember { mutableStateOf("fit") }
     var showDropboxDisconnectedDialog by remember { mutableStateOf(false) }
+    var showNoCloudConnectedDialog by remember { mutableStateOf(false) }
     val isDropboxConnected = remember(uiState) {
         TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
     }
@@ -307,6 +308,7 @@ fun ImportBackupTabsScreen(
                         viewModel = viewModel,
                         isBusy = isBusy,
                         isDropboxConnected = isDropboxConnected,
+                        isGoogleDriveConnected = isGoogleDriveConnected,
                         onCreateBackupClick = {
                             viewModel.createBackup(context) { uri ->
                                 val intent = Intent(Intent.ACTION_SEND).apply {
@@ -317,11 +319,11 @@ fun ImportBackupTabsScreen(
                                 context.startActivity(Intent.createChooser(intent, createBackupChooserTitle))
                             }
                         },
-                        onUploadToDropboxClick = {
-                            if (isDropboxConnected) {
-                                viewModel.uploadToDropbox(context)
+                        onUploadToCloudClick = {
+                            if (isDropboxConnected || isGoogleDriveConnected) {
+                                viewModel.uploadToCloud(context)
                             } else {
-                                showDropboxDisconnectedDialog = true
+                                showNoCloudConnectedDialog = true
                             }
                         }
                     )
@@ -468,6 +470,21 @@ fun ImportBackupTabsScreen(
             text = { Text(stringResource(R.string.dropbox_disconnected_status)) },
             confirmButton = {
                 TextButton(onClick = { showDropboxDisconnectedDialog = false }) {
+                    Text(stringResource(R.string.OK))
+                }
+            }
+        )
+    }
+
+    if (showNoCloudConnectedDialog) {
+        AlertDialog(
+            onDismissRequest = { showNoCloudConnectedDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+            title = { Text(stringResource(R.string.cloud_backup_no_provider_dialog_title)) },
+            text = { Text(stringResource(R.string.cloud_backup_no_provider_dialog_message)) },
+            confirmButton = {
+                TextButton(onClick = { showNoCloudConnectedDialog = false }) {
                     Text(stringResource(R.string.OK))
                 }
             }

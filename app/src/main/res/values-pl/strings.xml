@@ -1195,6 +1195,14 @@
     <string name="import_backup_summary">Zarządzaj importem treningów, kopiami zapasowymi i przywracaniem danych</string>
 
     <string name="create_and_upload_to_dropbox">Utwórz \u0026 prześlij do Dropbox</string>
+    <string name="create_and_upload_to_both">Utwórz \u0026 prześlij (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_google_drive">Utwórz \u0026 prześlij do Google Drive</string>
+    <string name="create_and_upload_to_cloud">Utwórz \u0026 prześlij do chmury</string>
+    <string name="cloud_backup_no_provider_dialog_title">Kopia w chmurze</string>
+    <string name="cloud_backup_no_provider_dialog_message">Brak połączonej chmury. Połącz konto Dropbox lub Google Drive w ustawieniach synchronizacji.</string>
+    <string name="automated_backups_summary_both">Regularnie przesyłaj kopie zapasowe do Dropbox i Google Drive</string>
+    <string name="automated_backups_summary_google_drive">Regularnie przesyłaj kopie zapasowe do Google Drive</string>
+    <string name="automated_backups_summary_local_only">Regularnie twórz lokalne kopie zapasowe na tym urządzeniu</string>
     <string name="full_restore_description">Usuwa wszystkie lokalne dane i zastępuje je zawartością kopii zapasowej. Wymaga restartu aplikacji.</string>
     <string name="incremental_import_description">Scala treningi z kopii zapasowej z Twoją obecną historią. Istniejące już treningi zostaną pominięte.</string>
     <string name="legacy_recovery_title">Import treningów</string>

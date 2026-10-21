@@ -1179,6 +1179,14 @@
     <string name="import_backup_summary">ワークアウトのインポート、バックアップ、データの復元を管理します</string>
 
     <string name="create_and_upload_to_dropbox">作成 \u0026 Dropboxへ送る</string>
+    <string name="create_and_upload_to_both">作成 \u0026 送信 (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_google_drive">作成 \u0026 Google Driveへ送る</string>
+    <string name="create_and_upload_to_cloud">作成 \u0026 クラウドへ送る</string>
+    <string name="cloud_backup_no_provider_dialog_title">クラウドバックアップ</string>
+    <string name="cloud_backup_no_provider_dialog_message">クラウドストレージが接続されていません。同期設定で Dropbox または Google Drive を連携してください。</string>
+    <string name="automated_backups_summary_both">定期的に Dropbox と Google Drive へバックアップをアップロード</string>
+    <string name="automated_backups_summary_google_drive">定期的に Google Drive へバックアップをアップロード</string>
+    <string name="automated_backups_summary_local_only">この端末に定期的なローカルバックアップを作成</string>
     <string name="full_restore_description">ローカルデータをすべて削除し、バックアップの内容に置き換えます。アプリの再起動が必要です。</string>
     <string name="incremental_import_description">バックアップから現在の履歴にワークアウトを統合します。既存のワークアウトはスキップされます。</string>
     <string name="legacy_recovery_title">ワークアウトのインポート</string>
