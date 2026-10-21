@@ -81,7 +81,8 @@ data class LiveSegmentMath(
     var startDistance: Double = 0.0,  // the distance, when we started the segment
     var indexOfDistance: Int = 0,     // index of the segment flow of the current distance
     val startGate: PolylineGate? = null,
-    val endGate: PolylineGate? = null
+    val endGate: PolylineGate? = null,
+    var lastSegmentIndex: Int? = null
 )
 
 // data class that encapsulates all data for a live segment (summary, path, time and distances, as well as the math details)
@@ -269,12 +270,14 @@ class LiveSegmentsRepository internal constructor(
                         // remember the startTime and startDistance
                         liveSegment.math.startTime_ms = System.currentTimeMillis()
                         liveSegment.math.startDistance = currentDistance
+                        liveSegment.math.lastSegmentIndex = 0
 
                         newSegmentStatus = LiveSegmentStatus.ON_SEGMENT
                     }
 
                     // moved away from the start line
                     if (distanceToStart > SEGMENT_START_DISTANCE_THRESHOLD) {
+                        liveSegment.math.lastSegmentIndex = null
                         newSegmentStatus = LiveSegmentStatus.FAR_FAR_AWAY
                     }
                 }
@@ -338,8 +341,15 @@ class LiveSegmentsRepository internal constructor(
                     val timeOnSegment =
                         (System.currentTimeMillis() - liveSegment.math.startTime_ms) / 1000
 
-                    // Continuous orthogonal polyline projection (REQ-GEO-001)
-                    val projection = PolylineProgressTracker.projectLocation(liveSegment.staticData.path, currentLocation)
+                    // Continuous orthogonal polyline projection (REQ-GEO-001, REQ-NAV-056)
+                    val projection = PolylineProgressTracker.projectLocation(
+                        liveSegment.staticData.path,
+                        currentLocation,
+                        lastSegmentIndex = liveSegment.math.lastSegmentIndex
+                    )
+                    if (projection != null) {
+                        liveSegment.math.lastSegmentIndex = projection.segmentIndex
+                    }
                     val distanceOnSegment = projection?.alongTrackDistance ?: (currentDistance - liveSegment.math.startDistance)
                     val distanceToSegment = projection?.crossTrackDistanceMeters ?: 0.0
 
@@ -353,6 +363,7 @@ class LiveSegmentsRepository internal constructor(
 
                     // if distance to segment is too far away, we set its state to FAR_FAR_AWAY
                     if (distanceToSegment > SEGMENT_DISTANCE_THRESHOLD) {
+                        liveSegment.math.lastSegmentIndex = null
                         liveSegment.copy(
                             liveData = LiveSegmentData(
                                 segmentStatus = LiveSegmentStatus.FAR_FAR_AWAY,
@@ -380,7 +391,12 @@ class LiveSegmentsRepository internal constructor(
                     if (liveSegment.liveData.segmentStatus != LiveSegmentStatus.FINISHED) {   // just finished
                         val timeOnSegment =
                             (System.currentTimeMillis() - liveSegment.math.startTime_ms) / 1000
-                        val projection = PolylineProgressTracker.projectLocation(liveSegment.staticData.path, currentLocation)
+                        val projection = PolylineProgressTracker.projectLocation(
+                            liveSegment.staticData.path,
+                            currentLocation,
+                            lastSegmentIndex = liveSegment.math.lastSegmentIndex
+                        )
+                        liveSegment.math.lastSegmentIndex = null
                         val distanceOnSegment = projection?.alongTrackDistance ?: (currentDistance - liveSegment.math.startDistance)
 
                         val prRaw = liveSegment.staticData.summary.prTime_raw
@@ -426,6 +442,7 @@ class LiveSegmentsRepository internal constructor(
                 }
 
                 LiveSegmentStatus.FAR_FAR_AWAY -> {
+                    liveSegment.math.lastSegmentIndex = null
                     if (liveSegment.liveData.segmentStatus != LiveSegmentStatus.FAR_FAR_AWAY) {  // changed to FAR_FAR_AWAY -> copy to force an update
                         liveSegment.copy(
                             liveData = LiveSegmentData(

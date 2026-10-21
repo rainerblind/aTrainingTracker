@@ -355,4 +355,66 @@ class LiveSegmentsRepositoryTest {
         assertNull(finishedNoPr.liveData.prDeltaSeconds)
         assertNull(finishedNoPr.liveData.prDeltaFormatted)
     }
+
+    @Test
+    fun testLiveSegment_lastSegmentIndex_propagatesAndAdvancesOnSegment() = runTest(testDispatcher) {
+        allSegmentsWithPathFlow.value = listOf(sampleSegment)
+        testScope.testScheduler.advanceUntilIdle()
+
+        // 1. Approach and cross start gate
+        repository.updateLiveSegments(LatLng(46.9995, 10.0), currentBearing = 0.0, currentDistance = 100.0)
+        assertEquals(LiveSegmentStatus.APPROACHING, repository.liveSegments.value.first().liveData.segmentStatus)
+
+        repository.updateLiveSegments(LatLng(47.0001, 10.0), currentBearing = 0.0, currentDistance = 150.0)
+        val onSegment = repository.liveSegments.value.first()
+        assertEquals(LiveSegmentStatus.ON_SEGMENT, onSegment.liveData.segmentStatus)
+        assertEquals("lastSegmentIndex should be initialized to 0 on start crossing", 0, onSegment.math.lastSegmentIndex)
+
+        // 2. Advance to segment 2 (near lat 47.003, halfway between 47.002 and 47.004)
+        repository.updateLiveSegments(LatLng(47.003, 10.0), currentBearing = 0.0, currentDistance = 400.0)
+        val advanced = repository.liveSegments.value.first()
+        assertEquals(LiveSegmentStatus.ON_SEGMENT, advanced.liveData.segmentStatus)
+        assertEquals("lastSegmentIndex should advance to 2", 2, advanced.math.lastSegmentIndex)
+
+        // 3. Advance to segment 4 (near lat 47.006, halfway between 47.0055 and 47.007)
+        repository.updateLiveSegments(LatLng(47.006, 10.0), currentBearing = 0.0, currentDistance = 780.0)
+        val advancedFurther = repository.liveSegments.value.first()
+        assertEquals(4, advancedFurther.math.lastSegmentIndex)
+    }
+
+    @Test
+    fun testLiveSegment_offSegmentDeviation_resetsLastSegmentIndexToNull() = runTest(testDispatcher) {
+        allSegmentsWithPathFlow.value = listOf(sampleSegment)
+        testScope.testScheduler.advanceUntilIdle()
+
+        // Start segment
+        repository.updateLiveSegments(LatLng(46.9995, 10.0), currentBearing = 0.0, currentDistance = 100.0)
+        repository.updateLiveSegments(LatLng(47.0001, 10.0), currentBearing = 0.0, currentDistance = 150.0)
+        assertEquals(0, repository.liveSegments.value.first().math.lastSegmentIndex)
+
+        // Deviate > 60m laterally (longitude offset at lat 47.002)
+        val lngOffset60m = 60.0 / (111139.0 * kotlin.math.cos(Math.toRadians(47.0)))
+        repository.updateLiveSegments(LatLng(47.002, 10.0 + lngOffset60m), currentBearing = 0.0, currentDistance = 350.0)
+
+        val offSegment = repository.liveSegments.value.first()
+        assertEquals(LiveSegmentStatus.FAR_FAR_AWAY, offSegment.liveData.segmentStatus)
+        assertNull("lastSegmentIndex should reset to null on FAR_FAR_AWAY", offSegment.math.lastSegmentIndex)
+    }
+
+    @Test
+    fun testLiveSegment_finish_resetsLastSegmentIndexToNull() = runTest(testDispatcher) {
+        allSegmentsWithPathFlow.value = listOf(sampleSegment)
+        testScope.testScheduler.advanceUntilIdle()
+
+        // Start -> Close to finish -> Finish
+        repository.updateLiveSegments(LatLng(46.9995, 10.0), currentBearing = 0.0, currentDistance = 100.0)
+        repository.updateLiveSegments(LatLng(47.0001, 10.0), currentBearing = 0.0, currentDistance = 150.0)
+        repository.updateLiveSegments(LatLng(47.0075, 10.0), currentBearing = 0.0, currentDistance = 950.0)
+        repository.liveSegments.value.first().math.startTime_ms = System.currentTimeMillis() - 200_000L
+        repository.updateLiveSegments(LatLng(47.0082, 10.0), currentBearing = 0.0, currentDistance = 1020.0)
+
+        val finished = repository.liveSegments.value.first()
+        assertEquals(LiveSegmentStatus.FINISHED, finished.liveData.segmentStatus)
+        assertNull("lastSegmentIndex must reset to null on segment finish", finished.math.lastSegmentIndex)
+    }
 }
