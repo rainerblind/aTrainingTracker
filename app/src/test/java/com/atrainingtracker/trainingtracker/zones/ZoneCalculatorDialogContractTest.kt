@@ -38,7 +38,7 @@ import org.junit.Test
 class ZoneCalculatorDialogContractTest {
 
     @Test
-    fun initialState_populatesStoredFtpOrFallback200W() {
+    fun initialState_populatesStoredFtpOrFallback240W() {
         // Stored FTP present
         val holderWithFtp = ZoneCalculatorStateHolder(
             zoneType = ZoneType.PWR_BIKE,
@@ -49,14 +49,14 @@ class ZoneCalculatorDialogContractTest {
         assertEquals(listOf(151, 206, 248, 289, 330, 413), holderWithFtp.state.calculatedZones)
         assertTrue(holderWithFtp.state.canApply)
 
-        // Stored FTP absent -> defaults to 200W
+        // Stored FTP absent -> defaults to 240W
         val holderNoFtp = ZoneCalculatorStateHolder(
             zoneType = ZoneType.PWR_BIKE,
             initialCustomized = false,
             initialFtp = null
         )
-        assertEquals("200", holderNoFtp.state.ftpInput)
-        assertEquals(listOf(110, 150, 180, 210, 240, 300), holderNoFtp.state.calculatedZones)
+        assertEquals("240", holderNoFtp.state.ftpInput)
+        assertEquals(listOf(132, 180, 216, 252, 288, 360), holderNoFtp.state.calculatedZones)
         assertTrue(holderNoFtp.state.canApply)
     }
 

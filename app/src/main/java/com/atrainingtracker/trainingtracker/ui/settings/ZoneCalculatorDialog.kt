@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import com.atrainingtracker.trainingtracker.zones.ValidationResult
 import com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath
@@ -49,10 +50,10 @@ enum class HrMethod {
 data class ZoneCalculatorUiState(
     val zoneType: ZoneType,
     val isCustomized: Boolean,
-    val ftpInput: String = "200",
+    val ftpInput: String = "240",
     val ftpErrorResId: Int? = null,
-    val hrMaxInput: String = "190",
-    val hrRestInput: String = "50",
+    val hrMaxInput: String = "185",
+    val hrRestInput: String = "55",
     val hrMethod: HrMethod = HrMethod.KARVONEN,
     val hrMaxErrorResId: Int? = null,
     val hrRestErrorResId: Int? = null,
@@ -82,9 +83,9 @@ class ZoneCalculatorStateHolder(
         ZoneCalculatorUiState(
             zoneType = zoneType,
             isCustomized = initialCustomized,
-            ftpInput = (initialFtp?.takeIf { it in ZoneCalculationMath.MIN_FTP..ZoneCalculationMath.MAX_FTP } ?: 200).toString(),
-            hrMaxInput = (initialHrMax?.takeIf { it in ZoneCalculationMath.MIN_HR_MAX..ZoneCalculationMath.MAX_HR_MAX } ?: 190).toString(),
-            hrRestInput = (initialHrRest?.takeIf { it in ZoneCalculationMath.MIN_HR_REST..ZoneCalculationMath.MAX_HR_REST } ?: 50).toString(),
+            ftpInput = (initialFtp?.takeIf { it in ZoneCalculationMath.MIN_FTP..ZoneCalculationMath.MAX_FTP } ?: SettingsDataStore.DEFAULT_CYCLING_FTP).toString(),
+            hrMaxInput = (initialHrMax?.takeIf { it in ZoneCalculationMath.MIN_HR_MAX..ZoneCalculationMath.MAX_HR_MAX } ?: SettingsDataStore.DEFAULT_HR_MAX).toString(),
+            hrRestInput = (initialHrRest?.takeIf { it in ZoneCalculationMath.MIN_HR_REST..ZoneCalculationMath.MAX_HR_REST } ?: SettingsDataStore.DEFAULT_HR_REST).toString(),
             hrMethod = initialHrMethod
         )
     )
@@ -416,10 +417,10 @@ fun ZoneCalculatorDialog(
                 onClick = {
                     holder.onApplyClicked { cutoffs ->
                         if (state.zoneType == ZoneType.PWR_BIKE) {
-                            val ftp = ZoneNumberParser.parseIntOrNull(state.ftpInput) ?: 200
+                            val ftp = ZoneNumberParser.parseIntOrNull(state.ftpInput) ?: SettingsDataStore.DEFAULT_CYCLING_FTP
                             onSavePower(ftp, cutoffs)
                         } else {
-                            val hrMax = ZoneNumberParser.parseIntOrNull(state.hrMaxInput) ?: 190
+                            val hrMax = ZoneNumberParser.parseIntOrNull(state.hrMaxInput) ?: SettingsDataStore.DEFAULT_HR_MAX
                             val hrRest = if (state.hrMethod == HrMethod.KARVONEN) ZoneNumberParser.parseIntOrNull(state.hrRestInput) else null
                             val method = if (state.hrMethod == HrMethod.KARVONEN) "KARVONEN" else "MAX_HR"
                             onSaveHeartRate(state.zoneType, hrMax, hrRest, method, cutoffs)
@@ -452,9 +453,9 @@ fun ZoneCalculatorDialog(
     // Overwrite Confirmation Modal
     if (state.showOverwriteWarning) {
         val benchmarkValue = if (state.zoneType == ZoneType.PWR_BIKE) {
-            ZoneNumberParser.parseIntOrNull(state.ftpInput) ?: 200
+            ZoneNumberParser.parseIntOrNull(state.ftpInput) ?: SettingsDataStore.DEFAULT_CYCLING_FTP
         } else {
-            ZoneNumberParser.parseIntOrNull(state.hrMaxInput) ?: 190
+            ZoneNumberParser.parseIntOrNull(state.hrMaxInput) ?: SettingsDataStore.DEFAULT_HR_MAX
         }
 
         AlertDialog(
@@ -470,10 +471,10 @@ fun ZoneCalculatorDialog(
                     onClick = {
                         holder.onConfirmOverwrite { cutoffs ->
                             if (state.zoneType == ZoneType.PWR_BIKE) {
-                                val ftp = ZoneNumberParser.parseIntOrNull(state.ftpInput) ?: 200
+                                val ftp = ZoneNumberParser.parseIntOrNull(state.ftpInput) ?: SettingsDataStore.DEFAULT_CYCLING_FTP
                                 onSavePower(ftp, cutoffs)
                             } else {
-                                val hrMax = ZoneNumberParser.parseIntOrNull(state.hrMaxInput) ?: 190
+                                val hrMax = ZoneNumberParser.parseIntOrNull(state.hrMaxInput) ?: SettingsDataStore.DEFAULT_HR_MAX
                                 val hrRest = if (state.hrMethod == HrMethod.KARVONEN) ZoneNumberParser.parseIntOrNull(state.hrRestInput) else null
                                 val method = if (state.hrMethod == HrMethod.KARVONEN) "KARVONEN" else "MAX_HR"
                                 onSaveHeartRate(state.zoneType, hrMax, hrRest, method, cutoffs)

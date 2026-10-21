@@ -58,12 +58,12 @@ class SettingsDataStorePowerZonesTest {
     fun testPowerZones_defaultValuesWhenUnset() = runBlocking {
         val (_, dataStore) = createTestDataStore()
 
-        assertEquals(150, dataStore.getZone1MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
-        assertEquals(200, dataStore.getZone2MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
-        assertEquals(250, dataStore.getZone3MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
-        assertEquals(300, dataStore.getZone4MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
-        assertEquals(350, dataStore.getZone5MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
-        assertEquals(450, dataStore.getZone6MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
+        assertEquals(132, dataStore.getZone1MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
+        assertEquals(180, dataStore.getZone2MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
+        assertEquals(216, dataStore.getZone3MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
+        assertEquals(252, dataStore.getZone4MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
+        assertEquals(288, dataStore.getZone5MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
+        assertEquals(360, dataStore.getZone6MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
     }
 
     @Test
@@ -133,12 +133,12 @@ class SettingsDataStorePowerZonesTest {
         dataStore.checkAndMigratePowerZones()
 
         // Sanity check must fail and trigger reset to canonical defaults
-        assertEquals(150, prefsDataStore.data.first()[intPreferencesKey("pwr_bike_zone1_max")])
-        assertEquals(200, prefsDataStore.data.first()[intPreferencesKey("pwr_bike_zone2_max")])
-        assertEquals(250, prefsDataStore.data.first()[intPreferencesKey("pwr_bike_zone3_max")])
-        assertEquals(300, prefsDataStore.data.first()[intPreferencesKey("pwr_bike_zone4_max")])
-        assertEquals(350, prefsDataStore.data.first()[intPreferencesKey("pwr_bike_zone5_max")])
-        assertEquals(450, prefsDataStore.data.first()[intPreferencesKey("pwr_bike_zone6_max")])
+        assertEquals(132, prefsDataStore.data.first()[intPreferencesKey("pwr_bike_zone1_max")])
+        assertEquals(180, prefsDataStore.data.first()[intPreferencesKey("pwr_bike_zone2_max")])
+        assertEquals(216, prefsDataStore.data.first()[intPreferencesKey("pwr_bike_zone3_max")])
+        assertEquals(252, prefsDataStore.data.first()[intPreferencesKey("pwr_bike_zone4_max")])
+        assertEquals(288, prefsDataStore.data.first()[intPreferencesKey("pwr_bike_zone5_max")])
+        assertEquals(360, prefsDataStore.data.first()[intPreferencesKey("pwr_bike_zone6_max")])
     }
 
     @Test
@@ -172,11 +172,11 @@ class SettingsDataStorePowerZonesTest {
 
         dataStore.resetToDefaults(SettingsDataStore.ZoneType.PWR_BIKE)
 
-        assertEquals(150, dataStore.getZone1MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
-        assertEquals(200, dataStore.getZone2MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
-        assertEquals(250, dataStore.getZone3MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
-        assertEquals(300, dataStore.getZone4MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
-        assertEquals(350, dataStore.getZone5MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
-        assertEquals(450, dataStore.getZone6MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
+        assertEquals(132, dataStore.getZone1MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
+        assertEquals(180, dataStore.getZone2MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
+        assertEquals(216, dataStore.getZone3MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
+        assertEquals(252, dataStore.getZone4MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
+        assertEquals(288, dataStore.getZone5MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
+        assertEquals(360, dataStore.getZone6MaxFlow(SettingsDataStore.ZoneType.PWR_BIKE).first())
     }
 }

@@ -99,14 +99,14 @@ class BatterySaverModelPureTest {
 
     @Test
     fun testBackwardCompatibleOverload_delegatesSynchronously() {
-        // HR_RUN defaults: 135, 155, 175, 185
+        // HR_RUN defaults: 132, 145, 158, 171
         assertEquals(1, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.HR_RUN, 120.0))
         assertEquals(2, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.HR_RUN, 140.0))
-        assertEquals(3, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.HR_RUN, 160.0))
-        assertEquals(4, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.HR_RUN, 180.0))
-        assertEquals(5, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.HR_RUN, 200.0))
+        assertEquals(3, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.HR_RUN, 150.0))
+        assertEquals(4, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.HR_RUN, 165.0))
+        assertEquals(5, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.HR_RUN, 180.0))
 
-        // PWR_BIKE defaults: 150, 200, 250, 300, 350, 450
+        // PWR_BIKE defaults: 132, 180, 216, 252, 288, 360
         assertEquals(1, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 100.0))
         assertEquals(7, calculateZoneIndex(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 500.0))
     }
