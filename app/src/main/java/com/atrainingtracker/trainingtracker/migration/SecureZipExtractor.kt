@@ -90,16 +90,16 @@ object SecureZipExtractor {
                         throw SecurityException("Null byte in archive entry name: $entryName")
                     }
 
-                    val entryPath = destPath.resolve(entryName).normalize()
+                    val entryPath = realDestPath.resolve(entryName).normalize()
 
                     // 1. Normalized prefix boundary check (pre-I/O defense)
-                    if (!entryPath.startsWith(destPath)) {
+                    if (!entryPath.startsWith(realDestPath)) {
                         throw SecurityException("Zip-slip path traversal attempt detected: $entryName")
                     }
 
-                    // 2. Symbolic link rejection check on target and all path ancestors within destPath
+                    // 2. Symbolic link rejection check on target and all path ancestors within realDestPath
                     var ancestor: Path? = entryPath
-                    while (ancestor != null && ancestor != destPath) {
+                    while (ancestor != null && ancestor != realDestPath) {
                         if (Files.exists(ancestor, LinkOption.NOFOLLOW_LINKS) && Files.isSymbolicLink(ancestor)) {
                             throw SecurityException("Symbolic links are strictly prohibited in backup archives: $entryName")
                         }
@@ -107,7 +107,7 @@ object SecureZipExtractor {
                     }
 
                     // 3. Top-level directory whitelist check
-                    val relativePath = destPath.relativize(entryPath).toString().replace('\\', '/')
+                    val relativePath = realDestPath.relativize(entryPath).toString().replace('\\', '/')
                     if (relativePath.isNotEmpty() && relativePath != ".") {
                         val topLevelDir = relativePath.substringBefore('/')
                         if (topLevelDir !in allowedTopLevelDirs) {
@@ -207,6 +207,10 @@ object SecureZipExtractor {
         } catch (e: Exception) {
             Log.e(TAG, "Secure extraction failed, purging destination: ${destDir.absolutePath}", e)
             destDir.deleteRecursively()
+            try {
+                realDestPath.toFile().deleteRecursively()
+            } catch (ignored: Exception) {
+            }
             throw e
         }
     }
