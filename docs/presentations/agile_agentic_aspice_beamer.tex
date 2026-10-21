@@ -796,7 +796,57 @@
 \end{frame}
 
 % =========================================================================
-% SLIDE 14: EMPIRICAL EVOLUTION OF FORMAL REQUIREMENTS (REQ-*)
+% SLIDE 14: THE LIVING DOCUMENT TRIAD — GOVERNANCE, CODING & DESIGN RULES
+% =========================================================================
+\begin{frame}{The Living Document Triad: Governance, Coding \& Design Rules}
+  \centering
+  \begin{tikzpicture}[x=1cm, y=1cm]
+    % Column 1: Process & Governance Rules
+    \draw[fill=aaaLightBg, draw=aaaNavy!45, line width=0.85pt, rounded corners=4pt] (-7.25, -1.68) rectangle (-2.60, 2.70);
+    \fill[aaaNavy, rounded corners=3pt] (-7.25, 1.98) rectangle (-2.60, 2.70);
+    \node[font=\footnotesize\bfseries, text=white] at (-4.925, 2.47) {1. Process \& Governance};
+    \node[font=\fontsize{6}{7}\selectfont\ttfamily, text=white!90] at (-4.925, 2.16) {.agents/rules/aspice\_governance.md};
+    \node[anchor=north west, text width=4.32cm, font=\scriptsize] at (-7.06, 1.80) {
+      \bitem \textbf{Rule \#1 (``Obey the Rules''):} Reload rules + auto-inject stage \texttt{SKILL.md}.\\[4pt]
+      \bitem \textbf{Code Lock Until Gate 3:} Zero code edits until \texttt{check-gate} passes.\\[4pt]
+      \bitem \textbf{Human Sovereignty:} Only human sets \texttt{Done}; \textbf{no coding} during Review.\\[4pt]
+      \bitem \textbf{\color{aaaAmber!90!black}Device Data Guard:} Never run \texttt{uninstall} or \texttt{pm clear} without \texttt{.attbackup}.
+    };
+
+    % Column 2: Technical Architecture & Coding Standards
+    \draw[fill=aaaLightBg, draw=aaaTeal!55, line width=0.85pt, rounded corners=4pt] (-2.32, -1.68) rectangle (2.32, 2.70);
+    \fill[aaaTeal, rounded corners=3pt] (-2.32, 1.98) rectangle (2.32, 2.70);
+    \node[font=\footnotesize\bfseries, text=white] at (0.0, 2.47) {2. Architecture \& Coding};
+    \node[font=\fontsize{6}{7}\selectfont\ttfamily, text=white!90] at (0.0, 2.16) {docs/coding\_standards.md};
+    \node[anchor=north west, text width=4.32cm, font=\scriptsize] at (-2.13, 1.80) {
+      \bitem \textbf{Reuse Before Create (DRY):} Canonical formatters; no inline \texttt{* 3.6f}.\\[4pt]
+      \bitem \textbf{Never Sort Display Strings:} Sort raw \texttt{Double} (\texttt{"2.40 km" < "995 m"}!).\\[4pt]
+      \bitem \textbf{No Silent \texttt{\{\}} or Default Traps:} Wire \textbf{all} callers for new callbacks.\\[4pt]
+      \bitem \textbf{Strict Mocks \& 2-Tier Tests:} Ban \texttt{returnDefaultValues}; 2-Tier suite.
+    };
+
+    % Column 3: UI, UX & 9-Language Design Guidelines
+    \draw[fill=aaaLightBg, draw=aaaGreen!60, line width=0.85pt, rounded corners=4pt] (2.60, -1.68) rectangle (7.25, 2.70);
+    \fill[aaaGreen, rounded corners=3pt] (2.60, 1.98) rectangle (7.25, 2.70);
+    \node[font=\footnotesize\bfseries, text=white] at (4.925, 2.47) {3. UI, UX \& 9 Locales};
+    \node[font=\fontsize{6}{7}\selectfont\ttfamily, text=white!90] at (4.925, 2.16) {docs/design\_guidelines.md};
+    \node[anchor=north west, text width=4.32cm, font=\scriptsize] at (2.79, 1.80) {
+      \bitem \textbf{``Look Like the Rest'':} Shared shapes (\texttt{12.dp}), spacing \& theme tokens.\\[4pt]
+      \bitem \textbf{9 Locales \& DE Stress Test:} Positional \texttt{\%1\$s}; \texttt{FlowRow} dialog actions.\\[4pt]
+      \bitem \textbf{Cardinality Controls:} \texttt{2} $\rightarrow$ Segmented; \texttt{3--4} $\rightarrow$ FilterChip; $\ge 5$ $\rightarrow$ Slider.\\[4pt]
+      \bitem \textbf{Adaptive Elevation \& Icons:} Relief-scaled ($70\text{--}200\text{ dp}$); true vectors.
+    };
+
+    % Bottom Self-Improving Memory Banner
+    \node[bannerAmber, text width=14.15cm, anchor=north] at (0, -1.88) {
+      \scriptsize\textcolor{aaaAmber!90!black}{\textbf{Self-Improving Institutional Memory (61 Rules Evolved Across Sprint Retrospectives):}}
+      Every defect or UX inconsistency caught in Ceremony 2 (\emph{Retro Before Merge}) is distilled into a permanent rule in the Document Triad—ensuring the agent team never repeats the same mistake twice.
+    };
+  \end{tikzpicture}
+\end{frame}
+
+% =========================================================================
+% SLIDE 15: EMPIRICAL EVOLUTION OF FORMAL REQUIREMENTS (REQ-*)
 % =========================================================================
 \begin{frame}{Empirical Impact: Evolution of Formal Requirements (\texttt{REQ-*})}
   \centering
