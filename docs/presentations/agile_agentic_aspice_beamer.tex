@@ -152,8 +152,8 @@
     \node[anchor=north west, text width=4.30cm, font=\scriptsize] at (-2.12, 1.72) {
       \bitem \textbf{Product Owner (Human):} Vision, priorities \& final UX sign-off.\\[4.5pt]
       \bitem \textbf{Co-Architect (\texttt{Argon}):} Root-cause studies, Ceremony 1 \& 2 audit.\\[4.5pt]
-      \bitem \textbf{Execution Subagents (\texttt{agent1}):} \texttt{pro}/\texttt{flash} across Stages 1--5.\\[4.5pt]
-      \bitem \textbf{Gatekeeper (\texttt{agent2}):} Independent \texttt{research} subagent (\emph{Zipper}).
+      \bitem \textbf{Zipper Pair (\texttt{pro} $\leftrightarrow$ \texttt{flash}):} Alternating \texttt{agent1} (Doer) \& \texttt{agent2} (Gate).\\[4.5pt]
+      \bitem \textbf{Epic-Scoped Persistence:} One persistent pair per Epic across the sprint.
     };
 
     % Column 3: ASPICE
@@ -164,7 +164,7 @@
       \bitem \textbf{Deliberate ``Speed Bumps'':} No code before analysis, spec \& plan.\\[4.5pt]
       \bitem \textbf{5 Coupled Sub-Tasks} governed by strict Quality Gates (Gates 1--5).\\[4.5pt]
       \bitem \textbf{Chesterton's Fence:} Mandatory proof before altering existing REQs.\\[4.5pt]
-      \bitem \textbf{8 Core Rules \& Living Docs:} Compact (\textasciitilde 5\,KB) permanent memory.
+      \bitem \textbf{Infinite Context:} Living docs serve as permanent project memory.
     };
 
     % Bottom Takeaway Banner
@@ -207,11 +207,11 @@
     \node[midBox] (midLeft) at (-2.15, 0.25)
       {\textbf{Stages 1--3: Analysis, Spec \& Plan}\\4-eyes check, \texttt{REQ/TST}, 9 locales\\\textcolor{aaaTeal}{\textbf{\texttt{agent1} $\leftrightarrow$ Gates 1--3 (\texttt{agent2})}}};
     \node[midBox] (midRight) at (3.55, 0.25)
-      {\textbf{Stage 5: Verification \& Merge}\\\texttt{testDebugUnitTest} + \texttt{assembleDebug}\\\textcolor{aaaTeal}{\textbf{\texttt{agent1} (\texttt{flash}) $\leftrightarrow$ Gate 5 (\texttt{pro})}}};
+      {\textbf{Stage 5: Verification \& Merge}\\\texttt{testDebugUnitTest} + \texttt{assembleDebug}\\\textcolor{aaaTeal}{\textbf{\texttt{agent1} $\leftrightarrow$ Gate 5 (\texttt{agent2})}}};
 
     % Bottom (Stage 4 Implementation)
     \node[botBox] (bottom) at (0.70, -1.52)
-      {\textbf{Stage 4: Software Construction \& Contract Tests}\\Atomic code steps, 9-language parity, unit \& architecture tests\\\textcolor{aaaGreen!85!black}{\textbf{\texttt{agent1} (\texttt{flash}/\texttt{pro}) $\leftrightarrow$ Gate 4 Diff Scrutiny (\texttt{pro}/\texttt{flash})}}};
+      {\textbf{Stage 4: Software Construction \& Contract Tests}\\Atomic code steps, 9-language parity, unit \& architecture tests\\\textcolor{aaaGreen!85!black}{\textbf{\texttt{agent1} $\leftrightarrow$ Gate 4 Diff Scrutiny (\texttt{agent2})}}};
 
     % Arrows along the V
     \draw[arr] (leftTop.south) -- (midLeft.north);
@@ -236,7 +236,7 @@
     x=1cm, y=1cm,
     boxA/.style={rectangle, rounded corners=4pt, draw=aaaNavy, very thick, fill=aaaNavy!10, text width=3.05cm, align=center, minimum height=1.22cm, font=\scriptsize},
     boxF/.style={rectangle, rounded corners=4pt, draw=aaaTeal, very thick, fill=aaaTeal!10, text width=4.25cm, align=center, minimum height=1.22cm, font=\scriptsize},
-    featBox/.style={rectangle, rounded corners=3.5pt, draw=aaaGreen, very thick, fill=aaaGreen!10, text width=5.40cm, align=center, minimum height=0.85cm, font=\scriptsize},
+    featBox/.style={rectangle, rounded corners=3.5pt, draw=aaaGreen, very thick, fill=aaaGreen!10, text width=5.10cm, align=center, minimum height=0.85cm, font=\scriptsize},
     arr/.style={-{Stealth[scale=1.0]}, line width=1.05pt, draw=aaaNavy}
   ]
     % Develop branch line
@@ -260,7 +260,7 @@
 
     % Feature branch loop below Phase 2
     \node[featBox] (fb) at (0.85, -1.30)
-      {\textbf{Per Ticket: \texttt{feature/ATT-XXXX} (1 Atomic Commit)}\\Stages 1--5 $\rightarrow$ Gate 5 PASS $\rightarrow$ \texttt{merge --squash} into \texttt{sprint/<ID>}};
+      {\textbf{Per Ticket: \texttt{feature/ATT-XXXX}}\\Stages 1--5 $\rightarrow$ Gate 5 PASS $\rightarrow$ immediate \texttt{merge --no-ff} into \texttt{sprint/<ID>}};
 
     % Branching & phase arrows
     \draw[arr] (-4.40, 2.15) -- node[left=3pt, font=\tiny\bfseries, text=aaaNavy] {\texttt{checkout -b}} (c1.north);
@@ -274,15 +274,15 @@
     % Bottom explanation banner
     \node[bannerGreen, text width=14.15cm, anchor=north] at (0, -1.95) {
       \scriptsize\textcolor{aaaGreen!85!black}{\textbf{Why Strategy A (\texttt{sprint/<ID>}) Eliminates Merge Hell:}}
-      Every ticket is squashed into a \textbf{single atomic commit} on the shared \texttt{sprint/<ID>} branch immediately after \textbf{Gate 5 PASS}. Ticket $k+1$ starts on top of the verified code of ticket $k$—preventing diverging branches at sprint end.
+      Every ticket is merged into the shared \texttt{sprint/<ID>} branch immediately after \textbf{Gate 5 PASS}. Consequently, ticket $k+1$ automatically starts on top of the verified code of ticket $k$—preventing diverging feature branches at the end of the sprint.
     };
   \end{tikzpicture}
 \end{frame}
 
 % =========================================================================
-% SLIDE 5: WORKFLOW 3 — THE 2-TIER CASCADE & ZIPPER PRINCIPLE
+% SLIDE 5: WORKFLOW 3 — THE 2-TIER CASCADE (PARENT <-> 5 SUB-TASKS)
 % =========================================================================
-\begin{frame}{Workflow 3: The 2-Tier Cascade \& Asymmetric \texttt{pro}/\texttt{flash} Zipper Principle}
+\begin{frame}{Workflow 3: The 2-Tier Cascade (Parent Ticket $\leftrightarrow$ 5 Stage Sub-Tasks)}
   \centering
   \begin{tikzpicture}[
     x=1cm, y=1cm,
@@ -293,7 +293,7 @@
   ]
     % Level 1 Header
     \node[anchor=west, font=\scriptsize\bfseries, text=aaaNavy] at (-7.15, 2.35)
-      {Tier 1: Parent Ticket Status in Jira (synchronously advances via \texttt{gate-verdict PASS} + auto-injects next \texttt{SKILL.md})};
+      {Tier 1: Parent Ticket Status in Jira (blocked until the corresponding Stage Sub-Task reaches \texttt{Done})};
 
     % Parent boxes (y = 1.45)
     \node[pBox] (p1) at (-5.95, 1.45) {1. Analysis};
@@ -306,19 +306,19 @@
 
     % Subtask boxes (y = -0.80)
     \node[sBox] (s1) at (-5.95, -0.80)
-      {\textcolor{aaaTeal}{\textbf{\texttt{[Analysis]}}}\\[2pt]Do: \textbf{\texttt{pro}}\\Gate 1: \textbf{\texttt{flash}}\\[2pt]\texttt{analysis.md}};
+      {\textcolor{aaaTeal}{\textbf{\texttt{[Analysis]}}}\\[2pt]4-Eyes Check\\\texttt{stage1\_analysis.md}\\[2pt]\textbf{Gate 1 (\texttt{agent2})}};
     \node[sBox] (s2) at (-3.57, -0.80)
-      {\textcolor{aaaTeal}{\textbf{\texttt{[Req \& Test]}}}\\[2pt]Do: \textbf{\texttt{flash}}\\Gate 2: \textbf{\texttt{pro}}\\[2pt]\texttt{test\_spec.md}};
+      {\textcolor{aaaTeal}{\textbf{\texttt{[Req \& Test]}}}\\[2pt]\texttt{REQ/TST} + Fence\\\texttt{stage2\_test\_spec.md}\\[2pt]\textbf{Gate 2 (\texttt{agent2})}};
     \node[sBox] (s3) at (-1.19, -0.80)
-      {\textcolor{aaaTeal}{\textbf{\texttt{[Impl-Plan]}}}\\[2pt]Do: \textbf{\texttt{pro}}\\Gate 3: \textbf{\texttt{flash}}\\[2pt]\texttt{plan.md}};
+      {\textcolor{aaaTeal}{\textbf{\texttt{[Impl-Plan]}}}\\[2pt]SWE.2 Architecture\\\texttt{stage3\_impl\_plan.md}\\[2pt]\textbf{Gate 3 (\texttt{agent2})}};
     \node[sBox] (s4) at ( 1.19, -0.80)
-      {\textcolor{aaaTeal}{\textbf{\texttt{[Implementation]}}}\\[2pt]Do: \textbf{\texttt{flash/pro}}\\Gate 4: \textbf{\texttt{pro/flash}}\\[2pt]Code + 9 Locales};
+      {\textcolor{aaaTeal}{\textbf{\texttt{[Implementation]}}}\\[2pt]Code + 9 Locales\\Contract Tests\\[2pt]\textbf{Gate 4 (\texttt{agent2})}};
     \node[sBox] (s5) at ( 3.57, -0.80)
-      {\textcolor{aaaTeal}{\textbf{\texttt{[Test]}}}\\[2pt]Do: \textbf{\texttt{flash}}\\Gate 5: \textbf{\texttt{pro}}\\[2pt]\texttt{walkthrough.md}};
+      {\textcolor{aaaTeal}{\textbf{\texttt{[Test]}}}\\[2pt]Unit + AAPT2 Build\\\texttt{walkthrough.md}\\[2pt]\textbf{Gate 5 (\texttt{agent2})}};
 
     % Level 2 Header
     \node[anchor=west, font=\scriptsize\bfseries, text=aaaTeal] at (-7.15, -1.85)
-      {Tier 2: Asymmetric \texttt{pro}/\texttt{flash} Zipper Principle (\texttt{submit-stage} $\rightarrow$ read-only \texttt{research} subagent $\rightarrow$ \texttt{gate-verdict})};
+      {Tier 2: The 5 Coupled Stage Sub-Tasks (\texttt{agent1} produces artifact/code $\rightarrow$ independent \texttt{agent2} audits Gates 1--5)};
 
     % Down arrows (spawn / block)
     \draw[spawnArr] (p1.south) -- node[left=1pt, font=\tiny, text=aaaSlate] {spawns} (s1.north);
@@ -337,9 +337,9 @@
 \end{frame}
 
 % =========================================================================
-% SLIDE 6: WORKFLOW 4 — SUB-TASK STATE MACHINE & COMPOSITE CLI
+% SLIDE 6: WORKFLOW 4 — SUB-TASK STATE MACHINE
 % =========================================================================
-\begin{frame}{Workflow 4: The Sub-Task State Machine \& Single-Turn Composite CLI}
+\begin{frame}{Workflow 4: The Sub-Task State Machine (incl.\ Revision \& Escalation)}
   \centering
   \begin{tikzpicture}[
     x=1cm, y=1cm,
@@ -351,16 +351,16 @@
   ]
     % 4 State Boxes
     \node[stateBox] (s1) at (-5.60, 0.35)
-      {\textbf{1. To Do}\\[2pt]Created atomically by\\\texttt{submit-stage}\\Auto-Assign $\rightarrow$ \texttt{agent1}};
+      {\textbf{1. To Do / In Progress}\\[2pt]\texttt{agent1} (\texttt{pro} or \texttt{flash})\\authors deliverable / code};
 
     \node[stateBox] (s2) at (-1.85, 0.35)
-      {\textbf{2. In Progress}\\[2pt]\texttt{agent1} produces\\artifact / code +\\\texttt{submit-stage 1..5}};
+      {\textbf{2. \texttt{submit-stage}}\\[2pt]1 composite CLI call:\\creates/updates sub-task\\\& moves to \texttt{In Review}};
 
     \node[revBox] (s3) at (1.90, 0.35)
-      {\textbf{3. In Review}\\[2pt]Read-only \texttt{research}\\subagent (\texttt{agent2})\\audits Gate checklist};
+      {\textbf{3. In Review (Gate)}\\[2pt]Peer agent as \texttt{agent2}\\audits Gate checklist\\via \texttt{gate-verdict}};
 
     \node[passBox] (s4) at (5.75, 0.35)
-      {\textcolor{aaaGreen!85!black}{\textbf{4. Done (PASS)}}\\[2pt]\texttt{gate-verdict PASS} $\rightarrow$\\Parent advances +\\next \texttt{SKILL.md} injected!};
+      {\textcolor{aaaGreen!85!black}{\textbf{4. Done (PASS)}}\\[2pt]Sub-Task closed, Parent\\advances + \texttt{agent2} fuses\\into Stage $k+1$ \texttt{agent1}!};
 
     % Forward transitions
     \draw[arr] (s1.east) -- (s2.west);
@@ -370,8 +370,8 @@
     % Top Revision Loop (agent2 -> agent1)
     \draw[arr, draw=aaaAmber, line width=1.15pt, dashed] (s3.north) to[bend right=25]
       node[above=3pt, font=\tiny\bfseries, text=aaaAmber!90!black]
-      {\texttt{gate-verdict REVISION} (returned to \texttt{agent1} in 1 CLI call with actionable findings)}
-      (s2.north);
+      {\texttt{gate-verdict REVISION} (returned to \texttt{agent1} with actionable findings)}
+      (s1.north);
 
     % Bottom Human Escalation Loop
     \node[escBox] (esc) at (-1.85, -1.65)
@@ -383,7 +383,60 @@
 \end{frame}
 
 % =========================================================================
-% SLIDE 7: WORKFLOW 5 — CEREMONY 2 DECISION TREE
+% SLIDE 7: AGENT CREATION & SELECTION (ZIPPER PRINCIPLE & EPIC PERSISTENCE)
+% =========================================================================
+\begin{frame}{Agent Creation \& Selection: The ``Zipper Principle'' \& Epic Persistence}
+  \centering
+  \begin{tikzpicture}[x=1cm, y=1cm]
+    % Left Card: The Zipper Principle (Model Selection & Fused Ping-Pong)
+    \draw[fill=aaaLightBg, draw=aaaNavy!45, line width=0.85pt, rounded corners=4pt] (-7.20, -1.68) rectangle (-0.15, 2.68);
+    \fill[aaaNavy, rounded corners=3pt] (-7.20, 2.08) rectangle (-0.15, 2.68);
+    \node[font=\scriptsize\bfseries, text=white] at (-3.675, 2.38)
+      {1. Model Selection: The ``Zipper Principle'' (Rules 7 \& 60)};
+
+    \node[anchor=north west, text width=6.65cm, font=\tiny] at (-7.00, 1.96) {
+      \textbf{\color{aaaNavy}Two Complementary Models per Pair:}
+      \textbf{\texttt{subagent\_pro}} (\emph{deep reasoning}) + \textbf{\texttt{subagent\_flash}} (\emph{fast synthesis \& test runs}).\\[2.5pt]
+      {\setlength{\tabcolsep}{2.4pt}
+      \renewcommand{\arraystretch}{1.18}
+      \begin{tabular}{@{}l l l@{}}
+        \toprule
+        \textbf{Stage} & \textbf{Doing (\texttt{--as agent1})} & \textbf{Gate (\texttt{--as agent2})} \\
+        \midrule
+        \textbf{S1: Analysis} & \textcolor{aaaNavy}{\textbf{\texttt{pro}}} (RCA \& blast radius) & \textcolor{aaaTeal}{\textbf{\texttt{flash}}} (Gate 1 audit) \\
+        \textbf{S2: Spec} & \textcolor{aaaTeal}{\textbf{\texttt{flash}}} \emph{(fused with G1!)} & \textcolor{aaaNavy}{\textbf{\texttt{pro}}} (Gate 2 + Fence) \\
+        \textbf{S3: Plan} & \textcolor{aaaNavy}{\textbf{\texttt{pro}}} \emph{(fused with G2!)} & \textcolor{aaaTeal}{\textbf{\texttt{flash}}} (Gate 3 audit) \\
+        \textbf{S4: Code} & \textcolor{aaaTeal}{\textbf{\texttt{flash}}} \emph{(fused with G3!)} & \textcolor{aaaNavy}{\textbf{\texttt{pro}}} (Gate 4 \texttt{git diff}) \\
+        \textbf{S5: Verify} & \textcolor{aaaTeal}{\textbf{\texttt{flash}}} (Suite + Auto-Verify) & \textcolor{aaaNavy}{\textbf{\texttt{pro}}} (Gate 5 + Merge) \\
+        \bottomrule
+      \end{tabular}}\\[3.5pt]
+      \textcolor{aaaGreen!85!black}{\textbf{$\rightarrow$ Fused Gate-to-Doing Handoffs:}} When the reviewer passes Gate $k$, its context window is already 100\% warm with the ticket's files—so it \textbf{immediately executes Stage $k+1$ Doing in the same turn} (cutting 10 turns/ticket down to \textbf{5}).
+    };
+
+    % Right Card: Epic-Scoped Persistent Agent Pairs
+    \draw[fill=aaaLightBg, draw=aaaTeal!55, line width=0.85pt, rounded corners=4pt] (0.15, -1.68) rectangle (7.20, 2.68);
+    \fill[aaaTeal, rounded corners=3pt] (0.15, 2.08) rectangle (7.20, 2.68);
+    \node[font=\scriptsize\bfseries, text=white] at (3.675, 2.38)
+      {2. Agent Creation: Epic-Scoped Persistent Pairs (\texttt{ATT-4520})};
+
+    \node[anchor=north west, text width=6.65cm, font=\scriptsize] at (0.35, 1.98) {
+      \bitem \textbf{Cold-Start Bottleneck:} Spawning 2 fresh agents per ticket wastes $\sim$8--10 min re-reading governance \& code.\\[3pt]
+      \bitem \textbf{Epic-Scoped Agent Pairs (\texttt{1 Pair per Epic}):}
+      Per sprint Epic (\texttt{ATT-111}, \texttt{ATT-281}, \texttt{ATT-355}), the Coordinator spawns \textbf{one persistent \texttt{(pro, flash)} pair} reused via \texttt{send\_message} across \textbf{all tickets in that Epic}.\\[3pt]
+      \bitem \textbf{Cumulative Domain Memory:} By ticket 2+, both agents already hold the module's repositories, SQLite schemas, and Compose patterns in context.\\[3pt]
+      \bitem \textbf{Clean Lifecycle:} Pairs stay alive across all Epic tickets (incl.\ bounce-backs) and terminate at Sprint End.
+    };
+
+    % Bottom Banner
+    \node[bannerGreen, text width=14.05cm, anchor=north] at (0, -1.86) {
+      \scriptsize\textcolor{aaaGreen!85!black}{\textbf{Measured Velocity Gain:}}
+      Combining \textbf{Zipper Fused Turns} (5 turns instead of 10), \textbf{Composite CLI Calls} (\texttt{submit-stage} / \texttt{gate-verdict}), and \textbf{Epic-Scoped Persistent Pairs} reduces cycle time from \textbf{51.5 min/ticket} down to \textbf{35--44 min/ticket} while preserving strict 4-eyes independence.
+    };
+  \end{tikzpicture}
+\end{frame}
+
+% =========================================================================
+% SLIDE 8: WORKFLOW 5 — CEREMONY 2 DECISION TREE
 % =========================================================================
 \begin{frame}{Workflow 5: Ceremony 2 — Joint Review \& Decision Tree}
   \centering
@@ -410,11 +463,11 @@
     % Step 3: 3 Decision Paths
     \node[decBox, draw=aaaGreen, fill=aaaGreen!12] (d1) at (4.35, 1.62)
       {\textcolor{aaaGreen!85!black}{\textbf{Path A: Accepted (Pass)}}\\
-       Set \texttt{FixVersion}; Human transitions Parent Ticket to \texttt{Done}.};
+       Human transitions Parent Ticket to \texttt{Done} (\emph{Human Authority Gate}).};
 
     \node[decBox, draw=aaaBlue, fill=aaaBlue!10] (d2) at (4.35, 0.30)
       {\textcolor{aaaNavy}{\textbf{Path B: Functionally OK, Minor Polish Needed}}\\
-       \textbf{No coding during Review!} Create top-of-backlog follow-up ticket + mark \texttt{Done}.};
+       \textbf{No coding during Review!} Create a follow-up backlog ticket + mark current ticket \texttt{Done}.};
 
     \node[decBox, draw=aaaAmber, fill=aaaAmber!12] (d3) at (4.35, -1.02)
       {\textcolor{aaaAmber!90!black}{\textbf{Path C: Rejected (Fail)}}\\
@@ -429,13 +482,13 @@
     % Bottom Ceremony 2 Golden Rule Banner
     \node[bannerNavy, text width=14.15cm, anchor=north] at (0, -1.78) {
       \scriptsize\textcolor{aaaNavy}{\textbf{After the Final Ticket — Mandatory Retrospective (\emph{Retro Before Merge}):}}
-      Before merging \texttt{sprint/<ID>} into \texttt{develop}, Human and \texttt{Argon} jointly analyze: Which issues slipped past the automated checks and quality gates (Gates 1--5)—and how do we sharpen our Document Triad and skills for the next sprint?
+      Before merging \texttt{sprint/<ID>} into \texttt{develop}, Human and \texttt{Argon} jointly analyze: Which issues slipped past the automated checks and quality gates (Gates 1--5)—and how do we sharpen our skills and gate rules for the next sprint?
     };
   \end{tikzpicture}
 \end{frame}
 
 % =========================================================================
-% SLIDE 8: DETAILED GATE CRITERIA — STAGE 1 & STAGE 2
+% SLIDE 9: DETAILED GATE CRITERIA — STAGE 1 & STAGE 2
 % =========================================================================
 \begin{frame}{Detailed Gate Criteria: Stage 1 (Gate 1) \& Stage 2 (Gate 2)}
   \centering
@@ -444,13 +497,13 @@
     \draw[fill=aaaLightBg, draw=aaaNavy!45, line width=0.85pt, rounded corners=4pt] (-7.25, -2.75) rectangle (-0.20, 2.65);
     \fill[aaaNavy, rounded corners=3pt] (-7.25, 2.02) rectangle (-0.20, 2.65);
     \node[font=\footnotesize\bfseries, text=white] at (-3.725, 2.33)
-      {Stage 1: \texttt{[Analysis]} (\texttt{pro}) $\rightarrow$ \textbf{Gate 1 (\texttt{flash})}};
+      {Stage 1: \texttt{[Analysis]} (\texttt{pro}) $\rightarrow$ \textbf{Gate 1} (\texttt{flash})};
 
     \node[anchor=north west, text width=6.65cm, font=\scriptsize] at (-7.05, 1.88) {
-      \textbf{\color{aaaNavy}Artifact:} \texttt{analysis/<KEY>\_analysis.md} \,|\, \texttt{Analysis} $\rightarrow$ \texttt{Test Spec}\\[3.5pt]
-      \textbf{\color{aaaTeal}Role of \texttt{agent1} (\texttt{pro} — 4-Eyes Principle):}
+      \textbf{\color{aaaNavy}Artifact:} \texttt{ATT-XXXX\_analysis.md} \,|\, \texttt{Analysis} $\rightarrow$ \texttt{Specification}\\[3.5pt]
+      \textbf{\color{aaaTeal}Role of \texttt{agent1} (\texttt{subagent\_pro} — 4-Eyes Principle):}
       Validates the ticket pre-analysis as a hypothesis against the actual code on \texttt{sprint/<ID>}; identifies all call sites, existing \texttt{REQ} IDs, and system invariants.\\[4pt]
-      \textbf{\color{aaaNavy}Gate 1 Checklist (\texttt{agent2} \texttt{research} Subagent — \texttt{flash}):}\\[2.5pt]
+      \textbf{\color{aaaNavy}Gate 1 Checklist (\texttt{agent2} / \texttt{subagent\_flash} via \texttt{gate-verdict}):}\\[2.5pt]
       \textbf{\color{aaaNavy}1.} \textbf{Root Cause vs.\ Symptom:} True cause proven in code?\\[2pt]
       \textbf{\color{aaaNavy}2.} \textbf{User Scope Grounding:} No unrequested rewrites?\\[2pt]
       \textbf{\color{aaaNavy}3.} \textbf{Blast Radius:} All call sites \& affected modules listed?\\[2pt]
@@ -462,13 +515,13 @@
     \draw[fill=aaaLightBg, draw=aaaTeal!55, line width=0.85pt, rounded corners=4pt] (0.20, -2.75) rectangle (7.25, 2.65);
     \fill[aaaTeal, rounded corners=3pt] (0.20, 2.02) rectangle (7.25, 2.65);
     \node[font=\footnotesize\bfseries, text=white] at (3.725, 2.33)
-      {Stage 2: \texttt{[Req \& Test Spec]} (\texttt{flash}) $\rightarrow$ \textbf{Gate 2 (\texttt{pro})}};
+      {Stage 2: \texttt{[Req \& Test Spec]} (\texttt{flash}) $\rightarrow$ \textbf{Gate 2} (\texttt{pro})};
 
     \node[anchor=north west, text width=6.65cm, font=\scriptsize] at (0.40, 1.88) {
-      \textbf{\color{aaaTeal}Artifact:} \texttt{test\_specs/<KEY>\_test\_spec.md} \,|\, \texttt{Test Spec} $\rightarrow$ \texttt{Impl.\ Plan}\\[3.5pt]
-      \textbf{\color{aaaTeal}Role of \texttt{agent1} (\texttt{flash} — Living Docs \& 9 Locales):}
+      \textbf{\color{aaaTeal}Artifact:} \texttt{ATT-XXXX\_test\_spec.md} \,|\, \texttt{Specification} $\rightarrow$ \texttt{Impl.\ Plan}\\[3.5pt]
+      \textbf{\color{aaaTeal}Role of \texttt{agent1} (\texttt{subagent\_flash} — Living Docs \& 9 Locales):}
       Updates \texttt{requirements.md} (\texttt{REQ-XXX}), \texttt{tests.md} (\texttt{TST-XXX}), defines \emph{Given-When-Then} criteria, and plans string resources across all 9 languages.\\[4pt]
-      \textbf{\color{aaaNavy}Gate 2 Checklist (\texttt{agent2} \texttt{research} Subagent — \texttt{pro}):}\\[2.5pt]
+      \textbf{\color{aaaNavy}Gate 2 Checklist (\texttt{agent2} / \texttt{subagent\_pro} via \texttt{gate-verdict}):}\\[2.5pt]
       \textbf{\color{aaaTeal}1.} \textbf{Atomic Syntax:} \texttt{SHALL}/\texttt{MUST} without implementation leaks?\\[2pt]
       \textbf{\color{aaaTeal}2.} \textbf{Bidirectional Traceability:} Every \texttt{REQ-XXX} $\leftrightarrow$ \texttt{TST-XXX}?\\[2pt]
       \textbf{\color{aaaAmber!90!black}3. Chesterton's Fence (4-Field Mandate):} Whenever existing \texttt{REQ}s are modified or removed, \emph{Original ID}, \emph{Git Commit/Ticket}, \emph{Historical Reason}, and \emph{Invariant Preservation} must be proven—otherwise \texttt{REVISION}!
@@ -477,7 +530,7 @@
 \end{frame}
 
 % =========================================================================
-% SLIDE 9: DETAILED GATE CRITERIA — STAGES 3, 4 & 5
+% SLIDE 10: DETAILED GATE CRITERIA — STAGES 3, 4 & 5
 % =========================================================================
 \begin{frame}{Detailed Gate Criteria: Stages 3, 4 \& 5 (Gates 3, 4 \& 5)}
   \centering
@@ -485,86 +538,40 @@
     % Column 1: Stage 3 -> Gate 3
     \draw[fill=aaaLightBg, draw=aaaNavy!45, line width=0.85pt, rounded corners=4pt] (-7.25, -2.75) rectangle (-2.60, 2.65);
     \fill[aaaNavy, rounded corners=3pt] (-7.25, 2.02) rectangle (-2.60, 2.65);
-    \node[font=\footnotesize\bfseries, text=white] at (-4.925, 2.33) {Stage 3 (\texttt{pro}) $\rightarrow$ \textbf{Gate 3 (\texttt{flash})}};
+    \node[font=\footnotesize\bfseries, text=white] at (-4.925, 2.33) {Stage 3 (\texttt{pro}) $\rightarrow$ \textbf{Gate 3} (\texttt{flash})};
     \node[anchor=north west, text width=4.30cm, font=\scriptsize] at (-7.05, 1.86) {
       \textbf{\color{aaaNavy}Sub-Task:} \texttt{[Impl-Plan]}\\
-      \textbf{\color{aaaNavy}Artifact:} \texttt{plans/<KEY>\_plan.md}\\[4pt]
+      \textbf{\color{aaaNavy}Artifact:} \texttt{ATT-XXXX\_plan.md}\\[4pt]
       \bitem \textbf{SWE.2 Architecture:} Layer \& component boundaries respected?\\[3pt]
       \bitem \textbf{DB Schema Safety:} Parity between \texttt{onCreate} and \texttt{onUpgrade}?\\[3pt]
       \bitem \textbf{Test Mapping:} Every atomic step mapped to a test in \texttt{tests.md}?\\[3pt]
-      \bitem \textbf{\color{aaaAmber!90!black}Code Lock:} Enforced via \texttt{jira\_util.py check-gate}!
+      \bitem \textbf{\color{aaaAmber!90!black}Code Lock:} Zero production code changes allowed during Stage 3!
     };
 
     % Column 2: Stage 4 -> Gate 4
     \draw[fill=aaaLightBg, draw=aaaTeal!55, line width=0.85pt, rounded corners=4pt] (-2.32, -2.75) rectangle (2.32, 2.65);
     \fill[aaaTeal, rounded corners=3pt] (-2.32, 2.02) rectangle (2.32, 2.65);
-    \node[font=\footnotesize\bfseries, text=white] at (0.0, 2.33) {Stage 4 (\texttt{flash/pro}) $\rightarrow$ \textbf{Gate 4}};
+    \node[font=\footnotesize\bfseries, text=white] at (0.0, 2.33) {Stage 4 (\texttt{flash}) $\rightarrow$ \textbf{Gate 4} (\texttt{pro})};
     \node[anchor=north west, text width=4.30cm, font=\scriptsize] at (-2.12, 1.86) {
       \textbf{\color{aaaTeal}Sub-Task:} \texttt{[Implementation]}\\
       \textbf{\color{aaaTeal}Focus:} Code, Tests \& 9 Locales\\[4pt]
       \bitem \textbf{Diff Scrutiny:} Does actual \texttt{git diff} match the Stage 3 plan?\\[3pt]
       \bitem \textbf{No Scope Creep:} No unrelated files or unauthorized refactoring?\\[3pt]
-      \bitem \textbf{Contract Tests:} Targeted unit tests green in 5--15s?\\[3pt]
-      \bitem \textbf{9-Locale Parity:} All 9 language files (\texttt{EN..PT}) completely updated?
+      \bitem \textbf{Contract Tests:} Guards against partial refactoring green?\\[3pt]
+      \bitem \textbf{9-Locale Parity:} All 9 language files (\texttt{EN..ZH}) completely updated?
     };
 
     % Column 3: Stage 5 -> Gate 5
     \draw[fill=aaaLightBg, draw=aaaGreen!60, line width=0.85pt, rounded corners=4pt] (2.60, -2.75) rectangle (7.25, 2.65);
     \fill[aaaGreen, rounded corners=3pt] (2.60, 2.02) rectangle (7.25, 2.65);
-    \node[font=\footnotesize\bfseries, text=white] at (4.925, 2.33) {Stage 5 (\texttt{flash}) $\rightarrow$ \textbf{Gate 5 (\texttt{pro})}};
+    \node[font=\footnotesize\bfseries, text=white] at (4.925, 2.33) {Stage 5 (\texttt{flash}) $\rightarrow$ \textbf{Gate 5} (\texttt{pro})};
     \node[anchor=north west, text width=4.30cm, font=\scriptsize] at (2.80, 1.86) {
       \textbf{\color{aaaGreen!85!black}Sub-Task:} \texttt{[Test]}\\
-      \textbf{\color{aaaGreen!85!black}Artifact:} \texttt{walkthrough.md}\\[4pt]
-      \bitem \textbf{Unit Tests:} \texttt{testDebugUnitTest} 100\% green (0 failures)?\\[3pt]
+      \textbf{\color{aaaGreen!85!black}Artifact:} \texttt{ATT-XXXX\_walkthrough.md}\\[4pt]
+      \bitem \textbf{Unit Tests:} Tier 1 \texttt{testDebugUnitTest} 100\% green (0 failures)?\\[3pt]
       \bitem \textbf{Resource Build:} \texttt{assembleDebug} (AAPT2) 100\% error-free?\\[3pt]
-      \bitem \textbf{Living Docs:} \texttt{requirements.md} \& \texttt{tests.md} set to \texttt{Verified}?\\[3pt]
-      \bitem \textbf{1 Atomic Commit:} Squashed onto \texttt{sprint/<ID>}?
-    };
-  \end{tikzpicture}
-\end{frame}
-
-% =========================================================================
-% SLIDE 10: WHY JIRA AS EXTERNAL STATE MACHINE & TELEMETRY BACKBONE?
-% =========================================================================
-\begin{frame}{Why Jira Cloud as the External State Machine \& Telemetry Backbone?}
-  \centering
-  \begin{tikzpicture}[x=1cm, y=1cm]
-    % Top-Left Card: 1. Immutable State Machine & Audit Trail
-    \draw[fill=aaaLightBg, draw=aaaNavy!45, line width=0.85pt, rounded corners=4pt] (-7.25, 0.25) rectangle (-0.20, 2.65);
-    \fill[aaaNavy, rounded corners=3pt] (-7.25, 2.08) rectangle (-0.20, 2.65);
-    \node[font=\scriptsize\bfseries, text=white] at (-3.725, 2.36)
-      {1. Immutable Out-of-Context State Machine \& Audit Trail};
-    \node[anchor=north west, text width=6.65cm, font=\tiny] at (-7.05, 1.96) {
-      \bitem \textbf{Zero State Loss Across Compactions:} Survives LLM context compactions, session restarts, and subagent handoffs with 100\% deterministic state.\\[2.5pt]
-      \bitem \textbf{Role-Segregated Identity:} Enforces distinct accounts (\texttt{agent1}, \texttt{agent2}, \texttt{coordinator}, \texttt{human}), blocking parent \texttt{Done} transitions and timestamping every stage deliverable and gate verdict.
-    };
-
-    % Top-Right Card: 2. Empirical Process Telemetry (Data-Driven Kaizen)
-    \draw[fill=aaaLightBg, draw=aaaTeal!55, line width=0.85pt, rounded corners=4pt] (0.20, 0.25) rectangle (7.25, 2.65);
-    \fill[aaaTeal, rounded corners=3pt] (0.20, 2.08) rectangle (7.25, 2.65);
-    \node[font=\scriptsize\bfseries, text=white] at (3.725, 2.36)
-      {2. Empirical Process Telemetry (35 Sprints / 423 Tickets)};
-    \node[anchor=north west, text width=6.65cm, font=\tiny] at (0.40, 1.96) {
-      \bitem \textbf{Quantitative Bottleneck Discovery:} Mining $>2{,}100$ sub-task changelogs measured \texttt{S1--S5} durations, \texttt{pro} vs.\ \texttt{flash} defect rates, and test parallelization (\texttt{S5} cut from 14.5\,min to 4.0\,min).\\[2.5pt]
-      \bitem \textbf{Breaking the ``40-Turn Wall'':} Revealed that \textasciitilde 70\% of ticket time was sequential Jira CLI turns—motivating composite \texttt{submit-stage} \& \texttt{gate-verdict} commands.
-    };
-
-    % Bottom-Left Card: 3. Asynchronous Human-Agent Decoupling
-    \draw[fill=aaaLightBg, draw=aaaGreen!60, line width=0.85pt, rounded corners=4pt] (-7.25, -2.30) rectangle (-0.20, 0.05);
-    \fill[aaaGreen, rounded corners=3pt] (-7.25, -0.52) rectangle (-0.20, 0.05);
-    \node[font=\scriptsize\bfseries, text=white] at (-3.725, -0.23)
-      {3. Asynchronous Decoupling of Human \& Autonomous Pipeline};
-    \node[anchor=north west, text width=6.65cm, font=\tiny] at (-7.05, -0.64) {
-      \bitem \textbf{Concurrent Non-Blocking Collaboration:} While the autonomous pipeline executes the active sprint in the background, the human can file new tickets, refine the backlog, answer escalated sub-task questions (\texttt{Rule 6}), and queue retrospective improvements (\texttt{ATT-4290}) without interrupting the running agent.
-    };
-
-    % Bottom-Right Card: 4. Active Context Injection Point
-    \draw[fill=aaaLightBg, draw=aaaAmber!60, line width=0.85pt, rounded corners=4pt] (0.20, -2.30) rectangle (7.25, 0.05);
-    \fill[aaaAmber, rounded corners=3pt] (0.20, -0.52) rectangle (7.25, 0.05);
-    \node[font=\scriptsize\bfseries, text=white] at (3.725, -0.23)
-      {4. Deterministic Active Context Injection (\texttt{jira\_util.py})};
-    \node[anchor=north west, text width=6.65cm, font=\tiny] at (0.40, -0.64) {
-      \bitem \textbf{Zero-Turn Skill Reloading:} Stage transitions in Jira (\texttt{gate-verdict PASS}) act as the deterministic trigger to print the exact next stage's \texttt{SKILL.md} and the \textbf{8 Core Governance Rules} (\textasciitilde 5\,KB) directly to \texttt{stdout}—preventing ``Lost in the Middle'' context drift with 0 extra LLM turns.
+      \bitem \textbf{Living Docs:} Auto-flipped to \texttt{Verified} on \texttt{submit-stage 5}?\\[3pt]
+      \bitem \textbf{Sprint Merge:} 1 squashed commit merged into \texttt{sprint/<ID>}?
     };
   \end{tikzpicture}
 \end{frame}
@@ -583,7 +590,7 @@
 
     \node[anchor=north west, text width=6.65cm, font=\scriptsize] at (-7.05, 1.84) {
       \bitem \textbf{The Problem of Ephemeral Chats:} An LLM context window ends with the session—implicit knowledge discussed only in chat is lost forever.\\[3.5pt]
-      \bitem \textbf{The Repository as Long-Term Memory:} Through \texttt{docs/engineering/}, \texttt{requirements.md}, \texttt{tests.md}, and the \textbf{Document Triad}, a permanent knowledge base lives directly in Git.\\[3.5pt]
+      \bitem \textbf{The Repository as Long-Term Memory:} Through \texttt{docs/workflows/}, \texttt{requirements.md}, \texttt{tests.md}, and \texttt{walkthroughs/}, a permanent knowledge base lives directly in Git.\\[3.5pt]
       \bitem \textbf{Real-World Leverage:} When analyzing new bugs or features, agents automatically read prior walkthrough and spec documents, immediately grasping the historical \emph{``Why''}.
     };
 
@@ -629,7 +636,7 @@
       {\textbf{\scriptsize Master Ctrl.\ $R_1$}\\Human + \texttt{Argon}\\(Ceremony 1)};
     \node[sum] (s2) at (-1.80, 1.65) {$\Sigma_2$};
     \node[reg2] (r2) at (-0.05, 1.65)
-      {\textbf{\scriptsize Stage Ctrl.\ $R_2$}\\\texttt{agent1} (\texttt{pro/flash})\\(ASPICE Stages 1--5)};
+      {\textbf{\scriptsize Stage Ctrl.\ $R_2$}\\\texttt{agent1} Workflow\\(ASPICE Stages 1--5)};
     \node[sum] (s3) at (1.90, 1.65) {$\Sigma_3$};
     \node[plant] (g) at (3.75, 1.65)
       {\textbf{\scriptsize Process Plant $G$}\\Code, 9 Locales,\\Tests \& Living Docs};
@@ -665,7 +672,7 @@
 
     % =================== LOOP 2: MIDDLE ASPICE GATE LOOP (y = -0.34, strictly 2 lines) ===================
     \node[fbBox, draw=aaaTeal, fill=aaaTeal!10, text width=6.40cm] (fb2) at (1.80, -0.34)
-      {\textcolor{aaaTeal!90!black}{\textbf{2. Middle Loop ($\tau_2 \sim$ 5--15 min / Ticket — Gates 1--5)}}\\Gatekeeper \texttt{agent2} (\texttt{research} subagent, Zipper): Fence, SWE.2, Diff Audit $\rightarrow$ \texttt{REVISION}};
+      {\textcolor{aaaTeal!90!black}{\textbf{2. Middle Loop ($\tau_2 \sim$ 5--10 min / Stage — Gates 1--5)}}\\Zipper Gatekeeper \texttt{agent2} (\texttt{gate-verdict}): Fence, SWE.2, Diff Audit $\rightarrow$ \texttt{REVISION}};
     \draw[sigArr, draw=aaaTeal] (5.42, 1.65) |- (fb2.east);
     \draw[sigArr, draw=aaaTeal] (fb2.west) -| node[pos=0.92, right, font=\tiny\bfseries] {$-$} (s2.south);
 
