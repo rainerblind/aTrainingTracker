@@ -61,25 +61,25 @@ class SettingsDataStoreJavaHelperNonBlockingTest {
 
     @Test
     fun testGetZoneMax_returnsDefaultsSynchronously() {
-        // HR_RUN defaults: 135, 155, 175, 185
-        assertEquals(135, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_RUN, 1))
-        assertEquals(155, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_RUN, 2))
-        assertEquals(175, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_RUN, 3))
-        assertEquals(185, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_RUN, 4))
+        // HR_RUN defaults: 132, 145, 158, 171
+        assertEquals(132, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_RUN, 1))
+        assertEquals(145, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_RUN, 2))
+        assertEquals(158, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_RUN, 3))
+        assertEquals(171, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_RUN, 4))
 
-        // HR_BIKE defaults: 130, 150, 170, 180
-        assertEquals(130, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_BIKE, 1))
-        assertEquals(150, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_BIKE, 2))
-        assertEquals(170, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_BIKE, 3))
-        assertEquals(180, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_BIKE, 4))
+        // HR_BIKE defaults: 127, 140, 153, 166
+        assertEquals(127, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_BIKE, 1))
+        assertEquals(140, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_BIKE, 2))
+        assertEquals(153, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_BIKE, 3))
+        assertEquals(166, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.HR_BIKE, 4))
 
-        // PWR_BIKE defaults: 150, 200, 250, 300, 350, 450
-        assertEquals(150, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 1))
-        assertEquals(200, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 2))
-        assertEquals(250, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 3))
-        assertEquals(300, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 4))
-        assertEquals(350, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 5))
-        assertEquals(450, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 6))
+        // PWR_BIKE defaults: 149, 203, 243, 284, 324, 405
+        assertEquals(149, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 1))
+        assertEquals(203, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 2))
+        assertEquals(243, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 3))
+        assertEquals(284, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 4))
+        assertEquals(324, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 5))
+        assertEquals(405, SettingsDataStoreJavaHelper.getZoneMax(mockContext, SettingsDataStore.ZoneType.PWR_BIKE, 6))
     }
 
     @Test

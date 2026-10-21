@@ -252,32 +252,6 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                 )
             }
 
-            // Update power feature flags when necessary
-            if (originalState.powerFeatures != finalState.powerFeatures) {
-                var powerFeatureFlags = originalState.powerFeaturesFlags
-                powerFeatureFlags = if (finalState.powerFeatures!!.doublePowerBalanceValues) {
-                    powerFeatureFlags?.let { BikePowerSensorsHelper.addDoublePowerBalanceValues(it) }
-                } else {
-                    powerFeatureFlags?.let {
-                        BikePowerSensorsHelper.removeDoublePowerBalanceValues(
-                            it
-                        )
-                    }
-                }
-                if (finalState.powerFeatures!!.invertPowerBalanceValues) {
-                    powerFeatureFlags = powerFeatureFlags?.let {
-                        BikePowerSensorsHelper.addInvertPowerBalanceValues(it)
-                    }
-                } else {
-                    powerFeatureFlags = powerFeatureFlags?.let {
-                        BikePowerSensorsHelper.removeInvertPowerBalanceValues(it)
-                    }
-                }
-                if (powerFeatureFlags != null) {
-                    devicesDatabaseManager.putBikePowerSensorFlags(finalState.id, powerFeatureFlags)
-                }
-            }
-
             // Update the local LiveData to immediately reflect the change in the UI
             val currentList = _allDevices.value
             val updatedList = currentList.map { if (it.id == finalState.id) finalState else it }

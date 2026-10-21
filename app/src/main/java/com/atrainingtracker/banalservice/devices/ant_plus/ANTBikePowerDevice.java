@@ -71,7 +71,6 @@ public class ANTBikePowerDevice extends MyANTDevice {
     protected MySensor<Integer> mPedalSmoothnessSensor;
     protected MySensor<Integer> mTorqueEffectivenessRightSensor;
     protected MySensor<Integer> mTorqueEffectivenessLeftSensor;
-    protected boolean mInvertPowerBalanceValues;
     AntPlusBikePowerPcc bikePowerPcc = null;
     final DevicesDatabaseManager mDevicesDatabaseManager;
 
@@ -82,9 +81,6 @@ public class ANTBikePowerDevice extends MyANTDevice {
      **/
     public ANTBikePowerDevice(Context context, MySensorManager mySensorManager, long deviceID, int antDeviceNumber) {
         super(context, mySensorManager, DeviceType.BIKE_POWER, deviceID, antDeviceNumber);
-
-        int sensorFlags = DevicesDatabaseManager.getInstance(mContext).getBikePowerSensorFlags(getDeviceId());
-        mInvertPowerBalanceValues = BikePowerSensorsHelper.invertPowerBalanceValues(sensorFlags);
 
         mDevicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
     }
@@ -327,7 +323,8 @@ public class ANTBikePowerDevice extends MyANTDevice {
 
                     if (mPowerBalanceSensor != null) {
                         if (pedalPowerPercentage >= 0) {
-                            if (mInvertPowerBalanceValues) {
+                            if (!rightPedalIndicator) {
+                                // rightPedalIndicator == false denotes Left pedal reference; invert to Right pedal percentage (REQ-CON-022.2, REQ-UI-377.1)
                                 pedalPowerPercentage = 100 - pedalPowerPercentage;
                             }
 

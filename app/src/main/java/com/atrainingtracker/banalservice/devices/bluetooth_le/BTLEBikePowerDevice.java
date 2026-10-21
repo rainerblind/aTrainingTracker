@@ -96,8 +96,6 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
     protected boolean mIsPowerBalanceSupported = false;
     protected boolean mIsWheelRevolutionDataSupported = false;
     protected boolean mIsCrankRevolutionDataSupported = false;
-    protected boolean mDoublePowerBalanceValues = false;
-    protected boolean mInvertPowerBalanceValues = false;
     private final String TAG = BTLEBikePowerDevice.class.getName();
 
 
@@ -245,9 +243,6 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
             mIsCrankRevolutionDataSupported = true;
             addCadenceSensor();
         }
-
-        mDoublePowerBalanceValues = BikePowerSensorsHelper.doublePowerBalanceValues(sensorFlags);
-        mInvertPowerBalanceValues = BikePowerSensorsHelper.invertPowerBalanceValues(sensorFlags);
     }
 
 
@@ -325,9 +320,11 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
                     if (mIsPowerBalanceSupported) {
                         Integer rawBalance = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, offset);
                         if (rawBalance != null) {
-                            double balanceValue = rawBalance;
-                            balanceValue = mDoublePowerBalanceValues ? balanceValue : balanceValue / 2; // according to the spec, the value must be halved.  Optionally, we double it by not halving
-                            balanceValue = mInvertPowerBalanceValues ? 100 - balanceValue : balanceValue; // optionally, invert the value
+                            double balanceValue = rawBalance / 2.0; // according to the BLE CPS specification, resolution is 0.5%
+                            if ((flags & PEDAL_POWER_BALANCE_REFERENCE_MASK) != 0) {
+                                // Bit 1 == 1 denotes Left pedal reference per Bluetooth SIG CPS; invert to Right pedal percentage (REQ-CON-022.1, REQ-UI-377.1)
+                                balanceValue = 100.0 - balanceValue;
+                            }
                             mPowerBalanceSensor.newValue(balanceValue);
                         }
                     } else {

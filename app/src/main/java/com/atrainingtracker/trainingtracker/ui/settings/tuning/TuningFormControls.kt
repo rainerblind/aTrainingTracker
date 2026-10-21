@@ -211,9 +211,9 @@ fun TuningResetDefaultsButton(
 }
 
 /**
- * Compact subordinate toggle switch for secondary child settings (Rule 59, ATT-4432, ATT-4464).
+ * Compact subordinate toggle switch for secondary child settings (Rule 59, ATT-4432, ATT-4464, ATT-4513).
  * Displays lighter typography without a heavy subtitle and a significantly downscaled switch
- * with compact vertical height and secondary color tokens.
+ * with compact vertical height and lighter primary alpha color tokens.
  */
 @Composable
 fun SubordinateTuningToggleItem(
@@ -247,8 +247,8 @@ fun SubordinateTuningToggleItem(
                 .scale(0.6f)
                 .height(24.dp),
             colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                checkedTrackColor = MaterialTheme.colorScheme.secondary
+                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
             )
         )
     }

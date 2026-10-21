@@ -100,7 +100,7 @@ class LapsDatabaseManagerTest {
 
     @Test
     fun testDbHelperConstantsAndSchema() {
-        assertEquals("Database version must be upgraded to 2", 2, LapsDatabaseManager.LapsDbHelper.DB_VERSION)
+        assertEquals("Database version must be upgraded to 3", 3, LapsDatabaseManager.LapsDbHelper.DB_VERSION)
         assertTrue(
             "CREATE_TABLE must declare name TEXT column",
             LapsDatabaseManager.LapsDbHelper.CREATE_TABLE.contains("name TEXT")
@@ -124,6 +124,22 @@ class LapsDatabaseManagerTest {
         }
         verify {
             mockDb.execSQL(match { it.contains("ALTER TABLE") && it.contains("ADD COLUMN") && it.contains("description") })
+        }
+
+        // Verify table was NEVER dropped (Zero Data Loss Invariant)
+        verify(exactly = 0) {
+            mockDb.execSQL(match { it.lowercase().contains("drop table") })
+        }
+    }
+
+    @Test
+    fun testOnUpgrade_v2ToV3_createsIndexNonDestructively() {
+        val helper = LapsDatabaseManager.LapsDbHelper(mockContext)
+        helper.onUpgrade(mockDb, 2, 3)
+
+        // Verify CREATE INDEX statement executed
+        verify {
+            mockDb.execSQL(match { it.contains("CREATE INDEX") && it.contains("idx_laps_workout_id") })
         }
 
         // Verify table was NEVER dropped (Zero Data Loss Invariant)

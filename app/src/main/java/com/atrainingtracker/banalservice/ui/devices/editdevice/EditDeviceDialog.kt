@@ -521,29 +521,6 @@ private fun PowerMeterSection(data: DeviceUiData, viewModel: EditDeviceViewModel
                         MaterialTheme.colorScheme.onSurface
                 )
             }
-
-            // Bluetooth specific corrections
-            if (data.protocol == Protocol.BLUETOOTH_LE && features.pedalPowerBalanceSupported) {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                Text(
-                    text = stringResource(R.string.bike_power__pedal_power_balance_correction),
-                    style = MaterialTheme.typography.titleSmall
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = features.doublePowerBalanceValues,
-                        onCheckedChange = { viewModel.onDoublePowerBalanceValuesChanged(it) }
-                    )
-                    Text(stringResource(R.string.bike_power__double_power_balance_values))
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = features.invertPowerBalanceValues,
-                        onCheckedChange = { viewModel.onInvertPowerBalanceValuesChanged(it) }
-                    )
-                    Text(stringResource(R.string.bike_power__invert_power_balance_values))
-                }
-            }
         }
     }
 }

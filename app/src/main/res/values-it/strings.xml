@@ -261,10 +261,6 @@
     <string name="bike_power__torque_effectiveness">&#8226; Efficacia coppia</string>
     <string name="bike_power__torque_data">&#8226; Coppia</string>
 
-    <string name="bike_power__pedal_power_balance_correction">Correzione bilanciamento</string>
-    <string name="bike_power__double_power_balance_values">Raddoppia valori misurati</string>
-    <string name="bike_power__invert_power_balance_values">Inverti (sx/dx)</string>
-
     <!-- Labels -->
     <string name="PebbleConfigActivityLabel">Modifica vista Pebble</string>
 
@@ -1197,6 +1193,14 @@
     <string name="import_backup_summary">Gestire le importazioni di allenamenti, i backup e il ripristino dei dati</string>
 
     <string name="create_and_upload_to_dropbox">Crea \u0026 carica su Dropbox</string>
+    <string name="create_and_upload_to_both">Crea \u0026 carica (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_google_drive">Crea \u0026 carica su Google Drive</string>
+    <string name="create_and_upload_to_cloud">Crea \u0026 carica sul cloud</string>
+    <string name="cloud_backup_no_provider_dialog_title">Backup sul cloud</string>
+    <string name="cloud_backup_no_provider_dialog_message">Nessuno spazio cloud collegato. Collega Dropbox o Google Drive nelle impostazioni di sincronizzazione.</string>
+    <string name="automated_backups_summary_both">Carica regolarmente i backup su Dropbox e Google Drive</string>
+    <string name="automated_backups_summary_google_drive">Carica regolarmente i backup su Google Drive</string>
+    <string name="automated_backups_summary_local_only">Crea regolarmente backup locali su questo dispositivo</string>
     <string name="full_restore_description">Cancella tutti i dati locali e li sostituisce con il contenuto del backup. Forza il riavvio dell\'app.</string>
     <string name="incremental_import_description">Unisci gli allenamenti da un backup nella cronologia attuale. Gli allenamenti già presenti verranno saltati.</string>
     <string name="legacy_recovery_title">Importazione allenamenti</string>

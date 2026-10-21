@@ -336,10 +336,6 @@
     <string name="bike_power__torque_effectiveness">&#8226; Torque Effectiveness</string>
     <string name="bike_power__torque_data">&#8226; Torque</string>
 
-    <string name="bike_power__pedal_power_balance_correction">Pedal power balance correction</string>
-    <string name="bike_power__double_power_balance_values">Double measured values</string>
-    <string name="bike_power__invert_power_balance_values">Invert measured values. I.e., swap left and right</string>
-
     <!-- Manifest -->
     <string name="app_name" translatable="false">a Training Tracker</string>
 
@@ -1392,6 +1388,14 @@
     <string name="backup_interval_weekly">Weekly</string>
     <string name="backup_interval_monthly">Monthly</string>
     <string name="create_and_upload_to_dropbox">Create \u0026 Upload to Dropbox</string>
+    <string name="create_and_upload_to_both">Create \u0026 Upload (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_google_drive">Create \u0026 Upload to Google Drive</string>
+    <string name="create_and_upload_to_cloud">Create \u0026 Upload to Cloud</string>
+    <string name="cloud_backup_no_provider_dialog_title">Cloud Backup</string>
+    <string name="cloud_backup_no_provider_dialog_message">No cloud storage connected. Please connect Dropbox or Google Drive in Synchronization settings.</string>
+    <string name="automated_backups_summary_both">Regularly upload backups to Dropbox and Google Drive</string>
+    <string name="automated_backups_summary_google_drive">Regularly upload backups to Google Drive</string>
+    <string name="automated_backups_summary_local_only">Regularly create local rolling backups on this device</string>
     <string name="full_restore_description">Wipes all local data and replaces it with the content of the backup. Forces an app restart.</string>
     <string name="incremental_import_description">Merges workouts from a backup into your current history. Workouts already present locally will be skipped.</string>
     <string name="legacy_recovery_title">Workout Import</string>

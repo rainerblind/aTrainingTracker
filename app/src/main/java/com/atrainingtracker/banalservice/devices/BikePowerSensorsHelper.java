@@ -39,11 +39,6 @@ public class BikePowerSensorsHelper {
     private static final int PEDAL_SMOOTHNESS = 1 << 11;
     private static final int TORQUE_EFFECTIVENESS = 1 << 12;
 
-    // set by the user
-    private static final int DOUBLE_POWER_BALANCE_VALUES = 1 << 13;
-    private static final int INVERT_POWER_BALANCE_VALUES = 1 << 14;
-
-
     private static boolean isSensorSupported(int sensorFlags, int mask) {
         return (sensorFlags & mask) != 0;
     }
@@ -100,15 +95,6 @@ public class BikePowerSensorsHelper {
         return isSensorSupported(sensorFlags, TORQUE_EFFECTIVENESS);
     }
 
-    public static boolean doublePowerBalanceValues(int sensorFlags) {
-        return isSensorSupported(sensorFlags, DOUBLE_POWER_BALANCE_VALUES);
-    }
-
-    public static boolean invertPowerBalanceValues(int sensorFlags) {
-        return isSensorSupported(sensorFlags, INVERT_POWER_BALANCE_VALUES);
-    }
-
-
     private static int addSensorFlags(int leftSensorFlags, int rightSensorFlags) {
         return leftSensorFlags | rightSensorFlags;
     }
@@ -164,26 +150,4 @@ public class BikePowerSensorsHelper {
     public static int addTorqueEffectivenessFlag(int sensorFlags) {
         return addSensorFlags(sensorFlags, TORQUE_EFFECTIVENESS);
     }
-
-    public static int addDoublePowerBalanceValues(int sensorFlags) {
-        return addSensorFlags(sensorFlags, DOUBLE_POWER_BALANCE_VALUES);
-    }
-
-    public static int addInvertPowerBalanceValues(int sensorFlags) {
-        return addSensorFlags(sensorFlags, INVERT_POWER_BALANCE_VALUES);
-    }
-
-
-    private static int removeSensorFlags(int leftSensorFlags, int rightSensorFlags) {
-        return leftSensorFlags & ~rightSensorFlags;
-    }
-
-    public static int removeDoublePowerBalanceValues(int sensorFlags) {
-        return removeSensorFlags(sensorFlags, DOUBLE_POWER_BALANCE_VALUES);
-    }
-
-    public static int removeInvertPowerBalanceValues(int sensorFlags) {
-        return removeSensorFlags(sensorFlags, INVERT_POWER_BALANCE_VALUES);
-    }
-
 }

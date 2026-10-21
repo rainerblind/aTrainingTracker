@@ -1,6 +1,9 @@
 package com.atrainingtracker.trainingtracker.physiology
 
 import com.atrainingtracker.banalservice.BSportType
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.pow
@@ -1005,7 +1008,8 @@ object PowerPhysiologyCalculator {
         nowMs: Long = System.currentTimeMillis(),
         ftpWatts: Double? = null,
         hrRestBpm: Double? = null,
-        hrMaxBpm: Double? = null
+        hrMaxBpm: Double? = null,
+        zoneId: ZoneId = ZoneId.systemDefault()
     ): PmcSummaryResult {
         if (workoutSamples.isEmpty()) {
             return PmcSummaryResult()
@@ -1024,7 +1028,7 @@ object PowerPhysiologyCalculator {
                 hrMaxBpm = hrMaxBpm
             )
             if (load <= 0.0) continue
-            val dayIdx = sample.timestampMs / MILLIS_PER_DAY
+            val dayIdx = Instant.ofEpochMilli(sample.timestampMs).atZone(zoneId).toLocalDate().toEpochDay()
             dailyLoads[dayIdx] = (dailyLoads[dayIdx] ?: 0.0) + load
             if (dayIdx < minDayIndex) minDayIndex = dayIdx
             if (dayIdx > maxSampleDayIndex) maxSampleDayIndex = dayIdx
@@ -1034,7 +1038,7 @@ object PowerPhysiologyCalculator {
             return PmcSummaryResult()
         }
 
-        val nowDayIndex = max(maxSampleDayIndex, nowMs / MILLIS_PER_DAY)
+        val nowDayIndex = max(maxSampleDayIndex, Instant.ofEpochMilli(nowMs).atZone(zoneId).toLocalDate().toEpochDay())
         val totalDays = (nowDayIndex - minDayIndex + 1L).coerceAtMost(3650L).toInt()
         val startDayIndex = nowDayIndex - totalDays + 1L
 
@@ -1058,7 +1062,7 @@ object PowerPhysiologyCalculator {
             points.add(
                 PmcDailyPoint(
                     dayEpochIndex = dayIdx,
-                    dayStartTimestampMs = dayIdx * MILLIS_PER_DAY,
+                    dayStartTimestampMs = LocalDate.ofEpochDay(dayIdx).atStartOfDay(zoneId).toInstant().toEpochMilli(),
                     dailyTss = tss,
                     ctl = ctl,
                     atl = atl,

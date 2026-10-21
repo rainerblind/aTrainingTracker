@@ -259,10 +259,6 @@
     <string name="bike_power__torque_effectiveness">&#8226; Effizienz</string>
     <string name="bike_power__torque_data">&#8226; Kraft</string>
 
-    <string name="bike_power__pedal_power_balance_correction">Korrektur für Power Balance</string>
-    <string name="bike_power__double_power_balance_values">Verdopple die gemessenen Werte</string>
-    <string name="bike_power__invert_power_balance_values">Invertiere die gemessenen Werte.  D.h., vertausche rechts und links</string>
-
     <string name="slope">Steigung</string>
     <string name="slope_short">Steigung</string>
     <string name="vertical_speed">Vertikale Geschwindigkeit (VAM)</string>"
@@ -1284,6 +1280,14 @@
     <string name="backup_interval_weekly">Wöchentlich</string>
     <string name="backup_interval_monthly">Monatlich</string>
     <string name="create_and_upload_to_dropbox">Erstellen \u0026 Dropbox-Upload</string>
+    <string name="create_and_upload_to_both">Erstellen \u0026 Upload (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_google_drive">Erstellen \u0026 Google Drive-Upload</string>
+    <string name="create_and_upload_to_cloud">Erstellen \u0026 Cloud-Upload</string>
+    <string name="cloud_backup_no_provider_dialog_title">Cloud-Backup</string>
+    <string name="cloud_backup_no_provider_dialog_message">Kein Cloud-Speicher verbunden. Bitte Dropbox oder Google Drive in den Synchronisierungs-Einstellungen verknüpfen.</string>
+    <string name="automated_backups_summary_both">Regelmäßig Backups zu Dropbox und Google Drive hochladen</string>
+    <string name="automated_backups_summary_google_drive">Regelmäßig Backups zu Google Drive hochladen</string>
+    <string name="automated_backups_summary_local_only">Regelmäßig lokale rollierende Backups auf diesem Gerät erstellen</string>
     <string name="full_restore_description">Löscht alle lokalen Daten und ersetzt sie durch den Inhalt des Backups. Erzwingt einen App-Neustart.</string>
     <string name="incremental_import_description">Fügt Workouts aus einem Backup zu deiner aktuellen Historie hinzu. Bereits vorhandene Workouts werden übersprungen.</string>
     <string name="legacy_recovery_title">Workout-Import</string>

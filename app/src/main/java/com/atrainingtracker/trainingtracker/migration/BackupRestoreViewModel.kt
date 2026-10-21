@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.FileProvider
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
@@ -230,6 +231,113 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             }
         }
     }
+
+    /**
+     * Creates a local backup and uploads it to all enabled cloud providers (Dropbox and/or Google Drive),
+     * acquiring [BackupManager.acquireLock] to prevent race conditions and persisting [lastBackupInfo]
+     * matching [BackupWorker] parity (REQ-MIG-036).
+     */
+    fun uploadToCloud(
+        context: Context,
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): Job {
+        return viewModelScope.launch(dispatcher) {
+            val dropboxConnected = TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
+            val googleDriveConnected = TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
+
+            if (!dropboxConnected && !googleDriveConnected) {
+                _uiState.value = UiState.Error(context.getString(R.string.cloud_backup_no_provider_dialog_message))
+                return@launch
+            }
+
+            _uiState.value = UiState.Loading("Creating backup...")
+
+            val lock = BackupManager.acquireLock(context)
+            if (lock == null) {
+                _uiState.value = UiState.Error("Backup already in progress")
+                return@launch
+            }
+
+            lock.use {
+                val backupFile = BackupManager.createBackup(context, object : BackupManager.ProgressListener {
+                    override fun onProgress(message: String) {
+                        _uiState.value = UiState.Loading(message)
+                    }
+                })
+
+                val targets = mutableMapOf<String, Boolean>()
+                targets["local"] = (backupFile != null)
+
+                if (backupFile != null) {
+                    var anyUploadSuccess = false
+                    var anyUploadFailed = false
+
+                    if (dropboxConnected) {
+                        _uiState.value = UiState.Loading("Uploading to Dropbox...")
+                        val dbxSuccess = DropboxBackupManager.uploadBackup(context, backupFile)
+                        targets["dropbox"] = dbxSuccess
+                        if (dbxSuccess) {
+                            anyUploadSuccess = true
+                        } else {
+                            anyUploadFailed = true
+                        }
+                    }
+
+                    if (googleDriveConnected) {
+                        _uiState.value = UiState.Loading("Uploading to Google Drive...")
+                        val gdSuccess = GoogleDriveBackupManager.uploadBackup(context, backupFile)
+                        targets["google_drive"] = gdSuccess
+                        if (gdSuccess) {
+                            anyUploadSuccess = true
+                        } else {
+                            anyUploadFailed = true
+                        }
+                    }
+
+                    val targetsStr = BackupWorker.formatTargets(targets)
+                    val status = if (anyUploadSuccess) {
+                        if (anyUploadFailed) "PARTIAL_SUCCESS" else "SUCCESS"
+                    } else {
+                        "Upload failed"
+                    }
+
+                    prefs.edit(commit = true) {
+                        if (anyUploadSuccess) {
+                            putLong("last_backup_timestamp", System.currentTimeMillis())
+                        }
+                        putString("last_backup_status", status)
+                        putString("last_backup_targets", targetsStr)
+                    }
+
+                    if (anyUploadSuccess) {
+                        val msg = if (anyUploadFailed) {
+                            "Backup partially uploaded to cloud"
+                        } else {
+                            "Backup uploaded to cloud"
+                        }
+                        _uiState.value = UiState.Success(msg)
+                    } else {
+                        _uiState.value = UiState.Error("Cloud upload failed")
+                    }
+                } else {
+                    val targetsStr = BackupWorker.formatTargets(targets)
+                    prefs.edit(commit = true) {
+                        putString("last_backup_status", "Local backup creation failed")
+                        putString("last_backup_targets", targetsStr)
+                    }
+                    _uiState.value = UiState.Error("Failed to create backup")
+                }
+            }
+        }
+    }
+
+    /**
+     * Alias for [uploadToCloud] (REQ-MIG-036).
+     */
+    fun uploadToEnabledClouds(
+        context: Context,
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): Job = uploadToCloud(context, dispatcher)
 
     fun restoreFromDropbox(context: Context) {
         viewModelScope.launch {

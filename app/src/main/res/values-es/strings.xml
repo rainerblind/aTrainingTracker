@@ -261,10 +261,6 @@
     <string name="bike_power__torque_effectiveness">&#8226; Efectividad de par</string>
     <string name="bike_power__torque_data">&#8226; Par</string>
 
-    <string name="bike_power__pedal_power_balance_correction">Corrección balance potencia pedal</string>
-    <string name="bike_power__double_power_balance_values">Doblar valores medidos</string>
-    <string name="bike_power__invert_power_balance_values">Invertir valores medidos. Ej: intercambiar izq y der</string>
-
     <!-- Labels -->
     <string name="PebbleConfigActivityLabel">Editar vista de Pebble</string>
 
@@ -1199,6 +1195,14 @@
     <string name="import_backup_summary">Gestione las importaciones de entrenamientos, las copias de seguridad y la restauración de datos</string>
 
     <string name="create_and_upload_to_dropbox">Crear \u0026 subir a Dropbox</string>
+    <string name="create_and_upload_to_both">Crear \u0026 subir (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_google_drive">Crear \u0026 subir a Google Drive</string>
+    <string name="create_and_upload_to_cloud">Crear \u0026 subir a la nube</string>
+    <string name="cloud_backup_no_provider_dialog_title">Copia de seguridad en la nube</string>
+    <string name="cloud_backup_no_provider_dialog_message">No hay almacenamiento en la nube conectado. Conecta Dropbox o Google Drive en los ajustes de Sincronización.</string>
+    <string name="automated_backups_summary_both">Subir copias a Dropbox y Google Drive periódicamente</string>
+    <string name="automated_backups_summary_google_drive">Subir copias a Google Drive periódicamente</string>
+    <string name="automated_backups_summary_local_only">Crear copias locales periódicamente en este dispositivo</string>
     <string name="full_restore_description">Borra todos los datos locales y los reemplaza con el contenido de la copia. Reinicia la aplicación.</string>
     <string name="incremental_import_description">Combina entrenamientos de una copia con tu historial actual. Se omitirán los entrenamientos ya presentes.</string>
     <string name="legacy_recovery_title">Importación de entrenamientos</string>

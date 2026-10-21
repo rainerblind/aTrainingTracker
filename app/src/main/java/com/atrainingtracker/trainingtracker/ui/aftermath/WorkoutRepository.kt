@@ -62,6 +62,7 @@ import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
+import com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMath
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -73,9 +74,11 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionD
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneSample
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -168,7 +171,9 @@ class WorkoutRepository private constructor(private val application: Application
     override val coroutineContext = Dispatchers.Main + job
 
     // Helper instances, initialized lazily
-    private val deletionHelper by lazy { WorkoutDeletionHelper(application) }
+    @VisibleForTesting
+    internal var deletionHelperInstance: WorkoutDeletionHelper? = null
+    private val deletionHelper get() = deletionHelperInstance ?: WorkoutDeletionHelper(application)
     private val summariesManager by lazy { WorkoutSummariesDatabaseManager.getInstance(application) }
     private val samplesManager by lazy { WorkoutSamplesDatabaseManager.getInstance(application) }
     private val equipmentDbHelper by lazy { EquipmentDbHelper.getInstance(application) }
@@ -195,7 +200,8 @@ class WorkoutRepository private constructor(private val application: Application
      */
     private val _allWorkouts = MutableStateFlow<List<WorkoutData>>(emptyList())
     val allWorkouts: StateFlow<List<WorkoutData>> = _allWorkouts.asStateFlow()
-    private val reloadingWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
+    private val activeReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
+    private val dirtyReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
 
     /**
      * Provides a reactive stream for a specific workout ID.
@@ -316,6 +322,32 @@ class WorkoutRepository private constructor(private val application: Application
      * @param trackType The specific track provider to retrieve (BEST, GPS, FUSED, NETWORK).
      * @return A list of [PathPoint] objects containing distance, location, and altitude.
      */
+    /**
+     * DTO containing consolidated telemetry tracks and zone distributions (ATT-4003 / REQ-DAT-033).
+     */
+    data class WorkoutDetailTelemetry(
+        val tracks: Map<TrackType, List<PathPoint>>,
+        val hrZoneDistribution: ZoneDistributionData?,
+        val powerZoneDistribution: ZoneDistributionData?
+    )
+
+    private fun getExistingColumns(db: android.database.sqlite.SQLiteDatabase, tableName: String): Set<String> {
+        val cols = mutableSetOf<String>()
+        try {
+            db.rawQuery("PRAGMA table_info($tableName)", null).use { c ->
+                val nameIdx = c.getColumnIndex("name")
+                if (nameIdx >= 0) {
+                    while (c.moveToNext()) {
+                        cols.add(c.getString(nameIdx))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to inspect columns for table $tableName", e)
+        }
+        return cols
+    }
+
     suspend fun getWorkoutTrackPoints(
         workoutId: Long,
         trackType: TrackType
@@ -335,11 +367,29 @@ class WorkoutRepository private constructor(private val application: Application
             return@withContext emptyList()
         }
 
+        val existingColumns = getExistingColumns(db, tableName)
         val latName = trackType.latitudeColumn
         val lonName = trackType.longitudeColumn
+        if (latName !in existingColumns || lonName !in existingColumns) {
+            return@withContext emptyList()
+        }
 
+        val candidateCols = listOf(
+            latName, lonName,
+            SensorType.ALTITUDE.name,
+            SensorType.DISTANCE_m.name,
+            SensorType.TIME_ACTIVE.name,
+            SensorType.TIME_TOTAL.name,
+            WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME,
+            SensorType.HR.name,
+            SensorType.POWER.name,
+            SensorType.SPEED_mps.name,
+            SensorType.SLOPE.name,
+            SensorType.W_PRIME_BAL.name
+        )
+        val projection = candidateCols.filter { it in existingColumns }.toTypedArray()
 
-        db.query(tableName, null, null, null, null, null, null).use { cursor ->
+        db.query(tableName, projection, null, null, null, null, null).use { cursor ->
 
             val latIdx = cursor.getColumnIndex(latName)
             val lonIdx = cursor.getColumnIndex(lonName)
@@ -372,7 +422,7 @@ class WorkoutRepository private constructor(private val application: Application
 
                 if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
                     val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
-                    val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else 0.0
+                    val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null
                     val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
                     val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
                     val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
@@ -450,11 +500,11 @@ class WorkoutRepository private constructor(private val application: Application
                 val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
                 val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
                 val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
-                val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else 0.0
+                val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null
                 val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
                 val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
 
-                if (hr != null || power != null || speed != null || alt != 0.0) {
+                if (hr != null || power != null || speed != null || alt != null) {
                     points.add(
                         PathPoint(
                             distance = dist,
@@ -520,7 +570,11 @@ class WorkoutRepository private constructor(private val application: Application
         val baseFileName = summariesManager.getBaseFileName(workoutId) ?: return@withContext null
         if (!samplesManager.existsTable(baseFileName)) return@withContext null
 
+        val db = samplesManager.database
         val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val existingColumns = getExistingColumns(db, tableName)
+        if (SensorType.HR.name !in existingColumns) return@withContext null
+
         val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
 
         val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
@@ -529,10 +583,16 @@ class WorkoutRepository private constructor(private val application: Application
         val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
         val thresholds = HeartRateZoneThresholds(z1, z2, z3, z4)
 
+        val candidateCols = listOf(
+            SensorType.HR.name,
+            SensorType.TIME_ACTIVE.name,
+            SensorType.TIME_TOTAL.name,
+            WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME
+        )
+        val projection = candidateCols.filter { it in existingColumns }.toTypedArray()
         val samples = mutableListOf<ZoneSample>()
-        val db = samplesManager.database
 
-        db.query(tableName, null, null, null, null, null, null).use { cursor ->
+        db.query(tableName, projection, null, null, null, null, null).use { cursor ->
             val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
             if (hrIdx == -1) return@withContext null
 
@@ -581,7 +641,11 @@ class WorkoutRepository private constructor(private val application: Application
         val baseFileName = summariesManager.getBaseFileName(workoutId) ?: return@withContext null
         if (!samplesManager.existsTable(baseFileName)) return@withContext null
 
+        val db = samplesManager.database
         val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val existingColumns = getExistingColumns(db, tableName)
+        if (SensorType.POWER.name !in existingColumns) return@withContext null
+
         val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
 
         val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
@@ -592,10 +656,16 @@ class WorkoutRepository private constructor(private val application: Application
         val z6 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6)
         val thresholds = PowerZoneThresholds(z1, z2, z3, z4, z5, z6)
 
+        val candidateCols = listOf(
+            SensorType.POWER.name,
+            SensorType.TIME_ACTIVE.name,
+            SensorType.TIME_TOTAL.name,
+            WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME
+        )
+        val projection = candidateCols.filter { it in existingColumns }.toTypedArray()
         val samples = mutableListOf<ZoneSample>()
-        val db = samplesManager.database
 
-        db.query(tableName, null, null, null, null, null, null).use { cursor ->
+        db.query(tableName, projection, null, null, null, null, null).use { cursor ->
             val pwrIdx = cursor.getColumnIndex(SensorType.POWER.name)
             if (pwrIdx == -1) return@withContext null
 
@@ -629,6 +699,169 @@ class WorkoutRepository private constructor(private val application: Application
         }
 
         ZoneDistributionCalculator.calculatePowerDistribution(samples, thresholds)
+    }
+
+    /**
+     * ATT-4003 / REQ-DAT-033: Consolidated single-pass extraction of tracks and zone telemetry.
+     * Replaces multiple unprojected table scans across track types and zone distributions
+     * with a single projected query over the workout's samples table.
+     */
+    suspend fun loadWorkoutDetailTelemetry(
+        workoutId: Long,
+        bSportType: BSportType?
+    ): WorkoutDetailTelemetry = withContext(Dispatchers.IO) {
+        val baseFileName = summariesManager.getBaseFileName(workoutId)
+            ?: return@withContext WorkoutDetailTelemetry(emptyMap(), null, null)
+
+        val db = samplesManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        if (!samplesManager.existsTable(baseFileName)) {
+            return@withContext WorkoutDetailTelemetry(emptyMap(), null, null)
+        }
+
+        val existingColumns = getExistingColumns(db, tableName)
+
+        val availableTrackTypes = TrackType.entries.filter { type ->
+            type.latitudeColumn in existingColumns && type.longitudeColumn in existingColumns
+        }
+
+        val hasHr = SensorType.HR.name in existingColumns
+        val hasPower = SensorType.POWER.name in existingColumns
+
+        if (availableTrackTypes.isEmpty() && !hasHr && !hasPower) {
+            return@withContext WorkoutDetailTelemetry(emptyMap(), null, null)
+        }
+
+        val hrThresholds = if (hasHr) {
+            val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+            HeartRateZoneThresholds(z1, z2, z3, z4)
+        } else null
+
+        val powerThresholds = if (hasPower) {
+            val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+            val z5 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 5)
+            val z6 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6)
+            PowerZoneThresholds(z1, z2, z3, z4, z5, z6)
+        } else null
+
+        val projectionSet = mutableSetOf<String>()
+        for (type in availableTrackTypes) {
+            projectionSet.add(type.latitudeColumn)
+            projectionSet.add(type.longitudeColumn)
+        }
+        val commonCols = listOf(
+            SensorType.ALTITUDE.name,
+            SensorType.DISTANCE_m.name,
+            SensorType.TIME_ACTIVE.name,
+            SensorType.TIME_TOTAL.name,
+            WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME,
+            SensorType.HR.name,
+            SensorType.POWER.name,
+            SensorType.SPEED_mps.name,
+            SensorType.SLOPE.name,
+            SensorType.W_PRIME_BAL.name
+        )
+        for (col in commonCols) {
+            if (col in existingColumns) projectionSet.add(col)
+        }
+
+        val projection = projectionSet.toTypedArray()
+        val trackPointsMap = availableTrackTypes.associateWith { ArrayList<PathPoint>() }
+        val hrSamples = if (hasHr) mutableListOf<ZoneSample>() else null
+        val powerSamples = if (hasPower) mutableListOf<ZoneSample>() else null
+
+        db.query(tableName, projection, null, null, null, null, null).use { cursor ->
+            val colIndices = availableTrackTypes.associateWith { type ->
+                Pair(cursor.getColumnIndex(type.latitudeColumn), cursor.getColumnIndex(type.longitudeColumn))
+            }
+            val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
+            val distIdx = cursor.getColumnIndex(SensorType.DISTANCE_m.name)
+            val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
+            val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+            val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+            val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+            val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+            val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
+            val slopeIdx = cursor.getColumnIndex(SensorType.SLOPE.name)
+            val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
+
+            var initialEpochSec: Long? = null
+            var sampleIndex = 0L
+
+            while (cursor.moveToNext()) {
+                val timeSec = when {
+                    timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                    timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                    timeIdx != -1 && !cursor.isNull(timeIdx) -> {
+                        val (offset, anchor) = parseTimestampOffset(cursor.getString(timeIdx), initialEpochSec)
+                        initialEpochSec = anchor
+                        offset ?: sampleIndex
+                    }
+                    else -> sampleIndex
+                }
+
+                val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
+                val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else 0.0
+                val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
+                val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
+                val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
+                val slope = if (slopeIdx != -1 && !cursor.isNull(slopeIdx)) cursor.getDouble(slopeIdx) else null
+                val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
+
+                for (type in availableTrackTypes) {
+                    val (latIdx, lonIdx) = colIndices[type] ?: continue
+                    if (latIdx != -1 && lonIdx != -1 && !cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                        trackPointsMap[type]?.add(
+                            PathPoint(
+                                distance = dist,
+                                latLng = LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx)),
+                                altitude = alt,
+                                timeSec = timeSec,
+                                hr = hr,
+                                power = power,
+                                speedMps = speed,
+                                slope = slope,
+                                wPrimeBalKj = wPrimeBal
+                            )
+                        )
+                    }
+                }
+
+                if (hr != null && hr > 0) {
+                    hrSamples?.add(ZoneSample(timeActiveSec = timeSec, value = hr))
+                }
+                if (power != null && power > 0) {
+                    powerSamples?.add(ZoneSample(timeActiveSec = timeSec, value = power))
+                }
+                sampleIndex++
+            }
+        }
+
+        val enrichedTracks = availableTrackTypes.associateWith { type ->
+            enrichPointsWithWPrimeBal(trackPointsMap[type] ?: emptyList())
+        }
+
+        val hrDistribution = if (hrSamples != null && hrThresholds != null) {
+            ZoneDistributionCalculator.calculateHeartRateDistribution(hrSamples, hrThresholds)
+        } else null
+
+        val powerDistribution = if (powerSamples != null && powerThresholds != null) {
+            ZoneDistributionCalculator.calculatePowerDistribution(powerSamples, powerThresholds)
+        } else null
+
+        WorkoutDetailTelemetry(
+            tracks = enrichedTracks,
+            hrZoneDistribution = hrDistribution,
+            powerZoneDistribution = powerDistribution
+        )
     }
 
     private val extremaSensorTypes = arrayOf(
@@ -981,13 +1214,58 @@ class WorkoutRepository private constructor(private val application: Application
                 }
 
                 // Downsample streams for summary
+                val hasAnyAltitude = retainedSamples.any { it.altitude != null && !it.altitude.isNaN() }
                 val sampledAltitudes = mutableListOf<Double>()
                 val sampledDistances = mutableListOf<Double>()
-                for (i in retainedSamples.indices) {
-                    if (i % WorkoutSummariesDatabaseManager.WorkoutSummaries.ENCODING_STEP_SIZE == 0 || i == retainedSamples.lastIndex) {
-                        val s = retainedSamples[i]
-                        sampledAltitudes.add(s.altitude ?: 0.0)
-                        sampledDistances.add((s.distanceTotalM - startSample.distanceTotalM).coerceAtLeast(0.0))
+                if (hasAnyAltitude) {
+                    for (i in retainedSamples.indices) {
+                        if (i % WorkoutSummariesDatabaseManager.WorkoutSummaries.ENCODING_STEP_SIZE == 0 || i == retainedSamples.lastIndex) {
+                            val s = retainedSamples[i]
+                            val alt = s.altitude ?: run {
+                                var prevAlt: Double? = null
+                                var prevDist = 0.0
+                                for (k in i - 1 downTo 0) {
+                                    val a = retainedSamples[k].altitude
+                                    if (a != null && !a.isNaN()) {
+                                        prevAlt = a
+                                        prevDist = retainedSamples[k].distanceTotalM
+                                        break
+                                    }
+                                }
+                                var nextAlt: Double? = null
+                                var nextDist = 0.0
+                                for (k in i + 1 until retainedSamples.size) {
+                                    val a = retainedSamples[k].altitude
+                                    if (a != null && !a.isNaN()) {
+                                        nextAlt = a
+                                        nextDist = retainedSamples[k].distanceTotalM
+                                        break
+                                    }
+                                }
+                                when {
+                                    prevAlt != null && nextAlt != null -> {
+                                        val distSpan = nextDist - prevDist
+                                        if (distSpan > 1e-6) {
+                                            prevAlt + (nextAlt - prevAlt) * ((s.distanceTotalM - prevDist) / distSpan)
+                                        } else {
+                                            prevAlt
+                                        }
+                                    }
+                                    prevAlt != null -> prevAlt
+                                    nextAlt != null -> nextAlt
+                                    else -> 0.0
+                                }
+                            }
+                            sampledAltitudes.add(alt)
+                            sampledDistances.add((s.distanceTotalM - startSample.distanceTotalM).coerceAtLeast(0.0))
+                        }
+                    }
+                } else {
+                    for (i in retainedSamples.indices) {
+                        if (i % WorkoutSummariesDatabaseManager.WorkoutSummaries.ENCODING_STEP_SIZE == 0 || i == retainedSamples.lastIndex) {
+                            val s = retainedSamples[i]
+                            sampledDistances.add((s.distanceTotalM - startSample.distanceTotalM).coerceAtLeast(0.0))
+                        }
                     }
                 }
                 val encodedAltitudes = if (sampledAltitudes.isNotEmpty()) com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils.encodeDoubles(sampledAltitudes) else null
@@ -1109,6 +1387,8 @@ class WorkoutRepository private constructor(private val application: Application
                 Log.e(TAG, "Disk full during crop operation for workout $workoutId", e)
                 reloadWorkoutData(workoutId)
                 Result.failure(e)
+            } catch (ce: CancellationException) {
+                throw ce
             } catch (t: Throwable) {
                 Log.e(TAG, "Unexpected error during crop operation for workout $workoutId", t)
                 reloadWorkoutData(workoutId)
@@ -1155,7 +1435,43 @@ class WorkoutRepository private constructor(private val application: Application
     val exportStatusDataProvider = ExportStatusDataProvider(application)
     val orderedExportTypes = listOf(ExportType.FILE, ExportType.DROPBOX, ExportType.GOOGLE_DRIVE, ExportType.COMMUNITY)
 
-    private var isListLoading = false
+    private val isListLoading = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val deletedDuringLoadIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
+
+    /**
+     * Merges freshly streamed workout entities from local persistence into [_allWorkouts],
+     * strictly excluding sessions deleted via [deleteWorkout] during loading and preserving
+     * active in-memory transient fields (REQ-STB-018.2).
+     */
+    private fun emitMergedWorkouts(loadedWorkouts: List<WorkoutData>) {
+        val deleted = deletedDuringLoadIds.toSet()
+        _allWorkouts.update { currentMemoryList ->
+            val memoryMap = currentMemoryList.associateBy { it.id }
+            val mergedLoaded = loadedWorkouts
+                .filterNot { it.id in deleted }
+                .map { loaded ->
+                    val existing = memoryMap[loaded.id]
+                    if (existing != null) {
+                        loaded.copy(
+                            mapPolyline = if (loaded.mapPolyline.isEmpty()) existing.mapPolyline else loaded.mapPolyline,
+                            encodedAltitudes = if (loaded.encodedAltitudes.isEmpty()) existing.encodedAltitudes else loaded.encodedAltitudes,
+                            encodedDistances = if (loaded.encodedDistances.isEmpty()) existing.encodedDistances else loaded.encodedDistances,
+                            extremaRows = if (loaded.extremaRows.isEmpty()) existing.extremaRows else loaded.extremaRows,
+                            exportStatuses = if (loaded.exportStatuses.isEmpty()) existing.exportStatuses else loaded.exportStatuses
+                        )
+                    } else {
+                        loaded
+                    }
+                }
+            val loadedIds = mergedLoaded.map { it.id }.toSet()
+            val unstreamed = currentMemoryList.filter { it.id !in deleted && it.id !in loadedIds }
+            if (unstreamed.isEmpty()) {
+                mergedLoaded
+            } else {
+                (unstreamed + mergedLoaded).sortedByDescending { it.headerData.startTimeS }
+            }
+        }
+    }
 
     /**
      * Performs a progressive background scan of the entire workout history.
@@ -1167,13 +1483,13 @@ class WorkoutRepository private constructor(private val application: Application
      * 4. Batches are emitted into [allWorkouts] as they are ready, providing immediate feedback.
      */
     suspend fun loadAllWorkouts() {
-        if (isListLoading) {
+        if (!isListLoading.compareAndSet(false, true)) {
             if (DEBUG) Log.d(TAG, "loadAllWorkouts: already in progress, skipping redundant call.")
             return
         }
 
         Log.i(TAG, "loadAllWorkouts: starting optimized progressive streaming load.")
-        isListLoading = true
+        deletedDuringLoadIds.clear()
         try {
             withContext(Dispatchers.IO) {
                 val cursor = summariesManager.getCursorForAllWorkouts()
@@ -1222,36 +1538,46 @@ class WorkoutRepository private constructor(private val application: Application
                             laps = lapsMap
                         )
 
-                        // 3. Map the chunk in memory without cursor seeking (ATT-2309)
+                        // 3. Map the chunk in memory without cursor seeking (ATT-2309 / REQ-STB-018.2)
                         for (snapshot in snapshots) {
-                            val workoutData = mapper.fromSnapshot(snapshot, batchMetadata)
+                            try {
+                                val workoutData = mapper.fromSnapshot(snapshot, batchMetadata)
 
-                            // Add Export Statuses (Fast from memory-only providers if possible)
-                            val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
-                            if (workoutData.fileBaseName != null) {
-                                for (type in orderedExportTypes) {
-                                    val groupData = exportStatusDataProvider.createGroupData(workoutData.fileBaseName, type)
-                                    if (groupData.hasContent) exportStatuses.add(groupData)
+                                // Add Export Statuses (Fast from memory-only providers if possible)
+                                val exportStatuses: MutableList<ExportStatusGroupData> = mutableListOf()
+                                if (workoutData.fileBaseName != null) {
+                                    for (type in orderedExportTypes) {
+                                        try {
+                                            val groupData = exportStatusDataProvider.createGroupData(workoutData.fileBaseName, type)
+                                            if (groupData.hasContent) exportStatuses.add(groupData)
+                                        } catch (e: Exception) {
+                                            Log.w(TAG, "loadAllWorkouts: error creating export status group data for type $type", e)
+                                        }
+                                    }
                                 }
-                            }
 
-                            allLoadedWorkouts.add(workoutData.copy(exportStatuses = exportStatuses))
-                            processedCount++
+                                allLoadedWorkouts.add(workoutData.copy(exportStatuses = exportStatuses))
+                                processedCount++
+                            } catch (e: Exception) {
+                                Log.e(TAG, "loadAllWorkouts: error mapping snapshot for workout ${snapshot.workoutId}, skipping", e)
+                            }
                         }
 
                         // 4. PROGRESSIVE UI PUMP (ATT-346 Style)
                         // Emit updates to provide immediate feedback
                         if (processedCount <= 10 || processedCount % batchSize == 0 || processedCount == totalCount) {
-                            val currentList = allLoadedWorkouts.toList() // Copy for thread safety
                             Log.d(TAG, "Streaming batch to UI: $processedCount items.")
-                            _allWorkouts.value = currentList
+                            emitMergedWorkouts(allLoadedWorkouts)
                         }
                     }
                 }
+                // Unconditional terminal batch publication (REQ-STB-018.2)
+                emitMergedWorkouts(allLoadedWorkouts)
                 Log.i(TAG, "Load complete. Total workouts: ${allLoadedWorkouts.size}")
             }
         } finally {
-            isListLoading = false
+            deletedDuringLoadIds.clear()
+            isListLoading.set(false)
         }
     }
 
@@ -1383,34 +1709,39 @@ class WorkoutRepository private constructor(private val application: Application
     /**
      * Atomically updates a workout session in memory while handling potential race conditions.
      *
-     * Implementation: If the workout is already cached, it applies the [block] transform.
-     * If not, it fetches the session from the database first, ensuring no updates are lost.
+     * Implementation: If the workout is already cached, it applies the [block] transform purely in-place
+     * with zero coroutine launches inside CAS (REQ-STB-018.3). If not, it fetches the session from the
+     * database asynchronously outside CAS retry loops, ensuring pure functional invariants.
      */
     private fun updateWorkoutInMemory(workoutId: Long, block: (WorkoutData) -> WorkoutData) {
-        _allWorkouts.update { currentList ->
-            val index = currentList.indexOfFirst { it.id == workoutId }
-            if (index != -1) {
-                // Workout is already in the list, update it in place
-                currentList.map { if (it.id == workoutId) block(it) else it }
-            } else {
-                // Workout is NOT in the list yet (e.g. background worker finished before UI load)
-                launch(Dispatchers.IO) {
-                    summariesManager.getWorkoutCursor(workoutId).use { cursor ->
-                        if (cursor?.moveToFirst() == true) {
-                            val freshWorkout = mapper.fromCursor(cursor)
-                            val updatedWorkout = block(freshWorkout)
+        val isCached = _allWorkouts.value.any { it.id == workoutId }
+        if (isCached) {
+            _allWorkouts.update { currentList ->
+                val index = currentList.indexOfFirst { it.id == workoutId }
+                if (index != -1) {
+                    currentList.map { if (it.id == workoutId) block(it) else it }
+                } else {
+                    currentList
+                }
+            }
+            return
+        }
 
-                            _allWorkouts.update { list ->
-                                if (list.any { it.id == workoutId }) {
-                                    list.map { if (it.id == workoutId) updatedWorkout else it }
-                                } else {
-                                    (list + updatedWorkout).sortedByDescending { it.headerData.startTimeS }
-                                }
-                            }
+        // Workout is NOT in the list yet (e.g. background worker finished before UI load)
+        launch(Dispatchers.IO) {
+            summariesManager.getWorkoutCursor(workoutId).use { cursor ->
+                if (cursor?.moveToFirst() == true) {
+                    val freshWorkout = mapper.fromCursor(cursor)
+                    val updatedWorkout = block(freshWorkout)
+
+                    _allWorkouts.update { list ->
+                        if (list.any { it.id == workoutId }) {
+                            list.map { if (it.id == workoutId) updatedWorkout else it }
+                        } else {
+                            (list + updatedWorkout).sortedByDescending { it.headerData.startTimeS }
                         }
                     }
                 }
-                currentList
             }
         }
     }
@@ -1475,44 +1806,67 @@ class WorkoutRepository private constructor(private val application: Application
     /**
      * Public accessor to force a reload of a single workout from the database.
      *
-     * Implementation: Fetches the latest summary and triggers surgical updates for
-     * dependent modules (Periods, Clusters) if the workout has just been finalized.
+     * Implementation: Uses a conflated reload pipeline (REQ-STB-018.1). If a reload for [workoutId]
+     * is already active, concurrent reload requests are flagged as dirty rather than dropped,
+     * guaranteeing a sequential re-query pass that catches trailing state transitions
+     * (e.g. TRACKING_FINISHED_INTENT) and triggers lifecycle observers on finalization.
      *
      * @param workoutId The primary key of the session to reload.
      */
     suspend fun reloadWorkoutData(workoutId: Long) {
-        if (!reloadingWorkoutIds.add(workoutId)) {
-            if (DEBUG) Log.d(TAG, "reloadWorkoutData: workoutId=$workoutId already reloading, skipping duplicate pass")
+        val shouldStart = synchronized(activeReloadWorkoutIds) {
+            if (!activeReloadWorkoutIds.add(workoutId)) {
+                dirtyReloadWorkoutIds.add(workoutId)
+                false
+            } else {
+                true
+            }
+        }
+        if (!shouldStart) {
+            if (DEBUG) Log.d(TAG, "reloadWorkoutData: workoutId=$workoutId already reloading, marked dirty for sequential pass")
             return
         }
+
         try {
-            if (DEBUG) Log.i(TAG, "reloadWorkoutData: workoutId=$workoutId")
+            do {
+                if (DEBUG) Log.i(TAG, "reloadWorkoutData: executing pass for workoutId=$workoutId")
 
-            withContext(Dispatchers.IO) {
-                summariesManager.getWorkoutCursor(workoutId).use { cursor ->
-                    if (cursor?.moveToFirst() == true) {
-                        // Get the fresh data from the database.
-                        val freshWorkoutData = mapper.fromCursor(cursor)
-                        
-                        // --- SURGICAL PERIOD UPDATE (ATT-346) & CLUSTER UPDATE (ATT-354 / REQ-MIG-025) ---
-                        val existing = allWorkouts.value.find { it.id == workoutId }
-                        val isLiveSessionFinish = (existing != null && !existing.finished) && freshWorkoutData.finished
-                        val isNewImportOrFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
-                        
-                        if (isNewImportOrFinish) {
-                            PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
+                withContext(Dispatchers.IO) {
+                    summariesManager.getWorkoutCursor(workoutId).use { cursor ->
+                        if (cursor?.moveToFirst() == true) {
+                            // Get the fresh data from the database.
+                            val freshWorkoutData = mapper.fromCursor(cursor)
+                            
+                            // --- SURGICAL PERIOD UPDATE (ATT-346) & CLUSTER UPDATE (ATT-354 / REQ-MIG-025) ---
+                            val existing = _allWorkouts.value.find { it.id == workoutId }
+                            val isLiveSessionFinish = (existing != null && !existing.finished) && freshWorkoutData.finished
+                            val isNewImportOrFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
+                            
+                            if (isNewImportOrFinish) {
+                                PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
+                            }
+
+                            if (isLiveSessionFinish && freshWorkoutData.clusterId != -1L) {
+                                WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
+                            }
+
+                            addOrUpdateWorkout(freshWorkoutData)
                         }
-
-                        if (isLiveSessionFinish && freshWorkoutData.clusterId != -1L) {
-                            WorkoutClusterEngine.getInstance(application).onWorkoutFinished(application, freshWorkoutData)
-                        }
-
-                        addOrUpdateWorkout(freshWorkoutData)
                     }
                 }
-            }
+            } while (synchronized(activeReloadWorkoutIds) {
+                if (dirtyReloadWorkoutIds.remove(workoutId)) {
+                    true
+                } else {
+                    activeReloadWorkoutIds.remove(workoutId)
+                    false
+                }
+            })
         } finally {
-            reloadingWorkoutIds.remove(workoutId)
+            synchronized(activeReloadWorkoutIds) {
+                activeReloadWorkoutIds.remove(workoutId)
+                dirtyReloadWorkoutIds.remove(workoutId)
+            }
         }
     }
 
@@ -1569,11 +1923,10 @@ class WorkoutRepository private constructor(private val application: Application
 
             // 3. Update memory surgically - perform the merge ATOMICALLY inside update
             Log.i(TAG, "update from saveWorkout")
-            var oldWorkout: WorkoutData? = null
+            val oldWorkout = _allWorkouts.value.find { it.id == workoutId }
             _allWorkouts.update { currentList ->
                 currentList.map { current ->
                     if (current.id == workoutId) {
-                        oldWorkout = current
                         current.copy(
                             workoutName = userEditedWorkout.workoutName,
                             sportId = userEditedWorkout.sportId,
@@ -1624,6 +1977,9 @@ class WorkoutRepository private constructor(private val application: Application
      * @param id The unique identifier of the workout to delete.
      */
     fun deleteWorkout(id: Long) {
+        if (isListLoading.get()) {
+            deletedDuringLoadIds.add(id)
+        }
         launch(Dispatchers.IO) {
             // Find the workout name *before* deleting it.
             val workout = _allWorkouts.value.find { it.id == id }
@@ -1633,28 +1989,36 @@ class WorkoutRepository private constructor(private val application: Application
             // Post the detailed progress to the LiveData.
             _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, id))
 
-            // Perform the actual deletion in the database first
-            val success = deletionHelper.deleteWorkout(id)
-            if (success) {
-                // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
-                workout?.let { 
-                    PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
-                    WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it)
-                }
+            try {
+                // Perform the actual deletion in the database first
+                val success = deletionHelper.deleteWorkout(id)
+                if (success) {
+                    if (isListLoading.get()) {
+                        deletedDuringLoadIds.add(id)
+                    }
+                    // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
+                    workout?.let { 
+                        PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
+                        WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it)
+                    }
 
-                // Now, update the in-memory list
-                _allWorkouts.update { currentList ->
-                    currentList.filterNot { it.id == id }
-                }
+                    // Now, update the in-memory list
+                    _allWorkouts.update { currentList ->
+                        currentList.filterNot { it.id == id }
+                    }
 
-                // Post event for UI to react (e.g., close screen)
-                deleteFinishedEvent.postValue(Pair(id, true))
-            } else {
-                deleteFinishedEvent.postValue(Pair(id, true))
+                    // Post event for UI to react (e.g., close screen)
+                    deleteFinishedEvent.postValue(Pair(id, true))
+                } else {
+                    deleteFinishedEvent.postValue(Pair(id, false))
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "deleteWorkout: exception deleting workoutId=$id", e)
+                deleteFinishedEvent.postValue(Pair(id, false))
+            } finally {
+                // Reset the state to Idle when done or if an error occurs.
+                _deletionProgress.postValue(DeletionProgress.Idle)
             }
-
-            // Reset the state to Idle when done or if an error occurs.
-            _deletionProgress.postValue(DeletionProgress.Idle)
         }
     }
 
@@ -1682,15 +2046,17 @@ class WorkoutRepository private constructor(private val application: Application
 
                 val success = deletionHelper.deleteOldWorkouts(daysToKeep, progressCallback)
 
-                // After deleting, reload workouts and resynchronize downstream analytical caches (REQ-DAT-011).
+                // After deleting, reload workouts and resynchronize downstream analytical caches (REQ-DAT-011, REQ-UI-427.4).
                 if (success) {
-                    _deletionProgress.postValue(DeletionProgress.Resyncing)
-                    notificationManager.showResyncNotification()
+                    withContext(NonCancellable) {
+                        _deletionProgress.postValue(DeletionProgress.Resyncing)
+                        notificationManager.showResyncNotification()
 
-                    loadAllWorkouts()
-                    PeriodsRepository.getInstance(application).resyncAllPeriods()
-                    WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false, forceCheckIntegrity = true)
-                    WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)
+                        loadAllWorkouts()
+                        PeriodsRepository.getInstance(application).resyncAllPeriods()
+                        WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false, forceCheckIntegrity = true)
+                        WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)
+                    }
                 }
             } finally {
                 // Reset the state to Idle when done or if an error occurs.

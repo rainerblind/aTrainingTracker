@@ -25,6 +25,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDateTime
@@ -109,17 +110,17 @@ class MapModelsTest {
         assertEquals(3, track.path.size)
 
         // Point 1
-        assertEquals(450.0, track.path[0].altitude, 0.01)
+        assertEquals(450.0, track.path[0].altitude!!, 0.01)
         assertEquals(0.0, track.path[0].distance, 0.01)
         assertEquals(47.50000, track.path[0].latLng.latitude, 0.00001)
         assertEquals(11.00000, track.path[0].latLng.longitude, 0.00001)
 
         // Point 2
-        assertEquals(520.5, track.path[1].altitude, 0.01)
+        assertEquals(520.5, track.path[1].altitude!!, 0.01)
         assertEquals(750.0, track.path[1].distance, 0.01)
 
         // Point 3
-        assertEquals(610.25, track.path[2].altitude, 0.01)
+        assertEquals(610.25, track.path[2].altitude!!, 0.01)
         assertEquals(1850.5, track.path[2].distance, 0.01)
     }
 
@@ -140,9 +141,9 @@ class MapModelsTest {
         val track = workout.toMapTrack()
 
         assertEquals(2, track.path.size)
-        assertEquals(0.0, track.path[0].altitude, 0.001)
+        assertNull(track.path[0].altitude)
         assertEquals(0.0, track.path[0].distance, 0.001)
-        assertEquals(0.0, track.path[1].altitude, 0.001)
+        assertNull(track.path[1].altitude)
         assertEquals(0.0, track.path[1].distance, 0.001)
     }
 
@@ -181,13 +182,13 @@ class MapModelsTest {
         val track = workout.toMapTrack()
 
         assertEquals(3, track.path.size)
-        assertEquals(500.0, track.path[0].altitude, 0.01)
+        assertEquals(500.0, track.path[0].altitude!!, 0.01)
         assertEquals(0.0, track.path[0].distance, 0.01)
 
-        assertEquals(0.0, track.path[1].altitude, 0.01) // Padded with 0.0
+        assertNull(track.path[1].altitude) // Padded with null
         assertEquals(300.0, track.path[1].distance, 0.01)
 
-        assertEquals(0.0, track.path[2].altitude, 0.01) // Padded with 0.0
+        assertNull(track.path[2].altitude) // Padded with null
         assertEquals(0.0, track.path[2].distance, 0.01) // Padded with 0.0
     }
 

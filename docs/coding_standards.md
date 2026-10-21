@@ -150,9 +150,9 @@ This document serves as the authoritative living source of truth for software en
   * Enabling default return values causes unmocked Android framework methods to silently return `null`, `0`, or `false`, masking severe regressions, null pointer exceptions, and incorrect control flow.
   * Every Android SDK dependency in unit tests must be explicitly mocked (e.g. via MockK, Robolectric, or clean architectural abstraction).
 
-### 5.2 Two-Tier Unit Test Execution Strategy: Per-Ticket vs Sprint Integration Gate (Rule 60 — ATT-4465)
+### 5.2 Two-Tier Unit Test Execution Strategy: Per-Ticket vs Sprint Integration Gate (Rules 60 & 61 — ATT-4465, ATT-4520)
 * **Tier 1 — Per-Ticket Verification (Stages 4 & 5, ~10–20 Seconds)**:
-  * During Stage 4 construction and Stage 5 ticket verification, execute targeted unit and contract test classes covering all modified and directly adjacent packages:
+  * During Stage 4 construction and Stage 5 ticket verification, execute incremental targeted unit and contract test classes covering all modified and directly adjacent packages (**never** pass `--rerun-tasks`, which forces a 4+ minute full recompilation):
     ```bash
     ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.specific.*"
     ```
@@ -167,3 +167,10 @@ This document serves as the authoritative living source of truth for software en
     ./gradlew testDebugUnitTest
     ```
   * Verify 100% pass rate across all 3,660+ unit tests across all project modules. Because each ticket is squashed into a single atomic commit on `sprint/<SPRINT_NAME>` (Core Rule 8), any cross-package regression caught at the Sprint Integration Gate can be pinpointed immediately.
+
+### 5.3 Caller-Site Integration Verification for Optional Default Parameters (Rule 61 — ATT-4015 / ATT-4520)
+* **No Unwired Default Parameter Fallbacks**:
+  * Whenever a shared utility, calculator, or repository method adds an optional parameter with a default value (e.g., `lastSegmentIndex: Int? = null` in `PolylineProgressTracker.projectLocation`) to fix a production behavior defect, Stage 3 (`Implementation Plan`), Stage 4 (`Implementation`), and Gate 4 Review **MUST** audit and wire **all intended production callers** to pass the stateful parameter.
+  * Unit-testing only the utility method while leaving production call sites on the default `null` fallback leaves the bug active at runtime.
+* **Connected User Device Data Protection (`adb uninstall` / `pm clear` Prohibition)**:
+  * Agents **MUST NEVER** run `adb uninstall` or `adb shell pm clear` on `com.atrainingtracker` or `com.atrainingtracker.debug` on a connected user device without explicit human confirmation naming the exact package and first pulling a verified `.attbackup` archive to the host machine.

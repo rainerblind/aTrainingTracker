@@ -497,11 +497,26 @@ class WorkoutDataMapper(
     /**
      * DTO for batch-loaded metadata (ATT-359).
      */
+    data class SportTypeInfo(
+        val bSportType: BSportType,
+        val sportName: String,
+        val stravaSportName: String?
+    )
+
+    data class AthleteMetricsInfo(
+        val effectiveFtpWatts: Double,
+        val effectiveWeightKg: Double
+    )
+
     data class BatchMetadata(
         val extrema: Map<Long, List<WorkoutSummariesDatabaseManager.ExtremaRecord>>,
         val stravaData: Map<String, String>,
         val clusterNames: Map<Long, String> = emptyMap(),
-        val laps: Map<Long, List<LapData>> = emptyMap()
+        val laps: Map<Long, List<LapData>> = emptyMap(),
+        val sportTypes: Map<Long, SportTypeInfo> = emptyMap(),
+        val equipmentNames: Map<Long, String> = emptyMap(),
+        val locationNames: Map<LatLng, String> = emptyMap(),
+        val athleteMetrics: Map<Long, AthleteMetricsInfo> = emptyMap()
     )
 
     /**
@@ -620,10 +635,17 @@ class WorkoutDataMapper(
      * Enriches an in-memory [RawCursorSnapshot] with pre-fetched batch metadata (ATT-359, ATT-2309).
      * Eliminates N+1 database queries without requiring cursor seeking.
      */
-    fun fromSnapshot(snapshot: RawCursorSnapshot, batch: BatchMetadata): WorkoutData {
-        val bSportType = sportTypeDatabaseManager.getBSportType(snapshot.sportId)
-        val sportName = sportTypeDatabaseManager.getUIName(snapshot.sportId)
-        val equipmentName = if (snapshot.equipmentId > 0) equipmentDbHelper.getEquipmentNameFromId(snapshot.equipmentId) else null
+    fun fromSnapshot(
+        snapshot: RawCursorSnapshot,
+        batch: BatchMetadata,
+        reconcile: Boolean = false
+    ): WorkoutData {
+        val sportInfo = batch.sportTypes[snapshot.sportId]
+        val bSportType = sportInfo?.bSportType ?: sportTypeDatabaseManager.getBSportType(snapshot.sportId)
+        val sportName = sportInfo?.sportName ?: sportTypeDatabaseManager.getUIName(snapshot.sportId)
+        val equipmentName = if (snapshot.equipmentId > 0) {
+            batch.equipmentNames[snapshot.equipmentId] ?: equipmentDbHelper.getEquipmentNameFromId(snapshot.equipmentId)
+        } else null
 
         val stravaActivityData = if (snapshot.fileBaseName != null) batch.stravaData[snapshot.fileBaseName] else null
         val workoutExtrema = batch.extrema[snapshot.workoutId] ?: emptyList()
@@ -636,19 +658,35 @@ class WorkoutDataMapper(
         val rawMaxDispLatLng = getBatchPos(SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
         val rawMaxDisplacement = getBatchVal(SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
 
-        val resolvedApex = resolveAuthoritativeApex(snapshot.workoutId, startLatLng, snapshot.mapPolyline, rawMaxDisplacement, rawMaxDispLatLng)
+        val resolvedApex = if (reconcile) {
+            resolveAuthoritativeApex(snapshot.workoutId, startLatLng, snapshot.mapPolyline, rawMaxDisplacement, rawMaxDispLatLng)
+        } else {
+            Pair(rawMaxDisplacement, rawMaxDispLatLng)
+        }
         val maxDisplacement = resolvedApex.first
         val maxDispLatLng = resolvedApex.second
 
         val rawMinAltitude = getBatchVal(SensorType.ALTITUDE, ExtremaType.MIN)
         val rawMaxAltitude = getBatchVal(SensorType.ALTITUDE, ExtremaType.MAX)
-        val resolvedAltitudeExtrema = reconcileAltitudeExtrema(snapshot.workoutId, snapshot.encodedAltitudes, rawMinAltitude, rawMaxAltitude)
+        val resolvedAltitudeExtrema = if (reconcile) {
+            reconcileAltitudeExtrema(snapshot.workoutId, snapshot.encodedAltitudes, rawMinAltitude, rawMaxAltitude)
+        } else {
+            Pair(rawMinAltitude, rawMaxAltitude)
+        }
         val minAltitude = resolvedAltitudeExtrema.first
         val maxAltitude = resolvedAltitudeExtrema.second
 
         val clusterName = batch.clusterNames[snapshot.clusterId]
-        val startLocationName = resolveLocationName(startLatLng)
-        val endLocationName = resolveLocationName(endLatLng)
+        val startLocationName = if (startLatLng != null && batch.locationNames.containsKey(startLatLng)) {
+            batch.locationNames[startLatLng]
+        } else {
+            resolveLocationName(startLatLng)
+        }
+        val endLocationName = if (endLatLng != null && batch.locationNames.containsKey(endLatLng)) {
+            batch.locationNames[endLatLng]
+        } else {
+            resolveLocationName(endLatLng)
+        }
 
         val avgPowerWattsBatch = getBatchVal(SensorType.POWER, ExtremaType.AVG)
         val maxPowerWattsBatch = getBatchVal(SensorType.POWER, ExtremaType.MAX)
@@ -666,6 +704,7 @@ class WorkoutDataMapper(
             avgSpeedMps = getBatchVal(SensorType.SPEED_mps, ExtremaType.AVG) ?: snapshot.avgSpeedMps,
             bSportType = bSportType
         )
+        val athleteMetric = batch.athleteMetrics[snapshot.workoutId]
         val powerSummary = resolvePowerTrainingSummary(
             npEnd = getBatchVal(SensorType.NORMALIZED_POWER, ExtremaType.END),
             npAvg = getBatchVal(SensorType.NORMALIZED_POWER, ExtremaType.AVG),
@@ -682,7 +721,19 @@ class WorkoutDataMapper(
             avgPowerWatts = avgPowerWattsBatch,
             maxPowerWatts = maxPowerWattsBatch,
             activeTimeSec = snapshot.activeTimeSec,
-            startTimeS = snapshot.startTimeS
+            startTimeS = snapshot.startTimeS,
+            effectiveFtpWatts = athleteMetric?.effectiveFtpWatts ?: try {
+                com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveFtpAt(
+                    context,
+                    snapshot.startTimeS * 1000L
+                )?.toDouble() ?: 0.0
+            } catch (_: Throwable) { 0.0 },
+            effectiveWeightKg = athleteMetric?.effectiveWeightKg ?: try {
+                com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveWeightKgAt(
+                    context,
+                    snapshot.startTimeS * 1000L
+                )?.toDouble() ?: 0.0
+            } catch (_: Throwable) { 0.0 }
         )
 
         return WorkoutData(
@@ -751,7 +802,7 @@ class WorkoutDataMapper(
             goal = snapshot.goal,
             method = snapshot.method,
 
-            stravaSportName = sportTypeDatabaseManager.getStravaName(snapshot.sportId),
+            stravaSportName = sportInfo?.stravaSportName ?: sportTypeDatabaseManager.getStravaName(snapshot.sportId),
             stravaActivityData = stravaActivityData,
 
             extremaRows = sensorsToCheck.flatMap { sensorType ->
@@ -782,8 +833,8 @@ class WorkoutDataMapper(
      * Optimized mapping using pre-fetched batch metadata (ATT-359).
      * Eliminates N+1 database queries. Delegates to [readCursorSnapshot] and [fromSnapshot].
      */
-    fun fromCursor(cursor: Cursor, batch: BatchMetadata): WorkoutData {
-        return fromSnapshot(readCursorSnapshot(cursor), batch)
+    fun fromCursor(cursor: Cursor, batch: BatchMetadata, reconcile: Boolean = false): WorkoutData {
+        return fromSnapshot(readCursorSnapshot(cursor), batch, reconcile)
     }
 
     private fun createExtremaRow(
@@ -897,7 +948,7 @@ class WorkoutDataMapper(
             )
         } catch (e: ParseException) {
             Log.e("WorkoutHeaderProvider", "Failed to parse date string: $startTimeString", e)
-            DateTimeResult(context.getString(R.string.invalid_date), "", 0L, java.time.LocalDateTime.now())
+            DateTimeResult(context.getString(R.string.invalid_date), "", 0L, java.time.LocalDateTime.ofInstant(java.time.Instant.EPOCH, java.time.ZoneId.systemDefault()))
         }
     }
 
@@ -987,11 +1038,27 @@ class WorkoutDataMapper(
             val streamMin = streamPoints.minOrNull() ?: return Pair(recordedMin, recordedMax)
             val streamMax = streamPoints.maxOrNull() ?: return Pair(recordedMin, recordedMax)
 
+            val nonZeroPoints = streamPoints.filter { it != 0.0 && !it.isNaN() }
+            val effectiveStreamMin = if (streamMin == 0.0 && recordedMin != null && recordedMin > 15.0) {
+                if (nonZeroPoints.isEmpty()) {
+                    recordedMin
+                } else {
+                    val nonZeroMin = nonZeroPoints.min()
+                    if (nonZeroMin > 15.0) {
+                        minOf(recordedMin, nonZeroMin)
+                    } else {
+                        streamMin
+                    }
+                }
+            } else {
+                streamMin
+            }
+
             var needUpdate = false
 
-            val authoritativeMin = if (recordedMin == null || recordedMin < streamMin - 15.0 || recordedMin > streamMin) {
+            val authoritativeMin = if (recordedMin == null || recordedMin < effectiveStreamMin - 15.0 || recordedMin > effectiveStreamMin) {
                 needUpdate = true
-                streamMin
+                effectiveStreamMin
             } else {
                 recordedMin
             }

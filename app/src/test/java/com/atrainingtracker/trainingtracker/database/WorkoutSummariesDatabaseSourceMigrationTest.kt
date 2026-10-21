@@ -84,8 +84,8 @@ class WorkoutSummariesDatabaseSourceMigrationTest {
     }
 
     @Test
-    fun testDbVersion_is25() {
-        assertEquals("DB_VERSION must be 25", 25, WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_VERSION)
+    fun testDbVersion_is26() {
+        assertEquals("DB_VERSION must be 26", 26, WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_VERSION)
     }
 
     @Test
@@ -136,6 +136,29 @@ class WorkoutSummariesDatabaseSourceMigrationTest {
         verify {
             mockDb.execSQL(match {
                 it.contains("ALTER TABLE ${WorkoutSummaries.TABLE_EXTREMA_VALUES} ADD COLUMN ${WorkoutSummaries.COUNT} int")
+            })
+        }
+    }
+
+    @Test
+    fun testOnUpgrade_fromV25ToV26_addsIndexes() {
+        val helper = WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper(mockContext)
+
+        helper.onUpgrade(mockDb, 25, 26)
+
+        verify {
+            mockDb.execSQL(match {
+                it.contains("CREATE INDEX IF NOT EXISTS idx_extrema_workout_sensor_extrema")
+            })
+        }
+        verify {
+            mockDb.execSQL(match {
+                it.contains("CREATE INDEX IF NOT EXISTS idx_summaries_cluster_id")
+            })
+        }
+        verify {
+            mockDb.execSQL(match {
+                it.contains("CREATE INDEX IF NOT EXISTS idx_summaries_file_base_name_nocase")
             })
         }
     }

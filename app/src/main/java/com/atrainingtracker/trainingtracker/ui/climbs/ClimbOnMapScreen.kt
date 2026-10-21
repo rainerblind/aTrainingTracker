@@ -280,8 +280,9 @@ fun ClimbDetails(
                 isPrimary = true
             )
 
-            val minAlt = climb.pathPoints.minOfOrNull { it.altitude }
-            val maxAlt = climb.pathPoints.maxOfOrNull { it.altitude }
+            val nonNullAlts = climb.pathPoints.mapNotNull { it.altitude }
+            val minAlt = nonNullAlts.minOrNull()
+            val maxAlt = nonNullAlts.maxOrNull()
             if (minAlt != null && maxAlt != null) {
                 VerticalClimbDivider()
                 MetricItem(

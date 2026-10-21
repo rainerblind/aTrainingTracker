@@ -21,7 +21,10 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 import android.content.Context
 import android.database.Cursor
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
@@ -513,5 +516,48 @@ class WorkoutDataMappingSymmetryTest {
         assertEquals(900.0, fallbackSummary.workKj!!, 1e-6)
         assertEquals(250.0 / 75.0, fallbackSummary.avgPowerToWeight!!, 1e-6)
         assertEquals(500.0 / 75.0, fallbackSummary.maxPowerToWeight!!, 1e-6)
+    }
+
+    @Test
+    fun testTST_DAT_028_1_expandedBatchMetadata_and_nonReconcilingMode_zeroDbWrites() {
+        val cursor = createMockCursor(sourceString = "TCX", raceInt = 1)
+        val snapshot = mapper.readCursorSnapshot(cursor)
+
+        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+            extrema = emptyMap(),
+            stravaData = mapOf("2026-09-09-10-02-00" to "StravaJSON"),
+            clusterNames = mapOf(42L to "Morning Loops"),
+            laps = emptyMap(),
+            sportTypes = mapOf(
+                2L to WorkoutDataMapper.SportTypeInfo(
+                    bSportType = BSportType.RUN,
+                    sportName = "Trail Run",
+                    stravaSportName = "Run"
+                )
+            ),
+            equipmentNames = mapOf(10L to "Speedcross 5"),
+            locationNames = mapOf(com.google.android.gms.maps.model.LatLng(48.0, 11.5) to "Home Trail"),
+            athleteMetrics = mapOf(
+                5023L to WorkoutDataMapper.AthleteMetricsInfo(
+                    effectiveFtpWatts = 280.0,
+                    effectiveWeightKg = 72.0
+                )
+            )
+        )
+
+        // 1. Map via fromSnapshot with reconcile = false
+        val mappedData = mapper.fromSnapshot(snapshot, batchMetadata, reconcile = false)
+
+        // Verify batch pre-fetched metadata was consumed without querying single-item DBs
+        assertEquals("Trail Run", mappedData.sportName)
+        assertEquals(BSportType.RUN, mappedData.bSportType)
+        assertEquals("Run", mappedData.stravaSportName)
+        assertEquals("Speedcross 5", mappedData.equipmentName)
+        assertEquals("Morning Loops", mappedData.clusterName)
+
+        // Verify zero SQLite writes were executed on extrema database during mapping
+        io.mockk.verify(exactly = 0) {
+            mockSummariesDb.updateExtremaValue(any(), any(), any(), any(), any())
+        }
     }
 }

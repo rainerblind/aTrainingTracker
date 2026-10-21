@@ -259,7 +259,7 @@ class LiveClimbsRepositoryTest {
         assertEquals(LiveClimbStatus.ON_CLIMB, live25!!.status)
         assertEquals(0.125f, live25.currentProgressFraction, 0.01f)
         assertEquals(875.0, live25.distanceToSummit, 5.0)
-        assertEquals(512.5, live25.climb.pathPoints.first().altitude + (live25.climb.pathPoints[1].altitude - live25.climb.pathPoints.first().altitude) * 0.25, 0.1)
+        assertEquals(512.5, live25.climb.pathPoints.first().altitude!! + (live25.climb.pathPoints[1].altitude!! - live25.climb.pathPoints.first().altitude!!) * 0.25, 0.1)
         assertEquals(87.5, live25.remainingElevationGain, 1.0)
         assertEquals(10.0, live25.currentGradePercent, 0.1)
 

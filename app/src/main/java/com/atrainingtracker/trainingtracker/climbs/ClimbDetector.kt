@@ -56,30 +56,31 @@ object ClimbDetector {
         routeId: Long? = null,
         context: Context? = null
     ): List<Climb> {
-        if (points.size < 2) return emptyList()
+        val validPoints = points.filter { it.altitude != null }
+        if (validPoints.size < 2) return emptyList()
 
         val climbs = mutableListOf<Climb>()
         var i = 0
 
-        while (i < points.size - 1) {
+        while (i < validPoints.size - 1) {
             // Find start of ascent (where altitude starts increasing)
-            if (points[i + 1].altitude <= points[i].altitude) {
+            if (validPoints[i + 1].altitude!! <= validPoints[i].altitude!!) {
                 i++
                 continue
             }
 
             val startIdx = i
             var peakIdx = i + 1
-            var maxAlt = points[startIdx].altitude
+            var maxAlt = validPoints[startIdx].altitude!!
             var dipDescent = 0.0
             var dipDistance = 0.0
             var j = i + 1
 
-            while (j < points.size) {
-                val currentAlt = points[j].altitude
-                val prevAlt = points[j - 1].altitude
+            while (j < validPoints.size) {
+                val currentAlt = validPoints[j].altitude!!
+                val prevAlt = validPoints[j - 1].altitude!!
                 val deltaAlt = currentAlt - prevAlt
-                val deltaDist = points[j].distance - points[j - 1].distance
+                val deltaDist = validPoints[j].distance - validPoints[j - 1].distance
 
                 if (currentAlt > maxAlt) {
                     // New peak reached within climb
@@ -103,12 +104,12 @@ object ClimbDetector {
             }
 
             // Evaluate candidate from startIdx to peakIdx
-            val dist = points[peakIdx].distance - points[startIdx].distance
-            val gain = points[peakIdx].altitude - points[startIdx].altitude
+            val dist = validPoints[peakIdx].distance - validPoints[startIdx].distance
+            val gain = validPoints[peakIdx].altitude!! - validPoints[startIdx].altitude!!
             val avgGrade = if (dist > 0) (gain / dist) * 100.0 else 0.0
 
             if (dist >= minLengthMeters && gain >= minGainMeters && avgGrade >= minGradePercent) {
-                val climbPoints = points.subList(startIdx, peakIdx + 1)
+                val climbPoints = validPoints.subList(startIdx, peakIdx + 1)
                 val maxGrade = calculateMaxGrade(climbPoints)
                 val score = dist * avgGrade
                 val category = ClimbCategory.fromScore(score)
@@ -121,10 +122,10 @@ object ClimbDetector {
                     Climb(
                         name = name,
                         routeId = routeId,
-                        startLat = points[startIdx].latLng.latitude,
-                        startLng = points[startIdx].latLng.longitude,
-                        endLat = points[peakIdx].latLng.latitude,
-                        endLng = points[peakIdx].latLng.longitude,
+                        startLat = validPoints[startIdx].latLng.latitude,
+                        startLng = validPoints[startIdx].latLng.longitude,
+                        endLat = validPoints[peakIdx].latLng.latitude,
+                        endLng = validPoints[peakIdx].latLng.longitude,
                         distanceMeters = dist,
                         elevationGainMeters = gain,
                         avgGradePercent = avgGrade,
@@ -150,8 +151,10 @@ object ClimbDetector {
         if (points.size < 2) return 0.0
         var maxGrade = 0.0
         for (k in 0 until points.size - 1) {
+            val altNext = points[k + 1].altitude ?: continue
+            val altCurr = points[k].altitude ?: continue
             val dDist = points[k + 1].distance - points[k].distance
-            val dAlt = points[k + 1].altitude - points[k].altitude
+            val dAlt = altNext - altCurr
             if (dDist > 5.0 && dAlt > 0) {
                 val grade = (dAlt / dDist) * 100.0
                 if (grade > maxGrade) {

@@ -6,6 +6,10 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlin.math.exp
 
 /**
@@ -384,6 +388,63 @@ class PowerPhysiologyCalculatorTest {
         assertEquals(AcwrZone.SWEET_SPOT, PowerPhysiologyCalculator.classifyAcwrZone(1.05))
         assertEquals(AcwrZone.HIGH_LOAD_CAUTION, PowerPhysiologyCalculator.classifyAcwrZone(1.40))
         assertEquals(AcwrZone.DANGER_ZONE, PowerPhysiologyCalculator.classifyAcwrZone(1.65))
+    }
+
+    @Test
+    fun computePerformanceManagementChart_localTimezoneBucketsLateWorkoutIntoLocalCalendarDay() {
+        // TST-PER-021.3 (REQ-PER-015.3)
+        val berlinZone = ZoneId.of("Europe/Berlin")
+
+        // 2026-07-15 00:30:00 CEST (UTC+2 in summer) -> 2026-07-14 22:30:00 UTC
+        val localDateTime = LocalDateTime.of(2026, 7, 15, 0, 30, 0)
+        val sampleMs = localDateTime.atZone(berlinZone).toInstant().toEpochMilli()
+        val expectedLocalEpochDay = LocalDate.of(2026, 7, 15).toEpochDay()
+        val utcEpochDay = Instant.ofEpochMilli(sampleMs).atZone(ZoneId.of("UTC")).toLocalDate().toEpochDay()
+
+        assertEquals("UTC epoch day must be the prior day (2026-07-14)", expectedLocalEpochDay - 1L, utcEpochDay)
+
+        val sample = WorkoutTrainingLoadSample(
+            timestampMs = sampleMs,
+            activeTimeSeconds = 3600,
+            powerTss = 75.0
+        )
+
+        // Evaluate PMC using Europe/Berlin zone
+        val pmc = PowerPhysiologyCalculator.computePerformanceManagementChart(
+            workoutSamples = listOf(sample),
+            nowMs = sampleMs + 3600_000L,
+            zoneId = berlinZone
+        )
+
+        assertEquals(1, pmc.dailyPoints.size)
+        val point = pmc.dailyPoints.first()
+        assertEquals("Sample must be bucketed into Europe/Berlin local calendar day (2026-07-15)", expectedLocalEpochDay, point.dayEpochIndex)
+        assertEquals(75.0, point.dailyTss, 1e-4)
+
+        // Test America/New_York (UTC-4 in summer): 2026-07-15 21:00:00 EDT -> 2026-07-16 01:00:00 UTC
+        val nyZone = ZoneId.of("America/New_York")
+        val nyLocalDt = LocalDateTime.of(2026, 7, 15, 21, 0, 0)
+        val nySampleMs = nyLocalDt.atZone(nyZone).toInstant().toEpochMilli()
+        val nyExpectedLocalEpochDay = LocalDate.of(2026, 7, 15).toEpochDay()
+        val nyUtcEpochDay = Instant.ofEpochMilli(nySampleMs).atZone(ZoneId.of("UTC")).toLocalDate().toEpochDay()
+
+        assertEquals("UTC epoch day must be the next day (2026-07-16)", nyExpectedLocalEpochDay + 1L, nyUtcEpochDay)
+
+        val nySample = WorkoutTrainingLoadSample(
+            timestampMs = nySampleMs,
+            activeTimeSeconds = 3600,
+            powerTss = 85.0
+        )
+
+        val nyPmc = PowerPhysiologyCalculator.computePerformanceManagementChart(
+            workoutSamples = listOf(nySample),
+            nowMs = nySampleMs + 3600_000L,
+            zoneId = nyZone
+        )
+
+        assertEquals(1, nyPmc.dailyPoints.size)
+        assertEquals("Sample must be bucketed into America/New_York local calendar day (2026-07-15)", nyExpectedLocalEpochDay, nyPmc.dailyPoints.first().dayEpochIndex)
+        assertEquals(85.0, nyPmc.dailyPoints.first().dailyTss, 1e-4)
     }
 }
 

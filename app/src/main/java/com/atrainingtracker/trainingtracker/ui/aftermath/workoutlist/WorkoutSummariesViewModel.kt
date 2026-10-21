@@ -49,7 +49,9 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class WorkoutSortOrder(@StringRes override val labelResId: Int) : MappableSortOrder {
     DATE(R.string.sort_date),
@@ -256,7 +258,9 @@ class WorkoutSummariesViewModel(application: Application) :
      */
     fun executeDeleteOldWorkouts(daysToKeep: Int) {
         viewModelScope.launch {
-            workoutRepo.deleteOldWorkouts(daysToKeep)
+            withContext(NonCancellable) {
+                workoutRepo.deleteOldWorkouts(daysToKeep)
+            }
         }
     }
 

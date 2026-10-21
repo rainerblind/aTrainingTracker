@@ -133,7 +133,7 @@ class TuningFormControlsTest {
     }
 
     @Test
-    fun testSubordinateTuningToggleItem_appliesDownscale0_6fCompactHeightAndSecondaryColors() {
+    fun testSubordinateTuningToggleItem_appliesDownscale0_6fCompactHeightAndLighterPrimaryAlphaColors() {
         val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt")
         val content = file.readText()
 
@@ -146,9 +146,9 @@ class TuningFormControlsTest {
             content.contains(".height(24.dp)")
         )
         assertTrue(
-            "SubordinateTuningToggleItem must style Switch with secondary color tokens",
-            content.contains("checkedThumbColor = MaterialTheme.colorScheme.onSecondary") &&
-                    content.contains("checkedTrackColor = MaterialTheme.colorScheme.secondary")
+            "SubordinateTuningToggleItem must style Switch with lighter primary alpha color tokens (ATT-4513)",
+            content.contains("checkedThumbColor = MaterialTheme.colorScheme.primary") &&
+                    content.contains("checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)")
         )
         assertTrue(
             "SubordinateTuningToggleItem must use bodySmall typography and onSurfaceVariant color",

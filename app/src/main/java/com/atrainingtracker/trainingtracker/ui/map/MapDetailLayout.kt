@@ -174,24 +174,24 @@ fun MapDetailLayout(
                 val activeIndex = activeScrubPath.indexOf(activeScrubPoint).coerceAtLeast(0)
                 val pLeft = activeScrubPath[activeIndex]
                 val pRight = activeScrubPath.getOrNull(activeIndex + 1)
-                if (pRight != null && pRight.timeSec > pLeft.timeSec) {
+                if (pRight != null && pRight.timeSec > pLeft.timeSec && pLeft.altitude != null && pRight.altitude != null) {
                     val factor = ((selectedDistance!! - pLeft.timeSec) / (pRight.timeSec - pLeft.timeSec).toDouble()).coerceIn(0.0, 1.0)
                     pLeft.altitude + factor * (pRight.altitude - pLeft.altitude)
                 } else {
-                    pLeft.altitude
+                    pLeft.altitude ?: pRight?.altitude
                 }
             } else {
                 val activeIndex = activeScrubPath.indexOfLast { it.distance <= selectedDistance!! }.coerceAtLeast(0)
                 val pLeft = activeScrubPath[activeIndex]
                 val pRight = activeScrubPath.getOrNull(activeIndex + 1)
-                if (pRight != null && pRight.distance > pLeft.distance) {
+                if (pRight != null && pRight.distance > pLeft.distance && pLeft.altitude != null && pRight.altitude != null) {
                     val factor = ((selectedDistance!! - pLeft.distance) / (pRight.distance - pLeft.distance)).coerceIn(0.0, 1.0)
                     pLeft.altitude + factor * (pRight.altitude - pLeft.altitude)
                 } else {
-                    pLeft.altitude
+                    pLeft.altitude ?: pRight?.altitude
                 }
             }
-        } else 0.0
+        } else null
     }
 
     val scrubbingOverlay: @Composable BoxScope.() -> Unit = {

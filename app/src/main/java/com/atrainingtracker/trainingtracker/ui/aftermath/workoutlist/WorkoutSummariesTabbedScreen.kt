@@ -36,9 +36,12 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,7 +52,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -243,6 +249,17 @@ fun WorkoutSummariesTabbedScreen(
         workouts.find { it.id == id }
     }
 
+    // Process-death and configuration change restoration (REQ-UI-427.2)
+    LaunchedEffect(selectedWorkoutIdForDetails, selectedWorkoutForDetails) {
+        if (selectedWorkoutForDetails != null) {
+            val currentTracks = trackOnMapViewModel.uiState.value.tracks
+            val alreadyLoaded = currentTracks.any { it.id == selectedWorkoutForDetails.id }
+            if (!alreadyLoaded) {
+                trackOnMapViewModel.loadAftermathData(selectedWorkoutForDetails)
+            }
+        }
+    }
+
     Scaffold(
         modifier = modifier,
         snackbarHost = {
@@ -346,20 +363,34 @@ fun WorkoutSummariesTabbedScreen(
                 )
             }
 
-            if (selectedWorkoutIdForEdit != null) {
-                val app = context.applicationContext as Application
-                val editViewModel: EditWorkoutViewModel = viewModel(
-                    key = "edit_workout_$selectedWorkoutIdForEdit",
-                    factory = EditWorkoutViewModelFactory(app, selectedWorkoutIdForEdit!!)
-                )
-
-                EditWorkoutScreen(
-                    viewModel = editViewModel,
-                    onBack = {
-                        selectedWorkoutIdForEdit = null
-                        WorkoutNavigationEvents.reset()
+            val editWorkoutId = selectedWorkoutIdForEdit
+            if (editWorkoutId != null) {
+                key(editWorkoutId) {
+                    val editStoreOwner = remember(editWorkoutId) {
+                        object : ViewModelStoreOwner {
+                            override val viewModelStore = ViewModelStore()
+                        }
                     }
-                )
+                    DisposableEffect(editStoreOwner) {
+                        onDispose {
+                            editStoreOwner.viewModelStore.clear()
+                        }
+                    }
+                    CompositionLocalProvider(LocalViewModelStoreOwner provides editStoreOwner) {
+                        val app = context.applicationContext as Application
+                        val editViewModel: EditWorkoutViewModel = viewModel(
+                            factory = EditWorkoutViewModelFactory(app, editWorkoutId)
+                        )
+
+                        EditWorkoutScreen(
+                            viewModel = editViewModel,
+                            onBack = {
+                                selectedWorkoutIdForEdit = null
+                                WorkoutNavigationEvents.reset()
+                            }
+                        )
+                    }
+                }
             }
         }
     }

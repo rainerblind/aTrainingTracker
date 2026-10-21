@@ -57,14 +57,48 @@ object ElevationSmoothingMath {
     ): DoubleArray {
         val n = pathPoints.size
         if (n == 0) return DoubleArray(0)
-        if (n == 1) return doubleArrayOf(pathPoints[0].altitude)
+        if (n == 1) return doubleArrayOf(pathPoints[0].altitude ?: 0.0)
+
+        val hasAnyNonNull = pathPoints.any { it.altitude != null && !it.altitude.isNaN() }
+        if (!hasAnyNonNull) {
+            return DoubleArray(n) { 0.0 }
+        }
 
         val distances = DoubleArray(n)
         val altitudes = DoubleArray(n)
+
+        var lastValidIdx = -1
         for (idx in 0 until n) {
-            val pt = pathPoints[idx]
-            distances[idx] = pt.distance
-            altitudes[idx] = pt.altitude
+            distances[idx] = pathPoints[idx].distance
+            val alt = pathPoints[idx].altitude
+            if (alt != null && !alt.isNaN()) {
+                altitudes[idx] = alt
+                if (lastValidIdx == -1) {
+                    for (k in 0 until idx) {
+                        altitudes[k] = alt
+                    }
+                } else if (idx > lastValidIdx + 1) {
+                    val d0 = distances[lastValidIdx]
+                    val a0 = altitudes[lastValidIdx]
+                    val d1 = distances[idx]
+                    val a1 = alt
+                    val dSpan = d1 - d0
+                    for (k in (lastValidIdx + 1) until idx) {
+                        altitudes[k] = if (dSpan > 1e-6) {
+                            a0 + (a1 - a0) * ((distances[k] - d0) / dSpan)
+                        } else {
+                            a0
+                        }
+                    }
+                }
+                lastValidIdx = idx
+            }
+        }
+        if (lastValidIdx != -1 && lastValidIdx < n - 1) {
+            val lastAlt = altitudes[lastValidIdx]
+            for (k in (lastValidIdx + 1) until n) {
+                altitudes[k] = lastAlt
+            }
         }
 
         val result = DoubleArray(n)

@@ -134,8 +134,9 @@ fun ClimbDetailElevationProfile(
 
         val startDist = pathPoints.first().distance
         val totalDist = (pathPoints.last().distance - startDist).coerceAtLeast(1.0)
-        val minAlt = pathPoints.minOf { it.altitude }
-        val maxAlt = pathPoints.maxOf { it.altitude }
+        val nonNullAlts = pathPoints.mapNotNull { it.altitude }
+        val minAlt = nonNullAlts.minOrNull() ?: 0.0
+        val maxAlt = nonNullAlts.maxOrNull() ?: 10.0
         val altSpan = (maxAlt - minAlt).coerceAtLeast(10.0)
 
         val topPadding = 8f
@@ -143,15 +144,17 @@ fun ClimbDetailElevationProfile(
         val usableHeight = height - topPadding - bottomPadding
 
         var prevX = 0f
-        var prevY = (height - bottomPadding - (((pathPoints[0].altitude - minAlt) / altSpan) * usableHeight)).toFloat()
+        var prevY = (height - bottomPadding - ((((pathPoints[0].altitude ?: minAlt) - minAlt) / altSpan) * usableHeight)).toFloat()
 
         for (i in 1 until pathPoints.size) {
             val p = pathPoints[i]
+            val pAlt = p.altitude ?: minAlt
+            val prevAlt = pathPoints[i - 1].altitude ?: minAlt
             val x = (((p.distance - startDist) / totalDist) * width).toFloat().coerceIn(0f, width)
-            val y = (height - bottomPadding - (((p.altitude - minAlt) / altSpan) * usableHeight)).toFloat().coerceIn(0f, height)
+            val y = (height - bottomPadding - (((pAlt - minAlt) / altSpan) * usableHeight)).toFloat().coerceIn(0f, height)
 
             val dDist = p.distance - pathPoints[i - 1].distance
-            val dAlt = p.altitude - pathPoints[i - 1].altitude
+            val dAlt = pAlt - prevAlt
             val grade = if (dDist > 0) (dAlt / dDist) * 100.0 else 0.0
 
             val segmentColor = TTColor.getClimbGradeColor(grade)

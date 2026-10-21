@@ -261,10 +261,6 @@
     <string name="bike_power__torque_effectiveness">&#8226; Koppel-effectiviteit</string>
     <string name="bike_power__torque_data">&#8226; Koppel</string>
 
-    <string name="bike_power__pedal_power_balance_correction">Pedaalbalans correctie</string>
-    <string name="bike_power__double_power_balance_values">Meetwaarden verdubbelen</string>
-    <string name="bike_power__invert_power_balance_values">Meetwaarden omkeren (L/R)</string>
-
     <!-- Labels -->
     <string name="PebbleConfigActivityLabel">Pebble weergave bewerken</string>
 
@@ -1197,6 +1193,14 @@
     <string name="import_backup_summary">Beheer workout-import, back-ups en gegevensherstel</string>
 
     <string name="create_and_upload_to_dropbox">Maken \u0026 Dropbox-upload</string>
+    <string name="create_and_upload_to_both">Maken \u0026 upload (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_google_drive">Maken \u0026 Google Drive-upload</string>
+    <string name="create_and_upload_to_cloud">Maken \u0026 cloud-upload</string>
+    <string name="cloud_backup_no_provider_dialog_title">Cloudback-up</string>
+    <string name="cloud_backup_no_provider_dialog_message">Geen cloudopslag verbonden. Verbind Dropbox of Google Drive in de synchronisatie-instellingen.</string>
+    <string name="automated_backups_summary_both">Regelmatig back-ups naar Dropbox en Google Drive uploaden</string>
+    <string name="automated_backups_summary_google_drive">Regelmatig back-ups naar Google Drive uploaden</string>
+    <string name="automated_backups_summary_local_only">Regelmatig lokale back-ups op dit apparaat maken</string>
     <string name="full_restore_description">Wist alle lokale gegevens en vervangt deze door de inhoud van de back-up. Start de app opnieuw op.</string>
     <string name="incremental_import_description">Voegt trainingen uit een back-up samen met je huidige geschiedenis. Dubbele trainingen worden overgeslagen.</string>
     <string name="legacy_recovery_title">Workout-import</string>
