@@ -795,4 +795,133 @@
   \end{tikzpicture}
 \end{frame}
 
+% =========================================================================
+% SLIDE 14: EMPIRICAL EVOLUTION OF FORMAL REQUIREMENTS (REQ-*)
+% =========================================================================
+\begin{frame}{Empirical Impact: Evolution of Formal Requirements (\texttt{REQ-*})}
+  \centering
+  \resizebox{!}{0.82\textheight}{%
+  \begin{tikzpicture}[
+    x=1cm, y=1cm,
+    gridLine/.style={draw=aaaBorder!70, dashed, line width=0.45pt},
+    axisLine/.style={draw=aaaSlate, line width=0.8pt},
+    milestone/.style={draw=aaaAmber!80, densely dotted, line width=0.85pt},
+    callout/.style={rectangle, rounded corners=3pt, fill=white, draw=aaaBorder, line width=0.6pt, inner sep=3.5pt, font=\scriptsize, align=left}
+  ]
+    % Panel backgrounds
+    \fill[white, draw=aaaBorder, line width=0.6pt] (0, 0) rectangle (13.5, 4.4);
+    \fill[white, draw=aaaBorder, line width=0.6pt] (0, -3.55) rectangle (13.5, -0.95);
+
+    % Summer break shaded band (Jul 27 - Sep 01)
+    \fill[aaaSlate!8] (4.12, 0) rectangle (8.024, 4.4);
+    \fill[aaaSlate!8] (5.03, -3.55) rectangle (7.80, -0.95);
+
+    % AAA Era shaded band (Sep 28 - Oct 21)
+    \fill[aaaTeal!7] (10.952, 0) rectangle (13.5, 4.4);
+    \fill[aaaTeal!7] (10.835, -3.55) rectangle (13.5, -0.95);
+
+    % Top Panel Grid & Ticks (y scaled by 4.4/4.8 = 0.9167)
+    \foreach \x/\lbl in {0.0/Jun 19, 1.301/Jul 01, 2.819/Jul 15, 4.663/Aug 01, 6.181/Aug 15, 8.024/Sep 01, 9.542/Sep 15, 11.277/Oct 01, 12.361/Oct 11, 13.446/Oct 21} {
+      \draw[gridLine] (\x, 0) -- (\x, 4.4);
+      \draw[axisLine] (\x, 0) -- (\x, -0.09) node[below=1pt, font=\tiny\sffamily\mdseries, text=aaaSlate] {\lbl};
+    }
+
+    \foreach \r/\yl in {0/0.0, 200/1.1, 400/2.2, 600/3.3, 800/4.4} {
+      \draw[gridLine] (0, \yl) -- (13.5, \yl);
+      \draw[axisLine] (0, \yl) -- (-0.12, \yl) node[left=2pt, font=\scriptsize\mdseries, text=aaaSlate] {\r};
+    }
+
+    % Bottom Panel Horizontal Grid (0, 50, 100, 140 REQs/week)
+    \foreach \w/\yl in {0/-3.55, 50/-2.675, 100/-1.80, 140/-1.10} {
+      \draw[gridLine] (0, \yl) -- (13.5, \yl);
+      \draw[axisLine] (0, \yl) -- (-0.12, \yl) node[left=2pt, font=\scriptsize\mdseries, text=aaaSlate] {\w};
+    }
+
+    % Top Panel Shaded Area & REQ-* Curve
+    \begin{scope}[yscale=0.9167]
+      \fill[aaaNavy!11] (0,0) -- (0.0,0.114) -- (0.101,0.282) -- (0.301,0.366) -- (0.414,0.402) -- (0.517,0.414) -- (0.564,0.432) -- (0.737,0.48) -- (0.86,0.522) -- (0.956,0.558) -- (1.107,0.594) -- (1.498,0.612) -- (1.598,0.636) -- (1.83,0.666) -- (1.926,0.672) -- (2.043,0.744) -- (2.907,1.014) -- (2.951,1.014) -- (3.136,1.032) -- (3.251,1.068) -- (3.339,1.104) -- (3.45,1.11) -- (4.106,1.326) -- (4.208,1.338) -- (4.325,1.38) -- (4.42,1.386) -- (5.838,1.398) -- (8.115,1.428) -- (8.221,1.452) -- (8.333,1.5) -- (8.434,1.542) -- (8.538,1.554) -- (8.658,1.566) -- (8.767,1.62) -- (8.878,1.656) -- (8.986,1.698) -- (9.097,1.722) -- (9.188,1.74) -- (9.307,1.752) -- (9.408,1.83) -- (9.523,1.842) -- (9.637,1.878) -- (9.745,1.89) -- (9.854,1.908) -- (9.966,1.932) -- (10.079,1.956) -- (10.132,1.968) -- (10.291,2.04) -- (10.392,2.064) -- (10.506,2.094) -- (10.614,2.124) -- (10.711,2.142) -- (10.819,2.184) -- (10.919,2.232) -- (11.046,2.256) -- (11.133,2.292) -- (11.266,2.436) -- (11.374,2.544) -- (11.464,2.646) -- (11.559,2.748) -- (11.682,2.934) -- (11.786,2.964) -- (12.02,3.126) -- (12.122,3.258) -- (12.222,3.408) -- (12.335,3.558) -- (12.442,3.702) -- (12.553,3.75) -- (12.67,3.804) -- (12.774,3.876) -- (12.876,3.984) -- (12.962,4.134) -- (13.105,4.194) -- (13.201,4.308) -- (13.307,4.512) -- (13.425,4.602) -- (13.532,4.68) -- (13.532, 0) -- cycle;
+      \draw[draw=aaaNavy, line width=2.0pt, line join=round] (0.0,0.114) -- (0.101,0.282) -- (0.301,0.366) -- (0.414,0.402) -- (0.517,0.414) -- (0.564,0.432) -- (0.737,0.48) -- (0.86,0.522) -- (0.956,0.558) -- (1.107,0.594) -- (1.498,0.612) -- (1.598,0.636) -- (1.83,0.666) -- (1.926,0.672) -- (2.043,0.744) -- (2.907,1.014) -- (2.951,1.014) -- (3.136,1.032) -- (3.251,1.068) -- (3.339,1.104) -- (3.45,1.11) -- (4.106,1.326) -- (4.208,1.338) -- (4.325,1.38) -- (4.42,1.386) -- (5.838,1.398) -- (8.115,1.428) -- (8.221,1.452) -- (8.333,1.5) -- (8.434,1.542) -- (8.538,1.554) -- (8.658,1.566) -- (8.767,1.62) -- (8.878,1.656) -- (8.986,1.698) -- (9.097,1.722) -- (9.188,1.74) -- (9.307,1.752) -- (9.408,1.83) -- (9.523,1.842) -- (9.637,1.878) -- (9.745,1.89) -- (9.854,1.908) -- (9.966,1.932) -- (10.079,1.956) -- (10.132,1.968) -- (10.291,2.04) -- (10.392,2.064) -- (10.506,2.094) -- (10.614,2.124) -- (10.711,2.142) -- (10.819,2.184) -- (10.919,2.232) -- (11.046,2.256) -- (11.133,2.292) -- (11.266,2.436) -- (11.374,2.544) -- (11.464,2.646) -- (11.559,2.748) -- (11.682,2.934) -- (11.786,2.964) -- (12.02,3.126) -- (12.122,3.258) -- (12.222,3.408) -- (12.335,3.558) -- (12.442,3.702) -- (12.553,3.75) -- (12.67,3.804) -- (12.774,3.876) -- (12.876,3.984) -- (12.962,4.134) -- (13.105,4.194) -- (13.201,4.308) -- (13.307,4.512) -- (13.425,4.602) -- (13.532,4.68);
+    \end{scope}
+
+    % August Pause label inside plateau
+    \node[font=\scriptsize\itshape, text=aaaSlate!90, align=center] at (6.07, 0.60) {August Pause\\(223 REQs)};
+
+    % Bottom Panel Weekly Bars (shifted to y = -3.55, yscale = 0.875)
+    \begin{scope}[yshift=-3.55cm]
+      \draw[draw=aaaNavy!60, densely dashed, line width=0.9pt] (0, 0.595) -- (10.835, 0.595);
+      \node[above=2pt, font=\tiny\bfseries, text=aaaNavy] at (6.35, 0.595) {Pre-AAA Avg: 34 REQs / week};
+      \draw[draw=aaaAmber!85!black, densely dashed, line width=0.95pt] (10.835, 2.01) -- (13.5, 2.01);
+
+      \foreach \xc/\val/\h/\kw in {
+        0.44/61/1.068/KW25,
+        1.13/32/0.560/KW26,
+        1.82/18/0.315/KW27,
+        2.51/13/0.228/KW28,
+        3.20/60/1.050/KW29,
+        3.89/37/0.648/KW30,
+        4.58/10/0.175/KW31,
+        8.27/28/0.490/KW36,
+        8.99/44/0.770/KW37,
+        9.71/23/0.403/KW38,
+        10.43/44/0.770/KW39
+      } {
+        \fill[aaaNavy!75, rounded corners=1pt] (\xc-0.22, 0) rectangle (\xc+0.22, \h);
+        \node[above=1pt, font=\tiny\bfseries, text=aaaSlate, fill=white, inner sep=1pt] at (\xc, \h) {\val};
+        \node[below=2pt, font=\tiny\mdseries, text=aaaSlate] at (\xc, -0.04) {\kw};
+      }
+
+      \node[below=2pt, font=\tiny\mdseries, text=aaaSlate] at (5.27, -0.04) {KW32};
+      \fill[aaaSlate!45, rounded corners=1pt] (5.74, 0) rectangle (6.18, 0.035);
+      \node[above=1pt, font=\tiny\bfseries, text=aaaSlate] at (5.96, 0.035) {2};
+      \node[below=2pt, font=\tiny\mdseries, text=aaaSlate] at (5.96, -0.04) {KW33};
+      \node[below=2pt, font=\tiny\mdseries, text=aaaSlate] at (6.65, -0.04) {KW34};
+      \node[below=2pt, font=\tiny\mdseries, text=aaaSlate] at (7.34, -0.04) {KW35};
+
+      \foreach \xc/\lbl/\h/\kw in {
+        11.24/117/2.048/KW40,
+        11.95/128/2.240/KW41,
+        12.66/101/1.768/KW42,
+        13.27/62*/1.085/KW43
+      } {
+        \fill[aaaTeal, rounded corners=1pt] (\xc-0.22, 0) rectangle (\xc+0.22, \h);
+        \node[above=0.8pt, font=\tiny\bfseries, text=aaaTeal!90!black, fill=aaaTeal!7, inner sep=0.8pt] at (\xc, \h) {\lbl};
+        \node[below=2pt, font=\tiny\mdseries, text=aaaSlate] at (\xc, -0.04) {\kw};
+      }
+
+      % Compact AAA throughput summary in the open space of the bottom panel
+      \node[callout, draw=aaaTeal, fill=white, anchor=north west] at (0.35, 2.48)
+        {\textbf{\color{aaaTeal!90!black}AAA Era (KW 40--42): 115 REQs / week ($3.4\times$ Pre-AAA)} \quad {\tiny\mdseries\color{aaaSlate}(\texttt{62*} = first 3 days of KW 43)}};
+    \end{scope}
+
+    % Axes
+    \draw[axisLine] (0, 4.4) -- (0, 0) -- (13.5, 0);
+    \draw[axisLine] (0, -0.95) -- (0, -3.55) -- (13.5, -3.55);
+
+    % Y-axis Labels
+    \node[rotate=90, font=\footnotesize\bfseries, text=aaaNavy] at (-1.25, 2.2) {Cumulative REQs};
+    \node[rotate=90, font=\footnotesize\bfseries, text=aaaTeal!90!black] at (-1.25, -2.25) {New REQs / Week};
+
+    % Only 2 Key Markers on Top Plot:
+    % 1. Sep 28 AAA Sprint Workflow launch
+    \draw[milestone, draw=aaaTeal] (10.952, 0) -- (10.952, 2.101);
+    \draw[milestone, draw=aaaTeal] (10.835, -3.55) -- (10.835, -0.95);
+    \fill[aaaTeal] (10.952, 2.101) circle (2.5pt);
+    \node[callout, draw=aaaTeal, fill=white, anchor=south east] at (10.45, 2.22)
+      {\textbf{\color{aaaTeal}Sep 28 (AAA 5-Stage Sprints):} \mdseries 382 REQs\\[-1pt]{\tiny\mdseries\color{aaaSlate}Launch of autonomous 5-stage sprint workflow}};
+    \draw[-{Stealth[scale=0.85]}, draw=aaaTeal, line width=0.85pt] (10.45, 2.45) -- (10.89, 2.14);
+
+    % 2. Oct 21 Today (780 REQs)
+    \fill[aaaGreen] (13.532, 4.29) circle (2.6pt);
+    \node[callout, draw=aaaGreen, fill=aaaGreen!6, anchor=north east] at (12.60, 4.25)
+      {\textbf{\color{aaaGreen!85!black}Oct 21 (Sprint 43.5): 780 REQs}\\[-1pt]{\tiny\mdseries\color{aaaSlate}+398 REQs in 23 days (\textbf{+104\%} since Sep 28)}};
+    \draw[-{Stealth[scale=0.85]}, draw=aaaGreen, line width=0.85pt] (12.60, 3.98) -- (13.44, 4.27);
+
+    % Legend in Top Left
+    \node[callout, anchor=north west] at (0.35, 4.25) {
+      \tikz\draw[aaaNavy, line width=2.0pt] (0,0.08) -- (0.45,0.08); \textbf{Formal Requirements \texttt{REQ-*}} \mdseries(19 $\rightarrow$ 780)
+    };
+  \end{tikzpicture}%
+  }
+\end{frame}
+
 \end{document}
