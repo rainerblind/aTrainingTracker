@@ -336,10 +336,6 @@
     <string name="bike_power__torque_effectiveness">&#8226; Torque Effectiveness</string>
     <string name="bike_power__torque_data">&#8226; Torque</string>
 
-    <string name="bike_power__pedal_power_balance_correction">Pedal power balance correction</string>
-    <string name="bike_power__double_power_balance_values">Double measured values</string>
-    <string name="bike_power__invert_power_balance_values">Invert measured values. I.e., swap left and right</string>
-
     <!-- Manifest -->
     <string name="app_name" translatable="false">a Training Tracker</string>
 

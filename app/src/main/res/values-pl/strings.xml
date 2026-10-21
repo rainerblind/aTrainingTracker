@@ -1007,14 +1007,11 @@
     <string name="bike_power__accumulated_energy">• Skumulowana energia</string>
     <string name="bike_power__accumulated_torque">• Skumulowany moment obrotowy</string>
     <string name="bike_power__crank_revolution_data">• Kadencja</string>
-    <string name="bike_power__double_power_balance_values">Podwajaj mierzone wartości</string>
     <string name="bike_power__extreme_angles">• Ekstremalne kąty</string>
     <string name="bike_power__extreme_magnitudes">• Ekstremalne wielkości</string>
     <string name="bike_power__features">funkcje</string>
     <string name="bike_power__instantaneous_power">• Moc chwilowa</string>
-    <string name="bike_power__invert_power_balance_values">Odwróć mierzone wartości (zamień lewo/prawo)</string>
     <string name="bike_power__pedal_power_balance">• Balans pedałów</string>
-    <string name="bike_power__pedal_power_balance_correction">Korekta balansu pedałów</string>
     <string name="bike_power__pedal_smoothness">• Płynność pedałowania</string>
     <string name="bike_power__top_and_bottom_dead_sport_angles">• Kąty martwego punktu</string>
     <string name="bike_power__torque_data">• Moment obrotowy</string>

@@ -261,10 +261,6 @@
     <string name="bike_power__torque_effectiveness">&#8226; Efficacité du couple</string>
     <string name="bike_power__torque_data">&#8226; Couple</string>
 
-    <string name="bike_power__pedal_power_balance_correction">Correction de l\'équilibre</string>
-    <string name="bike_power__double_power_balance_values">Doubler les valeurs mesurées</string>
-    <string name="bike_power__invert_power_balance_values">Inverser (G/D)</string>
-
     <!-- Labels -->
     <string name="PebbleConfigActivityLabel">Modifier la vue Pebble</string>
 

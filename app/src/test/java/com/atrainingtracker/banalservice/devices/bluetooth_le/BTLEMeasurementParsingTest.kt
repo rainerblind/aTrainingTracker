@@ -442,4 +442,82 @@ class BTLEMeasurementParsingTest {
         device.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(validUint8))
         assertEquals(140, device.getHeartRateSensor().value)
     }
+
+    /**
+     * TST-CON-022.1: BLE Pedal Power Balance Reference Flag Normalization.
+     * Verify that when Bit 1 == 0 (Right reference), raw value scaled by 0.5% is emitted as Right pedal percentage.
+     */
+    @Test
+    fun testBikePower_pedalPowerBalance_rightReference_parsedCleanly() {
+        val device = TestBikePowerDevice(mockContext, mockSensorManager, 109L, "AA:BB:CC:DD:EE:09")
+
+        // Flags: 0x0001 (Bit 0 = 1 Balance Present, Bit 1 = 0 Right Reference)
+        // Power: 250 W (0x00FA)
+        // Balance raw: 104 (0x68) -> 52.0% Right
+        val bytes = byteArrayOf(
+            0x01.toByte(), 0x00.toByte(),
+            0xFA.toByte(), 0x00.toByte(),
+            104.toByte()
+        )
+        val characteristic = createMockCharacteristic(bytes)
+
+        device.measurementCharacteristicUpdate(mockGatt, characteristic)
+
+        assertEquals(250, device.getPowerSensor().value)
+        assertEquals(52.0, device.getPowerBalanceSensor().value, 0.001)
+    }
+
+    /**
+     * TST-CON-022.1: BLE Pedal Power Balance Reference Flag Normalization.
+     * Verify that when Bit 1 == 1 (Left reference), raw value (48% Left) is automatically inverted
+     * to Right pedal percentage (52% Right) pursuant to REQ-CON-022.1 and REQ-UI-377.1.
+     */
+    @Test
+    fun testBikePower_pedalPowerBalance_leftReference_automaticallyInvertedToRight() {
+        val device = TestBikePowerDevice(mockContext, mockSensorManager, 110L, "AA:BB:CC:DD:EE:10")
+
+        // Flags: 0x0003 (Bit 0 = 1 Balance Present, Bit 1 = 1 Left Reference)
+        // Power: 250 W (0x00FA)
+        // Balance raw: 96 (0x60) -> 48.0% Left -> inverted to 52.0% Right
+        val bytes = byteArrayOf(
+            0x03.toByte(), 0x00.toByte(),
+            0xFA.toByte(), 0x00.toByte(),
+            96.toByte()
+        )
+        val characteristic = createMockCharacteristic(bytes)
+
+        device.measurementCharacteristicUpdate(mockGatt, characteristic)
+
+        assertEquals(250, device.getPowerSensor().value)
+        assertEquals(52.0, device.getPowerBalanceSensor().value, 0.001)
+    }
+
+    /**
+     * TST-CON-022.1: BLE Pedal Power Balance boundary value verification.
+     */
+    @Test
+    fun testBikePower_pedalPowerBalance_boundaryValues() {
+        val device = TestBikePowerDevice(mockContext, mockSensorManager, 111L, "AA:BB:CC:DD:EE:11")
+
+        // 1. Bit 1 == 1 (Left reference), raw = 0 (0% Left -> 100% Right)
+        val leftZeroBytes = byteArrayOf(0x03.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0.toByte())
+        device.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(leftZeroBytes))
+        assertEquals(100.0, device.getPowerBalanceSensor().value, 0.001)
+
+        // 2. Bit 1 == 1 (Left reference), raw = 200 (100% Left -> 0% Right)
+        val leftFullBytes = byteArrayOf(0x03.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 200.toByte())
+        device.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(leftFullBytes))
+        assertEquals(0.0, device.getPowerBalanceSensor().value, 0.001)
+
+        // 3. Bit 1 == 0 (Right reference), raw = 0 (0% Right)
+        val rightZeroBytes = byteArrayOf(0x01.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0.toByte())
+        device.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(rightZeroBytes))
+        assertEquals(0.0, device.getPowerBalanceSensor().value, 0.001)
+
+        // 4. Bit 1 == 0 (Right reference), raw = 200 (100% Right)
+        val rightFullBytes = byteArrayOf(0x01.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 200.toByte())
+        device.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(rightFullBytes))
+        assertEquals(100.0, device.getPowerBalanceSensor().value, 0.001)
+    }
 }
+

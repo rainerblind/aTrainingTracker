@@ -261,10 +261,6 @@
     <string name="bike_power__torque_effectiveness">&#8226; Efficacia coppia</string>
     <string name="bike_power__torque_data">&#8226; Coppia</string>
 
-    <string name="bike_power__pedal_power_balance_correction">Correzione bilanciamento</string>
-    <string name="bike_power__double_power_balance_values">Raddoppia valori misurati</string>
-    <string name="bike_power__invert_power_balance_values">Inverti (sx/dx)</string>
-
     <!-- Labels -->
     <string name="PebbleConfigActivityLabel">Modifica vista Pebble</string>
 

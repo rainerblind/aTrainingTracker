@@ -259,10 +259,6 @@
     <string name="bike_power__torque_effectiveness">&#8226; Effizienz</string>
     <string name="bike_power__torque_data">&#8226; Kraft</string>
 
-    <string name="bike_power__pedal_power_balance_correction">Korrektur für Power Balance</string>
-    <string name="bike_power__double_power_balance_values">Verdopple die gemessenen Werte</string>
-    <string name="bike_power__invert_power_balance_values">Invertiere die gemessenen Werte.  D.h., vertausche rechts und links</string>
-
     <string name="slope">Steigung</string>
     <string name="slope_short">Steigung</string>
     <string name="vertical_speed">Vertikale Geschwindigkeit (VAM)</string>"

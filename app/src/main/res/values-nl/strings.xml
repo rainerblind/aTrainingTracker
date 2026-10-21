@@ -261,10 +261,6 @@
     <string name="bike_power__torque_effectiveness">&#8226; Koppel-effectiviteit</string>
     <string name="bike_power__torque_data">&#8226; Koppel</string>
 
-    <string name="bike_power__pedal_power_balance_correction">Pedaalbalans correctie</string>
-    <string name="bike_power__double_power_balance_values">Meetwaarden verdubbelen</string>
-    <string name="bike_power__invert_power_balance_values">Meetwaarden omkeren (L/R)</string>
-
     <!-- Labels -->
     <string name="PebbleConfigActivityLabel">Pebble weergave bewerken</string>
 

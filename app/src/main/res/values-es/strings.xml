@@ -261,10 +261,6 @@
     <string name="bike_power__torque_effectiveness">&#8226; Efectividad de par</string>
     <string name="bike_power__torque_data">&#8226; Par</string>
 
-    <string name="bike_power__pedal_power_balance_correction">Corrección balance potencia pedal</string>
-    <string name="bike_power__double_power_balance_values">Doblar valores medidos</string>
-    <string name="bike_power__invert_power_balance_values">Invertir valores medidos. Ej: intercambiar izq y der</string>
-
     <!-- Labels -->
     <string name="PebbleConfigActivityLabel">Editar vista de Pebble</string>
 

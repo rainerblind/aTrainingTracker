@@ -299,14 +299,6 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
         updateState { it.copy(wheelCircumference = wheelCircumference) }
     }
 
-    fun onDoublePowerBalanceValuesChanged(isDouble: Boolean) {
-        updateState { it.copy(powerFeatures = it.powerFeatures?.copy(doublePowerBalanceValues = isDouble)) }
-    }
-
-    fun onInvertPowerBalanceValuesChanged(isInverted: Boolean) {
-        updateState { it.copy(powerFeatures = it.powerFeatures?.copy(invertPowerBalanceValues = isInverted)) }
-    }
-
     /**
      * A generic helper function to safely update the state.
      * It ensures we always work with a non-null state and posts the result.

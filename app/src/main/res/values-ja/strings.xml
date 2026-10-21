@@ -261,10 +261,6 @@
     <string name="bike_power__torque_effectiveness">&#8226; トルク効率</string>
     <string name="bike_power__torque_data">&#8226; トルク</string>
 
-    <string name="bike_power__pedal_power_balance_correction">バランス補正</string>
-    <string name="bike_power__double_power_balance_values">測定値を2倍にする</string>
-    <string name="bike_power__invert_power_balance_values">左右を反転させる</string>
-
     <!-- Labels -->
     <string name="PebbleConfigActivityLabel">Pebble表示設定を編集</string>
 
