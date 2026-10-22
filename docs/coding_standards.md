@@ -100,6 +100,16 @@ This document serves as the authoritative living source of truth for software en
   * `DatabaseSchemaRegistry` (and any backup/restore or migration schema validator) **MUST** reference each `SQLiteOpenHelper` subclass's `DB_VERSION` / `C_DB_VERSION` constant directly rather than duplicating raw integer literals (`maxVersion = 1`, `25`, etc.).
   * Whenever a database's `DB_VERSION` is incremented (e.g., for an index or column migration), `DatabaseSchemaRegistry` must automatically reflect the updated version and must be guarded by a contract test asserting equality between every registered database's `maxVersion` and its corresponding `SQLiteOpenHelper` version constant.
 
+### 2.3 SQLite Schema Migration & `onCreate`/`onUpgrade` Parity (Rule 64 — ATT-3534)
+* **Symmetrical Schema Evolution**:
+  * Whenever a database's `DB_VERSION` / `C_DB_VERSION` is incremented, both `onCreate()` (the fresh-installation schema definition) and `onUpgrade()` (the incremental migration pathway) **MUST** be updated symmetrically.
+  * Fresh installs and incrementally upgraded databases must yield 100% equivalent schema structures (identical columns, constraints, indices, and defaults).
+* **Safe `DEFAULT` Constraints on Added `NOT NULL` Columns**:
+  * When executing `ALTER TABLE ... ADD COLUMN` for a non-null property on an existing table in `onUpgrade()`, the column definition **MUST** include an explicit safe `DEFAULT` constraint (e.g. `DEFAULT 0` or `DEFAULT ''`).
+  * Adding a `NOT NULL` column without a `DEFAULT` constraint causes SQLite migrations to crash with `SQLiteException: Cannot add a NOT NULL column with default value NULL` on existing user databases.
+* **Automated Migration Contract Unit Tests**:
+  * Every database schema version increment **MUST** be accompanied by an automated migration contract unit test verifying that a database upgraded incrementally through all `onUpgrade()` steps produces identical table schemas and columns as a fresh database initialized via `onCreate()`.
+
 ---
 
 ## 3. Android Platform & Lifecycle Safety

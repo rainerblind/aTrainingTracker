@@ -1,15 +1,16 @@
-# ASPICE In-Sprint Core Governance Rules: aTrainingTracker
+# Agile Agentic ASPICE (AAA) In-Sprint Core Governance Rules: aTrainingTracker
 
-These **8 Core Rules** are strictly binding on all AI agents during in-sprint execution.
+These **8 Core Rules** operationalize **Agile Agentic ASPICE (AAA)** (Tripwires, Infinite Context, and Constructive Resistance) and are strictly binding on all AI agents during in-sprint execution.
 * **Domain Standards**: See [`docs/design_guidelines.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/design_guidelines.md) (UI/Compose/Charts) and [`docs/coding_standards.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/coding_standards.md) (Architecture/DRY/Android Lifecycles).
 * **Sprint Ceremonies & Hotfixes**: See [`.agents/skills/sprint-planner/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/sprint-planner/SKILL.md) (Ceremony 1 & 2 rules) and [`.agents/skills/release-manager/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/release-manager/SKILL.md).
 * **Historical Archive**: Legacy Rules 1–55 are indexed in [`docs/engineering/rule_history_archive.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/engineering/rule_history_archive.md).
 
 ---
 
-## Rule 1: Obey the Rules & Two-Tier Context Refresh
+## Rule 1: Obey the Rules, Two-Tier Context Refresh & Constructive Resistance
 * **Ticket Start / Ceremony Start / Post-Compaction Resume**: Before starting a new ticket, starting a sprint ceremony, or resuming after a context compaction, explicitly read `.agents/rules/aspice_governance.md` and the relevant domain standard (`docs/design_guidelines.md` for UI tickets, `docs/coding_standards.md` for logic/service/DB tickets) via `view_file`.
 * **Intra-Ticket Stage Transitions (Stages 1 $\rightarrow$ 2 $\rightarrow$ 3 $\rightarrow$ 4 $\rightarrow$ 5)**: Whenever `tools/jira_util.py` transitions a parent ticket into a lifecycle stage (via `move <KEY> analysis` or `gate-verdict <SUBTASK> PASS`), it **automatically prints** the target stage's `SKILL.md` and core governance rules to `stdout`, eliminating separate manual `view_file` turns between stages unless a context compaction occurred.
+* **Constructive Resistance & Documented Deviations (*Pflicht zum Widerspruch & Dokumentierte Abweichungserlaubnis*)**: Agents MUST NOT initiate shortcuts. When the human user requests an exception from standard process, the agent SHALL first offer constructive resistance (explaining the guardrail's purpose and associated risk). If the human insists, the exception, its rationale, and exact changes MUST be cleanly documented in Jira and the deliverable/walkthrough.
 
 ## Rule 2: Autonomous Full-Sprint Execution
 * Execute the entire active sprint backlog (`ORDER BY rank ASC`) continuously from ticket to ticket across Stages 1–5 without pausing or asking the user whether to continue.

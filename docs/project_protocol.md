@@ -1,11 +1,17 @@
-# Project Protocol & Architecture Pointer: aTrainingTracker
+# Agile Agentic ASPICE (AAA) Protocol & Architecture Pointer: aTrainingTracker
 
-> **Note (Sprint 2026-43.1 / `ATT-4290`)**: To eliminate redundant context overhead, the authoritative engineering governance and living standards are maintained in the **Document Triad** and modular `.agents/skills/`:
-> 1. **In-Sprint Core Rules (8 Core Rules)**: [`.agents/rules/aspice_governance.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/rules/aspice_governance.md)
-> 2. **UI & Interaction Design Guidelines**: [`docs/design_guidelines.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/design_guidelines.md)
-> 3. **Technical Architecture & Coding Standards**: [`docs/coding_standards.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/coding_standards.md)
-> 4. **Stage & Ceremony Skills**: [`.agents/skills/stage1-analysis/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/stage1-analysis/SKILL.md) through [`.agents/skills/stage5-verification/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/stage5-verification/SKILL.md), [`.agents/skills/sprint-planner/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/sprint-planner/SKILL.md), and [`.agents/skills/jira-workflow/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/jira-workflow/SKILL.md).
-> 5. **Historical Rule Archive (Rules 1–55)**: [`docs/engineering/rule_history_archive.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/engineering/rule_history_archive.md)
+Agile Agentic ASPICE (AAA) operationalizes Automotive SPICE for autonomous AI pair-programming agents across three core pillars:
+1. **Intentional Engineering Tripwires (*Stolpersteine*)**: Deliberate quality gates (Gates 1–5), bidirectional requirement/test traceability (`REQ-XXX` $\leftrightarrow$ `TST-XXX`), Chesterton's Fence archaeology (`REQ-PRO-022`), and independent `pro`/`flash` cross-auditing prevent autonomous agents from taking unverified shortcuts.
+2. **Artifact-Driven Infinite Context**: Stage deliverables (`docs/engineering/`), living specifications (`docs/requirements.md`, `docs/tests.md`), and walkthroughs (`docs/engineering/walkthroughs/`) maintain persistent external long-term memory across context compactions and agent turns.
+3. **Constructive Resistance & Documented Deviations (*Pflicht zum Widerspruch & Dokumentierte Abweichungserlaubnis*)**: Agents MUST NOT initiate shortcuts. When the human user requests an exception from standard process, the agent SHALL first offer constructive resistance (explaining the guardrail's purpose and associated risk). Only if the human explicitly insists may the exception proceed—and even then, the exception, its justification, and all changes made MUST be cleanly documented in Jira and the walkthrough/docs.
+
+## Document Triad & In-Sprint Architecture
+Authoritative engineering governance and living standards are decoupled into the **Document Triad** and modular `.agents/skills/`:
+1. **In-Sprint Core Rules (8 Core Rules)**: [`.agents/rules/aspice_governance.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/rules/aspice_governance.md)
+2. **UI & Interaction Design Guidelines**: [`docs/design_guidelines.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/design_guidelines.md)
+3. **Technical Architecture & Coding Standards**: [`docs/coding_standards.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/coding_standards.md)
+4. **Stage & Ceremony Skills**: [`.agents/skills/stage1-analysis/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/stage1-analysis/SKILL.md) through [`.agents/skills/stage5-verification/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/stage5-verification/SKILL.md), [`.agents/skills/sprint-planner/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/sprint-planner/SKILL.md), and [`.agents/skills/jira-workflow/SKILL.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/.agents/skills/jira-workflow/SKILL.md).
+5. **Historical Rule Archive (Rules 1–55)**: [`docs/engineering/rule_history_archive.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/engineering/rule_history_archive.md)
 
 ## Multi-Account Role Segregation & Invariants (`REQ-PRO-020` / `REQ-PRO-022`)
 * **Multi-Account Credentials (`.env.jira`)**: `tools/jira_util.py` resolves role-specific credentials for `agent1` (`JIRA_AGENT1_USER` / `JIRA_AGENT1_TOKEN`), `agent2` (`JIRA_AGENT2_USER` / `JIRA_AGENT2_TOKEN`), and `coordinator` (`JIRA_COORDINATOR_USER` / `JIRA_COORDINATOR_TOKEN`).

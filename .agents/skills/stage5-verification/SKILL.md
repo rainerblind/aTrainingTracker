@@ -24,13 +24,17 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
        ```bash
        ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"
        ```
+     - Run fast AAPT2 resource compilation verification to rapidly trap 9-language XML/AAPT2 resource errors without full APK build overhead (~5s, ATT-3534):
+       ```bash
+       ./gradlew processDebugResources
+       ```
      - Run `python3 tools/verify_requirement_governance.py` when existing requirements are modified.
      - **Exception (High-Risk Core Infrastructure)**: Run the full `./gradlew testDebugUnitTest` suite per-ticket *only* for High-Risk cross-cutting changes touching core shared infrastructure (`TrainingApplication`, `TrackerService`, `BANALService`, or SQLite database schema migrations).
    - **Tier 2 — Sprint Integration Gate (Once per Sprint in `Review & Retro`, ~4m)**:
      - The full clean-room regression suite (`./gradlew testDebugUnitTest` — 3,660+ tests) is executed once during the Sprint `Review & Retro` ticket before merging `sprint/<SPRINT_NAME>` into `develop`.
 2. **Conditional On-Device / Physical Verification (Rules 60 & 62 — `ATT-4465`, `ATT-4596`)**:
    - **UI / Compose / Resource / Navigation / Foreground Service Tickets**: Deploy debug APK to Pixel 10 (`./gradlew installDebug`), explicitly launch the **Debug** package (`adb shell am start -n com.atrainingtracker.debug/com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation` — never `com.atrainingtracker`, which opens the unpatched Release package), navigate on-device to **every single screen/route** whose `ViewModel`, `Fragment`, or composable was modified, and verify `adb logcat -b crash -d` is clean. Capture on-device screenshots (`adb exec-out screencap -p > docs/engineering/walkthroughs/img/<KEY>_<name>.png`) of the new/changed UI and reference screen, and compare against `docs/design_guidelines.md` Section 5.
-   - **Non-UI Backend / Algorithm / DB Query / Dead-Code Cleanup Tickets**: Skip physical APK deployment in Stage 5 and rely on targeted unit/contract tests + `./gradlew assembleDebug` compilation verification.
+   - **Non-UI Backend / Algorithm / DB Query / Dead-Code Cleanup Tickets**: Skip physical APK deployment in Stage 5 and rely on targeted unit/contract tests + `./gradlew processDebugResources` compilation verification.
 3. **Walkthrough Documentation & Automatic Living Documentation Synchronization (Concise Cap $\le 60\text{--}80$ Lines)**:
    - Author `docs/engineering/walkthroughs/<TICKET_KEY>_walkthrough.md` using `templates/walkthrough_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**.
    - Note: `submit-stage <TICKET_KEY> 5` **automatically** flips `Planned` / `Status: Planned (<TICKET_KEY>)` rows in `docs/requirements.md` and `docs/tests.md` to `Verified`—no manual `replace_file_content` calls are needed just to flip the status column.
