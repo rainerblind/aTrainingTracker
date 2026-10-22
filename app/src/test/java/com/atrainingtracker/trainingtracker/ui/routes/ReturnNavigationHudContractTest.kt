@@ -102,14 +102,50 @@ class ReturnNavigationHudContractTest {
     }
 
     @Test
-    fun returnNavigationHud_doesNotContainEmojiAndUsesDesignTokens() {
-        val hudFile = java.io.File("src/main/java/com/atrainingtracker/trainingtracker/ui/routes/ReturnNavigationHud.kt")
-        val content = hudFile.readText()
+    fun hudState_defaultValues_areInactiveAndEmpty() {
+        val defaultState = ReturnNavigationState()
+        assertFalse(defaultState.isActive)
+        assertEquals("", defaultState.destinationName)
+        assertFalse(defaultState.isHomeDestination)
+        assertEquals(0.0, defaultState.remainingDistanceMeters, 0.001)
+        assertEquals(0.0, defaultState.remainingElevationGainMeters, 0.001)
+        assertEquals(0.0, defaultState.durationSeconds, 0.001)
+        assertEquals("", defaultState.formattedDuration)
+        assertEquals("", defaultState.formattedClockTime)
+        assertFalse(defaultState.isReverseReturn)
+        assertFalse(defaultState.isTakeMeHomeMode)
+        org.junit.Assert.assertNull(defaultState.snappedRouteId)
+        assertFalse(defaultState.isDismissed)
+        assertFalse(defaultState.hasRemainingMetrics)
+    }
 
-        assertFalse("ReturnNavigationHud must not contain raw house emoji", content.contains("🏠"))
-        assertTrue("ReturnNavigationHud must use RoundedCornerShape(12.dp)", content.contains("RoundedCornerShape(12.dp)"))
-        assertTrue("ReturnNavigationHud must use TTColor.RouteSelected accent", content.contains("TTColor.RouteSelected"))
-        assertTrue("ReturnNavigationHud must use localized nav_stop_return description", content.contains("R.string.nav_stop_return"))
+    @Test
+    fun hudState_reverseReturnAndTakeMeHomeModes_retainProperties() {
+        val state = ReturnNavigationState(
+            isActive = true,
+            destinationName = "Startpunkt",
+            isReverseReturn = true,
+            isTakeMeHomeMode = false,
+            snappedRouteId = 42L,
+            remainingDistanceMeters = 8200.0,
+            remainingElevationGainMeters = 110.0
+        )
+
+        assertTrue(state.isActive)
+        assertTrue(state.isReverseReturn)
+        assertFalse(state.isTakeMeHomeMode)
+        assertEquals(42L, state.snappedRouteId)
+        assertTrue(state.hasRemainingMetrics)
+        assertEquals(DistanceFormatter().format_with_units(8200.0), state.formattedRemainingDistance)
+        assertEquals("+${AltitudeFormatter().format_with_units(110.0)}", state.formattedRemainingClimb)
+    }
+
+    @Test
+    fun hudState_stopReturnActionResource_existsInResourceTable() {
+        assertTrue(
+            "R.string.nav_stop_return must be defined in resource table",
+            com.atrainingtracker.R.string.nav_stop_return != 0
+        )
     }
 }
 

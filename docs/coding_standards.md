@@ -174,3 +174,12 @@ This document serves as the authoritative living source of truth for software en
   * Unit-testing only the utility method while leaving production call sites on the default `null` fallback leaves the bug active at runtime.
 * **Connected User Device Data Protection (`adb uninstall` / `pm clear` Prohibition)**:
   * Agents **MUST NEVER** run `adb uninstall` or `adb shell pm clear` on `com.atrainingtracker` or `com.atrainingtracker.debug` on a connected user device without explicit human confirmation naming the exact package and first pulling a verified `.attbackup` archive to the host machine.
+
+### 5.4 Contract Test Standards & Prohibition of UI Literal Source-Grep (ATT-4028 / REQ-TST-002)
+* **Prohibition of Source-Text UI Grep**:
+  * Unit and contract tests **MUST NOT** read source code files (`File.readText()`) to assert on Compose design tokens (e.g. `RoundedCornerShape(12.dp)`, `TTColor.RouteSelected`), raw string/emoji literals, internal call parameters, or raw SVG path commands (`V20`, `h-2`).
+  * Text-grep assertions freeze non-functional formatting, whitespace, and private implementation details, triggering false-positive test failures during innocent refactors while verifying zero runtime behavior.
+  * UI contracts must be verified via semantic state models, Compose semantics/UI testing, or behavioral formatters. Vector drawables must be verified via XML DOM parsing and geometric vertex milestone evaluation. Excision/decoupling must be verified via programmatic reflection (`Class.forName`, `declaredFields`, `declaredMethods`) and file existence checks.
+* **Preservation of System Architectural Governance Guards**:
+  * System policy and governance guards (such as `TryWithResourcesCursorAuditTest` for leak prevention, `ManifestSecurityContractTest` for Android security boundaries, `TranslationParityTest` for 9-language localization, and Rule 34 empty callback guards) enforce essential repository-wide invariants and **MUST NOT** be confused with prohibited UI source-grep tests.
+

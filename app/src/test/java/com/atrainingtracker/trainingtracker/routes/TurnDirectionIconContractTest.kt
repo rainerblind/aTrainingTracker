@@ -114,15 +114,15 @@ class TurnDirectionIconContractTest {
             val moveCount = pathData.count { it == 'M' || it == 'm' }
             assertEquals("$fileName must be a single continuous closed subpath (1 Move command)", 1, moveCount)
 
-            assertTrue("$fileName must close stem at y=20 (V20z)", pathData.endsWith("V20z"))
-            assertTrue(
-                "$fileName must have a 2dp horizontal stem cut at y=20 (h2 or h-2)",
-                pathData.contains("20h2") || pathData.contains("20h-2")
-            )
-
             val milestones = evaluateAbsoluteMilestones(pathData)
             assertEquals("$fileName must start at y=20.0", 20.0, milestones.first().second, 0.01)
             assertEquals("$fileName must end at y=20.0 before closing", 20.0, milestones.last().second, 0.01)
+            assertEquals(
+                "$fileName must have a 2dp horizontal stem cut at y=20",
+                2.0,
+                kotlin.math.abs(milestones[1].first - milestones[0].first),
+                0.01
+            )
 
             for ((idx, pt) in milestones.withIndex()) {
                 assertTrue(
@@ -270,19 +270,24 @@ class TurnDirectionIconContractTest {
 
     @Test
     fun testSlightTurnIconsGroundingAndStemWidth() {
-        val rightFile = File(resDrawableDir, "ic_turn_slight_right.xml")
-        val leftFile = File(resDrawableDir, "ic_turn_slight_left.xml")
+        val dbFactory = DocumentBuilderFactory.newInstance()
+        val dBuilder = dbFactory.newDocumentBuilder()
 
-        val rightContent = rightFile.readText()
-        val leftContent = leftFile.readText()
+        for (fileName in listOf("ic_turn_slight_right.xml", "ic_turn_slight_left.xml")) {
+            val file = File(resDrawableDir, fileName)
+            val doc = dBuilder.parse(file)
+            val pathElement = doc.documentElement.getElementsByTagName("path").item(0) as Element
+            val pathData = pathElement.getAttribute("android:pathData")
+            val milestones = evaluateAbsoluteMilestones(pathData)
 
-        // Stem must be grounded at baseline y = 20
-        assertTrue("Right turn icon must ground stem at V20", rightContent.contains("V20"))
-        assertTrue("Left turn icon must ground stem at V20", leftContent.contains("V20"))
+            // Stem must be grounded at baseline y = 20
+            assertEquals("$fileName start vertex must be grounded at baseline y=20.0", 20.0, milestones.first().second, 0.01)
+            assertEquals("$fileName end vertex must close at baseline y=20.0", 20.0, milestones.last().second, 0.01)
 
-        // Stem width must be 2dp at baseline
-        assertTrue("Right turn icon must have 2dp stem baseline cut h-2", rightContent.contains("h-2"))
-        assertTrue("Left turn icon must have 2dp stem baseline cut h2", leftContent.contains("h2"))
+            // Stem width must be 2dp at baseline
+            val stemWidth = kotlin.math.abs(milestones[1].first - milestones[0].first)
+            assertEquals("$fileName must have 2dp stem baseline cut", 2.0, stemWidth, 0.01)
+        }
     }
 
     @Test
@@ -376,21 +381,24 @@ class TurnDirectionIconContractTest {
 
     @Test
     fun testSharpTurnIconsGroundingAndStemWidth() {
-        val rightFile = File(resDrawableDir, "ic_turn_sharp_right.xml")
-        val leftFile = File(resDrawableDir, "ic_turn_sharp_left.xml")
+        val dbFactory = DocumentBuilderFactory.newInstance()
+        val dBuilder = dbFactory.newDocumentBuilder()
 
-        val rightContent = rightFile.readText()
-        val leftContent = leftFile.readText()
+        for (fileName in listOf("ic_turn_sharp_right.xml", "ic_turn_sharp_left.xml")) {
+            val file = File(resDrawableDir, fileName)
+            val doc = dBuilder.parse(file)
+            val pathElement = doc.documentElement.getElementsByTagName("path").item(0) as Element
+            val pathData = pathElement.getAttribute("android:pathData")
+            val milestones = evaluateAbsoluteMilestones(pathData)
 
-        // Stem must be grounded at baseline y = 20
-        assertTrue("Right turn sharp icon must start stem at y=20 (M6,20)", rightContent.contains("M6,20"))
-        assertTrue("Right turn sharp icon must close stem at y=20 (V20z)", rightContent.contains("V20z"))
-        assertTrue("Left turn sharp icon must start stem at y=20 (M18,20)", leftContent.contains("M18,20"))
-        assertTrue("Left turn sharp icon must close stem at y=20 (V20z)", leftContent.contains("V20z"))
+            // Stem must be grounded at baseline y = 20
+            assertEquals("$fileName start vertex must be grounded at baseline y=20.0", 20.0, milestones.first().second, 0.01)
+            assertEquals("$fileName end vertex must close at baseline y=20.0", 20.0, milestones.last().second, 0.01)
 
-        // Stem width must be 2dp at baseline
-        assertTrue("Right turn sharp icon must have 2dp stem baseline cut h2", rightContent.contains("h2"))
-        assertTrue("Left turn sharp icon must have 2dp stem baseline cut h-2", leftContent.contains("h-2"))
+            // Stem width must be 2dp at baseline
+            val stemWidth = kotlin.math.abs(milestones[1].first - milestones[0].first)
+            assertEquals("$fileName must have 2dp stem baseline cut", 2.0, stemWidth, 0.01)
+        }
     }
 
     @Test
