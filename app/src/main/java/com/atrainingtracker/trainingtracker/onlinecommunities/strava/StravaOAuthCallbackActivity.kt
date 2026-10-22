@@ -23,13 +23,15 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import com.atrainingtracker.BuildConfig
 
 /**
- * Handles OAuth 2.0 authorization redirect callbacks for Strava (REQ-EXT-012, ATT-4022).
+ * Handles OAuth 2.0 authorization redirect callbacks for Strava (REQ-EXT-012, ATT-4022, ATT-4668).
  *
  * Validates the cryptographically random state parameter using [StravaOAuthStateManager]
- * to prevent Login CSRF attacks, enforces single-use state consumption, and dispatches
- * token exchange within [StravaAuthRepository]'s structured coroutine scope.
+ * to prevent Login CSRF attacks, enforces single-use state consumption, scopes the callback
+ * URI prefix to [BuildConfig.APPLICATION_ID] to eliminate disambiguation prompts on co-installed
+ * variants, and dispatches token exchange within [StravaAuthRepository]'s structured coroutine scope.
  */
 class StravaOAuthCallbackActivity : Activity() {
 
@@ -78,7 +80,7 @@ class StravaOAuthCallbackActivity : Activity() {
 
     companion object {
         private const val TAG = "StravaOAuthCallback"
-        private const val REDIRECT_URI_PREFIX = "strava://rainerblind.github.io"
+        internal val REDIRECT_URI_PREFIX = "strava://rainerblind.github.io/${BuildConfig.APPLICATION_ID}"
         const val StravaOAuthSuccess = "com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthSuccess"
     }
 }
