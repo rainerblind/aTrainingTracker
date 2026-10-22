@@ -927,7 +927,7 @@ fun ClusterNamingDialog(
                     label = { Text(stringResource(R.string.cluster_naming__selected_route_label)) },
                     trailingIcon = {
                         IconButton(onClick = { showSelectionDialog = true }) {
-                            Icon(painter = painterResource(id = R.drawable.my_locations), contentDescription = null)
+                            Icon(painter = painterResource(id = R.drawable.my_locations), contentDescription = stringResource(R.string.select_route))
                         }
                     }
                 )
@@ -996,7 +996,7 @@ fun ImportMappingDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp,
-        title = { Text("Map Data for Import") },
+        title = { Text(stringResource(R.string.import_map_data_title)) },
         text = {
             Column(
                 modifier = Modifier
@@ -1005,7 +1005,7 @@ fun ImportMappingDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (analysis.sportTypes.isNotEmpty()) {
-                    Text("Sport Types", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.sport_types), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     analysis.sportTypes.forEach { source ->
                         Column {
                             Text("${source.name} (${source.bSportType})", style = MaterialTheme.typography.labelMedium)
@@ -1013,7 +1013,7 @@ fun ImportMappingDialog(
                             val currentTarget = localSportTypes.find { it.id == sportMapping[source.id] }
                             ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                                 TextField(
-                                    value = currentTarget?.name ?: "Unknown",
+                                    value = currentTarget?.name ?: stringResource(R.string.unknown),
                                     onValueChange = {},
                                     readOnly = true,
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -1038,7 +1038,7 @@ fun ImportMappingDialog(
 
                 if (analysis.equipment.isNotEmpty()) {
                     HorizontalDivider()
-                    Text("Equipment", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.equipment), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     analysis.equipment.forEach { source ->
                         Column {
                             Text("${source.name} (${source.bSportType})", style = MaterialTheme.typography.labelMedium)
@@ -1046,7 +1046,7 @@ fun ImportMappingDialog(
                             val currentTarget = localEquipment.find { it.id == equipMapping[source.id] }
                             ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                                 TextField(
-                                    value = currentTarget?.name ?: "None",
+                                    value = currentTarget?.name ?: stringResource(R.string.none),
                                     onValueChange = {},
                                     readOnly = true,
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -1057,7 +1057,7 @@ fun ImportMappingDialog(
                                     )
                                 )
                                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                                    DropdownMenuItem(text = { Text("None") }, onClick = {
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.none)) }, onClick = {
                                         equipMapping[source.id] = -1L
                                         expanded = false
                                     })

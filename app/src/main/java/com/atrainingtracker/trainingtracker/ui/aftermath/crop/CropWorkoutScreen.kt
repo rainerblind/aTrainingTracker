@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
@@ -153,6 +155,9 @@ fun CropWorkoutScreen(
             return@AppModalBottomSheet
         }
 
+        val distanceFormatter = remember { DistanceFormatter() }
+        val speedFormatter = remember { SpeedFormatter() }
+
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -228,12 +233,12 @@ fun CropWorkoutScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Start: +${DateUtils.formatElapsedTime(startTrimDuration)}",
+                        text = stringResource(R.string.crop_start_trim, DateUtils.formatElapsedTime(startTrimDuration)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "End: -${DateUtils.formatElapsedTime(endTrimDuration)}",
+                        text = stringResource(R.string.crop_end_trim, DateUtils.formatElapsedTime(endTrimDuration)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -269,11 +274,11 @@ fun CropWorkoutScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Distanz:",
+                            text = stringResource(R.string.crop_distance_label),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = String.format(java.util.Locale.getDefault(), "%.2f km", uiState.croppedDistanceM / 1000.0),
+                            text = distanceFormatter.format_with_units(uiState.croppedDistanceM),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -283,7 +288,7 @@ fun CropWorkoutScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Dauer:",
+                            text = stringResource(R.string.crop_duration_label),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
@@ -297,11 +302,11 @@ fun CropWorkoutScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Ø Geschwindigkeit:",
+                            text = stringResource(R.string.crop_avg_speed_label),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = String.format(java.util.Locale.getDefault(), "%.1f km/h", uiState.croppedAvgSpeedMps * 3.6),
+                            text = speedFormatter.format_with_units(uiState.croppedAvgSpeedMps),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )

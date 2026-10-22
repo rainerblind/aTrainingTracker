@@ -2097,5 +2097,34 @@
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
     <string name="workout_card_reorder_toggle">Ordem e visibilidade dos cartões (%1$d ativos)</string>
     <string name="settings_workout_details_title">Detalhes do treino (ecrã inteiro)</string>
-</resources>
 
+    <!-- UI Localization Parity, Units & Accessibility (REQ-UI-429 / ATT-4026) -->
+    <string name="crop_start_trim">Início: +%1$s</string>
+    <string name="crop_end_trim">Fim: -%1$s</string>
+    <string name="crop_distance_label">Distância:</string>
+    <string name="crop_duration_label">Duração:</string>
+    <string name="crop_avg_speed_label">Ø Velocidade:</string>
+    <string name="import_map_data_title">Mapear dados para importação</string>
+    <string name="none">Nenhum</string>
+    <string name="unknown">Desconhecido</string>
+    <string name="destination_not_yet_implemented">A definição de um novo destino de conteúdo ainda não foi implementada</string>
+    <string name="unit_watt">W</string>
+    <string name="lap_placeholder_format">Volta %1$d</string>
+    <string name="period_no_gps_data">Sem dados de GPS para este período</string>
+    <string name="marker_summit">Cume</string>
+    <string name="marker_lap_start">Início da volta</string>
+    <string name="marker_lap_end">Fim da volta</string>
+    <string name="cd_fastest_split">Parcial mais rápido</string>
+    <string name="cd_switch_view_mode">Alternar modo de exibição</string>
+    <string name="connect_with_strava">Conectar ao Strava</string>
+    <string name="cd_add_row">Adicionar linha</string>
+    <string name="cd_add_column">Adicionar coluna</string>
+    <string name="cd_add_before">Adicionar antes</string>
+    <string name="cd_delete_tab">Excluir aba</string>
+    <string name="cd_add_after">Adicionar depois</string>
+    <string name="back">Voltar</string>
+    <string name="close">Fechar</string>
+    <string name="clear">Limpar</string>
+    <string name="select_route">Selecionar rota</string>
+    <string name="equipment">Equipamento</string>
+</resources>

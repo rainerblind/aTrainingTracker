@@ -2184,4 +2184,34 @@
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
     <string name="workout_card_reorder_toggle">Kartenreihenfolge &amp; Sichtbarkeit (%1$d aktiv)</string>
     <string name="settings_workout_details_title">Trainings-Details (Detail-Ansicht)</string>
+
+    <!-- UI Localization Parity, Units & Accessibility (REQ-UI-429 / ATT-4026) -->
+    <string name="crop_start_trim">Start: +%1$s</string>
+    <string name="crop_end_trim">Ende: -%1$s</string>
+    <string name="crop_distance_label">Distanz:</string>
+    <string name="crop_duration_label">Dauer:</string>
+    <string name="crop_avg_speed_label">Ø Geschwindigkeit:</string>
+    <string name="import_map_data_title">Daten für Import zuordnen</string>
+    <string name="none">Keine</string>
+    <string name="unknown">Unbekannt</string>
+    <string name="destination_not_yet_implemented">Festlegen eines neuen Inhaltsziels ist noch nicht implementiert</string>
+    <string name="unit_watt">W</string>
+    <string name="lap_placeholder_format">Runde %1$d</string>
+    <string name="period_no_gps_data">Keine GPS-Daten für diesen Zeitraum</string>
+    <string name="marker_summit">Gipfel</string>
+    <string name="marker_lap_start">Rundenstart</string>
+    <string name="marker_lap_end">Rundenende</string>
+    <string name="cd_fastest_split">Schnellster Split</string>
+    <string name="cd_switch_view_mode">Ansichtsmodus wechseln</string>
+    <string name="connect_with_strava">Mit Strava verbinden</string>
+    <string name="cd_add_row">Zeile hinzufügen</string>
+    <string name="cd_add_column">Spalte hinzufügen</string>
+    <string name="cd_add_before">Davor hinzufügen</string>
+    <string name="cd_delete_tab">Tab löschen</string>
+    <string name="cd_add_after">Danach hinzufügen</string>
+    <string name="back">Zurück</string>
+    <string name="close">Schließen</string>
+    <string name="clear">Löschen</string>
+    <string name="select_route">Route auswählen</string>
+    <string name="equipment">Ausrüstung</string>
 </resources>

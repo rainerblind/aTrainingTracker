@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 
@@ -45,7 +46,7 @@ fun ConnectWithStravaButton(
     
     Image(
         painter = painterResource(id = resId),
-        contentDescription = "Connect with Strava",
+        contentDescription = stringResource(R.string.connect_with_strava),
         contentScale = ContentScale.Fit,
         modifier = modifier
             .fillMaxWidth() // Allow it to fill the container width

@@ -973,7 +973,7 @@ fun ElevationProfile(
                 onClick = { showLegend = !showLegend },
                 modifier = Modifier.align(Alignment.TopEnd).padding(end = 4.dp).size(24.dp)
             ) {
-                Icon(Icons.Default.Info, contentDescription = "Legend", modifier = Modifier.size(16.dp), tint = colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium))
+                Icon(Icons.Default.Info, contentDescription = stringResource(R.string.legend), modifier = Modifier.size(16.dp), tint = colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium))
             }
 
             if (showLegend) {

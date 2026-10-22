@@ -83,7 +83,7 @@ fun WorkoutListActions(
         IconButton(onClick = onToggleCompactView) {
             Icon(
                 imageVector = if (isCompactView) Icons.Default.ViewStream else Icons.Default.ViewHeadline,
-                contentDescription = "Switch View Mode",
+                contentDescription = stringResource(R.string.cd_switch_view_mode),
                 tint = tint
             )
         }

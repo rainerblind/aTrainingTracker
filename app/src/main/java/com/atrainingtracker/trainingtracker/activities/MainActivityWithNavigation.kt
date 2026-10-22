@@ -787,7 +787,7 @@ class MainActivityWithNavigation :
         }
 
         Log.d(TAG, "setting a new content destination not yet implemented: $itemId")
-        Toast.makeText(this, "setting a new content destination not yet implemented", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.destination_not_yet_implemented, Toast.LENGTH_SHORT).show()
         return false
     }
 
@@ -974,7 +974,7 @@ class MainActivityWithNavigation :
                         if (percentage <= CRITICAL_BATTERY_LEVEL) {
                             if (mInRideCriticalAlertedSensorIds.add(deviceId)) {
                                 mInRideAlertedSensorIds.add(deviceId)
-                                val deviceName = devDbManager.getDeviceName(deviceId) ?: "Sensor"
+                                val deviceName = devDbManager.getDeviceName(deviceId) ?: getString(R.string.sensor)
                                 val message = getString(R.string.sensor_battery_snackbar_single, deviceName, percentage)
                                 WorkoutNavigationEvents.triggerLowBatteryAlert(
                                     WorkoutNavigationEvents.LowBatteryAlert(
@@ -987,7 +987,7 @@ class MainActivityWithNavigation :
                             }
                         } else {
                             if (mInRideAlertedSensorIds.add(deviceId)) {
-                                val deviceName = devDbManager.getDeviceName(deviceId) ?: "Sensor"
+                                val deviceName = devDbManager.getDeviceName(deviceId) ?: getString(R.string.sensor)
                                 val message = getString(R.string.sensor_battery_snackbar_single, deviceName, percentage)
                                 WorkoutNavigationEvents.triggerLowBatteryAlert(
                                     WorkoutNavigationEvents.LowBatteryAlert(

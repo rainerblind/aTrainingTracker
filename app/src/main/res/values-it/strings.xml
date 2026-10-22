@@ -2099,5 +2099,34 @@
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
     <string name="workout_card_reorder_toggle">Ordine e visibilità schede (%1$d attive)</string>
     <string name="settings_workout_details_title">Dettagli allenamento (schermo intero)</string>
-</resources>
 
+    <!-- UI Localization Parity, Units & Accessibility (REQ-UI-429 / ATT-4026) -->
+    <string name="crop_start_trim">Inizio: +%1$s</string>
+    <string name="crop_end_trim">Fine: -%1$s</string>
+    <string name="crop_distance_label">Distanza:</string>
+    <string name="crop_duration_label">Durata:</string>
+    <string name="crop_avg_speed_label">Ø Velocità:</string>
+    <string name="import_map_data_title">Mappa i dati per l\'importazione</string>
+    <string name="none">Nessuno</string>
+    <string name="unknown">Sconosciuto</string>
+    <string name="destination_not_yet_implemented">L\'impostazione di una nuova destinazione dei contenuti non è ancora implementata</string>
+    <string name="unit_watt">W</string>
+    <string name="lap_placeholder_format">Giro %1$d</string>
+    <string name="period_no_gps_data">Nessun dato GPS per questo periodo</string>
+    <string name="marker_summit">Cima</string>
+    <string name="marker_lap_start">Inizio giro</string>
+    <string name="marker_lap_end">Fine giro</string>
+    <string name="cd_fastest_split">Frazione più veloce</string>
+    <string name="cd_switch_view_mode">Cambia modalità di visualizzazione</string>
+    <string name="connect_with_strava">Connettiti con Strava</string>
+    <string name="cd_add_row">Aggiungi riga</string>
+    <string name="cd_add_column">Aggiungi colonna</string>
+    <string name="cd_add_before">Aggiungi prima</string>
+    <string name="cd_delete_tab">Elimina scheda</string>
+    <string name="cd_add_after">Aggiungi dopo</string>
+    <string name="back">Indietro</string>
+    <string name="close">Chiudi</string>
+    <string name="clear">Cancella</string>
+    <string name="select_route">Seleziona percorso</string>
+    <string name="equipment">Attrezzatura</string>
+</resources>

@@ -2098,4 +2098,34 @@
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
     <string name="workout_card_reorder_toggle">Ordre et visibilité des cartes (%1$d actives)</string>
     <string name="settings_workout_details_title">Détails de l\'entraînement (plein écran)</string>
+
+    <!-- UI Localization Parity, Units & Accessibility (REQ-UI-429 / ATT-4026) -->
+    <string name="crop_start_trim">Début : +%1$s</string>
+    <string name="crop_end_trim">Fin : -%1$s</string>
+    <string name="crop_distance_label">Distance :</string>
+    <string name="crop_duration_label">Durée :</string>
+    <string name="crop_avg_speed_label">Ø Vitesse :</string>
+    <string name="import_map_data_title">Mapper les données pour l\'importation</string>
+    <string name="none">Aucun</string>
+    <string name="unknown">Inconnu</string>
+    <string name="destination_not_yet_implemented">La définition d\'une nouvelle destination de contenu n\'est pas encore implémentée</string>
+    <string name="unit_watt">W</string>
+    <string name="lap_placeholder_format">Tour %1$d</string>
+    <string name="period_no_gps_data">Aucune donnée GPS pour cette période</string>
+    <string name="marker_summit">Sommet</string>
+    <string name="marker_lap_start">Début de tour</string>
+    <string name="marker_lap_end">Fin de tour</string>
+    <string name="cd_fastest_split">Temps intermédiaire le plus rapide</string>
+    <string name="cd_switch_view_mode">Changer de mode d\'affichage</string>
+    <string name="connect_with_strava">Se connecter à Strava</string>
+    <string name="cd_add_row">Ajouter une ligne</string>
+    <string name="cd_add_column">Ajouter une colonne</string>
+    <string name="cd_add_before">Ajouter avant</string>
+    <string name="cd_delete_tab">Supprimer l\'onglet</string>
+    <string name="cd_add_after">Ajouter après</string>
+    <string name="back">Retour</string>
+    <string name="close">Fermer</string>
+    <string name="clear">Effacer</string>
+    <string name="select_route">Sélectionner un itinéraire</string>
+    <string name="equipment">Équipement</string>
 </resources>

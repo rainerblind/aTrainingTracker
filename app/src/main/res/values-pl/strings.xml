@@ -2100,5 +2100,34 @@
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
     <string name="workout_card_reorder_toggle">Kolejność i widoczność kart (%1$d aktywne)</string>
     <string name="settings_workout_details_title">Szczegóły treningu (pełny ekran)</string>
-</resources>
 
+    <!-- UI Localization Parity, Units & Accessibility (REQ-UI-429 / ATT-4026) -->
+    <string name="crop_start_trim">Start: +%1$s</string>
+    <string name="crop_end_trim">Koniec: -%1$s</string>
+    <string name="crop_distance_label">Dystans:</string>
+    <string name="crop_duration_label">Czas trwania:</string>
+    <string name="crop_avg_speed_label">Ø Prędkość:</string>
+    <string name="import_map_data_title">Przypisz dane do importu</string>
+    <string name="none">Brak</string>
+    <string name="unknown">Nieznany</string>
+    <string name="destination_not_yet_implemented">Ustawianie nowego miejsca docelowego treści nie jest jeszcze zaimplementowane</string>
+    <string name="unit_watt">W</string>
+    <string name="lap_placeholder_format">Okrążenie %1$d</string>
+    <string name="period_no_gps_data">Brak danych GPS dla tego okresu</string>
+    <string name="marker_summit">Szczyt</string>
+    <string name="marker_lap_start">Początek okrążenia</string>
+    <string name="marker_lap_end">Koniec okrążenia</string>
+    <string name="cd_fastest_split">Najszybszy międzyczas</string>
+    <string name="cd_switch_view_mode">Przełącz tryb widoku</string>
+    <string name="connect_with_strava">Połącz ze Strava</string>
+    <string name="cd_add_row">Dodaj wiersz</string>
+    <string name="cd_add_column">Dodaj kolumnę</string>
+    <string name="cd_add_before">Dodaj przed</string>
+    <string name="cd_delete_tab">Usuń kartę</string>
+    <string name="cd_add_after">Dodaj po</string>
+    <string name="back">Wstecz</string>
+    <string name="close">Zamknij</string>
+    <string name="clear">Wyczyść</string>
+    <string name="select_route">Wybierz trasę</string>
+    <string name="equipment">Sprzęt</string>
+</resources>

@@ -1339,7 +1339,7 @@ private fun RowAdder(onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Icon(
             imageVector = Icons.Default.Add,
-            contentDescription = "Add Row",
+            contentDescription = stringResource(R.string.cd_add_row),
             tint = MaterialTheme.colorScheme.primary
         )
     }
@@ -1350,7 +1350,7 @@ private fun ColAdder(onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.fillMaxHeight()) {
         Icon(
             imageVector = Icons.Default.Add,
-            contentDescription = "Add Column",
+            contentDescription = stringResource(R.string.cd_add_column),
             tint = MaterialTheme.colorScheme.primary
         )
     }

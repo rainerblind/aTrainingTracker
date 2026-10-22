@@ -536,7 +536,7 @@ private fun PeriodMultiWorkoutMap(
 
     if (allPaths.isEmpty()) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            Text("No GPS data for this period", style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.period_no_gps_data), style = MaterialTheme.typography.labelSmall)
         }
         return
     }

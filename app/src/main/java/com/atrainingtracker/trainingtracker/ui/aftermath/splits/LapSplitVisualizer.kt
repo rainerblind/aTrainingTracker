@@ -147,11 +147,12 @@ fun LapSplitVisualizer(
                             horizontalArrangement = Arrangement.End
                         ) {
                             if (split.isFastest) {
+                                val fastestSplitCd = stringResource(R.string.cd_fastest_split)
                                 Text(
                                     text = "🐇",
                                     fontSize = 13.sp,
                                     modifier = Modifier.semantics {
-                                        contentDescription = "Fastest split"
+                                        contentDescription = fastestSplitCd
                                     }
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))

@@ -2098,5 +2098,34 @@
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
     <string name="workout_card_reorder_toggle">Kaartvolgorde en zichtbaarheid (%1$d actief)</string>
     <string name="settings_workout_details_title">Workout-details (volledig scherm)</string>
-</resources>
 
+    <!-- UI Localization Parity, Units & Accessibility (REQ-UI-429 / ATT-4026) -->
+    <string name="crop_start_trim">Start: +%1$s</string>
+    <string name="crop_end_trim">Einde: -%1$s</string>
+    <string name="crop_distance_label">Afstand:</string>
+    <string name="crop_duration_label">Duur:</string>
+    <string name="crop_avg_speed_label">Ø Snelheid:</string>
+    <string name="import_map_data_title">Gegevens toewijzen voor import</string>
+    <string name="none">Geen</string>
+    <string name="unknown">Onbekend</string>
+    <string name="destination_not_yet_implemented">Een nieuwe inhoudsbestemming instellen is nog niet geïmplementeerd</string>
+    <string name="unit_watt">W</string>
+    <string name="lap_placeholder_format">Ronde %1$d</string>
+    <string name="period_no_gps_data">Geen GPS-gegevens voor deze periode</string>
+    <string name="marker_summit">Top</string>
+    <string name="marker_lap_start">Rondestart</string>
+    <string name="marker_lap_end">Ronde-einde</string>
+    <string name="cd_fastest_split">Snelste tussentijd</string>
+    <string name="cd_switch_view_mode">Weergavemodus wijzigen</string>
+    <string name="connect_with_strava">Verbinden met Strava</string>
+    <string name="cd_add_row">Rij toevoegen</string>
+    <string name="cd_add_column">Kolom toevoegen</string>
+    <string name="cd_add_before">Ervóór toevoegen</string>
+    <string name="cd_delete_tab">Tabblad verwijderen</string>
+    <string name="cd_add_after">Erna toevoegen</string>
+    <string name="back">Terug</string>
+    <string name="close">Sluiten</string>
+    <string name="clear">Wissen</string>
+    <string name="select_route">Route selecteren</string>
+    <string name="equipment">Uitrusting</string>
+</resources>

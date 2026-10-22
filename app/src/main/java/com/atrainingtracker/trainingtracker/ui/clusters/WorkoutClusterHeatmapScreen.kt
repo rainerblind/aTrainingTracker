@@ -653,7 +653,7 @@ fun WorkoutClusterSummaryHeader(
                 ) {
                     if (isEditing) {
                         IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = null)
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                         }
                     }
 

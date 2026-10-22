@@ -68,7 +68,7 @@ fun ClusterTuningScreen(
                 title = { Text(stringResource(R.string.cluster_tuning_title)) },
                 navigationIcon = {
                     IconButton(onClick = handleBack, enabled = !isRecalculating) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {

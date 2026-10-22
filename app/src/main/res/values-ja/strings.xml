@@ -2078,5 +2078,34 @@
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
     <string name="workout_card_reorder_toggle">カードの順序と表示（%1$d件有効）</string>
     <string name="settings_workout_details_title">ワークアウト詳細（全画面）</string>
-</resources>
 
+    <!-- UI Localization Parity, Units & Accessibility (REQ-UI-429 / ATT-4026) -->
+    <string name="crop_start_trim">開始: +%1$s</string>
+    <string name="crop_end_trim">終了: -%1$s</string>
+    <string name="crop_distance_label">距離:</string>
+    <string name="crop_duration_label">時間:</string>
+    <string name="crop_avg_speed_label">Ø 速度:</string>
+    <string name="import_map_data_title">インポート用のデータをマッピング</string>
+    <string name="none">なし</string>
+    <string name="unknown">不明</string>
+    <string name="destination_not_yet_implemented">新しいコンテンツ宛先の設定はまだ実装されていません</string>
+    <string name="unit_watt">W</string>
+    <string name="lap_placeholder_format">ラップ %1$d</string>
+    <string name="period_no_gps_data">この期間のGPSデータはありません</string>
+    <string name="marker_summit">山頂</string>
+    <string name="marker_lap_start">ラップ開始</string>
+    <string name="marker_lap_end">ラップ終了</string>
+    <string name="cd_fastest_split">最速スプリット</string>
+    <string name="cd_switch_view_mode">表示モードの切り替え</string>
+    <string name="connect_with_strava">Stravaに接続</string>
+    <string name="cd_add_row">行を追加</string>
+    <string name="cd_add_column">列を追加</string>
+    <string name="cd_add_before">前に追加</string>
+    <string name="cd_delete_tab">タブを削除</string>
+    <string name="cd_add_after">後に追加</string>
+    <string name="back">戻る</string>
+    <string name="close">閉じる</string>
+    <string name="clear">クリア</string>
+    <string name="select_route">ルートを選択</string>
+    <string name="equipment">装備</string>
+</resources>

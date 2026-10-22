@@ -1595,6 +1595,7 @@ public class TrainingApplication extends Application {
         sActiveWorkoutId = workoutID;
     }
 
+    @Deprecated
     public void todo(Context context, String text) {
         Toast.makeText(context, "TODO: " + text, Toast.LENGTH_SHORT).show();
     }
