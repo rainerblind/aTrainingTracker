@@ -748,8 +748,9 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True)
 
 def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
     """
-    Automatically flips 'Planned' / 'Status: Planned (<KEY>)' status cells to 'Verified'
-    in docs/requirements.md and docs/tests.md when submitting Stage 5 (Rule 60).
+    Automatically flips 'Planned' / 'Status: Planned (<KEY>)' status cells and multi-line headings
+    to 'Verified' across docs/requirements.md, docs/tests.md, docs/requirements/*.md, and docs/tests/*.md
+    when submitting Stage 5 (Rule 60).
     """
     if not parent_key:
         return 0
@@ -764,9 +765,30 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
         r"(?:Status:\s*)?Planned\s*\(\s*" + re.escape(parent_key) + r"\s*\)",
         re.IGNORECASE,
     )
+    heading_planned_key_re = re.compile(
+        r"^(#{2,4}\s*(?:REQ|TST)-[A-Z0-9_-]+:.*?\[)(?:Status:\s*)?Planned\s*\(\s*" + re.escape(parent_key) + r"\s*\)(\])",
+        re.IGNORECASE,
+    )
+    heading_planned_gen_re = re.compile(
+        r"^(#{2,4}\s*(?:REQ|TST)-[A-Z0-9_-]+:.*?\[)(?:Status:\s*)?Planned(\])",
+        re.IGNORECASE,
+    )
+    bullet_planned_key_re = re.compile(
+        r"(\*\*(?:Status|Verification Status)\*\*:\s*)(?:Status:\s*)?Planned\s*\(\s*" + re.escape(parent_key) + r"\s*\)",
+        re.IGNORECASE,
+    )
+
+    # Collect target files
+    target_files = ["docs/requirements.md", "docs/tests.md"]
+    for shard_dir in ("docs/requirements", "docs/tests"):
+        abs_shard_dir = os.path.join(repo_root, shard_dir)
+        if os.path.isdir(abs_shard_dir):
+            for fname in sorted(os.listdir(abs_shard_dir)):
+                if fname.endswith(".md"):
+                    target_files.append(os.path.join(shard_dir, fname))
 
     total_updated = 0
-    for rel_path in ("docs/requirements.md", "docs/tests.md"):
+    for rel_path in target_files:
         abs_path = os.path.join(repo_root, rel_path)
         if not os.path.exists(abs_path):
             continue
@@ -778,9 +800,17 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
             for line in lines:
                 new_line = line
                 if line.lstrip().startswith("|") and trailing_planned_re.search(line):
-                    new_line = trailing_planned_re.sub(r"| Verified |\1", line)
+                    if parent_key in line or "Planned (" not in line:
+                        new_line = trailing_planned_re.sub(r"| Verified |\1", line)
                 elif parent_key in line and inline_planned_key_re.search(line):
                     new_line = inline_planned_key_re.sub("Verified", line)
+                elif heading_planned_key_re.search(line):
+                    new_line = heading_planned_key_re.sub(r"\1Verified\2", line)
+                elif parent_key in line and heading_planned_gen_re.search(line):
+                    new_line = heading_planned_gen_re.sub(r"\1Verified\2", line)
+                elif bullet_planned_key_re.search(line):
+                    new_line = bullet_planned_key_re.sub(r"\1Verified", line)
+
                 if new_line != line:
                     updated_count += 1
                 new_lines.append(new_line)

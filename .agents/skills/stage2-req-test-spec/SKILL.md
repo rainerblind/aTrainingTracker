@@ -16,12 +16,12 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
 ## Key Responsibilities (`subagent_flash` as `agent1` — `flash`)
 1. **Requirement Formulation (`REQ-XXX`)**:
    - Write clear SHALL/MUST clauses, structured architectural constraints, and Given-When-Then acceptance criteria.
-   - Insert new requirement rows into `docs/requirements.md` (or conduct Chesterton's Fence archaeology if modifying existing lines).
+   - Insert new requirement rows into the appropriate domain shard under `docs/requirements/` (`docs/requirements.md` master index) using the multi-line section format (or conduct Chesterton's Fence archaeology if modifying existing lines).
    - Validate governance via `python3 tools/verify_requirement_governance.py`.
 2. **Test Specification (`TST-XXX`)**:
    - Specify deterministic unit, repository, ViewModel, database, and UI test cases.
    - Include 9-language localization audit (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) ensuring zero missing entries, matching format specifiers, and literal `\n` linebreaks (never XML entity `&#10;` which AAPT2 collapses).
-   - Synchronize `docs/tests.md` with the new test definition.
+   - Synchronize the appropriate domain shard under `docs/tests/` (`docs/tests.md` master index) with the new test definition.
 3. **Traceability Matrix**:
    - Map all test cases to requirement IDs in a structured markdown table.
 4. **Single-Turn Stage Submission (`submit-stage`) & Concise Deliverable Cap (Rule 60)**:

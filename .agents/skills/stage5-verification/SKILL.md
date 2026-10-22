@@ -37,7 +37,7 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
    - **Non-UI Backend / Algorithm / DB Query / Dead-Code Cleanup Tickets**: Skip physical APK deployment in Stage 5 and rely on targeted unit/contract tests + `./gradlew processDebugResources` compilation verification.
 3. **Walkthrough Documentation & Automatic Living Documentation Synchronization (Concise Cap $\le 60\text{--}80$ Lines)**:
    - Author `docs/engineering/walkthroughs/<TICKET_KEY>_walkthrough.md` using `templates/walkthrough_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**.
-   - Note: `submit-stage <TICKET_KEY> 5` **automatically** flips `Planned` / `Status: Planned (<TICKET_KEY>)` rows in `docs/requirements.md` and `docs/tests.md` to `Verified`—no manual `replace_file_content` calls are needed just to flip the status column.
+    - Note: `submit-stage <TICKET_KEY> 5` **automatically** flips `Planned` / `Status: Planned (<TICKET_KEY>)` rows and headings across `docs/requirements/`, `docs/tests/`, `docs/requirements.md` and `docs/tests.md` to `Verified`—no manual `replace_file_content` calls are needed just to flip the status column.
 4. **Single-Turn Stage Submission (`submit-stage`)**:
    - Submit Stage 5 walkthrough in a single composite CLI call (auto-flips `Planned` $\rightarrow$ `Verified` in living docs, creates/updates `[Test]` sub-task, and moves it to `In Überprüfung`):
      ```bash
@@ -47,7 +47,7 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
 ## Gate 5 Independent Review Checklist (`subagent_pro` as `agent2` — `pro`)
 Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Stage 5 walkthrough and repository state against this checklist and record the verdict via `--as agent2 gate-verdict`:
 1. **Regression & Governance Verification**: Verify Tier 1 targeted/contract unit tests (or full suite for High-Risk tickets), `TranslationParityTest` (if strings changed), and `verify_requirement_governance.py` passed with 100% success (0 failures, 0 regressions).
-2. **Living Documentation Parity**: Confirm `docs/requirements.md` and `docs/tests.md` status fields are updated to `Verified`.
+2. **Living Documentation Parity**: Confirm living documentation in `docs/requirements/` and `docs/tests/` status fields are updated to `Verified`.
 3. **Mandatory Lösungsversion (Fix Version/s) Governance Audit**:
    - In accordance with Core Rule 8 ("FixVersion set only upon completion" and sub-tasks never having `fixVersions`), active in-sprint tickets legitimately have Parent `Lösungsversion` as `None` until final acceptance during Joint Review or release. Verify that the deliverable references the target release version (e.g. `V4.9.40`) and that sub-tasks have no fix version assigned.
 4. **Gate Verdict (`gate-verdict`) & Parent Handover (Core Rule 3)**:

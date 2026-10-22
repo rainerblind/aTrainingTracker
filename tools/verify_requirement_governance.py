@@ -30,21 +30,26 @@ MANDATORY_FIELDS = [
 ]
 
 HEADER_PATTERN = re.compile(
-    r"(?:#{2,3}|h[23]\.)\s*(?:\d+(?:\.\d+)*[.\)]\s*)?Requirement Archaeology & Chesterton's Fence Audit",
+    r"(?:#{2,4}|h[2-4]\.)\s*(?:\d+(?:\.\d+)*[.\)]\s*)?Requirement Archaeology & Chesterton's Fence Audit",
     re.IGNORECASE,
 )
 
 REQ_ROW_PATTERN = re.compile(
-    r"^[+-]\|\s*\*\*REQ-([A-Z0-9_-]+)\*\*",
+    r"^[+-](?:\|\s*\*\*REQ-([A-Z0-9_-]+)\*\*|#{2,4}\s*REQ-([A-Z0-9_-]+))",
     re.MULTILINE,
 )
 
 
-def get_git_diff(base_ref="develop", target_file="docs/requirements.md"):
+def get_git_diff(base_ref="develop", target_paths=None):
     """
-    Retrieves the git diff for target_file against base_ref (or merge-base with base_ref).
+    Retrieves the git diff for target_paths against base_ref (or merge-base with base_ref).
     If base_ref is not resolvable or in detached HEAD, falls back to diff against HEAD or staged/working tree.
     """
+    if target_paths is None:
+        target_paths = ["docs/requirements.md", "docs/requirements/"]
+    elif isinstance(target_paths, str):
+        target_paths = [target_paths]
+
     if base_ref == "develop":
         try:
             sprint_branches = subprocess.check_output(
@@ -68,10 +73,8 @@ def get_git_diff(base_ref="develop", target_file="docs/requirements.md"):
             ["git", "merge-base", base_ref, "HEAD"],
             stderr=subprocess.DEVNULL,
         ).decode("utf-8").strip()
-        diff = subprocess.check_output(
-            ["git", "diff", f"{mb}", "--", target_file],
-            stderr=subprocess.DEVNULL,
-        ).decode("utf-8")
+        cmd = ["git", "diff", f"{mb}", "--"] + target_paths
+        diff = subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode("utf-8")
         if diff.strip():
             return diff
     except Exception:
@@ -79,10 +82,8 @@ def get_git_diff(base_ref="develop", target_file="docs/requirements.md"):
 
     # Fallback to direct diff with base_ref
     try:
-        diff = subprocess.check_output(
-            ["git", "diff", f"{base_ref}", "--", target_file],
-            stderr=subprocess.DEVNULL,
-        ).decode("utf-8")
+        cmd = ["git", "diff", f"{base_ref}", "--"] + target_paths
+        diff = subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode("utf-8")
         if diff.strip():
             return diff
     except Exception:
@@ -90,10 +91,8 @@ def get_git_diff(base_ref="develop", target_file="docs/requirements.md"):
 
     # Fallback to working tree / uncommitted changes
     try:
-        diff = subprocess.check_output(
-            ["git", "diff", "HEAD", "--", target_file],
-            stderr=subprocess.DEVNULL,
-        ).decode("utf-8")
+        cmd = ["git", "diff", "HEAD", "--"] + target_paths
+        diff = subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode("utf-8")
         return diff
     except Exception:
         return ""
@@ -101,7 +100,8 @@ def get_git_diff(base_ref="develop", target_file="docs/requirements.md"):
 
 def parse_diff_requirements(diff_text):
     """
-    Parses git diff output for docs/requirements.md.
+    Parses git diff output for docs/requirements.md and docs/requirements/*.md.
+    Supports both legacy table rows (| **REQ-XXX**) and multi-line markdown headings (### REQ-XXX:).
     Returns:
       modified_reqs: set of REQ IDs that appear in both deleted (-) and added (+) lines.
       added_reqs: set of REQ IDs that appear ONLY in added (+) lines.
@@ -109,18 +109,45 @@ def parse_diff_requirements(diff_text):
     """
     added_ids = set()
     deleted_ids = set()
+    current_req = None
 
     for line in diff_text.splitlines():
         if line.startswith("+++") or line.startswith("---"):
             continue
+        if line.startswith("@@"):
+            m_hunk = re.search(r"REQ-([A-Z0-9_-]+)", line)
+            current_req = f"REQ-{m_hunk.group(1)}" if m_hunk else None
+            continue
+        if line.startswith(" "):
+            m_ctx = re.search(r"#{2,4}\s*REQ-([A-Z0-9_-]+)", line)
+            if m_ctx:
+                current_req = f"REQ-{m_ctx.group(1)}"
+            continue
+
         if line.startswith("+"):
             m = re.search(r"\|\s*\*\*REQ-([A-Z0-9_-]+)\*\*", line)
+            if not m:
+                m = re.search(r"#{2,4}\s*REQ-([A-Z0-9_-]+)(?:[:\s]|$)", line)
+            if not m:
+                m = re.search(r"\*\*REQ-([A-Z0-9_-]+)\.\d+\*\*", line)
             if m:
-                added_ids.add(f"REQ-{m.group(1)}")
+                req_id = f"REQ-{m.group(1)}"
+                added_ids.add(req_id)
+                current_req = req_id
+            elif current_req:
+                added_ids.add(current_req)
         elif line.startswith("-"):
             m = re.search(r"\|\s*\*\*REQ-([A-Z0-9_-]+)\*\*", line)
+            if not m:
+                m = re.search(r"#{2,4}\s*REQ-([A-Z0-9_-]+)(?:[:\s]|$)", line)
+            if not m:
+                m = re.search(r"\*\*REQ-([A-Z0-9_-]+)\.\d+\*\*", line)
             if m:
-                deleted_ids.add(f"REQ-{m.group(1)}")
+                req_id = f"REQ-{m.group(1)}"
+                deleted_ids.add(req_id)
+                current_req = req_id
+            elif current_req:
+                deleted_ids.add(current_req)
 
     # Modified requirements appear in both added and deleted sets
     modified_reqs = added_ids.intersection(deleted_ids)
