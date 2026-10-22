@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 17
+**Total Requirements**: 18
 
 ---
 
@@ -250,3 +250,44 @@
 • *Then* `heatmapProvider` returns `null`.
 
 **Invariants**: Zero changes to `PeriodSummaries.db`, memory safety without OOMs, and 100% clean-room unit test pass rate.
+
+### REQ-PER-018: Continuous Timeline PeriodBarGraph, Sub-Hour Value Formatting & Sport/Metric Modes [Verified]
+- **Tests**: `PeriodBarGraph.kt`, `PeriodBarGraphTest.kt`, `PeriodsTabsScreen.kt`
+- **Implementation**: Standalone PeriodBarGraph composable with timeline gap interpolation, sub-hour formatting, compact X-axis period labels, sport-stacked proportional bars, and metric mode toggle.
+- **Rationale**: The system SHALL provide continuous timeline analytics, sub-hour duration legibility, and multi-metric sport visualization in the PeriodBarGraph header (ATT-4478, Parent Epic ATT-4474, Status: Verified, refining `REQ-PER-007`):
+1. *Timeline Gap Interpolation & Rest Buckets (`REQ-PER-018.1`)*:
+• When rendering `periods` in `PeriodBarGraph`, the system SHALL generate continuous chronological buckets including zero-volume rest periods between active workouts up to a bounded window.
+• Zero-volume rest periods SHALL render as subtle baseline ticks (height 2 dp, disabled tint) preserving temporal spacing across Days, Weeks, and Months.
+2. *Sub-Hour Duration & Value Formatting (`REQ-PER-018.2`)*:
+• Durations `< 60s` SHALL format as `<1m`, `< 60m` SHALL format as `${m}m` (e.g., `45m`), `1h..10h` SHALL format with one decimal or integer hours (e.g., `1.5h` or `2h`), and `> 10h` SHALL format as `${h}h`.
+• Each bar SHALL display a compact X-axis period identifier (e.g., day/month, `W42`, `Oct`, `2026`) beneath the bar.
+3. *Sport-Stacked Proportions & Metric Switching (`REQ-PER-018.3`)*:
+• Active bars SHALL support proportional vertical segments colored by `BSportType` (`BIKE`, `RUN`, `OTHER`) using canonical theme colors.
+• The header SHALL provide a compact metric selector toggling between Duration, Distance, and Ascent, scaling bar heights dynamically to the maximum active value in the visible window.
+4. *Bidirectional Scroll & Navigation Synchronization (`REQ-PER-018.4`)*:
+• Clicking an active bar SHALL scroll the `PeriodList` to the corresponding `PeriodSummaryCard`.
+• Scrolling `PeriodList` SHALL keep `PeriodBarGraph` centered/synchronized with the active item via `LaunchedEffect`. Zero-volume rest ticks SHALL be non-interactive.
+5. *Preservation of System Invariants (`REQ-PER-018.5`)*:
+• Zero alterations to `PeriodSummaries.db` schema or database queries.
+• Strict non-crashing behavior on empty or single-item period lists.
+• 9-language localization parity maintained for all metric and accessibility labels.
+• Clean-room full test suite pass rate under `./gradlew testDebugUnitTest` SHALL remain 100%.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-PER-007` (*Reactive Period-Workout Association & Bar Graph*), targeting `PeriodsTabsScreen.kt` and `PeriodBarGraph.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (ATT-375 scroll sync, ATT-440 layout spacing, ATT-488).
+3. *Root Reason for Existing Formulation*: Originally designed as a minimal inline 70-line overview plotting raw non-zero periods directly from the database without timeline gap interpolation or metric toggles to minimize initial layout complexity.
+4. *Preservation of Core Invariants*: `LaunchedEffect` scroll synchronization, selection highlighting, and click navigation to `PeriodSummaryCard` remain 100% strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a list of periods with calendar gaps (e.g. rest days between Day 1 and Day 4),
+• *When* `PeriodBarGraph` renders,
+• *Then* continuous chronological buckets SHALL be generated with rest days rendered as baseline ticks preserving accurate temporal spacing.
+• *Given* an active period with duration of 45 minutes,
+• *When* value labels are drawn,
+• *Then* the label SHALL display `45m` rather than being suppressed or truncated to 0.
+• *Given* metric mode toggled to `Distance` or `Ascent`,
+• *When* bars render,
+• *Then* bar heights and values SHALL scale according to the selected metric's values across sports.
+
+**Invariants**: Zero database schema migrations, non-blocking UI thread, crash prevention on empty lists, and 100% clean-room test pass rate.

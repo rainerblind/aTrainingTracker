@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 24
+**Total Tests**: 25
 
 ---
 
@@ -223,3 +223,27 @@
   2. Verify that `PeriodType.WEEK`, `MONTH`, and `YEAR` return non-null `PolylineHeatmapTileProvider` instances with calibrated opacity.
   3. Verify that empty path input returns `heatmapProvider = null`.
   4. Run targeted unit test suite `com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*` verifying 100% pass rate.
+
+### TST-PER-024: **PeriodBarGraph Timeline Gap Interpolation, Sub-Hour Formatting, Sport Stacking & Metric Mode Verification Suite** [PeriodBarGraph correctly interpolates timeline rest gaps, renders subtle baseline ticks for zero-volume intervals, formats sub-hour durations cleanly (<1m, 45m, 1.5h), stacks bars by BSportType, switches metrics across Duration/Distance/Ascent, and handles empty/single lists gracefully without crashing; 100% clean-room test pass rate.]
+- **Requirement(s)**: `REQ-PER-018`
+- **Component**: **Period Timeline Bar Graph**
+- **Jira**: `ATT-4478`
+- **Test Description**:
+  1. *Timeline Gap Interpolation Unit Tests (`TST-PER-024.1`, `PeriodBarGraphTest.kt`)*:
+  • Given non-consecutive periods (e.g. Day 1 and Day 4 with Day 2-3 missing), verify continuous timeline generation inserts zero-volume rest buckets for Day 2 and Day 3.
+  • Verify zero-volume rest items have 0 metric values and render with subtle baseline tick height (2 dp).
+  2. *Sub-Hour Duration & Value Formatting Tests (`TST-PER-024.2`, `PeriodBarGraphTest.kt`)*:
+  • Verify duration `< 60s` formats as `<1m`.
+  • Verify duration `45 * 60` (45 min) formats as `45m` (not empty, not `0h`).
+  • Verify duration `90 * 60` (1.5 h) formats as `1.5h`.
+  • Verify duration `12 * 3600` (12 h) formats as `12h`.
+  • Verify distance and ascent metric value formatting for compact display.
+  3. *Metric Switching & Proportional Scaling Tests (`TST-PER-024.3`, `PeriodBarGraphTest.kt`)*:
+  • Verify bar height fractions scale dynamically relative to max duration in Duration mode, max distance in Distance mode, and max ascent in Ascent mode.
+  4. *Sport Breakdown Proportions Tests (`TST-PER-024.4`, `PeriodBarGraphTest.kt`)*:
+  • For periods with multiple sports (BIKE, RUN, OTHER), verify stacked segment height fractions match sport proportional contributions.
+  5. *Empty & Boundary Protection Tests (`TST-PER-024.5`, `PeriodBarGraphTest.kt`)*:
+  • Verify empty period list renders nothing without crashing.
+  • Verify single period list renders correctly with height fraction 1.0f.
+  6. *Clean-Room Regression Suite Execution (`TST-PER-024.6`)*:
+  • Run targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
