@@ -83,7 +83,7 @@ data class ClusterMapState(
  * Architectural Role: Presentation layer for recurring spatial patterns.
  * Threading: Intensive map data processing is offloaded to [Dispatchers.Default].
  */
-class WorkoutClustersViewModel(
+class WorkoutClustersViewModel @JvmOverloads constructor(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AndroidViewModel(application) {
