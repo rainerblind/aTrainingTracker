@@ -140,8 +140,9 @@ object ZoneDistributionCalculator {
         samples: List<ZoneSample>,
         thresholds: PowerZoneThresholds
     ): ZoneDistributionData? {
-        val validSamples = samples.filter { it.value > 0 }
-        if (validSamples.isEmpty()) return null
+        val hasPositivePower = samples.any { it.value > 0 }
+        if (!hasPositivePower) return null
+        val validSamples = samples.filter { it.value >= 0 }
 
         val isDegenerate = validSamples.size > 1 && validSamples.first().timeActiveSec == validSamples.last().timeActiveSec
         val zoneDurations = LongArray(7)

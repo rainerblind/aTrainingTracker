@@ -202,4 +202,54 @@ class TcxCourseParserTest {
         val result = TcxCourseParser.parse(invalidXml)
         assertTrue(result.isFailure)
     }
+
+    /**
+     * TST-MAP-055.3: Verifies that TcxCourseParser filters out position-less trackpoints
+     * to protect route polyline projection.
+     */
+    @Test
+    fun testParseTcxCourse_filtersPositionlessTrackpoints() {
+        val tcxXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+                <Courses>
+                    <Course>
+                        <Name>Route With Mixed Points</Name>
+                        <Track>
+                            <Trackpoint>
+                                <Position>
+                                    <LatitudeDegrees>47.0</LatitudeDegrees>
+                                    <LongitudeDegrees>10.0</LongitudeDegrees>
+                                </Position>
+                                <AltitudeMeters>500.0</AltitudeMeters>
+                                <DistanceMeters>0.0</DistanceMeters>
+                            </Trackpoint>
+                            <!-- Position-less indoor / sensor point -->
+                            <Trackpoint>
+                                <Time>2026-10-04T08:05:00Z</Time>
+                                <AltitudeMeters>502.0</AltitudeMeters>
+                                <DistanceMeters>500.0</DistanceMeters>
+                            </Trackpoint>
+                            <Trackpoint>
+                                <Position>
+                                    <LatitudeDegrees>47.01</LatitudeDegrees>
+                                    <LongitudeDegrees>10.01</LongitudeDegrees>
+                                </Position>
+                                <AltitudeMeters>505.0</AltitudeMeters>
+                                <DistanceMeters>1000.0</DistanceMeters>
+                            </Trackpoint>
+                        </Track>
+                    </Course>
+                </Courses>
+            </TrainingCenterDatabase>
+        """.trimIndent()
+
+        val result = TcxCourseParser.parse(tcxXml)
+        assertTrue(result.isSuccess)
+        val importData = result.getOrThrow()
+        // Position-less point was filtered out, leaving exactly 2 valid route points
+        assertEquals(2, importData.pathPoints.size)
+        assertEquals(47.0, importData.pathPoints[0].latLng.latitude, 0.0001)
+        assertEquals(47.01, importData.pathPoints[1].latLng.latitude, 0.0001)
+    }
 }

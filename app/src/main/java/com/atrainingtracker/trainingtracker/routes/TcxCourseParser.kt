@@ -53,6 +53,7 @@ object TcxCourseParser {
             }
             val data = parseResult.getOrThrow()
             val rawPoints = data.laps.flatMap { it.trackpoints }
+                .filter { it.lat != null && it.lng != null }
 
             if (rawPoints.isEmpty()) {
                 return Result.failure(IllegalArgumentException("No valid trackpoints found in TCX course"))
@@ -60,7 +61,7 @@ object TcxCourseParser {
 
             val trackPoints = rawPoints.map { pt ->
                 PathPoint(
-                    latLng = LatLng(pt.lat, pt.lng),
+                    latLng = LatLng(pt.lat!!, pt.lng!!),
                     altitude = pt.altitude ?: 0.0,
                     distance = pt.distanceMeters ?: 0.0
                 )

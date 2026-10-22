@@ -441,7 +441,11 @@ object PowerPhysiologyCalculator {
      * @return Normalized Power in Watts ($> 0$), or `null` if no positive power samples exist.
      */
     @JvmStatic
-    fun calculateNormalizedPower(powerSamplesWatts: List<Double?>): Double? {
+    @JvmOverloads
+    fun calculateNormalizedPower(
+        powerSamplesWatts: List<Double?>,
+        sampleIntervalSec: Double = 1.0
+    ): Double? {
         val validSamples = powerSamplesWatts.mapNotNull { p ->
             if (p != null && p.isFinite() && p >= 0.0) p else null
         }
@@ -449,7 +453,8 @@ object PowerPhysiologyCalculator {
             return null
         }
 
-        val window = ArrayDeque<Double>(NP_ROLLING_WINDOW_SECONDS)
+        val windowSize = maxOf(1, (30.0 / sampleIntervalSec).roundToInt())
+        val window = ArrayDeque<Double>(windowSize)
         var windowSum = 0.0
         var sumFourthPowers = 0.0
         var count = 0
@@ -457,7 +462,7 @@ object PowerPhysiologyCalculator {
         for (p in validSamples) {
             window.addLast(p)
             windowSum += p
-            if (window.size > NP_ROLLING_WINDOW_SECONDS) {
+            if (window.size > windowSize) {
                 windowSum -= window.removeFirst()
             }
             val rollingAvg = windowSum / window.size.toDouble()
@@ -811,7 +816,7 @@ object PowerPhysiologyCalculator {
         val avgPower = if (hasPositiveSample) validSamples.average() else null
         val maxPower = if (hasPositiveSample) validSamples.maxOrNull() else null
 
-        val npWatts = calculateNormalizedPower(powerSamplesWatts)
+        val npWatts = calculateNormalizedPower(powerSamplesWatts, sampleIntervalSec)
             ?: fallbackNpWatts?.takeIf { it.isFinite() && it > 0.0 }
 
         val vi = if (npWatts != null && avgPower != null && avgPower > 0.0) {
@@ -840,13 +845,7 @@ object PowerPhysiologyCalculator {
         }
 
         val workKjVal = if (hasPositiveSample) {
-            if (activeTimeSeconds > 0 && avgPower != null && validSamples.size != activeTimeSeconds) {
-                // Scale by authoritative activeTime when sample rate differs from 1Hz
-                val sampleBasedKj = calculateWorkKj(validSamples, sampleIntervalSec)
-                sampleBasedKj
-            } else {
-                calculateWorkKj(validSamples, sampleIntervalSec)
-            }
+            calculateWorkKj(validSamples, sampleIntervalSec)
         } else {
             fallbackWorkKj?.takeIf { it.isFinite() && it > 0.0 }
         }

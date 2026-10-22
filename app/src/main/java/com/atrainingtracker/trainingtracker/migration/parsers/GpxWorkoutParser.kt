@@ -113,37 +113,42 @@ object GpxWorkoutParser {
                         put(SensorType.LAP_NR.name, lapNr)
                     }
 
-                    val pLat = prevLat
-                    val pLng = prevLng
-                    if (pLat != null && pLng != null) {
-                        val results = FloatArray(1)
-                        Location.distanceBetween(pLat, pLng, pt.lat, pt.lng, results)
-                        cumDist += results[0].toDouble()
+                    if (pt.lat != null && pt.lng != null) {
+                        val pLat = prevLat
+                        val pLng = prevLng
+                        if (pLat != null && pLng != null) {
+                            val results = FloatArray(1)
+                            Location.distanceBetween(pLat, pLng, pt.lat, pt.lng, results)
+                            cumDist += results[0].toDouble()
+                        }
+                        prevLat = pt.lat
+                        prevLng = pt.lng
+
+                        values.put(SensorType.LATITUDE.name, pt.lat)
+                        values.put(SensorType.LONGITUDE.name, pt.lng)
+                        values.put(SensorType.DISTANCE_m.name, cumDist)
+                        foundSensors.add(SensorType.LATITUDE)
+                        foundSensors.add(SensorType.LONGITUDE)
+                        foundSensors.add(SensorType.DISTANCE_m)
+
+                        val pos = LatLng(pt.lat, pt.lng)
+                        points.add(pos)
                     }
-                    prevLat = pt.lat
-                    prevLng = pt.lng
-
-                    values.put(SensorType.LATITUDE.name, pt.lat)
-                    values.put(SensorType.LONGITUDE.name, pt.lng)
-                    values.put(SensorType.DISTANCE_m.name, cumDist)
-                    foundSensors.add(SensorType.LATITUDE)
-                    foundSensors.add(SensorType.LONGITUDE)
-                    foundSensors.add(SensorType.DISTANCE_m)
-
-                    val pos = LatLng(pt.lat, pt.lng)
-                    points.add(pos)
 
                     pt.altitude?.let { alt ->
                         values.put(SensorType.ALTITUDE.name, alt)
                         foundSensors.add(SensorType.ALTITUDE)
                         altitudes.add(alt)
-                        if (alt < minAltVal) {
-                            minAltVal = alt
-                            minAltPos = pos
-                        }
-                        if (alt > maxAltVal) {
-                            maxAltVal = alt
-                            maxAltPos = pos
+                        if (pt.lat != null && pt.lng != null) {
+                            val pos = LatLng(pt.lat, pt.lng)
+                            if (alt < minAltVal) {
+                                minAltVal = alt
+                                minAltPos = pos
+                            }
+                            if (alt > maxAltVal) {
+                                maxAltVal = alt
+                                maxAltPos = pos
+                            }
                         }
                     }
 

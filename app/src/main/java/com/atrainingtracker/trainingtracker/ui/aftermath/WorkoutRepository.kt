@@ -690,7 +690,7 @@ class WorkoutRepository private constructor(private val application: Application
 
                 if (!cursor.isNull(pwrIdx)) {
                     val pwr = cursor.getInt(pwrIdx)
-                    if (pwr > 0) {
+                    if (pwr >= 0) {
                         samples.add(ZoneSample(timeActiveSec = timeSec, value = pwr))
                     }
                 }
@@ -838,7 +838,7 @@ class WorkoutRepository private constructor(private val application: Application
                 if (hr != null && hr > 0) {
                     hrSamples?.add(ZoneSample(timeActiveSec = timeSec, value = hr))
                 }
-                if (power != null && power > 0) {
+                if (power != null && power >= 0) {
                     powerSamples?.add(ZoneSample(timeActiveSec = timeSec, value = power))
                 }
                 sampleIndex++
