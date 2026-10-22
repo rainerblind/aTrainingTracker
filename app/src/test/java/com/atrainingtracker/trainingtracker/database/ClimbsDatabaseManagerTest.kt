@@ -189,7 +189,7 @@ class ClimbsDatabaseManagerTest {
         assertEquals(3, deserialized.size)
         assertEquals(original[0].latLng.latitude, deserialized[0].latLng.latitude, 0.000001)
         assertEquals(original[0].latLng.longitude, deserialized[0].latLng.longitude, 0.000001)
-        assertEquals(original[0].altitude, deserialized[0].altitude, 0.01)
+        assertEquals(original[0].altitude!!, deserialized[0].altitude!!, 0.01)
         assertEquals(original[2].distance, deserialized[2].distance, 0.01)
     }
 

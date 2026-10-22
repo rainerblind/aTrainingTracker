@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.FileProvider
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
@@ -33,6 +34,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
@@ -43,7 +45,16 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
-class BackupRestoreViewModel(application: Application) : AndroidViewModel(application) {
+/**
+ * ViewModel managing backup creation, cloud/local synchronization, and database restores (REQ-TST-003.4).
+ *
+ * @param application Application context for system services and resources.
+ * @param ioDispatcher Dispatcher used for background I/O operations (defaults to [Dispatchers.IO]).
+ */
+class BackupRestoreViewModel @JvmOverloads constructor(
+    application: Application,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : AndroidViewModel(application) {
 
     sealed class UiState {
         object Idle : UiState()
@@ -93,13 +104,17 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    data class LastBackupInfo(val timestamp: Long, val status: String)
+    data class LastBackupInfo(
+        val timestamp: Long,
+        val status: String,
+        val targets: Map<String, Boolean> = emptyMap()
+    )
 
     private val prefs = PreferenceManager.getDefaultSharedPreferences(application)
 
     val lastBackupInfo: StateFlow<LastBackupInfo?> = callbackFlow {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
-            if (key == "last_backup_timestamp" || key == "last_backup_status") {
+            if (key == "last_backup_timestamp" || key == "last_backup_status" || key == "last_backup_targets") {
                 trySend(readLastBackupInfo(p))
             }
         }
@@ -111,7 +126,28 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     private fun readLastBackupInfo(p: SharedPreferences): LastBackupInfo? {
         val ts = p.getLong("last_backup_timestamp", 0L)
         val st = p.getString("last_backup_status", null)
-        return if (ts == 0L && st == null) null else LastBackupInfo(ts, st ?: "UNKNOWN")
+        val targetsStr = p.getString("last_backup_targets", null)
+        if (ts == 0L && st == null) return null
+
+        val targets = if (!targetsStr.isNullOrBlank()) {
+            targetsStr.split(";").mapNotNull { entry ->
+                val parts = entry.split(":")
+                if (parts.size == 2) parts[0].trim() to (parts[1].trim() == "SUCCESS") else null
+            }.toMap()
+        } else {
+            inferTargetsFromStatus(st)
+        }
+        return LastBackupInfo(ts, st ?: "UNKNOWN", targets)
+    }
+
+    private fun inferTargetsFromStatus(status: String?): Map<String, Boolean> {
+        return when (status) {
+            "LOCAL_SUCCESS" -> mapOf("local" to true)
+            "SUCCESS" -> mapOf("local" to true)
+            "Upload failed" -> mapOf("local" to true)
+            "Local backup creation failed" -> mapOf("local" to false)
+            else -> emptyMap()
+        }
     }
 
     var automatedBackupsEnabled by mutableStateOf(prefs.getBoolean("automated_backups", true))
@@ -205,6 +241,113 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
             }
         }
     }
+
+    /**
+     * Creates a local backup and uploads it to all enabled cloud providers (Dropbox and/or Google Drive),
+     * acquiring [BackupManager.acquireLock] to prevent race conditions and persisting [lastBackupInfo]
+     * matching [BackupWorker] parity (REQ-MIG-036).
+     */
+    fun uploadToCloud(
+        context: Context,
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): Job {
+        return viewModelScope.launch(dispatcher) {
+            val dropboxConnected = TrainingApplication.uploadToDropbox() && TrainingApplication.uploadBackupToDropbox() && TrainingApplication.readDropboxCredential() != null
+            val googleDriveConnected = TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
+
+            if (!dropboxConnected && !googleDriveConnected) {
+                _uiState.value = UiState.Error(context.getString(R.string.cloud_backup_no_provider_dialog_message))
+                return@launch
+            }
+
+            _uiState.value = UiState.Loading("Creating backup...")
+
+            val lock = BackupManager.acquireLock(context)
+            if (lock == null) {
+                _uiState.value = UiState.Error("Backup already in progress")
+                return@launch
+            }
+
+            lock.use {
+                val backupFile = BackupManager.createBackup(context, object : BackupManager.ProgressListener {
+                    override fun onProgress(message: String) {
+                        _uiState.value = UiState.Loading(message)
+                    }
+                })
+
+                val targets = mutableMapOf<String, Boolean>()
+                targets["local"] = (backupFile != null)
+
+                if (backupFile != null) {
+                    var anyUploadSuccess = false
+                    var anyUploadFailed = false
+
+                    if (dropboxConnected) {
+                        _uiState.value = UiState.Loading("Uploading to Dropbox...")
+                        val dbxSuccess = DropboxBackupManager.uploadBackup(context, backupFile)
+                        targets["dropbox"] = dbxSuccess
+                        if (dbxSuccess) {
+                            anyUploadSuccess = true
+                        } else {
+                            anyUploadFailed = true
+                        }
+                    }
+
+                    if (googleDriveConnected) {
+                        _uiState.value = UiState.Loading("Uploading to Google Drive...")
+                        val gdSuccess = GoogleDriveBackupManager.uploadBackup(context, backupFile)
+                        targets["google_drive"] = gdSuccess
+                        if (gdSuccess) {
+                            anyUploadSuccess = true
+                        } else {
+                            anyUploadFailed = true
+                        }
+                    }
+
+                    val targetsStr = BackupWorker.formatTargets(targets)
+                    val status = if (anyUploadSuccess) {
+                        if (anyUploadFailed) "PARTIAL_SUCCESS" else "SUCCESS"
+                    } else {
+                        "Upload failed"
+                    }
+
+                    prefs.edit(commit = true) {
+                        if (anyUploadSuccess) {
+                            putLong("last_backup_timestamp", System.currentTimeMillis())
+                        }
+                        putString("last_backup_status", status)
+                        putString("last_backup_targets", targetsStr)
+                    }
+
+                    if (anyUploadSuccess) {
+                        val msg = if (anyUploadFailed) {
+                            "Backup partially uploaded to cloud"
+                        } else {
+                            "Backup uploaded to cloud"
+                        }
+                        _uiState.value = UiState.Success(msg)
+                    } else {
+                        _uiState.value = UiState.Error("Cloud upload failed")
+                    }
+                } else {
+                    val targetsStr = BackupWorker.formatTargets(targets)
+                    prefs.edit(commit = true) {
+                        putString("last_backup_status", "Local backup creation failed")
+                        putString("last_backup_targets", targetsStr)
+                    }
+                    _uiState.value = UiState.Error("Failed to create backup")
+                }
+            }
+        }
+    }
+
+    /**
+     * Alias for [uploadToCloud] (REQ-MIG-036).
+     */
+    fun uploadToEnabledClouds(
+        context: Context,
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): Job = uploadToCloud(context, dispatcher)
 
     fun restoreFromDropbox(context: Context) {
         viewModelScope.launch {
@@ -315,6 +458,34 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
+    fun getAutomaticBackupTimestamp(context: Context): Long? {
+        val backupFile = File(BackupManager.getBackupDir(context), BackupManager.BACKUP_FILENAME)
+        return if (backupFile.exists() && backupFile.length() > 0) backupFile.lastModified() else null
+    }
+
+    fun restoreFromLocalBackup(context: Context) {
+        viewModelScope.launch(ioDispatcher) {
+            val backupFile = File(BackupManager.getBackupDir(context), BackupManager.BACKUP_FILENAME)
+            if (!backupFile.exists() || backupFile.length() == 0L) {
+                _uiState.value = UiState.Error(context.getString(R.string.restore_automatic_backup_not_found))
+                return@launch
+            }
+            _uiState.value = UiState.Loading("Processing backup file...")
+            try {
+                val success = MigrationEngine.performFullRestore(context, backupFile, object : MigrationEngine.ProgressListener {
+                    override fun onProgress(message: String) {
+                        _uiState.value = UiState.Loading(message)
+                    }
+                })
+                if (!success) {
+                    _uiState.value = UiState.Error(context.getString(R.string.restore_failed))
+                }
+            } catch (e: Exception) {
+                _uiState.value = UiState.Error("Failed to restore local backup: ${e.message}")
+            }
+        }
+    }
+
     fun analyzeImport(context: Context, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = UiState.Loading("Analyzing backup content...")
@@ -384,6 +555,36 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
+     * Recursively scans an Android Storage Access Framework (SAF) directory tree for workout files
+     * and bulk-imports them with duplicate skipping and reconciliation (REQ-UI-363, ATT-3491).
+     */
+    fun importWorkoutDirectory(
+        context: Context,
+        treeUri: Uri,
+        format: String,
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): Job {
+        saveClusteringTolerances()
+        return viewModelScope.launch(dispatcher) {
+            _uiState.value = UiState.Loading(context.getString(R.string.import_directory_scanning))
+
+            val discoveredUris = SafDirectoryScanner.scanDirectory(
+                context = context,
+                treeUri = treeUri,
+                targetFormat = format
+            )
+
+            if (discoveredUris.isEmpty()) {
+                val formatLabel = format.uppercase()
+                _uiState.value = UiState.Success(context.getString(R.string.import_directory_no_files_found, formatLabel), null)
+                return@launch
+            }
+
+            importWorkoutFilesInternal(context, discoveredUris, format)
+        }
+    }
+
+    /**
      * Ingests a batch of workout files (FIT, TCX, GPX) sequentially with duplicate skipping,
      * progress feedback, and post-import database reconciliation (REQ-DAT-019, REQ-UI-293, ATT-3315).
      */
@@ -396,102 +597,110 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
         if (uris.isEmpty()) return Job().apply { complete() }
         saveClusteringTolerances()
         return viewModelScope.launch(dispatcher) {
-            val totalFiles = uris.size
-            var importedCount = 0
-            var skippedCount = 0
-            var failedCount = 0
-            var lastImportedWorkoutId: Long? = null
+            importWorkoutFilesInternal(context, uris, format)
+        }
+    }
 
-            val progressFormatString = if (format.lowercase() == "fit") {
-                context.getString(R.string.import_fit_progress, 0, totalFiles)
+    private suspend fun importWorkoutFilesInternal(
+        context: Context,
+        uris: List<Uri>,
+        format: String
+    ) {
+        val totalFiles = uris.size
+        var importedCount = 0
+        var skippedCount = 0
+        var failedCount = 0
+        var lastImportedWorkoutId: Long? = null
+
+        val progressFormatString = if (format.lowercase() == "fit") {
+            context.getString(R.string.import_fit_progress, 0, totalFiles)
+        } else {
+            context.getString(R.string.import_workout_files_progress, 0, totalFiles)
+        }
+        _uiState.value = UiState.Loading(progressFormatString)
+
+        uris.forEachIndexed { index, uri ->
+            val progressStepString = if (format.lowercase() == "fit") {
+                context.getString(R.string.import_fit_progress, index + 1, totalFiles)
             } else {
-                context.getString(R.string.import_workout_files_progress, 0, totalFiles)
+                context.getString(R.string.import_workout_files_progress, index + 1, totalFiles)
             }
-            _uiState.value = UiState.Loading(progressFormatString)
+            _uiState.value = UiState.Loading(progressStepString)
 
-            uris.forEachIndexed { index, uri ->
-                val progressStepString = if (format.lowercase() == "fit") {
-                    context.getString(R.string.import_fit_progress, index + 1, totalFiles)
-                } else {
-                    context.getString(R.string.import_workout_files_progress, index + 1, totalFiles)
+            val displayName = try {
+                context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        if (idx != -1) cursor.getString(idx) else null
+                    } else null
                 }
-                _uiState.value = UiState.Loading(progressStepString)
-
-                val displayName = try {
-                    context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-                        if (cursor.moveToFirst()) {
-                            val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                            if (idx != -1) cursor.getString(idx) else null
-                        } else null
-                    }
-                } catch (e: Exception) {
-                    null
+            } catch (e: Exception) {
+                null
+            }
+            val fileName = displayName?.takeIf { it.isNotBlank() } ?: "import_${System.currentTimeMillis()}_$index.$format"
+            val tempFile = File(context.cacheDir, fileName)
+            try {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    tempFile.outputStream().use { output -> input.copyTo(output) }
                 }
-                val fileName = displayName?.takeIf { it.isNotBlank() } ?: "import_${System.currentTimeMillis()}_$index.$format"
-                val tempFile = File(context.cacheDir, fileName)
-                try {
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        tempFile.outputStream().use { output -> input.copyTo(output) }
-                    }
 
-                    val fileExt = if (fileName.contains('.')) fileName.substringAfterLast('.').lowercase() else format.lowercase()
-                    val result = when (fileExt) {
-                        "tcx" -> LegacyImportEngine.importFromTcxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                        "gpx" -> LegacyImportEngine.importFromGpxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                        "fit" -> LegacyImportEngine.importFromFitResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
-                        else -> LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.FAILED)
-                    }
+                val fileExt = if (fileName.contains('.')) fileName.substringAfterLast('.').lowercase() else format.lowercase()
+                val result = when (fileExt) {
+                    "tcx" -> LegacyImportEngine.importFromTcxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                    "gpx" -> LegacyImportEngine.importFromGpxResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                    "fit" -> LegacyImportEngine.importFromFitResult(context, tempFile, createLegacyListener(), uploadToStravaOnImport)
+                    else -> LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.FAILED)
+                }
 
-                    when (result.status) {
-                        LegacyImportEngine.ImportStatus.SUCCESS -> {
-                            importedCount++
-                            if (result.workoutId != null) {
-                                lastImportedWorkoutId = result.workoutId
-                            }
+                when (result.status) {
+                    LegacyImportEngine.ImportStatus.SUCCESS -> {
+                        importedCount++
+                        if (result.workoutId != null) {
+                            lastImportedWorkoutId = result.workoutId
                         }
-                        LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> skippedCount++
-                        LegacyImportEngine.ImportStatus.FAILED -> failedCount++
                     }
-                } catch (e: Exception) {
-                    Log.e("BackupRestoreVM", "Failed to import $format URI $uri: ${e.message}", e)
-                    failedCount++
-                } finally {
-                    tempFile.delete()
+                    LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> skippedCount++
+                    LegacyImportEngine.ImportStatus.FAILED -> failedCount++
                 }
+            } catch (e: Exception) {
+                Log.e("BackupRestoreVM", "Failed to import $format URI $uri: ${e.message}", e)
+                failedCount++
+            } finally {
+                tempFile.delete()
             }
+        }
 
+        if (importedCount > 0) {
+            try {
+                val app = getApplication<Application>()
+                WorkoutRepository.getInstance(app).loadAllWorkouts()
+                PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
+                WorkoutClusterRepository.getInstance(app).refreshClusters()
+            } catch (e: Exception) {
+                Log.w("BackupRestoreVM", "Post-import reconciliation failed: ${e.message}")
+            }
+        }
+
+        if (totalFiles == 1 && format.lowercase() != "fit") {
+            val fileExt = format.uppercase()
             if (importedCount > 0) {
-                try {
-                    val app = getApplication<Application>()
-                    WorkoutRepository.getInstance(app).loadAllWorkouts()
-                    PeriodsRepository.getInstance(app).syncPeriodsIfDiscrepancy()
-                    WorkoutClusterRepository.getInstance(app).refreshClusters()
-                } catch (e: Exception) {
-                    Log.w("BackupRestoreVM", "Post-import reconciliation failed: ${e.message}")
-                }
+                _uiState.value = UiState.Success("Successfully imported workout from $fileExt file.", lastImportedWorkoutId)
+            } else if (skippedCount > 0) {
+                _uiState.value = UiState.Success(context.getString(R.string.import_fit_summary_success, 0, 1), null)
+            } else {
+                _uiState.value = UiState.Error("Failed to import workout. It might already exist or the file format is invalid.")
+            }
+        } else {
+            val resultMsg = if (failedCount > 0) {
+                context.getString(R.string.import_fit_summary_with_errors, importedCount, skippedCount, failedCount)
+            } else {
+                context.getString(R.string.import_fit_summary_success, importedCount, skippedCount)
             }
 
-            if (totalFiles == 1 && format.lowercase() != "fit") {
-                val fileExt = format.uppercase()
-                if (importedCount > 0) {
-                    _uiState.value = UiState.Success("Successfully imported workout from $fileExt file.", lastImportedWorkoutId)
-                } else if (skippedCount > 0) {
-                    _uiState.value = UiState.Success(context.getString(R.string.import_fit_summary_success, 0, 1), null)
-                } else {
-                    _uiState.value = UiState.Error("Failed to import workout. It might already exist or the file format is invalid.")
-                }
+            if (importedCount > 0 || skippedCount > 0) {
+                _uiState.value = UiState.Success(resultMsg, if (importedCount > 0) lastImportedWorkoutId else null)
             } else {
-                val resultMsg = if (failedCount > 0) {
-                    context.getString(R.string.import_fit_summary_with_errors, importedCount, skippedCount, failedCount)
-                } else {
-                    context.getString(R.string.import_fit_summary_success, importedCount, skippedCount)
-                }
-
-                if (importedCount > 0 || skippedCount > 0) {
-                    _uiState.value = UiState.Success(resultMsg, if (importedCount > 0) lastImportedWorkoutId else null)
-                } else {
-                    _uiState.value = UiState.Error(resultMsg)
-                }
+                _uiState.value = UiState.Error(resultMsg)
             }
         }
     }

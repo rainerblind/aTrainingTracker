@@ -25,9 +25,9 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
     private static final String TAG = "MyAccumulatorSensor";
 
     Boolean mRespectPause;
-    protected N mInitialValue;  // necessary to manipulate the output that we get via getValue()...
+    protected volatile N mInitialValue;  // necessary to manipulate the output that we get via getValue()...
     protected N mZeroValue; // In almost all cases, this will be 0.  In some special cases, like a lap sensor, this will be 1.
-    protected N mLastAbsoluteValue;
+    protected volatile N mLastAbsoluteValue;
 
     @Override
     @Deprecated
@@ -42,28 +42,48 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
 
 
     public void accumulate(N absoluteValue) {
-        if (mLastAbsoluteValue != null) {
-            N incrementBy = sub(absoluteValue, mLastAbsoluteValue);
-            if (incrementBy.doubleValue() >= 0) {
-                increment(incrementBy);
-            } else {
-                android.util.Log.w(TAG, "Negative increment detected (" + incrementBy + "). Sensor reset or wrap-around? Ignoring.");
+        N incrementBy = null;
+        synchronized (this) {
+            if (mLastAbsoluteValue != null) {
+                N diff = sub(absoluteValue, mLastAbsoluteValue);
+                if (diff.doubleValue() >= 0) {
+                    incrementBy = diff;
+                } else {
+                    android.util.Log.w(TAG, "Negative increment detected (" + diff + "). Sensor reset or wrap-around? Ignoring.");
+                }
             }
+            mLastAbsoluteValue = absoluteValue;
         }
-        mLastAbsoluteValue = absoluteValue;
+        if (incrementBy != null) {
+            increment(incrementBy);
+        }
     }
 
 
     public void increment(N incrementBy) {
-        if (mRespectPause && TrainingApplication.isPaused()) {
+        if (mRespectPause && (TrainingApplication.isPaused() || TrainingApplication.isAutoPaused())) {
             // do nothing
         } else {
-            newValue(add(mValue, incrementBy));
+            N currentTotal = null;
+            boolean active;
+            synchronized (this) {
+                active = mActivated;
+                if (active) {
+                    mValue = add(mValue, incrementBy);
+                    mLastUpdateTimestamp = System.currentTimeMillis();
+                    currentTotal = add(mInitialValue, mValue);
+                }
+            }
+            if (active) {
+                for (SensorListener sensorListener : mSensorListeners) {
+                    sensorListener.newValue(currentTotal);
+                }
+            }
         }
     }
 
     @Override
-    public N getValue() {
+    public synchronized N getValue() {
         if (mActivated) {
             return add(mInitialValue, mValue);
         } else {
@@ -85,11 +105,11 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
         newValue(zeroValue);
     }
 
-    public final void setInitialValue(N value) {
+    public final synchronized void setInitialValue(N value) {
         mInitialValue = value;
     }
 
-    public final void reset() {
+    public final synchronized void reset() {
         setInitialValue(sub(mZeroValue, mValue));
     }
 }

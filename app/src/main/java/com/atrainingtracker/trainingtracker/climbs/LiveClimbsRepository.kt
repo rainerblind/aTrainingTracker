@@ -145,7 +145,8 @@ class LiveClimbsRepository private constructor(
                             currentGradePercent = climb.avgGradePercent,
                             currentProgressFraction = 0f,
                             routeIndex = if (activeRouteId != null) index + 1 else null,
-                            totalRouteClimbs = totalRouteClimbs
+                            totalRouteClimbs = totalRouteClimbs,
+                            lastSegmentIndex = if (distToStart <= CLIMB_START_GATE_THRESHOLD_METERS) 0 else null
                         )
                     }
                 }
@@ -181,7 +182,8 @@ class LiveClimbsRepository private constructor(
                 status = LiveClimbStatus.FINISHED,
                 distanceToSummit = 0.0,
                 remainingElevationGain = 0.0,
-                currentProgressFraction = 1.0f
+                currentProgressFraction = 1.0f,
+                lastSegmentIndex = null
             )
         }
 
@@ -195,7 +197,8 @@ class LiveClimbsRepository private constructor(
                 activeClimbStartTimeMs = System.currentTimeMillis()
                 return current.copy(
                     status = LiveClimbStatus.ON_CLIMB,
-                    distanceToStart = 0.0
+                    distanceToStart = 0.0,
+                    lastSegmentIndex = 0
                 )
             } else if (distToStart > CLIMB_APPROACH_THRESHOLD_METERS) {
                 // Moved away
@@ -231,9 +234,12 @@ class LiveClimbsRepository private constructor(
             )
         }
 
-        // Project rider coordinate orthogonally onto polyline segments via unified engine (REQ-GEO-001)
-        val projection = PolylineProgressTracker.projectLocation(path, location)
-            ?: return null
+        // Project rider coordinate orthogonally onto polyline segments via unified engine (REQ-GEO-001, REQ-NAV-056)
+        val projection = PolylineProgressTracker.projectLocation(
+            path = path,
+            location = location,
+            lastSegmentIndex = current.lastSegmentIndex
+        ) ?: return null
 
         // Off-climb check using perpendicular cross-track distance
         if (projection.crossTrackDistanceMeters > CLIMB_OFF_ROUTE_THRESHOLD_METERS) {
@@ -242,8 +248,8 @@ class LiveClimbsRepository private constructor(
 
         val completedDist = projection.alongTrackDistance
         val remainingDist = (climb.distanceMeters - completedDist).coerceAtLeast(0.0)
-        val currentAlt = projection.interpolatedAltitude ?: path.first().altitude
-        val summitAlt = path.last().altitude
+        val currentAlt = projection.interpolatedAltitude ?: path.first().altitude ?: 0.0
+        val summitAlt = path.last().altitude ?: currentAlt
         val remainingGain = (summitAlt - currentAlt).coerceAtLeast(0.0)
         val progressFraction = (completedDist / climb.distanceMeters).coerceIn(0.0, 1.0).toFloat()
         val grade = projection.instantaneousGradePercent ?: climb.avgGradePercent
@@ -252,7 +258,8 @@ class LiveClimbsRepository private constructor(
             distanceToSummit = remainingDist,
             remainingElevationGain = remainingGain,
             currentGradePercent = grade,
-            currentProgressFraction = progressFraction
+            currentProgressFraction = progressFraction,
+            lastSegmentIndex = projection.segmentIndex
         )
     }
 

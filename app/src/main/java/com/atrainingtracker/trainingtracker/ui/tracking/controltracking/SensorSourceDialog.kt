@@ -31,8 +31,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.ui.res.stringResource
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -40,6 +42,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
@@ -69,12 +72,29 @@ fun SensorSourceDialog(
     }
     val activeDeviceIds = remember(allActiveTelemetries) { allActiveTelemetries.map { it.deviceId }.toSet() }
     
-    val activeBackups = remember(allActiveTelemetries, sourceDevice) {
-        allActiveTelemetries.filter { it.deviceId != sourceDevice?.id }
+    val activeBackups = remember(allActiveTelemetries, sourceDevice, allDevices, sensorType) {
+        allActiveTelemetries
+            .filter { it.deviceId != sourceDevice?.id }
+            .sortedWith(
+                compareBy<DeviceTelemetry> { telemetry ->
+                    val dev = allDevices.find { it.id == telemetry.deviceId }
+                    MySensorManager.getPriorityRank(sensorType, dev?.deviceType)
+                }
+                .thenBy { telemetry ->
+                    allDevices.find { it.id == telemetry.deviceId }?.deviceName ?: ""
+                }
+                .thenBy { it.deviceId }
+            )
     }
     
-    val notConnected = remember(allDevices, activeDeviceIds, potentialTypes) {
-        allDevices.filter { potentialTypes.contains(it.deviceType) && !activeDeviceIds.contains(it.id) }
+    val notConnected = remember(allDevices, activeDeviceIds, potentialTypes, sensorType) {
+        allDevices
+            .filter { potentialTypes.contains(it.deviceType) && !activeDeviceIds.contains(it.id) }
+            .sortedWith(
+                compareBy<DeviceUiData> { MySensorManager.getPriorityRank(sensorType, it.deviceType) }
+                    .thenBy { it.deviceName }
+                    .thenBy { it.id }
+            )
     }
 
     val unitRes = MyHelper.getUnitsId(sensorType)
@@ -82,7 +102,7 @@ fun SensorSourceDialog(
 
     AppModalBottomSheet(
         title = sensorType.getFullName(context),
-        iconPainter = painterResource(id = sensorType.getIconResId()),
+        iconPainter = safePainterResource(id = sensorType.getIconResId(), fallback = Icons.Default.Sensors),
         iconTint = MaterialTheme.colorScheme.onSurface,
         onDismissRequest = onDismiss,
         actions = {
@@ -105,7 +125,7 @@ fun SensorSourceDialog(
                         text = stringResource(id = R.string.source_device),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = TTColor.RouteSelected
+                        color = TTColor.SensorSourceActive
                     )
                     DeviceIdentityBlock(
                         device = sourceDevice, 
@@ -126,7 +146,7 @@ fun SensorSourceDialog(
                         text = stringResource(id = R.string.source_active_backups),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = TTColor.RouteUnselected
+                        color = TTColor.SensorBackupActive
                     )
                     activeBackups.forEach { telemetry ->
                         val device = allDevices.find { it.id == telemetry.deviceId }
@@ -209,7 +229,7 @@ private fun DeviceIdentityBlock(
         modifier = modifier
     ) {
         Icon(
-            painter = painterResource(id = device.deviceTypeIconRes),
+            painter = safePainterResource(id = device.deviceTypeIconRes, fallback = Icons.Default.Sensors),
             contentDescription = null,
             modifier = Modifier
                 .size(if (device.protocol == Protocol.SMARTPHONE) 32.dp else 44.dp)

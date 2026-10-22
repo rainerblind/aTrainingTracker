@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
-
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,7 +42,6 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
-
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 
@@ -62,7 +60,8 @@ fun WorkoutClustersTabsScreen(
     onHitCountClick: (WorkoutCluster) -> Unit,
     onAddClick: () -> Unit,
     onDeleteRequest: (WorkoutCluster) -> Unit,
-    migrationStatus: com.atrainingtracker.trainingtracker.ui.util.MigrationStatus? = null
+    migrationStatus: com.atrainingtracker.trainingtracker.ui.util.MigrationStatus? = null,
+    onNavigateToAdvancedSettings: () -> Unit = {}
 ) {
     val clusters by viewModel.allClusters.collectAsState()
     val unclusteredWorkouts by viewModel.unclusteredWorkouts.collectAsState()
@@ -72,12 +71,17 @@ fun WorkoutClustersTabsScreen(
     val currentLocation by viewModel.currentLocation.collectAsState()
     val isLocationAvailable by viewModel.isLocationAvailable.collectAsState()
     val knownLocations by viewModel.knownLocations.collectAsState()
+    val clusterStats by viewModel.clusterStats.collectAsState()
+    val linkedEquipmentBySport by viewModel.linkedEquipmentBySport.collectAsState()
 
     var showFilterBottomSheet by rememberSaveable { mutableStateOf(false) }
     var showInfoDialog by rememberSaveable { mutableStateOf(false) }
 
     if (showInfoDialog) {
-        ClusterInfoDialog(onDismissRequest = { showInfoDialog = false })
+        ClusterInfoDialog(
+            onDismissRequest = { showInfoDialog = false },
+            onNavigateToAdvancedSettings = { showInfoDialog = false; onNavigateToAdvancedSettings() }
+        )
     }
 
     if (showFilterBottomSheet) {
@@ -157,8 +161,9 @@ fun WorkoutClustersTabsScreen(
                         sportFilteredClusters
                     } else {
                         sportFilteredClusters.filter { cluster ->
-                            val linkedEquipment = viewModel.getLinkedEquipmentSet(cluster.probableSportId)
-                            filterCriteria.matches(cluster, linkedEquipment)
+                            val linkedEquipment = linkedEquipmentBySport[cluster.probableSportId] ?: emptySet()
+                            val elevation = clusterStats[cluster.id]?.avgAscentMeters?.toDouble() ?: 0.0
+                            filterCriteria.matches(cluster, linkedEquipment, elevation)
                         }
                     }
 
@@ -358,7 +363,9 @@ fun WorkoutClustersTabsScreen(
                                 criteria = filterCriteria,
                                 onRemoveQuery = { viewModel.updateFilterCriteria { it.copy(query = "") } },
                                 onRemoveEquipment = { viewModel.updateFilterCriteria { it.copy(equipmentName = null) } },
-                                onRemoveMinDistance = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null) } },
+                                onRemoveDistanceRange = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
+                                onRemoveMinDistance = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
+                                onRemoveElevationRange = { viewModel.updateFilterCriteria { it.copy(minElevationGainMeters = null, maxElevationGainMeters = null) } },
                                 onRemoveMinHitCount = { viewModel.updateFilterCriteria { it.copy(minHitCount = null) } },
                                 onRemoveStartLocation = {
                                     viewModel.updateFilterCriteria {
@@ -381,10 +388,7 @@ fun WorkoutClustersTabsScreen(
             // Synchronized look & feel (SCRUM-208): Using default M3 colors to match SportTypes/Equipment
             FloatingActionButton(
                 onClick = onAddClick,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-                    .navigationBarsPadding()
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).navigationBarsPadding()
             ) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.text_new))
             }

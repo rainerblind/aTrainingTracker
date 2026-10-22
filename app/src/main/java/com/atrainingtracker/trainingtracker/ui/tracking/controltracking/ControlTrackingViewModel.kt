@@ -25,7 +25,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
@@ -35,14 +34,13 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataReposit
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -57,7 +55,6 @@ data class RemoteDeviceUIData(
 
 // Sealed class for navigation destinations
 sealed class ControlNavigation {
-    data class ToPairing(val protocol: Protocol, val deviceType: DeviceType? = null) : ControlNavigation()
     data class ToEditDevice(val deviceId: Long, val deviceType: DeviceType) : ControlNavigation()
     data object ShowRecoveryDialog : ControlNavigation()
 }
@@ -67,7 +64,7 @@ class ControlTrackingViewModel(
 ) : ViewModel() {
 
     companion object {
-        val DEBUG = true
+        val DEBUG = com.atrainingtracker.BuildConfig.DEBUG
         val TAG = "ControlTrackingViewModel"
     }
 
@@ -75,11 +72,8 @@ class ControlTrackingViewModel(
     private val devicesRepository = DeviceDataRepository.getInstance(application)
 
     // A channel for one-time events (like clicking a button to navigate)
-    private val _navigationEvent = MutableSharedFlow<ControlNavigation>(replay = 0)
-    val navigationEvent = _navigationEvent.asSharedFlow()
-
-    private val _selectingProtocol = MutableStateFlow<Protocol?>(null)
-    val selectingProtocol: StateFlow<Protocol?> = _selectingProtocol.asStateFlow()
+    private val _navigationEvent = Channel<ControlNavigation>(Channel.BUFFERED)
+    val navigationEvent: Flow<ControlNavigation> = _navigationEvent.receiveAsFlow()
 
     val devicesDatabaseManager = DevicesDatabaseManager.getInstance(application)
 
@@ -116,6 +110,21 @@ class ControlTrackingViewModel(
             initialValue = devicesDatabaseManager.hasPairedRemoteDevices()
         )
 
+    /**
+     * Emits `true` if at least one paired Bluetooth LE remote device
+     * exists in the database, false otherwise (ATT-3998 / REQ-PRI-006).
+     * Seeded synchronously from SQLite on cold start to prevent UI flicker.
+     */
+    val hasPairedBluetoothSensors: StateFlow<Boolean> = allDevicesFromDb
+        .map { devices ->
+            devices.any { it.isPaired && it.protocol == Protocol.BLUETOOTH_LE }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = devicesDatabaseManager.hasPairedBluetoothDevices()
+        )
+
     // 2. Combine the IDs from the BANALService with the Data from the Database
     val remoteDevices: StateFlow<List<RemoteDeviceUIData>> = banalServiceRepository.activeRemoteDevicesIds
         .combine(allDevicesFromDb) { ids, dbDevices ->
@@ -145,7 +154,7 @@ class ControlTrackingViewModel(
 
     fun onDeviceClicked(device: RemoteDeviceUIData) {
         viewModelScope.launch {
-            _navigationEvent.emit(ControlNavigation.ToEditDevice(device.id, device.deviceType))
+            _navigationEvent.send(ControlNavigation.ToEditDevice(device.id, device.deviceType))
         }
     }
 
@@ -160,30 +169,6 @@ class ControlTrackingViewModel(
         banalServiceRepository.startSearchingForPairedDevices()
     }
 
-    fun isAntProperlyInstalled(): Boolean {
-        return BANALService.areAllANTServicesInstalled(application)
-    }
-
-    fun isBluetoothSupported(): Boolean {
-        return BANALService.isProtocolSupported(application, Protocol.BLUETOOTH_LE)
-    }
-
-    fun onPairingClicked(protocol: Protocol) {
-        _selectingProtocol.value = protocol
-    }
-
-    fun onDeviceTypeSelected(deviceType: DeviceType) {
-        val protocol = _selectingProtocol.value ?: return
-        _selectingProtocol.value = null
-        viewModelScope.launch {
-            _navigationEvent.emit(ControlNavigation.ToPairing(protocol, deviceType))
-        }
-    }
-
-    fun onCancelDeviceTypeSelection() {
-        _selectingProtocol.value = null
-    }
-
 
     /***********************************************************************************************
      * Control Tracking
@@ -194,7 +179,7 @@ class ControlTrackingViewModel(
         val dbManager = WorkoutSummariesDatabaseManager.getInstance(application)
         if (!TrainingApplication.isTracking() && dbManager.hasUnfinishedWorkout()) {
             viewModelScope.launch {
-                _navigationEvent.emit(ControlNavigation.ShowRecoveryDialog)
+                _navigationEvent.send(ControlNavigation.ShowRecoveryDialog)
             }
         } else {
             sendBroadcast(TrainingApplication.REQUEST_START_TRACKING)

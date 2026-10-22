@@ -121,7 +121,7 @@ class RoutesRepository internal constructor(
         // Auto-sync Strava routes if user is connected and cache has no Strava routes
         if (TrainingApplication.getStravaAccessToken() != null) {
             repositoryScope.launch {
-                val hasStravaRoutes = routesDb.getAllRoutes().any { it.summary.source == RouteSource.STRAVA }
+                val hasStravaRoutes = routesDb.getAllRouteSummaries().any { it.source == RouteSource.STRAVA }
                 if (!hasStravaRoutes) {
                     syncRoutesFromStrava()
                 }
@@ -368,16 +368,16 @@ class RoutesRepository internal constructor(
 
                 // 2. Identify which routes are already in the DB
                 val activeExtIds = stravaRoutes.map { it.idStr }.toSet()
-                val existingRoutes = routesDb.getAllRoutes()
+                val existingRoutes = routesDb.getAllRouteSummaries()
                 val existingRoutesByExtId = existingRoutes
-                    .filter { it.summary.source == RouteSource.STRAVA && it.summary.externalId.isNotBlank() }
-                    .associateBy { it.summary.externalId }
+                    .filter { it.source == RouteSource.STRAVA && it.externalId.isNotBlank() }
+                    .associateBy { it.externalId }
 
                 for (stravaRoute in stravaRoutes) {
                     val existing = existingRoutesByExtId[stravaRoute.idStr]
                     if (existing != null) {
                         // Route already imported: refresh its synced_at timestamp to extend cache validity
-                        routesDb.updateRouteSyncedAt(existing.summary.id, System.currentTimeMillis())
+                        routesDb.updateRouteSyncedAt(existing.id, System.currentTimeMillis())
                         continue
                     }
 

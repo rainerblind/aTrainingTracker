@@ -21,7 +21,9 @@ package com.atrainingtracker.banalservice.database
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
+import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.testutil.MockCursorFactory
 import io.mockk.every
@@ -30,13 +32,18 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
 /**
  * Unit verification suite for sport-specific sensor ordering in [DevicesDatabaseManager.getSensorsForSportType]
- * (REQ-UI-283, TST-UI-243.3, ATT-2464).
+ * and location devices initialization ordering in [DevicesDatabaseManager.DevicesDbHelper.addLocationDevicesToDb]
+ * (REQ-UI-283, TST-UI-243.3, ATT-2464, REQ-TRK-024.6, TST-TRK-016.4, ATT-4375).
  */
+@RunWith(RobolectricTestRunner::class)
 class DevicesDatabaseManagerOrderingTest {
 
     private lateinit var mockContext: Context
@@ -147,5 +154,62 @@ class DevicesDatabaseManagerOrderingTest {
         assertEquals(DeviceType.RUN_SPEED, result[0].deviceType)
         assertEquals(DeviceType.HRM, result[1].deviceType)
         assertEquals(DeviceType.ENVIRONMENT, result[2].deviceType)
+    }
+
+    /**
+     * `TST-TRK-016.4`: Verifies that [DevicesDatabaseManager.DevicesDbHelper.addLocationDevicesToDb]
+     * inserts location devices in sequence GPS (_id=1, paired=true), GOOGLE_FUSED (_id=2, paired=true),
+     * and NETWORK (_id=3, paired=false), guaranteeing autoincrement primary key order matches canonical
+     * fallback priority (REQ-TRK-024.6).
+     */
+    @Test
+    fun testAddLocationDevicesToDb_insertionOrder_gpsThenGoogleFusedThenNetwork() {
+        mockkStatic(com.atrainingtracker.banalservice.helpers.HavePressureSensor::class)
+        every { com.atrainingtracker.banalservice.helpers.HavePressureSensor.havePressureSensor(any()) } returns false
+
+        val testContext = mockk<Context>(relaxed = true)
+        every { testContext.getString(any()) } returns "MockDevice"
+
+        val db = SQLiteDatabase.create(null)
+        val helper = DevicesDatabaseManager.DevicesDbHelper(testContext)
+
+        helper.onCreate(db)
+
+        val cursor = db.query(
+            DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+            arrayOf(
+                DevicesDatabaseManager.DevicesDbHelper.C_ID,
+                DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE,
+                DevicesDatabaseManager.DevicesDbHelper.PAIRED
+            ),
+            "${DevicesDatabaseManager.DevicesDbHelper.PROTOCOL} = ?",
+            arrayOf(Protocol.SMARTPHONE.name),
+            null,
+            null,
+            "${DevicesDatabaseManager.DevicesDbHelper.C_ID} ASC"
+        )
+
+        val devices = mutableListOf<Triple<Long, String, Int>>()
+        cursor.use {
+            while (it.moveToNext()) {
+                val id = it.getLong(0)
+                val type = it.getString(1)
+                val paired = it.getInt(2)
+                devices.add(Triple(id, type, paired))
+            }
+        }
+
+        assertTrue(devices.size >= 3)
+        assertEquals(1L, devices[0].first)
+        assertEquals(DeviceType.SPEED_AND_LOCATION_GPS.name, devices[0].second)
+        assertEquals(1, devices[0].third)
+
+        assertEquals(2L, devices[1].first)
+        assertEquals(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name, devices[1].second)
+        assertEquals(1, devices[1].third)
+
+        assertEquals(3L, devices[2].first)
+        assertEquals(DeviceType.SPEED_AND_LOCATION_NETWORK.name, devices[2].second)
+        assertEquals(0, devices[2].third)
     }
 }

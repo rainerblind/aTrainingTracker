@@ -396,8 +396,10 @@ fun RouteTabbedScreen(
                                 onRemoveQuery = { onUpdateFilterCriteria { it.copy(query = "") } },
                                 onRemoveSource = { onUpdateFilterCriteria { it.copy(source = null) } },
                                 onRemoveSelected = { onUpdateFilterCriteria { it.copy(isSelected = null) } },
-                                onRemoveMinDistance = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null) } },
-                                onRemoveMinElevation = { onUpdateFilterCriteria { it.copy(minElevationGainMeters = null) } },
+                                onRemoveDistanceRange = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
+                                onRemoveMinDistance = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
+                                onRemoveElevationRange = { onUpdateFilterCriteria { it.copy(minElevationGainMeters = null, maxElevationGainMeters = null) } },
+                                onRemoveMinElevation = { onUpdateFilterCriteria { it.copy(minElevationGainMeters = null, maxElevationGainMeters = null) } },
                                 onClearAll = onClearAllFilters
                             )
                         }

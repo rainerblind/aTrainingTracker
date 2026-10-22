@@ -40,7 +40,8 @@ object GoogleDriveBackupManager {
     var clientProvider: (Context) -> GoogleDriveClient = { context ->
         GoogleDriveClient(
             tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() },
-            tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull() }
+            tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull() },
+            accountProvider = { TrainingApplication.getGoogleDriveAccountEmail() }
         )
     }
 
@@ -49,7 +50,8 @@ object GoogleDriveBackupManager {
         clientProvider = { context ->
             GoogleDriveClient(
                 tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() },
-                tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull() }
+                tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull() },
+                accountProvider = { TrainingApplication.getGoogleDriveAccountEmail() }
             )
         }
     }
@@ -75,12 +77,29 @@ object GoogleDriveBackupManager {
                 return@withContext false
             }
 
-            val success = client.uploadOrOverwriteFile(
-                folderId = folderId,
+            var resolvedFolderId = folderId
+            var success = client.uploadOrOverwriteFile(
+                folderId = resolvedFolderId,
                 fileName = GOOGLE_DRIVE_BACKUP_FILENAME,
                 mimeType = "application/octet-stream",
                 file = backupFile
             )
+
+            // Bounded self-healing re-creation on HTTP 404 (REQ-DAT-030.3)
+            if (!success && client.lastHttpCode == 404) {
+                Log.w(TAG, "Backup upload returned HTTP 404 for folder $resolvedFolderId; attempting single self-healing re-creation...")
+                client.evictFolder(resolvedFolderId)
+                val recreatedFolderId = client.ensureFolderHierarchy(BACKUP_FOLDER_HIERARCHY)
+                if (recreatedFolderId != null) {
+                    resolvedFolderId = recreatedFolderId
+                    success = client.uploadOrOverwriteFile(
+                        folderId = resolvedFolderId,
+                        fileName = GOOGLE_DRIVE_BACKUP_FILENAME,
+                        mimeType = "application/octet-stream",
+                        file = backupFile
+                    )
+                }
+            }
 
             if (success) {
                 TrainingApplication.setGoogleDriveLastSyncTimestamp(System.currentTimeMillis())

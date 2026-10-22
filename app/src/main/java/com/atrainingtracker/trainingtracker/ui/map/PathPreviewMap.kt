@@ -68,7 +68,7 @@ fun PathPreviewMap(
         DarkMapStyle.resolveMapProperties(isDark, context)
     }
 
-    Box(modifier = modifier.background(if (isDark) Color(0xFF121212) else Color.White)) {
+    Box(modifier = modifier.background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,

@@ -63,7 +63,6 @@ class MainActivityStartupPermissionContractTest {
         activity = mockk(relaxed = true)
         every { activity.getSystemService(Context.LOCATION_SERVICE) } returns mockLocationManager
         every { activity.checkGpsEnabledIfPermitted() } answers { callOriginal() }
-        every { activity.getPermissions(any()) } answers { callOriginal() }
     }
 
     @After
@@ -77,19 +76,16 @@ class MainActivityStartupPermissionContractTest {
     }
 
     @Test
-    fun testGetPermissionsMethodContract() {
-        val method = MainActivityWithNavigation::class.java.getMethod("getPermissions", Boolean::class.javaPrimitiveType)
-        assertNotNull("getPermissions(boolean) method must exist for backward compatibility", method)
-        assertTrue(Modifier.isPublic(method.modifiers))
-    }
-
-    @Test
-    fun testGetPermissionsWithPopupFalse_doesNotThrowOrShowDialog() {
-        // When getPermissions is called with popup=false, it immediately returns without throwing
-        activity.getPermissions(false)
-        verify(exactly = 0) {
-            ContextCompat.checkSelfPermission(any(), any())
-        }
+    fun testLegacyPermissionMethodsRetired_REQ_PRI_006() {
+        val declaredMethods = MainActivityWithNavigation::class.java.declaredMethods.map { it.name }
+        assertTrue(
+            "getPermissions must not exist in MainActivityWithNavigation",
+            !declaredMethods.contains("getPermissions")
+        )
+        assertTrue(
+            "showBackgroundLocationDialog must not exist in MainActivityWithNavigation",
+            !declaredMethods.contains("showBackgroundLocationDialog")
+        )
     }
 
     @Test

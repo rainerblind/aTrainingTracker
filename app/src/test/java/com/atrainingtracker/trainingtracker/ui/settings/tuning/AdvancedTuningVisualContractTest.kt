@@ -255,6 +255,27 @@ class AdvancedTuningVisualContractTest {
             sectionContent.contains("FlowRow(")
         )
     }
+
+    @Test
+    fun testNavigationSection_doesNotContainCameraTuningSliders() {
+        val candidates = listOf(
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/NavigationSection.kt"),
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/NavigationSection.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/NavigationSection.kt")
+        )
+        val targetFile = candidates.firstOrNull { it.exists() }
+            ?: error("Target file not found in candidates: $candidates")
+        val content = targetFile.readText()
+
+        assertFalse("Must not contain map camera section title", content.contains("tuning_map_camera_section_title"))
+        assertFalse("Must not contain base zoom slider", content.contains("tuning_map_base_zoom_title"))
+        assertFalse("Must not contain speed zoom toggle", content.contains("tuning_map_speed_zoom_enabled_title"))
+        assertFalse("Must not contain cruising zoom slider", content.contains("tuning_map_cruising_zoom_title"))
+        assertFalse("Must not contain tilt angle slider", content.contains("tuning_map_tilt_angle_title"))
+        assertFalse("Must not contain lookahead padding slider", content.contains("tuning_map_lookahead_padding_title"))
+        assertFalse("Must not contain speed smoothing slider", content.contains("tuning_map_follow_me_speed_smoothing_title"))
+        assertFalse("Must not contain bearing smoothing slider", content.contains("tuning_map_follow_me_bearing_smoothing_title"))
+    }
 }
 
 

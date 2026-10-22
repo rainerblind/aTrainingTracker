@@ -30,7 +30,7 @@ MANDATORY_FIELDS = [
 ]
 
 HEADER_PATTERN = re.compile(
-    r"(?:###|h3\.)\s*Requirement Archaeology & Chesterton's Fence Audit",
+    r"(?:#{2,3}|h[23]\.)\s*(?:\d+(?:\.\d+)*[.\)]\s*)?Requirement Archaeology & Chesterton's Fence Audit",
     re.IGNORECASE,
 )
 
@@ -45,6 +45,23 @@ def get_git_diff(base_ref="develop", target_file="docs/requirements.md"):
     Retrieves the git diff for target_file against base_ref (or merge-base with base_ref).
     If base_ref is not resolvable or in detached HEAD, falls back to diff against HEAD or staged/working tree.
     """
+    if base_ref == "develop":
+        try:
+            sprint_branches = subprocess.check_output(
+                ["git", "for-each-ref", "--format=%(refname:short)", "refs/heads/sprint/*"],
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8").strip().splitlines()
+            for sb in sprint_branches:
+                ret = subprocess.call(
+                    ["git", "merge-base", "--is-ancestor", sb, "HEAD"],
+                    stderr=subprocess.DEVNULL,
+                )
+                if ret == 0:
+                    base_ref = sb
+                    break
+        except Exception:
+            pass
+
     # Try merge-base first
     try:
         mb = subprocess.check_output(
@@ -52,7 +69,7 @@ def get_git_diff(base_ref="develop", target_file="docs/requirements.md"):
             stderr=subprocess.DEVNULL,
         ).decode("utf-8").strip()
         diff = subprocess.check_output(
-            ["git", "diff", f"{mb}..HEAD", "--", target_file],
+            ["git", "diff", f"{mb}", "--", target_file],
             stderr=subprocess.DEVNULL,
         ).decode("utf-8")
         if diff.strip():
@@ -63,7 +80,7 @@ def get_git_diff(base_ref="develop", target_file="docs/requirements.md"):
     # Fallback to direct diff with base_ref
     try:
         diff = subprocess.check_output(
-            ["git", "diff", f"{base_ref}..HEAD", "--", target_file],
+            ["git", "diff", f"{base_ref}", "--", target_file],
             stderr=subprocess.DEVNULL,
         ).decode("utf-8")
         if diff.strip():
@@ -254,6 +271,30 @@ def main():
             text_content = f.read()
     elif not sys.stdin.isatty():
         text_content = sys.stdin.read()
+
+    if not text_content:
+        # Attempt auto-discovery based on current branch or engineering docs
+        try:
+            branch = subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                stderr=subprocess.DEVNULL,
+            ).decode("utf-8").strip()
+            ticket_m = re.search(r"(?:feature|bugfix|hotfix)/([A-Z]+-\d+)", branch)
+            ticket_key = ticket_m.group(1) if ticket_m else None
+            if ticket_key:
+                candidates = [
+                    f"docs/engineering/test_specs/{ticket_key}_test_spec.md",
+                    f"docs/engineering/plans/{ticket_key}_plan.md",
+                    f"docs/engineering/walkthroughs/{ticket_key}_walkthrough.md",
+                    f"docs/engineering/analysis/{ticket_key}_analysis.md",
+                ]
+                for cand in candidates:
+                    if os.path.exists(cand):
+                        with open(cand, "r", encoding="utf-8") as f:
+                            text_content = f.read()
+                        break
+        except Exception:
+            pass
 
     diff_content = None
     if args.diff_file:

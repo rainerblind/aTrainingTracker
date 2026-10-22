@@ -28,6 +28,9 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.banalservice.filters.FilterType
+import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import java.lang.reflect.Field
 
 /**
@@ -308,15 +311,15 @@ class TrackingViewsDatabaseManagerTest {
 
         dbHelper.onCreate(mockDb)
 
-        val supportedActivities = listOf(
+        val nonPowerActivities = listOf(
             com.atrainingtracker.banalservice.ActivityType.GENERIC_HR,
             com.atrainingtracker.banalservice.ActivityType.RUN_SPEED_AND_CADENCE,
-            com.atrainingtracker.banalservice.ActivityType.BIKE_SPEED_AND_CADENCE,
-            com.atrainingtracker.banalservice.ActivityType.BIKE_POWER
+            com.atrainingtracker.banalservice.ActivityType.BIKE_SPEED_AND_CADENCE
         )
 
-        for (activityType in supportedActivities) {
-            // Standard Tab: layoutNr 1, live segments, live climbs, nav hints
+        for (activityType in nonPowerActivities) {
+            val isCycling = activityType == com.atrainingtracker.banalservice.ActivityType.BIKE_SPEED_AND_CADENCE
+            // Standard Tab: layoutNr 1, live segments, live climbs, nav hints, showBikeBell = isCycling
             verify(atLeast = 1) {
                 dbHelper.addDefaultTab(
                     mockDb,
@@ -328,10 +331,11 @@ class TrackingViewsDatabaseManagerTest {
                     true,
                     true,
                     true,
+                    isCycling,
                     any()
                 )
             }
-            // Map Tab: layoutNr 2, map, elevation profile, nav hints, no live climbs or segments
+            // Map Tab: layoutNr 2, map, elevation profile, nav hints, no live climbs or segments, showBikeBell = isCycling
             verify(atLeast = 1) {
                 dbHelper.addDefaultTab(
                     mockDb,
@@ -343,10 +347,11 @@ class TrackingViewsDatabaseManagerTest {
                     false,
                     false,
                     true,
+                    isCycling,
                     any()
                 )
             }
-            // Laps Tab: layoutNr 3, lap button only, no live climbs, nav hints, or segments
+            // Laps Tab: layoutNr 3, lap button only, no live climbs, nav hints, or segments, showBikeBell = isCycling
             verify(atLeast = 1) {
                 dbHelper.addDefaultTab(
                     mockDb,
@@ -358,9 +363,19 @@ class TrackingViewsDatabaseManagerTest {
                     false,
                     false,
                     false,
+                    isCycling,
                     any()
                 )
             }
+        }
+
+        // BIKE_POWER (REQ-UI-409.2): 4 tabs (1 = Standard, 2 = Power, 3 = Map, 4 = Laps), all have showBikeBell = true
+        val bikePower = com.atrainingtracker.banalservice.ActivityType.BIKE_POWER
+        verify(atLeast = 1) {
+            dbHelper.addDefaultTab(mockDb, bikePower, any(), 1, false, false, true, true, true, true, any())
+            dbHelper.addDefaultTab(mockDb, bikePower, any(), 2, false, false, false, false, true, true, any())
+            dbHelper.addDefaultTab(mockDb, bikePower, any(), 3, false, true, false, false, true, true, any())
+            dbHelper.addDefaultTab(mockDb, bikePower, any(), 4, true, false, false, false, false, true, any())
         }
     }
 
@@ -517,8 +532,18 @@ class TrackingViewsDatabaseManagerTest {
     }
 
     @Test
-    fun testDatabaseVersionIs13() {
-        assertEquals(13, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    fun testDatabaseVersionIs15() {
+        assertEquals(15, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    }
+
+    @Test
+    fun testOnUpgrade_from13To14_createsSectionDividersTable() {
+        val dbHelper = TrackingViewsDatabaseManager.TrackingViewsDbHelper(mockContext)
+        dbHelper.onUpgrade(mockDb, 13, 14)
+
+        verify(atLeast = 1) {
+            mockDb.execSQL(match { it.contains("CREATE TABLE IF NOT EXISTS SectionDividersTable") })
+        }
     }
 
     @Test
@@ -613,5 +638,140 @@ class TrackingViewsDatabaseManagerTest {
                 arrayOf("42")
             )
         }
+    }
+
+    @Test
+    fun testSetSectionDivider_insertsWithOnConflictReplace() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        manager.setSectionDivider(10L, 3, "POWER METRICS")
+
+        verify(exactly = 1) {
+            mockDb.insertWithOnConflict(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE,
+                null,
+                any(),
+                SQLiteDatabase.CONFLICT_REPLACE
+            )
+        }
+    }
+
+    @Test
+    fun testDeleteSectionDivider_deletesRow() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        manager.deleteSectionDivider(10L, 3)
+
+        verify(exactly = 1) {
+            mockDb.delete(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE,
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEW_ID}=? AND ${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_NR}=?",
+                arrayOf("10", "3")
+            )
+        }
+    }
+
+    @Test
+    fun testDeleteTabView_deletesSectionDividers() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        manager.deleteTabView(10L)
+
+        verify(exactly = 1) {
+            mockDb.delete(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE,
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEW_ID}=?",
+                arrayOf("10")
+            )
+        }
+    }
+
+    @Test
+    fun testInsertSensorFieldAt_newRow_shiftsSectionDividersAndExecutesTransactionally() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        manager.insertSensorFieldAt(
+            10L,
+            2,
+            -1,
+            SensorType.CADENCE,
+            ViewSize.LARGE,
+            null,
+            FilterType.INSTANTANEOUS,
+            1.0
+        )
+
+        verify(exactly = 1) { mockDb.beginTransaction() }
+        verify(atLeast = 1) {
+            mockDb.execSQL(
+                match { it.contains("UPDATE LayoutRowsTable SET RowNr=RowNr+1 WHERE ViewId=? AND RowNr >= ?") },
+                match<Array<Any>> { it.size == 2 && it[0] == 10L && it[1] == 2 }
+            )
+        }
+        verify(atLeast = 1) {
+            mockDb.execSQL(
+                match { it.contains("UPDATE SectionDividersTable SET RowNr=RowNr+1 WHERE ViewId=? AND RowNr >= ?") },
+                match<Array<Any>> { it.size == 2 && it[0] == 10L && it[1] == 2 }
+            )
+        }
+        verify(exactly = 1) { mockDb.setTransactionSuccessful() }
+        verify(exactly = 1) { mockDb.endTransaction() }
+    }
+
+    @Test
+    fun testInsertSensorFieldAt_parameterAndBoundaryValidation() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        // Invalid tabViewId <= 0
+        manager.insertSensorFieldAt(
+            0L,
+            1,
+            -1,
+            SensorType.CADENCE,
+            ViewSize.LARGE,
+            null,
+            FilterType.INSTANTANEOUS,
+            0.0
+        )
+        manager.insertSensorFieldAt(
+            -5L,
+            1,
+            -1,
+            SensorType.CADENCE,
+            ViewSize.LARGE,
+            null,
+            FilterType.INSTANTANEOUS,
+            0.0
+        )
+
+        // Invalid rowNr < 1
+        manager.insertSensorFieldAt(
+            10L,
+            0,
+            -1,
+            SensorType.CADENCE,
+            ViewSize.LARGE,
+            null,
+            FilterType.INSTANTANEOUS,
+            0.0
+        )
+        manager.insertSensorFieldAt(
+            10L,
+            -1,
+            -1,
+            SensorType.CADENCE,
+            ViewSize.LARGE,
+            null,
+            FilterType.INSTANTANEOUS,
+            0.0
+        )
+
+        // Verify zero transactions or queries initiated for invalid inputs
+        verify(exactly = 0) { mockDb.beginTransaction() }
     }
 }

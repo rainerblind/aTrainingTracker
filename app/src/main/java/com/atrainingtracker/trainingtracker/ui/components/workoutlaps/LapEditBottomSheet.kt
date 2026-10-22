@@ -479,14 +479,14 @@ fun LapEditBottomSheet(
                                 value = nameText,
                                 onValueChange = { nameText = it },
                                 label = { Text(stringResource(R.string.lap_name_label)) },
-                                placeholder = { Text("Lap $lapDisplayIndex") },
+                                placeholder = { Text(stringResource(R.string.lap_placeholder_format, lapDisplayIndex)) },
                                 singleLine = true,
                                 trailingIcon = {
                                     if (nameText.isNotEmpty()) {
                                         IconButton(onClick = { nameText = "" }) {
                                             Icon(
                                                 imageVector = Icons.Default.Clear,
-                                                contentDescription = null
+                                                contentDescription = stringResource(R.string.clear)
                                             )
                                         }
                                     }
@@ -570,7 +570,7 @@ fun LapEditBottomSheet(
 
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         GoogleMap(
-                                            modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White),
+                                            modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White),
                                             cameraPositionState = cameraPositionState,
                                             uiSettings = MapUiSettings(
                                                 zoomControlsEnabled = false,

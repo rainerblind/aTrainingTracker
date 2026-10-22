@@ -23,6 +23,7 @@ import android.location.Address
 import android.location.Geocoder
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import androidx.annotation.WorkerThread
 import com.atrainingtracker.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -118,7 +119,11 @@ object LocationNameResolver {
 
     /**
      * Synchronous blocking resolution for Java caller threads (e.g. background executors).
+     *
+     * WARNING: Performs synchronous network and disk geocoding operations via [runBlocking].
+     * Must NEVER be called from the Main UI thread (REQ-SET-079 / ATT-3999).
      */
+    @WorkerThread
     @JvmStatic
     @JvmOverloads
     fun resolveLocationNameBlocking(

@@ -36,6 +36,7 @@ class ZoneDisplayOptionsTest {
         assertTrue("showLeftBar must default to true", options.showLeftBar)
         assertFalse("showRightBar must default to false", options.showRightBar)
         assertFalse("showTextColor must default to false", options.showTextColor)
+        assertFalse("showGauge must default to false", options.showGauge)
     }
 
     @Test
@@ -44,36 +45,40 @@ class ZoneDisplayOptionsTest {
             showBackground = false,
             showLeftBar = false,
             showRightBar = true,
-            showTextColor = true
+            showTextColor = true,
+            showGauge = true
         )
         assertFalse(options.showBackground)
         assertFalse(options.showLeftBar)
         assertTrue(options.showRightBar)
         assertTrue(options.showTextColor)
+        assertTrue(options.showGauge)
     }
 
     @Test
     fun copy_updatesTargetPropertiesOnly() {
         val original = ZoneDisplayOptions()
-        val modified = original.copy(showRightBar = true, showTextColor = true)
+        val modified = original.copy(showRightBar = true, showTextColor = true, showGauge = true)
 
         assertTrue(modified.showBackground)
         assertTrue(modified.showLeftBar)
         assertTrue(modified.showRightBar)
         assertTrue(modified.showTextColor)
+        assertTrue(modified.showGauge)
 
         // Original remains immutable and unchanged
         assertTrue(original.showBackground)
         assertTrue(original.showLeftBar)
         assertFalse(original.showRightBar)
         assertFalse(original.showTextColor)
+        assertFalse(original.showGauge)
     }
 
     @Test
     fun equalityAndHashCode_respectAllFields() {
-        val opt1 = ZoneDisplayOptions(showBackground = true, showLeftBar = true, showRightBar = false, showTextColor = false)
-        val opt2 = ZoneDisplayOptions(showBackground = true, showLeftBar = true, showRightBar = false, showTextColor = false)
-        val opt3 = ZoneDisplayOptions(showBackground = false, showLeftBar = true, showRightBar = false, showTextColor = false)
+        val opt1 = ZoneDisplayOptions(showBackground = true, showLeftBar = true, showRightBar = false, showTextColor = false, showGauge = false)
+        val opt2 = ZoneDisplayOptions(showBackground = true, showLeftBar = true, showRightBar = false, showTextColor = false, showGauge = false)
+        val opt3 = ZoneDisplayOptions(showBackground = true, showLeftBar = true, showRightBar = false, showTextColor = false, showGauge = true)
 
         assertEquals(opt1, opt2)
         assertEquals(opt1.hashCode(), opt2.hashCode())

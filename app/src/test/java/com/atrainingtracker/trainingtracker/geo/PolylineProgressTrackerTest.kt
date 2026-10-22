@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.geo
 
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.SphericalUtil
 import org.junit.Assert.*
 import org.junit.Test
 import kotlin.math.sign
@@ -260,5 +261,129 @@ class PolylineProgressTrackerTest {
         assertTrue(PolylineProgressTracker.isHeadingAligned(350.0, 10.0, 45.0)) // Wrap-around 20 deg diff
         assertFalse(PolylineProgressTracker.isHeadingAligned(0.0, 90.0, 45.0)) // 90 deg diff
         assertFalse(PolylineProgressTracker.isHeadingAligned(0.0, 180.0, 45.0)) // Opposite heading
+    }
+
+    @Test
+    fun testEquirectangularProjectionOnDiagonalSegmentAt50N() {
+        // TST-GEO-002.1: At 50N, verify diagonal segment orthogonal projection parameter t
+        // is immune to longitudinal scaling distortion under lateral offset.
+        val cos50 = kotlin.math.cos(Math.toRadians(50.0))
+        val p1 = PathPoint(distance = 0.0, latLng = LatLng(50.0, 10.0), altitude = 100.0, slope = 2.0)
+        // 0.01 deg lat ~ 1111m, 0.01 / cos50 deg lng ~ 1111m in metric space
+        val p2 = PathPoint(distance = 1572.0, latLng = LatLng(50.01, 10.0 + 0.01 / cos50), altitude = 120.0, slope = 2.0)
+        val path = listOf(p1, p2)
+
+        // Midpoint at t = 0.50 with a perpendicular lateral offset of ~55 meters
+        // In metric space, segment is (dX, dY) = (0.01, 0.01). Perpendicular offset is (-0.0005, 0.0005 / cos50)
+        val testLoc = LatLng(50.005 - 0.0005, 10.0 + 0.005 / cos50 + 0.0005 / cos50)
+        val proj = PolylineProgressTracker.projectLocation(path, testLoc)
+
+        assertNotNull(proj)
+        assertEquals(0, proj!!.segmentIndex)
+        // Parameter t must evaluate to 0.50 within tight tolerance
+        assertEquals(0.50, proj.t, 0.01)
+        // Along track distance should be ~786m (50% of 1572m)
+        assertEquals(786.0, proj.alongTrackDistance, 15.0)
+        // Cross-track error should capture the lateral offset (~50-70m)
+        assertTrue("Cross-track error should be between 40m and 80m", proj.crossTrackDistanceMeters in 40.0..80.0)
+    }
+
+    @Test
+    fun testGateOrthogonalityAt50N() {
+        // TST-GEO-002.2: Verify virtual gate endpoints form true physical 90-degree angle
+        // to diagonal track vector at 50 degrees North.
+        val cos50 = kotlin.math.cos(Math.toRadians(50.0))
+        val p1 = PathPoint(distance = 0.0, latLng = LatLng(50.0, 10.0), altitude = 100.0, slope = 0.0)
+        val p2 = PathPoint(distance = 500.0, latLng = LatLng(50.005, 10.0 + 0.005 / cos50), altitude = 110.0, slope = 0.0)
+        val path = listOf(p1, p2)
+
+        val gate = PolylineProgressTracker.createGate(path, isStartGate = true, sampleOffset = 1)!!
+        val trackHeading = SphericalUtil.computeHeading(p1.latLng, p2.latLng)
+        val gateHeading = SphericalUtil.computeHeading(gate.gateStart, gate.gateEnd)
+
+        // Compute angle between track and gate line
+        var angleDiff = kotlin.math.abs(trackHeading - gateHeading)
+        if (angleDiff > 180.0) angleDiff = 360.0 - angleDiff
+        // Physical angle must be 90 degrees (+- 1.5 degrees due to spherical curvature over large delta)
+        assertEquals(90.0, angleDiff, 1.5)
+    }
+
+    @Test
+    fun testOutAndBackWindowedSegmentContinuityUnderLateralJitter() {
+        // TST-GEO-002.3: On an out-and-back course with overlapping outbound and return legs,
+        // windowed forward search maintains outbound segment continuity under lateral GPS jitter.
+        val path = mutableListOf<PathPoint>()
+        // Outbound leg (segments 0..9): moving North from 50.000 to 50.010 along longitude 10.000000
+        for (i in 0..10) {
+            path.add(PathPoint(distance = i * 100.0, latLng = LatLng(50.0 + i * 0.001, 10.0), altitude = 100.0, slope = 0.0))
+        }
+        // Turnaround / return leg (segments 10..20): moving South from 50.010 to 50.000 along parallel road 8m East
+        // At 50N, 8m ~ 0.000112 deg longitude
+        val returnLng = 10.000112
+        for (i in 1..10) {
+            path.add(PathPoint(distance = 1000.0 + i * 100.0, latLng = LatLng(50.010 - i * 0.001, returnLng), altitude = 100.0, slope = 0.0))
+        }
+
+        // Athlete is at latitude 50.0025 on the outbound leg (between segment 2 and 3).
+        // GPS fix has 5m lateral jitter towards the return leg:
+        // Outbound line is at 10.0, return line is at 10.000112 (~8m away).
+        // Jitter puts fix at 10.000065 (~4.6m from outbound, ~3.4m from return leg).
+        val jitteredFix = LatLng(50.0025, 10.000065)
+
+        // Without windowing (global search), fix would jump to the return leg (segment 17) because 3.4m < 4.6m
+        val unseededProj = PolylineProgressTracker.projectLocation(path, jitteredFix, lastSegmentIndex = null)
+        assertNotNull(unseededProj)
+        assertEquals("Global search snaps to closer return leg", 17, unseededProj!!.segmentIndex)
+        assertTrue("Distance jumped to return leg", unseededProj.alongTrackDistance > 1500.0)
+
+        // WITH windowed forward continuity (lastSegmentIndex = 2):
+        // Tracker evaluates segments in [0, 12], keeping focus on outbound leg
+        val windowedProj = PolylineProgressTracker.projectLocation(path, jitteredFix, lastSegmentIndex = 2)
+        assertNotNull(windowedProj)
+        assertEquals("Windowed search preserves outbound leg", 2, windowedProj!!.segmentIndex)
+        assertEquals("Along track distance remains ~250m", 250.0, windowedProj.alongTrackDistance, 20.0)
+    }
+
+    @Test
+    fun testCorridorExceedanceFallsBackToGlobalSearch() {
+        // TST-GEO-002.4: When lateral distance exceeds maxCorridorMeters (50m),
+        // tracker falls back to global search for off-route recovery and route rejoin.
+        val path = mutableListOf<PathPoint>()
+        for (i in 0..10) {
+            path.add(PathPoint(distance = i * 100.0, latLng = LatLng(50.0 + i * 0.001, 10.0), altitude = 100.0, slope = 0.0))
+        }
+        for (i in 1..10) {
+            // Return leg is 100m East (at 50N, 100m ~ 0.00140 deg longitude)
+            path.add(PathPoint(distance = 1000.0 + i * 100.0, latLng = LatLng(50.010 - i * 0.001, 10.00140), altitude = 100.0, slope = 0.0))
+        }
+
+        // Athlete was on segment 1, but took a detour and rejoined directly on return leg at (50.0025, 10.00140)
+        // Distance to outbound segment 1 is ~100m (> 50m corridor threshold)
+        val rejoinFix = LatLng(50.0025, 10.00140)
+        val fallbackProj = PolylineProgressTracker.projectLocation(
+            path = path,
+            location = rejoinFix,
+            lastSegmentIndex = 1,
+            maxCorridorMeters = 50.0
+        )
+        assertNotNull(fallbackProj)
+        // Global fallback must engage and recover cleanly on the return leg (segment 17)
+        assertEquals("Corridor exceedance triggers global search recovering on return leg", 17, fallbackProj!!.segmentIndex)
+        assertTrue(fallbackProj.crossTrackDistanceMeters < 5.0)
+    }
+
+    @Test
+    fun testStatelessCallerBackwardCompatibility() {
+        // TST-GEO-002.5: Calling projectLocation without lastSegmentIndex performs global search
+        val midLocation = LatLng(47.005, 10.0)
+        val projDefault = PolylineProgressTracker.projectLocation(samplePath, midLocation)
+        val projExplicitNull = PolylineProgressTracker.projectLocation(samplePath, midLocation, lastSegmentIndex = null)
+
+        assertNotNull(projDefault)
+        assertNotNull(projExplicitNull)
+        assertEquals(projDefault!!.segmentIndex, projExplicitNull!!.segmentIndex)
+        assertEquals(projDefault.alongTrackDistance, projExplicitNull.alongTrackDistance, 0.001)
+        assertEquals(projDefault.crossTrackDistanceMeters, projExplicitNull.crossTrackDistanceMeters, 0.001)
+        assertEquals(2, projDefault.segmentIndex)
     }
 }

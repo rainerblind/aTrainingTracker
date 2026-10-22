@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 import androidx.compose.runtime.Immutable
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.google.android.gms.maps.model.LatLng
 import org.json.JSONObject
@@ -51,6 +52,8 @@ data class WorkoutFilterCriteria(
     val maxDistanceMeters: Double? = null,
     val minDurationSec: Long? = null,
     val maxDurationSec: Long? = null,
+    val minElevationGainMeters: Double? = null,
+    val maxElevationGainMeters: Double? = null,
     val startLocationName: String? = null,
     val startLocationLat: Double? = null,
     val startLocationLng: Double? = null,
@@ -75,6 +78,7 @@ data class WorkoutFilterCriteria(
             if (hasGpsTrack == true) count++
             if (minDistanceMeters != null || maxDistanceMeters != null) count++
             if (minDurationSec != null || maxDurationSec != null) count++
+            if (minElevationGainMeters != null || maxElevationGainMeters != null) count++
             if (startLocationLat != null && startLocationLng != null) count++
             if (clusterId != null) count++
             if (source != null) count++
@@ -181,6 +185,14 @@ data class WorkoutFilterCriteria(
             return false
         }
 
+        // Elevation Gain threshold / interval (meters) (REQ-UI-425)
+        if (minElevationGainMeters != null && workout.ascentMeters < minElevationGainMeters) {
+            return false
+        }
+        if (maxElevationGainMeters != null && workout.ascentMeters > maxElevationGainMeters) {
+            return false
+        }
+
         // Start Location geofence filter
         if (startLocationLat != null && startLocationLng != null) {
             val start = workout.startLatLng ?: return false
@@ -226,6 +238,8 @@ data class WorkoutFilterCriteria(
         maxDistanceMeters?.let { json.put("maxDistanceMeters", it) }
         minDurationSec?.let { json.put("minDurationSec", it) }
         maxDurationSec?.let { json.put("maxDurationSec", it) }
+        minElevationGainMeters?.let { json.put("minElevationGainMeters", it) }
+        maxElevationGainMeters?.let { json.put("maxElevationGainMeters", it) }
         startLocationName?.let { json.put("startLocationName", it) }
         startLocationLat?.let { json.put("startLocationLat", it) }
         startLocationLng?.let { json.put("startLocationLng", it) }
@@ -263,6 +277,8 @@ data class WorkoutFilterCriteria(
                     maxDistanceMeters = if (json.has("maxDistanceMeters")) json.optDouble("maxDistanceMeters") else null,
                     minDurationSec = if (json.has("minDurationSec")) json.optLong("minDurationSec") else null,
                     maxDurationSec = if (json.has("maxDurationSec")) json.optLong("maxDurationSec") else null,
+                    minElevationGainMeters = if (json.has("minElevationGainMeters")) json.optDouble("minElevationGainMeters") else null,
+                    maxElevationGainMeters = if (json.has("maxElevationGainMeters")) json.optDouble("maxElevationGainMeters") else null,
                     startLocationName = if (json.has("startLocationName")) json.optString("startLocationName") else null,
                     startLocationLat = if (json.has("startLocationLat")) json.optDouble("startLocationLat") else null,
                     startLocationLng = if (json.has("startLocationLng")) json.optDouble("startLocationLng") else null,
@@ -270,11 +286,7 @@ data class WorkoutFilterCriteria(
                     clusterId = if (json.has("clusterId")) json.optLong("clusterId") else null,
                     clusterName = if (json.has("clusterName")) json.optString("clusterName") else null,
                     source = if (json.has("source")) {
-                        try {
-                            WorkoutSource.valueOf(json.optString("source").trim().uppercase())
-                        } catch (_: IllegalArgumentException) {
-                            null
-                        }
+                        safeEnumValueOfOrNull<WorkoutSource>(json.optString("source").trim().uppercase(), "WorkoutFilterCriteria")
                     } else null
                 )
             } catch (e: Exception) {

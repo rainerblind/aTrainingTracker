@@ -37,14 +37,14 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -62,8 +62,15 @@ class TrackingTabsViewModel(
     private val banalServiceRepository: BANALServiceRepository,
     private val devicesRepository: DeviceDataRepository,
     liveSegmentsRepository: com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository? = null,
-    knownLocationsRepository: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository? = null
+    knownLocationsRepository: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository? = null,
+    bikeBellAudioSynthesizer: com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer? = null,
+    private val timeProvider: () -> Long = { android.os.SystemClock.elapsedRealtime() }
 ) : AndroidViewModel(application) {
+
+    val bikeBellSynthesizer: com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer =
+        bikeBellAudioSynthesizer ?: com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer()
+
+    private var lastRingTimestampMs: Long = -10000L
 
     // State to hold the explicitly selected ActivityType
     private val _explicitActivityType = MutableStateFlow<ActivityType?>(null)
@@ -104,6 +111,40 @@ class TrackingTabsViewModel(
     // Screen mode is now local to the ViewModel to prevent background state leakage (ATT-245)
     private val _screenMode = MutableStateFlow(ScreenMode.TRACKING)
     val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
+
+    // Session state tracking whether the first-time stop tracking coachmark banner has been rendered
+    // in the current workout session, surviving configuration changes (REQ-UI-367 / ATT-3387).
+    private val _hasRenderedCoachmarkInSession = MutableStateFlow(false)
+    val hasRenderedCoachmarkInSession: StateFlow<Boolean> = _hasRenderedCoachmarkInSession.asStateFlow()
+
+    // Synchronous optimistic dismissal flag preventing single-frame flicker while DataStore I/O completes (REQ-UI-367 / ATT-3387).
+    private val _isCoachmarkDismissPending = MutableStateFlow(false)
+    val isCoachmarkDismissPending: StateFlow<Boolean> = _isCoachmarkDismissPending.asStateFlow()
+
+    /**
+     * Marks that the stop tracking coachmark banner has been displayed on a telemetry tab (Page >= 1)
+     * during the active workout session (REQ-UI-367 / ATT-3387).
+     */
+    fun markCoachmarkRenderedInSession() {
+        _hasRenderedCoachmarkInSession.value = true
+    }
+
+    /**
+     * Synchronously marks the stop tracking coachmark as dismissed in local ViewModel state before
+     * the asynchronous DataStore write completes, eliminating persistence latency flicker (REQ-UI-367 / ATT-3387).
+     */
+    fun markCoachmarkDismissPending() {
+        _isCoachmarkDismissPending.value = true
+    }
+
+    /**
+     * Resets the in-session coachmark rendering and optimistic dismissal state (e.g. when returning to READY mode
+     * or when factory defaults are restored) (REQ-UI-367 / ATT-3387).
+     */
+    fun resetCoachmarkSessionState() {
+        _hasRenderedCoachmarkInSession.value = false
+        _isCoachmarkDismissPending.value = false
+    }
 
     private val knownLocationsRepo: com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository? = knownLocationsRepository
     private var lastCalibratedLocationId: Long? = null
@@ -169,12 +210,19 @@ class TrackingTabsViewModel(
 
     fun onEditDevice(deviceId: Long) {
         viewModelScope.launch {
-            _navigationEvent.emit(TabNavigationEvent.EditDevice(deviceId))
+            _navigationEvent.send(TabNavigationEvent.EditDevice(deviceId))
         }
     }
 
-    private val _navigationEvent = MutableSharedFlow<TabNavigationEvent>(extraBufferCapacity = 64)
-    val navigationEvent: SharedFlow<TabNavigationEvent> = _navigationEvent.asSharedFlow()
+    private val _currentPage = MutableStateFlow(0)
+    val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
+
+    fun onPageSelected(page: Int) {
+        _currentPage.value = page
+    }
+
+    private val _navigationEvent = Channel<TabNavigationEvent>(Channel.BUFFERED)
+    val navigationEvent: Flow<TabNavigationEvent> = _navigationEvent.receiveAsFlow()
 
     val trackingViews: StateFlow<List<TrackingViewInfo>> = combine(
         activityType,
@@ -196,15 +244,101 @@ class TrackingTabsViewModel(
         viewModelScope.launch {
             var previousMode: TrackingMode? = null
             banalServiceRepository.trackingMode.asFlow().collect { mode ->
-                if (mode == TrackingMode.TRACKING &&
-                    previousMode != null &&
-                    previousMode != TrackingMode.TRACKING
+                if (mode == TrackingMode.READY) {
+                    _hasRenderedCoachmarkInSession.value = false
+                }
+                if (shouldNavigateToFirstCockpitTab(
+                        previousMode = previousMode,
+                        currentMode = mode,
+                        wasAutoPaused = banalServiceRepository.wasAutoPaused.value,
+                        currentPage = _currentPage.value
+                    )
                 ) {
-                    Log.i("TrackingTabsViewModel", "Tracking started (rising edge) -> navigating to cockpit tab")
-                    _navigationEvent.emit(TabNavigationEvent.NavigateTo(0))
+                    Log.i(
+                        "TrackingTabsViewModel",
+                        "Tracking started (rising edge) -> navigating to cockpit tab (prevMode=$previousMode, wasAuto=${banalServiceRepository.wasAutoPaused.value}, page=${_currentPage.value})"
+                    )
+                    _navigationEvent.send(TabNavigationEvent.NavigateTo(0))
+                } else if (mode == TrackingMode.TRACKING && previousMode != null && previousMode != TrackingMode.TRACKING) {
+                    Log.i(
+                        "TrackingTabsViewModel",
+                        "Suppressed cockpit navigation on resume (prevMode=$previousMode, wasAuto=${banalServiceRepository.wasAutoPaused.value}, page=${_currentPage.value})"
+                    )
                 }
                 previousMode = mode
             }
+        }
+    }
+
+    companion object {
+        /**
+         * Pure domain predicate determining whether rising-edge tracking mode transition
+         * should navigate to the first cockpit tab (REQ-UI-163).
+         *
+         * @param previousMode TrackingMode prior to the transition (nullable for initial emission).
+         * @param currentMode New TrackingMode.
+         * @param wasAutoPaused Whether the paused state originated from auto-pause.
+         * @param currentPage The active pager page index (0 = Control Tab, >= 1 = Telemetry/Map Tabs).
+         * @return True if navigation to first Cockpit tab should be executed.
+         */
+        fun shouldNavigateToFirstCockpitTab(
+            previousMode: TrackingMode?,
+            currentMode: TrackingMode,
+            wasAutoPaused: Boolean,
+            currentPage: Int
+        ): Boolean {
+            if (currentMode != TrackingMode.TRACKING || previousMode == null || previousMode == TrackingMode.TRACKING) {
+                return false
+            }
+            return when (previousMode) {
+                TrackingMode.READY -> true
+                TrackingMode.PAUSED -> !wasAutoPaused && currentPage == 0
+                else -> false
+            }
+        }
+
+        /**
+         * Pure domain predicate determining whether the first-time stop tracking coachmark banner
+         * should be displayed on the cockpit screen (REQ-UI-367 / ATT-3387).
+         *
+         * @param trackingMode Current [TrackingMode].
+         * @param currentPage Current pager page index (`0` = Control Tab, `>= 1` = Telemetry Data Tabs).
+         * @param screenMode Current [ScreenMode].
+         * @param hasSeenHint Nullable flag from [com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.hasSeenStopTrackingHintFlow] (`null` while DataStore is still loading).
+         * @param isDismissPending Synchronous optimistic dismissal flag set immediately on user interaction.
+         */
+        fun shouldShowStopTrackingCoachmark(
+            trackingMode: TrackingMode,
+            currentPage: Int,
+            screenMode: ScreenMode,
+            hasSeenHint: Boolean?,
+            isDismissPending: Boolean = false
+        ): Boolean {
+            if (hasSeenHint != false || isDismissPending) return false
+            val isActiveWorkout = trackingMode == TrackingMode.TRACKING || trackingMode == TrackingMode.PAUSED
+            return isActiveWorkout && currentPage > 0 && screenMode == ScreenMode.TRACKING
+        }
+
+        /**
+         * Pure domain predicate determining whether settling on `Page 0` (`Control` tab) should
+         * automatically acknowledge and permanently dismiss the stop tracking coachmark (REQ-UI-367 / ATT-3387, ATT-4456).
+         * Requires [hasRenderedCoachmarkInSession] to be `true` so the initial `READY -> TRACKING` transition
+         * while still on `Page 0` never prematurely dismisses the coachmark before the user sees it,
+         * and strictly enforces [currentPage] == 0, [settledPage] == 0, and `![isScrollInProgress]` to avoid
+         * race conditions during scroll transitions away from `Page 0`.
+         */
+        fun shouldAutoAcknowledgeStopTrackingCoachmark(
+            trackingMode: TrackingMode,
+            currentPage: Int,
+            settledPage: Int,
+            isScrollInProgress: Boolean,
+            hasSeenHint: Boolean?,
+            hasRenderedCoachmarkInSession: Boolean,
+            isDismissPending: Boolean = false
+        ): Boolean {
+            if (hasSeenHint != false || !hasRenderedCoachmarkInSession || isDismissPending) return false
+            val isActiveWorkout = trackingMode == TrackingMode.TRACKING || trackingMode == TrackingMode.PAUSED
+            return isActiveWorkout && currentPage == 0 && settledPage == 0 && !isScrollInProgress
         }
     }
 
@@ -212,6 +346,7 @@ class TrackingTabsViewModel(
         super.onCleared()
         // unbind from the BANALService
         banalServiceRepository.unbindFromBANALService()
+        bikeBellSynthesizer.close()
     }
 
     // Method for the Fragment to set the explicit ActivityType
@@ -315,7 +450,7 @@ class TrackingTabsViewModel(
                 } else {
                     indexToDelete
                 }
-                _navigationEvent.emit(TabNavigationEvent.NavigateTo(newTarget))
+                _navigationEvent.send(TabNavigationEvent.NavigateTo(newTarget))
             }
         }
     }
@@ -323,6 +458,44 @@ class TrackingTabsViewModel(
 
     fun onLapButtonClick() {
         trackingViewsRepository.requestNewLap()
+    }
+
+    /**
+     * Triggers electronic bike bell ring with progressive loudness escalation (REQ-UI-421.5).
+     *
+     * Initial ring sounds at polite volume (70%). Rapid repeated rings within <= 5s or long-press
+     * escalate to 100% volume. Volume resets to polite after 5s of silence.
+     */
+    fun triggerBellRing(isLongPress: Boolean = false) {
+        val now = timeProvider()
+        val isEscalated = isLongPress || (now - lastRingTimestampMs <= 5000L)
+        lastRingTimestampMs = now
+        val volume = if (isEscalated) 1.0f else 0.70f
+        bikeBellSynthesizer.ring(volume)
+    }
+
+    /**
+     * Starts continuous urgent striker roll (*"Brriiiing!"*) at 100% volume (REQ-UI-421.2).
+     */
+    fun triggerBellRoll() {
+        lastRingTimestampMs = timeProvider()
+        bikeBellSynthesizer.startRoll(1.0f)
+    }
+
+    /**
+     * Stops continuous striker roll playback.
+     */
+    fun stopBellRoll() {
+        bikeBellSynthesizer.stopRoll()
+    }
+
+    /**
+     * Persists per-tab bike bell configuration state (REQ-UI-421.1).
+     */
+    fun onUpdateShowBikeBell(tabViewId: Long, show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowBikeBell(tabViewId, show)
+        }
     }
 }
 

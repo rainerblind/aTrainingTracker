@@ -98,4 +98,48 @@ class SensorFieldZoneDisplayTest {
 
         assertEquals(Color.Transparent, state.zoneColor)
     }
+
+    @Test
+    fun sensorFieldState_zone6AndZone7Colors_arePreserved() {
+        val zone6Color = com.atrainingtracker.trainingtracker.ui.theme.TTColor.Zone6
+        val zone7Color = com.atrainingtracker.trainingtracker.ui.theme.TTColor.Zone7
+
+        val stateZ6 = SensorFieldState(
+            configHash = 1,
+            sensorFieldId = 11,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = "Power",
+            filterDescription = "",
+            value = "400",
+            units = "W",
+            zoneColor = zone6Color
+        )
+
+        val stateZ7 = SensorFieldState(
+            configHash = 1,
+            sensorFieldId = 12,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = "Power",
+            filterDescription = "",
+            value = "600",
+            units = "W",
+            zoneColor = zone7Color
+        )
+
+        assertEquals(Color(0xFF8B5A2B), stateZ6.zoneColor)
+        assertEquals(Color(0xFF000000), stateZ7.zoneColor)
+
+        val contrastRatio = com.atrainingtracker.trainingtracker.ui.theme.TTColor.calculateContrastRatio(
+            zone6Color,
+            zone7Color
+        )
+        assertTrue(
+            "Zone 6 (#8B5A2B) vs Zone 7 (#000000) contrast ratio ($contrastRatio) must be >= 3.0:1",
+            contrastRatio >= 3.0
+        )
+    }
 }

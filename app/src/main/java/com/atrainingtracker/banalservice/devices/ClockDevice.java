@@ -20,7 +20,10 @@ package com.atrainingtracker.banalservice.devices;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.SystemClock;
 import android.util.Log;
+
+import androidx.annotation.VisibleForTesting;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.MyIntegerAccumulatorSensor;
@@ -35,6 +38,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClockDevice extends MyDevice {
     private static final String TAG = "ClockDevice";
@@ -58,8 +62,15 @@ public class ClockDevice extends MyDevice {
     private Timer timer;
     private boolean timerRunning = false;
     private final DateFormat df = SimpleDateFormat.getTimeInstance();
+    private final AtomicInteger mClockTimerErrorCount = new AtomicInteger(0);
+    private volatile long mLastTickElapsedRealtimeMs = 0L;
 
     public ClockDevice(Context context, MySensorManager mySensorManager) {
+        this(context, mySensorManager, true);
+    }
+
+    @VisibleForTesting
+    public ClockDevice(Context context, MySensorManager mySensorManager, boolean startTimerImmediately) {
         super(context, mySensorManager, DeviceType.CLOCK);
         if (DEBUG) Log.i(TAG, "begin of constructor: mLaps=" + mLaps);
 
@@ -71,7 +82,11 @@ public class ClockDevice extends MyDevice {
         TimeFormatter timeFormatter = new TimeFormatter();
 
         registerSensors();
-        startTimer();
+        if (startTimerImmediately) {
+            startTimer();
+        } else {
+            mLapSensor.newValue(mLaps);
+        }
         if (DEBUG) Log.i(TAG, "end of constructor: mLaps=" + mLaps);
     }
 
@@ -112,21 +127,23 @@ public class ClockDevice extends MyDevice {
     // 	}
     // };
 
-    private synchronized void startTimer() {
+    protected synchronized void startTimer() {
         mLapSensor.newValue(mLaps);  // TODO: is this really the right place?
 
         // timer might be already running?
         if (!timerRunning) {
-            timer = new Timer();
+            timer = new Timer("ClockDeviceTimer", true);
             timer.scheduleAtFixedRate(new ClockTimeTask(), 0, 1000);
             timerRunning = true;
         }
     }
 
-    private synchronized void stopTimer() {
-        timer.cancel();
-        timer.purge();
-        timer = null;
+    protected synchronized void stopTimer() {
+        if (timer != null) {
+            timer.cancel();
+            timer.purge();
+            timer = null;
+        }
         timerRunning = false;
     }
 
@@ -153,19 +170,71 @@ public class ClockDevice extends MyDevice {
         mLapTimeSensor_s.reset();
     }
 
+    /**
+     * Returns the number of caught transient exceptions during the 1 Hz clock timer loop ({@code REQ-TRK-027.2}, {@code ATT-3981}).
+     */
+    @VisibleForTesting
+    public int getClockTimerErrorCount() {
+        return mClockTimerErrorCount.get();
+    }
+
+    @VisibleForTesting
+    public static boolean shouldLogClockTimerError(int errorCount) {
+        return errorCount > 0
+                && (errorCount <= 3 || errorCount % 60 == 0);
+    }
+
+    @VisibleForTesting
+    public static long getMonotonicTimeMs() {
+        try {
+            return SystemClock.elapsedRealtime();
+        } catch (Throwable t) {
+            return System.nanoTime() / 1_000_000L;
+        }
+    }
+
+    @VisibleForTesting
+    public long getLastTickElapsedRealtimeMs() {
+        return mLastTickElapsedRealtimeMs;
+    }
+
+    /**
+     * Executes a single 1 Hz clock timer tick for unit testing ({@code REQ-TRK-027.2}, {@code ATT-3981}).
+     */
+    @VisibleForTesting
+    public void runClockTickForTesting() {
+        new ClockTimeTask().run();
+    }
+
     private class ClockTimeTask extends TimerTask {
         @Override
         public void run() {
-            mTotalTimeSensor_s.increment(1);
-            mActiveTimeSensor_s.increment(1);
-            mLapTimeSensor_s.increment(1);
+            try {
+                mLastTickElapsedRealtimeMs = getMonotonicTimeMs();
+                mTotalTimeSensor_s.increment(1);
+                mActiveTimeSensor_s.increment(1);
+                mLapTimeSensor_s.increment(1);
 
-            mTimeOfDaySensor.newValue(df.format(Calendar.getInstance().getTime()));
+                mTimeOfDaySensor.newValue(df.format(Calendar.getInstance().getTime()));
 
-            // send broadcast
-            if (DEBUG) Log.d(TAG, "sending new time event broadcast");
-            mContext.sendBroadcast(new Intent(BANALService.NEW_TIME_EVENT_INTENT)
-                    .setPackage(mContext.getPackageName()));
+                // send broadcast
+                if (DEBUG) Log.d(TAG, "sending new time event broadcast");
+                if (mContext != null) {
+                    mContext.sendBroadcast(new Intent(BANALService.NEW_TIME_EVENT_INTENT)
+                            .setPackage(mContext.getPackageName()));
+                }
+            } catch (Throwable t) {
+                int errorCount = mClockTimerErrorCount.incrementAndGet();
+                String msg = t.getMessage();
+                if (msg != null && msg.contains("not mocked")) {
+                    // Orphaned timer thread in a local JVM unit test after unmockkAll(); stop timer to prevent cross-test interference
+                    stopTimer();
+                    return;
+                }
+                if (shouldLogClockTimerError(errorCount)) {
+                    Log.e(TAG, "Error during 1 Hz clock timer tick; continuing clock timer (error #" + errorCount + ")", t);
+                }
+            }
         }
     }
 

@@ -40,8 +40,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.ui.res.stringResource
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -86,7 +88,7 @@ private fun StatusInfo(
             Spacer(Modifier.width(8.dp))
         } else if (iconRes != null) {
             Icon(
-                painter = painterResource(id = iconRes),
+                painter = safePainterResource(id = iconRes, fallback = Icons.Default.Sensors),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
                 tint = iconTint
@@ -105,7 +107,7 @@ private fun StatusInfo(
 
 @Preview(showBackground = true, name = "Tracking - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun PreviewSearchAreaTrackingDark() {
+private fun PreviewSearchAreaTrackingDark() {
     ATrainingTrackerTheme(darkTheme = true) {
         Surface {
             SearchArea(
@@ -118,7 +120,7 @@ fun PreviewSearchAreaTrackingDark() {
 
 @Preview(showBackground = true, name = "Searching - Light")
 @Composable
-fun PreviewSearchAreaSearching() {
+private fun PreviewSearchAreaSearching() {
     ATrainingTrackerTheme {
         Surface {
             SearchArea(
@@ -129,7 +131,7 @@ fun PreviewSearchAreaSearching() {
 }
 @Preview(showBackground = true, name = "Ready - Light")
 @Composable
-fun PreviewSearchAreaReady() {
+private fun PreviewSearchAreaReady() {
     ATrainingTrackerTheme {
         Surface {
             SearchArea(
@@ -140,7 +142,7 @@ fun PreviewSearchAreaReady() {
 }
 @Preview(showBackground = true, name = "Tracking - Light")
 @Composable
-fun PreviewSearchAreaTracking() {
+private fun PreviewSearchAreaTracking() {
     ATrainingTrackerTheme {
         Surface {
             SearchArea(
@@ -151,7 +153,7 @@ fun PreviewSearchAreaTracking() {
 }
 @Preview(showBackground = true, name = "Paused - Light")
 @Composable
-fun PreviewSearchAreaPaused() {
+private fun PreviewSearchAreaPaused() {
     ATrainingTrackerTheme {
         Surface {
             SearchArea(

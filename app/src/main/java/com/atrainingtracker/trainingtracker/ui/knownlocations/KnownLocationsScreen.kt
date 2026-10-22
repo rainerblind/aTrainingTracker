@@ -93,6 +93,7 @@ import com.atrainingtracker.trainingtracker.ui.map.createHeartPinMarker
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.model.CameraPosition
@@ -362,12 +363,12 @@ private fun KnownLocationThumbnailMap(
                     val center = Offset(size.width / 2f, size.height / 2f)
                     val circleRadius = size.minDimension * 0.35f
                     drawCircle(
-                        color = Color(0x332196F3),
+                        color = TTColor.GeofenceFill,
                         radius = circleRadius,
                         center = center
                     )
                     drawCircle(
-                        color = Color(0x882196F3),
+                        color = TTColor.GeofenceStroke,
                         radius = circleRadius,
                         center = center,
                         style = Stroke(width = 2.dp.toPx())
@@ -391,7 +392,7 @@ private fun KnownLocationThumbnailMap(
         val heartMarkerIcon = remember(context) {
             createHeartPinMarker(
                 context = context,
-                pinColor = Color(0xFF2196F3),
+                pinColor = TTColor.GeofencePin,
                 heartColor = Color.White
             )
         }
@@ -412,7 +413,7 @@ private fun KnownLocationThumbnailMap(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(if (isDark) Color(0xFF121212) else Color.White)
+                .background(if (isDark) TTColor.DarkMapCanvas else Color.White)
         ) {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
@@ -445,8 +446,8 @@ private fun KnownLocationThumbnailMap(
                 Circle(
                     center = item.latLng,
                     radius = item.radius.toDouble(),
-                    fillColor = Color(0x332196F3),
-                    strokeColor = Color(0x882196F3),
+                    fillColor = TTColor.GeofenceFill,
+                    strokeColor = TTColor.GeofenceStroke,
                     strokeWidth = 2f
                 )
             }
@@ -707,18 +708,18 @@ fun ElevationSourceBadge(source: ElevationSource) {
         )
         ElevationSource.MANUAL_USER -> Triple(
             R.string.source_manual_user,
-            Color(0xFFE8F5E9),
-            Color(0xFF2E7D32)
+            TTColor.LocationBadgeHomeContainer,
+            TTColor.LocationBadgeHomeContent
         )
         ElevationSource.AUTO_LEARNED -> Triple(
             R.string.source_auto_learned,
-            Color(0xFFFFF8E1),
-            Color(0xFFF57F17)
+            TTColor.LocationBadgeWorkContainer,
+            TTColor.LocationBadgeWorkContent
         )
         ElevationSource.GPS_FALLBACK -> Triple(
             R.string.source_gps_fallback,
-            Color(0xFFFFE0B2),
-            Color(0xFFE65100)
+            TTColor.LocationBadgeOtherContainer,
+            TTColor.LocationBadgeOtherContent
         )
         ElevationSource.LEGACY_RAW -> Triple(
             R.string.source_legacy_raw,
@@ -772,7 +773,7 @@ private val previewMockCluster = WorkoutCluster(
 
 @Preview(name = "List Item - Light", showBackground = true)
 @Composable
-fun PreviewKnownLocationCardLight() {
+private fun PreviewKnownLocationCardLight() {
     ATrainingTrackerTheme(darkTheme = false) {
         Box(modifier = Modifier.padding(16.dp)) {
             KnownLocationCard(
@@ -790,7 +791,7 @@ fun PreviewKnownLocationCardLight() {
 
 @Preview(name = "List Item - Dark", showBackground = true)
 @Composable
-fun PreviewKnownLocationCardDark() {
+private fun PreviewKnownLocationCardDark() {
     ATrainingTrackerTheme(darkTheme = true) {
         Box(modifier = Modifier.padding(16.dp)) {
             KnownLocationCard(
@@ -808,7 +809,7 @@ fun PreviewKnownLocationCardDark() {
 
 @Preview(name = "List Item - Context Menu (Long Click)", showBackground = true)
 @Composable
-fun PreviewKnownLocationCardContextMenu() {
+private fun PreviewKnownLocationCardContextMenu() {
     ATrainingTrackerTheme(darkTheme = false) {
         Box(modifier = Modifier.padding(16.dp)) {
             KnownLocationCard(

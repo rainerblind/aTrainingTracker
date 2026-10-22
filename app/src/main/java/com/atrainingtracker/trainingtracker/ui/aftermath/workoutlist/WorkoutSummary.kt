@@ -78,6 +78,9 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDist
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.saveable.rememberSaveable
 
 /**
@@ -98,16 +101,22 @@ fun WorkoutSummary(
     onClusterClick: ((Long) -> Unit)? = null,
     onMarkFinished: (() -> Unit)? = null,
     preferences: WorkoutCardSectionPreferences = WorkoutCardSectionPreferences(),
-    workoutSectionsOrder: List<WorkoutSectionType> = WorkoutSectionType.DEFAULT_ORDER
+    workoutSectionsOrder: List<WorkoutSectionType> = WorkoutSectionType.DEFAULT_ORDER,
+    tuningConfig: TuningConfig? = null
 ) {
     // When the workout is not yet finished (properly), we show it with an alpha of 0.5
     val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
 
     var activeEditingLap by remember { mutableStateOf<LapData?>(null) }
-    var hrZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
-    var powerZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
+    var hrZoneDisplayMode by rememberSaveable { mutableStateOf<ZoneCardDisplayMode?>(null) }
+    var powerZoneDisplayMode by rememberSaveable { mutableStateOf<ZoneCardDisplayMode?>(null) }
+    val effectiveHrZoneDisplayMode = hrZoneDisplayMode ?: preferences.zoneCardDisplayMode
+    val effectivePowerZoneDisplayMode = powerZoneDisplayMode ?: preferences.zoneCardDisplayMode
     val context = LocalContext.current
     val repository = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
+    val tuningDataStore = remember(context) { TuningPreferencesDataStore(context.applicationContext) }
+    val observedTuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
+    val effectiveTuningConfig = tuningConfig ?: observedTuningConfig
 
     // Lazy telemetry points loading (ATT-1714 / REQ-UI-210)
     val telemetryPoints by produceState<List<PathPoint>>(
@@ -190,7 +199,13 @@ fun WorkoutSummary(
 
         WorkoutDetails(
             data = workoutData.detailsData,
-            modifier = mapClickModifier
+            modifier = mapClickModifier,
+            enableCogganPowerMetrics = effectiveTuningConfig.enableCogganPowerMetrics,
+            showCogganPowerInWorkoutSummary = effectiveTuningConfig.showCogganPowerInWorkoutSummary,
+            enableAerobicEfficiencyModel = effectiveTuningConfig.enableAerobicEfficiencyModel,
+            showAerobicEfficiencyInWorkoutSummary = effectiveTuningConfig.showAerobicEfficiencyInWorkoutSummary,
+            enableCriticalPowerModel = effectiveTuningConfig.enableCriticalPowerModel,
+            showCriticalPowerInWorkoutSummary = effectiveTuningConfig.showCriticalPowerInWorkoutSummary
         )
 
         // 2. Dynamic Section Rendering Loop (REQ-UI-255)
@@ -339,7 +354,7 @@ fun WorkoutSummary(
                                     bSportType = workoutData.bSportType,
                                     enableGestures = false,
                                     zoneDistribution = hrZoneDistribution,
-                                    zoneDisplayMode = hrZoneDisplayMode,
+                                    zoneDisplayMode = effectiveHrZoneDisplayMode,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -370,7 +385,36 @@ fun WorkoutSummary(
                                     bSportType = workoutData.bSportType,
                                     enableGestures = false,
                                     zoneDistribution = powerZoneDistribution,
-                                    zoneDisplayMode = powerZoneDisplayMode,
+                                    zoneDisplayMode = effectivePowerZoneDisplayMode,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                        if (effectiveTuningConfig.enableCriticalPowerModel && TelemetryMetricUtils.hasWPrimeBalData(telemetryPoints)) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(mapClickModifier)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.w_prime_bal),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                )
+                                TelemetryMetricGraph(
+                                    pathPoints = telemetryPoints,
+                                    metricType = TelemetryMetricType.W_PRIME_BAL,
+                                    currentDistance = null,
+                                    onDistanceSelected = {},
+                                    bSportType = workoutData.bSportType,
+                                    enableGestures = false,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -388,8 +432,9 @@ fun WorkoutSummary(
                         hrZoneDistribution?.let { distribution ->
                             HeartRateZoneDistributionCard(
                                 distribution = distribution,
-                                displayMode = hrZoneDisplayMode,
+                                displayMode = effectiveHrZoneDisplayMode,
                                 onDisplayModeChange = { hrZoneDisplayMode = it },
+                                showModeSelector = false,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -399,8 +444,9 @@ fun WorkoutSummary(
                         powerZoneDistribution?.let { distribution ->
                             PowerZoneDistributionCard(
                                 distribution = distribution,
-                                displayMode = powerZoneDisplayMode,
+                                displayMode = effectivePowerZoneDisplayMode,
                                 onDisplayModeChange = { powerZoneDisplayMode = it },
+                                showModeSelector = false,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)

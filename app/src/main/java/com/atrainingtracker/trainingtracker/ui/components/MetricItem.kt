@@ -135,7 +135,7 @@ fun MetricItem(
 
 @Preview(showBackground = true, name = "Horizontal Basic")
 @Composable
-fun PreviewMetricItemHorizontal() {
+private fun PreviewMetricItemHorizontal() {
     MaterialTheme {
         Box(modifier = Modifier.padding(16.dp)) {
             MetricItem(
@@ -148,7 +148,7 @@ fun PreviewMetricItemHorizontal() {
 
 @Preview(showBackground = true, name = "Vertical Detailed")
 @Composable
-fun PreviewMetricItemVertical() {
+private fun PreviewMetricItemVertical() {
     MaterialTheme {
         Box(modifier = Modifier.padding(16.dp)) {
             MetricItem(
@@ -166,7 +166,7 @@ fun PreviewMetricItemVertical() {
 
 @Preview(showBackground = true, name = "Metric Gallery")
 @Composable
-fun PreviewMetricGallery() {
+private fun PreviewMetricGallery() {
     MaterialTheme {
         Column(
             modifier = Modifier.padding(16.dp),

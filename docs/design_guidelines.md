@@ -52,6 +52,8 @@ SingleChoiceSegmentedButtonRow(
   * Filtering lists by categories (e.g. Sport Types: All, Run, Bike, Hike).
   * Selecting multiple non-exclusive tags.
   * Selecting among 3 to 4 distinct discrete states where each option has descriptive context.
+* **Canonical Sport Type Chip Ordering (`Other` Always on the Far Right — Rule 57, ATT-4372 / ATT-4430)**:
+  * Across all sport type selector rows (`FilterChip` rows, segmented buttons), specific primary sports (`Run`, `Bike` / `Bike`, `Run`) **MUST** appear first, and the catch-all `Other` (`BSportType.UNKNOWN` / `"Andere"`) **MUST** always be positioned on the **far right** (`[Bike, Run, Other]` or `[Run, Bike, Other]`), even when `Other` is preselected as the default value. Never move `Other` to the leftmost position just because it is the default selection.
 
 ### 1.3 Large Option Sets ($> 4$ Options)
 * **Standard Control**: Exposed Dropdown Menu (`ExposedDropdownMenuBox`) or Modal Selection Dialog.
@@ -126,6 +128,14 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
     $$\text{alt} = P_i.\text{alt} + s \times (P_{i+1}.\text{alt} - P_i.\text{alt})$$
   * Telemetry and visual marker positions along polyline profiles must be interpolated continuously using this projected distance and altitude (ATT-3103 / ATT-3174).
 
+### 2.6 Mandatory Axis Scale Labels & Outlier-Resilient Y-Scaling on Telemetry & Progression Charts (Rule 48 — ATT-4287)
+* **Explicit X-Axis & Y-Axis Scale Markers**:
+  * Every chart rendered on a `Canvas` (including historical workout cluster progression charts such as `ClusterTrendChart` and post-workout telemetry charts) **MUST** render explicit, human-readable scale markers/labels on both the X-axis (e.g. session dates `"dd.MM."` / `"MMM yy"`, distance, or duration) and the Y-axis (e.g. formatted pace `"5:30 /km"`, speed `"28.5 km/h"`, heart rate `"155 bpm"`, or power `"220 W"` aligned with the horizontal reference gridlines).
+  * Drawing unlabeled gridlines without axis tick values leaves the athlete unable to read absolute performance levels or time intervals from the graph.
+* **Outlier-Resilient Y-Axis Domain Clamping**:
+  * Historical progression charts **MUST NOT** scale their Y-axis linearly across raw un-clamped `min..max` extrema when a single anomalous session (e.g. an unpaused stop yielding `115:52 /km` when normal sessions are `5:14/km – 8:28/km`) is present.
+  * Use outlier-resilient bounds (such as interquartile range $\text{IQR} = Q_3 - Q_1$ clamping to $[Q_1 - 1.5 \times \text{IQR}, Q_3 + 1.5 \times \text{IQR}]$ or 5th–95th percentile clamping when $N \ge 4$, pinning extreme outliers to the top/bottom canvas edge with an indicator) so the primary trend line utilizes the full vertical canvas height.
+
 ---
 
 ## 3. Settings & Accordion Structure
@@ -142,6 +152,23 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 ### 3.1 Explanatory Scale Direction in Settings Sliders
 * **Scale Direction Transparency**:
   * Whenever exposing numerical sliders or continuous values in user settings (such as map zoom levels, camera tilt angles, sensitivity curves, or lookahead paddings), the preference subtitle or hint text MUST explicitly explain the physical direction of the scale (e.g., *"Höherer Wert = Näher herangezoomt"* / *"Niedrigerer Wert = Weiträumigere Übersicht"*) (ATT-2946 / ATT-3054 / ATT-3171).
+
+### 3.2 Single Unambiguous Configuration Surface (Retiring Redundant Legacy Controls)
+* **Retire Overlapping Matrix Columns When Adding Dedicated Config Sheets (ATT-3920 / ATT-4043)**:
+  * When introducing a dedicated configuration sheet or editor for a view (such as `WorkoutDetailTabsConfigSheet` for `DetailedWorkoutView` tab ordering and visibility), any legacy settings controls that previously toggled the same view (such as the `Details` column in the 2-column `WorkoutMasksAndCardsSection` matrix) **MUST** be retired and cleaned up in the same change.
+  * Never keep two competing UI surfaces in the same settings screen that toggle the same underlying preferences; doing so confuses the athlete about which control is authoritative.
+
+### 3.3 Subordinate Settings Toggles: Lighter Visual Weight & Compact Switches (Rule 59 — ATT-4369 / ATT-4432 / ATT-4464 / ATT-4513)
+* **Clear Parent-Child Hierarchy**:
+  * Subordinate child toggles nested under a primary feature/model toggle (such as `"Show in Workout Summary"` / `"In Workout-Zusammenfassung anzeigen"` under a Physiology Model toggle) **MUST NOT** reuse the full-sized primary `TuningToggleItem` row or the same `Switch` scale (`0.8f`) as `TuningToggleItem`, which visually competes with the parent header.
+  * Because `TuningToggleItem` already scales its primary `Switch` to `0.8f`, subordinate toggles (`SubordinateTuningToggleItem`) **MUST** render with a significantly smaller/lighter control (e.g., `Modifier.scale(0.6f)` with lighter checked track color `MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)` and thumb `primary` [ATT-4513] to avoid excessively dark navy tracks in Light Mode), smaller/lighter text (`MaterialTheme.typography.bodySmall` or `labelMedium` with `MaterialTheme.colorScheme.onSurfaceVariant`), and compact vertical padding.
+* **No Unrequested Top-Level Model Toggles**:
+  * Do not invent extra top-level settings toggles for baseline metrics (e.g. `"Basic Power Metrics (Work, W/kg)"`) that were not requested in the ticket specification.
+
+### 3.4 Multi-Provider Cloud / Sync UI & Capability Symmetry (Rule 62 — ATT-4588 / ATT-4664 / ATT-4665 / ATT-4666)
+* **Shared Parameterized Layout & Symmetric Capabilities**:
+  * Parallel cloud/sync provider dialogs, cards, and action buttons (such as **Dropbox** vs. **Google Drive** in `CloudSyncSettingsDialogs.kt` and `RestoreTabContent.kt`) **MUST** share a unified parameterized composable layout, identical button label phrasing/iconography, and symmetric configuration granularity (e.g., independent toggles for Workouts vs. Backups, Wi-Fi-only restriction, Backup Interval selector, and Last Backup/Sync timestamp) unless a provider API physically lacks that capability.
+  * Never evolve sister provider dialogs independently with divergent wording or mismatched feature sets.
 
 ---
 
@@ -198,6 +225,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 ### 5.5 Typography & Icons
 * Text styles from `MaterialTheme.typography`; emphasis via `FontWeight.Bold` / `SemiBold` (no custom font families).
 * Icons from Material Icons (`Icons.Default.*`, `Icons.AutoMirrored.*` for directional icons). Map POIs/markers should use a consistent standard icon set (see ATT-2461) rather than ad-hoc drawn shapes.
+* **Unambiguous Action Iconography & No ASCII Symbol Prefixes in Strings (Rule 49 — ATT-4286, ATT-4288)**:
+  * **Never Use Minus-Like Icons (`HorizontalRule`) for Insert/Add Actions**: Never use `Icons.Default.HorizontalRule` (`—`) in a toolbar next to `+` (`Icons.Default.Add`) to represent inserting a section divider or item; a horizontal bar next to `+` visually reads as a minus/remove button (`-`). Use a dedicated split/section icon or labeled menu item.
+  * **Never Include Literal `"+ "` Prefixes Inside Localized `<string>` Resources**: When a button, chip, or action item renders a leading `Icon(Icons.Default.Add, ...)`, the corresponding `<string>` resource in `strings.xml` **MUST NOT** start with a literal `"+ "` character (which produces duplicate `+ + Pair Sensor` labels on screen). Keep icon graphics in Compose `Icon` slots and keep XML strings purely textual.
 * **Semantic Category Icon Tinting (Rule 23)**: When rendering paired or symmetric category items across lists, tables, or tabbed views (e.g. equipment categories like bikes and shoes in `EquipmentSensorMatrixScreen`):
   * **Unified Active Role**: All active entities across categories MUST use the same unified brand color token (`MaterialTheme.colorScheme.primary`). Do NOT assign disparate color roles (e.g. `primary` to bikes and `secondary` to shoes) to differentiate categories; visual distinction is provided by the vector drawables themselves (`ic_equipment_bike` vs `ic_equipment_shoe`) and section/tab titles.
   * **Status Tinting**: Use `MaterialTheme.colorScheme.outline` for retired/inactive entities, and `MaterialTheme.colorScheme.error` for failed/unhealthy states.
@@ -208,9 +238,20 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
     * Symmetric, canonical Material Design arrowheads across complementary directions (left / right).
     * True geometric angle transitions: gentle 45° for slight turns, 90° for normal turns, acute ~135° for sharp turns, 180° loop for u-turns.
   * Any modification to directional iconography **MUST** be verified side-by-side across all enum variants in both Light and Dark themes via a dedicated Compose `@Preview` gallery (e.g. `TurnCueIconsGalleryPreview`) before release.
+* **1:1 Visual Fidelity & True Geometric Primitives When Vectorizing Raster Icons (Rule 37 — ATT-2859 / ATT-3679)**:
+  * When migrating legacy multi-density raster PNG drawables (such as sport icons `bsport_bike`, `bsport_run`, `bsport_other` or ANT+/BLE sensor badges) to XML `VectorDrawable`s, the vector paths **MUST** faithfully redraw the exact visual design, multi-color geometry, and badge layout of the existing icons—never replace custom multi-color icons or protocol badges with generic monochrome Material Symbols.
+  * **Authoritative Original Vector Sources (`/home/rainer/Dropbox/workspace/`)**: Always check `/home/rainer/Dropbox/workspace/` (`aTrainingTracker_Images/`, `Images/`, `Logos/`, `featureGraphic/`) first for original `.fig` (`xfig`), `.svg` (Inkscape), and `.xcf` (GIMP) master files before attempting any manual reconstruction. Convert existing `.svg` / `.fig` master geometry directly into Android `VectorDrawable` paths rather than approximating by hand.
+  * **Prohibition of Naive Polygon Auto-Tracing**: Never use naive marching-squares / Ramer-Douglas-Peucker (`M...L...Z` straight-line polygon) auto-tracing scripts on raster icons without `fillType="evenOdd"` or layer reconstruction. Naive colour-mask tracing produces jagged polygonal edges, fills in inner holes (wheels, stopwatch rings, letters like `R`, `P`, `D`, `B`), and severs occluded shapes where foreground layers overlap background wheels/frames. Construct icons from true geometric primitives (circles, `A` arcs, rounded strokes in back-to-front Z-order, and `evenOdd` compound paths) and visually verify a rendered bitmap 1:1 against the `xxxhdpi` reference PNG.
 
-### 5.6 Placement & Entry Points
+### 5.6 Placement, Entry Points & Screen Headers
 * New features are entered from the screen where the athlete expects them (e.g. route selection on the Control Tracking screen, ATT-2458) using the same button/chip style as neighbouring actions — not via new floating or branded elements.
+* **Compact Icon Actions in Top Headers (ATT-3184, ATT-3188, ATT-3675)**:
+  * Top screen headers (`Row`) **MUST NOT** pack multiple multi-word `TextButton`s alongside a title and status chip on a single horizontal line. Across 9 localized languages (especially German, e.g. `"Auf Standardwerte zurücksetzen"`), horizontal text buttons starve the layout width and wrap vertically 1 character per line across the screen. Use compact `IconButton` symbol actions (with accessible `contentDescription` tooltips) or a wrapping `FlowRow`.
+* **No Single-Character or Word Wrapping in Dense Horizontal Chip / SegmentedButton Rows (Rule 38 — ATT-3184, ATT-3676)**:
+  * Never pack 5–7 Material 3 `FilterChip`s (especially with `leadingIcon`s) into a single `Row` using `Modifier.weight(1f)`. M3 `FilterChip` reserves ~24dp of internal horizontal padding plus icon spacing, leaving only ~10dp for text on 7-zone rows and wrapping `"Z1"` into `"Z\n1"`. Use compact custom bordered/tinted pills without `leadingIcon` overhead, and always enforce `maxLines = 1, softWrap = false` across all 9 locales (including long German labels like `"Histogramm"` in `SegmentedButton`s).
+* **System Navigation Bar Inset Clearance on Scrollable Screens (Rule 41 — ATT-3704)**:
+  * Every full-screen scrollable container (`Column(Modifier.verticalScroll(...))` or `LazyColumn`) hosted inside an edge-to-edge Activity (such as `MainActivityWithNavigation`) **MUST** account for the bottom Android system navigation bar insets (via `Modifier.navigationBarsPadding()` after `verticalScroll`, or `WindowInsets.navigationBars.asPaddingValues()` in `LazyColumn(contentPadding = ...)`).
+  * Omitting bottom system bar insets causes the bottommost card or action rows to be partially hidden behind the gesture or 3-button Android navigation bar when scrolled all the way down.
 
 ### 5.7 In-Ride Navigation Cues & HUD Overlays
 * **Top-Level Spatial Overlay**: In-ride navigation hints, turn-by-turn cues (e.g. ATT-1450), and fork-in-the-road decision prompts (e.g. ATT-1955) must float directly on top of the active tracking screen elements (cockpit tiles, map view) rather than displacing or squeezing the cockpit tile layout.
@@ -218,7 +259,12 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Transient Auto-Dismiss (3–5 Seconds)**: Navigation cues are time-sensitive and ephemeral. Upon being triggered (or once a maneuver instruction is issued), the cue must automatically vanish after a brief, configurable interval (3–5 seconds) via a smooth animation (fade or slide), promptly returning the screen to full telemetry focus without requiring manual dismissal while riding.
 * **Expert Settings Customization**: Auto-dismiss duration (e.g. 2–8 seconds or persistent until passed, default 4 seconds) and countdown distance (30–300 m, default 100 m) are exposed as configurable parameters in Expert Settings (*Experteneinstellungen*), allowing athletes to tailor cue timing to their riding speed and sport discipline (ATT-3321, ATT-3322).
 
-### 5.8 Live Tracking Bottom Sheets (Segments & Climbs)
+### 5.8 Bottom Sheets (`AppModalBottomSheet`, Live Segments & Climbs) & Modal Overlay Composition Retention
+* **Modal Overlay Composition Retention — Never Unmount Host Screens When Opening a Sheet or Dialog (Rule 47 — ATT-4285)**:
+  * Modal bottom sheets (`AppModalBottomSheet`, `ModalBottomSheet`) and dialogs (`AlertDialog`) **MUST** be rendered as overlays *alongside* the underlying host screen (e.g. `RouteTabbedScreen`, `EquipmentSensorMatrixScreen`) in the Compose tree—**NEVER** inside a mutually exclusive `if (editingItem != null) { Sheet(...) } else { HostScreen(...) }` branch.
+  * Unmounting the underlying screen while a modal sheet is open destroys non-saveable composition state and causes `PrimaryScrollableTabRow` (`rememberScrollState(0)`), `LazyListState`, and collapsing header states to visibly jump or reset when the modal closes.
+* **No Nested `verticalScroll` Inside `AppModalBottomSheet` (ATT-3274 / ATT-3679)**:
+  * `AppModalBottomSheet` defaults to `scrollable = true`, which wraps its content slot in a `Column(Modifier.verticalScroll(rememberScrollState()))`. Child screens hosted inside `AppModalBottomSheet` **MUST NOT** apply a second `Modifier.verticalScroll` (which crashes Compose with `IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints`), or must explicitly pass `scrollable = false` to `AppModalBottomSheet`.
 * **Default Fully Expanded Presentation**:
   * Live Segment (`LiveSegmentSheet`) and Climb (`LiveClimbSheet`) bottom sheets during active tracking (`SensorGridScreen`) must pop up **fully expanded** (`SheetValue.Expanded`) by default instead of partially expanded (`SheetValue.PartiallyExpanded` / peek height).
   * This provides immediate visibility of the elevation profile graph, instantaneous gradient profile, and live pacing telemetry HUD without requiring manual touch interaction or swipe gestures while riding or running.
@@ -239,6 +285,76 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 | **Map** (`Layout 2`) | ✅ **On** | ✅ **On** | ❌ Off | ❌ Off | ❌ Off | ✅ **On** |
 | **Laps** (`Layout 3`) | ❌ Off | ❌ Off | ✅ **On** | ❌ Off | ❌ Off | ❌ Off |
 
+### 5.10 `WorkoutDetails` & Summary Card Grouped Metric Rows (`AltitudeRow` Pattern)
+* **Canonical Single-Line Grouped Row Layout (ATT-3858, ATT-3930, ATT-4042)**:
+  * Domain-grouped summary metrics rendered inside `WorkoutDetails.kt` (shared by `WorkoutSummary` cards and `TrackOnMapScreen` / `MapDetailLayout`, such as Elevation, Power Training Metrics `NP/IF/TSS`, Aerobic Efficiency `EF & Decoupling`, and Anaerobic Battery `CP/W'/W'bal`) **MUST** follow the single-line `AltitudeRow` layout pattern:
+    1. **Left Domain Header Column**: A `Column` displaying the localized domain category label (`style = MaterialTheme.typography.labelMedium`, `color = MaterialTheme.colorScheme.onSurfaceVariant`), a `Spacer(modifier = Modifier.height(4.dp))`, and a `24.dp` domain `Icon` (`tint = MaterialTheme.colorScheme.onSurfaceVariant`), followed by `Spacer(modifier = Modifier.width(20.dp))`.
+    2. **Single Horizontal Row of 2–3 Primary `MetricItem`s**: A **single** `Row(modifier = Modifier.fillMaxWidth())` containing **at most 2–3** equal-weight `MetricItem` cells (`layout = MetricLayout.VERTICAL`, `modifier = Modifier.weight(1f)`), where each `MetricItem` displays its short metric label above (`labelMedium`, `onSurfaceVariant`) and bold formatted value (with units) below. Do **NOT** stack multiple `Row`s of metrics under one domain icon in `WorkoutDetails.kt`; select only the 2 or 3 most important metrics for the summary row.
+    3. **Clear Visual Separation Between Consecutive Domain Rows**: Separate consecutive domain rows with adequate vertical padding (e.g. `padding(vertical = 4.dp)` or `8.dp` spacing) and a subtle `HorizontalDivider` (`thickness = 0.5.dp`) so adjacent rows do not visually run together.
+* **Anti-Patterns (Strictly Forbidden)**:
+  * ❌ **Do NOT stack multiple horizontal `Row`s (e.g. 2 rows of 3 metrics) under a single domain header** in `WorkoutDetails`. Keep each domain row strictly to a single line of 2–3 primary metrics.
+  * ❌ **Do NOT use `FlowRow` pill/chip badges (`Surface(color = surfaceContainerHighest)` with `"NP: 175 W"`)** for workout summary metrics. Wrapping pill clouds break the tabular visual alignment of `WorkoutDetails` and leave trailing chips orphaned on new lines.
+  * ❌ **Do NOT render raw inline `Text("EF: 1,32 W/bpm")` lines** without a domain header column and `MetricItem` structure.
+
+```kotlin
+// Canonical Single-Line Grouped Metric Row Pattern in WorkoutDetails.kt (AltitudeRow reference):
+Row(
+    modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
+    verticalAlignment = Alignment.CenterVertically
+) {
+    Column {
+        Text(
+            text = stringResource(R.string.domain_label),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Icon(
+            painter = painterResource(id = R.drawable.ic_domain_icon),
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    Spacer(modifier = Modifier.width(20.dp))
+    Row(modifier = Modifier.fillMaxWidth()) {
+        MetricItem(
+            iconRes = R.drawable.ic_metric_1, // or optional icon
+            label = stringResource(R.string.metric_1_short),
+            value = formattedValue1,
+            layout = MetricLayout.VERTICAL,
+            modifier = Modifier.weight(1f)
+        )
+        MetricItem(
+            iconRes = R.drawable.ic_metric_2,
+            label = stringResource(R.string.metric_2_short),
+            value = formattedValue2,
+            layout = MetricLayout.VERTICAL,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+```
+
+### 5.11 Cockpit & Form Section Dividers: Prominent Contrast & Centered Titles (Rule 49 — ATT-4286)
+* **Visual Prominence**:
+  * Section dividers inside dense telemetry grids (`SensorGridScreen`) must be clearly distinguishable at a glance while riding, using a thick stroke (`thickness >= 2.dp` or `3.dp`, or a tinted pill/banner container) with high-contrast color tokens (`MaterialTheme.colorScheme.primary` or `onSurfaceVariant` at high opacity) rather than a faint `1.dp` hairline surrounded by empty whitespace.
+* **Centered Section Titles**:
+  * When a section divider includes a title, the title **MUST** be horizontally centered across the full row width (flanked by symmetric `HorizontalDivider(modifier = Modifier.weight(1f))` segments on both left and right, or centered inside a full-width section header bar), never left-aligned with a single trailing line.
+
+### 5.12 Cockpit Utility Button Availability & Click/Pointer Gesture Isolation (Rules 53 & 58 — ATT-4371, ATT-4431)
+* **Availability Across `READY`, `TRACKING`, and `PAUSED` Modes**:
+  * Unlike `LapButton` (which records a workout lap split and therefore requires `TrackingMode.TRACKING`), auxiliary Cockpit utility controls such as the **Bike Bell** (`BikeBellButton`) **MUST** remain enabled across `READY`, `TRACKING`, and `PAUSED` modes (`enabled = isConfigureMode || trackingMode in setOf(READY, TRACKING, PAUSED)`) so athletes can test or ring the bell while stationary or before pressing Start.
+* **Never Nest `ElevatedButton(onClick)` Inside `Modifier.pointerInput(detectTapGestures)` — Preserve Press-and-Hold via `InteractionSource` (Rules 53 & 58)**:
+  * Do not wrap a Material `Button`/`ElevatedButton` with its own `onClick` handler inside a parent `Box(Modifier.pointerInput { detectTapGestures(...) })`, which causes pointer event contention and swallows clicks.
+  * When a button supports both single-tap (`onClick`) and press-and-hold / long-press actions (such as `BikeBellButton`'s continuous `"Brriiiing!"` roll), never delete the long-press capability to fix click contention; instead observe `PressInteraction.Press` / `Release` / `Cancel` on the button's `MutableInteractionSource` (or use a `Surface` with `combinedClickable`) so both single-tap and press-and-hold work reliably.
+
+### 5.13 Dialog Width Budgets, Multi-Chip `FlowRow` Wrapping & Long-Locale (`de`) Verification (Rule 54 — ATT-4372)
+* **No Non-Wrapping 3+ Chip `Row` Inside `AlertDialog`**:
+  * Standard Material 3 `AlertDialog` containers have a narrow horizontal width (`~280.dp–320.dp`). Placing 3 or more `FilterChip`s (e.g., `Cycling`, `Running`, `Other` / `Radfahren`, `Laufen`, `Andere`) inside a single non-wrapping `Row(Modifier.fillMaxWidth())` crushes the trailing chip into a 1-character-per-line vertical stack (`A / n / d / e / r / e`).
+  * Multi-chip selectors inside dialogs **MUST** use `FlowRow` (so chips wrap cleanly as intact horizontal pills) or `AppModalBottomSheet`.
+* **Verbose Locale (`de`) Segmented Button Width Check**:
+  * Avoid squeezing long multi-word labels (`"Auf alle anwenden"`) into a 2-button `SingleChoiceSegmentedButtonRow` inside a narrow `AlertDialog` where labels truncate mid-word (`"Auf alle anwen"`). Prefer concise localized labels, stacked radio/card rows, or a full-width `AppModalBottomSheet`.
 
 ---
 
@@ -248,6 +364,3 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Single Spatial Authority**:
   * Map camera tracking, Follow-Me lookahead offsets, and viewport content paddings MUST share a single spatial authority to prevent conflicting animation loops and viewport jitter.
   * Avoid competing camera updates where Google Maps `contentPadding` recalculation in `BoxWithConstraints` fights with `cameraPositionState.animate(...)`. Keep map paddings symmetric or fixed, and implement forward camera lookahead analytically via target coordinate projection (ATT-3054 / ATT-3102).
-
-
-

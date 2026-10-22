@@ -68,7 +68,7 @@ fun ClusterTuningScreen(
                 title = { Text(stringResource(R.string.cluster_tuning_title)) },
                 navigationIcon = {
                     IconButton(onClick = handleBack, enabled = !isRecalculating) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
@@ -83,7 +83,10 @@ fun ClusterTuningScreen(
         }
     ) { padding ->
         if (showInfoDialog) {
-            ClusterInfoDialog(onDismissRequest = { showInfoDialog = false })
+            ClusterInfoDialog(
+                onDismissRequest = { showInfoDialog = false },
+                onNavigateToAdvancedSettings = { showInfoDialog = false }
+            )
         }
         if (isRecalculating) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.ui.components.core.EntityDetailSheetScaffold
@@ -116,13 +117,13 @@ fun ClimbDetailElevationProfile(
             drawPath(
                 path = rampPath,
                 brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFFEF6C00).copy(alpha = 0.5f), Color.Transparent),
+                    colors = listOf(TTColor.ClimbCategory2.copy(alpha = 0.5f), Color.Transparent),
                     startY = 0f,
                     endY = height
                 )
             )
             drawLine(
-                color = Color(0xFFEF6C00),
+                color = TTColor.ClimbCategory2,
                 start = Offset(0f, height),
                 end = Offset(width, 0f),
                 strokeWidth = 3.dp.toPx(),
@@ -133,8 +134,9 @@ fun ClimbDetailElevationProfile(
 
         val startDist = pathPoints.first().distance
         val totalDist = (pathPoints.last().distance - startDist).coerceAtLeast(1.0)
-        val minAlt = pathPoints.minOf { it.altitude }
-        val maxAlt = pathPoints.maxOf { it.altitude }
+        val nonNullAlts = pathPoints.mapNotNull { it.altitude }
+        val minAlt = nonNullAlts.minOrNull() ?: 0.0
+        val maxAlt = nonNullAlts.maxOrNull() ?: 10.0
         val altSpan = (maxAlt - minAlt).coerceAtLeast(10.0)
 
         val topPadding = 8f
@@ -142,25 +144,20 @@ fun ClimbDetailElevationProfile(
         val usableHeight = height - topPadding - bottomPadding
 
         var prevX = 0f
-        var prevY = (height - bottomPadding - (((pathPoints[0].altitude - minAlt) / altSpan) * usableHeight)).toFloat()
+        var prevY = (height - bottomPadding - ((((pathPoints[0].altitude ?: minAlt) - minAlt) / altSpan) * usableHeight)).toFloat()
 
         for (i in 1 until pathPoints.size) {
             val p = pathPoints[i]
+            val pAlt = p.altitude ?: minAlt
+            val prevAlt = pathPoints[i - 1].altitude ?: minAlt
             val x = (((p.distance - startDist) / totalDist) * width).toFloat().coerceIn(0f, width)
-            val y = (height - bottomPadding - (((p.altitude - minAlt) / altSpan) * usableHeight)).toFloat().coerceIn(0f, height)
+            val y = (height - bottomPadding - (((pAlt - minAlt) / altSpan) * usableHeight)).toFloat().coerceIn(0f, height)
 
             val dDist = p.distance - pathPoints[i - 1].distance
-            val dAlt = p.altitude - pathPoints[i - 1].altitude
+            val dAlt = pAlt - prevAlt
             val grade = if (dDist > 0) (dAlt / dDist) * 100.0 else 0.0
 
-            val segmentColor = when {
-                grade < 3.0 -> Color(0xFF4CAF50)
-                grade < 6.0 -> Color(0xFF8BC34A)
-                grade < 9.0 -> Color(0xFFFFC107)
-                grade < 12.0 -> Color(0xFFFF9800)
-                grade < 20.0 -> Color(0xFFE53935)
-                else -> Color(0xFF212121)
-            }
+            val segmentColor = TTColor.getClimbGradeColor(grade)
 
             val fillPath = Path().apply {
                 moveTo(prevX, height)

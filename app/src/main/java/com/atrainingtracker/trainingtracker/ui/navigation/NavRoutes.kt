@@ -52,12 +52,28 @@ object NavRoutes {
     const val LOCATIONS_PATTERN = "locations?clusterId={clusterId}"
     const val ARG_CLUSTER_ID = "clusterId"
     const val SENSORS = "sensors"
+    const val EQUIPMENT = "equipment"
     const val BIKES = "bikes"
     const val SHOES = "shoes"
     const val SPORT_TYPES = "sport_types"
     const val TRAINING_ZONES = "training_zones"
+    const val TRAINING_ZONES_PATTERN = "training_zones?initialTab={initialTab}&promptReason={promptReason}"
+    const val ARG_INITIAL_TAB = "initialTab"
+    const val ARG_PROMPT_REASON = "promptReason"
+    const val ATHLETE_PROFILE = "athlete_profile"
     const val BACKUP_RESTORE = "backup_restore"
     const val ADVANCED_SETTINGS = "advanced_settings"
+
+    /**
+     * Builds a navigation route to Training Zones, optionally parameterized with an initial tab and onboarding prompt reason (REQ-UI-374.3).
+     */
+    fun trainingZones(initialTab: Int = 0, promptReason: String? = null): String =
+        if (initialTab != 0 || promptReason != null) {
+            val reasonParam = promptReason?.let { "&promptReason=$it" } ?: ""
+            "training_zones?$ARG_INITIAL_TAB=$initialTab$reasonParam"
+        } else {
+            TRAINING_ZONES
+        }
 
     /**
      * Builds a navigation route to the central map, optionally parameterized with a target location ID.
@@ -85,10 +101,12 @@ object NavRoutes {
         R.id.drawer_start_locations -> START_LOCATIONS
         R.id.drawer_my_locations -> LOCATIONS
         R.id.drawer_my_sensors -> SENSORS
+        R.id.drawer_equipment -> EQUIPMENT
         R.id.drawer_bikes -> BIKES
         R.id.drawer_shoes -> SHOES
         R.id.drawer_sport_types -> SPORT_TYPES
         R.id.drawer_training_zones -> TRAINING_ZONES
+        R.id.drawer_athlete_profile -> ATHLETE_PROFILE
         R.id.drawer_backup_restore -> BACKUP_RESTORE
         R.id.drawer_advanced_tuning -> ADVANCED_SETTINGS
         else -> null
@@ -107,10 +125,12 @@ object NavRoutes {
         START_LOCATIONS -> R.id.drawer_start_locations
         LOCATIONS -> R.id.drawer_my_locations
         SENSORS -> R.id.drawer_my_sensors
+        EQUIPMENT -> R.id.drawer_equipment
         BIKES -> R.id.drawer_bikes
         SHOES -> R.id.drawer_shoes
         SPORT_TYPES -> R.id.drawer_sport_types
         TRAINING_ZONES -> R.id.drawer_training_zones
+        ATHLETE_PROFILE -> R.id.drawer_athlete_profile
         BACKUP_RESTORE -> R.id.drawer_backup_restore
         ADVANCED_SETTINGS -> R.id.drawer_advanced_tuning
         else -> R.id.drawer_start_tracking

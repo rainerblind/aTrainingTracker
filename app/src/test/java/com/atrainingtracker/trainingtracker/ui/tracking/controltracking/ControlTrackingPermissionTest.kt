@@ -135,27 +135,69 @@ class ControlTrackingPermissionTest {
 
     @Test
     fun testWarningBadgePredicate_logicMatchesPermissionState() {
-        // When hasLocationPermission is false, warning badge should be active
-        val hasLocationPermission = false
-        val hasPermissionWarning = !hasLocationPermission
-        assertTrue("Warning badge must be visible when location permission is missing", hasPermissionWarning)
+        fun computeWarning(
+            hasLocationPermission: Boolean,
+            isIgnoringBattery: Boolean,
+            hasPairedBluetoothSensors: Boolean,
+            hasBluetoothPermission: Boolean
+        ): Boolean {
+            return !hasLocationPermission || !isIgnoringBattery || (hasPairedBluetoothSensors && !hasBluetoothPermission)
+        }
 
-        // When hasLocationPermission is true, warning badge must be dismissed
-        val grantedPermission = true
-        val noWarning = !grantedPermission
-        assertFalse("Warning badge must NOT be visible when location permission is granted", noWarning)
+        // When location missing -> warning
+        assertTrue(computeWarning(false, true, false, true))
+
+        // When battery optimization not ignored -> warning
+        assertTrue(computeWarning(true, false, false, true))
+
+        // When paired BLE sensors present and bluetooth missing -> warning
+        assertTrue(computeWarning(true, true, true, false))
+
+        // When paired BLE sensors present and bluetooth granted -> no warning
+        assertFalse(computeWarning(true, true, true, true))
+
+        // When NO paired BLE sensors and bluetooth missing -> no warning
+        assertFalse(computeWarning(true, true, false, false))
+
+        // All granted / compliant -> no warning
+        assertFalse(computeWarning(true, true, false, true))
     }
 
-    @Test
-    fun testProgressiveSetupFlow_missingForegroundTransitionsToForegroundRationale() {
+    private fun evaluateCascade(
+        hasLocation: Boolean,
+        hasNotification: Boolean,
+        isNotificationDismissed: Boolean = false,
+        hasPairedBluetoothSensors: Boolean = false,
+        hasBluetoothConnect: Boolean = true,
+        isBluetoothDismissed: Boolean = false,
+        hasBgLocation: Boolean = true,
+        isIgnoringBattery: Boolean = true
+    ): Pair<RationaleStep, Boolean> {
         var activeStep = RationaleStep.NONE
-        val hasLocation = false
+        var started = false
 
         if (!hasLocation) {
             activeStep = RationaleStep.FOREGROUND
+        } else if (!hasNotification && !isNotificationDismissed) {
+            activeStep = RationaleStep.NOTIFICATION
+        } else if (hasPairedBluetoothSensors && !hasBluetoothConnect && !isBluetoothDismissed) {
+            activeStep = RationaleStep.BLUETOOTH
+        } else if (!hasBgLocation) {
+            activeStep = RationaleStep.BACKGROUND_LOCATION
+        } else if (!isIgnoringBattery) {
+            activeStep = RationaleStep.BATTERY_OPTIMIZATION
+        } else {
+            activeStep = RationaleStep.NONE
+            started = true
         }
+        return Pair(activeStep, started)
+    }
 
-        assertEquals(RationaleStep.FOREGROUND, activeStep)
+    @Test
+    fun testDecoupledCascade_missingLocationTransitionsToForeground() {
+        val (step, started) = evaluateCascade(hasLocation = false, hasNotification = false)
+        assertEquals(RationaleStep.FOREGROUND, step)
+        assertFalse(started)
     }
 
     @Test
@@ -169,11 +211,9 @@ class ControlTrackingPermissionTest {
         assertFalse("Coarse-only permission must NOT satisfy checkHasLocation (REQ-PRI-004)", checkHasLocation)
         assertTrue("When coarse is granted and fine is missing, checkIsCoarseOnly must be true", checkIsCoarseOnly)
 
-        var activeStep = RationaleStep.NONE
-        if (!checkHasLocation) {
-            activeStep = RationaleStep.FOREGROUND
-        }
-        assertEquals("Missing fine location must trigger FOREGROUND rationale step", RationaleStep.FOREGROUND, activeStep)
+        val (step, started) = evaluateCascade(hasLocation = checkHasLocation, hasNotification = true)
+        assertEquals("Missing fine location must trigger FOREGROUND rationale step", RationaleStep.FOREGROUND, step)
+        assertFalse(started)
     }
 
     @Test
@@ -189,58 +229,78 @@ class ControlTrackingPermissionTest {
     }
 
     @Test
-    fun testProgressiveSetupFlow_foregroundGrantedMissingBgTransitionsToBgRationale() {
-        var activeStep = RationaleStep.NONE
-        val hasLocation = true
-        val hasBgLocation = false
-
-        if (!hasLocation) {
-            activeStep = RationaleStep.FOREGROUND
-        } else if (!hasBgLocation) {
-            activeStep = RationaleStep.BACKGROUND_LOCATION
-        }
-
-        assertEquals(RationaleStep.BACKGROUND_LOCATION, activeStep)
+    fun testDecoupledCascade_locationGrantedMissingNotificationTransitionsToNotificationRationale() {
+        val (step, started) = evaluateCascade(hasLocation = true, hasNotification = false)
+        assertEquals(RationaleStep.NOTIFICATION, step)
+        assertFalse(started)
     }
 
     @Test
-    fun testProgressiveSetupFlow_locationGrantedMissingBatteryTransitionsToBatteryRationale() {
-        var activeStep = RationaleStep.NONE
-        val hasLocation = true
-        val hasBgLocation = true
-        val isIgnoringBattery = false
-
-        if (!hasLocation) {
-            activeStep = RationaleStep.FOREGROUND
-        } else if (!hasBgLocation) {
-            activeStep = RationaleStep.BACKGROUND_LOCATION
-        } else if (!isIgnoringBattery) {
-            activeStep = RationaleStep.BATTERY_OPTIMIZATION
-        }
-
-        assertEquals(RationaleStep.BATTERY_OPTIMIZATION, activeStep)
+    fun testDecoupledCascade_notificationDismissedWithPairedSensorsMissingBtTransitionsToBtRationale() {
+        val (step, started) = evaluateCascade(
+            hasLocation = true,
+            hasNotification = false,
+            isNotificationDismissed = true,
+            hasPairedBluetoothSensors = true,
+            hasBluetoothConnect = false
+        )
+        assertEquals(RationaleStep.BLUETOOTH, step)
+        assertFalse(started)
     }
 
     @Test
-    fun testProgressiveSetupFlow_allGrantedDispatchesStart() {
-        var activeStep = RationaleStep.NONE
-        var started = false
-        val hasLocation = true
-        val hasBgLocation = true
-        val isIgnoringBattery = true
+    fun testDecoupledCascade_notificationDismissedNoPairedSensorsBypassesBtRationaleToBgLocation() {
+        val (step, started) = evaluateCascade(
+            hasLocation = true,
+            hasNotification = false,
+            isNotificationDismissed = true,
+            hasPairedBluetoothSensors = false,
+            hasBluetoothConnect = false,
+            hasBgLocation = false
+        )
+        assertEquals(RationaleStep.BACKGROUND_LOCATION, step)
+        assertFalse(started)
+    }
 
-        if (!hasLocation) {
-            activeStep = RationaleStep.FOREGROUND
-        } else if (!hasBgLocation) {
-            activeStep = RationaleStep.BACKGROUND_LOCATION
-        } else if (!isIgnoringBattery) {
-            activeStep = RationaleStep.BATTERY_OPTIMIZATION
-        } else {
-            activeStep = RationaleStep.NONE
-            started = true
-        }
+    @Test
+    fun testDecoupledCascade_bluetoothDismissedAdvancesToBgLocation() {
+        val (step, started) = evaluateCascade(
+            hasLocation = true,
+            hasNotification = true,
+            hasPairedBluetoothSensors = true,
+            hasBluetoothConnect = false,
+            isBluetoothDismissed = true,
+            hasBgLocation = false
+        )
+        assertEquals(RationaleStep.BACKGROUND_LOCATION, step)
+        assertFalse(started)
+    }
 
-        assertEquals(RationaleStep.NONE, activeStep)
+    @Test
+    fun testDecoupledCascade_bgLocationGrantedMissingBatteryTransitionsToBatteryRationale() {
+        val (step, started) = evaluateCascade(
+            hasLocation = true,
+            hasNotification = true,
+            hasPairedBluetoothSensors = true,
+            hasBluetoothConnect = true,
+            hasBgLocation = true,
+            isIgnoringBattery = false
+        )
+        assertEquals(RationaleStep.BATTERY_OPTIMIZATION, step)
+        assertFalse(started)
+    }
+
+    @Test
+    fun testDecoupledCascade_allGrantedDispatchesStart() {
+        val (step, started) = evaluateCascade(
+            hasLocation = true,
+            hasNotification = true,
+            hasPairedBluetoothSensors = true,
+            hasBluetoothConnect = true,
+            hasBgLocation = true,
+            isIgnoringBattery = true
+        )
+        assertEquals(RationaleStep.NONE, step)
         assertTrue("Tracking must start when all permissions and battery exemptions are present", started)
     }
 

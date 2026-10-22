@@ -128,4 +128,19 @@ class ElevationProfileGestureTest {
             content.contains("localStartDist = panStart")
         )
     }
+
+    @Test
+    fun testElevationProfile_tracksPathPointsViaRememberUpdatedState() {
+        assertTrue("ElevationProfile.kt must exist", elevationProfileFile.exists())
+        val content = elevationProfileFile.readText()
+
+        assertTrue(
+            "ElevationProfile must track pathPoints via rememberUpdatedState (REQ-UI-427.3, TST-UI-392.3)",
+            content.contains("val currentPathPointsState by rememberUpdatedState(pathPoints)")
+        )
+        assertTrue(
+            "ElevationProfile scrubbing must use currentPathPointsState",
+            content.contains("val activePoints = currentPathPointsState")
+        )
+    }
 }

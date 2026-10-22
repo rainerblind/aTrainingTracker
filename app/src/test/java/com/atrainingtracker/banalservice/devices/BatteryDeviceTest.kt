@@ -44,12 +44,14 @@ import java.util.Locale
  */
 class BatteryDeviceTest {
 
+    private lateinit var originalLocale: Locale
     private lateinit var mockContext: Context
     private lateinit var mockSensorManager: MySensorManager
     private lateinit var mockDevicesDbManager: DevicesDatabaseManager
 
     @Before
     fun setUp() {
+        originalLocale = Locale.getDefault()
         Locale.setDefault(Locale.US)
         mockkStatic(ContextCompat::class)
         mockkStatic(DevicesDatabaseManager::class)
@@ -66,6 +68,7 @@ class BatteryDeviceTest {
 
     @After
     fun tearDown() {
+        Locale.setDefault(originalLocale)
         unmockkAll()
     }
 
@@ -121,7 +124,7 @@ class BatteryDeviceTest {
         val remainingSensor = device.getSensor(SensorType.BATTERY_REMAINING_TIME)
         assertEquals(BatteryRemainingTimeFormatter.CHARGING_STATUS_CODE, remainingSensor.value)
         val str = remainingSensor.stringValue
-        assertTrue(str == "Charging" || str.isNotEmpty())
+        assertEquals("Charging", str)
     }
 
     @Test

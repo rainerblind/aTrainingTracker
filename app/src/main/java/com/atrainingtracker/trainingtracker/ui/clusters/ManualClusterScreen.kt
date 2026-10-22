@@ -95,7 +95,7 @@ fun ManualClusterScreen(
                 title = { Text(stringResource(R.string.cluster_manual_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
@@ -225,7 +225,7 @@ fun ManualClusterScreen(
 
             var isMapLoaded by remember { mutableStateOf(false) }
 
-            Box(modifier = Modifier.weight(0.55f).fillMaxWidth().background(if (isDark) Color(0xFF121212) else Color.White)) {
+            Box(modifier = Modifier.weight(0.55f).fillMaxWidth().background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {
                 GoogleMap(
                     modifier = Modifier.fillMaxSize(),
                     cameraPositionState = cameraPositionState,

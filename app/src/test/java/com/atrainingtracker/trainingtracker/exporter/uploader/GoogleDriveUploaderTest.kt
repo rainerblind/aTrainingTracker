@@ -232,4 +232,30 @@ class GoogleDriveUploaderTest {
         assertFalse(result.success())
         assertEquals("Google Drive session expired or unauthorized. Please re-authenticate in Settings.", result.answer())
     }
+
+    @Test
+    fun testDoExport_uploadFailsWith404_evictsFolderAndRecreatesOnRetry() {
+        val fitDir = File(tempFolder.root, "FIT").apply { mkdirs() }
+        File(fitDir, "workout.fit").apply { writeText("data") }
+        val exportInfo = ExportInfo("workout", FileFormat.FIT, ExportType.GOOGLE_DRIVE)
+
+        every { mockPrefs.getString(TrainingApplication.SP_GOOGLE_DRIVE_AUTH_TOKEN, null) } returns "valid_token"
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
+
+        // First resolution returns stale folder ID, second returns recreated folder ID
+        every { mockClient.ensureFolderHierarchy(listOf("aTrainingTracker", "FIT")) } returns "stale_folder_id" andThen "recreated_folder_id"
+        // First upload fails with 404, second upload on recreated folder succeeds
+        every { mockClient.uploadOrOverwriteFile("stale_folder_id", "workout.fit", any(), any()) } returns false
+        every { mockClient.lastHttpCode } returns 404 andThen 200
+        every { mockClient.evictFolder("stale_folder_id") } just Runs
+        every { mockClient.uploadOrOverwriteFile("recreated_folder_id", "workout.fit", any(), any()) } returns true
+
+        val uploader = createTestUploader(tempFolder.root)
+        val result = uploader.doExport(exportInfo)
+
+        assertTrue("Upload should succeed on self-healing retry", result.success())
+        verify { mockClient.evictFolder("stale_folder_id") }
+        verify(exactly = 2) { mockClient.ensureFolderHierarchy(listOf("aTrainingTracker", "FIT")) }
+        verify { mockClient.uploadOrOverwriteFile("recreated_folder_id", "workout.fit", any(), any()) }
+    }
 }

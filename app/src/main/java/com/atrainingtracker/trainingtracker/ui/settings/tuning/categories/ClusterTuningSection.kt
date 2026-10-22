@@ -105,13 +105,19 @@ fun ClusterTuningSection(
         Button(
             onClick = { showConfirmDialog = true },
             enabled = !isRecalculating,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.error,
+                contentColor = MaterialTheme.colorScheme.onError,
+                disabledContainerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
+                disabledContentColor = MaterialTheme.colorScheme.onError
+            ),
             modifier = Modifier.fillMaxWidth()
         ) {
             if (isRecalculating) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(16.dp),
                     strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = MaterialTheme.colorScheme.onError
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = stringResource(R.string.cluster_tuning_recalculating))

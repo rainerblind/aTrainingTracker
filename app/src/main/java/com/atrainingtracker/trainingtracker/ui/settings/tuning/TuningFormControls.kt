@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RestartAlt
@@ -29,11 +30,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
 /**
- * Reusable slider form control for advanced tuning options (REQ-UI-262).
+ * Reusable slider form control for advanced tuning options (REQ-UI-262, REQ-SET-077).
  */
 @Composable
 fun TuningSliderItem(
@@ -44,8 +48,11 @@ fun TuningSliderItem(
     value: Float,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
-    steps: Int = 0
+    steps: Int = 0,
+    enabled: Boolean = true,
+    onValueChangeFinished: (() -> Unit)? = null
 ) {
+    val contentAlpha = if (enabled) 1f else TTAlpha.Disabled
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -59,32 +66,36 @@ fun TuningSliderItem(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
             )
             Text(
                 text = valueText,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
             )
         }
         if (helperText.isNotEmpty()) {
             Text(
                 text = helperText,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
             )
         }
-        Text(
-            text = defaultText,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline
-        )
+        if (defaultText.isNotEmpty()) {
+            Text(
+                text = defaultText,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = contentAlpha)
+            )
+        }
         Slider(
             value = value,
             onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
             valueRange = valueRange,
             steps = steps,
+            enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 2.dp)
@@ -93,18 +104,22 @@ fun TuningSliderItem(
 }
 
 /**
- * Reusable toggle switch form control for advanced tuning options (REQ-UI-262).
+ * Reusable toggle switch form control for advanced tuning options (REQ-UI-262, REQ-SET-077).
  */
 @Composable
 fun TuningToggleItem(
     title: String,
     isChecked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    summary: String? = null
+    summary: String? = null,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
+    val contentAlpha = if (enabled) 1f else TTAlpha.Disabled
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp)
             .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -117,19 +132,20 @@ fun TuningToggleItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
             )
             if (!summary.isNullOrEmpty()) {
                 Text(
                     text = summary,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
                 )
             }
         }
         Switch(
             checked = isChecked,
             onCheckedChange = onCheckedChange,
+            enabled = enabled,
             modifier = Modifier.scale(0.8f)
         )
     }
@@ -191,6 +207,73 @@ fun TuningResetDefaultsButton(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(stringResource(R.string.reset_to_defaults))
+    }
+}
+
+/**
+ * Compact subordinate toggle switch for secondary child settings (Rule 59, ATT-4432, ATT-4464, ATT-4513).
+ * Displays lighter typography without a heavy subtitle and a significantly downscaled switch
+ * with compact vertical height and lighter primary alpha color tokens.
+ */
+@Composable
+fun SubordinateTuningToggleItem(
+    title: String,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    val contentAlpha = if (enabled) 1f else TTAlpha.Disabled
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, top = 2.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 12.dp)
+        )
+        Switch(
+            checked = isChecked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
+            modifier = Modifier
+                .scale(0.6f)
+                .height(24.dp),
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+            )
+        )
+    }
+}
+
+@Preview(name = "SubordinateTuningToggleItem - Light", showBackground = true)
+@Preview(name = "SubordinateTuningToggleItem - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Composable
+private fun SubordinateTuningToggleItemPreview() {
+    ATrainingTrackerTheme {
+        Surface {
+            Column(modifier = Modifier.padding(16.dp)) {
+                SubordinateTuningToggleItem(
+                    title = "Show in Workout Summary",
+                    isChecked = true,
+                    onCheckedChange = {}
+                )
+                SubordinateTuningToggleItem(
+                    title = "Show in Workout Summary (Disabled)",
+                    isChecked = false,
+                    onCheckedChange = {},
+                    enabled = false
+                )
+            }
+        }
     }
 }
 

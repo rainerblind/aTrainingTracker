@@ -184,11 +184,7 @@ data class BikePowerFeatures(
     val wheelSpeedDataSupported: Boolean = false,
     val wheelDistanceDataSupported: Boolean = false,
     val pedalSmoothnessSupported: Boolean = false,
-    val torqueEffectivenessSupported: Boolean = false,
-
-    // editable by the user
-    val doublePowerBalanceValues: Boolean = false,
-    val invertPowerBalanceValues: Boolean = false
+    val torqueEffectivenessSupported: Boolean = false
 ) {
     /**
      * A companion object to hold the logic for creating an instance
@@ -217,9 +213,7 @@ data class BikePowerFeatures(
                 wheelSpeedDataSupported = BikePowerSensorsHelper.isWheelSpeedDataSupported(featureFlags),
                 wheelDistanceDataSupported = BikePowerSensorsHelper.isWheelDistanceDataSupported(featureFlags),
                 pedalSmoothnessSupported = BikePowerSensorsHelper.isPedalSmoothnessSupported(featureFlags),
-                torqueEffectivenessSupported = BikePowerSensorsHelper.isTorqueEffectivenessSupported(featureFlags),
-                doublePowerBalanceValues = BikePowerSensorsHelper.doublePowerBalanceValues(featureFlags),
-                invertPowerBalanceValues = BikePowerSensorsHelper.invertPowerBalanceValues(featureFlags)
+                torqueEffectivenessSupported = BikePowerSensorsHelper.isTorqueEffectivenessSupported(featureFlags)
             )
         }
     }

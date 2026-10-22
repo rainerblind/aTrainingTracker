@@ -20,9 +20,16 @@ package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -62,6 +69,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -84,6 +92,7 @@ import com.atrainingtracker.trainingtracker.batterysaver.TelemetrySnapshot
 import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode
 import com.atrainingtracker.trainingtracker.batterysaver.calculateZoneIndex
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.routes.TurnByTurnNavigationRepository
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -102,8 +111,19 @@ import com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepository
 import com.atrainingtracker.trainingtracker.ui.components.RouteSelectionButton
 import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModel
+import android.app.Application
+import android.content.Context
+import android.content.ContextWrapper
 import android.location.Location
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val TAG = "TrackingTabsScreen"
 private val DEBUG = BuildConfig.DEBUG
@@ -112,7 +132,8 @@ private val DEBUG = BuildConfig.DEBUG
 fun TrackingTabsScreen(
     trackingTabsViewModel: TrackingTabsViewModel
 ) {
-    val context = LocalContext.current as androidx.appcompat.app.AppCompatActivity
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
 
     val isSystemDark = isSystemInDarkTheme()
     var cockpitThemeMode by remember { mutableStateOf(TrainingApplication.getCockpitThemeMode()) }
@@ -146,7 +167,7 @@ fun TrackingTabsScreen(
         }
     }
 
-    val batterySaverController = remember { BatterySaverController(activity = context) }
+    val batterySaverController = remember(activity) { BatterySaverController(activity = activity) }
     LaunchedEffect(brightnessMode, customBrightness) {
         batterySaverController.setMode(brightnessMode, customBrightness)
     }
@@ -175,7 +196,7 @@ fun TrackingTabsScreen(
                 )
                 val result = snackbarHostState.showSnackbar(visuals)
                 if (result == SnackbarResult.ActionPerformed) {
-                    (context as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors)
+                    (activity as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors)
                 }
                 WorkoutNavigationEvents.consumeLowBatteryAlert()
             }
@@ -197,7 +218,8 @@ fun TrackingTabsScreen(
     val controlViewModel: ControlTrackingViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return ControlTrackingViewModel(context.application) as T
+                val application = activity?.application ?: (context.applicationContext as Application)
+                return ControlTrackingViewModel(application) as T
             }
         }
     )
@@ -206,8 +228,8 @@ fun TrackingTabsScreen(
     val devices by controlViewModel.remoteDevices.collectAsState()
     val activeSensors by controlViewModel.activeSensors.collectAsState()
     val bSportType by controlViewModel.bSportType.collectAsState()
-    val selectingProtocol by controlViewModel.selectingProtocol.collectAsState()
     val hasPairedRemoteDevices by controlViewModel.hasPairedRemoteDevices.collectAsState()
+    val hasPairedBluetoothSensors by controlViewModel.hasPairedBluetoothSensors.collectAsState()
     val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
 
     // Battery Saver Telemetry & Event Subscriptions
@@ -293,11 +315,22 @@ fun TrackingTabsScreen(
         val isCycling = activityType.sportType == BSportType.BIKE
         val hrZone = if (hrValue != null && hrValue > 0) {
             val zoneType = if (isCycling) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
-            calculateZoneIndex(context, zoneType, hrValue)
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            calculateZoneIndex(hrValue, listOf(z1, z2, z3, z4))
         } else null
 
         val powerZone = if (isCycling && powerValue != null && powerValue > 0) {
-            calculateZoneIndex(context, SettingsDataStore.ZoneType.PWR_BIKE, powerValue)
+            val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
+            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
+            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
+            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
+            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            val z5 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 5)
+            val z6 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 6)
+            calculateZoneIndex(powerValue, listOf(z1, z2, z3, z4, z5, z6))
         } else null
 
         batterySaverController.updateTelemetry(
@@ -380,6 +413,7 @@ fun TrackingTabsScreen(
     // Update the tracker whenever the pager settles on a new page
     LaunchedEffect(pagerState.currentPage) {
         lastKnownPage = pagerState.currentPage
+        trackingTabsViewModel.onPageSelected(pagerState.currentPage)
     }
 
     val cockpitThemeState = resolveEffectiveCockpitThemeState(
@@ -421,72 +455,45 @@ fun TrackingTabsScreen(
 
     val currentPagerState by rememberUpdatedState(pagerState)
     val currentScreenMode by rememberUpdatedState(screenMode)
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
     // NAVIGATION COLLECTION (necessary, when deleting tabs or tracking starts)
-    LaunchedEffect(Unit) {
-        Log.i(TAG, "LaunchedEffect(Unit) started collecting navigationEvent")
-        trackingTabsViewModel.navigationEvent.collect { tabNavigationEvent ->
-            Log.i(TAG, "navigationEvent received: $tabNavigationEvent, currentScreenMode=$currentScreenMode, pageCount=${currentPagerState.pageCount}, currentPage=${currentPagerState.currentPage}")
-            when (tabNavigationEvent) {
-                is TabNavigationEvent.NavigateTo -> {
-                    // Calculate offset: if TRACKING mode, page 0 is Control, so add 1
-                    val offset = if (currentScreenMode == ScreenMode.TRACKING) 1 else 0
-                    val target = tabNavigationEvent.index + offset
-                    Log.i(TAG, "Navigating to target=$target (offset=$offset)")
-
-                    lastKnownPage = target
-
-                    // If pager hasn't loaded enough pages yet, wait for pageCount to be ready
-                    if (currentPagerState.pageCount <= target) {
-                        try {
-                            kotlinx.coroutines.withTimeout(2000) {
-                                androidx.compose.runtime.snapshotFlow { currentPagerState.pageCount }
-                                    .collect { count ->
-                                        if (count > target) {
-                                            throw kotlinx.coroutines.CancellationException("PageCountReady")
-                                        }
-                                    }
-                            }
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            if (e.message != "PageCountReady") throw e
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Timed out waiting for pageCount > $target", e)
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            Log.i(TAG, "LaunchedEffect(lifecycleOwner) started collecting navigationEvent")
+            trackingTabsViewModel.navigationEvent.collect { tabNavigationEvent ->
+                Log.i(TAG, "navigationEvent received: $tabNavigationEvent, currentScreenMode=$currentScreenMode, pageCount=${currentPagerState.pageCount}, currentPage=${currentPagerState.currentPage}")
+                when (tabNavigationEvent) {
+                    is TabNavigationEvent.NavigateTo -> {
+                        navigateToPagerTarget(
+                            tabIndex = tabNavigationEvent.index,
+                            screenMode = currentScreenMode,
+                            currentPageCount = { currentPagerState.pageCount },
+                            pageCountFlow = androidx.compose.runtime.snapshotFlow { currentPagerState.pageCount },
+                            onUpdateLastKnownPage = { lastKnownPage = it },
+                            animateScrollToPage = { currentPagerState.animateScrollToPage(it) },
+                            scrollToPage = { currentPagerState.scrollToPage(it) }
+                        )
+                    }
+                    is TabNavigationEvent.EditDevice -> {
+                        if (activity != null && activity.canShowDialogFragments()) {
+                            val editDeviceDialog = EditDeviceFragmentFactory.create(
+                                deviceId = tabNavigationEvent.deviceId,
+                                deviceType = com.atrainingtracker.banalservice.devices.DeviceType.ALL
+                            )
+                            editDeviceDialog.show(
+                                activity.supportFragmentManager,
+                                "EditDeviceDialog"
+                            )
+                        } else {
+                            Log.w(TAG, "Skipping EditDeviceDialog: host activity unavailable or state already saved")
                         }
                     }
-
-                    if (target in 0 until currentPagerState.pageCount) {
-                        try {
-                            currentPagerState.animateScrollToPage(target)
-                            Log.i(TAG, "Successfully animated to page $target")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "animateScrollToPage failed: page $target not ready yet", e)
-                            try {
-                                currentPagerState.scrollToPage(target)
-                                Log.i(TAG, "Fallback scrollToPage succeeded for page $target")
-                            } catch (e2: Exception) {
-                                Log.e(TAG, "Fallback scrollToPage also failed", e2)
-                            }
-                        }
-                    } else {
-                        Log.e(TAG, "Cannot scroll to target $target: pageCount is ${currentPagerState.pageCount}")
-                    }
-                }
-                is TabNavigationEvent.EditDevice -> {
-                    val editDeviceDialog = EditDeviceFragmentFactory.create(
-                        deviceId = tabNavigationEvent.deviceId,
-                        deviceType = com.atrainingtracker.banalservice.devices.DeviceType.ALL
-                    )
-                    editDeviceDialog.show(
-                        context.supportFragmentManager,
-                        "EditDeviceDialog"
-                    )
                 }
             }
         }
     }
 
-
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
@@ -501,10 +508,10 @@ fun TrackingTabsScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    DisposableEffect(context, isSystemDark) {
+    DisposableEffect(activity, isSystemDark) {
         onDispose {
-            if (!context.isFinishing && !context.isDestroyed) {
-                context.window?.let { window ->
+            if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
+                activity.window?.let { window ->
                     val insetsController = WindowCompat.getInsetsController(window, window.decorView)
                     insetsController.isAppearanceLightStatusBars = !isSystemDark
                     insetsController.isAppearanceLightNavigationBars = !isSystemDark
@@ -572,7 +579,7 @@ fun TrackingTabsScreen(
                                         allDevices = allDevices,
                                         onDeviceClick = { trackingTabsViewModel.onEditDevice(it) },
                                         onMenuClick = {
-                                            (context as? MainActivityWithNavigation)?.openDrawer()
+                                            (activity as? MainActivityWithNavigation)?.openDrawer()
                                         }
                                     )
                                 }
@@ -652,116 +659,197 @@ fun TrackingTabsScreen(
                     }
                 }
 
-                // The Main content
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .navigationBarsPadding(), // do not draw under the navigation bar
-                    userScrollEnabled = true,
-                    beyondViewportPageCount = if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size  // keep them all
-                ) { page ->
-                    if (screenMode == ScreenMode.TRACKING && page == 0) {
+                // First-time Stop Tracking Coachmark state & auto-acknowledgement (REQ-UI-367 / ATT-3387)
+                val hasSeenStopTrackingHint: Boolean? by tuningDataStore.hasSeenStopTrackingHintFlow.collectAsState(initial = null)
+                val hasRenderedCoachmarkInSession by trackingTabsViewModel.hasRenderedCoachmarkInSession.collectAsState()
+                val isCoachmarkDismissPending by trackingTabsViewModel.isCoachmarkDismissPending.collectAsState()
 
-                        // --- CONTROL TAB (Page 0) ---
-                        LaunchedEffect(Unit) {
-                            controlViewModel.navigationEvent.collect { navigation ->
-                                when (navigation) {
-                                    is ControlNavigation.ToPairing -> {
-                                        (context as? MainActivityWithNavigation)?.startPairing(
-                                            navigation.protocol,
-                                            navigation.deviceType
-                                        )
-                                    }
+                val showStopTrackingCoachmark = TrackingTabsViewModel.shouldShowStopTrackingCoachmark(
+                    trackingMode = trackingMode,
+                    currentPage = pagerState.currentPage,
+                    screenMode = screenMode,
+                    hasSeenHint = hasSeenStopTrackingHint,
+                    isDismissPending = isCoachmarkDismissPending
+                )
 
-                                    is ControlNavigation.ToEditDevice -> {
-                                        val editDeviceDialog =
-                                            EditDeviceFragmentFactory.create(
-                                                deviceId = navigation.deviceId,
-                                                deviceType = navigation.deviceType
-                                            )
-                                        editDeviceDialog.show(
-                                            context.supportFragmentManager,
-                                            "EditDeviceDialog"
-                                        )
-                                    }
+                LaunchedEffect(
+                    pagerState.settledPage,
+                    pagerState.isScrollInProgress,
+                    showStopTrackingCoachmark
+                ) {
+                    if (showStopTrackingCoachmark && pagerState.settledPage > 0 && !pagerState.isScrollInProgress) {
+                        trackingTabsViewModel.markCoachmarkRenderedInSession()
+                    }
+                }
 
-                                    is ControlNavigation.ShowRecoveryDialog -> {
-                                        val recoveryHandler = context as? StartOrResumeInterface
-                                        if (recoveryHandler != null) {
-                                            recoveryHandler.showStartOrResumeDialog()
-                                        } else if (context.supportFragmentManager.findFragmentByTag(StartOrResumeDialog.TAG) == null) {
-                                            StartOrResumeDialog().show(
-                                                context.supportFragmentManager,
-                                                StartOrResumeDialog.TAG
-                                            )
+                LaunchedEffect(
+                    pagerState.currentPage,
+                    pagerState.settledPage,
+                    pagerState.isScrollInProgress,
+                    trackingMode,
+                    hasSeenStopTrackingHint,
+                    hasRenderedCoachmarkInSession,
+                    isCoachmarkDismissPending
+                ) {
+                    if (TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(
+                            trackingMode = trackingMode,
+                            currentPage = pagerState.currentPage,
+                            settledPage = pagerState.settledPage,
+                            isScrollInProgress = pagerState.isScrollInProgress,
+                            hasSeenHint = hasSeenStopTrackingHint,
+                            hasRenderedCoachmarkInSession = hasRenderedCoachmarkInSession,
+                            isDismissPending = isCoachmarkDismissPending
+                        )
+                    ) {
+                        trackingTabsViewModel.markCoachmarkDismissPending()
+                        tuningDataStore.setHasSeenStopTrackingHint(true)
+                    }
+                }
+
+                // The Main content hosted inside a constant-weight Box so coachmark overlay never shifts or resizes HorizontalPager
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .navigationBarsPadding(), // do not draw under the navigation bar
+                        userScrollEnabled = true,
+                        beyondViewportPageCount = if (screenMode == ScreenMode.TRACKING) trackingViews.size + 1 else trackingViews.size  // keep them all
+                    ) { page ->
+                        if (screenMode == ScreenMode.TRACKING && page == 0) {
+
+                            // --- CONTROL TAB (Page 0) ---
+                            LaunchedEffect(lifecycleOwner) {
+                                lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                    controlViewModel.navigationEvent.collect { navigation ->
+                                        when (navigation) {
+                                            is ControlNavigation.ToEditDevice -> {
+                                                if (activity != null && activity.canShowDialogFragments()) {
+                                                    val editDeviceDialog =
+                                                        EditDeviceFragmentFactory.create(
+                                                            deviceId = navigation.deviceId,
+                                                            deviceType = navigation.deviceType
+                                                        )
+                                                    editDeviceDialog.show(
+                                                        activity.supportFragmentManager,
+                                                        "EditDeviceDialog"
+                                                    )
+                                                } else {
+                                                    Log.w(TAG, "Skipping EditDeviceDialog from ControlTab: host activity unavailable or state already saved")
+                                                }
+                                            }
+
+                                            is ControlNavigation.ShowRecoveryDialog -> {
+                                                val recoveryHandler = activity as? StartOrResumeInterface
+                                                if (recoveryHandler != null) {
+                                                    if (activity.canShowDialogFragments()) {
+                                                        recoveryHandler.showStartOrResumeDialog()
+                                                    } else {
+                                                        Log.w(TAG, "Skipping recovery dialog via handler: host activity state already saved")
+                                                    }
+                                                } else if (
+                                                    activity != null &&
+                                                    activity.canShowDialogFragments() &&
+                                                    activity.supportFragmentManager.findFragmentByTag(StartOrResumeDialog.TAG) == null
+                                                ) {
+                                                    StartOrResumeDialog().show(
+                                                        activity.supportFragmentManager,
+                                                        StartOrResumeDialog.TAG
+                                                    )
+                                                } else {
+                                                    Log.w(TAG, "Skipping StartOrResumeDialog: host activity unavailable or state already saved")
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        ControlTrackingScreen(
-                            trackingMode = trackingMode,
-                            searchingFor = searchingFor,
-                            devices = devices,
-                            currentSport = bSportType,
-                            isAntSupported = controlViewModel.isAntProperlyInstalled(),
-                            isBluetoothSupported = controlViewModel.isBluetoothSupported(),
-                            onSearch = { controlViewModel.onSearchClicked() },
-                            onDeviceClick = { controlViewModel.onDeviceClicked(it) },
-                            onSportSelected = { controlViewModel.setSport(it) },
-                            onStart = { controlViewModel.onStartTracking() },
-                            onPause = { controlViewModel.onPauseTracking() },
-                            onResume = { controlViewModel.onResumeTracking() },
-                            onStop = { controlViewModel.onStopTracking() },
-                            onPairingClicked = { controlViewModel.onPairingClicked(it) },
-                            selectingProtocol = selectingProtocol,
-                            onDeviceTypeSelected = { controlViewModel.onDeviceTypeSelected(it) },
-                            onCancelDeviceTypeSelection = { controlViewModel.onCancelDeviceTypeSelection() },
-                            showResearchButton = hasPairedRemoteDevices,
-                            locationCalibrationStatus = locationCalibrationStatus,
-                            bottomContent = {
-                                val isDimmed = routeSelectorUiState.activeRoute == null && routeSelectorUiState.routes.isEmpty()
-                                val emptySubtitleRes = if (isDimmed) {
-                                    routeSelectorUiState.contextEmptyHintRes
-                                } else {
-                                    R.string.route_action_select_desc
+                            ControlTrackingScreen(
+                                trackingMode = trackingMode,
+                                searchingFor = searchingFor,
+                                devices = devices,
+                                currentSport = bSportType,
+                                onSearch = { controlViewModel.onSearchClicked() },
+                                onDeviceClick = { controlViewModel.onDeviceClicked(it) },
+                                onSportSelected = { controlViewModel.setSport(it) },
+                                onStart = { controlViewModel.onStartTracking() },
+                                onPause = { controlViewModel.onPauseTracking() },
+                                onResume = { controlViewModel.onResumeTracking() },
+                                onStop = { controlViewModel.onStopTracking() },
+                                showResearchButton = hasPairedRemoteDevices,
+                                hasPairedBluetoothSensors = hasPairedBluetoothSensors,
+                                locationCalibrationStatus = locationCalibrationStatus,
+                                onPairSensor = { (activity as? MainActivityWithNavigation)?.navigateToDrawerItem(R.id.drawer_my_sensors) },
+                                bottomContent = {
+                                    val isDimmed = routeSelectorUiState.activeRoute == null && routeSelectorUiState.routes.isEmpty()
+                                    val emptySubtitleRes = if (isDimmed) {
+                                        routeSelectorUiState.contextEmptyHintRes
+                                    } else {
+                                        R.string.route_action_select_desc
+                                    }
+                                    RouteSelectionButton(
+                                        activeRoute = routeSelectorUiState.activeRoute,
+                                        isDimmed = isDimmed,
+                                        emptySubtitleRes = emptySubtitleRes,
+                                        returnNavState = returnNavState,
+                                        onClick = { showRouteSelectorSheet = true },
+                                        onClearRoute = { routeSelectorViewModel.clearRoute() }
+                                    )
                                 }
-                                RouteSelectionButton(
-                                    activeRoute = routeSelectorUiState.activeRoute,
-                                    isDimmed = isDimmed,
-                                    emptySubtitleRes = emptySubtitleRes,
-                                    returnNavState = returnNavState,
-                                    onClick = { showRouteSelectorSheet = true },
-                                    onClearRoute = { routeSelectorViewModel.clearRoute() }
-                                )
-                            }
-                        )
-                    } else {
-                        val viewIndex =
-                            if (screenMode == ScreenMode.TRACKING) page - 1 else page
-
-                        // Safely get the viewInfo
-                        val viewInfo = trackingViews.getOrNull(viewIndex)
-
-                        if (viewInfo != null) {
-                            TrackingTabGridContent(
-                                tabViewId = viewInfo.tabViewId,
-                                screenMode = screenMode,
-                                isTabActive = pagerState.currentPage == page,
                             )
                         } else {
-                            // Optional: Show a placeholder or empty box while loading
-                            Box(Modifier.fillMaxSize())
+                            val viewIndex =
+                                if (screenMode == ScreenMode.TRACKING) page - 1 else page
+
+                            // Safely get the viewInfo
+                            val viewInfo = trackingViews.getOrNull(viewIndex)
+
+                            if (viewInfo != null) {
+                                TrackingTabGridContent(
+                                    tabViewId = viewInfo.tabViewId,
+                                    screenMode = screenMode,
+                                    isTabActive = pagerState.currentPage == page,
+                                    onRingBikeBell = { trackingTabsViewModel.triggerBellRing(isLongPress = false) }
+                                )
+                            } else {
+                                // Optional: Show a placeholder or empty box while loading
+                                Box(Modifier.fillMaxSize())
+                            }
                         }
+                    }
+
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = showStopTrackingCoachmark,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .zIndex(2f),
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        StopTrackingCoachmarkBanner(
+                            onShowControlTab = {
+                                trackingTabsViewModel.markCoachmarkDismissPending()
+                                scope.launch {
+                                    tuningDataStore.setHasSeenStopTrackingHint(true)
+                                    pagerState.animateScrollToPage(0)
+                                }
+                            },
+                            onDismiss = {
+                                trackingTabsViewModel.markCoachmarkDismissPending()
+                                scope.launch {
+                                    tuningDataStore.setHasSeenStopTrackingHint(true)
+                                }
+                            }
+                        )
                     }
                 }
             }
 
-            // --- Conditionally show the Lap Button (suppressed in CONFIGURATION mode per REQ-UI-295)
+            // --- Conditionally show the Lap Button and Bike Bell Button (suppressed in CONFIGURATION mode per REQ-UI-295)
             val shouldShowLapButton = currentViewInfo?.showLapButton == true && screenMode != ScreenMode.CONFIGURATION
-            if (shouldShowLapButton) {
+            val shouldShowBikeBell = currentViewInfo?.showBikeBell == true && screenMode != ScreenMode.CONFIGURATION
+            if (shouldShowLapButton || shouldShowBikeBell) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -769,13 +857,46 @@ fun TrackingTabsScreen(
                         .padding(bottom = 8.dp), // Space from bottom of screen
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    LapButton(
-                        modifier = Modifier
-                            .wrapContentSize() // Don't fill width anymore
-                            .padding(horizontal = 16.dp),
-                        trackingMode = trackingMode,
-                        onClick = { trackingTabsViewModel.onLapButtonClick() }
-                    )
+                    if (shouldShowLapButton && shouldShowBikeBell) {
+                        Row(
+                            modifier = Modifier
+                                .wrapContentSize()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            LapButton(
+                                modifier = Modifier.wrapContentSize(),
+                                trackingMode = trackingMode,
+                                onClick = { trackingTabsViewModel.onLapButtonClick() }
+                            )
+                            BikeBellButton(
+                                modifier = Modifier.wrapContentSize(),
+                                trackingMode = trackingMode,
+                                onSingleRing = { trackingTabsViewModel.triggerBellRing(isLongPress = false) },
+                                onContinuousRingStart = { trackingTabsViewModel.triggerBellRoll() },
+                                onContinuousRingStop = { trackingTabsViewModel.stopBellRoll() }
+                            )
+                        }
+                    } else if (shouldShowLapButton) {
+                        LapButton(
+                            modifier = Modifier
+                                .wrapContentSize()
+                                .padding(horizontal = 16.dp),
+                            trackingMode = trackingMode,
+                            onClick = { trackingTabsViewModel.onLapButtonClick() }
+                        )
+                    } else {
+                        BikeBellButton(
+                            modifier = Modifier
+                                .wrapContentSize()
+                                .padding(horizontal = 16.dp),
+                            trackingMode = trackingMode,
+                            onSingleRing = { trackingTabsViewModel.triggerBellRing(isLongPress = false) },
+                            onContinuousRingStart = { trackingTabsViewModel.triggerBellRoll() },
+                            onContinuousRingStop = { trackingTabsViewModel.stopBellRoll() }
+                        )
+                    }
                 }
             }
 
@@ -798,7 +919,7 @@ fun TrackingTabsScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(bottom = if (shouldShowLapButton) 64.dp else 8.dp)
+                    .padding(bottom = if (shouldShowLapButton || shouldShowBikeBell) 64.dp else 8.dp)
             ) { data ->
                 val visuals = data.visuals as? WorkoutNavigationEvents.BatterySnackbarVisuals
                 if (visuals != null) {
@@ -829,5 +950,97 @@ fun getControlTabTitle(mode: TrackingMode): String {
         TrackingMode.PAUSED -> stringResource(R.string.Paused)
         TrackingMode.TRACKING -> stringResource(R.string.Tracking)
         else -> stringResource(R.string.tab_start)
+    }
+}
+
+/**
+ * Unwraps nested [ContextWrapper] instances to locate the hosting [AppCompatActivity],
+ * or returns `null` if the [Context] is not backed by an [AppCompatActivity].
+ *
+ * Ref: REQ-UI-410 / ATT-4000
+ */
+internal tailrec fun Context.findActivity(): AppCompatActivity? = when (this) {
+    is AppCompatActivity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+/**
+ * Returns `true` when the receiver [AppCompatActivity] is non-null, active (neither finishing
+ * nor destroyed), and its [androidx.fragment.app.FragmentManager] has not yet saved state,
+ * making it safe to commit [androidx.fragment.app.DialogFragment.show] transactions.
+ *
+ * Ref: REQ-UI-410 / ATT-4000
+ */
+internal fun AppCompatActivity?.canShowDialogFragments(): Boolean {
+    return this != null && !isFinishing && !isDestroyed && !supportFragmentManager.isStateSaved
+}
+
+/**
+ * Executes a programmatic tab navigation event against the Cockpit pager without cancelling
+ * the caller coroutine if `pageCount` fails to grow past the target index within [timeoutMs].
+ *
+ * Only updates `lastKnownPage` via [onUpdateLastKnownPage] after confirming the resolved
+ * pager target index is within `0 until currentPageCount()`.
+ *
+ * Ref: REQ-UI-410 / ATT-4000
+ *
+ * @return `true` if the target page was in bounds and scroll was invoked, `false` otherwise.
+ */
+internal suspend fun navigateToPagerTarget(
+    tabIndex: Int,
+    screenMode: ScreenMode,
+    currentPageCount: () -> Int,
+    pageCountFlow: Flow<Int>,
+    onUpdateLastKnownPage: (Int) -> Unit,
+    animateScrollToPage: suspend (Int) -> Unit,
+    scrollToPage: suspend (Int) -> Unit,
+    timeoutMs: Long = 2000L
+): Boolean {
+    // Calculate offset: if TRACKING mode, page 0 is Control, so add 1
+    val offset = if (screenMode == ScreenMode.TRACKING) 1 else 0
+    val target = tabIndex + offset
+    Log.i(TAG, "Navigating to target=$target (offset=$offset)")
+
+    if (target < 0) {
+        Log.w(TAG, "Cannot scroll to negative target $target")
+        return false
+    }
+
+    // If pager hasn't loaded enough pages yet, wait up to timeoutMs for pageCount > target
+    if (currentPageCount() <= target) {
+        val readyCount = withTimeoutOrNull(timeoutMs) {
+            pageCountFlow.first { count -> count > target }
+        }
+        if (readyCount == null) {
+            Log.w(TAG, "Timed out after ${timeoutMs}ms waiting for pageCount > $target (current=${currentPageCount()})")
+        }
+    }
+
+    val finalPageCount = currentPageCount()
+    if (target in 0 until finalPageCount) {
+        onUpdateLastKnownPage(target)
+        try {
+            animateScrollToPage(target)
+            Log.i(TAG, "Successfully animated to page $target")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            Log.i(TAG, "animateScrollToPage cancelled by user gesture or concurrent scroll; skipping fallback", e)
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            Log.e(TAG, "animateScrollToPage failed: page $target not ready yet", e)
+            try {
+                scrollToPage(target)
+                Log.i(TAG, "Fallback scrollToPage succeeded for page $target")
+            } catch (e2: kotlinx.coroutines.CancellationException) {
+                Log.i(TAG, "Fallback scrollToPage cancelled", e2)
+            } catch (e2: Exception) {
+                currentCoroutineContext().ensureActive()
+                Log.e(TAG, "Fallback scrollToPage also failed", e2)
+            }
+        }
+        return true
+    } else {
+        Log.e(TAG, "Cannot scroll to target $target: pageCount is $finalPageCount")
+        return false
     }
 }

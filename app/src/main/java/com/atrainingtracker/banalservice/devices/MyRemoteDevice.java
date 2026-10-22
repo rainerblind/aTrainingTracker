@@ -26,6 +26,7 @@ import android.content.IntentFilter;
 import android.util.Log;
 
 import androidx.core.content.ContextCompat;
+import com.atrainingtracker.util.LifecycleUtils;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.Protocol;
@@ -38,7 +39,7 @@ import com.atrainingtracker.banalservice.helpers.UIHelper;
 public abstract class MyRemoteDevice extends MyDevice {
     private static final boolean DEBUG = BANALService.getDebug(false);
     protected final IntentFilter mCalibrationFactorChangedFilter = new IntentFilter(BANALService.CALIBRATION_FACTOR_CHANGED);
-    protected double mCalibrationFactor = 1;
+    protected volatile double mCalibrationFactor = 1;
     private final String TAG = "MyRemoteDevice";
     private final BroadcastReceiver mCalibrationFactorChangedReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -50,7 +51,7 @@ public abstract class MyRemoteDevice extends MyDevice {
             }
         }
     };
-    private boolean mSearching = false;
+    private volatile boolean mSearching = false;
 
     public MyRemoteDevice(Context context, MySensorManager mySensorManager, DeviceType deviceType, long deviceId) {
         super(context, mySensorManager, deviceType);
@@ -93,7 +94,10 @@ public abstract class MyRemoteDevice extends MyDevice {
         intent.putExtra(BANALService.PROTOCOL, getProtocol().name());
         intent.putExtra(BANALService.DEVICE_TYPE, getDeviceType().name());
         intent.putExtra(BANALService.DEVICE_ID, getDeviceId());
-        intent.putExtra(BANALService.DEVICE_NAME, getName());
+        String name = getName();
+        if (name != null) {
+            intent.putExtra(BANALService.DEVICE_NAME, name);
+        }
         return intent;
     }
 
@@ -101,7 +105,7 @@ public abstract class MyRemoteDevice extends MyDevice {
     public void shutDown() {
         if (DEBUG) Log.i(TAG, "shutDown()");
 
-        mContext.unregisterReceiver(mCalibrationFactorChangedReceiver);
+        LifecycleUtils.safeUnregisterReceiver(mContext, mCalibrationFactorChangedReceiver, TAG);
         super.shutDown();
     }
 

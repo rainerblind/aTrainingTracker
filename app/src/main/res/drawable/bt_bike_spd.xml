@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ATT-2859 / REQ-UI-375: bt_bike_spd compiled from Bilder/Bluetooth/bike.fig & BT_BIKE_SPD.xcf -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="144"
+    android:viewportHeight="144">
+    <path
+        android:fillColor="#07377F"
+        android:pathData="M 23.5,10.0 L 120.5,10.0 A 13.5,13.5 0 0,1 134.0,23.5 L 134.0,120.5 A 13.5,13.5 0 0,1 120.5,134.0 L 23.5,134.0 A 13.5,13.5 0 0,1 10.0,120.5 L 10.0,23.5 A 13.5,13.5 0 0,1 23.5,10.0 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 60.26,37.50 L 73.28,62.51 L 65.47,90.92 L 73.28,97.06"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="9.30"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 96.70,24.64 A 42.93,42.93 0 0,0 58.84,34.62"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="13.94"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 96.18,57.52 L 64.45,84.91"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7.90"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 65.47,85.90 L 55.46,36.32"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8.37"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter" />
+    <path
+        android:pathData="M 19.92,82.12 A 19.43,19.43 0 1,0 58.78,82.12 A 19.43,19.43 0 1,0 19.92,82.12 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="11.16" />
+    <path
+        android:pathData="M 86.57,84.91 A 19.71,19.71 0 1,0 125.99,84.91 A 19.71,19.71 0 1,0 86.57,84.91 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="9.30" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 95.59,55.81 L 59.92,53.06"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.32"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 105.66,84.82 L 95.00,52.50"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5.58"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 69.78,81.22 L 64.72,71.25 L 90.94,55.63 L 57.10,42.43"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="9.30"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 47.71,44.47 L 60.01,44.47"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.25"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter" />
+    <path
+        android:pathData="M 99.46,24.86 A 7.87,7.84 0 1,0 115.20,24.86 A 7.87,7.84 0 1,0 99.46,24.86 Z"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.65" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 40.37,82.06 L 59.92,53.06"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.25"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 67.23,86.31 L 40.37,82.06"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.25"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 61.66,36.11 L 93.73,26.35"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="10.69"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="miter" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 88.15,52.84 L 57.47,40.29"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="12.08"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="miter" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 118.83,52.84 L 97.26,50.83 L 96.18,24.05"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6.97"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 96.18,24.64 L 101.17,25.17"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.32"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 57.47,31.92 Q 54.69,30.53 53.29,33.32 Q 51.90,36.11 52.59,39.59 Q 53.29,43.08 54.69,40.99 Q 56.08,38.90 58.17,36.11 Q 60.26,33.32 57.47,31.92 Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.86"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M 46.25,116.34 L 46.25,119.27 C 45.43,118.92 44.63,118.67 43.86,118.50 C 43.10,118.32 42.38,118.23 41.69,118.23 C 40.96,118.23 40.42,118.33 40.06,118.52 C 39.71,118.69 39.53,118.97 39.53,119.36 C 39.53,119.66 39.67,119.90 39.94,120.06 C 40.21,120.23 40.69,120.35 41.38,120.42 L 42.06,120.52 C 44.03,120.78 45.35,121.19 46.03,121.77 C 46.71,122.34 47.05,123.23 47.05,124.45 C 47.05,125.73 46.57,126.70 45.63,127.34 C 44.69,127.99 43.28,128.31 41.41,128.31 C 40.60,128.31 39.78,128.25 38.94,128.13 C 38.09,128.00 37.22,127.81 36.33,127.56 L 36.33,124.64 C 37.09,125.02 37.87,125.30 38.67,125.48 C 39.48,125.66 40.31,125.75 41.14,125.75 C 41.89,125.75 42.45,125.65 42.83,125.44 C 43.21,125.23 43.41,124.92 43.41,124.52 C 43.41,124.17 43.27,123.92 43.00,123.75 C 42.74,123.58 42.22,123.45 41.45,123.36 L 40.77,123.27 C 39.06,123.06 37.86,122.66 37.17,122.08 C 36.48,121.49 36.14,120.61 36.14,119.44 C 36.14,118.17 36.58,117.22 37.45,116.61 C 38.33,115.98 39.67,115.67 41.47,115.67 C 42.18,115.67 42.92,115.73 43.70,115.84 C 44.48,115.95 45.33,116.11 46.25,116.34 Z M 53.69,126.27 L 53.69,132.58 L 49.84,132.58 L 49.84,115.97 L 53.69,115.97 L 53.69,117.73 C 54.22,117.03 54.81,116.51 55.45,116.17 C 56.10,115.84 56.84,115.67 57.67,115.67 C 59.16,115.67 60.38,116.27 61.33,117.45 C 62.29,118.63 62.77,120.15 62.77,122.00 C 62.77,123.85 62.29,125.37 61.33,126.55 C 60.38,127.72 59.16,128.31 57.67,128.31 C 56.84,128.31 56.10,128.15 55.45,127.81 C 54.81,127.48 54.22,126.96 53.69,126.27 Z M 56.25,118.47 C 55.43,118.47 54.79,118.77 54.34,119.38 C 53.91,119.98 53.69,120.85 53.69,122.00 C 53.69,123.14 53.91,124.01 54.34,124.61 C 54.79,125.21 55.43,125.52 56.25,125.52 C 57.07,125.52 57.70,125.22 58.13,124.63 C 58.56,124.02 58.78,123.15 58.78,122.00 C 58.78,120.85 58.56,119.98 58.13,119.38 C 57.70,118.77 57.07,118.47 56.25,118.47 Z M 77.86,121.95 L 77.86,123.05 L 68.86,123.05 C 68.95,123.95 69.28,124.63 69.84,125.08 C 70.41,125.53 71.19,125.75 72.19,125.75 C 73.00,125.75 73.83,125.63 74.67,125.39 C 75.53,125.15 76.40,124.79 77.28,124.30 L 77.28,127.27 C 76.38,127.61 75.47,127.87 74.56,128.05 C 73.66,128.22 72.74,128.31 71.83,128.31 C 69.65,128.31 67.96,127.76 66.75,126.66 C 65.55,125.54 64.95,123.99 64.95,122.00 C 64.95,120.03 65.54,118.48 66.72,117.36 C 67.91,116.23 69.54,115.67 71.61,115.67 C 73.51,115.67 75.02,116.24 76.16,117.39 C 77.29,118.53 77.86,120.05 77.86,121.95 Z M 73.91,120.67 C 73.91,119.94 73.69,119.35 73.27,118.91 C 72.84,118.46 72.28,118.23 71.59,118.23 C 70.85,118.23 70.25,118.44 69.78,118.86 C 69.31,119.28 69.02,119.88 68.91,120.67 L 73.91,120.67 Z M 92.86,121.95 L 92.86,123.05 L 83.86,123.05 C 83.95,123.95 84.28,124.63 84.84,125.08 C 85.41,125.53 86.19,125.75 87.19,125.75 C 88.00,125.75 88.83,125.63 89.67,125.39 C 90.53,125.15 91.40,124.79 92.28,124.30 L 92.28,127.27 C 91.38,127.61 90.47,127.87 89.56,128.05 C 88.66,128.22 87.74,128.31 86.83,128.31 C 84.65,128.31 82.96,127.76 81.75,126.66 C 80.55,125.54 79.95,123.99 79.95,122.00 C 79.95,120.03 80.54,118.48 81.72,117.36 C 82.91,116.23 84.54,115.67 86.61,115.67 C 88.51,115.67 90.02,116.24 91.16,117.39 C 92.29,118.53 92.86,120.05 92.86,121.95 Z M 88.91,120.67 C 88.91,119.94 88.69,119.35 88.27,118.91 C 87.84,118.46 87.28,118.23 86.59,118.23 C 85.85,118.23 85.25,118.44 84.78,118.86 C 84.31,119.28 84.02,119.88 83.91,120.67 L 88.91,120.67 Z M 104.03,117.73 L 104.03,111.28 L 107.91,111.28 L 107.91,128.00 L 104.03,128.00 L 104.03,126.27 C 103.50,126.97 102.92,127.49 102.28,127.83 C 101.65,128.15 100.91,128.31 100.06,128.31 C 98.58,128.31 97.36,127.72 96.41,126.55 C 95.46,125.37 94.98,123.85 94.98,122.00 C 94.98,120.15 95.46,118.63 96.41,117.45 C 97.36,116.27 98.58,115.67 100.06,115.67 C 100.90,115.67 101.63,115.84 102.27,116.17 C 102.91,116.51 103.50,117.03 104.03,117.73 Z M 101.50,125.52 C 102.32,125.52 102.95,125.22 103.38,124.63 C 103.81,124.02 104.03,123.15 104.03,122.00 C 104.03,120.85 103.81,119.98 103.38,119.38 C 102.95,118.77 102.32,118.47 101.50,118.47 C 100.69,118.47 100.06,118.77 99.63,119.38 C 99.19,119.98 98.97,120.85 98.97,122.00 C 98.97,123.15 99.19,124.02 99.63,124.63 C 100.06,125.22 100.69,125.52 101.50,125.52 Z" />
+</vector>

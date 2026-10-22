@@ -70,6 +70,7 @@ class NavigationDrawerStateTest {
 
     @Test
     fun testDrawerItemStructureIntegrity() {
+        val groups = createDrawerGroups(R.string.tab_start)
         val expectedCategories = listOf(
             R.string.drawer__training,
             R.string.drawer__maps,
@@ -77,47 +78,127 @@ class NavigationDrawerStateTest {
             R.string.prefsOnlineCommunities,
             R.string.drawer__settings
         )
-        assertEquals("Navigation drawer must contain 5 category hubs", 5, expectedCategories.size)
+        assertEquals("Navigation drawer must contain 5 category hubs (Advanced group removed)", 5, groups.size)
+        assertEquals(expectedCategories, groups.map { it.titleRes })
 
-        val expectedItems = listOf(
-            // Training (3)
-            R.id.drawer_start_tracking,
-            R.id.drawer_workouts,
-            R.id.drawer_periods,
-            // Maps (5)
-            R.id.drawer_map,
-            R.id.drawer_segments,
-            R.id.drawer_routes,
-            R.id.drawer_start_locations,
-            R.id.drawer_my_locations,
-            // My Stuff / Equipment (5)
-            R.id.drawer_my_sensors,
-            R.id.drawer_bikes,
-            R.id.drawer_shoes,
-            R.id.drawer_sport_types,
-            R.id.drawer_training_zones,
-            // Online Communities (3)
-            R.id.drawer_strava,
-            R.id.drawer_dropbox,
-            R.id.drawer_export,
-            // Settings (5)
-            R.id.drawer_units,
-            R.id.drawer_display_settings,
-            R.id.drawer_tracking_layouts,
-            R.id.drawer_backup_restore,
-            R.id.drawer_privacy_policy
+        val trainingGroup = groups.first { it.titleRes == R.string.drawer__training }
+        val mapsGroup = groups.first { it.titleRes == R.string.drawer__maps }
+        val myStuffGroup = groups.first { it.titleRes == R.string.drawer__my_stuff }
+        val onlineGroup = groups.first { it.titleRes == R.string.prefsOnlineCommunities }
+        val settingsGroup = groups.first { it.titleRes == R.string.drawer__settings }
+
+        // Verify collapsible flags: Training and Maps are always expanded; My Stuff, Online Communities, and Settings are collapsible (REQ-UI-405)
+        org.junit.Assert.assertFalse(trainingGroup.collapsible)
+        org.junit.Assert.assertFalse(mapsGroup.collapsible)
+        org.junit.Assert.assertTrue(myStuffGroup.collapsible)
+        org.junit.Assert.assertTrue(onlineGroup.collapsible)
+        org.junit.Assert.assertTrue(settingsGroup.collapsible)
+
+        // Verify Training ordering: Start Tracking, Workouts, Stats & Periods, Profile & Zones (REQ-UI-405.1)
+        val trainingIds = trainingGroup.items.map { it.id }
+        assertEquals(
+            listOf(
+                R.id.drawer_start_tracking,
+                R.id.drawer_workouts,
+                R.id.drawer_periods,
+                R.id.drawer_athlete_profile
+            ),
+            trainingIds
         )
+        val profileItem = trainingGroup.items.first { it.id == R.id.drawer_athlete_profile }
+        assertEquals(R.drawable.ic_athlete_profile, profileItem.iconRes)
+        assertEquals(R.string.drawer_athlete_profile, profileItem.titleRes)
 
-        assertEquals("Navigation drawer must contain exactly 21 destinations", 21, expectedItems.size)
-        // Ensure all IDs are unique non-zero resource integers
-        val uniqueItems = expectedItems.toSet()
-        assertEquals("All 21 navigation items must have distinct IDs", 21, uniqueItems.size)
+        // Verify My Stuff ordering: My Sensors, Equipment (REQ-UI-422.1)
+        val myStuffIds = myStuffGroup.items.map { it.id }
+        assertEquals(
+            listOf(
+                R.id.drawer_my_sensors,
+                R.id.drawer_equipment
+            ),
+            myStuffIds
+        )
+        val equipmentItem = myStuffGroup.items.first { it.id == R.id.drawer_equipment }
+        assertEquals(R.drawable.ic_equipment_combined, equipmentItem.iconRes)
+        assertEquals(R.string.equipment_management_title, equipmentItem.titleRes)
+
+        // Verify Settings ordering: Units, Display, Tracking Layouts, Sport Types, Backup & Restore, Privacy Policy, Advanced Tuning (REQ-UI-422.2)
+        val settingsIds = settingsGroup.items.map { it.id }
+        assertEquals(
+            listOf(
+                R.id.drawer_units,
+                R.id.drawer_display_settings,
+                R.id.drawer_tracking_layouts,
+                R.id.drawer_sport_types,
+                R.id.drawer_backup_restore,
+                R.id.drawer_privacy_policy,
+                R.id.drawer_advanced_tuning
+            ),
+            settingsIds
+        )
+        assertEquals(R.id.drawer_sport_types, settingsIds[3])
+        assertEquals(R.id.drawer_advanced_tuning, settingsIds.last())
+        val sportTypesItem = settingsGroup.items.first { it.id == R.id.drawer_sport_types }
+        assertEquals(R.drawable.ic_sports_combined, sportTypesItem.iconRes)
+        assertEquals(R.string.sport_types, sportTypesItem.titleRes)
+
+        // Verify default visible destination items across non-collapsible groups = 9 (4 + 5) (REQ-UI-405.3, REQ-UI-422.5)
+        val defaultVisibleCount = groups.filter { !it.collapsible }.sumOf { it.items.size }
+        assertEquals("Default visible destination items when secondary groups are collapsed must be 9", 9, defaultVisibleCount)
+
+        val allItems = groups.flatMap { it.items.map { item -> item.id } }
+        assertEquals("Navigation drawer must contain 22 total items across 5 groups", 22, allItems.size)
+        assertEquals("All 22 navigation items must have distinct IDs", 22, allItems.toSet().size)
         org.junit.Assert.assertFalse(
             "drawer_search_settings must be removed from drawer destinations",
-            uniqueItems.contains(R.id.drawer_search_settings)
+            allItems.contains(R.id.drawer_search_settings)
         )
-        expectedItems.forEach { id ->
+        allItems.forEach { id ->
             assertNotNull("Item ID must not be null", id)
         }
+    }
+
+    @Test
+    fun testCollapsibleDrawerInitialExpansionAndConsolidatedSelection() {
+        val groups = createDrawerGroups(R.string.tab_start)
+        val trainingGroup = groups.first { it.titleRes == R.string.drawer__training }
+        val myStuffGroup = groups.first { it.titleRes == R.string.drawer__my_stuff }
+        val onlineGroup = groups.first { it.titleRes == R.string.prefsOnlineCommunities }
+        val settingsGroup = groups.first { it.titleRes == R.string.drawer__settings }
+
+        // Default selection (Start Tracking): primary expanded, secondary collapsed
+        org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(trainingGroup, R.id.drawer_start_tracking))
+        org.junit.Assert.assertFalse(isDrawerGroupInitiallyExpanded(myStuffGroup, R.id.drawer_start_tracking))
+        org.junit.Assert.assertFalse(isDrawerGroupInitiallyExpanded(onlineGroup, R.id.drawer_start_tracking))
+        org.junit.Assert.assertFalse(isDrawerGroupInitiallyExpanded(settingsGroup, R.id.drawer_start_tracking))
+
+        // Exhaustively verify every item in My Stuff (plus consolidated aliases) auto-expands My Stuff
+        myStuffGroup.items.forEach { item ->
+            org.junit.Assert.assertTrue(
+                "Selecting ${item.id} must auto-expand My Stuff",
+                isDrawerGroupInitiallyExpanded(myStuffGroup, item.id)
+            )
+        }
+        org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(myStuffGroup, R.id.drawer_bikes))
+        org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(myStuffGroup, R.id.drawer_shoes))
+
+        // Active item inside Online Communities or Settings auto-expands that group
+        org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(onlineGroup, R.id.drawer_strava))
+        org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(settingsGroup, R.id.drawer_advanced_tuning))
+        org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(settingsGroup, R.id.drawer_backup_restore))
+
+        // Sport Types in Settings (REQ-UI-422.4)
+        org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(settingsGroup, R.id.drawer_sport_types))
+        org.junit.Assert.assertFalse(isDrawerGroupInitiallyExpanded(myStuffGroup, R.id.drawer_sport_types))
+
+        // Consolidated item selection matching for Equipment and Profile & Zones
+        org.junit.Assert.assertTrue(isDrawerItemSelected(R.id.drawer_equipment, R.id.drawer_equipment))
+        org.junit.Assert.assertTrue(isDrawerItemSelected(R.id.drawer_equipment, R.id.drawer_bikes))
+        org.junit.Assert.assertTrue(isDrawerItemSelected(R.id.drawer_equipment, R.id.drawer_shoes))
+        org.junit.Assert.assertFalse(isDrawerItemSelected(R.id.drawer_equipment, R.id.drawer_workouts))
+
+        org.junit.Assert.assertTrue(isDrawerItemSelected(R.id.drawer_athlete_profile, R.id.drawer_athlete_profile))
+        org.junit.Assert.assertTrue(isDrawerItemSelected(R.id.drawer_athlete_profile, R.id.drawer_training_zones))
+        org.junit.Assert.assertFalse(isDrawerItemSelected(R.id.drawer_athlete_profile, R.id.drawer_workouts))
     }
 }

@@ -48,8 +48,10 @@ class PermissionRationaleSheetContractTest {
     @Test
     fun testRationaleTypeEnumConstants() {
         val types = RationaleType.values().map { it.name }
-        assertEquals(3, types.size)
+        assertEquals(5, types.size)
         assertTrue(types.contains("FOREGROUND"))
+        assertTrue(types.contains("NOTIFICATION"))
+        assertTrue(types.contains("BLUETOOTH"))
         assertTrue(types.contains("BACKGROUND_LOCATION"))
         assertTrue(types.contains("BATTERY_OPTIMIZATION"))
     }
@@ -57,9 +59,11 @@ class PermissionRationaleSheetContractTest {
     @Test
     fun testRationaleStepEnumConstants() {
         val steps = RationaleStep.values().map { it.name }
-        assertEquals(4, steps.size)
+        assertEquals(6, steps.size)
         assertTrue(steps.contains("NONE"))
         assertTrue(steps.contains("FOREGROUND"))
+        assertTrue(steps.contains("NOTIFICATION"))
+        assertTrue(steps.contains("BLUETOOTH"))
         assertTrue(steps.contains("BACKGROUND_LOCATION"))
         assertTrue(steps.contains("BATTERY_OPTIMIZATION"))
     }
@@ -87,6 +91,12 @@ class PermissionRationaleSheetContractTest {
         assertTrue(R.string.background_location_permission_text != 0)
         assertTrue(R.string.battery_optimization_title != 0)
         assertTrue(R.string.battery_optimization_text != 0)
+
+        // Decoupled Multi-Permission Cascade & Sensor Discovery (ATT-3998 / REQ-PRI-006)
+        assertTrue(R.string.bluetooth_permission_scan_required != 0)
+        assertTrue(R.string.grant_permission != 0)
+        assertTrue(R.string.permission_rationale_notification_subtitle != 0)
+        assertTrue(R.string.permission_rationale_bluetooth_subtitle != 0)
     }
 
     @Test
@@ -129,7 +139,11 @@ class PermissionRationaleSheetContractTest {
             "background_location_permission_title",
             "background_location_permission_text",
             "battery_optimization_title",
-            "battery_optimization_text"
+            "battery_optimization_text",
+            "bluetooth_permission_scan_required",
+            "grant_permission",
+            "permission_rationale_notification_subtitle",
+            "permission_rationale_bluetooth_subtitle"
         )
 
         for (localeDir in localeDirs) {

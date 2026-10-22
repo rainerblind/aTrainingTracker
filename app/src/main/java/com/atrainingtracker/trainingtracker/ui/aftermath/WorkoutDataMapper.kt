@@ -116,6 +116,43 @@ class WorkoutDataMapper(
         val startLocationName = resolveLocationName(startLatLng)
         val endLocationName = resolveLocationName(endLatLng)
 
+        val activeTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s))
+        val avgSpeedMpsVal = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps))
+        val avgPowerWattsVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.AVG)
+        val maxPowerWattsVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.MAX)
+        val hasPowerData = (avgPowerWattsVal != null && avgPowerWattsVal > 0.0) || (maxPowerWattsVal != null && maxPowerWattsVal > 0.0)
+
+        val rawMinWPrimeBal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.MIN)
+        val (minWPrimeBalKj, minWPrimeBalPct, isEmptyTankWarning) = resolveWPrimeBalSummary(rawMinWPrimeBal, hasPowerData = hasPowerData)
+        val aerobicSummary = resolveAerobicEfficiencySummary(
+            powerEf = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.EFFICIENCY_FACTOR),
+            powerDecouplingPct = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER, ExtremaType.AEROBIC_DECOUPLING),
+            speedEf = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.EFFICIENCY_FACTOR),
+            speedDecouplingPct = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.AEROBIC_DECOUPLING),
+            avgHrBpm = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HR, ExtremaType.AVG),
+            avgPowerWatts = avgPowerWattsVal,
+            avgSpeedMps = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.AVG) ?: avgSpeedMpsVal,
+            bSportType = bSportType
+        )
+        val powerSummary = resolvePowerTrainingSummary(
+            npEnd = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.END),
+            npAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.AVG),
+            ifEnd = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.END),
+            ifAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.AVG),
+            tssEnd = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.TSS, ExtremaType.END),
+            tssAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.TSS, ExtremaType.AVG),
+            tssMax = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.TSS, ExtremaType.MAX),
+            workEnd = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.END),
+            workAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.AVG),
+            workMax = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.MAX),
+            ptwAvg = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG),
+            ptwMax = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX),
+            avgPowerWatts = avgPowerWattsVal,
+            maxPowerWatts = maxPowerWattsVal,
+            activeTimeSec = activeTimeSec,
+            startTimeS = dateTimeResult.timestampS
+        )
+
         // The mapper is responsible for assembling the final object from its constituent parts.
         return WorkoutData(
             id = workoutId,
@@ -151,11 +188,26 @@ class WorkoutDataMapper(
             maxLat = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LAT))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LAT)),
             maxLng = if (cursor.isNull(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG))) null else cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG)),
 
+            minWPrimeBalKj = minWPrimeBalKj,
+            minWPrimeBalPct = minWPrimeBalPct,
+            isEmptyTankWarning = isEmptyTankWarning,
+            efficiencyFactor = aerobicSummary.efficiencyFactor,
+            aerobicDecouplingPct = aerobicSummary.aerobicDecouplingPct,
+            isPowerBasedEfficiency = aerobicSummary.isPowerBasedEfficiency,
+            isAerobicDecouplingHighDrift = aerobicSummary.isAerobicDecouplingHighDrift,
+            normalizedPowerWatts = powerSummary.normalizedPowerWatts,
+            intensityFactor = powerSummary.intensityFactor,
+            tss = powerSummary.tss,
+            workKj = powerSummary.workKj,
+            avgPowerToWeight = powerSummary.avgPowerToWeight,
+            maxPowerToWeight = powerSummary.maxPowerToWeight,
+            variabilityIndex = powerSummary.variabilityIndex,
+
             totalDistance = totalDistance,
             maxDisplacement = maxDisplacement,
-            activeTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_ACTIVE_s)),
+            activeTimeSec = activeTimeSec,
             totalTimeSec = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.TIME_TOTAL_s)),
-            avgSpeedMps = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPEED_AVERAGE_mps)),
+            avgSpeedMps = avgSpeedMpsVal,
             ascentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.ASCENDING)),
             descentMeters = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCENDING)),
             minAltitude = minAltitude,
@@ -209,13 +261,262 @@ class WorkoutDataMapper(
     }
 
     /**
+     * Resolves minimum $W'_{\text{bal}}$ (`kJ`), percentage of $W'$, and the $< 10\%$ empty-tank warning (`REQ-UI-399.3`, `REQ-TRK-038.5`).
+     * Strictly gated on presence of recorded power telemetry (`hasPowerData`) to hide the row on non-power workouts (Rule 52).
+     */
+    internal fun resolveWPrimeBalSummary(
+        rawMinWPrimeBalKj: Double?,
+        effectiveWPrimeKj: Double = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getEffectiveWPrimeKj(context).toDouble(),
+        hasPowerData: Boolean = false
+    ): Triple<Double?, Double?, Boolean> {
+        if (!hasPowerData) return Triple(null, null, false)
+        val validMinKj = rawMinWPrimeBalKj?.takeIf { !it.isNaN() && !it.isInfinite() && it >= 0.0 && it < Double.MAX_VALUE }
+            ?: return Triple(null, null, false)
+        val pct = if (effectiveWPrimeKj > 0.0) {
+            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateWPrimeBalancePct(
+                wPrimeBal = validMinKj,
+                wPrimeTotal = effectiveWPrimeKj
+            )
+        } else null
+        val isEmptyTank = pct != null && pct < com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.EMPTY_TANK_WARNING_THRESHOLD_PCT
+        return Triple(validMinKj, pct, isEmptyTank)
+    }
+
+    /**
+     * Resolved Efficiency Factor ($\text{EF}$) and Aerobic Decoupling ($\text{Pw:Hr }\%$ or $\text{Pa:Hr }\%$) summary (`REQ-UI-400.3`).
+     */
+    internal data class AerobicEfficiencySummary(
+        val efficiencyFactor: Double?,
+        val aerobicDecouplingPct: Double?,
+        val isPowerBasedEfficiency: Boolean,
+        val isAerobicDecouplingHighDrift: Boolean
+    )
+
+    /**
+     * Resolves Efficiency Factor ($\text{EF}$) and Aerobic Decoupling ($\text{Pw:Hr }\%$ or $\text{Pa:Hr }\%$)
+     * from persisted extrema records, with an on-the-fly fallback for Efficiency Factor when average HR
+     * and average Power / Speed exist (`REQ-UI-400.3`, Rule 20).
+     */
+    internal fun resolveAerobicEfficiencySummary(
+        powerEf: Double?,
+        powerDecouplingPct: Double?,
+        speedEf: Double?,
+        speedDecouplingPct: Double?,
+        avgHrBpm: Double?,
+        avgPowerWatts: Double?,
+        avgSpeedMps: Double?,
+        bSportType: BSportType
+    ): AerobicEfficiencySummary {
+        fun cleanPositive(v: Double?): Double? = v?.takeIf { it.isFinite() && it > 0.0 && it < Double.MAX_VALUE }
+        fun cleanFinite(v: Double?): Double? = v?.takeIf { it.isFinite() && it > -1000.0 && it < 1000.0 }
+
+        val validPowerEf = cleanPositive(powerEf)
+        val validPowerDec = cleanFinite(powerDecouplingPct)
+        val validSpeedEf = cleanPositive(speedEf)
+        val validSpeedDec = cleanFinite(speedDecouplingPct)
+        val validHr = cleanPositive(avgHrBpm)
+        val validPowerAvg = cleanPositive(avgPowerWatts)
+        val validSpeedAvg = cleanPositive(avgSpeedMps)
+
+        val ef: Double?
+        val dec: Double?
+        val isPower: Boolean
+
+        if (validPowerEf != null || validPowerDec != null) {
+            ef = validPowerEf ?: if (validPowerAvg != null && validHr != null) {
+                com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateEfficiencyFactorPower(validPowerAvg, validHr)
+            } else null
+            dec = validPowerDec
+            isPower = true
+        } else if (validSpeedEf != null || validSpeedDec != null) {
+            ef = validSpeedEf ?: if (validSpeedAvg != null && validHr != null) {
+                com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateEfficiencyFactorSpeed(validSpeedAvg, validHr)
+            } else null
+            dec = validSpeedDec
+            isPower = false
+        } else if (validHr != null) {
+            if (validPowerAvg != null && (bSportType != BSportType.RUN || validSpeedAvg == null)) {
+                ef = com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateEfficiencyFactorPower(validPowerAvg, validHr)
+                dec = null
+                isPower = true
+            } else if (validSpeedAvg != null) {
+                ef = com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateEfficiencyFactorSpeed(validSpeedAvg, validHr)
+                dec = null
+                isPower = false
+            } else {
+                ef = null
+                dec = null
+                isPower = bSportType != BSportType.RUN
+            }
+        } else {
+            ef = null
+            dec = null
+            isPower = bSportType != BSportType.RUN
+        }
+
+        val isHighDrift = dec != null && dec >= com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.AEROBIC_DECOUPLING_DRIFT_THRESHOLD_PCT
+        return AerobicEfficiencySummary(
+            efficiencyFactor = ef,
+            aerobicDecouplingPct = dec,
+            isPowerBasedEfficiency = isPower,
+            isAerobicDecouplingHighDrift = isHighDrift
+        )
+    }
+
+    /**
+     * Resolved session-level power training metrics (`REQ-UI-402.1`, Rule 20).
+     */
+    internal data class PowerTrainingSummary(
+        val normalizedPowerWatts: Double? = null,
+        val intensityFactor: Double? = null,
+        val tss: Double? = null,
+        val workKj: Double? = null,
+        val avgPowerToWeight: Double? = null,
+        val maxPowerToWeight: Double? = null,
+        val variabilityIndex: Double? = null
+    )
+
+    /**
+     * Resolves session-level power training metrics (`NP`, `IF`, `TSS`, `Work kJ`, `W/kg`, `VI`)
+     * prioritizing `ExtremaType.END` over `ExtremaType.AVG`/`MAX` for cumulative session metrics
+     * and providing an on-the-fly fallback when `POWER` extrema and athlete thresholds exist (`REQ-UI-402.1`, Rule 20).
+     */
+    internal fun resolvePowerTrainingSummary(
+        npEnd: Double?,
+        npAvg: Double?,
+        ifEnd: Double?,
+        ifAvg: Double?,
+        tssEnd: Double?,
+        tssAvg: Double?,
+        tssMax: Double?,
+        workEnd: Double?,
+        workAvg: Double?,
+        workMax: Double?,
+        ptwAvg: Double?,
+        ptwMax: Double?,
+        avgPowerWatts: Double?,
+        maxPowerWatts: Double?,
+        activeTimeSec: Long,
+        startTimeS: Long,
+        effectiveFtpWatts: Double = try {
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveFtpAt(
+                context,
+                startTimeS * 1000L
+            )?.toDouble() ?: 0.0
+        } catch (_: Throwable) {
+            0.0
+        },
+        effectiveWeightKg: Double = try {
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveWeightKgAt(
+                context,
+                startTimeS * 1000L
+            )?.toDouble() ?: 0.0
+        } catch (_: Throwable) {
+            0.0
+        }
+    ): PowerTrainingSummary {
+        fun cleanPositive(v: Double?): Double? = v?.takeIf { it.isFinite() && it > 0.0 && it < Double.MAX_VALUE }
+
+        val validNp = cleanPositive(npEnd) ?: cleanPositive(npAvg)
+        val validAvgPower = cleanPositive(avgPowerWatts)
+        val validMaxPower = cleanPositive(maxPowerWatts)
+        val validIf = cleanPositive(ifEnd) ?: cleanPositive(ifAvg)
+        val validTss = cleanPositive(tssEnd) ?: cleanPositive(tssMax) ?: cleanPositive(tssAvg)
+        val validWorkKj = cleanPositive(workEnd) ?: cleanPositive(workMax) ?: cleanPositive(workAvg)
+        val validAvgPtw = cleanPositive(ptwAvg)
+        val validMaxPtw = cleanPositive(ptwMax)
+
+        // If no power telemetry or power extrema exist at all, return empty nulls.
+        if (validNp == null && validAvgPower == null && validMaxPower == null &&
+            validIf == null && validTss == null && validWorkKj == null &&
+            validAvgPtw == null && validMaxPtw == null
+        ) {
+            return PowerTrainingSummary()
+        }
+
+        val effectiveNp = validNp ?: validAvgPower
+        val resolvedVi = if (validNp != null && validAvgPower != null) {
+            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateVariabilityIndex(
+                validNp,
+                validAvgPower
+            )
+        } else {
+            null
+        }
+        val resolvedIf = validIf ?: if (effectiveNp != null && effectiveFtpWatts > 0.0) {
+            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateIntensityFactor(
+                effectiveNp,
+                effectiveFtpWatts
+            )
+        } else {
+            null
+        }
+        val resolvedTss = validTss ?: if (effectiveNp != null && resolvedIf != null && activeTimeSec > 0L && effectiveFtpWatts > 0.0) {
+            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculateTss(
+                activeTimeSec.toDouble(),
+                effectiveNp,
+                resolvedIf,
+                effectiveFtpWatts
+            )
+        } else {
+            null
+        }
+        val resolvedWorkKj = validWorkKj ?: if (validAvgPower != null && activeTimeSec > 0L) {
+            (validAvgPower * activeTimeSec.toDouble()) / 1000.0
+        } else {
+            null
+        }
+        val resolvedAvgPtw = validAvgPtw ?: if (validAvgPower != null && effectiveWeightKg > 0.0) {
+            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculatePowerToWeight(
+                validAvgPower,
+                effectiveWeightKg
+            )
+        } else {
+            null
+        }
+        val resolvedMaxPtw = validMaxPtw ?: if (validMaxPower != null && effectiveWeightKg > 0.0) {
+            com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.calculatePowerToWeight(
+                validMaxPower,
+                effectiveWeightKg
+            )
+        } else {
+            null
+        }
+
+        return PowerTrainingSummary(
+            normalizedPowerWatts = validNp ?: validAvgPower,
+            intensityFactor = resolvedIf,
+            tss = resolvedTss,
+            workKj = resolvedWorkKj,
+            avgPowerToWeight = resolvedAvgPtw,
+            maxPowerToWeight = resolvedMaxPtw,
+            variabilityIndex = resolvedVi
+        )
+    }
+
+    /**
      * DTO for batch-loaded metadata (ATT-359).
      */
+    data class SportTypeInfo(
+        val bSportType: BSportType,
+        val sportName: String,
+        val stravaSportName: String?
+    )
+
+    data class AthleteMetricsInfo(
+        val effectiveFtpWatts: Double,
+        val effectiveWeightKg: Double
+    )
+
     data class BatchMetadata(
         val extrema: Map<Long, List<WorkoutSummariesDatabaseManager.ExtremaRecord>>,
         val stravaData: Map<String, String>,
         val clusterNames: Map<Long, String> = emptyMap(),
-        val laps: Map<Long, List<LapData>> = emptyMap()
+        val laps: Map<Long, List<LapData>> = emptyMap(),
+        val sportTypes: Map<Long, SportTypeInfo> = emptyMap(),
+        val equipmentNames: Map<Long, String> = emptyMap(),
+        val locationNames: Map<LatLng, String> = emptyMap(),
+        val athleteMetrics: Map<Long, AthleteMetricsInfo> = emptyMap()
     )
 
     /**
@@ -334,10 +635,17 @@ class WorkoutDataMapper(
      * Enriches an in-memory [RawCursorSnapshot] with pre-fetched batch metadata (ATT-359, ATT-2309).
      * Eliminates N+1 database queries without requiring cursor seeking.
      */
-    fun fromSnapshot(snapshot: RawCursorSnapshot, batch: BatchMetadata): WorkoutData {
-        val bSportType = sportTypeDatabaseManager.getBSportType(snapshot.sportId)
-        val sportName = sportTypeDatabaseManager.getUIName(snapshot.sportId)
-        val equipmentName = if (snapshot.equipmentId > 0) equipmentDbHelper.getEquipmentNameFromId(snapshot.equipmentId) else null
+    fun fromSnapshot(
+        snapshot: RawCursorSnapshot,
+        batch: BatchMetadata,
+        reconcile: Boolean = false
+    ): WorkoutData {
+        val sportInfo = batch.sportTypes[snapshot.sportId]
+        val bSportType = sportInfo?.bSportType ?: sportTypeDatabaseManager.getBSportType(snapshot.sportId)
+        val sportName = sportInfo?.sportName ?: sportTypeDatabaseManager.getUIName(snapshot.sportId)
+        val equipmentName = if (snapshot.equipmentId > 0) {
+            batch.equipmentNames[snapshot.equipmentId] ?: equipmentDbHelper.getEquipmentNameFromId(snapshot.equipmentId)
+        } else null
 
         val stravaActivityData = if (snapshot.fileBaseName != null) batch.stravaData[snapshot.fileBaseName] else null
         val workoutExtrema = batch.extrema[snapshot.workoutId] ?: emptyList()
@@ -350,19 +658,83 @@ class WorkoutDataMapper(
         val rawMaxDispLatLng = getBatchPos(SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
         val rawMaxDisplacement = getBatchVal(SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
 
-        val resolvedApex = resolveAuthoritativeApex(snapshot.workoutId, startLatLng, snapshot.mapPolyline, rawMaxDisplacement, rawMaxDispLatLng)
+        val resolvedApex = if (reconcile) {
+            resolveAuthoritativeApex(snapshot.workoutId, startLatLng, snapshot.mapPolyline, rawMaxDisplacement, rawMaxDispLatLng)
+        } else {
+            Pair(rawMaxDisplacement, rawMaxDispLatLng)
+        }
         val maxDisplacement = resolvedApex.first
         val maxDispLatLng = resolvedApex.second
 
         val rawMinAltitude = getBatchVal(SensorType.ALTITUDE, ExtremaType.MIN)
         val rawMaxAltitude = getBatchVal(SensorType.ALTITUDE, ExtremaType.MAX)
-        val resolvedAltitudeExtrema = reconcileAltitudeExtrema(snapshot.workoutId, snapshot.encodedAltitudes, rawMinAltitude, rawMaxAltitude)
+        val resolvedAltitudeExtrema = if (reconcile) {
+            reconcileAltitudeExtrema(snapshot.workoutId, snapshot.encodedAltitudes, rawMinAltitude, rawMaxAltitude)
+        } else {
+            Pair(rawMinAltitude, rawMaxAltitude)
+        }
         val minAltitude = resolvedAltitudeExtrema.first
         val maxAltitude = resolvedAltitudeExtrema.second
 
         val clusterName = batch.clusterNames[snapshot.clusterId]
-        val startLocationName = resolveLocationName(startLatLng)
-        val endLocationName = resolveLocationName(endLatLng)
+        val startLocationName = if (startLatLng != null && batch.locationNames.containsKey(startLatLng)) {
+            batch.locationNames[startLatLng]
+        } else {
+            resolveLocationName(startLatLng)
+        }
+        val endLocationName = if (endLatLng != null && batch.locationNames.containsKey(endLatLng)) {
+            batch.locationNames[endLatLng]
+        } else {
+            resolveLocationName(endLatLng)
+        }
+
+        val avgPowerWattsBatch = getBatchVal(SensorType.POWER, ExtremaType.AVG)
+        val maxPowerWattsBatch = getBatchVal(SensorType.POWER, ExtremaType.MAX)
+        val hasPowerData = (avgPowerWattsBatch != null && avgPowerWattsBatch > 0.0) || (maxPowerWattsBatch != null && maxPowerWattsBatch > 0.0)
+
+        val rawMinWPrimeBal = getBatchVal(SensorType.W_PRIME_BAL, ExtremaType.MIN)
+        val (minWPrimeBalKj, minWPrimeBalPct, isEmptyTankWarning) = resolveWPrimeBalSummary(rawMinWPrimeBal, hasPowerData = hasPowerData)
+        val aerobicSummary = resolveAerobicEfficiencySummary(
+            powerEf = getBatchVal(SensorType.POWER, ExtremaType.EFFICIENCY_FACTOR),
+            powerDecouplingPct = getBatchVal(SensorType.POWER, ExtremaType.AEROBIC_DECOUPLING),
+            speedEf = getBatchVal(SensorType.SPEED_mps, ExtremaType.EFFICIENCY_FACTOR),
+            speedDecouplingPct = getBatchVal(SensorType.SPEED_mps, ExtremaType.AEROBIC_DECOUPLING),
+            avgHrBpm = getBatchVal(SensorType.HR, ExtremaType.AVG),
+            avgPowerWatts = avgPowerWattsBatch,
+            avgSpeedMps = getBatchVal(SensorType.SPEED_mps, ExtremaType.AVG) ?: snapshot.avgSpeedMps,
+            bSportType = bSportType
+        )
+        val athleteMetric = batch.athleteMetrics[snapshot.workoutId]
+        val powerSummary = resolvePowerTrainingSummary(
+            npEnd = getBatchVal(SensorType.NORMALIZED_POWER, ExtremaType.END),
+            npAvg = getBatchVal(SensorType.NORMALIZED_POWER, ExtremaType.AVG),
+            ifEnd = getBatchVal(SensorType.INTENSITY_FACTOR, ExtremaType.END),
+            ifAvg = getBatchVal(SensorType.INTENSITY_FACTOR, ExtremaType.AVG),
+            tssEnd = getBatchVal(SensorType.TSS, ExtremaType.END),
+            tssAvg = getBatchVal(SensorType.TSS, ExtremaType.AVG),
+            tssMax = getBatchVal(SensorType.TSS, ExtremaType.MAX),
+            workEnd = getBatchVal(SensorType.WORK_KJ, ExtremaType.END),
+            workAvg = getBatchVal(SensorType.WORK_KJ, ExtremaType.AVG),
+            workMax = getBatchVal(SensorType.WORK_KJ, ExtremaType.MAX),
+            ptwAvg = getBatchVal(SensorType.POWER_TO_WEIGHT, ExtremaType.AVG),
+            ptwMax = getBatchVal(SensorType.POWER_TO_WEIGHT, ExtremaType.MAX),
+            avgPowerWatts = avgPowerWattsBatch,
+            maxPowerWatts = maxPowerWattsBatch,
+            activeTimeSec = snapshot.activeTimeSec,
+            startTimeS = snapshot.startTimeS,
+            effectiveFtpWatts = athleteMetric?.effectiveFtpWatts ?: try {
+                com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveFtpAt(
+                    context,
+                    snapshot.startTimeS * 1000L
+                )?.toDouble() ?: 0.0
+            } catch (_: Throwable) { 0.0 },
+            effectiveWeightKg = athleteMetric?.effectiveWeightKg ?: try {
+                com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveWeightKgAt(
+                    context,
+                    snapshot.startTimeS * 1000L
+                )?.toDouble() ?: 0.0
+            } catch (_: Throwable) { 0.0 }
+        )
 
         return WorkoutData(
             id = snapshot.workoutId,
@@ -396,6 +768,21 @@ class WorkoutDataMapper(
             maxLat = snapshot.maxLat,
             maxLng = snapshot.maxLng,
 
+            minWPrimeBalKj = minWPrimeBalKj,
+            minWPrimeBalPct = minWPrimeBalPct,
+            isEmptyTankWarning = isEmptyTankWarning,
+            efficiencyFactor = aerobicSummary.efficiencyFactor,
+            aerobicDecouplingPct = aerobicSummary.aerobicDecouplingPct,
+            isPowerBasedEfficiency = aerobicSummary.isPowerBasedEfficiency,
+            isAerobicDecouplingHighDrift = aerobicSummary.isAerobicDecouplingHighDrift,
+            normalizedPowerWatts = powerSummary.normalizedPowerWatts,
+            intensityFactor = powerSummary.intensityFactor,
+            tss = powerSummary.tss,
+            workKj = powerSummary.workKj,
+            avgPowerToWeight = powerSummary.avgPowerToWeight,
+            maxPowerToWeight = powerSummary.maxPowerToWeight,
+            variabilityIndex = powerSummary.variabilityIndex,
+
             totalDistance = snapshot.totalDistance,
             maxDisplacement = maxDisplacement,
             activeTimeSec = snapshot.activeTimeSec,
@@ -415,7 +802,7 @@ class WorkoutDataMapper(
             goal = snapshot.goal,
             method = snapshot.method,
 
-            stravaSportName = sportTypeDatabaseManager.getStravaName(snapshot.sportId),
+            stravaSportName = sportInfo?.stravaSportName ?: sportTypeDatabaseManager.getStravaName(snapshot.sportId),
             stravaActivityData = stravaActivityData,
 
             extremaRows = sensorsToCheck.flatMap { sensorType ->
@@ -446,8 +833,8 @@ class WorkoutDataMapper(
      * Optimized mapping using pre-fetched batch metadata (ATT-359).
      * Eliminates N+1 database queries. Delegates to [readCursorSnapshot] and [fromSnapshot].
      */
-    fun fromCursor(cursor: Cursor, batch: BatchMetadata): WorkoutData {
-        return fromSnapshot(readCursorSnapshot(cursor), batch)
+    fun fromCursor(cursor: Cursor, batch: BatchMetadata, reconcile: Boolean = false): WorkoutData {
+        return fromSnapshot(readCursorSnapshot(cursor), batch, reconcile)
     }
 
     private fun createExtremaRow(
@@ -561,7 +948,7 @@ class WorkoutDataMapper(
             )
         } catch (e: ParseException) {
             Log.e("WorkoutHeaderProvider", "Failed to parse date string: $startTimeString", e)
-            DateTimeResult(context.getString(R.string.invalid_date), "", 0L, java.time.LocalDateTime.now())
+            DateTimeResult(context.getString(R.string.invalid_date), "", 0L, java.time.LocalDateTime.ofInstant(java.time.Instant.EPOCH, java.time.ZoneId.systemDefault()))
         }
     }
 
@@ -651,11 +1038,27 @@ class WorkoutDataMapper(
             val streamMin = streamPoints.minOrNull() ?: return Pair(recordedMin, recordedMax)
             val streamMax = streamPoints.maxOrNull() ?: return Pair(recordedMin, recordedMax)
 
+            val nonZeroPoints = streamPoints.filter { it != 0.0 && !it.isNaN() }
+            val effectiveStreamMin = if (streamMin == 0.0 && recordedMin != null && recordedMin > 15.0) {
+                if (nonZeroPoints.isEmpty()) {
+                    recordedMin
+                } else {
+                    val nonZeroMin = nonZeroPoints.min()
+                    if (nonZeroMin > 15.0) {
+                        minOf(recordedMin, nonZeroMin)
+                    } else {
+                        streamMin
+                    }
+                }
+            } else {
+                streamMin
+            }
+
             var needUpdate = false
 
-            val authoritativeMin = if (recordedMin == null || recordedMin < streamMin - 15.0 || recordedMin > streamMin) {
+            val authoritativeMin = if (recordedMin == null || recordedMin < effectiveStreamMin - 15.0 || recordedMin > effectiveStreamMin) {
                 needUpdate = true
-                streamMin
+                effectiveStreamMin
             } else {
                 recordedMin
             }

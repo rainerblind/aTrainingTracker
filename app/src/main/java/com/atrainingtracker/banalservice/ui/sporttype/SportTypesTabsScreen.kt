@@ -398,6 +398,14 @@ fun SportTypeCard(
                             color = MaterialTheme.colorScheme.onSurface
                         )
 
+                        if (item.isPlaceholder) {
+                            Text(
+                                text = stringResource(R.string.sport_type_placeholder_badge),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+
                         Text(
                             text = stringResource(
                                 R.string.average_speed_range_format,

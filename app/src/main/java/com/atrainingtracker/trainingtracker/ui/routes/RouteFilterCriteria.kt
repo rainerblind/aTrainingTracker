@@ -27,9 +27,9 @@ import org.json.JSONObject
  * Immutable domain model representing multi-dimensional filter criteria for route lists.
  *
  * Holds filter values for free-text search, route source/origin (Strava, Local GPX, Workout),
- * map selection/visibility flag, and numerical distance / elevation gain thresholds.
+ * map selection/visibility flag, and numerical distance interval (min/max meters) / elevation gain thresholds.
  * Provides high-performance predicate evaluation via [matches] and lightweight JSON serialization
- * for asynchronous preference persistence.
+ * for asynchronous preference persistence (REQ-UI-417.1).
  */
 @Immutable
 data class RouteFilterCriteria(
@@ -37,10 +37,13 @@ data class RouteFilterCriteria(
     val source: RouteSource? = null,
     val isSelected: Boolean? = null,
     val minDistanceMeters: Double? = null,
-    val minElevationGainMeters: Double? = null
+    val maxDistanceMeters: Double? = null,
+    val minElevationGainMeters: Double? = null,
+    val maxElevationGainMeters: Double? = null
 ) {
     /**
      * Total count of distinct active filter dimensions.
+     * Distance interval (min or max) and elevation interval (min or max) each count as a single active filter dimension (REQ-UI-417.1, REQ-UI-425).
      */
     val activeFilterCount: Int
         get() {
@@ -48,8 +51,8 @@ data class RouteFilterCriteria(
             if (query.isNotBlank()) count++
             if (source != null) count++
             if (isSelected != null) count++
-            if (minDistanceMeters != null) count++
-            if (minElevationGainMeters != null) count++
+            if (minDistanceMeters != null || maxDistanceMeters != null) count++
+            if (minElevationGainMeters != null || maxElevationGainMeters != null) count++
             return count
         }
 
@@ -100,8 +103,18 @@ data class RouteFilterCriteria(
             return false
         }
 
+        // Maximum Distance threshold (meters) (REQ-UI-417.1)
+        if (maxDistanceMeters != null && route.summary.distance > maxDistanceMeters) {
+            return false
+        }
+
         // Minimum Elevation Gain threshold (meters)
         if (minElevationGainMeters != null && route.summary.elevationGain < minElevationGainMeters) {
+            return false
+        }
+
+        // Maximum Elevation Gain threshold (meters) (REQ-UI-425)
+        if (maxElevationGainMeters != null && route.summary.elevationGain > maxElevationGainMeters) {
             return false
         }
 
@@ -117,7 +130,9 @@ data class RouteFilterCriteria(
         source?.let { json.put("source", it.name) }
         isSelected?.let { json.put("isSelected", it) }
         minDistanceMeters?.let { json.put("minDistanceMeters", it) }
+        maxDistanceMeters?.let { json.put("maxDistanceMeters", it) }
         minElevationGainMeters?.let { json.put("minElevationGainMeters", it) }
+        maxElevationGainMeters?.let { json.put("maxElevationGainMeters", it) }
         return json.toString()
     }
 
@@ -125,6 +140,7 @@ data class RouteFilterCriteria(
         /**
          * Reconstructs a [RouteFilterCriteria] instance from its persisted JSON representation.
          * Returns an empty criteria instance if [jsonStr] is null, empty, or unparseable.
+         * Gracefully handles legacy JSON missing [maxDistanceMeters] or [maxElevationGainMeters] by falling back to null (REQ-UI-417.1, REQ-UI-425).
          */
         fun fromJson(jsonStr: String?): RouteFilterCriteria {
             if (jsonStr.isNullOrBlank()) return RouteFilterCriteria()
@@ -135,7 +151,9 @@ data class RouteFilterCriteria(
                     source = if (json.has("source")) RouteSource.fromString(json.getString("source")) else null,
                     isSelected = if (json.has("isSelected")) json.getBoolean("isSelected") else null,
                     minDistanceMeters = if (json.has("minDistanceMeters")) json.getDouble("minDistanceMeters") else null,
-                    minElevationGainMeters = if (json.has("minElevationGainMeters")) json.getDouble("minElevationGainMeters") else null
+                    maxDistanceMeters = if (json.has("maxDistanceMeters")) json.getDouble("maxDistanceMeters") else null,
+                    minElevationGainMeters = if (json.has("minElevationGainMeters")) json.getDouble("minElevationGainMeters") else null,
+                    maxElevationGainMeters = if (json.has("maxElevationGainMeters")) json.getDouble("maxElevationGainMeters") else null
                 )
             } catch (_: Exception) {
                 RouteFilterCriteria()

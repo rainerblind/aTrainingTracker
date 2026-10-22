@@ -131,6 +131,19 @@ object MapVisualization {
     const val SEGMENT_UNSELECTED_ALPHA = TTAlpha.Disabled
     const val CLIMB_WIDTH = 10f
     const val CLIMB_Z_INDEX = 28.0f
+
+    val TRACK_BEST_PATTERN: List<com.google.android.gms.maps.model.PatternItem> = listOf(
+        com.google.android.gms.maps.model.Dot(),
+        com.google.android.gms.maps.model.Gap(TRACK_DOT_GAP)
+    )
+    val SEGMENT_DASH_PATTERN: List<com.google.android.gms.maps.model.PatternItem> = listOf(
+        com.google.android.gms.maps.model.Dash(SEGMENT_DASH_LENGTH),
+        com.google.android.gms.maps.model.Gap(SEGMENT_GAP_LENGTH)
+    )
+    val ROUTE_DASH_PATTERN: List<com.google.android.gms.maps.model.PatternItem> = listOf(
+        com.google.android.gms.maps.model.Dash(ROUTE_DASH_LENGTH),
+        com.google.android.gms.maps.model.Gap(ROUTE_GAP_LENGTH)
+    )
 }
 
 
@@ -155,12 +168,13 @@ data class LocationMarker(
 data class PathPoint @JvmOverloads constructor(
     val distance: Double,
     val latLng: LatLng,
-    val altitude: Double,
+    val altitude: Double? = null,
     val timeSec: Long = 0L,
     val hr: Int? = null,
     val power: Int? = null,
     val speedMps: Double? = null,
-    val slope: Double? = null
+    val slope: Double? = null,
+    val wPrimeBalKj: Double? = null
 )
 
 /**
@@ -200,10 +214,10 @@ data class MapTrack(
     override val maxLat: Double? = null,
     override val maxLng: Double? = null,
     val isVisible: Boolean = true,
-    override val onClick: ((Long) -> Unit)? = null
+    override val onClick: ((Long) -> Unit)? = null,
+    override val latLngs: List<LatLng> = path.map { it.latLng }
 ) : MappablePath
 {
-    override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
     override val zIndex: Float get() = MapVisualization.TRACK_BASE_Z_INDEX + type.zIndex
     override val color: Color get() = if (type == TrackType.BEST) type.color else type.color.copy(alpha = 0.8f)
     override val width: Float get() = if (type == TrackType.BEST) MapVisualization.TRACK_WIDTH else MapVisualization.TRACK_WIDTH * 0.7f
@@ -211,7 +225,7 @@ data class MapTrack(
     override val overlayZIndex: Float get() = MapVisualization.TRACK_OVERLAY_Z_INDEX + type.zIndex
     override val pattern: List<com.google.android.gms.maps.model.PatternItem>?
         get() = if (type == TrackType.BEST) {
-            listOf(com.google.android.gms.maps.model.Dot(), com.google.android.gms.maps.model.Gap(MapVisualization.TRACK_DOT_GAP))
+            MapVisualization.TRACK_BEST_PATTERN
         } else null
 }
 
@@ -227,20 +241,17 @@ data class MapSegment(
     override val maxLng: Double? = null,
     val showStartAndFinishText: Boolean = true,
     val isDashed: Boolean = false,
-    override val onClick: ((Long) -> Unit)? = null
+    override val onClick: ((Long) -> Unit)? = null,
+    override val latLngs: List<LatLng> = path.map { it.latLng }
 ) : MappablePath {
     override val id: Long get() = stravaId
-    override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
     override val color: Color get() = TTColor.StravaOrange
     override val width: Float get() = MapVisualization.SEGMENT_WIDTH
     override val zIndex: Float get() = MapVisualization.SEGMENT_Z_INDEX
     override val overlayZIndex: Float? get() = null
     override val pattern: List<com.google.android.gms.maps.model.PatternItem>?
         get() = if (isDashed) {
-            listOf(
-                com.google.android.gms.maps.model.Dash(MapVisualization.SEGMENT_DASH_LENGTH),
-                com.google.android.gms.maps.model.Gap(MapVisualization.SEGMENT_GAP_LENGTH)
-            )
+            MapVisualization.SEGMENT_DASH_PATTERN
         } else null
 }
 
@@ -258,9 +269,9 @@ data class MapRoute(
     val isActiveNavigation: Boolean = false,
     val waypoints: List<RouteWaypoint> = emptyList(),
     val climbs: List<Climb> = emptyList(),
-    override val onClick: ((Long) -> Unit)? = null
+    override val onClick: ((Long) -> Unit)? = null,
+    override val latLngs: List<LatLng> = path.map { it.latLng }
 ) : MappablePath {
-    override val latLngs: List<LatLng> by lazy { path.map { it.latLng } }
     override val color: Color get() = when {
         isActiveNavigation -> TTColor.RouteActiveNavigation
         isSelected -> TTColor.RouteSelected
@@ -296,10 +307,7 @@ data class MapRoute(
         get() = if (isActiveNavigation) {
             null
         } else {
-            listOf(
-                com.google.android.gms.maps.model.Dash(MapVisualization.ROUTE_DASH_LENGTH),
-                com.google.android.gms.maps.model.Gap(MapVisualization.ROUTE_GAP_LENGTH)
-            )
+            MapVisualization.ROUTE_DASH_PATTERN
         }
 }
 /**
@@ -319,7 +327,8 @@ fun RouteWithPath.toMapRoute(isActiveNavigation: Boolean = false): MapRoute {
         maxLng = this.summary.maxLng,
         isActiveNavigation = isActiveNavigation,
         waypoints = this.waypoints,
-        climbs = this.climbs
+        climbs = this.climbs,
+        latLngs = this.latLngs
     )
 }
 
@@ -341,7 +350,8 @@ fun SegmentWithPath.toMapSegment(
         maxLat = this.summary.maxLat,
         maxLng = this.summary.maxLng,
         showStartAndFinishText = showStartAndFinishText,
-        isDashed = isDashed
+        isDashed = isDashed,
+        latLngs = this.latLngs
     )
 }
 
@@ -399,7 +409,7 @@ fun WorkoutData.toMapTrack(): MapTrack {
         PathPoint(
             distance = dists.getOrElse(index) { 0.0 },
             latLng = latLng,
-            altitude = alts.getOrElse(index) { 0.0 }
+            altitude = alts.getOrNull(index)
         )
     }
 

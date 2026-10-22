@@ -259,7 +259,7 @@ class LiveClimbsRepositoryTest {
         assertEquals(LiveClimbStatus.ON_CLIMB, live25!!.status)
         assertEquals(0.125f, live25.currentProgressFraction, 0.01f)
         assertEquals(875.0, live25.distanceToSummit, 5.0)
-        assertEquals(512.5, live25.climb.pathPoints.first().altitude + (live25.climb.pathPoints[1].altitude - live25.climb.pathPoints.first().altitude) * 0.25, 0.1)
+        assertEquals(512.5, live25.climb.pathPoints.first().altitude!! + (live25.climb.pathPoints[1].altitude!! - live25.climb.pathPoints.first().altitude!!) * 0.25, 0.1)
         assertEquals(87.5, live25.remainingElevationGain, 1.0)
         assertEquals(10.0, live25.currentGradePercent, 0.1)
 
@@ -344,5 +344,42 @@ class LiveClimbsRepositoryTest {
         assertNotNull(live)
         assertEquals(LiveClimbStatus.ON_CLIMB, live!!.status)
         assertEquals(0f, live.currentProgressFraction, 0.001f)
+    }
+
+    @Test
+    fun testLiveClimb_lastSegmentIndex_propagatesAndAdvancesOnClimb() = runTest(testDispatcher) {
+        repository.refreshClimbs(null)
+
+        // 1. Enter climb at start (47.0, 10.0)
+        repository.updateTracking(LatLng(47.0, 10.0), bearing = 0.0)
+        val onClimb = repository.activeLiveClimb.value
+        assertNotNull(onClimb)
+        assertEquals(LiveClimbStatus.ON_CLIMB, onClimb!!.status)
+        assertEquals("lastSegmentIndex should initialize to 0 on entering climb", 0, onClimb.lastSegmentIndex)
+
+        // 2. Advance past midpoint to segment 1 (e.g. lat 47.006, between 47.005 and 47.01)
+        repository.updateTracking(LatLng(47.006, 10.0), bearing = 0.0)
+        val advanced = repository.activeLiveClimb.value
+        assertNotNull(advanced)
+        assertEquals(LiveClimbStatus.ON_CLIMB, advanced!!.status)
+        assertEquals("lastSegmentIndex should advance to 1", 1, advanced.lastSegmentIndex)
+        assertTrue(advanced.currentProgressFraction > 0.5f)
+    }
+
+    @Test
+    fun testLiveClimb_summitReached_resetsLastSegmentIndexToNull() = runTest(testDispatcher) {
+        repository.refreshClimbs(null)
+
+        // Start and advance
+        repository.updateTracking(LatLng(47.0, 10.0), bearing = 0.0)
+        repository.updateTracking(LatLng(47.006, 10.0), bearing = 0.0)
+        assertEquals(1, repository.activeLiveClimb.value?.lastSegmentIndex)
+
+        // Reach summit at 47.01
+        repository.updateTracking(LatLng(47.01, 10.0), bearing = 0.0)
+        val finished = repository.activeLiveClimb.value
+        assertNotNull(finished)
+        assertEquals(LiveClimbStatus.FINISHED, finished!!.status)
+        assertNull("lastSegmentIndex must reset to null on climb finish", finished.lastSegmentIndex)
     }
 }

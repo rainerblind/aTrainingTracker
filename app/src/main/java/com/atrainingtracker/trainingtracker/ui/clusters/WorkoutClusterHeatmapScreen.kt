@@ -653,7 +653,7 @@ fun WorkoutClusterSummaryHeader(
                 ) {
                     if (isEditing) {
                         IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = null)
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                         }
                     }
 
@@ -802,6 +802,7 @@ fun WorkoutClusterDetailDashboard(
 
     val statsMap by viewModel.clusterStats.collectAsState()
     val stats = statsMap[cluster.id] ?: WorkoutClusterStats.EMPTY
+    val clusterWorkouts by viewModel.clusterWorkouts.collectAsState()
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         // Base metadata row
@@ -857,7 +858,7 @@ fun WorkoutClusterDetailDashboard(
                         Icon(
                             imageVector = Icons.Filled.EmojiEvents,
                             contentDescription = null,
-                            tint = Color(0xFFFFD700),
+                            tint = TTColor.Gold,
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
@@ -909,6 +910,24 @@ fun WorkoutClusterDetailDashboard(
                     )
                 }
             }
+        }
+
+        // --- TIER 1.5: Historical Effort Progression Trend Chart (REQ-SET-078) ---
+        val validTrendWorkoutsCount = remember(clusterWorkouts) {
+            clusterWorkouts.count { it.activeTimeSec > 0 && it.avgSpeedMps > 0.0 }
+        }
+        if (validTrendWorkoutsCount >= 2) {
+            WorkoutClusterTrendChartCard(
+                workouts = clusterWorkouts,
+                sportType = bSportType,
+                onSelectWorkout = { workoutId ->
+                    viewModel.selectWorkoutForPeek(workoutId)
+                }
+            )
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(vertical = 2.dp)
+            )
         }
 
         // --- TIER 2: Cumulative Volume Card (Distance, Ascent, Active Time) ---

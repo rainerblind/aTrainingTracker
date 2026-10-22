@@ -23,6 +23,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
+import com.atrainingtracker.util.safeUnregisterReceiver
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -102,11 +103,7 @@ class EquipmentFragment : Fragment() {
 
     override fun onStop() {
         super.onStop()
-        try {
-            requireContext().unregisterReceiver(syncReceiver)
-        } catch (e: IllegalArgumentException) {
-            // Receiver not registered
-        }
+        requireContext().safeUnregisterReceiver(syncReceiver, "EquipmentFragment")
     }
 
     override fun onResume() {

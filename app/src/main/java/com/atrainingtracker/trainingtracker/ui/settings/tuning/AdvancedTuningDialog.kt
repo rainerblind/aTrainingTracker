@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Search
@@ -56,6 +57,7 @@ import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.Amoled
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.ClusterTuningSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchPreferences
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchTuningSection
@@ -94,22 +96,24 @@ fun AdvancedTuningDialog(
     var sensorFieldBorderThickness by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS) }; var sensorFieldBorderContrast by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST) }
     var routeSelectionRadiusKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ROUTE_SELECTION_RADIUS_KM) }; var navigationCueDismissDurationSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC) }
     var elevationSmoothingSigmaMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS) }
-    var mapFollowMeInitialZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM) }; var mapFollowMeSpeedZoomEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED) }
-    var mapFollowMeCruisingZoom by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM) }; var mapFollowMeTiltAngle by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_TILT_ANGLE) }
-    var mapFollowMeLookaheadPaddingPercent by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_LOOKAHEAD_PADDING_PERCENT) }
-    var mapFollowMeSpeedSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA) }; var mapFollowMeBearingSmoothingAlpha by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA) }
     var showAntMissingAdapterWarnings by remember { mutableStateOf(!TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG) }; var autoFollowUniqueRouteEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED) }
     var turnCueCountdownDistanceMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS) }
     var clusterTolEndpoints by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS) }; var clusterTolApex by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_APEX) }
     var clusterTolDistance by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE) }; var clusterTolAltitudePos by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS) }
     var clusterUseSportType by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE) }; var clusterUseAltitudePos by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS) }
+    var autoPauseBikeEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED) }; var autoPauseRunEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED) }; var autoPauseOtherEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED) }
+    var autoPauseBikeSpeedThreshold by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC) }; var autoPauseBikeDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC) }
+    var autoPauseRunSpeedThreshold by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC) }; var autoPauseRunDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC) }
+    var autoPauseOtherSpeedThreshold by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC) }; var autoPauseOtherDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC) }
+    var enableCogganPowerMetrics by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS) }; var showCogganPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY) }; var enablePmcModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL) }
+    var enableAerobicEfficiencyModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL) }; var showAerobicEfficiencyInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY) }
+    var enableCriticalPowerModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL) }; var showCriticalPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
     var workoutDetailPrefs by remember { mutableStateOf(WorkoutDetailPreferences()) }; var isDetailPrefsInitialized by remember { mutableStateOf(false) }
     var workoutSectionsOrder by remember { mutableStateOf(WorkoutSectionType.DEFAULT_ORDER) }; var isSectionsOrderInitialized by remember { mutableStateOf(false) }
 
-    // Multi-section expansion state tracked across configuration changes via string identifiers
     var expandedSections by rememberSaveable { mutableStateOf(emptySet<String>()) }
     fun isSectionExpanded(section: TuningSection): Boolean = expandedSections.contains(section.name)
     fun toggleSection(section: TuningSection) {
@@ -128,6 +132,7 @@ fun AdvancedTuningDialog(
         val order = persistedWorkoutSectionsOrder
         if (!isSectionsOrderInitialized && order != null) { workoutSectionsOrder = order; isSectionsOrderInitialized = true }
     }
+    LaunchedEffect(Unit) { tuningDataStore.purgeLegacyMapCameraPreferences() }
     fun applyConfig(config: TuningConfig) {
         elevationXAxisDomain = config.elevationXAxisDomain; telemetryXAxisDomain = config.telemetryXAxisDomain
         cockpitFontFamily = config.cockpitFontFamily; cockpitFontWeight = config.cockpitFontWeight
@@ -140,22 +145,22 @@ fun AdvancedTuningDialog(
         slopeMinSpeed = config.slopeMinSpeedMps; paceCeilingMinKm = config.paceCeilingMinKm
         routeSelectionRadiusKm = config.routeSelectionRadiusKm
         navigationCueDismissDurationSec = config.navigationCueDismissDurationSec; elevationSmoothingSigmaMeters = config.elevationSmoothingSigmaMeters
-        mapFollowMeInitialZoom = config.mapFollowMeInitialZoom; mapFollowMeSpeedZoomEnabled = config.mapFollowMeSpeedZoomEnabled
-        mapFollowMeCruisingZoom = config.mapFollowMeCruisingZoom; mapFollowMeTiltAngle = config.mapFollowMeTiltAngle
-        mapFollowMeLookaheadPaddingPercent = config.mapFollowMeLookaheadPaddingPercent
-        mapFollowMeSpeedSmoothingAlpha = config.mapFollowMeSpeedSmoothingAlpha
-        mapFollowMeBearingSmoothingAlpha = config.mapFollowMeBearingSmoothingAlpha
-        showAntMissingAdapterWarnings = config.showAntMissingAdapterWarnings
-        autoFollowUniqueRouteEnabled = config.autoFollowUniqueRouteEnabled
+        showAntMissingAdapterWarnings = config.showAntMissingAdapterWarnings; autoFollowUniqueRouteEnabled = config.autoFollowUniqueRouteEnabled
         turnCueCountdownDistanceMeters = config.turnCueCountdownDistanceMeters
         clusterTolEndpoints = config.clusterTolEndpoints; clusterTolApex = config.clusterTolApex
         clusterTolDistance = config.clusterTolDistance; clusterTolAltitudePos = config.clusterTolAltitudePos
         clusterUseSportType = config.clusterUseSportType; clusterUseAltitudePos = config.clusterUseAltitudePos
+        autoPauseBikeEnabled = config.autoPauseBikeEnabled; autoPauseRunEnabled = config.autoPauseRunEnabled; autoPauseOtherEnabled = config.autoPauseOtherEnabled
+        autoPauseBikeSpeedThreshold = config.autoPauseBikeSpeedThreshold; autoPauseBikeDebounceSec = config.autoPauseBikeDebounceSec
+        autoPauseRunSpeedThreshold = config.autoPauseRunSpeedThreshold; autoPauseRunDebounceSec = config.autoPauseRunDebounceSec
+        autoPauseOtherSpeedThreshold = config.autoPauseOtherSpeedThreshold; autoPauseOtherDebounceSec = config.autoPauseOtherDebounceSec
+        enablePmcModel = config.enablePmcModel
+        enableCogganPowerMetrics = config.enableCogganPowerMetrics; showCogganPowerInWorkoutSummary = config.showCogganPowerInWorkoutSummary
+        enableAerobicEfficiencyModel = config.enableAerobicEfficiencyModel; showAerobicEfficiencyInWorkoutSummary = config.showAerobicEfficiencyInWorkoutSummary
+        enableCriticalPowerModel = config.enableCriticalPowerModel; showCriticalPowerInWorkoutSummary = config.showCriticalPowerInWorkoutSummary
     }
 
-    LaunchedEffect(persistedConfig) {
-        applyConfig(persistedConfig)
-    }
+    LaunchedEffect(persistedConfig) { applyConfig(persistedConfig) }
 
     AppBottomSheetContent(
         title = stringResource(R.string.advanced_tuning_title),
@@ -165,26 +170,22 @@ fun AdvancedTuningDialog(
             AppDialogActions.SaveCancel(
                 onSave = {
                     val newConfig = TuningConfig(
-                        elevationXAxisDomain = elevationXAxisDomain, telemetryXAxisDomain = telemetryXAxisDomain,
-                        cockpitFontFamily = cockpitFontFamily, cockpitFontWeight = cockpitFontWeight,
-                        sensorFieldVariant = sensorFieldVariant, sensorFieldCornerRadius = sensorFieldCornerRadius,
-                        sensorFieldBorderThickness = sensorFieldBorderThickness, sensorFieldBorderContrast = sensorFieldBorderContrast,
-                        fullDimFactor = fullDimFactor, mediumDimFactor = mediumDimFactor,
-                        slopeFlatThreshold = slopeFlat, slopeSteepThreshold = slopeSteep,
-                        wakeupDurationSec = wakeupSec, downwardDelaySec = downwardDelaySec,
-                        gpsAccuracyThresholdMeters = gpsAccuracy, altitudeFilterWindowSec = altitudeWindowSec,
-                        slopeMinSpeedMps = slopeMinSpeed, paceCeilingMinKm = paceCeilingMinKm,
-                        routeSelectionRadiusKm = routeSelectionRadiusKm,
+                        elevationXAxisDomain = elevationXAxisDomain, telemetryXAxisDomain = telemetryXAxisDomain, cockpitFontFamily = cockpitFontFamily, cockpitFontWeight = cockpitFontWeight,
+                        sensorFieldVariant = sensorFieldVariant, sensorFieldCornerRadius = sensorFieldCornerRadius, sensorFieldBorderThickness = sensorFieldBorderThickness, sensorFieldBorderContrast = sensorFieldBorderContrast,
+                        fullDimFactor = fullDimFactor, mediumDimFactor = mediumDimFactor, slopeFlatThreshold = slopeFlat, slopeSteepThreshold = slopeSteep,
+                        wakeupDurationSec = wakeupSec, downwardDelaySec = downwardDelaySec, gpsAccuracyThresholdMeters = gpsAccuracy, altitudeFilterWindowSec = altitudeWindowSec,
+                        slopeMinSpeedMps = slopeMinSpeed, paceCeilingMinKm = paceCeilingMinKm, routeSelectionRadiusKm = routeSelectionRadiusKm,
                         navigationCueDismissDurationSec = navigationCueDismissDurationSec, elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
-                        mapFollowMeInitialZoom = mapFollowMeInitialZoom, mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled,
-                        mapFollowMeCruisingZoom = mapFollowMeCruisingZoom, mapFollowMeTiltAngle = mapFollowMeTiltAngle,
-                        mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent,
-                        mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha, mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
                         suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings, autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
-                        turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters,
-                        clusterTolEndpoints = clusterTolEndpoints, clusterTolApex = clusterTolApex,
+                        turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters, clusterTolEndpoints = clusterTolEndpoints, clusterTolApex = clusterTolApex,
                         clusterTolDistance = clusterTolDistance, clusterTolAltitudePos = clusterTolAltitudePos,
-                        clusterUseSportType = clusterUseSportType, clusterUseAltitudePos = clusterUseAltitudePos
+                        autoPauseBikeEnabled = autoPauseBikeEnabled, autoPauseRunEnabled = autoPauseRunEnabled, autoPauseOtherEnabled = autoPauseOtherEnabled,
+                        autoPauseBikeSpeedThreshold = autoPauseBikeSpeedThreshold, autoPauseBikeDebounceSec = autoPauseBikeDebounceSec,
+                        autoPauseRunSpeedThreshold = autoPauseRunSpeedThreshold, autoPauseRunDebounceSec = autoPauseRunDebounceSec,
+                        autoPauseOtherSpeedThreshold = autoPauseOtherSpeedThreshold, autoPauseOtherDebounceSec = autoPauseOtherDebounceSec,
+                        enableCogganPowerMetrics = enableCogganPowerMetrics, showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary, enablePmcModel = enablePmcModel,
+                        enableAerobicEfficiencyModel = enableAerobicEfficiencyModel, showAerobicEfficiencyInWorkoutSummary = showAerobicEfficiencyInWorkoutSummary,
+                        enableCriticalPowerModel = enableCriticalPowerModel, showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
@@ -198,58 +199,28 @@ fun AdvancedTuningDialog(
             )
         }
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Advisory Warning Notice
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             TuningWarningNotice()
 
             // Section 1: Navigation & Kartenführung (REQ-UI-357: Promoted to top)
             TuningAccordionSection(
-                icon = Icons.Default.Navigation,
-                title = stringResource(R.string.tuning_cat_navigation),
-                subtitle = TuningSubtitleFormatter.formatNavigationSubtitle(
-                    radiusKm = routeSelectionRadiusKm,
-                    dismissSec = navigationCueDismissDurationSec,
-                    context = context
-                ),
-                isExpanded = isSectionExpanded(TuningSection.NAVIGATION),
-                onToggle = { toggleSection(TuningSection.NAVIGATION) }
+                icon = Icons.Default.Navigation, title = stringResource(R.string.tuning_cat_navigation),
+                subtitle = TuningSubtitleFormatter.formatNavigationSubtitle(routeSelectionRadiusKm, navigationCueDismissDurationSec, context),
+                isExpanded = isSectionExpanded(TuningSection.NAVIGATION), onToggle = { toggleSection(TuningSection.NAVIGATION) }
             ) {
                 NavigationSection(
-                    routeSelectionRadiusKm = routeSelectionRadiusKm,
-                    onRadiusChange = { routeSelectionRadiusKm = it },
-                    navigationCueDismissDurationSec = navigationCueDismissDurationSec,
-                    onDismissDurationChange = { navigationCueDismissDurationSec = it },
-                    mapFollowMeInitialZoom = mapFollowMeInitialZoom,
-                    onMapFollowMeInitialZoomChange = { mapFollowMeInitialZoom = it },
-                    mapFollowMeSpeedZoomEnabled = mapFollowMeSpeedZoomEnabled,
-                    onMapFollowMeSpeedZoomEnabledChange = { mapFollowMeSpeedZoomEnabled = it },
-                    mapFollowMeCruisingZoom = mapFollowMeCruisingZoom,
-                    onMapFollowMeCruisingZoomChange = { mapFollowMeCruisingZoom = it },
-                    mapFollowMeTiltAngle = mapFollowMeTiltAngle,
-                    onMapFollowMeTiltAngleChange = { mapFollowMeTiltAngle = it },
-                    mapFollowMeLookaheadPaddingPercent = mapFollowMeLookaheadPaddingPercent,
-                    onMapFollowMeLookaheadPaddingPercentChange = { mapFollowMeLookaheadPaddingPercent = it },
-                    mapFollowMeSpeedSmoothingAlpha = mapFollowMeSpeedSmoothingAlpha,
-                    onMapFollowMeSpeedSmoothingAlphaChange = { mapFollowMeSpeedSmoothingAlpha = it },
-                    mapFollowMeBearingSmoothingAlpha = mapFollowMeBearingSmoothingAlpha,
-                    onMapFollowMeBearingSmoothingAlphaChange = { mapFollowMeBearingSmoothingAlpha = it },
-                    autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
-                    onAutoFollowUniqueRouteEnabledChange = { autoFollowUniqueRouteEnabled = it },
-                    turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters,
-                    onTurnCueCountdownDistanceChange = { turnCueCountdownDistanceMeters = it }
+                    routeSelectionRadiusKm = routeSelectionRadiusKm, onRadiusChange = { routeSelectionRadiusKm = it },
+                    navigationCueDismissDurationSec = navigationCueDismissDurationSec, onDismissDurationChange = { navigationCueDismissDurationSec = it },
+                    autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled, onAutoFollowUniqueRouteEnabledChange = { autoFollowUniqueRouteEnabled = it },
+                    turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters, onTurnCueCountdownDistanceChange = { turnCueCountdownDistanceMeters = it }
                 )
             }
 
             // Section 2: Cockpit & Typografie
             TuningAccordionSection(
-                icon = Icons.Default.TextFields,
-                title = stringResource(R.string.tuning_cat_cockpit_typography),
+                icon = Icons.Default.TextFields, title = stringResource(R.string.tuning_cat_cockpit_typography),
                 subtitle = TuningSubtitleFormatter.formatCockpitSubtitle(cockpitFontFamily, cockpitFontWeight, sensorFieldVariant, context),
-                isExpanded = isSectionExpanded(TuningSection.COCKPIT_TYPOGRAPHY),
-                onToggle = { toggleSection(TuningSection.COCKPIT_TYPOGRAPHY) }
+                isExpanded = isSectionExpanded(TuningSection.COCKPIT_TYPOGRAPHY), onToggle = { toggleSection(TuningSection.COCKPIT_TYPOGRAPHY) }
             ) {
                 CockpitTypographySection(
                     cockpitFontFamily = cockpitFontFamily, onFontFamilyChange = { cockpitFontFamily = it },
@@ -263,51 +234,45 @@ fun AdvancedTuningDialog(
 
             // Section 3: AMOLED-Akkuschoner & Helligkeit
             TuningAccordionSection(
-                icon = Icons.Default.BrightnessMedium,
-                title = stringResource(R.string.tuning_cat_battery_saver),
+                icon = Icons.Default.BrightnessMedium, title = stringResource(R.string.tuning_cat_battery_saver),
                 subtitle = TuningSubtitleFormatter.formatBatterySaverSubtitle(fullDimFactor, mediumDimFactor, slopeFlat, slopeSteep),
-                isExpanded = isSectionExpanded(TuningSection.BATTERY_SAVER),
-                onToggle = { toggleSection(TuningSection.BATTERY_SAVER) }
+                isExpanded = isSectionExpanded(TuningSection.BATTERY_SAVER), onToggle = { toggleSection(TuningSection.BATTERY_SAVER) }
             ) {
                 AmoledBatterySaverSection(
                     fullDimFactor = fullDimFactor, onFullDimChange = { fullDimFactor = it },
                     mediumDimFactor = mediumDimFactor, onMediumDimChange = { mediumDimFactor = it },
-                    slopeFlat = slopeFlat, onSlopeFlatChange = { slopeFlat = it },
-                    slopeSteep = slopeSteep, onSlopeSteepChange = { slopeSteep = it },
-                    wakeupSec = wakeupSec, onWakeupSecChange = { wakeupSec = it },
-                    downwardDelaySec = downwardDelaySec, onDownwardDelayChange = { downwardDelaySec = it }
+                    slopeFlat = slopeFlat, onSlopeFlatChange = { slopeFlat = it }, slopeSteep = slopeSteep, onSlopeSteepChange = { slopeSteep = it },
+                    wakeupSec = wakeupSec, onWakeupSecChange = { wakeupSec = it }, downwardDelaySec = downwardDelaySec, onDownwardDelayChange = { downwardDelaySec = it }
                 )
             }
 
             // Section 4: Sensoren, GPS & Filter
             TuningAccordionSection(
-                icon = Icons.Default.LocationOn,
-                title = stringResource(R.string.tuning_cat_sensors_gps),
+                icon = Icons.Default.LocationOn, title = stringResource(R.string.tuning_cat_sensors_gps),
                 subtitle = TuningSubtitleFormatter.formatSensorsGpsSubtitle(gpsAccuracy, altitudeWindowSec, slopeMinSpeed),
-                isExpanded = isSectionExpanded(TuningSection.SENSORS_GPS),
-                onToggle = { toggleSection(TuningSection.SENSORS_GPS) }
+                isExpanded = isSectionExpanded(TuningSection.SENSORS_GPS), onToggle = { toggleSection(TuningSection.SENSORS_GPS) }
             ) {
                 SensorsGpsFilterSection(
-                    gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
-                    altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
-                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it }
+                    gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it }, altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
+                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it },
+                    autoPauseBikeEnabled = autoPauseBikeEnabled, onAutoPauseBikeEnabledChange = { autoPauseBikeEnabled = it },
+                    autoPauseBikeSpeedThreshold = autoPauseBikeSpeedThreshold, onAutoPauseBikeSpeedThresholdChange = { autoPauseBikeSpeedThreshold = it }, autoPauseBikeDebounceSec = autoPauseBikeDebounceSec, onAutoPauseBikeDebounceSecChange = { autoPauseBikeDebounceSec = it },
+                    autoPauseRunEnabled = autoPauseRunEnabled, onAutoPauseRunEnabledChange = { autoPauseRunEnabled = it },
+                    autoPauseRunSpeedThreshold = autoPauseRunSpeedThreshold, onAutoPauseRunSpeedThresholdChange = { autoPauseRunSpeedThreshold = it }, autoPauseRunDebounceSec = autoPauseRunDebounceSec, onAutoPauseRunDebounceSecChange = { autoPauseRunDebounceSec = it },
+                    autoPauseOtherEnabled = autoPauseOtherEnabled, onAutoPauseOtherEnabledChange = { autoPauseOtherEnabled = it },
+                    autoPauseOtherSpeedThreshold = autoPauseOtherSpeedThreshold, onAutoPauseOtherSpeedThresholdChange = { autoPauseOtherSpeedThreshold = it }, autoPauseOtherDebounceSec = autoPauseOtherDebounceSec, onAutoPauseOtherDebounceSecChange = { autoPauseOtherDebounceSec = it }
                 )
             }
 
             // Section 5: Sensorsuche & Verhalten
             TuningAccordionSection(
-                icon = Icons.Default.Search,
-                title = stringResource(R.string.tuning_cat_sensor_search),
+                icon = Icons.Default.Search, title = stringResource(R.string.tuning_cat_sensor_search),
                 subtitle = TuningSubtitleFormatter.formatSensorSearchSubtitle(
-                    sensorSearchPrefs.numberOfSearchTries,
-                    sensorSearchPrefs.startSearchWhenAppStarts,
-                    sensorSearchPrefs.startSearchWhenResumeFromPaused,
-                    sensorSearchPrefs.startSearchWhenUserChangesSport,
-                    sensorSearchPrefs.startSearchWhenTrackingStarts,
-                    context
+                    sensorSearchPrefs.numberOfSearchTries, sensorSearchPrefs.startSearchWhenAppStarts,
+                    sensorSearchPrefs.startSearchWhenResumeFromPaused, sensorSearchPrefs.startSearchWhenUserChangesSport,
+                    sensorSearchPrefs.startSearchWhenTrackingStarts, context
                 ),
-                isExpanded = isSectionExpanded(TuningSection.SENSOR_SEARCH),
-                onToggle = { toggleSection(TuningSection.SENSOR_SEARCH) }
+                isExpanded = isSectionExpanded(TuningSection.SENSOR_SEARCH), onToggle = { toggleSection(TuningSection.SENSOR_SEARCH) }
             ) {
                 SensorSearchTuningSection(
                     prefs = sensorSearchPrefs, onPrefsChange = { sensorSearchPrefs = it },
@@ -318,11 +283,9 @@ fun AdvancedTuningDialog(
 
             // Section 6: Workout-Masken & Detailkarten
             TuningAccordionSection(
-                icon = Icons.AutoMirrored.Filled.ViewList,
-                title = stringResource(R.string.tuning_cat_workout_masks_cards),
+                icon = Icons.AutoMirrored.Filled.ViewList, title = stringResource(R.string.tuning_cat_workout_masks_cards),
                 subtitle = TuningSubtitleFormatter.formatWorkoutMatrixSubtitle(workoutCardPrefs, workoutDetailPrefs, context),
-                isExpanded = isSectionExpanded(TuningSection.WORKOUT_MASKS_CARDS),
-                onToggle = { toggleSection(TuningSection.WORKOUT_MASKS_CARDS) }
+                isExpanded = isSectionExpanded(TuningSection.WORKOUT_MASKS_CARDS), onToggle = { toggleSection(TuningSection.WORKOUT_MASKS_CARDS) }
             ) {
                 WorkoutMasksAndCardsSection(
                     workoutCardPrefs = workoutCardPrefs, onWorkoutCardPrefsChange = { workoutCardPrefs = it },
@@ -331,40 +294,48 @@ fun AdvancedTuningDialog(
                 )
             }
 
-            // Section 7: Routen- & Workout-Clustering
+            // Section 7: Physiologie & Trainingsmodelle (REQ-UI-403)
+            TuningAccordionSection(
+                icon = Icons.Default.MonitorHeart, title = stringResource(R.string.tuning_cat_physiology_models),
+                subtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
+                    enableCogganPowerMetrics, enablePmcModel, enableAerobicEfficiencyModel, enableCriticalPowerModel, context
+                ),
+                isExpanded = isSectionExpanded(TuningSection.PHYSIOLOGY_MODELS), onToggle = { toggleSection(TuningSection.PHYSIOLOGY_MODELS) }
+            ) {
+                PhysiologyModelsSection(
+                    enableCogganPowerMetrics = enableCogganPowerMetrics, onEnableCogganPowerMetricsChange = { enableCogganPowerMetrics = it },
+                    showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary, onShowCogganPowerInWorkoutSummaryChange = { showCogganPowerInWorkoutSummary = it },
+                    enablePmcModel = enablePmcModel, onEnablePmcModelChange = { enablePmcModel = it },
+                    enableAerobicEfficiencyModel = enableAerobicEfficiencyModel, onEnableAerobicEfficiencyModelChange = { enableAerobicEfficiencyModel = it },
+                    showAerobicEfficiencyInWorkoutSummary = showAerobicEfficiencyInWorkoutSummary, onShowAerobicEfficiencyInWorkoutSummaryChange = { showAerobicEfficiencyInWorkoutSummary = it },
+                    enableCriticalPowerModel = enableCriticalPowerModel, onEnableCriticalPowerModelChange = { enableCriticalPowerModel = it },
+                    showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary, onShowCriticalPowerInWorkoutSummaryChange = { showCriticalPowerInWorkoutSummary = it }
+                )
+            }
+
+            // Section 8: Routen- & Workout-Clustering
             val isImperial = com.atrainingtracker.trainingtracker.TrainingApplication.getUnit() == com.atrainingtracker.trainingtracker.MyUnits.IMPERIAL
             TuningAccordionSection(
-                icon = Icons.Default.Hub,
-                title = stringResource(R.string.tuning_cat_route_clustering),
+                icon = Icons.Default.Hub, title = stringResource(R.string.tuning_cat_route_clustering),
                 subtitle = TuningSubtitleFormatter.formatClusterTuningSubtitle(
                     clusterTolEndpoints, clusterTolApex, clusterTolDistance, clusterTolAltitudePos,
                     clusterUseSportType, clusterUseAltitudePos, isImperial, context
                 ),
-                isExpanded = isSectionExpanded(TuningSection.ROUTE_CLUSTERING),
-                onToggle = { toggleSection(TuningSection.ROUTE_CLUSTERING) }
+                isExpanded = isSectionExpanded(TuningSection.ROUTE_CLUSTERING), onToggle = { toggleSection(TuningSection.ROUTE_CLUSTERING) }
             ) {
                 ClusterTuningSection(
-                    endpointTolerance = clusterTolEndpoints, onEndpointToleranceChange = { clusterTolEndpoints = it },
-                    apexTolerance = clusterTolApex, onApexToleranceChange = { clusterTolApex = it },
-                    distanceTolerance = clusterTolDistance, onDistanceToleranceChange = { clusterTolDistance = it },
-                    altitudePositionTolerance = clusterTolAltitudePos, onAltitudePositionToleranceChange = { clusterTolAltitudePos = it },
+                    endpointTolerance = clusterTolEndpoints, onEndpointToleranceChange = { clusterTolEndpoints = it }, apexTolerance = clusterTolApex, onApexToleranceChange = { clusterTolApex = it },
+                    distanceTolerance = clusterTolDistance, onDistanceToleranceChange = { clusterTolDistance = it }, altitudePositionTolerance = clusterTolAltitudePos, onAltitudePositionToleranceChange = { clusterTolAltitudePos = it },
                     useSportTypeForClustering = clusterUseSportType, onUseSportTypeChange = { clusterUseSportType = it },
                     useAltitudePosForClustering = clusterUseAltitudePos, onUseAltitudePosChange = { clusterUseAltitudePos = it }
                 )
             }
 
-            // Section 8: Aftermath & Analyse
+            // Section 9: Aftermath & Analyse
             TuningAccordionSection(
-                icon = Icons.AutoMirrored.Filled.ShowChart,
-                title = stringResource(R.string.tuning_cat_aftermath),
-                subtitle = TuningSubtitleFormatter.formatAftermathSubtitle(
-                    elevationXAxisDomain,
-                    telemetryXAxisDomain,
-                    context,
-                    elevationSmoothingSigmaMeters
-                ),
-                isExpanded = isSectionExpanded(TuningSection.AFTERMATH_ANALYSIS),
-                onToggle = { toggleSection(TuningSection.AFTERMATH_ANALYSIS) }
+                icon = Icons.AutoMirrored.Filled.ShowChart, title = stringResource(R.string.tuning_cat_aftermath),
+                subtitle = TuningSubtitleFormatter.formatAftermathSubtitle(elevationXAxisDomain, telemetryXAxisDomain, context, elevationSmoothingSigmaMeters),
+                isExpanded = isSectionExpanded(TuningSection.AFTERMATH_ANALYSIS), onToggle = { toggleSection(TuningSection.AFTERMATH_ANALYSIS) }
             ) {
                 AftermathAnalysisSection(
                     elevationXAxisDomain = elevationXAxisDomain, onElevationDomainChange = { elevationXAxisDomain = it },

@@ -352,7 +352,7 @@ class ClimbsDatabaseManager(
                     val lng = tokens[1].toDoubleOrNull()
                     val alt = tokens[2].toDoubleOrNull()
                     val dist = tokens[3].toDoubleOrNull()
-                    if (lat != null && lng != null && alt != null && dist != null) {
+                    if (lat != null && lng != null && dist != null) {
                         PathPoint(distance = dist, latLng = LatLng(lat, lng), altitude = alt)
                     } else null
                 } else null

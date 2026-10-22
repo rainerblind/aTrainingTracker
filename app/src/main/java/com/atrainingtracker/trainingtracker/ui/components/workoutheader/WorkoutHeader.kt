@@ -567,7 +567,7 @@ class WorkoutHeaderPreviewProvider : PreviewParameterProvider<WorkoutHeaderData>
 @Preview(name = "Light Mode", showBackground = true)
 @Preview(name = "Dark Mode", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun PreviewWorkoutHeader(
+private fun PreviewWorkoutHeader(
     @PreviewParameter(WorkoutHeaderPreviewProvider::class) data: WorkoutHeaderData
 ) {
     ATrainingTrackerTheme {
@@ -585,7 +585,7 @@ fun PreviewWorkoutHeader(
 
 @Preview(name = "Commute Tag", showBackground = true)
 @Composable
-fun PreviewCommuteHeader() {
+private fun PreviewCommuteHeader() {
     ATrainingTrackerTheme {
         WorkoutHeader(
             data = WorkoutHeaderData(

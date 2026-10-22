@@ -35,6 +35,8 @@ import android.preference.PreferenceManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
+import com.atrainingtracker.trainingtracker.security.AuthCredentialsStore;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -43,6 +45,8 @@ import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
+import com.atrainingtracker.util.EnumUtils;
+import com.atrainingtracker.util.LifecycleUtils;
 
 import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode;
 import com.atrainingtracker.trainingtracker.batterysaver.DisplayBrightnessMode;
@@ -79,12 +83,17 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TrainingApplication extends Application {
     private static final boolean DEBUG = BuildConfig.DEBUG;
     // some Strings to handle tracking globally
     public static final String REQUEST_START_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_START_TRACKING";
     public static final String REQUEST_PAUSE_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_PAUSE_TRACKING";
+    public static final String EXTRA_IS_AUTO_PAUSE = "com.atrainingtracker.trainingapplication.EXTRA_IS_AUTO_PAUSE";
+    public static final String EXTRA_WAS_AUTO_PAUSED = "com.atrainingtracker.trainingapplication.EXTRA_WAS_AUTO_PAUSED";
+    public static final String SP_MANUAL_PAUSE_LOCK = "manual_pause_lock";
+    public static final String SP_IS_AUTO_PAUSED = "is_auto_paused";
     public static final String REQUEST_RESUME_FROM_PAUSED = "com.atrainingtracker.trainingapplication.REQUEST_RESUME_FROM_PAUSED";
     public static final String REQUEST_STOP_TRACKING = "com.atrainingtracker.trainingapplication.REQUEST_STOP_TRACKING";
     public static final String TRACKING_STATE_CHANGED = "com.atrainingtracker.trainingapplication.TRACKING_STATE_CHANGED";
@@ -111,6 +120,10 @@ public class TrainingApplication extends Application {
     //    protected static final String SP_DROPBOX_KEY       = "dropboxKey";
 //    protected static final String SP_DROPBOX_SECRET    = "dropboxSecret";
     public static final String SP_UPLOAD_TO_DROPBOX = "uploadToDropbox";
+    public static final String SP_UPLOAD_WORKOUTS_TO_DROPBOX = "uploadWorkoutsToDropbox";
+    public static final String SP_UPLOAD_BACKUP_TO_DROPBOX = "uploadBackupToDropbox";
+    public static final String SP_DROPBOX_ONLY_WIFI = "dropboxOnlyWifi";
+    public static final String SP_DROPBOX_LAST_SYNC = "dropboxLastSync";
     public static final String SP_UPLOAD_TO_GOOGLE_DRIVE = "uploadToGoogleDrive";
     public static final String SP_UPLOAD_WORKOUTS_TO_GOOGLE_DRIVE = "uploadWorkoutsToGoogleDrive";
     public static final String SP_UPLOAD_BACKUP_TO_GOOGLE_DRIVE = "uploadBackupToGoogleDrive";
@@ -125,6 +138,8 @@ public class TrainingApplication extends Application {
     public static final String SP_STRAVA_TOKEN = "stravaToken";
     public static final String SP_STRAVA_REFRESH_TOKEN = "stravaRefreshToken";
     public static final String SP_STRAVA_TOKEN_EXPIRES_AT = "stravaTokenExpiresAt";
+    public static final String SP_STRAVA_OAUTH_STATE = "SP_STRAVA_OAUTH_STATE";
+    public static final String SP_STRAVA_OAUTH_STATE_TIMESTAMP = "SP_STRAVA_OAUTH_STATE_TIMESTAMP";
     public static final String SP_STRAVA_DEMO_MODE = "stravaDemoMode";
     public static final String SP_CLUSTER_TOL_ENDPOINTS = "clusterTolEndpoints";
     public static final String SP_CLUSTER_TOL_APEX = "clusterTolApex";
@@ -142,15 +157,9 @@ public class TrainingApplication extends Application {
     public static final String SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS = "strava_segments_sync_interval_days";
     public static final String SP_AUTOMATED_STRAVA_ROUTES_SYNC = "automated_strava_routes_sync";
     public static final String SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS = "strava_routes_sync_interval_days";
+    public static final String SP_AUTOMATED_STRAVA_EQUIPMENT_SYNC = "automated_strava_equipment_sync";
+    public static final String SP_STRAVA_EQUIPMENT_SYNC_INTERVAL_DAYS = "strava_equipment_sync_interval_days";
     public static final String SP_STRAVA_ATHLETE_ID = "stravaAthleteId";
-    public static final String PREFERENCE_SCREEN_RUNKEEPER = "psUploadToRunkeeper";
-    public static final String SP_UPLOAD_TO_RUNKEEPER = "uploadToRunkeeper";
-    public static final String SP_RUNKEEPER_TOKEN = "runkeeperToken";
-    public static final String PREFERENCE_SCREEN_TRAINING_PEAKS = "psUploadToTrainingPeaks";
-    //     protected final static AccessType DROPBOX_ACCESS_TYPE = AccessType.APP_FOLDER;
-    public static final String SP_UPLOAD_TO_TRAINING_PEAKS = "uploadToTrainingPeaks";
-    public static final String SP_TRAINING_PEAKS_ACCESS_TOKEN = "trainingPeaksAccessToken";
-    public static final String SP_TRAINING_PEAKS_REFRESH_TOKEN = "trainingPeaksRefreshToken";
     // public static final String SP_DISPLAY_UPDATE_TIME     = "displayUpdateTime";
     public static final String SP_EXPORT_TCX = "export_tcx";
     public static final String SP_EXPORT_GPX = "export_gpx";
@@ -204,16 +213,6 @@ public class TrainingApplication extends Application {
     private static final String SP_UPLOAD_STRAVA_HR = "uploadStravaHR";
     private static final String SP_UPLOAD_STRAVA_POWER = "uploadStravaPower";
     private static final String SP_UPLOAD_STRAVA_CADENCE = "uploadStravaCadence";
-    private static final String SP_UPLOAD_RUNKEEPER_GPS = "uploadRunkeeperGPS";
-    private static final String SP_UPLOAD_RUNKEEPER_ALTITUDE = "uploadRunkeeperAltitude";
-    private static final String SP_UPLOAD_RUNKEEPER_HR = "uploadRunkeeperHR";
-    private static final String SP_UPLOAD_RUNKEEPER_POWER = "uploadRunkeeperPower";
-    private static final String SP_UPLOAD_RUNKEEPER_CADENCE = "uploadRunkeeperCadence";
-    private static final String SP_UPLOAD_TRAINING_PEAKS_GPS = "uploadTrainingPeaksGPS";
-    private static final String SP_UPLOAD_TRAINING_PEAKS_ALTITUDE = "uploadTrainingPeaksAltitude";
-    private static final String SP_UPLOAD_TRAINING_PEAKS_HR = "uploadTrainingPeaksHR";
-    private static final String SP_UPLOAD_TRAINING_PEAKS_POWER = "uploadTrainingPeaksPower";
-    private static final String SP_UPLOAD_TRAINING_PEAKS_CADENCE = "uploadTrainingPeaksCadence";
     //public static final int UPLOAD_PROGRESS_NOTIFICATION_ID       = 3;
 
     // public static final int UPLOAD_RESULT_BASE_NOTIFICATION_ID    = 8;
@@ -224,13 +223,15 @@ public class TrainingApplication extends Application {
     private static final String APPLICATION_NAME = TAG;
     protected static Context cAppContext;
     @NonNull
-    protected static TrackingMode cTrackingMode = TrackingMode.READY;
-    protected static boolean cResumeFromCrash = false;
+    protected static volatile TrackingMode cTrackingMode = TrackingMode.READY;
+    private static final AtomicBoolean mManualPauseLock = new AtomicBoolean(false);
+    private static final AtomicBoolean mIsAutoPaused = new AtomicBoolean(false);
+    private static final AtomicBoolean mWasAutoPaused = new AtomicBoolean(false);
+    protected static volatile boolean cResumeFromCrash = false;
     private static SharedPreferences cSharedPreferences;
     private final IntentFilter mSearchingFinishedFilter = new IntentFilter(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
     private final IntentFilter mSearchingStartedFilter = new IntentFilter(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT);
     public TrackOnMapHelper trackOnMapHelper;
-    private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap<>();
     private long mWorkoutID = -1;
     private static volatile long sActiveWorkoutId = -1;
     protected final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
@@ -278,7 +279,8 @@ public class TrainingApplication extends Application {
     protected final BroadcastReceiver mPauseTrackingReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            pauseTracking();
+            boolean isAutoPause = (intent != null) && intent.getBooleanExtra(EXTRA_IS_AUTO_PAUSE, false);
+            pauseTracking(isAutoPause);
         }
     };
     protected final BroadcastReceiver mResumeFromPaused = new BroadcastReceiver() {
@@ -326,7 +328,7 @@ public class TrainingApplication extends Application {
 
     @NonNull
     public static Watchapp getPebbleWatchapp() {
-        return Watchapp.valueOf(cSharedPreferences.getString(SP_PEBBLE_WATCHAPP, Watchapp.BUILD_IN.name()));
+        return EnumUtils.safeValueOf(Watchapp.class, cSharedPreferences.getString(SP_PEBBLE_WATCHAPP, Watchapp.BUILD_IN.name()), Watchapp.BUILD_IN, TAG);
     }
 
     public static boolean showPebbleInstallDialog() {
@@ -343,12 +345,12 @@ public class TrainingApplication extends Application {
             switch (getPebbleWatchapp()) {
                 case BUILD_IN:
                     if (DEBUG) Log.d(TAG, "starting build in Pebble Watchapp Service");
-                    startService(new Intent(this, PebbleServiceBuildIn.class));
+                    LifecycleUtils.safeStartService(this, new Intent(this, PebbleServiceBuildIn.class), TAG);
                     break;
 
                 case TRAINING_TRACKER:
                     if (DEBUG) Log.d(TAG, "starting Training Tracker Pebble Watchapp Service");
-                    startService(new Intent(this, PebbleService.class));
+                    LifecycleUtils.safeStartService(this, new Intent(this, PebbleService.class), TAG);
                     break;
             }
             startedWatchapp = getPebbleWatchapp();
@@ -373,6 +375,16 @@ public class TrainingApplication extends Application {
 
     public static Context getAppContext() {
         return cAppContext;
+    }
+
+    @VisibleForTesting
+    public static void setAppContextForTesting(Context context) {
+        cAppContext = context;
+    }
+
+    @VisibleForTesting
+    public static void setSharedPreferencesForTesting(SharedPreferences preferences) {
+        cSharedPreferences = preferences;
     }
 
     public static boolean showInstallPlayServicesDialog() {
@@ -445,9 +457,22 @@ public class TrainingApplication extends Application {
         return false;
     }
 
+    private static MyUnits sTestUnit = null;
+
+    @androidx.annotation.VisibleForTesting
+    public static void setUnitForTesting(@androidx.annotation.Nullable MyUnits unit) {
+        sTestUnit = unit;
+    }
+
     @NonNull
     public static MyUnits getUnit() {
-        return MyUnits.valueOf(cSharedPreferences.getString(SP_UNITS, MyUnits.METRIC.name()));
+        if (sTestUnit != null) {
+            return sTestUnit;
+        }
+        if (cSharedPreferences == null) {
+            return MyUnits.METRIC;
+        }
+        return EnumUtils.safeValueOf(MyUnits.class, cSharedPreferences.getString(SP_UNITS, MyUnits.METRIC.name()), MyUnits.METRIC, TAG);
     }
 
     // -- Display options
@@ -627,22 +652,82 @@ public class TrainingApplication extends Application {
      * Dropbox helpers
      */
     public static boolean uploadToDropbox() {
+        if (cSharedPreferences == null) return false;
         return cSharedPreferences.getBoolean(SP_UPLOAD_TO_DROPBOX, false);
     }
 
     public static void setUploadToDropbox(boolean value) {
+        if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_DROPBOX, value).apply();
     }
 
+    public static boolean uploadWorkoutsToDropbox() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_UPLOAD_WORKOUTS_TO_DROPBOX, true);
+    }
+
+    public static void setUploadWorkoutsToDropbox(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_WORKOUTS_TO_DROPBOX, value).apply();
+    }
+
+    public static boolean uploadBackupToDropbox() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_UPLOAD_BACKUP_TO_DROPBOX, true);
+    }
+
+    public static void setUploadBackupToDropbox(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_BACKUP_TO_DROPBOX, value).apply();
+    }
+
+    public static boolean uploadToDropboxOnlyOnWifi() {
+        if (cSharedPreferences == null) return true;
+        return cSharedPreferences.getBoolean(SP_DROPBOX_ONLY_WIFI, true);
+    }
+
+    public static void setUploadToDropboxOnlyOnWifi(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_DROPBOX_ONLY_WIFI, value).apply();
+    }
+
+    public static long getDropboxLastSyncTimestamp() {
+        if (cSharedPreferences == null) return 0L;
+        return cSharedPreferences.getLong(SP_DROPBOX_LAST_SYNC, 0L);
+    }
+
+    public static void setDropboxLastSyncTimestamp(long timestamp) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putLong(SP_DROPBOX_LAST_SYNC, timestamp).apply();
+    }
+
+    public static String getDropboxAccountEmail() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getDropboxAccountEmail(cAppContext);
+        }
+        return null;
+    }
+
+    public static void setDropboxAccountEmail(String email) {
+        if (cAppContext != null) {
+            AuthCredentialsStore.storeDropboxAccountEmail(cAppContext, email);
+        }
+    }
+
     public static void storeDropboxCredential(DbxCredential dbxCredential) {
-        cSharedPreferences.edit().putString(SP_DROPBOX_CREDENTIAL, DbxCredential.Writer.writeToString(dbxCredential)).apply();
+        String credentialString = (dbxCredential != null) ? DbxCredential.Writer.writeToString(dbxCredential) : null;
+        if (cAppContext != null) {
+            AuthCredentialsStore.storeDropboxCredential(cAppContext, credentialString);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().remove(SP_DROPBOX_CREDENTIAL).apply();
+        }
     }
 
     public static DbxCredential readDropboxCredential() {
-        if (cSharedPreferences == null) {
-            return null;
-        }
-        String credential = cSharedPreferences.getString(SP_DROPBOX_CREDENTIAL, null);
+        String credential = (cAppContext != null)
+                ? AuthCredentialsStore.readDropboxCredential(cAppContext)
+                : (cSharedPreferences != null ? cSharedPreferences.getString(SP_DROPBOX_CREDENTIAL, null) : null);
         if (credential == null || credential.trim().isEmpty()) {
             return null;
         }
@@ -656,7 +741,13 @@ public class TrainingApplication extends Application {
     }
 
     public static void deleteDropboxCredential() {
-        cSharedPreferences.edit().remove(SP_DROPBOX_CREDENTIAL).apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.deleteDropboxCredential(cAppContext);
+            AuthCredentialsStore.deleteDropboxAccountEmail(cAppContext);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().remove(SP_DROPBOX_CREDENTIAL).apply();
+        }
     }
 
     /*
@@ -703,33 +794,53 @@ public class TrainingApplication extends Application {
     }
 
     public static void storeGoogleDriveCredential(String email, String token) {
-        if (cSharedPreferences == null) return;
-        cSharedPreferences.edit()
-                .putString(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL, email)
-                .putString(SP_GOOGLE_DRIVE_AUTH_TOKEN, token)
-                .putBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, true)
-                .apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.storeGoogleDriveCredential(cAppContext, email, token);
+            if (cSharedPreferences != null) {
+                cSharedPreferences.edit()
+                        .remove(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL)
+                        .remove(SP_GOOGLE_DRIVE_AUTH_TOKEN)
+                        .putBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, true)
+                        .apply();
+            }
+        } else if (cSharedPreferences != null) {
+            cSharedPreferences.edit()
+                    .putString(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL, email)
+                    .putString(SP_GOOGLE_DRIVE_AUTH_TOKEN, token)
+                    .putBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, true)
+                    .apply();
+        }
     }
 
     public static String getGoogleDriveAccountEmail() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getGoogleDriveAccountEmail(cAppContext);
+        }
         if (cSharedPreferences == null) return null;
         String email = cSharedPreferences.getString(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL, null);
         return (email == null || email.trim().isEmpty()) ? null : email;
     }
 
     public static String getGoogleDriveAuthToken() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getGoogleDriveAuthToken(cAppContext);
+        }
         if (cSharedPreferences == null) return null;
         String token = cSharedPreferences.getString(SP_GOOGLE_DRIVE_AUTH_TOKEN, null);
         return (token == null || token.trim().isEmpty()) ? null : token;
     }
 
     public static void deleteGoogleDriveCredential() {
-        if (cSharedPreferences == null) return;
-        cSharedPreferences.edit()
-                .remove(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL)
-                .remove(SP_GOOGLE_DRIVE_AUTH_TOKEN)
-                .putBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, false)
-                .apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.deleteGoogleDriveCredential(cAppContext);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit()
+                    .remove(SP_GOOGLE_DRIVE_ACCOUNT_EMAIL)
+                    .remove(SP_GOOGLE_DRIVE_AUTH_TOKEN)
+                    .putBoolean(SP_UPLOAD_TO_GOOGLE_DRIVE, false)
+                    .apply();
+        }
     }
 
     public static long getGoogleDriveLastSyncTimestamp() {
@@ -759,6 +870,10 @@ public class TrainingApplication extends Application {
         return getStravaAccessToken() != null;
     }
 
+    public static boolean hasStravaAccessToken() {
+        return getStravaAccessToken() != null;
+    }
+
     public static void setUploadToStrava(boolean value) {
         // Since we now use the presence of the access token as the source of truth,
         // we keep this for legacy compatibility but the logic is handled by token presence.
@@ -780,6 +895,9 @@ public class TrainingApplication extends Application {
 
     @Nullable
     public static String getStravaAccessToken() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getStravaAccessToken(cAppContext);
+        }
         if (cSharedPreferences == null) {
             return null;
         }
@@ -788,37 +906,71 @@ public class TrainingApplication extends Application {
     }
 
     public static void setStravaAccessToken(String token) {
-        cSharedPreferences.edit().putString(SP_STRAVA_TOKEN, token).apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.setStravaAccessToken(cAppContext, token);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().remove(SP_STRAVA_TOKEN).apply();
+        }
     }
 
     public static void setStravaRefreshToken(String refreshToken) {
-        cSharedPreferences.edit().putString(SP_STRAVA_REFRESH_TOKEN, refreshToken).apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.setStravaRefreshToken(cAppContext, refreshToken);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().remove(SP_STRAVA_REFRESH_TOKEN).apply();
+        }
     }
     @Nullable
     public static String getStravaRefreshToken() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getStravaRefreshToken(cAppContext);
+        }
+        if (cSharedPreferences == null) {
+            return null;
+        }
         return cSharedPreferences.getString(SP_STRAVA_REFRESH_TOKEN, null);
     }
 
     public static void setStravaTokenExpiresAt(int expiresAt) {
-        cSharedPreferences.edit().putInt(SP_STRAVA_TOKEN_EXPIRES_AT, expiresAt).apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.setStravaTokenExpiresAt(cAppContext, expiresAt);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().remove(SP_STRAVA_TOKEN_EXPIRES_AT).apply();
+        }
     }
     public static int getStravaTokenExpiresAt() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getStravaTokenExpiresAt(cAppContext);
+        }
+        if (cSharedPreferences == null) {
+            return 0;
+        }
         return cSharedPreferences.getInt(SP_STRAVA_TOKEN_EXPIRES_AT, 0);
     }
 
     public static void deleteStravaToken() {
         if (DEBUG) Log.i(TAG, "deleteStravaToken");
-        cSharedPreferences.edit()
-                .remove(SP_STRAVA_TOKEN)
-                .remove(SP_STRAVA_REFRESH_TOKEN)
-                .remove(SP_STRAVA_TOKEN_EXPIRES_AT)
-                .remove(SP_STRAVA_ATHLETE_ID)
-                .putBoolean(SP_UPLOAD_TO_STRAVA, false)
-                .putBoolean(SP_STRAVA_DEMO_MODE, false)
-                .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT)
-                .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES)
-                .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS)
-                .apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.clearStravaCredentials(cAppContext);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit()
+                    .remove(SP_STRAVA_TOKEN)
+                    .remove(SP_STRAVA_REFRESH_TOKEN)
+                    .remove(SP_STRAVA_TOKEN_EXPIRES_AT)
+                    .remove(SP_STRAVA_ATHLETE_ID)
+                    .remove(SP_STRAVA_OAUTH_STATE)
+                    .remove(SP_STRAVA_OAUTH_STATE_TIMESTAMP)
+                    .putBoolean(SP_UPLOAD_TO_STRAVA, false)
+                    .putBoolean(SP_STRAVA_DEMO_MODE, false)
+                    .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT)
+                    .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES)
+                    .remove(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS)
+                    .apply();
+        }
         if (DEBUG) Log.i(TAG, "end of deleteStravaToken");
     }
 
@@ -827,14 +979,22 @@ public class TrainingApplication extends Application {
     }
 
     public static void injectMockStravaAccount() {
-        cSharedPreferences.edit()
-                .putString(SP_STRAVA_TOKEN, "mock_access_token")
-                .putString(SP_STRAVA_REFRESH_TOKEN, "mock_refresh_token")
-                .putInt(SP_STRAVA_TOKEN_EXPIRES_AT, (int) (System.currentTimeMillis() / 1000 + 3600))
-                .putInt(SP_STRAVA_ATHLETE_ID, 12345)
-                .putBoolean(SP_UPLOAD_TO_STRAVA, true)
-                .putBoolean(SP_STRAVA_DEMO_MODE, true)
-                .apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.setStravaAccessToken(cAppContext, "mock_access_token");
+            AuthCredentialsStore.setStravaRefreshToken(cAppContext, "mock_refresh_token");
+            AuthCredentialsStore.setStravaTokenExpiresAt(cAppContext, (int) (System.currentTimeMillis() / 1000 + 3600));
+            AuthCredentialsStore.setStravaAthleteId(cAppContext, 12345);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit()
+                    .remove(SP_STRAVA_TOKEN)
+                    .remove(SP_STRAVA_REFRESH_TOKEN)
+                    .remove(SP_STRAVA_TOKEN_EXPIRES_AT)
+                    .remove(SP_STRAVA_ATHLETE_ID)
+                    .putBoolean(SP_UPLOAD_TO_STRAVA, true)
+                    .putBoolean(SP_STRAVA_DEMO_MODE, true)
+                    .apply();
+        }
     }
 
     public static float getClusterTolEndpoints() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_ENDPOINTS, 200f); }
@@ -853,71 +1013,204 @@ public class TrainingApplication extends Application {
 
     @NonNull
     public static String getLastUpdateTimeOfStravaEquipment() {
-        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, cAppContext.getString(R.string.lastUpdateOfEquipmentNever));
+        if (cSharedPreferences == null) {
+            return cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfEquipmentNever) : "";
+        }
+        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfEquipmentNever) : "");
     }
 
     public static void setLastUpdateTimeOfStravaEquipment(String updateTime) {
-        cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, updateTime).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT, updateTime).apply();
+        }
+    }
+
+    /**
+     * Checks whether automated periodic synchronization of Strava equipment is enabled.
+     *
+     * @return true if enabled or SharedPreferences is not yet initialized, false otherwise.
+     */
+    public static boolean isAutomatedStravaEquipmentSyncEnabled() {
+        if (cSharedPreferences == null) {
+            return true;
+        }
+        return cSharedPreferences.getBoolean(SP_AUTOMATED_STRAVA_EQUIPMENT_SYNC, true);
+    }
+
+    /**
+     * Sets whether automated periodic synchronization of Strava equipment is enabled.
+     *
+     * @param enabled true to enable automated equipment sync.
+     */
+    public static void setAutomatedStravaEquipmentSyncEnabled(boolean enabled) {
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_EQUIPMENT_SYNC, enabled).apply();
+        }
+    }
+
+    /**
+     * Gets the configured interval in days for automated Strava equipment synchronization.
+     *
+     * @return interval in days as a string (default "1").
+     */
+    @NonNull
+    public static String getStravaEquipmentSyncIntervalDays() {
+        if (cSharedPreferences == null) {
+            return "1";
+        }
+        return cSharedPreferences.getString(SP_STRAVA_EQUIPMENT_SYNC_INTERVAL_DAYS, "1");
+    }
+
+    /**
+     * Sets the configured interval in days for automated Strava equipment synchronization.
+     *
+     * @param intervalDays interval in days.
+     */
+    public static void setStravaEquipmentSyncIntervalDays(String intervalDays) {
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_STRAVA_EQUIPMENT_SYNC_INTERVAL_DAYS, intervalDays).apply();
+        }
     }
 
     @NonNull
     public static String getLastUpdateTimeOfStravaRoutes() {
-        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, cAppContext.getString(R.string.lastUpdateOfRoutesNever));
+        if (cSharedPreferences == null) {
+            return cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfRoutesNever) : "";
+        }
+        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfRoutesNever) : "");
     }
 
     public static void setLastUpdateTimeOfStravaRoutes(String updateTime) {
-        cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, updateTime).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_ROUTES, updateTime).apply();
+        }
     }
 
+    /**
+     * Checks whether automated periodic synchronization of Strava routes is enabled.
+     *
+     * @return true if enabled or SharedPreferences is not yet initialized, false otherwise.
+     */
     public static boolean isAutomatedStravaRoutesSyncEnabled() {
-        return true;
+        if (cSharedPreferences == null) {
+            return true;
+        }
+        return cSharedPreferences.getBoolean(SP_AUTOMATED_STRAVA_ROUTES_SYNC, true);
     }
 
+    /**
+     * Sets whether automated periodic synchronization of Strava routes is enabled.
+     *
+     * @param enabled true to enable automated routes sync.
+     */
     public static void setAutomatedStravaRoutesSyncEnabled(boolean enabled) {
-        cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_ROUTES_SYNC, enabled).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_ROUTES_SYNC, enabled).apply();
+        }
     }
 
+    /**
+     * Gets the configured interval in days for automated Strava routes synchronization.
+     *
+     * @return interval in days as a string (default "1").
+     */
     @NonNull
     public static String getStravaRoutesSyncIntervalDays() {
-        return "1";
+        if (cSharedPreferences == null) {
+            return "1";
+        }
+        return cSharedPreferences.getString(SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, "1");
     }
 
+    /**
+     * Sets the configured interval in days for automated Strava routes synchronization.
+     *
+     * @param intervalDays interval in days.
+     */
     public static void setStravaRoutesSyncIntervalDays(String intervalDays) {
-        cSharedPreferences.edit().putString(SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, intervalDays).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_STRAVA_ROUTES_SYNC_INTERVAL_DAYS, intervalDays).apply();
+        }
     }
 
     @NonNull
     public static String getLastUpdateTimeOfStravaSegments() {
-        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, cAppContext.getString(R.string.lastUpdateOfSegmentsNever));
+        if (cSharedPreferences == null) {
+            return cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfSegmentsNever) : "";
+        }
+        return cSharedPreferences.getString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, cAppContext != null ? cAppContext.getString(R.string.lastUpdateOfSegmentsNever) : "");
     }
 
     public static void setLastUpdateTimeOfStravaSegments(String updateTime) {
-        cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, updateTime).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_LAST_UPDATE_TIME_OF_STRAVA_SEGMENTS, updateTime).apply();
+        }
     }
 
+    /**
+     * Checks whether automated periodic synchronization of Strava segments is enabled.
+     *
+     * @return true if enabled or SharedPreferences is not yet initialized, false otherwise.
+     */
     public static boolean isAutomatedStravaSegmentsSyncEnabled() {
-        return true;
+        if (cSharedPreferences == null) {
+            return true;
+        }
+        return cSharedPreferences.getBoolean(SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, true);
     }
 
+    /**
+     * Sets whether automated periodic synchronization of Strava segments is enabled.
+     *
+     * @param enabled true to enable automated segments sync.
+     */
     public static void setAutomatedStravaSegmentsSyncEnabled(boolean enabled) {
-        cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, enabled).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putBoolean(SP_AUTOMATED_STRAVA_SEGMENTS_SYNC, enabled).apply();
+        }
     }
 
+    /**
+     * Gets the configured interval in days for automated Strava segments synchronization.
+     *
+     * @return interval in days as a string (default "1").
+     */
     @NonNull
     public static String getStravaSegmentsSyncIntervalDays() {
-        return "1";
+        if (cSharedPreferences == null) {
+            return "1";
+        }
+        return cSharedPreferences.getString(SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, "1");
     }
 
+    /**
+     * Sets the configured interval in days for automated Strava segments synchronization.
+     *
+     * @param intervalDays interval in days.
+     */
     public static void setStravaSegmentsSyncIntervalDays(String intervalDays) {
-        cSharedPreferences.edit().putString(SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, intervalDays).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_STRAVA_SEGMENTS_SYNC_INTERVAL_DAYS, intervalDays).apply();
+        }
     }
 
     public static int getStravaAthleteId() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getStravaAthleteId(cAppContext);
+        }
+        if (cSharedPreferences == null) {
+            return 0;
+        }
         return cSharedPreferences.getInt(SP_STRAVA_ATHLETE_ID, 0);
     }
 
     public static void setStravaAthleteId(int stravaAthleteId) {
-        cSharedPreferences.edit().putInt(SP_STRAVA_ATHLETE_ID, stravaAthleteId).apply();
+        if (cAppContext != null) {
+            AuthCredentialsStore.setStravaAthleteId(cAppContext, stravaAthleteId);
+        }
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().remove(SP_STRAVA_ATHLETE_ID).apply();
+        }
     }
 
     public static boolean uploadStravaGPS() {
@@ -938,106 +1231,6 @@ public class TrainingApplication extends Application {
 
     public static boolean uploadStravaCadence() {
         return cSharedPreferences.getBoolean(SP_UPLOAD_STRAVA_CADENCE, true);
-    }
-
-    /*
-     * Runkeeper helpers
-     */
-    public static boolean uploadToRunKeeper() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TO_RUNKEEPER, false);
-    }
-
-    public static void setUploadToRunkeeper(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, value).apply();
-    }
-
-    @Nullable
-    public static String getRunkeeperToken() {
-        return cSharedPreferences.getString(SP_RUNKEEPER_TOKEN, null);
-    }
-
-    public static void setRunkeeperToken(String token) {
-        cSharedPreferences.edit().putString(SP_RUNKEEPER_TOKEN, token).apply();
-    }
-
-    public static void deleteRunkeeperToken() {
-        cSharedPreferences.edit().remove(SP_RUNKEEPER_TOKEN).apply();
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, false).apply();
-    }
-
-    public static boolean uploadRunkeeperGPS() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_RUNKEEPER_GPS, true);
-    }
-
-    public static boolean uploadRunkeeperAltitude() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_RUNKEEPER_ALTITUDE, true);
-    }
-
-    public static boolean uploadRunkeeperHR() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_RUNKEEPER_HR, true);
-    }
-
-    public static boolean uploadRunkeeperPower() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_RUNKEEPER_POWER, true);
-    }
-
-    public static boolean uploadRunkeeperCadence() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_RUNKEEPER_CADENCE, true);
-    }
-
-    /*
-     * TrainingPeaks helpers
-     */
-    public static boolean uploadToTrainingPeaks() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TO_TRAINING_PEAKS, false);
-    }
-
-    public static void setUploadToTrainingPeaks(boolean value) {
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, value).apply();
-    }
-
-    @Nullable
-    public static String getTrainingPeaksAccessToken() {
-        return cSharedPreferences.getString(SP_TRAINING_PEAKS_ACCESS_TOKEN, null);
-    }
-
-    public static void setTrainingPeaksAccessToken(String token) {
-        cSharedPreferences.edit().putString(SP_TRAINING_PEAKS_ACCESS_TOKEN, token).apply();
-    }
-
-    @Nullable
-    public static String getTrainingPeaksRefreshToken() {
-        return cSharedPreferences.getString(SP_TRAINING_PEAKS_REFRESH_TOKEN, null);
-    }
-
-    public static void setTrainingPeaksRefreshToken(String token) {
-        cSharedPreferences.edit().putString(SP_TRAINING_PEAKS_REFRESH_TOKEN, token).apply();
-    }
-
-    public static void deleteTrainingPeaksToken() {
-        cSharedPreferences.edit().remove(SP_TRAINING_PEAKS_ACCESS_TOKEN).apply();
-        cSharedPreferences.edit().remove(SP_TRAINING_PEAKS_REFRESH_TOKEN).apply();
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_RUNKEEPER, false).apply();
-    }
-
-    public static boolean uploadTrainingPeaksGPS() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TRAINING_PEAKS_GPS, true);
-    }
-
-    public static boolean uploadTrainingPeaksAltitude() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TRAINING_PEAKS_ALTITUDE, true);
-    }
-
-    public static boolean uploadTrainingPeaksHR() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TRAINING_PEAKS_HR, true);
-    }
-
-    public static boolean uploadTrainingPeaksPower() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TRAINING_PEAKS_POWER, true);
-    }
-
-    public static boolean uploadTrainingPeaksCadence() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_TRAINING_PEAKS_CADENCE, true);
     }
 
     @Deprecated
@@ -1097,10 +1290,6 @@ public class TrainingApplication extends Application {
             case GPX -> exportToGPX();
             case FIT -> exportToFIT();
             case STRAVA -> uploadToStrava();
-            /* case RUNKEEPER:
-                return uploadToRunKeeper(); */
-            /* case TRAINING_PEAKS:
-                return uploadToTrainingPeaks(); */
         };
     }
 
@@ -1108,10 +1297,6 @@ public class TrainingApplication extends Application {
         switch (fileFormat) {
             case STRAVA:
                 return uploadToStrava();
-            /* case RUNKEEPER:
-                return uploadToRunKeeper(); */
-            /* case TRAINING_PEAKS:
-                return uploadToTrainingPeaks(); */
             default:
                 return false;
         }
@@ -1121,6 +1306,48 @@ public class TrainingApplication extends Application {
 
     public static boolean isPaused() {
         return cTrackingMode != TrackingMode.TRACKING;
+    }
+
+    public static boolean isManualPauseLocked() {
+        return mManualPauseLock.get();
+    }
+
+    public static void setManualPauseLock(boolean locked, Context context) {
+        mManualPauseLock.set(locked);
+        SharedPreferences prefs = cSharedPreferences != null ? cSharedPreferences
+                : (context != null ? PreferenceManager.getDefaultSharedPreferences(context) : null);
+        if (prefs != null) {
+            prefs.edit()
+                    .putBoolean(SP_MANUAL_PAUSE_LOCK, locked)
+                    .apply();
+        }
+    }
+
+    public static boolean isAutoPaused() {
+        return mIsAutoPaused.get();
+    }
+
+    /**
+     * Returns true if the most recent resumption to {@link TrackingMode#TRACKING} originated
+     * from an auto-pause state (REQ-UI-163).
+     */
+    public static boolean wasAutoPaused() {
+        return mWasAutoPaused.get();
+    }
+
+    public static void setAutoPaused(boolean autoPaused, Context context) {
+        mIsAutoPaused.set(autoPaused);
+        SharedPreferences prefs = cSharedPreferences != null ? cSharedPreferences
+                : (context != null ? PreferenceManager.getDefaultSharedPreferences(context) : null);
+        if (prefs != null) {
+            prefs.edit()
+                    .putBoolean(SP_IS_AUTO_PAUSED, autoPaused)
+                    .apply();
+        }
+    }
+
+    public static boolean isRecordingSuspended() {
+        return isPaused() || isAutoPaused();
     }
 
     public static boolean isTracking() {
@@ -1190,14 +1417,33 @@ public class TrainingApplication extends Application {
 
         cAppContext = getApplicationContext();
 
+        PreferenceManager.setDefaultValues(this, R.xml.prefs_search, false);
+        PreferenceManager.setDefaultValues(this, R.xml.prefs_strava, false);
+        PreferenceManager.setDefaultValues(this, R.xml.prefs_dropbox, false);
+        cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        // ATT-4023 / REQ-DAT-032.1: Migrate legacy credentials to isolated auth_credentials_prefs
+        AuthCredentialsStore.migrateLegacyCredentials(this);
+        mManualPauseLock.set(cSharedPreferences.getBoolean(SP_MANUAL_PAUSE_LOCK, false));
+        mIsAutoPaused.set(cSharedPreferences.getBoolean(SP_IS_AUTO_PAUSED, false));
+
         // ATT-3163 / REQ-UI-342: Intercept missing platform SelectGesture on Android 14+ OEM devices
         com.atrainingtracker.trainingtracker.ui.common.ComposeHandwritingResilience.install();
+
+        // ATT-3982 / REQ-MIG-040: Purge stale backup/restore staging directories from previous interrupted runs
+        com.atrainingtracker.trainingtracker.migration.SecureZipExtractor.purgeStaleStagingDirs(this);
+
+        // ATT-3989 / REQ-MIG-041: Transactional restore recovery for interrupted operations
+        com.atrainingtracker.trainingtracker.migration.RestoreJournalManager.recoverInterruptedRestoreIfNecessary(this);
+
+        // ATT-3983 / REQ-SEC-041: Security migration for fresh Strava re-authentication
+        com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSecurityMigration.runMigrationIfRequired(this);
 
         initWorkManager();
         if (sWorkManagerAvailable) {
             com.atrainingtracker.trainingtracker.migration.BackupWorker.Companion.schedule(this);
             com.atrainingtracker.trainingtracker.segments.StravaSegmentsSyncWorker.Companion.schedule(this);
             com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorker.Companion.schedule(this);
+            com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorker.Companion.schedule(this);
         } else {
             Log.w(TAG, "Skipping BackupWorker scheduling because WorkManager is unavailable on this device.");
         }
@@ -1205,12 +1451,6 @@ public class TrainingApplication extends Application {
         trackOnMapHelper = new TrackOnMapHelper();
 
         mNotificationSummary = getString(R.string.searching);
-
-
-        PreferenceManager.setDefaultValues(this, R.xml.prefs_search, false);
-        PreferenceManager.setDefaultValues(this, R.xml.prefs_strava, false);
-        PreferenceManager.setDefaultValues(this, R.xml.prefs_dropbox, false);
-        cSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         // cSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferencesChangeListener);
         // setPowerSmoothing(0.5);
 
@@ -1307,6 +1547,9 @@ public class TrainingApplication extends Application {
     }
 
     public void updateTimeAndDistanceToNotification(@Nullable SensorData<Integer> time, @Nullable SensorData<Number> distance, String sportType) {
+        if (!isTracking()) {
+            return;
+        }
         if (DEBUG) Log.i(TAG, "updateTimeAndDistanceToNotification(" + time + ", " + distance);
 
         if (mNotificationManager.areNotificationsEnabled()) {
@@ -1370,37 +1613,19 @@ public class TrainingApplication extends Application {
         super.onTerminate();
         if (DEBUG) Log.i(TAG, "onTerminated");
 
-        unregisterReceiver(mStopTrackingReceiver);
-        unregisterReceiver(mStartTrackingReceiver);
-        unregisterReceiver(mTrackingStartedReceiver);
-        unregisterReceiver(mTrackingStoppedReceiver);
+        LifecycleUtils.safeUnregisterReceiver(this, mStopTrackingReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mStartTrackingReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mTrackingStartedReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mTrackingStoppedReceiver, TAG);
 
-        unregisterReceiver(mSearchingFinishedReceiver);
-        unregisterReceiver(mSearchingStartedReceiver);
+        LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mSearchingStartedReceiver, TAG);
 
     }
 
     @NonNull
     public Notification getSearchingAndTrackingNotification() {
         return mTrackingAndSearchingNotificationBuilder.build();
-    }
-
-    public void setIsSegmentListUpdating(long sportTypeId, boolean isUpdating) {
-        if (DEBUG)
-            Log.i(TAG, "setIsSegmentListUpdating, sportTypeId=" + sportTypeId + ", isUpdating=" + isUpdating);
-
-        mSegmentListUpdating.put(sportTypeId, isUpdating);
-    }
-
-    public boolean isSegmentListUpdating(long sportTypeId) {
-        if (mSegmentListUpdating.containsKey(sportTypeId)) {
-            if (DEBUG)
-                Log.i(TAG, "isSegmentListUpdating(" + sportTypeId + "):  key exists: " + mSegmentListUpdating.get(sportTypeId));
-            return mSegmentListUpdating.get(sportTypeId);
-        } else {
-            if (DEBUG) Log.i(TAG, "isSegmentListUpdating(" + sportTypeId + "):  no key exists");
-            return false;
-        }
     }
 
     public long getWorkoutID() {
@@ -1412,11 +1637,8 @@ public class TrainingApplication extends Application {
         sActiveWorkoutId = workoutID;
     }
 
-    public void todo(Context context, String text) {
-        Toast.makeText(context, "TODO: " + text, Toast.LENGTH_SHORT).show();
-    }
-
     public void setTracking() {
+        mWasAutoPaused.set(false);
         cTrackingMode = TrackingMode.TRACKING;
         notifyTrackingStateChanged();
     }
@@ -1425,6 +1647,7 @@ public class TrainingApplication extends Application {
     /***********************************************************************************************/
     /*  Broadcast Receivers for handling the tracking state                                        */
     protected void startTracking() {
+        mWasAutoPaused.set(false);
         // ATT-3045: Ensure location devices are checked/initialized defensively when starting tracking
         BANALService.checkOrInitializeLocationDevices();
 
@@ -1471,8 +1694,21 @@ public class TrainingApplication extends Application {
      * of tracking rather than an athletic lap split. No {@link #REQUEST_NEW_LAP} broadcast is sent,
      * ensuring the active lap remains open across pauses.
      */
-    protected void pauseTracking() {
-        if (DEBUG) Log.d(TAG, "pause tracking");
+    public void pauseTracking() {
+        pauseTracking(false);
+    }
+
+    public void pauseTracking(boolean isAutoPause) {
+        if (DEBUG) Log.d(TAG, "pause tracking (isAutoPause=" + isAutoPause + ")");
+
+        mWasAutoPaused.set(false);
+
+        if (isAutoPause) {
+            setAutoPaused(true, this);
+        } else {
+            setManualPauseLock(true, this);
+            setAutoPaused(false, this);
+        }
 
         cTrackingMode = TrackingMode.PAUSED;
         notifyTrackingStateChanged();
@@ -1487,8 +1723,15 @@ public class TrainingApplication extends Application {
      * <p>Implementation Logic: In accordance with {@code REQ-TRK-002}, resuming continues the
      * active lap seamlessly without sending {@link #REQUEST_NEW_LAP}.
      */
-    protected void resumeFromPaused() {
+    public void resumeFromPaused() {
         if (DEBUG) Log.d(TAG, "resume tracking");
+
+        boolean wasAuto = mIsAutoPaused.get();
+        mWasAutoPaused.set(wasAuto);
+
+        setManualPauseLock(false, this);
+        setAutoPaused(false, this);
+        TrackerService.notifyManualResume();
 
         if (TrainingApplication.startSearchWhenResumeFromPaused()) {
             sendBroadcast(new Intent(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
@@ -1500,12 +1743,63 @@ public class TrainingApplication extends Application {
     }
 
     protected void stopTracking() {
+        mWasAutoPaused.set(false);
+        setManualPauseLock(false, this);
+        setAutoPaused(false, this);
+
         stopPebbleWatchapp();
 
-        stopService(new Intent(this, TrackerService.class));
+        if (TrackerService.isRunning()) {
+            Intent stopIntent = new Intent(this, TrackerService.class);
+            stopIntent.setAction(TrackerService.ACTION_STOP);
+            LifecycleUtils.safeStartService(this, stopIntent, TAG);
+        } else {
+            stopService(new Intent(this, TrackerService.class));
+        }
 
         cTrackingMode = TrackingMode.READY;
         sActiveWorkoutId = -1;
+        notifyTrackingStateChanged();
+    }
+
+    /**
+     * Resets the static tracking state flags ({@link #cTrackingMode}, {@link #mManualPauseLock},
+     * {@link #mIsAutoPaused}, and {@link #sActiveWorkoutId}) to their idle defaults when
+     * asynchronous workout initialization aborts before tracking can begin ({@code REQ-TRK-033.3}).
+     *
+     * <p>Threading: Safe to invoke from any thread; all mutated fields are {@code volatile} or
+     * backed by {@link AtomicBoolean}.
+     */
+    public static void resetTrackingStateOnAbort() {
+        mWasAutoPaused.set(false);
+        setManualPauseLock(false, cAppContext);
+        setAutoPaused(false, cAppContext);
+        cTrackingMode = TrackingMode.READY;
+        sActiveWorkoutId = -1;
+    }
+
+    /**
+     * Restores the application tracking state to {@link TrackingMode#READY}, clears pause locks,
+     * cancels the active tracking notification, and broadcasts {@link #TRACKING_STATE_CHANGED}
+     * when {@link TrackerService} aborts during asynchronous database initialization
+     * ({@code REQ-TRK-033.3}).
+     */
+    public void onTrackingAborted() {
+        if (DEBUG) Log.w(TAG, "onTrackingAborted: resetting tracking state to READY");
+        mWasAutoPaused.set(false);
+        setManualPauseLock(false, this);
+        setAutoPaused(false, this);
+
+        stopPebbleWatchapp();
+
+        cTrackingMode = TrackingMode.READY;
+        sActiveWorkoutId = -1;
+        mWorkoutID = -1;
+
+        if (mNotificationManager != null) {
+            mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
+        }
+
         notifyTrackingStateChanged();
     }
 
@@ -1526,6 +1820,7 @@ public class TrainingApplication extends Application {
         updateNotificationSummary();
 
         sendBroadcast(new Intent(TRACKING_STATE_CHANGED)
+                .putExtra(EXTRA_WAS_AUTO_PAUSED, mWasAutoPaused.get())
                 .setPackage(getPackageName()));
     }
 

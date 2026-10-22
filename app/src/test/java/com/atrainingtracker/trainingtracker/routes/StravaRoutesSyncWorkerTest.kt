@@ -73,6 +73,11 @@ class StravaRoutesSyncWorkerTest {
         mockkStatic(TrainingApplication::class)
         every { TrainingApplication.isWorkManagerAvailable() } returns true
         every { TrainingApplication.getStravaAccessToken() } returns "valid_test_token"
+        every { TrainingApplication.isAutomatedStravaRoutesSyncEnabled() } returns true
+        every { TrainingApplication.getStravaRoutesSyncIntervalDays() } returns "1"
+
+        mockkStatic(com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper::class)
+        every { com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper.getRefreshedAccessToken() } returns "valid_refreshed_token"
 
         mockkObject(RoutesRepository.Companion)
         every { RoutesRepository.getInstance(any()) } returns mockRoutesRepository
@@ -186,5 +191,71 @@ class StravaRoutesSyncWorkerTest {
         assertEquals(Result.retry(), result)
         verify(exactly = 1) { mockRoutesRepository.pruneExpiredRoutes() }
         coVerify(exactly = 1) { mockRoutesRepository.syncRoutesFromStrava() }
+    }
+
+    @Test
+    fun testScheduleWhenAutomatedSyncDisabledCancelsWork() {
+        every { TrainingApplication.getStravaAccessToken() } returns "valid_test_token"
+        every { TrainingApplication.isAutomatedStravaRoutesSyncEnabled() } returns false
+
+        StravaRoutesSyncWorker.schedule(mockContext)
+
+        verify(exactly = 1) { mockWorkManager.cancelUniqueWork(StravaRoutesSyncWorker.WORK_NAME) }
+        verify(exactly = 0) { mockWorkManager.enqueueUniquePeriodicWork(any(), any(), any()) }
+    }
+
+    @Test
+    fun testScheduleRespectsCustomIntervalDays() {
+        every { TrainingApplication.getStravaAccessToken() } returns "valid_test_token"
+        every { TrainingApplication.isAutomatedStravaRoutesSyncEnabled() } returns true
+        every { TrainingApplication.getStravaRoutesSyncIntervalDays() } returns "3"
+
+        val workRequestSlot = slot<PeriodicWorkRequest>()
+        every {
+            mockWorkManager.enqueueUniquePeriodicWork(
+                eq(StravaRoutesSyncWorker.WORK_NAME),
+                eq(ExistingPeriodicWorkPolicy.UPDATE),
+                capture(workRequestSlot)
+            )
+        } returns mockk(relaxed = true)
+
+        StravaRoutesSyncWorker.schedule(mockContext)
+
+        verify(exactly = 1) {
+            mockWorkManager.enqueueUniquePeriodicWork(
+                eq(StravaRoutesSyncWorker.WORK_NAME),
+                eq(ExistingPeriodicWorkPolicy.UPDATE),
+                any()
+            )
+        }
+        val request = workRequestSlot.captured
+        assertEquals(1000L * 60 * 60 * 24 * 3, request.workSpec.intervalDuration)
+    }
+
+    @Test
+    fun testDoWorkWhenAutomatedSyncDisabledReturnsSuccessWithoutSyncing() = runBlocking {
+        every { TrainingApplication.getStravaAccessToken() } returns "valid_test_token"
+        every { TrainingApplication.isAutomatedStravaRoutesSyncEnabled() } returns false
+
+        val worker = StravaRoutesSyncWorker(mockContext, mockk<WorkerParameters>(relaxed = true))
+        val result = worker.doWork()
+
+        assertEquals(Result.success(), result)
+        verify(exactly = 1) { mockRoutesRepository.pruneExpiredRoutes() }
+        coVerify(exactly = 0) { mockRoutesRepository.syncRoutesFromStrava() }
+    }
+
+    @Test
+    fun testDoWorkWhenTokenRefreshReturnsNullReturnsSuccessWithoutSyncing() = runBlocking {
+        every { TrainingApplication.getStravaAccessToken() } returns "valid_test_token"
+        every { TrainingApplication.isAutomatedStravaRoutesSyncEnabled() } returns true
+        every { com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper.getRefreshedAccessToken() } returns null
+
+        val worker = StravaRoutesSyncWorker(mockContext, mockk<WorkerParameters>(relaxed = true))
+        val result = worker.doWork()
+
+        assertEquals(Result.success(), result)
+        verify(exactly = 1) { mockRoutesRepository.pruneExpiredRoutes() }
+        coVerify(exactly = 0) { mockRoutesRepository.syncRoutesFromStrava() }
     }
 }

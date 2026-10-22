@@ -19,20 +19,29 @@
 package com.atrainingtracker.trainingtracker.ui.routes
 
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,10 +51,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
@@ -55,7 +67,11 @@ import com.atrainingtracker.trainingtracker.ui.map.toMapSegment
 import kotlinx.coroutines.launch
 
 /**
- * Top-level Composable for Routes tabbed list, detail map view, and editing (REQ-UI-159).
+ * Top-level Composable for Routes tabbed list, detail map view, and editing (REQ-UI-159, REQ-UI-423).
+ *
+ * Renders [RouteTabbedScreen] continuously in composition when not inspecting a route on full-screen map,
+ * and overlays [EditRouteScreen] modal bottom sheet alongside it to prevent horizontal tab bar scroll jumping
+ * and collapsing app bar offset loss upon sheet dismissal (Rule 47 / REQ-UI-423).
  */
 @Composable
 fun RoutesScreen(
@@ -64,12 +80,17 @@ fun RoutesScreen(
 ) {
     val context = LocalContext.current
 
-    val gpxPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
+    var pendingBatchUris by rememberSaveable { mutableStateOf<ArrayList<Uri>?>(null) }
+
+    val gpxPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        if (uris.size == 1) {
             val intent = Intent(context, GpxImportActivity::class.java).apply {
-                data = it
+                data = uris.first()
             }
             context.startActivity(intent)
+        } else {
+            pendingBatchUris = ArrayList(uris)
         }
     }
 
@@ -82,6 +103,8 @@ fun RoutesScreen(
     val syncStravaStatus by viewModel.syncStravaStatus.collectAsStateWithLifecycle()
     val tuningConfig by viewModel.tuningConfig.collectAsStateWithLifecycle()
     val activeNavigatedRouteId by viewModel.activeNavigatedRouteId.collectAsStateWithLifecycle()
+    val batchImportProgress by viewModel.batchImportProgress.collectAsStateWithLifecycle()
+    val batchImportResult by viewModel.batchImportResult.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -94,6 +117,50 @@ fun RoutesScreen(
             val message = if (success) successMsg else errorMsg
             snackbarHostState.showSnackbar(message)
             viewModel.resetSyncStravaStatus()
+        }
+    }
+
+    LaunchedEffect(batchImportResult) {
+        batchImportResult?.let { result ->
+            val message = when {
+                result.failedCount == 0 -> context.getString(R.string.routes_import_success, result.importedCount)
+                result.importedCount > 0 -> context.getString(R.string.routes_import_partial, result.importedCount, result.failedCount)
+                else -> context.getString(R.string.routes_import_all_failed)
+            }
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearBatchImportResult()
+        }
+    }
+
+    if (batchImportProgress != null) {
+        val progress = batchImportProgress!!
+        Dialog(
+            onDismissRequest = {},
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.routes_import_progress,
+                            progress.current,
+                            progress.total
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
         }
     }
 
@@ -153,24 +220,6 @@ fun RoutesScreen(
                         selectedRouteIdForDetails = null
                     }
                 }
-            } else if (selectedRouteIdForEdit != null) {
-                val routeToEdit = routes.find { it.summary.id == selectedRouteIdForEdit }
-                if (routeToEdit != null) {
-                    EditRouteScreen(
-                        routeSummary = routeToEdit.summary,
-                        onSave = {
-                            viewModel.updateRoute(it)
-                            selectedRouteIdForEdit = null
-                        },
-                        onCancel = {
-                            selectedRouteIdForEdit = null
-                        }
-                    )
-
-                    BackHandler {
-                        selectedRouteIdForEdit = null
-                    }
-                }
             } else {
                 RouteTabbedScreen(
                     routesWithPath = routes,
@@ -213,6 +262,51 @@ fun RoutesScreen(
                     onClearAllFilters = { viewModel.clearFilterCriteria() },
                     onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) }
                 )
+
+                if (selectedRouteIdForEdit != null) {
+                    val routeToEdit = routes.find { it.summary.id == selectedRouteIdForEdit }
+                    if (routeToEdit != null) {
+                        EditRouteScreen(
+                            routeSummary = routeToEdit.summary,
+                            onSave = {
+                                viewModel.updateRoute(it)
+                                selectedRouteIdForEdit = null
+                            },
+                            onCancel = {
+                                selectedRouteIdForEdit = null
+                            }
+                        )
+
+                        BackHandler {
+                            selectedRouteIdForEdit = null
+                        }
+                    }
+                }
+
+                pendingBatchUris?.let { uris ->
+                    BatchImportSportTypeDialog(
+                        routeCount = uris.size,
+                        onConfirm = { mode, selectedSport ->
+                            when (mode) {
+                                BatchSportMode.ALL -> {
+                                    viewModel.importRoutesBatch(uris, selectedSport)
+                                }
+                                BatchSportMode.INDIVIDUAL -> {
+                                    val intent = Intent(context, GpxImportActivity::class.java).apply {
+                                        action = Intent.ACTION_SEND_MULTIPLE
+                                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                                        putExtra(GpxImportActivity.EXTRA_INDIVIDUAL_MODE, true)
+                                    }
+                                    context.startActivity(intent)
+                                }
+                            }
+                            pendingBatchUris = null
+                        },
+                        onDismiss = {
+                            pendingBatchUris = null
+                        }
+                    )
+                }
             }
         }
     }

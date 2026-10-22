@@ -70,8 +70,9 @@ class WorkoutRepositoryExportStatusTest {
         mockkStatic(WorkoutSummariesDatabaseManager::class)
         every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockSummariesDb
 
-        mockkConstructor(StravaUploadDbHelper::class)
-        every { anyConstructed<StravaUploadDbHelper>().getStravaActivityData(any()) } returns null
+        val mockStravaHelper = mockk<StravaUploadDbHelper>(relaxed = true)
+        every { mockStravaHelper.getStravaActivityData(any()) } returns null
+        StravaUploadDbHelper.resetForTesting(mockStravaHelper)
 
         mockkConstructor(ExportStatusDataProvider::class)
         every { anyConstructed<ExportStatusDataProvider>().createGroupData(any(), any()) } returns mockk(relaxed = true)
@@ -84,6 +85,7 @@ class WorkoutRepositoryExportStatusTest {
     @After
     fun tearDown() {
         WorkoutRepository.resetForTesting(null)
+        StravaUploadDbHelper.resetForTesting(null)
         unmockkStatic(WorkoutSummariesDatabaseManager::class)
         unmockkAll()
     }

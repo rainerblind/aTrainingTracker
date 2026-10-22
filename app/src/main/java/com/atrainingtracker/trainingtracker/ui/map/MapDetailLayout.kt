@@ -142,7 +142,8 @@ fun MapDetailLayout(
     val hasTelemetryGraphs = showZoomControls && showTelemetryCharts && activeScrubPath != null && (
         TelemetryMetricUtils.hasHeartRateData(activeScrubPath) ||
         TelemetryMetricUtils.hasSpeedData(activeScrubPath) ||
-        TelemetryMetricUtils.hasPowerData(activeScrubPath)
+        TelemetryMetricUtils.hasPowerData(activeScrubPath) ||
+        (tuningConfig.enableCriticalPowerModel && TelemetryMetricUtils.hasWPrimeBalData(activeScrubPath))
     )
     val hasZoomToolbar = showZoomControls && (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty()
     val hasScrollableContent = metadataContent != null || analyticsContent != null || hasTelemetryGraphs
@@ -173,24 +174,24 @@ fun MapDetailLayout(
                 val activeIndex = activeScrubPath.indexOf(activeScrubPoint).coerceAtLeast(0)
                 val pLeft = activeScrubPath[activeIndex]
                 val pRight = activeScrubPath.getOrNull(activeIndex + 1)
-                if (pRight != null && pRight.timeSec > pLeft.timeSec) {
+                if (pRight != null && pRight.timeSec > pLeft.timeSec && pLeft.altitude != null && pRight.altitude != null) {
                     val factor = ((selectedDistance!! - pLeft.timeSec) / (pRight.timeSec - pLeft.timeSec).toDouble()).coerceIn(0.0, 1.0)
                     pLeft.altitude + factor * (pRight.altitude - pLeft.altitude)
                 } else {
-                    pLeft.altitude
+                    pLeft.altitude ?: pRight?.altitude
                 }
             } else {
                 val activeIndex = activeScrubPath.indexOfLast { it.distance <= selectedDistance!! }.coerceAtLeast(0)
                 val pLeft = activeScrubPath[activeIndex]
                 val pRight = activeScrubPath.getOrNull(activeIndex + 1)
-                if (pRight != null && pRight.distance > pLeft.distance) {
+                if (pRight != null && pRight.distance > pLeft.distance && pLeft.altitude != null && pRight.altitude != null) {
                     val factor = ((selectedDistance!! - pLeft.distance) / (pRight.distance - pLeft.distance)).coerceIn(0.0, 1.0)
                     pLeft.altitude + factor * (pRight.altitude - pLeft.altitude)
                 } else {
-                    pLeft.altitude
+                    pLeft.altitude ?: pRight?.altitude
                 }
             }
-        } else 0.0
+        } else null
     }
 
     val scrubbingOverlay: @Composable BoxScope.() -> Unit = {
@@ -469,6 +470,47 @@ fun MapDetailLayout(
                                             powerZoneThresholds = powerThresholds,
                                             zoneDistribution = powerZoneDistribution,
                                             zoneDisplayMode = powerZoneDisplayMode,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+
+                                    // W'bal Graph (REQ-UI-399.3 / REQ-UI-403)
+                                    if (tuningConfig.enableCriticalPowerModel && TelemetryMetricUtils.hasWPrimeBalData(path)) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        val activeWPrimePoint = if (selectedDistance != null) {
+                                            TelemetryMetricUtils.findNearestPoint(
+                                                points = path,
+                                                targetValue = selectedDistance!!,
+                                                isTimeDomain = isTrackless
+                                            )
+                                        } else null
+                                        val activeWPrimeKj = activeWPrimePoint?.wPrimeBalKj
+                                        val wPrimeHeaderText = if (activeWPrimeKj != null) {
+                                            String.format(java.util.Locale.US, "%s: %.1f kJ", stringResource(R.string.w_prime_bal), activeWPrimeKj)
+                                        } else {
+                                            stringResource(R.string.w_prime_bal)
+                                        }
+                                        Text(
+                                            text = wPrimeHeaderText,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                        )
+                                        TelemetryMetricGraph(
+                                            pathPoints = path,
+                                            metricType = TelemetryMetricType.W_PRIME_BAL,
+                                            currentDistance = selectedDistance,
+                                            onDistanceSelected = { selectedDistance = it },
+                                            xAxisDomain = activeTelemetryDomain,
+                                            bSportType = bSportType,
+                                            zoomScale = profileZoomScale,
+                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
+                                            isPanMode = isPanMode,
+                                            onZoomChanged = { z, s ->
+                                                profileZoomScale = z
+                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
+                                            },
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }

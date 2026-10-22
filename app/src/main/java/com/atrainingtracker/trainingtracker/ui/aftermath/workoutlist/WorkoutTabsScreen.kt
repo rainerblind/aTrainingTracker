@@ -322,6 +322,7 @@ fun WorkoutTabsScreen(
                                 onRemoveMinDuration = { onUpdateFilterCriteria { it.copy(minDurationSec = null, maxDurationSec = null) } },
                                 onRemoveDistanceRange = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
                                 onRemoveDurationRange = { onUpdateFilterCriteria { it.copy(minDurationSec = null, maxDurationSec = null) } },
+                                onRemoveElevationRange = { onUpdateFilterCriteria { it.copy(minElevationGainMeters = null, maxElevationGainMeters = null) } },
                                 onRemoveStartLocation = {
                                     onUpdateFilterCriteria {
                                         it.copy(

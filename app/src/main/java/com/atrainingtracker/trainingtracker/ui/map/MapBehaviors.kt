@@ -184,8 +184,9 @@ fun MapBoundsController(
 }
 
 /**
- * Calculates the target camera zoom level for Follow-Me tracking mode based on speed and tuning preferences (REQ-MAP-042).
+ * Calculates the target camera zoom level for Follow-Me tracking mode based on speed and tuning preferences (REQ-MAP-042 / REQ-MAP-050).
  * Converts speed from m/s to km/h and scales linearly between [baseZoom] at 0 km/h and [cruisingZoom] at 20 km/h.
+ * Above 20 km/h, applies smooth base-2 logarithmic scaling per REQ-MAP-050, clamped at [minZoom].
  * When [speedZoomEnabled] is false, locks the camera firmly to [baseZoom].
  */
 fun calculateFollowMeTargetZoom(
@@ -193,15 +194,22 @@ fun calculateFollowMeTargetZoom(
     baseZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
     speedZoomEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
     cruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
-    minZoom: Float = 12.0f,
+    minZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_MIN_ZOOM,
     maxZoom: Float = 21.0f
 ): Float {
     if (!speedZoomEnabled) {
         return baseZoom.coerceIn(minZoom, maxZoom)
     }
     val speedKmh = (speedMps * 3.6f).coerceAtLeast(0.0f)
-    val zoomSlope = (baseZoom - cruisingZoom) / 20.0f
-    return (baseZoom - zoomSlope * speedKmh).coerceIn(minZoom, maxZoom)
+    if (speedKmh <= 20.0f) {
+        val zoomSlope = (baseZoom - cruisingZoom) / 20.0f
+        return (baseZoom - zoomSlope * speedKmh).coerceIn(minZoom, maxZoom)
+    } else {
+        val logScale = (baseZoom - cruisingZoom) / 2.0f
+        val logDelta = logScale * (kotlin.math.ln(speedKmh / 20.0f) / kotlin.math.ln(2.0f))
+        val rawZoom = cruisingZoom - logDelta
+        return rawZoom.coerceIn(minZoom, maxZoom)
+    }
 }
 
 /**
@@ -236,7 +244,93 @@ fun calculateFollowMeCameraTarget(
 }
 
 /**
- * Manages the "Follow Me" camera behavior with smoothed bearing, speed-dependent zoom, and tilt (REQ-MAP-042 / REQ-MAP-046 / REQ-MAP-048).
+ * Immutable single-step result for Follow-Me exponential smoothing and zoom hysteresis (REQ-MAP-052.2 / ATT-3775).
+ */
+data class FollowMeSmoothingStep(
+    val filteredSpeed: Float,
+    val filteredBearing: Float,
+    val activeZoom: Float,
+    val effectiveZoom: Float,
+    val isConverged: Boolean
+)
+
+/**
+ * Pure, deterministic step function for Follow-Me camera smoothing (REQ-MAP-049 / REQ-MAP-050 / REQ-MAP-052.2 / ATT-3775).
+ *
+ * Steps [currentFilteredBearing] along the shortest angular arc in [-180, 180] and [currentFilteredSpeed]
+ * via exponential moving average, snapping directly to [targetBearing] / [targetSpeed] once within the
+ * convergence tolerance (`< 0.5 deg` for bearing, `< 0.05 m/s` for speed) so steady-state inputs converge
+ * completely without stalling inside the `0.10f` zoom hysteresis deadband.
+ */
+fun stepFollowMeSmoothing(
+    currentFilteredSpeed: Float,
+    currentFilteredBearing: Float,
+    currentActiveZoom: Float,
+    targetSpeed: Float,
+    targetBearing: Float,
+    baseZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_INITIAL_ZOOM,
+    speedZoomEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_ZOOM_ENABLED,
+    cruisingZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_CRUISING_ZOOM,
+    minZoom: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_MIN_ZOOM,
+    maxZoom: Float = 21.0f,
+    speedSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+    bearingSmoothingAlpha: Float = TuningPreferencesDefaults.DEFAULT_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
+): FollowMeSmoothingStep {
+    val bAlpha = bearingSmoothingAlpha.coerceIn(
+        TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
+        TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
+    )
+    val normalizedTargetBearing = ((targetBearing % 360f) + 360f) % 360f
+    var diff = normalizedTargetBearing - currentFilteredBearing
+    while (diff < -180f) diff += 360f
+    while (diff > 180f) diff -= 360f
+
+    val nextFilteredBearing = if (kotlin.math.abs(diff) < 0.5f) {
+        normalizedTargetBearing
+    } else {
+        ((currentFilteredBearing + bAlpha * diff) % 360f + 360f) % 360f
+    }
+    var remainingBearingDiff = normalizedTargetBearing - nextFilteredBearing
+    while (remainingBearingDiff < -180f) remainingBearingDiff += 360f
+    while (remainingBearingDiff > 180f) remainingBearingDiff -= 360f
+    val bearingConverged = kotlin.math.abs(remainingBearingDiff) < 0.5f
+
+    val sAlpha = speedSmoothingAlpha.coerceIn(
+        TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
+        TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
+    )
+    val sanitizedTargetSpeed = targetSpeed.coerceAtLeast(0f)
+    val steppedSpeed = currentFilteredSpeed + sAlpha * (sanitizedTargetSpeed - currentFilteredSpeed)
+    val speedConverged = kotlin.math.abs(sanitizedTargetSpeed - steppedSpeed) < 0.05f
+    val nextFilteredSpeed = if (speedConverged) sanitizedTargetSpeed else steppedSpeed
+
+    val targetZoom = calculateFollowMeTargetZoom(
+        speedMps = nextFilteredSpeed,
+        baseZoom = baseZoom,
+        speedZoomEnabled = speedZoomEnabled,
+        cruisingZoom = cruisingZoom,
+        minZoom = minZoom,
+        maxZoom = maxZoom
+    )
+    val zoomDelta = kotlin.math.abs(targetZoom - currentActiveZoom)
+    val nextActiveZoom = if (zoomDelta >= 0.10f || (speedConverged && zoomDelta >= 0.01f)) {
+        targetZoom
+    } else {
+        currentActiveZoom
+    }
+
+    return FollowMeSmoothingStep(
+        filteredSpeed = nextFilteredSpeed,
+        filteredBearing = if (bearingConverged) normalizedTargetBearing else nextFilteredBearing,
+        activeZoom = nextActiveZoom,
+        effectiveZoom = nextActiveZoom,
+        isConverged = speedConverged && bearingConverged
+    )
+}
+
+/**
+ * Manages the "Follow Me" camera behavior with smoothed bearing, speed-dependent zoom, and tilt
+ * (REQ-MAP-042 / REQ-MAP-046 / REQ-MAP-048 / REQ-MAP-052 / ATT-3775).
  * Returns the smoothed bearing for use in the user location marker.
  */
 @Composable
@@ -268,66 +362,58 @@ fun followMeController(
     }
 
     LaunchedEffect(
-        currentLocation, bearing, speed, baseZoom, speedZoomEnabled,
+        zoomFocus, currentLocation, bearing, speed, baseZoom, speedZoomEnabled,
         cruisingZoom, tiltAngle, lookaheadPaddingPercent, viewportHeightDp,
         speedSmoothingAlpha, bearingSmoothingAlpha
     ) {
         if (zoomFocus == MapZoomFocus.FOLLOW_ME && currentLocation != null) {
-            val bAlpha = bearingSmoothingAlpha.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_BEARING_SMOOTHING_ALPHA
-            )
-            var diff = bearing - filteredBearing
-            while (diff < -180f) diff += 360f
-            while (diff > 180f) diff -= 360f
-
-            filteredBearing += bAlpha * diff
-            filteredBearing = (filteredBearing + 360f) % 360f
-
-            val sAlpha = speedSmoothingAlpha.coerceIn(
-                TuningPreferencesDefaults.MIN_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA,
-                TuningPreferencesDefaults.MAX_MAP_FOLLOW_ME_SPEED_SMOOTHING_ALPHA
-            )
-            filteredSpeed += sAlpha * (speed - filteredSpeed)
-
-            val targetZoom = calculateFollowMeTargetZoom(
-                speedMps = filteredSpeed,
-                baseZoom = baseZoom,
-                speedZoomEnabled = speedZoomEnabled,
-                cruisingZoom = cruisingZoom
-            )
-            val zoomDelta = Math.abs(targetZoom - activeZoom)
-            val effectiveZoom = if (zoomDelta >= 0.10f) {
-                activeZoom = targetZoom
-                targetZoom
-            } else {
-                activeZoom
-            }
-
-            val effectiveTilt = tiltAngle.coerceIn(0f, 70f)
-            val cameraTarget = calculateFollowMeCameraTarget(
-                currentLocation = currentLocation,
-                bearing = filteredBearing,
-                zoom = effectiveZoom,
-                lookaheadPaddingPercent = lookaheadPaddingPercent,
-                viewportHeightDp = viewportHeightDp,
-                tiltAngle = effectiveTilt
-            )
-            try {
-                cameraPositionState.animate(
-                    CameraUpdateFactory.newCameraPosition(
-                        CameraPosition.builder()
-                            .target(cameraTarget)
-                            .bearing(filteredBearing)
-                            .zoom(effectiveZoom)
-                            .tilt(effectiveTilt)
-                            .build()
-                    ),
-                    400
+            do {
+                val step = stepFollowMeSmoothing(
+                    currentFilteredSpeed = filteredSpeed,
+                    currentFilteredBearing = filteredBearing,
+                    currentActiveZoom = activeZoom,
+                    targetSpeed = speed,
+                    targetBearing = bearing,
+                    baseZoom = baseZoom,
+                    speedZoomEnabled = speedZoomEnabled,
+                    cruisingZoom = cruisingZoom,
+                    speedSmoothingAlpha = speedSmoothingAlpha,
+                    bearingSmoothingAlpha = bearingSmoothingAlpha
                 )
-            } catch (e: Exception) {
-                Log.e("FollowMeController", "Error updating camera position", e)
-            }
+                filteredSpeed = step.filteredSpeed
+                filteredBearing = step.filteredBearing
+                activeZoom = step.activeZoom
+                val effectiveZoom = step.effectiveZoom
+
+                val effectiveTilt = tiltAngle.coerceIn(0f, 70f)
+                val cameraTarget = calculateFollowMeCameraTarget(
+                    currentLocation = currentLocation,
+                    bearing = filteredBearing,
+                    zoom = effectiveZoom,
+                    lookaheadPaddingPercent = lookaheadPaddingPercent,
+                    viewportHeightDp = viewportHeightDp,
+                    tiltAngle = effectiveTilt
+                )
+                try {
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newCameraPosition(
+                            CameraPosition.builder()
+                                .target(cameraTarget)
+                                .bearing(filteredBearing)
+                                .zoom(effectiveZoom)
+                                .tilt(effectiveTilt)
+                                .build()
+                        ),
+                        400
+                    )
+                } catch (e: Exception) {
+                    Log.e("FollowMeController", "Error updating camera position", e)
+                }
+
+                if (!step.isConverged) {
+                    kotlinx.coroutines.delay(1000L)
+                }
+            } while (!step.isConverged)
         }
     }
     

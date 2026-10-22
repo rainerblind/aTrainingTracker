@@ -20,8 +20,10 @@ package com.atrainingtracker.banalservice.sensor.formater;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.trainingtracker.MyHelper;
+import com.atrainingtracker.trainingtracker.MyUnits;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 
+import android.content.Context;
 import java.util.Locale;
 
 
@@ -50,7 +52,13 @@ public class AltitudeFormatter implements MyFormatter<Number> {
             return "--";
         }
 
-        String units = TrainingApplication.getAppContext().getString(MyHelper.getShortAltitudeUnitNameId());
+        Context context = TrainingApplication.getAppContext();
+        String units;
+        if (context != null) {
+            units = context.getString(MyHelper.getShortAltitudeUnitNameId());
+        } else {
+            units = TrainingApplication.getUnit() == MyUnits.IMPERIAL ? "ft" : "m";
+        }
 
         switch (TrainingApplication.getUnit()) {
             case METRIC:

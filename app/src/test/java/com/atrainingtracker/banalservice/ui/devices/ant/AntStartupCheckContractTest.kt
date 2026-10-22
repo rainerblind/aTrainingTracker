@@ -50,8 +50,8 @@ class AntStartupCheckContractTest {
         // Extract onCreate method body roughly
         val onCreateStart = content.indexOf("override fun onCreate(savedInstanceState: Bundle?)")
         assertTrue("onCreate must exist in MainActivityWithNavigation.kt", onCreateStart != -1)
-        val onCreateEnd = content.indexOf("private fun checkBatteryOptimizations()", onCreateStart)
-        assertTrue("checkBatteryOptimizations must follow onCreate", onCreateEnd != -1)
+        val onCreateEnd = content.indexOf("private fun observeNavigationEvents()", onCreateStart)
+        assertTrue("observeNavigationEvents must follow onCreate", onCreateEnd != -1)
 
         val onCreateBody = content.substring(onCreateStart, onCreateEnd)
 

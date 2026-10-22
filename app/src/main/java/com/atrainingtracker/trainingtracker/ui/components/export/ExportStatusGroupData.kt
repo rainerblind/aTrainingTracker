@@ -39,7 +39,6 @@ data class ExportDetail(
  * @param details a list of detailed information for each export job in this group
  */
 
-// TODO: find a better name?
 data class ExportStatusGroupData(
     val hasContent: Boolean,
     val groupTitle: String = "",
@@ -48,4 +47,48 @@ data class ExportStatusGroupData(
     val succeededLine: String? = null,
     val failedLine: String? = null,
     val details: List<ExportDetail> = emptyList()
-)
+) {
+    /**
+     * True when this group has content and all active jobs succeeded without any waiting,
+     * running, or failed lines (`REQ-UI-407.1`).
+     */
+    val isFullySucceeded: Boolean
+        get() = hasContent &&
+            !succeededLine.isNullOrBlank() &&
+            waitingLine.isNullOrBlank() &&
+            runningLine.isNullOrBlank() &&
+            failedLine.isNullOrBlank()
+
+    /**
+     * True when this group has content and at least one waiting, running, or failed status line
+     * that requires immediate user visibility (`REQ-UI-407.1`).
+     */
+    val needsAttentionOrInProgress: Boolean
+        get() = hasContent && (
+            !waitingLine.isNullOrBlank() ||
+                !runningLine.isNullOrBlank() ||
+                !failedLine.isNullOrBlank()
+            )
+}
+
+/**
+ * Formats a compact single-line summary of all fully succeeded export groups
+ * (e.g. `"✅ File, Dropbox, Communities"`), or returns `null` if no group is fully succeeded (`REQ-UI-407.1`).
+ */
+fun formatCollapsedSucceededSummary(groups: List<ExportStatusGroupData>): String? {
+    val succeededTitles = groups
+        .filter { it.isFullySucceeded && it.groupTitle.isNotBlank() }
+        .map { it.groupTitle }
+    return if (succeededTitles.isNotEmpty()) {
+        "✅ ${succeededTitles.joinToString(", ")}"
+    } else {
+        null
+    }
+}
+
+/**
+ * Returns the subset of active export groups that have waiting, running, or failed jobs (`REQ-UI-407.1`).
+ */
+fun filterAttentionGroups(groups: List<ExportStatusGroupData>): List<ExportStatusGroupData> {
+    return groups.filter { it.needsAttentionOrInProgress }
+}

@@ -43,8 +43,8 @@ public enum DeviceType {
     ENVIRONMENT(SensorType.TEMPERATURE, BSportType.UNKNOWN, 1),
 
     SPEED_AND_LOCATION_GPS(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
-    SPEED_AND_LOCATION_NETWORK(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
     SPEED_AND_LOCATION_GOOGLE_FUSED(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
+    SPEED_AND_LOCATION_NETWORK(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
 
     ALTITUDE_FROM_PRESSURE(SensorType.ALTITUDE, BSportType.UNKNOWN, 1),
 
@@ -52,7 +52,8 @@ public enum DeviceType {
     SENSOR_MANAGER(SensorType.SENSORS, BSportType.UNKNOWN, 1),
     CLOCK(SensorType.TIME_TOTAL, BSportType.UNKNOWN, 1),
     BATTERY(SensorType.PHONE_BATTERY, BSportType.UNKNOWN, 1),
-    VERTICAL_SPEED_AND_SLOPE(SensorType.VERTICAL_SPEED, BSportType.UNKNOWN, 1);   // only last one has ';' rest has ','!
+    VERTICAL_SPEED_AND_SLOPE(SensorType.VERTICAL_SPEED, BSportType.UNKNOWN, 1),
+    CYCLING_POWER_METRICS(SensorType.POWER_TO_WEIGHT, BSportType.BIKE, 1);   // only last one has ';' rest has ','!
 
     private final SensorType mainSensorType;
     private final BSportType sportType;

@@ -23,6 +23,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
+import com.atrainingtracker.util.safeUnregisterReceiver
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.exporter.ExportStatus
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
@@ -109,7 +110,7 @@ class ExportStatusRepository private constructor(context: Context) {
 
             // 4. Cleanup when the Flow is no longer needed
             awaitClose {
-                appContext.unregisterReceiver(receiver)
+                appContext.safeUnregisterReceiver(receiver, "ExportStatusRepository")
             }
         }
             .stateIn(

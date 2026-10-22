@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.segments
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -33,8 +34,8 @@ class LiveSegmentSheetLayoutTest {
 
     @Test
     fun testLiveSegmentSheet_composableExistsAndIsPublic() {
-        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.segments.LIveSegmentSheetKt")
-        assertNotNull("LIveSegmentSheetKt class must exist", clazz)
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheetKt")
+        assertNotNull("LiveSegmentSheetKt class must exist", clazz)
 
         val methods = clazz.declaredMethods
         val sheetMethod = methods.find { it.name.startsWith("LiveSegmentSheet") && Modifier.isPublic(it.modifiers) }
@@ -65,8 +66,8 @@ class LiveSegmentSheetLayoutTest {
         while (!java.io.File(dir, "app").exists() && dir.parentFile != null) {
             dir = dir.parentFile!!
         }
-        val file = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LIveSegmentSheet.kt")
-        assertTrue("LIveSegmentSheet.kt must exist", file.exists())
+        val file = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LiveSegmentSheet.kt")
+        assertTrue("LiveSegmentSheet.kt must exist", file.exists())
         val content = file.readText()
         assertTrue(
             "LiveSegmentSheet must pass showZoomControls = false to MapDetailLayout (REQ-UI-197, ATT-1736)",
@@ -81,7 +82,7 @@ class LiveSegmentSheetLayoutTest {
             dir = dir.parentFile!!
         }
 
-        // 1. Verify SensorGridScreen.kt configures sheetContainerColor and Box background
+        // 1. Verify SensorGridScreen.kt configures sheetContainerColor and mounts LiveTrackingSheetContainer
         val sensorGridFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         assertTrue("SensorGridScreen.kt must exist", sensorGridFile.exists())
         val sensorGridContent = sensorGridFile.readText()
@@ -90,8 +91,16 @@ class LiveSegmentSheetLayoutTest {
             sensorGridContent.contains("sheetContainerColor = MaterialTheme.colorScheme.surface")
         )
         assertTrue(
-            "SensorGridScreen sheet content Box must apply background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape) (REQ-UI-196, ATT-1735)",
-            sensorGridContent.contains(".background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)")
+            "SensorGridScreen must mount live sheets inside LiveTrackingSheetContainer (REQ-UI-196, ATT-1735, REQ-UI-366)",
+            sensorGridContent.contains("LiveTrackingSheetContainer")
+        )
+
+        val containerFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/core/LiveTrackingSheetContainer.kt")
+        assertTrue("LiveTrackingSheetContainer.kt must exist", containerFile.exists())
+        val containerContent = containerFile.readText()
+        assertTrue(
+            "LiveTrackingSheetContainer must apply background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape) (REQ-UI-196, ATT-1735, REQ-UI-366)",
+            containerContent.contains(".background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)")
         )
 
         // 2. Verify MapDetailLayout.kt applies background(surface) in sheet mode (!useStatusBarsPadding)
@@ -103,13 +112,24 @@ class LiveSegmentSheetLayoutTest {
             mapDetailContent.contains("if (!useStatusBarsPadding) Modifier.background(MaterialTheme.colorScheme.surface) else Modifier")
         )
 
-        // 3. Verify LIveSegmentSheet.kt header applies background(surface)
-        val liveSheetFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LIveSegmentSheet.kt")
-        assertTrue("LIveSegmentSheet.kt must exist", liveSheetFile.exists())
+        // 3. Verify LiveSegmentSheet.kt delegates header to LiveTrackingEntitySheet with surface background (REQ-UI-196, REQ-UI-383, ATT-3576)
+        val liveSheetFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LiveSegmentSheet.kt")
+        assertTrue("LiveSegmentSheet.kt must exist", liveSheetFile.exists())
         val liveSheetContent = liveSheetFile.readText()
         assertTrue(
-            "LIveSegmentSheet header must apply background(MaterialTheme.colorScheme.surface) (REQ-UI-196, ATT-1735)",
-            liveSheetContent.contains(".background(MaterialTheme.colorScheme.surface)")
+            "LiveSegmentSheet header must delegate to LiveTrackingEntitySheet (REQ-UI-196, REQ-UI-383, ATT-3576)",
+            liveSheetContent.contains("LiveTrackingEntitySheet(")
+        )
+        assertFalse(
+            "LiveSegmentSheet must not instantiate raw HorizontalDivider directly (REQ-UI-383, ATT-3576)",
+            liveSheetContent.contains("HorizontalDivider(")
+        )
+        val entitySheetFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/core/LiveTrackingEntitySheet.kt")
+        assertTrue("LiveTrackingEntitySheet.kt must exist", entitySheetFile.exists())
+        val entitySheetContent = entitySheetFile.readText()
+        assertTrue(
+            "LiveTrackingEntitySheet must apply background(MaterialTheme.colorScheme.surface) (REQ-UI-196, REQ-UI-383)",
+            entitySheetContent.contains(".background(MaterialTheme.colorScheme.surface)")
         )
     }
 
@@ -148,5 +168,53 @@ class LiveSegmentSheetLayoutTest {
         val localizedSummary = summary.copy(distance = "1,2 km", distance_raw = 1200.0)
         val localizedEvaluatedDistance = localizedSummary.distance_raw.coerceAtLeast(liveData.distanceOnSegment_raw)
         assertEquals(1200.0, localizedEvaluatedDistance, 0.001)
+    }
+
+    @Test
+    fun testSegmentLiveDetails_stateAwareVisibilityBranches() {
+        var dir = java.io.File(System.getProperty("user.dir") ?: ".")
+        while (!java.io.File(dir, "app").exists() && dir.parentFile != null) {
+            dir = dir.parentFile!!
+        }
+        val file = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/SegmentLiveDetails.kt")
+        assertTrue("SegmentLiveDetails.kt must exist", file.exists())
+        val content = file.readText()
+
+        // 1. Verify state-aware branching on LiveSegmentStatus
+        assertTrue(
+            "SegmentLiveDetails must branch using when (liveSegmentData.segmentStatus)",
+            content.contains("when (liveSegmentData.segmentStatus)")
+        )
+
+        // 2. In APPROACHING, verify segment_status_start_in is used and offset is not rendered
+        assertTrue(
+            "APPROACHING state branch must exist",
+            content.contains("LiveSegmentStatus.APPROACHING ->")
+        )
+        val approachingSection = content.substringAfter("LiveSegmentStatus.APPROACHING ->").substringBefore("LiveSegmentStatus.FINISHED ->")
+        assertTrue("APPROACHING branch must show start_in", approachingSection.contains("R.string.segment_status_start_in"))
+        assertTrue("APPROACHING branch must show remaining", approachingSection.contains("R.string.segment_status_remaining"))
+        assertFalse("APPROACHING branch must not render offset", approachingSection.contains("R.string.segment_status_offset"))
+
+        // 3. In FINISHED, verify segment_status_past_finish is rendered while remaining and offset are omitted
+        val finishedSection = content.substringAfter("LiveSegmentStatus.FINISHED ->").substringBefore("else ->")
+        assertTrue("FINISHED branch must show distanceOnSegment", finishedSection.contains("liveSegmentData.distanceOnSegment"))
+        assertTrue("FINISHED branch must show past_finish", finishedSection.contains("R.string.segment_status_past_finish"))
+        assertFalse("FINISHED branch must not render remaining", finishedSection.contains("R.string.segment_status_remaining"))
+        assertFalse("FINISHED branch must not render offset", finishedSection.contains("R.string.segment_status_offset"))
+
+        // 4. In FINISHED with PR delta, verify PR delta format and TTColor.Zone2 styling
+        assertTrue(
+            "FINISHED PR delta check must verify prDeltaFormatted != null",
+            content.contains("liveSegmentData.segmentStatus == LiveSegmentStatus.FINISHED && liveSegmentData.prDeltaFormatted != null")
+        )
+        assertTrue(
+            "PR delta must use string resource segment_status_pr_delta",
+            content.contains("R.string.segment_status_pr_delta")
+        )
+        assertTrue(
+            "PR delta <= 0 must use TTColor.Zone2",
+            content.contains("TTColor.Zone2")
+        )
     }
 }

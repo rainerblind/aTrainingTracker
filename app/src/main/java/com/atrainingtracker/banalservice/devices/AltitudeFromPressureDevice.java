@@ -31,6 +31,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
+import com.atrainingtracker.util.LifecycleUtils;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
@@ -116,8 +117,7 @@ public class AltitudeFromPressureDevice extends MyDevice
         mExecutor.shutdown();
         ((SensorManager) mContext.getSystemService(Context.SENSOR_SERVICE)).unregisterListener(this);
 
-        ContextCompat.registerReceiver(mContext, mGPSProviderEnabledReceiver, mGPSProviderEnabledFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
-        mContext.unregisterReceiver(mGPSProviderEnabledReceiver);
+        LifecycleUtils.safeUnregisterReceiver(mContext, mGPSProviderEnabledReceiver, TAG);
         mPendingReferenceAltitude = Double.NaN;
         mIsCalibrated = false;
     }

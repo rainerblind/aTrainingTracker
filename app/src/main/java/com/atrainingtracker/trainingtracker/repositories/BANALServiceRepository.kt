@@ -22,6 +22,7 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import com.atrainingtracker.util.safeStartService
 import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.os.IBinder
@@ -165,12 +166,19 @@ class BANALServiceRepository private constructor(context: Context) {
 
     // --- Tracking Mode and Lifecycle Events ---
     
+    private val _wasAutoPaused = MutableStateFlow(false)
+    val wasAutoPaused: StateFlow<Boolean> = _wasAutoPaused.asStateFlow()
+
     private val _trackingMode = MutableLiveData<TrackingMode>()
     val trackingMode: LiveData<TrackingMode> = _trackingMode
 
     // Listens for tracking state changes (READY, TRACKING, PAUSED) from TrainingApplication
     private val trackingModeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            val wasAuto = intent?.getBooleanExtra(TrainingApplication.EXTRA_WAS_AUTO_PAUSED, false)
+                ?: TrainingApplication.wasAutoPaused()
+            _wasAutoPaused.value = wasAuto
+
             val newTrackingMode = TrainingApplication.getTrackingMode()
             if (_trackingMode.value != newTrackingMode) {
                 _trackingMode.postValue(newTrackingMode)
@@ -208,6 +216,7 @@ class BANALServiceRepository private constructor(context: Context) {
 
 
     init {
+        _wasAutoPaused.value = TrainingApplication.wasAutoPaused()
         _trackingMode.postValue(TrainingApplication.getTrackingMode())
 
         appContext.registerReceiver(
@@ -254,7 +263,7 @@ class BANALServiceRepository private constructor(context: Context) {
         if (!isBoundToBanalService && !isBinding) {
             isBinding = true
             val intent = Intent(appContext, BANALService::class.java)
-            appContext.startService(intent)
+            appContext.safeStartService(intent, TAG)
             appContext.bindService(intent, banalServiceConnection, Context.BIND_AUTO_CREATE)
         }
     }

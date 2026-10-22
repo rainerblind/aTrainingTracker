@@ -49,6 +49,7 @@ import com.atrainingtracker.trainingtracker.routes.ForkBranchOption
 import com.atrainingtracker.trainingtracker.routes.ForkDecisionState
 import com.atrainingtracker.trainingtracker.routes.ForkDirection
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 import com.google.android.gms.maps.model.LatLng
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -255,14 +256,14 @@ fun ForkRouteRow(
                 modifier = Modifier.padding(top = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val distKm = branch.totalDistanceMeters / 1000.0
+                val formatters = LocalMetricFormatter.current
                 Text(
-                    text = String.format(Locale.US, "%.1f km", distKm),
+                    text = formatters.distance.format_with_units(branch.totalDistanceMeters),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "+${branch.totalElevationMeters.roundToInt()} m",
+                    text = "+${formatters.altitude.format_with_units(branch.totalElevationMeters)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

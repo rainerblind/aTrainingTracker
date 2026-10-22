@@ -119,6 +119,22 @@ data class WorkoutData(
     val maxLat: Double? = null,
     val maxLng: Double? = null,
 
+    // --- 2b. Anaerobic Battery (W'bal), Aerobic Efficiency & Power Training Summary (REQ-UI-399.3, REQ-UI-400.3, REQ-UI-402.1) ---
+    val minWPrimeBalKj: Double? = null,
+    val minWPrimeBalPct: Double? = null,
+    val isEmptyTankWarning: Boolean = false,
+    val efficiencyFactor: Double? = null,
+    val aerobicDecouplingPct: Double? = null,
+    val isPowerBasedEfficiency: Boolean = true,
+    val isAerobicDecouplingHighDrift: Boolean = false,
+    val normalizedPowerWatts: Double? = null,
+    val intensityFactor: Double? = null,
+    val tss: Double? = null,
+    val workKj: Double? = null,
+    val avgPowerToWeight: Double? = null,
+    val maxPowerToWeight: Double? = null,
+    val variabilityIndex: Double? = null,
+
     // --- 3. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
     val extremaRows: List<ExtremaDataRow> = emptyList(),
@@ -161,7 +177,21 @@ data class WorkoutData(
             bSportType = bSportType,
             ascentMeters = ascentMeters,
             descentMeters = descentMeters,
-            maxDisplacement = maxDisplacement
+            maxDisplacement = maxDisplacement,
+            minWPrimeBalKj = minWPrimeBalKj,
+            minWPrimeBalPct = minWPrimeBalPct,
+            isEmptyTankWarning = isEmptyTankWarning,
+            efficiencyFactor = efficiencyFactor,
+            aerobicDecouplingPct = aerobicDecouplingPct,
+            isPowerBasedEfficiency = isPowerBasedEfficiency,
+            isAerobicDecouplingHighDrift = isAerobicDecouplingHighDrift,
+            normalizedPowerWatts = normalizedPowerWatts,
+            intensityFactor = intensityFactor,
+            tss = tss,
+            workKj = workKj,
+            avgPowerToWeight = avgPowerToWeight,
+            maxPowerToWeight = maxPowerToWeight,
+            variabilityIndex = variabilityIndex
         )
 
     val descriptionData: DescriptionData

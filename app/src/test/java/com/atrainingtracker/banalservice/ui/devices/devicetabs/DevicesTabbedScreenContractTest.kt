@@ -161,4 +161,30 @@ class DevicesTabbedScreenContractTest {
             content.contains("tint = LocalContentColor.current")
         )
     }
+
+    @Test
+    fun testDevicesTabbedScreen_onScanForSensors_contract() {
+        val file = findFile("src/main/java/com/atrainingtracker/banalservice/ui/devices/devicetabs/DevicesTabbedScreen.kt")
+        val content = file.readText()
+
+        // 1. Must wire onScanForSensors across DeviceListScreen tabs
+        assertTrue(
+            "DevicesTabbedScreen must pass onScanForSensors = { showProtocolSheet = true }",
+            content.contains("onScanForSensors = { showProtocolSheet = true }")
+        )
+
+        // 2. Must clean up searching and sheet state on navigation disposal
+        assertTrue(
+            "DevicesTabbedScreen must stop searching on dispose",
+            content.contains("tabViewModel.stopSearching()")
+        )
+        assertTrue(
+            "DevicesTabbedScreen must reset showProtocolSheet on dispose",
+            content.contains("showProtocolSheet = false")
+        )
+        assertTrue(
+            "DevicesTabbedScreen must reset selectedPairingProtocol on dispose",
+            content.contains("selectedPairingProtocol = null")
+        )
+    }
 }

@@ -28,6 +28,7 @@ import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
@@ -35,6 +36,7 @@ import com.google.maps.android.PolyUtil
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -75,7 +77,7 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
     val enabledTrackTypes: StateFlow<Set<TrackType>> = prefManager.enabledTrackTypesFlow
         .map { strings ->
             strings.mapNotNull {
-                try { TrackType.valueOf(it) } catch(e: Exception) { null }
+                safeEnumValueOfOrNull<TrackType>(it)
             }.toSet()
         }
         .stateIn(
@@ -91,8 +93,13 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
         }
     }
 
+    private var loadJob: Job? = null
+    @androidx.annotation.VisibleForTesting
+    internal val currentLoadJob: Job? get() = loadJob
+
     fun loadAftermathData(workoutData: WorkoutData) {
-        viewModelScope.launch(ioDispatcher) {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch(ioDispatcher) {
             val workoutId = workoutData.id
             val bSportType = workoutData.bSportType
 
@@ -126,7 +133,7 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                     PathPoint(
                         distance = dists.getOrElse(index) { 0.0 },
                         latLng = latLng,
-                        altitude = alts.getOrElse(index) { 0.0 }
+                        altitude = alts.getOrNull(index)
                     )
                 }
 
@@ -153,8 +160,15 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
 
             // --- PHASE 4: High-Resolution Tracks (From Samples DB) ---
             // Load full fidelity data and simplify aggressively for map performance
+            // ATT-4003 / REQ-DAT-033: Consolidate multi-pass scans into single projected query
+            val telemetry = try {
+                workoutRepository.loadWorkoutDetailTelemetry(workoutId, bSportType)
+            } catch (_: Throwable) {
+                null
+            }
+
             val fullTracks = TrackType.entries.mapNotNull { type ->
-                val fullPath = workoutRepository.getWorkoutTrackPoints(workoutId, type)
+                val fullPath = telemetry?.tracks?.get(type) ?: workoutRepository.getWorkoutTrackPoints(workoutId, type)
                 if (fullPath.isNotEmpty()) {
                     // PERFORMANCE: Cap tracks at ~800 points for smooth UI interaction
                     val simplifiedPath = if (fullPath.size > 800) {
@@ -242,8 +256,8 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
             }
 
             // --- PHASE 7: Zone Analytics (Heart Rate & Power 5-Zone Distribution) ---
-            val hrDistribution = workoutRepository.getHeartRateZoneDistribution(workoutId, bSportType)
-            val powerDistribution = workoutRepository.getPowerZoneDistribution(workoutId)
+            val hrDistribution = telemetry?.hrZoneDistribution ?: workoutRepository.getHeartRateZoneDistribution(workoutId, bSportType)
+            val powerDistribution = telemetry?.powerZoneDistribution ?: workoutRepository.getPowerZoneDistribution(workoutId)
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(
                     hrZoneDistribution = hrDistribution,

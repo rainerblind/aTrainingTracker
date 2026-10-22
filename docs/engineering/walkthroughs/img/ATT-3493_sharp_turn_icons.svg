@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 220" width="540" height="220" style="background-color:#121212;">
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; fill: #FFFFFF; font-size: 13px; text-anchor: middle; }
+    .label { font-size: 11px; fill: #9E9E9E; }
+    .title { font-size: 15px; font-weight: 600; fill: #E0E0E0; letter-spacing: 0.3px; }
+  </style>
+
+  <!-- Title -->
+  <text x="270" y="28" class="title">Turn Direction Navigation Icons (ATT-3493)</text>
+  
+  <!-- Sharp Left Card -->
+  <g transform="translate(100, 42)">
+    <rect x="-65" y="0" width="130" height="135" rx="16" fill="#1E1E1E" stroke="#333333" stroke-width="1.5"/>
+    <g transform="translate(-40, 10) scale(3.333)">
+      <path fill="#1976D2" d="M18,20h-2V9c0,-2.21 -1.79,-4 -4,-4c-2.21,0 -4,1.79 -4,4v2.59l1.59,-1.59L11,11.41l-4,4l-4,-4l1.41,-1.41L6,11.59V9c0,-3.31 2.69,-6 6,-6c3.31,0 6,2.69 6,6V20z" />
+    </g>
+    <text x="0" y="106" style="font-weight:600; fill:#ECEFF1;">Sharp Left</text>
+    <text x="0" y="122" class="label">ic_turn_sharp_left</text>
+  </g>
+
+  <!-- Sharp Right Card -->
+  <g transform="translate(270, 42)">
+    <rect x="-65" y="0" width="130" height="135" rx="16" fill="#1E1E1E" stroke="#333333" stroke-width="1.5"/>
+    <g transform="translate(-40, 10) scale(3.333)">
+      <path fill="#1976D2" d="M6,20h2V9c0,-2.21 1.79,-4 4,-4c2.21,0 4,1.79 4,4v2.59l-1.59,-1.59L13,11.41l4,4l4,-4l-1.41,-1.41L18,11.59V9c0,-3.31 -2.69,-6 -6,-6c-3.31,0 -6,2.69 -6,6V20z" />
+    </g>
+    <text x="0" y="106" style="font-weight:600; fill:#ECEFF1;">Sharp Right</text>
+    <text x="0" y="122" class="label">ic_turn_sharp_right</text>
+  </g>
+
+  <!-- U-Turn Reference Card -->
+  <g transform="translate(440, 42)">
+    <rect x="-65" y="0" width="130" height="135" rx="16" fill="#1E1E1E" stroke="#333333" stroke-width="1.5"/>
+    <g transform="translate(-40, 10) scale(3.333)">
+      <path fill="#64B5F6" d="M6,20h2V9c0,-2.21 1.79,-4 4,-4c2.21,0 4,1.79 4,4v11h2V9c0,-3.31 -2.69,-6 -6,-6c-3.31,0 -6,2.69 -6,6V20z M14,14l4,4l4,-4l-1.41,-1.41L19,14.17V9h-2v5.17l-1.59,-1.58L14,14z" />
+    </g>
+    <text x="0" y="106" style="font-weight:600; fill:#ECEFF1;">U-Turn (Ref)</text>
+    <text x="0" y="122" class="label">ic_turn_u_turn</text>
+  </g>
+
+  <!-- Bottom subtitle -->
+  <text x="270" y="200" class="label">Grounded at baseline y=20 • 2dp stem • 135° acute arrowhead • Reflection symmetric across x=12</text>
+</svg>

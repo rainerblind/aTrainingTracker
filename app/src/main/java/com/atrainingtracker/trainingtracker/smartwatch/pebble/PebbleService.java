@@ -40,6 +40,8 @@ import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.BANALService.BANALServiceComm;
 import com.atrainingtracker.banalservice.sensor.SensorData;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.util.EnumUtils;
+import com.atrainingtracker.util.LifecycleUtils;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.trainingtracker.MyHelper;
 import com.atrainingtracker.trainingtracker.MyUnits;
@@ -66,7 +68,7 @@ import java.util.UUID;
 // TODO create super class for similar services???
 public class PebbleService extends Service {
     private static final String TAG = "PebbleService";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = com.atrainingtracker.BuildConfig.DEBUG;
 
 
     private static final int MAX_STRING_SIZE = 14;
@@ -309,21 +311,29 @@ public class PebbleService extends Service {
         List<SensorType> result = new LinkedList<>();
 
         SQLiteDatabase db = (new PebbleDbHelper(this)).getReadableDatabase();
-        Cursor cursor = db.query(PebbleDbHelper.ROWS_TABLE,
+        try (Cursor cursor = db.query(PebbleDbHelper.ROWS_TABLE,
                 null,
                 PebbleDbHelper.VIEW_ID + "=?",
                 new String[]{mViewId + ""},
                 null,
                 null,
-                PebbleDbHelper.ROW_NR + " ASC"); // sorting
+                PebbleDbHelper.ROW_NR + " ASC")) { // sorting
 
-        mRows = cursor.getCount();
-
-        while (cursor.moveToNext()) {
-            result.add(SensorType.valueOf(cursor.getString(cursor.getColumnIndex(PebbleDbHelper.SENSOR_TYPE))));
+            if (cursor != null) {
+                mRows = cursor.getCount();
+                int colIdx = cursor.getColumnIndex(PebbleDbHelper.SENSOR_TYPE);
+                while (cursor.moveToNext()) {
+                    SensorType sensorType = colIdx != -1 ? EnumUtils.safeValueOfOrNull(SensorType.class, cursor.getString(colIdx), TAG) : null;
+                    if (sensorType != null) {
+                        result.add(sensorType);
+                    } else {
+                        Log.w(TAG, "Skipping unrecognized sensor type for Pebble view");
+                    }
+                }
+            } else {
+                mRows = 0;
+            }
         }
-
-        cursor.close();
 
         mSensorTypeList = result;
     }
@@ -390,14 +400,14 @@ public class PebbleService extends Service {
         banalService = null;
 
         // unregisterReceiver(mSearchingFinishedReceiver);
-        unregisterReceiver(mConfigurePebbleWatchAppReceiver);
-        unregisterReceiver(mUpdatePebbleReceiver);
-        unregisterReceiver(mPebbleConnectedReceiver);
-        unregisterReceiver(mPauseReceiver);
-        unregisterReceiver(mResumeReceiver);
-        unregisterReceiver(mLapSummaryReceiver);
-        unregisterReceiver(mStartSearchingReceiver);
-        unregisterReceiver(mEndSearchingReceiver);
+        LifecycleUtils.safeUnregisterReceiver(this, mConfigurePebbleWatchAppReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mUpdatePebbleReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mPebbleConnectedReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mPauseReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mResumeReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mLapSummaryReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mStartSearchingReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mEndSearchingReceiver, TAG);
 
         stopPebbleWatchApp();
     }
@@ -540,21 +550,9 @@ public class PebbleService extends Service {
         }
 
         if (mReceiversRegistered) {
-            try {
-                unregisterReceiver(mPebbleDataReceiver);
-            } catch (Exception e) {
-                Log.e(TAG, "failed to unregister Data receiver");
-            }
-            try {
-                unregisterReceiver(pebbleAckReceiver);
-            } catch (Exception e) {
-                Log.e(TAG, "failed to unregister ACK receiver");
-            }
-            try {
-                unregisterReceiver(pebbleNackReceiver);
-            } catch (Exception e) {
-                Log.e(TAG, "failed to unregister NACK receiver");
-            }
+            LifecycleUtils.safeUnregisterReceiver(this, mPebbleDataReceiver, TAG);
+            LifecycleUtils.safeUnregisterReceiver(this, pebbleAckReceiver, TAG);
+            LifecycleUtils.safeUnregisterReceiver(this, pebbleNackReceiver, TAG);
         }
     }
 

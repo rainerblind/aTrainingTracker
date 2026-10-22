@@ -46,14 +46,16 @@ data class TelemetryZoneBand(
 object TelemetryZoneMath {
 
     /**
-     * Standard training zone colors matching TTColor palette.
+     * Standard training zone colors matching TTColor palette (Z1..Z7).
      */
     val ZONE_COLORS = listOf(
         TTColor.Zone1,
         TTColor.Zone2,
         TTColor.Zone3,
         TTColor.Zone4,
-        TTColor.Zone5
+        TTColor.Zone5,
+        TTColor.Zone6,
+        TTColor.Zone7
     )
 
     /**
@@ -98,7 +100,7 @@ object TelemetryZoneMath {
     }
 
     /**
-     * Calculates the 5 horizontal zone bands for a given cycling power data range.
+     * Calculates the 7 horizontal zone bands for a given cycling power data range.
      * Each band's [minVal, maxVal] interval is clamped to [dataMin, dataMax].
      */
     fun calculatePowerZoneBands(
@@ -113,7 +115,9 @@ object TelemetryZoneMath {
             Triple(2, thresholds.z1Max.toDouble(), thresholds.z2Max.toDouble()),
             Triple(3, thresholds.z2Max.toDouble(), thresholds.z3Max.toDouble()),
             Triple(4, thresholds.z3Max.toDouble(), thresholds.z4Max.toDouble()),
-            Triple(5, thresholds.z4Max.toDouble(), dataMax)
+            Triple(5, thresholds.z4Max.toDouble(), thresholds.z5Max.toDouble()),
+            Triple(6, thresholds.z5Max.toDouble(), thresholds.z6Max.toDouble()),
+            Triple(7, thresholds.z6Max.toDouble(), dataMax)
         )
 
         return rawBands.mapNotNull { (zoneIndex, rawMin, rawMax) ->
@@ -134,7 +138,7 @@ object TelemetryZoneMath {
     }
 
     /**
-     * Returns valid threshold boundary guidelines (Z1..Z4 upper limits) that fall strictly
+     * Returns valid threshold boundary guidelines (Z1..Z4 for HR or custom list) that fall strictly
      * within the visible data range (dataMin < threshold < dataMax).
      */
     fun calculateThresholdDashes(
@@ -146,6 +150,27 @@ object TelemetryZoneMath {
         dataMax: Double
     ): List<Double> {
         return listOf(z1Max, z2Max, z3Max, z4Max)
+            .map { it.toDouble() }
+            .filter { it > dataMin && it < dataMax }
+    }
+
+    /**
+     * Returns valid threshold boundary guidelines for cycling power (Z1..Z6 upper limits)
+     * that fall strictly within the visible data range (dataMin < threshold < dataMax).
+     */
+    fun calculatePowerThresholdDashes(
+        thresholds: PowerZoneThresholds,
+        dataMin: Double,
+        dataMax: Double
+    ): List<Double> {
+        return listOf(
+            thresholds.z1Max,
+            thresholds.z2Max,
+            thresholds.z3Max,
+            thresholds.z4Max,
+            thresholds.z5Max,
+            thresholds.z6Max
+        )
             .map { it.toDouble() }
             .filter { it > dataMin && it < dataMax }
     }
@@ -171,7 +196,8 @@ object TelemetryZoneMath {
     }
 
     /**
-     * Maps an instantaneous cycling power value (Watts) to a 1-indexed zone (1..5).
+     * Maps an instantaneous cycling power value (Watts) to a 1-indexed zone (1..7).
+     * For all values <= z1Max (including 0 and negative values), returns 1 safely.
      */
     fun determinePowerZone(power: Double, thresholds: PowerZoneThresholds): Int {
         return when {
@@ -179,7 +205,9 @@ object TelemetryZoneMath {
             power <= thresholds.z2Max -> 2
             power <= thresholds.z3Max -> 3
             power <= thresholds.z4Max -> 4
-            else -> 5
+            power <= thresholds.z5Max -> 5
+            power <= thresholds.z6Max -> 6
+            else -> 7
         }
     }
 
@@ -209,9 +237,10 @@ object TelemetryZoneMath {
 
     /**
      * Standardized factory method to load cycling power zone thresholds from user preferences
-     * (REQ-UI-260 / ATT-2031).
+     * (REQ-UI-260 / ATT-2031 / REQ-UI-370).
      *
-     * Validates that thresholds are strictly ascending and positive (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3).
+     * Validates that thresholds are strictly ascending and positive:
+     * (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3 && z5 > z4 && z6 > z5).
      * Returns null if unconfigured or invalid.
      */
     fun loadPowerThresholds(context: Context): PowerZoneThresholds? {
@@ -221,8 +250,10 @@ object TelemetryZoneMath {
             val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
             val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
             val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
-                PowerZoneThresholds(z1, z2, z3, z4)
+            val z5 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 5)
+            val z6 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 6)
+            if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3 && z5 > z4 && z6 > z5) {
+                PowerZoneThresholds(z1, z2, z3, z4, z5, z6)
             } else null
         }.getOrNull()
     }

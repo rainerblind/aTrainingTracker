@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import com.atrainingtracker.util.safeEnumValueOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -29,7 +30,9 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilt
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabConfig
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.routes.RouteFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.SegmentFilterCriteria
 import kotlinx.coroutines.CoroutineScope
@@ -44,7 +47,20 @@ private val Context.dataStore by preferencesDataStore(name = "user_preferences")
 typealias WorkoutListCardPreferences = WorkoutCardSectionPreferences
 
 /**
- * Configurable section visibility preferences for detailed workout journal cards (REQ-UI-210 / ATT-1714 / REQ-UI-229 / REQ-UI-240).
+ * Resolves a persisted [ZoneCardDisplayMode] string with legacy `"FIVE_ZONES"` migration
+ * and downgrade-safe fallback to [defaultMode] (REQ-UI-388).
+ */
+internal fun parseZoneCardDisplayMode(
+    rawMode: String?,
+    defaultMode: ZoneCardDisplayMode
+): ZoneCardDisplayMode {
+    if (rawMode == null) return defaultMode
+    if (rawMode == "FIVE_ZONES") return ZoneCardDisplayMode.COLUMNS
+    return safeEnumValueOf(rawMode, defaultMode)
+}
+
+/**
+ * Configurable section visibility preferences for detailed workout journal cards (REQ-UI-210 / ATT-1714 / REQ-UI-229 / REQ-UI-240 / REQ-UI-388).
  */
 data class WorkoutCardSectionPreferences(
     val showDescription: Boolean = true,
@@ -56,11 +72,12 @@ data class WorkoutCardSectionPreferences(
     val showTelemetryCharts: Boolean = false,
     val showZoneAnalysis: Boolean = true,
     val showExportStatus: Boolean = true,
-    val lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY
+    val lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY,
+    val zoneCardDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.STACKED_BAR
 )
 
 /**
- * Configurable section visibility preferences for the full-screen Workout Details screen (REQ-UI-240 / ATT-2030).
+ * Configurable section visibility preferences for the full-screen Workout Details screen (REQ-UI-240 / ATT-2030 / REQ-UI-388).
  */
 data class WorkoutDetailPreferences(
     val showDescription: Boolean = true,
@@ -71,7 +88,8 @@ data class WorkoutDetailPreferences(
     val showElevationProfile: Boolean = true,
     val showTelemetryCharts: Boolean = true,
     val showZoneAnalysis: Boolean = true,
-    val showExportStatus: Boolean = true
+    val showExportStatus: Boolean = true,
+    val zoneCardDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.HISTOGRAM
 )
 
 /**
@@ -111,6 +129,7 @@ class MyPreferenceManager(context: Context) {
         val WORKOUT_CARD_SHOW_ZONES = booleanPreferencesKey("workout_card_show_zones")
         val WORKOUT_CARD_SHOW_EXPORT_STATUS = booleanPreferencesKey("workout_card_show_export_status")
         val WORKOUT_CARD_LAP_DISPLAY_MODE = stringPreferencesKey("workout_card_lap_display_mode")
+        val WORKOUT_CARD_ZONE_DISPLAY_MODE = stringPreferencesKey("workout_card_zone_display_mode")
 
         val WORKOUT_DETAIL_SHOW_DESCRIPTION = booleanPreferencesKey("workout_detail_show_description")
         val WORKOUT_DETAIL_SHOW_EXTREMA = booleanPreferencesKey("workout_detail_show_extrema")
@@ -121,7 +140,9 @@ class MyPreferenceManager(context: Context) {
         val WORKOUT_DETAIL_SHOW_CHARTS = booleanPreferencesKey("workout_detail_show_charts")
         val WORKOUT_DETAIL_SHOW_ZONES = booleanPreferencesKey("workout_detail_show_zones")
         val WORKOUT_DETAIL_SHOW_EXPORT_STATUS = booleanPreferencesKey("workout_detail_show_export_status")
+        val WORKOUT_DETAIL_ZONE_DISPLAY_MODE = stringPreferencesKey("workout_detail_zone_display_mode")
         val WORKOUT_SECTIONS_ORDER = stringPreferencesKey("workout_sections_order")
+        val WORKOUT_DETAIL_TABS_CONFIG = stringPreferencesKey("pref_key_workout_detail_tabs_config")
 
         val EDIT_WORKOUT_SHOW_CLUSTER = booleanPreferencesKey("edit_workout_show_cluster")
         val EDIT_WORKOUT_SHOW_COMMUTE_TRAINER = booleanPreferencesKey("edit_workout_show_commute_trainer")
@@ -143,12 +164,14 @@ class MyPreferenceManager(context: Context) {
             showTelemetryCharts = preferences[WORKOUT_CARD_SHOW_CHARTS] ?: false,
             showZoneAnalysis = preferences[WORKOUT_CARD_SHOW_ZONES] ?: true,
             showExportStatus = preferences[WORKOUT_CARD_SHOW_EXPORT_STATUS] ?: true,
-            lapDisplayMode = try {
+            lapDisplayMode = run {
                 val rawMode = preferences[WORKOUT_CARD_LAP_DISPLAY_MODE]
-                if (rawMode != null && rawMode != "BOTH") LapDisplayMode.valueOf(rawMode) else LapDisplayMode.VISUALIZER_ONLY
-            } catch (e: Exception) {
-                LapDisplayMode.VISUALIZER_ONLY
-            }
+                if (rawMode != null && rawMode != "BOTH") safeEnumValueOf(rawMode, LapDisplayMode.VISUALIZER_ONLY) else LapDisplayMode.VISUALIZER_ONLY
+            },
+            zoneCardDisplayMode = parseZoneCardDisplayMode(
+                preferences[WORKOUT_CARD_ZONE_DISPLAY_MODE],
+                ZoneCardDisplayMode.STACKED_BAR
+            )
         )
     }
 
@@ -164,6 +187,7 @@ class MyPreferenceManager(context: Context) {
             preferences[WORKOUT_CARD_SHOW_ZONES] = prefs.showZoneAnalysis
             preferences[WORKOUT_CARD_SHOW_EXPORT_STATUS] = prefs.showExportStatus
             preferences[WORKOUT_CARD_LAP_DISPLAY_MODE] = prefs.lapDisplayMode.name
+            preferences[WORKOUT_CARD_ZONE_DISPLAY_MODE] = prefs.zoneCardDisplayMode.name
         }
     }
 
@@ -182,7 +206,11 @@ class MyPreferenceManager(context: Context) {
             showTelemetryCharts = preferences[WORKOUT_DETAIL_SHOW_CHARTS] ?: true,
             showZoneAnalysis = preferences[WORKOUT_DETAIL_SHOW_ZONES] ?: true,
             showExportStatus = preferences[WORKOUT_DETAIL_SHOW_EXPORT_STATUS]
-                ?: preferences[WORKOUT_CARD_SHOW_EXPORT_STATUS] ?: true
+                ?: preferences[WORKOUT_CARD_SHOW_EXPORT_STATUS] ?: true,
+            zoneCardDisplayMode = parseZoneCardDisplayMode(
+                preferences[WORKOUT_DETAIL_ZONE_DISPLAY_MODE],
+                ZoneCardDisplayMode.HISTOGRAM
+            )
         )
     }
 
@@ -197,6 +225,7 @@ class MyPreferenceManager(context: Context) {
             preferences[WORKOUT_DETAIL_SHOW_CHARTS] = prefs.showTelemetryCharts
             preferences[WORKOUT_DETAIL_SHOW_ZONES] = prefs.showZoneAnalysis
             preferences[WORKOUT_DETAIL_SHOW_EXPORT_STATUS] = prefs.showExportStatus
+            preferences[WORKOUT_DETAIL_ZONE_DISPLAY_MODE] = prefs.zoneCardDisplayMode.name
         }
     }
 
@@ -207,6 +236,36 @@ class MyPreferenceManager(context: Context) {
     suspend fun setWorkoutSectionsOrder(order: List<WorkoutSectionType>) {
         dataStore.edit { preferences ->
             preferences[WORKOUT_SECTIONS_ORDER] = WorkoutSectionType.toSerializedString(order)
+        }
+    }
+
+    /**
+     * Reactive flow of individually configured Workout Detail tabs (`REQ-UI-408.2` / `ATT-3920`).
+     */
+    val workoutDetailTabsOrderFlow: Flow<List<WorkoutDetailTabConfig>> = dataStore.data.map { preferences ->
+        WorkoutDetailTabConfig.deserializeTabs(preferences[WORKOUT_DETAIL_TABS_CONFIG])
+    }
+
+    /**
+     * Returns the default Workout Detail tabs (`REQ-UI-408.2`).
+     */
+    fun getWorkoutDetailTabs(): List<WorkoutDetailTabConfig> = WorkoutDetailTabConfig.DEFAULT_TABS
+
+    /**
+     * Atomically persists [tabs] to DataStore (`REQ-UI-408.2`).
+     */
+    suspend fun setWorkoutDetailTabs(tabs: List<WorkoutDetailTabConfig>) {
+        dataStore.edit { preferences ->
+            preferences[WORKOUT_DETAIL_TABS_CONFIG] = WorkoutDetailTabConfig.serializeTabs(tabs)
+        }
+    }
+
+    /**
+     * Resets Workout Detail tabs to [WorkoutDetailTabConfig.DEFAULT_TABS] (`REQ-UI-408.2`).
+     */
+    suspend fun resetWorkoutDetailTabs() {
+        dataStore.edit { preferences ->
+            preferences[WORKOUT_DETAIL_TABS_CONFIG] = WorkoutDetailTabConfig.serializeTabs(WorkoutDetailTabConfig.DEFAULT_TABS)
         }
     }
 

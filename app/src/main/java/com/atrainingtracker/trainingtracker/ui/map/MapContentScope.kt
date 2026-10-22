@@ -279,62 +279,70 @@ internal class MapContentScopeImpl(
 
         // 1. Contextual Paths (Background)
         contextualPaths.forEach { data ->
-            MappablePathLayer(
-                path = data.path,
-                alpha = data.alpha,
-                currentZoom = currentZoom,
-                context = context,
-                directionIcons = directionIcons
-            )
+            androidx.compose.runtime.key(data.path.id) {
+                MappablePathLayer(
+                    path = data.path,
+                    alpha = data.alpha,
+                    currentZoom = currentZoom,
+                    context = context,
+                    directionIcons = directionIcons
+                )
+            }
         }
 
         // 2. Segments
         segmentData.forEach { data ->
-            MappablePathLayer(
-                path = data.path,
-                alpha = data.alpha,
-                currentZoom = currentZoom,
-                context = context,
-                directionIcons = directionIcons,
-                onPathClick = data.onClick
-            )
+            androidx.compose.runtime.key(data.path.id) {
+                MappablePathLayer(
+                    path = data.path,
+                    alpha = data.alpha,
+                    currentZoom = currentZoom,
+                    context = context,
+                    directionIcons = directionIcons,
+                    onPathClick = data.onClick
+                )
+            }
         }
 
         // 3. Routes
         routeData.forEach { data ->
-            val style = LocalMapStyle.current
-            val route = data.path as MapRoute
-            val highlightRoute = route.isActiveNavigation
-                    || zoomFocus != MapZoomFocus.FOLLOW_ME 
-                    || (route.isSelected && route.bSportType == bSportType)
+            androidx.compose.runtime.key(data.path.id) {
+                val style = LocalMapStyle.current
+                val route = data.path as MapRoute
+                val highlightRoute = route.isActiveNavigation
+                        || zoomFocus != MapZoomFocus.FOLLOW_ME 
+                        || (route.isSelected && route.bSportType == bSportType)
 
-            MappablePathLayer(
-                path = route,
-                alpha = if (highlightRoute) data.alpha else style.routeUnselectedAlpha,
-                currentZoom = currentZoom,
-                context = context,
-                directionIcons = directionIcons,
-                onPathClick = data.onClick
-            )
+                MappablePathLayer(
+                    path = route,
+                    alpha = if (highlightRoute) data.alpha else style.routeUnselectedAlpha,
+                    currentZoom = currentZoom,
+                    context = context,
+                    directionIcons = directionIcons,
+                    onPathClick = data.onClick
+                )
+            }
         }
 
         // 4. Tracks
         trackData.forEach { data ->
-            // ATT-342 Refinement: Use dynamic trackAlpha for better blending as we zoom in.
-            val effectiveAlpha = if (anyHeatmapLoading && heatmaps.isNotEmpty()) {
-                (data.alpha * 2.5f).coerceAtMost(0.9f)
-            } else {
-                data.alpha * trackAlpha
-            }
+            androidx.compose.runtime.key(data.path.id) {
+                // ATT-342 Refinement: Use dynamic trackAlpha for better blending as we zoom in.
+                val effectiveAlpha = if (anyHeatmapLoading && heatmaps.isNotEmpty()) {
+                    (data.alpha * 2.5f).coerceAtMost(0.9f)
+                } else {
+                    data.alpha * trackAlpha
+                }
 
-            MappablePathLayer(
-                path = data.path,
-                alpha = effectiveAlpha,
-                currentZoom = currentZoom,
-                context = context,
-                directionIcons = directionIcons,
-                onPathClick = data.onClick
-            )
+                MappablePathLayer(
+                    path = data.path,
+                    alpha = effectiveAlpha,
+                    currentZoom = currentZoom,
+                    context = context,
+                    directionIcons = directionIcons,
+                    onPathClick = data.onClick
+                )
+            }
         }
 
         // 5. Markers

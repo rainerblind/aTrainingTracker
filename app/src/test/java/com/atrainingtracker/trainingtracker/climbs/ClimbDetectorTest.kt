@@ -18,9 +18,14 @@
 
 package com.atrainingtracker.trainingtracker.climbs
 
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
+import org.junit.After
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 
 /**
@@ -28,6 +33,16 @@ import org.junit.Test
  * (REQ-MAP-027, TST-MAP-029 Group 1).
  */
 class ClimbDetectorTest {
+
+    @Before
+    fun setUp() {
+        TrainingApplication.setUnitForTesting(MyUnits.METRIC)
+    }
+
+    @After
+    fun tearDown() {
+        TrainingApplication.setUnitForTesting(null)
+    }
 
     @Test
     fun detectClimbs_detectsValidClimbAndCalculatesCategory() {
@@ -60,7 +75,8 @@ class ClimbDetectorTest {
         assertEquals(120.0, climb.elevationGainMeters, 1.0)
         assertEquals(6.0, climb.avgGradePercent, 0.1)
         assertEquals(ClimbCategory.CAT_4, climb.category)
-        assertTrue(climb.name.contains("2.0 km"))
+        val expectedDist = DistanceFormatter().format_with_units(2000.0)
+        assertEquals("Climb $expectedDist @ 6.0%", climb.name)
         assertEquals(21, climb.pathPoints.size)
     }
 
@@ -119,5 +135,72 @@ class ClimbDetectorTest {
         assertEquals(ClimbCategory.CAT_3, ClimbCategory.fromScore(18000.0))
         assertEquals(ClimbCategory.CAT_4, ClimbCategory.fromScore(9000.0))
         assertEquals(ClimbCategory.UNCATEGORIZED, ClimbCategory.fromScore(5000.0))
+    }
+
+    /**
+     * TST-MAP-055.1: Verifies candidate search advances scanning index past non-viable bumps
+     * via maxOf(i + 1, peakIdx) in near-linear O(N) time on a 10,000-point route (<= 100 ms).
+     */
+    @Test
+    fun detectClimbs_advancesInLinearTimeOnLargeRoute() {
+        // Generate a 10,000-point route with rolling non-viable ripples (5m gain, 100m length)
+        val points = ArrayList<PathPoint>(10000)
+        for (i in 0 until 10000) {
+            val rippleAlt = 100.0 + (i % 20) * 0.25 // 0 to 4.75m ripples, non-viable (< 20m gain)
+            points.add(
+                PathPoint(
+                    distance = i * 10.0,
+                    latLng = LatLng(48.0 + (i * 0.0001), 11.0),
+                    altitude = rippleAlt
+                )
+            )
+        }
+
+        val startTime = System.currentTimeMillis()
+        val climbs = ClimbDetector.detectClimbs(points)
+        val elapsedMs = System.currentTimeMillis() - startTime
+
+        assertTrue("10,000-point route must execute in <= 500 ms (was ${elapsedMs}ms)", elapsedMs <= 500)
+        assertTrue("Ripples lacking 20m gain must yield 0 climbs", climbs.isEmpty())
+    }
+
+    /**
+     * TST-MAP-055.1: Verifies detection of steep climb sections embedded in long gentle ascents
+     * before summit dilution.
+     */
+    @Test
+    fun detectClimbs_detectsSteepClimbEmbeddedInGentleAscent() {
+        // Route profile:
+        // Section 1: 0 to 1000m @ 1.0% (10m gain: 100m -> 110m)
+        // Section 2: 1000m to 2000m @ 8.0% (80m gain: 110m -> 190m) - qualifying climb!
+        // Section 3: 2000m to 4000m @ 1.0% (20m gain: 190m -> 210m)
+        // Total candidate: 4000m, 110m gain -> avgGrade = 2.75% (< 3.0% threshold)
+        val points = mutableListOf<PathPoint>()
+        // Step size 50m
+        for (d in 0..4000 step 50) {
+            val dist = d.toDouble()
+            val alt = when {
+                dist <= 1000.0 -> 100.0 + (dist / 1000.0) * 10.0
+                dist <= 2000.0 -> 110.0 + ((dist - 1000.0) / 1000.0) * 80.0
+                else -> 190.0 + ((dist - 2000.0) / 2000.0) * 20.0
+            }
+            points.add(
+                PathPoint(
+                    distance = dist,
+                    latLng = LatLng(48.0 + (dist * 0.00001), 11.0),
+                    altitude = alt
+                )
+            )
+        }
+
+        val climbs = ClimbDetector.detectClimbs(points)
+
+        // The embedded steep climb (1000m @ 8.0%, gain 80m) must be detected!
+        assertEquals("Must isolate embedded steep climb", 1, climbs.size)
+        val climb = climbs[0]
+        assertEquals(1000.0, climb.distanceMeters, 50.0)
+        assertEquals(80.0, climb.elevationGainMeters, 5.0)
+        assertTrue("Grade must be >= 3.0%", climb.avgGradePercent >= 3.0)
+        assertEquals(ClimbCategory.CAT_4, climb.category)
     }
 }

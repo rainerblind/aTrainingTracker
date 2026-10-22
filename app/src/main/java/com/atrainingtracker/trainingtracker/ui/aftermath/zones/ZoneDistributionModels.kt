@@ -32,14 +32,16 @@ data class HeartRateZoneThresholds(
 )
 
 /**
- * Upper cycling power bounds in Watts for Zones 1 through 4.
- * Zone 5 corresponds to Power > z4Max.
+ * Upper cycling power bounds in Watts for Zones 1 through 6.
+ * Zone 7 corresponds to Power > z6Max (Neuromuscular Sprint Power).
  */
 data class PowerZoneThresholds(
     val z1Max: Int,
     val z2Max: Int,
     val z3Max: Int,
-    val z4Max: Int
+    val z4Max: Int,
+    val z5Max: Int,
+    val z6Max: Int
 )
 
 /**
@@ -54,7 +56,7 @@ data class ZoneSample(
  * Metric breakdown for an individual training zone.
  */
 data class ZoneTimeEntry(
-    val zoneIndex: Int, // 1..5
+    val zoneIndex: Int, // 1..5 for HR/Pace, 1..7 for Cycling Power
     val zoneLabelResId: Int,
     val durationSec: Long,
     val percentage: Float,
@@ -63,6 +65,9 @@ data class ZoneTimeEntry(
 
 /**
  * Individual frequency bin for fine-grained telemetry histograms.
+ *
+ * @property isOverflow True if this bin represents a folded rightmost high-wattage sprint overflow bar.
+ * @property isReturn True if this bin represents a folded leftmost return bar navigating back to main view.
  */
 data class TelemetryHistogramBin(
     val binIndex: Int,
@@ -70,31 +75,51 @@ data class TelemetryHistogramBin(
     val rangeMax: Int,
     val durationSec: Long,
     val percentage: Float,
-    val zoneIndex: Int, // 1..5
-    val color: Color
+    val zoneIndex: Int, // 1..5 for HR, 1..7 for Cycling Power
+    val color: Color,
+    val isOverflow: Boolean = false,
+    val isReturn: Boolean = false
 )
 
 /**
  * Complete fine-grained telemetry histogram dataset for a workout metric (HR or Power).
+ *
+ * @property tailCutoff Power threshold (in Watts) where rare sprint spikes were folded into an overflow bar,
+ *                      or null if the histogram is rendered linearly across the full data range.
+ * @property sprintTail Linked dataset representing the expanded high-power sprint tail view,
+ *                      or null if no sprint tail was folded.
  */
 data class TelemetryHistogramData(
     val binWidth: Int,
     val dataMin: Int,
     val dataMax: Int,
     val totalActiveTimeSec: Long,
-    val bins: List<TelemetryHistogramBin>
+    val bins: List<TelemetryHistogramBin>,
+    val tailCutoff: Int? = null,
+    val sprintTail: TelemetryHistogramData? = null
 )
 
 /**
- * Display modes for zone distribution cards.
+ * Display modes for zone distribution cards (REQ-UI-372).
  */
 enum class ZoneCardDisplayMode {
-    FIVE_ZONES,
-    HISTOGRAM
+    STACKED_BAR,
+    COLUMNS,
+    HISTOGRAM,
+    @Deprecated("Legacy alias for COLUMNS", ReplaceWith("COLUMNS"))
+    FIVE_ZONES;
+
+    /**
+     * Resolves the effective display mode enforcing Tier 3 domain fallback (REQ-UI-372.8):
+     * If HISTOGRAM is requested but fine-grained histogram telemetry is unavailable, falls back to COLUMNS.
+     */
+    fun resolveWithHistogramFallback(hasHistogram: Boolean): ZoneCardDisplayMode =
+        if (this == HISTOGRAM && !hasHistogram) COLUMNS else this
 }
 
 /**
- * Aggregate 5-zone time distribution data for a workout, optionally containing fine-grained histogram data.
+ * Aggregate time distribution data for a workout (5 zones for HR/Pace, 7 zones for Cycling Power),
+ * optionally containing fine-grained histogram data.
  */
 data class ZoneDistributionData(
     val totalActiveTimeSec: Long,

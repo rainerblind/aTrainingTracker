@@ -13,13 +13,14 @@ data class ResolvedElevationProfileData(
     val pathPoints: List<PathPoint>,
     val climbs: List<Climb>,
     val markerDistance: Double?,
-    val isRouteElevation: Boolean
+    val isRouteElevation: Boolean,
+    val segmentIndex: Int? = null
 )
 
 /**
  * Pure domain resolver for tracking cockpit elevation profile data source selection,
  * categorized climbs overlay, rolling window scoping with 15% athlete position centering,
- * and orthogonal map-matched position projection (REQ-UI-355 / ATT-3199 / ATT-3317).
+ * and orthogonal map-matched position projection (REQ-UI-355 / ATT-3199 / ATT-3317 / REQ-NAV-056).
  */
 object TrackingElevationProfileResolver {
 
@@ -28,22 +29,30 @@ object TrackingElevationProfileResolver {
         recordedPathPoints: List<PathPoint>,
         currentLocation: LatLng?,
         scope: ElevationProfileScope = ElevationProfileScope.FULL_ROUTE,
-        lookaheadDistanceMeters: Int = 2000
+        lookaheadDistanceMeters: Int = 2000,
+        lastSegmentIndex: Int? = null
     ): ResolvedElevationProfileData {
         if (activeNavigatedRoute != null &&
             activeNavigatedRoute.path.size >= 2 &&
             activeNavigatedRoute.path.any { it.altitude != 0.0 }
         ) {
-            val alongTrackDist = currentLocation?.let { loc ->
-                PolylineProgressTracker.projectLocation(activeNavigatedRoute.path, loc)?.alongTrackDistance
-            } ?: 0.0
+            val projection = currentLocation?.let { loc ->
+                PolylineProgressTracker.projectLocation(
+                    path = activeNavigatedRoute.path,
+                    location = loc,
+                    lastSegmentIndex = lastSegmentIndex
+                )
+            }
+            val alongTrackDist = projection?.alongTrackDistance ?: 0.0
+            val segIdx = projection?.segmentIndex
 
             if (scope == ElevationProfileScope.FULL_ROUTE) {
                 return ResolvedElevationProfileData(
                     pathPoints = activeNavigatedRoute.path,
                     climbs = activeNavigatedRoute.climbs,
                     markerDistance = alongTrackDist,
-                    isRouteElevation = true
+                    isRouteElevation = true,
+                    segmentIndex = segIdx
                 )
             }
 
@@ -74,7 +83,8 @@ object TrackingElevationProfileResolver {
                 pathPoints = slicedPath,
                 climbs = filteredClimbs,
                 markerDistance = alongTrackDist,
-                isRouteElevation = true
+                isRouteElevation = true,
+                segmentIndex = segIdx
             )
         }
 
@@ -82,7 +92,8 @@ object TrackingElevationProfileResolver {
             pathPoints = recordedPathPoints,
             climbs = emptyList(),
             markerDistance = recordedPathPoints.lastOrNull()?.distance,
-            isRouteElevation = false
+            isRouteElevation = false,
+            segmentIndex = null
         )
     }
 
@@ -107,7 +118,11 @@ object TrackingElevationProfileResolver {
                 val ratio = if (p2.distance > p1.distance) (startDist - p1.distance) / (p2.distance - p1.distance) else 0.0
                 val lat = p1.latLng.latitude + ratio * (p2.latLng.latitude - p1.latLng.latitude)
                 val lng = p1.latLng.longitude + ratio * (p2.latLng.longitude - p1.latLng.longitude)
-                val alt = p1.altitude + ratio * (p2.altitude - p1.altitude)
+                val alt = if (p1.altitude != null && p2.altitude != null) {
+                    p1.altitude + ratio * (p2.altitude - p1.altitude)
+                } else {
+                    p1.altitude ?: p2.altitude
+                }
                 val time = p1.timeSec + (ratio * (p2.timeSec - p1.timeSec)).toLong()
                 result.add(PathPoint(distance = startDist, latLng = LatLng(lat, lng), altitude = alt, timeSec = time))
             }
@@ -135,7 +150,11 @@ object TrackingElevationProfileResolver {
                 val ratio = if (p2.distance > p1.distance) (endDist - p1.distance) / (p2.distance - p1.distance) else 0.0
                 val lat = p1.latLng.latitude + ratio * (p2.latLng.latitude - p1.latLng.latitude)
                 val lng = p1.latLng.longitude + ratio * (p2.latLng.longitude - p1.latLng.longitude)
-                val alt = p1.altitude + ratio * (p2.altitude - p1.altitude)
+                val alt = if (p1.altitude != null && p2.altitude != null) {
+                    p1.altitude + ratio * (p2.altitude - p1.altitude)
+                } else {
+                    p1.altitude ?: p2.altitude
+                }
                 val time = p1.timeSec + (ratio * (p2.timeSec - p1.timeSec)).toLong()
                 result.add(PathPoint(distance = endDist, latLng = LatLng(lat, lng), altitude = alt, timeSec = time))
             }

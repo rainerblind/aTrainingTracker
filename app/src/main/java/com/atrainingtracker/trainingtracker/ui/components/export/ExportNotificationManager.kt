@@ -199,7 +199,7 @@ class ExportNotificationManager private constructor(private val context: Context
      * Companion-Object for the  Singleton-Pattern.
      */
     companion object {
-        private const val DEBUG = true
+        private val DEBUG = com.atrainingtracker.BuildConfig.DEBUG
         private const val TAG = "ExportNotificationManager"
 
         @Volatile

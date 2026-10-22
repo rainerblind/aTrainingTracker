@@ -26,6 +26,7 @@ import android.os.BatteryManager;
 import android.util.Log;
 
 import androidx.core.content.ContextCompat;
+import com.atrainingtracker.util.LifecycleUtils;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
@@ -347,13 +348,7 @@ public class BatteryDevice extends MyDevice {
     @Override
     public void shutDown() {
         super.shutDown();
-        try {
-            mContext.unregisterReceiver(mBatteryReceiver);
-        } catch (Exception ignored) {
-        }
-        try {
-            mContext.unregisterReceiver(mTimeEventReceiver);
-        } catch (Exception ignored) {
-        }
+        LifecycleUtils.safeUnregisterReceiver(mContext, mBatteryReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(mContext, mTimeEventReceiver, TAG);
     }
 }

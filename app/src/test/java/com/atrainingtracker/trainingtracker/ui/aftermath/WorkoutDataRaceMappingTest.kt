@@ -26,6 +26,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeaderData
 import io.mockk.*
 import org.junit.After
@@ -99,6 +100,8 @@ class WorkoutDataRaceMappingTest {
         every { mockSportDb.getBSportType(any()) } returns BSportType.BIKE
         every { mockSportDb.getUIName(any()) } returns "Cycling"
 
+        SettingsDataStore.setInstanceForTesting(mockk(relaxed = true))
+
         mapper = WorkoutDataMapper(
             context = mockContext,
             workoutSummariesDatabaseManager = mockSummariesDb,
@@ -110,6 +113,7 @@ class WorkoutDataRaceMappingTest {
 
     @After
     fun tearDown() {
+        SettingsDataStore.setInstanceForTesting(null)
         unmockkStatic(LapsDatabaseManager::class)
         unmockkStatic(TrainingApplication::class)
         unmockkAll()

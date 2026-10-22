@@ -30,12 +30,15 @@ import androidx.annotation.NonNull;
 import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.database.DatabaseConstants;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import com.atrainingtracker.trainingtracker.exporter.ExportType;
 import com.atrainingtracker.trainingtracker.exporter.FileFormat;
+
+import java.io.File;
 
 public abstract class BaseFileWriter extends BaseExporter {
     protected static final int MIN_DATA_POINTS_FOR_UPLOAD = 10;
@@ -49,10 +52,43 @@ public abstract class BaseFileWriter extends BaseExporter {
         super(context);
     }
 
+    @NonNull
+    public File getOutputFile(@NonNull ExportInfo exportInfo) {
+        return new File(getBaseDirFile(mContext), exportInfo.getShortPath());
+    }
+
+    public void deleteOutputFileSafely(@NonNull ExportInfo exportInfo) {
+        File file = getOutputFile(exportInfo);
+        if (file.exists()) {
+            boolean deleted = file.delete();
+            Log.i(TAG, "Deleted output file on cancellation or failure: " + file.getAbsolutePath() + " (success=" + deleted + ")");
+        }
+    }
+
+    /**
+     * Determines whether copying exported files to the shared public Downloads directory
+     * is supported on the active Android runtime (Android 10+ / API 29+ Scoped Storage).
+     *
+     * @return true if running on Android Q or higher, false otherwise
+     */
+    protected boolean isDownloadsCopySupported() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q;
+    }
+
+    /**
+     * Post-export hook invoked upon successful export completion.
+     * Preserves public Downloads copy for explicit user file exports (CSV, TCX, GPX, FIT, GC)
+     * while strictly excluding internal uploads (STRAVA or COMMUNITY) to protect athlete privacy
+     * from leaking GPS traces into public shared storage (REQ-EXP-022, ATT-4013).
+     *
+     * @param exportInfo the completed export metadata descriptor
+     */
     @Override
     protected void onFinished(@NonNull ExportInfo exportInfo) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            copyFileToDownloads(exportInfo);
+        if (exportInfo.getFileFormat() != FileFormat.STRAVA && exportInfo.getExportType() != ExportType.COMMUNITY) {
+            if (isDownloadsCopySupported()) {
+                copyFileToDownloads(exportInfo);
+            }
         }
     }
 
@@ -61,30 +97,43 @@ public abstract class BaseFileWriter extends BaseExporter {
         WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
         SQLiteDatabase db = databaseManager.getDatabase();
 
-        Cursor cursor = db.query(WorkoutSummaries.TABLE,
+        try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
                 null,
                 WorkoutSummaries.FILE_BASE_NAME + "=?",
                 new String[]{exportInfo.getFileBaseName()},
                 null,
                 null,
-                null);
-        cursor.moveToFirst();
-
-        // get the data for the header
-        startTime = myGet(cursor, WorkoutSummaries.TIME_START, "");
-        totalTime = myGet(cursor, WorkoutSummaries.TIME_TOTAL_s, "0");
-        data = myGet(cursor, WorkoutSummaries.GC_DATA, "--------");
-        goal = myGet(cursor, WorkoutSummaries.GOAL, "");
-        method = myGet(cursor, WorkoutSummaries.METHOD, "");
-        totalDistance = myGet(cursor, WorkoutSummaries.DISTANCE_TOTAL_m, "0");
-        description = myGet(cursor, WorkoutSummaries.DESCRIPTION, "");
-        workoutName = myGet(cursor, WorkoutSummaries.WORKOUT_NAME, "");
-        workoutID = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-        sportTypeId = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.SPORT_ID));
-        indoorTrainerSession = cursor.getInt(cursor.getColumnIndex(WorkoutSummaries.TRAINER)) > 0;
-
-        // now, that we have all the data, we close the mCursor
-        cursor.close();
+                null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                // get the data for the header
+                startTime = myGet(cursor, WorkoutSummaries.TIME_START, "");
+                totalTime = myGet(cursor, WorkoutSummaries.TIME_TOTAL_s, "0");
+                data = myGet(cursor, WorkoutSummaries.GC_DATA, "--------");
+                goal = myGet(cursor, WorkoutSummaries.GOAL, "");
+                method = myGet(cursor, WorkoutSummaries.METHOD, "");
+                totalDistance = myGet(cursor, WorkoutSummaries.DISTANCE_TOTAL_m, "0");
+                description = myGet(cursor, WorkoutSummaries.DESCRIPTION, "");
+                workoutName = myGet(cursor, WorkoutSummaries.WORKOUT_NAME, "");
+                int idIdx = cursor.getColumnIndex(WorkoutSummaries.C_ID);
+                workoutID = idIdx >= 0 ? cursor.getLong(idIdx) : DatabaseConstants.INVALID_ID;
+                int sportIdx = cursor.getColumnIndex(WorkoutSummaries.SPORT_ID);
+                sportTypeId = sportIdx >= 0 ? cursor.getLong(sportIdx) : DatabaseConstants.INVALID_ID;
+                int trainerIdx = cursor.getColumnIndex(WorkoutSummaries.TRAINER);
+                indoorTrainerSession = trainerIdx >= 0 && cursor.getInt(trainerIdx) > 0;
+            } else {
+                startTime = "";
+                totalTime = "0";
+                data = "--------";
+                goal = "";
+                method = "";
+                totalDistance = "0";
+                description = "";
+                workoutName = "";
+                workoutID = DatabaseConstants.INVALID_ID;
+                sportTypeId = DatabaseConstants.INVALID_ID;
+                indoorTrainerSession = false;
+            }
+        }
 
         haveDistance = data.indexOf('D') > 0;
         haveSpeed = data.indexOf('S') > 0;
@@ -104,17 +153,7 @@ public abstract class BaseFileWriter extends BaseExporter {
                 haveHR = haveHR & TrainingApplication.uploadStravaHR();
                 havePower = havePower & TrainingApplication.uploadStravaPower();
                 haveCadence = haveCadence & TrainingApplication.uploadStravaCadence();
-            } /* else if (exportInfo.getFileFormat() == FileFormat.RUNKEEPER) {
-                haveGeo = haveGeo & TrainingApplication.uploadRunkeeperGPS();
-                haveHR = haveHR & TrainingApplication.uploadRunkeeperHR();
-            } else if (exportInfo.getFileFormat() == FileFormat.TRAINING_PEAKS) {
-                // Log.i(TAG, "selective TrainingPeaks settings");
-                haveGeo = haveGeo & TrainingApplication.uploadTrainingPeaksGPS();
-                haveAltitude = haveAltitude & TrainingApplication.uploadTrainingPeaksAltitude();
-                haveHR = haveHR & TrainingApplication.uploadTrainingPeaksHR();
-                havePower = havePower & TrainingApplication.uploadTrainingPeaksPower();
-                haveCadence = haveCadence & TrainingApplication.uploadTrainingPeaksCadence();
-            } */
+            }
         }
 
         BSportType bSportType = SportTypeDatabaseManager.getInstance(mContext).getBSportType(sportTypeId);

@@ -21,7 +21,10 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 import android.content.Context
 import android.database.Cursor
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
@@ -30,6 +33,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import android.util.Log
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import io.mockk.every
@@ -86,6 +90,8 @@ class WorkoutDataMappingSymmetryTest {
         every { mockSportTypeDb.getStravaName(any()) } returns "Ride"
         every { mockEquipmentDb.getEquipmentNameFromId(any()) } returns "Road Bike"
 
+        SettingsDataStore.setInstanceForTesting(mockk(relaxed = true))
+
         mapper = WorkoutDataMapper(
             context = context,
             workoutSummariesDatabaseManager = mockSummariesDb,
@@ -98,6 +104,7 @@ class WorkoutDataMappingSymmetryTest {
 
     @org.junit.After
     fun tearDown() {
+        SettingsDataStore.setInstanceForTesting(null)
         WorkoutClusterDatabaseManager.resetForTesting(null)
         unmockkStatic(LapsDatabaseManager::class)
         unmockkStatic(TrainingApplication::class)
@@ -223,5 +230,338 @@ class WorkoutDataMappingSymmetryTest {
         assertEquals("Commute flag single vs batch", singleData.commute, batchData.commute)
         assertEquals("Trainer flag single vs batch", singleData.trainer, batchData.trainer)
         assertEquals("Finished flag single vs batch", singleData.finished, batchData.finished)
+    }
+
+    @Test
+    fun testRule20_wPrimeBalSummary_symmetryAcrossSingleBatchAndSnapshot() {
+        val cursor = createMockCursor(sourceString = "FIT", raceInt = 0)
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.W_PRIME_BAL,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.MIN
+            )
+        } returns 1.5
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.AVG
+            )
+        } returns 200.0
+
+        val singleData = mapper.fromCursor(cursor)
+        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+            extrema = mapOf(
+                5023L to listOf(
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(
+                        5023L,
+                        com.atrainingtracker.banalservice.sensor.SensorType.W_PRIME_BAL,
+                        com.atrainingtracker.trainingtracker.database.ExtremaType.MIN,
+                        1.5,
+                        null
+                    ),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(
+                        5023L,
+                        com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                        com.atrainingtracker.trainingtracker.database.ExtremaType.AVG,
+                        200.0,
+                        null
+                    )
+                )
+            ),
+            stravaData = emptyMap(),
+            clusterNames = mapOf(42L to "Test Cluster"),
+            laps = emptyMap()
+        )
+        val batchData = mapper.fromCursor(cursor, batchMetadata)
+        val snapshot = mapper.readCursorSnapshot(cursor)
+        val snapshotData = mapper.fromSnapshot(snapshot, batchMetadata)
+
+        assertEquals(1.5, singleData.minWPrimeBalKj!!, 1e-6)
+        assertEquals(singleData.minWPrimeBalKj, batchData.minWPrimeBalKj)
+        assertEquals(singleData.minWPrimeBalKj, snapshotData.minWPrimeBalKj)
+        assertEquals(singleData.minWPrimeBalPct, batchData.minWPrimeBalPct)
+        assertEquals(singleData.minWPrimeBalPct, snapshotData.minWPrimeBalPct)
+        assertEquals(singleData.isEmptyTankWarning, batchData.isEmptyTankWarning)
+        assertEquals(singleData.isEmptyTankWarning, snapshotData.isEmptyTankWarning)
+        assertEquals(singleData.detailsData.minWPrimeBalKj, batchData.detailsData.minWPrimeBalKj)
+        assertEquals(singleData.detailsData.minWPrimeBalKj, snapshotData.detailsData.minWPrimeBalKj)
+    }
+
+    @Test
+    fun testRule20_wPrimeBalSummary_noPowerData_suppressesWPrimeBalSymmetrically() {
+        // [TST-TRK-031.6] / REQ-TRK-038.5 (Rule 20 & Rule 52)
+        // Given legacy SQLite extrema for W_PRIME_BAL, but zero power data
+        val cursor = createMockCursor(sourceString = "FIT", raceInt = 0)
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.W_PRIME_BAL,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.MIN
+            )
+        } returns 20.0
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.AVG
+            )
+        } returns null
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.MAX
+            )
+        } returns null
+
+        val singleData = mapper.fromCursor(cursor)
+        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+            extrema = mapOf(
+                5023L to listOf(
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(
+                        5023L,
+                        com.atrainingtracker.banalservice.sensor.SensorType.W_PRIME_BAL,
+                        com.atrainingtracker.trainingtracker.database.ExtremaType.MIN,
+                        20.0,
+                        null
+                    )
+                )
+            ),
+            stravaData = emptyMap(),
+            clusterNames = mapOf(42L to "Test Cluster"),
+            laps = emptyMap()
+        )
+        val batchData = mapper.fromCursor(cursor, batchMetadata)
+        val snapshot = mapper.readCursorSnapshot(cursor)
+        val snapshotData = mapper.fromSnapshot(snapshot, batchMetadata)
+
+        // Then all pathways MUST symmetrically suppress minWPrimeBal (null)
+        org.junit.Assert.assertNull("Single minWPrimeBalKj must be null", singleData.minWPrimeBalKj)
+        org.junit.Assert.assertNull("Batch minWPrimeBalKj must be null", batchData.minWPrimeBalKj)
+        org.junit.Assert.assertNull("Snapshot minWPrimeBalKj must be null", snapshotData.minWPrimeBalKj)
+        org.junit.Assert.assertNull("Single minWPrimeBalPct must be null", singleData.minWPrimeBalPct)
+        org.junit.Assert.assertNull("Batch minWPrimeBalPct must be null", batchData.minWPrimeBalPct)
+        org.junit.Assert.assertNull("Snapshot minWPrimeBalPct must be null", snapshotData.minWPrimeBalPct)
+        org.junit.Assert.assertFalse("Single isEmptyTankWarning must be false", singleData.isEmptyTankWarning)
+        org.junit.Assert.assertFalse("Batch isEmptyTankWarning must be false", batchData.isEmptyTankWarning)
+        org.junit.Assert.assertFalse("Snapshot isEmptyTankWarning must be false", snapshotData.isEmptyTankWarning)
+        org.junit.Assert.assertNull("DetailsData minWPrimeBalKj must be null", singleData.detailsData.minWPrimeBalKj)
+        org.junit.Assert.assertNull("DetailsData minWPrimeBalKj must be null", batchData.detailsData.minWPrimeBalKj)
+        org.junit.Assert.assertNull("DetailsData minWPrimeBalKj must be null", snapshotData.detailsData.minWPrimeBalKj)
+    }
+
+    @Test
+    fun `fromCursor and fromSnapshot map Efficiency Factor and Aerobic Decoupling symmetrically (REQ-UI-400_3)`() {
+        val cursor = createMockCursor(sourceString = "FIT", raceInt = 0)
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.EFFICIENCY_FACTOR
+            )
+        } returns 1.65
+        every {
+            mockSummariesDb.getExtremaValue(
+                5023L,
+                com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                com.atrainingtracker.trainingtracker.database.ExtremaType.AEROBIC_DECOUPLING
+            )
+        } returns 3.8
+
+        val singleData = mapper.fromCursor(cursor)
+        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+            extrema = mapOf(
+                5023L to listOf(
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(
+                        5023L,
+                        com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                        com.atrainingtracker.trainingtracker.database.ExtremaType.EFFICIENCY_FACTOR,
+                        1.65,
+                        null
+                    ),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(
+                        5023L,
+                        com.atrainingtracker.banalservice.sensor.SensorType.POWER,
+                        com.atrainingtracker.trainingtracker.database.ExtremaType.AEROBIC_DECOUPLING,
+                        3.8,
+                        null
+                    )
+                )
+            ),
+            stravaData = emptyMap(),
+            clusterNames = mapOf(42L to "Test Cluster"),
+            laps = emptyMap()
+        )
+        val batchData = mapper.fromCursor(cursor, batchMetadata)
+        val snapshot = mapper.readCursorSnapshot(cursor)
+        val snapshotData = mapper.fromSnapshot(snapshot, batchMetadata)
+
+        assertEquals(1.65, singleData.efficiencyFactor!!, 1e-6)
+        assertEquals(3.8, singleData.aerobicDecouplingPct!!, 1e-6)
+        assertEquals(true, singleData.isPowerBasedEfficiency)
+        assertEquals(false, singleData.isAerobicDecouplingHighDrift)
+
+        assertEquals(singleData.efficiencyFactor, batchData.efficiencyFactor)
+        assertEquals(singleData.efficiencyFactor, snapshotData.efficiencyFactor)
+        assertEquals(singleData.aerobicDecouplingPct, batchData.aerobicDecouplingPct)
+        assertEquals(singleData.aerobicDecouplingPct, snapshotData.aerobicDecouplingPct)
+        assertEquals(singleData.isPowerBasedEfficiency, batchData.isPowerBasedEfficiency)
+        assertEquals(singleData.isPowerBasedEfficiency, snapshotData.isPowerBasedEfficiency)
+        assertEquals(singleData.isAerobicDecouplingHighDrift, batchData.isAerobicDecouplingHighDrift)
+        assertEquals(singleData.isAerobicDecouplingHighDrift, snapshotData.isAerobicDecouplingHighDrift)
+        assertEquals(singleData.detailsData.efficiencyFactor, snapshotData.detailsData.efficiencyFactor)
+        assertEquals(singleData.detailsData.aerobicDecouplingPct, snapshotData.detailsData.aerobicDecouplingPct)
+    }
+
+    @Test
+    fun `fromCursor and fromSnapshot map Power Training Metrics symmetrically and prioritize END over AVG (REQ-UI-402_1)`() {
+        val cursor = createMockCursor(sourceString = "FIT", raceInt = 1)
+        val sensorPower = com.atrainingtracker.banalservice.sensor.SensorType.POWER
+        val sensorNp = com.atrainingtracker.banalservice.sensor.SensorType.NORMALIZED_POWER
+        val sensorIf = com.atrainingtracker.banalservice.sensor.SensorType.INTENSITY_FACTOR
+        val sensorTss = com.atrainingtracker.banalservice.sensor.SensorType.TSS
+        val sensorWork = com.atrainingtracker.banalservice.sensor.SensorType.WORK_KJ
+        val sensorPtw = com.atrainingtracker.banalservice.sensor.SensorType.POWER_TO_WEIGHT
+        val extAvg = com.atrainingtracker.trainingtracker.database.ExtremaType.AVG
+        val extMax = com.atrainingtracker.trainingtracker.database.ExtremaType.MAX
+        val extEnd = com.atrainingtracker.trainingtracker.database.ExtremaType.END
+
+        every { mockSummariesDb.getExtremaValue(5023L, sensorPower, extAvg) } returns 200.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorPower, extMax) } returns 600.0
+        // Suppose AVG had an intermediate cumulative mean, while END has the authoritative session end value
+        every { mockSummariesDb.getExtremaValue(5023L, sensorNp, extAvg) } returns 190.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorNp, extEnd) } returns 210.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorIf, extAvg) } returns 0.76
+        every { mockSummariesDb.getExtremaValue(5023L, sensorIf, extEnd) } returns 0.84
+        every { mockSummariesDb.getExtremaValue(5023L, sensorTss, extAvg) } returns 40.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorTss, extEnd) } returns 75.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorWork, extAvg) } returns 350.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorWork, extEnd) } returns 720.0
+        every { mockSummariesDb.getExtremaValue(5023L, sensorPtw, extAvg) } returns 2.80
+        every { mockSummariesDb.getExtremaValue(5023L, sensorPtw, extMax) } returns 8.00
+
+        val singleData = mapper.fromCursor(cursor)
+        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+            extrema = mapOf(
+                5023L to listOf(
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPower, extAvg, 200.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPower, extMax, 600.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorNp, extAvg, 190.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorNp, extEnd, 210.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorIf, extAvg, 0.76, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorIf, extEnd, 0.84, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorTss, extAvg, 40.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorTss, extEnd, 75.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorWork, extAvg, 350.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorWork, extEnd, 720.0, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPtw, extAvg, 2.80, null),
+                    WorkoutSummariesDatabaseManager.ExtremaRecord(5023L, sensorPtw, extMax, 8.00, null)
+                )
+            ),
+            stravaData = emptyMap(),
+            clusterNames = mapOf(42L to "Test Cluster"),
+            laps = emptyMap()
+        )
+        val batchData = mapper.fromCursor(cursor, batchMetadata)
+        val snapshot = mapper.readCursorSnapshot(cursor)
+        val snapshotData = mapper.fromSnapshot(snapshot, batchMetadata)
+
+        // Prioritizes END over AVG and computes VI = 210 / 200 = 1.05
+        assertEquals(210.0, singleData.normalizedPowerWatts!!, 1e-6)
+        assertEquals(0.84, singleData.intensityFactor!!, 1e-6)
+        assertEquals(75.0, singleData.tss!!, 1e-6)
+        assertEquals(720.0, singleData.workKj!!, 1e-6)
+        assertEquals(2.80, singleData.avgPowerToWeight!!, 1e-6)
+        assertEquals(8.00, singleData.maxPowerToWeight!!, 1e-6)
+        assertEquals(1.05, singleData.variabilityIndex!!, 1e-6)
+
+        // Rule 20 symmetry across single, batch, snapshot, and detailsData
+        assertEquals(singleData.normalizedPowerWatts, batchData.normalizedPowerWatts)
+        assertEquals(singleData.normalizedPowerWatts, snapshotData.normalizedPowerWatts)
+        assertEquals(singleData.intensityFactor, batchData.intensityFactor)
+        assertEquals(singleData.intensityFactor, snapshotData.intensityFactor)
+        assertEquals(singleData.tss, batchData.tss)
+        assertEquals(singleData.tss, snapshotData.tss)
+        assertEquals(singleData.workKj, batchData.workKj)
+        assertEquals(singleData.workKj, snapshotData.workKj)
+        assertEquals(singleData.avgPowerToWeight, batchData.avgPowerToWeight)
+        assertEquals(singleData.avgPowerToWeight, snapshotData.avgPowerToWeight)
+        assertEquals(singleData.maxPowerToWeight, batchData.maxPowerToWeight)
+        assertEquals(singleData.maxPowerToWeight, snapshotData.maxPowerToWeight)
+        assertEquals(singleData.variabilityIndex, batchData.variabilityIndex)
+        assertEquals(singleData.variabilityIndex, snapshotData.variabilityIndex)
+
+        assertEquals(singleData.detailsData.normalizedPowerWatts, snapshotData.detailsData.normalizedPowerWatts)
+        assertEquals(singleData.detailsData.intensityFactor, snapshotData.detailsData.intensityFactor)
+        assertEquals(singleData.detailsData.tss, snapshotData.detailsData.tss)
+        assertEquals(singleData.detailsData.workKj, snapshotData.detailsData.workKj)
+        assertEquals(singleData.detailsData.avgPowerToWeight, snapshotData.detailsData.avgPowerToWeight)
+        assertEquals(singleData.detailsData.variabilityIndex, snapshotData.detailsData.variabilityIndex)
+
+        // Verify fallback derivation when only avgPowerWatts, activeTimeSec, FTP, and weight exist
+        val fallbackSummary = mapper.resolvePowerTrainingSummary(
+            npEnd = null, npAvg = null,
+            ifEnd = null, ifAvg = null,
+            tssEnd = null, tssAvg = null, tssMax = null,
+            workEnd = null, workAvg = null, workMax = null,
+            ptwAvg = null, ptwMax = null,
+            avgPowerWatts = 250.0,
+            maxPowerWatts = 500.0,
+            activeTimeSec = 3600L,
+            startTimeS = 1_700_000_000L,
+            effectiveFtpWatts = 250.0,
+            effectiveWeightKg = 75.0
+        )
+        assertEquals(250.0, fallbackSummary.normalizedPowerWatts!!, 1e-6)
+        assertEquals(1.0, fallbackSummary.intensityFactor!!, 1e-6)
+        assertEquals(100.0, fallbackSummary.tss!!, 1e-6)
+        assertEquals(900.0, fallbackSummary.workKj!!, 1e-6)
+        assertEquals(250.0 / 75.0, fallbackSummary.avgPowerToWeight!!, 1e-6)
+        assertEquals(500.0 / 75.0, fallbackSummary.maxPowerToWeight!!, 1e-6)
+    }
+
+    @Test
+    fun testTST_DAT_028_1_expandedBatchMetadata_and_nonReconcilingMode_zeroDbWrites() {
+        val cursor = createMockCursor(sourceString = "TCX", raceInt = 1)
+        val snapshot = mapper.readCursorSnapshot(cursor)
+
+        val batchMetadata = WorkoutDataMapper.BatchMetadata(
+            extrema = emptyMap(),
+            stravaData = mapOf("2026-09-09-10-02-00" to "StravaJSON"),
+            clusterNames = mapOf(42L to "Morning Loops"),
+            laps = emptyMap(),
+            sportTypes = mapOf(
+                2L to WorkoutDataMapper.SportTypeInfo(
+                    bSportType = BSportType.RUN,
+                    sportName = "Trail Run",
+                    stravaSportName = "Run"
+                )
+            ),
+            equipmentNames = mapOf(10L to "Speedcross 5"),
+            locationNames = mapOf(com.google.android.gms.maps.model.LatLng(48.0, 11.5) to "Home Trail"),
+            athleteMetrics = mapOf(
+                5023L to WorkoutDataMapper.AthleteMetricsInfo(
+                    effectiveFtpWatts = 280.0,
+                    effectiveWeightKg = 72.0
+                )
+            )
+        )
+
+        // 1. Map via fromSnapshot with reconcile = false
+        val mappedData = mapper.fromSnapshot(snapshot, batchMetadata, reconcile = false)
+
+        // Verify batch pre-fetched metadata was consumed without querying single-item DBs
+        assertEquals("Trail Run", mappedData.sportName)
+        assertEquals(BSportType.RUN, mappedData.bSportType)
+        assertEquals("Run", mappedData.stravaSportName)
+        assertEquals("Speedcross 5", mappedData.equipmentName)
+        assertEquals("Morning Loops", mappedData.clusterName)
+
+        // Verify zero SQLite writes were executed on extrema database during mapping
+        io.mockk.verify(exactly = 0) {
+            mockSummariesDb.updateExtremaValue(any(), any(), any(), any(), any())
+        }
     }
 }

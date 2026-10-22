@@ -33,8 +33,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.res.stringResource
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -90,7 +92,7 @@ fun DeviceItem(
                     Row(verticalAlignment = Alignment.Top) {
                         // Device Type Icon (Padding normalized for protocol-specific asset whitespace)
                         Icon(
-                            painter = painterResource(id = device.deviceTypeIconRes),
+                            painter = safePainterResource(id = device.deviceTypeIconRes, fallback = Icons.Default.Sensors),
                             contentDescription = null,
                             modifier = Modifier
                                 .size(if (device.protocol == Protocol.SMARTPHONE) 42.dp else 54.dp)
@@ -164,7 +166,7 @@ fun DeviceItem(
                                     )
                                 } else {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.ic_device_not_available),
+                                        painter = safePainterResource(id = R.drawable.ic_device_not_available, fallback = Icons.Default.Warning),
                                         contentDescription = null,
                                         modifier = Modifier.size(24.dp),
                                         tint = Color.Unspecified
@@ -256,7 +258,7 @@ fun DeviceItem(
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewDeviceItem() {
+private fun PreviewDeviceItem() {
     val mockDevice = DeviceUiData(
         id = 1L,
         protocol = Protocol.ANT_PLUS,
@@ -292,7 +294,7 @@ fun PreviewDeviceItem() {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewDeviceItem2() {
+private fun PreviewDeviceItem2() {
     val mockDevice = DeviceUiData(
         id = 1L,
         protocol = Protocol.ANT_PLUS,

@@ -49,16 +49,32 @@ data class TelemetrySnapshot(
     val isCycling: Boolean = true
 )
 
+/**
+ * Pure function to map a numeric telemetry value to a 1-based zone index based on an ascending list of upper cutoffs.
+ * (REQ-SET-079 / ATT-3999).
+ * Zero dependency on Context or DataStore.
+ */
+fun calculateZoneIndex(value: Double, cutoffs: List<Int>): Int {
+    for (i in cutoffs.indices) {
+        if (value <= cutoffs[i]) return i + 1
+    }
+    return cutoffs.size + 1
+}
+
+/**
+ * Backward-compatible overload delegating to non-blocking helper and pure calculation.
+ */
 fun calculateZoneIndex(context: Context, zoneType: SettingsDataStore.ZoneType, value: Double): Int {
     val z1Max = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
     val z2Max = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
     val z3Max = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
     val z4Max = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-    return when {
-        value <= z1Max -> 1
-        value <= z2Max -> 2
-        value <= z3Max -> 3
-        value <= z4Max -> 4
-        else -> 5
+    val cutoffs = if (zoneType == SettingsDataStore.ZoneType.PWR_BIKE) {
+        val z5Max = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 5)
+        val z6Max = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 6)
+        listOf(z1Max, z2Max, z3Max, z4Max, z5Max, z6Max)
+    } else {
+        listOf(z1Max, z2Max, z3Max, z4Max)
     }
+    return calculateZoneIndex(value, cutoffs)
 }

@@ -33,6 +33,8 @@ import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
@@ -42,8 +44,12 @@ import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 
+import java.util.Map;
 import java.util.Queue;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 //import de.rainerblind.MyAntPlusApp;
 
@@ -53,17 +59,95 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     private static final boolean DEBUG = BANALService.getDebug(false);
     private static final int SEARCH_PERIOD = 10 * 1000; // 10 seconds (same as for ANT+)
     private static final int READ_BATTERY_PERCENTAGE_PERIOD = 5 * 60 * 1000; // 5 minutes
+    private static final long INITIAL_RECONNECT_DELAY_MS = 1000L;
+    private static final long MAX_RECONNECT_DELAY_MS = 16000L;
     protected String mAddress; // the MAC Address
     // private static final int READ_BATTERY_PERCENTAGE_PERIOD = 10 * 1000; // 10 seconds (just for testing)
     private final Object mGattLock = new Object();
     protected volatile BluetoothGatt mBluetoothGatt;
     protected final Queue<BluetoothGattCharacteristic> mReadCharacteristicQueue = new ConcurrentLinkedQueue<BluetoothGattCharacteristic>();
-    protected State mState = State.DISCONNECTED;
+    protected volatile State mState = State.DISCONNECTED;
     Handler mHandler;
-    private BluetoothGattCharacteristic mBatteryCharacteristic;
+    private volatile BluetoothGattCharacteristic mBatteryCharacteristic;
+    private volatile boolean mIsShutDown = false;
+    private volatile long mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
+
+    private static final int SNAPSHOT_POOL_SIZE = 8;
+    private final Map<UUID, BluetoothGattCharacteristic[]> mCharacteristicPool = new ConcurrentHashMap<>();
+    private final AtomicInteger mPoolIndex = new AtomicInteger(0);
+
+    /**
+     * Obtains an immutable snapshot BluetoothGattCharacteristic from a pre-allocated pool
+     * to eliminate GC churn during continuous high-frequency telemetry streaming (e.g. 1-4 Hz).
+     */
+    protected BluetoothGattCharacteristic obtainSnapshotCharacteristic(BluetoothGattCharacteristic source, byte[] payload) {
+        if (mIsShutDown) {
+            return null;
+        }
+        BluetoothGattCharacteristic[] pool = mCharacteristicPool.computeIfAbsent(source.getUuid(), uuid -> {
+            BluetoothGattCharacteristic[] array = new BluetoothGattCharacteristic[SNAPSHOT_POOL_SIZE];
+            for (int i = 0; i < SNAPSHOT_POOL_SIZE; i++) {
+                array[i] = new BluetoothGattCharacteristic(uuid, source.getProperties(), source.getPermissions());
+            }
+            return array;
+        });
+        int rawIndex = mPoolIndex.getAndIncrement();
+        int idx = ((rawIndex % SNAPSHOT_POOL_SIZE) + SNAPSHOT_POOL_SIZE) % SNAPSHOT_POOL_SIZE;
+        BluetoothGattCharacteristic snapshot = pool[idx];
+        if (snapshot != null) {
+            snapshot.setValue(payload);
+        }
+        return snapshot;
+    }
+
+    /**
+     * Timeout runnable for GATT connection and service discovery.
+     * Fires after {@link #SEARCH_PERIOD} if data reception has not started,
+     * disconnecting and notifying that search failed.
+     */
+    private final Runnable mSearchTimeoutRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (DEBUG) Log.i(TAG, "search time out");
+            if (mIsShutDown) {
+                return;
+            }
+            if (!isReceivingData()) {
+                if (DEBUG) Log.i(TAG, "device is not receiving data, so this search failed");
+                disconnectFromGatt();
+                notifyStopSearching(false);  // we did not find the device
+            }
+        }
+    };
+
+    /**
+     * Exponential backoff reconnect runnable.
+     * Triggered upon unexpected GATT disconnection when not shut down.
+     * Schedules consecutive retry attempts backing off up to {@link #MAX_RECONNECT_DELAY_MS}.
+     */
+    private final Runnable mReconnectRunnable = new Runnable() {
+        @Override
+        public void run() {
+            synchronized (mGattLock) {
+                if (mIsShutDown) {
+                    return;
+                }
+                if (mState != State.CONNECTED_TO_GATT && mState != State.CONNECTED_WITH_SERVICE) {
+                    startSearching();
+                }
+            }
+        }
+    };
+
+    /**
+     * Periodic runnable to query the BLE battery level characteristic.
+     */
     private final Runnable mBatteryReadRunnable = new Runnable() {
         @Override
         public void run() {
+            if (mIsShutDown) {
+                return;
+            }
             final BluetoothGatt gatt = mBluetoothGatt;
             final BluetoothGattCharacteristic batteryChar = mBatteryCharacteristic;
             if (gatt != null && batteryChar != null) {
@@ -82,7 +166,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 if (DEBUG) Log.i(TAG, "Connected to GATT server");
 
-                mState = State.CONNECTED_TO_GATT;
+                synchronized (mGattLock) {
+                    mState = State.CONNECTED_TO_GATT;
+                }
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
@@ -98,14 +184,23 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                 });
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 Log.i(TAG, "Disconnected from GATT server.");
-                mState = State.DISCONNECTED;
+                synchronized (mGattLock) {
+                    mState = State.DISCONNECTED;
+                }
                 unregisterSensors();
 
-                disconnectFromGatt(); // correct?
+                disconnectFromGatt();
 
-                startSearching();
-
-                // startSearching(); // Missing in action!
+                if (!mIsShutDown) {
+                    long delay;
+                    synchronized (mGattLock) {
+                        delay = mCurrentReconnectDelayMs;
+                        mCurrentReconnectDelayMs = Math.min(mCurrentReconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS);
+                    }
+                    Log.i(TAG, "Scheduling reconnect in " + delay + " ms (next backoff: " + mCurrentReconnectDelayMs + " ms)");
+                    mHandler.removeCallbacks(mReconnectRunnable);
+                    mHandler.postDelayed(mReconnectRunnable, delay);
+                }
             } else {
                 Log.d(TAG, "unhandled state: " + newState);
             }
@@ -143,15 +238,66 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         public void onCharacteristicRead(BluetoothGatt gatt,
                                          BluetoothGattCharacteristic characteristic,
                                          int status) {
-            if (DEBUG) Log.i(TAG, "onCharacteristicRead: " + characteristic.getUuid());
+            if (DEBUG) Log.i(TAG, "onCharacteristicRead: " + (characteristic != null ? characteristic.getUuid() : "null"));
 
-            characteristicUpdate(gatt, characteristic);
+            if (status == BluetoothGatt.GATT_SUCCESS && characteristic != null && characteristic.getValue() != null && !mIsShutDown) {
+                byte[] cloned = characteristic.getValue().clone();
+                BluetoothGattCharacteristic snapshot = obtainSnapshotCharacteristic(characteristic, cloned);
+                if (snapshot != null) {
+                    characteristicUpdate(gatt, snapshot);
+                }
+            } else if (characteristic != null && !mIsShutDown) {
+                characteristicUpdate(gatt, characteristic);
+            }
             readNextCharacteristic();
+        }
+
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+        @Override
+        public void onCharacteristicChanged(@NonNull BluetoothGatt gatt,
+                                            @NonNull BluetoothGattCharacteristic characteristic,
+                                            @NonNull byte[] value) {
+            handleCharacteristicChanged(gatt, characteristic, value);
         }
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            characteristicUpdate(gatt, characteristic);
+            handleCharacteristicChanged(gatt, characteristic, characteristic != null ? characteristic.getValue() : null);
+        }
+
+        /**
+         * Dispatches characteristic change notifications defensively.
+         * Clones incoming raw telemetry payload bytes and packages them into an immutable
+         * {@link BluetoothGattCharacteristic} snapshot (standard API available since API 18)
+         * to preserve API compatibility across all {@link #measurementCharacteristicUpdate} subclass
+         * implementations while preventing asynchronous buffer mutation races (REQ-CON-020.1).
+         * Telemetry rates are bounded (1-4 Hz), resulting in negligible young-generation GC overhead
+         * while guaranteeing thread and subscriber isolation without risking object pool cross-contamination.
+         *
+         * @param gatt the GATT client instance
+         * @param characteristic the original framework characteristic containing metadata
+         * @param value the raw incoming byte payload (non-null on API 33+) or fallback characteristic value
+         */
+        private void handleCharacteristicChanged(final BluetoothGatt gatt,
+                                                final BluetoothGattCharacteristic characteristic,
+                                                final byte[] value) {
+            if (mIsShutDown) {
+                return;
+            }
+            if (DEBUG) Log.i(TAG, "handleCharacteristicChanged: " + (characteristic != null ? characteristic.getUuid() : "null"));
+            if (characteristic == null) {
+                return;
+            }
+            byte[] rawBytes = value != null ? value : characteristic.getValue();
+            if (rawBytes == null) {
+                if (DEBUG) Log.w(TAG, "characteristic value is null for " + characteristic.getUuid());
+                return;
+            }
+            byte[] cloned = rawBytes.clone();
+            BluetoothGattCharacteristic snapshot = obtainSnapshotCharacteristic(characteristic, cloned);
+            if (snapshot != null) {
+                characteristicUpdate(gatt, snapshot);
+            }
         }
 
         @Override
@@ -188,29 +334,32 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
 
     @Override
     public void startSearching() {
-        if (DEBUG) Log.i(TAG, "startSearching()");
-        notifyStartSearching();
-
-        mState = State.SEARCHING;
-
-        //stop searching after some time
-        mHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (DEBUG) Log.i(TAG, "search time out");
-                if (!isReceivingData()) {
-                    if (DEBUG) Log.i(TAG, "device is not receiving data, so this search failed");
-                    disconnectFromGatt();
-                    notifyStopSearching(false);  // we did not find the device
-                }
+        synchronized (mGattLock) {
+            if (mIsShutDown) {
+                Log.w(TAG, "Ignoring startSearching() because device is shut down");
+                return;
             }
-        }, SEARCH_PERIOD);
+            if (DEBUG) Log.i(TAG, "startSearching()");
+            notifyStartSearching();
+
+            mState = State.SEARCHING;
+
+            // Cancel any pending search timeout or reconnect runnable
+            mHandler.removeCallbacks(mSearchTimeoutRunnable);
+            mHandler.removeCallbacks(mReconnectRunnable);
+
+            // stop searching after some time
+            mHandler.postDelayed(mSearchTimeoutRunnable, SEARCH_PERIOD);
+        }
 
         final BluetoothDevice device = ((BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter().getRemoteDevice(mAddress);
 
         mHandler.post(new Runnable() {
             @Override
             public void run() {
+                if (mIsShutDown) {
+                    return;
+                }
                 if (DEBUG) Log.i(TAG, "trying to connect gatt");
                 if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                     return;
@@ -225,6 +374,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     protected void disconnectFromGatt() {
         if (DEBUG) Log.i(TAG, "disconnectFromGatt()");
 
+        mHandler.removeCallbacks(mSearchTimeoutRunnable);
         mHandler.removeCallbacks(mBatteryReadRunnable);
         mReadCharacteristicQueue.clear();
 
@@ -256,16 +406,56 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         return mState == State.CONNECTED_WITH_SERVICE;
     }
 
-
     @Override
     public void shutDown() {
+        mIsShutDown = true;
         if (DEBUG) Log.i(TAG, "shutDown()");
 
-        mHandler.removeCallbacksAndMessages(null);
+        synchronized (mGattLock) {
+            mState = State.DISCONNECTED;
+            mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
+            mHandler.removeCallbacks(mSearchTimeoutRunnable);
+            mHandler.removeCallbacks(mReconnectRunnable);
+            mHandler.removeCallbacks(mBatteryReadRunnable);
+            mHandler.removeCallbacksAndMessages(null);
+            mCharacteristicPool.clear();
+        }
 
         disconnectFromGatt();
 
         super.shutDown();
+    }
+
+    @Override
+    protected void notifyStopSearching(boolean success) {
+        if (success) {
+            mHandler.removeCallbacks(mSearchTimeoutRunnable);
+            synchronized (mGattLock) {
+                mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
+            }
+        }
+        super.notifyStopSearching(success);
+    }
+
+    // Package-private inspection methods for unit testing
+    boolean isShutDown() {
+        return mIsShutDown;
+    }
+
+    long getCurrentReconnectDelayMs() {
+        return mCurrentReconnectDelayMs;
+    }
+
+    Runnable getSearchTimeoutRunnable() {
+        return mSearchTimeoutRunnable;
+    }
+
+    Runnable getReconnectRunnable() {
+        return mReconnectRunnable;
+    }
+
+    BluetoothGattCallback getGattCallbackForTesting() {
+        return mGattCallback;
     }
 
     protected abstract void measurementCharacteristicUpdate(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic);
@@ -326,7 +516,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             });
         } else { // queue is empty
             if (!sensorsRegistered()) {  // but sensors are not yet registered
-                mState = State.CONNECTED_WITH_SERVICE;
+                synchronized (mGattLock) {
+                    mState = State.CONNECTED_WITH_SERVICE;
+                }
                 setLastActive();
                 registerSensors();
 

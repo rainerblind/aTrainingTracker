@@ -29,13 +29,10 @@ public enum FileFormat {
     FIT("FIT", ".fit", R.string.FIT),
 
     // not the best solution but should work.
-    STRAVA("Strava", ".tcx", R.string.Strava); //              new TCXFileExporter(),           new StravaUploader()),
-    // RUNKEEPER("RunKeeper", ".json", R.string.Runkeeper),//           new RunkeeperFileExporter(),     new RunkeeperUploader()),
-    // TRAINING_PEAKS("TrainingPeaks", ".tcx", R.string.TrainingPeaks);//       new TrainingPeaksFileExporter(), new TrainingPeaksUploader());
-    // TRAINING_PEAKS("TrainingPeaks", ".pwx",  "TrainingPeaks");//       new TrainingPeaksFileExporter(), new TrainingPeaksUploader());
+    STRAVA("Strava", ".tcx", R.string.Strava);
 
     public static final FileFormat[] STANDARD_FILE_FORMATS = new FileFormat[]{CSV, GC, TCX, GPX, FIT};
-    public static final FileFormat[] ONLINE_COMMUNITIES = new FileFormat[]{STRAVA /*, RUNKEEPER, TRAINING_PEAKS*/};
+    public static final FileFormat[] ONLINE_COMMUNITIES = new FileFormat[]{STRAVA};
 
     private final String mDirName;
     private final String mFileEnding;
@@ -62,6 +59,30 @@ public enum FileFormat {
 
     public int getUiNameId() {
         return mUiNameId;
+    }
+
+    /**
+     * Returns the standardized MIME type for MediaStore public Downloads insertion
+     * and external Intent sharing (REQ-EXP-022, ATT-4013).
+     *
+     * @return the MIME type string matching the file format standard
+     */
+    public String getMimeType() {
+        switch (this) {
+            case GPX:
+                return "application/gpx+xml";
+            case TCX:
+            case STRAVA:
+                return "application/vnd.garmin.tcx+xml";
+            case FIT:
+                return "application/vnd.ant.fit";
+            case CSV:
+                return "text/csv";
+            case GC:
+                return "application/json";
+            default:
+                return "application/octet-stream";
+        }
     }
 
     // public BaseExporter getFileExporter() { return mFileExporter; }

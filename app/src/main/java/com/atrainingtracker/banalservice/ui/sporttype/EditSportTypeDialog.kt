@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.ui.sporttype
 
 import androidx.compose.foundation.layout.Arrangement
+import java.util.Locale
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -77,7 +78,7 @@ fun EditSportTypeDialog(
     onDismiss: () -> Unit,
     onConfirm: (SportTypeItem) -> Unit
 ) {
-    fun formatSpeed(speed: Double): String = "%.2f".format(MyHelper.mps2userUnit(speed)).replace(",", ".")
+    fun formatSpeed(speed: Double): String = String.format(Locale.getDefault(), "%.2f", MyHelper.mps2userUnit(speed))
 
     var name by remember { mutableStateOf(item.name) }
     var bSportType by remember { mutableStateOf(item.bSportType) }
@@ -157,8 +158,8 @@ fun EditSportTypeDialog(
         actions = {
             AppDialogActions.SaveCancel(
                 onSave = {
-                    val finalMin = MyHelper.UserUnit2mps(minSpeed.toDoubleOrNull() ?: 0.0)
-                    val finalMax = MyHelper.UserUnit2mps(maxSpeed.toDoubleOrNull() ?: 0.0)
+                    val finalMin = MyHelper.UserUnit2mps(minSpeed.replace(',', '.').toDoubleOrNull() ?: 0.0)
+                    val finalMax = MyHelper.UserUnit2mps(maxSpeed.replace(',', '.').toDoubleOrNull() ?: 0.0)
                     onConfirm(item.copy(
                         name = name,
                         bSportType = bSportType,
@@ -251,14 +252,20 @@ fun EditSportTypeDialog(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = minSpeed,
-                    onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) minSpeed = it },
+                    onValueChange = { input ->
+                        val sanitized = input.replace(',', '.')
+                        if (input.isEmpty() || sanitized.toDoubleOrNull() != null) minSpeed = input
+                    },
                     label = { Text("${stringResource(R.string.min)} ($speedUnit)") },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
                 OutlinedTextField(
                     value = maxSpeed,
-                    onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null) maxSpeed = it },
+                    onValueChange = { input ->
+                        val sanitized = input.replace(',', '.')
+                        if (input.isEmpty() || sanitized.toDoubleOrNull() != null) maxSpeed = input
+                    },
                     label = { Text("${stringResource(R.string.max)} ($speedUnit)") },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)

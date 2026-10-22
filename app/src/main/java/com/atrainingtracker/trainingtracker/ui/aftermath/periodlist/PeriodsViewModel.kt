@@ -28,6 +28,7 @@ import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -78,7 +79,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     val enabledMarkerTypes: StateFlow<Set<PeriodMarkerType>> = prefManager.enabledPeriodMarkerTypesFlow
         .map { strings -> 
             strings.mapNotNull { 
-                try { PeriodMarkerType.valueOf(it) } catch(_: Exception) { null } 
+                safeEnumValueOfOrNull<PeriodMarkerType>(it)
             }.toSet()
         }
         .stateIn(
@@ -213,11 +214,16 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private var peekJob: Job? = null
+    @androidx.annotation.VisibleForTesting
+    internal val currentPeekJob: Job? get() = peekJob
+
     private val _peekedWorkoutDataWithTrack = MutableStateFlow<WorkoutDataWithTrack?>(null)
     val peekedWorkoutDataWithTrack = _peekedWorkoutDataWithTrack.asStateFlow()
 
     fun selectWorkoutForPeek(id: Long) {
-        viewModelScope.launch {
+        peekJob?.cancel()
+        peekJob = viewModelScope.launch {
             val workout = workoutRepo.allWorkouts.value.find { it.id == id }
             if (workout != null) {
                 _peekedWorkoutDataWithTrack.value = WorkoutDataWithTrack(
@@ -229,6 +235,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun clearPeekSelection() {
+        peekJob?.cancel()
         _peekedWorkoutDataWithTrack.value = null
     }
 }

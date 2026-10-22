@@ -26,10 +26,99 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.provider.BaseColumns
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.google.android.gms.maps.model.LatLng
 import org.json.JSONArray
+
+data class WorkoutBoundsDto(
+    val minLat: Double?,
+    val minLng: Double?,
+    val maxLat: Double?,
+    val maxLng: Double?
+) {
+    val hasPoints: Boolean
+        get() = minLat != null && minLng != null && maxLat != null && maxLng != null
+
+    companion object {
+        fun fromCursor(cursor: Cursor): WorkoutBoundsDto {
+            val minLatIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LAT)
+            val minLngIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MIN_LNG)
+            val maxLatIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LAT)
+            val maxLngIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.BOUND_MAX_LNG)
+
+            return WorkoutBoundsDto(
+                minLat = if (cursor.isNull(minLatIdx)) null else cursor.getDouble(minLatIdx),
+                minLng = if (cursor.isNull(minLngIdx)) null else cursor.getDouble(minLngIdx),
+                maxLat = if (cursor.isNull(maxLatIdx)) null else cursor.getDouble(maxLatIdx),
+                maxLng = if (cursor.isNull(maxLngIdx)) null else cursor.getDouble(maxLngIdx)
+            )
+        }
+    }
+}
+
+data class ClusterWorkoutCandidateDto(
+    val workoutId: Long,
+    val workoutName: String?,
+    val fileBaseName: String?,
+    val sportId: Long,
+    val distance: Double
+) {
+    companion object {
+        fun fromCursor(cursor: Cursor): ClusterWorkoutCandidateDto {
+            val idIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID)
+            val nameIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME)
+            val fileIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)
+            val sportIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID)
+            val distIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m)
+
+            return ClusterWorkoutCandidateDto(
+                workoutId = cursor.getLong(idIdx),
+                workoutName = if (!cursor.isNull(nameIdx)) cursor.getString(nameIdx) else null,
+                fileBaseName = if (!cursor.isNull(fileIdx)) cursor.getString(fileIdx) else null,
+                sportId = cursor.getLong(sportIdx),
+                distance = cursor.getDouble(distIdx)
+            )
+        }
+    }
+}
+
+data class WorkoutEquipmentDto(
+    val sportId: Long,
+    val equipmentId: Long
+) {
+    companion object {
+        fun fromCursor(cursor: Cursor): WorkoutEquipmentDto {
+            val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.SPORT_ID))
+            val equipmentId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.EQUIPMENT_ID))
+            return WorkoutEquipmentDto(sportId, equipmentId)
+        }
+    }
+}
+
+data class WorkoutBatchKey(
+    val id: Long,
+    val fileName: String?,
+    val clusterId: Long
+) {
+    companion object {
+        fun fromCursor(cursor: Cursor): WorkoutBatchKey {
+            val id = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID))
+            val fileIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)
+            val fileName = if (!cursor.isNull(fileIdx)) cursor.getString(fileIdx) else null
+            val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
+            return WorkoutBatchKey(id, fileName, clusterId)
+        }
+    }
+}
+
+data class WorkoutBatchKeys(
+    val idList: List<Long>,
+    val fileNameList: List<String>,
+    val clusterIdList: Set<Long>
+)
 
 data class WorkoutCluster(
     val id: Long = 0,
@@ -61,6 +150,10 @@ data class WorkoutCluster(
 ) {
     val minAltLatLng: LatLng? get() = if (minAltLat != null && minAltLng != null) LatLng(minAltLat, minAltLng) else null
     val maxAltLatLng: LatLng? get() = if (maxAltLat != null && maxAltLng != null) LatLng(maxAltLat, maxAltLng) else null
+
+    companion object {
+        fun fromCursor(cursor: Cursor): WorkoutCluster = WorkoutClusterDatabaseManager.mapCursorToCluster(cursor)
+    }
 }
 
 class WorkoutClusterDatabaseManager private constructor(context: Context) {
@@ -69,6 +162,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
     private var mDatabase: SQLiteDatabase? = null
 
     companion object {
+        private const val TAG = "WorkoutClusterDatabaseManager"
+
         @Volatile
         private var instance: WorkoutClusterDatabaseManager? = null
 
@@ -83,397 +178,111 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
         fun resetForTesting(newInstance: WorkoutClusterDatabaseManager? = null) {
             instance = newInstance
         }
-    }
 
-    /**
-     * Returns a writable database instance and ensures it remains open.
-     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
-     */
-    fun getDatabase(): SQLiteDatabase {
-        val db = mDatabase
-        if (db != null && db.isOpen) {
-            return db
-        }
-        return synchronized(this) {
-            val db2 = mDatabase
-            if (db2 != null && db2.isOpen) {
-                db2
-            } else {
-                // If the database was closed, ensure the helper clears its reference
-                if (mDatabase != null) {
-                    dbHelper.close()
+        @JvmStatic
+        fun deserializePreviewPaths(serialized: String): List<String> {
+            if (serialized.isEmpty()) return emptyList()
+            return try {
+                val array = JSONArray(serialized)
+                val list = mutableListOf<String>()
+                for (i in 0 until array.length()) {
+                    list.add(array.getString(i))
                 }
-                dbHelper.writableDatabase.also { mDatabase = it }
+                list
+            } catch (e: org.json.JSONException) {
+                Log.w(TAG, "Failed to deserialize preview paths JSON: $serialized", e)
+                emptyList()
             }
         }
-    }
 
-    fun getAllClusters(): List<WorkoutCluster> {
-        val clusters = mutableListOf<WorkoutCluster>()
-        getDatabase().query(
-            WorkoutClusterContract.TABLE_NAME, null, null, null, null, null, null
-        ).use { cursor ->
-            while (cursor.moveToNext()) {
-                clusters.add(mapCursorToCluster(cursor))
-            }
-        }
-        return clusters
-    }
+        /**
+         * Authoritative row-level mapper from a positioned [Cursor] to a [WorkoutCluster].
+         * Adheres to REQ-DAT-025: Does not advance or close the cursor.
+         */
+        @JvmStatic
+        fun mapCursorToCluster(cursor: Cursor): WorkoutCluster {
+            val minLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MIN_LAT)
+            val minLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MIN_LNG)
+            val maxLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MAX_LAT)
+            val maxLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MAX_LNG)
+            val previewIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_PREVIEW_PATHS)
+            val routeIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_ROUTE_POLYLINE)
 
-    /**
-     * Finds candidate clusters based on rough spatial and distance filtering.
-     * @param latToleranceDegrees The maximum latitude drift allowed for the start point.
-     * @param distToleranceMeters The maximum distance drift allowed for the total length.
-     */
-    fun findCandidates(
-        startLat: Double, 
-        startLng: Double, 
-        distance: Double,
-        latToleranceDegrees: Double,
-        distToleranceMeters: Double
-    ): List<WorkoutCluster> {
-        val cosLat = Math.cos(Math.toRadians(startLat)).coerceAtLeast(0.01)
-        val lngToleranceDegrees = latToleranceDegrees / cosLat
-        val selection = "${WorkoutClusterContract.COLUMN_START_LAT} BETWEEN ? AND ? AND " +
-                "${WorkoutClusterContract.COLUMN_START_LNG} BETWEEN ? AND ? AND " +
-                "${WorkoutClusterContract.COLUMN_REF_DISTANCE} BETWEEN ? AND ?"
-        val args = arrayOf(
-            (startLat - latToleranceDegrees).toString(), (startLat + latToleranceDegrees).toString(),
-            (startLng - lngToleranceDegrees).toString(), (startLng + lngToleranceDegrees).toString(),
-            (distance - distToleranceMeters).toString(), (distance + distToleranceMeters).toString()
-        )
+            val minAltLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MIN_ALT_LAT)
+            val minAltLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MIN_ALT_LNG)
+            val maxAltLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MAX_ALT_LAT)
+            val maxAltLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MAX_ALT_LNG)
+            val hasCounterIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_HAS_COUNTER)
 
-        val candidates = mutableListOf<WorkoutCluster>()
-        getDatabase().query(
-            WorkoutClusterContract.TABLE_NAME, null, selection, args, null, null, null
-        ).use { cursor ->
-            while (cursor.moveToNext()) {
-                candidates.add(mapCursorToCluster(cursor))
-            }
-        }
-        return candidates
-    }
-
-    fun insertCluster(cluster: WorkoutCluster): Long {
-        val values = createContentValues(cluster)
-        return getDatabase().insert(WorkoutClusterContract.TABLE_NAME, null, values)
-    }
-
-    fun updateCluster(cluster: WorkoutCluster) {
-        val values = createContentValues(cluster)
-        getDatabase().update(
-            WorkoutClusterContract.TABLE_NAME, values,
-            "${BaseColumns._ID} = ?", arrayOf(cluster.id.toString())
-        )
-    }
-
-    fun deleteCluster(id: Long) {
-        getDatabase().delete(
-            WorkoutClusterContract.TABLE_NAME,
-            "${BaseColumns._ID} = ?",
-            arrayOf(id.toString())
-        )
-    }
-
-    fun getClusterById(id: Long): WorkoutCluster? {
-        val selection = "${BaseColumns._ID} = ?"
-        val args = arrayOf(id.toString())
-        getDatabase().query(
-            WorkoutClusterContract.TABLE_NAME, null, selection, args, null, null, null
-        ).use { cursor ->
-            if (cursor.moveToFirst()) {
-                return mapCursorToCluster(cursor)
-            }
-        }
-        return null
-    }
-
-    /**
-     * Exact name lookup for route clusters (ATT-496 Fix).
-     */
-    fun getClusterByName(name: String): WorkoutCluster? {
-        val trimmed = name.trim()
-        if (trimmed.isEmpty()) return null
-        val selection = "${WorkoutClusterContract.COLUMN_NAME} = ?"
-        val args = arrayOf(trimmed)
-        getDatabase().query(
-            WorkoutClusterContract.TABLE_NAME, null, selection, args, null, null, null
-        ).use { cursor ->
-            if (cursor.moveToFirst()) {
-                return mapCursorToCluster(cursor)
-            }
-        }
-        return null
-    }
-
-    /**
-     * Fast lookup of a cluster name by ID (ATT-388).
-     */
-    fun getClusterNameById(id: Long): String? {
-        if (id == -1L) return null
-        val selection = "${BaseColumns._ID} = ?"
-        val args = arrayOf(id.toString())
-        getDatabase().query(
-            WorkoutClusterContract.TABLE_NAME, arrayOf(WorkoutClusterContract.COLUMN_NAME), 
-            selection, args, null, null, null
-        ).use { cursor ->
-            if (cursor.moveToFirst()) {
-                return cursor.getString(0)
-            }
-        }
-        return null
-    }
-
-    fun deleteAllClusters() {
-        getDatabase().delete(WorkoutClusterContract.TABLE_NAME, null, null)
-    }
-
-    /**
-     * Fast lookup of cluster names for a batch of IDs (ATT-388).
-     */
-    fun getClusterNamesForIds(ids: Collection<Long>): Map<Long, String> {
-        val results = mutableMapOf<Long, String>()
-        if (ids.isEmpty()) return results
-
-        val inClause = ids.joinToString(",")
-        val selection = "${BaseColumns._ID} IN ($inClause)"
-        
-        getDatabase().query(
-            WorkoutClusterContract.TABLE_NAME, 
-            arrayOf(BaseColumns._ID, WorkoutClusterContract.COLUMN_NAME), 
-            selection, null, null, null, null
-        ).use { cursor ->
-            while (cursor.moveToNext()) {
-                results[cursor.getLong(0)] = cursor.getString(1)
-            }
-        }
-        return results
-    }
-
-    fun isNameTaken(name: String, excludeId: Long = -1): Boolean {
-        var selection = "${WorkoutClusterContract.COLUMN_NAME} = ?"
-        var args = arrayOf(name)
-        
-        if (excludeId != -1L) {
-            selection += " AND ${BaseColumns._ID} != ?"
-            args = arrayOf(name, excludeId.toString())
-        }
-
-        getDatabase().query(
-            WorkoutClusterContract.TABLE_NAME, arrayOf(BaseColumns._ID), selection, args, null, null, null
-        ).use { cursor ->
-            return cursor.count > 0
-        }
-    }
-
-    private fun mapCursorToCluster(cursor: Cursor): WorkoutCluster {
-        val minLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MIN_LAT)
-        val minLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MIN_LNG)
-        val maxLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MAX_LAT)
-        val maxLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_BOUND_MAX_LNG)
-        val previewIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_PREVIEW_PATHS)
-        val routeIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_ROUTE_POLYLINE)
-
-        val minAltLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MIN_ALT_LAT)
-        val minAltLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MIN_ALT_LNG)
-        val maxAltLatIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MAX_ALT_LAT)
-        val maxAltLngIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_MAX_ALT_LNG)
-        val hasCounterIdx = cursor.getColumnIndex(WorkoutClusterContract.COLUMN_HAS_COUNTER)
-
-        return WorkoutCluster(
-            id = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID)),
-            name = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_NAME)),
-            probableSportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_PROBABLE_SPORT_ID)),
-            startLat = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_START_LAT)),
-            startLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_START_LNG)),
-            endLat = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_END_LAT)),
-            endLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_END_LNG)),
-            maxDispLat = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_MAX_DISP_LAT)),
-            maxDispLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_MAX_DISP_LNG)),
-            refDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_REF_DISTANCE)),
-            hitCount = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_HIT_COUNT)),
-            bSportType = BSportType.valueOf(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_SPORT_TYPE))),
-            previewPaths = if (previewIdx != -1 && !cursor.isNull(previewIdx)) deserializePreviewPaths(cursor.getString(previewIdx)) else emptyList(),
-            routePolyline = if (routeIdx != -1 && !cursor.isNull(routeIdx)) cursor.getString(routeIdx) else null,
-            minLat = if (minLatIdx != -1 && !cursor.isNull(minLatIdx)) cursor.getDouble(minLatIdx) else null,
-            minLng = if (minLngIdx != -1 && !cursor.isNull(minLngIdx)) cursor.getDouble(minLngIdx) else null,
-            maxLat = if (maxLatIdx != -1 && !cursor.isNull(maxLatIdx)) cursor.getDouble(maxLatIdx) else null,
-            maxLng = if (maxLngIdx != -1 && !cursor.isNull(maxLngIdx)) cursor.getDouble(maxLngIdx) else null,
-            minAltLat = if (minAltLatIdx != -1 && !cursor.isNull(minAltLatIdx)) cursor.getDouble(minAltLatIdx) else null,
-            minAltLng = if (minAltLngIdx != -1 && !cursor.isNull(minAltLngIdx)) cursor.getDouble(minAltLngIdx) else null,
-            maxAltLat = if (maxAltLatIdx != -1 && !cursor.isNull(maxAltLatIdx)) cursor.getDouble(maxAltLatIdx) else null,
-            maxAltLng = if (maxAltLngIdx != -1 && !cursor.isNull(maxAltLngIdx)) cursor.getDouble(maxAltLngIdx) else null,
-            hasCounter = if (hasCounterIdx != -1 && !cursor.isNull(hasCounterIdx)) cursor.getInt(hasCounterIdx) == 1 else true
-        )
-    }
-
-    private fun createContentValues(cluster: WorkoutCluster) = ContentValues().apply {
-        put(WorkoutClusterContract.COLUMN_NAME, cluster.name)
-        put(WorkoutClusterContract.COLUMN_PROBABLE_SPORT_ID, cluster.probableSportId)
-        put(WorkoutClusterContract.COLUMN_START_LAT, cluster.startLat)
-        put(WorkoutClusterContract.COLUMN_START_LNG, cluster.startLng)
-        put(WorkoutClusterContract.COLUMN_END_LAT, cluster.endLat)
-        put(WorkoutClusterContract.COLUMN_END_LNG, cluster.endLng)
-        put(WorkoutClusterContract.COLUMN_MAX_DISP_LAT, cluster.maxDispLat)
-        put(WorkoutClusterContract.COLUMN_MAX_DISP_LNG, cluster.maxDispLng)
-        put(WorkoutClusterContract.COLUMN_REF_DISTANCE, cluster.refDistance)
-        put(WorkoutClusterContract.COLUMN_HIT_COUNT, cluster.hitCount)
-        put(WorkoutClusterContract.COLUMN_SPORT_TYPE, cluster.bSportType.name)
-        // ATT-441
-        put(WorkoutClusterContract.COLUMN_PREVIEW_PATHS, serializePreviewPaths(cluster.previewPaths))
-        put(WorkoutClusterContract.COLUMN_ROUTE_POLYLINE, cluster.routePolyline)
-        // ATT-354
-        put(WorkoutClusterContract.COLUMN_BOUND_MIN_LAT, cluster.minLat)
-        put(WorkoutClusterContract.COLUMN_BOUND_MIN_LNG, cluster.minLng)
-        put(WorkoutClusterContract.COLUMN_BOUND_MAX_LAT, cluster.maxLat)
-        put(WorkoutClusterContract.COLUMN_BOUND_MAX_LNG, cluster.maxLng)
-        // ATT-502 / REQ-SET-065: Altitude Extrema coordinates
-        put(WorkoutClusterContract.COLUMN_MIN_ALT_LAT, cluster.minAltLat)
-        put(WorkoutClusterContract.COLUMN_MIN_ALT_LNG, cluster.minAltLng)
-        put(WorkoutClusterContract.COLUMN_MAX_ALT_LAT, cluster.maxAltLat)
-        put(WorkoutClusterContract.COLUMN_MAX_ALT_LNG, cluster.maxAltLng)
-        // ATT-714 / REQ-SET-067: Optional Activity Counter
-        put(WorkoutClusterContract.COLUMN_HAS_COUNTER, if (cluster.hasCounter) 1 else 0)
-    }
-
-    private fun serializePreviewPaths(paths: List<String>): String {
-        val array = JSONArray()
-        paths.forEach { array.put(it) }
-        return array.toString()
-    }
-
-    private fun deserializePreviewPaths(serialized: String): List<String> {
-        if (serialized.isEmpty()) return emptyList()
-        return try {
-            val array = JSONArray(serialized)
-            val list = mutableListOf<String>()
-            for (i in 0 until array.length()) {
-                list.add(array.getString(i))
-            }
-            list
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    object WorkoutClusterContract {
-        const val TABLE_NAME = "RouteClusters" // Keep existing table name to avoid migration for now
-        const val COLUMN_NAME = "name"
-        const val COLUMN_PROBABLE_SPORT_ID = "probable_sport_id"
-        const val COLUMN_START_LAT = "start_lat"
-        const val COLUMN_START_LNG = "start_lng"
-        const val COLUMN_END_LAT = "end_lat"
-        const val COLUMN_END_LNG = "end_lng"
-        const val COLUMN_MAX_DISP_LAT = "max_disp_lat"
-        const val COLUMN_MAX_DISP_LNG = "max_disp_lng"
-        const val COLUMN_REF_DISTANCE = "ref_distance"
-        const val COLUMN_HIT_COUNT = "hit_count"
-        const val COLUMN_SPORT_TYPE = "b_sport_type"
-        const val COLUMN_PREVIEW_PATHS = "preview_paths" // added in Version 8
-        const val COLUMN_ROUTE_POLYLINE = "route_polyline" // added in Version 8
-        const val COLUMN_BOUND_MIN_LAT = "bound_min_lat"
-        const val COLUMN_BOUND_MIN_LNG = "bound_min_lng"
-        const val COLUMN_BOUND_MAX_LAT = "bound_max_lat"
-        const val COLUMN_BOUND_MAX_LNG = "bound_max_lng"
-        // ATT-502: 3D Altitude extrema coordinate columns
-        const val COLUMN_MIN_ALT_LAT = "min_alt_lat"
-        const val COLUMN_MIN_ALT_LNG = "min_alt_lng"
-        const val COLUMN_MAX_ALT_LAT = "max_alt_lat"
-        const val COLUMN_MAX_ALT_LNG = "max_alt_lng"
-        // ATT-714: Optional Activity Counter
-        const val COLUMN_HAS_COUNTER = "has_counter"
-
-        const val CREATE_TABLE = """
-            CREATE TABLE $TABLE_NAME (
-                ${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT,
-                $COLUMN_NAME TEXT,
-                $COLUMN_PROBABLE_SPORT_ID INTEGER,
-                $COLUMN_START_LAT REAL,
-                $COLUMN_START_LNG REAL,
-                $COLUMN_END_LAT REAL,
-                $COLUMN_END_LNG REAL,
-                $COLUMN_MAX_DISP_LAT REAL,
-                $COLUMN_MAX_DISP_LNG REAL,
-                $COLUMN_REF_DISTANCE REAL,
-                $COLUMN_HIT_COUNT INTEGER,
-                $COLUMN_SPORT_TYPE TEXT,
-                $COLUMN_PREVIEW_PATHS TEXT,
-                $COLUMN_ROUTE_POLYLINE TEXT,
-                $COLUMN_BOUND_MIN_LAT REAL,
-                $COLUMN_BOUND_MIN_LNG REAL,
-                $COLUMN_BOUND_MAX_LAT REAL,
-                $COLUMN_BOUND_MAX_LNG REAL,
-                $COLUMN_MIN_ALT_LAT REAL,
-                $COLUMN_MIN_ALT_LNG REAL,
-                $COLUMN_MAX_ALT_LAT REAL,
-                $COLUMN_MAX_ALT_LNG REAL,
-                $COLUMN_HAS_COUNTER INTEGER DEFAULT 1
+            return WorkoutCluster(
+                id = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID)),
+                name = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_NAME)),
+                probableSportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_PROBABLE_SPORT_ID)),
+                startLat = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_START_LAT)),
+                startLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_START_LNG)),
+                endLat = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_END_LAT)),
+                endLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_END_LNG)),
+                maxDispLat = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_MAX_DISP_LAT)),
+                maxDispLng = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_MAX_DISP_LNG)),
+                refDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_REF_DISTANCE)),
+                hitCount = cursor.getInt(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_HIT_COUNT)),
+                bSportType = safeEnumValueOf(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutClusterContract.COLUMN_SPORT_TYPE)), BSportType.UNKNOWN),
+                previewPaths = if (previewIdx != -1 && !cursor.isNull(previewIdx)) deserializePreviewPaths(cursor.getString(previewIdx)) else emptyList(),
+                routePolyline = if (routeIdx != -1 && !cursor.isNull(routeIdx)) cursor.getString(routeIdx) else null,
+                minLat = if (minLatIdx != -1 && !cursor.isNull(minLatIdx)) cursor.getDouble(minLatIdx) else null,
+                minLng = if (minLngIdx != -1 && !cursor.isNull(minLngIdx)) cursor.getDouble(minLngIdx) else null,
+                maxLat = if (maxLatIdx != -1 && !cursor.isNull(maxLatIdx)) cursor.getDouble(maxLatIdx) else null,
+                maxLng = if (maxLngIdx != -1 && !cursor.isNull(maxLngIdx)) cursor.getDouble(maxLngIdx) else null,
+                minAltLat = if (minAltLatIdx != -1 && !cursor.isNull(minAltLatIdx)) cursor.getDouble(minAltLatIdx) else null,
+                minAltLng = if (minAltLngIdx != -1 && !cursor.isNull(minAltLngIdx)) cursor.getDouble(minAltLngIdx) else null,
+                maxAltLat = if (maxAltLatIdx != -1 && !cursor.isNull(maxAltLatIdx)) cursor.getDouble(maxAltLatIdx) else null,
+                maxAltLng = if (maxAltLngIdx != -1 && !cursor.isNull(maxAltLngIdx)) cursor.getDouble(maxAltLngIdx) else null,
+                hasCounter = if (hasCounterIdx != -1 && !cursor.isNull(hasCounterIdx)) cursor.getInt(hasCounterIdx) == 1 else true
             )
-        """
-    }
-
-    private class WorkoutClusterDbHelper(private val context: Context) : SQLiteOpenHelper(
-        context, "RouteClusters.db", null, 11
-    ) {
-        override fun onCreate(db: SQLiteDatabase) {
-            db.execSQL(WorkoutClusterContract.CREATE_TABLE)
         }
 
-        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Relational Integrity Migration (v7: Ensuring consistent schema after v4 drop)
-            if (oldVersion < 2) {
-                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_SPORT_TYPE} TEXT DEFAULT 'UNKNOWN'")
-            }
-            if (oldVersion < 3) {
-                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LAT} REAL")
-                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LNG} REAL")
-                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LAT} REAL")
-                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LNG} REAL")
-            }
-            // v4 was destructive (dropped table). 
-            // v5/v6 tried to reconstruct.
-            // v7 ensures all columns exist and triggers a repository-led re-aggregation if empty.
-            if (oldVersion < 7) {
-                // Final safety check: ensure all spatial columns exist without dropping
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LAT} REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LNG} REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LAT} REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LNG} REAL") } catch (e: Exception) {}
-            }
-            
-            if (oldVersion < 8) {
-                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_PREVIEW_PATHS} TEXT")
-                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_ROUTE_POLYLINE} TEXT")
-            }
+        /**
+         * Authoritative batch key extraction mapping open cursor to [WorkoutBatchKeys].
+         * Pre-resolves column indices once before iteration (REQ-DAT-025, TST-DAT-020).
+         * Leaves cursor closure to the caller's `.use { ... }` block.
+         */
+        @JvmStatic
+        fun fromCursorBatchKeys(cursor: Cursor): WorkoutBatchKeys {
+            val idList = mutableListOf<Long>()
+            val fileNameList = mutableListOf<String>()
+            val clusterIdList = mutableSetOf<Long>()
 
-            if (oldVersion < 9) {
-                // Clear corrupted piped-strings from v8 to force clean JSON re-enrichment
-                db.execSQL("UPDATE ${WorkoutClusterContract.TABLE_NAME} SET ${WorkoutClusterContract.COLUMN_PREVIEW_PATHS} = NULL")
-            }
+            val idIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID)
+            val fileIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME)
+            val clusterIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID)
 
-            // ATT-502 / REQ-SET-065: Upgrade to Version 10 with 3D altitude extrema columns and automated backfill
-            if (oldVersion < 10) {
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_MIN_ALT_LAT} REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_MIN_ALT_LNG} REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_MAX_ALT_LAT} REAL") } catch (e: Exception) {}
-                try { db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_MAX_ALT_LNG} REAL") } catch (e: Exception) {}
-                backfillAltitudeExtrema(context, db)
-            }
-
-            // ATT-714 / REQ-SET-067: Upgrade to Version 11 with has_counter column
-            if (oldVersion < 11) {
-                try {
-                    db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_HAS_COUNTER} INTEGER DEFAULT 1")
-                } catch (e: Exception) {
-                    Log.w("WorkoutClusterDbHelper", "Failed to add has_counter column", e)
+            while (cursor.moveToNext()) {
+                idList.add(cursor.getLong(idIdx))
+                if (!cursor.isNull(fileIdx)) {
+                    cursor.getString(fileIdx)?.let { fileNameList.add(it) }
+                }
+                val clusterId = cursor.getLong(clusterIdx)
+                if (clusterId != -1L) {
+                    clusterIdList.add(clusterId)
                 }
             }
+            return WorkoutBatchKeys(idList, fileNameList, clusterIdList)
         }
 
-        private fun backfillAltitudeExtrema(context: Context, db: SQLiteDatabase) {
+        /**
+         * Backfills 3D altitude extrema for route clusters whose extrema are unpopulated (REQ-MIG-046.3).
+         * Strictly idempotent: queries only clusters WHERE min_alt_lat IS NULL.
+         */
+        @JvmStatic
+        fun backfillAltitudeExtrema(context: Context, db: SQLiteDatabase) {
             try {
                 val clusterIds = mutableListOf<Long>()
-                db.query(WorkoutClusterContract.TABLE_NAME, arrayOf(BaseColumns._ID), null, null, null, null, null).use { cursor ->
+                db.query(
+                    WorkoutClusterContract.TABLE_NAME,
+                    arrayOf(BaseColumns._ID),
+                    "${WorkoutClusterContract.COLUMN_MIN_ALT_LAT} IS NULL",
+                    null, null, null, null
+                ).use { cursor ->
                     while (cursor.moveToNext()) {
                         clusterIds.add(cursor.getLong(0))
                     }
@@ -540,8 +349,375 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
                     }
                 }
             } catch (e: Exception) {
-                Log.w("WorkoutClusterDbHelper", "Altitude extrema backfill migration failed", e)
+                Log.w("WorkoutClusterDatabaseManager", "Altitude extrema backfill migration failed", e)
             }
+        }
+    }
+
+    /**
+     * Maps a single cursor row positioned at a cluster record to a [WorkoutCluster].
+     * Adheres to REQ-DAT-025: Does not advance or close the cursor.
+     */
+    fun fromCursor(cursor: Cursor): WorkoutCluster = mapCursorToCluster(cursor)
+
+    /**
+     * Maps an open cursor to a list of [WorkoutCluster] items.
+     */
+    fun fromCursorBatch(cursor: Cursor): List<WorkoutCluster> {
+        val clusters = mutableListOf<WorkoutCluster>()
+        while (cursor.moveToNext()) {
+            clusters.add(mapCursorToCluster(cursor))
+        }
+        return clusters
+    }
+
+    /**
+     * Returns a writable database instance and ensures it remains open.
+     * Re-opens if closed (e.g., by a backup process) to prevent IllegalStateException (ATT-289).
+     */
+    fun getDatabase(): SQLiteDatabase {
+        val db = mDatabase
+        if (db != null && db.isOpen) {
+            return db
+        }
+        return synchronized(this) {
+            val db2 = mDatabase
+            if (db2 != null && db2.isOpen) {
+                db2
+            } else {
+                // If the database was closed, ensure the helper clears its reference
+                if (mDatabase != null) {
+                    dbHelper.close()
+                }
+                dbHelper.writableDatabase.also { mDatabase = it }
+            }
+        }
+    }
+
+    fun getAllClusters(): List<WorkoutCluster> {
+        return getDatabase().query(
+            WorkoutClusterContract.TABLE_NAME, null, null, null, null, null, null
+        ).use { cursor ->
+            fromCursorBatch(cursor)
+        }
+    }
+
+    /**
+     * Finds candidate clusters based on rough spatial and distance filtering.
+     * @param latToleranceDegrees The maximum latitude drift allowed for the start point.
+     * @param distToleranceMeters The maximum distance drift allowed for the total length.
+     */
+    fun findCandidates(
+        startLat: Double, 
+        startLng: Double, 
+        distance: Double,
+        latToleranceDegrees: Double,
+        distToleranceMeters: Double
+    ): List<WorkoutCluster> {
+        val cosLat = Math.cos(Math.toRadians(startLat)).coerceAtLeast(0.01)
+        val lngToleranceDegrees = latToleranceDegrees / cosLat
+        val selection = "${WorkoutClusterContract.COLUMN_START_LAT} BETWEEN ? AND ? AND " +
+                "${WorkoutClusterContract.COLUMN_START_LNG} BETWEEN ? AND ? AND " +
+                "${WorkoutClusterContract.COLUMN_REF_DISTANCE} BETWEEN ? AND ?"
+        val args = arrayOf(
+            (startLat - latToleranceDegrees).toString(), (startLat + latToleranceDegrees).toString(),
+            (startLng - lngToleranceDegrees).toString(), (startLng + lngToleranceDegrees).toString(),
+            (distance - distToleranceMeters).toString(), (distance + distToleranceMeters).toString()
+        )
+
+        return getDatabase().query(
+            WorkoutClusterContract.TABLE_NAME, null, selection, args, null, null, null
+        ).use { cursor ->
+            fromCursorBatch(cursor)
+        }
+    }
+
+    fun insertCluster(cluster: WorkoutCluster): Long {
+        val values = createContentValues(cluster)
+        return getDatabase().insert(WorkoutClusterContract.TABLE_NAME, null, values)
+    }
+
+    fun updateCluster(cluster: WorkoutCluster) {
+        val values = createContentValues(cluster)
+        getDatabase().update(
+            WorkoutClusterContract.TABLE_NAME, values,
+            "${BaseColumns._ID} = ?", arrayOf(cluster.id.toString())
+        )
+    }
+
+    fun deleteCluster(id: Long) {
+        getDatabase().delete(
+            WorkoutClusterContract.TABLE_NAME,
+            "${BaseColumns._ID} = ?",
+            arrayOf(id.toString())
+        )
+    }
+
+    fun getClusterById(id: Long): WorkoutCluster? {
+        val selection = "${BaseColumns._ID} = ?"
+        val args = arrayOf(id.toString())
+        getDatabase().query(
+            WorkoutClusterContract.TABLE_NAME, null, selection, args, null, null, null
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return fromCursor(cursor)
+            }
+        }
+        return null
+    }
+
+    /**
+     * Exact name lookup for route clusters (ATT-496 Fix).
+     */
+    fun getClusterByName(name: String): WorkoutCluster? {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return null
+        val selection = "${WorkoutClusterContract.COLUMN_NAME} = ?"
+        val args = arrayOf(trimmed)
+        getDatabase().query(
+            WorkoutClusterContract.TABLE_NAME, null, selection, args, null, null, null
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return fromCursor(cursor)
+            }
+        }
+        return null
+    }
+
+    /**
+     * Fast lookup of a cluster name by ID (ATT-388).
+     */
+    fun getClusterNameById(id: Long): String? {
+        if (id == -1L) return null
+        val selection = "${BaseColumns._ID} = ?"
+        val args = arrayOf(id.toString())
+        getDatabase().query(
+            WorkoutClusterContract.TABLE_NAME, arrayOf(WorkoutClusterContract.COLUMN_NAME), 
+            selection, args, null, null, null
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return cursor.getString(0)
+            }
+        }
+        return null
+    }
+
+    fun deleteAllClusters() {
+        getDatabase().delete(WorkoutClusterContract.TABLE_NAME, null, null)
+    }
+
+    /**
+     * Fast lookup of cluster names for a batch of IDs (ATT-388).
+     */
+    fun getClusterNamesForIds(ids: Collection<Long>): Map<Long, String> {
+        val results = mutableMapOf<Long, String>()
+        if (ids.isEmpty()) return results
+
+        val inClause = ids.joinToString(",")
+        val selection = "${BaseColumns._ID} IN ($inClause)"
+        
+        getDatabase().query(
+            WorkoutClusterContract.TABLE_NAME, 
+            arrayOf(BaseColumns._ID, WorkoutClusterContract.COLUMN_NAME), 
+            selection, null, null, null, null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                results[cursor.getLong(0)] = cursor.getString(1)
+            }
+        }
+        return results
+    }
+
+    fun isNameTaken(name: String, excludeId: Long = -1): Boolean {
+        var selection = "${WorkoutClusterContract.COLUMN_NAME} = ?"
+        var args = arrayOf(name)
+        
+        if (excludeId != -1L) {
+            selection += " AND ${BaseColumns._ID} != ?"
+            args = arrayOf(name, excludeId.toString())
+        }
+
+        getDatabase().query(
+            WorkoutClusterContract.TABLE_NAME, arrayOf(BaseColumns._ID), selection, args, null, null, null
+        ).use { cursor ->
+            return cursor.count > 0
+        }
+    }
+
+    private fun createContentValues(cluster: WorkoutCluster) = ContentValues().apply {
+        put(WorkoutClusterContract.COLUMN_NAME, cluster.name)
+        put(WorkoutClusterContract.COLUMN_PROBABLE_SPORT_ID, cluster.probableSportId)
+        put(WorkoutClusterContract.COLUMN_START_LAT, cluster.startLat)
+        put(WorkoutClusterContract.COLUMN_START_LNG, cluster.startLng)
+        put(WorkoutClusterContract.COLUMN_END_LAT, cluster.endLat)
+        put(WorkoutClusterContract.COLUMN_END_LNG, cluster.endLng)
+        put(WorkoutClusterContract.COLUMN_MAX_DISP_LAT, cluster.maxDispLat)
+        put(WorkoutClusterContract.COLUMN_MAX_DISP_LNG, cluster.maxDispLng)
+        put(WorkoutClusterContract.COLUMN_REF_DISTANCE, cluster.refDistance)
+        put(WorkoutClusterContract.COLUMN_HIT_COUNT, cluster.hitCount)
+        put(WorkoutClusterContract.COLUMN_SPORT_TYPE, cluster.bSportType.name)
+        // ATT-441
+        put(WorkoutClusterContract.COLUMN_PREVIEW_PATHS, serializePreviewPaths(cluster.previewPaths))
+        put(WorkoutClusterContract.COLUMN_ROUTE_POLYLINE, cluster.routePolyline)
+        // ATT-354
+        put(WorkoutClusterContract.COLUMN_BOUND_MIN_LAT, cluster.minLat)
+        put(WorkoutClusterContract.COLUMN_BOUND_MIN_LNG, cluster.minLng)
+        put(WorkoutClusterContract.COLUMN_BOUND_MAX_LAT, cluster.maxLat)
+        put(WorkoutClusterContract.COLUMN_BOUND_MAX_LNG, cluster.maxLng)
+        // ATT-502 / REQ-SET-065: Altitude Extrema coordinates
+        put(WorkoutClusterContract.COLUMN_MIN_ALT_LAT, cluster.minAltLat)
+        put(WorkoutClusterContract.COLUMN_MIN_ALT_LNG, cluster.minAltLng)
+        put(WorkoutClusterContract.COLUMN_MAX_ALT_LAT, cluster.maxAltLat)
+        put(WorkoutClusterContract.COLUMN_MAX_ALT_LNG, cluster.maxAltLng)
+        // ATT-714 / REQ-SET-067: Optional Activity Counter
+        put(WorkoutClusterContract.COLUMN_HAS_COUNTER, if (cluster.hasCounter) 1 else 0)
+    }
+
+    private fun serializePreviewPaths(paths: List<String>): String {
+        val array = JSONArray()
+        paths.forEach { array.put(it) }
+        return array.toString()
+    }
+
+    object WorkoutClusterContract {
+        const val TABLE_NAME = "RouteClusters" // Keep existing table name to avoid migration for now
+        const val COLUMN_NAME = "name"
+        const val COLUMN_PROBABLE_SPORT_ID = "probable_sport_id"
+        const val COLUMN_START_LAT = "start_lat"
+        const val COLUMN_START_LNG = "start_lng"
+        const val COLUMN_END_LAT = "end_lat"
+        const val COLUMN_END_LNG = "end_lng"
+        const val COLUMN_MAX_DISP_LAT = "max_disp_lat"
+        const val COLUMN_MAX_DISP_LNG = "max_disp_lng"
+        const val COLUMN_REF_DISTANCE = "ref_distance"
+        const val COLUMN_HIT_COUNT = "hit_count"
+        const val COLUMN_SPORT_TYPE = "b_sport_type"
+        const val COLUMN_PREVIEW_PATHS = "preview_paths" // added in Version 8
+        const val COLUMN_ROUTE_POLYLINE = "route_polyline" // added in Version 8
+        const val COLUMN_BOUND_MIN_LAT = "bound_min_lat"
+        const val COLUMN_BOUND_MIN_LNG = "bound_min_lng"
+        const val COLUMN_BOUND_MAX_LAT = "bound_max_lat"
+        const val COLUMN_BOUND_MAX_LNG = "bound_max_lng"
+        // ATT-502: 3D Altitude extrema coordinate columns
+        const val COLUMN_MIN_ALT_LAT = "min_alt_lat"
+        const val COLUMN_MIN_ALT_LNG = "min_alt_lng"
+        const val COLUMN_MAX_ALT_LAT = "max_alt_lat"
+        const val COLUMN_MAX_ALT_LNG = "max_alt_lng"
+        // ATT-714: Optional Activity Counter
+        const val COLUMN_HAS_COUNTER = "has_counter"
+
+        const val CREATE_TABLE = """
+            CREATE TABLE $TABLE_NAME (
+                ${BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+                $COLUMN_NAME TEXT,
+                $COLUMN_PROBABLE_SPORT_ID INTEGER,
+                $COLUMN_START_LAT REAL,
+                $COLUMN_START_LNG REAL,
+                $COLUMN_END_LAT REAL,
+                $COLUMN_END_LNG REAL,
+                $COLUMN_MAX_DISP_LAT REAL,
+                $COLUMN_MAX_DISP_LNG REAL,
+                $COLUMN_REF_DISTANCE REAL,
+                $COLUMN_HIT_COUNT INTEGER,
+                $COLUMN_SPORT_TYPE TEXT,
+                $COLUMN_PREVIEW_PATHS TEXT,
+                $COLUMN_ROUTE_POLYLINE TEXT,
+                $COLUMN_BOUND_MIN_LAT REAL,
+                $COLUMN_BOUND_MIN_LNG REAL,
+                $COLUMN_BOUND_MAX_LAT REAL,
+                $COLUMN_BOUND_MAX_LNG REAL,
+                $COLUMN_MIN_ALT_LAT REAL,
+                $COLUMN_MIN_ALT_LNG REAL,
+                $COLUMN_MAX_ALT_LAT REAL,
+                $COLUMN_MAX_ALT_LNG REAL,
+                $COLUMN_HAS_COUNTER INTEGER DEFAULT 1
+            )
+        """
+    }
+
+    internal class WorkoutClusterDbHelper(private val context: Context) : SQLiteOpenHelper(
+        context, "RouteClusters.db", null, 11
+    ) {
+        override fun onCreate(db: SQLiteDatabase) {
+            db.execSQL(WorkoutClusterContract.CREATE_TABLE)
+        }
+
+        private fun addColumnIfNotExists(
+            db: SQLiteDatabase,
+            tableName: String,
+            columnName: String,
+            columnType: String,
+            defaultValue: String? = null
+        ) {
+            try {
+                db.rawQuery("PRAGMA table_info($tableName)", null).use { cursor ->
+                    val nameIdx = cursor.getColumnIndex("name")
+                    while (cursor.moveToNext()) {
+                        if (nameIdx != -1 && columnName.equals(cursor.getString(nameIdx), ignoreCase = true)) {
+                            return
+                        }
+                    }
+                }
+                var sql = "ALTER TABLE $tableName ADD COLUMN $columnName $columnType"
+                if (defaultValue != null) {
+                    sql += " DEFAULT $defaultValue"
+                }
+                db.execSQL(sql)
+                Log.i("WorkoutClusterDbHelper", "Added missing column [$columnName] to table [$tableName]")
+            } catch (e: Exception) {
+                Log.e("WorkoutClusterDbHelper", "Error checking/adding column: $columnName", e)
+            }
+        }
+
+        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+            // Relational Integrity Migration (v7: Ensuring consistent schema after v4 drop)
+            if (oldVersion < 2) {
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_SPORT_TYPE} TEXT DEFAULT 'UNKNOWN'")
+            }
+            if (oldVersion < 3) {
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LAT} REAL")
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MIN_LNG} REAL")
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LAT} REAL")
+                db.execSQL("ALTER TABLE ${WorkoutClusterContract.TABLE_NAME} ADD COLUMN ${WorkoutClusterContract.COLUMN_BOUND_MAX_LNG} REAL")
+            }
+            // v4 was destructive (dropped table). 
+            // v5/v6 tried to reconstruct.
+            // v7 ensures all columns exist and triggers a repository-led re-aggregation if empty.
+            if (oldVersion < 7) {
+                // Final safety check: ensure all spatial columns exist without dropping
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_BOUND_MIN_LAT, "REAL")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_BOUND_MIN_LNG, "REAL")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_BOUND_MAX_LAT, "REAL")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_BOUND_MAX_LNG, "REAL")
+            }
+            
+            if (oldVersion < 8) {
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_PREVIEW_PATHS, "TEXT")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_ROUTE_POLYLINE, "TEXT")
+            }
+
+            if (oldVersion < 9) {
+                // Clear corrupted piped-strings from v8 to force clean JSON re-enrichment
+                db.execSQL("UPDATE ${WorkoutClusterContract.TABLE_NAME} SET ${WorkoutClusterContract.COLUMN_PREVIEW_PATHS} = NULL")
+            }
+
+            // ATT-502 / REQ-SET-065: Upgrade to Version 10 with 3D altitude extrema columns and automated backfill
+            if (oldVersion < 10) {
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_MIN_ALT_LAT, "REAL")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_MIN_ALT_LNG, "REAL")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_MAX_ALT_LAT, "REAL")
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_MAX_ALT_LNG, "REAL")
+                // REQ-MIG-046.2: Heavy backfill excised from synchronous onUpgrade; managed asynchronously by DatabaseBackfillManager.
+            }
+
+            // ATT-714 / REQ-SET-067: Upgrade to Version 11 with has_counter column
+            if (oldVersion < 11) {
+                addColumnIfNotExists(db, WorkoutClusterContract.TABLE_NAME, WorkoutClusterContract.COLUMN_HAS_COUNTER, "INTEGER", "1")
+            }
+        }
+
+        private fun backfillAltitudeExtrema(context: Context, db: SQLiteDatabase) {
+            WorkoutClusterDatabaseManager.backfillAltitudeExtrema(context, db)
         }
     }
 }

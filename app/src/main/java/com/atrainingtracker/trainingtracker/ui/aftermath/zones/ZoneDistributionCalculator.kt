@@ -30,7 +30,7 @@ object ZoneDistributionCalculator {
     private const val MAX_DELTA_T_SEC = 5L
     private const val DEFAULT_LAST_SAMPLE_DURATION_SEC = 1L
 
-    private val ZONE_LABELS = intArrayOf(
+    private val HR_ZONE_LABELS = intArrayOf(
         R.string.zone_1_label,
         R.string.zone_2_label,
         R.string.zone_3_label,
@@ -38,12 +38,32 @@ object ZoneDistributionCalculator {
         R.string.zone_5_label
     )
 
-    private val ZONE_COLORS = arrayOf(
+    private val HR_ZONE_COLORS = arrayOf(
         TTColor.Zone1,
         TTColor.Zone2,
         TTColor.Zone3,
         TTColor.Zone4,
         TTColor.Zone5
+    )
+
+    private val POWER_ZONE_LABELS = intArrayOf(
+        R.string.zone_1_label,
+        R.string.zone_2_label,
+        R.string.zone_3_label,
+        R.string.zone_4_label,
+        R.string.zone_5_label,
+        R.string.zone_6_label,
+        R.string.zone_7_label
+    )
+
+    private val POWER_ZONE_COLORS = arrayOf(
+        TTColor.Zone1,
+        TTColor.Zone2,
+        TTColor.Zone3,
+        TTColor.Zone4,
+        TTColor.Zone5,
+        TTColor.Zone6,
+        TTColor.Zone7
     )
 
     /**
@@ -93,10 +113,10 @@ object ZoneDistributionCalculator {
             val pct = if (totalDuration > 0L) (duration.toFloat() / totalDuration) * 100f else 0f
             ZoneTimeEntry(
                 zoneIndex = idx + 1,
-                zoneLabelResId = ZONE_LABELS[idx],
+                zoneLabelResId = HR_ZONE_LABELS[idx],
                 durationSec = duration,
                 percentage = pct,
-                color = ZONE_COLORS[idx]
+                color = HR_ZONE_COLORS[idx]
             )
         }
 
@@ -110,21 +130,22 @@ object ZoneDistributionCalculator {
     }
 
     /**
-     * Calculates 5-zone distribution data from power samples and athlete thresholds.
+     * Calculates 7-zone Coggan distribution data from power samples and athlete thresholds.
      *
      * @param samples List of active time and power (Watts) samples.
-     * @param thresholds Athlete power thresholds for Zones 1 through 4.
-     * @return [ZoneDistributionData] containing exactly 5 entries, or null if telemetry is insufficient.
+     * @param thresholds Athlete power thresholds for Zones 1 through 6.
+     * @return [ZoneDistributionData] containing exactly 7 entries, or null if telemetry is insufficient.
      */
     fun calculatePowerDistribution(
         samples: List<ZoneSample>,
         thresholds: PowerZoneThresholds
     ): ZoneDistributionData? {
-        val validSamples = samples.filter { it.value > 0 }
-        if (validSamples.isEmpty()) return null
+        val hasPositivePower = samples.any { it.value > 0 }
+        if (!hasPositivePower) return null
+        val validSamples = samples.filter { it.value >= 0 }
 
         val isDegenerate = validSamples.size > 1 && validSamples.first().timeActiveSec == validSamples.last().timeActiveSec
-        val zoneDurations = LongArray(5)
+        val zoneDurations = LongArray(7)
 
         for (i in validSamples.indices) {
             val sample = validSamples[i]
@@ -150,15 +171,15 @@ object ZoneDistributionCalculator {
         val totalDuration = zoneDurations.sum()
         if (totalDuration <= 0L) return null
 
-        val entries = (0..4).map { idx ->
+        val entries = (0..6).map { idx ->
             val duration = zoneDurations[idx]
             val pct = if (totalDuration > 0L) (duration.toFloat() / totalDuration) * 100f else 0f
             ZoneTimeEntry(
                 zoneIndex = idx + 1,
-                zoneLabelResId = ZONE_LABELS[idx],
+                zoneLabelResId = POWER_ZONE_LABELS[idx],
                 durationSec = duration,
                 percentage = pct,
-                color = ZONE_COLORS[idx]
+                color = POWER_ZONE_COLORS[idx]
             )
         }
 
@@ -185,7 +206,7 @@ object ZoneDistributionCalculator {
     }
 
     /**
-     * Maps an instantaneous cycling power value (Watts) to a 0-indexed zone (0..4).
+     * Maps an instantaneous cycling power value (Watts) to a 0-indexed zone (0..6).
      */
     private fun determinePowerZone(pwr: Int, thresholds: PowerZoneThresholds): Int {
         return when {
@@ -193,7 +214,9 @@ object ZoneDistributionCalculator {
             pwr <= thresholds.z2Max -> 1
             pwr <= thresholds.z3Max -> 2
             pwr <= thresholds.z4Max -> 3
-            else -> 4
+            pwr <= thresholds.z5Max -> 4
+            pwr <= thresholds.z6Max -> 5
+            else -> 6
         }
     }
 }

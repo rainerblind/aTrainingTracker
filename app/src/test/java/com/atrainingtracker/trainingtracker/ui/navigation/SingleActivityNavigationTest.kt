@@ -62,6 +62,7 @@ class SingleActivityNavigationTest {
         assertEquals("routes", NavRoutes.ROUTES)
         assertEquals("locations", NavRoutes.LOCATIONS)
         assertEquals("sensors", NavRoutes.SENSORS)
+        assertEquals("equipment", NavRoutes.EQUIPMENT)
         assertEquals("bikes", NavRoutes.BIKES)
         assertEquals("shoes", NavRoutes.SHOES)
         assertEquals("sport_types", NavRoutes.SPORT_TYPES)
@@ -79,6 +80,7 @@ class SingleActivityNavigationTest {
         assertEquals(NavRoutes.ROUTES, NavRoutes.fromDrawerItemId(R.id.drawer_routes))
         assertEquals(NavRoutes.LOCATIONS, NavRoutes.fromDrawerItemId(R.id.drawer_my_locations))
         assertEquals(NavRoutes.SENSORS, NavRoutes.fromDrawerItemId(R.id.drawer_my_sensors))
+        assertEquals(NavRoutes.EQUIPMENT, NavRoutes.fromDrawerItemId(R.id.drawer_equipment))
         assertEquals(NavRoutes.BIKES, NavRoutes.fromDrawerItemId(R.id.drawer_bikes))
         assertEquals(NavRoutes.SHOES, NavRoutes.fromDrawerItemId(R.id.drawer_shoes))
         assertEquals(NavRoutes.SPORT_TYPES, NavRoutes.fromDrawerItemId(R.id.drawer_sport_types))
@@ -107,6 +109,7 @@ class SingleActivityNavigationTest {
         assertEquals(R.id.drawer_routes, NavRoutes.toDrawerItemId(NavRoutes.ROUTES))
         assertEquals(R.id.drawer_my_locations, NavRoutes.toDrawerItemId(NavRoutes.LOCATIONS))
         assertEquals(R.id.drawer_my_sensors, NavRoutes.toDrawerItemId(NavRoutes.SENSORS))
+        assertEquals(R.id.drawer_equipment, NavRoutes.toDrawerItemId(NavRoutes.EQUIPMENT))
         assertEquals(R.id.drawer_bikes, NavRoutes.toDrawerItemId(NavRoutes.BIKES))
         assertEquals(R.id.drawer_shoes, NavRoutes.toDrawerItemId(NavRoutes.SHOES))
         assertEquals(R.id.drawer_sport_types, NavRoutes.toDrawerItemId(NavRoutes.SPORT_TYPES))
@@ -195,15 +198,6 @@ class SingleActivityNavigationTest {
         )
         assertNotNull("startWorkoutSummaryListFromPeriod method must be present", startFromPeriodMethod)
         assertTrue(Modifier.isPublic(startFromPeriodMethod.modifiers))
-
-        // startPairing(Protocol, DeviceType)
-        val startPairingMethod = clazz.getMethod(
-            "startPairing",
-            Protocol::class.java,
-            DeviceType::class.java
-        )
-        assertNotNull("startPairing method must be present", startPairingMethod)
-        assertTrue(Modifier.isPublic(startPairingMethod.modifiers))
 
         // navigateToDrawerItem(Int)
         val navigateMethod = clazz.getMethod("navigateToDrawerItem", Int::class.javaPrimitiveType)

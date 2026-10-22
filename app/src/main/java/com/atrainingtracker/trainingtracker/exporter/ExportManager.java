@@ -28,6 +28,7 @@ import android.util.Log;
 
 import androidx.work.Constraints;
 import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
 import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
@@ -43,6 +44,7 @@ import com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploader;
 import com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploader;
 import com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploader;
 import com.atrainingtracker.trainingtracker.exporter.writer.CSVFileWriter;
+import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GCFileWriter;
 import com.atrainingtracker.trainingtracker.exporter.writer.GPXFileWriter;
@@ -51,13 +53,14 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData;
 
 import org.json.JSONException;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class ExportManager {
     private static final String TAG = "ExportManager";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = com.atrainingtracker.BuildConfig.DEBUG;
     @Nullable
     protected final Context mContext;
     // protected static HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>> cCash = new HashMap<String, EnumMap<ExportType, EnumMap<FileFormat, ExportStatus>>>();
@@ -66,6 +69,10 @@ public class ExportManager {
     public ExportManager(Context context) {
         mContext = context;
         exportStatusDatabaseManager = ExportStatusDatabaseManager.getInstance(context);
+    }
+
+    public static String getUniqueWorkName(@NonNull String fileBaseName, @NonNull FileFormat fileFormat) {
+        return "export_" + fileBaseName + "_" + fileFormat.name();
     }
 
 
@@ -79,11 +86,6 @@ public class ExportManager {
                     case GPX -> new GPXFileWriter(context);
                     case FIT -> new FitFileWriter(context);
                     case STRAVA -> new TCXFileWriter(context);
-                    /* case RUNKEEPER:
-                        return  new RunkeeperFileExporter(mContext);
-                    /* case TRAINING_PEAKS:
-                        return new TCXFileExporter(mContext);
-                        return new TrainingPeaksFileExporter(mContext); */
                 };
             case DROPBOX:
                 return new DropboxUploader(context);
@@ -92,12 +94,6 @@ public class ExportManager {
             case COMMUNITY:
                 return switch (exportInfo.getFileFormat()) {
                     case STRAVA -> new StravaUploader(context);
-                                /* case RUNKEEPER:
-                                    exporter = new RunkeeperUploader(mContext);
-                                    break; */
-                                /* case TRAINING_PEAKS:
-                                    exporter = new TrainingPeaksUploader(mContext);
-                                    break; */
                     default ->
                             throw new IllegalStateException("Unexpected value: " + exportInfo.getFileFormat());
                 };
@@ -118,6 +114,10 @@ public class ExportManager {
      * @param fileBaseName The unique identifier for the new workout.
      */
     public void newWorkout(String fileBaseName) {
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            Log.w(TAG, "Cannot start newWorkout for invalid fileBaseName: " + fileBaseName);
+            return;
+        }
         if (DEBUG) Log.d(TAG, "newWorkout: " + fileBaseName);
 
         // initialize all with UNWANTED
@@ -146,7 +146,7 @@ public class ExportManager {
             }
         }
 
-        if (TrainingApplication.uploadToDropbox()) {
+        if (TrainingApplication.uploadToDropbox() && TrainingApplication.uploadWorkoutsToDropbox()) {
             for (FileFormat fileFormat : ExportType.DROPBOX.getExportToFileFormats()) {
                 // Ein Upload zu Dropbox macht nur Sinn, wenn das Dateiformat prinzipiell auch generiert wird.
                 if (TrainingApplication.exportToFile(fileFormat)) {
@@ -180,6 +180,10 @@ public class ExportManager {
      * @param fileBaseName The unique identifier for the finished workout.
      */
     public void workoutFinished(String fileBaseName) {
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            Log.w(TAG, "Cannot finish workout for invalid fileBaseName: " + fileBaseName);
+            return;
+        }
         if (DEBUG) Log.d(TAG, "workoutFinished: " + fileBaseName);
 
         // simply delegate to the repository.
@@ -195,6 +199,10 @@ public class ExportManager {
      * @param workoutData
      */
     public void exportWorkout(WorkoutData workoutData) {
+        if (workoutData == null || !ExportStatusDatabaseManager.isValidFileBaseName(workoutData.getFileBaseName())) {
+            Log.w(TAG, "Cannot exportWorkout for null or invalid workoutData");
+            return;
+        }
         if (DEBUG) Log.d(TAG, "exportWorkout: " + workoutData.getFileBaseName());
 
         for (FileFormat fileFormat : FileFormat.values()) {
@@ -207,6 +215,21 @@ public class ExportManager {
         }
     }
 
+    /**
+     * Overload to trigger export directly with fileBaseName and FileFormat.
+     */
+    public void exportWorkoutTo(@NonNull String fileBaseName, @NonNull FileFormat fileFormat) {
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            Log.w(TAG, "Cannot exportWorkoutTo for invalid fileBaseName: " + fileBaseName);
+            return;
+        }
+        ContentValues values = new ContentValues();
+        values.put(ExportStatusDatabaseManager.ANSWER, "");
+        exportStatusDatabaseManager.updateExportStatus(values, fileBaseName, ExportType.FILE, fileFormat);
+        startFullExportProcess(fileBaseName, fileFormat);
+        broadcastExportStatusChanged(mContext, fileBaseName);
+    }
+
     /** method to trigger the ExportManager to export a specific workout and FileFormat
      *
      * @param workoutId: The workout ID
@@ -217,25 +240,68 @@ public class ExportManager {
 
         String fileBaseName = getFileBaseName(workoutId);
 
-        if (fileBaseName == null) {
-            Log.e(TAG, "could not find the fileBaseName of workout " + workoutId);
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            Log.e(TAG, "could not find valid fileBaseName of workout " + workoutId + ": " + fileBaseName);
             return;
         } else {
             Log.i(TAG, "exportWorkoutTo resolved fileBaseName: " + fileBaseName);
         }
 
+        exportWorkoutTo(fileBaseName, fileFormat);
+    }
 
-        ContentValues values = new ContentValues();
+    /**
+     * Defensive pre-crop cache invalidation: cancels running export tasks and deletes cached export files.
+     * Marks export status as WAITING so that post-crop export refreshes cleanly.
+     *
+     * @param fileBaseName The unique workout base name.
+     */
+    public void invalidateWorkoutExport(@NonNull String fileBaseName) {
+        if (DEBUG) Log.d(TAG, "invalidateWorkoutExport: " + fileBaseName);
+        if (mContext == null) return;
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            Log.w(TAG, "Cannot invalidate export for invalid fileBaseName: " + fileBaseName);
+            return;
+        }
 
-        // user explicitly wants this.  So, we do not check whether we normally do this.  I.e. no if (TrainingApplication.exportToFile(fileFormat))
-        // -> simply reset the answer and start the full export.
-        values.put(ExportStatusDatabaseManager.ANSWER, "");
-        exportStatusDatabaseManager.updateExportStatus(values, fileBaseName, ExportType.FILE, fileFormat);
+        // 1. Cancel running / scheduled WorkManager tasks for this workout
+        try {
+            WorkManager workManager = WorkManager.getInstance(mContext);
+            workManager.cancelAllWorkByTag(fileBaseName);
+            workManager.cancelUniqueWork("export_" + fileBaseName);
+            for (FileFormat format : FileFormat.values()) {
+                workManager.cancelUniqueWork(getUniqueWorkName(fileBaseName, format));
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Could not cancel WorkManager tasks for " + fileBaseName, t);
+        }
 
-        // trigger the export
-        startFullExportProcess(fileBaseName, fileFormat);
+        // 2. Delete cached files defensively
+        File baseDir = BaseExporter.getBaseDirFile(mContext);
+        for (FileFormat format : FileFormat.values()) {
+            try {
+                File targetFile = new File(baseDir, format.getDirName() + File.separator + fileBaseName + format.getFileEnding());
+                if (targetFile.exists()) {
+                    boolean deleted = targetFile.delete();
+                    if (DEBUG) Log.d(TAG, "Deleted export file: " + targetFile.getAbsolutePath() + " (success=" + deleted + ")");
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "Failed deleting cached export file for " + format + ": " + fileBaseName, t);
+            }
+        }
 
-        broadcastExportStatusChanged(mContext, fileBaseName);
+        // 3. Mark export status as WAITING in DB
+        try {
+            ContentValues values = new ContentValues();
+            values.put(ExportStatusDatabaseManager.EXPORT_STATUS, ExportStatus.WAITING.name());
+            values.put(ExportStatusDatabaseManager.ANSWER, "");
+            for (FileFormat format : FileFormat.values()) {
+                exportStatusDatabaseManager.updateExportStatus(values, fileBaseName, null, format);
+            }
+            broadcastExportStatusChanged(mContext, fileBaseName);
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed resetting export status in database for " + fileBaseName, t);
+        }
     }
 
     /***********************************************************************************************
@@ -243,6 +309,10 @@ public class ExportManager {
      **********************************************************************************************/
 
     private void startFullExportProcess(String fileBaseName, FileFormat fileFormat) {
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            Log.w(TAG, "Cannot startFullExportProcess for invalid fileBaseName: " + fileBaseName);
+            return;
+        }
         Log.i(TAG, "startFullExportProcess: fileBaseName=" + fileBaseName + ", format=" + fileFormat);
 
         try {
@@ -257,7 +327,8 @@ public class ExportManager {
             List<OneTimeWorkRequest> uploadWorks = new ArrayList<>();
 
             // Dropbox-Upload (when requested)
-            if (TrainingApplication.uploadToDropbox() && Arrays.asList(ExportType.DROPBOX.getExportToFileFormats()).contains(fileFormat)) {
+            if (TrainingApplication.uploadToDropbox() && TrainingApplication.uploadWorkoutsToDropbox()
+                    && Arrays.asList(ExportType.DROPBOX.getExportToFileFormats()).contains(fileFormat)) {
                 ExportInfo dropboxExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.DROPBOX);
                 uploadWorks.add(createWorkRequest(dropboxExportInfo));
                 updateStatus(dropboxExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
@@ -293,15 +364,16 @@ public class ExportManager {
             }
 
             // create the queue and start.
+            String uniqueWorkName = getUniqueWorkName(fileBaseName, fileFormat);
             if (uploadWorks.isEmpty()) {
-                Log.i(TAG, "Enqueuing file-only export for " + fileBaseName);
+                Log.i(TAG, "Enqueuing unique file-only export for " + fileBaseName + " (" + fileFormat + ")");
                 WorkManager.getInstance(mContext)
-                        .beginWith(fileCreationWork)
+                        .beginUniqueWork(uniqueWorkName, ExistingWorkPolicy.REPLACE, fileCreationWork)
                         .enqueue();
             } else {
-                Log.i(TAG, "Enqueuing fileCreationWork followed by " + uploadWorks.size() + " uploadWorks for " + fileBaseName);
+                Log.i(TAG, "Enqueuing unique fileCreationWork followed by " + uploadWorks.size() + " uploadWorks for " + fileBaseName + " (" + fileFormat + ")");
                 WorkManager.getInstance(mContext)
-                        .beginWith(fileCreationWork)
+                        .beginUniqueWork(uniqueWorkName, ExistingWorkPolicy.REPLACE, fileCreationWork)
                         .then(uploadWorks)
                         .enqueue();
             }
@@ -337,7 +409,7 @@ public class ExportManager {
         exportStatusDatabaseManager.updateExportStatus(values, info);
     }
 
-    private OneTimeWorkRequest createWorkRequest(ExportInfo exportInfo) throws JSONException {
+    OneTimeWorkRequest createWorkRequest(ExportInfo exportInfo) throws JSONException {
 
         Data inputData = new Data.Builder()
                 .putString(ExportWorker.KEY_EXPORT_INFO, exportInfo.toJson())
@@ -349,6 +421,8 @@ public class ExportManager {
             networkType = NetworkType.NOT_REQUIRED;
         } else if (exportInfo.getExportType() == ExportType.GOOGLE_DRIVE && TrainingApplication.uploadToGoogleDriveOnlyOnWifi()) {
             networkType = NetworkType.UNMETERED;
+        } else if (exportInfo.getExportType() == ExportType.DROPBOX && TrainingApplication.uploadToDropboxOnlyOnWifi()) {
+            networkType = NetworkType.UNMETERED;
         }
 
         Constraints constraints = new Constraints.Builder()
@@ -358,6 +432,7 @@ public class ExportManager {
         return new OneTimeWorkRequest.Builder(ExportWorker.class)
                 .setInputData(inputData)
                 .setConstraints(constraints)
+                .addTag(exportInfo.getFileBaseName())
                 .addTag(exportInfo.toString())
                 .build();
     }
@@ -382,18 +457,14 @@ public class ExportManager {
     private String getFileBaseName(long workoutId) {
         SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(mContext).getDatabase();
 
-        Cursor cursor = db.query(WorkoutSummaries.TABLE,
+        try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
                 new String[]{WorkoutSummaries.FILE_BASE_NAME},
                 WorkoutSummaries.C_ID + "=?",
                 new String[]{Long.toString(workoutId)},
                 null,
                 null,
-                null);
-
-        cursor.moveToFirst();
-        String fileBaseName = cursor.getString(0);
-        cursor.close();
-
-        return fileBaseName;
+                null)) {
+            return CursorUtils.mapFirst(cursor, null, c -> c.getString(0));
+        }
     }
 }

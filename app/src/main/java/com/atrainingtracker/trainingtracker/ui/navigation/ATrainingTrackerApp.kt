@@ -18,8 +18,13 @@
 
 package com.atrainingtracker.trainingtracker.ui.navigation
 
+import android.Manifest
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.os.PowerManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -28,6 +33,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.runtime.collectAsState
+import androidx.core.content.ContextCompat
+import com.atrainingtracker.trainingtracker.ui.onboarding.permission.PermissionOnboardingSheet
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
@@ -117,6 +125,47 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
+ * Evaluates whether all essential runtime permissions and battery optimization exemption
+ * are already granted on this device (REQ-PRI-007 / ATT-4455).
+ */
+fun checkAreAllPermissionsGranted(context: Context): Boolean {
+    val hasLocation = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+    if (!hasLocation) return false
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val hasBtScan = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.BLUETOOTH_SCAN
+        ) == PackageManager.PERMISSION_GRANTED
+        val hasBtConnect = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.BLUETOOTH_CONNECT
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!hasBtScan || !hasBtConnect) return false
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val hasNotification = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!hasNotification) return false
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (powerManager?.isIgnoringBatteryOptimizations(context.packageName) != true) {
+            return false
+        }
+    }
+
+    return true
+}
+
+/**
  * Root Composable hosting the pure Jetpack Compose single-activity architecture (REQ-UI-159).
  *
  * Incorporates Material 3 [ModalNavigationDrawer], [NavHost] mapping all 21 destinations,
@@ -132,6 +181,16 @@ fun ATrainingTrackerApp(
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
+    val hasCompletedOnboarding by tuningDataStore.hasCompletedPermissionOnboardingFlow.collectAsState(initial = true)
+
+    // Auto-skip on upgraded install if all permissions are already granted (REQ-PRI-007 / ATT-4455)
+    LaunchedEffect(hasCompletedOnboarding) {
+        if (!hasCompletedOnboarding && checkAreAllPermissionsGranted(context)) {
+            tuningDataStore.setHasCompletedPermissionOnboarding(true)
+        }
+    }
 
     // Attach NavController to Activity for direct intent / broadcast routing
     DisposableEffect(navController) {
@@ -394,6 +453,9 @@ fun ATrainingTrackerApp(
                         onBackToNav = {
                             clustersViewModel.selectCluster(null)
                             navController.popBackStack()
+                        },
+                        onNavigateToAdvancedSettings = {
+                            navController.navigate(NavRoutes.ADVANCED_SETTINGS)
                         }
                     )
                 }
@@ -404,7 +466,21 @@ fun ATrainingTrackerApp(
                     DevicesTabbedScreen(
                         tabViewModel = tabViewModel,
                         equipmentViewModel = equipmentViewModel,
-                        initialTab = 2
+                        initialTab = 2,
+                        onNavigateToZones = { initialTab, promptReason ->
+                            navController.navigate(NavRoutes.trainingZones(initialTab, promptReason))
+                        }
+                    )
+                }
+
+                composable(NavRoutes.EQUIPMENT) {
+                    val equipmentViewModel: EquipmentViewModel = viewModel(activity)
+                    EquipmentTabsScreen(
+                        viewModel = equipmentViewModel,
+                        initialTab = 0,
+                        onNavigateToWorkouts = { stats ->
+                            activity.navigateToFilteredWorkouts(stats)
+                        }
                     )
                 }
 
@@ -440,8 +516,34 @@ fun ATrainingTrackerApp(
                     )
                 }
 
-                composable(NavRoutes.TRAINING_ZONES) {
-                    ZoneSettingsScreen()
+                composable(
+                    route = NavRoutes.TRAINING_ZONES_PATTERN,
+                    arguments = listOf(
+                        navArgument(NavRoutes.ARG_INITIAL_TAB) {
+                            type = NavType.IntType
+                            defaultValue = 0
+                        },
+                        navArgument(NavRoutes.ARG_PROMPT_REASON) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { backStackEntry ->
+                    val initialTab = backStackEntry.arguments?.getInt(NavRoutes.ARG_INITIAL_TAB) ?: 0
+                    val promptReason = backStackEntry.arguments?.getString(NavRoutes.ARG_PROMPT_REASON)
+                    ZoneSettingsScreen(
+                        initialTab = initialTab,
+                        promptReason = promptReason,
+                        onFinish = { navController.popBackStack() }
+                    )
+                }
+
+                composable(NavRoutes.ATHLETE_PROFILE) {
+                    val athleteProfileViewModel: com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModel = viewModel(activity)
+                    com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileScreen(
+                        viewModel = athleteProfileViewModel
+                    )
                 }
 
                 composable(NavRoutes.BACKUP_RESTORE) {
@@ -562,6 +664,17 @@ fun ATrainingTrackerApp(
     if (activity.showAntStatusSheet) {
         AntServicesStatusSheet(
             onDismiss = { activity.showAntStatusSheet = false }
+        )
+    }
+
+    // First-install Permission Onboarding Flow (REQ-PRI-007 / ATT-4455 / Rule 47)
+    if (!hasCompletedOnboarding && !checkAreAllPermissionsGranted(context)) {
+        PermissionOnboardingSheet(
+            onFinish = {
+                scope.launch {
+                    tuningDataStore.setHasCompletedPermissionOnboarding(true)
+                }
+            }
         )
     }
 }

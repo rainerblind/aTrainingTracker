@@ -84,6 +84,7 @@ class FitFileWriterTest {
         every { Log.w(any<String>(), any<String>()) } returns 0
         every { Log.w(any<String>(), any<String>(), any()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
+        every { Log.e(any<String>(), any<String>(), any()) } returns 0
         every { Log.d(any<String>(), any<String>()) } returns 0
         every { Log.i(any<String>(), any<String>()) } returns 0
 
@@ -93,6 +94,7 @@ class FitFileWriterTest {
 
         tempDir = Files.createTempDirectory("fit_export_test").toFile()
         mockContext = mockk(relaxed = true)
+        every { mockContext.applicationContext } returns mockContext
         every { mockContext.filesDir } returns tempDir
 
         mockSqlDb = mockk(relaxed = true)
@@ -405,4 +407,280 @@ class FitFileWriterTest {
         assertEquals(92.toShort(), records[0].cadence)
         assertEquals(240, records[0].power)
     }
+
+    @Test
+    fun testFitFileWriter_utcTimestampPreservationUnderDifferentTimezones() {
+        val originalTz = java.util.TimeZone.getDefault()
+        try {
+            val testZones = listOf("GMT+2", "GMT+9", "GMT-5")
+            for (zoneId in testZones) {
+                java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone(zoneId))
+
+                val summaryCursor = createMockSummaryCursor(timeStart = "2026-10-03 10:00:00", totalTime = "120")
+                every {
+                    mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+                } returns summaryCursor
+
+                val sampleList = listOf(
+                    mapOf(
+                        WorkoutSamplesDbHelper.TIME to "2026-10-03 10:00:00",
+                        SensorType.LATITUDE.name to 52.5200,
+                        SensorType.LONGITUDE.name to 13.4050
+                    )
+                )
+                val samplesCursor = createMockSamplesCursor(sampleList)
+                every {
+                    mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+                } returns samplesCursor
+
+                every { mockSportTypeDb.getBSportType(1L) } returns BSportType.BIKE
+                every { mockSportTypeDb.getTcxName(1L) } returns "Biking"
+                every { mockLapsDb.getLaps(101L) } returns emptyList()
+
+                val exportInfo = ExportInfo("workout_tz_$zoneId", FileFormat.FIT, ExportType.FILE)
+                val writer = FitFileWriter(mockContext)
+                val result = writer.doExport(exportInfo)
+
+                assertTrue("Export must succeed under $zoneId", result.success())
+
+                val exportedFile = File(tempDir, exportInfo.shortPath)
+                val fileIds = mutableListOf<FileIdMesg>()
+                val records = mutableListOf<RecordMesg>()
+                val decode = Decode()
+                val broadcaster = MesgBroadcaster(decode)
+                broadcaster.addListener(FileIdMesgListener { fileIds.add(it) })
+                broadcaster.addListener(RecordMesgListener { records.add(it) })
+
+                FileInputStream(exportedFile).use { fis ->
+                    decode.read(fis, broadcaster)
+                }
+
+                // Expected timestamp in UTC: "2026-10-03 10:00:00" UTC
+                // 2026-10-03 10:00:00 UTC epoch seconds
+                val expectedUtcDate = java.time.LocalDateTime.parse("2026-10-03T10:00:00")
+                    .toInstant(java.time.ZoneOffset.UTC)
+
+                val fileIdTimestamp = fileIds[0].timeCreated.date.toInstant()
+                assertEquals("FileId timeCreated must match UTC ground truth under $zoneId",
+                    expectedUtcDate.epochSecond, fileIdTimestamp.epochSecond)
+
+                val recordTimestamp = records[0].timestamp.date.toInstant()
+                assertEquals("Record timestamp must match UTC ground truth under $zoneId",
+                    expectedUtcDate.epochSecond, recordTimestamp.epochSecond)
+            }
+        } finally {
+            java.util.TimeZone.setDefault(originalTz)
+        }
+    }
+
+    @Test
+    fun testFitFileWriter_synthesizesTransientLapWhenNoLapsInDatabase() {
+        val summaryCursor = createMockSummaryCursor(totalTime = "180", distanceTotal = "2000.0")
+        every {
+            mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+        } returns summaryCursor
+
+        val sampleList = listOf(
+            mapOf(
+                WorkoutSamplesDbHelper.TIME to "2026-10-03 10:00:00",
+                SensorType.DISTANCE_m.name to 0.0
+            ),
+            mapOf(
+                WorkoutSamplesDbHelper.TIME to "2026-10-03 10:03:00",
+                SensorType.DISTANCE_m.name to 2000.0
+            )
+        )
+        val samplesCursor = createMockSamplesCursor(sampleList)
+        every {
+            mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+        } returns samplesCursor
+
+        every { mockSportTypeDb.getBSportType(1L) } returns BSportType.BIKE
+        every { mockSportTypeDb.getTcxName(1L) } returns "Biking"
+        // 0 laps in Laps.db
+        every { mockLapsDb.getLaps(101L) } returns emptyList()
+
+        val exportInfo = ExportInfo("workout_synth_lap", FileFormat.FIT, ExportType.FILE)
+        val writer = FitFileWriter(mockContext)
+        val result = writer.doExport(exportInfo)
+
+        assertTrue(result.success())
+
+        val exportedFile = File(tempDir, exportInfo.shortPath)
+        val lapMesgs = mutableListOf<LapMesg>()
+        val sessions = mutableListOf<SessionMesg>()
+        val decode = Decode()
+        val broadcaster = MesgBroadcaster(decode)
+        broadcaster.addListener(LapMesgListener { lapMesgs.add(it) })
+        broadcaster.addListener(SessionMesgListener { sessions.add(it) })
+
+        FileInputStream(exportedFile).use { fis ->
+            decode.read(fis, broadcaster)
+        }
+
+        assertEquals("Exactly 1 synthesized lap must be encoded", 1, lapMesgs.size)
+        assertEquals(180f, lapMesgs[0].totalTimerTime)
+        assertEquals(180f, lapMesgs[0].totalElapsedTime)
+        assertEquals(2000f, lapMesgs[0].totalDistance)
+        assertEquals(1, sessions[0].numLaps)
+        assertEquals(180f, sessions[0].totalTimerTime)
+        assertEquals(180f, sessions[0].totalElapsedTime)
+    }
+
+    @Test
+    fun testFitFileWriter_failsFastOnMissingOrCorruptStartTime() {
+        val corruptedStarts = listOf("", "   ", "invalid-date", "2026/10/03 10:00:00")
+        for (badStart in corruptedStarts) {
+            val summaryCursor = createMockSummaryCursor(timeStart = badStart)
+            every {
+                mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+            } returns summaryCursor
+
+            val exportInfo = ExportInfo("workout_bad_start", FileFormat.FIT, ExportType.FILE)
+            val writer = FitFileWriter(mockContext)
+            val result = writer.doExport(exportInfo)
+
+            org.junit.Assert.assertFalse("Export must fail on bad start time: $badStart", result.success())
+        }
+    }
+
+    @Test
+    fun testFitFileWriter_failsFastOnSampleCursorException() {
+        val summaryCursor = createMockSummaryCursor()
+        every {
+            mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+        } returns summaryCursor
+
+        val badSamplesCursor = mockk<Cursor>(relaxed = true)
+        every { badSamplesCursor.moveToNext() } throws android.database.sqlite.SQLiteException("Simulated I/O corruption")
+        every {
+            mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+        } returns badSamplesCursor
+
+        val exportInfo = ExportInfo("workout_cursor_error", FileFormat.FIT, ExportType.FILE)
+        val writer = FitFileWriter(mockContext)
+        val result = writer.doExport(exportInfo)
+
+        org.junit.Assert.assertFalse("Export must fail on cursor exception", result.success())
+    }
+
+    @Test
+    fun testFitFileWriter_reExportHistoricalWorkoutPreservesGroundTruth() {
+        val summaryCursor = createMockSummaryCursor(timeStart = "2024-05-15 08:30:00", totalTime = "60")
+        every {
+            mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+        } returns summaryCursor
+
+        val sampleList = listOf(
+            mapOf(WorkoutSamplesDbHelper.TIME to "2024-05-15 08:30:00")
+        )
+        val samplesCursor = createMockSamplesCursor(sampleList)
+        every {
+            mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+        } returns samplesCursor
+
+        every { mockSportTypeDb.getBSportType(1L) } returns BSportType.RUN
+        every { mockSportTypeDb.getTcxName(1L) } returns "Running"
+        every { mockLapsDb.getLaps(101L) } returns emptyList()
+
+        val exportInfo = ExportInfo("workout_historical", FileFormat.FIT, ExportType.FILE)
+        val writer = FitFileWriter(mockContext)
+        val result = writer.doExport(exportInfo)
+
+        assertTrue(result.success())
+
+        val exportedFile = File(tempDir, exportInfo.shortPath)
+        val fileIds = mutableListOf<FileIdMesg>()
+        val decode = Decode()
+        val broadcaster = MesgBroadcaster(decode)
+        broadcaster.addListener(FileIdMesgListener { fileIds.add(it) })
+        FileInputStream(exportedFile).use { decode.read(it, broadcaster) }
+
+        val expectedUtc = java.time.LocalDateTime.parse("2024-05-15T08:30:00").toInstant(java.time.ZoneOffset.UTC)
+        assertEquals(expectedUtc.epochSecond, fileIds[0].timeCreated.date.toInstant().epochSecond)
+    }
+
+    @Test
+    fun testFitFileWriter_deletesPartialFileOnExportFailure() {
+        val summaryCursor = createMockSummaryCursor()
+        every {
+            mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+        } returns summaryCursor
+
+        val badSamplesCursor = mockk<Cursor>(relaxed = true)
+        every { badSamplesCursor.moveToNext() } throws java.lang.RuntimeException("Stream serialization error")
+        every {
+            mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+        } returns badSamplesCursor
+
+        val exportInfo = ExportInfo("workout_partial_delete", FileFormat.FIT, ExportType.FILE)
+        val writer = FitFileWriter(mockContext)
+        val result = writer.doExport(exportInfo)
+
+        org.junit.Assert.assertFalse(result.success())
+
+        val exportedFile = File(tempDir, exportInfo.shortPath)
+        org.junit.Assert.assertFalse("Partial FIT file must be deleted upon export failure", exportedFile.exists())
+    }
+
+    @Test
+    fun testFitFileWriter_abortsOnNegativeTotalTimeInconsistency() {
+        val summaryCursor = createMockSummaryCursor(totalTime = "-120.0")
+        every {
+            mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+        } returns summaryCursor
+
+        val exportInfo = ExportInfo("workout_negative_time", FileFormat.FIT, ExportType.FILE)
+        val writer = FitFileWriter(mockContext)
+        val result = writer.doExport(exportInfo)
+
+        org.junit.Assert.assertFalse("Export must fail on negative totalTime", result.success())
+        assertTrue("Error answer must mention negative totalTime", result.answer().contains("negative totalTime"))
+    }
+
+    @Test
+    fun testFitFileWriter_allowsWorkoutWithLongPauses() {
+        // Workout active timer time is 300s (5 min), but elapsed time between first and last sample is 900s (15 min)
+        val summaryCursor = createMockSummaryCursor(timeStart = "2026-10-03 10:00:00", totalTime = "300")
+        every {
+            mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+        } returns summaryCursor
+
+        val sampleList = listOf(
+            mapOf(WorkoutSamplesDbHelper.TIME to "2026-10-03 10:00:00"),
+            mapOf(WorkoutSamplesDbHelper.TIME to "2026-10-03 10:15:00") // 900 seconds later (10 minute pause)
+        )
+        val samplesCursor = createMockSamplesCursor(sampleList)
+        every {
+            mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+        } returns samplesCursor
+
+        every { mockSportTypeDb.getBSportType(1L) } returns BSportType.RUN
+        every { mockSportTypeDb.getTcxName(1L) } returns "Running"
+        every { mockLapsDb.getLaps(101L) } returns emptyList()
+
+        val exportInfo = ExportInfo("workout_with_pause", FileFormat.FIT, ExportType.FILE)
+        val writer = FitFileWriter(mockContext)
+        val result = writer.doExport(exportInfo)
+
+        assertTrue("Export must succeed for workout with pauses", result.success())
+
+        val exportedFile = File(tempDir, exportInfo.shortPath)
+        val sessions = mutableListOf<SessionMesg>()
+        val lapMesgs = mutableListOf<LapMesg>()
+        val decode = Decode()
+        val broadcaster = MesgBroadcaster(decode)
+        broadcaster.addListener(SessionMesgListener { sessions.add(it) })
+        broadcaster.addListener(LapMesgListener { lapMesgs.add(it) })
+
+        FileInputStream(exportedFile).use { decode.read(it, broadcaster) }
+
+        assertEquals(1, sessions.size)
+        assertEquals(300f, sessions[0].totalTimerTime)
+        assertEquals(900f, sessions[0].totalElapsedTime)
+        assertEquals(1, lapMesgs.size)
+        assertEquals(300f, lapMesgs[0].totalTimerTime)
+        assertEquals(900f, lapMesgs[0].totalElapsedTime)
+    }
 }
+

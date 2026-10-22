@@ -39,26 +39,32 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbData
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbStatus
+import com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingEntitySheet
 import com.atrainingtracker.trainingtracker.ui.components.MetricBadge
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
+import com.atrainingtracker.trainingtracker.ui.map.getElevationGradeColor
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.LatLng
 import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Real-time Climb Cockpit Bottom Sheet (ClimbPro) for active route climbs and free-riding ascents (REQ-MAP-027).
+ * Real-time Climb Cockpit Bottom Sheet (ClimbPro) for active route climbs and free-riding ascents (REQ-MAP-027, REQ-UI-383).
  *
  * Renders:
- * 1. Header with climb name, category badge, and route climb index counter.
+ * 1. Header with climb name, category badge, and route climb index counter via [ClimbHeader].
  * 2. Elevation profile curve colored dynamically by slope gradient bands with live rider pin.
- * 3. Pacing HUD metrics (remaining distance, remaining elevation gain, current instantaneous gradient).
+ * 3. Pacing HUD metrics via [ClimbLiveDetails] (remaining distance, remaining elevation gain, current instantaneous gradient).
+ *
+ * Layout structure is governed by [LiveTrackingEntitySheet] enforcing canonical vertical alignment and divider styling.
  */
 @Composable
 fun LiveClimbSheet(
@@ -67,12 +73,57 @@ fun LiveClimbSheet(
 ) {
     val climb = liveClimb.climb
     val distanceFormatter = remember { DistanceFormatter() }
+    val altitudeFormatter = remember { AltitudeFormatter() }
 
-    Column(
+    LiveTrackingEntitySheet(
+        headerContent = { headerModifier ->
+            ClimbHeader(
+                climb = climb,
+                liveClimb = liveClimb,
+                distanceFormatter = distanceFormatter,
+                altitudeFormatter = altitudeFormatter,
+                modifier = headerModifier
+            )
+        },
+        telemetryHudContent = { hudModifier ->
+            ClimbLiveDetails(
+                liveClimb = liveClimb,
+                distanceFormatter = distanceFormatter,
+                altitudeFormatter = altitudeFormatter,
+                modifier = hudModifier
+            )
+        },
+        elevationContent = {
+            val normalizedPoints = climb.normalizedPathPoints.ifEmpty { climb.pathPoints }
+            val currentDistance = if (liveClimb.status == LiveClimbStatus.ON_CLIMB || liveClimb.status == LiveClimbStatus.FINISHED) {
+                (liveClimb.currentProgressFraction.coerceIn(0f, 1f) * climb.distanceMeters)
+            } else null
+
+            ElevationProfile(
+                pathPoints = normalizedPoints,
+                currentDistance = currentDistance,
+                showZoomControls = false,
+                climbGradientShading = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
         modifier = modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+    )
+}
+
+/**
+ * Header composable for [LiveClimbSheet] rendering climb title, category badge, and status / route counter (REQ-UI-383, ATT-3576).
+ */
+@Composable
+fun ClimbHeader(
+    climb: Climb,
+    liveClimb: LiveClimbData,
+    distanceFormatter: DistanceFormatter,
+    altitudeFormatter: AltitudeFormatter,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         // --- 1. Top Header Row: 32dp Icon, Title, and Right-Aligned Category Chip ---
@@ -115,7 +166,7 @@ fun LiveClimbSheet(
             val counterText = if (liveClimb.routeIndex != null && liveClimb.totalRouteClimbs != null) {
                 stringResource(R.string.climb_route_counter, liveClimb.routeIndex, liveClimb.totalRouteClimbs)
             } else {
-                "${climb.elevationGainMeters.roundToInt()} m"
+                altitudeFormatter.format_with_units(climb.elevationGainMeters)
             }
             Text(
                 text = counterText,
@@ -124,92 +175,77 @@ fun LiveClimbSheet(
                 color = MaterialTheme.colorScheme.primary
             )
         }
+    }
+}
 
-        // --- 3. Standardized Horizontal Divider ---
-        HorizontalDivider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            thickness = 0.5.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-        )
+/**
+ * Live telemetry HUD metrics row for [LiveClimbSheet] displaying distance/elevation progress and gradient (REQ-UI-383, ATT-3576).
+ */
+@Composable
+fun ClimbLiveDetails(
+    liveClimb: LiveClimbData,
+    distanceFormatter: DistanceFormatter,
+    altitudeFormatter: AltitudeFormatter,
+    modifier: Modifier = Modifier
+) {
+    val remDistStr = if (liveClimb.status == LiveClimbStatus.FINISHED) {
+        distanceFormatter.format_with_units(0)
+    } else {
+        distanceFormatter.format_with_units(liveClimb.distanceToSummit)
+    }
+    val remElevStr = if (liveClimb.status == LiveClimbStatus.FINISHED) {
+        altitudeFormatter.format_with_units(0)
+    } else {
+        altitudeFormatter.format_with_units(liveClimb.remainingElevationGain)
+    }
+    val gradeStr = String.format(Locale.getDefault(), "%.1f%%", liveClimb.currentGradePercent)
 
-        // --- 4. Live Telemetry HUD (Harmonized with SegmentLiveDetails) ---
-        val remDistStr = if (liveClimb.status == LiveClimbStatus.FINISHED) {
-            "0 m"
-        } else {
-            distanceFormatter.format_with_units(liveClimb.distanceToSummit) ?: "${liveClimb.distanceToSummit.roundToInt()} m"
-        }
-        val remElevStr = if (liveClimb.status == LiveClimbStatus.FINISHED) {
-            "0 m"
-        } else {
-            "${liveClimb.remainingElevationGain.roundToInt()} m"
-        }
-        val gradeStr = String.format(Locale.getDefault(), "%.1f%%", liveClimb.currentGradePercent)
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Left: Distance & Elevation Progress
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = "$remDistStr ${stringResource(R.string.climb_remaining_dist)}",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "$remElevStr ${stringResource(R.string.climb_remaining_elevation)}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Right: Instantaneous Grade in Headline Monospace
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = gradeStr,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = stringResource(R.string.climb_grade),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Left: Distance & Elevation Progress
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = "$remDistStr ${stringResource(R.string.climb_remaining_dist)}",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "$remElevStr ${stringResource(R.string.climb_remaining_elevation)}",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // --- 5. Colored Elevation Profile (Shared ElevationProfile with Gradient Shading) ---
-        val normalizedPoints = climb.normalizedPathPoints.ifEmpty { climb.pathPoints }
-        val currentDistance = if (liveClimb.status == LiveClimbStatus.ON_CLIMB || liveClimb.status == LiveClimbStatus.FINISHED) {
-            (liveClimb.currentProgressFraction.coerceIn(0f, 1f) * climb.distanceMeters)
-        } else null
-
-        ElevationProfile(
-            pathPoints = normalizedPoints,
-            currentDistance = currentDistance,
-            showZoomControls = false,
-            climbGradientShading = true,
-            modifier = Modifier.fillMaxWidth()
-        )
+        // Right: Instantaneous Grade in Headline Monospace
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = gradeStr,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = stringResource(R.string.climb_grade),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
 fun getClimbCategoryColors(category: ClimbCategory): Triple<Color, Color, Int> {
     return when (category) {
-        ClimbCategory.HC -> Triple(Color(0xFF880E4F), Color.White, R.string.climb_category_hc)
-        ClimbCategory.CAT_1 -> Triple(Color(0xFFC62828), Color.White, R.string.climb_category_cat1)
-        ClimbCategory.CAT_2 -> Triple(Color(0xFFEF6C00), Color.White, R.string.climb_category_cat2)
-        ClimbCategory.CAT_3 -> Triple(Color(0xFFF9A825), Color.Black, R.string.climb_category_cat3)
-        ClimbCategory.CAT_4 -> Triple(Color(0xFF2E7D32), Color.White, R.string.climb_category_cat4)
-        ClimbCategory.UNCATEGORIZED -> Triple(Color(0xFF757575), Color.White, R.string.climb_category_uc)
+        ClimbCategory.HC -> Triple(TTColor.ClimbCategoryHc, Color.White, R.string.climb_category_hc)
+        ClimbCategory.CAT_1 -> Triple(TTColor.ClimbCategory1, Color.White, R.string.climb_category_cat1)
+        ClimbCategory.CAT_2 -> Triple(TTColor.ClimbCategory2, Color.White, R.string.climb_category_cat2)
+        ClimbCategory.CAT_3 -> Triple(TTColor.ClimbCategory3, Color.Black, R.string.climb_category_cat3)
+        ClimbCategory.CAT_4 -> Triple(TTColor.ClimbCategory4, Color.White, R.string.climb_category_cat4)
+        ClimbCategory.UNCATEGORIZED -> Triple(TTColor.ClimbCategoryUncategorized, Color.White, R.string.climb_category_uc)
     }
 }
 
@@ -237,7 +273,7 @@ private fun ClimbStatusBadge(
 ) {
     val (label, containerColor, contentColor) = when (status) {
         LiveClimbStatus.APPROACHING -> {
-            val dist = distanceFormatter.format_with_units(distanceToStart) ?: "${distanceToStart.roundToInt()} m"
+            val dist = distanceFormatter.format_with_units(distanceToStart)
             Triple(
                 "${stringResource(R.string.climb_approaching)} ($dist)",
                 MaterialTheme.colorScheme.secondaryContainer,
@@ -251,7 +287,7 @@ private fun ClimbStatusBadge(
         )
         LiveClimbStatus.FINISHED -> Triple(
             stringResource(R.string.climb_summit),
-            Color(0xFF2E7D32),
+            TTColor.ConnectionConnected,
             Color.White
         )
         LiveClimbStatus.FAR_FAR_AWAY -> Triple(
@@ -271,24 +307,10 @@ private fun ClimbStatusBadge(
 }
 
 /**
- * Resolves standard slope gradient color bands (REQ-MAP-027, REQ-UI-352):
- * - < 3%: Green
- * - 3% - 6%: Yellow-Green
- * - 6% - 9%: Amber/Yellow
- * - 9% - 12%: Orange
- * - 12% - 20%: Red
- * - >= 20%: Dark Red / Black
+ * Resolves standard 7-zone slope gradient color bands (REQ-MAP-027, REQ-UI-352, REQ-UI-371):
+ * Harmonized to consume the unified 7-color scale via [getElevationGradeColor].
  */
-fun getClimbGradeColor(gradePercent: Double): Color {
-    return when {
-        gradePercent < 3.0 -> Color(0xFF4CAF50)
-        gradePercent < 6.0 -> Color(0xFF8BC34A)
-        gradePercent < 9.0 -> Color(0xFFFFC107)
-        gradePercent < 12.0 -> Color(0xFFFF9800)
-        gradePercent < 20.0 -> Color(0xFFE53935)
-        else -> Color(0xFF212121)
-    }
-}
+fun getClimbGradeColor(gradePercent: Double): Color = getElevationGradeColor(gradePercent)
 
 @Composable
 private fun ClimbHudMetric(
@@ -363,7 +385,7 @@ private fun createMockLiveClimbData(
 
 @Preview(name = "Light Mode - On Climb", showBackground = true)
 @Composable
-fun LiveClimbSheet_OnClimb_Preview() {
+private fun LiveClimbSheet_OnClimb_Preview() {
     ATrainingTrackerTheme(darkTheme = false) {
         LiveClimbSheet(
             liveClimb = createMockLiveClimbData(
@@ -376,7 +398,7 @@ fun LiveClimbSheet_OnClimb_Preview() {
 
 @Preview(name = "Dark AMOLED Mode - On Climb", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun LiveClimbSheet_OnClimb_Dark_Preview() {
+private fun LiveClimbSheet_OnClimb_Dark_Preview() {
     ATrainingTrackerTheme(darkTheme = true, amoled = true) {
         LiveClimbSheet(
             liveClimb = createMockLiveClimbData(
@@ -389,7 +411,7 @@ fun LiveClimbSheet_OnClimb_Dark_Preview() {
 
 @Preview(name = "Approaching Climb", showBackground = true)
 @Composable
-fun LiveClimbSheet_Approaching_Preview() {
+private fun LiveClimbSheet_Approaching_Preview() {
     ATrainingTrackerTheme(darkTheme = false) {
         LiveClimbSheet(
             liveClimb = createMockLiveClimbData(
@@ -405,7 +427,7 @@ fun LiveClimbSheet_Approaching_Preview() {
 
 @Preview(name = "Summit Finished", showBackground = true)
 @Composable
-fun LiveClimbSheet_Finished_Preview() {
+private fun LiveClimbSheet_Finished_Preview() {
     ATrainingTrackerTheme(darkTheme = false) {
         LiveClimbSheet(
             liveClimb = createMockLiveClimbData(

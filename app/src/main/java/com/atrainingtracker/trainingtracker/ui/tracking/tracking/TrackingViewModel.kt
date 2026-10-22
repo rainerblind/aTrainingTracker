@@ -38,7 +38,8 @@ import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
-import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
@@ -51,13 +52,24 @@ import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
+import com.atrainingtracker.trainingtracker.ui.tracking.PedalBalanceState
+import com.atrainingtracker.trainingtracker.ui.tracking.PedalPowerBalanceMath
+import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeMath
+import com.atrainingtracker.trainingtracker.ui.tracking.ZoneGaugeState
+import com.atrainingtracker.trainingtracker.ui.tracking.WPrimeBatteryMath
+import com.atrainingtracker.trainingtracker.ui.tracking.WPrimeBatteryState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.SectionDividerInfo
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -73,9 +85,12 @@ data class TrackingScreenState(
     val showLiveClimbs: Boolean = true,
     val showNavigationHints: Boolean = true,
     val showLapButton: Boolean = true,
+    val showBikeBell: Boolean = false,
     val elevationProfileScope: ElevationProfileScope = ElevationProfileScope.FULL_ROUTE,
     val elevationProfileLookahead: Int = 2000,
     val fields: List<SensorFieldState> = emptyList(),
+    val sectionDividers: List<SectionDividerInfo> = emptyList(),
+    val tuningConfig: TuningConfig = TuningConfig(),
     val pathPoints: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint> = emptyList(),
     val mapState: TrackingMapState = TrackingMapState(showMap = showMap),
     
@@ -182,10 +197,27 @@ class TrackingViewModel(
         initialValue = emptyList()
     )
 
+    fun interface TimeProvider {
+        fun currentTimeMillis(): Long
+    }
+
+    var timeProvider: TimeProvider = TimeProvider { System.currentTimeMillis() }
+
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
     private val settingsDataStore = SettingsDataStore(application)
+    private val tuningPreferencesDataStore by lazy { TuningPreferencesDataStore(application) }
+    private val _tuningConfig = MutableStateFlow(TuningConfig())
+    val tuningConfig: StateFlow<TuningConfig> = _tuningConfig.asStateFlow()
     private val zoneDisplayOptionsMap = mutableMapOf<SettingsDataStore.ZoneType, ZoneDisplayOptions>()
+    private val zoneCutoffsMap = mutableMapOf<SettingsDataStore.ZoneType, List<Int>>(
+        SettingsDataStore.ZoneType.HR_RUN to listOf(132, 145, 158, 171),
+        SettingsDataStore.ZoneType.HR_BIKE to listOf(127, 140, 153, 166),
+        SettingsDataStore.ZoneType.PWR_BIKE to listOf(149, 203, 243, 284, 324, 405)
+    )
     private val defaultZoneColor = Color.Transparent
+
+    private var currentEffectiveWPrimeKj: Double = SettingsDataStore.DEFAULT_W_PRIME_KJ.toDouble()
+    private var wPrimeStaleJob: Job? = null
 
     // Pre-load the zone colors into a list for efficient access. The order is important.
     private val zoneColors: List<Color> = listOf(
@@ -193,28 +225,68 @@ class TrackingViewModel(
         Color(ContextCompat.getColor(application, R.color.zone_2)),
         Color(ContextCompat.getColor(application, R.color.zone_3)),
         Color(ContextCompat.getColor(application, R.color.zone_4)),
-        Color(ContextCompat.getColor(application, R.color.zone_5))
+        Color(ContextCompat.getColor(application, R.color.zone_5)),
+        Color(ContextCompat.getColor(application, R.color.zone_6)),
+        Color(ContextCompat.getColor(application, R.color.zone_7))
     )
 
     init {
+        observeTuningConfig()
         observeZoneDisplayOptions()
+        observeWPrimeKj()
         observeMapState()
         // Load both the main UI state and the activity type
         loadSensorFieldStates()
         loadActivityType()
     }
 
-    private fun observeZoneDisplayOptions() {
+    /**
+     * Subscribes non-blockingly to [TuningPreferencesDataStore.tuningConfigFlow] so initial SQLite
+     * sensor field loading never waits for DataStore I/O (REQ-UI-409.3).
+     */
+    private fun observeTuningConfig() {
+        val appContext = application.applicationContext ?: application
+        val hasValidFilesDir = try {
+            !appContext.filesDir?.path.isNullOrEmpty()
+        } catch (_: Throwable) {
+            false
+        }
+        if (!hasValidFilesDir) return
+
         viewModelScope.launch {
-            combine(
-                settingsDataStore.getZoneDisplayOptionsFlow(SettingsDataStore.ZoneType.HR_RUN),
-                settingsDataStore.getZoneDisplayOptionsFlow(SettingsDataStore.ZoneType.HR_BIKE),
-                settingsDataStore.getZoneDisplayOptionsFlow(SettingsDataStore.ZoneType.PWR_BIKE)
-            ) { hrRun, hrBike, pwrBike ->
-                zoneDisplayOptionsMap[SettingsDataStore.ZoneType.HR_RUN] = hrRun
-                zoneDisplayOptionsMap[SettingsDataStore.ZoneType.HR_BIKE] = hrBike
-                zoneDisplayOptionsMap[SettingsDataStore.ZoneType.PWR_BIKE] = pwrBike
-            }.collect()
+            tuningPreferencesDataStore.tuningConfigFlow
+                .distinctUntilChanged()
+                .collect { config ->
+                    _tuningConfig.value = config
+                    _uiState.update { current ->
+                        current.copy(tuningConfig = config)
+                    }
+                }
+        }
+    }
+
+    private fun observeZoneDisplayOptions() {
+        val appContext = application.applicationContext ?: application
+        val hasValidFilesDir = try {
+            !appContext.filesDir?.path.isNullOrEmpty()
+        } catch (_: Throwable) {
+            false
+        }
+        if (!hasValidFilesDir) return
+
+        viewModelScope.launch {
+            try {
+                settingsDataStore.snapshotFlow.collect { snapshot ->
+                    zoneDisplayOptionsMap[SettingsDataStore.ZoneType.HR_RUN] = snapshot.hrRunDisplayOptions
+                    zoneDisplayOptionsMap[SettingsDataStore.ZoneType.HR_BIKE] = snapshot.hrBikeDisplayOptions
+                    zoneDisplayOptionsMap[SettingsDataStore.ZoneType.PWR_BIKE] = snapshot.pwrBikeDisplayOptions
+                    zoneCutoffsMap[SettingsDataStore.ZoneType.HR_RUN] = snapshot.hrRunZoneMax
+                    zoneCutoffsMap[SettingsDataStore.ZoneType.HR_BIKE] = snapshot.hrBikeZoneMax
+                    zoneCutoffsMap[SettingsDataStore.ZoneType.PWR_BIKE] = snapshot.pwrBikeZoneMax
+                }
+            } catch (_: Throwable) {
+                // Graceful fallback in test environments without DataStore file storage
+            }
         }
     }
 
@@ -225,64 +297,166 @@ class TrackingViewModel(
         }
     }
 
-    private data class MapData<T1, T2, T3, T4>(
-        val allLiveSegments: T1,
-        val activeLiveSegments: T2,
-        val allRoutes: T3,
-        val activeNavigatedRouteId: T4
+    private fun scheduleWPrimeStaleCheck() {
+        wPrimeStaleJob?.cancel()
+        wPrimeStaleJob = viewModelScope.launch {
+            delay(WPrimeBatteryMath.STALE_TIMEOUT_MS)
+            markWPrimeBalFieldsStale()
+        }
+    }
+
+    private fun cancelWPrimeStaleCheck() {
+        wPrimeStaleJob?.cancel()
+        wPrimeStaleJob = null
+    }
+
+    private fun observeWPrimeKj() {
+        val appContext = application.applicationContext ?: application
+        val hasValidFilesDir = try {
+            !appContext.filesDir?.path.isNullOrEmpty()
+        } catch (_: Throwable) {
+            false
+        }
+        if (!hasValidFilesDir) return
+
+        viewModelScope.launch {
+            try {
+                settingsDataStore.wPrimeKjFlow.collect { configuredWPrime ->
+                    currentEffectiveWPrimeKj = (configuredWPrime?.takeIf { it > 0.0f } ?: SettingsDataStore.DEFAULT_W_PRIME_KJ).toDouble()
+                }
+            } catch (t: Throwable) {
+                android.util.Log.w("TrackingViewModel", "Failed to collect wPrimeKjFlow from DataStore", t)
+            }
+        }
+    }
+
+    private fun markWPrimeBalFieldsStale() {
+        _uiState.update { current ->
+            var changed = false
+            val updatedFields = current.fields.map { field ->
+                if (field.sensorType == SensorType.W_PRIME_BAL && field.wPrimeBatteryState?.isStale == false) {
+                    changed = true
+                    field.copy(
+                        wPrimeBatteryState = field.wPrimeBatteryState.copy(
+                            isStale = true,
+                            batteryFraction = null,
+                            isWarning = false
+                        )
+                    )
+                } else {
+                    field
+                }
+            }
+            if (changed) current.copy(fields = updatedFields) else current
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        cancelWPrimeStaleCheck()
+    }
+
+    private data class StaticMapLayerData(
+        val mapSegments: List<MapSegment>,
+        val activeLiveSegmentIds: Set<Long>,
+        val mapRoutes: List<MapRoute>
+    )
+
+    private data class LiveTelemetryTuple(
+        val currentTrack: List<LatLng>,
+        val bSportType: BSportType,
+        val userSpeed: Float,
+        val userBearing: Float
     )
 
     private fun observeMapState() {
         viewModelScope.launch {
-            val mapDataFlow = combine(
-                liveSegmentsRepository.liveSegments,
-                activeLiveSegments,
+            // REQ-MAP-051.1: Pre-map static MapSegment instances only when static segment paths change,
+            // never on 1-Hz liveData or currentTrack emissions.
+            val staticMapSegmentsFlow = liveSegmentsRepository.liveSegments
+                .map { list -> list.map { it.staticData } }
+                .distinctUntilChanged()
+                .map { staticList ->
+                    staticList.map { staticData ->
+                        MapSegment(
+                            stravaId = staticData.summary.stravaId,
+                            name = staticData.summary.name,
+                            bSportType = staticData.summary.bSportType,
+                            path = staticData.path,
+                            latLngs = staticData.latLngs
+                        )
+                    }
+                }
+
+            val activeLiveSegmentIdsFlow = activeLiveSegments
+                .map { list -> list.map { it.staticData.summary.stravaId }.toSet() }
+                .distinctUntilChanged()
+
+            // REQ-MAP-051.1: Pre-map MapRoute instances only when stored routes or activeNavigatedRouteId change.
+            val mapRoutesFlow = combine(
                 routesRepository.allRoutes,
                 routesRepository.activeNavigatedRouteId
-            ) { allSegments, activeSegments, allRoutes, activeNavigatedRouteId ->
-                MapData(allSegments, activeSegments, allRoutes, activeNavigatedRouteId)
+            ) { allRoutes, activeNavigatedRouteId ->
+                allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeNavigatedRouteId)) }
+            }.distinctUntilChanged()
+
+            val staticMapLayerFlow = combine(
+                staticMapSegmentsFlow,
+                activeLiveSegmentIdsFlow,
+                mapRoutesFlow
+            ) { mapSegments, activeIds, mapRoutes ->
+                StaticMapLayerData(
+                    mapSegments = mapSegments,
+                    activeLiveSegmentIds = activeIds,
+                    mapRoutes = mapRoutes
+                )
+            }
+
+            // REQ-MAP-052.1 / ATT-3775 / Rule 39: Actively subscribe currentSpeed and currentBearing
+            // alongside currentTrack and bSportType so Follow-Me zoom and bearing update continuously
+            // in both READY and TRACKING modes even when currentTrack does not emit.
+            val liveTelemetryFlow = combine(
+                banalServiceRepository.currentTrack,
+                banalServiceRepository.bSportType,
+                banalServiceRepository.currentSpeed,
+                banalServiceRepository.currentBearing
+            ) { currentTrack, bSportType, speed, bearing ->
+                LiveTelemetryTuple(
+                    currentTrack = currentTrack,
+                    bSportType = bSportType,
+                    userSpeed = speed?.toFloat() ?: 0f,
+                    userBearing = bearing?.toFloat() ?: 0f
+                )
             }
 
             combine(
                 trackingViewsRepository.getTrackingViewInfoFlow(viewId),
-                mapDataFlow,
-                banalServiceRepository.currentTrack,
-                banalServiceRepository.bSportType
-            ) { viewInfo, mapData, currentTrack, bSportType ->
-                val (allLiveSegments, activeLiveSegments, allRoutes, activeNavigatedRouteId) = mapData
-                val markerList = mutableListOf<LocationMarker>()
-                if (currentTrack.isNotEmpty()) {
-                    markerList.add(
+                staticMapLayerFlow,
+                liveTelemetryFlow
+            ) { viewInfo, staticLayers, liveTelemetry ->
+                val currentTrack = liveTelemetry.currentTrack
+                val markerList = if (currentTrack.isNotEmpty()) {
+                    listOf(
                         LocationMarker(
                             position = currentTrack.first(),
                             iconResId = R.drawable.start_logo_map,
                             title = application.getString(R.string.Start)
                         )
                     )
+                } else {
+                    emptyList()
                 }
-
-                // Convert LiveSegments into MapSegments
-                val mapSegments = allLiveSegments.map { live ->
-                    MapSegment(
-                        stravaId = live.staticData.summary.stravaId,
-                        name = live.staticData.summary.name,
-                        bSportType = live.staticData.summary.bSportType,
-                        path = live.staticData.path
-                    )
-                }
-
-                val activeIds = activeLiveSegments.map { it.staticData.summary.stravaId }.toSet()
 
                 TrackingMapState(
                     showMap = viewInfo?.showMap ?: false,
                     zoomFocus = MapZoomFocus.FOLLOW_ME,
-                    userSpeed = banalServiceRepository.currentSpeed.value?.toFloat() ?: 0f,
-                    userBearing = banalServiceRepository.currentBearing.value?.toFloat() ?: 0f,
-                    bSportType = bSportType,
+                    userSpeed = liveTelemetry.userSpeed,
+                    userBearing = liveTelemetry.userBearing,
+                    bSportType = liveTelemetry.bSportType,
                     currentTrack = currentTrack,
-                    mapSegments = mapSegments,
-                    mapRoutes = allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeNavigatedRouteId)) },
-                    activeLiveSegmentIds = activeIds,
+                    mapSegments = staticLayers.mapSegments,
+                    mapRoutes = staticLayers.mapRoutes,
+                    activeLiveSegmentIds = staticLayers.activeLiveSegmentIds,
                     mapMarkers = markerList
                 )
             }.collect { newMapState ->
@@ -313,8 +487,9 @@ class TrackingViewModel(
                 trackingViewsRepository.getSensorFieldConfigsForView(viewId),
                 banalServiceRepository.allFilteredSensorData,
                 trackingViewsRepository.getTrackingViewInfoFlow(viewId),
-                banalServiceRepository.currentPathPoints
-            ) { configs, allSensorData, viewInfo, livePathPoints ->
+                banalServiceRepository.currentPathPoints,
+                trackingViewsRepository.getSectionDividersFlow(viewId)
+            ) { configs, allSensorData, viewInfo, livePathPoints, sectionDividers ->
                 // --- Step 1: Create the base state from the latest configurations ---
                 val currentActivity = banalServiceRepository.activityType.value
                 val baseFields = configs.map { config ->
@@ -331,6 +506,16 @@ class TrackingViewModel(
                     val zoneType = getZoneType(config.sensorType, currentActivity.sportType)
                     val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
 
+                    val isPedalBalance = (config.sensorType == SensorType.PEDAL_POWER_BALANCE)
+                    val initialPedalBalanceState = if (isPedalBalance) {
+                        PedalPowerBalanceMath.calculateBalanceState(null)
+                    } else null
+                    val initialValue = if (isPedalBalance && initialPedalBalanceState != null) {
+                        PedalPowerBalanceMath.formatBalanceString(initialPedalBalanceState)
+                    } else {
+                        "--"
+                    }
+
                     SensorFieldState(
                         configHash = uniqueHash,
                         sensorFieldId = config.sensorFieldId,
@@ -339,10 +524,20 @@ class TrackingViewModel(
                         viewSize = config.viewSize,
                         label = application.getString(config.sensorType.shortNameId),
                         filterDescription = filterDescription,
-                        value = "--",
+                        value = initialValue,
                         units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
                         zoneColor = defaultZoneColor,
-                        zoneDisplayOptions = displayOptions
+                        zoneDisplayOptions = displayOptions,
+                        zoneGaugeState = calculateZoneGaugeState(zoneType, displayOptions, null),
+                        pedalBalanceState = initialPedalBalanceState,
+                        wPrimeBatteryState = if (config.sensorType == SensorType.W_PRIME_BAL) {
+                            WPrimeBatteryMath.calculateBatteryState(
+                                remainingKj = null,
+                                totalKj = currentEffectiveWPrimeKj,
+                                timestampMs = 0L
+                            )
+                        } else null,
+                        sensorType = config.sensorType
                     )
                 }
 
@@ -353,12 +548,15 @@ class TrackingViewModel(
                 val currentMap = _mapState.value
                 TrackingScreenState(
                     fields = finalFields,
+                    sectionDividers = sectionDividers,
+                    tuningConfig = _tuningConfig.value,
                     showMap = viewInfo?.showMap ?: false,
                     showLiveSegments = viewInfo?.showLiveSegments ?: false,
                     showElevationProfile = viewInfo?.showElevationProfile ?: false,
                     showLiveClimbs = viewInfo?.showLiveClimbs ?: true,
                     showNavigationHints = viewInfo?.showNavigationHints ?: true,
                     showLapButton = viewInfo?.showLapButton ?: true,
+                    showBikeBell = viewInfo?.showBikeBell ?: false,
                     elevationProfileScope = viewInfo?.elevationProfileScope ?: ElevationProfileScope.FULL_ROUTE,
                     elevationProfileLookahead = viewInfo?.elevationProfileLookahead ?: 2000,
                     pathPoints = livePathPoints,
@@ -399,23 +597,55 @@ class TrackingViewModel(
             val fieldsToUpdate = fieldsByHash[uniqueHash]
 
             if (fieldsToUpdate != null) {
-                val newFormattedValue = sensorData.stringValue
+                val isPedalBalance = (sensorData.sensorType == SensorType.PEDAL_POWER_BALANCE)
+                val newPedalBalanceState = if (isPedalBalance) {
+                    PedalPowerBalanceMath.calculateBalanceState(sensorData.value as? Number)
+                } else null
+                val newFormattedValue = if (isPedalBalance && newPedalBalanceState != null) {
+                    PedalPowerBalanceMath.formatBalanceString(newPedalBalanceState)
+                } else {
+                    sensorData.stringValue
+                }
                 val newZoneColor = calculateZoneColor(sensorData, activityType)
                 val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
                 val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
+                val numericValue = (sensorData.value as? Number)?.toDouble()
+                val newZoneGaugeState = calculateZoneGaugeState(zoneType, displayOptions, numericValue)
+
+                val isWPrimeBal = (sensorData.sensorType == SensorType.W_PRIME_BAL)
+                val newWPrimeBatteryState = if (isWPrimeBal) {
+                    val remainingKj = numericValue
+                    val state = WPrimeBatteryMath.calculateBatteryState(
+                        remainingKj = remainingKj,
+                        totalKj = currentEffectiveWPrimeKj,
+                        timestampMs = timeProvider.currentTimeMillis()
+                    )
+                    if (!state.isStale) {
+                        scheduleWPrimeStaleCheck()
+                    } else {
+                        cancelWPrimeStaleCheck()
+                    }
+                    state
+                } else null
 
                 // 3. Iterate through every field that needs this update.
                 for (fieldToUpdate in fieldsToUpdate) {
                     // Check if this specific instance needs an update to avoid unnecessary changes.
                     if (fieldToUpdate.value != newFormattedValue ||
                         fieldToUpdate.zoneColor != newZoneColor ||
-                        fieldToUpdate.zoneDisplayOptions != displayOptions) {
+                        fieldToUpdate.zoneDisplayOptions != displayOptions ||
+                        fieldToUpdate.zoneGaugeState != newZoneGaugeState ||
+                        fieldToUpdate.pedalBalanceState != newPedalBalanceState ||
+                        (isWPrimeBal && fieldToUpdate.wPrimeBatteryState != newWPrimeBatteryState)) {
                         val index = updatedFields.indexOf(fieldToUpdate)
                         if (index != -1) {
                             updatedFields[index] = fieldToUpdate.copy(
                                 value = newFormattedValue,
                                 zoneColor = newZoneColor,
-                                zoneDisplayOptions = displayOptions
+                                zoneDisplayOptions = displayOptions,
+                                zoneGaugeState = newZoneGaugeState,
+                                pedalBalanceState = newPedalBalanceState,
+                                wPrimeBatteryState = if (isWPrimeBal) newWPrimeBatteryState else fieldToUpdate.wPrimeBatteryState
                             )
                             hasChanged = true
                         }
@@ -437,21 +667,41 @@ class TrackingViewModel(
         val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
 
         if (zoneType != null && currentValue is Number) {
-            val z1Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
-            val z2Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
-            val z3Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
-            val z4Max = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+            val cutoffs = zoneCutoffsMap[zoneType] ?: when (zoneType) {
+                SettingsDataStore.ZoneType.PWR_BIKE -> listOf(149, 203, 243, 284, 324, 405)
+                SettingsDataStore.ZoneType.HR_RUN -> listOf(132, 145, 158, 171)
+                SettingsDataStore.ZoneType.HR_BIKE -> listOf(127, 140, 153, 166)
+            }
             val numericValue = currentValue.toDouble()
 
-            return when {
-                numericValue <= z1Max -> zoneColors[0]
-                numericValue <= z2Max -> zoneColors[1]
-                numericValue <= z3Max -> zoneColors[2]
-                numericValue <= z4Max -> zoneColors[3]
-                else -> zoneColors[4]
+            for (i in cutoffs.indices) {
+                if (numericValue <= cutoffs[i]) {
+                    return zoneColors.getOrElse(i) { defaultZoneColor }
+                }
             }
+            return zoneColors.getOrElse(cutoffs.size) { defaultZoneColor }
         }
         return defaultZoneColor
+    }
+
+    private fun calculateZoneGaugeState(
+        zoneType: SettingsDataStore.ZoneType?,
+        displayOptions: ZoneDisplayOptions,
+        numericValue: Double?
+    ): ZoneGaugeState? {
+        if (!displayOptions.showGauge || zoneType == null) return null
+
+        val cutoffs = zoneCutoffsMap[zoneType] ?: when (zoneType) {
+            SettingsDataStore.ZoneType.PWR_BIKE -> listOf(149, 203, 243, 284, 324, 405)
+            SettingsDataStore.ZoneType.HR_RUN -> listOf(132, 145, 158, 171)
+            SettingsDataStore.ZoneType.HR_BIKE -> listOf(127, 140, 153, 166)
+        }
+
+        return ZoneGaugeMath.calculateZoneGaugeState(
+            value = numericValue,
+            zoneType = zoneType,
+            cutoffs = cutoffs
+        )
     }
 
     /**
@@ -574,6 +824,23 @@ class TrackingViewModel(
         }
     }
 
+    fun onUpdateShowBikeBell(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowBikeBell(viewId, show)
+        }
+    }
+
+    fun onSetSectionDivider(rowNr: Int, title: String?) {
+        viewModelScope.launch {
+            trackingViewsRepository.setSectionDivider(viewId, rowNr, title)
+        }
+    }
+
+    fun onDeleteSectionDivider(rowNr: Int) {
+        viewModelScope.launch {
+            trackingViewsRepository.deleteSectionDivider(viewId, rowNr)
+        }
+    }
 }
 
 /**

@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.settings
 
+import java.io.Serializable
+
 /**
  * Encapsulates the athlete-configurable presentation options for an athletic zone profile (REQ-UI-172).
  *
@@ -25,10 +27,12 @@ package com.atrainingtracker.trainingtracker.settings
  * @property showLeftBar Whether to render a 6dp solid accent strip on the left edge.
  * @property showRightBar Whether to render a 6dp solid accent strip on the right edge.
  * @property showTextColor Whether to render the primary metric reading in the active zone color.
+ * @property showGauge Whether to render a horizontal training zone gauge bar in the sensor tile (REQ-UI-376).
  */
 data class ZoneDisplayOptions(
     val showBackground: Boolean = true,
     val showLeftBar: Boolean = true,
     val showRightBar: Boolean = false,
-    val showTextColor: Boolean = false
-)
+    val showTextColor: Boolean = false,
+    val showGauge: Boolean = false
+) : Serializable

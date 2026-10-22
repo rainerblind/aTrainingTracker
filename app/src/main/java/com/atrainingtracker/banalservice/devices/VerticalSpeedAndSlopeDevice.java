@@ -31,6 +31,7 @@ import com.atrainingtracker.banalservice.sensor.MyDoubleAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -211,6 +212,13 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
     private void calculateMetrics() {
         if (DEBUG) Log.i(TAG, "calculateMetrics()");
+
+        if (TrainingApplication.isPaused()) {
+            return;
+        }
+        if (TrainingApplication.isAutoPaused()) {
+            return;
+        }
 
         // get current values
         FilteredSensorData<Double> altitudeFilteredSensorData = BANALService.getFilteredSensorData(cAltitudeFilter);

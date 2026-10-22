@@ -38,11 +38,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.routes.BatchImportSportTypeDialog
+import com.atrainingtracker.trainingtracker.ui.routes.BatchSportMode
 import com.atrainingtracker.trainingtracker.ui.routes.EditRouteScreen
 import com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModel
 import com.atrainingtracker.trainingtracker.ui.routes.GpxImportViewModelFactory
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
+/**
+ * Activity handling external file intents and multi-route sequential editing (REQ-MAP-053).
+ */
 class GpxImportActivity : ComponentActivity() {
 
     private val viewModel: GpxImportViewModel by viewModels {
@@ -53,8 +58,26 @@ class GpxImportActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // Handle the incoming intent data
-        val uri = intent.data ?: intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM)
-        viewModel.handleIntent(uri)
+        val uris: List<android.net.Uri> = when (intent.action) {
+            android.content.Intent.ACTION_SEND_MULTIPLE -> {
+                intent.getParcelableArrayListExtra<android.net.Uri>(android.content.Intent.EXTRA_STREAM)?.filterNotNull() ?: emptyList()
+            }
+            else -> {
+                val single = intent.data ?: intent.getParcelableExtra<android.net.Uri>(android.content.Intent.EXTRA_STREAM)
+                listOfNotNull(single)
+            }
+        }
+
+        val isIndividualMode = intent.getBooleanExtra(EXTRA_INDIVIDUAL_MODE, false)
+        if (uris.size > 1) {
+            if (isIndividualMode) {
+                viewModel.startIndividualImport(uris)
+            } else {
+                viewModel.promptSportType(uris)
+            }
+        } else {
+            viewModel.handleIntent(uris.firstOrNull())
+        }
 
         setContent {
             ATrainingTrackerTheme {
@@ -78,6 +101,22 @@ class GpxImportActivity : ComponentActivity() {
                             }
                         }
                     }
+                    is GpxImportViewModel.ImportState.PromptSportType -> {
+                        BatchImportSportTypeDialog(
+                            routeCount = state.uris.size,
+                            onConfirm = { mode, selectedSport ->
+                                when (mode) {
+                                    BatchSportMode.ALL -> {
+                                        viewModel.handleBatchUris(state.uris, selectedSport)
+                                    }
+                                    BatchSportMode.INDIVIDUAL -> {
+                                        viewModel.startIndividualImport(state.uris)
+                                    }
+                                }
+                            },
+                            onDismiss = { finish() }
+                        )
+                    }
                     is GpxImportViewModel.ImportState.Editing -> {
                         EditRouteScreen(
                             routeSummary = state.summary,
@@ -85,6 +124,23 @@ class GpxImportActivity : ComponentActivity() {
                                 viewModel.saveRoute(updatedSummary, state.points, state.waypoints)
                             },
                             onCancel = { finish() }
+                        )
+                    }
+                    is GpxImportViewModel.ImportState.EditingIndividual -> {
+                        EditRouteScreen(
+                            routeSummary = state.summary,
+                            onSave = { updatedSummary ->
+                                viewModel.saveCurrentIndividualRoute(updatedSummary)
+                            },
+                            onCancel = { finish() },
+                            title = stringResource(
+                                R.string.batch_import_individual_progress_format,
+                                state.current,
+                                state.total
+                            ),
+                            onSkip = {
+                                viewModel.skipCurrentIndividualRoute()
+                            }
                         )
                     }
                     is GpxImportViewModel.ImportState.Saving -> {
@@ -97,7 +153,41 @@ class GpxImportActivity : ComponentActivity() {
                     }
                     is GpxImportViewModel.ImportState.Success -> {
                         LaunchedEffect(Unit) {
-                            Toast.makeText(this@GpxImportActivity, "Route Imported!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@GpxImportActivity, getString(R.string.route_saved_success), Toast.LENGTH_SHORT).show()
+                            finish()
+                        }
+                    }
+                    is GpxImportViewModel.ImportState.BatchProgress -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                CircularProgressIndicator()
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = stringResource(
+                                        R.string.routes_import_progress,
+                                        state.current,
+                                        state.total
+                                    ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    is GpxImportViewModel.ImportState.BatchSuccess -> {
+                        LaunchedEffect(Unit) {
+                            val message = when {
+                                state.failedCount == 0 -> getString(R.string.routes_import_success, state.importedCount)
+                                state.importedCount > 0 -> getString(R.string.routes_import_partial, state.importedCount, state.failedCount)
+                                else -> getString(R.string.routes_import_all_failed)
+                            }
+                            Toast.makeText(this@GpxImportActivity, message, Toast.LENGTH_SHORT).show()
                             finish()
                         }
                     }
@@ -109,5 +199,10 @@ class GpxImportActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        /** Intent extra indicating that multi-file batch import should start directly in sequential review mode. */
+        const val EXTRA_INDIVIDUAL_MODE = "com.atrainingtracker.extra.INDIVIDUAL_MODE"
     }
 }

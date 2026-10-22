@@ -22,15 +22,20 @@ import android.app.Application
 import android.content.Context
 import android.util.Log
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldConfig
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.slot
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -41,6 +46,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -238,5 +244,162 @@ class EditSensorFieldViewModelTest {
         assertEquals(5.0, state.filterConstant, 0.001)
         assertEquals("sec", state.movingAverageUnit)
         assertTrue(state.isCustomFilterExpanded)
+    }
+
+    @Test
+    fun testAvailableSensorTypes_reactivelyUpdatesOnDelayedTuningConfigEmission() = runTest {
+        every { ActivityType.getSensorTypeArray(any(), any()) } returns arrayOf(
+            SensorType.SPEED_mps,
+            SensorType.POWER,
+            SensorType.NORMALIZED_POWER,
+            SensorType.INTENSITY_FACTOR,
+            SensorType.TSS,
+            SensorType.W_PRIME_BAL
+        )
+
+        val delayedTuningFlow = kotlinx.coroutines.flow.MutableSharedFlow<com.atrainingtracker.trainingtracker.settings.TuningConfig>()
+        val viewModel = EditSensorFieldViewModel(
+            application = application,
+            trackingViewsRepository = trackingViewsRepo,
+            banalServiceRepository = banalServiceRepo,
+            activityType = ActivityType.BIKE_POWER,
+            sensorFieldId = -1L,
+            tabViewId = 1L,
+            rowNr = 0,
+            colNr = 0,
+            tuningConfigFlow = delayedTuningFlow
+        )
+
+        // Immediately before delayed flow emits, initial state uses default TuningConfig (Coggan=true, CP=false)
+        // and never shows an empty list
+        val initialAvailable = viewModel.uiState.value.availableSensorTypesForCurrentActivityType
+        assertTrue(initialAvailable.isNotEmpty())
+        assertTrue(initialAvailable.contains(SensorType.NORMALIZED_POWER))
+        assertFalse(initialAvailable.contains(SensorType.W_PRIME_BAL))
+
+        // Simulate delayed TuningConfig emission disabling Coggan and enabling Critical Power
+        testDispatcher.scheduler.advanceUntilIdle()
+        delayedTuningFlow.emit(
+            com.atrainingtracker.trainingtracker.settings.TuningConfig(
+                enableCogganPowerMetrics = false,
+                enableCriticalPowerModel = true
+            )
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val updatedAvailable = viewModel.uiState.value.availableSensorTypesForCurrentActivityType
+        assertFalse(updatedAvailable.contains(SensorType.NORMALIZED_POWER))
+        assertFalse(updatedAvailable.contains(SensorType.INTENSITY_FACTOR))
+        assertFalse(updatedAvailable.contains(SensorType.TSS))
+        assertTrue(updatedAvailable.contains(SensorType.W_PRIME_BAL))
+        assertTrue(updatedAvailable.contains(SensorType.POWER))
+    }
+
+    /**
+     * TST-FIL-014.1: Creating a new field with sentinel "Best Sensor" (selectedDeviceId = -1)
+     * must normalize FilterData.deviceName = null and repository sourceDeviceId/Name = null
+     * (Rule 50 / REQ-FIL-014.1).
+     */
+    @Test
+    fun testSaveChanges_newField_bestSensor_normalizesDeviceNameToNull() = runTest {
+        val viewModel = createViewModel(sensorFieldId = -1L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val filterSlot = slot<FilterData>()
+        verify { banalServiceRepo.createFilter(capture(filterSlot)) }
+        assertNull("Best sensor must normalize FilterData.deviceName to null", filterSlot.captured.deviceName)
+
+        coVerify {
+            trackingViewsRepo.insertSensorFieldConfig(
+                tabViewId = 1L,
+                rowNr = 0,
+                colNr = 0,
+                newSensorType = SensorType.SPEED_mps,
+                newViewSize = ViewSize.NORMAL,
+                newSourceDeviceId = null,
+                newSourceDeviceName = null,
+                newFilterType = any(),
+                newFilterConstant = any()
+            )
+        }
+    }
+
+    /**
+     * TST-FIL-014.2: Updating an existing field with sentinel "Best Sensor" (selectedDeviceId = -1)
+     * must normalize FilterData.deviceName = null and repository update sourceDeviceId/Name = null
+     * (Rule 50 / REQ-FIL-014.1).
+     */
+    @Test
+    fun testSaveChanges_editField_bestSensor_normalizesDeviceNameToNull() = runTest {
+        val existingConfig = SensorFieldConfig(
+            sensorFieldId = 42L,
+            rowNr = 0,
+            colNr = 0,
+            sensorType = SensorType.POWER,
+            sourceDeviceId = -1L,
+            sourceDeviceName = "Bester Sensor",
+            viewSize = ViewSize.NORMAL,
+            filterType = FilterType.MOVING_AVERAGE_TIME,
+            filterConstant = 3.0
+        )
+        every { trackingViewsRepo.getSensorFieldConfig(42L) } returns flowOf(existingConfig)
+
+        val viewModel = createViewModel(sensorFieldId = 42L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val filterSlot = slot<FilterData>()
+        verify { banalServiceRepo.createFilter(capture(filterSlot)) }
+        assertNull("Best sensor update must normalize FilterData.deviceName to null", filterSlot.captured.deviceName)
+
+        coVerify {
+            trackingViewsRepo.updateSensorFieldConfig(
+                sensorFieldId = 42L,
+                newSensorType = SensorType.POWER,
+                newViewSize = ViewSize.NORMAL,
+                newSourceDeviceId = null,
+                newSourceDeviceName = null,
+                newFilterType = FilterType.MOVING_AVERAGE_TIME,
+                newFilterConstant = 3.0
+            )
+        }
+    }
+
+    /**
+     * TST-FIL-014.3: Selecting a specific paired device (selectedDeviceId > 0) must preserve
+     * the explicit deviceName and deviceId across FilterData and repository persistence
+     * (REQ-FIL-014.1, REQ-FIL-014.4).
+     */
+    @Test
+    fun testSaveChanges_specificDevice_preservesDeviceNameAndId() = runTest {
+        val viewModel = createViewModel(sensorFieldId = -1L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onDeviceChanged(123L, "Stages Power")
+        viewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val filterSlot = slot<FilterData>()
+        verify { banalServiceRepo.createFilter(capture(filterSlot)) }
+        assertEquals("Stages Power", filterSlot.captured.deviceName)
+
+        coVerify {
+            trackingViewsRepo.insertSensorFieldConfig(
+                tabViewId = 1L,
+                rowNr = 0,
+                colNr = 0,
+                newSensorType = SensorType.SPEED_mps,
+                newViewSize = ViewSize.NORMAL,
+                newSourceDeviceId = 123L,
+                newSourceDeviceName = "Stages Power",
+                newFilterType = any(),
+                newFilterConstant = any()
+            )
+        }
     }
 }

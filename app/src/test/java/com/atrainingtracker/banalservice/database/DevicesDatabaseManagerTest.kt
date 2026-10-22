@@ -26,6 +26,7 @@ import com.atrainingtracker.testutil.MockCursorFactory
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.mockkConstructor
 import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
@@ -57,6 +58,30 @@ class DevicesDatabaseManagerTest {
         mockContext = mockk(relaxed = true)
         mockDb = mockk(relaxed = true)
         every { mockDb.isOpen } returns true
+
+        mockkConstructor(android.content.ContentValues::class)
+        val capturedValues = mutableMapOf<String, Any?>()
+        every { anyConstructed<android.content.ContentValues>().put(any<String>(), any<String>()) } answers {
+            capturedValues[firstArg()] = secondArg()
+        }
+        every { anyConstructed<android.content.ContentValues>().put(any<String>(), any<Long>()) } answers {
+            capturedValues[firstArg()] = secondArg()
+        }
+        every { anyConstructed<android.content.ContentValues>().put(any<String>(), any<Int>()) } answers {
+            capturedValues[firstArg()] = secondArg()
+        }
+        every { anyConstructed<android.content.ContentValues>().put(any<String>(), any<Double>()) } answers {
+            capturedValues[firstArg()] = secondArg()
+        }
+        every { anyConstructed<android.content.ContentValues>().put(any<String>(), any<Boolean>()) } answers {
+            capturedValues[firstArg()] = secondArg()
+        }
+        every { anyConstructed<android.content.ContentValues>().getAsBoolean(any<String>()) } answers {
+            capturedValues[firstArg()] as? Boolean
+        }
+        every { anyConstructed<android.content.ContentValues>().getAsString(any<String>()) } answers {
+            capturedValues[firstArg()] as? String
+        }
     }
 
     @After
@@ -170,5 +195,91 @@ class DevicesDatabaseManagerTest {
             override fun getDatabase(): SQLiteDatabase = mockDb
         }
         assertFalse("Expected false when database is closed", managerClosed.hasPairedRemoteDevices())
+    }
+
+    @Test
+    fun testInsertNewBluetoothDeviceIntoDB_withPairedTrue_storesPairedOne() {
+        val emptyCursor = MockCursorFactory.create(
+            columns = listOf(DevicesDatabaseManager.DevicesDbHelper.C_ID),
+            rows = emptyList()
+        )
+        every {
+            mockDb.query(
+                DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                null,
+                any<String>(),
+                any<Array<String>>(),
+                null,
+                null,
+                null
+            )
+        } returns emptyCursor
+
+        val valuesSlot = slot<android.content.ContentValues>()
+        every {
+            mockDb.insert(DevicesDatabaseManager.DevicesDbHelper.DEVICES, null, capture(valuesSlot))
+        } returns 42L
+
+        val manager = object : DevicesDatabaseManager(mockContext) {
+            override fun getDatabase(): SQLiteDatabase = mockDb
+        }
+
+        val id = manager.insertNewBluetoothDeviceIntoDB(
+            com.atrainingtracker.banalservice.devices.DeviceType.HRM,
+            "AA:BB:CC:DD:EE:FF",
+            "Polar H10",
+            "Polar",
+            85,
+            true
+        )
+
+        assertEquals(42L, id)
+        assertTrue(valuesSlot.isCaptured)
+        val captured = valuesSlot.captured
+        assertEquals(true, captured.getAsBoolean(DevicesDatabaseManager.DevicesDbHelper.PAIRED))
+        assertEquals("Polar H10", captured.getAsString(DevicesDatabaseManager.DevicesDbHelper.NAME))
+    }
+
+    @Test
+    fun testInsertNewAntDeviceIntoDB_withPairedTrue_storesPairedOne() {
+        val emptyCursor = MockCursorFactory.create(
+            columns = listOf(DevicesDatabaseManager.DevicesDbHelper.C_ID),
+            rows = emptyList()
+        )
+        every {
+            mockDb.query(
+                DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                null,
+                any<String>(),
+                any<Array<String>>(),
+                null,
+                null,
+                null
+            )
+        } returns emptyCursor
+
+        val valuesSlot = slot<android.content.ContentValues>()
+        every {
+            mockDb.insert(DevicesDatabaseManager.DevicesDbHelper.DEVICES, null, capture(valuesSlot))
+        } returns 101L
+
+        val manager = object : DevicesDatabaseManager(mockContext) {
+            override fun getDatabase(): SQLiteDatabase = mockDb
+        }
+
+        val id = manager.insertNewAntDeviceIntoDB(
+            com.atrainingtracker.banalservice.devices.DeviceType.BIKE_POWER,
+            "Stages Power",
+            12345,
+            true,
+            "Stages",
+            90
+        )
+
+        assertEquals(101L, id)
+        assertTrue(valuesSlot.isCaptured)
+        val captured = valuesSlot.captured
+        assertEquals(true, captured.getAsBoolean(DevicesDatabaseManager.DevicesDbHelper.PAIRED))
+        assertEquals("Stages Power", captured.getAsString(DevicesDatabaseManager.DevicesDbHelper.NAME))
     }
 }

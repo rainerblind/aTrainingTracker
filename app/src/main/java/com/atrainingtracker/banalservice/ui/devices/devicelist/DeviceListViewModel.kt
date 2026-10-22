@@ -27,14 +27,26 @@ import com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCase
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
-class DeviceListViewModel(private val application: Application) : AndroidViewModel(application) {
+data class ZoneOnboardingEvent(
+    val initialTab: Int,
+    val promptReason: String
+)
 
-    private val devicesDBRepository = DeviceDataRepository.getInstance(application)
-    private val banalServiceRepository = BANALServiceRepository.getInstance(application)
+class DeviceListViewModel @JvmOverloads constructor(
+    private val application: Application,
+    private val settingsDataStore: SettingsDataStore = SettingsDataStore.getInstance(application),
+    private val devicesDBRepository: DeviceDataRepository = DeviceDataRepository.getInstance(application),
+    private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application)
+) : AndroidViewModel(application) {
 
     private val useCase = GetMergedDevicesUseCase(
         devicesDBRepository,
@@ -44,6 +56,9 @@ class DeviceListViewModel(private val application: Application) : AndroidViewMod
 
     // the single source of truth: the merged devices
     private val allDevices = useCase.mergedDevices
+
+    private val _zoneNavigationEvent = MutableSharedFlow<ZoneOnboardingEvent>(extraBufferCapacity = 1)
+    val zoneNavigationEvent: SharedFlow<ZoneOnboardingEvent> = _zoneNavigationEvent.asSharedFlow()
 
     /**
      * This is the key public method.
@@ -90,16 +105,49 @@ class DeviceListViewModel(private val application: Application) : AndroidViewMod
             // Find the current state of the device from the repository's cache
             val currentState = devicesDBRepository.getDeviceSnapshotById(deviceId) ?: return@launch
 
+            val wasPaired = currentState.isPaired
+            val newPaired = !wasPaired
+
             // Create a new state with the isPaired property flipped
-            val newState = currentState.copy(isPaired = !currentState.isPaired)
+            val newState = currentState.copy(isPaired = newPaired)
 
             // Tell the repository to save this new state. The repository will handle
             // the database update, sending the broadcast, and updating the LiveData.
             devicesDBRepository.updateDevice(newState)
+
+            // When transitioning from un-paired to paired, evaluate physiological zone onboarding (REQ-UI-374.1, REQ-UI-374.2)
+            if (!wasPaired && newPaired) {
+                when (currentState.deviceType) {
+                    DeviceType.HRM -> {
+                        val isConfigured = settingsDataStore.isHrZonesConfigured.first()
+                        if (!isConfigured) {
+                            _zoneNavigationEvent.emit(
+                                ZoneOnboardingEvent(initialTab = 0, promptReason = PROMPT_REASON_HR_PAIRED)
+                            )
+                        }
+                    }
+                    DeviceType.BIKE_POWER -> {
+                        val isConfigured = settingsDataStore.isPwrZonesConfigured.first()
+                        if (!isConfigured) {
+                            _zoneNavigationEvent.emit(
+                                ZoneOnboardingEvent(initialTab = 2, promptReason = PROMPT_REASON_PWR_PAIRED)
+                            )
+                        }
+                    }
+                    else -> {
+                        // Non-physiological sensors (speed, cadence, environmental, GPS, etc.) complete silently (REQ-UI-374.1)
+                    }
+                }
+            }
         }
     }
 
     fun deleteDevice(deviceId: Long) {
         devicesDBRepository.deleteDevice(deviceId)
+    }
+
+    companion object {
+        const val PROMPT_REASON_HR_PAIRED = "hr_paired"
+        const val PROMPT_REASON_PWR_PAIRED = "pwr_paired"
     }
 }

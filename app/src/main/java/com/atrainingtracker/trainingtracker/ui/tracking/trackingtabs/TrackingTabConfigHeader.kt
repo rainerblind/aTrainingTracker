@@ -113,7 +113,7 @@ fun TrackingTabConfigHeader(
                 IconButton(onClick = { onAddTabRelative(viewInfo.tabViewId, false) }) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = "Add Before",
+                        contentDescription = stringResource(R.string.cd_add_before),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -122,7 +122,7 @@ fun TrackingTabConfigHeader(
                 IconButton(onClick = { onDeleteTab(viewInfo.tabViewId) }) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete Tab"
+                        contentDescription = stringResource(R.string.cd_delete_tab)
                     )
                 }
 
@@ -130,7 +130,7 @@ fun TrackingTabConfigHeader(
                 IconButton(onClick = { onAddTabRelative(viewInfo.tabViewId, true) }) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = "Add After",
+                        contentDescription = stringResource(R.string.cd_add_after),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }

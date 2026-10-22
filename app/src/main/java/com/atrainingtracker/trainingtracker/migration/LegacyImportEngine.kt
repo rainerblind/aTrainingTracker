@@ -15,11 +15,14 @@ import android.content.ContentValues
 import android.content.Context
 import android.location.Location
 import android.util.Log
-import android.util.Xml
 import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParser
+import com.atrainingtracker.trainingtracker.migration.parsers.GpxWorkoutParser
+import com.atrainingtracker.trainingtracker.migration.parsers.ParsedWorkoutData
+import com.atrainingtracker.trainingtracker.migration.parsers.TcxWorkoutParser
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
@@ -46,23 +49,15 @@ import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClient
 import com.atrainingtracker.trainingtracker.cloud.googledrive.DriveFileEntry
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.xmlpull.v1.XmlPullParser
-import com.garmin.fit.Decode
-import com.garmin.fit.MesgBroadcaster
-import com.garmin.fit.FileIdMesg
-import com.garmin.fit.FileIdMesgListener
-import com.garmin.fit.SessionMesg
-import com.garmin.fit.SessionMesgListener
-import com.garmin.fit.LapMesg
-import com.garmin.fit.LapMesgListener
-import com.garmin.fit.RecordMesg
-import com.garmin.fit.RecordMesgListener
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -216,6 +211,7 @@ object LegacyImportEngine {
                 (1..3).map {
                     launch(Dispatchers.IO) {
                         for ((_, entry) in channel) {
+                            coroutineContext.ensureActive()
                             val current = processedCount.incrementAndGet()
                             listener?.onProgress(current, entries.size, entry.name)
 
@@ -253,6 +249,8 @@ object LegacyImportEngine {
                                     ImportStatus.DUPLICATE_SKIPPED -> skippedCount.incrementAndGet()
                                     ImportStatus.FAILED -> failedCount.incrementAndGet()
                                 }
+                            } catch (ce: CancellationException) {
+                                throw ce
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to download/import ${entry.name}", e)
                                 failedCount.incrementAndGet()
@@ -264,6 +262,8 @@ object LegacyImportEngine {
                     }
                 }
             }
+        } catch (ce: CancellationException) {
+            throw ce
         } catch (e: Exception) {
             Log.e(TAG, "Bulk recovery failed", e)
         }
@@ -276,7 +276,7 @@ object LegacyImportEngine {
         )
     }
 
-    private fun downloadFileWithRetry(
+    private suspend fun downloadFileWithRetry(
         dbxClient: DbxClientV2,
         pathLower: String,
         targetFile: File,
@@ -293,11 +293,13 @@ object LegacyImportEngine {
             } catch (e: com.dropbox.core.RateLimitException) {
                 val backoffMs = e.backoffMillis + 500L
                 Log.w(TAG, "Dropbox rate limit hit for $pathLower. Backing off for ${backoffMs}ms (attempt $attempt/$maxRetries)...")
-                try { Thread.sleep(backoffMs) } catch (_: Exception) {}
+                delay(backoffMs)
+            } catch (ce: CancellationException) {
+                throw ce
             } catch (e: Exception) {
                 Log.e(TAG, "Transient download error for $pathLower (attempt $attempt/$maxRetries): ${e.message}")
                 if (attempt >= maxRetries) return false
-                try { Thread.sleep(1000L * attempt) } catch (_: Exception) {}
+                delay(1000L * attempt)
             }
         }
         return false
@@ -320,7 +322,10 @@ object LegacyImportEngine {
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
     ): RecoveryResult {
         val token = TrainingApplication.getGoogleDriveAuthToken() ?: return RecoveryResult(0, 0, 0, 0)
-        val driveClient = GoogleDriveClient(tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() })
+        val driveClient = GoogleDriveClient(
+            tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() },
+            accountProvider = { TrainingApplication.getGoogleDriveAccountEmail() }
+        )
 
         val targetExtensions = when (format.lowercase()) {
             "fit" -> listOf(".fit")
@@ -373,8 +378,12 @@ object LegacyImportEngine {
                 listener?.onStatus("Scanning Google Drive: $folderNameDisplay...")
                 val folderId = driveClient.resolveFolderHierarchy(hierarchy)
                 if (folderId != null && searchedFolderIds.add(folderId)) {
-                    val entries = driveClient.listFilesRecursively(folderId, targetExtensions)
-                    allEntries.addAll(entries)
+                    val scanResult = driveClient.listFilesRecursivelyResult(folderId, targetExtensions)
+                    allEntries.addAll(scanResult.entries)
+                    if (!scanResult.isComplete) {
+                        Log.w(TAG, "Google Drive folder scan incomplete for $folderNameDisplay: ${scanResult.error?.message}")
+                        listener?.onStatus("Google Drive scan incomplete: ${scanResult.error?.message ?: "unknown error"}")
+                    }
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Google Drive folder scan failed for ${hierarchy.joinToString("/")}: ${e.message}")
@@ -406,6 +415,7 @@ object LegacyImportEngine {
                 (1..3).map {
                     launch(Dispatchers.IO) {
                         for ((_, entry) in channel) {
+                            coroutineContext.ensureActive()
                             val current = processedCount.incrementAndGet()
                             listener?.onProgress(current, entries.size, entry.name)
 
@@ -418,7 +428,13 @@ object LegacyImportEngine {
 
                             listener?.onStatus(context.getString(R.string.legacy_import__downloading_google_drive, entry.name))
                             val workerDir = File(tempDir, "job_$current").apply { mkdirs() }
-                            val tempFile = File(workerDir, entry.name)
+                            val tempFile = try {
+                                SecureZipExtractor.sanitizeDriveFileName(entry.name, workerDir)
+                            } catch (e: SecurityException) {
+                                Log.e(TAG, "Security violation: Invalid remote file name: ${entry.name}", e)
+                                failedCount.incrementAndGet()
+                                continue
+                            }
                             try {
                                 val downloaded = downloadGoogleDriveFileWithRetry(driveClient, entry.id, tempFile)
                                 if (!downloaded) {
@@ -443,6 +459,8 @@ object LegacyImportEngine {
                                     ImportStatus.DUPLICATE_SKIPPED -> skippedCount.incrementAndGet()
                                     ImportStatus.FAILED -> failedCount.incrementAndGet()
                                 }
+                            } catch (ce: CancellationException) {
+                                throw ce
                             } catch (e: Exception) {
                                 Log.e(TAG, "Failed to download/import ${entry.name}", e)
                                 failedCount.incrementAndGet()
@@ -454,6 +472,8 @@ object LegacyImportEngine {
                     }
                 }
             }
+        } catch (ce: CancellationException) {
+            throw ce
         } catch (e: Exception) {
             Log.e(TAG, "Google Drive bulk recovery failed", e)
         }
@@ -466,7 +486,7 @@ object LegacyImportEngine {
         )
     }
 
-    private fun downloadGoogleDriveFileWithRetry(
+    private suspend fun downloadGoogleDriveFileWithRetry(
         driveClient: GoogleDriveClient,
         fileId: String,
         targetFile: File,
@@ -479,11 +499,13 @@ object LegacyImportEngine {
                 val success = driveClient.downloadFileById(fileId, targetFile)
                 if (success) return true
                 if (attempt >= maxRetries) return false
-                try { Thread.sleep(1000L * attempt) } catch (_: Exception) {}
+                delay(1000L * attempt)
+            } catch (ce: CancellationException) {
+                throw ce
             } catch (e: Exception) {
                 Log.e(TAG, "Transient download error for Google Drive file $fileId (attempt $attempt/$maxRetries): ${e.message}")
                 if (attempt >= maxRetries) return false
-                try { Thread.sleep(1000L * attempt) } catch (_: Exception) {}
+                delay(1000L * attempt)
             }
         }
         return false
@@ -499,7 +521,7 @@ object LegacyImportEngine {
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
     ): ImportResult {
         try {
-            var baseFileName = tcxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
+            val baseFileName = tcxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
             val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
 
             // ATT-314: Early exit if workout already exists to prevent redundant processing
@@ -507,449 +529,24 @@ object LegacyImportEngine {
                 if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
                 return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
             }
-            
-            val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
-            
-            var firstTime: String? = null
-            var lastTime: String? = null
-            var sportName: String? = null
-            var workoutNotes: String? = null
-            var workoutName: String? = null
-            val points = mutableListOf<LatLng>()
-            val altitudes = mutableListOf<Double>()
-            val distances = mutableListOf<Double>()
-            val parsedLaps = mutableListOf<ParsedLap>()
-            var currentLap: ParsedLap? = null
-            
-            var minAltVal = Double.MAX_VALUE
-            var minAltPos: LatLng? = null
-            var maxAltVal = -Double.MAX_VALUE
-            var maxAltPos: LatLng? = null
 
-            val foundSensors = mutableSetOf<SensorType>()
-            val bufferedSamples = mutableListOf<ContentValues>()
-
-            FileInputStream(tcxFile).use { fis ->
-                val parser = Xml.newPullParser()
-                parser.setInput(fis, "UTF-8")
-                
-                var eventType = parser.eventType
-                var values = ContentValues()
-                var inActivity = false
-                var inLap = false
-                var inTrackpoint = false
-                var inCreator = false
-                var inAuthor = false
-                var currentLat: Double? = null
-                var currentLng: Double? = null
-                var currentAlt: Double? = null
-                var currentDist: Double? = null
-
-                while (eventType != XmlPullParser.END_DOCUMENT) {
-                    val rawName = parser.name
-                    val name = rawName?.substringAfterLast(':')
-                    when (eventType) {
-                        XmlPullParser.START_TAG -> {
-                            when (name) {
-                                "Activity" -> {
-                                    inActivity = true
-                                    sportName = parser.getAttributeValue(null, "Sport")
-                                    if (sportName == null) {
-                                        for (i in 0 until parser.attributeCount) {
-                                            if (parser.getAttributeName(i).equals("Sport", ignoreCase = true)) {
-                                                sportName = parser.getAttributeValue(i)
-                                                break
-                                            }
-                                        }
-                                    }
-                                }
-                                "Creator" -> inCreator = true
-                                "Author" -> inAuthor = true
-                                "Lap" -> {
-                                    inLap = true
-                                    val rawStartTime = parser.getAttributeValue(null, "StartTime") ?: run {
-                                        for (i in 0 until parser.attributeCount) {
-                                            if (parser.getAttributeName(i).equals("StartTime", ignoreCase = true)) {
-                                                return@run parser.getAttributeValue(i)
-                                            }
-                                        }
-                                        null
-                                    }
-                                    val formattedStartTime = rawStartTime?.let { raw ->
-                                        try {
-                                            val date = tcxTimeFormat.parse(raw.substring(0, 19))
-                                            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
-                                        } catch (_: Exception) { raw }
-                                    }
-                                    val lap = ParsedLap(
-                                        lapNr = parsedLaps.size.toLong(),
-                                        startTime = formattedStartTime
-                                    )
-                                    parsedLaps.add(lap)
-                                    currentLap = lap
-                                }
-                                "TotalTimeSeconds" -> if (!inTrackpoint) {
-                                    currentLap?.totalTimeSeconds = parser.nextText().toDoubleOrNull() ?: 0.0
-                                }
-                                "MaximumSpeed" -> if (!inTrackpoint) {
-                                    currentLap?.maxSpeed = parser.nextText().toDoubleOrNull()
-                                }
-                                "Calories" -> if (!inTrackpoint) {
-                                    currentLap?.calories = parser.nextText().toIntOrNull()
-                                }
-                                "Notes" -> if (!inTrackpoint) {
-                                    val text = parser.nextText()
-                                    if (!text.isNullOrBlank()) {
-                                        if (inLap && currentLap != null) {
-                                            val trimmed = text.trim()
-                                            val bracketMatch = Regex("""^\[(.*?)\](?:\s*(.*))?$""", RegexOption.DOT_MATCHES_ALL).find(trimmed)
-                                            if (bracketMatch != null) {
-                                                val extractedName = bracketMatch.groupValues[1].trim()
-                                                val extractedDesc = bracketMatch.groupValues.getOrNull(2)?.trim()
-                                                if (currentLap.name.isNullOrBlank() && extractedName.isNotEmpty()) {
-                                                    currentLap.name = extractedName
-                                                }
-                                                if (currentLap.description.isNullOrBlank() && !extractedDesc.isNullOrEmpty()) {
-                                                    currentLap.description = extractedDesc
-                                                }
-                                            } else {
-                                                val lines = trimmed.lines()
-                                                if (lines.size > 1) {
-                                                    val firstLine = lines.first().trim()
-                                                    if (currentLap.name.isNullOrBlank() && firstLine.length <= 40) {
-                                                        currentLap.name = firstLine
-                                                        if (currentLap.description.isNullOrBlank()) {
-                                                            val remaining = lines.drop(1).joinToString("\n").trim()
-                                                            if (remaining.isNotEmpty()) {
-                                                                currentLap.description = remaining
-                                                            }
-                                                        }
-                                                    } else if (currentLap.description.isNullOrBlank()) {
-                                                        currentLap.description = trimmed
-                                                    }
-                                                } else {
-                                                    if (trimmed.length <= 40 && currentLap.name.isNullOrBlank()) {
-                                                        currentLap.name = trimmed
-                                                    } else if (currentLap.description.isNullOrBlank()) {
-                                                        currentLap.description = trimmed
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            val trimmed = text.trim()
-                                            val bracketMatch = Regex("""^\[(.*?)\](?:\s*(.*))?$""", RegexOption.DOT_MATCHES_ALL).find(trimmed)
-                                            if (bracketMatch != null) {
-                                                val extractedName = bracketMatch.groupValues[1].trim()
-                                                val extractedDesc = bracketMatch.groupValues.getOrNull(2)?.trim()
-                                                if (workoutName.isNullOrBlank() && extractedName.isNotEmpty()) {
-                                                    workoutName = extractedName
-                                                }
-                                                if (workoutNotes.isNullOrBlank() && !extractedDesc.isNullOrEmpty()) {
-                                                    workoutNotes = extractedDesc
-                                                }
-                                            } else {
-                                                val lines = trimmed.lines()
-                                                if (lines.size > 1) {
-                                                    val firstLine = lines.first().trim()
-                                                    if (workoutName.isNullOrBlank() && firstLine.length <= 60) {
-                                                        workoutName = firstLine
-                                                        if (workoutNotes.isNullOrBlank()) {
-                                                            val remaining = lines.drop(1).joinToString("\n").trim()
-                                                            if (remaining.isNotEmpty()) {
-                                                                workoutNotes = remaining
-                                                            }
-                                                        }
-                                                    } else if (workoutNotes.isNullOrBlank()) {
-                                                        workoutNotes = trimmed
-                                                    }
-                                                } else {
-                                                    if (workoutNotes.isNullOrBlank()) {
-                                                        workoutNotes = trimmed
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                "Name" -> if (!inTrackpoint) {
-                                    val text = parser.nextText()
-                                    if (!text.isNullOrBlank()) {
-                                        if (inLap && currentLap != null) {
-                                            currentLap.name = text.trim()
-                                        } else if (inActivity && !inLap && !inCreator && !inAuthor) {
-                                            workoutName = text.trim()
-                                        }
-                                    }
-                                }
-                                "Description" -> if (!inTrackpoint) {
-                                    val text = parser.nextText()
-                                    if (!text.isNullOrBlank()) {
-                                        if (inLap && currentLap != null) {
-                                            currentLap.description = text.trim()
-                                        } else if (inActivity && !inLap && !inCreator && !inAuthor) {
-                                            workoutNotes = text.trim()
-                                        }
-                                    }
-                                }
-                                "Trackpoint" -> {
-                                    inTrackpoint = true
-                                    val lapNr = (parsedLaps.size - 1).coerceAtLeast(0).toLong()
-                                    values = ContentValues().apply {
-                                        put(SensorType.LAP_NR.name, lapNr)
-                                    }
-                                    currentLat = null
-                                    currentLng = null
-                                    currentAlt = null
-                                    currentDist = null
-                                }
-                                "Time" -> if (inTrackpoint) {
-                                    val rawTime = parser.nextText()
-                                    val formatted = try { 
-                                        val date = tcxTimeFormat.parse(rawTime.substring(0, 19))
-                                        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
-                                    } catch (e: Exception) { rawTime }
-                                    values.put("time", formatted)
-                                    if (firstTime == null) firstTime = formatted
-                                    lastTime = formatted
-                                }
-                                "LatitudeDegrees" -> if (inTrackpoint) {
-                                    val lat = parser.nextText().toDoubleOrNull()
-                                    if (lat != null) {
-                                        values.put(SensorType.LATITUDE.name, lat)
-                                        currentLat = lat
-                                        foundSensors.add(SensorType.LATITUDE)
-                                    }
-                                }
-                                "LongitudeDegrees" -> if (inTrackpoint) {
-                                    val lng = parser.nextText().toDoubleOrNull()
-                                    if (lng != null) {
-                                        values.put(SensorType.LONGITUDE.name, lng)
-                                        currentLng = lng
-                                        foundSensors.add(SensorType.LONGITUDE)
-                                    }
-                                }
-                                "AltitudeMeters" -> if (inTrackpoint) {
-                                    currentAlt = parser.nextText().toDoubleOrNull()
-                                    if (currentAlt != null) {
-                                        values.put(SensorType.ALTITUDE.name, currentAlt)
-                                        foundSensors.add(SensorType.ALTITUDE)
-                                    }
-                                }
-                                "DistanceMeters" -> if (inTrackpoint) {
-                                    currentDist = parser.nextText().toDoubleOrNull()
-                                    if (currentDist != null) {
-                                        values.put(SensorType.DISTANCE_m.name, currentDist)
-                                        foundSensors.add(SensorType.DISTANCE_m)
-                                    }
-                                } else {
-                                    currentLap?.distanceMeters = parser.nextText().toDoubleOrNull() ?: 0.0
-                                }
-                                "Value" -> {
-                                    if (inTrackpoint && parser.getAttributeValue(null, "xsi:type") == null) {
-                                        val hr = parser.nextText().toIntOrNull()
-                                        if (hr != null) {
-                                            values.put(SensorType.HR.name, hr)
-                                            foundSensors.add(SensorType.HR)
-                                        }
-                                    } else if (!inTrackpoint) {
-                                        val hr = parser.nextText().toIntOrNull()
-                                        if (hr != null && currentLap != null && currentLap.avgHeartRate == null) {
-                                            currentLap.avgHeartRate = hr
-                                        }
-                                    }
-                                }
-                                "Cadence" -> if (inTrackpoint) {
-                                    val cad = parser.nextText().toIntOrNull()
-                                    if (cad != null) {
-                                        values.put(SensorType.CADENCE.name, cad)
-                                        foundSensors.add(SensorType.CADENCE)
-                                    }
-                                }
-                                "Watts" -> if (inTrackpoint) {
-                                    val pwr = parser.nextText().toIntOrNull()
-                                    if (pwr != null) {
-                                        values.put(SensorType.POWER.name, pwr)
-                                        foundSensors.add(SensorType.POWER)
-                                    }
-                                }
-                                "Speed" -> if (inTrackpoint) {
-                                    val spd = parser.nextText().toDoubleOrNull()
-                                    if (spd != null) {
-                                        values.put(SensorType.SPEED_mps.name, spd)
-                                        foundSensors.add(SensorType.SPEED_mps)
-                                    }
-                                }
-                                "RunCadence" -> if (inTrackpoint) {
-                                    val cad = parser.nextText().toIntOrNull()
-                                    if (cad != null) {
-                                        values.put(SensorType.CADENCE.name, cad)
-                                        foundSensors.add(SensorType.CADENCE)
-                                    }
-                                }
-                            }
-                        }
-                        XmlPullParser.END_TAG -> {
-                            if (name == "Activity") {
-                                inActivity = false
-                            }
-                            if (name == "Creator") {
-                                inCreator = false
-                            }
-                            if (name == "Author") {
-                                inAuthor = false
-                            }
-                            if (name == "Lap") {
-                                inLap = false
-                                currentLap = null
-                            }
-                            if (name == "Trackpoint") {
-                                if (values.containsKey("time")) {
-                                    bufferedSamples.add(values)
-                                }
-
-                                if (currentLat != null && currentLng != null) {
-                                    val pos = LatLng(currentLat!!, currentLng!!)
-                                    points.add(pos)
-                                    if (currentAlt != null) {
-                                        if (currentAlt!! < minAltVal) {
-                                            minAltVal = currentAlt!!
-                                            minAltPos = pos
-                                        }
-                                        if (currentAlt!! > maxAltVal) {
-                                            maxAltVal = currentAlt!!
-                                            maxAltPos = pos
-                                        }
-                                    }
-                                }
-                                currentAlt?.let { altitudes.add(it) }
-                                currentDist?.let { distances.add(it) }
-                                inTrackpoint = false
-                            }
-                        }
-                    }
-                    eventType = parser.next()
-                }
+            val parseResult = TcxWorkoutParser.parse(tcxFile, context)
+            if (parseResult.isFailure) {
+                Log.e(TAG, "Failed to parse TCX: ${parseResult.exceptionOrNull()?.message}")
+                return ImportResult(ImportStatus.FAILED)
             }
+            val parsedWorkout = parseResult.getOrThrow()
 
-            // Post-parsing: Bulk insertion and dynamic table creation (ATT-357)
-            if (firstTime == null && parsedLaps.isNotEmpty() && parsedLaps.first().startTime != null) {
-                firstTime = parsedLaps.first().startTime
-            }
-
-            if (baseFileName.startsWith("legacy_import", ignoreCase = true) && firstTime != null) {
-                baseFileName = firstTime!!.replace(" ", "_").replace(":", "")
-            }
-
-            val sportTypeManager = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(context)
-            var bSportType = BSportType.UNKNOWN
-            var resolvedSportId = -1L
-            if (sportName != null) {
-                val sportId = sportTypeManager.getSportTypeIdFromTcxName(sportName!!)
-                if (sportId != -1L) {
-                    resolvedSportId = sportId
-                    bSportType = sportTypeManager.getBSportType(sportId)
-                } else {
-                    bSportType = when (sportName!!.lowercase()) {
-                        "running" -> BSportType.RUN
-                        "biking", "cycling" -> BSportType.BIKE
-                        "walking" -> BSportType.RUN
-                        else -> BSportType.UNKNOWN
-                    }
-                    if (bSportType != BSportType.UNKNOWN) {
-                        resolvedSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
-                    }
-                }
-            }
-
-            var workoutId = -1L
-            // ATT-2023 / REQ-MIG-031: Mutex-guarded multi-dimensional deduplication and atomic insertion
-            val isDuplicate = importMutex.withLock {
-                if (isWorkoutExisting(summaryDb, baseFileName, firstTime, bSportType)) {
-                    if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
-                    return@withLock true
-                }
-
-                // Post-parsing: Bulk insertion and dynamic table creation (ATT-357)
-                if (bufferedSamples.isNotEmpty()) {
-                    // ATT-602: Always create table with all SensorType values (same as TrackerService) so LAP_NR and standard columns exist
-                    samplesDbManager.createNewTable(baseFileName, SensorType.values().toList())
-                    val targetDb = samplesDbManager.database
-                    val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
-                    targetDb.beginTransaction()
-                    try {
-                        bufferedSamples.forEach { sampleValues ->
-                            targetDb.insert(tableName, null, sampleValues)
-                        }
-                        targetDb.setTransactionSuccessful()
-                    } finally {
-                        targetDb.endTransaction()
-                    }
-                }
-
-                if (firstTime != null) {
-                    workoutId = getWorkoutId(summaryDb, baseFileName)
-                    if (workoutId == -1L) {
-                        // ATT-1105: Ensure clean slate in StravaUpload.db for fresh workout imports
-                        try {
-                            StravaUploadDbHelper(context).deleteWorkout(baseFileName)
-                        } catch (t: Throwable) {
-                            Log.w(TAG, "Could not clean StravaUploadDb for $baseFileName: ${t.message}")
-                        }
-
-                        val summaryValues = ContentValues().apply {
-                            put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
-                            put(WorkoutSummaries.WORKOUT_NAME, if (!workoutName.isNullOrBlank()) workoutName!!.trim() else baseFileName)
-                            put(WorkoutSummaries.TIME_START, firstTime)
-                            put(WorkoutSummaries.SPORT_ID, resolvedSportId)
-                            put(WorkoutSummaries.B_SPORT, bSportType.name)
-                            put(WorkoutSummaries.EQUIPMENT_ID, -1L)
-                            put(WorkoutSummaries.FINISHED, 1)
-                            put(WorkoutSummaries.SOURCE, WorkoutSource.TCX.name)
-                            if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
-                                put(WorkoutSummaries.UPLOAD_TO_STRAVA, 1)
-                            } else {
-                                put(WorkoutSummaries.UPLOAD_TO_STRAVA, 0)
-                            }
-                        }
-                        workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
-                    }
-                }
-                false
-            }
-
-            if (isDuplicate) {
-                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
-            }
-
-            if (firstTime != null) {
-
-                // ATT-316: Synchronous post-processing to support backpressure (ATT-349).
-                // Refined: We no longer hold the mutex for the entire duration to allow the queue to grow,
-                // but we await the recalculation to ensure the engine pauses if the UI queue is full.
-                recalculateStats(
-                    context = context,
-                    workoutId = workoutId,
-                    baseFileName = baseFileName,
-                    points = points,
-                    altitudes = altitudes,
-                    distances = distances,
-                    bSportType = bSportType,
-                    foundSensors = foundSensors,
-                    parsedLaps = parsedLaps,
-                    workoutNotes = workoutNotes,
-                    workoutName = workoutName,
-                    firstTime = firstTime,
-                    lastTime = lastTime,
-                    minAltPos = minAltPos,
-                    maxAltPos = maxAltPos,
-                    listener = listener
-                )
-
-                // ATT-602 (REQ-EXT-008): Automatically schedule background upload to Strava and online communities
-                schedulePostImportCommunityUpload(context, workoutId, baseFileName)
-
-                return ImportResult(ImportStatus.SUCCESS, workoutId)
-            }
+            return persistParsedWorkout(
+                context = context,
+                baseFileName = baseFileName,
+                parsedWorkout = parsedWorkout,
+                source = WorkoutSource.TCX,
+                uploadToStrava = uploadToStrava,
+                listener = listener
+            )
+        } catch (ce: CancellationException) {
+            throw ce
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import TCX: ${tcxFile.name}", e)
         }
@@ -988,7 +585,7 @@ object LegacyImportEngine {
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
     ): ImportResult {
         try {
-            var baseFileName = gpxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
+            val baseFileName = gpxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
             val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
 
             // Early exit if workout already exists to prevent redundant processing
@@ -997,403 +594,23 @@ object LegacyImportEngine {
                 return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
             }
 
-            val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
-
-            var firstTime: String? = null
-            var lastTime: String? = null
-            var sportName: String? = null
-            var workoutNotes: String? = null
-            var workoutName: String? = null
-            val points = mutableListOf<LatLng>()
-            val altitudes = mutableListOf<Double>()
-            val distances = mutableListOf<Double>()
-            val parsedLaps = mutableListOf<ParsedLap>()
-            var currentLap: ParsedLap? = null
-            var lapFirstTime: String? = null
-            var lapLastTime: String? = null
-            var lapStartDistance = 0.0
-
-            var minAltVal = Double.MAX_VALUE
-            var minAltPos: LatLng? = null
-            var maxAltVal = -Double.MAX_VALUE
-            var maxAltPos: LatLng? = null
-
-            val foundSensors = mutableSetOf<SensorType>()
-            val bufferedSamples = mutableListOf<ContentValues>()
-
-            var prevLat: Double? = null
-            var prevLng: Double? = null
-            var cumDist = 0.0
-
-            FileInputStream(gpxFile).use { fis ->
-                val parser = Xml.newPullParser()
-                parser.setInput(fis, "UTF-8")
-
-                var eventType = parser.eventType
-                var values = ContentValues()
-                var inMetadata = false
-                var inTrk = false
-                var inTrackpoint = false
-                var currentLat: Double? = null
-                var currentLng: Double? = null
-                var currentAlt: Double? = null
-
-                while (eventType != XmlPullParser.END_DOCUMENT) {
-                    val rawName = parser.name
-                    val name = rawName?.substringAfterLast(':')
-                    when (eventType) {
-                        XmlPullParser.START_TAG -> {
-                            when (name) {
-                                "metadata" -> inMetadata = true
-                                "trk" -> inTrk = true
-                                "trkseg" -> {
-                                    lapStartDistance = cumDist
-                                    lapFirstTime = null
-                                    lapLastTime = null
-                                    val lap = ParsedLap(
-                                        lapNr = parsedLaps.size.toLong()
-                                    )
-                                    parsedLaps.add(lap)
-                                    currentLap = lap
-                                }
-                                "trkpt", "rtept" -> {
-                                    inTrackpoint = true
-                                    currentLat = parser.getAttributeValue(null, "lat")?.toDoubleOrNull()
-                                        ?: parser.getAttributeValue("", "lat")?.toDoubleOrNull()
-                                    currentLng = parser.getAttributeValue(null, "lon")?.toDoubleOrNull()
-                                        ?: parser.getAttributeValue("", "lon")?.toDoubleOrNull()
-                                    if (currentLat == null || currentLng == null) {
-                                        for (i in 0 until parser.attributeCount) {
-                                            if (parser.getAttributeName(i).equals("lat", ignoreCase = true)) {
-                                                currentLat = parser.getAttributeValue(i).toDoubleOrNull()
-                                            } else if (parser.getAttributeName(i).equals("lon", ignoreCase = true)) {
-                                                currentLng = parser.getAttributeValue(i).toDoubleOrNull()
-                                            }
-                                        }
-                                    }
-
-                                    if (currentLap == null && parsedLaps.isEmpty()) {
-                                        val lap = ParsedLap(lapNr = 0L)
-                                        parsedLaps.add(lap)
-                                        currentLap = lap
-                                        lapStartDistance = cumDist
-                                    }
-
-                                    val lapNr = (parsedLaps.size - 1).coerceAtLeast(0).toLong()
-                                    values = ContentValues().apply {
-                                        put(SensorType.LAP_NR.name, lapNr)
-                                    }
-
-                                    if (currentLat != null && currentLng != null) {
-                                        if (prevLat != null && prevLng != null) {
-                                            val results = FloatArray(1)
-                                            Location.distanceBetween(prevLat!!, prevLng!!, currentLat!!, currentLng!!, results)
-                                            cumDist += results[0].toDouble()
-                                        }
-                                        prevLat = currentLat
-                                        prevLng = currentLng
-
-                                        values.put(SensorType.LATITUDE.name, currentLat)
-                                        values.put(SensorType.LONGITUDE.name, currentLng)
-                                        values.put(SensorType.DISTANCE_m.name, cumDist)
-                                        foundSensors.add(SensorType.LATITUDE)
-                                        foundSensors.add(SensorType.LONGITUDE)
-                                        foundSensors.add(SensorType.DISTANCE_m)
-                                    }
-                                    currentAlt = null
-                                }
-                                "ele" -> if (inTrackpoint) {
-                                    currentAlt = parser.nextText().toDoubleOrNull()
-                                    if (currentAlt != null) {
-                                        values.put(SensorType.ALTITUDE.name, currentAlt)
-                                        foundSensors.add(SensorType.ALTITUDE)
-                                    }
-                                }
-                                "time" -> {
-                                    val rawTime = parser.nextText()
-                                    val formatted = try {
-                                        val date = tcxTimeFormat.parse(rawTime.substring(0, 19))
-                                        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(date!!)
-                                    } catch (_: Exception) { rawTime }
-
-                                    if (inTrackpoint) {
-                                        values.put("time", formatted)
-                                        if (firstTime == null) firstTime = formatted
-                                        lastTime = formatted
-                                        if (lapFirstTime == null) lapFirstTime = formatted
-                                        lapLastTime = formatted
-                                        if (currentLap?.startTime == null) currentLap?.startTime = formatted
-                                    } else if (inMetadata && firstTime == null) {
-                                        firstTime = formatted
-                                    }
-                                }
-                                "speed" -> if (inTrackpoint) {
-                                    val spd = parser.nextText().toDoubleOrNull()
-                                    if (spd != null) {
-                                        values.put(SensorType.SPEED_mps.name, spd)
-                                        foundSensors.add(SensorType.SPEED_mps)
-                                    }
-                                }
-                                "hr", "heartrate" -> if (inTrackpoint) {
-                                    val hr = parser.nextText().toIntOrNull()
-                                    if (hr != null) {
-                                        values.put(SensorType.HR.name, hr)
-                                        foundSensors.add(SensorType.HR)
-                                    }
-                                }
-                                "cad", "cadence" -> if (inTrackpoint) {
-                                    val cad = parser.nextText().toIntOrNull()
-                                    if (cad != null) {
-                                        values.put(SensorType.CADENCE.name, cad)
-                                        foundSensors.add(SensorType.CADENCE)
-                                    }
-                                }
-                                "atemp", "temp" -> if (inTrackpoint) {
-                                    val temp = parser.nextText().toDoubleOrNull()
-                                    if (temp != null) {
-                                        values.put(SensorType.TEMPERATURE.name, temp)
-                                        foundSensors.add(SensorType.TEMPERATURE)
-                                    }
-                                }
-                                "power", "watts" -> if (inTrackpoint) {
-                                    val pwr = parser.nextText().toIntOrNull()
-                                    if (pwr != null) {
-                                        values.put(SensorType.POWER.name, pwr)
-                                        foundSensors.add(SensorType.POWER)
-                                    }
-                                }
-                                "name" -> if (!inTrackpoint) {
-                                    val text = parser.nextText()
-                                    if (!text.isNullOrBlank() && workoutName.isNullOrBlank()) {
-                                        workoutName = text.trim()
-                                    }
-                                }
-                                "desc", "description" -> if (!inTrackpoint) {
-                                    val text = parser.nextText()
-                                    if (!text.isNullOrBlank() && workoutNotes.isNullOrBlank()) {
-                                        workoutNotes = text.trim()
-                                    }
-                                }
-                                "type", "activity", "sport" -> if (!inTrackpoint) {
-                                    val text = parser.nextText()
-                                    if (!text.isNullOrBlank() && sportName.isNullOrBlank()) {
-                                        sportName = text.trim()
-                                    }
-                                }
-                            }
-                        }
-                        XmlPullParser.END_TAG -> {
-                            when (name) {
-                                "metadata" -> inMetadata = false
-                                "trk" -> inTrk = false
-                                "trkseg" -> {
-                                    currentLap?.let { lap ->
-                                        lap.distanceMeters = (cumDist - lapStartDistance).coerceAtLeast(0.0)
-                                        if (lapFirstTime != null && lapLastTime != null) {
-                                            try {
-                                                val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
-                                                val t1 = format.parse(lapFirstTime!!)?.time ?: 0L
-                                                val t2 = format.parse(lapLastTime!!)?.time ?: 0L
-                                                val duration = ((t2 - t1) / 1000.0).coerceAtLeast(0.0)
-                                                lap.totalTimeSeconds = duration
-                                                if (duration > 0) {
-                                                    lap.maxSpeed = lap.distanceMeters / duration
-                                                }
-                                            } catch (_: Exception) {}
-                                        }
-                                    }
-                                    currentLap = null
-                                }
-                                "trkpt", "rtept" -> {
-                                    if (values.containsKey("time")) {
-                                        bufferedSamples.add(values)
-                                    }
-
-                                    if (currentLat != null && currentLng != null) {
-                                        val pos = LatLng(currentLat!!, currentLng!!)
-                                        points.add(pos)
-                                        if (currentAlt != null) {
-                                            if (currentAlt!! < minAltVal) {
-                                                minAltVal = currentAlt!!
-                                                minAltPos = pos
-                                            }
-                                            if (currentAlt!! > maxAltVal) {
-                                                maxAltVal = currentAlt!!
-                                                maxAltPos = pos
-                                            }
-                                        }
-                                    }
-                                    currentAlt?.let { altitudes.add(it) }
-                                    distances.add(cumDist)
-                                    inTrackpoint = false
-                                }
-                            }
-                        }
-                    }
-                    eventType = parser.next()
-                }
+            val parseResult = GpxWorkoutParser.parse(gpxFile, context)
+            if (parseResult.isFailure) {
+                Log.e(TAG, "Failed to parse GPX: ${parseResult.exceptionOrNull()?.message}")
+                return ImportResult(ImportStatus.FAILED)
             }
+            val parsedWorkout = parseResult.getOrThrow()
 
-            // Finalize any unfinished lap
-            currentLap?.let { lap ->
-                if (lap.distanceMeters <= 0.0 && cumDist > lapStartDistance) {
-                    lap.distanceMeters = (cumDist - lapStartDistance).coerceAtLeast(0.0)
-                }
-                if (lapFirstTime != null && lapLastTime != null && lap.totalTimeSeconds <= 0.0) {
-                    try {
-                        val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
-                        val t1 = format.parse(lapFirstTime!!)?.time ?: 0L
-                        val t2 = format.parse(lapLastTime!!)?.time ?: 0L
-                        lap.totalTimeSeconds = ((t2 - t1) / 1000.0).coerceAtLeast(0.0)
-                    } catch (_: Exception) {}
-                }
-            }
-
-            if (parsedLaps.isEmpty() && points.isNotEmpty()) {
-                parsedLaps.add(ParsedLap(lapNr = 0L, startTime = firstTime, distanceMeters = cumDist))
-            } else if (parsedLaps.size == 1 && parsedLaps[0].distanceMeters <= 0.0 && cumDist > 0.0) {
-                parsedLaps[0].distanceMeters = cumDist
-            }
-
-            if (firstTime == null && parsedLaps.isNotEmpty() && parsedLaps.first().startTime != null) {
-                firstTime = parsedLaps.first().startTime
-            }
-
-            if (baseFileName.startsWith("legacy_import", ignoreCase = true) && firstTime != null) {
-                baseFileName = firstTime!!.replace(" ", "_").replace(":", "")
-            }
-
-            val sportTypeManager = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getInstance(context)
-            var bSportType = BSportType.UNKNOWN
-            var resolvedSportId = -1L
-
-            if (sportName != null) {
-                val sportId = sportTypeManager.getSportTypeIdFromTcxName(sportName!!)
-                if (sportId != -1L) {
-                    resolvedSportId = sportId
-                    bSportType = sportTypeManager.getBSportType(sportId)
-                } else {
-                    bSportType = when (sportName!!.lowercase()) {
-                        "running", "run", "jogging" -> BSportType.RUN
-                        "biking", "cycling", "bike", "ride", "mountain biking", "road cycling" -> BSportType.BIKE
-                        "walking", "hiking", "hike", "walk" -> BSportType.RUN
-                        else -> BSportType.UNKNOWN
-                    }
-                    if (bSportType != BSportType.UNKNOWN) {
-                        resolvedSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
-                    }
-                }
-            }
-
-            var workoutId = -1L
-            // ATT-2023 / REQ-MIG-031: Mutex-guarded multi-dimensional deduplication and atomic insertion
-            val isDuplicate = importMutex.withLock {
-                if (isWorkoutExisting(summaryDb, baseFileName, firstTime, bSportType)) {
-                    if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
-                    return@withLock true
-                }
-
-                // Post-parsing: Bulk insertion and dynamic table creation
-                if (bufferedSamples.isNotEmpty()) {
-                    samplesDbManager.createNewTable(baseFileName, SensorType.values().toList())
-                    val targetDb = samplesDbManager.database
-                    val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
-                    targetDb.beginTransaction()
-                    try {
-                        bufferedSamples.forEach { sampleValues ->
-                            targetDb.insert(tableName, null, sampleValues)
-                        }
-                        targetDb.setTransactionSuccessful()
-                    } finally {
-                        targetDb.endTransaction()
-                    }
-                }
-
-                if (firstTime != null) {
-                    workoutId = getWorkoutId(summaryDb, baseFileName)
-                    if (workoutId == -1L) {
-                        try {
-                            StravaUploadDbHelper(context).deleteWorkout(baseFileName)
-                        } catch (t: Throwable) {
-                            Log.w(TAG, "Could not clean StravaUploadDb for $baseFileName: ${t.message}")
-                        }
-
-                        val summaryValues = ContentValues().apply {
-                            put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
-                            put(WorkoutSummaries.WORKOUT_NAME, if (!workoutName.isNullOrBlank()) workoutName!!.trim() else baseFileName)
-                            put(WorkoutSummaries.TIME_START, firstTime)
-                            put(WorkoutSummaries.SPORT_ID, resolvedSportId)
-                            put(WorkoutSummaries.B_SPORT, bSportType.name)
-                            put(WorkoutSummaries.EQUIPMENT_ID, -1L)
-                            put(WorkoutSummaries.FINISHED, 1)
-                            put(WorkoutSummaries.SOURCE, WorkoutSource.GPX.name)
-                            if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
-                                put(WorkoutSummaries.UPLOAD_TO_STRAVA, 1)
-                            } else {
-                                put(WorkoutSummaries.UPLOAD_TO_STRAVA, 0)
-                            }
-                        }
-                        workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
-                    }
-                }
-                false
-            }
-
-            if (isDuplicate) {
-                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
-            }
-
-            if (firstTime != null) {
-
-                // If sport is still unknown, infer from movement speed (ATT-1116)
-                if (bSportType == BSportType.UNKNOWN && cumDist > 0) {
-                    val activeTimeSec = if (parsedLaps.any { it.totalTimeSeconds > 0 }) {
-                        parsedLaps.sumOf { it.totalTimeSeconds }.roundToInt()
-                    } else {
-                        (points.size.coerceAtLeast(altitudes.size)).coerceAtLeast(distances.size)
-                    }
-                    val avgSpd = if (activeTimeSec > 0) cumDist / activeTimeSec else 0.0
-                    val candidateSports = try {
-                        EquipmentAndSportTypeDiscoveryManager.getInstance(context)
-                            .getCandidateBSportTypes(BSportType.UNKNOWN, avgSpd)
-                    } catch (_: Exception) {
-                        emptySet()
-                    }
-                    if (candidateSports.size == 1) {
-                        bSportType = candidateSports.first()
-                        val inferredSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
-                        if (inferredSportId != -1L) {
-                            summaryDb.database.update(WorkoutSummaries.TABLE, ContentValues().apply {
-                                put(WorkoutSummaries.SPORT_ID, inferredSportId)
-                                put(WorkoutSummaries.B_SPORT, bSportType.name)
-                            }, "${WorkoutSummaries.C_ID} = ?", arrayOf(workoutId.toString()))
-                        }
-                    }
-                }
-
-                recalculateStats(
-                    context = context,
-                    workoutId = workoutId,
-                    baseFileName = baseFileName,
-                    points = points,
-                    altitudes = altitudes,
-                    distances = distances,
-                    bSportType = bSportType,
-                    foundSensors = foundSensors,
-                    parsedLaps = parsedLaps,
-                    workoutNotes = workoutNotes,
-                    workoutName = workoutName,
-                    firstTime = firstTime,
-                    lastTime = lastTime,
-                    minAltPos = minAltPos,
-                    maxAltPos = maxAltPos,
-                    listener = listener
-                )
-
-                schedulePostImportCommunityUpload(context, workoutId, baseFileName)
-
-                return ImportResult(ImportStatus.SUCCESS, workoutId)
-            }
+            return persistParsedWorkout(
+                context = context,
+                baseFileName = baseFileName,
+                parsedWorkout = parsedWorkout,
+                source = WorkoutSource.GPX,
+                uploadToStrava = uploadToStrava,
+                listener = listener
+            )
+        } catch (ce: CancellationException) {
+            throw ce
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import GPX: ${gpxFile.name}", e)
         }
@@ -1433,7 +650,7 @@ object LegacyImportEngine {
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
     ): ImportResult {
         try {
-            var baseFileName = fitFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
+            val baseFileName = fitFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
             val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
 
             // Early exit if workout already exists to prevent redundant processing
@@ -1442,302 +659,195 @@ object LegacyImportEngine {
                 return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
             }
 
-            // Verify file integrity
-            val decode = Decode()
-            val isIntegrityValid = try {
-                FileInputStream(fitFile).use { fis ->
-                    decode.checkFileIntegrity(fis)
-                }
-            } catch (t: Throwable) {
-                Log.w(TAG, "Integrity check exception for ${fitFile.name}: ${t.message}")
-                false
-            }
-            if (!isIntegrityValid) {
-                Log.e(TAG, "FIT file integrity check failed for ${fitFile.name}")
+            val parseResult = FitWorkoutParser.parse(fitFile, context)
+            if (parseResult.isFailure) {
+                Log.e(TAG, "Failed to parse FIT: ${parseResult.exceptionOrNull()?.message}")
                 return ImportResult(ImportStatus.FAILED)
             }
+            val parsedWorkout = parseResult.getOrThrow()
 
-            val rawFileIds = mutableListOf<FileIdMesg>()
-            val rawSessions = mutableListOf<SessionMesg>()
-            val rawLaps = mutableListOf<LapMesg>()
-            val rawRecords = mutableListOf<RecordMesg>()
-
-            val broadcaster = MesgBroadcaster(decode)
-            broadcaster.addListener(FileIdMesgListener { rawFileIds.add(it) })
-            broadcaster.addListener(SessionMesgListener { rawSessions.add(it) })
-            broadcaster.addListener(LapMesgListener { rawLaps.add(it) })
-            broadcaster.addListener(RecordMesgListener { rawRecords.add(it) })
-
-            val readSuccess = try {
-                FileInputStream(fitFile).use { fis ->
-                    decode.read(fis, broadcaster)
-                }
-            } catch (t: Throwable) {
-                Log.e(TAG, "Error decoding FIT file ${fitFile.name}: ${t.message}", t)
-                false
-            }
-
-            if (!readSuccess || rawRecords.isEmpty()) {
-                Log.e(TAG, "Decoding failed or no record trackpoints found in ${fitFile.name}")
-                return ImportResult(ImportStatus.FAILED)
-            }
-
-            val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
-            val timeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
-
-            var firstTime: String? = null
-            var lastTime: String? = null
-            val points = mutableListOf<LatLng>()
-            val altitudes = mutableListOf<Double>()
-            val distances = mutableListOf<Double>()
-            val bufferedSamples = mutableListOf<ContentValues>()
-            val parsedLaps = mutableListOf<ParsedLap>()
-
-            var minAltVal = Double.MAX_VALUE
-            var maxAltVal = -Double.MAX_VALUE
-            var minAltPos: LatLng? = null
-            var maxAltPos: LatLng? = null
-
-            // Build parsed laps
-            rawLaps.forEachIndexed { index, lapMesg ->
-                val lapStartTime = lapMesg.startTime?.date?.let { timeFormat.format(it) }
-                val lapTotalTime = (lapMesg.totalTimerTime ?: lapMesg.totalElapsedTime ?: 0f).toDouble()
-                val lapDist = (lapMesg.totalDistance ?: 0f).toDouble()
-                val lapMaxSpeed = (lapMesg.enhancedMaxSpeed ?: lapMesg.maxSpeed)?.toDouble()
-                val lapCalories = lapMesg.totalCalories
-                val lapAvgHr = lapMesg.avgHeartRate?.toInt()
-                val lapMaxHr = lapMesg.maxHeartRate?.toInt()
-
-                parsedLaps.add(
-                    ParsedLap(
-                        lapNr = index.toLong(),
-                        startTime = lapStartTime,
-                        totalTimeSeconds = lapTotalTime,
-                        distanceMeters = lapDist,
-                        maxSpeed = lapMaxSpeed,
-                        calories = lapCalories,
-                        avgHeartRate = lapAvgHr,
-                        maxHeartRate = lapMaxHr
-                    )
-                )
-            }
-
-            // Build samples from raw records
-            rawRecords.forEach { record ->
-                val date = record.timestamp?.date ?: return@forEach
-                val formattedTime = timeFormat.format(date)
-                if (firstTime == null) {
-                    firstTime = formattedTime
-                }
-                lastTime = formattedTime
-
-                val values = ContentValues()
-                values.put("time", formattedTime)
-
-                val latSemi = record.positionLat
-                val lngSemi = record.positionLong
-                val altVal = (record.enhancedAltitude ?: record.altitude)?.toDouble()?.takeIf { it in -500.0..10000.0 }
-
-                if (latSemi != null && lngSemi != null && latSemi != 0x7FFFFFFF && lngSemi != 0x7FFFFFFF) {
-                    val latDeg = latSemi * (180.0 / 2147483648.0)
-                    val lngDeg = lngSemi * (180.0 / 2147483648.0)
-                    values.put(SensorType.LATITUDE.name, latDeg)
-                    values.put(SensorType.LONGITUDE.name, lngDeg)
-
-                    val pos = LatLng(latDeg, lngDeg)
-                    points.add(pos)
-
-                    altVal?.let { alt ->
-                        if (alt < minAltVal) {
-                            minAltVal = alt
-                            minAltPos = pos
-                        }
-                        if (alt > maxAltVal) {
-                            maxAltVal = alt
-                            maxAltPos = pos
-                        }
-                    }
-                }
-
-                altVal?.let { alt ->
-                    values.put(SensorType.ALTITUDE.name, alt)
-                    altitudes.add(alt)
-                }
-
-                record.distance?.toDouble()?.let { dist ->
-                    values.put(SensorType.DISTANCE_m.name, dist)
-                    distances.add(dist)
-                }
-
-                val spdVal = (record.enhancedSpeed ?: record.speed)?.toDouble()
-                if (spdVal != null && spdVal in 0.0..100.0) {
-                    values.put(SensorType.SPEED_mps.name, spdVal)
-                }
-
-                record.heartRate?.toInt()?.let { hr ->
-                    if (hr in 30..250) {
-                        values.put(SensorType.HR.name, hr)
-                    }
-                }
-
-                record.cadence?.toDouble()?.let { cad ->
-                    if (cad >= 0) {
-                        values.put(SensorType.CADENCE.name, cad)
-                    }
-                }
-
-                record.power?.toDouble()?.let { pwr ->
-                    if (pwr >= 0) {
-                        values.put(SensorType.POWER.name, pwr)
-                    }
-                }
-
-                record.temperature?.toDouble()?.let { temp ->
-                    values.put(SensorType.TEMPERATURE.name, temp)
-                }
-
-                // Determine lapNr
-                var sampleLapNr = 0L
-                if (parsedLaps.size > 1) {
-                    val recordEpoch = date.time
-                    for (i in parsedLaps.indices.reversed()) {
-                        val lapStart = parsedLaps[i].startTime?.let {
-                            try { timeFormat.parse(it)?.time } catch (_: Exception) { null }
-                        }
-                        if (lapStart != null && recordEpoch >= lapStart) {
-                            sampleLapNr = i.toLong()
-                            break
-                        }
-                    }
-                }
-                values.put(SensorType.LAP_NR.name, sampleLapNr)
-
-                bufferedSamples.add(values)
-            }
-
-            if (firstTime == null && parsedLaps.isNotEmpty() && parsedLaps.first().startTime != null) {
-                firstTime = parsedLaps.first().startTime
-            }
-
-            if (baseFileName.startsWith("legacy_import", ignoreCase = true) && firstTime != null) {
-                baseFileName = firstTime!!.replace(" ", "_").replace(":", "")
-            }
-
-            // Fallback lap if none parsed
-            if (parsedLaps.isEmpty()) {
-                val totalDist = distances.lastOrNull() ?: 0.0
-                parsedLaps.add(ParsedLap(lapNr = 0L, startTime = firstTime, distanceMeters = totalDist))
-            }
-
-            // Sport resolution
-            val primarySession = rawSessions.firstOrNull()
-            var bSportType = FitSportMapper.mapFitSport(primarySession?.sport, primarySession?.subSport)
-            var resolvedSportId = if (bSportType != BSportType.UNKNOWN) {
-                com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
-            } else {
-                -1L
-            }
-
-            // Infer sport from speed if still unknown (ATT-1116)
-            if (bSportType == BSportType.UNKNOWN && distances.isNotEmpty() && bufferedSamples.size > 1) {
-                val totalDist = distances.last()
-                val durationSec = parsedLaps.sumOf { it.totalTimeSeconds }.takeIf { it > 0 } ?: (bufferedSamples.size.toDouble())
-                val avgSpeed = if (durationSec > 0) totalDist / durationSec else 0.0
-                if (avgSpeed > 7.0) {
-                    bSportType = BSportType.BIKE
-                    resolvedSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(BSportType.BIKE)
-                } else if (avgSpeed in 1.5..7.0) {
-                    bSportType = BSportType.RUN
-                    resolvedSportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(BSportType.RUN)
-                }
-            }
-
-            var workoutId = -1L
-
-            // Mutex-guarded multi-dimensional deduplication and atomic insertion
-            val isDuplicate = importMutex.withLock {
-                if (isWorkoutExisting(summaryDb, baseFileName, firstTime, bSportType)) {
-                    if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
-                    return@withLock true
-                }
-
-                if (bufferedSamples.isNotEmpty()) {
-                    samplesDbManager.createNewTable(baseFileName, SensorType.values().toList())
-                    val targetDb = samplesDbManager.database
-                    val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
-                    targetDb.beginTransaction()
-                    try {
-                        bufferedSamples.forEach { sampleValues ->
-                            targetDb.insert(tableName, null, sampleValues)
-                        }
-                        targetDb.setTransactionSuccessful()
-                    } finally {
-                        targetDb.endTransaction()
-                    }
-                }
-
-                if (firstTime != null) {
-                    workoutId = getWorkoutId(summaryDb, baseFileName)
-                    if (workoutId == -1L) {
-                        try {
-                            StravaUploadDbHelper(context).deleteWorkout(baseFileName)
-                        } catch (t: Throwable) {
-                            Log.w(TAG, "Could not clean StravaUploadDb for $baseFileName: ${t.message}")
-                        }
-
-                        val summaryValues = ContentValues().apply {
-                            put(WorkoutSummaries.FILE_BASE_NAME, baseFileName)
-                            put(WorkoutSummaries.WORKOUT_NAME, baseFileName)
-                            put(WorkoutSummaries.TIME_START, firstTime)
-                            put(WorkoutSummaries.SPORT_ID, resolvedSportId)
-                            put(WorkoutSummaries.B_SPORT, bSportType.name)
-                            put(WorkoutSummaries.EQUIPMENT_ID, -1L)
-                            put(WorkoutSummaries.FINISHED, 1)
-                            put(WorkoutSummaries.SOURCE, WorkoutSource.FIT.name)
-                            if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
-                                put(WorkoutSummaries.UPLOAD_TO_STRAVA, 1)
-                            } else {
-                                put(WorkoutSummaries.UPLOAD_TO_STRAVA, 0)
-                            }
-                        }
-                        workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
-                    }
-                }
-                false
-            }
-
-            if (isDuplicate) {
-                return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
-            }
-
-            if (firstTime != null) {
-                recalculateStats(
-                    context = context,
-                    workoutId = workoutId,
-                    baseFileName = baseFileName,
-                    points = points,
-                    altitudes = altitudes,
-                    distances = distances,
-                    bSportType = bSportType,
-                    foundSensors = emptySet(),
-                    parsedLaps = parsedLaps,
-                    workoutNotes = null,
-                    workoutName = baseFileName,
-                    firstTime = firstTime,
-                    lastTime = lastTime,
-                    minAltPos = minAltPos,
-                    maxAltPos = maxAltPos,
-                    listener = listener
-                )
-
-                schedulePostImportCommunityUpload(context, workoutId, baseFileName)
-
-                return ImportResult(ImportStatus.SUCCESS, workoutId)
-            }
+            return persistParsedWorkout(
+                context = context,
+                baseFileName = baseFileName,
+                parsedWorkout = parsedWorkout,
+                source = WorkoutSource.FIT,
+                uploadToStrava = uploadToStrava,
+                listener = listener
+            )
+        } catch (ce: CancellationException) {
+            throw ce
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import FIT: ${fitFile.name}", e)
         }
         return ImportResult(ImportStatus.FAILED)
+    }
+
+    /**
+     * Persists in-memory parsed workout data into SQLite database tables and triggers
+     * stats recalculation and cloud synchronization (REQ-MIG-038, REQ-MIG-043).
+     */
+    internal suspend fun persistParsedWorkout(
+        context: Context,
+        baseFileName: String,
+        parsedWorkout: ParsedWorkoutData,
+        source: WorkoutSource,
+        uploadToStrava: Boolean,
+        listener: ProgressListener?
+    ): ImportResult {
+        var effectiveBaseFileName = baseFileName
+        var firstTime = parsedWorkout.firstTime
+
+        if (firstTime == null && parsedWorkout.parsedLaps.isNotEmpty() && parsedWorkout.parsedLaps.first().startTime != null) {
+            firstTime = parsedWorkout.parsedLaps.first().startTime
+        }
+
+        if (effectiveBaseFileName.startsWith("legacy_import", ignoreCase = true) && firstTime != null) {
+            effectiveBaseFileName = firstTime.replace(" ", "_").replace(":", "")
+        }
+
+        // Fail-fast if workout has no valid start time to avoid orphan database rows (REQ-MIG-043)
+        if (firstTime == null) {
+            Log.w(TAG, "Cannot import workout without valid start time: $baseFileName")
+            return ImportResult(ImportStatus.FAILED)
+        }
+
+        val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+        val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
+        var workoutId = -1L
+
+        // Mutex-guarded multi-dimensional deduplication and atomic insertion (REQ-MIG-031, REQ-MIG-043)
+        val isDuplicate = try {
+            importMutex.withLock {
+                if (isWorkoutExisting(summaryDb, effectiveBaseFileName, firstTime, parsedWorkout.bSportType)) {
+                    if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $effectiveBaseFileName: Workout already exists.")
+                    return@withLock true
+                }
+
+                workoutId = getWorkoutId(summaryDb, effectiveBaseFileName)
+                if (workoutId == -1L) {
+                    try {
+                        StravaUploadDbHelper.getInstance(context).deleteWorkout(effectiveBaseFileName)
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "Could not clean StravaUploadDb for $effectiveBaseFileName: ${t.message}")
+                    }
+
+                    val summaryValues = ContentValues().apply {
+                        put(WorkoutSummaries.FILE_BASE_NAME, effectiveBaseFileName)
+                        put(
+                            WorkoutSummaries.WORKOUT_NAME,
+                            if (!parsedWorkout.workoutName.isNullOrBlank()) parsedWorkout.workoutName.trim() else effectiveBaseFileName
+                        )
+                        put(WorkoutSummaries.TIME_START, firstTime)
+                        put(WorkoutSummaries.SPORT_ID, parsedWorkout.resolvedSportId)
+                        put(WorkoutSummaries.B_SPORT, parsedWorkout.bSportType.name)
+                        put(WorkoutSummaries.EQUIPMENT_ID, -1L)
+                        put(WorkoutSummaries.FINISHED, 1)
+                        put(WorkoutSummaries.SOURCE, source.name)
+                        if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
+                            put(WorkoutSummaries.UPLOAD_TO_STRAVA, 1)
+                        } else {
+                            put(WorkoutSummaries.UPLOAD_TO_STRAVA, 0)
+                        }
+                    }
+                    workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
+                    require(workoutId > 0) { "Failed to insert summary row for $effectiveBaseFileName" }
+                }
+
+                // Post-parsing: Bulk insertion and dynamic table creation (ATT-357 / ATT-602)
+                if (parsedWorkout.bufferedSamples.isNotEmpty()) {
+                    try {
+                        samplesDbManager.createNewTable(effectiveBaseFileName, SensorType.values().toList())
+                        val targetDb = samplesDbManager.database
+                        val tableName = WorkoutSamplesDatabaseManager.getTableName(effectiveBaseFileName)
+                        targetDb.beginTransaction()
+                        try {
+                            parsedWorkout.bufferedSamples.forEach { sampleValues ->
+                                val rowId = targetDb.insert(tableName, null, sampleValues)
+                                require(rowId >= 0) { "Failed to insert sample into $tableName" }
+                            }
+                            targetDb.setTransactionSuccessful()
+                        } finally {
+                            targetDb.endTransaction()
+                        }
+                    } catch (t: Throwable) {
+                        // Compensatory cleanup: drop sample table and delete summary row
+                        executeCompensatoryCleanup(context, samplesDbManager, summaryDb, effectiveBaseFileName, workoutId)
+                        throw t
+                    }
+                }
+                false
+            }
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed during mutex-guarded insertion for $effectiveBaseFileName", t)
+            return ImportResult(ImportStatus.FAILED)
+        }
+
+        if (isDuplicate) {
+            return ImportResult(ImportStatus.DUPLICATE_SKIPPED)
+        }
+
+        try {
+            recalculateStats(
+                context = context,
+                workoutId = workoutId,
+                baseFileName = effectiveBaseFileName,
+                points = parsedWorkout.points,
+                altitudes = parsedWorkout.altitudes,
+                distances = parsedWorkout.distances,
+                bSportType = parsedWorkout.bSportType,
+                foundSensors = parsedWorkout.foundSensors,
+                parsedLaps = parsedWorkout.parsedLaps,
+                workoutNotes = parsedWorkout.workoutNotes,
+                workoutName = parsedWorkout.workoutName ?: effectiveBaseFileName,
+                firstTime = firstTime,
+                lastTime = parsedWorkout.lastTime,
+                minAltPos = parsedWorkout.minAltPos,
+                maxAltPos = parsedWorkout.maxAltPos,
+                listener = listener,
+                sessionNormalizedPowerWatts = parsedWorkout.sessionNormalizedPowerWatts,
+                sessionIntensityFactor = parsedWorkout.sessionIntensityFactor,
+                sessionTss = parsedWorkout.sessionTss,
+                sessionWorkKj = parsedWorkout.sessionWorkKj
+            )
+
+            schedulePostImportCommunityUpload(context, workoutId, effectiveBaseFileName)
+            return ImportResult(ImportStatus.SUCCESS, workoutId)
+        } catch (ce: CancellationException) {
+            executeCompensatoryCleanup(context, samplesDbManager, summaryDb, effectiveBaseFileName, workoutId)
+            throw ce
+        } catch (t: Throwable) {
+            Log.e(TAG, "recalculateStats failed for $effectiveBaseFileName", t)
+            executeCompensatoryCleanup(context, samplesDbManager, summaryDb, effectiveBaseFileName, workoutId)
+            return ImportResult(ImportStatus.FAILED)
+        }
+    }
+
+    private fun executeCompensatoryCleanup(
+        context: Context,
+        samplesDbManager: WorkoutSamplesDatabaseManager,
+        summaryDb: WorkoutSummariesDatabaseManager,
+        baseFileName: String,
+        workoutId: Long
+    ) {
+        try {
+            samplesDbManager.deleteWorkout(baseFileName)
+        } catch (t: Throwable) {
+            Log.e(TAG, "CRITICAL: Compensatory cleanup failed to delete samples table for $baseFileName", t)
+        }
+        if (workoutId > 0) {
+            try {
+                summaryDb.deleteWorkout(workoutId)
+            } catch (t: Throwable) {
+                Log.e(TAG, "CRITICAL: Compensatory cleanup failed to delete summary row for $workoutId ($baseFileName)", t)
+            }
+            try {
+                LapsDatabaseManager.getInstance(context).deleteWorkout(workoutId)
+            } catch (t: Throwable) {
+                Log.e(TAG, "CRITICAL: Compensatory cleanup failed to delete laps for $workoutId ($baseFileName)", t)
+            }
+        }
     }
 
     /**
@@ -1763,7 +873,7 @@ object LegacyImportEngine {
 
     private fun getWorkoutId(db: WorkoutSummariesDatabaseManager, fileBaseName: String): Long {
         db.database.query(WorkoutSummaries.TABLE, arrayOf(WorkoutSummaries.C_ID), 
-            "${WorkoutSummaries.FILE_BASE_NAME} = ?", arrayOf(fileBaseName), null, null, null).use {
+            "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE", arrayOf(fileBaseName), null, null, null).use {
             return if (it.moveToFirst()) it.getLong(0) else -1L
         }
     }
@@ -1783,7 +893,7 @@ object LegacyImportEngine {
             db.database.query(
                 WorkoutSummaries.TABLE, 
                 arrayOf(WorkoutSummaries.C_ID), 
-                "${WorkoutSummaries.FILE_BASE_NAME} = ?", 
+                "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE", 
                 arrayOf(fileBaseName), 
                 null, null, null
             ).use {
@@ -1793,11 +903,11 @@ object LegacyImportEngine {
 
         val hasSport = bSportType != null && bSportType != BSportType.UNKNOWN
         val selection = if (hasSport) {
-            "${WorkoutSummaries.FILE_BASE_NAME} = ? OR " +
+            "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE OR " +
                     "${WorkoutSummaries.TIME_START} = ? OR " +
                     "(${WorkoutSummaries.B_SPORT} = ? AND ${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
         } else {
-            "${WorkoutSummaries.FILE_BASE_NAME} = ? OR " +
+            "${WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE OR " +
                     "${WorkoutSummaries.TIME_START} = ? OR " +
                     "(${WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
         }
@@ -1835,7 +945,11 @@ object LegacyImportEngine {
         lastTime: String? = null,
         minAltPos: LatLng? = null,
         maxAltPos: LatLng? = null,
-        listener: ProgressListener? = null
+        listener: ProgressListener? = null,
+        sessionNormalizedPowerWatts: Double? = null,
+        sessionIntensityFactor: Double? = null,
+        sessionTss: Double? = null,
+        sessionWorkKj: Double? = null
     ) {
         val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
         val samplesDb = WorkoutSamplesDatabaseManager.getInstance(context)
@@ -1966,8 +1080,9 @@ object LegacyImportEngine {
                     windowSum -= windowQueue.removeFirst()
                 }
                 val filtered = windowSum / windowQueue.size
-                if (lastFiltered != null) {
-                    val delta = filtered - lastFiltered!!
+                val prevFiltered = lastFiltered
+                if (prevFiltered != null) {
+                    val delta = filtered - prevFiltered
                     if (delta > 0) totalAscent += delta
                     else if (delta < 0) totalDescent += -delta
                 }
@@ -2039,6 +1154,110 @@ object LegacyImportEngine {
                     summariesDb.updateExtremaValue(workoutId, sensor, type, value, pos)
                 }
             }
+        }
+
+        // 4b. Calculate and persist Skiba W'bal extrema (MIN, AVG, END) and Aerobic Efficiency / Decoupling (REQ-UI-399.3, REQ-UI-400.2)
+        try {
+            if (samplesDb.existsTable(baseFileName)) {
+                val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+                val powerSamples = mutableListOf<Double?>()
+                val speedSamples = mutableListOf<Double?>()
+                val hrSamples = mutableListOf<Double?>()
+                samplesDb.database.query(tableName, null, null, null, null, null, null).use { cursor ->
+                    val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+                    val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
+                    val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+                    while (cursor.moveToNext()) {
+                        val p = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getDouble(powerIdx) else null
+                        val s = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
+                        val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getDouble(hrIdx) else null
+                        powerSamples.add(p)
+                        speedSamples.add(s)
+                        hrSamples.add(hr)
+                    }
+                }
+
+                val effectiveCp = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getEffectiveCpWatts(context)
+                val effectiveWPrimeKj = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getEffectiveWPrimeKj(context).toDouble()
+                if (effectiveCp != null && effectiveCp > 0 && effectiveWPrimeKj > 0.0 && powerSamples.any { it != null && it > 0.0 }) {
+                    val wPrimeSummary = com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeWPrimeBalanceSeries(
+                        powerSamplesWatts = powerSamples,
+                        cpWatts = effectiveCp.toDouble(),
+                        wPrimeKj = effectiveWPrimeKj
+                    )
+                    wPrimeSummary.minWPrimeBalKj?.let {
+                        summariesDb.updateExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.MIN, it, null)
+                    }
+                    wPrimeSummary.avgWPrimeBalKj?.let {
+                        summariesDb.updateExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.AVG, it, null)
+                    }
+                    wPrimeSummary.endWPrimeBalKj?.let {
+                        summariesDb.updateExtremaValue(workoutId, SensorType.W_PRIME_BAL, ExtremaType.END, it, null)
+                    }
+                }
+
+                // REQ-UI-400.2: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr)
+                val aerobicResult = com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computeAerobicEfficiencyAndDecoupling(
+                    powerSamplesWatts = powerSamples,
+                    speedSamplesMps = speedSamples,
+                    hrSamplesBpm = hrSamples,
+                    bSportType = bSportType
+                )
+                val targetSensor = if (aerobicResult.isPowerBased) SensorType.POWER else SensorType.SPEED_mps
+                aerobicResult.efficiencyFactor?.let {
+                    summariesDb.updateExtremaValue(workoutId, targetSensor, ExtremaType.EFFICIENCY_FACTOR, it, null)
+                }
+                aerobicResult.decouplingPct?.let {
+                    summariesDb.updateExtremaValue(workoutId, targetSensor, ExtremaType.AEROBIC_DECOUPLING, it, null)
+                }
+
+                // REQ-MIG-039.4 (ATT-3860): Calculate and persist session power training metrics (NP, IF, TSS, Work kJ, W/kg)
+                val workoutStartMs: Long? = firstTime?.let {
+                    try {
+                        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).parse(it)?.time
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+                val effectiveFtp = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveFtpAt(context, workoutStartMs)
+                val effectiveWeightKg = com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.resolveEffectiveWeightKgAt(context, workoutStartMs)
+                val powerMetrics = com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computePowerTrainingMetrics(
+                    powerSamplesWatts = powerSamples,
+                    activeTimeSeconds = activeTime,
+                    ftpWatts = effectiveFtp?.toDouble(),
+                    athleteWeightKg = effectiveWeightKg.toDouble().takeIf { it > 0.0 },
+                    fallbackNpWatts = sessionNormalizedPowerWatts,
+                    fallbackIf = sessionIntensityFactor,
+                    fallbackTss = sessionTss,
+                    fallbackWorkKj = sessionWorkKj
+                )
+                powerMetrics.normalizedPowerWatts?.let { np ->
+                    summariesDb.updateExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.AVG, np, null)
+                    summariesDb.updateExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.END, np, null)
+                }
+                powerMetrics.intensityFactor?.let { ifVal ->
+                    summariesDb.updateExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.AVG, ifVal, null)
+                    summariesDb.updateExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.END, ifVal, null)
+                }
+                powerMetrics.tss?.let { tss ->
+                    summariesDb.updateExtremaValue(workoutId, SensorType.TSS, ExtremaType.AVG, tss, null)
+                    summariesDb.updateExtremaValue(workoutId, SensorType.TSS, ExtremaType.MAX, tss, null)
+                    summariesDb.updateExtremaValue(workoutId, SensorType.TSS, ExtremaType.END, tss, null)
+                }
+                powerMetrics.workKj?.let { workKj ->
+                    summariesDb.updateExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.AVG, workKj, null)
+                    summariesDb.updateExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.MAX, workKj, null)
+                    summariesDb.updateExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.END, workKj, null)
+                }
+                powerMetrics.avgPowerToWeight?.let { avgWPerKg ->
+                    summariesDb.updateExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG, avgWPerKg, null)
+                }
+                powerMetrics.maxPowerToWeight?.let { maxWPerKg ->
+                    summariesDb.updateExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not compute W'bal, Aerobic Efficiency, or Power Training extrema during recalculateStats: ${e.message}")
         }
 
         // 5. Clustering (Spatial Markers)
@@ -2250,9 +1469,9 @@ object LegacyImportEngine {
                 "${WorkoutSummaries.C_ID} = ?",
                 arrayOf(workoutId.toString()),
                 null, null, null
-            )?.use { cursor ->
+            ).use { cursor ->
                 if (cursor.moveToFirst()) cursor.getInt(0) else -1
-            } ?: -1
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Could not query uploadToStrava for workout $workoutId", e)
             -1

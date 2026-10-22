@@ -17,10 +17,12 @@
 
     <!-- Equipment / My Stuff -->
     <item name="drawer_my_sensors" type="id" />
+    <item name="drawer_equipment" type="id" />
     <item name="drawer_bikes" type="id" />
     <item name="drawer_shoes" type="id" />
     <item name="drawer_sport_types" type="id" />
     <item name="drawer_training_zones" type="id" />
+    <item name="drawer_athlete_profile" type="id" />
 
     <!-- Online Communities / Ecosystem -->
     <item name="drawer_strava" type="id" />

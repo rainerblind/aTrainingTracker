@@ -25,7 +25,7 @@ import com.atrainingtracker.banalservice.devices.MyDevice;
  */
 
 public class ProxySensor<T> extends MySensor<T> {
-    protected MySensor<T> mSourceSensor;
+    protected volatile MySensor<T> mSourceSensor;
     private final String TAG = "ProxySensor";
 
     public ProxySensor(MyDevice myDevice, SensorType sensorType, MySensor<T> sourceSensor) {
@@ -35,17 +35,55 @@ public class ProxySensor<T> extends MySensor<T> {
 
     @Override
     public T getValue() {
-        return mSourceSensor.getValue();
+        final MySensor<T> source = mSourceSensor;
+        return source != null ? source.getValue() : null;
     }
 
+    /**
+     * Returns the last update timestamp delegated from the underlying source sensor.
+     *
+     * @return the source sensor's last update timestamp in milliseconds, or {@code 0L} if no source sensor is bound.
+     */
+    @Override
+    public long getLastUpdateTimestamp() {
+        final MySensor<T> source = mSourceSensor;
+        return source != null ? source.getLastUpdateTimestamp() : 0L;
+    }
+
+    /**
+     * Returns a {@link SensorData} snapshot using a single atomic local reference to {@link #mSourceSensor},
+     * delegating value and timestamp to the underlying source sensor while preserving {@code null} {@link #getDeviceName()}
+     * so primary sample table columns remain unsuffixed.
+     */
+    @Override
+    public SensorData<T> getSensorData() {
+        final MySensor<T> source = mSourceSensor;
+        final T value = source != null ? source.getValue() : null;
+        final long timestamp = source != null ? source.getLastUpdateTimestamp() : 0L;
+        final String stringValue = getSensorType() != null && getSensorType().getMyFormatter() != null
+                ? getSensorType().getMyFormatter().format(value)
+                : "";
+        return new SensorData<>(getSensorType(), value, stringValue, getDeviceName(), timestamp);
+    }
+
+    private final Object mSourceLock = new Object();
+
+    @Override
     public void addSensorListener(SensorListener sensorListener) {
         super.addSensorListener(sensorListener);
-        mSourceSensor.addSensorListener(sensorListener);   // also add this sensor listener to the source device
+        final MySensor<T> source = mSourceSensor;
+        if (source != null) {
+            source.addSensorListener(sensorListener);   // also add this sensor listener to the source device
+        }
     }
 
+    @Override
     public void removeSensorListener(SensorListener sensorListener) {
         super.removeSensorListener(sensorListener);
-        mSourceSensor.removeSensorListener(sensorListener);  // also remove this sensor listener from the source device
+        final MySensor<T> source = mSourceSensor;
+        if (source != null) {
+            source.removeSensorListener(sensorListener);  // also remove this sensor listener from the source device
+        }
     }
 
     @Override
@@ -54,20 +92,37 @@ public class ProxySensor<T> extends MySensor<T> {
     }
 
     public String getSourceDeviceName() {
-        return mSourceSensor.getDevice().getName();
+        final MySensor<T> source = mSourceSensor;
+        return (source != null && source.getDevice() != null) ? source.getDevice().getName() : null;
     }
 
     public long getSourceDeviceId() {
-        return mSourceSensor.getDevice().getDeviceId();
+        final MySensor<T> source = mSourceSensor;
+        return (source != null && source.getDevice() != null) ? source.getDevice().getDeviceId() : -1L;
     }
 
     public void setSourceSensor(MySensor<T> sourceSensor) {
-        // move all SensorListeners to the new sensor
-        for (SensorListener sensorListener : mSensorListeners) {
-            mSourceSensor.removeSensorListener(sensorListener);
-            sourceSensor.addSensorListener(sensorListener);
+        final MySensor<T> previousSource;
+        final java.util.List<SensorListener> listenersSnapshot;
+
+        synchronized (mSourceLock) {
+            previousSource = mSourceSensor;
+            if (previousSource == sourceSensor) {
+                return;
+            }
+            mSourceSensor = sourceSensor;
+            listenersSnapshot = new java.util.ArrayList<>(mSensorListeners);
         }
 
-        mSourceSensor = sourceSensor;
+        // Migrate all SensorListeners to the new source sensor strictly outside mSourceLock
+        // to prevent lock-order inversions during initial newValue callbacks (REQ-SEN-021.2).
+        for (SensorListener sensorListener : listenersSnapshot) {
+            if (previousSource != null) {
+                previousSource.removeSensorListener(sensorListener);
+            }
+            if (sourceSensor != null) {
+                sourceSensor.addSensorListener(sensorListener);
+            }
+        }
     }
 }

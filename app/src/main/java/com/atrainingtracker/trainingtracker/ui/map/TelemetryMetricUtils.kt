@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.map
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
+import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
@@ -112,6 +113,14 @@ object TelemetryMetricUtils {
     }
 
     /**
+     * Checks whether valid Skiba W'bal samples exist in [path] (`REQ-UI-399.3`).
+     */
+    fun hasWPrimeBalData(path: List<PathPoint>?): Boolean {
+        if (path.isNullOrEmpty()) return false
+        return path.any { it.wPrimeBalKj != null && it.wPrimeBalKj >= 0.0 }
+    }
+
+    /**
      * Extracts scalar value for a given [PathPoint] according to [metricType] and [unit].
      * Returns null if sample is invalid or unrecorded.
      */
@@ -127,7 +136,7 @@ object TelemetryMetricUtils {
             }
             TelemetryMetricType.SPEED -> {
                 point.speedMps?.takeIf { it > 0.0 }?.let { mps ->
-                    if (unit == MyUnits.METRIC) mps * 3.6 else mps * 2.236936
+                    MyHelper.mps2userUnit(mps, unit)
                 }
             }
             TelemetryMetricType.PACE -> {
@@ -148,6 +157,9 @@ object TelemetryMetricUtils {
             }
             TelemetryMetricType.POWER -> {
                 point.power?.takeIf { it >= 0 }?.toDouble()
+            }
+            TelemetryMetricType.W_PRIME_BAL -> {
+                point.wPrimeBalKj?.takeIf { it >= 0.0 }
             }
         }
     }
@@ -187,7 +199,7 @@ object TelemetryMetricUtils {
                 }
             }
             TelemetryMetricType.SPEED -> {
-                val mps = if (unit == MyUnits.METRIC) value / 3.6 else value / 2.236936
+                val mps = MyHelper.UserUnit2mps(value, unit)
                 speedFormatter.format_with_units(mps)
             }
             TelemetryMetricType.PACE -> {
@@ -207,6 +219,9 @@ object TelemetryMetricUtils {
                 } else {
                     base
                 }
+            }
+            TelemetryMetricType.W_PRIME_BAL -> {
+                String.format(Locale.US, "%.1f kJ", value)
             }
         }
     }

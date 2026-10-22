@@ -107,7 +107,7 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
 
     // access to the databases
     private val devicesDatabaseManager by lazy { DevicesDatabaseManager.getInstance(application) }
-    private val equipmentDbHelper by lazy { EquipmentDbHelper(application) }
+    private val equipmentDbHelper by lazy { EquipmentDbHelper.getInstance(application) }
     private val discoveryManager by lazy { EquipmentAndSportTypeDiscoveryManager.getInstance(application) }
     private val mapper by lazy { RawDeviceDataProvider(devicesDatabaseManager, equipmentDbHelper, discoveryManager) }
 
@@ -250,32 +250,6 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                     finalState.id.toInt(),
                     finalState.linkedEquipment
                 )
-            }
-
-            // Update power feature flags when necessary
-            if (originalState.powerFeatures != finalState.powerFeatures) {
-                var powerFeatureFlags = originalState.powerFeaturesFlags
-                powerFeatureFlags = if (finalState.powerFeatures!!.doublePowerBalanceValues) {
-                    powerFeatureFlags?.let { BikePowerSensorsHelper.addDoublePowerBalanceValues(it) }
-                } else {
-                    powerFeatureFlags?.let {
-                        BikePowerSensorsHelper.removeDoublePowerBalanceValues(
-                            it
-                        )
-                    }
-                }
-                if (finalState.powerFeatures!!.invertPowerBalanceValues) {
-                    powerFeatureFlags = powerFeatureFlags?.let {
-                        BikePowerSensorsHelper.addInvertPowerBalanceValues(it)
-                    }
-                } else {
-                    powerFeatureFlags = powerFeatureFlags?.let {
-                        BikePowerSensorsHelper.removeInvertPowerBalanceValues(it)
-                    }
-                }
-                if (powerFeatureFlags != null) {
-                    devicesDatabaseManager.putBikePowerSensorFlags(finalState.id, powerFeatureFlags)
-                }
             }
 
             // Update the local LiveData to immediately reflect the change in the UI

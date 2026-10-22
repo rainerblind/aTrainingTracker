@@ -91,7 +91,7 @@
 
     <string name="guess_commute_and_trainer">Pendeln/Trainer automatisch erkennen</string>
 
-    <string name="pebble_build_in">Standard Pebble Watchapp</string>
+    <string name="pebble_build_in">Integrierte Pebble-App</string>
     <string name="pebble_a_training_tracker_watchapp">a Training Tracker Watchapp</string>
 
     <string name="install_ant_plugin_message">Um ANT+ zu nutzen muss der ANT+ Plugin Service installiert sein.</string>
@@ -189,6 +189,12 @@
     <string name="position_short">Pos.</string>
     <string name="power">Leistung</string>
     <string name="power_short">Leistung</string>
+    <string name="power_to_weight">Leistungsgewicht</string>
+    <string name="power_to_weight_short">W/kg</string>
+    <string name="normalized_power">Normalisierte Leistung</string>
+    <string name="intensity_factor">Intensitätsfaktor</string>
+    <string name="work_kj">Mechanische Arbeit</string>
+    <string name="tss">Trainingsbelastungs-Score (TSS)</string>
     <string name="speed">Geschwindigkeit</string>
     <string name="speed_short">Geschw.</string>
     <string name="current_sensors">Aktuelle Sensoren</string>
@@ -211,7 +217,7 @@
     <string name="time_total_short">gesamt</string>
     <string name="torque">Drehmoment</string>
     <string name="torque_short">Moment</string>
-    <string name="pedal_power_balance">pedal power balance</string>
+    <string name="pedal_power_balance">Pedal-Leistungsbalance</string>
     <string name="pedal_power_balance_short">balance</string>
     <string name="pedal_smoothness_l">pedal smoothness left</string>
     <string name="pedal_smoothness_l_short">smooth l</string>
@@ -248,10 +254,6 @@
     <string name="bike_power__pedal_smoothness">&#8226; Glattheit</string>
     <string name="bike_power__torque_effectiveness">&#8226; Effizienz</string>
     <string name="bike_power__torque_data">&#8226; Kraft</string>
-
-    <string name="bike_power__pedal_power_balance_correction">Korrektur für Power Balance</string>
-    <string name="bike_power__double_power_balance_values">Verdopple die gemessenen Werte</string>
-    <string name="bike_power__invert_power_balance_values">Invertiere die gemessenen Werte.  D.h., vertausche rechts und links</string>
 
     <string name="slope">Steigung</string>
     <string name="slope_short">Steigung</string>
@@ -328,6 +330,9 @@
     <string name="automated_strava_routes_sync">Automatischer Routen-Abruf</string>
     <string name="automated_strava_routes_sync_summary">Regelmäßig Routen von Strava abrufen</string>
     <string name="strava_routes_sync_interval">Abrufintervall</string>
+    <string name="automated_strava_equipment_sync">Automatischer Ausrüstungs-Abruf</string>
+    <string name="automated_strava_equipment_sync_summary">Regelmäßig Fahrräder und Schuhe von Strava abrufen</string>
+    <string name="strava_equipment_sync_interval">Abrufintervall</string>
 
     <string name="strava_success_but_must_check">zu Strava hochgeladen, überprüfe die Rückmeldung …</string>
     <string name="strava_success_waiting_for_result">zu Strava hochgeladen, warte auf Rückmeldung …</string>
@@ -340,6 +345,7 @@
     <string name="tab_tracking">Aufzeichnung</string>
     <string name="tab_map">Karte</string>
     <string name="tab_laps">Runden</string>
+    <string name="tab_power">Leistung</string>
     <string name="tab_workouts">Einheiten</string>
 
 
@@ -621,6 +627,8 @@
     <string name="config_tracking__show_map">Karte</string>
     <string name="config_tracking__showLiveSegments">Live Segments</string>
     <string name="config_tracking__showLapButton">Lap Knopf</string>
+    <string name="config_tracking__showBikeBell">Fahrradklingel anzeigen</string>
+    <string name="config_tracking__showBikeBell_subtitle">Klingel-Button tippen/halten oder doppelt auf das Cockpit tippen</string>
     <string name="config_tracking__show_navigation_hints">Abbiegehinweise</string>
     <string name="config_tracking__show_live_climbs">Live-Anstiege</string>
     <string name="config_tracking__wysiwyg_active">Aktiv</string>
@@ -655,6 +663,8 @@
     <string name="zone_3_label">Zone 3 (Tempo)</string>
     <string name="zone_4_label">Zone 4 (Threshold)</string>
     <string name="zone_5_label">Zone 5 (Anaerobic)</string>
+    <string name="zone_6_label">Zone 6 (Anaerobe Kapazität)</string>
+    <string name="zone_7_label">Zone 7 (Neuromuskuläre Leistung)</string>
 
     <string name="label_min">Min</string>
     <string name="label_max">Max</string>
@@ -664,6 +674,9 @@
     <string name="zone_display_left_bar">Balken links</string>
     <string name="zone_display_right_bar">Balken rechts</string>
     <string name="zone_display_text_color">Textfarbe</string>
+    <string name="zone_display_gauge">Zonen-Balken</string>
+    <string name="pedal_balance_left_marker">L</string>
+    <string name="pedal_balance_right_marker">R</string>
     <string name="zone_display_preview_title">Vorschau</string>
     <string name="prefEmailExport">e-Mail</string>
 
@@ -872,7 +885,7 @@
     <string name="tab_name">Name</string>
 
     <!-- equipment -->
-    <string name="equipment_management_title">Ausrüstung</string>
+    <string name="equipment_management_title">Räder &amp; Schuhe</string>
     <string name="equipment_management_summary">Ausrüstung bearbeiten</string>
     <string name="prefs_manage_bikes_title">Räder</string>
     <string name="prefs_manage_bikes_summary">Konfiguriere all deine Fahrräder</string>
@@ -915,6 +928,8 @@
     <string name="sport_type_tab_bike">Radeln</string>
     <string name="sport_type_tab_run">Laufen</string>
     <string name="sport_type_tab_unknown">Andere Sportarten</string>
+    <string name="sport_type_restored_placeholder">Wiederhergestellte Sportart %1$d</string>
+    <string name="sport_type_placeholder_badge">Wiederhergestellt (Nicht konfiguriert)</string>
 
     <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">Alle Einheiten</string>
@@ -944,6 +959,8 @@
     <string name="segment_status_start_in">Start in: %1$s</string>
     <string name="segment_status_remaining">Ziel in: %1$s</string>
     <string name="segment_status_offset">Daneben: %1$s</string>
+    <string name="segment_status_past_finish">Nach Ziel: %1$s</string>
+    <string name="segment_status_pr_delta">%1$s vs. PR</string>
 
     <!-- ANT(+) Plugins -->
     <string name="ant_general_explanation">Wenn alles korrekt installiert ist, kannst Du deine ANT+ Sensoren koppeln.  Dazu benötigst Du jedoch die richtige Hard- und Software.
@@ -980,6 +997,19 @@
     <string name="route_import">Import</string>
     <string name="route_saved_success">Route erfolgreich gespeichert.</string>
     <string name="route_saved_failed">Speichern der Route fehlgeschlagen.</string>
+    <string name="routes_import_progress">Routen werden importiert (%1$d von %2$d)…</string>
+    <string name="routes_import_success">%1$d Routen erfolgreich importiert.</string>
+    <string name="routes_import_partial">%1$d Routen importiert, %2$d fehlgeschlagen.</string>
+    <string name="routes_import_all_failed">Routen konnten nicht importiert werden.</string>
+    <!-- Batch GPX Route Import Sport Type Selection (REQ-MAP-053 / ATT-4284) -->
+    <string name="batch_import_dialog_title_format">%1$d Routen importieren</string>
+    <string name="batch_import_mode_all">Auf alle anwenden</string>
+    <string name="batch_import_mode_individual">Individuell anpassen</string>
+    <string name="batch_import_individual_hint">Jede Route wird nacheinander zur Überprüfung und Bearbeitung vor dem Speichern geöffnet.</string>
+    <string name="batch_import_action_import">Importieren</string>
+    <string name="batch_import_action_continue">Weiter</string>
+    <string name="batch_import_individual_progress_format">Route %1$d von %2$d</string>
+    <string name="batch_import_skip_route">Überspringen</string>
     <string name="strava_sync_success">Routen von Strava synchronisiert.</string>
     <string name="strava_sync_failed">Synchronisierung der Routen von Strava fehlgeschlagen.</string>
     <string name="save_as_local_route">Als lokale Route speichern</string>
@@ -1043,6 +1073,10 @@
     <string name="dropbox_disconnected_status">Du bist nicht mit Dropbox verbunden</string>
     <string name="dropbox_disconnect">Von Dropbox trennen</string>
     <string name="dropbox_connect">Mit Dropbox verbinden</string>
+    <string name="dropbox_connect_prompt">Verknüpfe dein Dropbox-Konto, um Workouts automatisch zu exportieren und Datenbank-Backups mit Dropbox zu synchronisieren.</string>
+    <string name="upload_workouts_to_dropbox_summary">Lädt Aktivitäten (FIT, TCX, GPX, CSV) nach dem Speichern in Dropbox hoch</string>
+    <string name="upload_backup_to_dropbox_summary">Sichert die Datenbank regelmäßig in Dropbox</string>
+    <string name="last_backup_never">Bisher kein Backup erstellt</string>
     <string name="strava_disconnect">Von Strava trennen</string>
     <string name="strava_disconnect_dialog_title">Strava-Verbindung trennen?</string>
     <string name="strava_disconnect_dialog_message">Beim Trennen der Verbindung werden alle mit Strava synchronisierten Daten von diesem Gerät gelöscht:\n\n• Mit Stern markierte Segmente und Segmentzeiten\n• Strava-Routen\n• Ausrüstungsverknüpfungen mit Strava\n• Strava-Upload-Status vergangener Workouts\n\nDeine aufgezeichneten Trainingseinheiten (Zusammenfassungen, GPS-Strecken, Sensordaten) bleiben vollständig erhalten.</string>
@@ -1215,6 +1249,11 @@
     <string name="backup_failed">Backup-Erstellung fehlgeschlagen.</string>
     <string name="restore_success">Wiederherstellung erfolgreich. Die App wird nun neu gestartet.</string>
     <string name="restore_failed">Wiederherstellung fehlgeschlagen. Bitte stellen Sie sicher, dass die Datei gültig ist.</string>
+    <string name="backup_security_error">Sicherheitsfehler: Ungültiges oder beschädigtes Sicherungsarchiv.</string>
+    <string name="backup_security_error_desc">Das Sicherungsarchiv enthält unzulässige Pfade, symbolische Links oder überschreitet sichere Größengrenzen und wurde abgelehnt.</string>
+    <string name="backup_restore_error_missing_databases">Dem Sicherungsarchiv fehlt das Datenbankverzeichnis.</string>
+    <string name="backup_restore_error_integrity_failed">Die Sicherungsdatenbank hat die SQLite-Integritätsprüfung nicht bestanden.</string>
+    <string name="backup_restore_error_schema_downgrade">Die Sicherung wurde mit einer neueren App-Version erstellt und kann nicht wiederhergestellt werden.</string>
     <string name="restore_warning_title">GEFAHR: Vollständige Wiederherstellung</string>
     <string name="restore_warning_message">Dies wird ALLE aktuellen Workouts, Ausrüstungen und Einstellungen auf DIESEM Telefon UNWIDERRUFLICH LÖSCHEN und durch die Daten aus dem Backup ersetzen. Sind Sie absolut sicher?</string>
     <string name="import_finished_format">Import abgeschlossen. %1$d neue Workouts hinzugefügt.</string>
@@ -1224,12 +1263,31 @@
     <string name="automated_backups_summary">Regelmäßig Backups zu Dropbox hochladen</string>
     <string name="backup_now">Jetzt sichern</string>
     <string name="last_backup">Letztes Backup: %1$s</string>
+    <string name="last_backup_local_success">Letztes Backup: %1$s (Nur lokal)</string>
+    <string name="last_backup_partial_success">Letztes Backup: %1$s (Teilweise)</string>
+    <string name="last_backup_failed_format">Letztes Backup fehlgeschlagen: %1$s</string>
+    <string name="restore_automatic_local_backup">Aus automatischem lokalen Backup wiederherstellen</string>
+    <string name="restore_automatic_local_backup_format">Automatisches Backup (%1$s)</string>
+    <string name="restore_automatic_backup_not_found">Kein automatisches lokales Backup gefunden</string>
+    <string name="restore_from_file">Aus lokaler Datei wiederherstellen</string>
+    <string name="restore_from_dropbox">Aus Dropbox wiederherstellen</string>
+    <string name="backup_target_local">Lokal</string>
+    <string name="backup_target_dropbox">Dropbox</string>
+    <string name="backup_target_google_drive">Google Drive</string>
     <string name="backup_interval">Sicherungsintervall</string>
     <string name="backup_interval_daily">Täglich</string>
     <string name="backup_interval_3days">Alle 3 Tage</string>
     <string name="backup_interval_weekly">Wöchentlich</string>
     <string name="backup_interval_monthly">Monatlich</string>
     <string name="create_and_upload_to_dropbox">Erstellen \u0026 Dropbox-Upload</string>
+    <string name="create_and_upload_to_both">Erstellen \u0026 Upload\n(Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_google_drive">Erstellen \u0026 Google Drive-Upload</string>
+    <string name="create_and_upload_to_cloud">Erstellen \u0026 Cloud-Upload</string>
+    <string name="cloud_backup_no_provider_dialog_title">Cloud-Backup</string>
+    <string name="cloud_backup_no_provider_dialog_message">Kein Cloud-Speicher verbunden. Bitte Dropbox oder Google Drive in den Synchronisierungs-Einstellungen verknüpfen.</string>
+    <string name="automated_backups_summary_both">Regelmäßig Backups zu Dropbox und Google Drive hochladen</string>
+    <string name="automated_backups_summary_google_drive">Regelmäßig Backups zu Google Drive hochladen</string>
+    <string name="automated_backups_summary_local_only">Regelmäßig lokale rollierende Backups auf diesem Gerät erstellen</string>
     <string name="full_restore_description">Löscht alle lokalen Daten und ersetzt sie durch den Inhalt des Backups. Erzwingt einen App-Neustart.</string>
     <string name="incremental_import_description">Fügt Workouts aus einem Backup zu deiner aktuellen Historie hinzu. Bereits vorhandene Workouts werden übersprungen.</string>
     <string name="legacy_recovery_title">Workout-Import</string>
@@ -1292,6 +1350,8 @@
     <string name="filter_route_source">Quelle</string>
     <string name="filter_route_selected">Nur ausgewählte</string>
     <string name="filter_min_elevation_format">&gt; %1$s m</string>
+    <string name="filter_max_elevation_format">&lt; %1$s m</string>
+    <string name="filter_elevation_interval_format">%1$s - %2$s m</string>
     <string name="filter_no_matching_routes">Keine Routen entsprechen den aktiven Filtern</string>
     <!-- Segment Filtering (ATT-735) -->
     <string name="filter_segments_title">Segmente filtern</string>
@@ -1335,7 +1395,8 @@
     <string name="cluster_info_sports_title">Sportart-Trennung &amp; lernender Schwerpunkt</string>
     <string name="cluster_info_sports_desc">Lieblingsstrecken können nach Sportarten getrennt werden, sodass Radfahrten und Läufe auf demselben Weg separate Cluster bilden. Mit jedem weiteren Training auf einer Strecke passt das Cluster seine Referenzkoordinaten über einen gleitenden Schwerpunkt (Centroid) dynamisch an.</string>
     <string name="cluster_info_tuning_title">Empfindlichkeit &amp; Feinabstimmung</string>
-    <string name="cluster_info_tuning_desc">Über den Master-Schieberegler stellst du ein, wie streng Routen übereinstimmen müssen: „Streng“ trennt minimale Routenabweichungen in eigene Cluster; „Locker“ fasst auch Einheiten mit versetzten Startpunkten oder kleinen Umwegen zusammen. Weiter unten kannst du die einzelnen Toleranzen individuell anpassen.</string>
+    <string name="cluster_info_tuning_desc">In den erweiterten Einstellungen können Matching-Toleranzen und die Cluster-Neuberechnung angepasst werden. „Streng“ trennt minimale Routenabweichungen, während „Locker“ auch versetzte Startpunkte zusammenfasst.</string>
+    <string name="cluster_info_open_advanced_tuning">Zu den erweiterten Einstellungen</string>
     <string name="cluster_info_close">Verstanden</string>
 
     <!-- Workout Cluster Stats -->
@@ -1351,6 +1412,15 @@
     <string name="cluster_stats_yesterday">Gestern</string>
     <string name="cluster_stats_days_ago">vor %1$d Tagen</string>
     <string name="cluster_stats_weeks_ago">vor %1$d Wochen</string>
+
+    <!-- ATT-4067: Historical Effort Trend Chart for Workout Clusters -->
+    <string name="cluster_trend_title">Leistungsverlauf</string>
+    <string name="cluster_trend_duration">Dauer</string>
+    <string name="cluster_trend_speed">Tempo</string>
+    <string name="cluster_trend_pace">Pace</string>
+    <string name="cluster_trend_pr">Bestzeit</string>
+    <string name="cluster_trend_avg">Ø</string>
+    <string name="cluster_trend_outlier">Ausreißer</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Runden (%1$d)</string>
@@ -1557,9 +1627,15 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Leistungszonen</string>
-    <!-- Telemetry Frequency Histogram (ATT-1845 / REQ-UI-231) -->
+    <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 Zonen</string>
+    <string name="zone_mode_columns">Säulen</string>
+    <string name="zone_mode_stacked_bar">Balken</string>
     <string name="zone_mode_histogram">Histogramm</string>
+    <string name="power_histogram_overflow_label">&gt; %1$d %2$s</string>
+    <string name="power_histogram_return_label">%1$d–%2$d %3$s</string>
+    <string name="power_histogram_overflow_desc">Zur Sprint-Tail-Ansicht über %1$d %2$s wechseln</string>
+    <string name="power_histogram_return_desc">Zurück zum Haupt-Histogramm 0 bis %1$d %2$s</string>
     <string name="aftermath_laps_splits_title">Runden &amp; Zwischenzeiten</string>
     <string name="split_badge_best">Beste</string>
     <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
@@ -1581,6 +1657,9 @@
     <string name="settings_lap_display_mode_table">Tabelle</string>
     <string name="settings_lap_display_mode_visualizer">Visualizer</string>
     <string name="settings_lap_display_mode_both">Beide</string>
+
+    <!-- Configurable Default Zone Card Display Mode (ATT-3676 / REQ-UI-372.8) -->
+    <string name="settings_zone_card_display_mode_title">Zonenkarten-Anzeigemodus</string>
 
     <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
     <string name="workout_source_tracked">Aufgezeichnet</string>
@@ -1606,8 +1685,30 @@
     <string name="permission_rationale_open_settings">Einstellungen öffnen</string>
     <string name="permission_rationale_settings_explanation">Die Standortberechtigung wurde verweigert. Ohne Standortzugriff können keine GPS-Streckendaten aufgezeichnet werden. Du kannst die Berechtigung in den App-Einstellungen aktivieren.</string>
     <string name="permission_rationale_precise_location_explanation">Der genaue Standort (GPS) ist für die Trainingsaufzeichnung erforderlich. Der ungefähre Standort kann Distanz, Geschwindigkeit, Route und Höhenmeter nicht erfassen. Bitte wähle \'Genau\' in den Berechtigungen.</string>
+    <!-- Decoupled Multi-Permission Cascade & Sensor Discovery (ATT-3998 / REQ-PRI-006) -->
+    <string name="bluetooth_permission_scan_required">Bluetooth-Berechtigung ist erforderlich, um nach Sensoren in der Nähe zu suchen.</string>
+    <string name="grant_permission">Erteilen</string>
+    <string name="permission_rationale_notification_subtitle">Benachrichtigungen halten Trainingsdauer, Distanz, Rundenalarme und Schnellsteuerungen während der Hintergrundaufzeichnung zugänglich.</string>
+    <string name="permission_rationale_bluetooth_subtitle">Die Berechtigung für Geräte in der Nähe verbindet aTrainingTracker mit Ihren gekoppelten Herzfrequenz-, Leistungs-, Geschwindigkeits- und Trittfrequenzsensoren.</string>
     <string name="action_view_workout">Anzeigen</string>
     <string name="permission_warning_badge_desc">Standortberechtigung fehlt</string>
+
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">App-Berechtigungen</string>
+    <string name="permission_onboarding_step_format">Schritt %1$d von %2$d</string>
+    <string name="permission_onboarding_skip_setup">Einrichtung überspringen</string>
+    <string name="permission_onboarding_skip_step">Diesen Schritt überspringen</string>
+    <string name="permission_onboarding_grant">Berechtigung erteilen</string>
+    <string name="permission_onboarding_continue">Weiter</string>
+    <string name="permission_onboarding_finish">Einrichtung abschließen</string>
+    <string name="permission_onboarding_location_title">Standort &amp; GPS-Aufzeichnung</string>
+    <string name="permission_onboarding_location_desc">Ermöglicht die präzise Aufzeichnung deiner Trainingsroute, Distanz, Geschwindigkeit und Höhenmeter – auch bei gesperrtem Bildschirm im Hintergrund.</string>
+    <string name="permission_onboarding_bluetooth_title">Bluetooth-Sensoren</string>
+    <string name="permission_onboarding_bluetooth_desc">Ermöglicht die Suche und Verbindung von Herzfrequenzgurten, Leistungsmessern, Smart-Trainern sowie Geschwindigkeits- und Trittfrequenzsensoren.</string>
+    <string name="permission_onboarding_notification_title">Trainings-Benachrichtigungen</string>
+    <string name="permission_onboarding_notification_desc">Zeigt den aktiven Trainingsstatus, Rundenzeiten und Sensor-Akkustände in der Benachrichtigungsleiste und auf dem Sperrbildschirm an.</string>
+    <string name="permission_onboarding_battery_title">Akku-Optimierungsausnahme</string>
+    <string name="permission_onboarding_battery_desc">Verhindert, dass das Android-System die Aufzeichnung während langer Einheiten im Hintergrund oder bei ausgeschaltetem Bildschirm unerwartet beendet.</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">Training unterbrochen</string>
@@ -1628,8 +1729,8 @@
     <string name="import_fit_title">FIT-Dateien importieren</string>
     <string name="import_fit_description">Aktivitäten von Garmin, Wahoo, Hammerhead oder Smartwatches importieren (.fit).</string>
     <string name="import_fit_button">FIT-Dateien wählen</string>
+    <string name="import_fit_folder_button">Ordner scannen (FIT)</string>
     <string name="import_fit_dropbox_button">Dropbox scannen (FIT)</string>
-    <string name="import_fit_gdrive_button">Google Drive scannen (FIT)</string>
     <string name="import_fit_progress">Importiere FIT-Dateien (%1$d von %2$d)…</string>
     <string name="import_fit_summary_success">%1$d Aktivitäten erfolgreich importiert (%2$d Duplikate übersprungen).</string>
     <string name="import_fit_summary_with_errors">%1$d Aktivitäten importiert, %2$d Duplikate übersprungen, %3$d fehlgeschlagen.</string>
@@ -1637,13 +1738,15 @@
     <string name="import_tcx_title">TCX-Dateien importieren</string>
     <string name="import_tcx_description">Aktivitäten aus Training Center XML-Dateien importieren (.tcx).</string>
     <string name="import_tcx_button">Lokale TCX-Datei wählen</string>
+    <string name="import_tcx_folder_button">Ordner scannen (TCX)</string>
     <string name="import_tcx_dropbox_button">Dropbox scannen (TCX)</string>
-    <string name="import_tcx_gdrive_button">Google Drive scannen (TCX)</string>
     <string name="import_gpx_title">GPX-Dateien importieren</string>
     <string name="import_gpx_description">Strecken und Aktivitäten aus GPS Exchange Format importieren (.gpx).</string>
     <string name="import_gpx_button">Lokale GPX-Datei wählen</string>
+    <string name="import_gpx_folder_button">Ordner scannen (GPX)</string>
     <string name="import_gpx_dropbox_button">Dropbox scannen (GPX)</string>
-    <string name="import_gpx_gdrive_button">Google Drive scannen (GPX)</string>
+    <string name="import_directory_scanning">Ordner wird nach Trainings durchsucht…</string>
+    <string name="import_directory_no_files_found">Keine kompatiblen %1$s-Trainingsdateien im ausgewählten Ordner gefunden.</string>
     <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
     <string name="invalid_workout_file_format">Ungültiges Dateiformat. Bitte wählen Sie eine %1$s-Datei aus.</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
@@ -1806,9 +1909,6 @@
     <string name="ant_status_card_desc">Für ANT+ Sensoren auf modernen Smartphones ist ein USB-OTG-Adapter mit ANT+ USB-Stick sowie ANT+ Systemdienste erforderlich.</string>
     <string name="ant_status_card_action">Status prüfen</string>
     <string name="ant_status_usb_dongle_note">Moderne Smartphones besitzen keine integrierten ANT+-Funkchips. Ein externer USB-OTG-Adapter mit ANT+ USB-Stick ist für den Empfang nötig.</string>
-    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
-    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
-    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
     <string name="ant_service_installed">Installiert</string>
     <string name="ant_service_not_installed">Nicht installiert</string>
     <string name="ant_service_install_button">Installieren</string>
@@ -1822,22 +1922,7 @@
     <string name="ant_dialog_view_status">ANT+ Status anzeigen</string>
     <string name="ant_dialog_dismiss">Verstanden</string>
 
-    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
-    <string name="tuning_map_camera_section_title">Kartenkamera &amp; Follow-Me-Navigation</string>
-    <string name="tuning_map_base_zoom_title">Follow-Me Basis-Zoom</string>
-    <string name="tuning_map_base_zoom_desc">Basis-Zoomstufe im Stillstand (0 km/h) im Follow-Me-Trackingmodus (höherer Wert = näher herangezoomt)</string>
-    <string name="tuning_map_speed_zoom_enabled_title">Geschwindigkeitsabhängiger Zoom</string>
-    <string name="tuning_map_speed_zoom_enabled_desc">Zoomt bei zunehmender Geschwindigkeit schrittweise heraus für mehr Vorausschau</string>
-    <string name="tuning_map_cruising_zoom_title">Reisegeschwindigkeit-Zoom (bei 20 km/h)</string>
-    <string name="tuning_map_cruising_zoom_desc">Ziel-Zoomstufe bei typischer Fahrgeschwindigkeit (20 km/h) (höherer Wert = näher herangezoomt)</string>
-    <string name="tuning_map_tilt_angle_title">Kamera-Neigungswinkel</string>
-    <string name="tuning_map_tilt_angle_desc">Perspektivischer Neigungswinkel für die 3D-Navigation (0° ist flaches 2D, 70° volle 3D-Perspektive)</string>
-    <string name="tuning_map_lookahead_padding_title">Vorausschau-Kameraabstand</string>
-    <string name="tuning_map_lookahead_padding_desc">Anzeigebereich-Puffer in Prozent, um die Fahrerposition nach unten zu versetzen und den Blick auf die Strecke nach vorn zu maximieren (höherer Wert = Fahrer weiter unten / mehr Vorausschau)</string>
-    <string name="tuning_map_follow_me_speed_smoothing_title">Geschwindigkeits-Zoom-Glättung</string>
-    <string name="tuning_map_follow_me_speed_smoothing_desc">Dämpfungsfaktor für Geschwindigkeitsänderungen beim Follow-Me-Zoom (niedriger Wert = sanfter, höherer Wert = schnellere Reaktion)</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_title">Kompass- / Drehungsglättung</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_desc">Dämpfungsfaktor für Kameradrehungen im Follow-Me-Modus (niedriger Wert = sanfter, höherer Wert = schnellere Reaktion)</string>
+
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">NEU</string>
@@ -1849,4 +1934,281 @@
     <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
     <string name="tuning_nav_cue_distance_title">Distanz für Abbiegehinweise</string>
     <string name="tuning_nav_cue_distance_desc">Entfernung vor dem Abbiegen zur Anzeige von Navigationshinweisen</string>
+    <!-- First-Time Stop Tracking Coachmark (ATT-3387 / REQ-UI-367) -->
+    <string name="coachmark_stop_tracking_hint">Wische nach rechts oder tippe auf den ersten Reiter links, um die Aufzeichnung zu pausieren oder zu beenden.</string>
+    <string name="coachmark_stop_tracking_show_tab">Steuerung anzeigen</string>
+    <string name="coachmark_stop_tracking_dismiss">Verstanden</string>
+
+    <!-- Crop Start and End Points of Recorded Workout (ATT-3274 / REQ-UI-368) -->
+    <string name="crop_workout_title">Track zuschneiden</string>
+    <string name="crop_workout_action">Zuschneiden</string>
+    <string name="crop_workout_confirm_title">Track dauerhaft zuschneiden?</string>
+    <string name="crop_workout_confirm_message">Möchtest du den Track wirklich zuschneiden? Die Daten außerhalb des gewählten Bereichs werden dauerhaft gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.</string>
+    <string name="crop_workout_confirm_action">Unwiderruflich zuschneiden</string>
+    <string name="crop_workout_progress">Track wird zugeschnitten…</string>
+    <string name="crop_workout_success">Track erfolgreich zugeschnitten</string>
+    <string name="crop_insufficient_storage">Nicht genügend freier Speicherplatz zum Zuschneiden (mindestens %d MB erforderlich).</string>
+    <string name="crop_export_failed_retry">Neuerstellung der Exportdateien fehlgeschlagen. Bitte erneut versuchen.</string>
+    <string name="crop_force_reexport">Export wiederholen</string>
+    <!-- Grade Legend (ATT-3391 / REQ-UI-371) -->
+    <string name="grade_legend_under_2">&lt; 2%</string>
+    <string name="grade_legend_2_to_5">2 – 5%</string>
+    <string name="grade_legend_5_to_10">5 – 10%</string>
+    <string name="grade_legend_10_to_15">10 – 15%</string>
+    <string name="grade_legend_15_to_20">15 – 20%</string>
+    <string name="grade_legend_20_to_25">20 – 25%</string>
+    <string name="grade_legend_over_25">&gt; 25%</string>
+    <!-- Automated Zone Calculation (ATT-3188) -->
+    <string name="zone_calc_button">Zonen berechnen</string>
+    <string name="zone_calc_dialog_title_power">Rad-Leistungszonen berechnen</string>
+    <string name="zone_calc_dialog_title_hr">Herzfrequenz-Zonen berechnen</string>
+    <string name="zone_calc_ftp_label">Functional Threshold Power (FTP)</string>
+    <string name="zone_calc_hr_max_label">Maximale Herzfrequenz (HFmax)</string>
+    <string name="zone_calc_hr_rest_label">Ruheherzfrequenz (HFruhe)</string>
+    <string name="zone_calc_method_label">Berechnungsmethode</string>
+    <string name="zone_calc_method_max_hr">% HFmax</string>
+    <string name="zone_calc_method_karvonen">Karvonen (HRR)</string>
+    <string name="zone_calc_preview_title">Vorschau berechneter Zonen</string>
+    <string name="zone_calc_apply_button">Übernehmen</string>
+    <string name="zone_calc_cancel_button">Abbrechen</string>
+    <string name="zone_calc_status_calculated">Berechnet</string>
+    <string name="zone_calc_status_customized">Benutzerdefiniert</string>
+    <string name="zone_calc_calibration_recommended">Kalibrierung empfohlen</string>
+    <string name="zone_calc_last_updated">Zuletzt aktualisiert: %s</string>
+    <string name="zone_calc_overwrite_warning_title">Manuelle Zonen überschreiben?</string>
+    <string name="zone_calc_overwrite_warning_message">Achtung: Dies überschreibt alle manuell festgelegten Zonen mit den Standard-Zonen für FTP %d W. Möchtest du fortfahren?</string>
+    <string name="zone_calc_error_ftp_range">FTP muss zwischen %1$d W und %2$d W liegen</string>
+    <string name="zone_calc_error_hr_max_range">HFmax muss zwischen %1$d bpm und %2$d bpm liegen</string>
+    <string name="zone_calc_error_hr_rest_range">HFruhe muss zwischen %1$d bpm und %2$d bpm liegen</string>
+    <string name="zone_calc_error_hr_max_greater_rest">HFmax muss größer als HFruhe sein</string>
+    <string name="zone_calc_error_karvonen_delta">HFmax muss mindestens 20 bpm über HFruhe liegen</string>
+    <string name="zone_calc_error_monotonicity">Wert muss zwischen %1$d und %2$d liegen</string>
+    <string name="zone_onboarding_hr_banner">Neuer Herzfrequenzsensor gekoppelt. Richten Sie Ihre Herzfrequenzzonen für personalisiertes Trainings-Feedback ein.</string>
+    <string name="zone_onboarding_pwr_banner">Neuer Leistungsmesser gekoppelt. Richten Sie Ihre Leistungszonen ein oder berechnen Sie diese aus Ihrer FTP.</string>
+    <string name="zone_onboarding_dismiss">Verstanden</string>
+    <string name="zone_onboarding_prompt_hr_title">Herzfrequenz-Sensor gekoppelt</string>
+    <string name="zone_onboarding_prompt_hr_message">Möchtest du deine Herzfrequenz-Zonen jetzt konfigurieren?</string>
+    <string name="zone_onboarding_prompt_pwr_title">Leistungsmesser gekoppelt</string>
+    <string name="zone_onboarding_prompt_pwr_message">Möchtest du deine Rad-Leistungszonen jetzt konfigurieren?</string>
+    <string name="zone_onboarding_action_configure">Zonen konfigurieren</string>
+    <string name="zone_onboarding_action_later">Nicht jetzt</string>
+
+    <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="tuning_auto_pause_title">Auto-Pause</string>
+    <string name="tuning_auto_pause_desc">Aufzeichnung bei Stillstand automatisch pausieren</string>
+    <string name="tuning_auto_pause_bike_title">Radfahren</string>
+    <string name="tuning_auto_pause_run_title">Laufen</string>
+    <string name="tuning_auto_pause_other_title">Andere Sportarten</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Mindestgeschwindigkeit für Pause</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Geschwindigkeit, unter der die Aufzeichnung pausiert wird</string>
+    <string name="tuning_auto_pause_debounce_title">Verzögerung bis zur Pause</string>
+    <string name="tuning_auto_pause_debounce_desc">Dauer unterhalb der Schwelle, bevor pausiert wird</string>
+    <string name="tuning_speed_value_format">%1$d %2$s</string>
+    <string name="tuning_seconds_value_format">%1$d s</string>
+    <string name="cockpit_auto_pause_badge">Auto-Pause</string>
+    <string name="cockpit_auto_pause_resume">Jetzt fortsetzen</string>
+    <string name="cockpit_speed_sensor_lost">Geschwindigkeitssensor verloren</string>
+
+    <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
+    <string name="athlete_weight_title">Athletengewicht</string>
+    <string name="athlete_weight_label">Gewicht</string>
+    <string name="athlete_weight_dialog_title">Athletengewicht konfigurieren</string>
+    <string name="athlete_weight_save">Speichern</string>
+    <string name="athlete_weight_unconfigured">Nicht konfiguriert</string>
+    <string name="athlete_weight_invalid">Bitte geben Sie ein gültiges Gewicht ein</string>
+    <string name="athlete_weight_card_description">Erforderlich zur Berechnung des Echtzeit-Leistungsgewichts (W/kg).</string>
+    <string name="athlete_weight_clear">Löschen</string>
+    <string name="athlete_weight_edit">Bearbeiten</string>
+
+    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, ATT-3851, REQ-UI-391, REQ-UI-397) -->
+    <string name="drawer_athlete_profile">Profil &amp; Zonen</string>
+    <string name="athlete_profile_title">Profil &amp; Zonen</string>
+    <string name="athlete_profile_tab_profile">Profil</string>
+    <string name="athlete_profile_add_entry">Messwert hinzufügen</string>
+    <string name="athlete_profile_edit_entry">Messwert bearbeiten</string>
+    <string name="athlete_profile_metric_weight">Gewicht</string>
+    <string name="athlete_profile_metric_hr_rest">Ruhe-HF</string>
+    <string name="athlete_profile_metric_ftp">FTP</string>
+    <string name="athlete_profile_metric_w_per_kg">W/kg</string>
+    <string name="athlete_profile_chart_title">Verlauf</string>
+    <string name="athlete_profile_range_1m">1M</string>
+    <string name="athlete_profile_range_3m">3M</string>
+    <string name="athlete_profile_range_6m">6M</string>
+    <string name="athlete_profile_range_1y">1J</string>
+    <string name="athlete_profile_range_all">Alle</string>
+    <string name="athlete_profile_history_title">Messwert-Historie</string>
+    <string name="athlete_profile_filter_all">Alle</string>
+    <string name="athlete_profile_empty_chart">Keine Messwerte im gewählten Zeitraum.</string>
+    <string name="athlete_profile_empty_history">Noch keine Messwerte erfasst. Tippen Sie auf +, um Gewicht, Ruhe-HF oder FTP einzutragen.</string>
+    <string name="athlete_profile_date_label">Datum</string>
+    <string name="athlete_profile_value_label">Wert (%1$s)</string>
+    <string name="athlete_profile_delete_title">Messwert löschen?</string>
+    <string name="athlete_profile_delete_message">%1$s (%2$s) vom %3$s löschen?</string>
+
+    <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
+    <string name="elevation_profile_empty_state">Höhenprofil — wartet auf Strecke oder Aufzeichnung</string>
+
+    <!-- ATT-3852: Categorized & Searchable SensorType Selector (REQ-UI-395) -->
+    <string name="sensor_category_time_and_laps">Zeit &amp; Runden</string>
+    <string name="sensor_category_speed_pace_and_distance">Geschwindigkeit, Pace &amp; Distanz</string>
+    <string name="sensor_category_cadence_and_running">Trittfrequenz &amp; Laufen</string>
+    <string name="sensor_category_heart_rate_and_energy">Herzfrequenz &amp; Energie</string>
+    <string name="sensor_category_power_and_pedaling">Leistung &amp; Tritteffizienz</string>
+    <string name="sensor_category_elevation_and_navigation">Höhe &amp; Navigation</string>
+    <string name="sensor_category_system_environment_and_diagnostics">System, Umwelt &amp; Diagnose</string>
+    <string name="sensor_type_search_hint">Messwert oder Einheit suchen…</string>
+    <string name="sensor_type_no_matches">Keine passenden Messwerte gefunden</string>
+
+    <!-- ATT-3862: Critical Power (CP), W', and W'bal (REQ-UI-399) -->
+    <string name="w_prime_bal">W\'-Bilanz (Anaerober Akku)</string>
+    <string name="w_prime_bal_short">W\'bal</string>
+    <string name="athlete_profile_metric_cp">CP</string>
+    <string name="athlete_profile_metric_w_prime">W\'</string>
+    <string name="athlete_profile_cp_estimator_title">2-Punkt CP- &amp; W\'-Rechner</string>
+    <string name="athlete_profile_cp_estimator_short_power">Kurze Leistung (W)</string>
+    <string name="athlete_profile_cp_estimator_short_sec">Kurze Dauer (s)</string>
+    <string name="athlete_profile_cp_estimator_long_power">Lange Leistung (W)</string>
+    <string name="athlete_profile_cp_estimator_long_sec">Lange Dauer (s)</string>
+    <string name="athlete_profile_cp_estimator_apply">Schätzung übernehmen (%1$d W / %2$.1f kJ)</string>
+    <string name="workout_w_prime_bal_min_format">Min. W\'bal: %1$.1f kJ (%2$.0f%%)</string>
+    <string name="workout_w_prime_empty_tank">Tank leer (&lt;10%)</string>
+    <string name="w_prime_battery_pct">%1$d%%</string>
+    <string name="w_prime_warning_low_battery">W\'-Akku schwach (&lt;20%)</string>
+
+    <!-- ATT-3861: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400) -->
+    <string name="efficiency_factor_short">EF</string>
+    <string name="aerobic_decoupling_short">Pw:Hr</string>
+    <string name="workout_ef_pwhr_format">EF: %1$.2f W/bpm • Pw:Hr: %2$.1f%%</string>
+    <string name="workout_ef_pahr_format">EF: %1$.2f m/min/bpm • Pa:Hr: %2$.1f%%</string>
+    <string name="workout_ef_only_pw_format">EF: %1$.2f W/bpm</string>
+    <string name="workout_ef_only_pa_format">EF: %1$.2f m/min/bpm</string>
+    <string name="workout_decoupling_coupled">Stabil (&lt;5%)</string>
+    <string name="workout_decoupling_drift">Hohe Drift (≥5%)</string>
+
+    <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
+    <string name="athlete_profile_pmc_title">Leistungsmanagement (CTL / ATL / TSB)</string>
+    <string name="athlete_profile_pmc_ctl_label">Fitness (CTL)</string>
+    <string name="athlete_profile_pmc_atl_label">Ermüdung (ATL)</string>
+    <string name="athlete_profile_pmc_tsb_label">Form (TSB)</string>
+    <string name="athlete_profile_pmc_acwr_label">Belastungsquote (ACWR)</string>
+    <string name="athlete_profile_pmc_ramp_label">7T-Steigerung</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/Wo.</string>
+    <string name="athlete_profile_pmc_ramp_warning">Hoher Anstieg</string>
+    <string name="athlete_profile_pmc_zone_fresh">Wettkampfbereit</string>
+    <string name="athlete_profile_pmc_zone_neutral">Neutral</string>
+    <string name="athlete_profile_pmc_zone_optimal">Optimaler Aufbau</string>
+    <string name="athlete_profile_pmc_zone_fatigue">Hohe Ermüdung</string>
+    <string name="athlete_profile_pmc_acwr_under">Tapering</string>
+    <string name="athlete_profile_pmc_acwr_sweet_spot">Sweet Spot</string>
+    <string name="athlete_profile_pmc_acwr_caution">Hohe Last</string>
+    <string name="athlete_profile_pmc_acwr_danger">Risikobereich</string>
+    <string name="athlete_profile_pmc_empty">Noch keine Trainingsbelastungsdaten vorhanden.</string>
+
+    <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->
+    <string name="workout_power_metrics_np_format">NP: %1$.0f W</string>
+    <string name="workout_power_metrics_if_format">IF: %1$.2f</string>
+    <string name="workout_power_metrics_tss_format">TSS: %1$.0f</string>
+    <string name="workout_power_metrics_work_format">Arbeit: %1$.0f kJ</string>
+    <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
+    <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
+
+    <!-- Physiology & Training Models (ATT-3929 / REQ-UI-403) -->
+    <string name="tuning_cat_physiology_models">Physiologie &amp; Trainingsmodelle</string>
+    <string name="tuning_physiology_none_enabled">Nur Basismetriken</string>
+    <string name="tuning_physiology_coggan_short">Coggan</string>
+    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
+    <string name="tuning_physiology_cp_short">CP / W\'bal</string>
+    <string name="tuning_physiology_coggan_title">Coggan-Leistungsmetriken (NP, IF, TSS)</string>
+    <string name="tuning_physiology_coggan_desc">Normalized Power, Intensity Factor, Training Stress Score und Variability Index in Workouts und Cockpit anzeigen</string>
+    <string name="tuning_physiology_pmc_title">Leistungsmanagement (PMC)</string>
+    <string name="tuning_physiology_pmc_desc">Fitness (CTL), Ermüdung (ATL) und Form (TSB) unter Profil &amp; Zonen anzeigen</string>
+    <string name="tuning_physiology_ef_title">Aerobe Effizienz &amp; Entkopplung</string>
+    <string name="tuning_physiology_ef_desc">Effizienzfaktor (EF) und aerobe Entkopplung (Pw:Hr / Pa:Hr) in Trainingsübersicht und Details anzeigen</string>
+    <string name="tuning_physiology_cp_title">Critical Power &amp; Anaerobe Batterie (CP, W\', W\'bal)</string>
+    <string name="tuning_physiology_cp_desc">Critical Power, W\' und dynamische W\'bal-Batterie in Profil &amp; Zonen, Cockpit und Trainingsanalyse anzeigen</string>
+    <string name="tuning_physiology_show_in_workout_summary">In Workout-Zusammenfassung anzeigen</string>
+    <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
+    <string name="workout_domain_efficiency">Effizienz</string>
+    <string name="workout_ef_short">EF</string>
+    <string name="workout_pwhr_short">Pw:Hr</string>
+    <string name="workout_pahr_short">Pa:Hr</string>
+    <string name="workout_ef_value_pw_format">%1$.2f W/bpm</string>
+    <string name="workout_ef_value_pa_format">%1$.2f m/min/bpm</string>
+    <string name="workout_decoupling_pct_format">%1$.1f%%</string>
+    <string name="workout_w_prime_min_kj_label">Min. W\'bal</string>
+    <string name="workout_w_prime_min_pct_label">Min. %</string>
+    <string name="workout_w_prime_min_kj_value_format">%1$.1f kJ</string>
+    <string name="workout_w_prime_min_pct_value_format">%1$.0f%%</string>
+    <string name="workout_power_label_work">Arbeit</string>
+    <string name="workout_power_value_watts_format">%1$.0f W</string>
+    <string name="workout_power_value_if_format">%1$.2f</string>
+    <string name="workout_power_value_tss_format">%1$.0f</string>
+    <string name="workout_power_value_work_format">%1$.0f kJ</string>
+    <string name="workout_detail_tab_overview">Übersicht</string>
+    <string name="workout_detail_tab_map_graphs">Karte &amp; Diagramme</string>
+    <string name="workout_detail_tab_zones">Zonen</string>
+    <string name="workout_detail_tab_laps_segments">Runden &amp; Segmente</string>
+    <string name="workout_detail_tab_custom_default">Eigener Tab</string>
+    <string name="workout_detail_section_details">Trainingsmetriken &amp; Übersicht</string>
+    <string name="workout_detail_tabs_config_title">Detail-Tabs konfigurieren</string>
+    <string name="workout_detail_tabs_config_subtitle">Tabs und Sektionen der Trainingsdetails individuell anpassen</string>
+    <string name="workout_detail_tabs_add_tab">Tab hinzufügen</string>
+    <string name="workout_detail_tabs_rename_tab">Tab-Name</string>
+    <string name="workout_detail_tabs_delete_tab">Tab löschen</string>
+    <string name="workout_detail_tabs_reset_defaults">Standard-Tabs wiederherstellen</string>
+    <string name="workout_detail_tabs_sections_header">Zugewiesene Sektionen</string>
+    <string name="workout_detail_tabs_map_pinned_hint">Die Karte wird im Tab immer oben fixiert</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">Abschnittstrennlinie hinzufügen</string>
+    <string name="cockpit_section_divider_edit">Abschnittstrennlinie bearbeiten</string>
+    <string name="cockpit_section_divider_dialog_title">Abschnittstrennlinie</string>
+    <string name="cockpit_section_divider_title_label">Mini-Titel (optional)</string>
+    <string name="cockpit_section_divider_chip_power">Leistung</string>
+    <string name="cockpit_section_divider_chip_heart_rate">Puls</string>
+    <string name="cockpit_section_divider_chip_lap">Runde</string>
+    <string name="cockpit_section_divider_chip_pacing">Pacing</string>
+    <string name="cockpit_section_divider_chip_navigation">Navigation</string>
+    <string name="cockpit_section_divider_chip_total">Gesamt</string>
+    <string name="cockpit_section_divider_delete">Trennlinie entfernen</string>
+
+    <!-- Sensor Onboarding & Empty State (REQ-SEN-020 / ATT-4051) -->
+    <string name="onboarding_pair_sensor_action">Sensor koppeln</string>
+    <string name="devices_empty_state_search_hint">Suche nach Bluetooth-LE- oder ANT+-Sensoren in der Nähe</string>
+    <string name="devices_action_search_sensors">Sensoren suchen</string>
+    <string name="error_workout_table_name_too_long">Name der Trainingstabelle überschreitet SQLite-Längenbegrenzung (64 Zeichen)</string>
+
+    <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
+    <string name="workout_card_reorder_toggle">Kartenreihenfolge &amp; Sichtbarkeit (%1$d aktiv)</string>
+    <string name="settings_workout_details_title">Trainings-Details (Detail-Ansicht)</string>
+
+    <!-- UI Localization Parity, Units & Accessibility (REQ-UI-429 / ATT-4026) -->
+    <string name="crop_start_trim">Start: +%1$s</string>
+    <string name="crop_end_trim">Ende: -%1$s</string>
+    <string name="crop_distance_label">Distanz:</string>
+    <string name="crop_duration_label">Dauer:</string>
+    <string name="crop_avg_speed_label">Ø Geschwindigkeit:</string>
+    <string name="import_map_data_title">Daten für Import zuordnen</string>
+    <string name="none">Keine</string>
+    <string name="unknown">Unbekannt</string>
+    <string name="destination_not_yet_implemented">Festlegen eines neuen Inhaltsziels ist noch nicht implementiert</string>
+    <string name="unit_watt">W</string>
+    <string name="lap_placeholder_format">Runde %1$d</string>
+    <string name="period_no_gps_data">Keine GPS-Daten für diesen Zeitraum</string>
+    <string name="marker_summit">Gipfel</string>
+    <string name="marker_lap_start">Rundenstart</string>
+    <string name="marker_lap_end">Rundenende</string>
+    <string name="cd_fastest_split">Schnellster Split</string>
+    <string name="cd_switch_view_mode">Ansichtsmodus wechseln</string>
+    <string name="connect_with_strava">Mit Strava verbinden</string>
+    <string name="cd_add_row">Zeile hinzufügen</string>
+    <string name="cd_add_column">Spalte hinzufügen</string>
+    <string name="cd_add_before">Davor hinzufügen</string>
+    <string name="cd_delete_tab">Tab löschen</string>
+    <string name="cd_add_after">Danach hinzufügen</string>
+    <string name="back">Zurück</string>
+    <string name="close">Schließen</string>
+    <string name="clear">Löschen</string>
+    <string name="select_route">Route auswählen</string>
+    <string name="equipment">Ausrüstung</string>
 </resources>

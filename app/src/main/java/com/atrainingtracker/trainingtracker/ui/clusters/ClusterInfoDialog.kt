@@ -18,6 +18,7 @@ package com.atrainingtracker.trainingtracker.ui.clusters
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -30,20 +31,22 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomShe
 
 /**
  * Educational informational bottom sheet presenting the 3D topological clustering algorithm
- * ("Lieblingsstrecken" / Favorite Tracks) to athletes (REQ-UI-149, TST-UI-102).
+ * ("Lieblingsstrecken" / Favorite Tracks) to athletes (REQ-UI-149, TST-UI-102, REQ-SET-076).
  *
  * Covers:
  * 1. The concept and benefits of Lieblingsstrecken (automatic naming, gear assignment, comparison).
  * 2. The 3D topological fingerprint metrics (Start, End, Apex / Max Line Distance, Distance, Min/Max Altitude).
  * 3. Sport type awareness and dynamic centroid learning.
- * 4. Sensitivity adjustment (Master Slider) and individual parameter fine-tuning.
+ * 4. Sensitivity adjustment (Master Slider) and individual parameter fine-tuning in Advanced Settings.
  *
  * @param onDismissRequest Callback invoked when the user dismisses the dialog via "Got it", close icon, or swipe down.
+ * @param onNavigateToAdvancedSettings Callback invoked to navigate directly to Advanced Settings.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClusterInfoDialog(
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    onNavigateToAdvancedSettings: () -> Unit
 ) {
     AppModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -126,6 +129,22 @@ fun ClusterInfoDialog(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        onDismissRequest()
+                        onNavigateToAdvancedSettings()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.cluster_info_open_advanced_tuning))
+                }
             }
 
             Spacer(Modifier.height(8.dp))

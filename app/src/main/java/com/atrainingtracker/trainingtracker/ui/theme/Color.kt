@@ -106,9 +106,14 @@ val surfaceContainerDark = Color(0xFF20242E)
 val surfaceContainerHighDark = Color(0xFF282F3D)
 val surfaceContainerHighestDark = Color(0xFF1B2436) // Coordinated slate-blue tab background (REQ-UI-190)
 
-// AMOLED Pure Black Cockpit Theme Colors (ATT-1263 / ATT-1264 / REQ-UI-169 / REQ-UI-171)
+// AMOLED Pure Black Cockpit Theme Colors (ATT-1263 / ATT-1264 / REQ-UI-169 / REQ-UI-171 / REQ-UI-381)
 val AmoledBackground = Color(0xFF000000)
 val AmoledSurface = Color(0xFF000000)
+val AmoledPrimaryContainer = Color(0xFF000000)
+val AmoledOnPrimaryContainer = Color(0xFFFFFFFF)
+val AmoledSurfaceBright = Color(0xFF1A1A1A)
+val AmoledSurfaceContainerHigh = Color(0xFF121212)
+val AmoledSurfaceContainerHighest = Color(0xFF000000)
 val AmoledOutlineVariant = Color(0xFF262626) // Subtle tile divider border (ATT-1264 / REQ-UI-171)
 val AmoledOutline = Color(0xFF38383A)
 val AmoledOnSurfaceVariant = Color(0xFF9E9E9E) // Muted grey for labels and units (ATT-1264 / REQ-UI-171)
@@ -121,6 +126,7 @@ val LightWarning = Color(0xFFE65100)
 val LightWarningContainer = Color(0xFFFFE082)   // Warm Amber 200
 val LightOnWarningContainer = Color(0xFF3E2723) // Deep Brown (contrast > 10:1 on LightWarningContainer)
 val LightWarningAction = Color(0xFF6D3B00)      // Deep Amber (contrast > 7:1 on LightWarningContainer)
+val LightWarningBorder = Color(0xFFFFA000)      // Amber 700 for high-contrast light borders (REQ-UI-381)
 
 val DarkWarning = Color(0xFFFFB74D)
 val DarkWarningContainer = Color(0xFF4E2C00)    // Deep warm amber-brown
@@ -191,10 +197,54 @@ object TTColor {
     val Zone3 = Color(0xFFFFA500) // Orange
     val Zone4 = Color(0xFFFF0000) // Red
     val Zone5 = Color(0xFF9400D3) // Dark Violet
+    /**
+     * Zone 6 (Anaerobic Capacity / Extreme Grade): Warm Earthy Brown (#8B5A2B).
+     * Selected for WCAG 2.1 AA non-text contrast (3.44:1 >= 3.0:1) against [Zone7] Pure Black (#000000)
+     * on OLED displays (REQ-UI-392).
+     */
+    val Zone6 = Color(0xFF8B5A2B) // Warm Earthy Brown
+    val Zone7 = Color(0xFF000000) // Pure Black
+
+    /**
+     * Computes the WCAG 2.1 relative luminance of [color] in the range [0.0, 1.0].
+     */
+    fun relativeLuminance(color: Color): Double {
+        fun srgbToLinear(c: Float): Double {
+            val v = c.toDouble()
+            return if (v <= 0.03928) v / 12.92 else Math.pow((v + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * srgbToLinear(color.red) +
+            0.7152 * srgbToLinear(color.green) +
+            0.0722 * srgbToLinear(color.blue)
+    }
+
+    /**
+     * Computes the WCAG 2.1 contrast ratio between [foreground] and [background] in the range [1.0, 21.0].
+     */
+    fun calculateContrastRatio(foreground: Color, background: Color): Double {
+        val l1 = relativeLuminance(foreground)
+        val l2 = relativeLuminance(background)
+        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
+    }
 
     // Branding / Status
     val StravaOrange = Color(0xFFFC4C02)
     val ConnectionStatusGreen = Color(0xFF4CAF50)
+
+    // Sensor Source Availability (REQ-UI-051, ATT-4374)
+    /**
+     * Primary active sensor source section header color ("Quelle" / R.string.source_device).
+     * Material Green 800 (#2E7D32) provides strong contrast (>= 3.5:1 on dark, >= 5.1:1 on light)
+     * and aligns with [StartPoint], [ConnectionConnected], and [PmcFreshGreen].
+     */
+    val SensorSourceActive = Color(0xFF2E7D32)
+
+    /**
+     * Active standby backup sensor source section header color ("Aktive Backups" / R.string.source_active_backups).
+     * Material Green 600 (#43A047) provides a visibly lighter green tone while meeting WCAG AA
+     * bold contrast (>= 3.3:1 on light, >= 5.4:1 on dark) and harmonizing with [ConnectionStatusGreen].
+     */
+    val SensorBackupActive = Color(0xFF43A047)
 
     // Route Visualization
     val RouteSelected = Color(0xFF1565C0) // Material Blue 800 (Royal Blue)
@@ -208,4 +258,72 @@ object TTColor {
     val ApexPoint = Color(0xFF1565C0)  // Material Blue 800
     val MinAltitude = Color(0xFF1565C0) // Material Blue 800 (same as Apex / Max Line Distance)
     val MaxAltitude = Color(0xFF1565C0) // Material Blue 800 (same as Apex / Max Line Distance)
+
+    // Climb Categories (REQ-UI-381)
+    val ClimbCategoryHc = Color(0xFF880E4F)
+    val ClimbCategory1 = Color(0xFFC62828)
+    val ClimbCategory2 = Color(0xFFEF6C00)
+    val ClimbCategory3 = Color(0xFFF9A825)
+    val ClimbCategory4 = Color(0xFF2E7D32)
+    val ClimbCategoryUncategorized = Color(0xFF757575)
+
+    // Climb Gradient Bands (REQ-UI-381)
+    val ClimbGradeFlat = Color(0xFF4CAF50)
+    val ClimbGradeMild = Color(0xFF8BC34A)
+    val ClimbGradeMedium = Color(0xFFFFEB3B)
+    val ClimbGradeSteep = Color(0xFFFF9800)
+    val ClimbGradeSevere = Color(0xFFF44336)
+    val ClimbGradeExtreme = Color(0xFF9C27B0)
+
+    /**
+     * Resolves the authoritative elevation profile color for a given climb slope percentage (REQ-UI-381).
+     *
+     * @param gradePercent The slope gradient expressed as a percentage (e.g. 7.5 for 7.5%).
+     * @return The corresponding [Color] token representing the gradient intensity band.
+     */
+    fun getClimbGradeColor(gradePercent: Double): Color = when {
+        gradePercent < 3.0 -> ClimbGradeFlat
+        gradePercent < 6.0 -> ClimbGradeMild
+        gradePercent < 9.0 -> ClimbGradeMedium
+        gradePercent < 12.0 -> ClimbGradeSteep
+        gradePercent < 15.0 -> ClimbGradeSevere
+        else -> ClimbGradeExtreme
+    }
+
+    // Map Canvas & Track Overlays (REQ-UI-381)
+    val DarkMapCanvas = Color(0xFF121212)
+    val DarkMapTrackCyan = Color(0xFF00E5FF)
+
+    // Geofences & Location Badges (REQ-UI-381)
+    val GeofenceFill = Color(0x332196F3)
+    val GeofenceStroke = Color(0x882196F3)
+    val GeofencePin = Color(0xFF2196F3)
+    val LocationBadgeHomeContainer = Color(0xFFE8F5E9)
+    val LocationBadgeHomeContent = Color(0xFF2E7D32)
+    val LocationBadgeWorkContainer = Color(0xFFFFF8E1)
+    val LocationBadgeWorkContent = Color(0xFFF57F17)
+    val LocationBadgeOtherContainer = Color(0xFFFFE0B2)
+    val LocationBadgeOtherContent = Color(0xFFE65100)
+
+    // Cloud & Connectivity Status (REQ-UI-381)
+    val DropboxBlue = Color(0xFF0061FE)
+    val ConnectionConnected = Color(0xFF2E7D32)
+
+    // Cockpit Gauges, Controls & Sensor Borders (REQ-UI-381)
+    val PauseAmber = Color(0xFFF59E0B)
+    val SensorActiveBorder = Color(0xFF2196F3)
+    val SensorBorderDark = Color(0xFF383838)
+    val SensorBorderLight = Color(0xFFD6D6D6)
+    val BalanceGaugeTrack = Color(0xFF1B1B1F)
+    val ZoneGaugeTrack = Color(0xFF1B1B1F)
+    val WarningBorderLight = Color(0xFFE0E0E0)
+    val WPrimeBalGreen = Color(0xFF10B981)
+
+    // Performance Management Chart (PMC) Colors (REQ-UI-401)
+    val PmcCtlBlue = Color(0xFF1E88E5)
+    val PmcAtlMagenta = Color(0xFFD81B60)
+    val PmcTsbAmber = Color(0xFFFB8C00)
+    val PmcFreshGreen = Color(0xFF2E7D32)
+    val PmcOptimalBlue = Color(0xFF1565C0)
+    val PmcCautionOrange = Color(0xFFEF6C00)
 }

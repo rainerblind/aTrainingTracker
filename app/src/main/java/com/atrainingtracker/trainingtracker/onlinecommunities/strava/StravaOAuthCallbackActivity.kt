@@ -23,10 +23,16 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import com.atrainingtracker.BuildConfig
 
+/**
+ * Handles OAuth 2.0 authorization redirect callbacks for Strava (REQ-EXT-012, ATT-4022, ATT-4668, ATT-4706).
+ *
+ * Validates the cryptographically random state parameter using [StravaOAuthStateManager]
+ * to prevent Login CSRF attacks, enforces single-use state consumption, scopes the callback
+ * URI scheme to [BuildConfig.APPLICATION_ID] to eliminate disambiguation prompts on co-installed
+ * variants, and dispatches token exchange within [StravaAuthRepository]'s structured coroutine scope.
+ */
 class StravaOAuthCallbackActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,28 +47,32 @@ class StravaOAuthCallbackActivity : Activity() {
 
     private fun handleIntent(intent: Intent?) {
         val data: Uri? = intent?.data
-        if (data != null && data.toString().startsWith(REDIRECT_URI_PREFIX)) {
+        if (data != null && data.scheme == "strava.${BuildConfig.APPLICATION_ID}" && data.host == "rainerblind.github.io" && data.toString().startsWith(REDIRECT_URI_PREFIX)) {
             val error = data.getQueryParameter("error")
             if (error != null) {
-                Log.e(TAG, "Auth error: $error")
+                Log.w(TAG, "Auth error: $error")
+                StravaOAuthStateManager.clearState(this)
+                StravaAuthRepository.getInstance().setAuthState(StravaAuthState.Error("Authorization cancelled: $error"))
+                finish()
+                return
+            }
+
+            val state = data.getQueryParameter("state")
+            val isValidState = StravaOAuthStateManager.validateAndConsumeState(state, this)
+            if (!isValidState) {
+                Log.w(TAG, "OAuth state validation failed; rejecting callback")
+                StravaAuthRepository.getInstance().setAuthState(StravaAuthState.Error("OAuth state validation failed"))
                 finish()
                 return
             }
 
             val code = data.getQueryParameter(StravaHelper.CODE)
-            if (code != null) {
+            if (!code.isNullOrEmpty()) {
                 StravaAuthRepository.getInstance().resetState()
-                // Offload the exchange to the repository.
-                // The UI (StravaUploadFragment) will be observing the repository's StateFlow via ViewModel.
-                val repository = StravaAuthRepository.getInstance()
-                
-                // We use a global scope or similar if we want it to survive activity death, 
-                // but since the repo is a singleton and we use a suspend function, 
-                // we should ideally trigger it from a scope that persists.
-                // For now, let's just trigger it.
-                kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
-                   repository.exchangeCodeForToken(code)
-                }
+                StravaAuthRepository.getInstance().exchangeCodeForTokenAsync(code)
+            } else {
+                Log.w(TAG, "Missing authorization code in callback")
+                StravaAuthRepository.getInstance().setAuthState(StravaAuthState.Error("Missing authorization code"))
             }
         }
         finish()
@@ -70,7 +80,7 @@ class StravaOAuthCallbackActivity : Activity() {
 
     companion object {
         private const val TAG = "StravaOAuthCallback"
-        private const val REDIRECT_URI_PREFIX = "strava://rainerblind.github.io"
+        internal val REDIRECT_URI_PREFIX = "strava.${BuildConfig.APPLICATION_ID}://rainerblind.github.io"
         const val StravaOAuthSuccess = "com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthSuccess"
     }
 }

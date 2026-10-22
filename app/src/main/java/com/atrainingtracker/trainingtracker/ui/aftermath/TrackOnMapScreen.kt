@@ -47,11 +47,15 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.map.*
 import androidx.compose.ui.platform.LocalContext
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.WorkoutDescription
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
+import kotlinx.coroutines.launch
 
 @Composable
 fun TrackOnMapScreen(
@@ -76,14 +80,26 @@ fun TrackOnMapScreen(
     metadataContent: (@Composable ColumnScope.() -> Unit)? = null,
     telemetryPath: List<PathPoint> = emptyList(),
     detailPreferences: WorkoutDetailPreferences? = null,
-    sectionsOrder: List<WorkoutSectionType>? = null
+    sectionsOrder: List<WorkoutSectionType>? = null,
+    tabsConfig: List<WorkoutDetailTabConfig>? = null,
+    onSaveTabsConfig: ((List<WorkoutDetailTabConfig>) -> Unit)? = null,
+    useTabbedLayout: Boolean = true
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
+    val tuningDataStore = remember { TuningPreferencesDataStore(context.applicationContext) }
+    val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
     val persistedDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = WorkoutDetailPreferences())
+    val persistedCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = WorkoutCardSectionPreferences())
     val activeDetailPrefs = detailPreferences ?: persistedDetailPrefs
     val persistedSectionsOrder by preferenceManager.workoutSectionsOrderFlow.collectAsState(initial = WorkoutSectionType.DEFAULT_ORDER)
     val activeSectionsOrder = sectionsOrder ?: persistedSectionsOrder
+    val persistedTabsConfig by preferenceManager.workoutDetailTabsOrderFlow.collectAsState(initial = WorkoutDetailTabConfig.DEFAULT_TABS)
+    val activeTabsConfig = tabsConfig ?: persistedTabsConfig
+    var showTabsConfigSheet by rememberSaveable { mutableStateOf(false) }
+    val lapStartMarkerTitle = stringResource(R.string.marker_lap_start)
+    val lapEndMarkerTitle = stringResource(R.string.marker_lap_end)
 
     val mapIndex = activeSectionsOrder.indexOf(WorkoutSectionType.MAP)
     val preMapSections = remember(activeSectionsOrder, mapIndex) {
@@ -150,15 +166,187 @@ fun TrackOnMapScreen(
         }
     }
 
-    var hrZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
-    var powerZoneDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
+    var hrZoneDisplayMode by rememberSaveable(activeDetailPrefs.zoneCardDisplayMode) { mutableStateOf<ZoneCardDisplayMode?>(null) }
+    var powerZoneDisplayMode by rememberSaveable(activeDetailPrefs.zoneCardDisplayMode) { mutableStateOf<ZoneCardDisplayMode?>(null) }
+    val effectiveHrZoneDisplayMode = hrZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode
+    val effectivePowerZoneDisplayMode = powerZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode
 
     val isElevationPostMap = postMapSections.contains(WorkoutSectionType.ELEVATION)
     val isChartsPostMap = postMapSections.contains(WorkoutSectionType.CHARTS)
 
-    val hasTracklessAltitude = !hasGpsTrack && (activeScrubPath?.any { it.altitude != 0.0 } == true)
-    val hasAltitudeData = workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != 0.0 } == true)
+    val hasTracklessAltitude = !hasGpsTrack && (activeScrubPath?.any { it.altitude != null } == true)
+    val hasAltitudeData = workoutData.minAltitude != null || (activeScrubPath?.any { it.altitude != null } == true)
 
+    val enableCpModel = tuningConfig.enableCriticalPowerModel
+    val hasTelemetrySeries = remember(activeScrubPath, enableCpModel) {
+        !activeScrubPath.isNullOrEmpty() && (
+            TelemetryMetricUtils.hasSpeedData(activeScrubPath) ||
+                TelemetryMetricUtils.hasHeartRateData(activeScrubPath) ||
+                TelemetryMetricUtils.hasPowerData(activeScrubPath) ||
+                (enableCpModel && TelemetryMetricUtils.hasWPrimeBalData(activeScrubPath))
+            )
+    }
+
+    val hasZonesData = hrZoneDistribution != null || powerZoneDistribution != null
+    val hasLapsData = splitChartData != null && workoutData.laps.size > 1
+    val sectionAvailability = remember(
+        workoutData,
+        showMap,
+        hasGpsTrack,
+        hasTracklessAltitude,
+        hasAltitudeData,
+        hasTelemetrySeries,
+        hasZonesData,
+        hasLapsData
+    ) {
+        WorkoutDetailSectionAvailability.fromWorkoutState(
+            workoutData = workoutData,
+            showMap = showMap,
+            hasGpsTrack = hasGpsTrack,
+            hasTracklessAltitude = hasTracklessAltitude,
+            hasAltitudeData = hasAltitudeData,
+            hasTelemetrySeries = hasTelemetrySeries,
+            hasZonesData = hasZonesData,
+            hasLapsData = hasLapsData
+        )
+    }
+
+    val visibleTabs = remember(activeTabsConfig, sectionAvailability, activeDetailPrefs) {
+        WorkoutDetailTabConfig.filterVisibleWorkoutDetailTabs(
+            tabs = WorkoutDetailTabConfig.validateConfigs(activeTabsConfig),
+            availability = sectionAvailability,
+            detailPreferences = activeDetailPrefs
+        )
+    }
+
+    if (showTabsConfigSheet) {
+        WorkoutDetailTabsConfigSheet(
+            tabs = activeTabsConfig,
+            onTabsChange = { updated ->
+                val validated = WorkoutDetailTabConfig.validateConfigs(updated)
+                if (onSaveTabsConfig != null) {
+                    onSaveTabsConfig(validated)
+                } else {
+                    coroutineScope.launch { preferenceManager.setWorkoutDetailTabs(validated) }
+                }
+            },
+            onResetDefaults = {
+                if (onSaveTabsConfig != null) {
+                    onSaveTabsConfig(WorkoutDetailTabConfig.DEFAULT_TABS)
+                } else {
+                    coroutineScope.launch { preferenceManager.resetWorkoutDetailTabs() }
+                }
+            },
+            onDismiss = { showTabsConfigSheet = false }
+        )
+    }
+
+    if (useTabbedLayout && metadataContent == null && analyticsContent == null) {
+        WorkoutDetailTabbedContent(
+            workoutData = workoutData,
+            tabs = visibleTabs,
+            availability = sectionAvailability,
+            detailPreferences = activeDetailPrefs,
+            tuningConfig = tuningConfig,
+            activeScrubPath = activeScrubPath,
+            hasAltitudeData = hasAltitudeData,
+            splitChartData = splitChartData,
+            selectedLapNr = selectedLapNr,
+            onSelectLapNr = { selectedLapNr = it },
+            hrZoneDistribution = hrZoneDistribution,
+            powerZoneDistribution = powerZoneDistribution,
+            effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
+            effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
+            onHrZoneDisplayModeChange = { hrZoneDisplayMode = it },
+            onPowerZoneDisplayModeChange = { powerZoneDisplayMode = it },
+            useStatusBarsPadding = useStatusBarsPadding,
+            onClusterClick = onClusterClick,
+            onEditWorkout = onEditWorkout,
+            headerActions = headerActions,
+            onOpenTabsConfig = { showTabsConfigSheet = true },
+            mapContent = {
+                tracks(filteredTracks)
+                contextualPaths(segments)
+                contextualPaths(routes)
+                if (lapSegment.isNotEmpty()) {
+                    val lapMarkers = mutableListOf<LocationMarker>()
+                    lapSegment.firstOrNull()?.let { startPoint ->
+                        lapMarkers.add(LocationMarker(position = startPoint, iconResId = R.drawable.control_start, title = lapStartMarkerTitle))
+                    }
+                    lapSegment.lastOrNull()?.let { endPoint ->
+                        lapMarkers.add(LocationMarker(position = endPoint, iconResId = R.drawable.control_stop, title = lapEndMarkerTitle))
+                    }
+                    markers(markers + lapMarkers)
+                    lapHighlight(lapSegment)
+                } else {
+                    markers(markers)
+                }
+            },
+            mapOverlay = {
+                if (showTechnicalTracks) {
+                    var showTrackMenu by remember { mutableStateOf(false) }
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 76.dp, end = 16.dp)
+                    ) {
+                        Surface(
+                            onClick = { showTrackMenu = true },
+                            modifier = Modifier.size(44.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                            shadowElevation = 6.dp,
+                            tonalElevation = 2.dp
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Layers,
+                                    contentDescription = stringResource(R.string.track_layers),
+                                    modifier = Modifier.size(22.dp),
+                                    tint = if (enabledTrackTypes.size > 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
+                                )
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = showTrackMenu,
+                            onDismissRequest = { showTrackMenu = false }
+                        ) {
+                            TrackType.entries.forEach { type ->
+                                val isAvailable = type in availableTrackTypes
+                                DropdownMenuItem(
+                                    enabled = isAvailable,
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            modifier = Modifier.alpha(if (isAvailable) TTAlpha.High else TTAlpha.Disabled)
+                                        ) {
+                                            Checkbox(
+                                                checked = enabledTrackTypes.contains(type),
+                                                onCheckedChange = null,
+                                                enabled = isAvailable
+                                            )
+                                            Surface(
+                                                modifier = Modifier.size(12.dp),
+                                                color = type.color,
+                                                shape = RoundedCornerShape(2.dp)
+                                            ) {}
+                                            Text(
+                                                text = getTrackTypeName(type),
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        }
+                                    },
+                                    onClick = { onToggleTrackType(type) }
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            modifier = modifier
+        )
+    } else {
     MapDetailLayout(
         bSportType = workoutData.bSportType,
         zoomFocus = MapZoomFocus.FIT_PRIMARY,
@@ -171,8 +359,8 @@ fun TrackOnMapScreen(
         showTelemetryCharts = activeDetailPrefs.showTelemetryCharts && isChartsPostMap,
         hrZoneDistribution = hrZoneDistribution,
         powerZoneDistribution = powerZoneDistribution,
-        hrZoneDisplayMode = hrZoneDisplayMode,
-        powerZoneDisplayMode = powerZoneDisplayMode,
+        hrZoneDisplayMode = effectiveHrZoneDisplayMode,
+        powerZoneDisplayMode = effectivePowerZoneDisplayMode,
         header = {
             WorkoutHeader(
                 modifier = Modifier.fillMaxWidth(),
@@ -197,10 +385,10 @@ fun TrackOnMapScreen(
             if (lapSegment.isNotEmpty()) {
                 val lapMarkers = mutableListOf<LocationMarker>()
                 lapSegment.firstOrNull()?.let { startPoint ->
-                    lapMarkers.add(LocationMarker(position = startPoint, iconResId = R.drawable.control_start, title = "Lap Start"))
+                    lapMarkers.add(LocationMarker(position = startPoint, iconResId = R.drawable.control_start, title = lapStartMarkerTitle))
                 }
                 lapSegment.lastOrNull()?.let { endPoint ->
-                    lapMarkers.add(LocationMarker(position = endPoint, iconResId = R.drawable.control_stop, title = "Lap End"))
+                    lapMarkers.add(LocationMarker(position = endPoint, iconResId = R.drawable.control_stop, title = lapEndMarkerTitle))
                 }
                 markers(markers + lapMarkers)
                 lapHighlight(lapSegment)
@@ -398,7 +586,7 @@ fun TrackOnMapScreen(
                                         bSportType = workoutData.bSportType,
                                         enableGestures = false,
                                         zoneDistribution = hrZoneDistribution,
-                                        zoneDisplayMode = hrZoneDisplayMode,
+                                        zoneDisplayMode = effectiveHrZoneDisplayMode,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -418,7 +606,25 @@ fun TrackOnMapScreen(
                                         bSportType = workoutData.bSportType,
                                         enableGestures = false,
                                         zoneDistribution = powerZoneDistribution,
-                                        zoneDisplayMode = powerZoneDisplayMode,
+                                        zoneDisplayMode = effectivePowerZoneDisplayMode,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                if (tuningConfig.enableCriticalPowerModel && TelemetryMetricUtils.hasWPrimeBalData(activeScrubPath)) {
+                                    Text(
+                                        text = stringResource(R.string.w_prime_bal),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                    )
+                                    TelemetryMetricGraph(
+                                        pathPoints = activeScrubPath,
+                                        metricType = TelemetryMetricType.W_PRIME_BAL,
+                                        currentDistance = null,
+                                        onDistanceSelected = {},
+                                        bSportType = workoutData.bSportType,
+                                        enableGestures = false,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -429,7 +635,7 @@ fun TrackOnMapScreen(
                                 hrZoneDistribution?.let { distribution ->
                                     HeartRateZoneDistributionCard(
                                         distribution = distribution,
-                                        displayMode = hrZoneDisplayMode,
+                                        displayMode = effectiveHrZoneDisplayMode,
                                         onDisplayModeChange = { hrZoneDisplayMode = it },
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -439,7 +645,7 @@ fun TrackOnMapScreen(
                                 powerZoneDistribution?.let { distribution ->
                                     PowerZoneDistributionCard(
                                         distribution = distribution,
-                                        displayMode = powerZoneDisplayMode,
+                                        displayMode = effectivePowerZoneDisplayMode,
                                         onDisplayModeChange = { powerZoneDisplayMode = it },
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -470,7 +676,7 @@ fun TrackOnMapScreen(
                                 hrZoneDistribution?.let { distribution ->
                                     HeartRateZoneDistributionCard(
                                         distribution = distribution,
-                                        displayMode = hrZoneDisplayMode,
+                                        displayMode = effectiveHrZoneDisplayMode,
                                         onDisplayModeChange = { hrZoneDisplayMode = it },
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -480,7 +686,7 @@ fun TrackOnMapScreen(
                                 powerZoneDistribution?.let { distribution ->
                                     PowerZoneDistributionCard(
                                         distribution = distribution,
-                                        displayMode = powerZoneDisplayMode,
+                                        displayMode = effectivePowerZoneDisplayMode,
                                         onDisplayModeChange = { powerZoneDisplayMode = it },
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -520,6 +726,7 @@ fun TrackOnMapScreen(
             }
         }
     )
+    }
 }
 
 @Composable

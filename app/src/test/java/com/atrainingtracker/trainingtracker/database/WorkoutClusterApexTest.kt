@@ -72,6 +72,10 @@ class WorkoutClusterApexTest {
         every { mockContext.getString(any()) } returns "Cluster #%d"
         every { mockContext.getString(any(), any()) } returns "Cluster"
 
+        mockkStatic(KnownLocationsDatabaseManager::class)
+        val mockKnownLocationsDb = mockk<KnownLocationsDatabaseManager>(relaxed = true)
+        every { KnownLocationsDatabaseManager.getInstance(any()) } returns mockKnownLocationsDb
+
         WorkoutClusterEngine.resetForTesting(null)
         clusterEngine = WorkoutClusterEngine.getInstance(mockContext)
     }

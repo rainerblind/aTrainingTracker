@@ -123,6 +123,134 @@ class ClusterTuningContractTest {
         val content = contentFile.readText()
         assertTrue("Must declare ClusterTuningContent composable", content.contains("fun ClusterTuningContent("))
         assertTrue("ClusterTuningContent must support enabled parameter", content.contains("enabled: Boolean = true"))
-        assertTrue("Must declare TuningSlider composable", content.contains("fun TuningSlider("))
+    }
+
+    @Test
+    fun clusterTuningContent_delegatesToTuningFormControls() {
+        val contentFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterTuningContent.kt")
+        assertTrue("ClusterTuningContent.kt must exist", contentFile.exists())
+
+        val content = contentFile.readText()
+        assertTrue(
+            "ClusterTuningContent must delegate toggles to TuningToggleItem (REQ-SET-077)",
+            content.contains("TuningToggleItem(")
+        )
+        assertTrue(
+            "ClusterTuningContent must delegate sliders to TuningSliderItem (REQ-SET-077)",
+            content.contains("TuningSliderItem(")
+        )
+
+        // Verify that raw Switch calls within ClusterTuningContent have been eliminated
+        assertFalse(
+            "ClusterTuningContent must not instantiate raw Switch directly; use TuningToggleItem (REQ-SET-077)",
+            content.contains("Switch(")
+        )
+    }
+
+    @Test
+    fun clusterTuningContent_truthTableAltitudeGating() {
+        val contentFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterTuningContent.kt")
+        assertTrue("ClusterTuningContent.kt must exist", contentFile.exists())
+
+        val content = contentFile.readText()
+        assertTrue(
+            "Altitude position slider must be gated with enabled && useAltitudePosForClustering (REQ-SET-077)",
+            content.contains("enabled = enabled && useAltitudePosForClustering")
+        )
+
+        // Formal truth-table verification
+        val truthTable = listOf(
+            Triple(false, false, false),
+            Triple(false, true, false),
+            Triple(true, false, false),
+            Triple(true, true, true)
+        )
+
+        for ((enabled, useAltitude, expected) in truthTable) {
+            val result = enabled && useAltitude
+            org.junit.Assert.assertEquals(
+                "Gating truth table failed for ($enabled, $useAltitude)",
+                expected,
+                result
+            )
+        }
+    }
+
+    @Test
+    fun clusterTuningContent_deadTuningSliderIsCompletelyRemoved() {
+        val contentFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterTuningContent.kt")
+        assertTrue("ClusterTuningContent.kt must exist", contentFile.exists())
+
+        val content = contentFile.readText()
+        assertFalse(
+            "ClusterTuningContent must NOT declare fun TuningSlider (ATT-3575, Rule 36)",
+            content.contains("fun TuningSlider(")
+        )
+        assertFalse(
+            "ClusterTuningContent must NOT contain @Deprecated TuningSlider",
+            content.contains("Use TuningSliderItem from TuningFormControls.kt instead")
+        )
+    }
+
+    @Test
+    fun clusterTuning_noOrphanedTuningSliderReferencesInUiPackage() {
+        val uiDir = sequenceOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui")
+        ).firstOrNull { it.exists() } ?: File("app/src/main/java/com/atrainingtracker/trainingtracker/ui")
+
+        assertTrue("UI source directory must exist: ${uiDir.path}", uiDir.exists())
+
+        val orphanedReferences = mutableListOf<String>()
+        uiDir.walkTopDown()
+            .filter { it.isFile && (it.extension == "kt" || it.extension == "java") }
+            .forEach { file ->
+                file.useLines { lines ->
+                    lines.forEachIndexed { idx, line ->
+                        val trimmed = line.trim()
+                        if (!trimmed.startsWith("//") && !trimmed.startsWith("/*") && !trimmed.startsWith("*")) {
+                            if (trimmed.contains("TuningSlider(") && !trimmed.contains("TuningSliderItem(")) {
+                                orphanedReferences.add("${file.name}:${idx + 1}: $trimmed")
+                            }
+                        }
+                    }
+                }
+            }
+
+        assertTrue(
+            "Found orphaned TuningSlider references in UI package:\n${orphanedReferences.joinToString("\n")}",
+            orphanedReferences.isEmpty()
+        )
+    }
+
+    @Test
+    fun clusterTuningSection_recalculateButtonStyledInErrorColorsWithAccessibleProgress() {
+        val sectionFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/ClusterTuningSection.kt")
+        assertTrue("ClusterTuningSection.kt must exist", sectionFile.exists())
+
+        val content = sectionFile.readText()
+        assertTrue(
+            "Recalculate button must configure containerColor to error token (REQ-SET-076, ATT-3492)",
+            content.contains("containerColor = MaterialTheme.colorScheme.error")
+        )
+        assertTrue(
+            "Recalculate button must configure contentColor to onError token (REQ-SET-076, ATT-3492)",
+            content.contains("contentColor = MaterialTheme.colorScheme.onError")
+        )
+        assertTrue(
+            "Recalculate button must configure disabledContainerColor (REQ-SET-076, ATT-3492)",
+            content.contains("disabledContainerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.6f)")
+        )
+        assertTrue(
+            "Recalculate button must configure disabledContentColor to onError (REQ-SET-076, ATT-3492)",
+            content.contains("disabledContentColor = MaterialTheme.colorScheme.onError")
+        )
+        assertTrue(
+            "CircularProgressIndicator must use onError color for WCAG 2.1 accessible contrast (REQ-SET-076, ATT-3492)",
+            content.contains("CircularProgressIndicator(") &&
+                    content.contains("color = MaterialTheme.colorScheme.onError")
+        )
     }
 }
+

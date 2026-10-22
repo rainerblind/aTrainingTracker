@@ -40,6 +40,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaAuthS
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDataPurgeManager
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeauthorizationThread
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorker
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
@@ -145,6 +146,7 @@ fun StravaSettingsDialog(
 
             StravaSegmentsSyncWorker.schedule(context)
             StravaRoutesSyncWorker.schedule(context)
+            StravaEquipmentSyncWorker.schedule(context)
 
             StravaAuthRepository.getInstance().resetState()
             isConnected = true
@@ -168,6 +170,7 @@ fun StravaSettingsDialog(
                         .apply()
                     StravaSegmentsSyncWorker.schedule(context)
                     StravaRoutesSyncWorker.schedule(context)
+                    StravaEquipmentSyncWorker.schedule(context)
                     onDismiss()
                 },
                 onCancel = onDismiss,

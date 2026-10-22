@@ -80,7 +80,8 @@ data class SegmentSummary @JvmOverloads constructor(
 
 data class SegmentWithPath(
     val summary: SegmentSummary,
-    val path: List<PathPoint>
+    val path: List<PathPoint>,
+    val latLngs: List<LatLng> = path.map { it.latLng }
 )
 
 
@@ -512,7 +513,7 @@ class SegmentsRepository private constructor(context: Context) {
     }
 
     companion object {
-        val DEBUG = true
+        val DEBUG = com.atrainingtracker.BuildConfig.DEBUG
         val TAG = "SegmentsRepository"
 
         @Volatile

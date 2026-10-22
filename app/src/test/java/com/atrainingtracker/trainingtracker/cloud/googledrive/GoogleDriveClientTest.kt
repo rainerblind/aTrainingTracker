@@ -465,5 +465,248 @@ class GoogleDriveClientTest {
         assertEquals("created_folder_id", id2)
         assertEquals("Should create folder only once across separate client instances", 1, createCount)
     }
+
+    @Test
+    fun testGoogleDriveQueryBuilder_escapesQuotesAndBackslashes() {
+        val escaped1 = GoogleDriveQueryBuilder.escapeQueryValue("Runner's Track")
+        assertEquals("Runner\\'s Track", escaped1)
+
+        val escaped2 = GoogleDriveQueryBuilder.escapeQueryValue("Workouts\\2026")
+        assertEquals("Workouts\\\\2026", escaped2)
+
+        val escaped3 = GoogleDriveQueryBuilder.escapeQueryValue("O'Connor's \\Special\\")
+        assertEquals("O\\'Connor\\'s \\\\Special\\\\", escaped3)
+
+        val folderQuery = GoogleDriveQueryBuilder.buildFolderQuery("Runner's Track", "parent'1")
+        assertEquals("name = 'Runner\\'s Track' and 'parent\\'1' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false", folderQuery)
+
+        val fileQuery = GoogleDriveQueryBuilder.buildFileQuery("Bob's Workout.fit", "folder'2")
+        assertEquals("name = 'Bob\\'s Workout.fit' and 'folder\\'2' in parents and trashed = false", fileQuery)
+
+        val childrenQuery = GoogleDriveQueryBuilder.buildChildrenQuery("folder'3")
+        assertEquals("'folder\\'3' in parents and trashed = false", childrenQuery)
+    }
+
+    @Test
+    fun testEnsureFolderHierarchy_withSpecialCharacters_executesEscapedQuery() {
+        var capturedQueryUrl: String? = null
+
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                capturedQueryUrl = request.url.toString()
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body("""{"files":[{"id":"special_folder_id","name":"Runner's Track"}]}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                    .build()
+            }
+            .build()
+
+        val client = GoogleDriveClient(
+            tokenProvider = { "token" },
+            client = okHttpClient
+        )
+
+        val folderId = client.findFolderIdByName("Runner's Track", "root")
+        assertEquals("special_folder_id", folderId)
+        assertNotNull(capturedQueryUrl)
+        // URL decode to verify query contents
+        val decodedUrl = java.net.URLDecoder.decode(capturedQueryUrl!!, "UTF-8")
+        assertTrue("Query must contain escaped single quote: $decodedUrl", decodedUrl.contains("name = 'Runner\\'s Track'"))
+    }
+
+    @Test
+    fun testGoogleDriveFolderCache_accountIsolation() {
+        var createCountUser1 = 0
+        var createCountUser2 = 0
+
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                val auth = request.header("Authorization")
+                val isUser1 = auth?.contains("token_user_1") == true
+
+                if (request.method == "POST") {
+                    if (isUser1) createCountUser1++ else createCountUser2++
+                    val folderId = if (isUser1) "folder_id_user_1" else "folder_id_user_2"
+                    Response.Builder()
+                        .request(request)
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body("""{"id":"$folderId","name":"Workouts"}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                        .build()
+                } else {
+                    Response.Builder()
+                        .request(request)
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body("""{"files":[]}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                        .build()
+                }
+            }
+            .build()
+
+        val clientUser1 = GoogleDriveClient(
+            tokenProvider = { "token_user_1" },
+            client = okHttpClient,
+            accountProvider = { "user1@example.com" }
+        )
+        val clientUser2 = GoogleDriveClient(
+            tokenProvider = { "token_user_2" },
+            client = okHttpClient,
+            accountProvider = { "user2@example.com" }
+        )
+
+        val id1 = clientUser1.ensureFolderHierarchy(listOf("Workouts"))
+        val id2 = clientUser2.ensureFolderHierarchy(listOf("Workouts"))
+
+        assertEquals("folder_id_user_1", id1)
+        assertEquals("folder_id_user_2", id2)
+        assertEquals(1, createCountUser1)
+        assertEquals(1, createCountUser2)
+
+        // Subsequent lookup must use respective account's cached ID
+        assertEquals("folder_id_user_1", clientUser1.ensureFolderHierarchy(listOf("Workouts")))
+        assertEquals("folder_id_user_2", clientUser2.ensureFolderHierarchy(listOf("Workouts")))
+    }
+
+    @Test
+    fun testEvictFolder_atomicallyClearsMatchingEntries() {
+        var searchCount = 0
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                searchCount++
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body("""{"files":[{"id":"folder_to_evict","name":"Workouts"}]}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                    .build()
+            }
+            .build()
+
+        val client = GoogleDriveClient(
+            tokenProvider = { "token" },
+            client = okHttpClient
+        )
+
+        // Initial resolution caches the folder
+        val idFirst = client.ensureFolderHierarchy(listOf("Workouts"))
+        assertEquals("folder_to_evict", idFirst)
+        assertEquals(1, searchCount)
+
+        // Second call hits cache
+        val idCached = client.ensureFolderHierarchy(listOf("Workouts"))
+        assertEquals("folder_to_evict", idCached)
+        assertEquals(1, searchCount)
+
+        // Evict folder
+        client.evictFolder("folder_to_evict")
+
+        // Next resolution must re-query network
+        val idAfterEvict = client.ensureFolderHierarchy(listOf("Workouts"))
+        assertEquals("folder_to_evict", idAfterEvict)
+        assertEquals(2, searchCount)
+    }
+
+    @Test
+    fun testDownloadFileById_atomicStaging_cleansUpPartFileOnFailureAndDoesNotCorruptDestination() {
+        val destFile = tempFolder.newFile("workout.fit")
+        destFile.writeBytes("ORIGINAL_UNTOUCHED_CONTENT".toByteArray())
+
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { _ ->
+                throw java.io.IOException("Simulated connection reset mid-download")
+            }
+            .build()
+
+        val client = GoogleDriveClient(
+            tokenProvider = { "token" },
+            client = okHttpClient
+        )
+
+        val result = client.downloadFileById("corrupt_stream_file_id", destFile)
+        assertFalse("Download should fail on IOException", result)
+        assertEquals("ORIGINAL_UNTOUCHED_CONTENT", destFile.readText())
+
+        val parentDir = destFile.parentFile ?: File(".")
+        val leftoverParts = parentDir.listFiles { f -> f.name.contains(".part_") } ?: emptyArray()
+        assertEquals("Temporary .part files must be cleaned up on failure", 0, leftoverParts.size)
+    }
+
+    @Test
+    fun testDownloadFileById_atomicStaging_successRenamesDurablyToDestination() {
+        val destFile = tempFolder.newFile("complete.fit")
+        val expectedBytes = "HEALTHY_FIT_BINARY_DATA_12345".toByteArray()
+
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(expectedBytes.toResponseBody("application/octet-stream".toMediaTypeOrNull()))
+                    .build()
+            }
+            .build()
+
+        val client = GoogleDriveClient(
+            tokenProvider = { "token" },
+            client = okHttpClient
+        )
+
+        val result = client.downloadFileById("healthy_file_id", destFile)
+        assertTrue("Download should succeed", result)
+        assertArrayEquals(expectedBytes, destFile.readBytes())
+
+        val parentDir = destFile.parentFile ?: File(".")
+        val leftoverParts = parentDir.listFiles { f -> f.name.contains(".part_") } ?: emptyArray()
+        assertEquals("Temporary .part files must not remain after success", 0, leftoverParts.size)
+    }
+
+    @Test
+    fun testDownloadFileById_purgesStalePartFilesOlderThan24Hours() {
+        val parentDir = tempFolder.root
+        val stalePartFile = File(parentDir, "activity.fit.part_12345_abc")
+        stalePartFile.writeText("stale_temp_bytes")
+        stalePartFile.setLastModified(System.currentTimeMillis() - 90_000_000L) // > 24 hours ago
+
+        val freshPartFile = File(parentDir, "activity.fit.part_67890_def")
+        freshPartFile.writeText("fresh_temp_bytes")
+        freshPartFile.setLastModified(System.currentTimeMillis() - 60_000L) // 1 minute ago
+
+        val destFile = File(parentDir, "download_target.fit")
+        val expectedBytes = "NEW_DOWNLOAD_BYTES".toByteArray()
+
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(expectedBytes.toResponseBody("application/octet-stream".toMediaTypeOrNull()))
+                    .build()
+            }
+            .build()
+
+        val client = GoogleDriveClient(
+            tokenProvider = { "token" },
+            client = okHttpClient
+        )
+
+        val result = client.downloadFileById("fresh_id", destFile)
+        assertTrue(result)
+        assertFalse("Stale part file older than 24h should be purged", stalePartFile.exists())
+        assertTrue("Fresh part file younger than 24h should be preserved", freshPartFile.exists())
+    }
 }
 

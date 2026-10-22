@@ -18,23 +18,31 @@
 
 package com.atrainingtracker.trainingtracker.database;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteFullException;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteStatement;
 import android.location.Location;
 import android.provider.BaseColumns;
+import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+import com.atrainingtracker.trainingtracker.domain.crop.CropWorkoutMath;
 import com.google.android.gms.maps.model.LatLng;
 
+import java.util.ArrayList;
 import java.util.List;
+
 
 public class WorkoutSamplesDatabaseManager {
     private static final String TAG = WorkoutSamplesDatabaseManager.class.getName();
@@ -120,7 +128,6 @@ public class WorkoutSamplesDatabaseManager {
 
         // in all other cases, we let sqlite do the job
         Double extremaValue = null;
-        Cursor cursor = null;
         SQLiteDatabase db = getDatabase();
 
         // it might be possible that the corresponding sensor is not a column of the database, so we first check this
@@ -132,56 +139,61 @@ public class WorkoutSamplesDatabaseManager {
                 case MIN:
                     String[] columns = new String[]{extremaType.name() + "(" + sensorType.name() + ")"};
 
-                    cursor = db.query(getTableName(baseFileName),
+                    try (Cursor cursor = db.query(getTableName(baseFileName),
                             columns,  // columns,
                             null, // selection, (here something like MAX(?))
-                            null, // new String[] {sensorType.name()}, // selectionArgs,
-                            null, null, null); // groupBy, having, orderBy)
+                            null, // selectionArgs,
+                            null, null, null)) {
 
-                    if (cursor.moveToFirst() && !cursor.isNull(0)) {
-                        extremaValue = cursor.getDouble(0);
+                        if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) {
+                            extremaValue = cursor.getDouble(0);
+                        }
                     }
                     break;
 
                 case START:
-                    cursor = db.query(getTableName(baseFileName),
+                    try (Cursor cursor = db.query(getTableName(baseFileName),
                             null,
                             null,
                             null,
                             null,
                             null,
-                            null);  // sorting?
+                            null)) {
 
-                    while (cursor.moveToNext() && extremaValue == null) {
-                        if (dataValid(cursor, sensorType.name())) {
-                            if (DEBUG) Log.i(TAG, "got start value");
-                            extremaValue = cursor.getDouble(cursor.getColumnIndex(sensorType.name()));
+                        if (cursor != null) {
+                            int colIdx = cursor.getColumnIndex(sensorType.name());
+                            while (cursor.moveToNext() && extremaValue == null) {
+                                if (dataValid(cursor, sensorType.name()) && colIdx != -1) {
+                                    if (DEBUG) Log.i(TAG, "got start value");
+                                    extremaValue = cursor.getDouble(colIdx);
+                                }
+                            }
                         }
                     }
                     break;
 
                 case END:
-                    cursor = db.query(getTableName(baseFileName),
+                    try (Cursor cursor = db.query(getTableName(baseFileName),
                             null,
                             null,
                             null,
                             null,
                             null,
-                            null);  // sorting?
+                            null)) {
 
-                    cursor.moveToLast();
-                    while (cursor.moveToPrevious() && extremaValue == null) {
-                        if (dataValid(cursor, sensorType.name())) {
-                            if (DEBUG) Log.i(TAG, "got end location");
-                            extremaValue = cursor.getDouble(cursor.getColumnIndex(sensorType.name()));
+                        if (cursor != null && cursor.moveToLast()) {
+                            int colIdx = cursor.getColumnIndex(sensorType.name());
+                            do {
+                                if (dataValid(cursor, sensorType.name()) && colIdx != -1) {
+                                    if (DEBUG) Log.i(TAG, "got end location");
+                                    extremaValue = cursor.getDouble(colIdx);
+                                    break;
+                                }
+                            } while (cursor.moveToPrevious());
                         }
                     }
                     break;
             }
-        }
-
-        if (cursor != null && !cursor.isClosed()) {
-            cursor.close();
         }
 
         if (DEBUG) Log.i(TAG, "extremaValue: " + extremaValue);
@@ -213,54 +225,58 @@ public class WorkoutSamplesDatabaseManager {
         double average = 0.0;
 
         SQLiteDatabase summariesDb = workoutSummariesDatabaseManager.getDatabase();
-        Cursor summariesCursor = summariesDb.query(WorkoutSummaries.TABLE,
+        try (Cursor summariesCursor = summariesDb.query(WorkoutSummaries.TABLE,
                 new String[]{WorkoutSummaries.FILE_BASE_NAME},
                 null, null,
-                null, null, null);
+                null, null, null)) {
 
+            if (summariesCursor != null) {
+                while (summariesCursor.moveToNext()) {
+                    String name = summariesCursor.getString(0);
+                    if (DEBUG) Log.i(TAG, "querying table: " + name);
 
-        while (summariesCursor.moveToNext()) {
-            String name = summariesCursor.getString(0);
-            if (DEBUG) Log.i(TAG, "querying table: " + name);
+                    SQLiteDatabase samplesDb = getDatabase();
+                    if (!existsTable(name) || !existsColumnInTable(samplesDb, getTableName(name), sensorType.name())) {
+                        continue;
+                    }
 
-            SQLiteDatabase samplesDb = getDatabase();
-            if (!existsTable(name) || !existsColumnInTable(samplesDb, getTableName(name), sensorType.name())) {
-                continue;
-            }
+                    try (Cursor samplesCursor = samplesDb.query(getTableName(name), // Table
+                            new String[]{SensorType.LATITUDE.name(), SensorType.LONGITUDE.name(), sensorType.name()}, // columns
+                            SensorType.LATITUDE.name() + " > ? AND " +
+                                    SensorType.LATITUDE.name() + " < ? AND " +
+                                    SensorType.LONGITUDE.name() + " > ? AND " +
+                                    SensorType.LONGITUDE.name() + " < ?", // selection
+                            new String[]{Double.toString(p3.latitude), Double.toString(p1.latitude), Double.toString(p4.longitude), Double.toString(p2.longitude)},
+                            null, null, null)) {
 
-            Cursor samplesCursor = samplesDb.query(getTableName(name), // Table
-                    new String[]{SensorType.LATITUDE.name(), SensorType.LONGITUDE.name(), sensorType.name()}, // columns
-                    SensorType.LATITUDE.name() + " > ? AND " +
-                            SensorType.LATITUDE.name() + " < ? AND " +
-                            SensorType.LONGITUDE.name() + " > ? AND " +
-                            SensorType.LONGITUDE.name() + " < ?", // selection
-                    new String[]{Double.toString(p3.latitude), Double.toString(p1.latitude), Double.toString(p4.longitude), Double.toString(p2.longitude)},
-                    null, null, null);
+                        if (samplesCursor != null) {
+                            if (DEBUG)
+                                Log.i(TAG, "got cursor with " + samplesCursor.getCount() + " entries for " + name);
 
-            if (DEBUG)
-                Log.i(TAG, "got cursor with " + samplesCursor.getCount() + " entries for " + name);
+                            // cache the indexes
+                            int latIndex = samplesCursor.getColumnIndex(SensorType.LATITUDE.name());
+                            int lonIndex = samplesCursor.getColumnIndex(SensorType.LONGITUDE.name());
+                            int sensorIndex = samplesCursor.getColumnIndex(sensorType.name());
 
-            // cache the indexes
-            int latIndex = samplesCursor.getColumnIndex(SensorType.LATITUDE.name());
-            int lonIndex = samplesCursor.getColumnIndex(SensorType.LONGITUDE.name());
-            int sensorIndex = samplesCursor.getColumnIndex(sensorType.name());
+                            while (samplesCursor.moveToNext()) {
+                                if (dataValid(samplesCursor, sensorType.name())
+                                        && dataValid(samplesCursor, SensorType.LATITUDE.name())
+                                        && dataValid(samplesCursor, SensorType.LONGITUDE.name())
+                                        && latIndex != -1 && lonIndex != -1 && sensorIndex != -1) {
+                                    testLocation.setLatitude(samplesCursor.getDouble(latIndex));
+                                    testLocation.setLongitude(samplesCursor.getDouble(lonIndex));
 
-            while (samplesCursor.moveToNext()) {
-                if (dataValid(samplesCursor, sensorType.name())
-                        && dataValid(samplesCursor, SensorType.LATITUDE.name())
-                        && dataValid(samplesCursor, SensorType.LONGITUDE.name())) {
-                    testLocation.setLatitude(samplesCursor.getDouble(latIndex));
-                    testLocation.setLongitude(samplesCursor.getDouble(lonIndex));
-
-                    if (centerLocation.distanceTo(testLocation) <= radius) {
-                        valueSum += samplesCursor.getDouble(sensorIndex);
-                        counter++;
+                                    if (centerLocation.distanceTo(testLocation) <= radius) {
+                                        valueSum += samplesCursor.getDouble(sensorIndex);
+                                        counter++;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
-            samplesCursor.close();
         }
-        summariesCursor.close();
 
         if (counter != 0) {
             average = valueSum / counter;
@@ -332,11 +348,13 @@ public class WorkoutSamplesDatabaseManager {
         if (extremaValue != null) {
 
             SQLiteDatabase samplesDb = getDatabase();
-            Cursor cursor = null;
-
             if (!existsTable(baseFileName) || !existsColumnInTable(samplesDb, getTableName(baseFileName), sensorType.name())) {
                 return null;
             }
+
+            String selection;
+            String[] selectionArgs;
+            String orderBy = null;
 
             // depending on the extremaType, there are two alternative ways to find the corresponding row
             switch (extremaType) {
@@ -347,47 +365,47 @@ public class WorkoutSamplesDatabaseManager {
                     // in previous versions, we used the 'default' code for this but it failed for max of line_distance
                     // probably due to problems with converting and storing doubles?
 
-                    String orderBy = sensorType.name() + " " + ((extremaType == ExtremaType.MAX) ? "DESC" : "ASC");
-                    String spatialSelection = SensorType.LATITUDE.name() + " IS NOT NULL AND " + SensorType.LONGITUDE.name() + " IS NOT NULL";
-                    cursor = samplesDb.query(WorkoutSamplesDatabaseManager.getTableName(baseFileName), // table
-                            null, // columns
-                            spatialSelection, // selection: ensure we only inspect points with valid spatial coordinates
-                            null, // selectionArgs
-                            null, // groupBy
-                            null, // having
-                            orderBy, // orderBy
-                            "1"); // limit: we only need the first one
-
+                    orderBy = sensorType.name() + " " + ((extremaType == ExtremaType.MAX) ? "DESC" : "ASC");
+                    selection = SensorType.LATITUDE.name() + " IS NOT NULL AND " + SensorType.LONGITUDE.name() + " IS NOT NULL";
+                    selectionArgs = null;
                     break;
                 default:  // neither MIN nor MAX
                     if (DEBUG)
                         Log.i(TAG, "default case: search for the extrema value which should be already within the summariesDb");
 
-                    cursor = samplesDb.query(WorkoutSamplesDatabaseManager.getTableName(baseFileName), // table
-                            null, // columns
-                            sensorType.name() + "=?", // selection
-                            new String[]{extremaValue.toString()}, // selectionArgs
-                            null, // groupBy
-                            null, // having
-                            null, // orderBy
-                            "1"); // limit  TODO: might be increased in the future?
+                    selection = sensorType.name() + "=?";
+                    selectionArgs = new String[]{extremaValue.toString()};
+                    break;
             } // end of switch
 
-            if (cursor.moveToFirst()
-                    && !cursor.isNull(cursor.getColumnIndex(SensorType.LATITUDE.name()))
-                    && !cursor.isNull(cursor.getColumnIndex(SensorType.LONGITUDE.name()))) {
-                if (DEBUG)
-                    Log.i(TAG, "got a valid location for " + extremaType.name() + " of " + sensorType.name());
-                result = new LatLngValue(new LatLng(cursor.getDouble(cursor.getColumnIndex(SensorType.LATITUDE.name())),
-                        cursor.getDouble(cursor.getColumnIndex(SensorType.LONGITUDE.name()))),
-                        cursor.getDouble(cursor.getColumnIndex(sensorType.name())));
-            } else {
-                if (DEBUG)
-                    Log.d(TAG, "did not get a valid location for " + extremaType.name() + " of " + sensorType.name());
-            }
+            try (Cursor cursor = samplesDb.query(WorkoutSamplesDatabaseManager.getTableName(baseFileName), // table
+                    null, // columns
+                    selection, // selection
+                    selectionArgs, // selectionArgs
+                    null, // groupBy
+                    null, // having
+                    orderBy, // orderBy
+                    "1")) { // limit
 
-            // clean up
-            cursor.close();
+                if (cursor != null && cursor.moveToFirst()) {
+                    int latIdx = cursor.getColumnIndex(SensorType.LATITUDE.name());
+                    int lonIdx = cursor.getColumnIndex(SensorType.LONGITUDE.name());
+                    int sensorIdx = cursor.getColumnIndex(sensorType.name());
+
+                    if (latIdx != -1 && lonIdx != -1 && sensorIdx != -1
+                            && !cursor.isNull(latIdx)
+                            && !cursor.isNull(lonIdx)) {
+                        if (DEBUG)
+                            Log.i(TAG, "got a valid location for " + extremaType.name() + " of " + sensorType.name());
+                        result = new LatLngValue(new LatLng(cursor.getDouble(latIdx),
+                                cursor.getDouble(lonIdx)),
+                                cursor.getDouble(sensorIdx));
+                    } else {
+                        if (DEBUG)
+                            Log.d(TAG, "did not get a valid location for " + extremaType.name() + " of " + sensorType.name());
+                    }
+                }
+            }
 
         } else {
             if (DEBUG)
@@ -418,27 +436,178 @@ public class WorkoutSamplesDatabaseManager {
         getDatabase().execSQL("drop table if exists " + getTableName(baseFileName));
     }
 
+    /**
+     * Prunes unselected sample rows and updates cumulative and spatial fields
+     * within a native SQLite transaction (ATT-3274 / REQ-UI-368).
+     *
+     * @param fileBaseName The workout table name.
+     * @param startRowId The _id of the first retained sample row.
+     * @param endRowId The _id of the last retained sample row.
+     * @param expectedRetainedRows The expected number of rows after pruning.
+     * @param lapOffset The lap number offset to subtract (original start lap - 1).
+     * @param newStartLatLng The coordinate at startRowId for Haversine recalculation (null if indoor).
+     * @return The number of rows deleted.
+     */
+    public int pruneAndShiftSamples(@NonNull String fileBaseName, long startRowId, long endRowId,
+                                    int expectedRetainedRows, int lapOffset, @Nullable LatLng newStartLatLng) {
+        SQLiteDatabase db = getDatabase();
+        String table = getTableName(fileBaseName);
+        db.beginTransaction();
+        int deletedRows = 0;
+        try {
+            // 1. Delete rows outside [startRowId, endRowId]
+            deletedRows = db.delete(table, "_id < ? OR _id > ?", new String[]{String.valueOf(startRowId), String.valueOf(endRowId)});
+
+            // 2. Query baseline cumulative values at startRowId
+            double baseDist = 0.0;
+            long baseTimeTotal = 0L;
+            long baseTimeActive = 0L;
+            double baseAscent = 0.0;
+            double baseDescent = 0.0;
+            long baseCalories = 0L;
+
+            boolean hasDist = existsColumnInTable(db, table, SensorType.DISTANCE_m.name());
+            boolean hasTimeTotal = existsColumnInTable(db, table, SensorType.TIME_TOTAL.name());
+            boolean hasTimeActive = existsColumnInTable(db, table, SensorType.TIME_ACTIVE.name());
+            boolean hasAscent = existsColumnInTable(db, table, SensorType.ASCENT.name());
+            boolean hasDescent = existsColumnInTable(db, table, SensorType.DESCENT.name());
+            boolean hasCalories = existsColumnInTable(db, table, SensorType.CALORIES.name());
+            boolean hasLineDist = existsColumnInTable(db, table, SensorType.LINE_DISTANCE_m.name());
+            boolean hasLapNr = existsColumnInTable(db, table, SensorType.LAP_NR.name());
+            boolean hasLat = existsColumnInTable(db, table, SensorType.LATITUDE.name());
+            boolean hasLon = existsColumnInTable(db, table, SensorType.LONGITUDE.name());
+
+            try (Cursor baselineCursor = db.query(table, null, "_id = ?", new String[]{String.valueOf(startRowId)}, null, null, null)) {
+                if (baselineCursor != null && baselineCursor.moveToFirst()) {
+                    if (hasDist) baseDist = baselineCursor.getDouble(baselineCursor.getColumnIndexOrThrow(SensorType.DISTANCE_m.name()));
+                    if (hasTimeTotal) baseTimeTotal = baselineCursor.getLong(baselineCursor.getColumnIndexOrThrow(SensorType.TIME_TOTAL.name()));
+                    if (hasTimeActive) baseTimeActive = baselineCursor.getLong(baselineCursor.getColumnIndexOrThrow(SensorType.TIME_ACTIVE.name()));
+                    if (hasAscent) baseAscent = baselineCursor.getDouble(baselineCursor.getColumnIndexOrThrow(SensorType.ASCENT.name()));
+                    if (hasDescent) baseDescent = baselineCursor.getDouble(baselineCursor.getColumnIndexOrThrow(SensorType.DESCENT.name()));
+                    if (hasCalories) baseCalories = baselineCursor.getLong(baselineCursor.getColumnIndexOrThrow(SensorType.CALORIES.name()));
+                }
+            }
+
+            // 3. Vectorized bulk update for retained rows:
+            // Shift cumulative fields (DISTANCE_m, TIME_TOTAL, TIME_ACTIVE, ASCENT, DESCENT, CALORIES, LAP_NR) in a single atomic SQL statement
+            List<String> setClauses = new ArrayList<>();
+            if (hasDist) setClauses.add(SensorType.DISTANCE_m.name() + " = MAX(0.0, " + SensorType.DISTANCE_m.name() + " - " + baseDist + ")");
+            if (hasTimeTotal) setClauses.add(SensorType.TIME_TOTAL.name() + " = MAX(0, " + SensorType.TIME_TOTAL.name() + " - " + baseTimeTotal + ")");
+            if (hasTimeActive) setClauses.add(SensorType.TIME_ACTIVE.name() + " = MAX(0, " + SensorType.TIME_ACTIVE.name() + " - " + baseTimeActive + ")");
+            if (hasAscent) setClauses.add(SensorType.ASCENT.name() + " = MAX(0.0, " + SensorType.ASCENT.name() + " - " + baseAscent + ")");
+            if (hasDescent) setClauses.add(SensorType.DESCENT.name() + " = MAX(0.0, " + SensorType.DESCENT.name() + " - " + baseDescent + ")");
+            if (hasCalories) setClauses.add(SensorType.CALORIES.name() + " = MAX(0, " + SensorType.CALORIES.name() + " - " + baseCalories + ")");
+            if (hasLapNr && lapOffset > 0) setClauses.add(SensorType.LAP_NR.name() + " = MAX(1, " + SensorType.LAP_NR.name() + " - " + lapOffset + ")");
+
+            if (!setClauses.isEmpty()) {
+                String bulkUpdateSql = "UPDATE " + table + " SET " + TextUtils.join(", ", setClauses)
+                        + " WHERE _id >= ? AND _id <= ?";
+                db.execSQL(bulkUpdateSql, new Object[]{startRowId, endRowId});
+            }
+
+            // Recalculate LINE_DISTANCE_m: 0.0 at startRowId, and Haversine distance from newStartLatLng if GPS is available
+            if (hasLineDist) {
+                if (newStartLatLng != null && hasLat && hasLon) {
+                    db.execSQL("UPDATE " + table + " SET " + SensorType.LINE_DISTANCE_m.name() + " = 0.0 WHERE _id = ?",
+                            new Object[]{startRowId});
+                    SQLiteStatement stmt = db.compileStatement(
+                            "UPDATE " + table + " SET " + SensorType.LINE_DISTANCE_m.name() + " = ? WHERE _id = ?");
+                    try (Cursor cursor = db.query(table, new String[]{"_id", SensorType.LATITUDE.name(), SensorType.LONGITUDE.name()},
+                            "_id > ? AND _id <= ?", new String[]{String.valueOf(startRowId), String.valueOf(endRowId)},
+                            null, null, "_id ASC")) {
+                        if (cursor != null && cursor.moveToFirst()) {
+                            int idIdx = cursor.getColumnIndexOrThrow("_id");
+                            int latIdx = cursor.getColumnIndexOrThrow(SensorType.LATITUDE.name());
+                            int lonIdx = cursor.getColumnIndexOrThrow(SensorType.LONGITUDE.name());
+                            do {
+                                if (!cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
+                                    double rowLat = cursor.getDouble(latIdx);
+                                    double rowLon = cursor.getDouble(lonIdx);
+                                    double lineDist = CropWorkoutMath.INSTANCE.haversineDistanceMeters(newStartLatLng, new LatLng(rowLat, rowLon));
+                                    stmt.bindDouble(1, lineDist);
+                                    stmt.bindLong(2, cursor.getLong(idIdx));
+                                    stmt.executeUpdateDelete();
+                                }
+                            } while (cursor.moveToNext());
+                        }
+                    } finally {
+                        stmt.close();
+                    }
+                } else {
+                    db.execSQL("UPDATE " + table + " SET " + SensorType.LINE_DISTANCE_m.name() + " = 0.0 WHERE _id >= ? AND _id <= ?",
+                            new Object[]{startRowId, endRowId});
+                }
+            }
+
+            // 4. Verify post-op checksum
+            int remainingRows = 0;
+            try (Cursor countCursor = db.rawQuery("SELECT COUNT(*) FROM " + table, null)) {
+                if (countCursor != null && countCursor.moveToFirst()) {
+                    remainingRows = countCursor.getInt(0);
+                }
+            }
+
+            if (remainingRows != expectedRetainedRows || remainingRows < 2) {
+                throw new IllegalStateException("Crop checksum failure: expected " + expectedRetainedRows
+                        + " remaining rows, but found " + remainingRows);
+            }
+
+            db.setTransactionSuccessful();
+        } catch (SQLiteFullException e) {
+            Log.e(TAG, "Disk full during pruneAndShiftSamples, rolling back cleanly: " + e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            Log.e(TAG, "Transaction aborted during pruneAndShiftSamples, rolling back cleanly: " + e.getMessage(), e);
+            throw e;
+        } finally {
+            db.endTransaction();
+        }
+
+        return deletedRows;
+    }
+
+    /**
+     * Reclaims SQLite storage via incremental vacuum if deleted rows exceed 20% of total rows
+     * and the database is configured for INCREMENTAL auto-vacuum (mode 2).
+     */
+    public void vacuumIfFragmented(int deletedRows, int totalRows) {
+        if (totalRows > 0 && ((double) deletedRows / (double) totalRows) > 0.20) {
+            SQLiteDatabase db = getDatabase();
+            try (Cursor cursor = db.rawQuery("PRAGMA auto_vacuum;", null)) {
+                int autoVacuumMode = 0;
+                if (cursor != null && cursor.moveToFirst()) {
+                    autoVacuumMode = cursor.getInt(0);
+                }
+                // Mode 2 is INCREMENTAL auto-vacuum in SQLite
+                if (autoVacuumMode == 2) {
+                    db.execSQL("PRAGMA incremental_vacuum;");
+                    if (DEBUG) Log.d(TAG, "Incremental vacuum executed successfully.");
+                } else {
+                    if (DEBUG) Log.d(TAG, "Incremental vacuum skipped: auto_vacuum mode is " + autoVacuumMode + " (requires mode 2 / INCREMENTAL).");
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Incremental vacuum check/execution failed: " + e.getMessage());
+            }
+        }
+    }
+
+
     public boolean existsTable(String baseFileName) {
-        if (baseFileName == null) return false;
+        if (baseFileName == null || baseFileName.trim().isEmpty() || "null".equalsIgnoreCase(baseFileName.trim())) {
+            return false;
+        }
         return existsColumnInTable(getDatabase(), getTableName(baseFileName), WorkoutSamplesDbHelper.TIME);
     }
 
     // stolen from http://stackoverflow.com/questions/4719594/checking-if-a-column-exists-in-an-application-database-in-android
     private static boolean existsColumnInTable(@NonNull SQLiteDatabase inDatabase, String inTable, String columnToCheck) {
-        Cursor mCursor = null;
-        try {
-            // Query 1 row
-            mCursor = inDatabase.rawQuery("SELECT * FROM " + inTable + " LIMIT 0", null);
-
+        try (Cursor mCursor = inDatabase.rawQuery("SELECT * FROM " + inTable + " LIMIT 0", null)) {
             // getColumnIndex() gives us the index (0 to ...) of the column - otherwise we get a -1
-            return mCursor.getColumnIndex(columnToCheck) != -1;
-
+            return mCursor != null && mCursor.getColumnIndex(columnToCheck) != -1;
         } catch (Exception Exp) {
             // Something went wrong. Missing the database? The table?
             Log.d("... - existsColumnInTable", "When checking whether a column exists in the table, an error occurred: " + Exp.getMessage());
             return false;
-        } finally {
-            if (mCursor != null) mCursor.close();
         }
     }
 
@@ -457,9 +626,35 @@ public class WorkoutSamplesDatabaseManager {
         return true;
     }
 
+    /**
+     * Resolves the quoted SQLite table identifier for the given workout {@code workoutName}.
+     *
+     * <p>Requirement {@code REQ-TRK-026.2} ({@code ATT-3980}): Strictly rejects {@code null}, empty/blank,
+     * or literal {@code "null"} (case-insensitive) input to prevent silent creation or targeting of a
+     * table named {@code "\"null\""} during deferred resume flows.
+     *
+     * @param workoutName the workout {@code FILE_BASE_NAME}
+     * @return the quoted SQLite table name {@code "\"<workoutName>\""}
+     * @throws IllegalArgumentException if {@code workoutName} is {@code null}, blank, or literal {@code "null"}
+     */
     @NonNull
     public static String getTableName(String workoutName) {
-        return "\"" + workoutName + "\"";
+        if (workoutName == null || workoutName.trim().isEmpty() || "null".equalsIgnoreCase(workoutName.trim())) {
+            throw new IllegalArgumentException("Invalid workout baseFileName for sample table: " + workoutName);
+        }
+        String escaped = workoutName.replace("\"", "\"\"");
+        if (escaped.length() > 64) {
+            String msg = "Workout table name exceeds SQLite identifier limit (64 chars): " + workoutName;
+            try {
+                Context appContext = TrainingApplication.getAppContext();
+                if (appContext != null) {
+                    msg = appContext.getString(R.string.error_workout_table_name_too_long) + ": " + workoutName;
+                }
+            } catch (Throwable ignored) {
+            }
+            throw new IllegalArgumentException(msg);
+        }
+        return "\"" + escaped + "\"";
     }
 
     @NonNull

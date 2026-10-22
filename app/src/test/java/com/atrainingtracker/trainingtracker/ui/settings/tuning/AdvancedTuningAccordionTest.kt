@@ -28,7 +28,9 @@ import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFa
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import io.mockk.every
 import io.mockk.mockk
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 import java.util.Locale
 
@@ -37,6 +39,18 @@ import java.util.Locale
  * in accordance with REQ-UI-222 and TST-UI-176.1.
  */
 class AdvancedTuningAccordionTest {
+
+    private lateinit var originalLocale: Locale
+
+    @Before
+    fun setUp() {
+        originalLocale = Locale.getDefault()
+    }
+
+    @After
+    fun tearDown() {
+        Locale.setDefault(originalLocale)
+    }
 
     @Test
     fun testCockpitTypographySubtitle_reflectsFontAndWeight() {
@@ -300,21 +314,21 @@ class AdvancedTuningAccordionTest {
                 dismissSec = 4,
                 context = mockContext
             )
-            assertEquals("4s, 1.0 km", subtitle1)
+            assertEquals("4s, 1.00 km", subtitle1)
 
             val subtitle2 = TuningSubtitleFormatter.formatNavigationSubtitle(
                 radiusKm = 2.5f,
                 dismissSec = 10,
                 context = mockContext
             )
-            assertEquals("10s, 2.5 km", subtitle2)
+            assertEquals("10s, 2.50 km", subtitle2)
 
             val subtitle3 = TuningSubtitleFormatter.formatNavigationSubtitle(
                 radiusKm = 2.5f,
                 dismissSec = 0,
                 context = mockContext
             )
-            assertEquals("4s, 2.5 km", subtitle3)
+            assertEquals("4s, 2.50 km", subtitle3)
         } finally {
             Locale.setDefault(defaultLocale)
         }
@@ -368,34 +382,76 @@ class AdvancedTuningAccordionTest {
 
     @Test
     fun testClusterTuningSubtitle_formatting() {
-        Locale.setDefault(Locale.US)
+        val defaultLocale = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.US)
+            val mockContext = mockk<Context>()
+            every { mockContext.getString(R.string.units_distance_metric) } returns "km"
+            every { mockContext.getString(R.string.units_distance_imperial) } returns "mi"
+
+            val metricSubtitle = TuningSubtitleFormatter.formatClusterTuningSubtitle(
+                endpointTolerance = 200f,
+                apexTolerance = 400f,
+                distanceTolerance = 0.20f,
+                altitudePositionTolerance = 400f,
+                useSportTypeForClustering = true,
+                useAltitudePosForClustering = true,
+                isImperial = false,
+                context = mockContext
+            )
+            assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20% · Alt: 0.400km", metricSubtitle)
+
+            val metricSubtitleNoAlt = TuningSubtitleFormatter.formatClusterTuningSubtitle(
+                endpointTolerance = 200f,
+                apexTolerance = 400f,
+                distanceTolerance = 0.20f,
+                altitudePositionTolerance = 400f,
+                useSportTypeForClustering = true,
+                useAltitudePosForClustering = false,
+                isImperial = false,
+                context = mockContext
+            )
+            assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20%", metricSubtitleNoAlt)
+        } finally {
+            Locale.setDefault(defaultLocale)
+        }
+    }
+
+    @Test
+    fun testPhysiologyModelsSubtitle_reflectsEnabledSchools() {
         val mockContext = mockk<Context>()
-        every { mockContext.getString(R.string.units_distance_metric) } returns "km"
-        every { mockContext.getString(R.string.units_distance_imperial) } returns "mi"
+        every { mockContext.getString(R.string.tuning_physiology_coggan_short) } returns "Coggan"
+        every { mockContext.getString(R.string.tuning_physiology_pmc_short) } returns "PMC"
+        every { mockContext.getString(R.string.tuning_physiology_ef_short) } returns "EF / Decoupling"
+        every { mockContext.getString(R.string.tuning_physiology_cp_short) } returns "CP / W'"
+        every { mockContext.getString(R.string.tuning_physiology_none_enabled) } returns "None enabled"
 
-        val metricSubtitle = TuningSubtitleFormatter.formatClusterTuningSubtitle(
-            endpointTolerance = 200f,
-            apexTolerance = 400f,
-            distanceTolerance = 0.20f,
-            altitudePositionTolerance = 400f,
-            useSportTypeForClustering = true,
-            useAltitudePosForClustering = true,
-            isImperial = false,
+        val defaultSubtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
+            enableCogganPowerMetrics = true,
+            enablePmcModel = false,
+            enableAerobicEfficiencyModel = false,
+            enableCriticalPowerModel = false,
             context = mockContext
         )
-        assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20% · Alt: 0.400km", metricSubtitle)
+        assertEquals("Coggan", defaultSubtitle)
 
-        val metricSubtitleNoAlt = TuningSubtitleFormatter.formatClusterTuningSubtitle(
-            endpointTolerance = 200f,
-            apexTolerance = 400f,
-            distanceTolerance = 0.20f,
-            altitudePositionTolerance = 400f,
-            useSportTypeForClustering = true,
-            useAltitudePosForClustering = false,
-            isImperial = false,
+        val allSubtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
+            enableCogganPowerMetrics = true,
+            enablePmcModel = true,
+            enableAerobicEfficiencyModel = true,
+            enableCriticalPowerModel = true,
             context = mockContext
         )
-        assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20%", metricSubtitleNoAlt)
+        assertEquals("Coggan, PMC, EF / Decoupling, CP / W'", allSubtitle)
+
+        val noneSubtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
+            enableCogganPowerMetrics = false,
+            enablePmcModel = false,
+            enableAerobicEfficiencyModel = false,
+            enableCriticalPowerModel = false,
+            context = mockContext
+        )
+        assertEquals("None enabled", noneSubtitle)
     }
 
     @Test
@@ -407,6 +463,7 @@ class AdvancedTuningAccordionTest {
             TuningSection.SENSORS_GPS,
             TuningSection.SENSOR_SEARCH,
             TuningSection.WORKOUT_MASKS_CARDS,
+            TuningSection.PHYSIOLOGY_MODELS,
             TuningSection.ROUTE_CLUSTERING,
             TuningSection.AFTERMATH_ANALYSIS
         )

@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking
 
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
+import com.atrainingtracker.trainingtracker.ui.components.WPrimeBatteryGaugeBar
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -47,6 +48,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -163,6 +165,18 @@ fun SensorFieldView(
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {}
 ) {
+    val isWarning = fieldState.wPrimeBatteryState?.isWarning == true
+    val warningBorderColor = MaterialTheme.colorScheme.error
+    val effectiveBorder = remember(border, isSelectedForMove, isWarning, warningBorderColor) {
+        if (isSelectedForMove) {
+            border
+        } else if (isWarning) {
+            BorderStroke(1.5.dp, warningBorderColor)
+        } else {
+            border
+        }
+    }
+
     val cockpitTypography = LocalCockpitTypography.current
     // Determine text styles based on the size parameter and configured cockpit typography.
     val valueStyle = getSensorValueTextStyle(
@@ -226,7 +240,7 @@ fun SensorFieldView(
                 MaterialTheme.colorScheme.surface
             }
         ),
-        border = border
+        border = effectiveBorder
     ) {
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             // 1. Left Indicator Strip
@@ -285,6 +299,41 @@ fun SensorFieldView(
                         style = unitStyle,
                         modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Optional Zone Gauge Bar (REQ-UI-376)
+                if (fieldState.zoneDisplayOptions.showGauge && fieldState.zoneGaugeState != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    ZoneGaugeBar(
+                        state = fieldState.zoneGaugeState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
+                        showBadge = (fieldState.viewSize >= ViewSize.NORMAL)
+                    )
+                }
+
+                // Optional Pedal Power Balance Bar (REQ-UI-377)
+                if (fieldState.pedalBalanceState != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    PedalPowerBalanceBar(
+                        state = fieldState.pedalBalanceState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp)
+                    )
+                }
+
+                // Optional W' Anaerobic Battery Gauge Bar (REQ-UI-416)
+                if (fieldState.wPrimeBatteryState != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    WPrimeBatteryGaugeBar(
+                        state = fieldState.wPrimeBatteryState,
+                        viewSize = fieldState.viewSize,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp)
                     )
                 }
 
@@ -626,7 +675,7 @@ private fun MockCockpitGrid(style: SensorFieldStyle) {
 
 @Preview(showBackground = true, name = "Cockpit V0: Baseline (Status Quo)", widthDp = 360)
 @Composable
-fun PreviewCockpitVariant0_Baseline() {
+private fun PreviewCockpitVariant0_Baseline() {
     MaterialTheme {
         MockCockpitGrid(style = SensorFieldStyle.Variant0_Baseline)
     }
@@ -634,7 +683,7 @@ fun PreviewCockpitVariant0_Baseline() {
 
 @Preview(showBackground = true, name = "Cockpit V1: Modern Outlined Sport Tiles", widthDp = 360)
 @Composable
-fun PreviewCockpitVariant1_OutlinedTiles() {
+private fun PreviewCockpitVariant1_OutlinedTiles() {
     MaterialTheme {
         MockCockpitGrid(style = SensorFieldStyle.Variant1_OutlinedTiles)
     }
@@ -642,7 +691,7 @@ fun PreviewCockpitVariant1_OutlinedTiles() {
 
 @Preview(showBackground = true, name = "Cockpit V2: Elevated Sports Cards", widthDp = 360)
 @Composable
-fun PreviewCockpitVariant2_ElevatedCards() {
+private fun PreviewCockpitVariant2_ElevatedCards() {
     MaterialTheme {
         MockCockpitGrid(style = SensorFieldStyle.Variant2_ElevatedCards)
     }
@@ -650,7 +699,7 @@ fun PreviewCockpitVariant2_ElevatedCards() {
 
 @Preview(showBackground = true, name = "Cockpit V3: Soft Accent Capsules", widthDp = 360)
 @Composable
-fun PreviewCockpitVariant3_Capsules() {
+private fun PreviewCockpitVariant3_Capsules() {
     MaterialTheme {
         MockCockpitGrid(style = SensorFieldStyle.Variant3_Capsules)
     }
@@ -658,7 +707,7 @@ fun PreviewCockpitVariant3_Capsules() {
 
 @Preview(showBackground = true, name = "Cockpit Variants Comparison", widthDp = 360, heightDp = 1000)
 @Composable
-fun PreviewCockpitVariantsComparison() {
+private fun PreviewCockpitVariantsComparison() {
     MaterialTheme {
         Column(
             modifier = Modifier

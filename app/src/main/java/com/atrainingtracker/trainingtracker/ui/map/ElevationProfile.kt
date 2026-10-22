@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import android.content.res.Configuration
 import android.graphics.Paint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,8 +43,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import com.atrainingtracker.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.banalservice.BANALService
@@ -119,7 +125,8 @@ fun calculateElevationBounds(
     outlierToleranceMeters: Double = 15.0,
     minSpanMeters: Double = 20.0
 ): ElevationBounds {
-    if (pathPoints.isEmpty()) {
+    val nonNullPoints = pathPoints.filter { it.altitude != null && !it.altitude.isNaN() }
+    if (nonNullPoints.isEmpty()) {
         val fallbackMin = minAltitudeOverride ?: 0.0
         val fallbackMax = maxAltitudeOverride ?: (fallbackMin + minSpanMeters)
         val range = (fallbackMax - fallbackMin).coerceAtLeast(1.0)
@@ -127,20 +134,20 @@ fun calculateElevationBounds(
     }
 
     // REQ-CON-017: Filter extreme non-physical altitude outliers (e.g. 7300m calibration staircase)
-    val validPoints = if (pathPoints.size >= 5) {
-        val sortedAlts = pathPoints.map { it.altitude }.sorted()
+    val validPoints = if (nonNullPoints.size >= 5) {
+        val sortedAlts = nonNullPoints.map { it.altitude!! }.sorted()
         val medianAlt = sortedAlts[sortedAlts.size / 2]
-        if (medianAlt < 1500.0 && pathPoints.any { it.altitude > 3000.0 }) {
-            pathPoints.filter { it.altitude in -500.0..3000.0 }.ifEmpty { pathPoints }
+        if (medianAlt < 1500.0 && nonNullPoints.any { it.altitude!! > 3000.0 }) {
+            nonNullPoints.filter { it.altitude!! in -500.0..3000.0 }.ifEmpty { nonNullPoints }
         } else {
-            pathPoints
+            nonNullPoints
         }
     } else {
-        pathPoints
+        nonNullPoints
     }
 
-    val streamMin = validPoints.minOf { it.altitude }
-    val streamMax = validPoints.maxOf { it.altitude }
+    val streamMin = validPoints.minOf { it.altitude!! }
+    val streamMax = validPoints.maxOf { it.altitude!! }
 
     // Sanitize min override:
     // If override is an outlier (< streamMin - 15) OR higher than stream points (> streamMin),
@@ -199,6 +206,29 @@ fun calculateElevationProfileHeight(range: Double): androidx.compose.ui.unit.Dp 
     return height.toInt().dp
 }
 
+/**
+ * Resolves standard 7-zone slope gradient color bands (REQ-UI-371):
+ * - < 2%: Zone 1 (Chartreuse) - flat, rolling, descents, non-finite values (NaN/Inf)
+ * - 2% - 5%: Zone 2 (Green) - gentle incline [2.0, 5.0)
+ * - 5% - 10%: Zone 3 (Orange) - moderate climb [5.0, 10.0)
+ * - 10% - 15%: Zone 4 (Red) - steep climb [10.0, 15.0)
+ * - 15% - 20%: Zone 5 (Dark Violet) - very steep climb [15.0, 20.0)
+ * - 20% - 25%: Zone 6 (Dark Chestnut Brown) - extreme ramp [20.0, 25.0)
+ * - >= 25%: Zone 7 (Black) - monster grade / wall [25.0, +inf)
+ */
+fun getElevationGradeColor(gradePercent: Double): Color {
+    if (!gradePercent.isFinite()) return TTColor.Zone1
+    return when {
+        gradePercent < 2.0 -> TTColor.Zone1
+        gradePercent < 5.0 -> TTColor.Zone2
+        gradePercent < 10.0 -> TTColor.Zone3
+        gradePercent < 15.0 -> TTColor.Zone4
+        gradePercent < 20.0 -> TTColor.Zone5
+        gradePercent < 25.0 -> TTColor.Zone6
+        else -> TTColor.Zone7
+    }
+}
+
 private data class ElevationSegment(
     val dist1: Double,
     val timeSec1: Long,
@@ -232,6 +262,7 @@ fun ElevationProfile(
     climbGradientShading: Boolean = false,
     segmentColorProvider: ((Double) -> Color)? = null,
     fixedHeight: androidx.compose.ui.unit.Dp? = null,
+    showEmptyState: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -263,6 +294,7 @@ fun ElevationProfile(
         climbGradientShading = climbGradientShading,
         segmentColorProvider = segmentColorProvider,
         fixedHeight = fixedHeight,
+        showEmptyState = showEmptyState,
         modifier = modifier
     )
 }
@@ -291,8 +323,17 @@ fun ElevationProfile(
     fillParentHeight: Boolean = false,
     climbGradientShading: Boolean = false,
     segmentColorProvider: ((Double) -> Color)? = null,
-    fixedHeight: androidx.compose.ui.unit.Dp? = null
+    fixedHeight: androidx.compose.ui.unit.Dp? = null,
+    showEmptyState: Boolean = false
 ) {
+    if (pathPoints.size < 2 && showEmptyState) {
+        ElevationProfileEmptyState(
+            fixedHeight = fixedHeight,
+            fillMaxContainerHeight = fillParentHeight,
+            modifier = modifier
+        )
+        return
+    }
     if (pathPoints.size < 2) return
 
     val context = LocalContext.current
@@ -324,6 +365,7 @@ fun ElevationProfile(
     val currentUpdateZoomState by rememberUpdatedState(updateZoom)
     val currentOnDistanceSelectedState by rememberUpdatedState(onDistanceSelected)
     val currentOnPointSelectedState by rememberUpdatedState(onPointSelected)
+    val currentPathPointsState by rememberUpdatedState(pathPoints)
 
     var lastTapTime by remember { mutableLongStateOf(0L) }
 
@@ -387,14 +429,7 @@ fun ElevationProfile(
             val color = if (climbGradientShading) {
                 segmentColorProvider?.invoke(grade) ?: getClimbGradeColor(grade)
             } else {
-                when {
-                    grade < 2.0 -> TTColor.Zone1
-                    grade < 5.0 -> TTColor.Zone2
-                    grade < 10.0 -> TTColor.Zone3
-                    grade < 15.0 -> TTColor.Zone4
-                    grade < 20.0 -> TTColor.Zone5
-                    else -> Color.Black
-                }
+                segmentColorProvider?.invoke(grade) ?: getElevationGradeColor(grade)
             }
             segments.add(ElevationSegment(p1.distance, p1.timeSec, a1, p2.distance, p2.timeSec, a2, color))
         }
@@ -555,12 +590,13 @@ fun ElevationProfile(
                                         canvasWidth = chartWidthPx,
                                         totalDist = totalSpan
                                     )
+                                    val activePoints = currentPathPointsState
                                     val activeIndex = if (isTimeDomain) {
-                                        pathPoints.indexOfLast { it.timeSec.toDouble() <= selectedValue }.coerceAtLeast(0)
+                                        activePoints.indexOfLast { it.timeSec.toDouble() <= selectedValue }.coerceAtLeast(0)
                                     } else {
-                                        pathPoints.indexOfLast { it.distance <= selectedValue }.coerceAtLeast(0)
+                                        activePoints.indexOfLast { it.distance <= selectedValue }.coerceAtLeast(0)
                                     }
-                                    val activePoint = pathPoints.getOrNull(activeIndex) ?: pathPoints.firstOrNull()
+                                    val activePoint = activePoints.getOrNull(activeIndex) ?: activePoints.firstOrNull()
                                     currentOnDistanceSelectedState(activePoint?.distance ?: selectedValue)
                                     currentOnPointSelectedState?.invoke(activePoint)
                                 }
@@ -599,12 +635,13 @@ fun ElevationProfile(
                                     canvasWidth = chartWidthPx,
                                     totalDist = totalSpan
                                 )
+                                val activePoints = currentPathPointsState
                                 val activeIndex = if (isTimeDomain) {
-                                    pathPoints.indexOfLast { it.timeSec.toDouble() <= selectedValue }.coerceAtLeast(0)
+                                    activePoints.indexOfLast { it.timeSec.toDouble() <= selectedValue }.coerceAtLeast(0)
                                 } else {
-                                    pathPoints.indexOfLast { it.distance <= selectedValue }.coerceAtLeast(0)
+                                    activePoints.indexOfLast { it.distance <= selectedValue }.coerceAtLeast(0)
                                 }
-                                val activePoint = pathPoints.getOrNull(activeIndex) ?: pathPoints.firstOrNull()
+                                val activePoint = activePoints.getOrNull(activeIndex) ?: activePoints.firstOrNull()
                                 currentOnDistanceSelectedState(activePoint?.distance ?: selectedValue)
                                 currentOnPointSelectedState?.invoke(activePoint)
                             }
@@ -737,10 +774,11 @@ fun ElevationProfile(
                 // Render Summit Category Badges (REQ-UI-274)
                 if (!isTimeDomain && climbs.isNotEmpty()) {
                     climbs.forEach { climb ->
-                        val summitPt = climb.pathPoints.maxByOrNull { it.altitude } ?: climb.pathPoints.lastOrNull()
+                        val summitPt = climb.pathPoints.maxByOrNull { it.altitude ?: Double.NEGATIVE_INFINITY } ?: climb.pathPoints.lastOrNull()
                         if (summitPt != null && summitPt.distance in currentStartDist..(currentStartDist + visibleSpan)) {
+                            val summitAlt = summitPt.altitude ?: cachedData.minAlt
                             val summitX = ElevationProfileZoomMath.distanceToCanvasX(summitPt.distance, currentStartDist, visibleSpan, width)
-                            val summitY = height - (((summitPt.altitude - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
+                            val summitY = height - (((summitAlt - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
 
                             val (bgColor, textColor, labelRes) = getClimbCategoryColors(climb.category)
                             val badgeText = context.getString(labelRes)
@@ -864,16 +902,17 @@ fun ElevationProfile(
                 val activePoint = pathPoints.getOrNull(activeIndex) ?: pathPoints.firstOrNull()
                 val pLeft = pathPoints[activeIndex]
                 val pRight = pathPoints.getOrNull(activeIndex + 1)
-                val interAlt = if (pRight != null && pRight.distance > pLeft.distance) {
-                    pLeft.altitude + ((dist - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude - pLeft.altitude)
+                val interAlt = if (pRight != null && pRight.distance > pLeft.distance && pLeft.altitude != null && pRight.altitude != null) {
+                    pLeft.altitude!! + ((dist - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude!! - pLeft.altitude!!)
                 } else {
-                    pLeft.altitude
+                    pLeft.altitude ?: pRight?.altitude
                 }
 
                 val markerVal = if (isTimeDomain) (activePoint?.timeSec?.toDouble() ?: 0.0) else dist
                 if (markerVal in currentStartDist..(currentStartDist + visibleSpan)) {
+                    val markerAlt = interAlt ?: cachedData.minAlt
                     val markerX = ElevationProfileZoomMath.distanceToCanvasX(markerVal, currentStartDist, visibleSpan, width)
-                    val markerY = height - (((interAlt - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
+                    val markerY = height - (((markerAlt - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
 
                     drawLine(
                         color = colorScheme.primary,
@@ -884,7 +923,8 @@ fun ElevationProfile(
                     )
                     if (!showZoomControls) {
                         drawIntoCanvas { canvas ->
-                            val combinedLabel = "${distanceFormatter.format_with_units(dist)} | ${altitudeFormatter.format_with_units(interAlt)}"
+                            val altStr = if (interAlt != null) altitudeFormatter.format_with_units(interAlt) else "--"
+                            val combinedLabel = "${distanceFormatter.format_with_units(dist)} | $altStr"
                             val lWidth = highlightPaint.measureText(combinedLabel)
                             canvas.nativeCanvas.drawText(
                                 combinedLabel,
@@ -907,10 +947,10 @@ fun ElevationProfile(
             if (activePoint != null) {
                 val pLeft = pathPoints[activeIndex]
                 val pRight = pathPoints.getOrNull(activeIndex + 1)
-                val interAlt = if (pRight != null && pRight.distance > pLeft.distance) {
-                    pLeft.altitude + ((currentDistance - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude - pLeft.altitude)
+                val interAlt = if (pRight != null && pRight.distance > pLeft.distance && pLeft.altitude != null && pRight.altitude != null) {
+                    pLeft.altitude!! + ((currentDistance - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude!! - pLeft.altitude!!)
                 } else {
-                    pLeft.altitude
+                    pLeft.altitude ?: pRight?.altitude
                 }
 
                 ScrubbingTelemetryBadge(
@@ -933,7 +973,7 @@ fun ElevationProfile(
                 onClick = { showLegend = !showLegend },
                 modifier = Modifier.align(Alignment.TopEnd).padding(end = 4.dp).size(24.dp)
             ) {
-                Icon(Icons.Default.Info, contentDescription = "Legend", modifier = Modifier.size(16.dp), tint = colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium))
+                Icon(Icons.Default.Info, contentDescription = stringResource(R.string.legend), modifier = Modifier.size(16.dp), tint = colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium))
             }
 
             if (showLegend) {
@@ -952,7 +992,7 @@ fun ElevationProfile(
 fun ScrubbingTelemetryBadge(
     point: PathPoint,
     bSportType: BSportType,
-    altitude: Double,
+    altitude: Double? = null,
     unit: MyUnits,
     xAxisDomain: ProfileXAxisDomain,
     modifier: Modifier = Modifier,
@@ -1012,7 +1052,7 @@ fun ScrubbingTelemetryBadge(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                val altStr = altitudeFormatter.format_with_units(altitude)
+                val altStr = if (altitude != null) altitudeFormatter.format_with_units(altitude) else "--"
                 val slopeVal = point.slope
                 val slopeStr = if (slopeVal != null) {
                     val sign = if (slopeVal > 0) "+" else ""
@@ -1113,7 +1153,7 @@ fun ScrubbingTelemetryBadge(
 @Composable
 private fun GradeLegend(modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.widthIn(max = 280.dp),
+        modifier = modifier.widthIn(max = 300.dp),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
         shape = RoundedCornerShape(8.dp),
         shadowElevation = 4.dp
@@ -1123,20 +1163,30 @@ private fun GradeLegend(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            GradeLegendItem(TTColor.Zone1, "< 2%")
-            GradeLegendItem(TTColor.Zone2, "2 - 5%")
-            GradeLegendItem(TTColor.Zone3, "5 - 10%")
-            GradeLegendItem(TTColor.Zone4, "10 - 15%")
-            GradeLegendItem(TTColor.Zone5, "15 - 20%")
-            GradeLegendItem(Color.Black, "> 20%")
+            GradeLegendItem(TTColor.Zone1, stringResource(R.string.grade_legend_under_2))
+            GradeLegendItem(TTColor.Zone2, stringResource(R.string.grade_legend_2_to_5))
+            GradeLegendItem(TTColor.Zone3, stringResource(R.string.grade_legend_5_to_10))
+            GradeLegendItem(TTColor.Zone4, stringResource(R.string.grade_legend_10_to_15))
+            GradeLegendItem(TTColor.Zone5, stringResource(R.string.grade_legend_15_to_20))
+            GradeLegendItem(TTColor.Zone6, stringResource(R.string.grade_legend_20_to_25))
+            GradeLegendItem(TTColor.Zone7, stringResource(R.string.grade_legend_over_25))
         }
     }
 }
 
 @Composable
-private fun GradeLegendItem(color: Color, label: String) {
+private fun GradeLegendItem(
+    color: Color,
+    label: String,
+    hasOutline: Boolean = color == TTColor.Zone6 || color == TTColor.Zone7
+) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Surface(modifier = Modifier.size(12.dp), color = color, shape = RoundedCornerShape(2.dp)) {}
+        Surface(
+            modifier = Modifier.size(12.dp),
+            color = color,
+            shape = RoundedCornerShape(2.dp),
+            border = if (hasOutline) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null
+        ) {}
         Text(
             text = label, 
             style = MaterialTheme.typography.labelSmall, 
@@ -1145,3 +1195,88 @@ private fun GradeLegendItem(color: Color, label: String) {
         )
     }
 }
+
+/**
+ * ATT-3779 / REQ-UI-394: Placeholder empty state rendered when the Elevation Profile is enabled
+ * on a tracking tab (`showEmptyState = true`) but fewer than 2 elevation points exist
+ * (e.g., before tracking starts and no route is selected).
+ *
+ * Uses the canonical minimum elevation profile height (`calculateElevationProfileHeight(0.0)` = 70.dp)
+ * in strict compliance with Design Guidelines Section 2.3 ("No Hardcoded Fixed Heights").
+ */
+@Composable
+internal fun ElevationProfileEmptyState(
+    fixedHeight: Dp? = null,
+    fillMaxContainerHeight: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val targetHeight = fixedHeight ?: calculateElevationProfileHeight(0.0)
+    val colorScheme = MaterialTheme.colorScheme
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (fillMaxContainerHeight) Modifier.fillMaxHeight()
+                else Modifier.height(targetHeight)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            val gridColor = colorScheme.outlineVariant.copy(alpha = 0.25f)
+            val topY = h * 0.2f
+            val midY = h * 0.5f
+            val bottomY = h * 0.8f
+            drawLine(gridColor, Offset(0f, topY), Offset(w, topY), strokeWidth = 1f)
+            drawLine(gridColor, Offset(0f, midY), Offset(w, midY), strokeWidth = 1f)
+            drawLine(gridColor, Offset(0f, bottomY), Offset(w, bottomY), strokeWidth = 1f)
+        }
+
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Terrain,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(R.string.elevation_profile_empty_state),
+                style = MaterialTheme.typography.labelMedium,
+                color = colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Preview(name = "ElevationProfileEmptyState Light", showBackground = true)
+@Composable
+private fun ElevationProfileEmptyStateLightPreview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        Surface {
+            ElevationProfileEmptyState()
+        }
+    }
+}
+
+@Preview(
+    name = "ElevationProfileEmptyState Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    showBackground = true
+)
+@Composable
+private fun ElevationProfileEmptyStateDarkPreview() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        Surface {
+            ElevationProfileEmptyState()
+        }
+    }
+}
+

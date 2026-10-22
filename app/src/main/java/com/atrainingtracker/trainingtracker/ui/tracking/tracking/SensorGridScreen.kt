@@ -19,6 +19,17 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
+import com.atrainingtracker.util.safeUnregisterReceiver
+import androidx.compose.material.icons.filled.PauseCircle
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.runtime.DisposableEffect
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -26,10 +37,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -53,13 +66,26 @@ import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.HorizontalSplit
+import androidx.compose.material.icons.filled.Title
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
@@ -117,14 +143,25 @@ import com.atrainingtracker.trainingtracker.ui.routes.ReturnNavigationHud
 import com.atrainingtracker.trainingtracker.ui.routes.TurnPromptBanner
 import com.atrainingtracker.trainingtracker.ui.segments.LiveSegmentSheet
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
+import com.atrainingtracker.trainingtracker.ui.components.core.LiveTrackingSheetContainer
 import com.atrainingtracker.trainingtracker.ui.components.core.sheetContour
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.theme.DarkOnWarningContainer
+import com.atrainingtracker.trainingtracker.ui.theme.DarkWarning
+import com.atrainingtracker.trainingtracker.ui.theme.DarkWarningAction
+import com.atrainingtracker.trainingtracker.ui.theme.DarkWarningContainer
+import com.atrainingtracker.trainingtracker.ui.theme.LightOnWarningContainer
+import com.atrainingtracker.trainingtracker.ui.theme.LightWarningAction
+import com.atrainingtracker.trainingtracker.ui.theme.LightWarningBorder
+import com.atrainingtracker.trainingtracker.ui.theme.LightWarningContainer
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
+import com.atrainingtracker.trainingtracker.ui.tracking.SectionDividerInfo
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyle
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
+import com.atrainingtracker.trainingtracker.ui.tracking.packVisibleRowsForTuning
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitTypography
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.LocalCockpitTypography
 import com.google.android.gms.maps.model.LatLng
@@ -139,6 +176,8 @@ interface GridActions {
     fun onCancelMove() {}
     fun onSwapFields(sourceFieldId: Long, targetFieldId: Long) {}
     fun onMoveField(sourceFieldId: Long, targetRow: Int, targetCol: Int) {}
+    fun onSetSectionDivider(rowNr: Int, title: String?) {}
+    fun onDeleteSectionDivider(rowNr: Int) {}
 }
 
 interface TabToggleActions {
@@ -150,6 +189,8 @@ interface TabToggleActions {
     fun onToggleLiveClimbs(enabled: Boolean) {}
     fun onToggleNavigationHints(enabled: Boolean) {}
     fun onToggleLapButton(enabled: Boolean) {}
+    fun onToggleBikeBell(enabled: Boolean) {}
+    fun onRingBikeBell() {}
 
     companion object {
         val Empty: TabToggleActions = object : TabToggleActions {}
@@ -180,6 +221,19 @@ fun SensorGridScreen(
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
         initial = TuningConfig()
     )
+    var isAutoPaused by remember { mutableStateOf(TrainingApplication.isAutoPaused()) }
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context?, intent: Intent?) {
+                isAutoPaused = TrainingApplication.isAutoPaused()
+            }
+        }
+        val filter = IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED)
+        ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        onDispose {
+            context.safeUnregisterReceiver(receiver, "SensorGridScreen")
+        }
+    }
     val activeVariantStyle = remember(tuningConfig.sensorFieldVariant) {
         SensorFieldStyle.forVariant(tuningConfig.sensorFieldVariant)
     }
@@ -281,51 +335,56 @@ fun SensorGridScreen(
             sheetPeekHeight = if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
             sheetSwipeEnabled = (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING && isTabActive,
             sheetContent = {
-                if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveSegments && activeSegment != null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                            .sheetContour()
-                            .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
-                            .then(
-                                if (scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded) {
-                                    Modifier.clickable {
-                                        coroutineScope.launch {
-                                            scaffoldState.bottomSheetState.expand()
-                                        }
-                                    }
-                                } else Modifier
-                            )
+                val showSegment = shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveSegments && activeSegment != null
+                val showClimb = shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveClimbs && activeLiveClimb != null
+                if (showSegment || showClimb) {
+                    // LiveTrackingSheetContainer encapsulates sheetContour(), surface styling, and click-to-expand (REQ-UI-366)
+                    LiveTrackingSheetContainer(
+                        isPartiallyExpanded = scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded,
+                        onExpand = {
+                            coroutineScope.launch {
+                                scaffoldState.bottomSheetState.expand()
+                            }
+                        }
                     ) {
-                        LiveSegmentSheet(
-                            liveSegment = activeSegment
-                        )
-                    }
-                } else if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveClimbs && activeLiveClimb != null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .sheetContour()
-                            .background(MaterialTheme.colorScheme.surface, shape = BottomSheetDesign.SheetShape)
-                            .then(
-                                if (scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded) {
-                                    Modifier.clickable {
-                                        coroutineScope.launch {
-                                            scaffoldState.bottomSheetState.expand()
-                                        }
-                                    }
-                                } else Modifier
+                        if (showSegment) {
+                            LiveSegmentSheet(
+                                liveSegment = activeSegment
                             )
-                    ) {
-                        LiveClimbSheet(
-                            liveClimb = activeLiveClimb!!
-                        )
+                        } else if (showClimb) {
+                            LiveClimbSheet(
+                                liveClimb = activeLiveClimb!!
+                            )
+                        }
                     }
                 }
             }
         ) { paddingValues ->
         if (screenMode == ScreenMode.CONFIGURATION) {
+            var editingDividerRow by remember { mutableStateOf<Int?>(null) }
+            val dividerMap = remember(state.sectionDividers) {
+                state.sectionDividers.associateBy { it.rowNr }
+            }
+
+            if (editingDividerRow != null) {
+                val row = editingDividerRow!!
+                val existingDivider = dividerMap[row]
+                EditSectionDividerDialog(
+                    initialTitle = existingDivider?.title,
+                    onConfirm = { newTitle ->
+                        gridActions.onSetSectionDivider(row, newTitle)
+                        editingDividerRow = null
+                    },
+                    onDelete = if (existingDivider != null) {
+                        {
+                            gridActions.onDeleteSectionDivider(row)
+                            editingDividerRow = null
+                        }
+                    } else null,
+                    onDismiss = { editingDividerRow = null }
+                )
+            }
+
             // UNIFIED SCROLLABLE CONFIGURATION CONTAINER (REQ-UI-295 / ATT-2620)
             Column(
                 modifier = Modifier
@@ -391,13 +450,52 @@ fun SensorGridScreen(
 
                     sortedRows.forEach { rowNr ->
                         maxRowNr = rowNr
-                        RowAdder(onClick = {
-                            if (selectedFieldForMove != null) {
-                                gridActions.onMoveField(selectedFieldForMove.sensorFieldId, rowNr, -1)
-                            } else {
-                                gridActions.onAddRow(rowNr)
+                        val existingDivider = dividerMap[rowNr]
+
+                        if (rowNr > 1) {
+                            // Inter-row controls: Add Row + Section Divider toggle/indicator
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    RowAdder(onClick = {
+                                        if (selectedFieldForMove != null) {
+                                            gridActions.onMoveField(selectedFieldForMove.sensorFieldId, rowNr, -1)
+                                        } else {
+                                            gridActions.onAddRow(rowNr)
+                                        }
+                                    })
+                                }
+                                IconButton(onClick = { editingDividerRow = rowNr }) {
+                                    Icon(
+                                        imageVector = if (existingDivider != null) Icons.Default.Title else Icons.Default.HorizontalSplit,
+                                        contentDescription = stringResource(
+                                            if (existingDivider != null) R.string.cockpit_section_divider_edit
+                                            else R.string.cockpit_section_divider_add
+                                        ),
+                                        tint = if (existingDivider != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                    )
+                                }
                             }
-                        })
+
+                            if (existingDivider != null) {
+                                CockpitSectionDivider(
+                                    divider = existingDivider,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+                                )
+                            }
+                        } else {
+                            RowAdder(onClick = {
+                                if (selectedFieldForMove != null) {
+                                    gridActions.onMoveField(selectedFieldForMove.sensorFieldId, rowNr, -1)
+                                } else {
+                                    gridActions.onAddRow(rowNr)
+                                }
+                            })
+                        }
 
                         val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
                         Row(
@@ -544,13 +642,33 @@ fun SensorGridScreen(
                         icon = Icons.Default.Timer,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    SpatialCockpitToggleCard(
+                        title = stringResource(R.string.config_tracking__showBikeBell),
+                        subtitle = stringResource(R.string.config_tracking__showBikeBell_subtitle),
+                        isActive = state.showBikeBell,
+                        onToggle = { tabToggleActions.onToggleBikeBell(it) },
+                        icon = Icons.Default.Notifications,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         } else {
             // TRACKING & PREVIEW MODES (Top-level spatial Box overlay, independent inner sensor scroll, weighted map)
+            val isAvailable = screenMode != ScreenMode.CONFIGURATION
+            val haptic = LocalHapticFeedback.current
+            val doubleTapModifier = if (isAvailable && state.showBikeBell) {
+                Modifier.detectCockpitDoubleTap(enabled = true) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    tabToggleActions.onRingBikeBell()
+                }
+            } else {
+                Modifier
+            }
+
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
+                    .then(doubleTapModifier)
                     .padding(top = paddingValues.calculateTopPadding()) // Only pad the top
             ) {
                 val availableHeight = maxHeight
@@ -558,17 +676,26 @@ fun SensorGridScreen(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // 1. The Sensor Grid (Scrollable, capped at 50% available height when map visible, or unweighted when map hidden; REQ-UI-358)
+                    // 1. The Sensor Grid (Scrollable, capped at 50% available height when map visible, or unweighted when map hidden; REQ-UI-358 / REQ-UI-409.3)
                     val sensorGridModifier = if (state.mapState.showMap) {
                         Modifier
                             .fillMaxWidth()
+                            .defaultMinSize(minHeight = 48.dp)
                             .heightIn(max = availableHeight * 0.5f)
                             .verticalScroll(rememberScrollState())
                     } else {
                         Modifier
                             .fillMaxWidth()
+                            .defaultMinSize(minHeight = 48.dp)
                             .verticalScroll(rememberScrollState())
                             .weight(1f, fill = false)
+                    }
+
+                    val packedRows = remember(state.fields, tuningConfig, screenMode) {
+                        packVisibleRowsForTuning(state.fields, tuningConfig, screenMode)
+                    }
+                    val trackingDividerMap = remember(state.sectionDividers) {
+                        state.sectionDividers.associateBy { it.rowNr }
                     }
 
                     Column(
@@ -576,11 +703,18 @@ fun SensorGridScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
                     ) {
-                        val fieldsByRow = state.fields.groupBy { it.rowNr }
-                        val sortedRows = fieldsByRow.keys.sorted()
+                        packedRows.forEach { fieldsInThisRow ->
+                            val firstField = fieldsInThisRow.firstOrNull()
+                            if (firstField != null && firstField.rowNr > 1) {
+                                val divider = trackingDividerMap[firstField.rowNr]
+                                if (divider != null) {
+                                    CockpitSectionDivider(
+                                        divider = divider,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
 
-                        sortedRows.forEach { rowNr ->
-                            val fieldsInThisRow = fieldsByRow[rowNr]?.sortedBy { it.colNr } ?: emptyList()
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.height(IntrinsicSize.Min),
@@ -620,8 +754,9 @@ fun SensorGridScreen(
                         }
                     }
 
-                    // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199)
+                    // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199 / REQ-NAV-056)
                     val activeNavigatedRoute = state.mapRoutes.firstOrNull { it.isActiveNavigation }
+                    var lastRouteSegmentIndex by remember(activeNavigatedRoute?.id) { mutableStateOf<Int?>(null) }
                     val resolvedProfile = remember(
                         activeNavigatedRoute,
                         state.pathPoints,
@@ -629,16 +764,24 @@ fun SensorGridScreen(
                         state.elevationProfileScope,
                         state.elevationProfileLookahead
                     ) {
-                        TrackingElevationProfileResolver.resolve(
+                        val res = TrackingElevationProfileResolver.resolve(
                             activeNavigatedRoute = activeNavigatedRoute,
                             recordedPathPoints = state.pathPoints,
                             currentLocation = currentLocation,
                             scope = state.elevationProfileScope,
-                            lookaheadDistanceMeters = state.elevationProfileLookahead
+                            lookaheadDistanceMeters = state.elevationProfileLookahead,
+                            lastSegmentIndex = lastRouteSegmentIndex
                         )
+                        lastRouteSegmentIndex = res.segmentIndex
+                        res
                     }
 
-                    if (state.showElevationProfile && resolvedProfile.pathPoints.size >= 2) {
+                    // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199)
+                    // NOTE (ATT-3311 Post-Review Revert / Fence): Do NOT apply scaffold bottom padding from paddingValues
+                    // here! Material 3 BottomSheetScaffold passes static sheetPeekHeight (~174dp) in paddingValues even when
+                    // the user swipes the Live Segment / Climb sheet down to SheetValue.Hidden (skipHiddenState = false),
+                    // which creates a permanent 174dp blank whitespace below the ElevationProfile.
+                    if (state.showElevationProfile) {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -648,6 +791,7 @@ fun SensorGridScreen(
                                 pathPoints = resolvedProfile.pathPoints,
                                 currentDistance = resolvedProfile.markerDistance,
                                 climbs = resolvedProfile.climbs,
+                                showEmptyState = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -666,6 +810,21 @@ fun SensorGridScreen(
                         onSelectForkRoute = { routeId -> forkNavRepo.selectRouteManually(routeId) },
                         onDismissFork = { forkNavRepo.dismissPrompt() },
                         modifier = Modifier.align(Alignment.TopCenter)
+                    )
+                }
+
+                // Auto-Pause HUD Banner (REQ-TRK-018 / ATT-45)
+                if (isAutoPaused) {
+                    AutoPauseHudBanner(
+                        onManualResume = {
+                            val intent = Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED).apply {
+                                `package` = context.packageName
+                            }
+                            context.sendBroadcast(intent)
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = if (state.showNavigationHints) 64.dp else 8.dp)
                     )
                 }
 
@@ -704,6 +863,67 @@ fun SensorGridScreen(
         }
     }
 
+    }
+}
+
+/**
+ * Ambient amber pill HUD banner displayed when tracking is auto-paused (REQ-TRK-018 / ATT-45).
+ * Features high-contrast amber styling and a "Resume Now" manual override button.
+ */
+@Composable
+fun AutoPauseHudBanner(
+    onManualResume: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val containerColor = if (isDark) DarkWarningContainer else LightWarningContainer
+    val contentColor = if (isDark) DarkOnWarningContainer else LightOnWarningContainer
+    val actionColor = if (isDark) DarkWarningAction else LightWarningAction
+    val borderColor = if (isDark) DarkWarning else LightWarningBorder
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = containerColor,
+        contentColor = contentColor,
+        border = BorderStroke(1.5.dp, borderColor),
+        tonalElevation = 4.dp,
+        modifier = modifier
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.PauseCircle,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = stringResource(R.string.cockpit_auto_pause_badge),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = contentColor
+            )
+            FilledTonalButton(
+                onClick = onManualResume,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = actionColor,
+                    contentColor = if (isDark) Color.Black else Color.White
+                ),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier.height(32.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.cockpit_auto_pause_resume),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     }
 }
 
@@ -800,6 +1020,7 @@ fun SpatialCockpitToggleCard(
     isActive: Boolean,
     onToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     icon: ImageVector? = null,
     accentColor: Color? = null
 ) {
@@ -848,13 +1069,24 @@ fun SpatialCockpitToggleCard(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = contentColor.copy(alpha = 0.8f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
 
             Surface(
@@ -886,12 +1118,228 @@ fun SpatialCockpitToggleCard(
     }
 }
 
+/**
+ * Zero-Look Double-Tap gesture detector for the Cockpit sensor grid (REQ-UI-421.3).
+ * Evaluates pointer events in PointerEventPass.Main without consuming initial pointer down events,
+ * strictly preserving screen wakefulness in BatterySaverController (PointerEventPass.Initial),
+ * vertical sensor grid scrolling, and horizontal tab swiping in HorizontalPager.
+ */
+internal fun Modifier.detectCockpitDoubleTap(
+    enabled: Boolean,
+    onDoubleTap: () -> Unit
+): Modifier = if (!enabled) this else pointerInput(Unit) {
+    var lastTapTime = 0L
+    var lastTapPosition = Offset.Zero
+    val doubleTapTimeout = viewConfiguration.doubleTapTimeoutMillis
+    val doubleTapMinTime = 40L
+    val touchSlop = viewConfiguration.touchSlop
+
+    awaitPointerEventScope {
+        while (true) {
+            val down = awaitFirstDown(pass = PointerEventPass.Main, requireUnconsumed = false)
+            val downTime = System.currentTimeMillis()
+            val downPos = down.position
+            var isDrag = false
+
+            while (true) {
+                val event = awaitPointerEvent(pass = PointerEventPass.Main)
+                val pressed = event.changes.filter { it.pressed }
+                if (pressed.isEmpty()) {
+                    // All pointers up
+                    val upTime = System.currentTimeMillis()
+                    val upChange = event.changes.firstOrNull()
+                    if (!isDrag && (upTime - downTime) < doubleTapTimeout) {
+                        val isCloseToFirst = (downPos - lastTapPosition).getDistance() < touchSlop * 2
+                        val isSecondTap = (upTime - lastTapTime) in doubleTapMinTime..doubleTapTimeout && isCloseToFirst
+
+                        if (isSecondTap) {
+                            upChange?.consume()
+                            onDoubleTap()
+                            lastTapTime = 0L
+                            lastTapPosition = Offset.Zero
+                        } else {
+                            lastTapTime = upTime
+                            lastTapPosition = downPos
+                        }
+                    } else {
+                        lastTapTime = 0L
+                    }
+                    break
+                }
+
+                // Check if pointer moved beyond touch slop (indicating scroll/drag/swipe)
+                val currentPos = pressed[0].position
+                if ((currentPos - downPos).getDistance() > touchSlop) {
+                    isDrag = true
+                    lastTapTime = 0L
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Renders a horizontal section divider within the cockpit sensor grid (REQ-UI-411.4).
+ *
+ * When unlabeled, renders a prominent 2.5 dp stroke in [MaterialTheme.colorScheme.outline]
+ * to ensure high contrast against dark/AMOLED backgrounds and clear differentiation from
+ * adjacent 1 dp cell borders while riding.
+ *
+ * When labeled with an optional title, centers the uppercase text horizontally across the full row,
+ * flanked symmetrically by left and right divider segments with equal weight (1f) and 2 dp thickness,
+ * strictly forbidding asymmetric weights (Rule 49, Design Guidelines Sec 5.11).
+ * Total vertical footprint is bounded by compact padding and a max 20 dp height constraint.
+ *
+ * @param divider Metadata representing the section divider, including optional title.
+ * @param modifier Composable modifier for styling and layout positioning.
+ */
+@Composable
+fun CockpitSectionDivider(
+    divider: SectionDividerInfo,
+    modifier: Modifier = Modifier
+) {
+    val title = divider.title?.trim()
+    if (title.isNullOrEmpty()) {
+        HorizontalDivider(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            thickness = 2.5.dp,
+            color = MaterialTheme.colorScheme.outline
+        )
+    } else {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .heightIn(max = 20.dp)
+                .padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HorizontalDivider(
+                modifier = Modifier.weight(1f),
+                thickness = 2.dp,
+                color = MaterialTheme.colorScheme.outline
+            )
+            Text(
+                text = title.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 6.dp)
+            )
+            HorizontalDivider(
+                modifier = Modifier.weight(1f),
+                thickness = 2.dp,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
+    }
+}
+
+@Composable
+fun EditSectionDividerDialog(
+    initialTitle: String?,
+    onConfirm: (String?) -> Unit,
+    onDelete: (() -> Unit)?,
+    onDismiss: () -> Unit
+) {
+    var titleText by remember { mutableStateOf(initialTitle ?: "") }
+    val presetChips = listOf(
+        R.string.cockpit_section_divider_chip_power,
+        R.string.cockpit_section_divider_chip_heart_rate,
+        R.string.cockpit_section_divider_chip_lap,
+        R.string.cockpit_section_divider_chip_pacing,
+        R.string.cockpit_section_divider_chip_navigation,
+        R.string.cockpit_section_divider_chip_total
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.cockpit_section_divider_dialog_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = titleText,
+                    onValueChange = { titleText = it },
+                    label = { Text(stringResource(R.string.cockpit_section_divider_title_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text(
+                    text = "Presets",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // 2 rows of preset chips for fast tap-selection
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    presetChips.take(3).forEach { resId ->
+                        val chipLabel = stringResource(resId)
+                        FilterChip(
+                            selected = titleText.equals(chipLabel, ignoreCase = true),
+                            onClick = { titleText = chipLabel },
+                            label = { Text(chipLabel, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    presetChips.drop(3).forEach { resId ->
+                        val chipLabel = stringResource(resId)
+                        FilterChip(
+                            selected = titleText.equals(chipLabel, ignoreCase = true),
+                            onClick = { titleText = chipLabel },
+                            label = { Text(chipLabel, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(titleText.ifBlank { null }) }) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (onDelete != null) {
+                    TextButton(onClick = onDelete) {
+                        Text(
+                            text = stringResource(R.string.cockpit_section_divider_delete),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        }
+    )
+}
+
 @Composable
 private fun RowAdder(onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Icon(
             imageVector = Icons.Default.Add,
-            contentDescription = "Add Row",
+            contentDescription = stringResource(R.string.cd_add_row),
             tint = MaterialTheme.colorScheme.primary
         )
     }
@@ -902,7 +1350,7 @@ private fun ColAdder(onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.fillMaxHeight()) {
         Icon(
             imageVector = Icons.Default.Add,
-            contentDescription = "Add Column",
+            contentDescription = stringResource(R.string.cd_add_column),
             tint = MaterialTheme.colorScheme.primary
         )
     }
@@ -916,7 +1364,7 @@ val dummySegmentsFlow = kotlinx.coroutines.flow.MutableStateFlow<List<LiveSegmen
 // Preview for Configuration Mode
 @Preview(showBackground = true, name = "Config Mode")
 @Composable
-fun SensorGridScreenConfigPreview() {
+private fun SensorGridScreenConfigPreview() {
     val context = LocalContext.current
     ATrainingTrackerTheme {
         val previewFields = listOf(
@@ -943,7 +1391,7 @@ fun SensorGridScreenConfigPreview() {
 // Preview for Tracking Mode
 @Preview(showBackground = true, name = "Tracking Mode")
 @Composable
-fun SensorGridScreenTrackingPreview() {
+private fun SensorGridScreenTrackingPreview() {
     val context = LocalContext.current
     ATrainingTrackerTheme {
         val previewFields = listOf(

@@ -74,6 +74,7 @@ public class DropboxUploader extends BaseExporter {
         }
 
 
+        TrainingApplication.setDropboxLastSyncTimestamp(System.currentTimeMillis());
         if (DEBUG) Log.i(TAG, "successfully uploaded " + filename + " to Dropbox");
         return new ExportResult(true, false, "successfully uploaded " + filename + " to Dropbox");
     }

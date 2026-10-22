@@ -113,10 +113,13 @@ class DeviceListViewModelPriorityTest {
         every { BANALServiceRepository.getInstance(any()) } returns mockBanalServiceRepository
         every { mockBanalServiceRepository.allActiveDevicesTelemetry } returns telemetryFlow
         every { mockBanalServiceRepository.newlyFoundDevicesIds } returns newlyFoundFlow
+
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(mockk(relaxed = true))
     }
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         ArchTaskExecutor.getInstance().setDelegate(null)
         Dispatchers.resetMain()
         unmockkAll()

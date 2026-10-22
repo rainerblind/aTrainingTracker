@@ -337,4 +337,90 @@ class TranslationParityTest {
         }
         assertTrue("backup_interval_values must have translatable=\"false\"", backupIntervalIsNonTranslatable)
     }
+
+    /**
+     * TST-STR-019.2 (REQ-LOC-002.2, REQ-LOC-002.4): Verify that keys marked translatable="false"
+     * in the default values/ directory are NOT redeclared in any locale directory, preventing
+     * Android ExtraTranslation lint warnings.
+     */
+    @Test
+    fun testNoExtraTranslationsInLocales() {
+        val baseStrings = parseStrings(File(resDir, "values"))
+        val nonTranslatableBaseKeys = baseStrings.filter { !it.value.isTranslatable }.keys
+
+        for (locale in locales) {
+            val localeStrings = parseStrings(File(resDir, "values-$locale"))
+            val extraKeys = nonTranslatableBaseKeys.filter { it in localeStrings }
+
+            assertTrue(
+                "Locale '$locale' declares translatable=false base keys (ExtraTranslation violation): $extraKeys",
+                extraKeys.isEmpty()
+            )
+        }
+    }
+
+    /**
+     * TST-STR-019.1 (REQ-LOC-002.1): Verify that previously untranslated English strings
+     * in DE, NL, PL, and backup_restore across all locales contain localized translations.
+     */
+    @Test
+    fun testTranslationCompleteness_localeSpecificLiterals() {
+        // 1. German translations
+        val deStrings = parseStrings(File(resDir, "values-de"))
+        assertEquals("Integrierte Pebble-App", deStrings["pebble_build_in"]?.text)
+        assertEquals("Trainingsbelastungs-Score (TSS)", deStrings["tss"]?.text)
+        assertEquals("Pedal-Leistungsbalance", deStrings["pedal_power_balance"]?.text)
+
+        // 2. Dutch translations
+        val nlStrings = parseStrings(File(resDir, "values-nl"))
+        assertEquals("Zone 2 (Aeroob)", nlStrings["zone_2_label"]?.text)
+        assertEquals("Zone 5 (Anaeroob)", nlStrings["zone_5_label"]?.text)
+
+        // 3. Polish translations
+        val plStrings = parseStrings(File(resDir, "values-pl"))
+        assertEquals("Eksport do pliku nie jest wymagany.", plStrings["exporting_to_file_not_wanted"]?.text)
+        assertEquals("eksportowanie do pliku: %1\$s (%2\$d/%3\$d)", plStrings["exporting_to_file"]?.text)
+        assertEquals("eksport do pliku nie powiódł się dla 1/%1\$d plików", plStrings["exporting_to_file_failed_for_one"]?.text)
+        assertEquals("eksport do pliku nie powiódł się dla %1\$d/%2\$d plików", plStrings["exporting_to_file_failed_for_several"]?.text)
+
+        // 4. backup_restore across all 8 non-default locales
+        for (locale in locales) {
+            val locStrings = parseStrings(File(resDir, "values-$locale"))
+            val backupRestore = locStrings["backup_restore"]?.text
+            assertNotNull("backup_restore missing in locale '$locale'", backupRestore)
+            assertTrue(
+                "Locale '$locale' backup_restore is still untranslated English: '$backupRestore'",
+                backupRestore != "Backup & Restore" && backupRestore != "Backup \\u0026 Restore"
+            )
+        }
+    }
+
+    /**
+     * TST-STR-019.3 (REQ-LOC-002.3): Verify that structural string-arrays referencing @string
+     * tokens are not duplicated in locale arrays.xml files, relying instead on base values/arrays.xml.
+     */
+    @Test
+    fun testRedundantArraysRemovedFromLocales() {
+        val forbiddenArrays = setOf(
+            "Basic_Sport_Types",
+            "Filter_Types_UI",
+            "PebbleWatchapps",
+            "Time_Units_UI",
+            "units",
+            "display_options_titles",
+            "default_export_formats",
+            "export_formats_title"
+        )
+
+        for (locale in locales) {
+            val localeArrays = parseArrays(File(resDir, "values-$locale"))
+            val presentForbidden = localeArrays.keys.intersect(forbiddenArrays)
+
+            assertTrue(
+                "Locale '$locale' should not redeclare structural string-arrays: $presentForbidden",
+                presentForbidden.isEmpty()
+            )
+        }
+    }
 }
+

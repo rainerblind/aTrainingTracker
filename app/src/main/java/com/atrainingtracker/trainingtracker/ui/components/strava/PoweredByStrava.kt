@@ -56,7 +56,7 @@ fun PoweredByStrava(
 
 @Preview(showBackground = true, name = "Large Logo")
 @Composable
-fun PreviewPoweredByStravaLarge() {
+private fun PreviewPoweredByStravaLarge() {
     MaterialTheme {
         PoweredByStrava(height = 42.dp)
     }
@@ -64,7 +64,7 @@ fun PreviewPoweredByStravaLarge() {
 
 @Preview(showBackground = true, name = "Compact Logo")
 @Composable
-fun PreviewPoweredByStravaCompact() {
+private fun PreviewPoweredByStravaCompact() {
     MaterialTheme {
         PoweredByStrava(height = 16.dp)
     }

@@ -105,6 +105,8 @@ fun RouteOnMapScreen(
             createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint)
         }
     }
+    val startMarkerTitle = stringResource(R.string.marker_start)
+    val endMarkerTitle = stringResource(R.string.marker_end)
 
     val climbs = route?.climbs ?: emptyList()
 
@@ -307,7 +309,7 @@ fun RouteOnMapScreen(
                         LocationMarker(
                             position = route.path.first().latLng,
                             iconResId = R.drawable.control_start,
-                            title = "Start",
+                            title = startMarkerTitle,
                             iconDescriptor = startMarker
                         )
                     )
@@ -315,7 +317,7 @@ fun RouteOnMapScreen(
                         LocationMarker(
                             position = route.path.last().latLng,
                             iconResId = R.drawable.control_stop,
-                            title = "End",
+                            title = endMarkerTitle,
                             iconDescriptor = endMarker
                         )
                     )
@@ -547,12 +549,12 @@ fun RouteClimbsBreakdownSection(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = stringResource(R.string.routes_climb_start_at, formatters.distance.format_with_units(startDistMeters) ?: "${(startDistMeters / 1000.0).roundToInt()} km"),
+                            text = stringResource(R.string.routes_climb_start_at, formatters.distance.format_with_units(startDistMeters)),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "▲ +${formatters.altitude.format_with_units(climb.elevationGainMeters) ?: "${climb.elevationGainMeters.roundToInt()} m"}",
+                            text = "▲ +${formatters.altitude.format_with_units(climb.elevationGainMeters)}",
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

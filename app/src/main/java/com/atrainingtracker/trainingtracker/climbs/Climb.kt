@@ -131,5 +131,6 @@ data class LiveClimbData(
     val currentGradePercent: Double = 0.0,
     val currentProgressFraction: Float = 0.0f,
     val routeIndex: Int? = null,
-    val totalRouteClimbs: Int? = null
+    val totalRouteClimbs: Int? = null,
+    val lastSegmentIndex: Int? = null
 )

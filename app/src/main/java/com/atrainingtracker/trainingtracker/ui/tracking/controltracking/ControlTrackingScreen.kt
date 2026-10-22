@@ -31,7 +31,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,16 +48,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.sensor.SensorType
-import com.atrainingtracker.banalservice.ui.devices.DeviceTypeSelectionDialog
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
@@ -62,8 +67,6 @@ fun ControlTrackingScreen(
     searchingFor: String?,
     devices: List<RemoteDeviceUIData>,
     currentSport: BSportType,
-    isAntSupported: Boolean = false,
-    isBluetoothSupported: Boolean = false,
     onSearch: () -> Unit,
     onDeviceClick: (RemoteDeviceUIData) -> Unit,
     onSportSelected: (BSportType) -> Unit,
@@ -71,13 +74,11 @@ fun ControlTrackingScreen(
     onPause: () -> Unit,
     onResume: () -> Unit,
     onStop: () -> Unit,
-    onPairingClicked: (Protocol) -> Unit = {},
-    selectingProtocol: Protocol? = null,
-    onDeviceTypeSelected: (DeviceType) -> Unit = {},
-    onCancelDeviceTypeSelection: () -> Unit = {},
     showResearchButton: Boolean = true,
+    hasPairedBluetoothSensors: Boolean = false,
     locationCalibrationStatus: com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus? = null,
     modifier: Modifier = Modifier,
+    onPairSensor: () -> Unit = {},
     bottomContent: @Composable ColumnScope.() -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -99,6 +100,39 @@ fun ControlTrackingScreen(
             context,
             android.Manifest.permission.ACCESS_FINE_LOCATION
         ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    val checkHasNotification = {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    val checkHasBluetoothConnect = {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.BLUETOOTH_CONNECT
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    val checkHasBluetoothScan = {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.BLUETOOTH_SCAN
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
     }
 
     val checkHasBackgroundLocation = {
@@ -127,10 +161,22 @@ fun ControlTrackingScreen(
     var isCoarseOnly by remember {
         mutableStateOf(checkIsCoarseOnly())
     }
+    var hasNotificationPermission by remember {
+        mutableStateOf(checkHasNotification())
+    }
+    var hasBluetoothPermission by remember {
+        mutableStateOf(checkHasBluetoothConnect())
+    }
     var isIgnoringBatteryOptimizations by remember {
         mutableStateOf(checkIsIgnoringBatteryOptimizations())
     }
     var isBatteryBannerDismissed by androidx.compose.runtime.saveable.rememberSaveable {
+        mutableStateOf(false)
+    }
+    var isNotificationDismissed by androidx.compose.runtime.saveable.rememberSaveable {
+        mutableStateOf(false)
+    }
+    var isBluetoothDismissed by androidx.compose.runtime.saveable.rememberSaveable {
         mutableStateOf(false)
     }
     var pendingStartAfterBatteryExemption by androidx.compose.runtime.saveable.rememberSaveable {
@@ -143,7 +189,13 @@ fun ControlTrackingScreen(
     var isPermanentlyDenied by remember { mutableStateOf(false) }
 
     val proceedAfterPermissions: () -> Unit = {
-        if (!checkHasBackgroundLocation()) {
+        if (!checkHasNotification() && !isNotificationDismissed) {
+            isPermanentlyDenied = false
+            rationaleStep = RationaleStep.NOTIFICATION
+        } else if (hasPairedBluetoothSensors && !checkHasBluetoothConnect() && !isBluetoothDismissed) {
+            isPermanentlyDenied = false
+            rationaleStep = RationaleStep.BLUETOOTH
+        } else if (!checkHasBackgroundLocation()) {
             val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
             val hasRequestedBg = prefs.getBoolean("pref_has_requested_bg_perms", false)
             val activity = context as? android.app.Activity
@@ -191,6 +243,41 @@ fun ControlTrackingScreen(
         }
     }
 
+    val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasNotificationPermission = granted || checkHasNotification()
+        proceedAfterPermissions()
+    }
+
+    val bluetoothPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        hasBluetoothPermission = checkHasBluetoothConnect()
+        proceedAfterPermissions()
+    }
+
+    val bluetoothScanPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        if (checkHasBluetoothScan()) {
+            onSearch()
+        }
+    }
+
+    val handleSearchClick = {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && !checkHasBluetoothScan()) {
+            bluetoothScanPermissionLauncher.launch(
+                arrayOf(
+                    android.Manifest.permission.BLUETOOTH_CONNECT,
+                    android.Manifest.permission.BLUETOOTH_SCAN
+                )
+            )
+        } else {
+            onSearch()
+        }
+    }
+
     val bgLocationLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -223,12 +310,20 @@ fun ControlTrackingScreen(
                 val permitted = checkHasLocation()
                 hasLocationPermission = permitted
                 isCoarseOnly = checkIsCoarseOnly()
+                hasNotificationPermission = checkHasNotification()
+                hasBluetoothPermission = checkHasBluetoothConnect()
                 val batteryExempt = checkIsIgnoringBatteryOptimizations()
                 isIgnoringBatteryOptimizations = batteryExempt
                 if (permitted) {
                     com.atrainingtracker.banalservice.BANALService.checkOrInitializeLocationDevices()
                 }
                 if (permitted && rationaleStep == RationaleStep.FOREGROUND) {
+                    isPermanentlyDenied = false
+                    proceedAfterPermissions()
+                } else if (hasNotificationPermission && rationaleStep == RationaleStep.NOTIFICATION) {
+                    isPermanentlyDenied = false
+                    proceedAfterPermissions()
+                } else if (hasBluetoothPermission && rationaleStep == RationaleStep.BLUETOOTH) {
                     isPermanentlyDenied = false
                     proceedAfterPermissions()
                 } else if (checkHasBackgroundLocation() && rationaleStep == RationaleStep.BACKGROUND_LOCATION) {
@@ -302,7 +397,7 @@ fun ControlTrackingScreen(
                 if (showResearchButton) {
                     ResearchButton(
                         isEnabled = searchingFor == null,
-                        onClick = onSearch
+                        onClick = handleSearchClick
                     )
                 }
                 RemoteDevices(
@@ -334,8 +429,30 @@ fun ControlTrackingScreen(
             ) {
                 ResearchButton(
                     isEnabled = searchingFor == null,
-                    onClick = onSearch
+                    onClick = handleSearchClick
                 )
+            }
+        } else if (searchingFor == null) {
+            // Onboarding button when 0 sensors paired and not searching (REQ-SEN-020, ATT-4051)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = onPairSensor,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.onboarding_pair_sensor_action))
+                }
             }
         }
 
@@ -347,7 +464,8 @@ fun ControlTrackingScreen(
             modifier = Modifier.fillMaxWidth(),
             mode = trackingMode,
             enabled = true,
-            hasPermissionWarning = !hasLocationPermission || !isIgnoringBatteryOptimizations,
+            hasPermissionWarning = !hasLocationPermission || !isIgnoringBatteryOptimizations ||
+                                   (hasPairedBluetoothSensors && !hasBluetoothPermission),
             onStart = handleStartClick,
             onPause = onPause,
             onResume = onResume,
@@ -372,22 +490,16 @@ fun ControlTrackingScreen(
     // Material 3 Permission Rationale Sheet (REQ-PRI-003, ATT-2075)
     if (rationaleStep != RationaleStep.NONE) {
         val permissionsToRequest = remember {
-            val perms = mutableListOf(
+            arrayOf(
                 android.Manifest.permission.ACCESS_FINE_LOCATION,
                 android.Manifest.permission.ACCESS_COARSE_LOCATION
             )
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                perms.add(android.Manifest.permission.POST_NOTIFICATIONS)
-            }
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                perms.add(android.Manifest.permission.BLUETOOTH_CONNECT)
-                perms.add(android.Manifest.permission.BLUETOOTH_SCAN)
-            }
-            perms.toTypedArray()
         }
 
         val rationaleType = when (rationaleStep) {
             RationaleStep.FOREGROUND -> RationaleType.FOREGROUND
+            RationaleStep.NOTIFICATION -> RationaleType.NOTIFICATION
+            RationaleStep.BLUETOOTH -> RationaleType.BLUETOOTH
             RationaleStep.BACKGROUND_LOCATION -> RationaleType.BACKGROUND_LOCATION
             RationaleStep.BATTERY_OPTIMIZATION -> RationaleType.BATTERY_OPTIMIZATION
             RationaleStep.NONE -> RationaleType.FOREGROUND
@@ -411,6 +523,25 @@ fun ControlTrackingScreen(
                         val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
                         prefs.edit().putBoolean("pref_has_requested_foreground_perms", true).apply()
                         permissionLauncher.launch(permissionsToRequest)
+                    }
+                    RationaleStep.NOTIFICATION -> {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            proceedAfterPermissions()
+                        }
+                    }
+                    RationaleStep.BLUETOOTH -> {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                            bluetoothPermissionLauncher.launch(
+                                arrayOf(
+                                    android.Manifest.permission.BLUETOOTH_CONNECT,
+                                    android.Manifest.permission.BLUETOOTH_SCAN
+                                )
+                            )
+                        } else {
+                            proceedAfterPermissions()
+                        }
                     }
                     RationaleStep.BACKGROUND_LOCATION -> {
                         if (isPermanentlyDenied) {
@@ -439,6 +570,14 @@ fun ControlTrackingScreen(
                     RationaleStep.FOREGROUND -> {
                         rationaleStep = RationaleStep.NONE
                     }
+                    RationaleStep.NOTIFICATION -> {
+                        isNotificationDismissed = true
+                        proceedAfterPermissions()
+                    }
+                    RationaleStep.BLUETOOTH -> {
+                        isBluetoothDismissed = true
+                        proceedAfterPermissions()
+                    }
                     RationaleStep.BACKGROUND_LOCATION -> {
                         // User chose "Not now" for background location; proceed gracefully
                         if (!checkIsIgnoringBatteryOptimizations()) {
@@ -459,15 +598,6 @@ fun ControlTrackingScreen(
             }
         )
     }
-
-    // Device Type Selection Dialog
-    selectingProtocol?.let { protocol ->
-        DeviceTypeSelectionDialog(
-            protocol = protocol,
-            onSelected = onDeviceTypeSelected,
-            onDismiss = onCancelDeviceTypeSelection
-        )
-    }
 }
 
 /**
@@ -476,6 +606,8 @@ fun ControlTrackingScreen(
 enum class RationaleStep {
     NONE,
     FOREGROUND,
+    NOTIFICATION,
+    BLUETOOTH,
     BACKGROUND_LOCATION,
     BATTERY_OPTIMIZATION
 }
@@ -515,7 +647,7 @@ fun launchBatteryOptimizationIntent(context: android.content.Context) {
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlTrackingScreenSearching() {
+private fun PreviewControlTrackingScreenSearching() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingScreen(
@@ -523,11 +655,8 @@ fun PreviewControlTrackingScreenSearching() {
                 searchingFor = "my spd",
                 devices = listOf(RemoteDeviceUIData(1, deviceType = DeviceType.HRM, name = "Polar H10", R.drawable.hr)),
                 currentSport = BSportType.RUN,
-                isAntSupported = true,
-                isBluetoothSupported = true,
                 onSearch = {}, onDeviceClick = {}, onSportSelected = {},
-                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
-                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {}
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}
             )
         }
     }
@@ -540,7 +669,7 @@ fun PreviewControlTrackingScreenSearching() {
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlTrackingScreen() {
+private fun PreviewControlTrackingScreen() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingScreen(
@@ -548,11 +677,8 @@ fun PreviewControlTrackingScreen() {
                 searchingFor = null,
                 devices = listOf(RemoteDeviceUIData(1, deviceType = DeviceType.HRM, name = "Polar H10", R.drawable.hr)),
                 currentSport = BSportType.RUN,
-                isAntSupported = true,
-                isBluetoothSupported = true,
                 onSearch = {}, onDeviceClick = {}, onSportSelected = {},
-                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
-                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {}
+                onStart = {}, onPause = {}, onResume = {}, onStop = {}
             )
         }
     }
@@ -565,7 +691,7 @@ fun PreviewControlTrackingScreen() {
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlTrackingScreenNoRemoteDevices() {
+private fun PreviewControlTrackingScreenNoRemoteDevices() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingScreen(
@@ -573,11 +699,8 @@ fun PreviewControlTrackingScreenNoRemoteDevices() {
                 searchingFor = null,
                 devices = emptyList(),
                 currentSport = BSportType.RUN,
-                isAntSupported = true,
-                isBluetoothSupported = true,
                 onSearch = {}, onDeviceClick = {}, onSportSelected = {},
-                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
-                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {},
+                onStart = {}, onPause = {}, onResume = {}, onStop = {},
                 showResearchButton = false
             )
         }
@@ -591,7 +714,7 @@ fun PreviewControlTrackingScreenNoRemoteDevices() {
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlTrackingScreenMultiDevices() {
+private fun PreviewControlTrackingScreenMultiDevices() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingScreen(
@@ -606,11 +729,8 @@ fun PreviewControlTrackingScreenMultiDevices() {
                     RemoteDeviceUIData(6, deviceType = DeviceType.BIKE_SPEED_AND_CADENCE, name = "Combo", R.drawable.bt_bike_speed_and_cadence)
                 ),
                 currentSport = BSportType.BIKE,
-                isAntSupported = true,
-                isBluetoothSupported = true,
                 onSearch = {}, onDeviceClick = {}, onSportSelected = {},
-                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
-                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {},
+                onStart = {}, onPause = {}, onResume = {}, onStop = {},
                 showResearchButton = true
             )
         }
@@ -624,7 +744,7 @@ fun PreviewControlTrackingScreenMultiDevices() {
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlTrackingScreenSingleDevice() {
+private fun PreviewControlTrackingScreenSingleDevice() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingScreen(
@@ -634,11 +754,8 @@ fun PreviewControlTrackingScreenSingleDevice() {
                     RemoteDeviceUIData(1, deviceType = DeviceType.BIKE_CADENCE, name = "cad", R.drawable.bt_bike_cad)
                 ),
                 currentSport = BSportType.BIKE,
-                isAntSupported = true,
-                isBluetoothSupported = true,
                 onSearch = {}, onDeviceClick = {}, onSportSelected = {},
-                onStart = {}, onPause = {}, onResume = {}, onStop = {}, onPairingClicked = {},
-                selectingProtocol = null, onDeviceTypeSelected = {}, onCancelDeviceTypeSelection = {},
+                onStart = {}, onPause = {}, onResume = {}, onStop = {},
                 showResearchButton = true
             )
         }

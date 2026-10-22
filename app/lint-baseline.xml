@@ -913,17 +913,6 @@
     <issue
         id="Recycle"
         message="This `Cursor` should be freed up after use with `#close()`"
-        errorLine1="        Cursor cursor = db.query(Segments.TABLE_SEGMENT_LEADERBOARD, null,"
-        errorLine2="                           ~~~~~">
-        <location
-            file="src/main/java/com/atrainingtracker/trainingtracker/onlinecommunities/strava/StravaSegmentsIntentService.java"
-            line="683"
-            column="28"/>
-    </issue>
-
-    <issue
-        id="Recycle"
-        message="This `Cursor` should be freed up after use with `#close()`"
         errorLine1="        Cursor cursor = db.query(SegmentsDatabaseManager.Segments.TABLE_STARRED_SEGMENTS, null,"
         errorLine2="                           ~~~~~">
         <location
@@ -4655,17 +4644,6 @@
             file="src/main/AndroidManifest.xml"
             line="22"
             column="33"/>
-    </issue>
-
-    <issue
-        id="ClickableViewAccessibility"
-        message="`MultiSelectionSpinner#performClick` should call `super#performClick`"
-        errorLine1="    public boolean performClick() {"
-        errorLine2="                   ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/atrainingtracker/trainingtracker/views/MultiSelectionSpinner.java"
-            line="81"
-            column="20"/>
     </issue>
 
     <issue

@@ -72,7 +72,8 @@ enum class TelemetryMetricType {
     HEART_RATE,
     SPEED,
     PACE,
-    POWER
+    POWER,
+    W_PRIME_BAL
 }
 
 
@@ -135,6 +136,7 @@ fun TelemetryMetricGraph(
             TelemetryMetricType.HEART_RATE -> TTColor.Zone4
             TelemetryMetricType.SPEED, TelemetryMetricType.PACE -> colorScheme.primary
             TelemetryMetricType.POWER -> TTColor.Zone5
+            TelemetryMetricType.W_PRIME_BAL -> TTColor.WPrimeBalGreen
         }
     }
 
@@ -165,6 +167,9 @@ fun TelemetryMetricGraph(
         when (metricType) {
             TelemetryMetricType.POWER -> {
                 0.0 to (max * 1.1).coerceAtLeast(50.0)
+            }
+            TelemetryMetricType.W_PRIME_BAL -> {
+                0.0 to (max * 1.1).coerceAtLeast(10.0)
             }
             TelemetryMetricType.HEART_RATE -> {
                 (min - 5.0).coerceAtLeast(30.0) to (max + 5.0).coerceAtLeast(100.0)
@@ -220,7 +225,7 @@ fun TelemetryMetricGraph(
                 TelemetryZoneMath.calculateThresholdDashes(it.z1Max, it.z2Max, it.z3Max, it.z4Max, dataMin, dataMax)
             } ?: emptyList()
             TelemetryMetricType.POWER -> effectivePowerThresholds?.let {
-                TelemetryZoneMath.calculateThresholdDashes(it.z1Max, it.z2Max, it.z3Max, it.z4Max, dataMin, dataMax)
+                TelemetryZoneMath.calculatePowerThresholdDashes(it, dataMin, dataMax)
             } ?: emptyList()
             else -> emptyList()
         }
@@ -428,7 +433,7 @@ fun TelemetryMetricGraph(
                 val stripStartPx = startPaddingPx + chartWidthPx + 3.dp.toPx()
                 val stripWidthPx = (endPaddingPx - 5.dp.toPx()).coerceAtLeast(10.dp.toPx())
 
-                if (zoneDisplayMode == ZoneCardDisplayMode.FIVE_ZONES) {
+                if (zoneDisplayMode == ZoneCardDisplayMode.FIVE_ZONES || zoneDisplayMode == ZoneCardDisplayMode.COLUMNS || zoneDisplayMode == ZoneCardDisplayMode.STACKED_BAR) {
                     // 5-Zones mode: horizontal bars aligned with zone threshold boundaries
                     for (entry in zoneDistribution.entries) {
                         val band = zoneBands.getOrNull(entry.zoneIndex - 1)

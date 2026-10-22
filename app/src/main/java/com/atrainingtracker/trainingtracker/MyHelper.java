@@ -28,99 +28,14 @@ import androidx.annotation.NonNull;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.protocol.BasicHttpContext;
-import org.apache.http.protocol.HttpContext;
 import org.jetbrains.annotations.Contract;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.text.NumberFormat;
 import java.util.Locale;
 
 public class MyHelper {
     private static final String TAG = "MyHelper";
     private static final boolean DEBUG = false;
-
-    // taken from http://stackoverflow.com/questions/1995998/android-get-altitude-by-longitude-and-latitude
-    // unfortunately, this works only for US coordinates :-(
-    public static double getAltitudeFromUSGS(double longitude, double latitude) {
-        double result = Double.NaN;
-        HttpClient httpClient = new DefaultHttpClient();
-        HttpContext localContext = new BasicHttpContext();
-        String url = "http://gisdata.usgs.gov/"
-                + "xmlwebservices2/elevation_service.asmx/"
-                + "getElevation?X_Value=" + longitude
-                + "&Y_Value=" + latitude
-                + "&Elevation_Units=METERS&Source_Layer=-1&Elevation_Only=true";
-        HttpGet httpGet = new HttpGet(url);
-        try {
-            HttpResponse response = httpClient.execute(httpGet, localContext);
-            HttpEntity entity = response.getEntity();
-            if (entity != null) {
-                InputStream inputStream = entity.getContent();
-                int r = -1;
-                StringBuilder respStr = new StringBuilder();
-                while ((r = inputStream.read()) != -1)
-                    respStr.append((char) r);
-                String tagOpen = "<double>";
-                String tagClose = "</double>";
-                if (respStr.indexOf(tagOpen) != -1) {
-                    int start = respStr.indexOf(tagOpen) + tagOpen.length();
-                    int end = respStr.indexOf(tagClose);
-                    String value = respStr.substring(start, end);
-                    result = Double.parseDouble(value);
-                }
-                inputStream.close();
-            }
-        } catch (ClientProtocolException e) {
-        } catch (IOException e) {
-        }
-        return result;
-    }
-
-    // taken from http://stackoverflow.com/questions/1995998/android-get-altitude-by-longitude-and-latitude
-    // unfortunately, google API does not allow this usage without displaying it on a google map
-    public static double getElevationFromGoogleMaps(double longitude, double latitude) {
-        double result = Double.NaN;
-        HttpClient httpClient = new DefaultHttpClient();
-        HttpContext localContext = new BasicHttpContext();
-        String url = "http://maps.googleapis.com/maps/api/elevation/"
-                + "xml?locations=" + latitude
-                + "," + longitude
-                + "&sensor=true";
-        HttpGet httpGet = new HttpGet(url);
-        try {
-            HttpResponse response = httpClient.execute(httpGet, localContext);
-            HttpEntity entity = response.getEntity();
-            if (entity != null) {
-                InputStream inputStream = entity.getContent();
-                int r = -1;
-                StringBuilder respStr = new StringBuilder();
-                while ((r = inputStream.read()) != -1)
-                    respStr.append((char) r);
-                String tagOpen = "<elevation>";
-                String tagClose = "</elevation>";
-                if (respStr.indexOf(tagOpen) != -1) {
-                    int start = respStr.indexOf(tagOpen) + tagOpen.length();
-                    int end = respStr.indexOf(tagClose);
-                    String value = respStr.substring(start, end);
-                    result = Double.parseDouble(value);
-                }
-                inputStream.close();
-            }
-        } catch (ClientProtocolException e) {
-        } catch (IOException e) {
-        }
-
-        return result;
-    }
-
 
     public static boolean isOnline() {
         ConnectivityManager cm = (ConnectivityManager) TrainingApplication.getAppContext().getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -167,7 +82,11 @@ public class MyHelper {
     }
 
     public static double UserUnit2mps(double speed) {
-        return switch (TrainingApplication.getUnit()) {
+        return UserUnit2mps(speed, TrainingApplication.getUnit());
+    }
+
+    public static double UserUnit2mps(double speed, @NonNull MyUnits myUnits) {
+        return switch (myUnits) {
             case METRIC -> speed / 3.6;
             case IMPERIAL -> speed / 2.23693629;
         };

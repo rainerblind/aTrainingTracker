@@ -52,7 +52,9 @@ class TelemetryZoneMathTest {
         z1Max = 150,
         z2Max = 200,
         z3Max = 250,
-        z4Max = 300
+        z4Max = 300,
+        z5Max = 350,
+        z6Max = 450
     )
 
     @Test
@@ -110,15 +112,29 @@ class TelemetryZoneMathTest {
     }
 
     @Test
-    fun testCalculatePowerZoneBands_fullSpanAcrossAll5Zones() {
-        val bands = TelemetryZoneMath.calculatePowerZoneBands(powerThresholds, 0.0, 350.0)
+    fun testCalculatePowerZoneBands_fullSpanAcrossAll7Zones() {
+        val bands = TelemetryZoneMath.calculatePowerZoneBands(powerThresholds, 0.0, 550.0)
 
-        assertEquals(5, bands.size)
+        assertEquals(7, bands.size)
         assertEquals(150.0, bands[0].maxVal, 1e-4)
         assertEquals(200.0, bands[1].maxVal, 1e-4)
         assertEquals(250.0, bands[2].maxVal, 1e-4)
         assertEquals(300.0, bands[3].maxVal, 1e-4)
         assertEquals(350.0, bands[4].maxVal, 1e-4)
+        assertEquals(450.0, bands[5].maxVal, 1e-4)
+        assertEquals(550.0, bands[6].maxVal, 1e-4)
+        assertEquals("Z6", bands[5].label)
+        assertEquals("Z7", bands[6].label)
+    }
+
+    @Test
+    fun testCalculatePowerZoneBands_subThresholdRide_omitsZone7() {
+        // DataMax <= z6Max (e.g. 400W), Zone 7 should not be rendered
+        val bands = TelemetryZoneMath.calculatePowerZoneBands(powerThresholds, 0.0, 400.0)
+
+        assertEquals(6, bands.size)
+        assertEquals(6, bands.last().zoneIndex)
+        assertEquals(400.0, bands.last().maxVal, 1e-4)
     }
 
     @Test
@@ -134,6 +150,37 @@ class TelemetryZoneMathTest {
         )
 
         assertEquals(listOf(140.0, 160.0), dashes)
+    }
+
+    @Test
+    fun testCalculatePowerThresholdDashes_returnsAll6Thresholds_tst_ui_383_2() {
+        // powerThresholds: z1=150, z2=200, z3=250, z4=300, z5=350, z6=450
+        // Full range covering all 6 thresholds: 50.0..600.0
+        val allDashes = TelemetryZoneMath.calculatePowerThresholdDashes(
+            thresholds = powerThresholds,
+            dataMin = 50.0,
+            dataMax = 600.0
+        )
+        assertEquals(listOf(150.0, 200.0, 250.0, 300.0, 350.0, 450.0), allDashes)
+
+        // Bounded range: 220.0..380.0 (intersects z3Max=250, z4Max=300, z5Max=350)
+        val boundedDashes = TelemetryZoneMath.calculatePowerThresholdDashes(
+            thresholds = powerThresholds,
+            dataMin = 220.0,
+            dataMax = 380.0
+        )
+        assertEquals(listOf(250.0, 300.0, 350.0), boundedDashes)
+
+        // HR threshold dashes invariance: strictly 4 thresholds
+        val hrDashes = TelemetryZoneMath.calculateThresholdDashes(
+            z1Max = 120,
+            z2Max = 140,
+            z3Max = 160,
+            z4Max = 180,
+            dataMin = 50.0,
+            dataMax = 600.0
+        )
+        assertEquals(listOf(120.0, 140.0, 160.0, 180.0), hrDashes)
     }
 
     @Test
@@ -159,12 +206,15 @@ class TelemetryZoneMathTest {
     }
 
     @Test
-    fun testDeterminePowerZone_mapsCorrectly() {
+    fun testDeterminePowerZone_mapsCorrectlyAcrossAll7Zones() {
+        assertEquals(1, TelemetryZoneMath.determinePowerZone(0.0, powerThresholds)) // Zero / negative safe
         assertEquals(1, TelemetryZoneMath.determinePowerZone(100.0, powerThresholds))
         assertEquals(2, TelemetryZoneMath.determinePowerZone(175.0, powerThresholds))
         assertEquals(3, TelemetryZoneMath.determinePowerZone(225.0, powerThresholds))
         assertEquals(4, TelemetryZoneMath.determinePowerZone(280.0, powerThresholds))
-        assertEquals(5, TelemetryZoneMath.determinePowerZone(350.0, powerThresholds))
+        assertEquals(5, TelemetryZoneMath.determinePowerZone(330.0, powerThresholds))
+        assertEquals(6, TelemetryZoneMath.determinePowerZone(400.0, powerThresholds))
+        assertEquals(7, TelemetryZoneMath.determinePowerZone(500.0, powerThresholds))
     }
 
     @Test
@@ -231,9 +281,11 @@ class TelemetryZoneMathTest {
         every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 2) } returns 200
         every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 3) } returns 250
         every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 4) } returns 300
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 5) } returns 350
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 6) } returns 450
 
         val result = TelemetryZoneMath.loadPowerThresholds(context)
-        assertEquals(PowerZoneThresholds(150, 200, 250, 300), result)
+        assertEquals(PowerZoneThresholds(150, 200, 250, 300, 350, 450), result)
     }
 
     @Test
@@ -244,6 +296,8 @@ class TelemetryZoneMathTest {
         every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 2) } returns 0
         every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 3) } returns 250
         every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 4) } returns 300
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 5) } returns 350
+        every { SettingsDataStoreJavaHelper.getZoneMax(context, SettingsDataStore.ZoneType.PWR_BIKE, 6) } returns 450
 
         assertNull(TelemetryZoneMath.loadPowerThresholds(context))
     }

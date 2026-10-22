@@ -28,6 +28,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -158,8 +159,8 @@ fun ATrainingTrackerMap(
     }
 
     // 3. Behavioral Controllers
-    // IMPORTANT: Removing zoom from remember key to allow manual zooming without reset
-    val scope = remember(content, zoomFocus, primaryColor, context, directionIcons, bSportType) {
+    // IMPORTANT: Removing zoom and content from remember key to preserve MapContentScopeImpl across 1-Hz live track updates (REQ-MAP-051.3)
+    val scope = remember(zoomFocus, primaryColor, context, directionIcons, bSportType) {
         MapContentScopeImpl(zoomFocus, primaryColor, context, directionIcons, bSportType)
     }
     scope.collect(content)
@@ -207,7 +208,7 @@ fun ATrainingTrackerMap(
             GoogleMap(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(if (isDark) Color(0xFF121212) else Color.White),
+                    .background(if (isDark) TTColor.DarkMapCanvas else Color.White),
                 cameraPositionState = cameraPositionState,
                 contentPadding = PaddingValues(top = topPadding),
                 onMapClick = { latLng -> onMapClick?.invoke(latLng) },
@@ -250,14 +251,7 @@ fun ATrainingTrackerMap(
                     speed = userSpeed,
                     currentLocation = currentLocation,
                     cameraPositionState = cameraPositionState,
-                    baseZoom = tuningConfig.mapFollowMeInitialZoom,
-                    speedZoomEnabled = tuningConfig.mapFollowMeSpeedZoomEnabled,
-                    cruisingZoom = tuningConfig.mapFollowMeCruisingZoom,
-                    tiltAngle = tuningConfig.mapFollowMeTiltAngle,
-                    lookaheadPaddingPercent = tuningConfig.mapFollowMeLookaheadPaddingPercent,
-                    viewportHeightDp = maxHeight.value,
-                    speedSmoothingAlpha = tuningConfig.mapFollowMeSpeedSmoothingAlpha,
-                    bearingSmoothingAlpha = tuningConfig.mapFollowMeBearingSmoothingAlpha
+                    viewportHeightDp = maxHeight.value
                 )
 
                 currentLocation?.let { loc ->

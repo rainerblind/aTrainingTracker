@@ -329,6 +329,41 @@ class ControlTrackingViewModelTest {
         job.cancel()
     }
 
+    /**
+     * TST-UI-375.2: Verifies that when navigation events are emitted in ControlTrackingViewModel
+     * while no collector is active (e.g. Activity in STOPPED), the events remain buffered in
+     * the Channel and are delivered in FIFO order upon starting collection in STARTED.
+     */
+    @Test
+    fun testNavigationEvent_buffersEventsAcrossStoppedLifecycle() = runTest {
+        val viewModel = ControlTrackingViewModel(application)
+
+        // 1. Emit events while zero collectors are active (STOPPED)
+        val dummyDevice = RemoteDeviceUIData(42L, DeviceType.HRM, "Heart Rate", 0)
+        viewModel.onDeviceClicked(dummyDevice)
+
+        every { mockWorkoutSummariesDb.hasUnfinishedWorkout() } returns true
+        every { TrainingApplication.isTracking() } returns false
+        viewModel.onStartTracking()
+
+        // 2. Start collecting (simulating transition to STARTED)
+        val emittedEvents = mutableListOf<ControlNavigation>()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.navigationEvent.collect { emittedEvents.add(it) }
+        }
+
+        org.junit.Assert.assertEquals(
+            "Expected buffered events to be delivered in FIFO order on collection",
+            listOf(
+                ControlNavigation.ToEditDevice(42L, DeviceType.HRM),
+                ControlNavigation.ShowRecoveryDialog
+            ),
+            emittedEvents
+        )
+
+        job.cancel()
+    }
+
     private fun createDeviceUiData(id: Long, deviceType: DeviceType, name: String): DeviceUiData {
         return DeviceUiData(
             id = id,

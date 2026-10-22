@@ -286,10 +286,92 @@ class TrackingElevationProfileResolutionTest {
 
         // At 250m: ratio 0.25 -> alt 125m
         assertEquals(250.0, sliced.first().distance, 0.001)
-        assertEquals(125.0, sliced.first().altitude, 0.001)
+        assertEquals(125.0, sliced.first().altitude!!, 0.001)
 
         // At 750m: ratio 0.75 -> alt 175m
         assertEquals(750.0, sliced.last().distance, 0.001)
-        assertEquals(175.0, sliced.last().altitude, 0.001)
+        assertEquals(175.0, sliced.last().altitude!!, 0.001)
+    }
+
+    @Test
+    fun testResolve_lastSegmentIndexPropagation_maintainsForwardContinuityOnOutAndBackRoute() {
+        // Create out-and-back route: 10 segments outbound North, 10 segments return South overlapping closely
+        val points = mutableListOf<PathPoint>()
+        // Outbound (indices 0..10): lat 48.000 to 48.010, lng 11.00000
+        for (i in 0..10) {
+            points.add(
+                PathPoint(
+                    distance = i * 100.0,
+                    latLng = LatLng(48.0 + i * 0.001, 11.00000),
+                    altitude = 100.0 + i * 5.0
+                )
+            )
+        }
+        // Inbound (indices 11..20): lat 48.010 back to 48.000, lng 11.00005 (separated by ~3.7m)
+        for (i in 1..10) {
+            points.add(
+                PathPoint(
+                    distance = 1000.0 + i * 100.0,
+                    latLng = LatLng(48.010 - i * 0.001, 11.00005),
+                    altitude = 150.0 - i * 5.0
+                )
+            )
+        }
+        val outAndBackRoute = MapRoute(
+            id = 42L,
+            name = "OutAndBack",
+            isSelected = true,
+            bSportType = com.atrainingtracker.banalservice.BSportType.BIKE,
+            path = points,
+            isActiveNavigation = true
+        )
+
+        // Fix 1 on outbound leg in segment 2 (dist ~250m) slightly off centerline
+        val fix1 = LatLng(48.0025, 11.00001)
+        val res1 = TrackingElevationProfileResolver.resolve(
+            activeNavigatedRoute = outAndBackRoute,
+            recordedPathPoints = emptyList(),
+            currentLocation = fix1,
+            lastSegmentIndex = null
+        )
+        assertNotNull(res1.segmentIndex)
+        assertEquals(2, res1.segmentIndex)
+        assertTrue("Marker distance should be near 250m on outbound leg", res1.markerDistance!! < 500.0)
+
+        // Fix 2 moving forward along outbound leg to segment 3 (dist ~350m) with jitter closer to inbound leg
+        // Inbound point corresponding to lat 48.0035 is at index 17 (dist ~1650m)!
+        val fix2 = LatLng(48.0035, 11.00004)
+        val res2 = TrackingElevationProfileResolver.resolve(
+            activeNavigatedRoute = outAndBackRoute,
+            recordedPathPoints = emptyList(),
+            currentLocation = fix2,
+            lastSegmentIndex = res1.segmentIndex
+        )
+        assertEquals("Must maintain forward continuity on outbound leg without jumping to inbound leg (index 17/18)", 3, res2.segmentIndex)
+        assertTrue("Marker distance should be near 350m on outbound leg", res2.markerDistance!! in 300.0..400.0)
+    }
+
+    @Test
+    fun testResolve_nullLastSegmentIndex_backwardCompatibleGlobalSearch() {
+        val points = listOf(
+            PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.0), altitude = 100.0),
+            PathPoint(distance = 1000.0, latLng = LatLng(48.01, 11.0), altitude = 150.0)
+        )
+        val route = MapRoute(
+            id = 1L,
+            name = "Test",
+            isSelected = true,
+            bSportType = com.atrainingtracker.banalservice.BSportType.BIKE,
+            path = points,
+            isActiveNavigation = true
+        )
+
+        val res = TrackingElevationProfileResolver.resolve(
+            activeNavigatedRoute = route,
+            recordedPathPoints = emptyList(),
+            currentLocation = LatLng(48.005, 11.0)
+        )
+        assertEquals(0, res.segmentIndex)
+        assertEquals(500.0, res.markerDistance!!, 5.0)
     }
 }

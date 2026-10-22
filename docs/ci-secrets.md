@@ -29,11 +29,10 @@ These are read from `secrets.properties` at build time. The CI workflows generat
 |--------|---------|
 | `STRAVA_CLIENT_ID` | Strava API client ID |
 | `STRAVA_CLIENT_SECRET` | Strava API client secret |
-| `TRAININGPEAKS_CLIENT_ID` | TrainingPeaks API client ID |
-| `TRAININGPEAKS_CLIENT_SECRET` | TrainingPeaks API client secret |
-| `RUNKEEPER_CLIENT_ID` | Runkeeper/HealthGraph API client ID |
-| `RUNKEEPER_CLIENT_SECRET` | Runkeeper/HealthGraph API client secret |
-| `DROPBOX_APP_KEY` | Dropbox app key |
+| `DROPBOX_APP_KEY` | Dropbox app key (uses PKCE; no app secret required) |
+
+> **Note**: Runkeeper (`RUNKEEPER_*`), TrainingPeaks (`TRAININGPEAKS_*`), and Dropbox App Secret (`DROPBOX_APP_SECRET`) are permanently decommissioned (ATT-3551, ATT-4004 / `REQ-SEC-042`). They are excluded from compilation via `secrets.ignoreList` and MUST NOT be added to CI secrets.
+
 
 ## Signed release builds
 

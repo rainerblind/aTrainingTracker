@@ -123,7 +123,7 @@ private fun VerticalDivider() {
 
 @Preview(showBackground = true, name = "Segment Details")
 @Composable
-fun PreviewSegmentDetails() {
+private fun PreviewSegmentDetails() {
     ATrainingTrackerTheme {
         SegmentDetails(
             summary = SegmentSummary(

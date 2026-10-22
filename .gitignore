@@ -19,7 +19,8 @@ app/google-services.json
 # gradle files
 .gradle/
 .idea/
-build/
+/build/
+/app/build/
 gen/
 
 # Intellij files (Android Studio)

@@ -49,6 +49,37 @@ This document serves as the authoritative living source of truth for software en
   * Any user-triggered action that invalidates existing historical caches, re-clusters historical workouts, clears bulk data, or resets persistent preferences **MUST** be protected by an explicit confirmation dialog (`AppDialogActions` / `AlertDialog`).
   * The dialog must clearly explain the consequences of the re-computation (e.g. re-clustering historical workouts) before executing the background task.
 
+### 1.5 Reactive Flow Subscription Over Static `.value` Reads in `combine(...)` (Rule 39 — ATT-3581)
+* **Active Flow Subscription Invariant**:
+  * When a reactive pipeline in a ViewModel (such as `TrackingViewModel.observeMapState` using `combine(...)`) computes dynamic UI or camera state (e.g. Follow-Me speed-dependent zoom, bearing rotation) from live telemetry flows (`currentSpeed`, `currentBearing`), those telemetry flows **MUST** be subscribed as active inputs to `combine(...)`.
+  * **Prohibition**: Never read `.value` of a rapidly changing `StateFlow` inside the lambda of a `combine(...)` that only subscribes to static preference flows (`SettingsDataStore`). Preference flows only emit when user settings change, leaving the derived state frozen during live activity.
+
+### 1.6 Growing Warm-Up Window Over Blank Delay for Rolling Telemetry Metrics (Rule 40 — ATT-1290 / ATT-1291)
+* **Immediate Live Feedback**:
+  * Live rolling-window physiological metrics (such as 30-second Coggan Normalized Power, Intensity Factor, and TSS) **MUST** compute over the growing window ($1 \le k < W$) during the initial warm-up phase ($t < 30\text{ s}$) rather than emitting `null` (`"--"`) until the full window $W$ is reached.
+  * Returning `"--"` for 30 seconds while a sensor is actively transmitting misleads the athlete into thinking the sensor connection is broken.
+
+### 1.7 Backend Filter & Service Key Normalization & Post-Trim Empty Guard in Rolling Filters (Rule 50 — ATT-4282)
+* **Never Pass Localized UI Sentinel Strings Into Backend Service or Filter Keys**:
+  * When a UI selector uses a sentinel ID (`selectedDeviceId <= 0`, e.g. `-1L`) paired with a localized display string (`context.getString(R.string.bestSensor)` / `"Best Sensor"`) to represent automatic `"Best Sensor"` selection, the ViewModel **MUST** normalize `deviceId <= 0` to `null` before constructing backend identifiers (`FilterData.deviceName = null`).
+  * Passing the localized UI string `"Best Sensor"` as `deviceName` into `BANALService.createFilter(FilterData)` registers the filter under `"Best Sensor"` while `TrackingViewModel` queries `getFilteredSensorData(FilterData(..., deviceName = null))`, causing live cockpit tiles to display `"--"` until tracking is restarted.
+* **Post-Trim Emptiness Guard in Rolling Window Filters**:
+  * Any rolling-window or moving-average filter (`TimedMovingAverageFilter`) that prunes expired samples (`trimValues()`) inside `getFilteredValue()` **MUST** check `if (mValues.isEmpty()) return null;` *after* calling `trimValues()` before dividing by `mValues.size()`.
+  * Checking `isEmpty()` only before `trimValues()` causes `0.0 / 0 = Double.NaN` (`"--"`) whenever all buffered samples in the time window expire simultaneously.
+
+### 1.8 Constructor State Seeding Parity & Sensor-Presence Gating in Stateful Metric Devices (Rules 51 & 52 — ATT-4283, ATT-4368)
+* **Constructor Initialization Parity**:
+  * Any stateful virtual sensor or physiological metric device (such as `CyclingPowerMetricsDevice` tracking `W' Balance`, `NP`, `IF`, `TSS`) that initializes its baseline capacity in `resetSession()` **MUST** also invoke `resetSession()` (or seed the identical baseline state) inside its constructor.
+  * Unit tests that explicitly call `device.resetSession()` in `@Before` can mask uninitialized constructor state (`0.0` instead of full `W'` capacity) that occurs when the service instantiates the device in production.
+* **Sensor-Presence Gating Before Publishing to `MySensor` & Summary Persistence (Rule 52 — ATT-4368)**:
+  * While internal accumulator variables (`currentWPrimeBalance = wPrimeCapacity`) should be initialized immediately, virtual metric devices **MUST NOT** call `MySensor.newValue(...)` until the underlying physical/source sensor (`SensorType.POWER`) is registered or emits a real sample, and `WorkoutDataMapper` **MUST** gate derived summary rows (`W'bal`, `NP`, `EF`) on the presence of recorded source telemetry (`avgPower != null || maxPower != null`).
+  * Unconditionally publishing a seeded value to `MySensor` during `resetSession()` causes `TrackerService` to persist phantom `EXTREMA` rows (e.g., `W'bal = 100% / 20.0 kJ`) on non-power workouts such as walks or runs.
+
+### 1.9 Origin-Aware Cockpit Tab Navigation on `TrackingMode.TRACKING` Transitions (Rule 55 — ATT-4373)
+* **Preserve Active Cockpit Tab When Auto-Pause Ends**:
+  * Rising-edge transitions to `TrackingMode.TRACKING` in `TrackingTabsViewModel` **MUST** distinguish between an initial workout start (`READY -> TRACKING`) / manual resume from the **Control** tab (`Page 0`) versus an **Auto-Pause** resume (`PAUSED (isAutoPaused) -> TRACKING`).
+  * Emitting `TabNavigationEvent.NavigateTo(0)` when Auto-Pause finishes pulls the athlete away from whichever secondary telemetry or Map tab they were viewing. Auto-scroll to the first telemetry tab (`NavigateTo(0)`) is only permitted when starting tracking or resuming from the **Control** tab (`Page 0`).
+
 ---
 
 ## 2. Database & Data Transfer Object (DTO) Architecture
@@ -64,11 +95,16 @@ This document serves as the authoritative living source of truth for software en
 * **Architectural Contract Tests**:
   * Every DTO with multiple `fromCursor` pathways must be protected by an architectural contract unit test verifying that both single and batch overloads yield identical objects for identical cursor rows.
 
+### 2.2 Single Source of Truth for `DatabaseSchemaRegistry` & Schema Version Validation (Rule 62 — ATT-4592 / ATT-4596)
+* **Direct Reference to `SQLiteOpenHelper.DB_VERSION` Constants**:
+  * `DatabaseSchemaRegistry` (and any backup/restore or migration schema validator) **MUST** reference each `SQLiteOpenHelper` subclass's `DB_VERSION` / `C_DB_VERSION` constant directly rather than duplicating raw integer literals (`maxVersion = 1`, `25`, etc.).
+  * Whenever a database's `DB_VERSION` is incremented (e.g., for an index or column migration), `DatabaseSchemaRegistry` must automatically reflect the updated version and must be guarded by a contract test asserting equality between every registered database's `maxVersion` and its corresponding `SQLiteOpenHelper` version constant.
+
 ---
 
 ## 3. Android Platform & Lifecycle Safety
 
-### 3.1 Specific Direct Platform Intents Over Generic App Settings (Rule 21)
+### 3.1 Specific Direct Platform Intents & Variant-Scoped Custom URI Schemes (Rules 21 & 63 — ATT-4668 / ATT-4706)
 * **Direct Target Intents**:
   * User prompts requesting system permissions, battery optimization exemptions, or hardware settings must target the most specific direct intent:
     * System permission requests: direct Android runtime permission dialog (`ActivityCompat.requestPermissions`).
@@ -76,6 +112,9 @@ This document serves as the authoritative living source of truth for software en
     * Bluetooth / Location toggles: `ACTION_REQUEST_ENABLE` or `ACTION_LOCATION_SOURCE_SETTINGS`.
 * **Generic Fallback As Last Resort**:
   * Navigating to generic Application Details Settings (`ACTION_APPLICATION_DETAILS_SETTINGS`) is only permissible as a last-resort fallback when direct intents are unavailable or permissions are permanently blocked ("Don't ask again").
+* **Variant-Scoped Custom URI Schemes Over Path Suffixes (`Rule 63` — `ATT-4668` / `ATT-4706`)**:
+  * When isolating deep-link or OAuth callback `<intent-filter>`s between co-installed build variants (`com.atrainingtracker` vs `com.atrainingtracker.debug`), scope the **`android:scheme`** (or `android:host`) by `${applicationId}` (e.g. `android:scheme="strava.${applicationId}"`) whenever the OAuth provider permits custom schemes, rather than only adding `android:path="/${applicationId}"` onto a shared `scheme://host`.
+  * In Android's `IntentFilter.matchData()`, any co-installed APK (such as an older Release build) that declares `android:scheme` + `android:host` **without** an `android:path` attribute treats the omitted path as a wildcard (`/*`, `MATCH_DATA_AUTHORITY = 0x308000`), and `IntentResolver` includes all matching filters with equal `priority` in `ResolverActivity` ("Öffnen mit") regardless of path vs. authority match specificity.
 
 ### 3.2 Defensive Service Lifecycle Finalization & FGS Permission Gating (Rule 29)
 * **Permission-Gated Foreground Service Types**:
@@ -91,6 +130,18 @@ This document serves as the authoritative living source of truth for software en
   * When an entity (such as a paired sensor or bike profile) is deleted from local persistence (database), the background service managing active hardware connections (`BANALService`) **MUST** be immediately notified to cleanly disconnect and unregister the hardware resource.
 * **Orphan Defense in UI ViewModels**:
   * ViewModels **MUST** defensively discard orphaned IDs that do not exist in the database rather than constructing invalid fallback data models (`DeviceType.DUMMY`) that open broken, empty, or dimmed modal dialogs.
+
+### 3.4 Audible Outdoor Safety Alerts (`USAGE_MEDIA`) & Static `AudioTrack` Replay (Rule 53 — ATT-4371)
+* **Media Stream Routing Over Sonification**:
+  * Explicit user-triggered outdoor audio utilities (such as the Cockpit Bike Bell or acoustic safety warnings) **MUST** configure `AudioAttributes` with `AudioAttributes.USAGE_MEDIA` (or `AudioAttributes.USAGE_ALARM`), **NEVER** `AudioAttributes.USAGE_ASSISTANCE_SONIFICATION`.
+  * Android routes `USAGE_ASSISTANCE_SONIFICATION` to the system ringer/notification stream, which is completely silenced whenever the phone is on Vibrate or Silent mode.
+* **Reliable `MODE_STATIC` Replay**:
+  * When re-triggering a `MODE_STATIC` `AudioTrack` (or overlapping rapid chimes), always call `stop()` and `reloadStaticData()` (or instantiate a fresh `AudioTrack` per strike and release on completion) so subsequent taps never silently no-op.
+
+### 3.5 Mandatory `@JvmOverloads constructor` for Reflective Android Framework Classes (`AndroidViewModel`, `ViewModel`, `Fragment`) (Rule 62 — ATT-4667 / ATT-4596)
+* **Bytecode Constructor Generation for Default Parameters**:
+  * Whenever default constructor parameters (e.g., `ioDispatcher: CoroutineDispatcher = Dispatchers.IO`, repositories, or clock providers) are added to an `AndroidViewModel`, `ViewModel`, or `Fragment` instantiated via default Android framework reflection (`viewModel(activity)` / `AndroidViewModelFactory`), the primary constructor **MUST** be annotated with `@JvmOverloads constructor(...)` (or an explicit `ViewModelProvider.Factory` must be wired at all call sites).
+  * Without `@JvmOverloads`, Kotlin only emits the multi-argument + `DefaultConstructorMarker` constructor in bytecode, causing `ViewModelProvider.AndroidViewModelFactory`'s reflective `modelClass.getConstructor(Application::class.java)` lookup to crash at runtime with `NoSuchMethodException` even though Kotlin unit tests compile and pass.
 
 ---
 
@@ -112,16 +163,36 @@ This document serves as the authoritative living source of truth for software en
   * Enabling default return values causes unmocked Android framework methods to silently return `null`, `0`, or `false`, masking severe regressions, null pointer exceptions, and incorrect control flow.
   * Every Android SDK dependency in unit tests must be explicitly mocked (e.g. via MockK, Robolectric, or clean architectural abstraction).
 
-### 5.2 Phased Execution: Stage 4 vs Stage 5
-* **Stage 4 Construction (Fast Unit Loop)**:
-  * During Stage 4 implementation, execute targeted unit test classes (5–15 seconds):
+### 5.2 Two-Tier Unit Test Execution Strategy: Per-Ticket vs Sprint Integration Gate (Rules 60 & 61 — ATT-4465, ATT-4520)
+* **Tier 1 — Per-Ticket Verification (Stages 4 & 5, ~10–20 Seconds)**:
+  * During Stage 4 construction and Stage 5 ticket verification, execute incremental targeted unit and contract test classes covering all modified and directly adjacent packages (**never** pass `--rerun-tasks`, which forces a 4+ minute full recompilation):
     ```bash
     ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.specific.*"
     ```
-  * Maintain rapid developer velocity without running the full 430+ class test suite on every minor code edit.
-* **Stage 5 Verification (Clean-Room Full Suite)**:
-  * In Stage 5, execute the full clean-room test suite:
+  * Whenever any `strings.xml` resource file is modified, also run `TranslationParityTest` (~3s):
+    ```bash
+    ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"
+    ```
+  * **High-Risk Exception**: Run the full `./gradlew testDebugUnitTest` suite per-ticket *only* for High-Risk cross-cutting changes touching core shared infrastructure (`TrainingApplication`, `TrackerService`, `BANALService`, or SQLite database schema migrations).
+* **Tier 2 — Sprint Integration Gate (Once per Sprint in `Review & Retro` Before Merging `sprint/<ID>` into `develop`, ~4 Minutes)**:
+  * During the Sprint `Review & Retro` ceremony before merging `sprint/<SPRINT_NAME>` into `develop`, execute the full clean-room test suite:
     ```bash
     ./gradlew testDebugUnitTest
     ```
-  * Verify 100% pass rate across all project modules before presenting the ticket for Human Review.
+  * Verify 100% pass rate across all 3,660+ unit tests across all project modules. Because each ticket is squashed into a single atomic commit on `sprint/<SPRINT_NAME>` (Core Rule 8), any cross-package regression caught at the Sprint Integration Gate can be pinpointed immediately.
+
+### 5.3 Caller-Site Integration Verification for Optional Default Parameters (Rule 61 — ATT-4015 / ATT-4520)
+* **No Unwired Default Parameter Fallbacks**:
+  * Whenever a shared utility, calculator, or repository method adds an optional parameter with a default value (e.g., `lastSegmentIndex: Int? = null` in `PolylineProgressTracker.projectLocation`) to fix a production behavior defect, Stage 3 (`Implementation Plan`), Stage 4 (`Implementation`), and Gate 4 Review **MUST** audit and wire **all intended production callers** to pass the stateful parameter.
+  * Unit-testing only the utility method while leaving production call sites on the default `null` fallback leaves the bug active at runtime.
+* **Connected User Device Data Protection (`adb uninstall` / `pm clear` Prohibition)**:
+  * Agents **MUST NEVER** run `adb uninstall` or `adb shell pm clear` on `com.atrainingtracker` or `com.atrainingtracker.debug` on a connected user device without explicit human confirmation naming the exact package and first pulling a verified `.attbackup` archive to the host machine.
+
+### 5.4 Contract Test Standards & Prohibition of UI Literal Source-Grep (ATT-4028 / REQ-TST-002)
+* **Prohibition of Source-Text UI Grep**:
+  * Unit and contract tests **MUST NOT** read source code files (`File.readText()`) to assert on Compose design tokens (e.g. `RoundedCornerShape(12.dp)`, `TTColor.RouteSelected`), raw string/emoji literals, internal call parameters, or raw SVG path commands (`V20`, `h-2`).
+  * Text-grep assertions freeze non-functional formatting, whitespace, and private implementation details, triggering false-positive test failures during innocent refactors while verifying zero runtime behavior.
+  * UI contracts must be verified via semantic state models, Compose semantics/UI testing, or behavioral formatters. Vector drawables must be verified via XML DOM parsing and geometric vertex milestone evaluation. Excision/decoupling must be verified via programmatic reflection (`Class.forName`, `declaredFields`, `declaredMethods`) and file existence checks.
+* **Preservation of System Architectural Governance Guards**:
+  * System policy and governance guards (such as `TryWithResourcesCursorAuditTest` for leak prevention, `ManifestSecurityContractTest` for Android security boundaries, `TranslationParityTest` for 9-language localization, and Rule 34 empty callback guards) enforce essential repository-wide invariants and **MUST NOT** be confused with prohibited UI source-grep tests.
+

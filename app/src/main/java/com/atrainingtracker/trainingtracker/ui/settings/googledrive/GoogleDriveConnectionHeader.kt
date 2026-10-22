@@ -18,22 +18,19 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.googledrive
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.trainingtracker.ui.settings.cloud.CloudConnectionHeader
 
+/**
+ * Connection header composable for Google Drive cloud synchronization settings.
+ *
+ * Delegates to shared [CloudConnectionHeader] per Rule 36 and Rule 62.
+ */
 @Composable
 fun GoogleDriveConnectionHeader(
     isConnected: Boolean,
@@ -42,69 +39,18 @@ fun GoogleDriveConnectionHeader(
     onDisconnectClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = TTAlpha.Subtle),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = if (isConnected) stringResource(R.string.google_drive_connected_status)
-                else stringResource(R.string.google_drive_disconnected_status),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (isConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center
-            )
-
-            if (isConnected && !accountEmail.isNullOrBlank()) {
-                Text(
-                    text = accountEmail,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            if (!isConnected) {
-                Button(
-                    onClick = onConnectClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    modifier = Modifier.fillMaxWidth(0.8f)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_google_drive),
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(stringResource(R.string.google_drive_connect))
-                    }
-                }
-            } else {
-                Button(
-                    onClick = onDisconnectClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    ),
-                    modifier = Modifier.fillMaxWidth(0.8f)
-                ) {
-                    Text(stringResource(R.string.google_drive_disconnect))
-                }
-            }
-        }
-    }
+    CloudConnectionHeader(
+        isConnected = isConnected,
+        accountEmail = accountEmail,
+        statusConnectedText = stringResource(R.string.google_drive_connected_status),
+        statusDisconnectedText = stringResource(R.string.google_drive_disconnected_status),
+        connectButtonText = stringResource(R.string.google_drive_connect),
+        disconnectButtonText = stringResource(R.string.google_drive_disconnect),
+        iconPainter = painterResource(id = R.drawable.ic_google_drive),
+        onConnectClick = onConnectClick,
+        onDisconnectClick = onDisconnectClick,
+        modifier = modifier,
+        connectButtonContainerColor = MaterialTheme.colorScheme.primary,
+        connectButtonContentColor = MaterialTheme.colorScheme.onPrimary
+    )
 }

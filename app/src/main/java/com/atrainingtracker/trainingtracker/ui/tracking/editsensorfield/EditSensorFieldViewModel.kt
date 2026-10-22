@@ -31,12 +31,38 @@ import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.filters.SensorFilterDefaults
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldConfig
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+
+/**
+ * Determines whether a [SensorType] should be included in the available sensor types list
+ * based on the active Physiology & Training Models toggles (`REQ-UI-403`).
+ *
+ * If [type] matches [initialSensorType], it is always included so that editing an existing
+ * field configured with a disabled model's sensor does not break.
+ */
+fun shouldIncludeSensorType(
+    type: SensorType,
+    initialSensorType: SensorType?,
+    enableCogganPowerMetrics: Boolean,
+    enableCriticalPowerModel: Boolean
+): Boolean {
+    if (type == initialSensorType) return true
+    return when (type) {
+        SensorType.NORMALIZED_POWER,
+        SensorType.INTENSITY_FACTOR,
+        SensorType.TSS -> enableCogganPowerMetrics
+        SensorType.W_PRIME_BAL -> enableCriticalPowerModel
+        else -> true
+    }
+}
 
 /**
  * Intuitive smoothing presets for athletic sensor configurations (ATT-1276, REQ-UI-167, TST-UI-119).
@@ -107,6 +133,13 @@ data class EditDialogUiState(
         }
 }
 
+/**
+ * ViewModel managing the editing and creation lifecycle of cockpit sensor field configurations,
+ * including sensor type selection, view size, device source selection, and filter smoothing presets.
+ *
+ * <p>Thread Safety: State mutations execute on Dispatchers.Main via [StateFlow], while persistence
+ * operations are dispatched asynchronously via repository coroutines.</p>
+ */
 class EditSensorFieldViewModel(
     application: Application,
     private val trackingViewsRepository: TrackingViewsRepository,
@@ -116,16 +149,42 @@ class EditSensorFieldViewModel(
     private val tabViewId: Long,
     private val rowNr: Int,
     private val colNr: Int,          // -1 for new row
+    tuningConfigFlow: Flow<TuningConfig> = if (application is TrainingApplication) {
+        TuningPreferencesDataStore(application).tuningConfigFlow
+    } else {
+        flowOf(TuningConfig())
+    }
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(EditDialogUiState())
     val uiState: StateFlow<EditDialogUiState> = _uiState.asStateFlow()
+
+    private val activeTuningConfig: StateFlow<TuningConfig> = tuningConfigFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = TuningConfig()
+    )
 
     // This flow will ONLY be used to receive updates from the database.
     private val configFromRepoFlow = trackingViewsRepository.getSensorFieldConfig(sensorFieldId).filterNotNull()
     lateinit var initialConfig: SensorFieldConfig
 
     private val isNewField = sensorFieldId == -1L
+
+    private fun getFilteredSensorTypes(
+        context: Context,
+        initialType: SensorType?,
+        config: TuningConfig = activeTuningConfig.value
+    ): List<SensorType> {
+        return ActivityType.getSensorTypeArray(activityType, context).filter { type ->
+            shouldIncludeSensorType(
+                type = type,
+                initialSensorType = initialType,
+                enableCogganPowerMetrics = config.enableCogganPowerMetrics,
+                enableCriticalPowerModel = config.enableCriticalPowerModel
+            )
+        }
+    }
 
     init {
         Log.i("EditSensorFieldViewModel", "init(): $sensorFieldId, $tabViewId, $rowNr, $colNr")
@@ -134,6 +193,20 @@ class EditSensorFieldViewModel(
         } else {
             loadInitialState()
         }
+        combine(
+            _uiState.map { it.selectedSensorType }.distinctUntilChanged(),
+            activeTuningConfig
+        ) { _, config ->
+            config
+        }.onEach { config ->
+            val context = getApplication<Application>().applicationContext
+            val initialType = if (::initialConfig.isInitialized) initialConfig.sensorType else _uiState.value.selectedSensorType
+            _uiState.update { state ->
+                state.copy(
+                    availableSensorTypesForCurrentActivityType = getFilteredSensorTypes(context, initialType, config)
+                )
+            }
+        }.launchIn(viewModelScope)
     }
 
     private fun setupDefaultState() {
@@ -161,7 +234,7 @@ class EditSensorFieldViewModel(
         _uiState.update {
             it.copy(
                 selectedSensorType = defaultSensor,
-                availableSensorTypesForCurrentActivityType = ActivityType.getSensorTypeArray(activityType, context).toList(),
+                availableSensorTypesForCurrentActivityType = getFilteredSensorTypes(context, defaultSensor),
                 selectedDeviceId = -1,
                 selectedDeviceName = context.getString(R.string.bestSensor),
                 availableDevices = emptyList(), // Will be updated by side-effect if needed
@@ -201,7 +274,7 @@ class EditSensorFieldViewModel(
 
             _uiState.value = EditDialogUiState(
                 selectedSensorType = initialConfig.sensorType,
-                availableSensorTypesForCurrentActivityType = ActivityType.getSensorTypeArray(activityType, context).toList(),
+                availableSensorTypesForCurrentActivityType = getFilteredSensorTypes(context, initialConfig.sensorType),
                 selectedDeviceId = initialConfig.sourceDeviceId,
                 selectedDeviceName = initialConfig.sourceDeviceName,
                 availableDevices = getFullDeviceList(initialConfig.sensorType),
@@ -467,12 +540,26 @@ class EditSensorFieldViewModel(
         }
     }
 
+    /**
+     * Persists the configured sensor field changes to local database storage via [TrackingViewsRepository]
+     * and registers the corresponding runtime telemetry filter in [BANALServiceRepository].
+     *
+     * <p>Sentinel ID Normalization (Rule 50 / REQ-FIL-014.1): When [EditDialogUiState.selectedDeviceId]
+     * is &lt;= 0 (sentinel {@code -1L} representing "Best Sensor"), [newSourceDeviceName] and
+     * [newSourceDeviceId] are normalized to {@code null} so [FilterData] resolves the proxy sensor
+     * in BANALService and matches database query hashes. Explicit device selections (&gt; 0) retain
+     * their device ID and name.</p>
+     *
+     * Threading: Reads UI state on the main thread and launches asynchronous persistence writes
+     * onto [viewModelScope].
+     */
     fun saveChanges() {
         Log.i("EditSensorFieldViewModel", "saveChanges(): $tabViewId, $rowNr, $colNr")
         val currentState = _uiState.value
         val sensorType = currentState.selectedSensorType ?: return
 
-        val newSourceDeviceName = currentState.selectedDeviceName
+        val newSourceDeviceName = if (currentState.selectedDeviceId > 0) currentState.selectedDeviceName else null
+        val newSourceDeviceId = if (currentState.selectedDeviceId > 0) currentState.selectedDeviceId else null
         val newSensorType = sensorType
         val newFilterType = getFinalFilterType()
         val newFilterConstant = getFinalFilterConstant()
@@ -489,7 +576,7 @@ class EditSensorFieldViewModel(
                     colNr = colNr,
                     newSensorType = newSensorType,
                     newViewSize = currentState.selectedViewSize,
-                    newSourceDeviceId = currentState.selectedDeviceId,
+                    newSourceDeviceId = newSourceDeviceId,
                     newSourceDeviceName = newSourceDeviceName,
                     newFilterType = newFilterType,
                     newFilterConstant = newFilterConstant
@@ -499,7 +586,7 @@ class EditSensorFieldViewModel(
                     sensorFieldId = sensorFieldId,
                     newSensorType = newSensorType,
                     newViewSize = currentState.selectedViewSize,
-                    newSourceDeviceId = currentState.selectedDeviceId,
+                    newSourceDeviceId = newSourceDeviceId,
                     newSourceDeviceName = newSourceDeviceName,
                     newFilterType = newFilterType,
                     newFilterConstant = newFilterConstant

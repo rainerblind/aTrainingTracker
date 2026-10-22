@@ -111,8 +111,8 @@ class GpxImportViewModelTest {
         assertEquals("Test Route", editing.summary.name)
         assertEquals(120.0, editing.summary.elevationGain, 0.001)
         assertEquals(2, editing.points.size)
-        assertEquals(500.0, editing.points[0].altitude, 0.001)
-        assertEquals(620.0, editing.points[1].altitude, 0.001)
+        assertEquals(500.0, editing.points[0].altitude!!, 0.001)
+        assertEquals(620.0, editing.points[1].altitude!!, 0.001)
     }
 
     @Test
@@ -189,4 +189,216 @@ class GpxImportViewModelTest {
         coVerify(exactly = 1) { mockRepository.insertRoute(summary, points, waypoints) }
         assertTrue(viewModel.uiState is GpxImportViewModel.ImportState.Success)
     }
+
+    @Test
+    fun testHandleBatchUris_emptyList_emitsError() {
+        viewModel.handleBatchUris(emptyList())
+        assertTrue(viewModel.uiState is GpxImportViewModel.ImportState.Error)
+        val error = viewModel.uiState as GpxImportViewModel.ImportState.Error
+        assertEquals("No files provided", error.message)
+    }
+
+    @Test
+    fun testHandleBatchUris_singleUri_delegatesToHandleIntent() = runTest {
+        val summary = RouteSummary(
+            id = 0,
+            externalId = "single.gpx",
+            name = "Single Route",
+            description = "Single route description",
+            isSelected = false,
+            distance = 3000.0,
+            elevationGain = 50.0,
+            bSportType = BSportType.BIKE,
+            source = RouteSource.LOCAL_GPX
+        )
+        val points = listOf(
+            PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.0), altitude = 500.0)
+        )
+        coEvery { mockImporter.importRouteFromGpx(testUri) } returns Result.success(RouteImportResult(summary, points))
+
+        viewModel.handleBatchUris(listOf(testUri))
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState is GpxImportViewModel.ImportState.Editing)
+    }
+
+    @Test
+    fun testHandleBatchUris_multipleValidUris_insertsAllAndEmitsBatchSuccess() = runTest {
+        val uri1 = mockk<Uri>()
+        val uri2 = mockk<Uri>()
+        val summary1 = RouteSummary(id = 0, externalId = "1.gpx", name = "Route 1", description = "Desc 1", isSelected = false, distance = 1000.0, elevationGain = 10.0, bSportType = BSportType.BIKE, source = RouteSource.LOCAL_GPX)
+        val summary2 = RouteSummary(id = 0, externalId = "2.gpx", name = "Route 2", description = "Desc 2", isSelected = false, distance = 2000.0, elevationGain = 20.0, bSportType = BSportType.BIKE, source = RouteSource.LOCAL_GPX)
+        val points1 = listOf(PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.0), altitude = 500.0))
+        val points2 = listOf(PathPoint(distance = 0.0, latLng = LatLng(48.1, 11.1), altitude = 510.0))
+
+        coEvery { mockImporter.importRouteFromGpx(uri1) } returns Result.success(RouteImportResult(summary1, points1))
+        coEvery { mockImporter.importRouteFromGpx(uri2) } returns Result.success(RouteImportResult(summary2, points2))
+        coEvery { mockRepository.insertRoute(any(), any(), any()) } returns 1L
+
+        viewModel.handleBatchUris(listOf(uri1, uri2))
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { mockRepository.insertRoute(summary1, points1, emptyList()) }
+        coVerify(exactly = 1) { mockRepository.insertRoute(summary2, points2, emptyList()) }
+        assertTrue(viewModel.uiState is GpxImportViewModel.ImportState.BatchSuccess)
+        val state = viewModel.uiState as GpxImportViewModel.ImportState.BatchSuccess
+        assertEquals(2, state.importedCount)
+        assertEquals(0, state.failedCount)
+    }
+
+    @Test
+    fun testHandleBatchUris_partialFailure_insertsSuccessfulAndReportsFailed() = runTest {
+        val uriValid = mockk<Uri>()
+        val uriCorrupted = mockk<Uri>()
+        val summary = RouteSummary(id = 0, externalId = "valid.gpx", name = "Valid Route", description = "Desc valid", isSelected = false, distance = 1000.0, elevationGain = 10.0, bSportType = BSportType.BIKE, source = RouteSource.LOCAL_GPX)
+        val points = listOf(PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.0), altitude = 500.0))
+
+        coEvery { mockImporter.importRouteFromGpx(uriValid) } returns Result.success(RouteImportResult(summary, points))
+        coEvery { mockImporter.importRouteFromGpx(uriCorrupted) } returns Result.failure(Exception("Bad XML"))
+        coEvery { mockRepository.insertRoute(any(), any(), any()) } returns 1L
+
+        viewModel.handleBatchUris(listOf(uriValid, uriCorrupted))
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { mockRepository.insertRoute(summary, points, emptyList()) }
+        assertTrue(viewModel.uiState is GpxImportViewModel.ImportState.BatchSuccess)
+        val state = viewModel.uiState as GpxImportViewModel.ImportState.BatchSuccess
+        assertEquals(1, state.importedCount)
+        assertEquals(1, state.failedCount)
+    }
+
+    /**
+     * Verifies that [GpxImportViewModel.handleBatchUris] applies the specified [sportType]
+     * to all imported routes (REQ-MAP-053.5, TST-MAP-056.2).
+     */
+    @Test
+    fun testHandleBatchUris_withSportTypeOverride_TST_MAP_056_2() = runTest {
+        val uri1 = mockk<Uri>()
+        val uri2 = mockk<Uri>()
+        val summary1 = RouteSummary(
+            id = 0,
+            externalId = "1.gpx",
+            name = "Route 1",
+            description = "Desc 1",
+            isSelected = false,
+            distance = 1000.0,
+            elevationGain = 10.0,
+            bSportType = BSportType.UNKNOWN,
+            source = RouteSource.LOCAL_GPX
+        )
+        val summary2 = RouteSummary(
+            id = 0,
+            externalId = "2.gpx",
+            name = "Route 2",
+            description = "Desc 2",
+            isSelected = false,
+            distance = 2000.0,
+            elevationGain = 20.0,
+            bSportType = BSportType.UNKNOWN,
+            source = RouteSource.LOCAL_GPX
+        )
+        val points1 = listOf(PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.0), altitude = 500.0))
+        val points2 = listOf(PathPoint(distance = 0.0, latLng = LatLng(48.1, 11.1), altitude = 510.0))
+
+        coEvery { mockImporter.importRouteFromGpx(uri1) } returns Result.success(RouteImportResult(summary1, points1))
+        coEvery { mockImporter.importRouteFromGpx(uri2) } returns Result.success(RouteImportResult(summary2, points2))
+        coEvery { mockRepository.insertRoute(any(), any(), any()) } returns 1L
+
+        viewModel.handleBatchUris(listOf(uri1, uri2), sportType = BSportType.RUN)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            mockRepository.insertRoute(
+                match { it.externalId == "1.gpx" && it.bSportType == BSportType.RUN },
+                points1,
+                emptyList()
+            )
+        }
+        coVerify(exactly = 1) {
+            mockRepository.insertRoute(
+                match { it.externalId == "2.gpx" && it.bSportType == BSportType.RUN },
+                points2,
+                emptyList()
+            )
+        }
+        assertTrue(viewModel.uiState is GpxImportViewModel.ImportState.BatchSuccess)
+        val state = viewModel.uiState as GpxImportViewModel.ImportState.BatchSuccess
+        assertEquals(2, state.importedCount)
+        assertEquals(0, state.failedCount)
+    }
+
+    /**
+     * Verifies that [GpxImportViewModel.startIndividualImport] coordinates sequential
+     * interactive editing and advances correctly through save and skip actions (REQ-MAP-053.5, TST-MAP-056.3).
+     */
+    @Test
+    fun testStartIndividualImport_sequentialReviewFlow_TST_MAP_056_3() = runTest {
+        val uri1 = mockk<Uri>()
+        val uri2 = mockk<Uri>()
+        val uri3 = mockk<Uri>()
+
+        val summary1 = RouteSummary(id = 0, externalId = "1.gpx", name = "Route 1", description = "", isSelected = false, distance = 1000.0, elevationGain = 10.0, bSportType = BSportType.UNKNOWN, source = RouteSource.LOCAL_GPX)
+        val summary2 = RouteSummary(id = 0, externalId = "2.gpx", name = "Route 2", description = "", isSelected = false, distance = 2000.0, elevationGain = 20.0, bSportType = BSportType.UNKNOWN, source = RouteSource.LOCAL_GPX)
+        val summary3 = RouteSummary(id = 0, externalId = "3.gpx", name = "Route 3", description = "", isSelected = false, distance = 3000.0, elevationGain = 30.0, bSportType = BSportType.UNKNOWN, source = RouteSource.LOCAL_GPX)
+
+        val points1 = listOf(PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.0), altitude = 500.0))
+        val points2 = listOf(PathPoint(distance = 0.0, latLng = LatLng(48.1, 11.1), altitude = 510.0))
+        val points3 = listOf(PathPoint(distance = 0.0, latLng = LatLng(48.2, 11.2), altitude = 520.0))
+
+        coEvery { mockImporter.importRouteFromGpx(uri1) } returns Result.success(RouteImportResult(summary1, points1))
+        coEvery { mockImporter.importRouteFromGpx(uri2) } returns Result.success(RouteImportResult(summary2, points2))
+        coEvery { mockImporter.importRouteFromGpx(uri3) } returns Result.success(RouteImportResult(summary3, points3))
+        coEvery { mockRepository.insertRoute(any(), any(), any()) } returns 1L
+
+        // 1. Start sequential flow
+        viewModel.startIndividualImport(listOf(uri1, uri2, uri3))
+        advanceUntilIdle()
+
+        // Assert route 1 loaded
+        assertTrue(viewModel.uiState is GpxImportViewModel.ImportState.EditingIndividual)
+        val editing1 = viewModel.uiState as GpxImportViewModel.ImportState.EditingIndividual
+        assertEquals("Route 1", editing1.summary.name)
+        assertEquals(1, editing1.current)
+        assertEquals(3, editing1.total)
+
+        // 2. Save route 1 with modified sport type
+        val updatedSummary1 = editing1.summary.copy(name = "Route 1 Edited", bSportType = BSportType.BIKE)
+        viewModel.saveCurrentIndividualRoute(updatedSummary1)
+        advanceUntilIdle()
+
+        // Assert route 2 loaded
+        assertTrue(viewModel.uiState is GpxImportViewModel.ImportState.EditingIndividual)
+        val editing2 = viewModel.uiState as GpxImportViewModel.ImportState.EditingIndividual
+        assertEquals("Route 2", editing2.summary.name)
+        assertEquals(2, editing2.current)
+        assertEquals(3, editing2.total)
+
+        // 3. Skip route 2
+        viewModel.skipCurrentIndividualRoute()
+        advanceUntilIdle()
+
+        // Assert route 3 loaded
+        assertTrue(viewModel.uiState is GpxImportViewModel.ImportState.EditingIndividual)
+        val editing3 = viewModel.uiState as GpxImportViewModel.ImportState.EditingIndividual
+        assertEquals("Route 3", editing3.summary.name)
+        assertEquals(3, editing3.current)
+        assertEquals(3, editing3.total)
+
+        // 4. Save route 3
+        val updatedSummary3 = editing3.summary.copy(bSportType = BSportType.RUN)
+        viewModel.saveCurrentIndividualRoute(updatedSummary3)
+        advanceUntilIdle()
+
+        // Assert terminal state is BatchSuccess
+        assertTrue(viewModel.uiState is GpxImportViewModel.ImportState.BatchSuccess)
+        val terminalState = viewModel.uiState as GpxImportViewModel.ImportState.BatchSuccess
+        assertEquals(2, terminalState.importedCount)
+        assertEquals(1, terminalState.failedCount)
+
+        // Verify repository invocations: Route 1 and Route 3 inserted; Route 2 NOT inserted
+        coVerify(exactly = 1) { mockRepository.insertRoute(updatedSummary1, points1, emptyList()) }
+        coVerify(exactly = 0) { mockRepository.insertRoute(match { it.externalId == "2.gpx" }, any(), any()) }
+        coVerify(exactly = 1) { mockRepository.insertRoute(updatedSummary3, points3, emptyList()) }
+    }
 }
+

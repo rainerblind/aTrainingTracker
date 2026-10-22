@@ -144,7 +144,7 @@ private fun LapDataRow(hint: String, value: String, unit: String) {
 // Instead, we build a similar-looking composable for the preview.
 @Preview(showBackground = true)
 @Composable
-fun LapSummaryDialogPreview() {
+private fun LapSummaryDialogPreview() {
     ATrainingTrackerTheme(darkTheme = false) {
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
@@ -181,7 +181,7 @@ fun LapSummaryDialogPreview() {
 // The dark preview will also work now with these changes.
 @Preview(showBackground = true)
 @Composable
-fun LapSummaryDialogDarkPreview() {
+private fun LapSummaryDialogDarkPreview() {
     ATrainingTrackerTheme(darkTheme = true) {
         Surface(
             shape = MaterialTheme.shapes.extraLarge,

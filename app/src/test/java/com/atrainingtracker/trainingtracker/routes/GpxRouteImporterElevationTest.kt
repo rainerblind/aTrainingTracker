@@ -127,9 +127,9 @@ class GpxRouteImporterElevationTest {
         coVerify(exactly = 0) { mockElevationService.getBatchElevationsAsync(any()) }
 
         assertEquals(3, points.size)
-        assertEquals(650.0, points[0].altitude, 0.001)
-        assertEquals(720.0, points[1].altitude, 0.001)
-        assertEquals(810.0, points[2].altitude, 0.001)
+        assertEquals(650.0, points[0].altitude!!, 0.001)
+        assertEquals(720.0, points[1].altitude!!, 0.001)
+        assertEquals(810.0, points[2].altitude!!, 0.001)
 
         // Elevation gain: (720 - 650) + (810 - 720) = 70 + 90 = 160.0m
         assertEquals(160.0, summary.elevationGain, 0.001)
@@ -172,10 +172,10 @@ class GpxRouteImporterElevationTest {
         coVerify(exactly = 1) { mockElevationService.getBatchElevationsAsync(any()) }
 
         assertEquals(4, points.size)
-        assertEquals(500.0, points[0].altitude, 0.001)
-        assertEquals(520.0, points[1].altitude, 0.001)
-        assertEquals(515.0, points[2].altitude, 0.001)
-        assertEquals(540.0, points[3].altitude, 0.001)
+        assertEquals(500.0, points[0].altitude!!, 0.001)
+        assertEquals(520.0, points[1].altitude!!, 0.001)
+        assertEquals(515.0, points[2].altitude!!, 0.001)
+        assertEquals(540.0, points[3].altitude!!, 0.001)
 
         // Gain: (520 - 500 = +20) + (515 - 520 = -5, omitted) + (540 - 515 = +25) = 45.0m
         assertEquals(45.0, summary.elevationGain, 0.001)
@@ -252,8 +252,8 @@ class GpxRouteImporterElevationTest {
         val (summary, points) = result.getOrThrow()
 
         assertEquals(2, points.size)
-        assertEquals(0.0, points[0].altitude, 0.001)
-        assertEquals(0.0, points[1].altitude, 0.001)
+        assertEquals(0.0, points[0].altitude!!, 0.001)
+        assertEquals(0.0, points[1].altitude!!, 0.001)
         assertEquals(0.0, summary.elevationGain, 0.001)
     }
 
@@ -286,8 +286,98 @@ class GpxRouteImporterElevationTest {
         assertTrue(result.isSuccess)
         val (summary, points) = result.getOrThrow()
 
-        assertEquals(0.0, points[0].altitude, 0.001)
-        assertEquals(0.0, points[1].altitude, 0.001)
+        assertEquals(0.0, points[0].altitude!!, 0.001)
+        assertEquals(0.0, points[1].altitude!!, 0.001)
         assertEquals(0.0, summary.elevationGain, 0.001)
+    }
+
+    /**
+     * TST-MAP-055.2: Verifies that calculateElevationGain filters sub-2.0m elevation noise
+     * fluctuations and only accumulates deltas >= 2.0m.
+     */
+    @Test
+    fun testImportRoute_appliesHysteresisFilteringSub2MeterNoise() = runBlocking {
+        // Altitudes: 500.0 -> 501.5 (noise +1.5) -> 500.5 (noise -1.0) -> 501.8 (noise +1.3)
+        // -> 505.0 (+4.5 from 500.5, valid >= 2.0) -> 504.0 (noise -1.0) -> 508.0 (+4.0 from 504.0, valid >= 2.0)
+        // Total accumulated gain should be: (505.0 - 500.0) + (508.0 - 504.0) = 5.0 + 4.0 = 9.0m (not counting noise ripples)
+        val gpxWithNoisyAlt = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <gpx version="1.1">
+              <trk><name>Noisy Trail</name>
+                <trkseg>
+                  <trkpt lat="48.10" lon="11.50"><ele>500.0</ele></trkpt>
+                  <trkpt lat="48.11" lon="11.51"><ele>501.5</ele></trkpt>
+                  <trkpt lat="48.12" lon="11.52"><ele>500.5</ele></trkpt>
+                  <trkpt lat="48.13" lon="11.53"><ele>501.8</ele></trkpt>
+                  <trkpt lat="48.14" lon="11.54"><ele>505.0</ele></trkpt>
+                  <trkpt lat="48.15" lon="11.55"><ele>504.0</ele></trkpt>
+                  <trkpt lat="48.16" lon="11.56"><ele>508.0</ele></trkpt>
+                </trkseg>
+              </trk>
+            </gpx>
+        """.trimIndent()
+
+        every { mockContentResolver.openInputStream(testUri) } answers {
+            ByteArrayInputStream(gpxWithNoisyAlt.toByteArray(Charsets.UTF_8))
+        }
+
+        val result = importer.importRouteFromGpx(testUri)
+        assertTrue(result.isSuccess)
+        val (summary, _) = result.getOrThrow()
+
+        // 500.0 -> 501.5 (diff 1.5 < 2.0, ignored)
+        // 501.5 -> 500.5 (diff -1.0 > -2.0, ignored)
+        // 500.5 -> 501.8 (diff 1.8 from 500.0 < 2.0, ignored)
+        // 501.8 -> 505.0 (diff 5.0 from 500.0 >= 2.0, gain += 5.0, lastAlt = 505.0)
+        // 505.0 -> 504.0 (diff -1.0 > -2.0, ignored)
+        // 504.0 -> 508.0 (diff 3.0 from 505.0 >= 2.0, gain += 3.0, lastAlt = 508.0)
+        // Total gain = 8.0m (compared to raw 1.5 + 1.3 + 3.2 + 4.0 = 10.0m with noise)
+        assertEquals(8.0, summary.elevationGain, 0.001)
+    }
+
+    /**
+     * TST-MAP-055.2: Verifies that transient DEM batch failure (ServerError) does not terminate
+     * enrichment, continuing to subsequent batches.
+     */
+    @Test
+    fun testImportRoute_continuesEnrichmentOnSingleBatchServerError() = runBlocking {
+        // 150 points -> Batch 1 (100 points), Batch 2 (50 points)
+        val count = 150
+        val sb = StringBuilder()
+        sb.append("""<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1"><trk><name>TwoBatches</name><trkseg>""")
+        for (i in 0 until count) {
+            sb.append("""<trkpt lat="${48.0 + (i * 0.001)}" lon="${11.0 + (i * 0.001)}"/>""")
+        }
+        sb.append("""</trkseg></trk></gpx>""")
+
+        every { mockContentResolver.openInputStream(testUri) } answers {
+            ByteArrayInputStream(sb.toString().toByteArray(Charsets.UTF_8))
+        }
+
+        var callCount = 0
+        coEvery { mockElevationService.getBatchElevationsAsync(any()) } answers {
+            callCount++
+            if (callCount == 1) {
+                // Batch 1 fails with transient ServerError 500
+                ElevationResult.ServerError(500)
+            } else {
+                // Batch 2 succeeds
+                val requestedSize = (arg<List<LatLng>>(0)).size
+                ElevationResult.BatchSuccess(List(requestedSize) { 600.0 })
+            }
+        }
+
+        val result = importer.importRouteFromGpx(testUri)
+        assertTrue(result.isSuccess)
+        val (_, points) = result.getOrThrow()
+
+        // Verify both batches were queried despite batch 1 failure
+        assertEquals(2, callCount)
+        // Batch 1 points retain default 0.0
+        assertEquals(0.0, points[0].altitude!!, 0.001)
+        assertEquals(0.0, points[99].altitude!!, 0.001)
+        // Batch 2 points were successfully enriched with 600.0
+        assertEquals(600.0, points[100].altitude!!, 0.001)
+        assertEquals(600.0, points[149].altitude!!, 0.001)
     }
 }

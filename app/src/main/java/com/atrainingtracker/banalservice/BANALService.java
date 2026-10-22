@@ -30,6 +30,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import com.atrainingtracker.BuildConfig;
+import com.atrainingtracker.util.LifecycleUtils;
 import com.atrainingtracker.banalservice.devices.DeviceManager;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.MyDevice;
@@ -144,10 +145,10 @@ public class BANALService
     public static final String URI_ANT_USB_SERVICE = "com.dsi.ant.usbservice";
 
     public static final int INIT_LAP_NR = 1;
-    private static DeviceManager cDeviceManager;
-    private static MySensorManager cSensorManager;
-    private static FilterManager cFilterManager;
-    protected ActivityType mActivityTypeMax = ActivityType.getDefaultActivityType();
+    private static volatile DeviceManager cDeviceManager;
+    private static volatile MySensorManager cSensorManager;
+    private static volatile FilterManager cFilterManager;
+    protected volatile ActivityType mActivityTypeMax = ActivityType.getDefaultActivityType();
 
     /***********************************************************************************************/
 
@@ -167,8 +168,8 @@ public class BANALService
             newLap(intent.getBooleanExtra(IS_PAUSE, false));
         }
     };
-    private long mUserSelectedSportTypeId = -1;
-    private boolean mHaveUserSelectedSportType = false;
+    private volatile long mUserSelectedSportTypeId = -1;
+    private volatile boolean mHaveUserSelectedSportType = false;
 
     public static long getDefaultSportTypeId() {
         return SportTypeDatabaseManager.getDefaultSportTypeId();
@@ -215,22 +216,31 @@ public class BANALService
 
     /* filtered stuff */
     public static void createFilter(FilterData filterData) {
-        cFilterManager.createFilter(filterData);
+        FilterManager filterManager = cFilterManager;
+        if (filterManager != null) {
+            filterManager.createFilter(filterData);
+        }
     }
 
     public static FilteredSensorData getFilteredSensorData(FilterData filterData) {
-        return cFilterManager.getFilteredSensorData(filterData);
+        FilterManager filterManager = cFilterManager;
+        return filterManager != null ? filterManager.getFilteredSensorData(filterData) : null;
     }
 
     protected static List<FilteredSensorData> getAllFilteredSensorData() {
-        return cFilterManager.getAllFilteredSensorData();
+        FilterManager filterManager = cFilterManager;
+        return filterManager != null ? filterManager.getAllFilteredSensorData() : new LinkedList<>();
     }
 
     /* non-filtered stuff */  // outdated?
     protected static SensorData getSensorData(SensorType sensorType) {
         if (DEBUG) Log.d(TAG, "getBestSensorData(" + sensorType.name() + ")");
 
-        MySensor sensor = cSensorManager.getSensor(sensorType);
+        MySensorManager sensorManager = cSensorManager;
+        if (sensorManager == null) {
+            return null;
+        }
+        MySensor sensor = sensorManager.getSensor(sensorType);
         return sensor == null ? null : sensor.getSensorData();
     }
 
@@ -250,27 +260,34 @@ public class BANALService
      * permission is granted during an active service session (REQ-PRI-004, ATT-2357).
      */
     public static void checkOrInitializeLocationDevices() {
-        if (cDeviceManager != null) {
-            cDeviceManager.checkOrInitializeLocationDevices();
+        DeviceManager deviceManager = cDeviceManager;
+        if (deviceManager != null) {
+            deviceManager.checkOrInitializeLocationDevices();
         }
     }
 
     public static List<MySensor> getSensorList(SensorType sensorType) {
-        return cDeviceManager.getSensorList(sensorType);
+        DeviceManager deviceManager = cDeviceManager;
+        return deviceManager != null ? deviceManager.getSensorList(sensorType) : new LinkedList<>();
     }
 
     public static List<MyAccumulatorSensor> getAccumulatorSensorList(SensorType sensorType) {
-        return cDeviceManager.getAccumulatorSensorList(sensorType);
+        DeviceManager deviceManager = cDeviceManager;
+        return deviceManager != null ? deviceManager.getAccumulatorSensorList(sensorType) : new LinkedList<>();
     }
 
     public static Object getInitialValue(SensorType sensorType) {
-        return cSensorManager.getInitialValue(sensorType);
+        MySensorManager sensorManager = cSensorManager;
+        return sensorManager != null ? sensorManager.getInitialValue(sensorType) : null;
     }
 
     public static void setInitialSensorValue(SensorType sensorType, Double initialValue) {
         if (DEBUG)
             Log.d(TAG, "setInitialSensorValue: sensorType=" + sensorType + ", value=" + initialValue);
-        cSensorManager.setInitialValue(sensorType, initialValue);
+        MySensorManager sensorManager = cSensorManager;
+        if (sensorManager != null) {
+            sensorManager.setInitialValue(sensorType, initialValue);
+        }
         for (MyAccumulatorSensor<Double> myAccumulatorSensor : getAccumulatorSensorList(sensorType)) {
             if (DEBUG) Log.d(TAG, "initializing Sensor " + myAccumulatorSensor);
             myAccumulatorSensor.setInitialValue(initialValue);
@@ -280,7 +297,10 @@ public class BANALService
     public static void setInitialSensorValue(SensorType sensorType, Integer initialValue) {
         if (DEBUG)
             Log.d(TAG, "setInitialSensorValue: sensorType=" + sensorType + ", value=" + initialValue);
-        cSensorManager.setInitialValue(sensorType, initialValue);
+        MySensorManager sensorManager = cSensorManager;
+        if (sensorManager != null) {
+            sensorManager.setInitialValue(sensorType, initialValue);
+        }
         for (MyAccumulatorSensor<Integer> myAccumulatorSensor : getAccumulatorSensorList(sensorType)) {
             if (DEBUG) Log.d(TAG, "initializing Sensor " + myAccumulatorSensor);
             myAccumulatorSensor.setInitialValue(initialValue);
@@ -311,7 +331,8 @@ public class BANALService
         if (mHaveUserSelectedSportType) {
             return SportTypeDatabaseManager.getInstance(this).getBSportType(mUserSelectedSportTypeId);
         } else {
-            return cDeviceManager.getSportType();
+            DeviceManager deviceManager = cDeviceManager;
+            return deviceManager != null ? deviceManager.getSportType() : BSportType.UNKNOWN;
         }
     }
 
@@ -319,7 +340,9 @@ public class BANALService
         if (mHaveUserSelectedSportType) {
             return mUserSelectedSportTypeId;
         } else {
-            return SportTypeDatabaseManager.getSportTypeId(cDeviceManager.getSportType());
+            DeviceManager deviceManager = cDeviceManager;
+            BSportType sportType = deviceManager != null ? deviceManager.getSportType() : BSportType.UNKNOWN;
+            return SportTypeDatabaseManager.getSportTypeId(sportType);
         }
     }
 
@@ -327,8 +350,13 @@ public class BANALService
         if (mHaveUserSelectedSportType) {
             return mUserSelectedSportTypeId;
         } else {
-            List<Long> sportTypeIds = SportTypeDatabaseManager.getInstance(this).getSportTypesIdList(cDeviceManager.getSportType(), avgSpd);
-            return sportTypeIds.get(0);
+            DeviceManager deviceManager = cDeviceManager;
+            BSportType sportType = deviceManager != null ? deviceManager.getSportType() : BSportType.UNKNOWN;
+            List<Long> sportTypeIds = SportTypeDatabaseManager.getInstance(this).getSportTypesIdList(sportType, avgSpd);
+            if (sportTypeIds != null && !sportTypeIds.isEmpty()) {
+                return sportTypeIds.get(0);
+            }
+            return SportTypeDatabaseManager.getDefaultSportTypeId();
         }
     }
 
@@ -338,7 +366,10 @@ public class BANALService
     }
 
     protected void startSearchForPairedDevices() {
-        cDeviceManager.startSearchForPairedDevices();
+        DeviceManager deviceManager = cDeviceManager;
+        if (deviceManager != null) {
+            deviceManager.startSearchForPairedDevices();
+        }
     }
 
     protected void newLap() {
@@ -359,7 +390,7 @@ public class BANALService
 
         int prevLapNr = 0;
         sensorData = getSensorData(SensorType.LAP_NR);
-        if (sensorData != null) {
+        if (sensorData != null && sensorData.getValue() != null) {
             prevLapNr = (Integer) sensorData.getValue();
         }
 
@@ -379,10 +410,13 @@ public class BANALService
             lapDistance_String = sensorData.getStringValue();
         }
 
-        double lapSpeed = lapDistance / lapTime_s;
+        double lapSpeed = lapTime_s > 0 ? (lapDistance / lapTime_s) : 0.0;
         String lapSpeedString = SensorType.SPEED_mps.getMyFormatter().format(lapSpeed);
 
-        cDeviceManager.newLap();
+        DeviceManager deviceManager = cDeviceManager;
+        if (deviceManager != null) {
+            deviceManager.newLap();
+        }
 
         // send broadcast with these values
         Intent intent = new Intent(BANALService.LAP_SUMMARY)
@@ -401,20 +435,24 @@ public class BANALService
     protected Set<SensorType> getAvailableSensorTypeSet() {
 
         Set<SensorType> sensorTypeSet = EnumSet.noneOf(SensorType.class);
-
-        for (MySensor mySensor : cSensorManager.getSensors()) {
-            sensorTypeSet.add(mySensor.getSensorType());
+        MySensorManager sensorManager = cSensorManager;
+        if (sensorManager != null) {
+            for (MySensor mySensor : sensorManager.getSensors()) {
+                sensorTypeSet.add(mySensor.getSensorType());
+            }
         }
 
         return sensorTypeSet;
     }
 
     protected Set<SensorType> getAccumulatedSensorTypeSet() {
-        return cSensorManager.getAccumulatedSensorTypeSet();
+        MySensorManager sensorManager = cSensorManager;
+        return sensorManager != null ? sensorManager.getAccumulatedSensorTypeSet() : EnumSet.noneOf(SensorType.class);
     }
 
     protected String getMainSensorStringValue(long deviceID) {
-        return cDeviceManager.getMainSensorStringValue(deviceID);
+        DeviceManager deviceManager = cDeviceManager;
+        return deviceManager != null ? deviceManager.getMainSensorStringValue(deviceID) : "";
     }
 
     @NonNull
@@ -461,8 +499,11 @@ public class BANALService
         if (DEBUG) Log.d(TAG, "getBestSensorData()");
 
         LinkedList<SensorData> sensorDataList = new LinkedList<>();
-        for (MySensor mySensor : cSensorManager.getSensors()) {  // gets the ProxySensors
-            sensorDataList.add(mySensor.getSensorData());
+        MySensorManager sensorManager = cSensorManager;
+        if (sensorManager != null) {
+            for (MySensor mySensor : sensorManager.getSensors()) {  // gets the ProxySensors
+                sensorDataList.add(mySensor.getSensorData());
+            }
         }
 
         return sensorDataList;
@@ -471,8 +512,11 @@ public class BANALService
     protected List<SensorData> getAllButBestSensorData()  // get the SensorData from all but the best Sensors.  Maybe the best sensors are handled special?
     {
         LinkedList<SensorData> sensorDataLinkedList = new LinkedList<>();
-        for (MySensor mySensor : cSensorManager.getAllButBestSensors()) {
-            sensorDataLinkedList.add(mySensor.getSensorData());
+        MySensorManager sensorManager = cSensorManager;
+        if (sensorManager != null) {
+            for (MySensor mySensor : sensorManager.getAllButBestSensors()) {
+                sensorDataLinkedList.add(mySensor.getSensorData());
+            }
         }
 
         return sensorDataLinkedList;
@@ -481,8 +525,11 @@ public class BANALService
     protected List<SensorData> getAllSensorData()  // get the SensorData from all Sensors
     {
         LinkedList<SensorData> sensorDataLinkedList = new LinkedList<>();
-        for (MySensor mySensor : cSensorManager.getAllSensors()) {
-            sensorDataLinkedList.add(mySensor.getSensorData());
+        MySensorManager sensorManager = cSensorManager;
+        if (sensorManager != null) {
+            for (MySensor mySensor : sensorManager.getAllSensors()) {
+                sensorDataLinkedList.add(mySensor.getSensorData());
+            }
         }
 
         return sensorDataLinkedList;
@@ -499,6 +546,7 @@ public class BANALService
 
         // when there is a FilterManager, we can create the devices that need filtered data.
         cDeviceManager.createVerticalSpeedAndSlopeDevice();
+        cDeviceManager.createCyclingPowerMetricsDevice();
 
         ContextCompat.registerReceiver(this, mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP), ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -509,16 +557,24 @@ public class BANALService
         super.onDestroy();
         if (DEBUG) Log.d(TAG, "onDestroy");
 
-        // stop any ongoing searches for new devices
-        cDeviceManager.stopSearchForNewRemoteDevices();
+        DeviceManager deviceManager = cDeviceManager;
+        MySensorManager sensorManager = cSensorManager;
+        FilterManager filterManager = cFilterManager;
 
-        // cANTPlusPlusInterface.shutDown();
-        cDeviceManager.shutDown();
-        cSensorManager.shutDown();
-        cFilterManager.shutDown();
+        if (deviceManager != null) {
+            // stop any ongoing searches for new devices
+            deviceManager.stopSearchForNewRemoteDevices();
+            deviceManager.shutDown();
+        }
+        if (sensorManager != null) {
+            sensorManager.shutDown();
+        }
+        if (filterManager != null) {
+            filterManager.shutDown();
+        }
 
-        unregisterReceiver(mNewLapReceiver);
-        unregisterReceiver(mStartSearchForPairedDevices);
+        LifecycleUtils.safeUnregisterReceiver(this, mNewLapReceiver, TAG);
+        LifecycleUtils.safeUnregisterReceiver(this, mStartSearchForPairedDevices, TAG);
     }
 
     /***********************************************************************************************/
@@ -550,24 +606,33 @@ public class BANALService
         // only when searching for paired device?
         @Nullable
         public String getNameOfSearchingDevice() {
-            return cDeviceManager.getNameOfSearchingDevice();
+            DeviceManager deviceManager = cDeviceManager;
+            return deviceManager != null ? deviceManager.getNameOfSearchingDevice() : null;
         }
 
         public void startSearchForNewRemoteDevices(Protocol protocol, DeviceType deviceType) {
-            cDeviceManager.startSearchForNewRemoteDevices(protocol, deviceType);
+            DeviceManager deviceManager = cDeviceManager;
+            if (deviceManager != null) {
+                deviceManager.startSearchForNewRemoteDevices(protocol, deviceType);
+            }
         }
 
         public void stopSearchForNewRemoteDevices() {
-            cDeviceManager.stopSearchForNewRemoteDevices();
+            DeviceManager deviceManager = cDeviceManager;
+            if (deviceManager != null) {
+                deviceManager.stopSearchForNewRemoteDevices();
+            }
         }
 
         public boolean isSearchingForNewRemoteDevices() {
-            return cDeviceManager.isSearchingForNewRemoteDevices();
+            DeviceManager deviceManager = cDeviceManager;
+            return deviceManager != null && deviceManager.isSearchingForNewRemoteDevices();
         }
 
         @Nullable
         public DeviceType getNewRemoteDeviceTypeCurrentlySearchingFor() {
-            return cDeviceManager.getNewRemoteDeviceTypeCurrentlySearchingFor();
+            DeviceManager deviceManager = cDeviceManager;
+            return deviceManager != null ? deviceManager.getNewRemoteDeviceTypeCurrentlySearchingFor() : null;
         }
 
 
@@ -608,18 +673,24 @@ public class BANALService
         }
 
         public boolean calibrateAltimeter(double referenceAltitude) {
-            return cDeviceManager != null && cDeviceManager.calibrateAltimeter(referenceAltitude);
+            DeviceManager deviceManager = cDeviceManager;
+            return deviceManager != null && deviceManager.calibrateAltimeter(referenceAltitude);
         }
 
         public boolean isAltimeterCalibrated() {
-            return cDeviceManager != null && cDeviceManager.isAltimeterCalibrated();
+            DeviceManager deviceManager = cDeviceManager;
+            return deviceManager != null && deviceManager.isAltimeterCalibrated();
         }
 
         public long getSourceDeviceId(SensorType sensorType) {
-            MySensor sensor = cSensorManager.getSensor(sensorType);
+            MySensorManager sensorManager = cSensorManager;
+            if (sensorManager == null) {
+                return -1;
+            }
+            MySensor sensor = sensorManager.getSensor(sensorType);
             if (sensor instanceof ProxySensor) {
                 return ((ProxySensor) sensor).getSourceDeviceId();
-            } else if (sensor != null) {
+            } else if (sensor != null && sensor.getDevice() != null) {
                 return sensor.getDevice().getDeviceId();
             }
             return -1;
@@ -657,21 +728,25 @@ public class BANALService
 
         // without the speed and location devices.
         public List<Long> getDatabaseIdsOfActiveRemoteDevices() {
-            return cDeviceManager.getDatabaseIdsOfActiveRemoteDevices();
+            DeviceManager deviceManager = cDeviceManager;
+            return deviceManager != null ? deviceManager.getDatabaseIdsOfActiveRemoteDevices() : new LinkedList<>();
         }
 
         // only the remote devices (without the speed and location devices of the smartphone)
         public List<MyRemoteDevice> getActiveRemoteDevices() {
-            return cDeviceManager.getActiveRemoteDevices();
+            DeviceManager deviceManager = cDeviceManager;
+            return deviceManager != null ? deviceManager.getActiveRemoteDevices() : new LinkedList<>();
         }
 
         // including the location devices.
         public List<MyDevice> getActiveDevicesIncludingSpeedAndLocationDevices() {
-            return cDeviceManager.getActiveDevicesIncludingSpeedAndLocationDevices();
+            DeviceManager deviceManager = cDeviceManager;
+            return deviceManager != null ? deviceManager.getActiveDevicesIncludingSpeedAndLocationDevices() : new LinkedList<>();
         }
 
         public List<Long> getIdsOfNewlyFoundDevices() {
-            return cDeviceManager.getIdsOfNewlyFoundDevices();
+            DeviceManager deviceManager = cDeviceManager;
+            return deviceManager != null ? deviceManager.getIdsOfNewlyFoundDevices() : new LinkedList<>();
         }
 
         @NonNull
@@ -680,11 +755,21 @@ public class BANALService
         }
 
         public String getAccumulatedGCDataString() {
-            return cSensorManager.getSensor(SensorType.ACCUMULATED_SENSORS).getStringValue();
+            MySensorManager sensorManager = cSensorManager;
+            if (sensorManager == null) {
+                return MySensorManager.EMPTY_GC_DATA;
+            }
+            MySensor sensor = sensorManager.getSensor(SensorType.ACCUMULATED_SENSORS);
+            return sensor != null ? sensor.getStringValue() : MySensorManager.EMPTY_GC_DATA;
         }
 
         public String getGCDataString() {
-            return cSensorManager.getSensor(SensorType.SENSORS).getStringValue();
+            MySensorManager sensorManager = cSensorManager;
+            if (sensorManager == null) {
+                return MySensorManager.EMPTY_GC_DATA;
+            }
+            MySensor sensor = sensorManager.getSensor(SensorType.SENSORS);
+            return sensor != null ? sensor.getStringValue() : MySensorManager.EMPTY_GC_DATA;
         }
     }
 

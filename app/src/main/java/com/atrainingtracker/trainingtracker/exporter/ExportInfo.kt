@@ -19,7 +19,7 @@
 package com.atrainingtracker.trainingtracker.exporter
 
 import android.content.Context
-import com.atrainingtracker.R
+import com.atrainingtracker.util.safeEnumValueOf
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
@@ -76,9 +76,8 @@ data class ExportInfo(
         fun fromJson(json: String): ExportInfo {
             val jsonObject = JSONObject(json)
             val fileBaseName = jsonObject.getString(KEY_FILE_BASE_NAME)
-            // Use valueOf() to safely convert string back to enum
-            val fileFormat = FileFormat.valueOf(jsonObject.getString(KEY_FILE_FORMAT))
-            val exportType = ExportType.valueOf(jsonObject.getString(KEY_EXPORT_TYPE))
+            val fileFormat = safeEnumValueOf(jsonObject.optString(KEY_FILE_FORMAT), FileFormat.GPX, "ExportInfo")
+            val exportType = safeEnumValueOf(jsonObject.optString(KEY_EXPORT_TYPE), ExportType.FILE, "ExportInfo")
 
             return ExportInfo(fileBaseName, fileFormat, exportType)
         }

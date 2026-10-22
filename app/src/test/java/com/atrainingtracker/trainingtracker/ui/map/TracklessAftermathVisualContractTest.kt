@@ -69,7 +69,7 @@ class TracklessAftermathVisualContractTest {
 
         assertTrue(
             "TrackOnMapScreen must evaluate hasTracklessAltitude for trackless workouts with altitude data (REQ-UI-332)",
-            content.contains("val hasTracklessAltitude = !hasGpsTrack && (activeScrubPath?.any { it.altitude != 0.0 } == true)")
+            content.contains("val hasTracklessAltitude = !hasGpsTrack && (activeScrubPath?.any { it.altitude != null } == true)")
         )
 
         assertTrue(

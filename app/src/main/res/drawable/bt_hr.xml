@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ATT-2859 / REQ-UI-375: bt_hr compiled from Bilder/Bluetooth/BT_HR_just_the_heart.fig & BT_HR.xcf -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="144"
+    android:viewportHeight="144">
+    <path
+        android:fillColor="#07377F"
+        android:pathData="M 23.5,10.0 L 120.5,10.0 A 13.5,13.5 0 0,1 134.0,23.5 L 134.0,120.5 A 13.5,13.5 0 0,1 120.5,134.0 L 23.5,134.0 A 13.5,13.5 0 0,1 10.0,120.5 L 10.0,23.5 A 13.5,13.5 0 0,1 23.5,10.0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 75.37,129.43 L 72.12,133.73 L 68.69,129.40 L 72.09,125.16 L 73.67,127.11 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 76.15,41.79 L 72.00,48.98 L 68.04,42.20 L 72.03,37.74 L 74.17,40.71 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 72.00,126.24 L 90.11,106.74 Q 108.22,87.24 117.97,65.65 Q 127.72,44.05 124.93,35.00 Q 122.15,25.95 115.88,21.07 Q 109.61,16.19 100.56,15.50 Q 91.50,14.80 85.23,19.68 Q 78.97,24.55 72.00,39.88"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="9.29"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M 72.00,126.24 L 53.89,106.74 Q 35.78,87.24 26.03,65.65 Q 16.28,44.05 19.07,35.00 Q 21.85,25.95 28.12,21.07 Q 34.39,16.19 43.44,15.50 Q 52.50,14.80 58.77,19.68 Q 65.03,24.55 72.00,39.88"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="9.29"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="round" />
+</vector>

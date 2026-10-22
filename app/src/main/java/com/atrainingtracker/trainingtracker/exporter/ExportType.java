@@ -27,7 +27,7 @@ public enum ExportType {
     FILE(R.string.SD_card, FileFormat.values()),
     DROPBOX(R.string.Dropbox, new FileFormat[]{FileFormat.CSV, FileFormat.GC, FileFormat.GPX, FileFormat.TCX, FileFormat.FIT}),
     GOOGLE_DRIVE(R.string.google_drive, new FileFormat[]{FileFormat.CSV, FileFormat.GC, FileFormat.GPX, FileFormat.TCX, FileFormat.FIT}),
-    COMMUNITY(R.string.Community, new FileFormat[]{FileFormat.STRAVA, /* FileFormat.RUNKEEPER, FileFormat.TRAINING_PEAKS */});
+    COMMUNITY(R.string.Community, new FileFormat[]{FileFormat.STRAVA});
 
     private final int uiId;
     private final FileFormat[] exportToFileFormats;
@@ -41,7 +41,8 @@ public enum ExportType {
     @NonNull
     @Override
     public String toString() {
-        return TrainingApplication.getAppContext().getString(uiId);
+        android.content.Context context = TrainingApplication.getAppContext();
+        return context != null ? context.getString(uiId) : name();
     }
 
     public int getUiId() {

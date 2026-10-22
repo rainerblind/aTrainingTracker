@@ -27,6 +27,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import com.atrainingtracker.util.LifecycleUtils;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
@@ -49,11 +50,12 @@ public abstract class MyDevice {
     protected EnumMap<SensorType, MySensor> mSensorMap = new EnumMap<SensorType, MySensor>(SensorType.class);
     protected MySensorManager mMySensorManager;
     private final String TAG = "MyDevice";
-    private boolean mSensorsRegistered = false;
+    private volatile boolean mSensorsRegistered = false;
 
     protected final DevicesDatabaseManager mDevicesDatabaseManager;
+    private volatile String mCachedDeviceName = null;
     protected long mDeviceId = -1;  // the id of the device within the database
-    protected int mBatteryPercentage = -1;
+    protected volatile int mBatteryPercentage = -1;
 
     private final BroadcastReceiver resetAccumulatorsReceiver = new BroadcastReceiver() {
         @Override
@@ -102,7 +104,18 @@ public abstract class MyDevice {
     // Note,  this will only work properly, when the device is in the database...
     @Nullable
     public String getName() {
-        return mDevicesDatabaseManager.getDeviceName(getDeviceId());
+        if (mCachedDeviceName != null) {
+            return mCachedDeviceName;
+        }
+        String name = mDevicesDatabaseManager.getDeviceName(getDeviceId());
+        if (name != null) {
+            mCachedDeviceName = name;
+        }
+        return name;
+    }
+
+    public void invalidateDeviceNameCache() {
+        mCachedDeviceName = null;
     }
 
     @Nullable
@@ -233,7 +246,7 @@ public abstract class MyDevice {
 
         unregisterSensors();
 
-        mContext.unregisterReceiver(resetAccumulatorsReceiver);
+        LifecycleUtils.safeUnregisterReceiver(mContext, resetAccumulatorsReceiver, TAG);
     }
 
     public final DeviceType getDeviceType() {

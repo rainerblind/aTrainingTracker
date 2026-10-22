@@ -42,7 +42,7 @@ class MapDetailLayoutNavigationBarsPaddingTest {
     }
 
     private val liveSegmentSheetFile: File by lazy {
-        File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LIveSegmentSheet.kt")
+        File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LiveSegmentSheet.kt")
     }
 
     private val mapScreenWithTrackFile: File by lazy {
@@ -90,7 +90,7 @@ class MapDetailLayoutNavigationBarsPaddingTest {
 
     @Test
     fun testLiveSegmentSheet_configuresMapDetailLayoutForBottomSheetMode() {
-        assertTrue("LIveSegmentSheet.kt must exist", liveSegmentSheetFile.exists())
+        assertTrue("LiveSegmentSheet.kt must exist", liveSegmentSheetFile.exists())
         val content = liveSegmentSheetFile.readText()
 
         assertTrue(

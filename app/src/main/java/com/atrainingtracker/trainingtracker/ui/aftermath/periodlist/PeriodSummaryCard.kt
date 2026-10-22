@@ -58,6 +58,7 @@ import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLngBounds
 
@@ -535,7 +536,7 @@ private fun PeriodMultiWorkoutMap(
 
     if (allPaths.isEmpty()) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            Text("No GPS data for this period", style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.period_no_gps_data), style = MaterialTheme.typography.labelSmall)
         }
         return
     }
@@ -580,7 +581,7 @@ private fun PeriodMultiWorkoutMap(
         DarkMapStyle.resolveMapProperties(isDark, context)
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(if (isDark) Color(0xFF121212) else Color.White)) {
+    Box(modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
@@ -622,7 +623,7 @@ private fun PeriodMultiWorkoutMap(
 
 @Preview(showBackground = true, name = "Weekly Summary")
 @Composable
-fun PreviewPeriodSummary() {
+private fun PreviewPeriodSummary() {
     val mockSummary = PeriodSummary(
         periodLabel = "Week 20",
         periodDateRange = "May 11 - May 17, 2026",
@@ -675,7 +676,7 @@ fun PreviewPeriodSummary() {
 
 @Preview(showBackground = true, name = "Empty Period")
 @Composable
-fun PreviewEmptyPeriod() {
+private fun PreviewEmptyPeriod() {
     val emptySummary = PeriodSummary(
         periodLabel = "June 2026",
         periodDateRange = "No workouts recorded",

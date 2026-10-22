@@ -25,7 +25,7 @@ import java.io.File
 
 /**
  * Layout, typography, and reordering ergonomics verification for WorkoutMasksAndCardsSection
- * (REQ-UI-264, TST-UI-223, ATT-2305).
+ * (REQ-UI-264, REQ-UI-414, TST-UI-223, TST-UI-377, ATT-2305, ATT-4043).
  */
 class WorkoutMasksAndCardsLayoutTest {
 
@@ -56,7 +56,7 @@ class WorkoutMasksAndCardsLayoutTest {
             content.contains("Spacer(modifier = Modifier.width(32.dp))")
         )
 
-        // 3. Checkbox columns must be 50.dp in width
+        // 3. Checkbox column must be 50.dp in width
         assertTrue(
             "Checkbox header containers must use width(50.dp)",
             content.contains(".width(50.dp)")
@@ -106,8 +106,12 @@ class WorkoutMasksAndCardsLayoutTest {
         )
     }
 
+    /**
+     * TST-UI-377.2: Single-Column Checkbox & Layout Structure Contract Test.
+     * Verifies removal of redundant Details column and header (REQ-UI-414.1).
+     */
     @Test
-    fun testHeaderTypographyAndDefensiveTruncationContract() {
+    fun `TST-UI-377_2 single-column checkbox table contract and details column removal`() {
         val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt")
         val content = file.readText()
 
@@ -128,24 +132,90 @@ class WorkoutMasksAndCardsLayoutTest {
             listHeaderBlock.contains("overflow = TextOverflow.Ellipsis")
         )
 
-        // Verify tuning_matrix_col_details text composable enforces defensive single-line typography (REQ-UI-271)
-        val detailsHeaderIndex = content.indexOf("R.string.tuning_matrix_col_details")
-        assertTrue("Header must reference tuning_matrix_col_details", detailsHeaderIndex >= 0)
-        val detailsHeaderBlock = content.substring(detailsHeaderIndex, detailsHeaderIndex + 450)
-        assertTrue(
-            "Details column header must enforce textAlign = TextAlign.Center",
-            detailsHeaderBlock.contains("textAlign = TextAlign.Center")
+        // Redundant details column header must NOT be present in WorkoutMasksAndCardsSection.kt (REQ-UI-414.1)
+        assertFalse(
+            "WorkoutMasksAndCardsSection.kt must NOT reference tuning_matrix_col_details",
+            content.contains("R.string.tuning_matrix_col_details")
         )
+
+        // Feature row must contain single checkbox (feature.listChecked) and no feature.detailChecked
         assertTrue(
-            "Details column header must enforce maxLines = 1",
-            detailsHeaderBlock.contains("maxLines = 1")
+            "Row must bind feature.listChecked",
+            content.contains("Checkbox(checked = feature.listChecked, onCheckedChange = feature.onListChange)")
         )
-        assertTrue(
-            "Details column header must enforce overflow = TextOverflow.Ellipsis",
-            detailsHeaderBlock.contains("overflow = TextOverflow.Ellipsis")
+        assertFalse(
+            "Row must NOT bind feature.detailChecked",
+            content.contains("feature.detailChecked")
         )
     }
 
+    /**
+     * TST-UI-377.3: Collapsible Summary Reorder List Contract Test (REQ-UI-414.3).
+     */
+    @Test
+    fun `TST-UI-377_3 collapsible summary reorder list contract`() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt")
+        val content = file.readText()
+
+        // 1. Collapsed by default state
+        assertTrue(
+            "isSummaryListExpanded must default to false",
+            content.contains("var isSummaryListExpanded by remember { mutableStateOf(false) }")
+        )
+
+        // 2. Expand/collapse chevron icons
+        assertTrue(
+            "Must use KeyboardArrowUp and KeyboardArrowDown for toggle",
+            content.contains("Icons.Default.KeyboardArrowUp") && content.contains("Icons.Default.KeyboardArrowDown")
+        )
+
+        // 3. Formatted toggle string with active card count
+        assertTrue(
+            "Must reference R.string.workout_card_reorder_toggle",
+            content.contains("R.string.workout_card_reorder_toggle")
+        )
+    }
+
+    /**
+     * TST-UI-377.4: Scoped Zone Display Mode & Detail Tabs Action Contract Test (REQ-UI-414.4).
+     */
+    @Test
+    fun `TST-UI-377_4 domain-scoped zone display mode and detail tabs config contract`() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt")
+        val content = file.readText()
+
+        // Verify domain section titles
+        assertTrue(
+            "Must display R.string.settings_workout_card_title",
+            content.contains("R.string.settings_workout_card_title")
+        )
+        assertTrue(
+            "Must display R.string.settings_workout_details_title",
+            content.contains("R.string.settings_workout_details_title")
+        )
+
+        // Verify Summary zone selector binds workoutCardPrefs.zoneCardDisplayMode
+        assertTrue(
+            "Must bind workoutCardPrefs.zoneCardDisplayMode in summary block",
+            content.contains("workoutCardPrefs.zoneCardDisplayMode")
+        )
+
+        // Verify Details zone selector binds workoutDetailPrefs.zoneCardDisplayMode in details block
+        assertTrue(
+            "Must bind workoutDetailPrefs.zoneCardDisplayMode in details block",
+            content.contains("workoutDetailPrefs.zoneCardDisplayMode")
+        )
+
+        // Verify Detail Tabs sheet launcher button
+        assertTrue(
+            "Must host WorkoutDetailTabsConfigSheet in details block",
+            content.contains("WorkoutDetailTabsConfigSheet(")
+        )
+    }
+
+    /**
+     * TST-UI-377.5: Modularity & Strictly Under 400 Lines Constraint (REQ-PRO-011 / REQ-UI-414.5).
+     */
     @Test
     fun testFileSizeConstraint_strictlyUnder400Lines() {
         val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt")

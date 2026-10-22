@@ -35,6 +35,9 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData;
+import com.atrainingtracker.database.CursorProvider;
+import com.atrainingtracker.util.CursorUtils;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.PolyUtil;
@@ -48,7 +51,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
 
 /**
  * Orchestrates all persistent storage operations for high-level workout session metadata.
@@ -400,6 +402,7 @@ public class WorkoutSummariesDatabaseManager {
     /**
      * Retrieves a cursor for a specific workout ID.
      */
+    @CursorProvider
     public Cursor getWorkoutCursor(long workoutId) {
         return getDatabase().query(WorkoutSummaries.TABLE,
                 null,
@@ -411,6 +414,7 @@ public class WorkoutSummariesDatabaseManager {
     /**
      * Returns a cursor for all workouts sorted descending (newest first).
      */
+    @CursorProvider
     public Cursor getCursorForAllWorkouts() {
         return getDatabase().query(
                 WorkoutSummaries.TABLE,
@@ -422,6 +426,7 @@ public class WorkoutSummariesDatabaseManager {
     /**
      * Returns a cursor for all workouts sorted ascending (oldest first).
      */
+    @CursorProvider
     public Cursor getCursorForAllWorkoutsAsc() {
         return getDatabase().query(
                 WorkoutSummaries.TABLE,
@@ -452,6 +457,7 @@ public class WorkoutSummariesDatabaseManager {
      * @param endTimeS End of range in seconds.
      * @return A cursor sorted by start time ascending.
      */
+    @CursorProvider
     public Cursor getWorkoutsInRangeCursor(long startTimeS, long endTimeS) {
         String selection = "strftime('%s', " + WorkoutSummaries.TIME_START + ") >= ? AND " +
                 "strftime('%s', " + WorkoutSummaries.TIME_START + ") <= ? AND " +
@@ -741,7 +747,113 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
-     * DTO for batch extrema lookups (ATT-359).
+     * ATT-3859 / REQ-UI-401.2: Retrieves lightweight training load summaries for all finished workouts
+     * in a single batch query to populate the Performance Management Chart (PMC).
+     */
+    @NonNull
+    public List<com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample> getWorkoutTrainingLoadRecords() {
+        List<com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample> results = new ArrayList<>();
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return results;
+        }
+
+        String sql = "SELECT w." + WorkoutSummaries.C_ID + ", "
+                + "CAST(strftime('%s', w." + WorkoutSummaries.TIME_START + ") AS INTEGER) * 1000 AS start_ms, "
+                + "IFNULL(w." + WorkoutSummaries.TIME_ACTIVE_s + ", 0) AS active_s, "
+                + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'TSS' AND e." + WorkoutSummaries.EXTREMA_TYPE + " IN ('END', 'AVG', 'MAX') THEN e." + WorkoutSummaries.VALUE + " END) AS power_tss, "
+                + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'NORMALIZED_POWER' AND e." + WorkoutSummaries.EXTREMA_TYPE + " IN ('END', 'AVG') THEN e." + WorkoutSummaries.VALUE + " END) AS np_watts, "
+                + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'POWER' AND e." + WorkoutSummaries.EXTREMA_TYPE + " = 'AVG' THEN e." + WorkoutSummaries.VALUE + " END) AS avg_power, "
+                + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'HR' AND e." + WorkoutSummaries.EXTREMA_TYPE + " = 'AVG' THEN e." + WorkoutSummaries.VALUE + " END) AS avg_hr "
+                + "FROM " + WorkoutSummaries.TABLE + " w "
+                + "LEFT JOIN " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " e ON w." + WorkoutSummaries.C_ID + " = e." + WorkoutSummaries.WORKOUT_ID + " "
+                + "WHERE w." + WorkoutSummaries.FINISHED + " = 1 "
+                + "GROUP BY w." + WorkoutSummaries.C_ID + " "
+                + "ORDER BY start_ms ASC";
+
+        try (Cursor cursor = db.rawQuery(sql, null)) {
+            if (cursor != null) {
+                int startMsIdx = cursor.getColumnIndex("start_ms");
+                int activeSIdx = cursor.getColumnIndex("active_s");
+                int tssIdx = cursor.getColumnIndex("power_tss");
+                int npIdx = cursor.getColumnIndex("np_watts");
+                int pwrIdx = cursor.getColumnIndex("avg_power");
+                int hrIdx = cursor.getColumnIndex("avg_hr");
+
+                while (cursor.moveToNext()) {
+                    long startMs = (startMsIdx != -1 && !cursor.isNull(startMsIdx)) ? cursor.getLong(startMsIdx) : 0L;
+                    int activeS = (activeSIdx != -1 && !cursor.isNull(activeSIdx)) ? cursor.getInt(activeSIdx) : 0;
+                    Double powerTss = (tssIdx != -1 && !cursor.isNull(tssIdx)) ? cursor.getDouble(tssIdx) : null;
+                    Double npWatts = (npIdx != -1 && !cursor.isNull(npIdx)) ? cursor.getDouble(npIdx) : null;
+                    Double avgPower = (pwrIdx != -1 && !cursor.isNull(pwrIdx)) ? cursor.getDouble(pwrIdx) : null;
+                    Double avgHr = (hrIdx != -1 && !cursor.isNull(hrIdx)) ? cursor.getDouble(hrIdx) : null;
+
+                    if (startMs > 0L) {
+                        results.add(new com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample(
+                                startMs,
+                                activeS,
+                                powerTss,
+                                npWatts,
+                                avgPower,
+                                avgHr
+                        ));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying workout training load records: " + e.getMessage(), e);
+        }
+
+        return results;
+    }
+
+    /**
+     * DTO holding encoded spatial and analytical streams for a workout session ({@code REQ-TRK-031.1}).
+     */
+    public static class EncodedStreams {
+        @Nullable public final String mapPolyline;
+        @Nullable public final String altitudeStream;
+        @Nullable public final String distanceStream;
+
+        public EncodedStreams(@Nullable String mapPolyline, @Nullable String altitudeStream, @Nullable String distanceStream) {
+            this.mapPolyline = mapPolyline;
+            this.altitudeStream = altitudeStream;
+            this.distanceStream = distanceStream;
+        }
+    }
+
+    /**
+     * Fetches the persisted encoded map polyline, altitude stream, and distance stream for a workout
+     * in a single targeted query ({@code REQ-TRK-031.1}).
+     *
+     * @param workoutId The ID of the workout session.
+     * @return An {@link EncodedStreams} record, or {@code null} if no summary row exists.
+     */
+    @Nullable
+    public EncodedStreams getEncodedStreams(long workoutId) {
+        try (Cursor cursor = getDatabase().query(
+                WorkoutSummaries.TABLE,
+                new String[]{WorkoutSummaries.MAP_POLYLINE, WorkoutSummaries.ALTITUDE_STREAM, WorkoutSummaries.DISTANCE_STREAM},
+                WorkoutSummaries.C_ID + "=?",
+                new String[]{String.valueOf(workoutId)},
+                null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int polyIdx = cursor.getColumnIndex(WorkoutSummaries.MAP_POLYLINE);
+                int altIdx = cursor.getColumnIndex(WorkoutSummaries.ALTITUDE_STREAM);
+                int distIdx = cursor.getColumnIndex(WorkoutSummaries.DISTANCE_STREAM);
+                String poly = (polyIdx != -1 && !cursor.isNull(polyIdx)) ? cursor.getString(polyIdx) : null;
+                String alt = (altIdx != -1 && !cursor.isNull(altIdx)) ? cursor.getString(altIdx) : null;
+                String dist = (distIdx != -1 && !cursor.isNull(distIdx)) ? cursor.getString(distIdx) : null;
+                return new EncodedStreams(poly, alt, dist);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying encoded streams for workout " + workoutId, e);
+        }
+        return null;
+    }
+
+    /**
+     * DTO for batch extrema lookups (ATT-359, REQ-TRK-031.1).
      */
     public static class ExtremaRecord {
         public final long workoutId;
@@ -749,13 +861,19 @@ public class WorkoutSummariesDatabaseManager {
         public final ExtremaType extremaType;
         public final double value;
         public final LatLng position;
+        @Nullable public final Integer count;
 
         public ExtremaRecord(long workoutId, SensorType sensorType, ExtremaType extremaType, double value, LatLng position) {
+            this(workoutId, sensorType, extremaType, value, position, null);
+        }
+
+        public ExtremaRecord(long workoutId, SensorType sensorType, ExtremaType extremaType, double value, LatLng position, @Nullable Integer count) {
             this.workoutId = workoutId;
             this.sensorType = sensorType;
             this.extremaType = extremaType;
             this.value = value;
             this.position = position;
+            this.count = count;
         }
     }
 
@@ -785,18 +903,27 @@ public class WorkoutSummariesDatabaseManager {
             int valIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.VALUE);
             int latIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.LATITUDE);
             int lonIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.LONGITUDE);
+            int countIdx = cursor.getColumnIndex(WorkoutSummaries.COUNT);
 
             while (cursor.moveToNext()) {
                 LatLng pos = null;
                 if (!cursor.isNull(latIdx) && !cursor.isNull(lonIdx)) {
                     pos = new LatLng(cursor.getDouble(latIdx), cursor.getDouble(lonIdx));
                 }
+                Integer count = (countIdx != -1 && !cursor.isNull(countIdx)) ? cursor.getInt(countIdx) : null;
+                SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, cursor.getString(sensorIdx), TAG);
+                ExtremaType extremaType = EnumUtils.safeValueOfOrNull(ExtremaType.class, cursor.getString(typeIdx), TAG);
+                if (sensorType == null || extremaType == null) {
+                    Log.w(TAG, "Skipping corrupted or unrecognized extrema record at cursor pos " + cursor.getPosition());
+                    continue;
+                }
                 records.add(new ExtremaRecord(
                         cursor.getLong(wIdIdx),
-                        SensorType.valueOf(cursor.getString(sensorIdx)),
-                        ExtremaType.valueOf(cursor.getString(typeIdx)),
+                        sensorType,
+                        extremaType,
                         cursor.getDouble(valIdx),
-                        pos
+                        pos,
+                        count
                 ));
             }
         }
@@ -872,13 +999,27 @@ public class WorkoutSummariesDatabaseManager {
      * Atomically updates or inserts a sensor peak value and its location.
      */
     public void updateExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position) {
-        updateExtremaValue(getDatabase(), workoutId, sensorType, extremaType, value, position);
+        updateExtremaValue(getDatabase(), workoutId, sensorType, extremaType, value, position, null);
+    }
+
+    /**
+     * Atomically updates or inserts a sensor peak value, its location, and its sample count ({@code REQ-TRK-031.1}).
+     */
+    public void updateExtremaValue(long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position, @Nullable Integer count) {
+        updateExtremaValue(getDatabase(), workoutId, sensorType, extremaType, value, position, count);
     }
 
     /**
      * Implementation for extrema update using an explicit database handle.
      */
     public void updateExtremaValue(SQLiteDatabase db, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position) {
+        updateExtremaValue(db, workoutId, sensorType, extremaType, value, position, null);
+    }
+
+    /**
+     * Implementation for extrema update with optional sample count using an explicit database handle ({@code REQ-TRK-031.1}).
+     */
+    public void updateExtremaValue(SQLiteDatabase db, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position, @Nullable Integer count) {
         ContentValues values = new ContentValues();
         values.put(WorkoutSummaries.WORKOUT_ID, workoutId);
         values.put(WorkoutSummaries.SENSOR_TYPE, sensorType.name());
@@ -887,6 +1028,9 @@ public class WorkoutSummariesDatabaseManager {
         if (position != null) {
             values.put(WorkoutSummaries.LATITUDE, position.latitude);
             values.put(WorkoutSummaries.LONGITUDE, position.longitude);
+        }
+        if (count != null) {
+            values.put(WorkoutSummaries.COUNT, count);
         }
 
         String where = WorkoutSummaries.WORKOUT_ID + "=? AND " + WorkoutSummaries.SENSOR_TYPE + "=? AND " + WorkoutSummaries.EXTREMA_TYPE + "=?";
@@ -927,6 +1071,50 @@ public class WorkoutSummariesDatabaseManager {
         }
 
         getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+    }
+
+    /**
+     * Data holder representing an extrema record to persist or update.
+     */
+    public static class ExtremaUpdateRecord {
+        @NonNull public final SensorType sensorType;
+        @NonNull public final ExtremaType extremaType;
+        public final double value;
+        @Nullable public final LatLng position;
+
+        public ExtremaUpdateRecord(@NonNull SensorType sensorType, @NonNull ExtremaType extremaType, double value, @Nullable LatLng position) {
+            this.sensorType = sensorType;
+            this.extremaType = extremaType;
+            this.value = value;
+            this.position = position;
+        }
+    }
+
+    /**
+     * Atomically updates summary scalars, encoded streams, bounding boxes, and replaces extrema values
+     * for a cropped workout session within a single SQLite transaction.
+     *
+     * @param workoutId The ID of the workout.
+     * @param summaryValues The updated summary columns (e.g. distance, active time, streams, bounds).
+     * @param extremaUpdates Optional list of updated extrema values to replace existing extrema.
+     */
+    public void updateCroppedWorkoutSummary(long workoutId, @NonNull ContentValues summaryValues, @Nullable java.util.List<ExtremaUpdateRecord> extremaUpdates) {
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            if (summaryValues.size() > 0) {
+                db.update(WorkoutSummaries.TABLE, summaryValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+            }
+            if (extremaUpdates != null) {
+                db.delete(WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
+                for (ExtremaUpdateRecord record : extremaUpdates) {
+                    updateExtremaValue(db, workoutId, record.sensorType, record.extremaType, record.value, record.position);
+                }
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
     }
 
     /**
@@ -977,12 +1165,12 @@ public class WorkoutSummariesDatabaseManager {
 
     /**
      * Sanitizes historical workouts contaminated with runaway altitude shifts (REQ-CON-017).
-     * Identifies workouts where maximum recorded altitude exceeds 4000m while minimum is below 1000m,
-     * clamps non-physical leading staircase points in ALTITUDE_STREAM to the valid ground baseline,
-     * recalculates EXTREMUM values (MIN, MAX, AVG), and updates database tables atomically.
      *
+     * @deprecated Automated background mutation of historical workout altitude data is prohibited (REQ-CON-017, ATT-3990).
+     * Database opening MUST remain passive and side-effect free to preserve legitimate mountain climbs.
      * @return count of sanitized workouts
      */
+    @Deprecated
     public int sanitizeCorruptedAltitudeWorkouts() {
         SQLiteDatabase db = getDatabase();
         int repairedCount = 0;
@@ -1117,7 +1305,12 @@ public class WorkoutSummariesDatabaseManager {
             while (cursor.moveToNext()) {
                 String sensorTypeName = cursor.getString(cursor.getColumnIndex(WorkoutSummaries.SENSOR_TYPE));
                 if (DEBUG) Log.i(TAG, "got sensor: " + sensorTypeName);
-                accumulatedSensorTypesSet.add(SensorType.valueOf(sensorTypeName));
+                SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, sensorTypeName, TAG);
+                if (sensorType != null) {
+                    accumulatedSensorTypesSet.add(sensorType);
+                } else {
+                    Log.w(TAG, "Skipping unrecognized accumulated sensor type: " + sensorTypeName);
+                }
             }
         }
 
@@ -1177,12 +1370,22 @@ public class WorkoutSummariesDatabaseManager {
 
 
     /**
-     * Surgically deletes a workout and its related metadata from the summary and extrema tables.
-     * Note: This does NOT delete raw samples. Use [WorkoutDeletionHelper] for full cleanup.
+     * Surgically deletes a workout and its related metadata from the summary, accumulated sensors,
+     * and extrema tables.
      *
-     * @return true if the deletion was successful.
+     * <p><b>Security and Concurrency Notice:</b> This method only purges summary database tables.
+     * It does NOT purge raw sensor sample tables in {@code WorkoutSamples.db} or lap records in
+     * {@code Laps.db}. For complete user-initiated workout deletion across all databases, always
+     * invoke {@link WorkoutDeletionHelper#deleteWorkout(long)}.
+     * This method is exposed publicly to support low-level compensatory rollback during transactional
+     * import pipelines (e.g. {@code LegacyImportEngine}) and orphan data repair utilities
+     * (e.g. {@code OrphanDataDiagnosticHelper}). Callers are responsible for coordinating cross-database
+     * mutex synchronization.</p>
+     *
+     * @param workoutId The internal unique primary key (_id) of the workout summary to remove.
+     * @return true if the deletion operations completed without error.
      */
-    boolean deleteWorkout(long workoutId) {
+    public boolean deleteWorkout(long workoutId) {
         if (DEBUG) Log.i(TAG, "deleteWorkout: workoutId=" + workoutId);
 
         SQLiteDatabase dbSummaries = getDatabase();
@@ -1224,22 +1427,21 @@ public class WorkoutSummariesDatabaseManager {
                 "COUNT(*)" // count of workouts
         };
 
-        Cursor cursor = db.query(
+        try (Cursor cursor = db.query(
                 WorkoutSummaries.TABLE,
                 columns,
                 column + "=?",
                 new String[]{String.valueOf(id)},
-                null, null, null
-        );
+                null, null, null)) {
 
-        if (cursor != null && cursor.moveToFirst()) {
-            stats.totalDistanceM = cursor.getDouble(0);
-            stats.totalActiveTimeS = cursor.getLong(1);
-            stats.totalAscentM = cursor.getInt(2);
-            stats.firstUsage = cursor.getString(3);
-            stats.lastUsage = cursor.getString(4);
-            stats.count = cursor.getInt(5); // Extract count
-            cursor.close();
+            if (cursor != null && cursor.moveToFirst()) {
+                stats.totalDistanceM = cursor.getDouble(0);
+                stats.totalActiveTimeS = cursor.getLong(1);
+                stats.totalAscentM = cursor.getInt(2);
+                stats.firstUsage = cursor.getString(3);
+                stats.lastUsage = cursor.getString(4);
+                stats.count = cursor.getInt(5); // Extract count
+            }
         }
 
         return stats;
@@ -1391,6 +1593,7 @@ public class WorkoutSummariesDatabaseManager {
         public static final String VALUE = "value";
         public static final String LATITUDE = "latitude";
         public static final String LONGITUDE = "longitude";
+        public static final String COUNT = "count"; // added in Version 25 (ATT-3987)
 
         public final static int ENCODING_STEP_SIZE = 20;  // twenty seconds (Introduced in Version 15)
     }
@@ -1420,7 +1623,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 21; // 25.07.2026 Added bounding box for performance (ATT-352)
         // public static final int DB_VERSION = 22; // 01.10.2026 Added composite index on extrema table for start location queries (ATT-1734)
         // public static final int DB_VERSION = 23; // 02.10.2026 Added race column (ATT-2005)
-        public static final int DB_VERSION = 24; // 03.10.2026 Added source column (ATT-2186)
+        // public static final int DB_VERSION = 25; // 18.10.2026 Added count column to extrema table (ATT-3987)
+        public static final int DB_VERSION = 26; // 21.10.2026 Added missing indexes on extrema and summaries tables (REQ-DAT-034, ATT-4008)
         
 
 
@@ -1472,7 +1676,8 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.VALUE + " real," // end of version 5
                 + WorkoutSummaries.LATITUDE + " real,"
                 + WorkoutSummaries.LONGITUDE + " real,"
-                + WorkoutSummaries.SAMPLES_COLUMN_ID + " int)";
+                + WorkoutSummaries.SAMPLES_COLUMN_ID + " int,"
+                + WorkoutSummaries.COUNT + " int)";
 
         protected static final String CREATE_TABLE_ACCUMULATED_SENSORS = "create table " + WorkoutSummaries.TABLE_ACCUMULATED_SENSORS + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1492,15 +1697,7 @@ public class WorkoutSummariesDatabaseManager {
 
         @Override
         public void onOpen(@NonNull SQLiteDatabase db) {
-            super.onOpen(db);
-            // Asynchronously sanitize any historical workouts corrupted with runaway altitude shifts (REQ-CON-017)
-            Executors.newSingleThreadExecutor().execute(() -> {
-                try {
-                    WorkoutSummariesDatabaseManager.getInstance(mContext).sanitizeCorruptedAltitudeWorkouts();
-                } catch (Exception e) {
-                    Log.w(TAG, "Error during automatic altitude sanitization: " + e.getMessage());
-                }
-            });
+            // REQ-CON-017 / ATT-3990: Passive hook; zero side-effects, zero mutations, zero thread allocations.
         }
 
         // Called only once, first time the DB is created
@@ -1521,6 +1718,17 @@ public class WorkoutSummariesDatabaseManager {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_extrema_sensor_extrema ON " + WorkoutSummaries.TABLE_EXTREMA_VALUES
                     + " (" + WorkoutSummaries.SENSOR_TYPE + ", " + WorkoutSummaries.EXTREMA_TYPE + ")");
 
+            // composite index prefixed by workoutId for extrema lookup (REQ-DAT-034 / ATT-4008)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_extrema_workout_sensor_extrema ON " + WorkoutSummaries.TABLE_EXTREMA_VALUES
+                    + " (" + WorkoutSummaries.WORKOUT_ID + ", " + WorkoutSummaries.SENSOR_TYPE + ", " + WorkoutSummaries.EXTREMA_TYPE + ")");
+
+            // index on clusterId for cluster workouts lookup (REQ-DAT-034 / ATT-4008)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_summaries_cluster_id ON " + WorkoutSummaries.TABLE
+                    + " (" + WorkoutSummaries.CLUSTER_ID + ")");
+
+            // case-insensitive index for deduplication and lookup (REQ-MIG-042 / ATT-3991)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_summaries_file_base_name_nocase ON "
+                    + WorkoutSummaries.TABLE + " (" + WorkoutSummaries.FILE_BASE_NAME + " COLLATE NOCASE)");
         }
 
         private void addColumn(@NonNull SQLiteDatabase db, String table, String column, String type, String defaultValue) {
@@ -1553,6 +1761,30 @@ public class WorkoutSummariesDatabaseManager {
             } catch (Exception e) {
                 Log.e(TAG, "Error checking/adding column: " + columnName, e);
             }
+        }
+
+        private boolean doesTableExist(@NonNull SQLiteDatabase db, @NonNull String tableName) {
+            try (Cursor cursor = db.rawQuery("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", new String[]{tableName})) {
+                return cursor != null && cursor.moveToFirst();
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        private boolean doesColumnExist(@NonNull SQLiteDatabase db, @NonNull String tableName, @NonNull String columnName) {
+            try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + tableName + ")", null)) {
+                if (cursor != null) {
+                    int nameIdx = cursor.getColumnIndex("name");
+                    while (cursor.moveToNext()) {
+                        if (nameIdx != -1 && columnName.equalsIgnoreCase(cursor.getString(nameIdx))) {
+                            return true;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Table might not exist
+            }
+            return false;
         }
 
         //Called whenever newVersion != oldVersion
@@ -1607,40 +1839,60 @@ public class WorkoutSummariesDatabaseManager {
 
             if (oldVersion < 11) {
                 Log.i(TAG, "upgrading to DB version 11");
-                addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.SPORT_ID, "int", "0");
-                // addColumn(db, WorkoutSummaries.TABLE, WorkoutSummaries.B_SPORT,  "text");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.SPORT_ID, "int", "0");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.B_SPORT, "text", null);
 
-                Cursor cursor = db.query(WorkoutSummaries.TABLE,
-                        new String[]{WorkoutSummaries.C_ID, "sport"},
-                        null, null,
-                        null, null, null);
-                ContentValues contentValues = new ContentValues();
-                while (cursor.moveToNext()) {
-                    contentValues.clear();
-                    long id = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-                    String sport = cursor.getString(cursor.getColumnIndex("sport"));
-                    contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
-                    contentValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sport).name());
-                    db.update(WorkoutSummaries.TABLE, contentValues,
-                            WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                if (doesColumnExist(db, WorkoutSummaries.TABLE, "sport")) {
+                    ContentValues contentValues = new ContentValues();
+                    try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
+                            new String[]{WorkoutSummaries.C_ID, "sport"},
+                            null, null,
+                            null, null, null)) {
+
+                        if (cursor != null) {
+                            int idCol = cursor.getColumnIndex(WorkoutSummaries.C_ID);
+                            int sportCol = cursor.getColumnIndex("sport");
+                            while (cursor.moveToNext()) {
+                                contentValues.clear();
+                                long id = idCol != -1 ? cursor.getLong(idCol) : -1L;
+                                String sport = sportCol != -1 ? cursor.getString(sportCol) : "";
+                                contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
+                                contentValues.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getBSportType(sport).name());
+                                db.update(WorkoutSummaries.TABLE, contentValues,
+                                        WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error migrating sport to sportId in WorkoutSummaries", e);
+                    }
                 }
-                cursor.close();
 
+                if (doesTableExist(db, "WorkoutNamePatterns")) {
+                    addColumnIfNotExists(db, "WorkoutNamePatterns", "sportId", "text", "'???'");
 
-                addColumn(db, "WorkoutNamePatterns", "sportId", "text", "???");
+                    if (doesColumnExist(db, "WorkoutNamePatterns", "sport")) {
+                        ContentValues contentValues = new ContentValues();
+                        try (Cursor cursor = db.query("WorkoutNamePatterns",
+                                new String[]{WorkoutSummaries.C_ID, "sport"},
+                                null, null,
+                                null, null, null)) {
 
-                cursor = db.query("WorkoutNamePatterns",
-                        new String[]{WorkoutSummaries.C_ID, "sport"},
-                        null, null,
-                        null, null, null);
-                while (cursor.moveToNext()) {
-                    long id = cursor.getLong(cursor.getColumnIndex(WorkoutSummaries.C_ID));
-                    String sport = cursor.getString(cursor.getColumnIndex("sport"));
-                    contentValues.put(WorkoutSummaries.SPORT_ID, SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport));
-                    db.update("WorkoutNamePatterns", contentValues,
-                            WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                            if (cursor != null) {
+                                int idCol = cursor.getColumnIndex(WorkoutSummaries.C_ID);
+                                int sportCol = cursor.getColumnIndex("sport");
+                                while (cursor.moveToNext()) {
+                                    long id = idCol != -1 ? cursor.getLong(idCol) : -1L;
+                                    String sport = sportCol != -1 ? cursor.getString(sportCol) : "";
+                                    contentValues.put("sportId", String.valueOf(SportTypeDatabaseManager.getSportTypeIdFromTTSportTypeName(sport)));
+                                    db.update("WorkoutNamePatterns", contentValues,
+                                            WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(id)});
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error migrating sport in WorkoutNamePatterns", e);
+                        }
+                    }
                 }
-                cursor.close();
             }
 
             if (oldVersion < 12) {
@@ -1665,9 +1917,8 @@ public class WorkoutSummariesDatabaseManager {
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.DISTANCE_STREAM, "text", "''");
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.ALTITUDE_STREAM, "text", "''");
 
-                // Combined migration to avoid multiple passes and ANRs.
-                // If oldVersion < 15, we must recalculate everything due to step size change.
-                migrateExistingWorkouts(db, oldVersion < 15);
+                // REQ-MIG-046.2: Heavy cross-database backfill excised from synchronous onUpgrade.
+                // Dispatched asynchronously off UI thread by DatabaseBackfillManager.
             }
 
             // 18 failed due ot a bug
@@ -1676,8 +1927,8 @@ public class WorkoutSummariesDatabaseManager {
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.LATITUDE, "real", null);
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.LONGITUDE, "real", null);
 
-                // Populate new columns for existing data
-                migrateExtremaPositions(db);
+                // REQ-MIG-046.2: Heavy cross-database backfill excised from synchronous onUpgrade.
+                // Dispatched asynchronously off UI thread by DatabaseBackfillManager.
             }
 
             if (oldVersion < 20) {
@@ -1696,7 +1947,8 @@ public class WorkoutSummariesDatabaseManager {
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.BOUND_MAX_LAT, "real", null);
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.BOUND_MAX_LNG, "real", null);
 
-                migrateSpatialBounds(db);
+                // REQ-MIG-046.2: Heavy cross-database backfill excised from synchronous onUpgrade.
+                // Dispatched asynchronously off UI thread by DatabaseBackfillManager.
             }
 
             if (oldVersion < 22) {
@@ -1714,13 +1966,39 @@ public class WorkoutSummariesDatabaseManager {
                 Log.i(TAG, "upgrading to DB version 24 (Adding source column)");
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.SOURCE, "text", "'TRACKED'");
             }
+
+            if (oldVersion < 25) {
+                Log.i(TAG, "upgrading to DB version 25 (Adding count column to extrema table)");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.COUNT, "int", null);
+            }
+
+            if (oldVersion < 26) {
+                Log.i(TAG, "upgrading to DB version 26 (Adding composite extrema index, clusterId index, and fileBaseName NOCASE index)");
+                try {
+                    db.execSQL("CREATE INDEX IF NOT EXISTS idx_extrema_workout_sensor_extrema ON " + WorkoutSummaries.TABLE_EXTREMA_VALUES
+                            + " (" + WorkoutSummaries.WORKOUT_ID + ", " + WorkoutSummaries.SENSOR_TYPE + ", " + WorkoutSummaries.EXTREMA_TYPE + ")");
+                    db.execSQL("CREATE INDEX IF NOT EXISTS idx_summaries_cluster_id ON " + WorkoutSummaries.TABLE
+                            + " (" + WorkoutSummaries.CLUSTER_ID + ")");
+                    db.execSQL("CREATE INDEX IF NOT EXISTS idx_summaries_file_base_name_nocase ON "
+                            + WorkoutSummaries.TABLE + " (" + WorkoutSummaries.FILE_BASE_NAME + " COLLATE NOCASE)");
+                } catch (Exception e) {
+                    Log.e(TAG, "Error creating indexes in onUpgrade to v26", e);
+                }
+            }
         }
 
-        private void migrateSpatialBounds(SQLiteDatabase db) {
+        public void migrateSpatialBounds(SQLiteDatabase db) {
+            migrateSpatialBoundsStatic(db);
+        }
+
+        public static void migrateSpatialBoundsStatic(@NonNull SQLiteDatabase db) {
             Log.i(TAG, "Populating spatial bounds for existing workouts...");
+            String selection = WorkoutSummaries.BOUND_MIN_LAT + " IS NULL AND "
+                    + WorkoutSummaries.MAP_POLYLINE + " IS NOT NULL AND "
+                    + WorkoutSummaries.MAP_POLYLINE + " != ''";
             try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
                     new String[]{WorkoutSummaries.C_ID, WorkoutSummaries.MAP_POLYLINE},
-                    null, null, null, null, null)) {
+                    selection, null, null, null, null)) {
                 int idIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID);
                 int polylineIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE);
 
@@ -1751,11 +2029,15 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
 
-        private void migrateExtremaPositions(SQLiteDatabase summariesDb) {
+        public void migrateExtremaPositions(SQLiteDatabase summariesDb) {
+            migrateExtremaPositions(mContext, summariesDb);
+        }
+
+        public static void migrateExtremaPositions(@NonNull Context context, @NonNull SQLiteDatabase summariesDb) {
             Log.i(TAG, "Starting migration of extrema positions...");
 
-            WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
-            WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
+            WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(context);
+            WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(context);
 
             String selection = WorkoutSummaries.LATITUDE + " IS NULL AND " + WorkoutSummaries.EXTREMA_TYPE + " != ?";
             String[] selectionArgs = {ExtremaType.AVG.name()};
@@ -1774,8 +2056,12 @@ public class WorkoutSummariesDatabaseManager {
                     double value = extremaCursor.getDouble(valueIdx);
 
                     try {
-                        SensorType sensorType = SensorType.valueOf(sensorTypeName);
-                        ExtremaType extremaType = ExtremaType.valueOf(extremaTypeName);
+                        SensorType sensorType = EnumUtils.safeValueOfOrNull(SensorType.class, sensorTypeName, TAG);
+                        ExtremaType extremaType = EnumUtils.safeValueOfOrNull(ExtremaType.class, extremaTypeName, TAG);
+                        if (sensorType == null || extremaType == null) {
+                            Log.w(TAG, "Skipping legacy position migration for unrecognized enum: " + sensorTypeName + " " + extremaTypeName);
+                            continue;
+                        }
 
                         // Use the shared logic in WorkoutSamplesDatabaseManager to find the location
                         // Pass the database currently being upgraded to avoid recursion
@@ -1796,7 +2082,11 @@ public class WorkoutSummariesDatabaseManager {
          * Combined migration for polylines and numerical streams.
          * Only one pass through the summaries table is performed.
          */
-        private void migrateExistingWorkouts(SQLiteDatabase db, boolean forceRecalc) {
+        public void migrateExistingWorkouts(SQLiteDatabase db, boolean forceRecalc) {
+            migrateExistingWorkouts(mContext, db, forceRecalc);
+        }
+
+        public static void migrateExistingWorkouts(@NonNull Context context, @NonNull SQLiteDatabase db, boolean forceRecalc) {
             Log.i(TAG, "Starting combined migration (forceRecalc=" + forceRecalc + ")...");
 
             String selection = null;
@@ -1816,7 +2106,7 @@ public class WorkoutSummariesDatabaseManager {
                     long workoutId = summaryCursor.getLong(idIdx);
                     String baseFileName = summaryCursor.getString(fileIdx);
                     if (baseFileName != null) {
-                        migrateOneWorkout(db, workoutId, baseFileName);
+                        migrateOneWorkout(context, db, workoutId, baseFileName);
                     }
                 }
             } catch (Exception e) {
@@ -1824,12 +2114,12 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
 
-        private void migrateOneWorkout(SQLiteDatabase db, long workoutId, String baseFileName) {
+        public static void migrateOneWorkout(@NonNull Context context, @NonNull SQLiteDatabase db, long workoutId, @NonNull String baseFileName) {
             List<LatLng> latLngs = new ArrayList<>();
             List<Double> altitudes = new ArrayList<>();
             List<Double> distances = new ArrayList<>();
 
-            SQLiteDatabase samplesDb = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();
+            SQLiteDatabase samplesDb = WorkoutSamplesDatabaseManager.getInstance(context).getDatabase();
             String tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName);
 
             try (Cursor cursor = samplesDb.query(tableName, null, null, null, null, null, null)) {

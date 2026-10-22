@@ -23,7 +23,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,7 +30,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.banalservice.BANALService
-import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 
 /**
  * Reusable, canonical workout route clustering tuning content (REQ-SET-075, Rule 36).
@@ -112,163 +112,87 @@ fun ClusterTuningContent(
         }
 
         // 2. Details Toggle
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(stringResource(R.string.cluster_tuning_show_details), style = MaterialTheme.typography.bodyMedium)
-            Switch(
-                checked = showDetails,
-                onCheckedChange = { showDetails = it },
-                enabled = enabled
-            )
-        }
+        TuningToggleItem(
+            title = stringResource(R.string.cluster_tuning_show_details),
+            isChecked = showDetails,
+            onCheckedChange = { showDetails = it },
+            enabled = enabled
+        )
 
         // 3. Detailed Parameters (Optional)
         if (showDetails) {
+            val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
             val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
             val lengthUnit = stringResource(if (isImperial) R.string.units_distance_imperial else R.string.units_distance_metric)
             val lengthMultiplier = if (isImperial) (1.0 / BANALService.METER_PER_MILE).toFloat() else 0.001f
 
             // A. Switches above sliders
             // Sport Type Awareness (ATT-350)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.cluster_tuning_use_sport_type_label),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = stringResource(R.string.cluster_tuning_use_sport_type_summary),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = useSportTypeForClustering,
-                    onCheckedChange = onUseSportTypeChange,
-                    enabled = enabled
-                )
-            }
+            TuningToggleItem(
+                title = stringResource(R.string.cluster_tuning_use_sport_type_label),
+                summary = stringResource(R.string.cluster_tuning_use_sport_type_summary),
+                isChecked = useSportTypeForClustering,
+                onCheckedChange = onUseSportTypeChange,
+                enabled = enabled
+            )
 
             // Altitude Extrema Awareness (ATT-502, REQ-SET-065)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.cluster_tuning_use_altitude_label),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = stringResource(R.string.cluster_tuning_use_altitude_summary),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = useAltitudePosForClustering,
-                    onCheckedChange = onUseAltitudePosChange,
-                    enabled = enabled
-                )
-            }
+            TuningToggleItem(
+                title = stringResource(R.string.cluster_tuning_use_altitude_label),
+                summary = stringResource(R.string.cluster_tuning_use_altitude_summary),
+                isChecked = useAltitudePosForClustering,
+                onCheckedChange = onUseAltitudePosChange,
+                enabled = enabled
+            )
 
             // B. Tolerance Sliders
-            TuningSlider(
-                label = stringResource(R.string.cluster_tuning_endpoint_label),
+            TuningSliderItem(
+                title = stringResource(R.string.cluster_tuning_endpoint_label),
+                valueText = String.format(locale, "%.3f %s", endpointTolerance * lengthMultiplier, lengthUnit),
+                helperText = "",
+                defaultText = "",
                 value = endpointTolerance,
                 onValueChange = onEndpointToleranceChange,
                 onValueChangeFinished = onValueChangeFinished,
                 valueRange = endRange,
-                unit = lengthUnit,
-                displayMultiplier = lengthMultiplier,
-                decimalPlaces = 3,
                 enabled = enabled
             )
 
-            TuningSlider(
-                label = stringResource(R.string.cluster_tuning_apex_label),
+            TuningSliderItem(
+                title = stringResource(R.string.cluster_tuning_apex_label),
+                valueText = String.format(locale, "%.3f %s", apexTolerance * lengthMultiplier, lengthUnit),
+                helperText = "",
+                defaultText = "",
                 value = apexTolerance,
                 onValueChange = onApexToleranceChange,
                 onValueChangeFinished = onValueChangeFinished,
                 valueRange = apexRange,
-                unit = lengthUnit,
-                displayMultiplier = lengthMultiplier,
-                decimalPlaces = 3,
                 enabled = enabled
             )
 
-            TuningSlider(
-                label = stringResource(R.string.cluster_tuning_distance_label),
+            TuningSliderItem(
+                title = stringResource(R.string.cluster_tuning_distance_label),
+                valueText = String.format(locale, "%.0f %s", distanceTolerance * 100f, stringResource(R.string.units_percent)),
+                helperText = "",
+                defaultText = "",
                 value = distanceTolerance,
                 onValueChange = onDistanceToleranceChange,
                 onValueChangeFinished = onValueChangeFinished,
                 valueRange = distRange,
-                unit = stringResource(R.string.units_percent),
-                displayMultiplier = 100f,
-                decimalPlaces = 0,
                 enabled = enabled
             )
 
-            TuningSlider(
-                label = stringResource(R.string.cluster_tuning_altitude_pos_label),
+            TuningSliderItem(
+                title = stringResource(R.string.cluster_tuning_altitude_pos_label),
+                valueText = String.format(locale, "%.3f %s", altitudePositionTolerance * lengthMultiplier, lengthUnit),
+                helperText = "",
+                defaultText = "",
                 value = altitudePositionTolerance,
                 onValueChange = onAltitudePositionToleranceChange,
                 onValueChangeFinished = onValueChangeFinished,
                 valueRange = altRange,
-                unit = lengthUnit,
-                displayMultiplier = lengthMultiplier,
-                decimalPlaces = 3,
                 enabled = enabled && useAltitudePosForClustering
             )
         }
-    }
-}
-
-@Composable
-fun TuningSlider(
-    label: String,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    valueRange: ClosedFloatingPointRange<Float>,
-    unit: String,
-    displayMultiplier: Float = 1f,
-    decimalPlaces: Int = 0,
-    enabled: Boolean = true,
-    onValueChangeFinished: (() -> Unit)? = null
-) {
-    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
-    val contentAlpha = if (enabled) 1.0f else TTAlpha.Disabled
-
-    Column(
-        modifier = Modifier.alpha(contentAlpha),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else TTAlpha.Disabled)
-        )
-        Text(
-            text = java.lang.String.format(locale, "%.${decimalPlaces}f %s", value * displayMultiplier, unit),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Disabled)
-        )
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            onValueChangeFinished = onValueChangeFinished,
-            valueRange = valueRange,
-            enabled = enabled,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }

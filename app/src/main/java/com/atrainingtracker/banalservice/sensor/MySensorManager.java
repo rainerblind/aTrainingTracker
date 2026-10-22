@@ -29,24 +29,31 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class MySensorManager extends MyDevice {
     public static final String EMPTY_GC_DATA = "-----------";
+    /**
+     * Priority hierarchy for speed and distance sensors ({@link SensorType#SPEED_mps},
+     * {@link SensorType#PACE_spm}, {@link SensorType#DISTANCE_m}, {@link SensorType#DISTANCE_m_LAP}).
+     * <p>
+     * Dedicated wheel/footpod sensors take precedence over GPS, followed by Google Fused Location
+     * and Network Location, matching {@link #ALTITUDE_PRIORITY} and {@link #LOCATION_PRIORITY}
+     * ({@code REQ-TRK-024} / {@code ATT-3961}).
+     */
     protected static final DeviceType[] SPEED_PRIORITY
             = new DeviceType[]{
             DeviceType.RUN_SPEED,
             DeviceType.BIKE_SPEED,
             DeviceType.BIKE_SPEED_AND_CADENCE,
             DeviceType.BIKE_POWER,
-            // DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
             DeviceType.SPEED_AND_LOCATION_GPS,
+            DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
             DeviceType.SPEED_AND_LOCATION_NETWORK
     };
     protected static final DeviceType[] CADENCE_PRIORITY
@@ -73,7 +80,7 @@ public class MySensorManager extends MyDevice {
     // String        mGCData            = EMPTY_GC_DATA;
     // protected int mAccumulatedSensors = 0; 
     private static final boolean DEBUG = BANALService.getDebug(false);
-    protected Map<SensorType, Object> mInitialValues = new HashMap<SensorType, Object>();
+    protected final Map<SensorType, Object> mInitialValues = new ConcurrentHashMap<>();
     protected StringBuilder mAccumulatedGCData = new StringBuilder(EMPTY_GC_DATA);
     protected Set<SensorType> mAccumulatedSensorTypeSet = new HashSet<SensorType>();
     protected EnumMap<SensorType, LinkedList<DeviceType>> mDevicePriorityList
@@ -101,6 +108,7 @@ public class MySensorManager extends MyDevice {
         setPriorityList(SensorType.BEARING, LOCATION_PRIORITY);
         setPriorityList(SensorType.LATITUDE, LOCATION_PRIORITY);
         setPriorityList(SensorType.LONGITUDE, LOCATION_PRIORITY);
+        setPriorityList(SensorType.LINE_DISTANCE_m, LOCATION_PRIORITY);
 
         mInitialValues.put(SensorType.LAP_NR, BANALService.INIT_LAP_NR);
 
@@ -134,7 +142,7 @@ public class MySensorManager extends MyDevice {
     //     return true;
     // }    
 
-    public ArrayList<MySensor> getSensorList(Collection<SensorType> sensorCollection) {
+    public synchronized ArrayList<MySensor> getSensorList(Collection<SensorType> sensorCollection) {
         ArrayList<MySensor> sensorList = new ArrayList<MySensor>();
 
         for (SensorType sensorType : sensorCollection) {
@@ -147,8 +155,19 @@ public class MySensorManager extends MyDevice {
         return sensorList;
     }
 
+    /**
+     * Returns a thread-safe defensive snapshot copy of the sensor types accumulated during the
+     * active workout session ({@code REQ-TRK-030.2}, {@code ATT-3986}).
+     *
+     * <p>Threading / Concurrency: Synchronized on {@code this} {@link MySensorManager} monitor so
+     * concurrent sensor registrations via {@link #registerSensor(MySensor)} /
+     * {@link #notifyNewSensor(MySensor)} never throw {@link java.util.ConcurrentModificationException}
+     * while callers iterate over the returned set.
+     *
+     * @return a detached {@link HashSet} containing all accumulated {@link SensorType}s
+     */
     public synchronized Set<SensorType> getAccumulatedSensorTypeSet() {
-        return mAccumulatedSensorTypeSet;
+        return new HashSet<>(mAccumulatedSensorTypeSet);
     }
 
     public synchronized void setPriorityList(SensorType sensorType, DeviceType[] deviceTypeArray) {
@@ -159,32 +178,52 @@ public class MySensorManager extends MyDevice {
         return mDevicePriorityList.get(sensorType);
     }
 
-    public synchronized void registerSensor(MySensor mySensor) {
+    public void registerSensor(MySensor mySensor) {
         if (DEBUG) {
             Log.d(TAG, "registerSensor(" + mySensor.getSensorType() + ")");
         }
 
-        SensorType sensorType = mySensor.getSensorType();
-        DeviceType deviceType = mySensor.getDevice().getDeviceType();
+        String gcData = null;
+        String accumulatedGCData = null;
+        final SensorType sensorType = mySensor.getSensorType();
 
-        boolean newSensor = false;
-        if (getBestSensor(sensorType) == null) {
-            addSensor(new ProxySensor(this, sensorType, mySensor));
-            newSensor = true;
+        synchronized (this) {
+            DeviceType deviceType = mySensor.getDevice().getDeviceType();
+
+            boolean newSensor = false;
+            if (getBestSensor(sensorType) == null) {
+                addSensor(new ProxySensor(this, sensorType, mySensor));
+                newSensor = true;
+            }
+
+            if (mAllSensorsMapMap.get(sensorType) == null) {
+                mAllSensorsMapMap.put(sensorType, new EnumMap<DeviceType, LinkedList<MySensor>>(DeviceType.class));
+            }
+            if (mAllSensorsMapMap.get(sensorType).get(deviceType) == null) {
+                mAllSensorsMapMap.get(sensorType).put(deviceType, new LinkedList<MySensor>());
+            }
+
+            mAllSensorsMapMap.get(sensorType).get(deviceType).addLast(mySensor);
+
+            if (newSensor) {
+                if (DEBUG) Log.d(TAG, "notifyNewSensor(" + mySensor.mSensorType.name() + ")");
+                mAccumulatedSensorTypeSet.add(sensorType);
+                gcData = computeGCDataLocked();
+                addGCSensor(sensorType, mAccumulatedGCData);
+                accumulatedGCData = mAccumulatedGCData.toString();
+            }
         }
 
-        if (mAllSensorsMapMap.get(sensorType) == null) {
-            mAllSensorsMapMap.put(sensorType, new EnumMap<DeviceType, LinkedList<MySensor>>(DeviceType.class));
-        }
-        if (mAllSensorsMapMap.get(sensorType).get(deviceType) == null) {
-            mAllSensorsMapMap.get(sensorType).put(deviceType, new LinkedList<MySensor>());
-        }
-
-        mAllSensorsMapMap.get(sensorType).get(deviceType).addLast(mySensor);
-
+        // Dispatch setBestSensorForProxySensor outside synchronized (this) to eliminate
+        // potential lock-order inversion with ProxySensor listeners (REQ-SEN-021.3).
         setBestSensorForProxySensor(sensorType);
 
-        if (newSensor) notifyNewSensor(mySensor);
+        if (gcData != null) {
+            mSensorsSensor.newValue(gcData);
+        }
+        if (accumulatedGCData != null) {
+            mAccumulatedSensorsSensor.newValue(accumulatedGCData);
+        }
     }
 
     public synchronized List<MySensor> getAllButBestSensors() {
@@ -215,7 +254,7 @@ public class MySensorManager extends MyDevice {
     }
 
 
-    public synchronized void registerSensors(Collection<MySensor> sensorCollection) {
+    public void registerSensors(Collection<MySensor> sensorCollection) {
         if (DEBUG) Log.d(TAG, "registerSensors");
 
         for (MySensor mySensor : sensorCollection) {
@@ -223,52 +262,76 @@ public class MySensorManager extends MyDevice {
         }
     }
 
-    public synchronized void unregisterSensor(MySensor mySensor) {
+    public void unregisterSensor(MySensor mySensor) {
         if (DEBUG) Log.d(TAG, "unregisterSensor(" + mySensor.getSensorType() + ")");
 
-        SensorType sensorType = mySensor.getSensorType();
-        DeviceType deviceType = mySensor.getDevice().getDeviceType();
+        String gcData = null;
+        final SensorType sensorType = mySensor.getSensorType();
+        boolean shouldUpdateProxy = false;
 
-        EnumMap<DeviceType, LinkedList<MySensor>> deviceMap = mAllSensorsMapMap.get(sensorType);
-        if (deviceMap != null) {
-            LinkedList<MySensor> sensorList = deviceMap.get(deviceType);
-            if (sensorList != null) {
+        synchronized (this) {
+            DeviceType deviceType = mySensor.getDevice().getDeviceType();
 
-                boolean sensorRemoved = false;
-                sensorList.remove(mySensor);
-                MySensor newBestSensor = getBestSensor(sensorType);
-                if (newBestSensor == null) {
-                    if (DEBUG) Log.d(TAG, "newBestSensor == null => removeSensor");
-                    removeSensor(sensorType);
-                    sensorRemoved = true;
+            EnumMap<DeviceType, LinkedList<MySensor>> deviceMap = mAllSensorsMapMap.get(sensorType);
+            if (deviceMap != null) {
+                LinkedList<MySensor> sensorList = deviceMap.get(deviceType);
+                if (sensorList != null) {
+
+                    boolean sensorRemoved = false;
+                    sensorList.remove(mySensor);
+                    MySensor newBestSensor = getBestSensor(sensorType);
+                    if (newBestSensor == null) {
+                        if (DEBUG) Log.d(TAG, "newBestSensor == null => removeSensor");
+                        removeSensor(sensorType);
+                        sensorRemoved = true;
+                    }
+
+                    shouldUpdateProxy = true;
+
+                    if (sensorRemoved) {
+                        if (DEBUG) Log.d(TAG, "notifySensorRemoved");
+                        gcData = computeGCDataLocked();
+                    }
                 }
-
-                setBestSensorForProxySensor(sensorType);
-
-                if (sensorRemoved) notifySensorRemoved(mySensor);
             }
         }
 
+        // Dispatch setBestSensorForProxySensor outside synchronized (this) to eliminate
+        // potential lock-order inversion with ProxySensor listeners (REQ-SEN-021.3).
+        if (shouldUpdateProxy) {
+            setBestSensorForProxySensor(sensorType);
+        }
+
+        if (gcData != null) {
+            mSensorsSensor.newValue(gcData);
+        }
     }
 
-    public synchronized void unregisterSensors(Collection<MySensor> sensorCollection) {
+    public void unregisterSensors(Collection<MySensor> sensorCollection) {
         for (MySensor mySensor : sensorCollection) {
             unregisterSensor(mySensor);
         }
     }
 
 
-    protected synchronized void setBestSensorForProxySensor(SensorType sensorType) {
+    protected void setBestSensorForProxySensor(SensorType sensorType) {
         if (DEBUG) Log.d(TAG, "setBestSensorForProxySensor(" + sensorType.name() + ")");
 
-        MySensor bestSensor = getBestSensor(sensorType);
-        if (bestSensor != null) {
-            MySensor proxy = getSensor(sensorType);
-            if (proxy instanceof ProxySensor) {
-                ((ProxySensor) proxy).setSourceSensor(bestSensor);
+        MySensor bestSensor;
+        MySensor proxy;
+        synchronized (this) {
+            bestSensor = getBestSensor(sensorType);
+            if (bestSensor != null) {
+                proxy = getSensor(sensorType);
+            } else {
+                removeSensor(sensorType);
+                proxy = null;
             }
-        } else {
-            removeSensor(sensorType);
+        }
+
+        // Invoke ProxySensor.setSourceSensor outside synchronized (this) (REQ-SEN-021.3)
+        if (bestSensor != null && proxy instanceof ProxySensor) {
+            ((ProxySensor) proxy).setSourceSensor(bestSensor);
         }
     }
 
@@ -308,48 +371,16 @@ public class MySensorManager extends MyDevice {
     }
 
 
-    /**
-     * called when there is a new Sensor
-     */
-    private void notifyNewSensor(MySensor mySensor) {
-        if (DEBUG) Log.d(TAG, "notifyNewSensor(" + mySensor.mSensorType.name() + ")");
-
-        mAccumulatedSensorTypeSet.add(mySensor.getSensorType());
-
-        updateGCData();
-        addGCSensor(mySensor.getSensorType(), mAccumulatedGCData);
-        mAccumulatedSensorsSensor.newValue(mAccumulatedGCData.toString());
-
-        // Intent intent =  new Intent(BANALService.NEW_SENSOR_INTENT);
-        // intent.putExtra(BANALService.SENSOR_TYPE_NAME, mySensor.getSensorType().name());
-        // intent.putExtra(BANALService.SENSOR_UNIT, mContext.getString(mySensor.getSensorType().getUnitId()));
-        // mContext.sendBroadcast(intent.setPackage(getActivity().getPackageName()));
-    }
-
-
-    /**
-     * called when a Sensor is removed
-     */
-    private void notifySensorRemoved(MySensor mySensor) {
-        if (DEBUG) Log.d(TAG, "notifySensorRemoved");
-
-        updateGCData();
-
-        // Intent intent = new Intent(BANALService.SENSOR_REMOVED_INTENT);
-        // intent.putExtra(BANALService.SENSOR_TYPE_NAME, mySensor.getSensorType().name());
-        // mContext.sendBroadcast(intent.setPackage(getActivity().getPackageName()));
-    }
-
-    private void updateGCData() {
-        if (DEBUG) Log.d(TAG, "updateGCData()");
+    private synchronized String computeGCDataLocked() {
+        if (DEBUG) Log.d(TAG, "computeGCDataLocked()");
 
         StringBuilder GCdata = new StringBuilder(EMPTY_GC_DATA);
 
         for (MySensor mySensor : getSensors()) {
             addGCSensor(mySensor.getSensorType(), GCdata);
         }
-        mSensorsSensor.newValue(GCdata.toString());
         if (DEBUG) Log.d(TAG, "updatedGCData: " + GCdata);
+        return GCdata.toString();
     }
 
     private void addGCSensor(SensorType sensorType, StringBuilder gcDataString) {
@@ -395,7 +426,70 @@ public class MySensorManager extends MyDevice {
 
     public void setInitialValue(SensorType key, Object value) {
         if (DEBUG) Log.d(TAG, "setting key:" + Object.class + " value" + value);
+        if (key == null) {
+            return;
+        }
+        if (value == null) {
+            mInitialValues.remove(key);
+        } else {
+            mInitialValues.put(key, value);
+        }
+    }
 
-        mInitialValues.put(key, value);
+    /**
+     * Returns the canonical priority array of {@link DeviceType}s for the given {@link SensorType},
+     * or {@code null} if no explicit priority list is registered.
+     *
+     * @param sensorType the sensor type to query
+     * @return the priority array of {@link DeviceType}s, or {@code null}
+     */
+    public static DeviceType[] getPriorityArray(SensorType sensorType) {
+        if (sensorType == null) {
+            return null;
+        }
+        switch (sensorType) {
+            case SPEED_mps:
+            case PACE_spm:
+            case DISTANCE_m:
+            case DISTANCE_m_LAP:
+                return SPEED_PRIORITY;
+            case CADENCE:
+                return CADENCE_PRIORITY;
+            case ALTITUDE:
+                return ALTITUDE_PRIORITY;
+            case ACCURACY:
+            case BEARING:
+            case LATITUDE:
+            case LONGITUDE:
+            case LINE_DISTANCE_m:
+                return LOCATION_PRIORITY;
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Returns the 0-based canonical priority rank of {@code deviceType} for {@code sensorType}.
+     * Lower values indicate higher operational priority in sensor redundancy resolution.
+     * If {@code deviceType} is not in the priority array, returns a fallback rank of {@code 1000 + ordinal}.
+     * If {@code deviceType} is {@code null}, returns {@link Integer#MAX_VALUE}.
+     *
+     * @param sensorType the sensor type being queried
+     * @param deviceType the device type whose priority rank is requested
+     * @return 0-based priority rank, fallback rank, or {@link Integer#MAX_VALUE}
+     */
+    public static int getPriorityRank(SensorType sensorType, DeviceType deviceType) {
+        if (deviceType == null) {
+            return Integer.MAX_VALUE;
+        }
+        DeviceType[] priority = getPriorityArray(sensorType);
+        if (priority != null) {
+            for (int i = 0; i < priority.length; i++) {
+                if (priority[i] == deviceType) {
+                    return i;
+                }
+            }
+        }
+        return 1000 + deviceType.ordinal();
     }
 }

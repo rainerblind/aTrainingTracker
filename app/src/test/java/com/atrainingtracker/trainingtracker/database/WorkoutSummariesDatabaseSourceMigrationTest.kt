@@ -84,13 +84,18 @@ class WorkoutSummariesDatabaseSourceMigrationTest {
     }
 
     @Test
-    fun testDbVersion_is24() {
-        assertEquals("DB_VERSION must be 24", 24, WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_VERSION)
+    fun testDbVersion_is26() {
+        assertEquals("DB_VERSION must be 26", 26, WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_VERSION)
     }
 
     @Test
     fun testSourceColumnConstant_isSource() {
         assertEquals("Column constant must be 'source'", "source", WorkoutSummaries.SOURCE)
+    }
+
+    @Test
+    fun testCountColumnConstant_isCount() {
+        assertEquals("Column constant must be 'count'", "count", WorkoutSummaries.COUNT)
     }
 
     @Test
@@ -113,6 +118,90 @@ class WorkoutSummariesDatabaseSourceMigrationTest {
                 it.contains("ALTER TABLE ${WorkoutSummaries.TABLE} ADD COLUMN ${WorkoutSummaries.SOURCE} text DEFAULT 'TRACKED'")
             })
         }
+    }
+
+    @Test
+    fun testOnUpgrade_fromV24ToV25_addsCountColumnToExtremaValues() {
+        val helper = WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper(mockContext)
+
+        val cursor = mockk<Cursor>(relaxed = true)
+        every { mockDb.rawQuery(match { it.contains("PRAGMA table_info") }, null) } returns cursor
+        every { cursor.moveToFirst() } returns true
+        every { cursor.moveToNext() } returns false
+        every { cursor.getColumnIndex("name") } returns 1
+        every { cursor.getString(1) } returns WorkoutSummaries.C_ID
+
+        helper.onUpgrade(mockDb, 24, 25)
+
+        verify {
+            mockDb.execSQL(match {
+                it.contains("ALTER TABLE ${WorkoutSummaries.TABLE_EXTREMA_VALUES} ADD COLUMN ${WorkoutSummaries.COUNT} int")
+            })
+        }
+    }
+
+    @Test
+    fun testOnUpgrade_fromV25ToV26_addsIndexes() {
+        val helper = WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper(mockContext)
+
+        helper.onUpgrade(mockDb, 25, 26)
+
+        verify {
+            mockDb.execSQL(match {
+                it.contains("CREATE INDEX IF NOT EXISTS idx_extrema_workout_sensor_extrema")
+            })
+        }
+        verify {
+            mockDb.execSQL(match {
+                it.contains("CREATE INDEX IF NOT EXISTS idx_summaries_cluster_id")
+            })
+        }
+        verify {
+            mockDb.execSQL(match {
+                it.contains("CREATE INDEX IF NOT EXISTS idx_summaries_file_base_name_nocase")
+            })
+        }
+    }
+
+    @Test
+    fun testGetEncodedStreams_extractsMapPolylineAndElevationStreams() {
+        val manager = object : WorkoutSummariesDatabaseManager(mockContext) {
+            override fun getDatabase(): SQLiteDatabase = mockDb
+        }
+
+        val cursor = mockk<Cursor>(relaxed = true)
+        every {
+            mockDb.query(
+                WorkoutSummaries.TABLE,
+                arrayOf(
+                    WorkoutSummaries.MAP_POLYLINE,
+                    WorkoutSummaries.ALTITUDE_STREAM,
+                    WorkoutSummaries.DISTANCE_STREAM
+                ),
+                "${WorkoutSummaries.C_ID}=?",
+                arrayOf("42"),
+                null,
+                null,
+                null
+            )
+        } returns cursor
+        every { cursor.moveToFirst() } returns true
+        every { cursor.getColumnIndex(WorkoutSummaries.MAP_POLYLINE) } returns 0
+        every { cursor.getColumnIndex(WorkoutSummaries.ALTITUDE_STREAM) } returns 1
+        every { cursor.getColumnIndex(WorkoutSummaries.DISTANCE_STREAM) } returns 2
+        every { cursor.isNull(0) } returns false
+        every { cursor.isNull(1) } returns false
+        every { cursor.isNull(2) } returns false
+        every { cursor.getString(0) } returns "_p~iF~ps|U"
+        every { cursor.getString(1) } returns "alt_encoded"
+        every { cursor.getString(2) } returns "dist_encoded"
+
+        val streams = manager.getEncodedStreams(42L)
+        org.junit.Assert.assertNotNull(streams)
+        assertEquals("_p~iF~ps|U", streams!!.mapPolyline)
+        assertEquals("alt_encoded", streams.altitudeStream)
+        assertEquals("dist_encoded", streams.distanceStream)
+        verify(exactly = 1) { cursor.close() }
     }
 
     @Test

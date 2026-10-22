@@ -73,6 +73,8 @@ fun ClimbOnMapScreen(
     val normalizedClimbPath = remember(climb) {
         climb.normalizedPathPoints
     }
+    val startMarkerTitle = stringResource(R.string.marker_start)
+    val summitMarkerTitle = stringResource(R.string.marker_summit)
 
     MapDetailLayout(
         bSportType = bSportType,
@@ -114,7 +116,7 @@ fun ClimbOnMapScreen(
                     LocationMarker(
                         position = climb.startLatLng,
                         iconResId = R.drawable.control_start,
-                        title = "Start",
+                        title = startMarkerTitle,
                         iconDescriptor = startMarker
                     )
                 )
@@ -124,7 +126,7 @@ fun ClimbOnMapScreen(
                     LocationMarker(
                         position = climb.endLatLng,
                         iconResId = R.drawable.control_stop,
-                        title = "Summit",
+                        title = summitMarkerTitle,
                         iconDescriptor = endMarker
                     )
                 )
@@ -276,12 +278,13 @@ fun ClimbDetails(
 
             MetricItem(
                 iconRes = R.drawable.ic_ascent,
-                value = "+${formatters.altitude.format_with_units(climb.elevationGainMeters) ?: "${climb.elevationGainMeters.roundToInt()} m"}",
+                value = "+${formatters.altitude.format_with_units(climb.elevationGainMeters)}",
                 isPrimary = true
             )
 
-            val minAlt = climb.pathPoints.minOfOrNull { it.altitude }
-            val maxAlt = climb.pathPoints.maxOfOrNull { it.altitude }
+            val nonNullAlts = climb.pathPoints.mapNotNull { it.altitude }
+            val minAlt = nonNullAlts.minOrNull()
+            val maxAlt = nonNullAlts.maxOrNull()
             if (minAlt != null && maxAlt != null) {
                 VerticalClimbDivider()
                 MetricItem(

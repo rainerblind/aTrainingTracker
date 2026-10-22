@@ -188,6 +188,12 @@
     <string name="position_short">位置</string>
     <string name="power">パワー</string>
     <string name="power_short">power</string>
+    <string name="power_to_weight">パワーウェイトレシオ</string>
+    <string name="power_to_weight_short">W/kg</string>
+    <string name="normalized_power">標準化パワー</string>
+    <string name="intensity_factor">強度係数</string>
+    <string name="work_kj">機械的仕事</string>
+    <string name="tss">トレーニングストレススコア</string>
     <string name="speed">速度</string>
     <string name="speed_short">速度</string>
     <string name="current_sensors">現在のセンサー</string>
@@ -250,10 +256,6 @@
     <string name="bike_power__pedal_smoothness">&#8226; ペダルスムーズネス</string>
     <string name="bike_power__torque_effectiveness">&#8226; トルク効率</string>
     <string name="bike_power__torque_data">&#8226; トルク</string>
-
-    <string name="bike_power__pedal_power_balance_correction">バランス補正</string>
-    <string name="bike_power__double_power_balance_values">測定値を2倍にする</string>
-    <string name="bike_power__invert_power_balance_values">左右を反転させる</string>
 
     <!-- Labels -->
     <string name="PebbleConfigActivityLabel">Pebble表示設定を編集</string>
@@ -324,6 +326,9 @@
     <string name="automated_strava_routes_sync">ルートの自動同期</string>
     <string name="automated_strava_routes_sync_summary">Strava から定期的にルートを取得</string>
     <string name="strava_routes_sync_interval">同期の間隔</string>
+    <string name="automated_strava_equipment_sync">装備の自動同期</string>
+    <string name="automated_strava_equipment_sync_summary">Strava から定期的にバイクとシューズを取得</string>
+    <string name="strava_equipment_sync_interval">同期の間隔</string>
 
     <string name="strava_success_but_must_check">Strava アップロード完了、結果を確認中 …</string>
     <string name="strava_success_waiting_for_result">Strava アップロード完了、結果待ち …</string>
@@ -336,6 +341,7 @@
     <string name="tab_tracking">記録中</string>
     <string name="tab_map">マップ</string>
     <string name="tab_laps">ラップ</string>
+    <string name="tab_power">パワー</string>
     <string name="tab_workouts">履歴</string>
 
     <!-- layouts -->
@@ -582,6 +588,8 @@
     <string name="config_tracking__show_map">マップ表示</string>
     <string name="config_tracking__showLiveSegments">ライブセグメント</string>
     <string name="config_tracking__showLapButton">ラップボタン</string>
+    <string name="config_tracking__showBikeBell">自転車ベルを表示</string>
+    <string name="config_tracking__showBikeBell_subtitle">ベルボタンをタップ/長押し、またはコックピットをダブルタップして鳴らします</string>
     <string name="config_tracking__show_navigation_hints">ターンバイターン案内</string>
     <string name="config_tracking__show_live_climbs">ライブクライム</string>
     <string name="config_tracking__wysiwyg_active">有効</string>
@@ -614,6 +622,8 @@
     <string name="zone_3_label">ゾーン 3 (テンポ)</string>
     <string name="zone_4_label">ゾーン 4 (閾値)</string>
     <string name="zone_5_label">ゾーン 5 (無酸素)</string>
+    <string name="zone_6_label">ゾーン 6 (無酸素運動容量)</string>
+    <string name="zone_7_label">ゾーン 7 (神経筋パワー)</string>
 
     <string name="label_min">最小</string>
     <string name="label_max">最大</string>
@@ -623,6 +633,9 @@
     <string name="zone_display_left_bar">左バー</string>
     <string name="zone_display_right_bar">右バー</string>
     <string name="zone_display_text_color">文字色</string>
+    <string name="zone_display_gauge">ゾーンゲージバー</string>
+    <string name="pedal_balance_left_marker">L</string>
+    <string name="pedal_balance_right_marker">R</string>
     <string name="zone_display_preview_title">プレビュー</string>
 
     <string name="prefEmailExport">eメール</string>
@@ -781,7 +794,7 @@
     <string name="tab_name">名前</string>
 
     <!-- Equipment -->
-    <string name="equipment_management_title">装備管理</string>
+    <string name="equipment_management_title">バイク＆シューズ</string>
     <string name="equipment_management_summary">バイクやシューズの設定</string>
     <string name="prefs_manage_bikes_title">バイク</string>
     <string name="prefs_manage_bikes_summary">バイクの一覧と設定</string>
@@ -824,6 +837,8 @@
     <string name="sport_type_tab_bike">バイク系</string>
     <string name="sport_type_tab_run">ラン系</string>
     <string name="sport_type_tab_unknown">その他</string>
+    <string name="sport_type_restored_placeholder">復元されたスポーツ %1$d</string>
+    <string name="sport_type_placeholder_badge">復元済み（未設定）</string>
 
     <!-- workout summaries tabs -->
     <string name="workout_summaries_tab_all">すべて</string>
@@ -852,7 +867,9 @@
     <string name="segment_status_finished">終了</string>
     <string name="segment_status_start_in">開始まで: %1$s</string>
     <string name="segment_status_remaining">残り: %1$s</string>
-    <string name="segment_status_offset">タイム差: %1$s</string>
+    <string name="segment_status_offset">コースずれ: %1$s</string>
+    <string name="segment_status_past_finish">ゴール通過後: %1$s</string>
+    <string name="segment_status_pr_delta">%1$s (自己ベスト比)</string>
 
     <!-- ANT(+) Plugins -->
     <string name="ant_general_explanation">対応するハード・ソフトを揃えることで、ANT+ デバイスをペアリングできます。</string>
@@ -889,6 +906,19 @@
     <string name="route_import">インポート</string>
     <string name="route_saved_success">ルートを保存しました。</string>
     <string name="route_saved_failed">保存に失敗しました。</string>
+    <string name="routes_import_progress">ルートをインポートしています (%1$d / %2$d)…</string>
+    <string name="routes_import_success">%1$d 件のルートを正常にインポートしました。</string>
+    <string name="routes_import_partial">%1$d 件のルートをインポート、%2$d 件失敗しました。</string>
+    <string name="routes_import_all_failed">ルートをインポートできませんでした。</string>
+    <!-- Batch GPX Route Import Sport Type Selection (REQ-MAP-053 / ATT-4284) -->
+    <string name="batch_import_dialog_title_format">%1$d 件のルートをインポート</string>
+    <string name="batch_import_mode_all">すべてに適用</string>
+    <string name="batch_import_mode_individual">個別に設定</string>
+    <string name="batch_import_individual_hint">保存する前に、各ルートが順番に開かれ確認および編集できます。</string>
+    <string name="batch_import_action_import">インポート</string>
+    <string name="batch_import_action_continue">続行</string>
+    <string name="batch_import_individual_progress_format">ルート %1$d / %2$d</string>
+    <string name="batch_import_skip_route">スキップ</string>
     <string name="strava_sync_success">Strava ルートを同期しました。</string>
     <string name="strava_sync_failed">Strava 同期失敗。</string>
     <string name="save_as_local_route">ローカルルートとして保存</string>
@@ -948,6 +978,10 @@
     <string name="dropbox_disconnected_status">Dropbox 未接続</string>
     <string name="dropbox_disconnect">Dropbox から切断</string>
     <string name="dropbox_connect">Dropbox に接続</string>
+    <string name="dropbox_connect_prompt">Dropbox アカウントを連携して、ワークアウトを自動エクスポートし、データベースのバックアップを Dropbox に同期します。</string>
+    <string name="upload_workouts_to_dropbox_summary">保存後にアクティビティ（FIT、TCX、GPX、CSV）を Dropbox にアップロードします</string>
+    <string name="upload_backup_to_dropbox_summary">データベースを定期的に Dropbox にバックアップします</string>
+    <string name="last_backup_never">バックアップはまだ作成されていません</string>
     <string name="strava_disconnect">Strava 切断</string>
     <string name="strava_disconnect_dialog_title">Strava との連携を解除しますか？</string>
     <string name="strava_disconnect_dialog_message">連携を解除すると、このデバイスから Strava と同期されたすべてのデータが削除されます:\n\n• スター付きセグメントとタイム\n• Strava ルート\n• Strava とのギア連携\n• 過去のワークアウトの Strava アップロード情報\n\n記録済みのワークアウト（サマリー、GPSトラック、センサーデータ）は削除されません。</string>
@@ -1086,7 +1120,7 @@
     <string name="all_shoes">+ すべてのシューズ +</string>
     <string name="all_bikes">+ すべてのバイク +</string>
     <string name="no_equipment">- なし -</string>
-    <string name="backup_restore">Backup \u0026 Restore</string>
+    <string name="backup_restore">バックアップ \u0026 復元</string>
     <string name="backup_restore_summary">データの移行やリカバリを実行</string>
     <string name="create_backup">バックアップを作成</string>
     <string name="restore_backup">全復元（移行）</string>
@@ -1095,6 +1129,11 @@
     <string name="backup_failed">バックアップの作成に失敗しました。</string>
     <string name="restore_success">復元が完了しました。アプリを再起動します。</string>
     <string name="restore_failed">復元の実行に失敗しました。ファイルが有効か確認してください。</string>
+    <string name="backup_security_error">セキュリティエラー: バックアップアーカイブが無効または破損しています。</string>
+    <string name="backup_security_error_desc">バックアップアーカイブに不正なパスやシンボリックリンクが含まれているか、安全なサイズ制限を超過しているため拒否されました。</string>
+    <string name="backup_restore_error_missing_databases">バックアップアーカイブにデータベースディレクトリがありません。</string>
+    <string name="backup_restore_error_integrity_failed">バックアップデータベースのSQLite整合性チェックに失敗しました。</string>
+    <string name="backup_restore_error_schema_downgrade">バックアップはより新しいバージョンのアプリで作成されたため、復元できません。</string>
     <string name="restore_warning_title">危険: 全復元</string>
     <string name="restore_warning_message">この操作により、この端末にあるすべてのワークアウト、装備、設定がバックアップデータで上書きされ、永久に削除されます。本当によろしいですか？</string>
     <string name="import_finished_format">インポート完了。%1$d 件のワークアウトを追加しました。</string>
@@ -1104,6 +1143,17 @@
     <string name="automated_backups_summary">定期的に Dropbox へバックアップをアップロード</string>
     <string name="backup_now">今すぐバックアップ</string>
     <string name="last_backup">最終バックアップ: %1$s</string>
+    <string name="last_backup_local_success">最終バックアップ: %1$s (ローカルのみ)</string>
+    <string name="last_backup_partial_success">最終バックアップ: %1$s (一部成功)</string>
+    <string name="last_backup_failed_format">最後のバックアップに失敗しました: %1$s</string>
+    <string name="restore_automatic_local_backup">自動ローカルバックアップから復元</string>
+    <string name="restore_automatic_local_backup_format">自動バックアップ (%1$s)</string>
+    <string name="restore_automatic_backup_not_found">自動ローカルバックアップが見つかりません</string>
+    <string name="restore_from_file">ローカルファイルから復元</string>
+    <string name="restore_from_dropbox">Dropbox から復元</string>
+    <string name="backup_target_local">ローカル</string>
+    <string name="backup_target_dropbox">Dropbox</string>
+    <string name="backup_target_google_drive">Google ドライブ</string>
     <string name="backup_interval">バックアップ間隔</string>
     <string name="backup_interval_daily">毎日</string>
     <string name="backup_interval_3days">3日ごと</string>
@@ -1125,6 +1175,14 @@
     <string name="import_backup_summary">ワークアウトのインポート、バックアップ、データの復元を管理します</string>
 
     <string name="create_and_upload_to_dropbox">作成 \u0026 Dropboxへ送る</string>
+    <string name="create_and_upload_to_both">作成 \u0026 送信\n(Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_google_drive">作成 \u0026 Google Driveへ送る</string>
+    <string name="create_and_upload_to_cloud">作成 \u0026 クラウドへ送る</string>
+    <string name="cloud_backup_no_provider_dialog_title">クラウドバックアップ</string>
+    <string name="cloud_backup_no_provider_dialog_message">クラウドストレージが接続されていません。同期設定で Dropbox または Google Drive を連携してください。</string>
+    <string name="automated_backups_summary_both">定期的に Dropbox と Google Drive へバックアップをアップロード</string>
+    <string name="automated_backups_summary_google_drive">定期的に Google Drive へバックアップをアップロード</string>
+    <string name="automated_backups_summary_local_only">この端末に定期的なローカルバックアップを作成</string>
     <string name="full_restore_description">ローカルデータをすべて削除し、バックアップの内容に置き換えます。アプリの再起動が必要です。</string>
     <string name="incremental_import_description">バックアップから現在の履歴にワークアウトを統合します。既存のワークアウトはスキップされます。</string>
     <string name="legacy_recovery_title">ワークアウトのインポート</string>
@@ -1187,6 +1245,8 @@
     <string name="filter_route_source">ソース</string>
     <string name="filter_route_selected">選択中のみ</string>
     <string name="filter_min_elevation_format">&gt; %1$s m</string>
+    <string name="filter_max_elevation_format">&lt; %1$s m</string>
+    <string name="filter_elevation_interval_format">%1$s - %2$s m</string>
     <string name="filter_no_matching_routes">有効なフィルターに一致するルートはありません</string>
     <!-- Segment Filtering (ATT-735) -->
     <string name="filter_segments_title">セグメントをフィルター</string>
@@ -1230,7 +1290,8 @@
     <string name="cluster_info_sports_title">スポーツ種別の分離と適応重心</string>
     <string name="cluster_info_sports_desc">お気に入りルートはスポーツ種別ごとに分離できるため、同じ道でのサイクリングとランニングが混ざりません。ワークアウトが追加されるたびに、加重移動平均（重心）によって参照座標が自動的に微調整されます。</string>
     <string name="cluster_info_tuning_title">感度とパラメータ調整</string>
-    <string name="cluster_info_tuning_desc">マスタースライダーでルートの一致基準を調整します。「厳格」にするとわずかなルートの違いを別クラスタに分け、「緩和」にするとスタート位置のズレや小さな回り道があっても同じクラスタにまとめます。個別の許容値も下部で微調整できます。</string>
+    <string name="cluster_info_tuning_desc">許容値と全クラスタの再計算は高度な設定で構成できます。「厳格」はわずかなルートの違いを分け、「緩和」はスタート位置のズレがあっても同じクラスタにまとめます。</string>
+    <string name="cluster_info_open_advanced_tuning">高度な設定を開く</string>
     <string name="cluster_info_close">了解</string>
 
     <!-- Workout Cluster Stats -->
@@ -1246,6 +1307,15 @@
     <string name="cluster_stats_yesterday">昨日</string>
     <string name="cluster_stats_days_ago">%1$d日前</string>
     <string name="cluster_stats_weeks_ago">%1$d週間前</string>
+
+    <!-- ATT-4067: Historical Effort Trend Chart for Workout Clusters -->
+    <string name="cluster_trend_title">パフォーマンス推移</string>
+    <string name="cluster_trend_duration">時間</string>
+    <string name="cluster_trend_speed">速度</string>
+    <string name="cluster_trend_pace">ペース</string>
+    <string name="cluster_trend_pr">自己ベスト</string>
+    <string name="cluster_trend_avg">平均</string>
+    <string name="cluster_trend_outlier">外れ値</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">ラップ (%1$d)</string>
@@ -1448,9 +1518,15 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">パワーゾーン</string>
-    <!-- Telemetry Frequency Histogram (ATT-1845 / REQ-UI-231) -->
+    <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5ゾーン</string>
+    <string name="zone_mode_columns">カラム</string>
+    <string name="zone_mode_stacked_bar">スタックバー</string>
     <string name="zone_mode_histogram">ヒストグラム</string>
+    <string name="power_histogram_overflow_label">&gt; %1$d %2$s</string>
+    <string name="power_histogram_return_label">%1$d–%2$d %3$s</string>
+    <string name="power_histogram_overflow_desc">%1$d %2$s 超のスプリント詳細表示に切り替え</string>
+    <string name="power_histogram_return_desc">メインのヒストグラム (0 〜 %1$d %2$s) に戻る</string>
     <string name="aftermath_laps_splits_title">ラップとスプリット</string>
     <string name="split_badge_best">ベスト</string>
     <!-- Continuous Metric Graphs & Headings (ATT-1740 / REQ-UI-206) -->
@@ -1472,6 +1548,9 @@
     <string name="settings_lap_display_mode_table">テーブル</string>
     <string name="settings_lap_display_mode_visualizer">ビジュアライザー</string>
     <string name="settings_lap_display_mode_both">両方</string>
+
+    <!-- Configurable Default Zone Card Display Mode (ATT-3676 / REQ-UI-372.8) -->
+    <string name="settings_zone_card_display_mode_title">ゾーンカード表示モード</string>
 
     <!-- Workout Origin Source (ATT-2186 / REQ-DAT-017) -->
     <string name="workout_source_tracked">記録済み</string>
@@ -1497,8 +1576,30 @@
     <string name="permission_rationale_open_settings">設定を開く</string>
     <string name="permission_rationale_settings_explanation">位置情報の権限が拒否されました。位置情報へのアクセスがない場合、GPSルートの記録は利用できません。アプリの設定で権限を付与できます。</string>
     <string name="permission_rationale_precise_location_explanation">ワークアウトの記録には正確な位置情報 (GPS) が必要です。おおよその位置情報では、距離、速度、ルート、高度を記録できません。権限で「正確」を選択してください。</string>
+    <!-- Decoupled Multi-Permission Cascade & Sensor Discovery (ATT-3998 / REQ-PRI-006) -->
+    <string name="bluetooth_permission_scan_required">近くのセンサーを検索するにはBluetoothの権限が必要です。</string>
+    <string name="grant_permission">許可</string>
+    <string name="permission_rationale_notification_subtitle">通知により、バックグラウンドでの記録中もワークアウト時間、距離、ラップアラート、クイック操作が利用可能になります。</string>
+    <string name="permission_rationale_bluetooth_subtitle">付近のデバイスの権限により、aTrainingTrackerをペアリング済みの心拍数、パワー、速度、ケイデンスセンサーに接続します。</string>
     <string name="action_view_workout">表示</string>
     <string name="permission_warning_badge_desc">位置情報の権限がありません</string>
+
+    <!-- First-Install Permission Onboarding Flow (ATT-4455 / REQ-PRI-007) -->
+    <string name="permission_onboarding_title">アプリの権限</string>
+    <string name="permission_onboarding_step_format">ステップ %1$d / %2$d</string>
+    <string name="permission_onboarding_skip_setup">設定をスキップ</string>
+    <string name="permission_onboarding_skip_step">このステップをスキップ</string>
+    <string name="permission_onboarding_grant">権限を許可</string>
+    <string name="permission_onboarding_continue">次へ</string>
+    <string name="permission_onboarding_finish">設定を完了</string>
+    <string name="permission_onboarding_location_title">位置情報とGPS記録</string>
+    <string name="permission_onboarding_location_desc">画面オフ時やバックグラウンドでも、トレーニングルート、距離、速度、標高を正確に記録できます。</string>
+    <string name="permission_onboarding_bluetooth_title">Bluetoothセンサー</string>
+    <string name="permission_onboarding_bluetooth_desc">心拍計、パワーメーター、スマートトレーナー、速度・ケイデンスセンサーの検索と接続を可能にします。</string>
+    <string name="permission_onboarding_notification_title">トレーニング通知</string>
+    <string name="permission_onboarding_notification_desc">通知バーおよびロック画面に、アクティブなトレーニング状況、ラップタイム、センサーのバッテリー残量を表示します。</string>
+    <string name="permission_onboarding_battery_title">バッテリー最適化の除外</string>
+    <string name="permission_onboarding_battery_desc">画面がオフになっている長時間のライドやランニング中に、Androidシステムがバックグラウンド記録を強制停止するのを防ぎます。</string>
 
     <!-- Forensic Process Kill Diagnosis & Progressive Escalation (ATT-2079 / REQ-STB-012) -->
     <string name="unfinished_workout_title">トレーニングが中断されました</string>
@@ -1519,8 +1620,8 @@
     <string name="import_fit_title">FITファイルをインポート</string>
     <string name="import_fit_description">Garmin、Wahoo、Hammerhead、スマートウォッチからワークアウトをインポート (.fit)。</string>
     <string name="import_fit_button">FITファイルを選択</string>
+    <string name="import_fit_folder_button">フォルダをスキャン (FIT)</string>
     <string name="import_fit_dropbox_button">Dropboxをスキャン (FIT)</string>
-    <string name="import_fit_gdrive_button">Google ドライブをスキャン (FIT)</string>
     <string name="import_fit_progress">FITファイルをインポート中 (%1$d / %2$d)…</string>
     <string name="import_fit_summary_success">%1$d 件のワークアウトを正常にインポートしました (%2$d 件の重複をスキップ)。</string>
     <string name="import_fit_summary_with_errors">%1$d 件のワークアウトをインポート、%2$d 件の重複をスキップ、%3$d 件失敗。</string>
@@ -1528,13 +1629,15 @@
     <string name="import_tcx_title">TCXファイルをインポート</string>
     <string name="import_tcx_description">Training Center XMLファイル（.tcx）からワークアウトをインポートします。</string>
     <string name="import_tcx_button">ローカルTCXファイルを選択</string>
+    <string name="import_tcx_folder_button">フォルダをスキャン (TCX)</string>
     <string name="import_tcx_dropbox_button">Dropboxをスキャン (TCX)</string>
-    <string name="import_tcx_gdrive_button">Google ドライブをスキャン (TCX)</string>
     <string name="import_gpx_title">GPXファイルをインポート</string>
     <string name="import_gpx_description">GPS Exchange Formatファイル（.gpx）からルートとアクティビティをインポートします。</string>
     <string name="import_gpx_button">ローカルGPXファイルを選択</string>
+    <string name="import_gpx_folder_button">フォルダをスキャン (GPX)</string>
     <string name="import_gpx_dropbox_button">Dropboxをスキャン (GPX)</string>
-    <string name="import_gpx_gdrive_button">Google ドライブをスキャン (GPX)</string>
+    <string name="import_directory_scanning">フォルダ内のワークアウトをスキャン中…</string>
+    <string name="import_directory_no_files_found">選択したフォルダ内に互換性のある%1$sワークアウトファイルが見つかりませんでした。</string>
     <!-- Workout File Picker MIME Filtering (ATT-2622 / REQ-UI-294) -->
     <string name="invalid_workout_file_format">無効なファイル形式です。%1$s ファイルを選択してください。</string>
     <!-- Quick Route Selector & Route Auto Detection (ATT-1835 / REQ-MAP-024) -->
@@ -1697,9 +1800,6 @@
     <string name="ant_status_card_desc">最新のスマートフォンで ANT+ センサーを使用するには、ANT+ USB ドングル付きの USB-OTG アダプターと ANT+ システムサービスが必要です。</string>
     <string name="ant_status_card_action">ステータスを確認</string>
     <string name="ant_status_usb_dongle_note">最新のスマートフォンには内蔵 ANT+ チップがありません。受信には ANT+ USB ドングル付きの外部 USB-OTG アダプターが必要です。</string>
-    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
-    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
-    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
     <string name="ant_service_installed">インストール済み</string>
     <string name="ant_service_not_installed">未インストール</string>
     <string name="ant_service_install_button">インストール</string>
@@ -1713,22 +1813,6 @@
     <string name="ant_dialog_view_status">ANT+ ステータスを表示</string>
     <string name="ant_dialog_dismiss">了解</string>
 
-    <!-- Follow-Me Map Camera & Speed Zoom Tuning (ATT-2946 / REQ-MAP-042) -->
-    <string name="tuning_map_camera_section_title">マップカメラと追従ナビゲーション</string>
-    <string name="tuning_map_base_zoom_title">追従ベースズーム</string>
-    <string name="tuning_map_base_zoom_desc">追従トラッキングモードでの停止時（0 km/h）のベースズームレベル（値が大きいほど拡大表示）</string>
-    <string name="tuning_map_speed_zoom_enabled_title">速度依存ズーム</string>
-    <string name="tuning_map_speed_zoom_enabled_desc">走行速度が上がると段階的にズームアウトし、進行方向の見通しを広げます</string>
-    <string name="tuning_map_cruising_zoom_title">巡航速度ズーム（20 km/h時）</string>
-    <string name="tuning_map_cruising_zoom_desc">一般的なサイクリング速度（20 km/h）に合わせたカメラズームレベル（値が大きいほど拡大表示）</string>
-    <string name="tuning_map_tilt_angle_title">カメラ傾斜角度</string>
-    <string name="tuning_map_tilt_angle_desc">3Dナビゲーションの視点傾斜角度（0°はフラットな2D、70°は完全な3Dパースペクティブ）</string>
-    <string name="tuning_map_lookahead_padding_title">前方視野マージン</string>
-    <string name="tuning_map_lookahead_padding_desc">ライダーの位置を下部に配置し、前方の道路視野を最大化するためのビューポート余白比率（%）（値が大きいほどライダーが下側に配置され前方が広く見えます）</string>
-    <string name="tuning_map_follow_me_speed_smoothing_title">速度ズームのスムージング</string>
-    <string name="tuning_map_follow_me_speed_smoothing_desc">追従モードズームにおける速度変化の減衰係数（小さい値 = より滑らか、大きい値 = より素早い応答）</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_title">方位・回転のスムージング</string>
-    <string name="tuning_map_follow_me_bearing_smoothing_desc">追従モードにおけるカメラ回転の減衰係数（小さい値 = より滑らか、大きい値 = より素早い応答）</string>
 
     <!-- Sensor Discovery Prioritization & Highlight (ATT-3099 / REQ-UI-334) -->
     <string name="devices_newly_discovered_badge">新規</string>
@@ -1744,5 +1828,281 @@
     <!-- Advanced Navigation Settings: Turn Cue Distance (ATT-3321 / REQ-UI-287) -->
     <string name="tuning_nav_cue_distance_title">ナビゲーション案内の距離</string>
     <string name="tuning_nav_cue_distance_desc">右左折案内を表示する手前の距離</string>
-</resources>
+    <!-- First-Time Stop Tracking Coachmark (ATT-3387 / REQ-UI-367) -->
+    <string name="coachmark_stop_tracking_hint">右にスワイプするか左端のタブをタップすると、ワークアウトを一時停止または終了できます。</string>
+    <string name="coachmark_stop_tracking_show_tab">操作タブを表示</string>
+    <string name="coachmark_stop_tracking_dismiss">了解</string>
 
+    <!-- Crop Start and End Points of Recorded Workout (ATT-3274 / REQ-UI-368) -->
+    <string name="crop_workout_title">ワークアウトをトリミング</string>
+    <string name="crop_workout_action">トリミング</string>
+    <string name="crop_workout_confirm_title">ワークアウトを完全にトリミングしますか？</string>
+    <string name="crop_workout_confirm_message">このワークアウトを本当にトリミングしますか？選択範囲外のデータは完全に削除されます。この操作は元に戻せません。</string>
+    <string name="crop_workout_confirm_action">完全にトリミング</string>
+    <string name="crop_workout_progress">ワークアウトをトリミング中…</string>
+    <string name="crop_workout_success">ワークアウトが正常にトリミングされました</string>
+    <string name="crop_insufficient_storage">ワークアウトをトリミングするための空き容量が不足しています（少なくとも%d MB必要です）。</string>
+    <string name="crop_export_failed_retry">エクスポートファイルの再作成に失敗しました。再試行してください。</string>
+    <string name="crop_force_reexport">再エクスポートを強制</string>
+    <!-- Grade Legend (ATT-3391 / REQ-UI-371) -->
+    <string name="grade_legend_under_2">&lt; 2%</string>
+    <string name="grade_legend_2_to_5">2 – 5%</string>
+    <string name="grade_legend_5_to_10">5 – 10%</string>
+    <string name="grade_legend_10_to_15">10 – 15%</string>
+    <string name="grade_legend_15_to_20">15 – 20%</string>
+    <string name="grade_legend_20_to_25">20 – 25%</string>
+    <string name="grade_legend_over_25">&gt; 25%</string>
+    <!-- Automated Zone Calculation (ATT-3188) -->
+    <string name="zone_calc_button">ゾーンを計算</string>
+    <string name="zone_calc_dialog_title_power">サイクリングパワーゾーンを計算</string>
+    <string name="zone_calc_dialog_title_hr">心拍ゾーンを計算</string>
+    <string name="zone_calc_ftp_label">機能的作業閾値パワー (FTP)</string>
+    <string name="zone_calc_hr_max_label">最大心拍数 (HRmax)</string>
+    <string name="zone_calc_hr_rest_label">安静時心拍数 (HRrest)</string>
+    <string name="zone_calc_method_label">計算方法</string>
+    <string name="zone_calc_method_max_hr">% HRmax</string>
+    <string name="zone_calc_method_karvonen">カルボーネン (HRR)</string>
+    <string name="zone_calc_preview_title">計算されたゾーンのプレビュー</string>
+    <string name="zone_calc_apply_button">適用</string>
+    <string name="zone_calc_cancel_button">キャンセル</string>
+    <string name="zone_calc_status_calculated">計算済み</string>
+    <string name="zone_calc_status_customized">カスタム</string>
+    <string name="zone_calc_calibration_recommended">キャリブレーション推奨</string>
+    <string name="zone_calc_last_updated">最終更新: %s</string>
+    <string name="zone_calc_overwrite_warning_title">カスタムゾーンを上書きしますか？</string>
+    <string name="zone_calc_overwrite_warning_message">警告: これにより手動で設定されたすべてのゾーンが FTP %d W の標準ゾーンで上書きされます。続行しますか？</string>
+    <string name="zone_calc_error_ftp_range">FTPは %1$d W から %2$d W の間である必要があります</string>
+    <string name="zone_calc_error_hr_max_range">HRmaxは %1$d bpm から %2$d bpm の間である必要があります</string>
+    <string name="zone_calc_error_hr_rest_range">HRrestは %1$d bpm から %2$d bpm の間である必要があります</string>
+    <string name="zone_calc_error_hr_max_greater_rest">HRmaxはHRrestより大きくなければなりません</string>
+    <string name="zone_calc_error_karvonen_delta">HRmaxはHRrestより少なくとも20 bpm高くなければなりません</string>
+    <string name="zone_calc_error_monotonicity">値は %1$d から %2$d の間である必要があります</string>
+    <string name="zone_onboarding_hr_banner">新しい心拍数センサーがペアリングされました。パーソナライズされたトレーニングフィードバックのために心拍ゾーンを設定してください。</string>
+    <string name="zone_onboarding_pwr_banner">新しいパワーメーターがペアリングされました。パワーゾーンを設定するか、FTPから計算してください。</string>
+    <string name="zone_onboarding_dismiss">了解</string>
+    <string name="zone_onboarding_prompt_hr_title">心拍数センサーがペアリングされました</string>
+    <string name="zone_onboarding_prompt_hr_message">今すぐ心拍ゾーンを設定しますか？</string>
+    <string name="zone_onboarding_prompt_pwr_title">パワーメーターがペアリングされました</string>
+    <string name="zone_onboarding_prompt_pwr_message">今すぐサイクリングパワーゾーンを設定しますか？</string>
+    <string name="zone_onboarding_action_configure">ゾーンを設定</string>
+    <string name="zone_onboarding_action_later">後で</string>
+
+    <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="tuning_auto_pause_title">オートポーズ</string>
+    <string name="tuning_auto_pause_desc">停止時に記録を自動的に一時停止します</string>
+    <string name="tuning_auto_pause_bike_title">サイクリング</string>
+    <string name="tuning_auto_pause_run_title">ランニング</string>
+    <string name="tuning_auto_pause_other_title">その他のスポーツ</string>
+    <string name="tuning_auto_pause_speed_threshold_title">一時停止速度しきい値</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">記録が一時停止される速度のしきい値</string>
+    <string name="tuning_auto_pause_debounce_title">一時停止遅延時間</string>
+    <string name="tuning_auto_pause_debounce_desc">一時停止するまでのしきい値以下の継続時間</string>
+    <string name="tuning_speed_value_format">%1$d %2$s</string>
+    <string name="tuning_seconds_value_format">%1$d s</string>
+    <string name="cockpit_auto_pause_badge">オートポーズ</string>
+    <string name="cockpit_auto_pause_resume">今すぐ再開</string>
+    <string name="cockpit_speed_sensor_lost">スピードセンサー喪失</string>
+
+    <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
+    <string name="athlete_weight_title">アスリートの体重</string>
+    <string name="athlete_weight_label">体重</string>
+    <string name="athlete_weight_dialog_title">アスリートの体重を設定</string>
+    <string name="athlete_weight_save">保存</string>
+    <string name="athlete_weight_unconfigured">未設定</string>
+    <string name="athlete_weight_invalid">有効な体重を入力してください</string>
+    <string name="athlete_weight_card_description">リアルタイムのパワーウェイトレシオ（W/kg）の計算に必要です。</string>
+    <string name="athlete_weight_clear">クリア</string>
+    <string name="athlete_weight_edit">編集</string>
+
+    <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, ATT-3851, REQ-UI-391, REQ-UI-397) -->
+    <string name="drawer_athlete_profile">プロフィールとゾーン</string>
+    <string name="athlete_profile_title">プロフィールとゾーン</string>
+    <string name="athlete_profile_tab_profile">プロフィール</string>
+    <string name="athlete_profile_add_entry">測定値を追加</string>
+    <string name="athlete_profile_edit_entry">測定値を編集</string>
+    <string name="athlete_profile_metric_weight">体重</string>
+    <string name="athlete_profile_metric_hr_rest">安静時心拍</string>
+    <string name="athlete_profile_metric_ftp">FTP</string>
+    <string name="athlete_profile_metric_w_per_kg">W/kg</string>
+    <string name="athlete_profile_chart_title">推移</string>
+    <string name="athlete_profile_range_1m">1ヶ月</string>
+    <string name="athlete_profile_range_3m">3ヶ月</string>
+    <string name="athlete_profile_range_6m">6ヶ月</string>
+    <string name="athlete_profile_range_1y">1年</string>
+    <string name="athlete_profile_range_all">すべて</string>
+    <string name="athlete_profile_history_title">測定履歴</string>
+    <string name="athlete_profile_filter_all">すべて</string>
+    <string name="athlete_profile_empty_chart">選択した期間に測定値がありません。</string>
+    <string name="athlete_profile_empty_history">測定値がまだ記録されていません。+ をタップして体重、安静時心拍数、またはFTPを追加してください。</string>
+    <string name="athlete_profile_date_label">日付</string>
+    <string name="athlete_profile_value_label">値 (%1$s)</string>
+    <string name="athlete_profile_delete_title">測定値を削除しますか？</string>
+    <string name="athlete_profile_delete_message">%3$s の %1$s (%2$s) を削除しますか？</string>
+
+    <!-- ATT-3779: Elevation Profile Empty State on Tracking Tabs (REQ-UI-394) -->
+    <string name="elevation_profile_empty_state">標高プロファイル — ルートまたは記録の待機中</string>
+
+    <!-- ATT-3852: Categorized & Searchable SensorType Selector (REQ-UI-395) -->
+    <string name="sensor_category_time_and_laps">時間とラップ</string>
+    <string name="sensor_category_speed_pace_and_distance">速度・ペース・距離</string>
+    <string name="sensor_category_cadence_and_running">ケイデンスとランニング</string>
+    <string name="sensor_category_heart_rate_and_energy">心拍数とエネルギー</string>
+    <string name="sensor_category_power_and_pedaling">パワーとペダリング</string>
+    <string name="sensor_category_elevation_and_navigation">標高とナビゲーション</string>
+    <string name="sensor_category_system_environment_and_diagnostics">システム・環境・診断</string>
+    <string name="sensor_type_search_hint">項目または単位を検索…</string>
+    <string name="sensor_type_no_matches">一致する項目がありません</string>
+
+    <!-- ATT-3862: Critical Power (CP), W', and W'bal (REQ-UI-399) -->
+    <string name="w_prime_bal">W\'バランス (無酸素バッテリー)</string>
+    <string name="w_prime_bal_short">W\'bal</string>
+    <string name="athlete_profile_metric_cp">CP</string>
+    <string name="athlete_profile_metric_w_prime">W\'</string>
+    <string name="athlete_profile_cp_estimator_title">2点法 CP &amp; W\' 推定</string>
+    <string name="athlete_profile_cp_estimator_short_power">短時間パワー (W)</string>
+    <string name="athlete_profile_cp_estimator_short_sec">短時間 (秒)</string>
+    <string name="athlete_profile_cp_estimator_long_power">長時間パワー (W)</string>
+    <string name="athlete_profile_cp_estimator_long_sec">長時間 (秒)</string>
+    <string name="athlete_profile_cp_estimator_apply">推定値を適用 (%1$d W / %2$.1f kJ)</string>
+    <string name="workout_w_prime_bal_min_format">最小 W\'bal: %1$.1f kJ (%2$.0f%%)</string>
+    <string name="workout_w_prime_empty_tank">タンク空 (&lt;10%)</string>
+    <string name="w_prime_battery_pct">%1$d%%</string>
+    <string name="w_prime_warning_low_battery">W\'バッテリー残量低下 (&lt;20%)</string>
+
+    <!-- ATT-3861: Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) (REQ-UI-400) -->
+    <string name="efficiency_factor_short">EF</string>
+    <string name="aerobic_decoupling_short">Pw:Hr</string>
+    <string name="workout_ef_pwhr_format">EF: %1$.2f W/bpm • Pw:Hr: %2$.1f%%</string>
+    <string name="workout_ef_pahr_format">EF: %1$.2f m/min/bpm • Pa:Hr: %2$.1f%%</string>
+    <string name="workout_ef_only_pw_format">EF: %1$.2f W/bpm</string>
+    <string name="workout_ef_only_pa_format">EF: %1$.2f m/min/bpm</string>
+    <string name="workout_decoupling_coupled">安定 (&lt;5%)</string>
+    <string name="workout_decoupling_drift">高ドリフト (≥5%)</string>
+
+    <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
+    <string name="athlete_profile_pmc_title">パフォーマンス管理 (CTL / ATL / TSB)</string>
+    <string name="athlete_profile_pmc_ctl_label">フィットネス (CTL)</string>
+    <string name="athlete_profile_pmc_atl_label">疲労 (ATL)</string>
+    <string name="athlete_profile_pmc_tsb_label">フォーム (TSB)</string>
+    <string name="athlete_profile_pmc_acwr_label">負荷比 (ACWR)</string>
+    <string name="athlete_profile_pmc_ramp_label">7日ランプ率</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/週</string>
+    <string name="athlete_profile_pmc_ramp_warning">急上昇</string>
+    <string name="athlete_profile_pmc_zone_fresh">レース準備完了</string>
+    <string name="athlete_profile_pmc_zone_neutral">ニュートラル</string>
+    <string name="athlete_profile_pmc_zone_optimal">最適負荷</string>
+    <string name="athlete_profile_pmc_zone_fatigue">高疲労</string>
+    <string name="athlete_profile_pmc_acwr_under">テーパリング</string>
+    <string name="athlete_profile_pmc_acwr_sweet_spot">スイートスポット</string>
+    <string name="athlete_profile_pmc_acwr_caution">高負荷</string>
+    <string name="athlete_profile_pmc_acwr_danger">危険ゾーン</string>
+    <string name="athlete_profile_pmc_empty">トレーニング負荷データがまだありません。</string>
+
+    <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->
+    <string name="workout_power_metrics_np_format">NP: %1$.0f W</string>
+    <string name="workout_power_metrics_if_format">IF: %1$.2f</string>
+    <string name="workout_power_metrics_tss_format">TSS: %1$.0f</string>
+    <string name="workout_power_metrics_work_format">仕事量: %1$.0f kJ</string>
+    <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
+    <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
+
+    <!-- Physiology & Training Models (ATT-3929 / REQ-UI-403) -->
+    <string name="tuning_cat_physiology_models">生理学・トレーニングモデル</string>
+    <string name="tuning_physiology_none_enabled">基本指標のみ</string>
+    <string name="tuning_physiology_coggan_short">Coggan</string>
+    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
+    <string name="tuning_physiology_cp_short">CP / W\'bal</string>
+    <string name="tuning_physiology_coggan_title">Cogganパワー指標 (NP, IF, TSS)</string>
+    <string name="tuning_physiology_coggan_desc">Normalized Power、Intensity Factor、TSS、Variability Indexをワークアウトとコックピットに表示します</string>
+    <string name="tuning_physiology_pmc_title">パフォーマンス管理 (PMC)</string>
+    <string name="tuning_physiology_pmc_desc">プロフィールとゾーン画面にフィットネス (CTL)、疲労 (ATL)、フォーム (TSB) チャートを表示します</string>
+    <string name="tuning_physiology_ef_title">有酸素効率とデカップリング</string>
+    <string name="tuning_physiology_ef_desc">効率係数 (EF) と有酸素デカップリング (Pw:Hr / Pa:Hr) をワークアウト概要と詳細に表示します</string>
+    <string name="tuning_physiology_cp_title">クリティカルパワー＆無酸素バッテリー (CP, W\', W\'bal)</string>
+    <string name="tuning_physiology_cp_desc">クリティカルパワー、W\'、W\'balバッテリーをプロフィール、コックピット、ワークアウト分析に表示します</string>
+    <string name="tuning_physiology_show_in_workout_summary">ワークアウト概要に表示</string>
+    <!-- WorkoutDetails Section 5.10 Grouped Metric Rows (ATT-3930 / REQ-UI-404) -->
+    <string name="workout_domain_efficiency">効率</string>
+    <string name="workout_ef_short">EF</string>
+    <string name="workout_pwhr_short">Pw:Hr</string>
+    <string name="workout_pahr_short">Pa:Hr</string>
+    <string name="workout_ef_value_pw_format">%1$.2f W/bpm</string>
+    <string name="workout_ef_value_pa_format">%1$.2f m/min/bpm</string>
+    <string name="workout_decoupling_pct_format">%1$.1f%%</string>
+    <string name="workout_w_prime_min_kj_label">最小 W\'bal</string>
+    <string name="workout_w_prime_min_pct_label">最小 %</string>
+    <string name="workout_w_prime_min_kj_value_format">%1$.1f kJ</string>
+    <string name="workout_w_prime_min_pct_value_format">%1$.0f%%</string>
+    <string name="workout_power_label_work">仕事量</string>
+    <string name="workout_power_value_watts_format">%1$.0f W</string>
+    <string name="workout_power_value_if_format">%1$.2f</string>
+    <string name="workout_power_value_tss_format">%1$.0f</string>
+    <string name="workout_power_value_work_format">%1$.0f kJ</string>
+    <string name="workout_detail_tab_overview">概要</string>
+    <string name="workout_detail_tab_map_graphs">地図とグラフ</string>
+    <string name="workout_detail_tab_zones">ゾーン</string>
+    <string name="workout_detail_tab_laps_segments">ラップ＆セグメント</string>
+    <string name="workout_detail_tab_custom_default">カスタムタブ</string>
+    <string name="workout_detail_section_details">ワークアウト指標と概要</string>
+    <string name="workout_detail_tabs_config_title">詳細タブの設定</string>
+    <string name="workout_detail_tabs_config_subtitle">ワークアウト詳細画面のタブとセクションをカスタマイズ</string>
+    <string name="workout_detail_tabs_add_tab">タブを追加</string>
+    <string name="workout_detail_tabs_rename_tab">タブ名</string>
+    <string name="workout_detail_tabs_delete_tab">タブを削除</string>
+    <string name="workout_detail_tabs_reset_defaults">デフォルトのタブに戻す</string>
+    <string name="workout_detail_tabs_sections_header">割り当てられたセクション</string>
+    <string name="workout_detail_tabs_map_pinned_hint">地図が有効な場合、常にタブの上部に固定されます</string>
+    <!-- Cockpit Section Dividers (REQ-UI-411 / ATT-4055) -->
+    <string name="cockpit_section_divider_add">セクション区切り線を追加</string>
+    <string name="cockpit_section_divider_edit">セクション区切り線を編集</string>
+    <string name="cockpit_section_divider_dialog_title">セクション区切り線</string>
+    <string name="cockpit_section_divider_title_label">ミニタイトル（省略可能）</string>
+    <string name="cockpit_section_divider_chip_power">パワー</string>
+    <string name="cockpit_section_divider_chip_heart_rate">心拍数</string>
+    <string name="cockpit_section_divider_chip_lap">ラップ</string>
+    <string name="cockpit_section_divider_chip_pacing">ペーシング</string>
+    <string name="cockpit_section_divider_chip_navigation">ナビゲーション</string>
+    <string name="cockpit_section_divider_chip_total">合計</string>
+    <string name="cockpit_section_divider_delete">区切り線を削除</string>
+
+    <!-- Sensor Onboarding & Empty State (REQ-SEN-020 / ATT-4051) -->
+    <string name="onboarding_pair_sensor_action">センサーをペアリング</string>
+    <string name="devices_empty_state_search_hint">近くのBluetooth LEまたはANT+センサーをスキャン</string>
+    <string name="devices_action_search_sensors">センサーを検索</string>
+    <string name="error_workout_table_name_too_long">ワークアウトテーブル名がSQLite識別子の制限（64文字）を超えています</string>
+
+    <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
+    <string name="workout_card_reorder_toggle">カードの順序と表示（%1$d件有効）</string>
+    <string name="settings_workout_details_title">ワークアウト詳細（全画面）</string>
+
+    <!-- UI Localization Parity, Units & Accessibility (REQ-UI-429 / ATT-4026) -->
+    <string name="crop_start_trim">開始: +%1$s</string>
+    <string name="crop_end_trim">終了: -%1$s</string>
+    <string name="crop_distance_label">距離:</string>
+    <string name="crop_duration_label">時間:</string>
+    <string name="crop_avg_speed_label">Ø 速度:</string>
+    <string name="import_map_data_title">インポート用のデータをマッピング</string>
+    <string name="none">なし</string>
+    <string name="unknown">不明</string>
+    <string name="destination_not_yet_implemented">新しいコンテンツ宛先の設定はまだ実装されていません</string>
+    <string name="unit_watt">W</string>
+    <string name="lap_placeholder_format">ラップ %1$d</string>
+    <string name="period_no_gps_data">この期間のGPSデータはありません</string>
+    <string name="marker_summit">山頂</string>
+    <string name="marker_lap_start">ラップ開始</string>
+    <string name="marker_lap_end">ラップ終了</string>
+    <string name="cd_fastest_split">最速スプリット</string>
+    <string name="cd_switch_view_mode">表示モードの切り替え</string>
+    <string name="connect_with_strava">Stravaに接続</string>
+    <string name="cd_add_row">行を追加</string>
+    <string name="cd_add_column">列を追加</string>
+    <string name="cd_add_before">前に追加</string>
+    <string name="cd_delete_tab">タブを削除</string>
+    <string name="cd_add_after">後に追加</string>
+    <string name="back">戻る</string>
+    <string name="close">閉じる</string>
+    <string name="clear">クリア</string>
+    <string name="select_route">ルートを選択</string>
+    <string name="equipment">装備</string>
+</resources>

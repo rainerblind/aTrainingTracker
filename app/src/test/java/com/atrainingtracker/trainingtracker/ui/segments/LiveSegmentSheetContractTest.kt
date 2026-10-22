@@ -39,7 +39,7 @@ class LiveSegmentSheetContractTest {
 
     @Test
     fun testLiveSegmentSheet_forwardsWrapContentHeightAndSuppressesMap() {
-        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LIveSegmentSheet.kt")
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LiveSegmentSheet.kt")
         val content = file.readText()
 
         // 1. Accepts optional modifier parameter
@@ -100,18 +100,23 @@ class LiveSegmentSheetContractTest {
         val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
         val content = file.readText()
 
-        // In sheetContent, the LiveSegment container Box must explicitly wrap content height
+        // In sheetContent, LiveSegment is mounted via LiveTrackingSheetContainer which wraps content height (REQ-UI-270, REQ-UI-366)
         assertTrue(
-            "SensorGridScreen sheetContent must include .wrapContentHeight() for LiveSegment container",
-            content.contains(".fillMaxWidth()") &&
-            content.contains(".wrapContentHeight()") &&
-            content.contains("LiveSegmentSheet(")
+            "SensorGridScreen sheetContent must mount LiveSegmentSheet inside LiveTrackingSheetContainer (REQ-UI-270, REQ-UI-366)",
+            content.contains("LiveTrackingSheetContainer") && content.contains("LiveSegmentSheet(")
+        )
+
+        val containerFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/components/core/LiveTrackingSheetContainer.kt")
+        val containerContent = containerFile.readText()
+        assertTrue(
+            "LiveTrackingSheetContainer must apply .wrapContentHeight() and .fillMaxWidth() (REQ-UI-270, REQ-UI-366)",
+            containerContent.contains(".wrapContentHeight()") && containerContent.contains(".fillMaxWidth()")
         )
     }
 
     @Test
     fun testLiveSegmentSheet_evaluatesAndForwardsExternalScrubDistance() {
-        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LIveSegmentSheet.kt")
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LiveSegmentSheet.kt")
         val content = file.readText()
 
         // 1. Evaluates externalScrubDistance based on segmentStatus
@@ -150,6 +155,21 @@ class LiveSegmentSheetContractTest {
         assertTrue(
             "MapDetailLayout must synchronize selectedDistance = externalScrubDistance (REQ-UI-331)",
             content.contains("LaunchedEffect(externalScrubDistance) {\n        selectedDistance = externalScrubDistance\n    }")
+        )
+    }
+
+    @Test
+    fun testLiveSegmentSheet_delegatesToLiveTrackingEntitySheet() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/segments/LiveSegmentSheet.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "LiveSegmentSheet must delegate header slot to LiveTrackingEntitySheet (REQ-UI-383, ATT-3576)",
+            content.contains("LiveTrackingEntitySheet(")
+        )
+        assertFalse(
+            "LiveSegmentSheet must not contain direct HorizontalDivider call (REQ-UI-383, ATT-3576)",
+            content.contains("HorizontalDivider(")
         )
     }
 }

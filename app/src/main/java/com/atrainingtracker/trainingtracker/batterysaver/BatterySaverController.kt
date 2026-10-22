@@ -22,12 +22,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class BatterySaverController(
     private val activity: Activity? = null,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob()),
+    internal val scope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob()),
     val stateMachine: BatterySaverStateMachine = BatterySaverStateMachine(),
     private val systemBrightnessProvider: (() -> Float)? = null,
     private val brightnessApplier: ((Float) -> Unit)? = null
@@ -236,6 +237,7 @@ class BatterySaverController(
         cancelWakeupTimer()
         hysteresisJob?.cancel()
         hysteresisJob = null
+        scope.cancel()
         if (brightnessApplier != null) {
             brightnessApplier.invoke(1.0f)
             return

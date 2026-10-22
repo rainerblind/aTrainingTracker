@@ -28,22 +28,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 
 /**
  * Compact card displaying a 5-zone Cycling Power vertical column histogram and time-in-zone breakdown,
  * with an interactive toggle to switch to a fine-grained telemetry frequency histogram (10 W bins).
+ *
+ * The bottom [SingleChoiceSegmentedButtonRow] spans `fillMaxWidth().height(28.dp)` with `icon = {}`,
+ * `PaddingValues(horizontal = 6.dp, vertical = 0.dp)`, and single-line `labelSmall` text
+ * (`maxLines = 1`, `softWrap = false`, `TextOverflow.Ellipsis`) so all 3 mode labels render on a
+ * single line across all 9 supported locales without mid-word wrapping (REQ-UI-386 / Rule 38).
+ *
+ * @param showModeSelector Whether to render the bottom 3-way [SingleChoiceSegmentedButtonRow] mode switcher.
+ *   Defaults to `true` (Workout Details); set to `false` in Workout Summary cards to keep the summary compact (REQ-UI-388).
  */
 @Composable
 fun PowerZoneDistributionCard(
     distribution: ZoneDistributionData,
     modifier: Modifier = Modifier,
     displayMode: ZoneCardDisplayMode? = null,
-    onDisplayModeChange: ((ZoneCardDisplayMode) -> Unit)? = null
+    onDisplayModeChange: ((ZoneCardDisplayMode) -> Unit)? = null,
+    showModeSelector: Boolean = true
 ) {
     var internalDisplayMode by rememberSaveable { mutableStateOf(ZoneCardDisplayMode.FIVE_ZONES) }
-    val effectiveDisplayMode = displayMode ?: internalDisplayMode
+    val effectiveDisplayMode = (displayMode ?: internalDisplayMode)
+        .resolveWithHistogramFallback(distribution.histogram != null)
     val setDisplayMode: (ZoneCardDisplayMode) -> Unit = { newMode ->
         if (onDisplayModeChange != null) {
             onDisplayModeChange(newMode)
@@ -91,9 +102,16 @@ fun PowerZoneDistributionCard(
                 )
             }
 
-            // Body: 5-Column Vertical Histogram or Fine-Grained Telemetry Frequency Histogram
+            // Body: Stacked Horizontal Bar, Vertical Column Chart, or Fine-Grained Telemetry Frequency Histogram
             when (effectiveDisplayMode) {
-                ZoneCardDisplayMode.FIVE_ZONES -> {
+                ZoneCardDisplayMode.STACKED_BAR -> {
+                    ZoneDistributionStackedBar(
+                        distribution = distribution,
+                        modifier = Modifier.fillMaxWidth(),
+                        showLegend = false
+                    )
+                }
+                ZoneCardDisplayMode.COLUMNS, ZoneCardDisplayMode.FIVE_ZONES -> {
                     ZoneDistributionColumnChart(
                         distribution = distribution,
                         modifier = Modifier.fillMaxWidth()
@@ -108,38 +126,70 @@ fun PowerZoneDistributionCard(
                 }
             }
 
-            // Bottom Mode Switcher: Centered below chart for ample breathing room (ATT-1959)
-            if (distribution.histogram != null) {
+            // Bottom Mode Switcher: Centered below chart for ample breathing room (ATT-1959 / ATT-3390 / ATT-3771 / ATT-3773)
+            val hasHistogram = distribution.histogram != null
+            val buttonCount = if (hasHistogram) 3 else 2
+
+            if (showModeSelector && distribution.entries.isNotEmpty()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
                     SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier.height(28.dp)
+                        modifier = Modifier.fillMaxWidth().height(28.dp)
                     ) {
+                        val isStackedBar = effectiveDisplayMode == ZoneCardDisplayMode.STACKED_BAR
                         SegmentedButton(
-                            selected = effectiveDisplayMode == ZoneCardDisplayMode.FIVE_ZONES,
-                            onClick = { setDisplayMode(ZoneCardDisplayMode.FIVE_ZONES) },
-                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            selected = isStackedBar,
+                            onClick = { setDisplayMode(ZoneCardDisplayMode.STACKED_BAR) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = buttonCount),
                             icon = {},
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
                         ) {
                             Text(
-                                text = stringResource(R.string.zone_mode_5_zones),
-                                style = MaterialTheme.typography.labelSmall
+                                text = stringResource(R.string.zone_mode_stacked_bar),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (isStackedBar) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
+                        val isColumns = effectiveDisplayMode == ZoneCardDisplayMode.COLUMNS || effectiveDisplayMode == ZoneCardDisplayMode.FIVE_ZONES
                         SegmentedButton(
-                            selected = effectiveDisplayMode == ZoneCardDisplayMode.HISTOGRAM,
-                            onClick = { setDisplayMode(ZoneCardDisplayMode.HISTOGRAM) },
-                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            selected = isColumns,
+                            onClick = { setDisplayMode(ZoneCardDisplayMode.COLUMNS) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = buttonCount),
                             icon = {},
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
                         ) {
                             Text(
-                                text = stringResource(R.string.zone_mode_histogram),
-                                style = MaterialTheme.typography.labelSmall
+                                text = stringResource(R.string.zone_mode_columns),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (isColumns) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
                             )
+                        }
+                        if (hasHistogram) {
+                            val isHistogram = effectiveDisplayMode == ZoneCardDisplayMode.HISTOGRAM
+                            SegmentedButton(
+                                selected = isHistogram,
+                                onClick = { setDisplayMode(ZoneCardDisplayMode.HISTOGRAM) },
+                                shape = SegmentedButtonDefaults.itemShape(index = 2, count = buttonCount),
+                                icon = {},
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.zone_mode_histogram),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (isHistogram) FontWeight.Bold else FontWeight.Medium,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 }

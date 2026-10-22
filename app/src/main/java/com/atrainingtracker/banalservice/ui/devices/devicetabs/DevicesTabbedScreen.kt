@@ -58,6 +58,10 @@ import androidx.compose.foundation.rememberScrollState
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSportSensorMatrix
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModel
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusSheet
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
@@ -70,13 +74,20 @@ fun DevicesTabbedScreen(
     equipmentViewModel: EquipmentViewModel = viewModel(),
     initialTab: Int = 0,
     onCheckAntInstallation: () -> Unit = {},
+    onNavigateToZones: ((initialTab: Int, promptReason: String?) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    LaunchedEffect(listViewModel) {
+        listViewModel.zoneNavigationEvent.collect { event ->
+            onNavigateToZones?.invoke(event.initialTab, event.promptReason)
+        }
+    }
     val uiState by tabViewModel.uiState.observeAsState()
     val isSearchingForNewDevices by tabViewModel.isSearchingForNewDevices.collectAsState()
     val scanningProtocol by tabViewModel.scanningProtocol.collectAsState()
     val scanningDeviceType by tabViewModel.scanningDeviceType.collectAsState()
     val filterCriteria by tabViewModel.filterCriteria.collectAsState()
+    val zonePrompt by tabViewModel.zonePromptState.collectAsState()
     
     val protocol = tabViewModel.protocol
     var showDeleteConfirmFor by remember { mutableStateOf<DeviceUiData?>(null) }
@@ -85,12 +96,62 @@ fun DevicesTabbedScreen(
     var showProtocolSheet by remember { mutableStateOf(false) }
     var showFilterSheet by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var selectedPairingProtocol by remember { mutableStateOf<Protocol?>(null) }
+    var pendingPairingProtocol by remember { mutableStateOf<Protocol?>(null) }
     var showAntStatusSheet by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val checkHasBluetoothScan = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_SCAN
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    var hasBluetoothScanPermission by remember {
+        mutableStateOf(checkHasBluetoothScan())
+    }
+
+    val bluetoothScanLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        val granted = checkHasBluetoothScan()
+        hasBluetoothScanPermission = granted
+        if (granted) {
+            tabViewModel.startSearching()
+            pendingPairingProtocol?.let { protocolToPair ->
+                pendingPairingProtocol = null
+                selectedPairingProtocol = protocolToPair
+            }
+        }
+    }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                val granted = checkHasBluetoothScan()
+                hasBluetoothScanPermission = granted
+                if (granted) {
+                    tabViewModel.startSearching()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     val density = LocalDensity.current
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val chipsRowHeight = if (filterCriteria.isNotEmpty) 40.dp else 0.dp
-    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + chipsRowHeight).roundToPx() }
+    val showScanWarningBanner = !hasBluetoothScanPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val bannerHeight = if (showScanWarningBanner) 56.dp else 0.dp
+    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT + chipsRowHeight + bannerHeight).roundToPx() }
     
     val connection = remember(appBarMaxHeightPx) {
         CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
@@ -111,7 +172,6 @@ fun DevicesTabbedScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val haptic = LocalHapticFeedback.current
-    val context = LocalContext.current
 
     LaunchedEffect(tabViewModel) {
         tabViewModel.newDeviceDiscoveredEvent.collect { deviceName ->
@@ -167,7 +227,8 @@ fun DevicesTabbedScreen(
                                 appBarOffsetPx = connection.appBarOffset,
                                 headerHeightPx = appBarMaxHeightPx.toFloat(),
                                 onCheckAntInstallation = { showAntStatusSheet = true },
-                                filterCriteria = filterCriteria
+                                filterCriteria = filterCriteria,
+                                onScanForSensors = { showProtocolSheet = true }
                             )
                             1 -> DeviceListScreen(
                                 viewModel = listViewModel,
@@ -179,7 +240,8 @@ fun DevicesTabbedScreen(
                                 appBarOffsetPx = connection.appBarOffset,
                                 headerHeightPx = appBarMaxHeightPx.toFloat(),
                                 onCheckAntInstallation = { showAntStatusSheet = true },
-                                filterCriteria = filterCriteria
+                                filterCriteria = filterCriteria,
+                                onScanForSensors = { showProtocolSheet = true }
                             )
                             2 -> DeviceListScreen(
                                 viewModel = listViewModel,
@@ -191,7 +253,8 @@ fun DevicesTabbedScreen(
                                 appBarOffsetPx = connection.appBarOffset,
                                 headerHeightPx = appBarMaxHeightPx.toFloat(),
                                 onCheckAntInstallation = { showAntStatusSheet = true },
-                                filterCriteria = filterCriteria
+                                filterCriteria = filterCriteria,
+                                onScanForSensors = { showProtocolSheet = true }
                             )
                             3 -> EquipmentSportSensorMatrix(
                                 items = bikes,
@@ -363,6 +426,49 @@ fun DevicesTabbedScreen(
                                     )
                                 }
                             }
+
+                            // Bluetooth Scan Permission Warning Banner (ATT-3998 / REQ-PRI-006)
+                            if (showScanWarningBanner) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.errorContainer,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.bluetooth_permission_scan_required),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onErrorContainer,
+                                            modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                        )
+                                        Button(
+                                            onClick = {
+                                                bluetoothScanLauncher.launch(
+                                                    arrayOf(
+                                                        Manifest.permission.BLUETOOTH_SCAN,
+                                                        Manifest.permission.BLUETOOTH_CONNECT
+                                                    )
+                                                )
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.error,
+                                                contentColor = MaterialTheme.colorScheme.onError
+                                            ),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.grant_permission),
+                                                style = MaterialTheme.typography.labelMedium
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -392,10 +498,20 @@ fun DevicesTabbedScreen(
                     )
                 }
                 
-                // Keep searching active while displaying tabs
+                // Screen lifecycle cleanup: stop search and dismiss pairing sheets when leaving screen
                 DisposableEffect(Unit) {
-                    tabViewModel.startSearching()
-                    onDispose { tabViewModel.stopSearching() }
+                    onDispose {
+                        tabViewModel.stopSearching()
+                        showProtocolSheet = false
+                        selectedPairingProtocol = null
+                    }
+                }
+
+                // Reactively start searching whenever scan permission is granted
+                LaunchedEffect(hasBluetoothScanPermission) {
+                    if (hasBluetoothScanPermission) {
+                        tabViewModel.startSearching()
+                    }
                 }
 
                 // Pairing Protocol Bottom Sheet (ATT-2189)
@@ -403,7 +519,17 @@ fun DevicesTabbedScreen(
                     PairingProtocolBottomSheet(
                         onProtocolSelected = { selectedProtocol ->
                             showProtocolSheet = false
-                            selectedPairingProtocol = selectedProtocol
+                            if (selectedProtocol == Protocol.BLUETOOTH_LE && !hasBluetoothScanPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                pendingPairingProtocol = selectedProtocol
+                                bluetoothScanLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.BLUETOOTH_SCAN,
+                                        Manifest.permission.BLUETOOTH_CONNECT
+                                    )
+                                )
+                            } else {
+                                selectedPairingProtocol = selectedProtocol
+                            }
                         },
                         onAntServicesMissing = {
                             showProtocolSheet = false
@@ -484,6 +610,27 @@ fun DevicesTabbedScreen(
             onDismiss = { editingDeviceId = null }
         )
     }
+
+    // Zone Onboarding Prompt Dialog (REQ-UI-374.6)
+    zonePrompt?.let { prompt ->
+        val isHr = prompt.deviceType == DeviceType.HRM
+        val titleRes = if (isHr) R.string.zone_onboarding_prompt_hr_title else R.string.zone_onboarding_prompt_pwr_title
+        val messageRes = if (isHr) R.string.zone_onboarding_prompt_hr_message else R.string.zone_onboarding_prompt_pwr_message
+        val initialTab = if (isHr) 0 else 2
+        val promptReason = if (isHr) DeviceListViewModel.PROMPT_REASON_HR_PAIRED else DeviceListViewModel.PROMPT_REASON_PWR_PAIRED
+
+        ZoneOnboardingPromptDialog(
+            title = stringResource(titleRes),
+            message = stringResource(messageRes),
+            onConfigure = {
+                tabViewModel.dismissZonePrompt()
+                onNavigateToZones?.invoke(initialTab, promptReason)
+            },
+            onDismiss = {
+                tabViewModel.dismissZonePrompt()
+            }
+        )
+    }
 }
 
 @Composable
@@ -492,5 +639,53 @@ private fun getTabTitle(spec: DeviceFilterSpec): String {
         DeviceFilterType.CONNECTED -> stringResource(R.string.devices_tab_available)
         DeviceFilterType.PAIRED -> stringResource(R.string.devices_tab_paired)
         DeviceFilterType.ALL_KNOWN -> stringResource(R.string.devices_tab_known)
+    }
+}
+
+/**
+ * Dialog prompting athlete to configure physiological zones upon auto-pairing discovery (REQ-UI-374.6).
+ */
+@Composable
+fun ZoneOnboardingPromptDialog(
+    title: String,
+    message: String,
+    onConfigure: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+        title = { Text(title) },
+        text = { Text(message) },
+        confirmButton = {
+            Button(onClick = onConfigure) {
+                Text(stringResource(R.string.zone_onboarding_action_configure))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.zone_onboarding_action_later))
+            }
+        }
+    )
+}
+
+@androidx.compose.ui.tooling.preview.Preview(name = "Light Mode")
+@androidx.compose.ui.tooling.preview.Preview(
+    name = "Dark Mode",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+private fun ZoneOnboardingPromptDialogPreview() {
+    com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme {
+        ZoneOnboardingPromptDialog(
+            title = "Heart Rate Monitor paired",
+            message = "Would you like to configure your Heart Rate zones now?",
+            onConfigure = {},
+            onDismiss = {}
+        )
     }
 }

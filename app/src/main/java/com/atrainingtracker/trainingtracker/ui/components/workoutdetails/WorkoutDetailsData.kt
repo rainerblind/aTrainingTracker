@@ -36,5 +36,19 @@ data class WorkoutDetailsData(
     val descentMeters: Long,
     val bSportType: BSportType,  // necessary for distinguishing to show speed or pace
 
-    val maxDisplacement: Double?
+    val maxDisplacement: Double?,
+    val minWPrimeBalKj: Double? = null,
+    val minWPrimeBalPct: Double? = null,
+    val isEmptyTankWarning: Boolean = false,
+    val efficiencyFactor: Double? = null,
+    val aerobicDecouplingPct: Double? = null,
+    val isPowerBasedEfficiency: Boolean = true,
+    val isAerobicDecouplingHighDrift: Boolean = false,
+    val normalizedPowerWatts: Double? = null,
+    val intensityFactor: Double? = null,
+    val tss: Double? = null,
+    val workKj: Double? = null,
+    val avgPowerToWeight: Double? = null,
+    val maxPowerToWeight: Double? = null,
+    val variabilityIndex: Double? = null
 )

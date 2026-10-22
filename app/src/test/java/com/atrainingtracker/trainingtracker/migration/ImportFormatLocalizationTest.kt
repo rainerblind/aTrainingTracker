@@ -17,7 +17,7 @@ import java.io.File
 
 /**
  * Unit test verifying 9-language localization parity and non-empty content
- * for format-specific import blocks (FIT, TCX, GPX) and their action triads (REQ-UI-293, TST-UI-253, ATT-2623).
+ * for format-specific import blocks (FIT, TCX, GPX) and their action dyads (REQ-UI-293, REQ-UI-362, TST-UI-253, TST-UI-325, ATT-2623, ATT-3489).
  */
 class ImportFormatLocalizationTest {
 
@@ -37,17 +37,25 @@ class ImportFormatLocalizationTest {
         "import_fit_title",
         "import_fit_description",
         "import_fit_button",
+        "import_fit_folder_button",
         "import_fit_dropbox_button",
-        "import_fit_gdrive_button",
         "import_tcx_title",
         "import_tcx_description",
         "import_tcx_button",
+        "import_tcx_folder_button",
         "import_tcx_dropbox_button",
-        "import_tcx_gdrive_button",
         "import_gpx_title",
         "import_gpx_description",
         "import_gpx_button",
+        "import_gpx_folder_button",
         "import_gpx_dropbox_button",
+        "import_directory_scanning",
+        "import_directory_no_files_found"
+    )
+
+    private val removedKeys = listOf(
+        "import_fit_gdrive_button",
+        "import_tcx_gdrive_button",
         "import_gpx_gdrive_button"
     )
 
@@ -69,14 +77,26 @@ class ImportFormatLocalizationTest {
 
             for (locale in locales) {
                 val file = findFile("src/main/res/$locale/strings.xml")
-                assertTrue("strings.xml does not exist for $locale", file.exists())
-
                 val content = file.readText()
                 val match = regex.find(content)
-                assertTrue("Target string key '$targetKey' missing in $locale", match != null)
 
-                val text = match!!.groupValues[1].trim()
-                assertFalse("Target string key '$targetKey' is empty in $locale", text.isEmpty())
+                assertTrue("Locale '$locale' must define key '$targetKey'", match != null)
+                val value = match!!.groupValues[1].trim()
+                assertFalse("Locale '$locale' key '$targetKey' must not be empty", value.isEmpty())
+            }
+        }
+    }
+
+    @Test
+    fun testRemovedGoogleDriveScanStringsAreAbsentAcrossAllNineLocales() {
+        for (removedKey in removedKeys) {
+            for (locale in locales) {
+                val file = findFile("src/main/res/$locale/strings.xml")
+                val content = file.readText()
+                assertFalse(
+                    "Locale '$locale' must NOT define removed key '$removedKey'",
+                    content.contains("""name="$removedKey"""")
+                )
             }
         }
     }

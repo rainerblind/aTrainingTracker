@@ -30,6 +30,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.atrainingtracker.banalservice.BSportType;
+import com.atrainingtracker.util.CursorUtils;
+import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository;
 
 import java.util.ArrayList;
@@ -63,7 +65,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     static final String DB_NAME = "Equipment.db";
     static final int DB_VERSION = 2;
     private static final String TAG = "EquipmentDbHelper";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = com.atrainingtracker.BuildConfig.DEBUG;
     private static final String CREATE_EQUIPMENT_TABLE = "create table " + EQUIPMENT + " ("
             + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
             + NAME + " text,"
@@ -77,6 +79,37 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             + EQUIPMENT_ID + " int,"
             + ANT_DEVICE_ID + " int)";
     private final Context mContext;
+    private static volatile EquipmentDbHelper sInstance;
+
+    @NonNull
+    public static EquipmentDbHelper getInstance(@NonNull Context context) {
+        if (sInstance == null) {
+            synchronized (EquipmentDbHelper.class) {
+                if (sInstance == null) {
+                    sInstance = new EquipmentDbHelper(context.getApplicationContext());
+                }
+            }
+        }
+        return sInstance;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting() {
+        resetForTesting(null);
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public static void resetForTesting(EquipmentDbHelper newInstance) {
+        synchronized (EquipmentDbHelper.class) {
+            if (sInstance != null && sInstance != newInstance) {
+                try {
+                    sInstance.close();
+                } catch (Exception ignored) {
+                }
+            }
+            sInstance = newInstance;
+        }
+    }
 
     // Constructor
     public EquipmentDbHelper(Context context) {
@@ -89,7 +122,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public List<String> getLinkedEquipment(long workoutId) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipment, workoutId=" + workoutId);
 
-        return getLinkedEquipment(new ActiveDevicesDbHelper(mContext).getDatabaseIdsOfActiveDevices(workoutId));
+        return getLinkedEquipment(ActiveDevicesDbHelper.getInstance(mContext).getDatabaseIdsOfActiveDevices(workoutId));
     }
 
     @NonNull
@@ -141,50 +174,25 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         if (DEBUG)
             Log.d(TAG, "getEquipment, sportType=" + sportType.name() + "frameType=" + frameType);
 
-        List<String> equipmentList = new LinkedList<>();
-
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor;
+        String selection = null;
+        String[] selectionArgs = null;
         if (sportType == BSportType.UNKNOWN) {
-            cursor = db.query(EQUIPMENT,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null);
-        }
-        else if (frameType == 0) {
-            cursor = db.query(EQUIPMENT,
-                    null,
-                    SPORT_TYPE + "=?",
-                    new String[]{sportType.name()},
-                    null,
-                    null,
-                    null);
-        }
-        else {
-            cursor = db.query(EQUIPMENT,
-                    null,
-                    FRAME_TYPE + "=? AND " + SPORT_TYPE + "=?",
-                    new String[]{Long.toString(frameType), sportType.name()},
-                    null,
-                    null,
-                    null);
+            // query all
+        } else if (frameType == 0) {
+            selection = SPORT_TYPE + "=?";
+            selectionArgs = new String[]{sportType.name()};
+        } else {
+            selection = FRAME_TYPE + "=? AND " + SPORT_TYPE + "=?";
+            selectionArgs = new String[]{Long.toString(frameType), sportType.name()};
         }
 
-        if (cursor.moveToFirst()) {
-            do {
-                if (DEBUG)
-                    Log.d(TAG, "adding " + cursor.getString(cursor.getColumnIndex(NAME)) + " to equipment list");
-
-                equipmentList.add(cursor.getString(cursor.getColumnIndex(NAME)));
-            } while (cursor.moveToNext());
+        try (Cursor cursor = db.query(EQUIPMENT, null, selection, selectionArgs, null, null, null)) {
+            return CursorUtils.mapList(cursor, c -> {
+                int colIdx = c.getColumnIndex(NAME);
+                return colIdx != -1 ? c.getString(colIdx) : "";
+            });
         }
-
-        cursor.close();
-
-        return equipmentList;
     }
 
     /**
@@ -386,7 +394,6 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public List<EquipmentData> getEquipmentItems(@NonNull BSportType sportType, boolean activeOnly) {
         if (DEBUG) Log.d(TAG, "getEquipmentItems, sportType=" + sportType.name() + ", activeOnly=" + activeOnly);
 
-        List<EquipmentData> itemList = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
 
         String selection = SPORT_TYPE + "=?";
@@ -394,36 +401,33 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             selection += " AND (" + RETIRED + " IS NULL OR " + RETIRED + "=0)";
         }
 
-        Cursor cursor = db.query(EQUIPMENT,
+        try (Cursor cursor = db.query(EQUIPMENT,
                 new String[]{C_ID, NAME, SPORT_TYPE, FRAME_TYPE, STRAVA_NAME, STRAVA_ID, RETIRED},
                 selection,
                 new String[]{sportType.name()},
-                null, null, null);
+                null, null, null)) {
 
-        if (cursor.moveToFirst()) {
-            int idIdx = cursor.getColumnIndex(C_ID);
-            int nameIdx = cursor.getColumnIndex(NAME);
-            int sportIdx = cursor.getColumnIndex(SPORT_TYPE);
-            int frameIdx = cursor.getColumnIndex(FRAME_TYPE);
-            int stravaNameIdx = cursor.getColumnIndex(STRAVA_NAME);
-            int stravaIdIdx = cursor.getColumnIndex(STRAVA_ID);
-            int retiredIdx = cursor.getColumnIndex(RETIRED);
+            return CursorUtils.mapList(cursor, c -> {
+                int idIdx = c.getColumnIndex(C_ID);
+                int nameIdx = c.getColumnIndex(NAME);
+                int sportIdx = c.getColumnIndex(SPORT_TYPE);
+                int frameIdx = c.getColumnIndex(FRAME_TYPE);
+                int stravaNameIdx = c.getColumnIndex(STRAVA_NAME);
+                int stravaIdIdx = c.getColumnIndex(STRAVA_ID);
+                int retiredIdx = c.getColumnIndex(RETIRED);
 
-            do {
-                boolean isRetired = retiredIdx != -1 && cursor.getInt(retiredIdx) == 1;
-                itemList.add(new EquipmentData(
-                        cursor.getLong(idIdx),
-                        cursor.getString(nameIdx),
-                        BSportType.valueOf(cursor.getString(sportIdx)),
-                        cursor.getInt(frameIdx),
-                        cursor.getString(stravaNameIdx),
-                        cursor.getString(stravaIdIdx),
+                boolean isRetired = retiredIdx != -1 && c.getInt(retiredIdx) == 1;
+                return new EquipmentData(
+                        idIdx != -1 ? c.getLong(idIdx) : -1L,
+                        nameIdx != -1 ? c.getString(nameIdx) : "",
+                        EnumUtils.safeValueOf(BSportType.class, sportIdx != -1 ? c.getString(sportIdx) : null, BSportType.UNKNOWN, TAG),
+                        frameIdx != -1 ? c.getInt(frameIdx) : 0,
+                        stravaNameIdx != -1 ? c.getString(stravaNameIdx) : "",
+                        stravaIdIdx != -1 ? c.getString(stravaIdIdx) : "",
                         isRetired
-                ));
-            } while (cursor.moveToNext());
+                );
+            });
         }
-        cursor.close();
-        return itemList;
     }
 
     // Get list of all equipment
@@ -436,41 +440,37 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public List<EquipmentData> getEquipmentItems(boolean activeOnly) {
         if (DEBUG) Log.d(TAG, "getEquipmentItems, activeOnly=" + activeOnly);
 
-        List<EquipmentData> itemList = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
 
         String selection = activeOnly ? ("(" + RETIRED + " IS NULL OR " + RETIRED + "=0)") : null;
 
-        Cursor cursor = db.query(EQUIPMENT,
+        try (Cursor cursor = db.query(EQUIPMENT,
                 new String[]{C_ID, NAME, SPORT_TYPE, FRAME_TYPE, STRAVA_NAME, STRAVA_ID, RETIRED},
                 selection,
                 null,
-                null, null, null);
+                null, null, null)) {
 
-        if (cursor.moveToFirst()) {
-            int idIdx = cursor.getColumnIndex(C_ID);
-            int nameIdx = cursor.getColumnIndex(NAME);
-            int sportIdx = cursor.getColumnIndex(SPORT_TYPE);
-            int frameIdx = cursor.getColumnIndex(FRAME_TYPE);
-            int stravaNameIdx = cursor.getColumnIndex(STRAVA_NAME);
-            int stravaIdIdx = cursor.getColumnIndex(STRAVA_ID);
-            int retiredIdx = cursor.getColumnIndex(RETIRED);
+            return CursorUtils.mapList(cursor, c -> {
+                int idIdx = c.getColumnIndex(C_ID);
+                int nameIdx = c.getColumnIndex(NAME);
+                int sportIdx = c.getColumnIndex(SPORT_TYPE);
+                int frameIdx = c.getColumnIndex(FRAME_TYPE);
+                int stravaNameIdx = c.getColumnIndex(STRAVA_NAME);
+                int stravaIdIdx = c.getColumnIndex(STRAVA_ID);
+                int retiredIdx = c.getColumnIndex(RETIRED);
 
-            do {
-                boolean isRetired = retiredIdx != -1 && cursor.getInt(retiredIdx) == 1;
-                itemList.add(new EquipmentData(
-                        cursor.getLong(idIdx),
-                        cursor.getString(nameIdx),
-                        BSportType.valueOf(cursor.getString(sportIdx)),
-                        cursor.getInt(frameIdx),
-                        cursor.getString(stravaNameIdx),
-                        cursor.getString(stravaIdIdx),
+                boolean isRetired = retiredIdx != -1 && c.getInt(retiredIdx) == 1;
+                return new EquipmentData(
+                        idIdx != -1 ? c.getLong(idIdx) : -1L,
+                        nameIdx != -1 ? c.getString(nameIdx) : "",
+                        EnumUtils.safeValueOf(BSportType.class, sportIdx != -1 ? c.getString(sportIdx) : null, BSportType.UNKNOWN, TAG),
+                        frameIdx != -1 ? c.getInt(frameIdx) : 0,
+                        stravaNameIdx != -1 ? c.getString(stravaNameIdx) : "",
+                        stravaIdIdx != -1 ? c.getString(stravaIdIdx) : "",
                         isRetired
-                ));
-            } while (cursor.moveToNext());
+                );
+            });
         }
-        cursor.close();
-        return itemList;
     }
 
     /**
@@ -481,22 +481,16 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         if (equipmentId <= 0) {
             return Collections.emptyList();
         }
-        List<Long> deviceIds = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
 
-        Cursor cursor = db.query(LINKS,
+        try (Cursor cursor = db.query(LINKS,
                 new String[]{ANT_DEVICE_ID},
                 EQUIPMENT_ID + "=?",
                 new String[]{Long.toString(equipmentId)},
-                null, null, null);
+                null, null, null)) {
 
-        if (cursor.moveToFirst()) {
-            do {
-                deviceIds.add(cursor.getLong(0));
-            } while (cursor.moveToNext());
+            return CursorUtils.mapList(cursor, c -> c.getLong(0));
         }
-        cursor.close();
-        return deviceIds;
     }
 
     @Nullable
@@ -515,41 +509,43 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         if (DEBUG) Log.d(TAG, "getLinkedEquipmentFromDeviceId: " + deviceId);
 
         List<String> equipmentList = new LinkedList<>();
-
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor linkCursor = db.query(LINKS,
+
+        try (Cursor linkCursor = db.query(LINKS,
                 null,
                 ANT_DEVICE_ID + "=?",
                 new String[]{Long.toString(deviceId)},
                 null,
                 null,
-                null);
+                null)) {
 
-        if (linkCursor.moveToFirst()) {
-            if (DEBUG) Log.d(TAG, "got some linked equipment");
-            do {
-                int equipmentId = linkCursor.getInt(linkCursor.getColumnIndex(EQUIPMENT_ID));
+            if (linkCursor != null && linkCursor.moveToFirst()) {
+                if (DEBUG) Log.d(TAG, "got some linked equipment");
+                int equipmentIdCol = linkCursor.getColumnIndex(EQUIPMENT_ID);
+                do {
+                    int equipmentId = equipmentIdCol != -1 ? linkCursor.getInt(equipmentIdCol) : -1;
 
-                Cursor equipmentCursor = db.query(EQUIPMENT,
-                        null,
-                        C_ID + "=?",
-                        new String[]{Long.toString(equipmentId)},
-                        null,
-                        null,
-                        null);
-                if (equipmentCursor.moveToFirst()) {
-                    if (DEBUG)
-                        Log.d(TAG, "adding " + equipmentCursor.getString(equipmentCursor.getColumnIndex(NAME)));
-                    equipmentList.add(equipmentCursor.getString(equipmentCursor.getColumnIndex(NAME)));
-                } else {
-                    Log.e(TAG, "ERROR: more than one name to one equipment id!");
-                }
-                equipmentCursor.close();
-
-            } while (linkCursor.moveToNext());
+                    try (Cursor equipmentCursor = db.query(EQUIPMENT,
+                            null,
+                            C_ID + "=?",
+                            new String[]{Long.toString(equipmentId)},
+                            null,
+                            null,
+                            null)) {
+                        String name = CursorUtils.mapFirst(equipmentCursor, c -> {
+                            int nameCol = c.getColumnIndex(NAME);
+                            return nameCol != -1 ? c.getString(nameCol) : null;
+                        });
+                        if (name != null) {
+                            if (DEBUG) Log.d(TAG, "adding " + name);
+                            equipmentList.add(name);
+                        } else {
+                            Log.e(TAG, "ERROR: more than one name to one equipment id!");
+                        }
+                    }
+                } while (linkCursor.moveToNext());
+            }
         }
-
-        linkCursor.close();
 
         return equipmentList;
     }
@@ -557,27 +553,20 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public List<Long> getLinkedEquipmentIdsFromDeviceId(long deviceId) {
         if (DEBUG) Log.d(TAG, "getLinkedEquipmentIdsFromDeviceId: " + deviceId);
 
-        List<Long> equipmentList = new LinkedList<>();
-
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor linkCursor = db.query(LINKS,
+        try (Cursor linkCursor = db.query(LINKS,
                 null,
                 ANT_DEVICE_ID + "=?",
                 new String[]{Long.toString(deviceId)},
                 null,
                 null,
-                null);
+                null)) {
 
-        if (linkCursor.moveToFirst()) {
-            if (DEBUG) Log.d(TAG, "got some linked equipment");
-            do {
-                equipmentList.add(linkCursor.getLong(linkCursor.getColumnIndex(EQUIPMENT_ID)));
-
-            } while (linkCursor.moveToNext());
+            return CursorUtils.mapList(linkCursor, c -> {
+                int colIdx = c.getColumnIndex(EQUIPMENT_ID);
+                return colIdx != -1 ? c.getLong(colIdx) : -1L;
+            });
         }
-        linkCursor.close();
-
-        return equipmentList;
     }
 
 
@@ -609,17 +598,18 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     private long getEquipmentId(@NonNull SQLiteDatabase db, @NonNull String equipmentName) {
         equipmentName.isEmpty();  // throw an exception when equipmentName is null
 
-        long equipmentId = -1;
-
-        Cursor cursor = db.query(EQUIPMENT, null, NAME + "=?", new String[]{equipmentName}, null, null, null);
-        if (cursor.moveToFirst()) {
-            equipmentId = cursor.getInt(cursor.getColumnIndex(C_ID));
-        } else {
-            Log.e(TAG, "ERROR: in getEquipmentId: no id to name: " + equipmentName);
+        try (Cursor cursor = db.query(EQUIPMENT, null, NAME + "=?", new String[]{equipmentName}, null, null, null)) {
+            Long equipmentId = CursorUtils.mapFirst(cursor, c -> {
+                int colIdx = c.getColumnIndex(C_ID);
+                return colIdx != -1 ? c.getLong(colIdx) : -1L;
+            });
+            if (equipmentId != null && equipmentId != -1L) {
+                return equipmentId;
+            } else {
+                Log.e(TAG, "ERROR: in getEquipmentId: no id to name: " + equipmentName);
+                return -1L;
+            }
         }
-        cursor.close();
-
-        return equipmentId;
     }
 
     public long getEquipmentId(@NonNull String equipmentName) {
@@ -632,20 +622,18 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         if (equipmentId <= 0) {
             return null;
         }
-        String equipmentName = null;
 
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.query(EQUIPMENT, null, C_ID + "=?", new String[]{Long.toString(equipmentId)}, null, null, null);
-
-        if (cursor.moveToFirst()) {
-            equipmentName = cursor.getString(cursor.getColumnIndex(NAME));
-        } else {
-            Log.e(TAG, "ERROR: in getEquipmentFromId: no name for id: " + equipmentId);
+        try (Cursor cursor = db.query(EQUIPMENT, null, C_ID + "=?", new String[]{Long.toString(equipmentId)}, null, null, null)) {
+            String equipmentName = CursorUtils.mapFirst(cursor, c -> {
+                int colIdx = c.getColumnIndex(NAME);
+                return colIdx != -1 ? c.getString(colIdx) : null;
+            });
+            if (equipmentName == null) {
+                Log.e(TAG, "ERROR: in getEquipmentFromId: no name for id: " + equipmentId);
+            }
+            return equipmentName;
         }
-
-        cursor.close();
-
-        return equipmentName;
     }
 
     @Nullable
@@ -658,20 +646,18 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         if (equipmentId <= 0) {
             return null;
         }
-        String stravaId = null;
 
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.query(EQUIPMENT, null, C_ID + "=?", new String[]{Long.toString(equipmentId)}, null, null, null);
-
-        if (cursor.moveToFirst()) {
-            stravaId = cursor.getString(cursor.getColumnIndex(STRAVA_ID));
-        } else {
-            Log.e(TAG, "ERROR: in getStravaIdFromId: no stravaId for id: " + equipmentId);
+        try (Cursor cursor = db.query(EQUIPMENT, null, C_ID + "=?", new String[]{Long.toString(equipmentId)}, null, null, null)) {
+            String stravaId = CursorUtils.mapFirst(cursor, c -> {
+                int colIdx = c.getColumnIndex(STRAVA_ID);
+                return colIdx != -1 ? c.getString(colIdx) : null;
+            });
+            if (stravaId == null) {
+                Log.e(TAG, "ERROR: in getStravaIdFromId: no stravaId for id: " + equipmentId);
+            }
+            return stravaId;
         }
-
-        cursor.close();
-
-        return stravaId;
     }
 
     public long getIdFromStravaId(@Nullable String stravaId) {

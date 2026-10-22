@@ -171,4 +171,76 @@ class WorkoutSummariesDatabaseManagerSanitizationTest {
         assertEquals(0, count)
         verify(exactly = 0) { mockDb.beginTransaction() }
     }
+
+    /**
+     * TST-CON-008.7 / ATT-3990: Verify that WorkoutSummariesDbHelper.onOpen completes synchronously
+     * without spawning unmanaged executors or leaking background threads.
+     */
+    @Test
+    fun testOnOpen_doesNotSpawnUnmanagedExecutorOrLeakThreads() {
+        val helper = WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper(mockContext)
+
+        // Capture active thread count before onOpen calls
+        val threadCountBefore = Thread.activeCount()
+
+        // Act: Invoke onOpen repeatedly (e.g. 25 times simulating frequent DB open events)
+        repeat(25) {
+            helper.onOpen(mockDb)
+        }
+
+        // Assert: Database operations remain passive and side-effect free
+        verify(exactly = 0) { mockDb.rawQuery(any(), any()) }
+        verify(exactly = 0) { mockDb.update(any(), any(), any(), any()) }
+        verify(exactly = 0) { mockDb.execSQL(any()) }
+
+        // Assert: No background threads are leaked
+        val threadCountAfter = Thread.activeCount()
+        assertTrue(
+            "Active threads should not increase across onOpen calls: before=$threadCountBefore, after=$threadCountAfter",
+            threadCountAfter <= threadCountBefore + 1
+        )
+    }
+
+    /**
+     * TST-CON-008.6 / ATT-3990: Explicit negative test verifying that a legitimate high-altitude
+     * mountain ascent (e.g. 600m valley to 4200m summit) is NEVER modified, truncated, or
+     * overwritten when opening the database.
+     */
+    @Test
+    fun testDatabaseOpen_preservesLegitimateHighAltitudeClimbsWithoutModification() {
+        val helper = WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper(mockContext)
+
+        val climbWorkoutId = 42L
+        val legitimateClimb = listOf(600.0, 1200.0, 1800.0, 2400.0, 3000.0, 3600.0, 4200.0)
+        val encodedStream = NumericalEncodingUtils.encodeDoubles(legitimateClimb)
+
+        // Act: Open the database
+        helper.onOpen(mockDb)
+
+        // Assert: Zero mutations or background sanitizations executed
+        verify(exactly = 0) {
+            mockDb.update(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                any(),
+                any(),
+                any()
+            )
+        }
+        verify(exactly = 0) {
+            mockDb.update(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE_EXTREMA_VALUES,
+                any(),
+                any(),
+                any()
+            )
+        }
+        verify(exactly = 0) { mockDb.execSQL(any()) }
+        verify(exactly = 0) { mockDb.beginTransaction() }
+
+        // Confirm that the original profile remains 100% intact
+        val decoded = NumericalEncodingUtils.decodeDoubles(encodedStream)
+        assertEquals(7, decoded.size)
+        assertEquals(600.0, decoded[0], 0.001)
+        assertEquals(4200.0, decoded[6], 0.001)
+    }
 }

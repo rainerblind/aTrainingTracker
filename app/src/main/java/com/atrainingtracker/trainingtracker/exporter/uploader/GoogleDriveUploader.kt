@@ -42,7 +42,8 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
     open fun createClient(): GoogleDriveClient {
         return GoogleDriveClient(
             tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() },
-            tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(mContext).getOrNull() }
+            tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(mContext).getOrNull() },
+            accountProvider = { TrainingApplication.getGoogleDriveAccountEmail() }
         )
     }
 
@@ -83,7 +84,20 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
 
             val driveFileName = exportInfo.fileName
             val mimeType = resolveMimeType(exportInfo.fileFormat)
-            val success = client.uploadOrOverwriteFile(folderId, driveFileName, mimeType, file)
+            var resolvedFolderId = folderId
+            var success = client.uploadOrOverwriteFile(resolvedFolderId, driveFileName, mimeType, file)
+
+            // Bounded self-healing re-creation on HTTP 404 (REQ-DAT-030.3)
+            if (!success && client.lastHttpCode == 404) {
+                Log.w(TAG, "Upload returned HTTP 404 for folder $resolvedFolderId; attempting single self-healing re-creation...")
+                client.evictFolder(resolvedFolderId)
+                val recreatedFolderId = client.ensureFolderHierarchy(targetHierarchy)
+                if (recreatedFolderId != null) {
+                    resolvedFolderId = recreatedFolderId
+                    success = client.uploadOrOverwriteFile(resolvedFolderId, driveFileName, mimeType, file)
+                }
+            }
+
             return if (success) {
                 TrainingApplication.setGoogleDriveLastSyncTimestamp(System.currentTimeMillis())
                 TrainingApplication.setGoogleDriveLastSyncStatus("SUCCESS")
