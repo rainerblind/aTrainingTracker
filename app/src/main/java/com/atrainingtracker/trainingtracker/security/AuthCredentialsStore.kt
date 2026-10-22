@@ -51,6 +51,7 @@ object AuthCredentialsStore {
 
     // Dropbox credential keys
     const val KEY_DROPBOX_CREDENTIAL = "sp_dropbox_credential"
+    const val KEY_DROPBOX_ACCOUNT_EMAIL = "sp_dropbox_account_email"
 
     // Legacy credential keys from TrainingApplication.java
     const val LEGACY_KEY_DROPBOX_CREDENTIAL = "dropboxCredential"
@@ -74,7 +75,8 @@ object AuthCredentialsStore {
         KEY_STRAVA_OAUTH_STATE_TIMESTAMP,
         KEY_GOOGLE_DRIVE_ACCOUNT_EMAIL,
         KEY_GOOGLE_DRIVE_AUTH_TOKEN,
-        KEY_DROPBOX_CREDENTIAL
+        KEY_DROPBOX_CREDENTIAL,
+        KEY_DROPBOX_ACCOUNT_EMAIL
     )
 
     val ALL_CREDENTIAL_KEYS_TO_SANITIZE: Set<String> = ALL_CREDENTIAL_KEYS + LEGACY_KEY_MIGRATION_MAP.keys
@@ -361,7 +363,30 @@ object AuthCredentialsStore {
 
     @JvmStatic
     fun deleteDropboxCredential(context: Context) {
-        getPrefs(context).edit().remove(KEY_DROPBOX_CREDENTIAL).apply()
+        getPrefs(context).edit()
+            .remove(KEY_DROPBOX_CREDENTIAL)
+            .remove(KEY_DROPBOX_ACCOUNT_EMAIL)
+            .apply()
+    }
+
+    @JvmStatic
+    fun getDropboxAccountEmail(context: Context): String? {
+        val email = getPrefs(context).getString(KEY_DROPBOX_ACCOUNT_EMAIL, null)
+        return if (email.isNullOrBlank()) null else email
+    }
+
+    @JvmStatic
+    fun storeDropboxAccountEmail(context: Context, email: String?) {
+        if (email == null) {
+            getPrefs(context).edit().remove(KEY_DROPBOX_ACCOUNT_EMAIL).apply()
+        } else {
+            getPrefs(context).edit().putString(KEY_DROPBOX_ACCOUNT_EMAIL, email).apply()
+        }
+    }
+
+    @JvmStatic
+    fun deleteDropboxAccountEmail(context: Context) {
+        getPrefs(context).edit().remove(KEY_DROPBOX_ACCOUNT_EMAIL).apply()
     }
 
     // --- General Maintenance & Purge ---

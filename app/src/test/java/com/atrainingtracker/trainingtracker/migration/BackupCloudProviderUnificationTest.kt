@@ -116,6 +116,8 @@ class BackupCloudProviderUnificationTest {
         every { TrainingApplication.getClusterTolAltitudePos() } returns 100.0f
         every { TrainingApplication.useSportTypeForClustering() } returns false
         every { TrainingApplication.useAltitudePosForClustering() } returns false
+        every { TrainingApplication.uploadBackupToDropbox() } returns true
+        every { TrainingApplication.uploadToDropboxOnlyOnWifi() } returns true
 
         every { mockContext.getString(R.string.cloud_backup_no_provider_dialog_message) } returns
                 "No cloud storage connected. Please connect Dropbox or Google Drive in Synchronization settings."

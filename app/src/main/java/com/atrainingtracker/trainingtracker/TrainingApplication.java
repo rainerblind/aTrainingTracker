@@ -120,6 +120,10 @@ public class TrainingApplication extends Application {
     //    protected static final String SP_DROPBOX_KEY       = "dropboxKey";
 //    protected static final String SP_DROPBOX_SECRET    = "dropboxSecret";
     public static final String SP_UPLOAD_TO_DROPBOX = "uploadToDropbox";
+    public static final String SP_UPLOAD_WORKOUTS_TO_DROPBOX = "uploadWorkoutsToDropbox";
+    public static final String SP_UPLOAD_BACKUP_TO_DROPBOX = "uploadBackupToDropbox";
+    public static final String SP_DROPBOX_ONLY_WIFI = "dropboxOnlyWifi";
+    public static final String SP_DROPBOX_LAST_SYNC = "dropboxLastSync";
     public static final String SP_UPLOAD_TO_GOOGLE_DRIVE = "uploadToGoogleDrive";
     public static final String SP_UPLOAD_WORKOUTS_TO_GOOGLE_DRIVE = "uploadWorkoutsToGoogleDrive";
     public static final String SP_UPLOAD_BACKUP_TO_GOOGLE_DRIVE = "uploadBackupToGoogleDrive";
@@ -657,6 +661,59 @@ public class TrainingApplication extends Application {
         cSharedPreferences.edit().putBoolean(SP_UPLOAD_TO_DROPBOX, value).apply();
     }
 
+    public static boolean uploadWorkoutsToDropbox() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_UPLOAD_WORKOUTS_TO_DROPBOX, true);
+    }
+
+    public static void setUploadWorkoutsToDropbox(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_WORKOUTS_TO_DROPBOX, value).apply();
+    }
+
+    public static boolean uploadBackupToDropbox() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_UPLOAD_BACKUP_TO_DROPBOX, true);
+    }
+
+    public static void setUploadBackupToDropbox(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_BACKUP_TO_DROPBOX, value).apply();
+    }
+
+    public static boolean uploadToDropboxOnlyOnWifi() {
+        if (cSharedPreferences == null) return true;
+        return cSharedPreferences.getBoolean(SP_DROPBOX_ONLY_WIFI, true);
+    }
+
+    public static void setUploadToDropboxOnlyOnWifi(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_DROPBOX_ONLY_WIFI, value).apply();
+    }
+
+    public static long getDropboxLastSyncTimestamp() {
+        if (cSharedPreferences == null) return 0L;
+        return cSharedPreferences.getLong(SP_DROPBOX_LAST_SYNC, 0L);
+    }
+
+    public static void setDropboxLastSyncTimestamp(long timestamp) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putLong(SP_DROPBOX_LAST_SYNC, timestamp).apply();
+    }
+
+    public static String getDropboxAccountEmail() {
+        if (cAppContext != null) {
+            return AuthCredentialsStore.getDropboxAccountEmail(cAppContext);
+        }
+        return null;
+    }
+
+    public static void setDropboxAccountEmail(String email) {
+        if (cAppContext != null) {
+            AuthCredentialsStore.storeDropboxAccountEmail(cAppContext, email);
+        }
+    }
+
     public static void storeDropboxCredential(DbxCredential dbxCredential) {
         String credentialString = (dbxCredential != null) ? DbxCredential.Writer.writeToString(dbxCredential) : null;
         if (cAppContext != null) {
@@ -686,6 +743,7 @@ public class TrainingApplication extends Application {
     public static void deleteDropboxCredential() {
         if (cAppContext != null) {
             AuthCredentialsStore.deleteDropboxCredential(cAppContext);
+            AuthCredentialsStore.deleteDropboxAccountEmail(cAppContext);
         }
         if (cSharedPreferences != null) {
             cSharedPreferences.edit().remove(SP_DROPBOX_CREDENTIAL).apply();

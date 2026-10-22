@@ -252,7 +252,7 @@ class BackupRestoreViewModel @JvmOverloads constructor(
         dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
     ): Job {
         return viewModelScope.launch(dispatcher) {
-            val dropboxConnected = TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
+            val dropboxConnected = TrainingApplication.uploadToDropbox() && TrainingApplication.uploadBackupToDropbox() && TrainingApplication.readDropboxCredential() != null
             val googleDriveConnected = TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
 
             if (!dropboxConnected && !googleDriveConnected) {

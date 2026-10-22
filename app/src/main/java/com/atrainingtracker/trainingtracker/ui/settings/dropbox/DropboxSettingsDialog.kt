@@ -43,11 +43,13 @@ import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.migration.BackupWorker
+import com.atrainingtracker.trainingtracker.migration.DropboxBackupManager
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.dropbox.core.DbxRequestConfig
 import com.dropbox.core.android.Auth
+import kotlinx.coroutines.launch
 
 /**
  * Recursively unwraps a [Context] to resolve the hosting [Activity], traversing any [ContextWrapper] layers
@@ -76,6 +78,7 @@ fun DropboxSettingsDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
 
     var isConnected by remember {
@@ -97,6 +100,12 @@ fun DropboxSettingsDialog(
                 if (dbxCredential != null) {
                     TrainingApplication.storeDropboxCredential(dbxCredential)
                     TrainingApplication.setUploadToDropbox(true)
+                    coroutineScope.launch {
+                        val email = DropboxBackupManager.fetchAccountEmail()
+                        if (!email.isNullOrBlank()) {
+                            TrainingApplication.setDropboxAccountEmail(email)
+                        }
+                    }
                 }
                 isConnected = TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
             }

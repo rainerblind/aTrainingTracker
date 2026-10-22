@@ -53,6 +53,7 @@ object DropboxBackupManager {
                     .withMode(WriteMode.OVERWRITE)
                     .uploadAndFinish(inputStream)
             }
+            TrainingApplication.setDropboxLastSyncTimestamp(System.currentTimeMillis())
             Log.i(TAG, "Successfully uploaded backup to Dropbox")
             true
         } catch (e: Exception) {
@@ -80,6 +81,23 @@ object DropboxBackupManager {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to download backup from Dropbox", e)
             false
+        }
+    }
+
+    /**
+     * Attempts to query the current athlete's account email from Dropbox API,
+     * gracefully catching [Exception] (such as DbxException or network failures) and returning null.
+     */
+    suspend fun fetchAccountEmail(): String? = withContext(Dispatchers.IO) {
+        val credential = TrainingApplication.readDropboxCredential() ?: return@withContext null
+        try {
+            val config = DbxRequestConfig(BuildConfig.DROPBOX_APP_KEY)
+            val client = DbxClientV2(config, credential)
+            val account = client.users().currentAccount
+            account?.email
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to fetch Dropbox account email: ${e.message}")
+            null
         }
     }
 }

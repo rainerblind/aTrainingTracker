@@ -156,7 +156,7 @@ fun ImportBackupTabsScreen(
     }
 
     val isDropboxConnected = remember(uiState, resumeTrigger, showDropboxDisconnectedDialog, showNoCloudConnectedDialog) {
-        TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
+        TrainingApplication.uploadToDropbox() && TrainingApplication.uploadBackupToDropbox() && TrainingApplication.readDropboxCredential() != null
     }
     val isGoogleDriveConnected = remember(uiState, resumeTrigger, showNoCloudConnectedDialog) {
         TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()

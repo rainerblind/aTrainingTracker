@@ -36,7 +36,7 @@ class BackupWorker(
         
         val prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val automatedEnabled = prefs.getBoolean("automated_backups", true)
-        val dropboxConnected = TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
+        val dropboxConnected = TrainingApplication.uploadToDropbox() && TrainingApplication.uploadBackupToDropbox() && TrainingApplication.readDropboxCredential() != null
         val googleDriveConnected = TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
 
         if (!automatedEnabled) {
@@ -126,9 +126,21 @@ class BackupWorker(
         }
 
         fun buildConstraints(context: Context): Constraints {
-            val cloudBackupEnabled = (TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null) ||
-                (TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive())
-            val networkType = if (cloudBackupEnabled) NetworkType.UNMETERED else NetworkType.NOT_REQUIRED
+            val dropboxBackupEnabled = TrainingApplication.uploadToDropbox() &&
+                TrainingApplication.uploadBackupToDropbox() &&
+                TrainingApplication.readDropboxCredential() != null
+            val googleDriveBackupEnabled = TrainingApplication.uploadToGoogleDrive() &&
+                TrainingApplication.uploadBackupToGoogleDrive()
+
+            val cloudBackupEnabled = dropboxBackupEnabled || googleDriveBackupEnabled
+            val requiresWifi = (dropboxBackupEnabled && TrainingApplication.uploadToDropboxOnlyOnWifi()) ||
+                (googleDriveBackupEnabled && TrainingApplication.uploadToGoogleDriveOnlyOnWifi())
+
+            val networkType = when {
+                !cloudBackupEnabled -> NetworkType.NOT_REQUIRED
+                requiresWifi -> NetworkType.UNMETERED
+                else -> NetworkType.CONNECTED
+            }
 
             return Constraints.Builder()
                 .setRequiredNetworkType(networkType)
