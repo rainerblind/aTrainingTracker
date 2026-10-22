@@ -46,7 +46,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <!-- <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" android:minSdkVersion="29"/> Not necessary since we track within a background service, which is visible by a notification-->
+    <!-- REQ-TRK-015 / REQ-BLD-003: ACCESS_BACKGROUND_LOCATION is required on Android 14+ (API 34+) when TrackerService is restarted by the OS via START_STICKY (intent == null) to promote to FOREGROUND_SERVICE_TYPE_LOCATION without SecurityException -->
     <uses-feature
         android:name="android.hardware.location.gps"
         android:required="true" />
@@ -106,13 +106,10 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="file" />
                 <data android:scheme="content" />
-                <data android:host="*" />
                 <data android:mimeType="application/gpx+xml" />
                 <data android:mimeType="application/xml" />
                 <data android:mimeType="text/xml" />
-                <data android:mimeType="application/octet-stream" />
             </intent-filter>
 
             <!-- Handle .gpx files by Extension (Fallback for some File Managers) -->
@@ -120,9 +117,19 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="file" />
                 <data android:scheme="content" />
-                <data android:host="*" />
+                <data android:pathPattern=".*\\.gpx" />
+                <data android:pathPattern=".*\\..*\\.gpx" />
+                <data android:pathSuffix=".gpx" />
+            </intent-filter>
+
+            <!-- Handle .gpx octet-stream files constrained by extension (REQ-BLD-003.2) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/octet-stream" />
                 <data android:pathPattern=".*\\.gpx" />
                 <data android:pathPattern=".*\\..*\\.gpx" />
                 <data android:pathSuffix=".gpx" />
@@ -136,7 +143,6 @@
                 <data android:mimeType="application/gpx+xml" />
                 <data android:mimeType="application/xml" />
                 <data android:mimeType="text/xml" />
-                <data android:mimeType="application/octet-stream" />
             </intent-filter>
         </activity>
 
@@ -144,7 +150,7 @@
 
         <activity
             android:name=".trainingtracker.smartwatch.pebble.ConfigPebbleViewsActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/PebbleConfigActivityLabel"
             android:launchMode="singleTask"
             android:theme="@style/Theme.aTrainingTracker"
