@@ -27,9 +27,9 @@ import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.rememberUpdatedMarkerState
 import androidx.compose.ui.graphics.Color
-import androidx.compose.material3.MaterialTheme
 import com.google.maps.android.compose.Polyline
-import com.google.maps.android.heatmaps.HeatmapTileProvider
+import androidx.compose.material3.MaterialTheme
+import com.google.android.gms.maps.model.TileProvider
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
 import com.google.android.gms.maps.model.JointType
@@ -238,39 +238,22 @@ internal class MapContentScopeImpl(
         var anyHeatmapLoading = false
         val providers = heatmaps.map { data ->
             // Async generation of the heatmap provider to keep UI responsive.
-            val provider by produceState<HeatmapTileProvider?>(
+            val provider by produceState<TileProvider?>(
                 initialValue = null, 
                 data.allPaths, 
                 data.opacity, 
-                steppedZoom, 
-                data.radius, 
-                data.densifyInterval, 
-                data.maxPoints,
-                heatmapWeight,
-                heatmapStartIntensity,
-                heatmapMaxIntensity
+                steppedZoom
             ) {
-                // ATT-500 Refinement: Strict radius clamping (10-15px) prevents the heatmap from bloating into a wide band at high zoom levels.
-                val effectiveRadius = data.radius ?: (10 + (steppedZoom - 14).coerceAtLeast(0f) * 1.0f).toInt().coerceIn(10, 15)
-                val effectiveInterval = data.densifyInterval ?: when {
-                    steppedZoom < 10 -> 500.0
-                    steppedZoom < 13 -> 250.0
-                    steppedZoom < 15 -> 50.0
-                    else -> 10.0
-                }
-                val effectiveMaxPoints = data.maxPoints ?: 15000
-                
                 value = withContext(Dispatchers.Default) {
-                    createHeatmapProvider(
-                        data.allPaths,
-                        data.opacity,
-                        radius = effectiveRadius,
-                        densifyInterval = effectiveInterval,
-                        maxPoints = effectiveMaxPoints,
-                        weight = heatmapWeight,
-                        startIntensity = heatmapStartIntensity,
-                        maxIntensity = heatmapMaxIntensity
-                    )
+                    if (data.allPaths.isEmpty()) null
+                    else {
+                        val strokeWidth = (4f + (steppedZoom - 10f).coerceAtLeast(0f) * 0.5f).coerceIn(3.5f, 7.5f)
+                        PolylineHeatmapTileProvider(
+                            allPaths = data.allPaths,
+                            opacity = data.opacity,
+                            strokeWidthPx = strokeWidth
+                        )
+                    }
                 }
             }
             if (provider == null) anyHeatmapLoading = true

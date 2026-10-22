@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 23
+**Total Tests**: 24
 
 ---
 
@@ -213,3 +213,13 @@
   • Verify `PeriodsRepository` uses a single shared/reusable `WorkoutDataMapper` instance across all cursor mapping routines instead of allocating ad-hoc instances and redundant DB helper singletons.
   4. *Clean-Room Regression Suite Execution (`TST-PER-022.4`)*:
   • Execute targeted unit tests and `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
+
+### TST-PER-023: **Period Line-Density Heatmap Visuals & Allocation-Free Tile Rendering Verification Suite** [PeriodMapVisuals heatmapProvider integrates PolylineHeatmapTileProvider; Day periods emit null provider; Week, Month, and Year periods instantiate calibrated line-density tile providers without densifyPath or heap point caps; underlying map labels remain legible; 100% clean-room unit test pass rate.]
+- **Requirement(s)**: `REQ-PER-017`
+- **Component**: **Period Heatmap Visuals**
+- **Jira**: `ATT-4480`
+- **Test Description**:
+  1. Verify in `PeriodMapVisualsTest` that `getPeriodMapVisuals(PeriodType.DAY, ...)` returns `heatmapProvider = null`.
+  2. Verify that `PeriodType.WEEK`, `MONTH`, and `YEAR` return non-null `PolylineHeatmapTileProvider` instances with calibrated opacity.
+  3. Verify that empty path input returns `heatmapProvider = null`.
+  4. Run targeted unit test suite `com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*` verifying 100% pass rate.

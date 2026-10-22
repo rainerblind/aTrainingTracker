@@ -19,21 +19,21 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.heatmaps.HeatmapTileProvider
-import com.atrainingtracker.trainingtracker.ui.map.createHeatmapProvider
+import com.google.android.gms.maps.model.TileProvider
+import com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProvider
 
 /**
  * Encapsulates the visual styling for period-based maps.
  */
 data class PeriodMapVisuals(
-    val heatmapProvider: HeatmapTileProvider?,
+    val heatmapProvider: TileProvider?,
     val polylineAlpha: Float,
     val polylineWidth: Float
 )
 
 /**
  * Centralized logic to determine how workouts are visualized based on the period level.
- * Transitions from clear polylines (Day) to prominent heatmaps (Year).
+ * Transitions from clear polylines (Day) to prominent line-density heatmaps (Year).
  * @param zoom The current map zoom level. If null, a default summary radius is used.
  */
 fun getPeriodMapVisuals(
@@ -46,48 +46,26 @@ fun getPeriodMapVisuals(
         if (allPaths.isEmpty() || periodType == PeriodType.DAY) {
             null
         } else {
-            // ATT-504 Fix: Calibrated opacity levels (0.4-0.6) so terrain, roads, and map labels remain legible
             val opacity = when (periodType) {
                 PeriodType.WEEK -> 0.4
                 PeriodType.MONTH -> 0.5
                 PeriodType.YEAR -> 0.6
-                else -> 0.0
+                else -> 0.5
             }
 
-            // ATT-310 & ATT-342: Adaptive densification based on scale and interaction
-            val interval = if (zoom != null) {
-                // Adaptive interval for interactive map
-                when {
-                    zoom < 10 -> 200.0
-                    zoom < 12 -> 100.0
-                    zoom < 14 -> 50.0
-                    else -> 10.0
-                }
-            } else {
-                // Static interval for summary cards
-                when (periodType) {
-                    PeriodType.WEEK -> 10.0
-                    PeriodType.MONTH -> 50.0
-                    PeriodType.YEAR -> 200.0
-                    else -> 10.0
-                }
+            val strokeWidth = when {
+                zoom != null -> (4f + (zoom - 10f).coerceAtLeast(0f) * 0.5f).coerceIn(3.5f, 7.5f)
+                periodType == PeriodType.WEEK -> 6f
+                periodType == PeriodType.MONTH -> 5f
+                periodType == PeriodType.YEAR -> 4f
+                else -> 5f
             }
 
-            // ATT-500 Refinement: Strict radius clamping (10-15px) prevents the heatmap from bloating into a wide band.
-            val radius = if (zoom == null) {
-                10 // Safe minimum for summary cards
-            } else {
-                (10 + (zoom - 14).coerceAtLeast(0f) * 1.0f).toInt().coerceIn(10, 15)
-            }
-
-            // ATT-342 OOM Fix: Define point caps to protect heap
-            val maxPoints = if (zoom == null) 8000 else 100000
-
-            // Use lower weight when zoomed out or in summary cards to reduce 'bloat' intensity.
-            // This ensures only high-density areas (overlapping tracks) are prominent.
-            val weight = if (zoom == null || zoom < 10) 0.3 else 1.0
-
-            createHeatmapProvider(allPaths, opacity, radius = radius, densifyInterval = interval, maxPoints = maxPoints, weight = weight)
+            PolylineHeatmapTileProvider(
+                allPaths = allPaths,
+                opacity = opacity,
+                strokeWidthPx = strokeWidth
+            )
         }
     }
 

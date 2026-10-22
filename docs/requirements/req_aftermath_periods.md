@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 16
+**Total Requirements**: 17
 
 ---
 
@@ -220,3 +220,33 @@
 • *Then* operations reuse a single shared `WorkoutDataMapper` instance without repeated allocations of database helpers.
 
 **Invariants**: Immediate period finalization display (`REQ-PER-014`), calendar-aware aggregation boundaries (`REQ-PER-015`), O(1) self-healing sync (`REQ-MIG-026`), zero SQLite schema migrations, and 100% clean-room test pass rate.
+
+### REQ-PER-017: True Line-Density Period Heatmap Visualization [Verified]
+- **Tests**: `PeriodMapUtils.kt`, `PeriodSummaryCard.kt`, `PeriodMapVisualsTest.kt`
+- **Implementation**: Replace point-cloud HeatmapTileProvider in PeriodMapUtils with PolylineHeatmapTileProvider and calibrate period-level opacity.
+- **Rationale**: The system SHALL visualize period training density using true line-density rasterization without point densification overhead (ATT-4480, Parent Epic ATT-4474, Status: Verified, refining `REQ-PER-010`):
+1. *Period Line-Density Integration (`PeriodMapUtils.kt`, `REQ-PER-017.1`)*:
+• `PeriodMapVisuals` SHALL declare `val heatmapProvider: com.google.android.gms.maps.model.TileProvider?` instead of restricting to `com.google.maps.android.heatmaps.HeatmapTileProvider?`.
+• `getPeriodMapVisuals` SHALL construct `PolylineHeatmapTileProvider` for Week, Month, and Year periods using all active period paths without calling `densifyPath()` or capping points via `maxPoints`.
+2. *Calibrated Period Dynamic Range (`REQ-PER-017.2`)*:
+• Intensity scaling and opacity SHALL be calibrated per `PeriodType` (Week: lighter base; Month: balanced; Year: high dynamic range) to preserve underlying road label legibility.
+3. *Preservation of System Invariants (`REQ-PER-017.3`)*:
+• Day periods (`PeriodType.DAY`) SHALL return `heatmapProvider = null`.
+• Zero changes to `PeriodSummaries.db` schema or period statistics.
+• 100% clean-room test pass rate under `./gradlew testDebugUnitTest`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-PER-010` (*Uniform Period Heatmap Visualization*), targeting `PeriodMapUtils.kt`, `PeriodMapVisuals`, and `PeriodSummaryCard.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (ATT-440, ATT-504) and commit `06990c88` (ATT-4594).
+3. *Root Reason for Existing Formulation*: `REQ-PER-010` relied on `createHeatmapProvider` with aggressive downsampling (`samplingStep`) and artificial point caps (`maxPoints = 8000..100000`) to avoid OOM crashes during 2D Gaussian convolution.
+4. *Preservation of Core Invariants*: Visual distinction across PeriodType (Day/Week/Month/Year), non-blocking UI thread, and legibility of map labels and terrain remain 100% strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a Month or Year period with multiple workout paths,
+• *When* `getPeriodMapVisuals` is called,
+• *Then* `heatmapProvider` returns an active `PolylineHeatmapTileProvider` instance without allocating `WeightedLatLng` point clouds.
+• *Given* a Day period (`PeriodType.DAY`),
+• *When* `getPeriodMapVisuals` is called,
+• *Then* `heatmapProvider` returns `null`.
+
+**Invariants**: Zero changes to `PeriodSummaries.db`, memory safety without OOMs, and 100% clean-room unit test pass rate.

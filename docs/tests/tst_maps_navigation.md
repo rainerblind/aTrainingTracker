@@ -3,7 +3,7 @@
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Tests**: 52
+**Total Tests**: 53
 
 ---
 
@@ -957,3 +957,14 @@
   • Verify `null` is returned when all power samples are 0 W or absent, preserving parity with `PowerZoneDistributionCalculatorTest`.
   6. *Clean-Room Full Suite Regression Execution (`TST-MAP-055.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full project test suite.
+
+### TST-MAP-058: **Line-Density PolylineHeatmapTileProvider, Web Mercator Projection & Thermal Color LUT Verification Suite** [PolylineHeatmapTileProvider correctly projects geographic coordinates to Web Mercator tile pixels; culls disjoint paths in O(1) returning NO_TILE; accumulates line density with PorterDuff.Mode.ADD without point-spacing artifacts; maps intensity to 256-entry thermal Color LUT; renders thread-safely across concurrent tile requests; 100% clean-room test pass rate.]
+- **Requirement(s)**: `REQ-MAP-056`
+- **Component**: **Map Tile Heatmap**
+- **Jira**: `ATT-4480`
+- **Test Description**:
+  1. Verify in `PolylineHeatmapTileProviderTest` that requesting a tile disjoint from all input polylines returns `TileProvider.NO_TILE` immediately without allocating bitmaps.
+  2. Verify that intersecting polylines produce a valid 256x256 PNG tile byte array.
+  3. Verify that multiple overlapping traversals produce increasing intensity values correctly mapped through the thermal Color LUT.
+  4. Verify thread safety under concurrent `getTile(x, y, zoom)` invocations across multiple worker threads.
+  5. Run targeted unit test suite `com.atrainingtracker.trainingtracker.ui.map.*` verifying 100% pass rate.

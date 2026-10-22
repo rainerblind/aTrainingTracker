@@ -3,7 +3,7 @@
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Requirements**: 57
+**Total Requirements**: 58
 
 ---
 
@@ -1753,3 +1753,42 @@
 • *Then* `lastSegmentIndex` resets to `null`.
 
 **Invariants**: Backward compatibility for stateless callers (`null`), pure Kotlin JVM decoupling, thread safety, 100% clean-room test pass rate.
+
+### REQ-MAP-056: Line-Density Polyline Heatmap Tile Provider & 256-Entry Thermal Color LUT [Verified]
+- **Tests**: `PolylineHeatmapTileProvider.kt`, `MapUtils.kt`, `MapContentScope.kt`, `PolylineHeatmapTileProviderTest.kt`
+- **Implementation**: Replace Google Maps Gaussian point-cloud HeatmapTileProvider with custom Web Mercator line-density PolylineHeatmapTileProvider and 256-entry thermal color lookup table (LUT).
+- **Rationale**: The system SHALL replace Gaussian point-cloud heatmap tile rendering with a true line-density tile provider (`PolylineHeatmapTileProvider`) and thermal color LUT across all map views (ATT-4480, Parent Epic ATT-4474, Status: Verified, refining `REQ-MAP-002` and `REQ-MAP-016`):
+1. *Web Mercator Line-Raster TileProvider (`PolylineHeatmapTileProvider.kt`, `REQ-MAP-056.1`)*:
+• `PolylineHeatmapTileProvider` SHALL implement `com.google.android.gms.maps.model.TileProvider`.
+• For each requested tile $(x, y, \text{zoom})$, candidate polylines SHALL be filtered in $O(1)$ time using bounding-box intersection against the tile's geographic coordinates $[lat_{\min}, lon_{\min}, lat_{\max}, lon_{\max}]$ with a stroke margin.
+• If no paths intersect the tile bounding box, `getTile` SHALL return `TileProvider.NO_TILE` immediately without allocating bitmaps.
+• Intersecting polylines SHALL be projected into Web Mercator tile pixel coordinates ($256 \times 256$) and rasterized using `android.graphics.Canvas`, `Path`, and additive blending (`PorterDuff.Mode.ADD`) to accumulate 1D line density without vertex spacing or speed bias.
+2. *256-Entry Thermal Color Lookup Table & Dynamic Range (`REQ-MAP-056.2`)*:
+• Accumulated single-channel intensity values SHALL be mapped to 32-bit ARGB pixels using a precomputed 256-entry thermal Color LUT spanning from cool electric blue/violet (1 pass) through magenta/crimson (moderate) and fiery orange/amber to incandescent yellow/white-hot (maximum passes).
+• The provider SHALL calibrate intensity scaling ($\Delta I$) based on dataset size and zoom level to ensure full dynamic range utilization across both small and large workout collections.
+3. *Thread Safety & Memory Headroom (`REQ-MAP-056.3`)*:
+• `getTile(x, y, zoom)` SHALL be completely thread-safe across concurrent tile fetch worker threads.
+• The provider SHALL eliminate synthetic point interpolation (`densifyPath`) and `WeightedLatLng` allocations.
+4. *Preservation of System Invariants (`REQ-MAP-056.4`)*:
+• Zero alterations to database schemas or workout telemetry recording.
+• Compatibility with standard Google Maps `TileOverlay` composable across Light, Dark, and AMOLED map themes.
+• Clean-room full test suite pass rate under `./gradlew testDebugUnitTest` SHALL remain 100%.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-MAP-002` (*Training heatmaps (Cyan -> Indigo gradient)*) and `REQ-MAP-016` (*Heatmap DSL Support*) under Epic `ATT-4474`, targeting `MapUtils.kt`, `MapContentScope.kt`, and `PolylineHeatmapTileProvider.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (ATT-500, ATT-504) and Sprint 2026-43.9 (commit `06990c88`, ATT-4594).
+3. *Root Reason for Existing Formulation*: Google Maps `HeatmapTileProvider` was originally adopted as an off-the-shelf component to provide density visualization without writing custom Web Mercator rasterization shaders. Because it evaluated 2D Gaussian point-cloud KDE, it generated artificial heat blobs on slow climbs and corners while requiring synthetic point densification.
+4. *Preservation of Core Invariants*: Standard Google Maps `TileProvider` interface compatibility, zoom-adaptive rendering, non-blocking asynchronous tile delivery, and legible underlying map labels/terrain remain 100% strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout polyline traversed at varying speeds (fast descent vs. slow climb),
+• *When* rendered by `PolylineHeatmapTileProvider`,
+• *Then* the rendered intensity along the path SHALL remain uniform regardless of GPS point density or instantaneous speed.
+• *Given* a requested tile coordinate $(x, y, zoom)$ with no intersecting workout paths,
+• *When* `getTile` executes,
+• *Then* the provider SHALL return `TileProvider.NO_TILE` immediately without allocating bitmaps.
+• *Given* overlapping paths traversed 1 time, 5 times, and 20+ times,
+• *When* the heatmap tile is generated,
+• *Then* the thermal color LUT SHALL map each traversal level to visually distinct hues from cool electric blue to incandescent yellow-white.
+
+**Invariants**: Zero changes to SQLite databases, thread-safe concurrent execution, zero main-thread jank, and 100% clean-room unit test pass rate.
