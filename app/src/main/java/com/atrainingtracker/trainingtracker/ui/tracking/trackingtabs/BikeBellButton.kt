@@ -211,7 +211,7 @@ fun BikeBellButton(
 
 @Preview(showBackground = true, name = "Bike Bell Button States")
 @Composable
-fun PreviewBikeBellButton() {
+private fun PreviewBikeBellButton() {
     ATrainingTrackerTheme {
         Column(
             modifier = Modifier.padding(16.dp),

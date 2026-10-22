@@ -644,7 +644,7 @@ private val previewEditMockLocation = KnownLocationItem(
 
 @Preview(name = "Edit Sheet - Without Map (Light)", showBackground = true)
 @Composable
-fun PreviewEditKnownLocationSheetWithoutMapLight() {
+private fun PreviewEditKnownLocationSheetWithoutMapLight() {
     ATrainingTrackerTheme(darkTheme = false) {
         EditKnownLocationSheetContent(
             location = previewEditMockLocation,
@@ -658,7 +658,7 @@ fun PreviewEditKnownLocationSheetWithoutMapLight() {
 
 @Preview(name = "Edit Sheet - With Map (Light)", showBackground = true)
 @Composable
-fun PreviewEditKnownLocationSheetWithMapLight() {
+private fun PreviewEditKnownLocationSheetWithMapLight() {
     ATrainingTrackerTheme(darkTheme = false) {
         EditKnownLocationSheetContent(
             location = previewEditMockLocation,
@@ -672,7 +672,7 @@ fun PreviewEditKnownLocationSheetWithMapLight() {
 
 @Preview(name = "Edit Sheet - With Map (Dark)", showBackground = true)
 @Composable
-fun PreviewEditKnownLocationSheetWithMapDark() {
+private fun PreviewEditKnownLocationSheetWithMapDark() {
     ATrainingTrackerTheme(darkTheme = true) {
         EditKnownLocationSheetContent(
             location = previewEditMockLocation,

@@ -128,7 +128,7 @@ private fun SportItem(
 
 @Preview(showBackground = true, name = "Sport Selector - Bike Selected")
 @Composable
-fun PreviewSportTypeSelectorBike() {
+private fun PreviewSportTypeSelectorBike() {
     MaterialTheme {
         Surface {
             SportTypeSelector(
@@ -141,7 +141,7 @@ fun PreviewSportTypeSelectorBike() {
 
 @Preview(showBackground = true, name = "Sport Selector - Run Selected")
 @Composable
-fun PreviewSportTypeSelectorRun() {
+private fun PreviewSportTypeSelectorRun() {
     MaterialTheme {
         Surface {
             SportTypeSelector(
@@ -154,7 +154,7 @@ fun PreviewSportTypeSelectorRun() {
 
 @Preview(showBackground = true, name = "Sport Selector - Other Selected")
 @Composable
-fun PreviewSportTypeSelectorOther() {
+private fun PreviewSportTypeSelectorOther() {
     MaterialTheme {
         Surface {
             SportTypeSelector(

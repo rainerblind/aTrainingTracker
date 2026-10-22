@@ -626,7 +626,7 @@ private fun mockStats(
 
 @Preview(showBackground = true, name = "Equipment Card - Linked Strava")
 @Composable
-fun PreviewEquipmentCardLinked() {
+private fun PreviewEquipmentCardLinked() {
     ATrainingTrackerTheme {
         Box(modifier = Modifier.padding(16.dp)) {
             EquipmentItem(
@@ -660,7 +660,7 @@ fun PreviewEquipmentCardLinked() {
 
 @Preview(showBackground = true, name = "Equipment Card - Simple Shoe")
 @Composable
-fun PreviewEquipmentCardSimple() {
+private fun PreviewEquipmentCardSimple() {
     ATrainingTrackerTheme {
         Box(modifier = Modifier.padding(16.dp)) {
             EquipmentItem(
@@ -694,7 +694,7 @@ fun PreviewEquipmentCardSimple() {
 
 @Preview(showBackground = true, name = "Equipment Card - Empty")
 @Composable
-fun PreviewEquipmentCardEmpty() {
+private fun PreviewEquipmentCardEmpty() {
     ATrainingTrackerTheme {
         Box(modifier = Modifier.padding(16.dp)) {
             EquipmentItem(
@@ -728,7 +728,7 @@ fun PreviewEquipmentCardEmpty() {
 
 @Preview(showBackground = true, name = "Equipment Card - Retired Bike")
 @Composable
-fun PreviewEquipmentCardRetired() {
+private fun PreviewEquipmentCardRetired() {
     ATrainingTrackerTheme {
         Box(modifier = Modifier.padding(16.dp)) {
             EquipmentItem(

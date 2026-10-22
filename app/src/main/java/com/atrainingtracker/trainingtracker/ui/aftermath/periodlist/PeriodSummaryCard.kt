@@ -623,7 +623,7 @@ private fun PeriodMultiWorkoutMap(
 
 @Preview(showBackground = true, name = "Weekly Summary")
 @Composable
-fun PreviewPeriodSummary() {
+private fun PreviewPeriodSummary() {
     val mockSummary = PeriodSummary(
         periodLabel = "Week 20",
         periodDateRange = "May 11 - May 17, 2026",
@@ -676,7 +676,7 @@ fun PreviewPeriodSummary() {
 
 @Preview(showBackground = true, name = "Empty Period")
 @Composable
-fun PreviewEmptyPeriod() {
+private fun PreviewEmptyPeriod() {
     val emptySummary = PeriodSummary(
         periodLabel = "June 2026",
         periodDateRange = "No workouts recorded",

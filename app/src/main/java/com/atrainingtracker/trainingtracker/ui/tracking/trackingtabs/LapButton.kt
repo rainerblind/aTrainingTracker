@@ -113,7 +113,7 @@ fun LapButton(
 
 @Preview(showBackground = true, name = "Lap Button States")
 @Composable
-fun PreviewLapButton() {
+private fun PreviewLapButton() {
     ATrainingTrackerTheme {
         Column(
             modifier = Modifier.padding(16.dp),

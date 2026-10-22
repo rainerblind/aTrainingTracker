@@ -130,7 +130,7 @@ fun LiveSegmentStatus.label(): String {
 
 @Preview(showBackground = true, name = "Static Segment Header")
 @Composable
-fun PreviewSegmentHeader() {
+private fun PreviewSegmentHeader() {
     ATrainingTrackerTheme {
         SegmentHeader(
             summary = SegmentSummary(
@@ -160,7 +160,7 @@ fun PreviewSegmentHeader() {
 
 @Preview(showBackground = true, name = "Live Segment Header")
 @Composable
-fun PreviewSegmentHeaderLive() {
+private fun PreviewSegmentHeaderLive() {
     ATrainingTrackerTheme {
         SegmentHeader(
             summary = SegmentSummary(

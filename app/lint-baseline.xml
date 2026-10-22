@@ -4647,17 +4647,6 @@
     </issue>
 
     <issue
-        id="ClickableViewAccessibility"
-        message="`MultiSelectionSpinner#performClick` should call `super#performClick`"
-        errorLine1="    public boolean performClick() {"
-        errorLine2="                   ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/atrainingtracker/trainingtracker/views/MultiSelectionSpinner.java"
-            line="81"
-            column="20"/>
-    </issue>
-
-    <issue
         id="ContentDescription"
         message="Missing `contentDescription` attribute on image"
         errorLine1="    &lt;com.google.android.material.floatingactionbutton.FloatingActionButton"

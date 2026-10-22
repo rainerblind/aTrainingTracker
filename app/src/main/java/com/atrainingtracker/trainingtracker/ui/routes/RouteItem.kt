@@ -166,7 +166,7 @@ fun RouteItem(
 
 @Preview(showBackground = true, name = "Selected Route")
 @Composable
-fun PreviewSelectedRoute() {
+private fun PreviewSelectedRoute() {
     val mockSummary = RouteSummary(
             id = 1,
             externalId = "sample_1",
@@ -193,7 +193,7 @@ fun PreviewSelectedRoute() {
 
 @Preview(showBackground = true, name = "Unselected Route")
 @Composable
-fun PreviewUnselectedRoute() {
+private fun PreviewUnselectedRoute() {
     val mockSummary = RouteSummary(
             id = 2,
             externalId = "sample_2",

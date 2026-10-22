@@ -773,7 +773,7 @@ private val previewMockCluster = WorkoutCluster(
 
 @Preview(name = "List Item - Light", showBackground = true)
 @Composable
-fun PreviewKnownLocationCardLight() {
+private fun PreviewKnownLocationCardLight() {
     ATrainingTrackerTheme(darkTheme = false) {
         Box(modifier = Modifier.padding(16.dp)) {
             KnownLocationCard(
@@ -791,7 +791,7 @@ fun PreviewKnownLocationCardLight() {
 
 @Preview(name = "List Item - Dark", showBackground = true)
 @Composable
-fun PreviewKnownLocationCardDark() {
+private fun PreviewKnownLocationCardDark() {
     ATrainingTrackerTheme(darkTheme = true) {
         Box(modifier = Modifier.padding(16.dp)) {
             KnownLocationCard(
@@ -809,7 +809,7 @@ fun PreviewKnownLocationCardDark() {
 
 @Preview(name = "List Item - Context Menu (Long Click)", showBackground = true)
 @Composable
-fun PreviewKnownLocationCardContextMenu() {
+private fun PreviewKnownLocationCardContextMenu() {
     ATrainingTrackerTheme(darkTheme = false) {
         Box(modifier = Modifier.padding(16.dp)) {
             KnownLocationCard(

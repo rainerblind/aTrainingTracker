@@ -844,7 +844,7 @@ fun IntegerInputField(
 
 @Preview(showBackground = true)
 @Composable
-fun SettingsScreenPreview() {
+private fun SettingsScreenPreview() {
     MaterialTheme {
         SettingsScreenContent(
             z1Max = 130,

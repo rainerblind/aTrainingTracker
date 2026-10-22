@@ -1364,7 +1364,7 @@ val dummySegmentsFlow = kotlinx.coroutines.flow.MutableStateFlow<List<LiveSegmen
 // Preview for Configuration Mode
 @Preview(showBackground = true, name = "Config Mode")
 @Composable
-fun SensorGridScreenConfigPreview() {
+private fun SensorGridScreenConfigPreview() {
     val context = LocalContext.current
     ATrainingTrackerTheme {
         val previewFields = listOf(
@@ -1391,7 +1391,7 @@ fun SensorGridScreenConfigPreview() {
 // Preview for Tracking Mode
 @Preview(showBackground = true, name = "Tracking Mode")
 @Composable
-fun SensorGridScreenTrackingPreview() {
+private fun SensorGridScreenTrackingPreview() {
     val context = LocalContext.current
     ATrainingTrackerTheme {
         val previewFields = listOf(

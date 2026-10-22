@@ -107,7 +107,7 @@ private fun StatusInfo(
 
 @Preview(showBackground = true, name = "Tracking - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun PreviewSearchAreaTrackingDark() {
+private fun PreviewSearchAreaTrackingDark() {
     ATrainingTrackerTheme(darkTheme = true) {
         Surface {
             SearchArea(
@@ -120,7 +120,7 @@ fun PreviewSearchAreaTrackingDark() {
 
 @Preview(showBackground = true, name = "Searching - Light")
 @Composable
-fun PreviewSearchAreaSearching() {
+private fun PreviewSearchAreaSearching() {
     ATrainingTrackerTheme {
         Surface {
             SearchArea(
@@ -131,7 +131,7 @@ fun PreviewSearchAreaSearching() {
 }
 @Preview(showBackground = true, name = "Ready - Light")
 @Composable
-fun PreviewSearchAreaReady() {
+private fun PreviewSearchAreaReady() {
     ATrainingTrackerTheme {
         Surface {
             SearchArea(
@@ -142,7 +142,7 @@ fun PreviewSearchAreaReady() {
 }
 @Preview(showBackground = true, name = "Tracking - Light")
 @Composable
-fun PreviewSearchAreaTracking() {
+private fun PreviewSearchAreaTracking() {
     ATrainingTrackerTheme {
         Surface {
             SearchArea(
@@ -153,7 +153,7 @@ fun PreviewSearchAreaTracking() {
 }
 @Preview(showBackground = true, name = "Paused - Light")
 @Composable
-fun PreviewSearchAreaPaused() {
+private fun PreviewSearchAreaPaused() {
     ATrainingTrackerTheme {
         Surface {
             SearchArea(

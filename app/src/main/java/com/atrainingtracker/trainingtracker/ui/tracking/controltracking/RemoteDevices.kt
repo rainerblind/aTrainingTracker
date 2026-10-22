@@ -111,7 +111,7 @@ private fun RemoteDeviceItem(
 
 @Preview(showBackground = true, name = "Light Mode")
 @Composable
-fun PreviewRemoteDeviceRow() {
+private fun PreviewRemoteDeviceRow() {
     val mockDevices = getMockDevices()
     // Replace ATrainingTrackerTheme with your actual project theme name
     // Usually located in ui.theme package
@@ -128,7 +128,7 @@ fun PreviewRemoteDeviceRow() {
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewRemoteDeviceRowDark() {
+private fun PreviewRemoteDeviceRowDark() {
     val mockDevices = getMockDevices()
     // Explicitly set darkTheme = true
     ATrainingTrackerTheme(darkTheme = true) {
