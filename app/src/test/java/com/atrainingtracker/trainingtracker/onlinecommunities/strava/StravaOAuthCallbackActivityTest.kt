@@ -60,7 +60,7 @@ class StravaOAuthCallbackActivityTest {
 
     @Test
     fun testHandleIntent_missingStateParameter_rejectsAndSetsErrorState() {
-        val uri = Uri.parse("strava://rainerblind.github.io/${BuildConfig.APPLICATION_ID}?code=injected_auth_code_123")
+        val uri = Uri.parse("strava.${BuildConfig.APPLICATION_ID}://rainerblind.github.io?code=injected_auth_code_123")
         val intent = Intent(Intent.ACTION_VIEW, uri)
 
         val controller = Robolectric.buildActivity(StravaOAuthCallbackActivity::class.java, intent)
@@ -75,7 +75,7 @@ class StravaOAuthCallbackActivityTest {
     fun testHandleIntent_mismatchedStateParameter_rejectsAndSetsErrorState() {
         val legitimateState = StravaOAuthStateManager.generateAndSaveState(context)
 
-        val uri = Uri.parse("strava://rainerblind.github.io/${BuildConfig.APPLICATION_ID}?state=attacker_state_xyz&code=injected_auth_code_123")
+        val uri = Uri.parse("strava.${BuildConfig.APPLICATION_ID}://rainerblind.github.io?state=attacker_state_xyz&code=injected_auth_code_123")
         val intent = Intent(Intent.ACTION_VIEW, uri)
 
         val controller = Robolectric.buildActivity(StravaOAuthCallbackActivity::class.java, intent)
@@ -93,7 +93,7 @@ class StravaOAuthCallbackActivityTest {
     fun testHandleIntent_validStateParameter_dispatchesExchangeAndConsumesState() {
         val state = StravaOAuthStateManager.generateAndSaveState(context)
 
-        val uri = Uri.parse("strava://rainerblind.github.io/${BuildConfig.APPLICATION_ID}?state=$state&code=valid_exchange_code")
+        val uri = Uri.parse("strava.${BuildConfig.APPLICATION_ID}://rainerblind.github.io?state=$state&code=valid_exchange_code")
         val intent = Intent(Intent.ACTION_VIEW, uri)
 
         val controller = Robolectric.buildActivity(StravaOAuthCallbackActivity::class.java, intent)
@@ -108,14 +108,14 @@ class StravaOAuthCallbackActivityTest {
         val authState = StravaAuthRepository.getInstance().authState.value
         // Auth state should be Loading or progressed past Idle, NOT rejected with state validation Error
         assertFalse("Auth state must not be state validation Error on valid state",
-            authState is StravaAuthState.Error && (authState as StravaAuthState.Error).message.contains("state validation failed"))
+            authState is StravaAuthState.Error && authState.message.contains("state validation failed"))
     }
 
     @Test
     fun testHandleIntent_withErrorQueryParam_clearsStateAndSetsError() {
         val state = StravaOAuthStateManager.generateAndSaveState(context)
 
-        val uri = Uri.parse("strava://rainerblind.github.io/${BuildConfig.APPLICATION_ID}?error=access_denied")
+        val uri = Uri.parse("strava.${BuildConfig.APPLICATION_ID}://rainerblind.github.io?error=access_denied")
         val intent = Intent(Intent.ACTION_VIEW, uri)
 
         val controller = Robolectric.buildActivity(StravaOAuthCallbackActivity::class.java, intent)
@@ -145,13 +145,13 @@ class StravaOAuthCallbackActivityTest {
     }
 
     /**
-     * TST-EXT-012.3: Callback targeting a different application ID path is ignored without state consumption.
+     * TST-EXT-012.3: Callback targeting a different application ID scheme is ignored without state consumption.
      */
     @Test
-    fun testHandleIntent_mismatchedApplicationIdPath_ignoresAndFinishesCleanly() {
+    fun testHandleIntent_mismatchedApplicationIdScheme_ignoresAndFinishesCleanly() {
         val state = StravaOAuthStateManager.generateAndSaveState(context)
 
-        val uri = Uri.parse("strava://rainerblind.github.io/com.other.variant?state=$state&code=valid_exchange_code")
+        val uri = Uri.parse("strava.com.other.variant://rainerblind.github.io?state=$state&code=valid_exchange_code")
         val intent = Intent(Intent.ACTION_VIEW, uri)
 
         val controller = Robolectric.buildActivity(StravaOAuthCallbackActivity::class.java, intent)

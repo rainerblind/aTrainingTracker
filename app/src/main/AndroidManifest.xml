@@ -187,9 +187,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="strava"
-                    android:host="rainerblind.github.io"
-                    android:path="/${applicationId}" />
+                    android:scheme="strava.${applicationId}"
+                    android:host="rainerblind.github.io" />
             </intent-filter>
         </activity>
 

@@ -26,11 +26,11 @@ import android.util.Log
 import com.atrainingtracker.BuildConfig
 
 /**
- * Handles OAuth 2.0 authorization redirect callbacks for Strava (REQ-EXT-012, ATT-4022, ATT-4668).
+ * Handles OAuth 2.0 authorization redirect callbacks for Strava (REQ-EXT-012, ATT-4022, ATT-4668, ATT-4706).
  *
  * Validates the cryptographically random state parameter using [StravaOAuthStateManager]
  * to prevent Login CSRF attacks, enforces single-use state consumption, scopes the callback
- * URI prefix to [BuildConfig.APPLICATION_ID] to eliminate disambiguation prompts on co-installed
+ * URI scheme to [BuildConfig.APPLICATION_ID] to eliminate disambiguation prompts on co-installed
  * variants, and dispatches token exchange within [StravaAuthRepository]'s structured coroutine scope.
  */
 class StravaOAuthCallbackActivity : Activity() {
@@ -47,7 +47,7 @@ class StravaOAuthCallbackActivity : Activity() {
 
     private fun handleIntent(intent: Intent?) {
         val data: Uri? = intent?.data
-        if (data != null && data.toString().startsWith(REDIRECT_URI_PREFIX)) {
+        if (data != null && data.scheme == "strava.${BuildConfig.APPLICATION_ID}" && data.host == "rainerblind.github.io" && data.toString().startsWith(REDIRECT_URI_PREFIX)) {
             val error = data.getQueryParameter("error")
             if (error != null) {
                 Log.w(TAG, "Auth error: $error")
@@ -80,7 +80,7 @@ class StravaOAuthCallbackActivity : Activity() {
 
     companion object {
         private const val TAG = "StravaOAuthCallback"
-        internal val REDIRECT_URI_PREFIX = "strava://rainerblind.github.io/${BuildConfig.APPLICATION_ID}"
+        internal val REDIRECT_URI_PREFIX = "strava.${BuildConfig.APPLICATION_ID}://rainerblind.github.io"
         const val StravaOAuthSuccess = "com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaOAuthSuccess"
     }
 }
