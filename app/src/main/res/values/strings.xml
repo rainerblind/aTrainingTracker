@@ -1388,7 +1388,7 @@
     <string name="backup_interval_weekly">Weekly</string>
     <string name="backup_interval_monthly">Monthly</string>
     <string name="create_and_upload_to_dropbox">Create \u0026 Upload to Dropbox</string>
-    <string name="create_and_upload_to_both">Create \u0026 Upload (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_both">Create \u0026 Upload\n(Dropbox \u0026 Google Drive)</string>
     <string name="create_and_upload_to_google_drive">Create \u0026 Upload to Google Drive</string>
     <string name="create_and_upload_to_cloud">Create \u0026 Upload to Cloud</string>
     <string name="cloud_backup_no_provider_dialog_title">Cloud Backup</string>
@@ -2292,6 +2292,34 @@
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
     <string name="workout_card_reorder_toggle">Card Order &amp; Visibility (%1$d active)</string>
     <string name="settings_workout_details_title">Workout Details (Full Screen)</string>
+
+    <!-- UI Localization Parity, Units & Accessibility (REQ-UI-429 / ATT-4026) -->
+    <string name="crop_start_trim">Start: +%1$s</string>
+    <string name="crop_end_trim">End: -%1$s</string>
+    <string name="crop_distance_label">Distance:</string>
+    <string name="crop_duration_label">Duration:</string>
+    <string name="crop_avg_speed_label">Ø Speed:</string>
+    <string name="import_map_data_title">Map Data for Import</string>
+    <string name="none">None</string>
+    <string name="unknown">Unknown</string>
+    <string name="destination_not_yet_implemented">Setting a new content destination is not yet implemented</string>
+    <string name="unit_watt">W</string>
+    <string name="lap_placeholder_format">Lap %1$d</string>
+    <string name="period_no_gps_data">No GPS data for this period</string>
+    <string name="marker_summit">Summit</string>
+    <string name="marker_lap_start">Lap Start</string>
+    <string name="marker_lap_end">Lap End</string>
+    <string name="cd_fastest_split">Fastest split</string>
+    <string name="cd_switch_view_mode">Switch view mode</string>
+    <string name="connect_with_strava">Connect with Strava</string>
+    <string name="cd_add_row">Add row</string>
+    <string name="cd_add_column">Add column</string>
+    <string name="cd_add_before">Add before</string>
+    <string name="cd_delete_tab">Delete tab</string>
+    <string name="cd_add_after">Add after</string>
+    <string name="back">Back</string>
+    <string name="close">Close</string>
+    <string name="clear">Clear</string>
+    <string name="select_route">Select route</string>
+    <string name="equipment">Equipment</string>
 </resources>
-
-

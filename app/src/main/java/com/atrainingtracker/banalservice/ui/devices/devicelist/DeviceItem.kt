@@ -258,7 +258,7 @@ fun DeviceItem(
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewDeviceItem() {
+private fun PreviewDeviceItem() {
     val mockDevice = DeviceUiData(
         id = 1L,
         protocol = Protocol.ANT_PLUS,
@@ -294,7 +294,7 @@ fun PreviewDeviceItem() {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewDeviceItem2() {
+private fun PreviewDeviceItem2() {
     val mockDevice = DeviceUiData(
         id = 1L,
         protocol = Protocol.ANT_PLUS,

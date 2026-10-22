@@ -385,7 +385,7 @@ private fun createMockLiveClimbData(
 
 @Preview(name = "Light Mode - On Climb", showBackground = true)
 @Composable
-fun LiveClimbSheet_OnClimb_Preview() {
+private fun LiveClimbSheet_OnClimb_Preview() {
     ATrainingTrackerTheme(darkTheme = false) {
         LiveClimbSheet(
             liveClimb = createMockLiveClimbData(
@@ -398,7 +398,7 @@ fun LiveClimbSheet_OnClimb_Preview() {
 
 @Preview(name = "Dark AMOLED Mode - On Climb", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun LiveClimbSheet_OnClimb_Dark_Preview() {
+private fun LiveClimbSheet_OnClimb_Dark_Preview() {
     ATrainingTrackerTheme(darkTheme = true, amoled = true) {
         LiveClimbSheet(
             liveClimb = createMockLiveClimbData(
@@ -411,7 +411,7 @@ fun LiveClimbSheet_OnClimb_Dark_Preview() {
 
 @Preview(name = "Approaching Climb", showBackground = true)
 @Composable
-fun LiveClimbSheet_Approaching_Preview() {
+private fun LiveClimbSheet_Approaching_Preview() {
     ATrainingTrackerTheme(darkTheme = false) {
         LiveClimbSheet(
             liveClimb = createMockLiveClimbData(
@@ -427,7 +427,7 @@ fun LiveClimbSheet_Approaching_Preview() {
 
 @Preview(name = "Summit Finished", showBackground = true)
 @Composable
-fun LiveClimbSheet_Finished_Preview() {
+private fun LiveClimbSheet_Finished_Preview() {
     ATrainingTrackerTheme(darkTheme = false) {
         LiveClimbSheet(
             liveClimb = createMockLiveClimbData(

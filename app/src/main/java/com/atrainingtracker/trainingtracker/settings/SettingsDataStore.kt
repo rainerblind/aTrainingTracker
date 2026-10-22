@@ -639,6 +639,72 @@ class SettingsDataStore(
     }
 
     /**
+     * Atomically saves all zone threshold limits and display options for a profile
+     * within a single dataStore.edit { } ACID transaction (REQ-UI-428.1).
+     */
+    suspend fun saveZoneProfile(profile: ZoneProfileState) {
+        val customizedKey = getCustomizedKey(profile.type)
+        dataStore.edit { prefs ->
+            prefs[customizedKey] = true
+            if (profile.type == ZoneType.PWR_BIKE) {
+                prefs[KEY_IS_PWR_ZONES_CONFIGURED] = true
+                prefs[PWR_BIKE_ZONE1_MAX] = profile.z1
+                prefs[PWR_BIKE_ZONE2_MAX] = profile.z2
+                prefs[PWR_BIKE_ZONE3_MAX] = profile.z3
+                prefs[PWR_BIKE_ZONE4_MAX] = profile.z4
+                prefs[PWR_BIKE_ZONE5_MAX] = profile.z5
+                prefs[PWR_BIKE_ZONE6_MAX] = profile.z6
+            } else {
+                prefs[KEY_IS_HR_ZONES_CONFIGURED] = true
+                val (k1, k2, k3, k4) = if (profile.type == ZoneType.HR_BIKE) {
+                    listOf(HR_BIKE_ZONE1_MAX, HR_BIKE_ZONE2_MAX, HR_BIKE_ZONE3_MAX, HR_BIKE_ZONE4_MAX)
+                } else {
+                    listOf(HR_RUN_ZONE1_MAX, HR_RUN_ZONE2_MAX, HR_RUN_ZONE3_MAX, HR_RUN_ZONE4_MAX)
+                }
+                prefs[k1] = profile.z1
+                prefs[k2] = profile.z2
+                prefs[k3] = profile.z3
+                prefs[k4] = profile.z4
+            }
+
+            val displayKeys = getZoneDisplayKeys(profile.type)
+            prefs[displayKeys.bgKey] = profile.displayOptions.showBackground
+            prefs[displayKeys.leftBarKey] = profile.displayOptions.showLeftBar
+            prefs[displayKeys.rightBarKey] = profile.displayOptions.showRightBar
+            prefs[displayKeys.textColorKey] = profile.displayOptions.showTextColor
+            prefs[displayKeys.gaugeKey] = profile.displayOptions.showGauge
+        }
+    }
+
+    /**
+     * Loads the complete zone profile state for a given ZoneType, ensuring
+     * power zone migrations are checked idempotently (REQ-UI-428.3).
+     */
+    suspend fun loadZoneProfile(type: ZoneType): ZoneProfileState {
+        checkAndMigratePowerZones()
+        return ZoneProfileState(
+            type = type,
+            z1 = getZone1MaxFlow(type).first(),
+            z2 = getZone2MaxFlow(type).first(),
+            z3 = getZone3MaxFlow(type).first(),
+            z4 = getZone4MaxFlow(type).first(),
+            z5 = if (type == ZoneType.PWR_BIKE) getZone5MaxFlow(type).first() else 0,
+            z6 = if (type == ZoneType.PWR_BIKE) getZone6MaxFlow(type).first() else 0,
+            displayOptions = getZoneDisplayOptionsFlow(type).first()
+        )
+    }
+
+    /**
+     * Loads all canonical zone profiles in standard order (HR_RUN, HR_BIKE, PWR_BIKE) (REQ-UI-428.3).
+     */
+    suspend fun loadAllZoneProfiles(): List<ZoneProfileState> {
+        checkAndMigratePowerZones()
+        return listOf(ZoneType.HR_RUN, ZoneType.HR_BIKE, ZoneType.PWR_BIKE).map { type ->
+            loadZoneProfile(type)
+        }
+    }
+
+    /**
      * Atomically saves calculated cycling power zones and FTP baseline conforming to REQ-UI-373.1, REQ-UI-373.5, REQ-UI-374.2.
      * All writes occur within a single dataStore.edit { } ACID transaction.
      */

@@ -136,11 +136,7 @@ class DefaultAutoPauseAudioNotifier(
                 SoundCue.NONE -> {}
             }
         } catch (t: Throwable) {
-            try {
-                Log.w("AutoPauseManager", "Audio tone error: ${t.message}")
-            } catch (_: Throwable) {
-                // Ignore unmocked Android Log in local JVM unit tests
-            }
+            Log.w("AutoPauseManager", "Audio tone error: ${t.message}")
         }
     }
 
@@ -152,11 +148,7 @@ class DefaultAutoPauseAudioNotifier(
         try {
             toneGenerator?.release()
         } catch (t: Throwable) {
-            try {
-                Log.w("AutoPauseManager", "ToneGenerator release error: ${t.message}")
-            } catch (_: Throwable) {
-                // Ignore unmocked Android Log in local JVM unit tests
-            }
+            Log.w("AutoPauseManager", "ToneGenerator release error: ${t.message}")
         } finally {
             toneGenerator = null
         }

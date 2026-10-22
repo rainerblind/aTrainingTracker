@@ -80,7 +80,6 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
-import com.atrainingtracker.banalservice.dialogs.InstallANTShitDialog
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModel
@@ -495,26 +494,6 @@ class MainActivityWithNavigation :
         observeNavigationEvents()
     }
 
-    private fun checkBatteryOptimizations() {
-        val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && pm != null) {
-            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-                AlertDialog.Builder(this)
-                    .setTitle(R.string.battery_optimization_title)
-                    .setMessage(R.string.battery_optimization_text)
-                    .setPositiveButton(R.string.OK) { _, _ ->
-                        val intent = Intent().apply {
-                            action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
-                            data = Uri.parse("package:$packageName")
-                        }
-                        startActivity(intent)
-                    }
-                    .setNegativeButton(R.string.Cancel) { dialog, _ -> dialog.dismiss() }
-                    .show()
-            }
-        }
-    }
-
     private fun observeNavigationEvents() {
         WorkoutNavigationEvents.navigateToEditLiveData.observe(this) { workoutId: Long? ->
             if (workoutId == null) return@observe
@@ -638,11 +617,19 @@ class MainActivityWithNavigation :
         window.decorView.keepScreenOn = TrainingApplication.keepScreenOn()
 
         if (TrainingApplication.NoUnlocking()) {
-            @Suppress("DEPRECATION")
-            window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                setShowWhenLocked(true)
+            } else {
+                @Suppress("DEPRECATION")
+                window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+            }
         } else {
-            @Suppress("DEPRECATION")
-            window.clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                setShowWhenLocked(false)
+            } else {
+                @Suppress("DEPRECATION")
+                window.clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+            }
         }
 
         if (TrainingApplication.forcePortrait()) {
@@ -787,7 +774,7 @@ class MainActivityWithNavigation :
         }
 
         Log.d(TAG, "setting a new content destination not yet implemented: $itemId")
-        Toast.makeText(this, "setting a new content destination not yet implemented", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.destination_not_yet_implemented, Toast.LENGTH_SHORT).show()
         return false
     }
 
@@ -974,7 +961,7 @@ class MainActivityWithNavigation :
                         if (percentage <= CRITICAL_BATTERY_LEVEL) {
                             if (mInRideCriticalAlertedSensorIds.add(deviceId)) {
                                 mInRideAlertedSensorIds.add(deviceId)
-                                val deviceName = devDbManager.getDeviceName(deviceId) ?: "Sensor"
+                                val deviceName = devDbManager.getDeviceName(deviceId) ?: getString(R.string.sensor)
                                 val message = getString(R.string.sensor_battery_snackbar_single, deviceName, percentage)
                                 WorkoutNavigationEvents.triggerLowBatteryAlert(
                                     WorkoutNavigationEvents.LowBatteryAlert(
@@ -987,7 +974,7 @@ class MainActivityWithNavigation :
                             }
                         } else {
                             if (mInRideAlertedSensorIds.add(deviceId)) {
-                                val deviceName = devDbManager.getDeviceName(deviceId) ?: "Sensor"
+                                val deviceName = devDbManager.getDeviceName(deviceId) ?: getString(R.string.sensor)
                                 val message = getString(R.string.sensor_battery_snackbar_single, deviceName, percentage)
                                 WorkoutNavigationEvents.triggerLowBatteryAlert(
                                     WorkoutNavigationEvents.LowBatteryAlert(
@@ -1098,11 +1085,6 @@ class MainActivityWithNavigation :
             val gpsDisabledDialog = GPSDisabledDialog()
             gpsDisabledDialog.show(supportFragmentManager, GPSDisabledDialog.TAG)
         }
-    }
-
-    private fun showInstallANTShitDialog() {
-        val installANTShitDialog = InstallANTShitDialog()
-        installANTShitDialog.show(supportFragmentManager, InstallANTShitDialog.TAG)
     }
 
     override fun showStartOrResumeDialog() {

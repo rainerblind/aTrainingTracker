@@ -73,6 +73,8 @@ fun ClimbOnMapScreen(
     val normalizedClimbPath = remember(climb) {
         climb.normalizedPathPoints
     }
+    val startMarkerTitle = stringResource(R.string.marker_start)
+    val summitMarkerTitle = stringResource(R.string.marker_summit)
 
     MapDetailLayout(
         bSportType = bSportType,
@@ -114,7 +116,7 @@ fun ClimbOnMapScreen(
                     LocationMarker(
                         position = climb.startLatLng,
                         iconResId = R.drawable.control_start,
-                        title = "Start",
+                        title = startMarkerTitle,
                         iconDescriptor = startMarker
                     )
                 )
@@ -124,7 +126,7 @@ fun ClimbOnMapScreen(
                     LocationMarker(
                         position = climb.endLatLng,
                         iconResId = R.drawable.control_stop,
-                        title = "Summit",
+                        title = summitMarkerTitle,
                         iconDescriptor = endMarker
                     )
                 )

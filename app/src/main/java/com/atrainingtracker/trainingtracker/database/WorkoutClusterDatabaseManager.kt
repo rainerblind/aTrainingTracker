@@ -162,6 +162,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
     private var mDatabase: SQLiteDatabase? = null
 
     companion object {
+        private const val TAG = "WorkoutClusterDatabaseManager"
+
         @Volatile
         private var instance: WorkoutClusterDatabaseManager? = null
 
@@ -187,7 +189,8 @@ class WorkoutClusterDatabaseManager private constructor(context: Context) {
                     list.add(array.getString(i))
                 }
                 list
-            } catch (_: Exception) {
+            } catch (e: org.json.JSONException) {
+                Log.w(TAG, "Failed to deserialize preview paths JSON: $serialized", e)
                 emptyList()
             }
         }

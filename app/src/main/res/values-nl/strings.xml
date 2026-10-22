@@ -191,13 +191,9 @@
     <string name="power_to_weight">Vermogen-gewichtsverhouding</string>
     <string name="power_to_weight_short">W/kg</string>
     <string name="normalized_power">Genormaliseerd vermogen</string>
-    <string name="normalized_power_short">NP</string>
     <string name="intensity_factor">Intensiteitsfactor</string>
-    <string name="intensity_factor_short">IF</string>
     <string name="work_kj">Mechanische arbeid</string>
-    <string name="work_kj_short">kJ</string>
     <string name="tss">Training Stress Score</string>
-    <string name="tss_short">TSS</string>
     <string name="speed">snelheid</string>
     <string name="speed_short">snelh</string>
     <string name="current_sensors">huidige sensoren</string>
@@ -624,10 +620,10 @@
     <string name="tab_pwr_bike">Pwr Fietsen</string>
 
     <string name="zone_1_label">Zone 1 (Herstel)</string>
-    <string name="zone_2_label">Zone 2 (Aerobic)</string>
+    <string name="zone_2_label">Zone 2 (Aeroob)</string>
     <string name="zone_3_label">Zone 3 (Tempo)</string>
     <string name="zone_4_label">Zone 4 (Drempel)</string>
-    <string name="zone_5_label">Zone 5 (Anaerobic)</string>
+    <string name="zone_5_label">Zone 5 (Anaeroob)</string>
     <string name="zone_6_label">Zone 6 (Anaerobe capaciteit)</string>
     <string name="zone_7_label">Zone 7 (Neuromusculair vermogen)</string>
 
@@ -1138,7 +1134,7 @@
     <string name="all_shoes">+ alle schoenen +</string>
     <string name="all_bikes">+ alle fietsen +</string>
     <string name="no_equipment">- geen -</string>
-    <string name="backup_restore">Backup \u0026 Restore</string>
+    <string name="backup_restore">Back-up \u0026 herstel</string>
     <string name="backup_restore_summary">Gegevens migreren of herstellen</string>
     <string name="create_backup">Back-up maken</string>
     <string name="restore_backup">Volledig herstel (Migratie)</string>
@@ -1193,7 +1189,7 @@
     <string name="import_backup_summary">Beheer workout-import, back-ups en gegevensherstel</string>
 
     <string name="create_and_upload_to_dropbox">Maken \u0026 Dropbox-upload</string>
-    <string name="create_and_upload_to_both">Maken \u0026 upload (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_both">Maken \u0026 upload\n(Dropbox \u0026 Google Drive)</string>
     <string name="create_and_upload_to_google_drive">Maken \u0026 Google Drive-upload</string>
     <string name="create_and_upload_to_cloud">Maken \u0026 cloud-upload</string>
     <string name="cloud_backup_no_provider_dialog_title">Cloudback-up</string>
@@ -1820,9 +1816,6 @@
     <string name="ant_status_card_desc">ANT+ sensoren op moderne smartphones vereisen een USB-OTG-adapter met ANT+ USB-stick en ANT+ systeemdiensten.</string>
     <string name="ant_status_card_action">Status controleren</string>
     <string name="ant_status_usb_dongle_note">Moderne smartphones hebben geen ingebouwde ANT+-chips. Een externe USB-OTG-adapter met ANT+ USB-stick is vereist voor ontvangst.</string>
-    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
-    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
-    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
     <string name="ant_service_installed">Geïnstalleerd</string>
     <string name="ant_service_not_installed">Niet geïnstalleerd</string>
     <string name="ant_service_install_button">Installeren</string>
@@ -2098,5 +2091,34 @@
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
     <string name="workout_card_reorder_toggle">Kaartvolgorde en zichtbaarheid (%1$d actief)</string>
     <string name="settings_workout_details_title">Workout-details (volledig scherm)</string>
-</resources>
 
+    <!-- UI Localization Parity, Units & Accessibility (REQ-UI-429 / ATT-4026) -->
+    <string name="crop_start_trim">Start: +%1$s</string>
+    <string name="crop_end_trim">Einde: -%1$s</string>
+    <string name="crop_distance_label">Afstand:</string>
+    <string name="crop_duration_label">Duur:</string>
+    <string name="crop_avg_speed_label">Ø Snelheid:</string>
+    <string name="import_map_data_title">Gegevens toewijzen voor import</string>
+    <string name="none">Geen</string>
+    <string name="unknown">Onbekend</string>
+    <string name="destination_not_yet_implemented">Een nieuwe inhoudsbestemming instellen is nog niet geïmplementeerd</string>
+    <string name="unit_watt">W</string>
+    <string name="lap_placeholder_format">Ronde %1$d</string>
+    <string name="period_no_gps_data">Geen GPS-gegevens voor deze periode</string>
+    <string name="marker_summit">Top</string>
+    <string name="marker_lap_start">Rondestart</string>
+    <string name="marker_lap_end">Ronde-einde</string>
+    <string name="cd_fastest_split">Snelste tussentijd</string>
+    <string name="cd_switch_view_mode">Weergavemodus wijzigen</string>
+    <string name="connect_with_strava">Verbinden met Strava</string>
+    <string name="cd_add_row">Rij toevoegen</string>
+    <string name="cd_add_column">Kolom toevoegen</string>
+    <string name="cd_add_before">Ervóór toevoegen</string>
+    <string name="cd_delete_tab">Tabblad verwijderen</string>
+    <string name="cd_add_after">Erna toevoegen</string>
+    <string name="back">Terug</string>
+    <string name="close">Sluiten</string>
+    <string name="clear">Wissen</string>
+    <string name="select_route">Route selecteren</string>
+    <string name="equipment">Uitrusting</string>
+</resources>

@@ -191,13 +191,9 @@
     <string name="power_to_weight">Rapport puissance/poids</string>
     <string name="power_to_weight_short">W/kg</string>
     <string name="normalized_power">Puissance normalisée</string>
-    <string name="normalized_power_short">NP</string>
     <string name="intensity_factor">Facteur d\'intensité</string>
-    <string name="intensity_factor_short">IF</string>
     <string name="work_kj">Travail mécanique</string>
-    <string name="work_kj_short">kJ</string>
     <string name="tss">Score de stress d\'entraînement</string>
-    <string name="tss_short">TSS</string>
     <string name="speed">vitesse</string>
     <string name="speed_short">vit</string>
     <string name="current_sensors">capteurs actuels</string>
@@ -1139,7 +1135,7 @@
     <string name="config_tracking__elevation_profile_scope_full_route">Parcours complet</string>
     <string name="config_tracking__elevation_profile_scope_rolling_window">Fenêtre glissante</string>
     <string name="config_tracking__elevation_profile_lookahead">Anticipation</string>
-    <string name="backup_restore">Backup \u0026 Restore</string>
+    <string name="backup_restore">Sauvegarde \u0026 restauration</string>
     <string name="backup_restore_summary">Migrer les données ou effectuer une récupération</string>
     <string name="create_backup">Créer une sauvegarde</string>
     <string name="restore_backup">Restauration complète (Migration)</string>
@@ -1194,7 +1190,7 @@
     <string name="import_backup_summary">Gérer les importations d\'entraînements, les sauvegardes et la restauration des données</string>
 
     <string name="create_and_upload_to_dropbox">Créer \u0026 envoyer vers Dropbox</string>
-    <string name="create_and_upload_to_both">Créer \u0026 envoyer (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_both">Créer \u0026 envoyer\n(Dropbox \u0026 Google Drive)</string>
     <string name="create_and_upload_to_google_drive">Créer \u0026 envoyer vers Google Drive</string>
     <string name="create_and_upload_to_cloud">Créer \u0026 envoyer vers le cloud</string>
     <string name="cloud_backup_no_provider_dialog_title">Sauvegarde dans le cloud</string>
@@ -1823,9 +1819,6 @@
     <string name="ant_status_card_desc">Les capteurs ANT+ sur les smartphones modernes nécessitent un adaptateur USB-OTG avec une clé USB ANT+ et les services système ANT+.</string>
     <string name="ant_status_card_action">Vérifier l\'état</string>
     <string name="ant_status_usb_dongle_note">Les smartphones modernes ne possèdent pas de puces ANT+ intégrées. Un adaptateur USB-OTG externe avec une clé USB ANT+ est nécessaire.</string>
-    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
-    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
-    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
     <string name="ant_service_installed">Installé</string>
     <string name="ant_service_not_installed">Non installé</string>
     <string name="ant_service_install_button">Installer</string>
@@ -2098,4 +2091,34 @@
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
     <string name="workout_card_reorder_toggle">Ordre et visibilité des cartes (%1$d actives)</string>
     <string name="settings_workout_details_title">Détails de l\'entraînement (plein écran)</string>
+
+    <!-- UI Localization Parity, Units & Accessibility (REQ-UI-429 / ATT-4026) -->
+    <string name="crop_start_trim">Début : +%1$s</string>
+    <string name="crop_end_trim">Fin : -%1$s</string>
+    <string name="crop_distance_label">Distance :</string>
+    <string name="crop_duration_label">Durée :</string>
+    <string name="crop_avg_speed_label">Ø Vitesse :</string>
+    <string name="import_map_data_title">Mapper les données pour l\'importation</string>
+    <string name="none">Aucun</string>
+    <string name="unknown">Inconnu</string>
+    <string name="destination_not_yet_implemented">La définition d\'une nouvelle destination de contenu n\'est pas encore implémentée</string>
+    <string name="unit_watt">W</string>
+    <string name="lap_placeholder_format">Tour %1$d</string>
+    <string name="period_no_gps_data">Aucune donnée GPS pour cette période</string>
+    <string name="marker_summit">Sommet</string>
+    <string name="marker_lap_start">Début de tour</string>
+    <string name="marker_lap_end">Fin de tour</string>
+    <string name="cd_fastest_split">Temps intermédiaire le plus rapide</string>
+    <string name="cd_switch_view_mode">Changer de mode d\'affichage</string>
+    <string name="connect_with_strava">Se connecter à Strava</string>
+    <string name="cd_add_row">Ajouter une ligne</string>
+    <string name="cd_add_column">Ajouter une colonne</string>
+    <string name="cd_add_before">Ajouter avant</string>
+    <string name="cd_delete_tab">Supprimer l\'onglet</string>
+    <string name="cd_add_after">Ajouter après</string>
+    <string name="back">Retour</string>
+    <string name="close">Fermer</string>
+    <string name="clear">Effacer</string>
+    <string name="select_route">Sélectionner un itinéraire</string>
+    <string name="equipment">Équipement</string>
 </resources>

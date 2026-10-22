@@ -384,4 +384,155 @@ class BackupImportSecurityTest {
         assertFalse(importTemp.exists())
         assertFalse(importAnalysis.exists())
     }
+
+    /**
+     * TST-MIG-044.1: Valid archive extraction through a destination path with a symlinked parent directory.
+     * Simulates Android /data/user/0/<pkg>/... -> /data/data/<pkg>/... OS-level symlink architecture
+     * (REQ-MIG-047.1, ATT-4592).
+     */
+    @Test
+    fun testSecureZipExtractor_extractsValidArchiveThroughSymlinkedParent() {
+        val realBase = tempFolder.newFolder("real_android_data")
+        val symlinkBase = tempFolder.root.toPath().resolve("symlink_user_0")
+        try {
+            Files.createSymbolicLink(symlinkBase, realBase.toPath())
+        } catch (e: UnsupportedOperationException) {
+            return // Skip if symlinks are not supported on filesystem
+        }
+
+        val destDir = File(symlinkBase.toFile(), "restore_staging")
+        val validZip = File(tempFolder.root, "valid_android_backup.attbackup")
+        createZipArchive(validZip, mapOf(
+            "databases/WorkoutSummaries.db" to "sqlite_header_mock".toByteArray(),
+            "shared_prefs/settings.xml" to "<map></map>".toByteArray(),
+            "datastore/data.pb" to "proto_mock".toByteArray()
+        ))
+
+        // Must succeed without throwing SecurityException
+        SecureZipExtractor.extractBackupArchive(validZip, destDir)
+
+        val extractedDb = File(destDir, "databases/WorkoutSummaries.db")
+        val extractedPrefs = File(destDir, "shared_prefs/settings.xml")
+        val extractedDatastore = File(destDir, "datastore/data.pb")
+
+        assertTrue("Database file must exist in extracted destination", extractedDb.exists())
+        assertTrue("Preferences file must exist in extracted destination", extractedPrefs.exists())
+        assertTrue("DataStore file must exist in extracted destination", extractedDatastore.exists())
+        assertEquals("sqlite_header_mock", extractedDb.readText())
+
+        // Verify that real destination also contains the extracted files
+        val realDb = File(realBase, "restore_staging/databases/WorkoutSummaries.db")
+        assertTrue("File must be present in canonical destination path", realDb.exists())
+    }
+
+    /**
+     * TST-MIG-044.2: Zip-slip path traversal attempt is strictly rejected even when extraction
+     * is rooted through a symlinked parent directory (REQ-MIG-047.2, REQ-MIG-040.1, ATT-4592).
+     */
+    @Test
+    fun testSecureZipExtractor_rejectsZipSlipThroughSymlinkedParent() {
+        val realBase = tempFolder.newFolder("real_slip_data")
+        val symlinkBase = tempFolder.root.toPath().resolve("symlink_slip_user_0")
+        try {
+            Files.createSymbolicLink(symlinkBase, realBase.toPath())
+        } catch (e: UnsupportedOperationException) {
+            return
+        }
+
+        val destDir = File(symlinkBase.toFile(), "restore_staging")
+        val slipZip = File(tempFolder.root, "slip_android_backup.attbackup")
+        createZipArchive(slipZip, mapOf(
+            "../../escaped_evil.db" to "malicious_payload".toByteArray()
+        ))
+
+        try {
+            SecureZipExtractor.extractBackupArchive(slipZip, destDir)
+            fail("Must reject zip-slip path traversal through symlinked parent directory")
+        } catch (e: SecurityException) {
+            assertTrue(
+                "Exception message must mention zip-slip traversal",
+                e.message?.contains("Zip-slip path traversal attempt detected") == true
+            )
+        }
+
+        val escapedFile = File(tempFolder.root, "escaped_evil.db")
+        assertFalse("Escaped file outside destination must not exist", escapedFile.exists())
+    }
+
+    /**
+     * TST-MIG-044.2 (Extended): Rejection of internal symbolic links inside the archive or extraction tree
+     * when destination is rooted through a symlinked parent directory (REQ-MIG-047.2, REQ-MIG-040.2, ATT-4592).
+     */
+    @Test
+    fun testSecureZipExtractor_rejectsInternalSymlinksThroughSymlinkedParent() {
+        val realBase = tempFolder.newFolder("real_internal_symlink_data")
+        val symlinkBase = tempFolder.root.toPath().resolve("symlink_internal_user_0")
+        val outsideTarget = tempFolder.newFolder("outside_escape_target")
+        try {
+            Files.createSymbolicLink(symlinkBase, realBase.toPath())
+        } catch (e: UnsupportedOperationException) {
+            return
+        }
+
+        val destDir = File(symlinkBase.toFile(), "restore_staging")
+        destDir.mkdirs()
+
+        // Create an internal symlink inside the staging directory pointing outside
+        val internalSymlink = destDir.toPath().resolve("databases")
+        try {
+            Files.createSymbolicLink(internalSymlink, outsideTarget.toPath())
+        } catch (e: UnsupportedOperationException) {
+            return
+        }
+
+        val testZip = File(tempFolder.root, "internal_symlink_test.attbackup")
+        createZipArchive(testZip, mapOf(
+            "databases/WorkoutSummaries.db" to "escaped_payload".toByteArray()
+        ))
+
+        try {
+            SecureZipExtractor.extractBackupArchive(testZip, destDir)
+            fail("Must reject internal symlinks inside destination tree")
+        } catch (e: SecurityException) {
+            assertTrue(
+                "Exception message must mention symbolic link prohibition",
+                e.message?.contains("Symbolic links are strictly prohibited in backup archives") == true
+            )
+        }
+
+        val escapedFile = File(outsideTarget, "WorkoutSummaries.db")
+        assertFalse("Outside target must not be written via internal symlink", escapedFile.exists())
+    }
+
+    /**
+     * TST-MIG-044.3: Top-level whitelist enforcement when destination is rooted through a symlinked parent
+     * (REQ-MIG-047.2, REQ-MIG-040.3, ATT-4592).
+     */
+    @Test
+    fun testSecureZipExtractor_rejectsUnwhitelistedDirectoryThroughSymlinkedParent() {
+        val realBase = tempFolder.newFolder("real_whitelist_data")
+        val symlinkBase = tempFolder.root.toPath().resolve("symlink_whitelist_user_0")
+        try {
+            Files.createSymbolicLink(symlinkBase, realBase.toPath())
+        } catch (e: UnsupportedOperationException) {
+            return
+        }
+
+        val destDir = File(symlinkBase.toFile(), "restore_staging")
+        val unwhitelistedZip = File(tempFolder.root, "unwhitelisted_backup.attbackup")
+        createZipArchive(unwhitelistedZip, mapOf(
+            "unauthorized_dir/malicious.sh" to "#!/bin/sh\nrm -rf /".toByteArray()
+        ))
+
+        try {
+            SecureZipExtractor.extractBackupArchive(unwhitelistedZip, destDir)
+            fail("Must reject unwhitelisted top-level directory entries")
+        } catch (e: SecurityException) {
+            assertTrue(
+                "Exception message must mention whitelisted directories",
+                e.message?.contains("Invalid backup entry outside whitelisted directories") == true
+            )
+        }
+    }
 }
+

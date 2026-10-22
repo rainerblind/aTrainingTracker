@@ -525,7 +525,7 @@ private fun RankBadge(rank: Int) {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewStravaActivitySection() {
+private fun PreviewStravaActivitySection() {
     val dummyJson = """
         {
           "id": 123456789,
@@ -548,7 +548,7 @@ fun PreviewStravaActivitySection() {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewStravaActivitySection2() {
+private fun PreviewStravaActivitySection2() {
     val dummyJson = """
         {
           "id": 987654321,
@@ -571,7 +571,7 @@ fun PreviewStravaActivitySection2() {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewStravaActivitySectionNoPRs() {
+private fun PreviewStravaActivitySectionNoPRs() {
     val dummyJson = """
         {
           "id": 123456789,
@@ -589,7 +589,7 @@ fun PreviewStravaActivitySectionNoPRs() {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewStravaActivitySectionNoSegments() {
+private fun PreviewStravaActivitySectionNoSegments() {
     val dummyJson = """
         {
           "id": 123456789,

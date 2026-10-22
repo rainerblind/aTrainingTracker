@@ -353,7 +353,10 @@ public class BANALService
             DeviceManager deviceManager = cDeviceManager;
             BSportType sportType = deviceManager != null ? deviceManager.getSportType() : BSportType.UNKNOWN;
             List<Long> sportTypeIds = SportTypeDatabaseManager.getInstance(this).getSportTypesIdList(sportType, avgSpd);
-            return sportTypeIds.get(0);
+            if (sportTypeIds != null && !sportTypeIds.isEmpty()) {
+                return sportTypeIds.get(0);
+            }
+            return SportTypeDatabaseManager.getDefaultSportTypeId();
         }
     }
 
@@ -407,7 +410,7 @@ public class BANALService
             lapDistance_String = sensorData.getStringValue();
         }
 
-        double lapSpeed = lapDistance / lapTime_s;
+        double lapSpeed = lapTime_s > 0 ? (lapDistance / lapTime_s) : 0.0;
         String lapSpeedString = SensorType.SPEED_mps.getMyFormatter().format(lapSpeed);
 
         DeviceManager deviceManager = cDeviceManager;

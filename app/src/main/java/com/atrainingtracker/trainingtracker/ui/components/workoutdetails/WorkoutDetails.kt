@@ -430,7 +430,7 @@ private fun AnaerobicBatteryRow(
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewWorkoutDetails() {
+private fun PreviewWorkoutDetails() {
     ATrainingTrackerTheme {
         WorkoutDetails(
             data = WorkoutDetailsData(

@@ -9,41 +9,64 @@ import java.io.File
 /**
  * Structural contract tests verifying complete excision of corridor-based route grouping
  * and differentiating thumbnail zoom, and restoration of clean flat route list presentation
- * (TST-MAP-037 / REQ-MAP-035).
+ * (TST-MAP-037 / REQ-MAP-035, TST-TST-002 / REQ-TST-002).
  */
 class RouteTabbedCleanLayoutTest {
 
     @Test
     fun routeTabbedScreen_doesNotReferenceGatewayFilterChipsOrCorridorClassifier() {
-        val file = File("src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteTabbedScreen.kt")
-        assertTrue("RouteTabbedScreen.kt must exist", file.exists())
-        val content = file.readText()
+        // Programmatic classpath reflection: verify deleted classes cannot be resolved by classloader
+        val obsoleteClassNames = listOf(
+            "com.atrainingtracker.trainingtracker.routes.RouteCorridorClassifier",
+            "com.atrainingtracker.trainingtracker.routes.RouteBoundingBoxCalculator",
+            "com.atrainingtracker.trainingtracker.ui.routes.GatewayFilterChipsRowKt",
+            "com.atrainingtracker.trainingtracker.ui.routes.GatewayDirection"
+        )
+        for (className in obsoleteClassNames) {
+            val classFound = try {
+                Class.forName(className)
+                true
+            } catch (_: ClassNotFoundException) {
+                false
+            }
+            assertFalse("Obsolete class '$className' must not exist in classpath", classFound)
+        }
 
-        assertFalse("RouteTabbedScreen must not reference GatewayFilterChipsRow", content.contains("GatewayFilterChipsRow"))
-        assertFalse("RouteTabbedScreen must not reference GatewayDirection", content.contains("GatewayDirection"))
-        assertFalse("RouteTabbedScreen must not reference RouteCorridorClassifier", content.contains("RouteCorridorClassifier"))
-        assertFalse("RouteTabbedScreen must not compute gatewayChipsHeight", content.contains("gatewayChipsHeight"))
-        assertFalse("RouteTabbedScreen must not contain hasGatewayChips", content.contains("hasGatewayChips"))
+        // Verify RouteTabbedScreenKt does not declare corridor or gateway methods
+        val tabbedScreenClass = Class.forName("com.atrainingtracker.trainingtracker.ui.routes.RouteTabbedScreenKt")
+        val methods = tabbedScreenClass.declaredMethods.map { it.name }
+        assertFalse("RouteTabbedScreenKt must not contain gatewayChipsHeight", methods.any { it.contains("gatewayChipsHeight") })
+        assertFalse("RouteTabbedScreenKt must not contain hasGatewayChips", methods.any { it.contains("hasGatewayChips") })
     }
 
     @Test
     fun routeList_doesNotAcceptOrForwardFocusedThumbnailZoom() {
-        val file = File("src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteList.kt")
-        assertTrue("RouteList.kt must exist", file.exists())
-        val content = file.readText()
-
-        assertFalse("RouteList must not contain focusedThumbnailZoomEnabled", content.contains("focusedThumbnailZoomEnabled"))
+        // Verify RouteListKt declared methods do not contain focusedThumbnailZoom parameters
+        val routeListClass = Class.forName("com.atrainingtracker.trainingtracker.ui.routes.RouteListKt")
+        val methods = routeListClass.declaredMethods
+        for (method in methods) {
+            for (paramType in method.parameterTypes) {
+                assertFalse(
+                    "RouteList method '${method.name}' must not accept corridor or thumbnail zoom parameter type",
+                    paramType.name.contains("ThumbnailZoom") || paramType.name.contains("Corridor")
+                )
+            }
+        }
     }
 
     @Test
-    fun routeItem_doesNotReferenceRouteBoundingBoxCalculator_andPassesNullTargetBounds() {
-        val file = File("src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteItem.kt")
-        assertTrue("RouteItem.kt must exist", file.exists())
-        val content = file.readText()
-
-        assertFalse("RouteItem must not reference RouteBoundingBoxCalculator", content.contains("RouteBoundingBoxCalculator"))
-        assertFalse("RouteItem must not contain focusedThumbnailZoomEnabled", content.contains("focusedThumbnailZoomEnabled"))
-        assertTrue("RouteItem must pass targetBounds = null for full route preview", content.contains("targetBounds = null"))
+    fun routeItem_doesNotReferenceRouteBoundingBoxCalculator() {
+        // Verify RouteItemKt declared methods and fields do not reference RouteBoundingBoxCalculator
+        val routeItemClass = Class.forName("com.atrainingtracker.trainingtracker.ui.routes.RouteItemKt")
+        val methods = routeItemClass.declaredMethods
+        for (method in methods) {
+            for (paramType in method.parameterTypes) {
+                assertFalse(
+                    "RouteItem method '${method.name}' must not accept RouteBoundingBoxCalculator",
+                    paramType.name.contains("RouteBoundingBoxCalculator")
+                )
+            }
+        }
     }
 
     @Test

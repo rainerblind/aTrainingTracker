@@ -223,12 +223,11 @@ public class TrainingApplication extends Application {
     private static final AtomicBoolean mManualPauseLock = new AtomicBoolean(false);
     private static final AtomicBoolean mIsAutoPaused = new AtomicBoolean(false);
     private static final AtomicBoolean mWasAutoPaused = new AtomicBoolean(false);
-    protected static boolean cResumeFromCrash = false;
+    protected static volatile boolean cResumeFromCrash = false;
     private static SharedPreferences cSharedPreferences;
     private final IntentFilter mSearchingFinishedFilter = new IntentFilter(BANALService.SEARCHING_FINISHED_FOR_ALL_INTENT);
     private final IntentFilter mSearchingStartedFilter = new IntentFilter(BANALService.SEARCHING_STARTED_FOR_ONE_INTENT);
     public TrackOnMapHelper trackOnMapHelper;
-    private final HashMap<Long, Boolean> mSegmentListUpdating = new HashMap<>();
     private long mWorkoutID = -1;
     private static volatile long sActiveWorkoutId = -1;
     protected final BroadcastReceiver mTrackingStartedReceiver = new BroadcastReceiver() {
@@ -1257,15 +1256,12 @@ public class TrainingApplication extends Application {
 
     public static void setManualPauseLock(boolean locked, Context context) {
         mManualPauseLock.set(locked);
-        if (context != null) {
-            try {
-                PreferenceManager.getDefaultSharedPreferences(context)
-                        .edit()
-                        .putBoolean(SP_MANUAL_PAUSE_LOCK, locked)
-                        .apply();
-            } catch (Throwable ignored) {
-                // Ignore in unmocked unit test environments
-            }
+        SharedPreferences prefs = cSharedPreferences != null ? cSharedPreferences
+                : (context != null ? PreferenceManager.getDefaultSharedPreferences(context) : null);
+        if (prefs != null) {
+            prefs.edit()
+                    .putBoolean(SP_MANUAL_PAUSE_LOCK, locked)
+                    .apply();
         }
     }
 
@@ -1283,15 +1279,12 @@ public class TrainingApplication extends Application {
 
     public static void setAutoPaused(boolean autoPaused, Context context) {
         mIsAutoPaused.set(autoPaused);
-        if (context != null) {
-            try {
-                PreferenceManager.getDefaultSharedPreferences(context)
-                        .edit()
-                        .putBoolean(SP_IS_AUTO_PAUSED, autoPaused)
-                        .apply();
-            } catch (Throwable ignored) {
-                // Ignore in unmocked unit test environments
-            }
+        SharedPreferences prefs = cSharedPreferences != null ? cSharedPreferences
+                : (context != null ? PreferenceManager.getDefaultSharedPreferences(context) : null);
+        if (prefs != null) {
+            prefs.edit()
+                    .putBoolean(SP_IS_AUTO_PAUSED, autoPaused)
+                    .apply();
         }
     }
 
@@ -1496,6 +1489,9 @@ public class TrainingApplication extends Application {
     }
 
     public void updateTimeAndDistanceToNotification(@Nullable SensorData<Integer> time, @Nullable SensorData<Number> distance, String sportType) {
+        if (!isTracking()) {
+            return;
+        }
         if (DEBUG) Log.i(TAG, "updateTimeAndDistanceToNotification(" + time + ", " + distance);
 
         if (mNotificationManager.areNotificationsEnabled()) {
@@ -1574,24 +1570,6 @@ public class TrainingApplication extends Application {
         return mTrackingAndSearchingNotificationBuilder.build();
     }
 
-    public void setIsSegmentListUpdating(long sportTypeId, boolean isUpdating) {
-        if (DEBUG)
-            Log.i(TAG, "setIsSegmentListUpdating, sportTypeId=" + sportTypeId + ", isUpdating=" + isUpdating);
-
-        mSegmentListUpdating.put(sportTypeId, isUpdating);
-    }
-
-    public boolean isSegmentListUpdating(long sportTypeId) {
-        if (mSegmentListUpdating.containsKey(sportTypeId)) {
-            if (DEBUG)
-                Log.i(TAG, "isSegmentListUpdating(" + sportTypeId + "):  key exists: " + mSegmentListUpdating.get(sportTypeId));
-            return mSegmentListUpdating.get(sportTypeId);
-        } else {
-            if (DEBUG) Log.i(TAG, "isSegmentListUpdating(" + sportTypeId + "):  no key exists");
-            return false;
-        }
-    }
-
     public long getWorkoutID() {
         return mWorkoutID;
     }
@@ -1599,10 +1577,6 @@ public class TrainingApplication extends Application {
     public void setWorkoutID(long workoutID) {
         mWorkoutID = workoutID;
         sActiveWorkoutId = workoutID;
-    }
-
-    public void todo(Context context, String text) {
-        Toast.makeText(context, "TODO: " + text, Toast.LENGTH_SHORT).show();
     }
 
     public void setTracking() {
@@ -1758,26 +1732,17 @@ public class TrainingApplication extends Application {
         setManualPauseLock(false, this);
         setAutoPaused(false, this);
 
-        try {
-            stopPebbleWatchapp();
-        } catch (Throwable ignored) {
-        }
+        stopPebbleWatchapp();
 
         cTrackingMode = TrackingMode.READY;
         sActiveWorkoutId = -1;
         mWorkoutID = -1;
 
-        try {
-            if (mNotificationManager != null) {
-                mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
-            }
-        } catch (Throwable ignored) {
+        if (mNotificationManager != null) {
+            mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
         }
 
-        try {
-            notifyTrackingStateChanged();
-        } catch (Throwable ignored) {
-        }
+        notifyTrackingStateChanged();
     }
 
     protected void trackingStopped() {

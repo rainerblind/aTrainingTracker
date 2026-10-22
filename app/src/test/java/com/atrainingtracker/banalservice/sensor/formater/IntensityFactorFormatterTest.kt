@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.sensor.formater
 
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -25,12 +26,19 @@ import java.util.Locale
 
 class IntensityFactorFormatterTest {
 
+    private lateinit var originalLocale: Locale
     private lateinit var formatter: IntensityFactorFormatter
 
     @Before
     fun setUp() {
+        originalLocale = Locale.getDefault()
         Locale.setDefault(Locale.US)
         formatter = IntensityFactorFormatter()
+    }
+
+    @After
+    fun tearDown() {
+        Locale.setDefault(originalLocale)
     }
 
     @Test

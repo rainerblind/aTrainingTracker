@@ -327,7 +327,7 @@ private fun RationaleValueItem(
 
 @Preview(name = "Light Mode", showBackground = true)
 @Composable
-fun PreviewPermissionRationaleContentLight() {
+private fun PreviewPermissionRationaleContentLight() {
     ATrainingTrackerTheme(darkTheme = false) {
         Surface {
             PermissionRationaleContent(
@@ -343,7 +343,7 @@ fun PreviewPermissionRationaleContentLight() {
 
 @Preview(name = "Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
-fun PreviewPermissionRationaleContentDark() {
+private fun PreviewPermissionRationaleContentDark() {
     ATrainingTrackerTheme(darkTheme = true) {
         Surface {
             PermissionRationaleContent(
@@ -359,7 +359,7 @@ fun PreviewPermissionRationaleContentDark() {
 
 @Preview(name = "Background Location Rationale", showBackground = true)
 @Composable
-fun PreviewPermissionRationaleContentBgLocation() {
+private fun PreviewPermissionRationaleContentBgLocation() {
     ATrainingTrackerTheme(darkTheme = false) {
         Surface {
             PermissionRationaleContent(
@@ -375,7 +375,7 @@ fun PreviewPermissionRationaleContentBgLocation() {
 
 @Preview(name = "Battery Optimization Rationale", showBackground = true)
 @Composable
-fun PreviewPermissionRationaleContentBattery() {
+private fun PreviewPermissionRationaleContentBattery() {
     ATrainingTrackerTheme(darkTheme = false) {
         Surface {
             PermissionRationaleContent(
@@ -391,7 +391,7 @@ fun PreviewPermissionRationaleContentBattery() {
 
 @Preview(name = "Settings Explanation Mode", showBackground = true)
 @Composable
-fun PreviewPermissionRationaleContentDenied() {
+private fun PreviewPermissionRationaleContentDenied() {
     ATrainingTrackerTheme(darkTheme = false) {
         Surface {
             PermissionRationaleContent(
@@ -407,7 +407,7 @@ fun PreviewPermissionRationaleContentDenied() {
 
 @Preview(name = "Notification Rationale", showBackground = true)
 @Composable
-fun PreviewPermissionRationaleContentNotification() {
+private fun PreviewPermissionRationaleContentNotification() {
     ATrainingTrackerTheme(darkTheme = false) {
         Surface {
             PermissionRationaleContent(
@@ -423,7 +423,7 @@ fun PreviewPermissionRationaleContentNotification() {
 
 @Preview(name = "Bluetooth Rationale", showBackground = true)
 @Composable
-fun PreviewPermissionRationaleContentBluetooth() {
+private fun PreviewPermissionRationaleContentBluetooth() {
     ATrainingTrackerTheme(darkTheme = false) {
         Surface {
             PermissionRationaleContent(

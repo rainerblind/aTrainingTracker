@@ -754,8 +754,9 @@ fun SensorGridScreen(
                         }
                     }
 
-                    // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199)
+                    // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199 / REQ-NAV-056)
                     val activeNavigatedRoute = state.mapRoutes.firstOrNull { it.isActiveNavigation }
+                    var lastRouteSegmentIndex by remember(activeNavigatedRoute?.id) { mutableStateOf<Int?>(null) }
                     val resolvedProfile = remember(
                         activeNavigatedRoute,
                         state.pathPoints,
@@ -763,13 +764,16 @@ fun SensorGridScreen(
                         state.elevationProfileScope,
                         state.elevationProfileLookahead
                     ) {
-                        TrackingElevationProfileResolver.resolve(
+                        val res = TrackingElevationProfileResolver.resolve(
                             activeNavigatedRoute = activeNavigatedRoute,
                             recordedPathPoints = state.pathPoints,
                             currentLocation = currentLocation,
                             scope = state.elevationProfileScope,
-                            lookaheadDistanceMeters = state.elevationProfileLookahead
+                            lookaheadDistanceMeters = state.elevationProfileLookahead,
+                            lastSegmentIndex = lastRouteSegmentIndex
                         )
+                        lastRouteSegmentIndex = res.segmentIndex
+                        res
                     }
 
                     // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199)
@@ -1335,7 +1339,7 @@ private fun RowAdder(onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Icon(
             imageVector = Icons.Default.Add,
-            contentDescription = "Add Row",
+            contentDescription = stringResource(R.string.cd_add_row),
             tint = MaterialTheme.colorScheme.primary
         )
     }
@@ -1346,7 +1350,7 @@ private fun ColAdder(onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.fillMaxHeight()) {
         Icon(
             imageVector = Icons.Default.Add,
-            contentDescription = "Add Column",
+            contentDescription = stringResource(R.string.cd_add_column),
             tint = MaterialTheme.colorScheme.primary
         )
     }
@@ -1360,7 +1364,7 @@ val dummySegmentsFlow = kotlinx.coroutines.flow.MutableStateFlow<List<LiveSegmen
 // Preview for Configuration Mode
 @Preview(showBackground = true, name = "Config Mode")
 @Composable
-fun SensorGridScreenConfigPreview() {
+private fun SensorGridScreenConfigPreview() {
     val context = LocalContext.current
     ATrainingTrackerTheme {
         val previewFields = listOf(
@@ -1387,7 +1391,7 @@ fun SensorGridScreenConfigPreview() {
 // Preview for Tracking Mode
 @Preview(showBackground = true, name = "Tracking Mode")
 @Composable
-fun SensorGridScreenTrackingPreview() {
+private fun SensorGridScreenTrackingPreview() {
     val context = LocalContext.current
     ATrainingTrackerTheme {
         val previewFields = listOf(

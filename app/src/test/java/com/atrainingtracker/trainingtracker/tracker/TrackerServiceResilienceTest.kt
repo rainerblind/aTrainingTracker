@@ -18,10 +18,12 @@
 
 package com.atrainingtracker.trainingtracker.tracker
 
+import android.app.Application
 import android.app.Notification
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.util.Log
@@ -80,6 +82,10 @@ class TrackerServiceResilienceTest {
 
         override fun performStopSelf() {
             stoppedSelf = true
+        }
+
+        override fun performStopForeground() {
+            // No-op in unit tests
         }
 
         override fun performStartForeground(id: Int, notification: Notification?, foregroundServiceType: Int) {

@@ -265,7 +265,7 @@ fun MultiSelectSensorSpinner(
 
 @Preview(showBackground = true, name = "Edit Bike Preview")
 @Composable
-fun PreviewEditEquipmentDialog() {
+private fun PreviewEditEquipmentDialog() {
     // Mock data for the preview matching your latest StatsData structure
     val mockStats = StatsData(
         primaryTitle = "Foo",

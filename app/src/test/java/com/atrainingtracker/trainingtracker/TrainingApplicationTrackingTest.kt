@@ -308,5 +308,18 @@ class TrainingApplicationTrackingTest {
 
         assertFalse("wasAutoPaused must be reset to false on onTrackingAborted", TrainingApplication.wasAutoPaused())
     }
+
+    /**
+     * TST-TRK-039.2: Verifies that updateTimeAndDistanceToNotification short-circuits
+     * when tracking is stopped (TrackingMode.READY), preventing notification resurrection (REQ-TRK-039.3).
+     */
+    @Test
+    fun testUpdateTimeAndDistanceToNotification_whenNotTracking_suppressesNotification() {
+        TrainingApplication.cTrackingMode = TrackingMode.READY
+        assertFalse("App must not be tracking", TrainingApplication.isTracking())
+
+        // Must return cleanly without attempting to access or build notifications
+        app.updateTimeAndDistanceToNotification(null, null, "Running")
+    }
 }
 

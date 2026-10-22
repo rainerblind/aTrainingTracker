@@ -165,6 +165,11 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **No Unrequested Top-Level Model Toggles**:
   * Do not invent extra top-level settings toggles for baseline metrics (e.g. `"Basic Power Metrics (Work, W/kg)"`) that were not requested in the ticket specification.
 
+### 3.4 Multi-Provider Cloud / Sync UI & Capability Symmetry (Rule 62 — ATT-4588 / ATT-4664 / ATT-4665 / ATT-4666)
+* **Shared Parameterized Layout & Symmetric Capabilities**:
+  * Parallel cloud/sync provider dialogs, cards, and action buttons (such as **Dropbox** vs. **Google Drive** in `CloudSyncSettingsDialogs.kt` and `RestoreTabContent.kt`) **MUST** share a unified parameterized composable layout, identical button label phrasing/iconography, and symmetric configuration granularity (e.g., independent toggles for Workouts vs. Backups, Wi-Fi-only restriction, Backup Interval selector, and Last Backup/Sync timestamp) unless a provider API physically lacks that capability.
+  * Never evolve sister provider dialogs independently with divergent wording or mismatched feature sets.
+
 ---
 
 ## 4. Spacing, Typography & Localization Parity

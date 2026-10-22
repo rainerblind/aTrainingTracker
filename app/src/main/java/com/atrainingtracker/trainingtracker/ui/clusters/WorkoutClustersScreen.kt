@@ -189,7 +189,7 @@ fun WorkoutClustersScreen(
                         title = { Text(cluster.name) },
                         navigationIcon = {
                             IconButton(onClick = { viewingWorkoutsForCluster = null }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                             }
                         },
                         actions = {

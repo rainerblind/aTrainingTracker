@@ -188,7 +188,7 @@ fun RouteSummaryHeader(
 
 @Preview(showBackground = true, name = "Cycling Route - Selected")
 @Composable
-fun PreviewRouteSummaryHeaderBike() {
+private fun PreviewRouteSummaryHeaderBike() {
     ATrainingTrackerTheme {
         RouteSummaryHeader(
             summary = RouteSummary(
@@ -209,7 +209,7 @@ fun PreviewRouteSummaryHeaderBike() {
 
 @Preview(showBackground = true, name = "Running Route - Unselected")
 @Composable
-fun PreviewRouteSummaryHeaderRun() {
+private fun PreviewRouteSummaryHeaderRun() {
     ATrainingTrackerTheme {
         RouteSummaryHeader(
             summary = RouteSummary(

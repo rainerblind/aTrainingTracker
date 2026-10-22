@@ -115,10 +115,11 @@ class ForkNavigationRepository internal constructor(
         val isAlertActive = activeState != null
 
         // Quiescent tracking throttling: skip if elapsed time < 3000ms AND displacement < 20m
-        if (!isAlertActive && lastSearchPos != null) {
+        val prevPos = lastSearchPos
+        if (!isAlertActive && prevPos != null) {
             val elapsedMs = currentTimeMs - lastSearchTimeMs
             val distanceMoved = GeoUtils.haversineDistanceMeters(
-                lastSearchPos!!.latitude, lastSearchPos!!.longitude,
+                prevPos.latitude, prevPos.longitude,
                 currentPos.latitude, currentPos.longitude
             )
             if (elapsedMs < QUIESCENT_THROTTLE_INTERVAL_MS && distanceMoved < QUIESCENT_THROTTLE_DISTANCE_METERS) {

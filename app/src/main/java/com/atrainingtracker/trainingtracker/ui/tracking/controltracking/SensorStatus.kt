@@ -143,7 +143,7 @@ internal const val INACTIVE_SENSOR_ALPHA = 0.38f
 
 @Preview(showBackground = true, name = "Light Mode")
 @Composable
-fun PreviewSensorStatusRow() {
+private fun PreviewSensorStatusRow() {
     ATrainingTrackerTheme {
         Surface {
             SensorStatus(activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.HR))
@@ -153,7 +153,7 @@ fun PreviewSensorStatusRow() {
 
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES, name = "Dark Mode")
 @Composable
-fun PreviewSensorStatusRowDark() {
+private fun PreviewSensorStatusRowDark() {
     ATrainingTrackerTheme(darkTheme = true) {
         Surface {
             SensorStatus(activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.DISTANCE_m))
@@ -163,7 +163,7 @@ fun PreviewSensorStatusRowDark() {
 
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES, name = "AMOLED Dark Mode")
 @Composable
-fun PreviewSensorStatusRowAmoled() {
+private fun PreviewSensorStatusRowAmoled() {
     ATrainingTrackerTheme(darkTheme = true, amoled = true) {
         Surface {
             SensorStatus(activeSensors = setOf(SensorType.TIME_ACTIVE, SensorType.ACCURACY, SensorType.ALTITUDE))

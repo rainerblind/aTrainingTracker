@@ -105,7 +105,9 @@ object MigrationEngine {
             } finally {
                 try {
                     db?.close()
-                } catch (_: Throwable) {}
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error closing database ${dbFile.name} during pre-validation", e)
+                }
             }
         }
 
@@ -285,7 +287,7 @@ object MigrationEngine {
 
                 // ATT-4023 / REQ-DAT-032.3: Enforce clean re-authentication invariant across application preferences
                 com.atrainingtracker.trainingtracker.security.AuthCredentialsStore.sanitizeAfterRestore(context)
-            } catch (swapError: Throwable) {
+            } catch (swapError: Exception) {
                 Log.e(TAG, "Error during atomic swap, attempting immediate recovery from staging trash", swapError)
                 if (dbTrash.exists()) {
                     databasesDir.deleteRecursively()

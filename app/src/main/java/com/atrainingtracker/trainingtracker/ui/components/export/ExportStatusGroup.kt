@@ -249,7 +249,7 @@ private fun StatusLine(text: String?) {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewExportStatusGroup() {
+private fun PreviewExportStatusGroup() {
     MaterialTheme {
         Column(Modifier.padding(16.dp)) {
             ExportStatusGroup(

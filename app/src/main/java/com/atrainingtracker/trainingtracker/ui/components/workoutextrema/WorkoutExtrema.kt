@@ -196,7 +196,7 @@ private fun ExtremaRow(
 
 @Preview(showBackground = true, name = "Core Performance Metrics")
 @Composable
-fun PreviewAllCoreSensors() {
+private fun PreviewAllCoreSensors() {
     MaterialTheme {
         WorkoutExtrema(
             data = ExtremaData(
@@ -217,7 +217,7 @@ fun PreviewAllCoreSensors() {
 
 @Preview(showBackground = true, name = "Calculating State")
 @Composable
-fun PreviewWorkoutExtremaCalculating() {
+private fun PreviewWorkoutExtremaCalculating() {
     MaterialTheme {
         WorkoutExtrema(
             data = ExtremaData(

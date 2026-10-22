@@ -90,12 +90,16 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
 Jointly review all completed sprint tickets with the human user against expectations on the integrated sprint build, authorize release, handle rejected items, and cleanly close the sprint into `develop`.
 
 ### Step-by-Step Procedure
-1. **Mandatory Device Build & Deployment ('Install Before Review')**:
-   Before commencing ticket inspection with the human user, the agent MUST compile and deploy the latest integrated sprint APK from `sprint/<SPRINT_NAME>` to the attached physical device (e.g. Google Pixel 10) (`"Sprint Review session must start with installing the latest sprint version on the phone."`):
-   ```bash
-   ./gradlew installDebug
-   ```
-   Confirm successful installation before proceeding to ticket walkthroughs.
+1. **Mandatory Device Build, Deployment & Background Tier 2 Unit Test Launch ('Install & Test at Review Start' — Rule 62)**:
+   At the very start of the Sprint Review session (before commencing ticket inspection with the human user), the agent MUST:
+   1. Compile and deploy the latest integrated sprint APK from `sprint/<SPRINT_NAME>` to the attached physical device (e.g. Google Pixel 10), and launch `com.atrainingtracker.debug` (`"Sprint Review session must start with installing the latest sprint version on the phone."`):
+      ```bash
+      ./gradlew installDebug && adb shell am start -n com.atrainingtracker.debug/com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
+      ```
+   2. Immediately launch the **Tier 2 Sprint Integration Gate** (`./gradlew testDebugUnitTest && python3 tools/verify_requirement_governance.py`) **in the background** (`WaitMsBeforeAsync` $\le 1000$) right at the start of the review (`"We should start the full set of unit tests right at the start of the review in the background. Then, I don't have to wait for the results (and we might even get active during the review)."` — Retro 2026-43.6, `ATT-4596`):
+      ```bash
+      ./gradlew testDebugUnitTest && python3 tools/verify_requirement_governance.py
+      ```
 
 2. **Query Tickets Ready for Review in Rank Order**:
    Find all sprint tickets in status `Final Review (Human)` sorted strictly by backlog rank for the exact active sprint ID or name:

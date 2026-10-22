@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.settings
 
+import java.io.Serializable
+
 /**
  * Encapsulates the athlete-configurable presentation options for an athletic zone profile (REQ-UI-172).
  *
@@ -33,4 +35,4 @@ data class ZoneDisplayOptions(
     val showRightBar: Boolean = false,
     val showTextColor: Boolean = false,
     val showGauge: Boolean = false
-)
+) : Serializable

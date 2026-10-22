@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.ui.settings.dropbox
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,6 +50,16 @@ import com.dropbox.core.DbxRequestConfig
 import com.dropbox.core.android.Auth
 
 /**
+ * Recursively unwraps a [Context] to resolve the hosting [Activity], traversing any [ContextWrapper] layers
+ * (e.g. ContextThemeWrapper or Compose wrapper hierarchies).
+ */
+internal tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+/**
  * Bottom sheet composable for configuring Dropbox cloud synchronization and automated backup settings.
  *
  * Architectural Role:
@@ -66,7 +78,9 @@ fun DropboxSettingsDialog(
     val context = LocalContext.current
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
 
-    var isConnected by remember { mutableStateOf(TrainingApplication.uploadToDropbox()) }
+    var isConnected by remember {
+        mutableStateOf(TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null)
+    }
     var automatedBackups by remember {
         mutableStateOf(prefs.getBoolean("automated_backups", true))
     }
@@ -84,7 +98,7 @@ fun DropboxSettingsDialog(
                     TrainingApplication.storeDropboxCredential(dbxCredential)
                     TrainingApplication.setUploadToDropbox(true)
                 }
-                isConnected = TrainingApplication.uploadToDropbox()
+                isConnected = TrainingApplication.uploadToDropbox() && TrainingApplication.readDropboxCredential() != null
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -123,7 +137,7 @@ fun DropboxSettingsDialog(
             DropboxConnectionHeader(
                 isConnected = isConnected,
                 onConnectClick = {
-                    (context as? Activity)?.let { activity ->
+                    context.findActivity()?.let { activity ->
                         Auth.startOAuth2PKCE(
                             activity,
                             BuildConfig.DROPBOX_APP_KEY,

@@ -18,7 +18,9 @@
 
 package com.atrainingtracker.banalservice.sensor.formater
 
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 import java.util.Locale
 
@@ -26,6 +28,18 @@ import java.util.Locale
  * Unit tests for [BatteryRemainingTimeFormatter] (TST-CON-006, ATT-1454).
  */
 class BatteryRemainingTimeFormatterTest {
+
+    private lateinit var originalLocale: Locale
+
+    @Before
+    fun setUp() {
+        originalLocale = Locale.getDefault()
+    }
+
+    @After
+    fun tearDown() {
+        Locale.setDefault(originalLocale)
+    }
 
     @Test
     fun testFormat_null_returnsDashes() {
@@ -44,7 +58,7 @@ class BatteryRemainingTimeFormatterTest {
     fun testFormat_chargingCode_returnsChargingFallback() {
         val formatter = BatteryRemainingTimeFormatter()
         val result = formatter.format(BatteryRemainingTimeFormatter.CHARGING_STATUS_CODE)
-        assert(result == "Charging" || result.isNotEmpty())
+        assertEquals("Charging", result)
     }
 
     @Test

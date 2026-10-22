@@ -163,7 +163,7 @@ fun BatteryOptimizationWarningBanner(
 
 @Preview(showBackground = true, name = "Battery Optimization Warning Banner")
 @Composable
-fun PreviewBatteryOptimizationWarningBanner() {
+private fun PreviewBatteryOptimizationWarningBanner() {
     ATrainingTrackerTheme {
         BatteryOptimizationWarningBanner(
             visible = true,

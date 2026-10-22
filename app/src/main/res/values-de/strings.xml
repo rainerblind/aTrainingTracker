@@ -91,7 +91,7 @@
 
     <string name="guess_commute_and_trainer">Pendeln/Trainer automatisch erkennen</string>
 
-    <string name="pebble_build_in">Standard Pebble Watchapp</string>
+    <string name="pebble_build_in">Integrierte Pebble-App</string>
     <string name="pebble_a_training_tracker_watchapp">a Training Tracker Watchapp</string>
 
     <string name="install_ant_plugin_message">Um ANT+ zu nutzen muss der ANT+ Plugin Service installiert sein.</string>
@@ -192,13 +192,9 @@
     <string name="power_to_weight">Leistungsgewicht</string>
     <string name="power_to_weight_short">W/kg</string>
     <string name="normalized_power">Normalisierte Leistung</string>
-    <string name="normalized_power_short">NP</string>
     <string name="intensity_factor">Intensitätsfaktor</string>
-    <string name="intensity_factor_short">IF</string>
     <string name="work_kj">Mechanische Arbeit</string>
-    <string name="work_kj_short">kJ</string>
-    <string name="tss">Training Stress Score</string>
-    <string name="tss_short">TSS</string>
+    <string name="tss">Trainingsbelastungs-Score (TSS)</string>
     <string name="speed">Geschwindigkeit</string>
     <string name="speed_short">Geschw.</string>
     <string name="current_sensors">Aktuelle Sensoren</string>
@@ -221,7 +217,7 @@
     <string name="time_total_short">gesamt</string>
     <string name="torque">Drehmoment</string>
     <string name="torque_short">Moment</string>
-    <string name="pedal_power_balance">pedal power balance</string>
+    <string name="pedal_power_balance">Pedal-Leistungsbalance</string>
     <string name="pedal_power_balance_short">balance</string>
     <string name="pedal_smoothness_l">pedal smoothness left</string>
     <string name="pedal_smoothness_l_short">smooth l</string>
@@ -1280,7 +1276,7 @@
     <string name="backup_interval_weekly">Wöchentlich</string>
     <string name="backup_interval_monthly">Monatlich</string>
     <string name="create_and_upload_to_dropbox">Erstellen \u0026 Dropbox-Upload</string>
-    <string name="create_and_upload_to_both">Erstellen \u0026 Upload (Dropbox \u0026 Google Drive)</string>
+    <string name="create_and_upload_to_both">Erstellen \u0026 Upload\n(Dropbox \u0026 Google Drive)</string>
     <string name="create_and_upload_to_google_drive">Erstellen \u0026 Google Drive-Upload</string>
     <string name="create_and_upload_to_cloud">Erstellen \u0026 Cloud-Upload</string>
     <string name="cloud_backup_no_provider_dialog_title">Cloud-Backup</string>
@@ -1909,9 +1905,6 @@
     <string name="ant_status_card_desc">Für ANT+ Sensoren auf modernen Smartphones ist ein USB-OTG-Adapter mit ANT+ USB-Stick sowie ANT+ Systemdienste erforderlich.</string>
     <string name="ant_status_card_action">Status prüfen</string>
     <string name="ant_status_usb_dongle_note">Moderne Smartphones besitzen keine integrierten ANT+-Funkchips. Ein externer USB-OTG-Adapter mit ANT+ USB-Stick ist für den Empfang nötig.</string>
-    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
-    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
-    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
     <string name="ant_service_installed">Installiert</string>
     <string name="ant_service_not_installed">Nicht installiert</string>
     <string name="ant_service_install_button">Installieren</string>
@@ -2184,4 +2177,34 @@
     <!-- Workout Masks & Cards Streamlining (REQ-UI-414 / ATT-4043) -->
     <string name="workout_card_reorder_toggle">Kartenreihenfolge &amp; Sichtbarkeit (%1$d aktiv)</string>
     <string name="settings_workout_details_title">Trainings-Details (Detail-Ansicht)</string>
+
+    <!-- UI Localization Parity, Units & Accessibility (REQ-UI-429 / ATT-4026) -->
+    <string name="crop_start_trim">Start: +%1$s</string>
+    <string name="crop_end_trim">Ende: -%1$s</string>
+    <string name="crop_distance_label">Distanz:</string>
+    <string name="crop_duration_label">Dauer:</string>
+    <string name="crop_avg_speed_label">Ø Geschwindigkeit:</string>
+    <string name="import_map_data_title">Daten für Import zuordnen</string>
+    <string name="none">Keine</string>
+    <string name="unknown">Unbekannt</string>
+    <string name="destination_not_yet_implemented">Festlegen eines neuen Inhaltsziels ist noch nicht implementiert</string>
+    <string name="unit_watt">W</string>
+    <string name="lap_placeholder_format">Runde %1$d</string>
+    <string name="period_no_gps_data">Keine GPS-Daten für diesen Zeitraum</string>
+    <string name="marker_summit">Gipfel</string>
+    <string name="marker_lap_start">Rundenstart</string>
+    <string name="marker_lap_end">Rundenende</string>
+    <string name="cd_fastest_split">Schnellster Split</string>
+    <string name="cd_switch_view_mode">Ansichtsmodus wechseln</string>
+    <string name="connect_with_strava">Mit Strava verbinden</string>
+    <string name="cd_add_row">Zeile hinzufügen</string>
+    <string name="cd_add_column">Spalte hinzufügen</string>
+    <string name="cd_add_before">Davor hinzufügen</string>
+    <string name="cd_delete_tab">Tab löschen</string>
+    <string name="cd_add_after">Danach hinzufügen</string>
+    <string name="back">Zurück</string>
+    <string name="close">Schließen</string>
+    <string name="clear">Löschen</string>
+    <string name="select_route">Route auswählen</string>
+    <string name="equipment">Ausrüstung</string>
 </resources>

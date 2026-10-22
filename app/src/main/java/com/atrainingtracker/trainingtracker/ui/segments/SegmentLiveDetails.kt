@@ -136,7 +136,7 @@ fun SegmentLiveDetails(
 
 @Preview(showBackground = true, name = "Live Segment Details - On Segment")
 @Composable
-fun PreviewSegmentLiveDetails() {
+private fun PreviewSegmentLiveDetails() {
     ATrainingTrackerTheme {
         SegmentLiveDetails(
             liveSegmentData = LiveSegmentData(
@@ -154,7 +154,7 @@ fun PreviewSegmentLiveDetails() {
 
 @Preview(showBackground = true, name = "Live Segment Details - Finished PR Beat")
 @Composable
-fun PreviewSegmentLiveDetailsFinished() {
+private fun PreviewSegmentLiveDetailsFinished() {
     ATrainingTrackerTheme {
         SegmentLiveDetails(
             liveSegmentData = LiveSegmentData(

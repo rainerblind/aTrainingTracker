@@ -647,7 +647,7 @@ fun launchBatteryOptimizationIntent(context: android.content.Context) {
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlTrackingScreenSearching() {
+private fun PreviewControlTrackingScreenSearching() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingScreen(
@@ -669,7 +669,7 @@ fun PreviewControlTrackingScreenSearching() {
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlTrackingScreen() {
+private fun PreviewControlTrackingScreen() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingScreen(
@@ -691,7 +691,7 @@ fun PreviewControlTrackingScreen() {
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlTrackingScreenNoRemoteDevices() {
+private fun PreviewControlTrackingScreenNoRemoteDevices() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingScreen(
@@ -714,7 +714,7 @@ fun PreviewControlTrackingScreenNoRemoteDevices() {
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlTrackingScreenMultiDevices() {
+private fun PreviewControlTrackingScreenMultiDevices() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingScreen(
@@ -744,7 +744,7 @@ fun PreviewControlTrackingScreenMultiDevices() {
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlTrackingScreenSingleDevice() {
+private fun PreviewControlTrackingScreenSingleDevice() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingScreen(

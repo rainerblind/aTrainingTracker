@@ -103,7 +103,7 @@ private fun DescriptionRow(
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewWorkoutDescription() {
+private fun PreviewWorkoutDescription() {
     MaterialTheme {
         WorkoutDescription(
             data = DescriptionData(
@@ -117,7 +117,7 @@ fun PreviewWorkoutDescription() {
 
 @Preview(showBackground = true, name = "Partial Content")
 @Composable
-fun PreviewWorkoutDescriptionPartial() {
+private fun PreviewWorkoutDescriptionPartial() {
     MaterialTheme {
         WorkoutDescription(
             data = DescriptionData(

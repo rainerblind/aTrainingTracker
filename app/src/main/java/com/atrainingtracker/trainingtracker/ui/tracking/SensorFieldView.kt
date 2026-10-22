@@ -675,7 +675,7 @@ private fun MockCockpitGrid(style: SensorFieldStyle) {
 
 @Preview(showBackground = true, name = "Cockpit V0: Baseline (Status Quo)", widthDp = 360)
 @Composable
-fun PreviewCockpitVariant0_Baseline() {
+private fun PreviewCockpitVariant0_Baseline() {
     MaterialTheme {
         MockCockpitGrid(style = SensorFieldStyle.Variant0_Baseline)
     }
@@ -683,7 +683,7 @@ fun PreviewCockpitVariant0_Baseline() {
 
 @Preview(showBackground = true, name = "Cockpit V1: Modern Outlined Sport Tiles", widthDp = 360)
 @Composable
-fun PreviewCockpitVariant1_OutlinedTiles() {
+private fun PreviewCockpitVariant1_OutlinedTiles() {
     MaterialTheme {
         MockCockpitGrid(style = SensorFieldStyle.Variant1_OutlinedTiles)
     }
@@ -691,7 +691,7 @@ fun PreviewCockpitVariant1_OutlinedTiles() {
 
 @Preview(showBackground = true, name = "Cockpit V2: Elevated Sports Cards", widthDp = 360)
 @Composable
-fun PreviewCockpitVariant2_ElevatedCards() {
+private fun PreviewCockpitVariant2_ElevatedCards() {
     MaterialTheme {
         MockCockpitGrid(style = SensorFieldStyle.Variant2_ElevatedCards)
     }
@@ -699,7 +699,7 @@ fun PreviewCockpitVariant2_ElevatedCards() {
 
 @Preview(showBackground = true, name = "Cockpit V3: Soft Accent Capsules", widthDp = 360)
 @Composable
-fun PreviewCockpitVariant3_Capsules() {
+private fun PreviewCockpitVariant3_Capsules() {
     MaterialTheme {
         MockCockpitGrid(style = SensorFieldStyle.Variant3_Capsules)
     }
@@ -707,7 +707,7 @@ fun PreviewCockpitVariant3_Capsules() {
 
 @Preview(showBackground = true, name = "Cockpit Variants Comparison", widthDp = 360, heightDp = 1000)
 @Composable
-fun PreviewCockpitVariantsComparison() {
+private fun PreviewCockpitVariantsComparison() {
     MaterialTheme {
         Column(
             modifier = Modifier

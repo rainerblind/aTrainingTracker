@@ -12,6 +12,7 @@ package com.atrainingtracker.trainingtracker.tracker.autopause
 
 import android.media.ToneGenerator
 import com.atrainingtracker.banalservice.BSportType
+import android.util.Log
 import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.ProxySensor
 import com.atrainingtracker.banalservice.sensor.SensorType
@@ -19,8 +20,11 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.runs
+import io.mockk.unmockkStatic
 import io.mockk.verify
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -51,10 +55,17 @@ class AutoPauseManagerTest {
 
     @Before
     fun setUp() {
+        mockkStatic(Log::class)
+        every { Log.w(any<String>(), any<String>()) } returns 0
         TrainingApplication.setManualPauseLock(false, null)
         TrainingApplication.setAutoPaused(false, null)
         mockAudioNotifier = TestAudioNotifier()
         autoPauseManager = AutoPauseManager(mockAudioNotifier)
+    }
+
+    @After
+    fun tearDown() {
+        unmockkStatic(Log::class)
     }
 
     @Test

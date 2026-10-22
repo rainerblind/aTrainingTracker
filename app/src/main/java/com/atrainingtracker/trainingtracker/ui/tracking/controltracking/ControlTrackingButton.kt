@@ -177,7 +177,7 @@ private fun ControlItem(
 
 @Preview(showBackground = true, name = "Start State with Permission Warning")
 @Composable
-fun PreviewControlStartWithWarning() {
+private fun PreviewControlStartWithWarning() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingButton(
@@ -191,7 +191,7 @@ fun PreviewControlStartWithWarning() {
 
 @Preview(showBackground = true, name = "Start State")
 @Composable
-fun PreviewControlStart() {
+private fun PreviewControlStart() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingButton(
@@ -204,7 +204,7 @@ fun PreviewControlStart() {
 
 @Preview(showBackground = true, name = "Tracking State")
 @Composable
-fun PreviewControlTracking() {
+private fun PreviewControlTracking() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingButton(
@@ -217,7 +217,7 @@ fun PreviewControlTracking() {
 
 @Preview(showBackground = true, name = "Paused State")
 @Composable
-fun PreviewControlPaused() {
+private fun PreviewControlPaused() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingButton(
@@ -236,7 +236,7 @@ fun PreviewControlPaused() {
     uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlStartDark() {
+private fun PreviewControlStartDark() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingButton(
@@ -254,7 +254,7 @@ fun PreviewControlStartDark() {
     uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlTrackingDark() {
+private fun PreviewControlTrackingDark() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingButton(
@@ -272,7 +272,7 @@ fun PreviewControlTrackingDark() {
     uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
-fun PreviewControlPausedDark() {
+private fun PreviewControlPausedDark() {
     ATrainingTrackerTheme {
         Surface {
             ControlTrackingButton(

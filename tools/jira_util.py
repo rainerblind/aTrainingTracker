@@ -673,6 +673,8 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True)
         print(f"{issue_key} is already in '{current_status_name}'.")
         if "final review" in current_status_lower and not is_subtask:
             assign_issue(issue_key, "human", role=role)
+        if is_subtask and (normalized_target == "freigabe" or current_status_lower == "erledigt"):
+            sync_parent_stage_on_subtask_done(parent_key, issue_summary, role=role, inject_context=inject_context)
         return
 
     chosen_trans = None

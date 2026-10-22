@@ -102,6 +102,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Run unit tests
+        run: ./gradlew :app:testDebugUnitTest
+
       - name: Build release APK and AAB
         run: ./gradlew :app:assembleRelease :app:bundleRelease
 

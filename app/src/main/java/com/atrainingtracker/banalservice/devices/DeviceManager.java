@@ -1065,47 +1065,48 @@ public class DeviceManager {
 
         SQLiteDatabase db = mDevicesDatabaseManager.getDatabase();
 
-        // TODO: sort according to the LAST_ACTIVE field?
-        Cursor cursor = db.query(DevicesDbHelper.DEVICES,
+        try (Cursor cursor = db.query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID, DevicesDbHelper.PAIRED, DevicesDbHelper.DEVICE_TYPE, DevicesDbHelper.ANT_DEVICE_NUMBER, DevicesDbHelper.BT_ADDRESS},
                 DevicesDbHelper.PROTOCOL + "=?",
                 new String[]{protocol.name()},
                 null,
                 null,
-                null);
+                null)) {
+            if (cursor == null) {
+                return;
+            }
+            while (cursor.moveToNext()) {
+                if (cursor.getInt(cursor.getColumnIndexOrThrow(DevicesDbHelper.PAIRED)) > 0) {
 
-        while (cursor.moveToNext()) {
-            if (cursor.getInt(cursor.getColumnIndexOrThrow(DevicesDbHelper.PAIRED)) > 0) {
+                    long deviceID = cursor.getLong(cursor.getColumnIndexOrThrow(DevicesDbHelper.C_ID));
+                    if (mMyRemoteDevices.containsKey(deviceID)) {
+                        if (DEBUG) Log.i(TAG, "device with ID " + deviceID + " is already created");
+                        continue;
+                    }
+                    if (DEBUG) Log.d(TAG, "create new device with ID: " + deviceID);
 
-                long deviceID = cursor.getLong(cursor.getColumnIndex(DevicesDbHelper.C_ID));
-                if (mMyRemoteDevices.containsKey(deviceID)) {
-                    if (DEBUG) Log.i(TAG, "device with ID " + deviceID + " is already created");
-                    continue;
+                    DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(cursor.getColumnIndexOrThrow(DevicesDbHelper.DEVICE_TYPE)), TAG);
+                    if (deviceType == null) {
+                        Log.w(TAG, "Skipping paired device with invalid DeviceType at ID: " + deviceID);
+                        continue;
+                    }
+
+                    switch (protocol) {
+                        case ANT_PLUS:
+                            int antDeviceNumber = cursor.getInt(cursor.getColumnIndexOrThrow(DevicesDbHelper.ANT_DEVICE_NUMBER));
+                            createNewANTDevice(deviceID, deviceType, antDeviceNumber);
+                            break;
+
+                        case BLUETOOTH_LE:
+                            String address = cursor.getString(cursor.getColumnIndexOrThrow(DevicesDbHelper.BT_ADDRESS));
+                            createNewBluetoothLEDevice(deviceID, deviceType, address);
+                            break;
+                    }
+                } else {
+                    if (DEBUG) Log.d(TAG, "createPairedDevices(): ignoring unpaired device");
                 }
-                if (DEBUG) Log.d(TAG, "create new device with ID: " + deviceID);
-
-                DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(cursor.getColumnIndex(DevicesDbHelper.DEVICE_TYPE)), TAG);
-                if (deviceType == null) {
-                    Log.w(TAG, "Skipping paired device with invalid DeviceType at ID: " + deviceID);
-                    continue;
-                }
-
-                switch (protocol) {
-                    case ANT_PLUS:
-                        int antDeviceNumber = cursor.getInt(cursor.getColumnIndex(DevicesDbHelper.ANT_DEVICE_NUMBER));
-                        createNewANTDevice(deviceID, deviceType, antDeviceNumber);
-                        break;
-
-                    case BLUETOOTH_LE:
-                        String address = cursor.getString(cursor.getColumnIndex(DevicesDbHelper.BT_ADDRESS));
-                        createNewBluetoothLEDevice(deviceID, deviceType, address);
-                        break;
-                }
-            } else {
-                if (DEBUG) Log.d(TAG, "createPairedDevices(): ignoring unpaired device");
             }
         }
-        cursor.close();
 
         if (DEBUG) Log.d(TAG, "finished createPairedDevices");
     }

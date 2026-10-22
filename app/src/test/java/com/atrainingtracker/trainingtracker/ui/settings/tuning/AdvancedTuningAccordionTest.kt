@@ -28,7 +28,9 @@ import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFa
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
 import io.mockk.every
 import io.mockk.mockk
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 import java.util.Locale
 
@@ -37,6 +39,18 @@ import java.util.Locale
  * in accordance with REQ-UI-222 and TST-UI-176.1.
  */
 class AdvancedTuningAccordionTest {
+
+    private lateinit var originalLocale: Locale
+
+    @Before
+    fun setUp() {
+        originalLocale = Locale.getDefault()
+    }
+
+    @After
+    fun tearDown() {
+        Locale.setDefault(originalLocale)
+    }
 
     @Test
     fun testCockpitTypographySubtitle_reflectsFontAndWeight() {
@@ -368,34 +382,39 @@ class AdvancedTuningAccordionTest {
 
     @Test
     fun testClusterTuningSubtitle_formatting() {
-        Locale.setDefault(Locale.US)
-        val mockContext = mockk<Context>()
-        every { mockContext.getString(R.string.units_distance_metric) } returns "km"
-        every { mockContext.getString(R.string.units_distance_imperial) } returns "mi"
+        val defaultLocale = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.US)
+            val mockContext = mockk<Context>()
+            every { mockContext.getString(R.string.units_distance_metric) } returns "km"
+            every { mockContext.getString(R.string.units_distance_imperial) } returns "mi"
 
-        val metricSubtitle = TuningSubtitleFormatter.formatClusterTuningSubtitle(
-            endpointTolerance = 200f,
-            apexTolerance = 400f,
-            distanceTolerance = 0.20f,
-            altitudePositionTolerance = 400f,
-            useSportTypeForClustering = true,
-            useAltitudePosForClustering = true,
-            isImperial = false,
-            context = mockContext
-        )
-        assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20% · Alt: 0.400km", metricSubtitle)
+            val metricSubtitle = TuningSubtitleFormatter.formatClusterTuningSubtitle(
+                endpointTolerance = 200f,
+                apexTolerance = 400f,
+                distanceTolerance = 0.20f,
+                altitudePositionTolerance = 400f,
+                useSportTypeForClustering = true,
+                useAltitudePosForClustering = true,
+                isImperial = false,
+                context = mockContext
+            )
+            assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20% · Alt: 0.400km", metricSubtitle)
 
-        val metricSubtitleNoAlt = TuningSubtitleFormatter.formatClusterTuningSubtitle(
-            endpointTolerance = 200f,
-            apexTolerance = 400f,
-            distanceTolerance = 0.20f,
-            altitudePositionTolerance = 400f,
-            useSportTypeForClustering = true,
-            useAltitudePosForClustering = false,
-            isImperial = false,
-            context = mockContext
-        )
-        assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20%", metricSubtitleNoAlt)
+            val metricSubtitleNoAlt = TuningSubtitleFormatter.formatClusterTuningSubtitle(
+                endpointTolerance = 200f,
+                apexTolerance = 400f,
+                distanceTolerance = 0.20f,
+                altitudePositionTolerance = 400f,
+                useSportTypeForClustering = true,
+                useAltitudePosForClustering = false,
+                isImperial = false,
+                context = mockContext
+            )
+            assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20%", metricSubtitleNoAlt)
+        } finally {
+            Locale.setDefault(defaultLocale)
+        }
     }
 
     @Test

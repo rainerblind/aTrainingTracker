@@ -128,7 +128,9 @@ public class FitFileWriter extends BaseFileWriter {
             if (totalDistance != null && !totalDistance.trim().isEmpty()) {
                 distTotal = Double.parseDouble(totalDistance);
             }
-        } catch (NumberFormatException ignored) {}
+        } catch (NumberFormatException e) {
+            Log.w(TAG, "Failed to parse totalDistance: " + totalDistance + ", falling back to 0.0", e);
+        }
         if (distTotal < 0.0) distTotal = 0.0;
 
         File outputFile = new File(getBaseDirFile(mContext), exportInfo.getShortPath());
@@ -328,7 +330,9 @@ public class FitFileWriter extends BaseFileWriter {
                         try {
                             Date parsed = parseUtcTimestamp(lap.getTimeStart());
                             if (parsed != null) lapStart = parsed;
-                        } catch (Exception ignored) {}
+                        } catch (Exception e) {
+                            Log.w(TAG, "Failed to parse lap start time: " + lap.getTimeStart() + ", falling back to workout startDate", e);
+                        }
                     }
                     lapMesg.setStartTime(new DateTime(lapStart));
                     long lapEndMs = lapStart.getTime() + (long) (lap.getTimeTotalS() * 1000L);
@@ -454,8 +458,8 @@ public class FitFileWriter extends BaseFileWriter {
             if (encoder != null) {
                 try {
                     encoder.close();
-                } catch (Throwable t) {
-                    Log.w(TAG, "Error closing FileEncoder: " + t.getMessage(), t);
+                } catch (Exception e) {
+                    Log.w(TAG, "Error closing FileEncoder: " + e.getMessage(), e);
                 }
             }
             if (!success && outputFile.exists()) {
@@ -468,8 +472,8 @@ public class FitFileWriter extends BaseFileWriter {
                     } else {
                         Log.d(TAG, "Partial FIT file cleaned up: " + outputFile.getAbsolutePath());
                     }
-                } catch (Throwable t) {
-                    Log.w(TAG, "Exception during partial file deletion: " + t.getMessage(), t);
+                } catch (Exception e) {
+                    Log.w(TAG, "Exception during partial file deletion: " + e.getMessage(), e);
                 }
             }
         }

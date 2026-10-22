@@ -98,6 +98,8 @@ fun TrackOnMapScreen(
     val persistedTabsConfig by preferenceManager.workoutDetailTabsOrderFlow.collectAsState(initial = WorkoutDetailTabConfig.DEFAULT_TABS)
     val activeTabsConfig = tabsConfig ?: persistedTabsConfig
     var showTabsConfigSheet by rememberSaveable { mutableStateOf(false) }
+    val lapStartMarkerTitle = stringResource(R.string.marker_lap_start)
+    val lapEndMarkerTitle = stringResource(R.string.marker_lap_end)
 
     val mapIndex = activeSectionsOrder.indexOf(WorkoutSectionType.MAP)
     val preMapSections = remember(activeSectionsOrder, mapIndex) {
@@ -269,10 +271,10 @@ fun TrackOnMapScreen(
                 if (lapSegment.isNotEmpty()) {
                     val lapMarkers = mutableListOf<LocationMarker>()
                     lapSegment.firstOrNull()?.let { startPoint ->
-                        lapMarkers.add(LocationMarker(position = startPoint, iconResId = R.drawable.control_start, title = "Lap Start"))
+                        lapMarkers.add(LocationMarker(position = startPoint, iconResId = R.drawable.control_start, title = lapStartMarkerTitle))
                     }
                     lapSegment.lastOrNull()?.let { endPoint ->
-                        lapMarkers.add(LocationMarker(position = endPoint, iconResId = R.drawable.control_stop, title = "Lap End"))
+                        lapMarkers.add(LocationMarker(position = endPoint, iconResId = R.drawable.control_stop, title = lapEndMarkerTitle))
                     }
                     markers(markers + lapMarkers)
                     lapHighlight(lapSegment)
@@ -383,10 +385,10 @@ fun TrackOnMapScreen(
             if (lapSegment.isNotEmpty()) {
                 val lapMarkers = mutableListOf<LocationMarker>()
                 lapSegment.firstOrNull()?.let { startPoint ->
-                    lapMarkers.add(LocationMarker(position = startPoint, iconResId = R.drawable.control_start, title = "Lap Start"))
+                    lapMarkers.add(LocationMarker(position = startPoint, iconResId = R.drawable.control_start, title = lapStartMarkerTitle))
                 }
                 lapSegment.lastOrNull()?.let { endPoint ->
-                    lapMarkers.add(LocationMarker(position = endPoint, iconResId = R.drawable.control_stop, title = "Lap End"))
+                    lapMarkers.add(LocationMarker(position = endPoint, iconResId = R.drawable.control_stop, title = lapEndMarkerTitle))
                 }
                 markers(markers + lapMarkers)
                 lapHighlight(lapSegment)
