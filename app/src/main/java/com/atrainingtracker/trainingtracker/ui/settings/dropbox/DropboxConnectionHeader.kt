@@ -18,86 +18,44 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.dropbox
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.trainingtracker.ui.settings.cloud.CloudConnectionHeader
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 
+/**
+ * Connection header composable for Dropbox cloud synchronization settings.
+ *
+ * Delegates to shared [CloudConnectionHeader] per Rule 36 and Rule 62 while maintaining
+ * backward-compatible signatures and [com.atrainingtracker.trainingtracker.ui.theme.ComposeSafePainterContractTest]
+ * resource-safety invariants.
+ */
 @Composable
 fun DropboxConnectionHeader(
     isConnected: Boolean,
     onConnectClick: () -> Unit,
     onDisconnectClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    accountEmail: String? = null
 ) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = TTAlpha.Subtle),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = if (isConnected) stringResource(R.string.dropbox_connected_status) 
-                       else stringResource(R.string.dropbox_disconnected_status),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (isConnected) TTColor.ConnectionConnected else MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center
-            )
-
-            if (!isConnected) {
-                Button(
-                    onClick = onConnectClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = TTColor.DropboxBlue, // Dropbox Blue
-                        contentColor = Color.White
-                    ),
-                    modifier = Modifier.fillMaxWidth(0.8f)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Image(
-                            painter = safePainterResource(id = R.drawable.dropbox_logo_blue, fallback = Icons.Default.Cloud),
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(stringResource(R.string.dropbox_connect))
-                    }
-                }
-            } else {
-                Button(
-                    onClick = onDisconnectClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    ),
-                    modifier = Modifier.fillMaxWidth(0.8f)
-                ) {
-                    Text(stringResource(R.string.dropbox_disconnect))
-                }
-            }
-        }
-    }
+    CloudConnectionHeader(
+        isConnected = isConnected,
+        statusConnectedText = stringResource(R.string.dropbox_connected_status),
+        statusDisconnectedText = stringResource(R.string.dropbox_disconnected_status),
+        connectButtonText = stringResource(R.string.dropbox_connect),
+        disconnectButtonText = stringResource(R.string.dropbox_disconnect),
+        iconPainter = safePainterResource(id = R.drawable.dropbox_logo_blue, fallback = Icons.Default.Cloud),
+        onConnectClick = onConnectClick,
+        onDisconnectClick = onDisconnectClick,
+        modifier = modifier,
+        accountEmail = accountEmail,
+        connectButtonContainerColor = TTColor.DropboxBlue,
+        connectButtonContentColor = Color.White
+    )
 }

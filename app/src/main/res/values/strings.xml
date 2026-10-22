@@ -1215,6 +1215,10 @@
     <string name="dropbox_disconnected_status">You are not connected to Dropbox</string>
     <string name="dropbox_disconnect">Disconnect from Dropbox</string>
     <string name="dropbox_connect">Connect to Dropbox</string>
+    <string name="dropbox_connect_prompt">Connect your Dropbox account to automatically export workouts and synchronize database backups to Dropbox.</string>
+    <string name="upload_workouts_to_dropbox_summary">Uploads activities (FIT, TCX, GPX, CSV) to Dropbox after saving</string>
+    <string name="upload_backup_to_dropbox_summary">Periodically backs up the database to Dropbox</string>
+    <string name="last_backup_never">No backup created yet</string>
     <string name="strava_disconnect">Disconnect from Strava</string>
     <string name="strava_disconnect_dialog_title">Disconnect from Strava?</string>
     <string name="strava_disconnect_dialog_message">Disconnecting will delete all Strava-synced data from this device:\n\n• Starred segments and segment times\n• Strava routes\n• Equipment links to Strava\n• Strava upload tracking for past workouts\n\nYour recorded workouts (summaries, GPS tracks, sensor data) will not be deleted.</string>
