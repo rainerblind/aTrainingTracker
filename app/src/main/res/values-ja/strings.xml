@@ -191,13 +191,9 @@
     <string name="power_to_weight">パワーウェイトレシオ</string>
     <string name="power_to_weight_short">W/kg</string>
     <string name="normalized_power">標準化パワー</string>
-    <string name="normalized_power_short">NP</string>
     <string name="intensity_factor">強度係数</string>
-    <string name="intensity_factor_short">IF</string>
     <string name="work_kj">機械的仕事</string>
-    <string name="work_kj_short">kJ</string>
     <string name="tss">トレーニングストレススコア</string>
-    <string name="tss_short">TSS</string>
     <string name="speed">速度</string>
     <string name="speed_short">速度</string>
     <string name="current_sensors">現在のセンサー</string>
@@ -1120,7 +1116,7 @@
     <string name="all_shoes">+ すべてのシューズ +</string>
     <string name="all_bikes">+ すべてのバイク +</string>
     <string name="no_equipment">- なし -</string>
-    <string name="backup_restore">Backup \u0026 Restore</string>
+    <string name="backup_restore">バックアップ \u0026 復元</string>
     <string name="backup_restore_summary">データの移行やリカバリを実行</string>
     <string name="create_backup">バックアップを作成</string>
     <string name="restore_backup">全復元（移行）</string>
@@ -1800,9 +1796,6 @@
     <string name="ant_status_card_desc">最新のスマートフォンで ANT+ センサーを使用するには、ANT+ USB ドングル付きの USB-OTG アダプターと ANT+ システムサービスが必要です。</string>
     <string name="ant_status_card_action">ステータスを確認</string>
     <string name="ant_status_usb_dongle_note">最新のスマートフォンには内蔵 ANT+ チップがありません。受信には ANT+ USB ドングル付きの外部 USB-OTG アダプターが必要です。</string>
-    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
-    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
-    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
     <string name="ant_service_installed">インストール済み</string>
     <string name="ant_service_not_installed">未インストール</string>
     <string name="ant_service_install_button">インストール</string>

@@ -191,13 +191,9 @@
     <string name="power_to_weight">Stosunek mocy do masy</string>
     <string name="power_to_weight_short">W/kg</string>
     <string name="normalized_power">Znormalizowana moc</string>
-    <string name="normalized_power_short">NP</string>
     <string name="intensity_factor">Współczynnik intensywności</string>
-    <string name="intensity_factor_short">IF</string>
     <string name="work_kj">Praca mechaniczna</string>
-    <string name="work_kj_short">kJ</string>
     <string name="tss">Wskaźnik obciążenia treningowego</string>
-    <string name="tss_short">TSS</string>
     <string name="speed">prędkość</string>
     <string name="speed_short">pręd</string>
     <string name="current_sensors">bieżące czujniki</string>
@@ -1110,16 +1106,16 @@
     <string name="writing">Zapisywanie</string>
     <string name="wrote">Zapisano</string>
     <string name="something_strange_happened">Stało się coś dziwnego.</string>
-    <string name="exporting_to_file_not_wanted">Exporting to file not wanted.</string>
+    <string name="exporting_to_file_not_wanted">Eksport do pliku nie jest wymagany.</string>
     <string name="uploading_to_dropbox_not_wanted">Przesyłanie do Dropbox nie jest wymagane.</string>
     <string name="uploading_to_community_not_wanted">Przesyłanie do społeczności online nie jest wymagane.</string>
-    <string name="exporting_to_file">exporting to file: %1$s (%2$d/%3$d)</string>
+    <string name="exporting_to_file">eksportowanie do pliku: %1$s (%2$d/%3$d)</string>
     <string name="uploading_to_dropbox">przesyłanie do Dropbox: %1$s (%2$d/%3$d)</string>
     <string name="uploading_to_community">przesyłanie do społeczności online: %1$s (%2$d/%3$d)</string>
-    <string name="exporting_to_file_failed_for_one">exporting to file failed for 1/%1$d files</string>
+    <string name="exporting_to_file_failed_for_one">eksport do pliku nie powiódł się dla 1/%1$d plików</string>
     <string name="uploading_to_dropbox_failed_for_one">przesyłanie do Dropbox nieudane dla 1/%1$d plików</string>
     <string name="uploading_to_community_failed_for_one">przesyłanie do 1/%1$d społeczności online nieudane</string>
-    <string name="exporting_to_file_failed_for_several">exporting to file failed for %1$d/%2$d files</string>
+    <string name="exporting_to_file_failed_for_several">eksport do pliku nie powiódł się dla %1$d/%2$d plików</string>
     <string name="uploading_to_dropbox_failed_for_several">przesyłanie do Dropbox nieudane dla %1$d/%2$d plików</string>
     <string name="uploading_to_community_failed_for_several">przesyłanie do %1$d/%2$d społeczności online nieudane</string>
     <string name="tracking">śledzenie</string>
@@ -1137,7 +1133,7 @@
 
     <!-- smartphone devices -->
     <string name="notification_tracking_a_workout">Rejestrowanie treningu</string>
-    <string name="backup_restore">Backup \u0026 Restore</string>
+    <string name="backup_restore">Kopia zapasowa \u0026 przywracanie</string>
     <string name="backup_restore_summary">Migruj dane lub wykonaj odzyskiwanie</string>
     <string name="create_backup">Utwórz kopię zapasową</string>
     <string name="restore_backup">Pełne przywracanie (Migracja)</string>
@@ -1823,9 +1819,6 @@
     <string name="ant_status_card_desc">Czujniki ANT+ na nowoczesnych smartfonach wymagają adaptera USB-OTG z odbiornikiem ANT+ USB i usług systemowych ANT+.</string>
     <string name="ant_status_card_action">Sprawdź status</string>
     <string name="ant_status_usb_dongle_note">Nowoczesne smartfony nie posiadają wbudowanych chipów ANT+. Do odbioru wymagany jest zewnętrzny adapter USB-OTG z odbiornikiem ANT+ USB.</string>
-    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
-    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
-    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
     <string name="ant_service_installed">Zainstalowano</string>
     <string name="ant_service_not_installed">Nie zainstalowano</string>
     <string name="ant_service_install_button">Zainstaluj</string>

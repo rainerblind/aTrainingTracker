@@ -191,13 +191,9 @@
     <string name="power_to_weight">Rapporto potenza-peso</string>
     <string name="power_to_weight_short">W/kg</string>
     <string name="normalized_power">Potenza normalizzata</string>
-    <string name="normalized_power_short">NP</string>
     <string name="intensity_factor">Fattore d\'intensità</string>
-    <string name="intensity_factor_short">IF</string>
     <string name="work_kj">Lavoro meccanico</string>
-    <string name="work_kj_short">kJ</string>
     <string name="tss">Punteggio di stress da allenamento</string>
-    <string name="tss_short">TSS</string>
     <string name="speed">velocità</string>
     <string name="speed_short">vel</string>
     <string name="current_sensors">sensori attuali</string>
@@ -1138,7 +1134,7 @@
     <string name="all_shoes">+ tutte le scarpe +</string>
     <string name="all_bikes">+ tutte le bici +</string>
     <string name="no_equipment">- nessuno -</string>
-    <string name="backup_restore">Backup \u0026 Restore</string>
+    <string name="backup_restore">Backup \u0026 ripristino</string>
     <string name="backup_restore_summary">Migra i dati o esegui il ripristino</string>
     <string name="create_backup">Crea backup</string>
     <string name="restore_backup">Ripristino totale (Migrazione)</string>
@@ -1820,9 +1816,6 @@
     <string name="ant_status_card_desc">I sensori ANT+ sugli smartphone moderni richiedono un adattatore USB-OTG con chiavetta USB ANT+ e i servizi di sistema ANT+.</string>
     <string name="ant_status_card_action">Controlla stato</string>
     <string name="ant_status_usb_dongle_note">Gli smartphone moderni non dispongono di chip ANT+ integrati. È necessario un adattatore USB-OTG esterno con chiavetta USB ANT+.</string>
-    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
-    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
-    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
     <string name="ant_service_installed">Installato</string>
     <string name="ant_service_not_installed">Non installato</string>
     <string name="ant_service_install_button">Installa</string>

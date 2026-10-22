@@ -91,7 +91,7 @@
 
     <string name="guess_commute_and_trainer">Pendeln/Trainer automatisch erkennen</string>
 
-    <string name="pebble_build_in">Standard Pebble Watchapp</string>
+    <string name="pebble_build_in">Integrierte Pebble-App</string>
     <string name="pebble_a_training_tracker_watchapp">a Training Tracker Watchapp</string>
 
     <string name="install_ant_plugin_message">Um ANT+ zu nutzen muss der ANT+ Plugin Service installiert sein.</string>
@@ -192,13 +192,9 @@
     <string name="power_to_weight">Leistungsgewicht</string>
     <string name="power_to_weight_short">W/kg</string>
     <string name="normalized_power">Normalisierte Leistung</string>
-    <string name="normalized_power_short">NP</string>
     <string name="intensity_factor">Intensitätsfaktor</string>
-    <string name="intensity_factor_short">IF</string>
     <string name="work_kj">Mechanische Arbeit</string>
-    <string name="work_kj_short">kJ</string>
-    <string name="tss">Training Stress Score</string>
-    <string name="tss_short">TSS</string>
+    <string name="tss">Trainingsbelastungs-Score (TSS)</string>
     <string name="speed">Geschwindigkeit</string>
     <string name="speed_short">Geschw.</string>
     <string name="current_sensors">Aktuelle Sensoren</string>
@@ -221,7 +217,7 @@
     <string name="time_total_short">gesamt</string>
     <string name="torque">Drehmoment</string>
     <string name="torque_short">Moment</string>
-    <string name="pedal_power_balance">pedal power balance</string>
+    <string name="pedal_power_balance">Pedal-Leistungsbalance</string>
     <string name="pedal_power_balance_short">balance</string>
     <string name="pedal_smoothness_l">pedal smoothness left</string>
     <string name="pedal_smoothness_l_short">smooth l</string>
@@ -1909,9 +1905,6 @@
     <string name="ant_status_card_desc">Für ANT+ Sensoren auf modernen Smartphones ist ein USB-OTG-Adapter mit ANT+ USB-Stick sowie ANT+ Systemdienste erforderlich.</string>
     <string name="ant_status_card_action">Status prüfen</string>
     <string name="ant_status_usb_dongle_note">Moderne Smartphones besitzen keine integrierten ANT+-Funkchips. Ein externer USB-OTG-Adapter mit ANT+ USB-Stick ist für den Empfang nötig.</string>
-    <string name="ant_service_plugin_name" translatable="false">ANT+ Plugins Service</string>
-    <string name="ant_service_radio_name" translatable="false">ANT Radio Service</string>
-    <string name="ant_service_usb_name" translatable="false">ANT USB Service</string>
     <string name="ant_service_installed">Installiert</string>
     <string name="ant_service_not_installed">Nicht installiert</string>
     <string name="ant_service_install_button">Installieren</string>
