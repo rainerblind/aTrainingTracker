@@ -49,7 +49,14 @@ import java.io.IOException
 
 open class StravaUploader @JvmOverloads constructor(context: Context, internal var client: OkHttpClient = OkHttpClient()) : BaseExporter(context) {
 
-    internal var sleepStrategy: (Long) -> Unit = { millis -> Thread.sleep(millis) }
+    internal var sleepStrategy: (Long) -> Unit = { millis ->
+        try {
+            Thread.sleep(millis)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            Log.w(TAG, "sleepStrategy interrupted during backoff sleep; thread interrupt flag restored", e)
+        }
+    }
 
     companion object {
         private const val TAG = "StravaUploader"
@@ -794,38 +801,55 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
     }
 
     internal open fun parseTimeToEpochSeconds(timeStr: String): Long? {
+        if (timeStr.isBlank()) {
+            Log.w(TAG, "Cannot parse blank timeStr to epoch seconds")
+            return null
+        }
         // Try ISO 8601 (e.g. "2024-05-12T10:15:30Z")
         try {
             return java.time.Instant.parse(timeStr).epochSecond
-        } catch (_: Exception) { }
+        } catch (e: java.time.format.DateTimeParseException) {
+            // Fall through to SQLite format
+        }
 
         // Try SQLite format (e.g. "2024-05-12 10:15:30")
         try {
             val dbFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.ROOT).apply {
                 timeZone = java.util.TimeZone.getTimeZone("UTC")
+                isLenient = false
             }
             val parsed = dbFormat.parse(timeStr)?.time?.div(1000)
             if (parsed != null) return parsed
-        } catch (_: Exception) { }
+        } catch (e: java.text.ParseException) {
+            // Fall through to fileBaseName format
+        }
 
         // Try standard fileBaseName format without inner hyphens (e.g. "2024-05-12_101530")
         try {
             val fileFormat1 = java.text.SimpleDateFormat("yyyy-MM-dd_HHmmss", java.util.Locale.ROOT).apply {
                 timeZone = java.util.TimeZone.getTimeZone("UTC")
+                isLenient = false
             }
             val parsed = fileFormat1.parse(timeStr)?.time?.div(1000)
             if (parsed != null) return parsed
-        } catch (_: Exception) { }
+        } catch (e: java.text.ParseException) {
+            // Fall through to hyphenated fileBaseName format
+        }
 
         // Try fileBaseName format with hyphens (e.g. "2024-05-12_10-15-30")
-        return try {
+        try {
             val fileFormat2 = java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", java.util.Locale.ROOT).apply {
                 timeZone = java.util.TimeZone.getTimeZone("UTC")
+                isLenient = false
             }
-            fileFormat2.parse(timeStr)?.time?.div(1000)
-        } catch (_: Exception) {
-            null
+            val parsed = fileFormat2.parse(timeStr)?.time?.div(1000)
+            if (parsed != null) return parsed
+        } catch (e: java.text.ParseException) {
+            // Exhausted all formats
         }
+
+        Log.w(TAG, "Failed to parse time string '$timeStr' with any supported date format; returning null")
+        return null
     }
 
     internal open fun isSportCompatible(localSport: BSportType?, stravaType: String?): Boolean {

@@ -49,9 +49,7 @@ public class MyBanalDebugHelper {
                 file.createNewFile();
                 bufferedWriter = new BufferedWriter(new FileWriter(file));
             } catch (IOException e) {
-                if (DEBUG) Log.d(TAG, "IOException in MyBanalDebugHelper()");
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+                Log.e(TAG, "IOException in MyBanalDebugHelper() constructor", e);
             }
 
         }
@@ -63,9 +61,7 @@ public class MyBanalDebugHelper {
                 bufferedWriter.append((new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)).format(new Date()) + ": " + tag + ", " + text + "\n");
                 bufferedWriter.flush();
             } catch (IOException e) {
-                Log.e(TAG, "IOException in MyBanalDebugHelper()");
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+                Log.e(TAG, "IOException in MyBanalDebugHelper() log()", e);
             }
         }
     }

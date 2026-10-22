@@ -40,10 +40,14 @@ object BackupManager {
         override fun close() {
             try {
                 fileLock?.release()
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to release backup file lock", e)
+            }
             try {
                 raf?.close()
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to close backup lock RandomAccessFile", e)
+            }
             if (jvmLock.isHeldByCurrentThread) {
                 jvmLock.unlock()
             }
@@ -75,8 +79,17 @@ object BackupManager {
             }
             return BackupLock(jvmLock, fileLock, raf)
         } catch (e: Exception) {
-            try { fileLock?.release() } catch (_: Exception) {}
-            try { raf?.close() } catch (_: Exception) {}
+            Log.w(TAG, "Failed to acquire backup file lock", e)
+            try {
+                fileLock?.release()
+            } catch (ex: Exception) {
+                Log.w(TAG, "Failed to release backup fileLock during error handling", ex)
+            }
+            try {
+                raf?.close()
+            } catch (ex: Exception) {
+                Log.w(TAG, "Failed to close backup raf during error handling", ex)
+            }
             if (jvmLock.isHeldByCurrentThread) {
                 jvmLock.unlock()
             }

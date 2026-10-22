@@ -111,7 +111,9 @@ class PeriodsRepository private constructor(private val application: Application
         fun resetInstanceForTesting() {
             try {
                 instance?.scope?.cancel()
-            } catch (ignored: Throwable) {}
+            } catch (e: Exception) {
+                Log.w(TAG, "Error cancelling scope during resetInstanceForTesting", e)
+            }
             instance = null
         }
 
@@ -120,7 +122,9 @@ class PeriodsRepository private constructor(private val application: Application
             if (repo == null) {
                 try {
                     instance?.scope?.cancel()
-                } catch (ignored: Throwable) {}
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error cancelling scope during setInstanceForTesting", e)
+                }
             }
             instance = repo
         }
@@ -822,13 +826,15 @@ class PeriodsRepository private constructor(private val application: Application
         val equipDb = com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(application)
         val equipmentMap = try {
             equipDb.getEquipmentItems().associate { it.id to it.name }
-        } catch (_: Throwable) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to load equipment items for periods; falling back to empty map", e)
             emptyMap()
         }
 
         val knownLocs = try {
             com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(application).allLocations
-        } catch (_: Throwable) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to load known locations for periods; falling back to empty list", e)
             emptyList()
         }
 
