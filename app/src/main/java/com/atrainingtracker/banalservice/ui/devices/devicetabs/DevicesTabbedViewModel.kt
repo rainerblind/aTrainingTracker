@@ -75,7 +75,7 @@ data class ZoneOnboardingPrompt(
 class DevicesTabbedViewModel @JvmOverloads constructor(
     application: Application,
     private val savedStateHandle: SavedStateHandle,
-    private val settingsDataStore: SettingsDataStore = SettingsDataStore(application),
+    private val settingsDataStore: SettingsDataStore = SettingsDataStore.getInstance(application),
     private val deviceDBRepository: DeviceDataRepository = DeviceDataRepository.getInstance(application),
     private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application)
 ) : AndroidViewModel(application) {

@@ -34,6 +34,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
@@ -44,7 +45,16 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
-class BackupRestoreViewModel(application: Application) : AndroidViewModel(application) {
+/**
+ * ViewModel managing backup creation, cloud/local synchronization, and database restores (REQ-TST-003.4).
+ *
+ * @param application Application context for system services and resources.
+ * @param ioDispatcher Dispatcher used for background I/O operations (defaults to [Dispatchers.IO]).
+ */
+class BackupRestoreViewModel @JvmOverloads constructor(
+    application: Application,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : AndroidViewModel(application) {
 
     sealed class UiState {
         object Idle : UiState()
@@ -454,7 +464,7 @@ class BackupRestoreViewModel(application: Application) : AndroidViewModel(applic
     }
 
     fun restoreFromLocalBackup(context: Context) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val backupFile = File(BackupManager.getBackupDir(context), BackupManager.BACKUP_FILENAME)
             if (!backupFile.exists() || backupFile.length() == 0L) {
                 _uiState.value = UiState.Error(context.getString(R.string.restore_automatic_backup_not_found))

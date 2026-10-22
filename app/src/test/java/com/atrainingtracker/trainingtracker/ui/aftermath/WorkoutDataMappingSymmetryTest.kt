@@ -33,6 +33,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import android.util.Log
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import io.mockk.every
@@ -89,6 +90,8 @@ class WorkoutDataMappingSymmetryTest {
         every { mockSportTypeDb.getStravaName(any()) } returns "Ride"
         every { mockEquipmentDb.getEquipmentNameFromId(any()) } returns "Road Bike"
 
+        SettingsDataStore.setInstanceForTesting(mockk(relaxed = true))
+
         mapper = WorkoutDataMapper(
             context = context,
             workoutSummariesDatabaseManager = mockSummariesDb,
@@ -101,6 +104,7 @@ class WorkoutDataMappingSymmetryTest {
 
     @org.junit.After
     fun tearDown() {
+        SettingsDataStore.setInstanceForTesting(null)
         WorkoutClusterDatabaseManager.resetForTesting(null)
         unmockkStatic(LapsDatabaseManager::class)
         unmockkStatic(TrainingApplication::class)

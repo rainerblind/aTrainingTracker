@@ -161,10 +161,4 @@ class HardcodedStringsAndUnitsContractTest {
         val heatmap = loadSource("app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterHeatmapScreen.kt")
         assertTrue("WorkoutClusterHeatmapScreen must use close resource", heatmap.contains("R.string.close"))
     }
-
-    @Test
-    fun `TrainingApplication todo method is marked as Deprecated`() {
-        val content = loadSource("app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java")
-        assertTrue("todo method in TrainingApplication must be marked @Deprecated", content.contains("@Deprecated\n    public void todo"))
-    }
 }

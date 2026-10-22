@@ -89,6 +89,8 @@ class TrackingTabsViewModelTest {
     @After
     fun tearDown() {
         wasAutoPausedFlow.value = false
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         Dispatchers.resetMain()
         ArchTaskExecutor.getInstance().setDelegate(null)
         unmockkAll()

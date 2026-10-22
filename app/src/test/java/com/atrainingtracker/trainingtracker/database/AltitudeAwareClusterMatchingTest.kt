@@ -62,6 +62,8 @@ class AltitudeAwareClusterMatchingTest {
 
     @After
     fun tearDown() {
+        WorkoutClusterDatabaseManager.resetForTesting(null)
+        WorkoutClusterEngine.resetForTesting(null)
         unmockkAll()
     }
 
@@ -324,6 +326,10 @@ class AltitudeAwareClusterMatchingTest {
         mockkStatic(SportTypeDatabaseManager::class)
         every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportDb
         every { mockSportDb.getBSportType(any()) } returns BSportType.RUN
+
+        val mockKnownLocDb = mockk<KnownLocationsDatabaseManager>(relaxed = true)
+        mockkStatic(KnownLocationsDatabaseManager::class)
+        every { KnownLocationsDatabaseManager.getInstance(any()) } returns mockKnownLocDb
 
         WorkoutClusterDatabaseManager.resetForTesting(mockDbManager)
         WorkoutClusterEngine.resetForTesting(null)
