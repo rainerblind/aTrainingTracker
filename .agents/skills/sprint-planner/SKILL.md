@@ -48,6 +48,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
    git checkout -b sprint/<SPRINT_NAME>  # e.g. sprint/2026-40.1
    ```
 3. **Ticket-by-Ticket Walkthrough with the Human User**:
+   * **Duplicate / Overlapping Ticket Detection (`Rule 63` — `ATT-4670`)**: When inspecting the active sprint backlog at the start of Ceremony 1, proactively check whether any two tickets in the sprint address the same root cause or overlapping scope (e.g., `ATT-4667` and `ATT-4663`). When a duplicate is detected, immediately flag it to the human user, propose consolidating any unique acceptance criteria into the primary ticket, and move the duplicate directly to `Final Review (Human)` with a cross-reference comment so it does not consume a redundant 5-stage pipeline cycle.
    For each feature/bug/improvement ticket in sequence (skipping the `Review & Retro` ceremony ticket, which remains as the sprint's continuous retro logging and Ceremony 2 retrospective container rather than entering `Analysis` or spawning `[Analysis]..[Test]` subtasks):
    * **Present Summary & Context**: Present the ticket key, title, and current description to the user.
    * **Strict Turn Boundary Before Moving to `Analysis` (Rule 7)**: Never call `python3 tools/jira_util.py move <KEY> "analysis"` in the same turn in which `<KEY>` is first presented to the user. Wait for the user's explicit approval of `<KEY>` before moving it to `Analysis`.
@@ -113,7 +114,10 @@ Jointly review all completed sprint tickets with the human user against expectat
    * **Rule (Single-Ticket Focus)**: Evaluate tickets **strictly one-by-one** (`"Please make one ticket after the other. Please also keep this in mind for the retro."`). Never batch or present multiple tickets simultaneously. Complete verification and human acceptance for the current ticket before proceeding to the next.
    For each ticket in `Final Review (Human)`:
    * Present the walkthrough deliverable (`docs/engineering/walkthroughs/<KEY>_walkthrough.md`), a summary of changes, and a concise **Code Review of the actual git diff** (`git show` / key modified files, verifying edge-case handling, resource safety, and adherence to architectural invariants) (`"Within the last tickets, you also did a review of the code-changes. I would like to keep this."` — Sprint Retro 2026-42.4 / ATT-3679).
-   * User verifies on-device behavior (Pixel 10 APK built from `sprint/<SPRINT_NAME>`) and inspects the code review.
+   * **Mandatory Proactive Review Recommendation (`Rule 63` — `ATT-4670`, `"For some recent tickets, I asked for your suggestion during the review. This should become standard."`)**: Always conclude the presentation of each ticket with a dedicated **`Recommendation`** section stating:
+     1. Your explicit verdict recommendation (e.g., **Accept as `i.O.`**, **Accept with Follow-Up Ticket**, or **Deferred Field Test**) and the technical rationale why.
+     2. Whether the ticket has an **on-device UI/behavioral touchpoint** (giving the exact screen/navigation path on the phone if the user wants to test it) or is a **pure backend/unit-test ticket** already 100% verified by the automated test suite.
+   * User verifies on-device behavior (Pixel 10 APK built from `sprint/<SPRINT_NAME>`) and inspects the code review and recommendation.
    * **Evaluation Decision**:
      * **In Ordnung (i.O. / Accepted)**:
        1. Set the active unreleased Fix Version (`Lösungsversion`) on the parent ticket (Rule 14):
