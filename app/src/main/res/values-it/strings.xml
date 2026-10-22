@@ -1167,8 +1167,8 @@
     <string name="restore_automatic_local_backup">Ripristina dal backup locale automatico</string>
     <string name="restore_automatic_local_backup_format">Backup automatico (%1$s)</string>
     <string name="restore_automatic_backup_not_found">Nessun backup locale automatico trovato</string>
-    <string name="restore_from_file">Locale: Ripristino completo (Migrazione)</string>
-    <string name="restore_from_dropbox">Dropbox: Ripristino completo (Migrazione)</string>
+    <string name="restore_from_file">Ripristina da file locale</string>
+    <string name="restore_from_dropbox">Ripristina da Dropbox</string>
     <string name="backup_target_local">Locale</string>
     <string name="backup_target_dropbox">Dropbox</string>
     <string name="backup_target_google_drive">Google Drive</string>

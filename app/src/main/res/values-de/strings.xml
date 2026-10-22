@@ -1269,8 +1269,8 @@
     <string name="restore_automatic_local_backup">Aus automatischem lokalen Backup wiederherstellen</string>
     <string name="restore_automatic_local_backup_format">Automatisches Backup (%1$s)</string>
     <string name="restore_automatic_backup_not_found">Kein automatisches lokales Backup gefunden</string>
-    <string name="restore_from_file">Lokal: Vollständige Wiederherstellung (Migration)</string>
-    <string name="restore_from_dropbox">Dropbox: Vollständige Wiederherstellung (Migration)</string>
+    <string name="restore_from_file">Aus lokaler Datei wiederherstellen</string>
+    <string name="restore_from_dropbox">Aus Dropbox wiederherstellen</string>
     <string name="backup_target_local">Lokal</string>
     <string name="backup_target_dropbox">Dropbox</string>
     <string name="backup_target_google_drive">Google Drive</string>

@@ -18,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.*
@@ -179,25 +178,24 @@ internal fun RestoreTabContent(
                     border = dropboxRestoreBorder,
                     enabled = !isBusy
                 ) {
-                    Icon(Icons.Default.CloudUpload, contentDescription = null)
+                    Icon(Icons.Default.CloudDownload, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.restore_from_dropbox))
                 }
 
-                // 4. Google Drive Restore (when enabled)
-                if (isGoogleDriveConnected) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = onGoogleDriveRestoreClick,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = googleDriveRestoreColors,
-                        border = googleDriveRestoreBorder,
-                        enabled = !isBusy
-                    ) {
-                        Icon(Icons.Default.CloudDownload, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.restore_from_google_drive))
-                    }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 4. Google Drive Restore
+                OutlinedButton(
+                    onClick = onGoogleDriveRestoreClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = googleDriveRestoreColors,
+                    border = googleDriveRestoreBorder,
+                    enabled = !isBusy
+                ) {
+                    Icon(Icons.Default.CloudDownload, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.restore_from_google_drive))
                 }
             }
         }

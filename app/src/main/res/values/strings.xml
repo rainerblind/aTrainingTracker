@@ -1381,8 +1381,8 @@
     <string name="restore_automatic_local_backup">Restore from Automatic Local Backup</string>
     <string name="restore_automatic_local_backup_format">Automatic Backup (%1$s)</string>
     <string name="restore_automatic_backup_not_found">No automatic local backup found</string>
-    <string name="restore_from_file">Local: Full Restore (Migration)</string>
-    <string name="restore_from_dropbox">Dropbox: Full Restore (Migration)</string>
+    <string name="restore_from_file">Restore from Local File</string>
+    <string name="restore_from_dropbox">Restore from Dropbox</string>
     <string name="backup_target_local">Local</string>
     <string name="backup_target_dropbox">Dropbox</string>
     <string name="backup_target_google_drive">Google Drive</string>

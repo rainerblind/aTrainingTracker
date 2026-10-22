@@ -131,6 +131,7 @@ fun ImportBackupTabsScreen(
     var pendingDirectoryUri by remember { mutableStateOf<Uri?>(null) }
     var pendingDirectoryFormat by remember { mutableStateOf("fit") }
     var showDropboxDisconnectedDialog by remember { mutableStateOf(false) }
+    var showGoogleDriveDisconnectedDialog by remember { mutableStateOf(false) }
     var showNoCloudConnectedDialog by remember { mutableStateOf(false) }
     var resumeTrigger by remember { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -158,7 +159,7 @@ fun ImportBackupTabsScreen(
     val isDropboxConnected = remember(uiState, resumeTrigger, showDropboxDisconnectedDialog, showNoCloudConnectedDialog) {
         TrainingApplication.uploadToDropbox() && TrainingApplication.uploadBackupToDropbox() && TrainingApplication.readDropboxCredential() != null
     }
-    val isGoogleDriveConnected = remember(uiState, resumeTrigger, showNoCloudConnectedDialog) {
+    val isGoogleDriveConnected = remember(uiState, resumeTrigger, showGoogleDriveDisconnectedDialog, showNoCloudConnectedDialog) {
         TrainingApplication.uploadToGoogleDrive() && TrainingApplication.uploadBackupToGoogleDrive()
     }
     
@@ -376,7 +377,11 @@ fun ImportBackupTabsScreen(
                                 }
                             },
                             onGoogleDriveRestoreClick = {
-                                showGoogleDriveRestoreConfirm = true
+                                if (isGoogleDriveConnected) {
+                                    showGoogleDriveRestoreConfirm = true
+                                } else {
+                                    showGoogleDriveDisconnectedDialog = true
+                                }
                             }
                         )
                     }
@@ -499,6 +504,21 @@ fun ImportBackupTabsScreen(
             text = { Text(stringResource(R.string.dropbox_disconnected_status)) },
             confirmButton = {
                 TextButton(onClick = { showDropboxDisconnectedDialog = false }) {
+                    Text(stringResource(R.string.OK))
+                }
+            }
+        )
+    }
+
+    if (showGoogleDriveDisconnectedDialog) {
+        AlertDialog(
+            onDismissRequest = { showGoogleDriveDisconnectedDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
+            title = { Text(stringResource(R.string.google_drive)) },
+            text = { Text(stringResource(R.string.google_drive_disconnected_status)) },
+            confirmButton = {
+                TextButton(onClick = { showGoogleDriveDisconnectedDialog = false }) {
                     Text(stringResource(R.string.OK))
                 }
             }

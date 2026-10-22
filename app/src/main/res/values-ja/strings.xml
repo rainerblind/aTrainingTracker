@@ -1149,8 +1149,8 @@
     <string name="restore_automatic_local_backup">自動ローカルバックアップから復元</string>
     <string name="restore_automatic_local_backup_format">自動バックアップ (%1$s)</string>
     <string name="restore_automatic_backup_not_found">自動ローカルバックアップが見つかりません</string>
-    <string name="restore_from_file">ローカル: 完全復元（移行）</string>
-    <string name="restore_from_dropbox">Dropbox: 完全復元（移行）</string>
+    <string name="restore_from_file">ローカルファイルから復元</string>
+    <string name="restore_from_dropbox">Dropbox から復元</string>
     <string name="backup_target_local">ローカル</string>
     <string name="backup_target_dropbox">Dropbox</string>
     <string name="backup_target_google_drive">Google ドライブ</string>

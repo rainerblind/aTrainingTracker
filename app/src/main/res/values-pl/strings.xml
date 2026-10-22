@@ -1166,8 +1166,8 @@
     <string name="restore_automatic_local_backup">Przywróć z automatycznej kopii lokalnej</string>
     <string name="restore_automatic_local_backup_format">Automatyczna kopia zapasowa (%1$s)</string>
     <string name="restore_automatic_backup_not_found">Nie znaleziono automatycznej kopii lokalnej</string>
-    <string name="restore_from_file">Lokalnie: Pełne przywrócenie (Migracja)</string>
-    <string name="restore_from_dropbox">Dropbox: Pełne przywrócenie (Migracja)</string>
+    <string name="restore_from_file">Przywróć z pliku lokalnego</string>
+    <string name="restore_from_dropbox">Przywróć z Dropbox</string>
     <string name="backup_target_local">Lokalnie</string>
     <string name="backup_target_dropbox">Dropbox</string>
     <string name="backup_target_google_drive">Dysk Google</string>

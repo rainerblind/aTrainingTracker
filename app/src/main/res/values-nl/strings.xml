@@ -1167,8 +1167,8 @@
     <string name="restore_automatic_local_backup">Herstellen vanaf automatische lokale back-up</string>
     <string name="restore_automatic_local_backup_format">Automatische back-up (%1$s)</string>
     <string name="restore_automatic_backup_not_found">Geen automatische lokale back-up gevonden</string>
-    <string name="restore_from_file">Lokaal: Volledig herstel (Migratie)</string>
-    <string name="restore_from_dropbox">Dropbox: Volledig herstel (Migratie)</string>
+    <string name="restore_from_file">Herstellen vanaf lokaal bestand</string>
+    <string name="restore_from_dropbox">Herstellen vanaf Dropbox</string>
     <string name="backup_target_local">Lokaal</string>
     <string name="backup_target_dropbox">Dropbox</string>
     <string name="backup_target_google_drive">Google Drive</string>
