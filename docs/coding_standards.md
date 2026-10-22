@@ -95,6 +95,11 @@ This document serves as the authoritative living source of truth for software en
 * **Architectural Contract Tests**:
   * Every DTO with multiple `fromCursor` pathways must be protected by an architectural contract unit test verifying that both single and batch overloads yield identical objects for identical cursor rows.
 
+### 2.2 Single Source of Truth for `DatabaseSchemaRegistry` & Schema Version Validation (Rule 62 — ATT-4592 / ATT-4596)
+* **Direct Reference to `SQLiteOpenHelper.DB_VERSION` Constants**:
+  * `DatabaseSchemaRegistry` (and any backup/restore or migration schema validator) **MUST** reference each `SQLiteOpenHelper` subclass's `DB_VERSION` / `C_DB_VERSION` constant directly rather than duplicating raw integer literals (`maxVersion = 1`, `25`, etc.).
+  * Whenever a database's `DB_VERSION` is incremented (e.g., for an index or column migration), `DatabaseSchemaRegistry` must automatically reflect the updated version and must be guarded by a contract test asserting equality between every registered database's `maxVersion` and its corresponding `SQLiteOpenHelper` version constant.
+
 ---
 
 ## 3. Android Platform & Lifecycle Safety
@@ -129,6 +134,11 @@ This document serves as the authoritative living source of truth for software en
   * Android routes `USAGE_ASSISTANCE_SONIFICATION` to the system ringer/notification stream, which is completely silenced whenever the phone is on Vibrate or Silent mode.
 * **Reliable `MODE_STATIC` Replay**:
   * When re-triggering a `MODE_STATIC` `AudioTrack` (or overlapping rapid chimes), always call `stop()` and `reloadStaticData()` (or instantiate a fresh `AudioTrack` per strike and release on completion) so subsequent taps never silently no-op.
+
+### 3.5 Mandatory `@JvmOverloads constructor` for Reflective Android Framework Classes (`AndroidViewModel`, `ViewModel`, `Fragment`) (Rule 62 — ATT-4667 / ATT-4596)
+* **Bytecode Constructor Generation for Default Parameters**:
+  * Whenever default constructor parameters (e.g., `ioDispatcher: CoroutineDispatcher = Dispatchers.IO`, repositories, or clock providers) are added to an `AndroidViewModel`, `ViewModel`, or `Fragment` instantiated via default Android framework reflection (`viewModel(activity)` / `AndroidViewModelFactory`), the primary constructor **MUST** be annotated with `@JvmOverloads constructor(...)` (or an explicit `ViewModelProvider.Factory` must be wired at all call sites).
+  * Without `@JvmOverloads`, Kotlin only emits the multi-argument + `DefaultConstructorMarker` constructor in bytecode, causing `ViewModelProvider.AndroidViewModelFactory`'s reflective `modelClass.getConstructor(Application::class.java)` lookup to crash at runtime with `NoSuchMethodException` even though Kotlin unit tests compile and pass.
 
 ---
 
