@@ -28,6 +28,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.atrainingtracker.trainingtracker.zones.ValidationResult
 import com.atrainingtracker.trainingtracker.zones.ZoneValidator
@@ -35,12 +36,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.File
 
 /**
  * Immutable in-memory snapshot of all zone thresholds, baselines, and display options.
@@ -77,9 +81,35 @@ data class SettingsSnapshot(
 // Create a single instance of DataStore for the entire app context
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_settings")
 
+internal class InMemoryPreferencesDataStore(
+    initialPreferences: Preferences = emptyPreferences()
+) : DataStore<Preferences> {
+    private val stateFlow = MutableStateFlow(initialPreferences)
+    override val data: Flow<Preferences> = stateFlow
+    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
+        val updated = transform(stateFlow.value)
+        stateFlow.value = updated
+        return updated
+    }
+}
+
+internal fun resolveDataStore(context: Context): DataStore<Preferences> {
+    return try {
+        val targetContext = context.applicationContext ?: context
+        val filesDir = targetContext.filesDir
+        if (filesDir != null && File(filesDir, "probe").path.isNotEmpty()) {
+            context.dataStore
+        } else {
+            InMemoryPreferencesDataStore()
+        }
+    } catch (_: Throwable) {
+        InMemoryPreferencesDataStore()
+    }
+}
+
 class SettingsDataStore(
     private val context: Context,
-    private val dataStore: DataStore<Preferences> = context.dataStore
+    private val dataStore: DataStore<Preferences> = resolveDataStore(context)
 ) {
 
     // private val appContext = context.applicationContext // not really needed???
@@ -112,7 +142,7 @@ class SettingsDataStore(
         @JvmStatic
         fun getInstance(context: Context): SettingsDataStore {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: SettingsDataStore(context.applicationContext).also { INSTANCE = it }
+                INSTANCE ?: SettingsDataStore(context.applicationContext ?: context).also { INSTANCE = it }
             }
         }
 
@@ -581,9 +611,11 @@ class SettingsDataStore(
         )
     }
 
-    val snapshotFlow: Flow<SettingsSnapshot> = dataStore.data.map { prefs ->
-        mapSettingsSnapshot(prefs)
-    }
+    val snapshotFlow: Flow<SettingsSnapshot> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { prefs ->
+            mapSettingsSnapshot(prefs)
+        }
 
     val snapshotStateFlow: StateFlow<SettingsSnapshot> by lazy {
         snapshotFlow.stateIn(

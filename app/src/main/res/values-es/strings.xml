@@ -1002,6 +1002,10 @@
     <string name="dropbox_disconnected_status">No estás conectado a Dropbox</string>
     <string name="dropbox_disconnect">Desconectarse de Dropbox</string>
     <string name="dropbox_connect">Conectarse a Dropbox</string>
+    <string name="dropbox_connect_prompt">Conecta tu cuenta de Dropbox para exportar entrenamientos automáticamente y sincronizar copias de seguridad de la base de datos en Dropbox.</string>
+    <string name="upload_workouts_to_dropbox_summary">Sube actividades (FIT, TCX, GPX, CSV) a Dropbox tras guardar</string>
+    <string name="upload_backup_to_dropbox_summary">Realiza copias de seguridad periódicas de la base de datos en Dropbox</string>
+    <string name="last_backup_never">Aún no se ha creado ninguna copia de seguridad</string>
     <string name="strava_disconnect">Desconectar de Strava</string>
     <string name="strava_disconnect_dialog_title">¿Desconectar de Strava?</string>
     <string name="strava_disconnect_dialog_message">Al desconectar, se eliminarán todos los datos sincronizados de Strava de este dispositivo:\n\n• Segmentos destacados y tiempos\n• Rutas de Strava\n• Enlaces de equipamiento con Strava\n• Estado de subida a Strava de entrenamientos pasados\n\nTus entrenamientos grabados (resúmenes, rutas GPS, datos de sensores) no se eliminarán.</string>
@@ -1165,8 +1169,8 @@
     <string name="restore_automatic_local_backup">Restaurar desde copia local automática</string>
     <string name="restore_automatic_local_backup_format">Copia de seguridad automática (%1$s)</string>
     <string name="restore_automatic_backup_not_found">No se encontró copia local automática</string>
-    <string name="restore_from_file">Local: Restauración completa (Migración)</string>
-    <string name="restore_from_dropbox">Dropbox: Restauración completa (Migración)</string>
+    <string name="restore_from_file">Restaurar desde archivo local</string>
+    <string name="restore_from_dropbox">Restaurar desde Dropbox</string>
     <string name="backup_target_local">Local</string>
     <string name="backup_target_dropbox">Dropbox</string>
     <string name="backup_target_google_drive">Google Drive</string>

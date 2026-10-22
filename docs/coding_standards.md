@@ -104,7 +104,7 @@ This document serves as the authoritative living source of truth for software en
 
 ## 3. Android Platform & Lifecycle Safety
 
-### 3.1 Specific Direct Platform Intents Over Generic App Settings (Rule 21)
+### 3.1 Specific Direct Platform Intents & Variant-Scoped Custom URI Schemes (Rules 21 & 63 — ATT-4668 / ATT-4706)
 * **Direct Target Intents**:
   * User prompts requesting system permissions, battery optimization exemptions, or hardware settings must target the most specific direct intent:
     * System permission requests: direct Android runtime permission dialog (`ActivityCompat.requestPermissions`).
@@ -112,6 +112,9 @@ This document serves as the authoritative living source of truth for software en
     * Bluetooth / Location toggles: `ACTION_REQUEST_ENABLE` or `ACTION_LOCATION_SOURCE_SETTINGS`.
 * **Generic Fallback As Last Resort**:
   * Navigating to generic Application Details Settings (`ACTION_APPLICATION_DETAILS_SETTINGS`) is only permissible as a last-resort fallback when direct intents are unavailable or permissions are permanently blocked ("Don't ask again").
+* **Variant-Scoped Custom URI Schemes Over Path Suffixes (`Rule 63` — `ATT-4668` / `ATT-4706`)**:
+  * When isolating deep-link or OAuth callback `<intent-filter>`s between co-installed build variants (`com.atrainingtracker` vs `com.atrainingtracker.debug`), scope the **`android:scheme`** (or `android:host`) by `${applicationId}` (e.g. `android:scheme="strava.${applicationId}"`) whenever the OAuth provider permits custom schemes, rather than only adding `android:path="/${applicationId}"` onto a shared `scheme://host`.
+  * In Android's `IntentFilter.matchData()`, any co-installed APK (such as an older Release build) that declares `android:scheme` + `android:host` **without** an `android:path` attribute treats the omitted path as a wildcard (`/*`, `MATCH_DATA_AUTHORITY = 0x308000`), and `IntentResolver` includes all matching filters with equal `priority` in `ResolverActivity` ("Öffnen mit") regardless of path vs. authority match specificity.
 
 ### 3.2 Defensive Service Lifecycle Finalization & FGS Permission Gating (Rule 29)
 * **Permission-Gated Foreground Service Types**:

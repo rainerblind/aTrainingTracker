@@ -62,6 +62,7 @@ class GpxRouteImporter @JvmOverloads constructor(
     companion object {
         private const val TAG = "GpxRouteImporter"
         const val MAX_BATCH_SIZE = 100
+        const val ELEVATION_GAIN_HYSTERESIS_METERS = 2.0
     }
 
     /**
@@ -86,7 +87,8 @@ class GpxRouteImporter @JvmOverloads constructor(
                 val gpxResult = GpxTrackpointParser.parse(inputStream)
                 val parsedGpx = gpxResult.getOrNull()
 
-                val trackPoints = parsedGpx?.laps?.flatMap { it.trackpoints } ?: emptyList()
+                val trackPoints = parsedGpx?.laps?.flatMap { it.trackpoints }
+                    ?.filter { it.lat != null && it.lng != null } ?: emptyList()
 
                 if (parsedGpx == null || trackPoints.isEmpty()) {
                     // Fallback attempt to TCX course parser
@@ -105,7 +107,7 @@ class GpxRouteImporter @JvmOverloads constructor(
                 // Convert points to PathPoint
                 val pathPoints = trackPoints.map { pt ->
                     PathPoint(
-                        latLng = LatLng(pt.lat, pt.lng),
+                        latLng = LatLng(pt.lat!!, pt.lng!!),
                         altitude = pt.altitude ?: 0.0,
                         distance = 0.0 // We calculate this below
                     )
@@ -192,12 +194,10 @@ class GpxRouteImporter @JvmOverloads constructor(
                         break
                     }
                     is ElevationResult.ServerError -> {
-                        Log.w(TAG, "DEM API server error (${result.statusCode}). Stopping further queries.")
-                        break
+                        Log.w(TAG, "DEM API server error (${result.statusCode}). Continuing next batch.")
                     }
                     is ElevationResult.NetworkError -> {
-                        Log.w(TAG, "DEM API network error (${result.message}). Stopping further queries.")
-                        break
+                        Log.w(TAG, "DEM API network error (${result.message}). Continuing next batch.")
                     }
                     is ElevationResult.Success -> {
                         pathPoints[startIndex] = pathPoints[startIndex].copy(altitude = result.elevationMeters)
@@ -205,7 +205,6 @@ class GpxRouteImporter @JvmOverloads constructor(
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Exception during elevation batch query: ${e.message}", e)
-                break
             }
         }
         onProgress?.invoke(totalPoints, totalPoints)
@@ -213,12 +212,19 @@ class GpxRouteImporter @JvmOverloads constructor(
 
     private fun calculateElevationGain(points: List<PathPoint>): Double {
         var gain = 0.0
-        for (i in 1 until points.size) {
-            val curr = points[i].altitude
-            val prev = points[i - 1].altitude
-            if (curr != null && prev != null) {
-                val diff = curr - prev
-                if (diff > 0) gain += diff
+        var lastAlt: Double? = null
+        for (point in points) {
+            val alt = point.altitude ?: continue
+            if (lastAlt == null) {
+                lastAlt = alt
+                continue
+            }
+            val delta = alt - lastAlt
+            if (delta >= ELEVATION_GAIN_HYSTERESIS_METERS) {
+                gain += delta
+                lastAlt = alt
+            } else if (delta <= -ELEVATION_GAIN_HYSTERESIS_METERS) {
+                lastAlt = alt
             }
         }
         return gain

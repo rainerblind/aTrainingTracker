@@ -22,6 +22,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.BuildConfig
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import org.junit.After
@@ -59,7 +60,7 @@ class StravaOAuthCallbackActivityTest {
 
     @Test
     fun testHandleIntent_missingStateParameter_rejectsAndSetsErrorState() {
-        val uri = Uri.parse("strava://rainerblind.github.io?code=injected_auth_code_123")
+        val uri = Uri.parse("strava://rainerblind.github.io/${BuildConfig.APPLICATION_ID}?code=injected_auth_code_123")
         val intent = Intent(Intent.ACTION_VIEW, uri)
 
         val controller = Robolectric.buildActivity(StravaOAuthCallbackActivity::class.java, intent)
@@ -74,7 +75,7 @@ class StravaOAuthCallbackActivityTest {
     fun testHandleIntent_mismatchedStateParameter_rejectsAndSetsErrorState() {
         val legitimateState = StravaOAuthStateManager.generateAndSaveState(context)
 
-        val uri = Uri.parse("strava://rainerblind.github.io?state=attacker_state_xyz&code=injected_auth_code_123")
+        val uri = Uri.parse("strava://rainerblind.github.io/${BuildConfig.APPLICATION_ID}?state=attacker_state_xyz&code=injected_auth_code_123")
         val intent = Intent(Intent.ACTION_VIEW, uri)
 
         val controller = Robolectric.buildActivity(StravaOAuthCallbackActivity::class.java, intent)
@@ -92,7 +93,7 @@ class StravaOAuthCallbackActivityTest {
     fun testHandleIntent_validStateParameter_dispatchesExchangeAndConsumesState() {
         val state = StravaOAuthStateManager.generateAndSaveState(context)
 
-        val uri = Uri.parse("strava://rainerblind.github.io?state=$state&code=valid_exchange_code")
+        val uri = Uri.parse("strava://rainerblind.github.io/${BuildConfig.APPLICATION_ID}?state=$state&code=valid_exchange_code")
         val intent = Intent(Intent.ACTION_VIEW, uri)
 
         val controller = Robolectric.buildActivity(StravaOAuthCallbackActivity::class.java, intent)
@@ -114,7 +115,7 @@ class StravaOAuthCallbackActivityTest {
     fun testHandleIntent_withErrorQueryParam_clearsStateAndSetsError() {
         val state = StravaOAuthStateManager.generateAndSaveState(context)
 
-        val uri = Uri.parse("strava://rainerblind.github.io?error=access_denied")
+        val uri = Uri.parse("strava://rainerblind.github.io/${BuildConfig.APPLICATION_ID}?error=access_denied")
         val intent = Intent(Intent.ACTION_VIEW, uri)
 
         val controller = Robolectric.buildActivity(StravaOAuthCallbackActivity::class.java, intent)
@@ -141,5 +142,45 @@ class StravaOAuthCallbackActivityTest {
 
         assertTrue("Activity must call finish()", activity.isFinishing)
         assertTrue("Auth state must remain Idle", StravaAuthRepository.getInstance().authState.value is StravaAuthState.Idle)
+    }
+
+    /**
+     * TST-EXT-012.3: Callback targeting a different application ID path is ignored without state consumption.
+     */
+    @Test
+    fun testHandleIntent_mismatchedApplicationIdPath_ignoresAndFinishesCleanly() {
+        val state = StravaOAuthStateManager.generateAndSaveState(context)
+
+        val uri = Uri.parse("strava://rainerblind.github.io/com.other.variant?state=$state&code=valid_exchange_code")
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+
+        val controller = Robolectric.buildActivity(StravaOAuthCallbackActivity::class.java, intent)
+        val activity = controller.create().get()
+
+        assertTrue("Activity must call finish()", activity.isFinishing)
+        assertTrue("Auth state must remain Idle for mismatched variant",
+            StravaAuthRepository.getInstance().authState.value is StravaAuthState.Idle)
+        assertTrue("State must NOT be consumed by mismatched variant callback",
+            StravaOAuthStateManager.validateAndConsumeState(state, context))
+    }
+
+    /**
+     * TST-EXT-012.4: Legacy un-scoped redirect URI is ignored without state consumption.
+     */
+    @Test
+    fun testHandleIntent_legacyUnscopedUri_ignoresAndFinishesCleanly() {
+        val state = StravaOAuthStateManager.generateAndSaveState(context)
+
+        val uri = Uri.parse("strava://rainerblind.github.io?state=$state&code=valid_exchange_code")
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+
+        val controller = Robolectric.buildActivity(StravaOAuthCallbackActivity::class.java, intent)
+        val activity = controller.create().get()
+
+        assertTrue("Activity must call finish()", activity.isFinishing)
+        assertTrue("Auth state must remain Idle for legacy un-scoped URI",
+            StravaAuthRepository.getInstance().authState.value is StravaAuthState.Idle)
+        assertTrue("State must NOT be consumed by un-scoped callback",
+            StravaOAuthStateManager.validateAndConsumeState(state, context))
     }
 }

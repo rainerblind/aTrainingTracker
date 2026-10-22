@@ -40,7 +40,9 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 
 /**
  * Unit tests verifying DevicesTabbedViewModel handles missing or malformed SavedStateHandle
@@ -48,6 +50,9 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class DevicesTabbedViewModelTest {
+
+    @get:Rule
+    val tempFolder = TemporaryFolder()
 
     private val testDispatcher = StandardTestDispatcher()
 
@@ -73,6 +78,7 @@ class DevicesTabbedViewModelTest {
         every { Log.e(any<String>(), any<String>()) } returns 0
 
         mockApplication = mockk(relaxed = true)
+        every { mockApplication.filesDir } returns tempFolder.newFolder("files_${System.nanoTime()}")
         every { mockApplication.registerReceiver(any(), any(), any()) } returns null
         every { mockApplication.registerReceiver(any(), any()) } returns null
 
@@ -91,10 +97,12 @@ class DevicesTabbedViewModelTest {
         mockSettingsDataStore = mockk(relaxed = true)
         every { mockSettingsDataStore.isHrZonesConfigured } returns MutableStateFlow(false)
         every { mockSettingsDataStore.isPwrZonesConfigured } returns MutableStateFlow(false)
+        SettingsDataStore.setInstanceForTesting(mockSettingsDataStore)
     }
 
     @After
     fun tearDown() {
+        SettingsDataStore.setInstanceForTesting(null)
         ArchTaskExecutor.getInstance().setDelegate(null)
         Dispatchers.resetMain()
         unmockkAll()
@@ -246,7 +254,7 @@ class DevicesTabbedViewModelTest {
         every { mockDeviceDataRepository.getDeviceSnapshotById(555L) } returns device
 
         val savedStateHandle = SavedStateHandle()
-        val viewModel = DevicesTabbedViewModel(mockApplication, savedStateHandle)
+        val viewModel = DevicesTabbedViewModel(mockApplication, savedStateHandle, settingsDataStore = mockSettingsDataStore)
 
         assertTrue(receiverSlot.isCaptured)
         val receiver = receiverSlot.captured

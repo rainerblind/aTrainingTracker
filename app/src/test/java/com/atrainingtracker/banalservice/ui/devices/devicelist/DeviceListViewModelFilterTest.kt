@@ -66,10 +66,13 @@ class DeviceListViewModelFilterTest {
         every { mockDeviceRepo.allDevices } returns allDevicesFlow
         every { mockBanalRepo.newlyFoundDevicesIds } returns newlyFoundIdsFlow
         every { mockBanalRepo.allActiveDevicesTelemetry } returns activeTelemetryFlow
+
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(mockk(relaxed = true))
     }
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         Dispatchers.resetMain()
         unmockkAll()
     }

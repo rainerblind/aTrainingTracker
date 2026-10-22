@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.onlinecommunities.strava
 
 import android.content.Context
 import android.util.Log
+import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import io.mockk.*
 import okhttp3.*
@@ -391,8 +392,20 @@ class StravaHelperTest {
         val url = StravaHelper.getAuthorizationUrl(testState)
 
         assertTrue("URL must contain state parameter", url.contains("state=$testState"))
-        assertTrue("URL must contain redirect_uri", url.contains("redirect_uri=strava%3A%2F%2Frainerblind.github.io") || url.contains("redirect_uri=strava://rainerblind.github.io"))
+        val expectedRedirectUri = "strava://rainerblind.github.io/${BuildConfig.APPLICATION_ID}"
+        val encodedRedirectUri = "strava%3A%2F%2Frainerblind.github.io%2F${BuildConfig.APPLICATION_ID}"
+        assertTrue("URL must contain applicationId-scoped redirect_uri",
+            url.contains("redirect_uri=$encodedRedirectUri") || url.contains("redirect_uri=$expectedRedirectUri"))
         assertTrue("URL must contain scope", url.contains("scope=read%2Cread_all%2Cprofile%3Aread_all%2Cactivity%3Aread_all%2Cactivity%3Awrite") || url.contains("scope=read,read_all,profile:read_all,activity:read_all,activity:write"))
+    }
+
+    /**
+     * TST-EXT-012.1: getRedirectUri scopes redirect URI with BuildConfig.APPLICATION_ID.
+     */
+    @Test
+    fun testGetRedirectUri_scopedByApplicationId() {
+        val redirectUri = StravaHelper.getRedirectUri()
+        assertEquals("strava://rainerblind.github.io/${BuildConfig.APPLICATION_ID}", redirectUri)
     }
 
     @Test

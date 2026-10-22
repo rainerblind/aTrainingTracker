@@ -91,8 +91,8 @@ class TrackpointXmlParserTest {
         assertEquals(2, lap.trackpoints.size)
 
         val pt1 = lap.trackpoints[0]
-        assertEquals(48.137154, pt1.lat, 0.00001)
-        assertEquals(11.576124, pt1.lng, 0.00001)
+        assertEquals(48.137154, pt1.lat!!, 0.00001)
+        assertEquals(11.576124, pt1.lng!!, 0.00001)
         assertEquals(520.5, pt1.altitude!!, 0.01)
         assertEquals(0.0, pt1.distanceMeters!!, 0.01)
         assertEquals(130, pt1.hr)
@@ -230,8 +230,8 @@ class TrackpointXmlParserTest {
         assertEquals(2, lap.trackpoints.size)
 
         val pt1 = lap.trackpoints[0]
-        assertEquals(48.1401, pt1.lat, 0.00001)
-        assertEquals(11.5801, pt1.lng, 0.00001)
+        assertEquals(48.1401, pt1.lat!!, 0.00001)
+        assertEquals(11.5801, pt1.lng!!, 0.00001)
         assertEquals(516.0, pt1.altitude!!, 0.01)
         assertEquals("2026-10-14T07:00:00Z", pt1.time)
         assertEquals(142, pt1.hr)
@@ -263,7 +263,7 @@ class TrackpointXmlParserTest {
         val data = result.getOrThrow()
         assertEquals(1, data.laps.size)
         assertEquals(1, data.laps[0].trackpoints.size)
-        assertEquals(48.0, data.laps[0].trackpoints[0].lat, 0.001)
+        assertEquals(48.0, data.laps[0].trackpoints[0].lat!!, 0.001)
     }
 
     @Test
@@ -275,7 +275,7 @@ class TrackpointXmlParserTest {
         val data = result.getOrThrow()
         assertEquals(1, data.laps.size)
         assertEquals(1, data.laps[0].trackpoints.size)
-        assertEquals(48.0, data.laps[0].trackpoints[0].lat, 0.001)
+        assertEquals(48.0, data.laps[0].trackpoints[0].lat!!, 0.001)
     }
 
     @Test

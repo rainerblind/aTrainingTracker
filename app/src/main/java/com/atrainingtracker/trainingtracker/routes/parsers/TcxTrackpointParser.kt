@@ -22,6 +22,7 @@ import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import kotlin.math.roundToInt
 
 /**
  * Unified streaming XML pull parser for Garmin TCX files (Workouts and Courses).
@@ -167,15 +168,15 @@ object TcxTrackpointParser {
                                         if (hr != null) currentHr = hr
                                     }
                                     "Cadence" -> {
-                                        val cad = text.toIntOrNull()
+                                        val cad = text.toDoubleOrNull()?.roundToInt()
                                         if (cad != null) currentCad = cad
                                     }
                                     "RunCadence" -> {
-                                        val cad = text.toIntOrNull()
+                                        val cad = text.toDoubleOrNull()?.roundToInt()
                                         if (cad != null && currentCad == null) currentCad = cad
                                     }
                                     "Watts" -> {
-                                        val pwr = text.toIntOrNull()
+                                        val pwr = text.toDoubleOrNull()?.roundToInt()
                                         if (pwr != null) currentWatts = pwr
                                     }
                                     "Speed" -> {
@@ -233,20 +234,18 @@ object TcxTrackpointParser {
                             "Position" -> inPosition = false
                             "Trackpoint" -> {
                                 if (inTrackpoint) {
-                                    if (currentLat != null && currentLng != null) {
-                                        val pt = RawTrackpoint(
-                                            lat = currentLat,
-                                            lng = currentLng,
-                                            altitude = currentAlt,
-                                            distanceMeters = currentDist,
-                                            time = currentTime,
-                                            hr = currentHr,
-                                            cadence = currentCad,
-                                            power = currentWatts,
-                                            speedMps = currentSpeed
-                                        )
-                                        currentLap?.trackpoints?.add(pt)
-                                    }
+                                    val pt = RawTrackpoint(
+                                        lat = currentLat,
+                                        lng = currentLng,
+                                        altitude = currentAlt,
+                                        distanceMeters = currentDist,
+                                        time = currentTime,
+                                        hr = currentHr,
+                                        cadence = currentCad,
+                                        power = currentWatts,
+                                        speedMps = currentSpeed
+                                    )
+                                    currentLap?.trackpoints?.add(pt)
                                     inTrackpoint = false
                                 }
                             }

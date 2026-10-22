@@ -74,6 +74,9 @@ class BackupWorkerTest {
         mockkStatic(TrainingApplication::class)
 
         every { mockContext.applicationContext } returns mockContext
+        every { mockPrefs.getBoolean(any(), any()) } answers { secondArg() }
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_BACKUP_TO_DROPBOX, true) } returns true
+        every { mockPrefs.getBoolean(TrainingApplication.SP_DROPBOX_ONLY_WIFI, true) } returns true
         every { mockPrefs.edit() } returns mockEditor
         every { mockEditor.putString(any(), any()) } returns mockEditor
         every { mockEditor.putLong(any(), any()) } returns mockEditor

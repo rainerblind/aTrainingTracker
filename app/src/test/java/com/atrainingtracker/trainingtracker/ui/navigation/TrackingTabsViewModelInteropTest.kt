@@ -31,6 +31,7 @@ import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsViewModel
+import androidx.lifecycle.viewModelScope
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -39,6 +40,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flowOf
@@ -52,7 +54,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.lang.reflect.Modifier
 
 /**
@@ -64,11 +68,15 @@ import java.lang.reflect.Modifier
 @OptIn(ExperimentalCoroutinesApi::class)
 class TrackingTabsViewModelInteropTest {
 
+    @get:Rule
+    val tempFolder = TemporaryFolder()
+
     private val testDispatcher = StandardTestDispatcher()
     private val mockApplication = mockk<Application>(relaxed = true)
     private val mockTrackingViewsRepo = mockk<TrackingViewsRepository>(relaxed = true)
     private val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
     private val mockDevicesRepo = mockk<DeviceDataRepository>(relaxed = true)
+    private val mockLiveSegmentsRepo = mockk<com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository>(relaxed = true)
 
     private val trackingModeLiveData = MutableLiveData<TrackingMode>()
     private val defaultSport = ActivityType.getDefaultActivityType()
@@ -90,6 +98,9 @@ class TrackingTabsViewModelInteropTest {
         every { Log.e(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
 
+        every { mockApplication.filesDir } returns tempFolder.newFolder("files_${System.nanoTime()}")
+        every { mockApplication.applicationContext } returns mockApplication
+
         every { mockBanalRepo.trackingMode } returns trackingModeLiveData
         every { mockBanalRepo.activityType } returns banalActivityTypeFlow
         every { mockBanalRepo.wasAutoPaused } returns MutableStateFlow(false)
@@ -98,20 +109,29 @@ class TrackingTabsViewModelInteropTest {
         every { mockDevicesRepo.allDevices } returns MutableStateFlow(emptyList())
     }
 
+    private val createdViewModels = mutableListOf<TrackingTabsViewModel>()
+
     @After
     fun tearDown() {
+        createdViewModels.forEach { it.viewModelScope.cancel() }
+        createdViewModels.clear()
+        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.settings.SettingsDataStore.setInstanceForTesting(null)
         Dispatchers.resetMain()
         ArchTaskExecutor.getInstance().setDelegate(null)
         unmockkAll()
     }
 
     private fun createViewModel(): TrackingTabsViewModel {
-        return TrackingTabsViewModel(
+        val vm = TrackingTabsViewModel(
             application = mockApplication,
             trackingViewsRepository = mockTrackingViewsRepo,
             banalServiceRepository = mockBanalRepo,
-            devicesRepository = mockDevicesRepo
+            devicesRepository = mockDevicesRepo,
+            liveSegmentsRepository = mockLiveSegmentsRepo
         )
+        createdViewModels.add(vm)
+        return vm
     }
 
     @Test

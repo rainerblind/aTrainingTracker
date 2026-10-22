@@ -446,5 +446,42 @@ class PowerPhysiologyCalculatorTest {
         assertEquals("Sample must be bucketed into America/New_York local calendar day (2026-07-15)", nyExpectedLocalEpochDay, nyPmc.dailyPoints.first().dayEpochIndex)
         assertEquals(85.0, nyPmc.dailyPoints.first().dailyTss, 1e-4)
     }
+
+    /**
+     * TST-MAP-055.4: Verifies that calculateNormalizedPower dynamically adapts its rolling window size
+     * based on sampleIntervalSec, while preserving bit-parity for the default 1.0s interval.
+     */
+    @Test
+    fun calculateNormalizedPower_scalesRollingWindowWithSampleInterval() {
+        // Stream of varying power: alternating 200W and 300W blocks
+        val baseStream = (0 until 60).map { if (it % 2 == 0) 200.0 else 300.0 }
+
+        // Default 1.0s interval (30-sample window)
+        val npDefault = PowerPhysiologyCalculator.calculateNormalizedPower(baseStream)
+        val npExplicit1 = PowerPhysiologyCalculator.calculateNormalizedPower(baseStream, 1.0)
+        assertNotNull(npDefault)
+        assertEquals("Explicit 1.0s must match default", npDefault!!, npExplicit1!!, 1e-9)
+
+        // 2.0s interval (windowSize = round(30 / 2.0) = 15 samples)
+        val np2s = PowerPhysiologyCalculator.calculateNormalizedPower(baseStream, 2.0)
+        assertNotNull(np2s)
+
+        // 0.5s interval (windowSize = round(30 / 0.5) = 60 samples)
+        val npHalfSec = PowerPhysiologyCalculator.calculateNormalizedPower(baseStream, 0.5)
+        assertNotNull(npHalfSec)
+
+        // Verify computePowerTrainingMetrics passes sampleIntervalSec through to NP and workKj
+        val metrics = PowerPhysiologyCalculator.computePowerTrainingMetrics(
+            powerSamplesWatts = baseStream,
+            ftpWatts = 250.0,
+            activeTimeSeconds = 120,
+            sampleIntervalSec = 2.0
+        )
+        assertNotNull(metrics.normalizedPowerWatts)
+        assertEquals(np2s!!, metrics.normalizedPowerWatts!!, 1e-9)
+        // Work kJ = (sum of watts * 2.0s) / 1000.0
+        val expectedKj = baseStream.sum() * 2.0 / 1000.0
+        assertEquals(expectedKj, metrics.workKj!!, 1e-4)
+    }
 }
 

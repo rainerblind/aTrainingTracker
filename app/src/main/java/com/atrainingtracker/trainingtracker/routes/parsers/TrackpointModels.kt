@@ -27,8 +27,8 @@ package com.atrainingtracker.trainingtracker.routes.parsers
  * - TST-MIG-034: Unified Streaming TCX and GPX XML Trackpoint Parsing Engine Verification.
  */
 data class RawTrackpoint(
-    val lat: Double,
-    val lng: Double,
+    val lat: Double? = null,
+    val lng: Double? = null,
     val altitude: Double? = null,
     val distanceMeters: Double? = null,
     val time: String? = null,

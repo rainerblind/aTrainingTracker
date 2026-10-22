@@ -109,39 +109,98 @@ object ClimbDetector {
             val avgGrade = if (dist > 0) (gain / dist) * 100.0 else 0.0
 
             if (dist >= minLengthMeters && gain >= minGainMeters && avgGrade >= minGradePercent) {
-                val climbPoints = validPoints.subList(startIdx, peakIdx + 1)
-                val maxGrade = calculateMaxGrade(climbPoints)
-                val score = dist * avgGrade
-                val category = ClimbCategory.fromScore(score)
-                val appContext = context ?: TrainingApplication.getAppContext()
-                val climbTitle = appContext?.getString(R.string.climb_title) ?: "Climb"
-                val formattedDistance = DistanceFormatter().format_with_units(dist)
-                val name = "$climbTitle $formattedDistance @ ${String.format(Locale.US, "%.1f%%", avgGrade)}"
-
-                climbs.add(
-                    Climb(
-                        name = name,
-                        routeId = routeId,
-                        startLat = validPoints[startIdx].latLng.latitude,
-                        startLng = validPoints[startIdx].latLng.longitude,
-                        endLat = validPoints[peakIdx].latLng.latitude,
-                        endLng = validPoints[peakIdx].latLng.longitude,
-                        distanceMeters = dist,
-                        elevationGainMeters = gain,
-                        avgGradePercent = avgGrade,
-                        maxGradePercent = maxGrade,
-                        category = category,
-                        pathPoints = climbPoints
-                    )
-                )
+                climbs.add(createClimb(validPoints, startIdx, peakIdx, routeId, context))
                 // Resume scanning after the climb summit
                 i = peakIdx
+            } else if (gain >= minGainMeters && dist >= minLengthMeters) {
+                // Total ascent had enough gain and length, but overall average grade was diluted below minGradePercent.
+                // Search for an embedded steep climb within [startIdx, peakIdx] by trimming gentle boundaries.
+                var s = startIdx
+                var e = peakIdx
+
+                while (s < e && localGradeForward(validPoints, s, e) < minGradePercent) {
+                    s++
+                }
+                while (e > s && localGradeBackward(validPoints, e, s) < minGradePercent) {
+                    e--
+                }
+
+                val subDist = validPoints[e].distance - validPoints[s].distance
+                val subGain = validPoints[e].altitude!! - validPoints[s].altitude!!
+                val subGrade = if (subDist > 0) (subGain / subDist) * 100.0 else 0.0
+
+                if (subDist >= minLengthMeters && subGain >= minGainMeters && subGrade >= minGradePercent) {
+                    climbs.add(createClimb(validPoints, s, e, routeId, context))
+                    i = e
+                } else {
+                    i = maxOf(i + 1, peakIdx)
+                }
             } else {
-                i++
+                // Insufficient bump (gain < minGainMeters or dist < minLengthMeters)
+                i = maxOf(i + 1, peakIdx)
             }
         }
 
         return climbs
+    }
+
+    private fun createClimb(
+        points: List<PathPoint>,
+        startIdx: Int,
+        peakIdx: Int,
+        routeId: Long?,
+        context: Context?
+    ): Climb {
+        val dist = points[peakIdx].distance - points[startIdx].distance
+        val gain = points[peakIdx].altitude!! - points[startIdx].altitude!!
+        val avgGrade = if (dist > 0) (gain / dist) * 100.0 else 0.0
+        val climbPoints = points.subList(startIdx, peakIdx + 1)
+        val maxGrade = calculateMaxGrade(climbPoints)
+        val score = dist * avgGrade
+        val category = ClimbCategory.fromScore(score)
+        val appContext = context ?: TrainingApplication.getAppContext()
+        val climbTitle = appContext?.getString(R.string.climb_title) ?: "Climb"
+        val formattedDistance = DistanceFormatter().format_with_units(dist)
+        val name = "$climbTitle $formattedDistance @ ${String.format(Locale.US, "%.1f%%", avgGrade)}"
+
+        return Climb(
+            name = name,
+            routeId = routeId,
+            startLat = points[startIdx].latLng.latitude,
+            startLng = points[startIdx].latLng.longitude,
+            endLat = points[peakIdx].latLng.latitude,
+            endLng = points[peakIdx].latLng.longitude,
+            distanceMeters = dist,
+            elevationGainMeters = gain,
+            avgGradePercent = avgGrade,
+            maxGradePercent = maxGrade,
+            category = category,
+            pathPoints = climbPoints
+        )
+    }
+
+    private fun localGradeForward(points: List<PathPoint>, fromIdx: Int, maxIdx: Int): Double {
+        if (fromIdx >= maxIdx || fromIdx >= points.size - 1) return 0.0
+        var j = minOf(fromIdx + 1, points.size - 1)
+        val limit = minOf(maxIdx, points.size - 1)
+        while (j < limit && points[j].distance - points[fromIdx].distance < 20.0) {
+            j++
+        }
+        val d = points[j].distance - points[fromIdx].distance
+        val g = points[j].altitude!! - points[fromIdx].altitude!!
+        return if (d > 0) (g / d) * 100.0 else 0.0
+    }
+
+    private fun localGradeBackward(points: List<PathPoint>, toIdx: Int, minIdx: Int): Double {
+        if (toIdx <= minIdx || toIdx <= 0) return 0.0
+        var j = maxOf(toIdx - 1, 0)
+        val limit = maxOf(minIdx, 0)
+        while (j > limit && points[toIdx].distance - points[j].distance < 20.0) {
+            j--
+        }
+        val d = points[toIdx].distance - points[j].distance
+        val g = points[toIdx].altitude!! - points[j].altitude!!
+        return if (d > 0) (g / d) * 100.0 else 0.0
     }
 
     /**

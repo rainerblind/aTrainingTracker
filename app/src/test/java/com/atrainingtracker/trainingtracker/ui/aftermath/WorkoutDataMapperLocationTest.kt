@@ -34,6 +34,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.google.android.gms.maps.model.LatLng
 import io.mockk.*
 import org.junit.After
@@ -77,6 +78,8 @@ class WorkoutDataMapperLocationTest {
         every { mockSportDb.getBSportType(any()) } returns BSportType.BIKE
         every { mockSportDb.getUIName(any()) } returns "Cycling"
 
+        SettingsDataStore.setInstanceForTesting(mockk(relaxed = true))
+
         mapper = WorkoutDataMapper(
             context = mockContext,
             workoutSummariesDatabaseManager = mockSummariesDb,
@@ -89,6 +92,7 @@ class WorkoutDataMapperLocationTest {
 
     @After
     fun tearDown() {
+        SettingsDataStore.setInstanceForTesting(null)
         WorkoutClusterDatabaseManager.resetForTesting(null)
         unmockkStatic(LapsDatabaseManager::class)
         unmockkStatic(TrainingApplication::class)

@@ -193,4 +193,86 @@ class TcxWorkoutParserTest {
             tempFile.delete()
         }
     }
+
+    /**
+     * TST-MAP-055.3: Verifies that indoor trackpoints lacking <Position> are retained with full
+     * telemetry (HR, power, cadence), and decimal <Watts> and <Cadence> values round to nearest integer.
+     */
+    @Test
+    fun testParseIndoorTcxWithDecimalWattsAndCadence() {
+        val indoorTcx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+              <Activities>
+                <Activity Sport="Biking">
+                  <Id>2026-10-15T09:00:00Z</Id>
+                  <Lap StartTime="2026-10-15T09:00:00Z">
+                    <TotalTimeSeconds>120.0</TotalTimeSeconds>
+                    <DistanceMeters>1500.0</DistanceMeters>
+                    <Calories>45</Calories>
+                    <Track>
+                      <!-- Trackpoint 1 without Position, with decimal Watts and Cadence -->
+                      <Trackpoint>
+                        <Time>2026-10-15T09:00:00Z</Time>
+                        <DistanceMeters>0.0</DistanceMeters>
+                        <HeartRateBpm><Value>135</Value></HeartRateBpm>
+                        <Cadence>89.6</Cadence>
+                        <Extensions>
+                          <TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+                            <Watts>249.7</Watts>
+                          </TPX>
+                        </Extensions>
+                      </Trackpoint>
+                      <!-- Trackpoint 2 without Position, with decimal Watts and Cadence -->
+                      <Trackpoint>
+                        <Time>2026-10-15T09:01:00Z</Time>
+                        <DistanceMeters>750.0</DistanceMeters>
+                        <HeartRateBpm><Value>142</Value></HeartRateBpm>
+                        <Cadence>91.2</Cadence>
+                        <Extensions>
+                          <TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+                            <Watts>250.4</Watts>
+                          </TPX>
+                        </Extensions>
+                      </Trackpoint>
+                    </Track>
+                  </Lap>
+                </Activity>
+              </Activities>
+            </TrainingCenterDatabase>
+        """.trimIndent()
+
+        val tempFile = File.createTempFile("test_indoor", ".tcx")
+        try {
+            tempFile.writeText(indoorTcx)
+            val result = TcxWorkoutParser.parse(tempFile, mockContext)
+            assertTrue(result.isSuccess)
+            val workout = result.getOrThrow()
+
+            // Indoor points without coordinates: points list must be empty
+            assertTrue("No GPS coordinates present", workout.points.isEmpty())
+            // Both trackpoints must be buffered with telemetry
+            assertEquals(2, workout.bufferedSamples.size)
+
+            assertTrue(workout.foundSensors.contains(SensorType.HR))
+            assertTrue(workout.foundSensors.contains(SensorType.CADENCE))
+            assertTrue(workout.foundSensors.contains(SensorType.POWER))
+
+            // Verify decimal rounding: 89.6 -> 90, 249.7 -> 250
+            val sample1 = contentValueStores[workout.bufferedSamples[0]]
+            assertNotNull(sample1)
+            assertEquals(135, sample1!![SensorType.HR.name])
+            assertEquals(90, sample1[SensorType.CADENCE.name])
+            assertEquals(250, sample1[SensorType.POWER.name])
+
+            // Verify decimal rounding: 91.2 -> 91, 250.4 -> 250
+            val sample2 = contentValueStores[workout.bufferedSamples[1]]
+            assertNotNull(sample2)
+            assertEquals(142, sample2!![SensorType.HR.name])
+            assertEquals(91, sample2[SensorType.CADENCE.name])
+            assertEquals(250, sample2[SensorType.POWER.name])
+        } finally {
+            tempFile.delete()
+        }
+    }
 }

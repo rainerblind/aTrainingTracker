@@ -184,7 +184,7 @@ class BackupRestoreViewModelLocalRestoreTest {
 
     @Test
     fun testRestoreFromLocalBackup_whenFileMissing_emitsError() = runTest(testDispatcher) {
-        val viewModel = BackupRestoreViewModel(mockApp)
+        val viewModel = BackupRestoreViewModel(mockApp, testDispatcher)
 
         viewModel.restoreFromLocalBackup(mockContext)
         advanceUntilIdle()
@@ -204,7 +204,7 @@ class BackupRestoreViewModelLocalRestoreTest {
         mockkObject(MigrationEngine)
         every { MigrationEngine.performFullRestore(any(), any(), any()) } returns true
 
-        val viewModel = BackupRestoreViewModel(mockApp)
+        val viewModel = BackupRestoreViewModel(mockApp, testDispatcher)
         viewModel.restoreFromLocalBackup(mockContext)
         advanceUntilIdle()
 
@@ -227,7 +227,7 @@ class BackupRestoreViewModelLocalRestoreTest {
         mockkObject(MigrationEngine)
         every { MigrationEngine.performFullRestore(any(), any(), any()) } returns false
 
-        val viewModel = BackupRestoreViewModel(mockApp)
+        val viewModel = BackupRestoreViewModel(mockApp, testDispatcher)
         viewModel.restoreFromLocalBackup(mockContext)
         advanceUntilIdle()
 
@@ -246,7 +246,7 @@ class BackupRestoreViewModelLocalRestoreTest {
         mockkObject(MigrationEngine)
         every { MigrationEngine.performFullRestore(any(), any(), any()) } throws RuntimeException("Corrupt SQLite database")
 
-        val viewModel = BackupRestoreViewModel(mockApp)
+        val viewModel = BackupRestoreViewModel(mockApp, testDispatcher)
         viewModel.restoreFromLocalBackup(mockContext)
         advanceUntilIdle()
 

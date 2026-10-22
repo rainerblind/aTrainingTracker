@@ -145,4 +145,44 @@ class DropboxSettingsDialogTest {
         assertFalse(TrainingApplication.uploadToDropbox())
         assertNull(TrainingApplication.readDropboxCredential())
     }
+
+    @Test
+    fun testGranularDropboxPreferences_commitAndReadBack() {
+        // Workout upload toggle
+        TrainingApplication.setUploadWorkoutsToDropbox(true)
+        assertTrue(TrainingApplication.uploadWorkoutsToDropbox())
+        TrainingApplication.setUploadWorkoutsToDropbox(false)
+        assertFalse(TrainingApplication.uploadWorkoutsToDropbox())
+
+        // Database backup toggle
+        TrainingApplication.setUploadBackupToDropbox(true)
+        assertTrue(TrainingApplication.uploadBackupToDropbox())
+        TrainingApplication.setUploadBackupToDropbox(false)
+        assertFalse(TrainingApplication.uploadBackupToDropbox())
+
+        // Wi-Fi only restriction toggle
+        TrainingApplication.setUploadToDropboxOnlyOnWifi(true)
+        assertTrue(TrainingApplication.uploadToDropboxOnlyOnWifi())
+        TrainingApplication.setUploadToDropboxOnlyOnWifi(false)
+        assertFalse(TrainingApplication.uploadToDropboxOnlyOnWifi())
+
+        // Account email persistence
+        TrainingApplication.setDropboxAccountEmail("athlete@dropbox.com")
+        assertEquals("athlete@dropbox.com", TrainingApplication.getDropboxAccountEmail())
+        TrainingApplication.deleteDropboxCredential()
+        assertNull(TrainingApplication.getDropboxAccountEmail())
+    }
+
+    @Test
+    fun testBackupIntervalPersistence_updatesSharedPreferences() {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = PreferenceManager.getDefaultSharedPreferences(appContext)
+
+        prefs.edit().putString("backup_interval_days", "7").apply()
+        assertEquals("7", prefs.getString("backup_interval_days", "1"))
+
+        prefs.edit().putString("backup_interval_days", "30").apply()
+        assertEquals("30", prefs.getString("backup_interval_days", "1"))
+    }
 }
+

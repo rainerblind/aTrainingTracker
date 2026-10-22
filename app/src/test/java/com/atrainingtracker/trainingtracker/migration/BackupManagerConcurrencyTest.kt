@@ -65,6 +65,7 @@ class BackupManagerConcurrencyTest {
 
         val isWriting = AtomicBoolean(true)
         val writeCount = AtomicInteger(0)
+        val firstWriteLatch = java.util.concurrent.CountDownLatch(1)
         val executor = Executors.newSingleThreadExecutor()
 
         try {
@@ -78,12 +79,14 @@ class BackupManagerConcurrencyTest {
                     }
                     activeDb.insert("Telemetry", null, values)
                     writeCount.incrementAndGet()
+                    firstWriteLatch.countDown()
                     counter++
                     Thread.sleep(2)
                 }
             }
 
-            // Let background writer start
+            // Ensure background writer has committed at least one row and is actively writing
+            assertTrue("Background writer must start writing within timeout", firstWriteLatch.await(5, java.util.concurrent.TimeUnit.SECONDS))
             Thread.sleep(10)
 
             // Execute VACUUM INTO concurrently

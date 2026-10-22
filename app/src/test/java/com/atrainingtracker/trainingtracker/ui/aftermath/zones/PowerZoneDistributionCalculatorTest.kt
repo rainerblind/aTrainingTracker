@@ -148,5 +148,27 @@ class PowerZoneDistributionCalculatorTest {
         assertEquals(0L, result.entries[5].durationSec)  // Z6
         assertEquals(0L, result.entries[6].durationSec)  // Z7
     }
+
+    /**
+     * TST-MAP-055.5: Verifies that 0 W coasting samples are categorized into Power Zone 1 (Active Recovery)
+     * when positive power samples exist, while all-zero power streams return null.
+     */
+    @Test
+    fun testCalculatePowerDistribution_includesZeroWattsCoastingInZone1WhenPositivePowerExists() {
+        val samples = listOf(
+            ZoneSample(timeActiveSec = 0L, value = 200), // Z2: 5s
+            ZoneSample(timeActiveSec = 5L, value = 0),   // Z1 (0W coasting): 5s
+            ZoneSample(timeActiveSec = 10L, value = 200),// Z2: 1s
+            ZoneSample(timeActiveSec = 11L, value = 200) // terminal: 1s
+        )
+        val result = ZoneDistributionCalculator.calculatePowerDistribution(samples, thresholds)
+        assertNotNull(result)
+        // Zone 1 (Active Recovery) must include the 5s of 0W coasting
+        assertEquals(5L, result!!.entries[0].durationSec)
+        assertEquals(1, result.entries[0].zoneIndex)
+        // Zone 2 has 5s (0..5) + 1s (10..11) + 1s (terminal 11) = 7s
+        assertEquals(7L, result.entries[1].durationSec)
+        assertEquals(12L, result.totalActiveTimeSec)
+    }
 }
 

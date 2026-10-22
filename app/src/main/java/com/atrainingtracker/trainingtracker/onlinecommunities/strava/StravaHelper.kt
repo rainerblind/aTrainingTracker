@@ -118,8 +118,8 @@ object StravaHelper {
         }
     }
 
-    private fun getRedirectUri(): String {
-        return "strava://rainerblind.github.io"
+    internal fun getRedirectUri(): String {
+        return "strava://rainerblind.github.io/${BuildConfig.APPLICATION_ID}"
     }
 
     @JvmStatic

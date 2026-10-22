@@ -35,6 +35,7 @@ import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterCrite
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModel
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -86,10 +87,13 @@ class NotificationDeepLinkTest {
         every { app.packageName } returns "com.atrainingtracker"
         every { app.registerReceiver(any(), any(), any()) } returns null
         every { app.registerReceiver(any(), any()) } returns null
+
+        SettingsDataStore.setInstanceForTesting(mockk(relaxed = true))
     }
 
     @After
     fun tearDown() {
+        SettingsDataStore.setInstanceForTesting(null)
         unmockkAll()
         Dispatchers.resetMain()
         ArchTaskExecutor.getInstance().setDelegate(null)

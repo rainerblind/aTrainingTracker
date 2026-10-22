@@ -246,4 +246,22 @@ class AuthCredentialsStoreTest {
         assertNull(AuthCredentialsStore.getStravaAccessToken(context))
         assertNull(AuthCredentialsStore.readDropboxCredential(context))
     }
+
+    @Test
+    fun testDropboxAccountEmail_storeReadDelete() {
+        assertNull(AuthCredentialsStore.getDropboxAccountEmail(context))
+
+        AuthCredentialsStore.storeDropboxAccountEmail(context, "athlete@dropbox.com")
+        assertEquals("athlete@dropbox.com", AuthCredentialsStore.getDropboxAccountEmail(context))
+
+        // Verify isolated in auth_credentials_prefs, absent in default prefs
+        val defaultPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+        assertFalse(defaultPrefs.contains(AuthCredentialsStore.KEY_DROPBOX_ACCOUNT_EMAIL))
+
+        // Deleting credential also deletes email
+        AuthCredentialsStore.storeDropboxCredential(context, "some_cred")
+        AuthCredentialsStore.deleteDropboxCredential(context)
+        assertNull(AuthCredentialsStore.readDropboxCredential(context))
+        assertNull(AuthCredentialsStore.getDropboxAccountEmail(context))
+    }
 }

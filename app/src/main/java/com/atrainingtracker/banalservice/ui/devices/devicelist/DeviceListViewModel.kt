@@ -43,7 +43,7 @@ data class ZoneOnboardingEvent(
 
 class DeviceListViewModel @JvmOverloads constructor(
     private val application: Application,
-    private val settingsDataStore: SettingsDataStore = SettingsDataStore(application),
+    private val settingsDataStore: SettingsDataStore = SettingsDataStore.getInstance(application),
     private val devicesDBRepository: DeviceDataRepository = DeviceDataRepository.getInstance(application),
     private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application)
 ) : AndroidViewModel(application) {

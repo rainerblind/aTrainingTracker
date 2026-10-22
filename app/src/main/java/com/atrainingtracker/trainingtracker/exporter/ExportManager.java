@@ -146,7 +146,7 @@ public class ExportManager {
             }
         }
 
-        if (TrainingApplication.uploadToDropbox()) {
+        if (TrainingApplication.uploadToDropbox() && TrainingApplication.uploadWorkoutsToDropbox()) {
             for (FileFormat fileFormat : ExportType.DROPBOX.getExportToFileFormats()) {
                 // Ein Upload zu Dropbox macht nur Sinn, wenn das Dateiformat prinzipiell auch generiert wird.
                 if (TrainingApplication.exportToFile(fileFormat)) {
@@ -327,7 +327,8 @@ public class ExportManager {
             List<OneTimeWorkRequest> uploadWorks = new ArrayList<>();
 
             // Dropbox-Upload (when requested)
-            if (TrainingApplication.uploadToDropbox() && Arrays.asList(ExportType.DROPBOX.getExportToFileFormats()).contains(fileFormat)) {
+            if (TrainingApplication.uploadToDropbox() && TrainingApplication.uploadWorkoutsToDropbox()
+                    && Arrays.asList(ExportType.DROPBOX.getExportToFileFormats()).contains(fileFormat)) {
                 ExportInfo dropboxExportInfo = new ExportInfo(fileBaseName, fileFormat, ExportType.DROPBOX);
                 uploadWorks.add(createWorkRequest(dropboxExportInfo));
                 updateStatus(dropboxExportInfo, ExportStatus.WAITING, null); // set state ot WAITING
@@ -408,7 +409,7 @@ public class ExportManager {
         exportStatusDatabaseManager.updateExportStatus(values, info);
     }
 
-    private OneTimeWorkRequest createWorkRequest(ExportInfo exportInfo) throws JSONException {
+    OneTimeWorkRequest createWorkRequest(ExportInfo exportInfo) throws JSONException {
 
         Data inputData = new Data.Builder()
                 .putString(ExportWorker.KEY_EXPORT_INFO, exportInfo.toJson())
@@ -419,6 +420,8 @@ public class ExportManager {
         if (exportInfo.getExportType() == ExportType.FILE) {
             networkType = NetworkType.NOT_REQUIRED;
         } else if (exportInfo.getExportType() == ExportType.GOOGLE_DRIVE && TrainingApplication.uploadToGoogleDriveOnlyOnWifi()) {
+            networkType = NetworkType.UNMETERED;
+        } else if (exportInfo.getExportType() == ExportType.DROPBOX && TrainingApplication.uploadToDropboxOnlyOnWifi()) {
             networkType = NetworkType.UNMETERED;
         }
 

@@ -117,25 +117,30 @@ object TcxWorkoutParser {
                         lastTime = formatted
                     }
 
-                    values.put(SensorType.LATITUDE.name, pt.lat)
-                    values.put(SensorType.LONGITUDE.name, pt.lng)
-                    foundSensors.add(SensorType.LATITUDE)
-                    foundSensors.add(SensorType.LONGITUDE)
+                    if (pt.lat != null && pt.lng != null) {
+                        values.put(SensorType.LATITUDE.name, pt.lat)
+                        values.put(SensorType.LONGITUDE.name, pt.lng)
+                        foundSensors.add(SensorType.LATITUDE)
+                        foundSensors.add(SensorType.LONGITUDE)
 
-                    val pos = LatLng(pt.lat, pt.lng)
-                    points.add(pos)
+                        val pos = LatLng(pt.lat, pt.lng)
+                        points.add(pos)
+                    }
 
                     pt.altitude?.let { alt ->
                         values.put(SensorType.ALTITUDE.name, alt)
                         foundSensors.add(SensorType.ALTITUDE)
                         altitudes.add(alt)
-                        if (alt < minAltVal) {
-                            minAltVal = alt
-                            minAltPos = pos
-                        }
-                        if (alt > maxAltVal) {
-                            maxAltVal = alt
-                            maxAltPos = pos
+                        if (pt.lat != null && pt.lng != null) {
+                            val pos = LatLng(pt.lat, pt.lng)
+                            if (alt < minAltVal) {
+                                minAltVal = alt
+                                minAltPos = pos
+                            }
+                            if (alt > maxAltVal) {
+                                maxAltVal = alt
+                                maxAltPos = pos
+                            }
                         }
                     }
 

@@ -134,9 +134,12 @@ class ImportFormatCardsContractTest {
             "Screen must NOT maintain showTuningDialogForGoogleDrive",
             content.contains("showTuningDialogForGoogleDrive")
         )
+        // Note: showGoogleDriveDisconnectedDialog is used by RestoreTabContent (REQ-MIG-036.13d, ATT-4664),
+        // but ImportTabContent must not contain any Google Drive scan integration.
+        val importTabContent = content.substringAfter("private fun ImportTabContent(")
         assertFalse(
-            "Screen must NOT maintain showGoogleDriveDisconnectedDialog",
-            content.contains("showGoogleDriveDisconnectedDialog")
+            "ImportTabContent must NOT maintain or reference showGoogleDriveDisconnectedDialog",
+            importTabContent.contains("showGoogleDriveDisconnectedDialog")
         )
 
         // 6. Cloud recovery confirmation passes scoped format for Dropbox and single legacy

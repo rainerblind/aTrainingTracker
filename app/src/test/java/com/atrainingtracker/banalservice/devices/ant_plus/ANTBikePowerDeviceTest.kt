@@ -60,6 +60,10 @@ class ANTBikePowerDeviceTest {
             bikePowerPcc = pcc
         }
 
+        override fun notifySensorsChanged() {
+            // No-op for unit test to avoid android.content.Intent construction and global broadcast
+        }
+
         fun getPowerBalanceSensor(): MySensor<Int>? = mPowerBalanceSensor
     }
 
@@ -80,8 +84,6 @@ class ANTBikePowerDeviceTest {
         every { mockDevicesDb.putBikePowerSensorFlags(any(), any()) } just Runs
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDb
 
-        mockkConstructor(android.content.Intent::class)
-        every { anyConstructed<android.content.Intent>().setPackage(any()) } answers { self as android.content.Intent }
 
         mockContext = mockk(relaxed = true)
         mockSensorManager = mockk(relaxed = true)

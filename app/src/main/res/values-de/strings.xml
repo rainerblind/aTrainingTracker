@@ -1073,6 +1073,10 @@
     <string name="dropbox_disconnected_status">Du bist nicht mit Dropbox verbunden</string>
     <string name="dropbox_disconnect">Von Dropbox trennen</string>
     <string name="dropbox_connect">Mit Dropbox verbinden</string>
+    <string name="dropbox_connect_prompt">Verknüpfe dein Dropbox-Konto, um Workouts automatisch zu exportieren und Datenbank-Backups mit Dropbox zu synchronisieren.</string>
+    <string name="upload_workouts_to_dropbox_summary">Lädt Aktivitäten (FIT, TCX, GPX, CSV) nach dem Speichern in Dropbox hoch</string>
+    <string name="upload_backup_to_dropbox_summary">Sichert die Datenbank regelmäßig in Dropbox</string>
+    <string name="last_backup_never">Bisher kein Backup erstellt</string>
     <string name="strava_disconnect">Von Strava trennen</string>
     <string name="strava_disconnect_dialog_title">Strava-Verbindung trennen?</string>
     <string name="strava_disconnect_dialog_message">Beim Trennen der Verbindung werden alle mit Strava synchronisierten Daten von diesem Gerät gelöscht:\n\n• Mit Stern markierte Segmente und Segmentzeiten\n• Strava-Routen\n• Ausrüstungsverknüpfungen mit Strava\n• Strava-Upload-Status vergangener Workouts\n\nDeine aufgezeichneten Trainingseinheiten (Zusammenfassungen, GPS-Strecken, Sensordaten) bleiben vollständig erhalten.</string>
@@ -1265,8 +1269,8 @@
     <string name="restore_automatic_local_backup">Aus automatischem lokalen Backup wiederherstellen</string>
     <string name="restore_automatic_local_backup_format">Automatisches Backup (%1$s)</string>
     <string name="restore_automatic_backup_not_found">Kein automatisches lokales Backup gefunden</string>
-    <string name="restore_from_file">Lokal: Vollständige Wiederherstellung (Migration)</string>
-    <string name="restore_from_dropbox">Dropbox: Vollständige Wiederherstellung (Migration)</string>
+    <string name="restore_from_file">Aus lokaler Datei wiederherstellen</string>
+    <string name="restore_from_dropbox">Aus Dropbox wiederherstellen</string>
     <string name="backup_target_local">Lokal</string>
     <string name="backup_target_dropbox">Dropbox</string>
     <string name="backup_target_google_drive">Google Drive</string>
