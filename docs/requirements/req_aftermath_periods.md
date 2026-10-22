@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 18
+**Total Requirements**: 19
 
 ---
 
@@ -291,3 +291,44 @@
 • *Then* bar heights and values SHALL scale according to the selected metric's values across sports.
 
 **Invariants**: Zero database schema migrations, non-blocking UI thread, crash prevention on empty lists, and 100% clean-room test pass rate.
+ 
+### REQ-PER-019: Full-Period Asynchronous Mini-Map Preview & Background Simplification Pipeline [Verified]
+- **Tests**: `TST-PER-025`
+- **Implementation**: `PeriodSummaryCard.kt`, `PeriodCardMapState.kt`, `PeriodsRepository.kt`
+- **Rationale**: The system SHALL provide complete route coverage and smooth 60 fps `LazyColumn` scrolling for Day, Week, Month, and Year summary cards by offloading polyline decoding, simplification, and GIS region clustering to background dispatchers (ATT-4477, Parent Epic ATT-4474, refining `REQ-PER-012`):
+1. *Full-Period Route Coverage & Background Offload (`REQ-PER-019.1`)*:
+• Period summary cards SHALL NOT truncate route previews to an 8-track compromise (`MAX_SUMMARY_THUMBNAIL_TRACKS = 8`). All available workout polylines for the period (`summary.workoutIdToPolylineMap` or `summary.polylines`) SHALL be processed into the preview.
+• Polyline decoding (`PolyUtil.decode`), Douglas-Peucker simplification, region detection (`SpatialRegionEngine.detectRegionsFromPaths`), and `PolylineHeatmapTileProvider` creation SHALL execute exclusively on worker threads (`Dispatchers.Default`) via `produceState<PeriodCardMapState>`.
+• The Android main thread SHALL perform zero synchronous polyline decoding or GIS clustering during card composition or `LazyColumn` scrolling.
+2. *Douglas-Peucker Adaptive Decimation & Point Budgeting (`REQ-PER-019.2`)*:
+• The background pipeline SHALL adaptively simplify member workout polylines using Douglas-Peucker decimation (`PolyUtil.simplify`) scaled by period type: `DAY` tolerance = 5.0m, `WEEK` tolerance = 15.0m, `MONTH` tolerance = 35.0m, and `YEAR` tolerance = 75.0m.
+• The simplification pipeline MUST bound total aggregate vertices per card ($\le 2,000$ points) to prevent GPU memory pressure and eliminate UI jank.
+3. *Background Region Clustering & Viewport Framing (`REQ-PER-019.3`)*:
+• When a period spans multiple distinct geographic regions ($> 75\text{ km}$ geodesic span), `SpatialRegionEngine.detectRegionsFromPaths` SHALL partition the simplified paths on `Dispatchers.Default` and select the primary region for initial camera framing (`bounds`).
+• The multi-region indicator badge (`REQ-PER-013`) SHALL display the count of distinct regions and primary region paths count when `regionCount > 1`.
+4. *Complete Regional Route Network Heatmap Integration (`REQ-PER-019.4`)*:
+• For `WEEK`, `MONTH`, and `YEAR` cards, `PeriodCardMapState` SHALL feed all simplified regional paths into `PolylineHeatmapTileProvider` (`REQ-PER-017`), rendering the full route density network. For `DAY` cards, `heatmapProvider` SHALL evaluate to `null` and render crisp vector polylines.
+5. *System Invariants & Graceful Degradation (`REQ-PER-019.5`)*:
+• When a period contains empty or invalid GPS data, the background pipeline SHALL emit a ready state with empty paths and null bounds, rendering the localized "No GPS data" fallback without throwing exceptions.
+• Zero mutations to `PeriodSummaries.db` schema.
+• 100% clean-room test pass rate under `./gradlew testDebugUnitTest`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-PER-012` (*Period Map Scalability, Memory Budget & Adaptive Layering Invariant*), targeting `PeriodSummaryCard.kt` and `PeriodsRepository.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-41.2 (commit `1c89f50e` / ATT-1151 / `MAX_SUMMARY_THUMBNAIL_TRACKS = 8`).
+3. *Root Reason for Existing Formulation*: Imposed an 8-track hard cap as a temporary mitigation against UI-thread ANRs and OOM crashes when Google Maps `MapView` and `HeatmapTileProvider` decoded and rendered unsimplified vector polylines synchronously inside Compose `remember` blocks during list scrolling.
+4. *Preservation of Core Invariants*: Memory safety without OOMs, multi-region indicator badge (`REQ-PER-013`), single-region camera framing, `DarkMapAntiFlashOverlay`, and non-blocking 60 fps `LazyColumn` scrolling remain 100% strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a Month or Year period with 30+ workouts,
+• *When* `PeriodSummaryCard` is composed in `LazyColumn`,
+• *Then* all member workout polylines are decoded and Douglas-Peucker simplified on `Dispatchers.Default`, and all primary region paths are rendered in `PolylineHeatmapTileProvider` rather than truncating to 8 tracks.
+• *Given* a period with empty or malformed GPS polylines,
+• *When* `PeriodCardMapState` evaluates on `Dispatchers.Default`,
+• *Then* `isReady` is set to true with empty `primaryPaths` and null `bounds`, displaying the no-GPS fallback without throwing exceptions.
+• *Given* `LazyColumn` scrolling through `PeriodSummaryCard` items,
+• *When* cards compose and recycle,
+• *Then* zero `PolyUtil.decode`, `PolyUtil.simplify`, or `SpatialRegionEngine` clustering executions occur on the Android main thread.
+
+**Invariants**: Zero database schema mutations, memory safety without OOMs, non-blocking UI thread, and 100% clean-room test pass rate.
+

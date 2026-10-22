@@ -1054,7 +1054,9 @@ class PeriodsRepository private constructor(private val application: Application
 
         return summary.copy(
             sportStats = enrichedSportStats,
-            polylines = if (previewWorkouts.isNotEmpty()) {
+            polylines = if (allPolylineMap.isNotEmpty()) {
+                allPolylineMap.values.toList()
+            } else if (previewWorkouts.isNotEmpty()) {
                 previewWorkouts.map { it.mapPolyline }.filter { it.isNotEmpty() }
             } else summary.polylines,
             workoutIdToPolylineMap = allPolylineMap,

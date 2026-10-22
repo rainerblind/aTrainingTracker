@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 25
+**Total Tests**: 26
 
 ---
 
@@ -247,3 +247,27 @@
   • Verify single period list renders correctly with height fraction 1.0f.
   6. *Clean-Room Regression Suite Execution (`TST-PER-024.6`)*:
   • Run targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
+
+### TST-PER-025: **PeriodCardMapState Background Pipeline, Douglas-Peucker Decimation & Full-Period Route Coverage Verification Suite** [PeriodCardMapState offloads polyline decoding, Douglas-Peucker decimation, and region detection to Dispatchers.Default; periods with > 8 workouts include 100% of member routes without 8-track truncation; vertex counts are bounded to <= 2,000 points; Week/Month/Year cards render full regional heatmap tile providers; empty GPS lists degrade gracefully; 100% clean-room test pass rate.]
+- **Requirement(s)**: `REQ-PER-019`, `REQ-PER-017`, `REQ-PER-013`, `REQ-PER-012`
+- **Component**: **PeriodCardMapState Pipeline**
+- **Jira**: `ATT-4477`
+- **Test Description**:
+  1. *Full-Period Route Ingestion & Truncation Elimination Tests (`TST-PER-025.1`, `PeriodCardMapStateTest.kt`)*:
+  • Given a Month period with 25 workouts and a Year period with 100 workouts, verify that `buildPeriodCardMapState` processes all available polylines instead of truncating to `MAX_SUMMARY_THUMBNAIL_TRACKS = 8`.
+  • Verify that `primaryRegionPathsCount` reflects the total routes in the primary region.
+  2. *Douglas-Peucker Adaptive Decimation Tests (`TST-PER-025.2`, `PeriodCardMapStateTest.kt`)*:
+  • Verify that simplification tolerance scales by period type: `DAY` (5.0m), `WEEK` (15.0m), `MONTH` (35.0m), and `YEAR` (75.0m).
+  • Verify that unsimplified polylines with 1,000+ raw GPS coordinates are decimated to bounded vertex counts while preserving start, apex, and boundary extrema.
+  3. *Spatial Region Clustering & Framing Offload Tests (`TST-PER-025.3`, `PeriodCardMapStateTest.kt`)*:
+  • For multi-region periods (e.g. Europe and California), verify that `PeriodCardMapState` identifies multiple regions, designates the dominant cluster as primary (`isPrimary = true`), and bounds the camera tightly to the primary region envelope.
+  • Verify that single-region periods return a single region envelope without cross-continental camera centering.
+  4. *PolylineHeatmapTileProvider Integration Tests (`TST-PER-025.4`, `PeriodCardMapStateTest.kt`)*:
+  • Verify that for `WEEK`, `MONTH`, and `YEAR` cards, `PeriodCardMapState.visuals.heatmapProvider` is an active non-null `PolylineHeatmapTileProvider` containing all simplified primary region paths.
+  • Verify that for `DAY` cards, `heatmapProvider` is `null`.
+  5. *Empty & Malformed GPS Resilience Tests (`TST-PER-025.5`, `PeriodCardMapStateTest.kt`)*:
+  • Verify that empty polyline maps or empty lists return `isReady = true`, `primaryPaths = emptyList()`, and `bounds = null` without throwing exceptions.
+  • Verify that malformed encoded strings are skipped safely without crashing the background worker.
+  6. *Clean-Room Regression Suite Execution (`TST-PER-025.6`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
+

@@ -195,84 +195,32 @@ fun PeriodSummaryCard(
             }
 
             // --- 2. THE MAP SECTION ---
-            if (isPlayServiceAvailable && summary.polylines.isNotEmpty()) {
-                val decodedAnchorPaths = remember(summary.polylines) {
-                    summary.polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
+            if (isPlayServiceAvailable && (summary.polylines.isNotEmpty() || summary.workoutIdToPolylineMap.isNotEmpty())) {
+                val mapState by produceState(
+                    initialValue = PeriodCardMapState(isReady = false),
+                    key1 = summary.sortKey,
+                    key2 = summary.workoutIdToPolylineMap.size,
+                    key3 = summary.polylines.size
+                ) {
+                    value = prepareCardMapPreview(summary)
                 }
 
-                if (decodedAnchorPaths.isNotEmpty()) {
-                    val pathRegions = remember(decodedAnchorPaths, summary.minLat, summary.maxLat, summary.minLng, summary.maxLng) {
-                        if (summary.minLat < 90.0 && summary.maxLat > -90.0) {
-                            val diagonal = SpatialRegionEngine.distanceBetween(
-                                LatLng(summary.minLat, summary.minLng),
-                                LatLng(summary.maxLat, summary.maxLng)
-                            )
-                            if (diagonal >= SpatialRegionConfig.SINGLE_REGION_ENVELOPE_METERS) {
-                                SpatialRegionEngine.detectRegionsFromPaths(decodedAnchorPaths)
-                            } else {
-                                val allPoints = decodedAnchorPaths.flatten()
-                                val bounds = if (allPoints.isNotEmpty()) {
-                                    SpatialRegionEngine.buildNormalizedBounds(allPoints)
-                                } else {
-                                    LatLngBounds(LatLng(summary.minLat, summary.minLng), LatLng(summary.maxLat, summary.maxLng))
-                                }
-                                listOf(
-                                    SpatialPathRegion(
-                                        region = SpatialRegion(
-                                            id = "region_0",
-                                            label = "Region 1",
-                                            bounds = bounds,
-                                            center = LatLng((summary.minLat + summary.maxLat) / 2.0, (summary.minLng + summary.maxLng) / 2.0),
-                                            workoutCount = decodedAnchorPaths.size,
-                                            totalDistanceMeters = 0.0,
-                                            mostRecentTimestampS = 0L,
-                                            isPrimary = true
-                                        ),
-                                        paths = decodedAnchorPaths
-                                    )
-                                )
-                            }
-                        } else {
-                            val allPoints = decodedAnchorPaths.flatten()
-                            val bounds = if (allPoints.isNotEmpty()) SpatialRegionEngine.buildNormalizedBounds(allPoints) else null
-                            if (bounds != null) {
-                                listOf(
-                                    SpatialPathRegion(
-                                        region = SpatialRegion(
-                                            id = "region_0",
-                                            label = "Region 1",
-                                            bounds = bounds,
-                                            center = LatLng(0.0, 0.0),
-                                            workoutCount = decodedAnchorPaths.size,
-                                            totalDistanceMeters = 0.0,
-                                            mostRecentTimestampS = 0L,
-                                            isPrimary = true
-                                        ),
-                                        paths = decodedAnchorPaths
-                                    )
-                                )
-                            } else emptyList()
-                        }
-                    }
-
-                    val primaryPathRegion = pathRegions.firstOrNull { it.region.isPrimary } ?: pathRegions.firstOrNull()
-                    val activeBounds = primaryPathRegion?.region?.bounds
-                    val activePaths = primaryPathRegion?.paths ?: decodedAnchorPaths
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(250.dp)
-                    ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp)
+                ) {
+                    if (mapState.isReady && mapState.primaryPaths.isNotEmpty()) {
                         PeriodMultiWorkoutMap(
                             summary = summary,
-                            paths = activePaths,
+                            paths = mapState.primaryPaths,
                             onMapClick = { onMapClick(summary) },
-                            bounds = activeBounds
+                            bounds = mapState.bounds,
+                            precomputedVisuals = mapState.visuals
                         )
 
                         // Multi-region badge indicator when period spans multiple regions (ATT-1151)
-                        if (pathRegions.size > 1) {
+                        if (mapState.regionCount > 1) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
@@ -297,7 +245,7 @@ fun PeriodSummaryCard(
                                         text = stringResource(
                                             R.string.workout_periods__primary_region_format,
                                             1,
-                                            primaryPathRegion?.paths?.size ?: 1
+                                            mapState.primaryRegionPathsCount.coerceAtLeast(1)
                                         ),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.SemiBold
@@ -305,7 +253,12 @@ fun PeriodSummaryCard(
                                 }
                             }
                         }
-                    
+                    } else if (mapState.isReady) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Text(stringResource(R.string.period_no_gps_data), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+
                     // Bottom Scrim for visual transition
                     Box(
                         modifier = Modifier
@@ -322,7 +275,6 @@ fun PeriodSummaryCard(
             }
         }
     }
-}
 
 @Composable
 fun SportStatsRow(
@@ -520,7 +472,8 @@ private fun PeriodMultiWorkoutMap(
     summary: PeriodSummary,
     paths: List<List<LatLng>> = emptyList(),
     onMapClick: () -> Unit,
-    bounds: LatLngBounds? = null
+    bounds: LatLngBounds? = null,
+    precomputedVisuals: PeriodMapVisuals? = null
 ) {
     // --- TIER 1: INSTANT ANCHORS ---
     // Only render anchors in the summary card to prevent OOM when many maps exist in a list (ATT-440 Refinement)
@@ -530,8 +483,8 @@ private fun PeriodMultiWorkoutMap(
         else summary.polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
     }
 
-    val visuals = remember(allPaths, summary.periodType) {
-        getPeriodMapVisuals(summary.periodType, allPaths, isInteractive = false)
+    val visuals = remember(allPaths, summary.periodType, precomputedVisuals) {
+        precomputedVisuals ?: getPeriodMapVisuals(summary.periodType, allPaths, isInteractive = false)
     }
 
     if (allPaths.isEmpty()) {
