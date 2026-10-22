@@ -165,6 +165,15 @@ class WorkoutRepository private constructor(private val application: Application
                 Pair(null, initialEpochSec)
             }
         }
+
+        /**
+         * Quotes a SQL column identifier using standard double quotes, escaping embedded quotes.
+         * Ensures source-qualified location columns like "LATITUDE (Google Fused)" are parsed
+         * as identifiers rather than expressions or syntax errors by SQLiteQueryBuilder.
+         * (ATT-4707 / REQ-DAT-033.4)
+         */
+        @JvmStatic
+        internal fun quoteSqlIdentifier(col: String): String = "\"${col.replace("\"", "\"\"")}\""
     }
 
     private val job = SupervisorJob()
@@ -387,7 +396,9 @@ class WorkoutRepository private constructor(private val application: Application
             SensorType.SLOPE.name,
             SensorType.W_PRIME_BAL.name
         )
-        val projection = candidateCols.filter { it in existingColumns }.toTypedArray()
+        val projection = candidateCols.filter { it in existingColumns }
+            .map { quoteSqlIdentifier(it) }
+            .toTypedArray()
 
         db.query(tableName, projection, null, null, null, null, null).use { cursor ->
 
@@ -589,7 +600,9 @@ class WorkoutRepository private constructor(private val application: Application
             SensorType.TIME_TOTAL.name,
             WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME
         )
-        val projection = candidateCols.filter { it in existingColumns }.toTypedArray()
+        val projection = candidateCols.filter { it in existingColumns }
+            .map { quoteSqlIdentifier(it) }
+            .toTypedArray()
         val samples = mutableListOf<ZoneSample>()
 
         db.query(tableName, projection, null, null, null, null, null).use { cursor ->
@@ -662,7 +675,9 @@ class WorkoutRepository private constructor(private val application: Application
             SensorType.TIME_TOTAL.name,
             WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME
         )
-        val projection = candidateCols.filter { it in existingColumns }.toTypedArray()
+        val projection = candidateCols.filter { it in existingColumns }
+            .map { quoteSqlIdentifier(it) }
+            .toTypedArray()
         val samples = mutableListOf<ZoneSample>()
 
         db.query(tableName, projection, null, null, null, null, null).use { cursor ->
@@ -773,7 +788,7 @@ class WorkoutRepository private constructor(private val application: Application
             if (col in existingColumns) projectionSet.add(col)
         }
 
-        val projection = projectionSet.toTypedArray()
+        val projection = projectionSet.map { quoteSqlIdentifier(it) }.toTypedArray()
         val trackPointsMap = availableTrackTypes.associateWith { ArrayList<PathPoint>() }
         val hrSamples = if (hasHr) mutableListOf<ZoneSample>() else null
         val powerSamples = if (hasPower) mutableListOf<ZoneSample>() else null

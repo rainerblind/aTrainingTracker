@@ -306,9 +306,8 @@ class WorkoutRepositoryTelemetryTest {
         assertEquals(2, points.size)
         assertEquals(48.137, points[0].latLng.latitude, 0.0001)
         assertEquals(11.575, points[0].latLng.longitude, 0.0001)
-        assertNotNull(capturedProjection.captured)
-        assertTrue(capturedProjection.captured.contains(TrackType.BEST.latitudeColumn))
-        assertTrue(capturedProjection.captured.contains(TrackType.BEST.longitudeColumn))
+        assertTrue(capturedProjection.captured.contains(WorkoutRepository.quoteSqlIdentifier(TrackType.BEST.latitudeColumn)))
+        assertTrue(capturedProjection.captured.contains(WorkoutRepository.quoteSqlIdentifier(TrackType.BEST.longitudeColumn)))
     }
 
     @Test
