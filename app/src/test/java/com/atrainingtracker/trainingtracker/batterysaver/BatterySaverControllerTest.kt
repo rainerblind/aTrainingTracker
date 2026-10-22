@@ -10,7 +10,10 @@
 
 package com.atrainingtracker.trainingtracker.batterysaver
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -37,7 +40,7 @@ class BatterySaverControllerTest {
         lastAppliedBrightness = -1f
         controller = BatterySaverController(
             activity = null,
-            scope = testScope,
+            scope = CoroutineScope(testDispatcher + SupervisorJob()),
             stateMachine = BatterySaverStateMachine(hysteresisMs = 3000L),
             systemBrightnessProvider = { testBaselineBrightness },
             brightnessApplier = { brightness ->
@@ -110,6 +113,7 @@ class BatterySaverControllerTest {
 
         controller.release()
         assertEquals(1.0f, lastAppliedBrightness, 0.001f)
+        assertFalse("Scope must be cancelled on release", controller.scope.isActive)
     }
 
     @Test

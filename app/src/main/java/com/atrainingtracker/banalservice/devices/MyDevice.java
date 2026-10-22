@@ -53,6 +53,7 @@ public abstract class MyDevice {
     private volatile boolean mSensorsRegistered = false;
 
     protected final DevicesDatabaseManager mDevicesDatabaseManager;
+    private volatile String mCachedDeviceName = null;
     protected long mDeviceId = -1;  // the id of the device within the database
     protected volatile int mBatteryPercentage = -1;
 
@@ -103,7 +104,18 @@ public abstract class MyDevice {
     // Note,  this will only work properly, when the device is in the database...
     @Nullable
     public String getName() {
-        return mDevicesDatabaseManager.getDeviceName(getDeviceId());
+        if (mCachedDeviceName != null) {
+            return mCachedDeviceName;
+        }
+        String name = mDevicesDatabaseManager.getDeviceName(getDeviceId());
+        if (name != null) {
+            mCachedDeviceName = name;
+        }
+        return name;
+    }
+
+    public void invalidateDeviceNameCache() {
+        mCachedDeviceName = null;
     }
 
     @Nullable

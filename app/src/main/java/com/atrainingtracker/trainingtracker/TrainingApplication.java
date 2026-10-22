@@ -1489,6 +1489,9 @@ public class TrainingApplication extends Application {
     }
 
     public void updateTimeAndDistanceToNotification(@Nullable SensorData<Integer> time, @Nullable SensorData<Number> distance, String sportType) {
+        if (!isTracking()) {
+            return;
+        }
         if (DEBUG) Log.i(TAG, "updateTimeAndDistanceToNotification(" + time + ", " + distance);
 
         if (mNotificationManager.areNotificationsEnabled()) {

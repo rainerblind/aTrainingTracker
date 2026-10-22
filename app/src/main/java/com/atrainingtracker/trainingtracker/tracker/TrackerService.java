@@ -191,6 +191,8 @@ public class TrackerService extends Service {
     @Nullable
     volatile BANALServiceComm mBanalService;
     private final AtomicInteger mSamplingErrorCount = new AtomicInteger(0);
+    private volatile long mCachedSportTypeId = -1;
+    private volatile String mCachedSportTypeUiName = null;
     public static final int SAMPLE_INSERT_FAILURE_INITIAL_BURST = 3;
     public static final int SAMPLE_INSERT_FAILURE_LOG_INTERVAL = 60;
     private final AtomicInteger mSampleInsertFailureCount = new AtomicInteger(0);
@@ -603,17 +605,28 @@ public class TrackerService extends Service {
                     // update notification
                     if (DEBUG) Log.i(TAG, "updating notification");
                     if (mTrainingApplication != null) {
+                        long sportTypeId = banalService.getSportTypeId();
+                        String sportUiName;
+                        if (sportTypeId == mCachedSportTypeId && mCachedSportTypeUiName != null) {
+                            sportUiName = mCachedSportTypeUiName;
+                        } else {
+                            sportUiName = SportTypeDatabaseManager.getInstance(TrackerService.this).getUIName(sportTypeId);
+                            mCachedSportTypeId = sportTypeId;
+                            mCachedSportTypeUiName = sportUiName;
+                        }
                         mTrainingApplication.updateTimeAndDistanceToNotification(
                                 banalService.getBestSensorData(SensorType.TIME_ACTIVE),
                                 banalService.getBestSensorData(SensorType.DISTANCE_m),
-                                SportTypeDatabaseManager.getInstance(TrackerService.this).getUIName(banalService.getSportTypeId()));
+                                sportUiName);
                     }
                     if (DEBUG) Log.i(TAG, "updated notification");
 
                 }
             } catch (Throwable t) {
-                mSamplingErrorCount.incrementAndGet();
-                Log.e(TAG, "Error during 1 Hz sampling tick; continuing tracking loop", t);
+                int errorCount = mSamplingErrorCount.incrementAndGet();
+                if (shouldLogSampleInsertFailure(errorCount)) {
+                    Log.e(TAG, "Error during 1 Hz sampling tick; continuing tracking loop (samplingErrorCount=" + errorCount + ")", t);
+                }
             }
         }
     };
@@ -2398,7 +2411,7 @@ public class TrackerService extends Service {
      * {@code SAMPLE_INSERT_FAILURE_LOG_INTERVAL}-th failure thereafter.
      */
     @VisibleForTesting
-    static boolean shouldLogSampleInsertFailure(int failureCount) {
+    public static boolean shouldLogSampleInsertFailure(int failureCount) {
         return failureCount > 0
                 && (failureCount <= SAMPLE_INSERT_FAILURE_INITIAL_BURST
                 || failureCount % SAMPLE_INSERT_FAILURE_LOG_INTERVAL == 0);

@@ -20,11 +20,14 @@ package com.atrainingtracker.banalservice.devices
 
 import android.content.Context
 import android.content.Intent
+import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
 import android.hardware.SensorManager
 import android.location.LocationManager
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
@@ -99,5 +102,22 @@ class DeviceManagerTeardownTest {
         val deviceManager = DeviceManager(mockBanalService, mockSensorManager)
         // Act: invoking removeAndStopRemoteDevice for an unmapped device ID must execute gracefully without NPE
         deviceManager.removeAndStopRemoteDevice(99999L)
+    }
+
+    /**
+     * TST-TRK-039.4: createPairedRemoteDevices safely handles null cursor and closes valid cursor (REQ-TRK-039.5).
+     */
+    @Test
+    fun testCreatePairedRemoteDevices_closesCursorDeterministically() {
+        val mockDb = mockk<SQLiteDatabase>(relaxed = true)
+        every { mockDevicesDbManager.database } returns mockDb
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        every { mockCursor.moveToNext() } returns false
+        every { mockDb.query(any(), any(), any(), any(), any(), any(), any()) } returns mockCursor
+
+        val deviceManager = DeviceManager(mockBanalService, mockSensorManager)
+        deviceManager.createPairedRemoteDevices(Protocol.BLUETOOTH_LE)
+
+        verify(exactly = 1) { mockCursor.close() }
     }
 }

@@ -117,7 +117,6 @@ public class AltitudeFromPressureDevice extends MyDevice
         mExecutor.shutdown();
         ((SensorManager) mContext.getSystemService(Context.SENSOR_SERVICE)).unregisterListener(this);
 
-        ContextCompat.registerReceiver(mContext, mGPSProviderEnabledReceiver, mGPSProviderEnabledFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         LifecycleUtils.safeUnregisterReceiver(mContext, mGPSProviderEnabledReceiver, TAG);
         mPendingReferenceAltitude = Double.NaN;
         mIsCalibrated = false;

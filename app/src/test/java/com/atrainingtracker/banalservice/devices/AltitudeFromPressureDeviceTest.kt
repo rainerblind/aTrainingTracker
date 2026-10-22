@@ -433,10 +433,15 @@ class AltitudeFromPressureDeviceTest {
         device.calibrate(436.0)
         assertTrue(device.isCalibrated)
 
+        // Constructor registered receivers (MyDevice accumulator receiver + GPS provider receiver)
+        verify(exactly = 2) { ContextCompat.registerReceiver(any(), any(), any(), any()) }
+
         // Act
         device.shutDown()
 
         // Assert
         assertFalse("isCalibrated must be reset on shutdown", device.isCalibrated)
+        // No redundant registerReceiver was called during shutDown; count remains 2
+        verify(exactly = 2) { ContextCompat.registerReceiver(any(), any(), any(), any()) }
     }
 }

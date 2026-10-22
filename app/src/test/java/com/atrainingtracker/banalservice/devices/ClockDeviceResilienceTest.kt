@@ -35,6 +35,7 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -127,5 +128,51 @@ class ClockDeviceResilienceTest {
         assertEquals("TIME_ACTIVE must increment across all 3 ticks", initialActive + 3, finalActive)
         assertEquals("TIME_LAP must increment across all 3 ticks", initialLap + 3, finalLap)
         verify(atLeast = 1) { Log.e("ClockDevice", any<String>(), any<Throwable>()) }
+    }
+
+    /**
+     * TST-TRK-039.3: Rate-limited error logging policy for ClockDevice timer loop (REQ-TRK-039.4).
+     */
+    @Test
+    fun testClockDeviceRateLimitsErrorLogging() {
+        // Initial burst 1..3
+        assertTrue("Error #1 must be logged", ClockDevice.shouldLogClockTimerError(1))
+        assertTrue("Error #2 must be logged", ClockDevice.shouldLogClockTimerError(2))
+        assertTrue("Error #3 must be logged", ClockDevice.shouldLogClockTimerError(3))
+
+        // Suppressed interval 4..59
+        for (i in 4..59) {
+            assertFalse("Error #$i must be suppressed", ClockDevice.shouldLogClockTimerError(i))
+        }
+
+        // Periodic 60
+        assertTrue("Error #60 must be logged", ClockDevice.shouldLogClockTimerError(60))
+
+        // Suppressed interval 61..119
+        for (i in 61..119) {
+            assertFalse("Error #$i must be suppressed", ClockDevice.shouldLogClockTimerError(i))
+        }
+
+        // Periodic 120
+        assertTrue("Error #120 must be logged", ClockDevice.shouldLogClockTimerError(120))
+    }
+
+    /**
+     * TST-TRK-039.3: Monotonic time anchoring for ClockDevice timer ticks (REQ-TRK-039.4).
+     */
+    @Test
+    fun testClockDeviceMonotonicTimeAdvancement() {
+        val device = ClockDevice(mockContext, mockSensorManager, false)
+        clockDevice = device
+
+        val initialTimestamp = device.lastTickElapsedRealtimeMs
+        device.runClockTickForTesting()
+        val tickTimestamp = device.lastTickElapsedRealtimeMs
+
+        assertTrue("Last tick timestamp must be updated on tick execution", tickTimestamp > 0L)
+        assertTrue("Tick timestamp must be >= initial timestamp", tickTimestamp >= initialTimestamp)
+
+        val monotonicNow = ClockDevice.getMonotonicTimeMs()
+        assertTrue("Monotonic timestamp must be non-negative", monotonicNow >= 0L)
     }
 }
