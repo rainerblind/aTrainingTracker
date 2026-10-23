@@ -998,14 +998,28 @@ class PeriodsRepository private constructor(private val application: Application
             selectedWorkouts
         } else anchorWorkouts
         
-        // 2. Map ALL available workout polylines for the full heatmap (ATT-440 Refinement)
+        // 2. Curate full polylines for the card thumbnail preview (REQ-PER-019)
         val allPolylineMap = if (groupWorkouts.isNotEmpty()) {
             groupWorkouts
                 .filter { it.mapPolyline.isNotEmpty() }
                 .associate { it.id to it.mapPolyline }
         } else summary.workoutIdToPolylineMap
 
-        // 3. Hydrate LongestWorkout metrics for each sport from in-memory workouts if available (ATT-536 / ATT-579 / ATT-4476)
+        // 3. Scope workoutIdToPolylineMap strictly to spatial anchors (<= 5 workouts) (REQ-PER-021.1)
+        // Pre-decode anchor paths off the main thread to eliminate UI-thread PolyUtil.decode calls (REQ-PER-021.3)
+        val anchorPolylineMap = if (groupWorkouts.isNotEmpty()) {
+            anchorWorkouts
+                .filter { it.mapPolyline.isNotEmpty() }
+                .associate { it.id to it.mapPolyline }
+        } else summary.workoutIdToPolylineMap.filterKeys { it in anchorIds }
+
+        val anchorPathMap = if (groupWorkouts.isNotEmpty()) {
+            anchorWorkouts
+                .filter { it.mapPolyline.isNotEmpty() }
+                .associate { it.id to PolyUtil.decode(it.mapPolyline) }
+        } else summary.workoutIdToPathMap.filterKeys { it in anchorIds }
+
+        // 4. Hydrate LongestWorkout metrics for each sport from in-memory workouts if available (ATT-536 / ATT-579 / ATT-4476)
         val enrichedSportStats = summary.sportStats.mapValues { (sport, stats) ->
             val targetId = stats.longestWorkout?.id ?: -1L
             val longestFromGroup = if (groupWorkouts.isNotEmpty()) {
@@ -1038,7 +1052,8 @@ class PeriodsRepository private constructor(private val application: Application
             } else if (previewWorkouts.isNotEmpty()) {
                 previewWorkouts.map { it.mapPolyline }.filter { it.isNotEmpty() }
             } else summary.polylines,
-            workoutIdToPolylineMap = allPolylineMap,
+            workoutIdToPolylineMap = anchorPolylineMap,
+            workoutIdToPathMap = anchorPathMap,
             workoutIdToSportMap = if (groupWorkouts.isNotEmpty()) groupWorkouts.associate { it.id to it.bSportType } else summary.workoutIdToSportMap,
             extremaMarkers = anchorWorkouts.flatMap { workout ->
                 val markers = mutableListOf<PeriodPeakMarker>()

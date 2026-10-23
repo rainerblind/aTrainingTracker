@@ -156,10 +156,11 @@ fun PeriodMapScreen(
             sportMatch && typeMatch
         }
 
-        // REQ-PER-012: Adaptive Layering Invariant
+        // REQ-PER-012 / REQ-PER-021: Adaptive Layering Invariant
         // When active workouts exceed MAX_PERIOD_VECTOR_TRACKS, suppress member vector tracks
         // and member markers in favor of the raster Heatmap to prevent OOM / ANR.
-        val isAdaptiveLayering = workouts.size > MAX_PERIOD_VECTOR_TRACKS
+        val isAdaptiveLayering = summary.totalWorkouts > MAX_PERIOD_VECTOR_TRACKS ||
+                mapState.workoutIdToHeatmapPathMap.size > MAX_PERIOD_VECTOR_TRACKS
 
         val memberMarkers = if (isAdaptiveLayering) {
             emptyList()
@@ -402,7 +403,11 @@ fun PeriodMapScreen(
                     ),
                     mapState = mapState,
                     memberMarkers = filteredContent.memberMarkers,
-                    memberTracks = filteredContent.memberTracks,
+                    memberTracks = if (filteredContent.memberTracks.isNotEmpty()) {
+                        filteredContent.memberTracks
+                    } else {
+                        peekedTracks
+                    },
                     heatmapPaths = filteredContent.heatmapPaths,
                     onWorkoutClick = onWorkoutClick,
                     modifier = Modifier.fillMaxSize(),

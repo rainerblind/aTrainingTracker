@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 27
+**Total Tests**: 28
 
 ---
 
@@ -293,5 +293,23 @@
   • Assert that on subsequent initializations with preference true, file scans are bypassed.
   6. *Clean-Room Regression Suite Execution (`TST-PER-026.6`)*:
   • Execute targeted unit tests and `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
+
+### TST-PER-027: **InteractivePeriodMap UI-Thread Decoupling, Deduplication & Large-Period Spatial Hit-Testing Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-021`, `REQ-PER-012`, `REQ-PER-013`
+- **Component**: **Interactive Period Map & Spatial Hit-Testing**
+- **Jira**: `ATT-4475`
+- **Test Description**:
+  1. *Spatial Anchor Scope Isolation Tests (`TST-PER-027.1`)*:
+  • Given a period with 25 workouts, verify `PeriodsRepository.enrich()` restricts `summary.workoutIdToPolylineMap` strictly to the $\le 5$ spatial anchor workouts (North, South, East, West, Longest).
+  2. *Interactive Map Track Deduplication Tests (`TST-PER-027.2`)*:
+  • Given `mapState.isLoading == false`, verify `InteractivePeriodMap` suppresses or deduplicates `anchorTracks` so member tracks are rendered exactly once.
+  3. *Zero-UI-Thread Polyline Decoding Tests (`TST-PER-027.3`)*:
+  • Verify that polyline decoding for member and anchor tracks is dispatched exclusively on `Dispatchers.Default` and not executed synchronously within Compose `remember`.
+  4. *Large-Period Route Visualization & Spatial Tap Hit-Testing Tests (`TST-PER-027.4`)*:
+  • Given a period with $> 30$ workouts (e.g. 50 workouts), verify routes are visualized via `PolylineHeatmapTileProvider` without instantiating 50+ Google Maps `Polyline` vector objects.
+  • Given a map tap at coordinates near a workout path, verify spatial hit-testing (`PolyUtil.isLocationOnPath`) resolves the matching `workoutId` and triggers workout selection/peeking.
+  5. *Clean-Room Regression Suite Execution (`TST-PER-027.5`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
+
 
 

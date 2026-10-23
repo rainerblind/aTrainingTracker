@@ -124,10 +124,10 @@ fun getPeriodMapVisuals(
  * (REQ-PER-019)
  */
 fun prepareCardMapPreviewSync(summary: PeriodSummary): PeriodCardMapState {
-    val rawPolylines: Collection<String> = if (summary.workoutIdToPolylineMap.isNotEmpty()) {
-        summary.workoutIdToPolylineMap.values
-    } else {
-        summary.polylines
+    val rawPolylines: Collection<String> = when {
+        summary.polylines.isNotEmpty() -> summary.polylines
+        summary.workoutIdToPolylineMap.isNotEmpty() -> summary.workoutIdToPolylineMap.values
+        else -> emptyList()
     }
 
     if (rawPolylines.isEmpty()) {
@@ -239,4 +239,26 @@ suspend fun prepareCardMapPreview(
     dispatcher: CoroutineDispatcher = Dispatchers.Default
 ): PeriodCardMapState = withContext(dispatcher) {
     prepareCardMapPreviewSync(summary)
+}
+
+/**
+ * Resolves the workout ID whose path is closest to the user's tap point on the map.
+ * Uses PolyUtil.isLocationOnPath with zoom-adaptive tolerance.
+ * (ATT-4475 / REQ-PER-021.4 / TST-PER-027.4)
+ */
+fun findClosestTrackOnMapClick(
+    tap: LatLng,
+    paths: Map<Long, List<LatLng>>,
+    zoom: Float = 12f
+): Long? {
+    if (paths.isEmpty()) return null
+    // Adaptive tolerance: ~100m at zoom <= 10, ~50m at zoom 11, ~25m at zoom 12, ~12m at zoom 13, down to 5m at zoom >= 14
+    val toleranceMeters = (100.0 / Math.pow(2.0, (zoom - 10.0).coerceAtLeast(0.0))).coerceIn(5.0, 100.0)
+    for ((workoutId, path) in paths) {
+        if (path.size < 2) continue
+        if (PolyUtil.isLocationOnPath(tap, path, true, toleranceMeters)) {
+            return workoutId
+        }
+    }
+    return null
 }

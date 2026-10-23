@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 20
+**Total Requirements**: 21
 
 ---
 
@@ -373,5 +373,46 @@
 • *Then* legacy experimental database file checks are skipped.
 
 **Invariants**: Zero data loss across migration; $O(1)$ query budget ($\le 3$ batch queries); bidirectional sync healing; 100% clean-room test pass rate.
+
+### REQ-PER-021: InteractivePeriodMap Double-Rendering Elimination, UI-Thread Decoupling & Large-Period Spatial Hit-Testing [Verified]
+- **Tests**: `TST-PER-027`
+- **Implementation**: `InteractivePeriodMap.kt`, `PeriodMapUtils.kt`, `PeriodsRepository.kt`, `PeriodsViewModel.kt`
+- **Rationale**: The system SHALL eliminate polyline double-rendering, offload all polyline decoding from the Android main thread, prevent OOM bypasses, and preserve workout route clickability on large periods (> 30 workouts) (ATT-4475, Parent Epic ATT-4474, refining `REQ-PER-012` and `REQ-PER-013`):
+1. *Spatial Anchor Scope Isolation in `groupedPeriods` (`REQ-PER-021.1`)*:
+• In `PeriodsRepository.enrich()`, `PeriodSummary.workoutIdToPolylineMap` SHALL be strictly scoped to spatial anchor workouts ($\le 5$ workouts: North, South, East, West, Longest).
+• Full member polylines for interactive exploration SHALL NOT be replicated 4x across Day, Week, Month, and Year lists in `groupedPeriods`; they SHALL be loaded on-demand in `PeriodsViewModel.showPeriodMap()` into `PeriodMapState`.
+2. *Double-Rendering Elimination in `InteractivePeriodMap` (`REQ-PER-021.2`)*:
+• In `InteractivePeriodMap.kt`, `anchorTracks` SHALL NOT render simultaneously with `memberTracks`. When `mapState.isLoading == false`, `anchorTracks` SHALL be hidden or deduplicated, preventing identical paths from being rendered twice at differing alpha values ($\alpha=0.5$ and $\alpha=0.3$).
+3. *Asynchronous Background Polyline Decoding (`REQ-PER-021.3`)*:
+• All `PolyUtil.decode` calls for period map tracks SHALL execute exclusively on worker threads (`Dispatchers.Default`) in `PeriodsViewModel` or repository loaders.
+• Synchronous `PolyUtil.decode` execution inside Compose `remember` on the Android UI thread in `InteractivePeriodMap.kt` SHALL be eliminated.
+4. *Large-Period Route Network & Spatial Tap Hit-Testing (`REQ-PER-021.4`)*:
+• For large periods exceeding `MAX_PERIOD_VECTOR_TRACKS = 30`, routes SHALL be rendered via `PolylineHeatmapTileProvider` (refining `REQ-PER-012` hard cliff) to eliminate Google Maps `Polyline` object allocation overhead.
+• Workout track clickability and peeking SHALL be supported on large periods via spatial tap hit-testing (`onMapClick(latLng)` invoking `PolyUtil.isLocationOnPath(latLng, path, true, toleranceMeters)`), dynamically selecting and highlighting the clicked workout route without instantiating hundreds of vector polylines.
+5. *Preservation of System Invariants (`REQ-PER-021.5`)*:
+• Zero alterations to `PeriodSummaries.db` schema.
+• Instant geographic framing via bounds and anchor markers remains strictly preserved.
+• 100% clean-room unit test pass rate under `./gradlew testDebugUnitTest`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-PER-012` (*Vector Track Safety Threshold*) and `REQ-PER-013` (*Period Map Performance*). Targets `InteractivePeriodMap.kt`, `PeriodMapUtils.kt`, `PeriodsRepository.kt`, `PeriodsViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (ATT-346 / commit `7a192b0c` for anchor framing; ATT-440 for `PeriodMapState`).
+3. *Root Reason for Existing Formulation*: Anchors were designed for instant framing before full data loaded. When `allPolylineMap` was added to feed heatmaps, `workoutIdToPolylineMap` was overloaded without isolating anchor IDs, causing small periods to double-render and large periods to decode 300+ polylines on the UI thread while dropping vector clickability.
+4. *Preservation of Core Invariants*: Instant camera framing, memory safety (zero OOMs), 60 fps gesture smoothness, and 100% clean-room test pass rate remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a period with $\le 30$ workouts,
+• *When* `InteractivePeriodMap` completes loading (`mapState.isLoading == false`),
+• *Then* member workout paths are rendered exactly once without duplicate underlying anchor vector tracks.
+• *Given* a Month or Year period with $> 30$ workouts,
+• *When* `InteractivePeriodMap` renders,
+• *Then* the Android UI thread executes zero synchronous `PolyUtil.decode` calls inside Compose `remember`,
+• *And* tapping a route on the map triggers spatial hit-testing (`PolyUtil.isLocationOnPath`) and peeks the selected workout.
+• *Given* `groupedPeriods` in `PeriodsRepository`,
+• *When* period summaries are enriched,
+• *Then* `summary.workoutIdToPolylineMap` contains at most 5 spatial anchor polylines rather than the full period workout dataset.
+
+**Invariants**: Zero changes to `PeriodSummaries.db`, memory safety without OOMs, and 100% clean-room test pass rate.
+
 
 

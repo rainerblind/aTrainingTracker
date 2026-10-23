@@ -89,13 +89,21 @@ fun InteractivePeriodMap(
     }
 
     // --- 2. PROGRESSIVE CONTENT ---
-    // Anchor routes (instantly available)
-    val anchorTracks = remember(summary.workoutIdToPolylineMap) {
-        summary.workoutIdToPolylineMap.mapNotNull { (id, polyline) ->
-            if (polyline.isEmpty()) return@mapNotNull null
-            val path = PolyUtil.decode(polyline)
-            val sport = summary.workoutIdToSportMap[id] ?: BSportType.UNKNOWN
-            MapTrack(id, TrackType.BEST, sport, path.map { PathPoint(0.0, it, 0.0) })
+    // Anchor routes (instantly available, pre-decoded off main thread when possible)
+    val anchorTracks = remember(summary.workoutIdToPathMap, summary.workoutIdToPolylineMap) {
+        if (summary.workoutIdToPathMap.isNotEmpty()) {
+            summary.workoutIdToPathMap.mapNotNull { (id, path) ->
+                if (path.isEmpty()) return@mapNotNull null
+                val sport = summary.workoutIdToSportMap[id] ?: BSportType.UNKNOWN
+                MapTrack(id, TrackType.BEST, sport, path.map { PathPoint(0.0, it, 0.0) })
+            }
+        } else {
+            summary.workoutIdToPolylineMap.mapNotNull { (id, polyline) ->
+                if (polyline.isEmpty()) return@mapNotNull null
+                val path = try { PolyUtil.decode(polyline) } catch (e: Exception) { emptyList() }
+                val sport = summary.workoutIdToSportMap[id] ?: BSportType.UNKNOWN
+                MapTrack(id, TrackType.BEST, sport, path.map { PathPoint(0.0, it, 0.0) })
+            }
         }
     }
     
@@ -107,12 +115,21 @@ fun InteractivePeriodMap(
         boundsFocusTrigger = mapState.focusEpochMs,
         currentLocationFlow = noLocation,
         modifier = modifier,
+        onMapClick = { latLng ->
+            val zoom = cameraPositionState.position.zoom
+            val hitId = findClosestTrackOnMapClick(latLng, mapState.workoutIdToHeatmapPathMap, zoom)
+            if (hitId != null) {
+                onWorkoutClick(hitId)
+            }
+        },
         shouldTakeSnapshot = shouldTakeSnapshot,
         onSnapshotReady = onSnapshotReady,
         content = {
-            // 1. Render Anchor Tracks (North/South/East/West/Longest) instantly
-            anchorTracks.forEach { track ->
-                path(track, alpha = 0.5f, onPathClick = { onWorkoutClick(it) })
+            // 1. Render Anchor Tracks (North/South/East/West/Longest) instantly during loading only (REQ-PER-021.2)
+            if (mapState.isLoading) {
+                anchorTracks.forEach { track ->
+                    path(track, alpha = 0.5f, onPathClick = { onWorkoutClick(it) })
+                }
             }
 
             // 2. Extrema Markers (Markers for anchors are already in summary.extremaMarkers)
@@ -134,9 +151,9 @@ fun InteractivePeriodMap(
             
             // 3. Render Additional Detail from MapState (ATT-440 Cluster algorithm)
             if (!mapState.isLoading) {
-                // Add filtered member traces
+                // Add filtered member traces (high-alpha when displaying single peeked workout track)
                 memberTracks.forEach { track ->
-                    path(track, alpha = 0.3f, onPathClick = { onWorkoutClick(it) })
+                    path(track, alpha = if (memberTracks.size == 1) 0.9f else 0.3f, onPathClick = { onWorkoutClick(it) })
                 }
                 
                 // Add filtered member markers
