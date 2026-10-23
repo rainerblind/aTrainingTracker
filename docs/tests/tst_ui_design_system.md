@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 388
+**Total Tests**: 389
 
 ---
 
@@ -6761,4 +6761,30 @@
   • Verify that `startPadding = 50.dp` is preserved across both orientations to guarantee multi-chart scrubber alignment.
   6. *Clean-Room Full Suite Regression Execution (`TST-UI-396.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate across the full project test suite.
+
+### TST-UI-397: **In-App Feature Discovery & Tips Guide, Navigation Drawer Integration & 9-Language Parity Verification Suite** [In-app feature discovery destination 'tips_guide' hosted in single-activity architecture, drawer integration under collapsible Settings group (23 total destinations, 9 non-collapsible default visible rows, advanced tuning terminal position preserved), 7 curated tips with deep-link navigation actions, zero raster asset bloat, 100% 9-language localization parity across all 32 string resources, and clean-room unit test pass rate.]
+- **Requirement(s)**: `REQ-UI-432`
+- **Component**: **In-App Feature Discovery & Tips Guide Verification Suite**
+- **Jira**: ``ATT-2276``
+- **Test Description**:
+  1. *NavRoutes Route and Drawer ID Bidirectional Mapping Unit Test (`TST-UI-397.1`, `SingleActivityNavigationTest.kt`)*:
+  • Verify `NavRoutes.TIPS_GUIDE == "tips_guide"`.
+  • Verify `NavRoutes.fromDrawerItemId(R.id.drawer_tips_guide) == NavRoutes.TIPS_GUIDE`.
+  • Verify `NavRoutes.toDrawerItemId(NavRoutes.TIPS_GUIDE) == R.id.drawer_tips_guide`.
+  • Verify `NavRoutes.toSettingsBottomSheetType(R.id.drawer_tips_guide) == null`.
+  2. *Navigation Drawer Group Structure & 23-Destination Item Integrity Unit Test (`TST-UI-397.2`, `NavigationDrawerStateTest.kt`)*:
+  • Verify `createDrawerGroups` maintains exactly 5 category hubs.
+  • Verify `settingsGroup.items` contains `R.id.drawer_tips_guide` positioned before `drawer_privacy_policy` and `drawer_advanced_tuning`.
+  • Verify total destination count is 23 across all 5 groups, and distinct ID count is 23.
+  • Verify default visible count across non-collapsible groups strictly remains 9.
+  • Verify `drawer_tips_guide` icon is `R.drawable.ic_tips_and_updates` and title is `R.string.drawer_tips_guide`.
+  3. *TipsGuideScreen Model, Expandable State & Deep-Link Dispatch Unit/Contract Test (`TST-UI-397.3`, `TipsGuideScreenContractTest.kt`)*:
+  • Verify data model defines exactly 7 curated tips with respective title, subtitle, description, icon, and route targets.
+  • Verify all 7 deep-link action callbacks (`onNavigateToLocations`, `onNavigateToSensors`, `onNavigateToDisplays`, `onNavigateToSegments`, `onNavigateToEquipment`, `onNavigateToZones`, `onNavigateToBackup`) dispatch cleanly when triggered.
+  4. *9-Language Localization & Format Specifier Parity Test (`TST-UI-397.4`, `TranslationParityTest.kt`)*:
+  • Verify all 32 string resources are defined across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  • Verify 100% translation coverage, matching positional format specifiers, and literal `\n` linebreaks.
+  5. *Clean-Room Full Suite Regression Execution (`TST-UI-397.5`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.localization.*"` and verify 100% pass rate.
+
 

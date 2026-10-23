@@ -2125,4 +2125,38 @@
     <string name="clear">Wissen</string>
     <string name="select_route">Route selecteren</string>
     <string name="equipment">Uitrusting</string>
+
+    <!-- In-App Feature Discovery & Tips Guide (REQ-UI-432 / ATT-2276) -->
+    <string name="drawer_tips_guide">Tips en trucs</string>
+    <string name="tips_guide_title">Tips en trucs</string>
+    <string name="tips_guide_header_title">Functies ontdekken</string>
+    <string name="tips_guide_header_subtitle">Ontdek krachtige functies en snelkoppelingen ontworpen voor je training.</string>
+    <string name="tip_routes_clustering_title">Favoriete routes &amp; automatisch clusteren</string>
+    <string name="tip_routes_clustering_subtitle">Intelligente herkenning van trainingsroutes</string>
+    <string name="tip_routes_clustering_desc">aTrainingTracker analyseert je gps-trainingen automatisch en groepeert vergelijkbare routes als favoriete routes. Vergelijk je tijden zonder handmatige invoer.</string>
+    <string name="tip_routes_clustering_action">Favoriete routes bekijken</string>
+    <string name="tip_sensors_failover_title">Multiprotocol-sensoren &amp; failover</string>
+    <string name="tip_sensors_failover_subtitle">Naadloos schakelen tussen ANT+ en Bluetooth LE</string>
+    <string name="tip_sensors_failover_desc">Koppel meerdere hartslag-, vermogens- of cadanssensoren tegelijk. Als een sensor wegvalt, neemt de reservesensor direct over zonder dataverlies.</string>
+    <string name="tip_sensors_failover_action">Sensoren beheren</string>
+    <string name="tip_cockpit_customization_title">Cockpit-schermen &amp; fietsbel</string>
+    <string name="tip_cockpit_customization_subtitle">Volledig aanpasbare telemetrierasters</string>
+    <string name="tip_cockpit_customization_desc">Stel meerdere telemetriepagina\'s per sport in met live statistieken, hoogteprofiel of kaart. Voeg de akoestische fietsbelknop toe voor ritten buiten.</string>
+    <string name="tip_cockpit_customization_action">Schermen configureren</string>
+    <string name="tip_live_segments_title">Strava Live Segments &amp; scrubbing</string>
+    <string name="tip_live_segments_subtitle">Live vergelijking met je PR en KOM</string>
+    <string name="tip_live_segments_desc">Synchroniseer je favoriete Strava-segmenten voor live aftellen, tijdsverschil en hoogteprofielen tijdens je rit.</string>
+    <string name="tip_live_segments_action">Segmenten bekijken</string>
+    <string name="tip_gear_tracking_title">Automatisch uitrustingsbeheer</string>
+    <string name="tip_gear_tracking_subtitle">Kilometerregistratie per fiets en schoenen</string>
+    <string name="tip_gear_tracking_desc">Koppel sensoren of sporten aan specifieke fietsen en hardloopschoenen. aTrainingTracker telt afstand en slijtage automatisch bij de juiste uitrusting.</string>
+    <string name="tip_gear_tracking_action">Uitrusting beheren</string>
+    <string name="tip_training_zones_title">Fysiologie &amp; trainingszones</string>
+    <string name="tip_training_zones_subtitle">Coggan Power, Karvonen HS &amp; W\'-batterij</string>
+    <string name="tip_training_zones_desc">Profiteer van geavanceerde statistieken zoals Normalized Power (NP), Intensity Factor (IF), TSS en live W\'-batterij. Pas je 7 vermogenszones en hartslagzones aan in je profiel.</string>
+    <string name="tip_training_zones_action">Zones configureren</string>
+    <string name="tip_data_backup_title">Datasoevereiniteit &amp; offline back-up</string>
+    <string name="tip_data_backup_subtitle">Volledige controle zonder verplichte cloudaccounts</string>
+    <string name="tip_data_backup_desc">Alle trainingsgegevens, gps-sporen en sensorwaarden blijven veilig op je apparaat in SQLite en standaard FIT/TCX-bestanden. Maak op elk moment back-ups of gebruik optionele cloud-synchronisatie.</string>
+    <string name="tip_data_backup_action">Back-up &amp; herstel</string>
 </resources>

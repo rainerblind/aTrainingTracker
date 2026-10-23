@@ -37,5 +37,6 @@
     <item name="drawer_tracking_layouts" type="id" />
     <item name="drawer_search_settings" type="id" />
     <item name="drawer_backup_restore" type="id" />
+    <item name="drawer_tips_guide" type="id" />
     <item name="drawer_privacy_policy" type="id" />
 </resources>

@@ -2124,4 +2124,38 @@
     <string name="clear">Limpar</string>
     <string name="select_route">Selecionar rota</string>
     <string name="equipment">Equipamento</string>
+
+    <!-- In-App Feature Discovery & Tips Guide (REQ-UI-432 / ATT-2276) -->
+    <string name="drawer_tips_guide">Dicas e truques</string>
+    <string name="tips_guide_title">Dicas e truques</string>
+    <string name="tips_guide_header_title">Descubra os recursos</string>
+    <string name="tips_guide_header_subtitle">Explore ferramentas avançadas e atalhos desenvolvidos para seu treino.</string>
+    <string name="tip_routes_clustering_title">Rotas favoritas e agrupamento automático</string>
+    <string name="tip_routes_clustering_subtitle">Detecção inteligente de rotas de treino</string>
+    <string name="tip_routes_clustering_desc">O aTrainingTracker analisa seus treinos com GPS e agrupa rotas semelhantes como rotas favoritas. Compare seus desempenhos sem precisar categorizar manualmente.</string>
+    <string name="tip_routes_clustering_action">Ver rotas favoritas</string>
+    <string name="tip_sensors_failover_title">Sensores multiprotocolo e redundância</string>
+    <string name="tip_sensors_failover_subtitle">Alternância perfeita entre ANT+ e Bluetooth LE</string>
+    <string name="tip_sensors_failover_desc">Emparelhe vários sensores de frequência cardíaca, potência ou cadência. Se a conexão cair, o sensor reserva assume imediatamente sem perder dados.</string>
+    <string name="tip_sensors_failover_action">Gerenciar sensores</string>
+    <string name="tip_cockpit_customization_title">Telas do cockpit e campainha de bicicleta</string>
+    <string name="tip_cockpit_customization_subtitle">Grades de telemetria totalmente personalizáveis</string>
+    <string name="tip_cockpit_customization_desc">Configure páginas de telemetria por esporte com métricas em tempo real, altimetria ou mapa. Adicione o botão de campainha para toques simples ou contínuos.</string>
+    <string name="tip_cockpit_customization_action">Configurar telas</string>
+    <string name="tip_live_segments_title">Segmentos ao vivo do Strava e navegação</string>
+    <string name="tip_live_segments_subtitle">Comparação em tempo real com seu recorde e KOM</string>
+    <string name="tip_live_segments_desc">Sincronize seus segmentos favoritos do Strava para acompanhar contagem regressiva, diferença de tempo e perfil altimétrico ao vivo durante o pedal.</string>
+    <string name="tip_live_segments_action">Explorar segmentos</string>
+    <string name="tip_gear_tracking_title">Equipamento e controle de desgaste</string>
+    <string name="tip_gear_tracking_subtitle">Registro de quilometragem por bike e tênis</string>
+    <string name="tip_gear_tracking_desc">Vincule sensores ou esportes a bikes e tênis específicos. O aTrainingTracker calcula automaticamente a quilometragem e o desgaste do equipamento correto.</string>
+    <string name="tip_gear_tracking_action">Gerenciar equipamentos</string>
+    <string name="tip_training_zones_title">Fisiologia e zonas de treino</string>
+    <string name="tip_training_zones_subtitle">Potência Coggan, FC Karvonen e bateria W\'</string>
+    <string name="tip_training_zones_desc">Aproveite métricas esportivas avançadas como Potência Normalizada (NP), Fator de Intensidade (IF), TSS e bateria W\' em tempo real. Configure suas 7 zonas de potência e zonas de FC.</string>
+    <string name="tip_training_zones_action">Configurar zonas</string>
+    <string name="tip_data_backup_title">Soberania dos dados e backup offline</string>
+    <string name="tip_data_backup_subtitle">Controle total sem necessidade de contas na nuvem</string>
+    <string name="tip_data_backup_desc">Todos os treinos, trajetos GPS e registros de sensores ficam protegidos no seu aparelho em SQLite e arquivos FIT/TCX. Crie backups completos ou sincronize opcionalmente com a nuvem.</string>
+    <string name="tip_data_backup_action">Backup e restauração</string>
 </resources>

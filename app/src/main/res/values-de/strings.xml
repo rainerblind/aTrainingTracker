@@ -2211,4 +2211,38 @@
     <string name="clear">Löschen</string>
     <string name="select_route">Route auswählen</string>
     <string name="equipment">Ausrüstung</string>
+
+    <!-- In-App Feature Discovery & Tips Guide (REQ-UI-432 / ATT-2276) -->
+    <string name="drawer_tips_guide">Tipps &amp; Tricks</string>
+    <string name="tips_guide_title">Tipps &amp; Tricks</string>
+    <string name="tips_guide_header_title">Funktionen entdecken</string>
+    <string name="tips_guide_header_subtitle">Entdecke leistungsstarke Funktionen und Abkürzungen für dein Training.</string>
+    <string name="tip_routes_clustering_title">Lieblingsstrecken &amp; Auto-Cluster</string>
+    <string name="tip_routes_clustering_subtitle">Intelligente Erkennung wiederkehrender Strecken</string>
+    <string name="tip_routes_clustering_desc">aTrainingTracker analysiert deine GPS-Workouts automatisch und fasst ähnliche Strecken als Lieblingsstrecken zusammen. Vergleiche deine Leistungen und verfolge deinen Fortschritt ganz ohne manuelles Tagging.</string>
+    <string name="tip_routes_clustering_action">Lieblingsstrecken ansehen</string>
+    <string name="tip_sensors_failover_title">Sensor-Redundanz &amp; Failover</string>
+    <string name="tip_sensors_failover_subtitle">Nahtlose Umschaltung zwischen ANT+ und Bluetooth</string>
+    <string name="tip_sensors_failover_desc">Kopple mehrere Herzfrequenz-, Leistungs- oder Trittfrequenzsensoren gleichzeitig. Bricht ein Sensor ab oder wird die Batterie leer, übernimmt der Backup-Sensor unterbrechungsfrei.</string>
+    <string name="tip_sensors_failover_action">Sensoren verwalten</string>
+    <string name="tip_cockpit_customization_title">Cockpit-Layouts &amp; Fahrradklingel</string>
+    <string name="tip_cockpit_customization_subtitle">Individuell anpassbare Telemetrie-Raster</string>
+    <string name="tip_cockpit_customization_desc">Passe deine Telemetrie-Seiten pro Sportart mit Live-Werten, Höhenprofil oder Karte an. Aktiviere die akustische Fahrradklingel für Einzelläuten oder Dauerton bei Ausfahrten.</string>
+    <string name="tip_cockpit_customization_action">Cockpit anpassen</string>
+    <string name="tip_live_segments_title">Strava Live-Segmente &amp; Scrubbing</string>
+    <string name="tip_live_segments_subtitle">Live-Vergleich gegen Bestzeit und KOM</string>
+    <string name="tip_live_segments_desc">Synchronisiere markierte Strava-Segmente für Live-Countdowns, Zeitrückstand und Höhenprofile während der Fahrt. Scrolle interaktiv durch das Segmentprofil zur Steigungskontrolle.</string>
+    <string name="tip_live_segments_action">Segmente ansehen</string>
+    <string name="tip_gear_tracking_title">Automatische Ausrüstungserfassung</string>
+    <string name="tip_gear_tracking_subtitle">Kilometerzähler für Fahrräder und Laufschuhe</string>
+    <string name="tip_gear_tracking_desc">Verknüpfe Sensoren oder Sportarten mit deinen Fahrrädern und Laufschuhen. aTrainingTracker ordnet Distanz und Verschleiß nach jedem Workout automatisch der richtigen Ausrüstung zu.</string>
+    <string name="tip_gear_tracking_action">Ausrüstung verwalten</string>
+    <string name="tip_training_zones_title">Physiologie &amp; Trainingszonen</string>
+    <string name="tip_training_zones_subtitle">Coggan Power, Karvonen HF &amp; W\'-Batterie</string>
+    <string name="tip_training_zones_desc">Nutze wissenschaftliche Metriken wie Normalized Power (NP), Intensity Factor (IF), TSS und die W\'-Batterie in Echtzeit. Passe deine 7 Leistungszonen und Karvonen-Herzfrequenzzonen im Profil an.</string>
+    <string name="tip_training_zones_action">Trainingszonen anpassen</string>
+    <string name="tip_data_backup_title">Datensouveränität &amp; Lokale Backups</string>
+    <string name="tip_data_backup_subtitle">Volle Kontrolle ohne Cloud-Konto-Zwang</string>
+    <string name="tip_data_backup_desc">Alle Trainingsdaten, GPS-Tracks und Sensorwerte bleiben sicher auf deinem Gerät in SQLite sowie standardisierten FIT/TCX-Dateien. Erstelle jederzeit vollständige Backups oder nutze optionalen Cloud-Sync.</string>
+    <string name="tip_data_backup_action">Sichern &amp; Wiederherstellen</string>
 </resources>

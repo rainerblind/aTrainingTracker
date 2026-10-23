@@ -2125,4 +2125,38 @@
     <string name="clear">Effacer</string>
     <string name="select_route">Sélectionner un itinéraire</string>
     <string name="equipment">Équipement</string>
+
+    <!-- In-App Feature Discovery & Tips Guide (REQ-UI-432 / ATT-2276) -->
+    <string name="drawer_tips_guide">Trucs et astuces</string>
+    <string name="tips_guide_title">Trucs et astuces</string>
+    <string name="tips_guide_header_title">Découvrir les fonctionnalités</string>
+    <string name="tips_guide_header_subtitle">Explorez des outils puissants et des raccourcis conçus pour votre entraînement.</string>
+    <string name="tip_routes_clustering_title">Parcours favoris et regroupement automatique</string>
+    <string name="tip_routes_clustering_subtitle">Détection intelligente des itinéraires d\'entraînement</string>
+    <string name="tip_routes_clustering_desc">aTrainingTracker analyse automatiquement vos entraînements GPS et regroupe les sorties similaires en parcours favoris. Comparez vos performances sans saisie manuelle.</string>
+    <string name="tip_routes_clustering_action">Voir les parcours favoris</string>
+    <string name="tip_sensors_failover_title">Capteurs multiprotocoles et basculement</string>
+    <string name="tip_sensors_failover_subtitle">Bascule transparente entre ANT+ et Bluetooth LE</string>
+    <string name="tip_sensors_failover_desc">Associez plusieurs capteurs cardiaques, de puissance ou de cadence. En cas de perte de signal d\'un capteur, le capteur de secours prend le relais sans interruption.</string>
+    <string name="tip_sensors_failover_action">Gérer les capteurs</string>
+    <string name="tip_cockpit_customization_title">Écrans cockpit et sonnette de vélo</string>
+    <string name="tip_cockpit_customization_subtitle">Grilles de télémétrie entièrement personnalisables</string>
+    <string name="tip_cockpit_customization_desc">Configurez vos pages de télémétrie par sport avec métriques en direct, profil d\'altitude ou carte. Ajoutez le bouton sonnette pour un tintement simple ou continu.</string>
+    <string name="tip_cockpit_customization_action">Configurer les affichages</string>
+    <string name="tip_live_segments_title">Segments en direct Strava et défilement</string>
+    <string name="tip_live_segments_subtitle">Comparaison en direct avec votre record et le KOM</string>
+    <string name="tip_live_segments_desc">Synchronisez vos segments favoris Strava pour afficher le compte à rebours, l\'écart de temps et les profils d\'altitude en temps réel pendant votre sortie.</string>
+    <string name="tip_live_segments_action">Explorer les segments</string>
+    <string name="tip_gear_tracking_title">Gestion automatique de l\'équipement</string>
+    <string name="tip_gear_tracking_subtitle">Suivi des kilomètres par vélo et chaussures</string>
+    <string name="tip_gear_tracking_desc">Associez capteurs ou sports à vos vélos et chaussures. aTrainingTracker affecte automatiquement la distance et l\'usure à l\'équipement adéquat.</string>
+    <string name="tip_gear_tracking_action">Gérer l\'équipement</string>
+    <string name="tip_training_zones_title">Physiologie et zones d\'entraînement</string>
+    <string name="tip_training_zones_subtitle">Puissance Coggan, FC Karvonen et batterie W\'</string>
+    <string name="tip_training_zones_desc">Bénéficiez de métriques avancées telles que la puissance normalisée (NP), l\'Intensity Factor (IF), le TSS et la batterie W\'. Personnalisez vos 7 zones de puissance et zones de FC Karvonen.</string>
+    <string name="tip_training_zones_action">Configurer les zones</string>
+    <string name="tip_data_backup_title">Souveraineté des données et sauvegarde hors ligne</string>
+    <string name="tip_data_backup_subtitle">Contrôle total sans compte cloud obligatoire</string>
+    <string name="tip_data_backup_desc">Toutes vos données d\'entraînement, traces GPS et relevés de capteurs restent stockés sur votre appareil en SQLite et fichiers FIT/TCX. Créez des sauvegardes complètes à tout moment.</string>
+    <string name="tip_data_backup_action">Sauvegarde et restauration</string>
 </resources>

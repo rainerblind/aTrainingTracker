@@ -2326,4 +2326,38 @@
     <string name="clear">Clear</string>
     <string name="select_route">Select route</string>
     <string name="equipment">Equipment</string>
+
+    <!-- In-App Feature Discovery & Tips Guide (REQ-UI-432 / ATT-2276) -->
+    <string name="drawer_tips_guide">Tips &amp; Tricks</string>
+    <string name="tips_guide_title">Tips &amp; Tricks</string>
+    <string name="tips_guide_header_title">Feature Discovery</string>
+    <string name="tips_guide_header_subtitle">Explore powerful tools and shortcuts designed for your training.</string>
+    <string name="tip_routes_clustering_title">Favorite Routes &amp; Auto-Clustering</string>
+    <string name="tip_routes_clustering_subtitle">Intelligent workout route detection</string>
+    <string name="tip_routes_clustering_desc">aTrainingTracker automatically analyzes your GPS workouts and groups similar rides or runs into favorite routes. Compare your past performances and track progression over time without manual tagging.</string>
+    <string name="tip_routes_clustering_action">View Favorite Routes</string>
+    <string name="tip_sensors_failover_title">Multi-Protocol Sensors &amp; Failover</string>
+    <string name="tip_sensors_failover_subtitle">Seamless ANT+ and Bluetooth LE switching</string>
+    <string name="tip_sensors_failover_desc">Pair multiple heart rate, power, or cadence sensors simultaneously. If an active sensor drops connection or its battery dies mid-workout, the backup sensor takes over immediately without data loss.</string>
+    <string name="tip_sensors_failover_action">Manage Sensors</string>
+    <string name="tip_cockpit_customization_title">Cockpit Displays &amp; Bike Bell</string>
+    <string name="tip_cockpit_customization_subtitle">Fully customizable telemetry grids</string>
+    <string name="tip_cockpit_customization_desc">Configure multiple telemetry pages per sport with live metrics, elevation profile, or map. Add the acoustic Bike Bell button for single-tap or continuous ringing on outdoor rides.</string>
+    <string name="tip_cockpit_customization_action">Configure Displays</string>
+    <string name="tip_live_segments_title">Strava Live Segments &amp; Scrubbing</string>
+    <string name="tip_live_segments_subtitle">Live pacing against PR and KOM</string>
+    <string name="tip_live_segments_desc">Synchronize your starred Strava segments for real-time in-ride countdowns, time deltas, and live elevation profiles. Scrub interactively across segment elevation graphs to inspect gradient and distance.</string>
+    <string name="tip_live_segments_action">Explore Segments</string>
+    <string name="tip_gear_tracking_title">Automated Gear &amp; Equipment</string>
+    <string name="tip_gear_tracking_subtitle">Distance tracking per bike and shoes</string>
+    <string name="tip_gear_tracking_desc">Link paired sensors or default sport types to specific bikes and shoes. aTrainingTracker automatically credits distance and wear to the right equipment after every workout.</string>
+    <string name="tip_gear_tracking_action">Manage Equipment</string>
+    <string name="tip_training_zones_title">Physiology &amp; Training Zones</string>
+    <string name="tip_training_zones_subtitle">Coggan Power, Karvonen HR &amp; W\' Balance</string>
+    <string name="tip_training_zones_desc">Leverage advanced athletic metrics including Normalized Power (NP), Intensity Factor (IF), TSS, and real-time W\' balance depletion. Customize 7 power zones and Karvonen heart rate zones in your profile.</string>
+    <string name="tip_training_zones_action">Configure Zones</string>
+    <string name="tip_data_backup_title">Data Sovereignty &amp; Offline Backup</string>
+    <string name="tip_data_backup_subtitle">Full control without mandatory cloud accounts</string>
+    <string name="tip_data_backup_desc">All workout telemetry, GPS tracks, and sensor records stay securely on your device in SQLite and standard FIT/TCX files. Create full offline backups anytime or configure optional sync to Google Drive or Dropbox.</string>
+    <string name="tip_data_backup_action">Backup &amp; Restore</string>
 </resources>

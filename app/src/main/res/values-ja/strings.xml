@@ -2105,4 +2105,38 @@
     <string name="clear">クリア</string>
     <string name="select_route">ルートを選択</string>
     <string name="equipment">装備</string>
+
+    <!-- In-App Feature Discovery & Tips Guide (REQ-UI-432 / ATT-2276) -->
+    <string name="drawer_tips_guide">ヒントとコツ</string>
+    <string name="tips_guide_title">ヒントとコツ</string>
+    <string name="tips_guide_header_title">機能の紹介</string>
+    <string name="tips_guide_header_subtitle">トレーニング向けに設計された強力な機能とショートカットを確認できます。</string>
+    <string name="tip_routes_clustering_title">お気に入りルートと自動クラスタリング</string>
+    <string name="tip_routes_clustering_subtitle">定期的なトレーニングルートの自動識別</string>
+    <string name="tip_routes_clustering_desc">aTrainingTrackerはGPS記録を自動分析し、類似ルートをお気に入りルートとしてまとめます。手動タグ付け不要で過去の記録と比較できます。</string>
+    <string name="tip_routes_clustering_action">お気に入りルートを見る</string>
+    <string name="tip_sensors_failover_title">マルチプロトコルセンサーとフェイルオーバー</string>
+    <string name="tip_sensors_failover_subtitle">ANT+とBluetooth LEのシームレスな切替</string>
+    <string name="tip_sensors_failover_desc">心拍、パワー、ケイデンスセンサーを複数ペアリング可能。接続が切れた場合でもバックアップセンサーへ即座に引き継がれます。</string>
+    <string name="tip_sensors_failover_action">センサーを管理</string>
+    <string name="tip_cockpit_customization_title">コックピット表示と自転車ベル</string>
+    <string name="tip_cockpit_customization_subtitle">自由にカスタマイズ可能な計測タイル</string>
+    <string name="tip_cockpit_customization_desc">スポーツごとにライブ数値、高度プロファイル、地図などの画面を構成できます。サイクリング中に鳴らせる自転車ベル機能も追加可能です。</string>
+    <string name="tip_cockpit_customization_action">表示を設定</string>
+    <string name="tip_live_segments_title">Strava Live Segmentsと標高スクラブ</string>
+    <string name="tip_live_segments_subtitle">自己ベストやKOMとのリアルタイム比較</string>
+    <string name="tip_live_segments_desc">お気に入りのStravaセグメントを同期し、走行中のタイム差カウントダウンや標高グラフを表示。勾配や距離を指でなぞって確認できます。</string>
+    <string name="tip_live_segments_action">セグメントを見る</string>
+    <string name="tip_gear_tracking_title">ギアと機材の自動管理</string>
+    <string name="tip_gear_tracking_subtitle">バイクやシューズごとの走行距離記録</string>
+    <string name="tip_gear_tracking_desc">センサーやスポーツ種目を特定のバイクやシューズに関連付け可能。トレーニング後の走行距離と摩耗を自動的に機材へ反映します。</string>
+    <string name="tip_gear_tracking_action">機材を管理</string>
+    <string name="tip_training_zones_title">生理学的指標とトレーニングゾーン</string>
+    <string name="tip_training_zones_subtitle">Cogganパワー、Karvonen心拍、W\'バッテリー</string>
+    <string name="tip_training_zones_desc">Normalized Power (NP)、Intensity Factor (IF)、TSS、リアルタイムW\'バッテリー残量などの高度な指標を活用。7段階パワーゾーンや心拍ゾーンを設定できます。</string>
+    <string name="tip_training_zones_action">ゾーンを設定</string>
+    <string name="tip_data_backup_title">データ主権とオフラインバックアップ</string>
+    <string name="tip_data_backup_subtitle">クラウド登録不要、すべてのデータを手元で保持</string>
+    <string name="tip_data_backup_desc">すべてのトレーニングデータやGPS記録は、端末内のSQLiteや標準FIT/TCXファイルに安全に保管されます。完全なオフラインバックアップや、Google Drive/Dropbox同期も利用可能です。</string>
+    <string name="tip_data_backup_action">バックアップと復元</string>
 </resources>

@@ -122,7 +122,7 @@ class NavigationDrawerStateTest {
         assertEquals(R.drawable.ic_equipment_combined, equipmentItem.iconRes)
         assertEquals(R.string.equipment_management_title, equipmentItem.titleRes)
 
-        // Verify Settings ordering: Units, Display, Tracking Layouts, Sport Types, Backup & Restore, Privacy Policy, Advanced Tuning (REQ-UI-422.2)
+        // Verify Settings ordering: Units, Display, Tracking Layouts, Sport Types, Backup & Restore, Tips & Tricks, Privacy Policy, Advanced Tuning (REQ-UI-422.2, REQ-UI-432)
         val settingsIds = settingsGroup.items.map { it.id }
         assertEquals(
             listOf(
@@ -131,6 +131,7 @@ class NavigationDrawerStateTest {
                 R.id.drawer_tracking_layouts,
                 R.id.drawer_sport_types,
                 R.id.drawer_backup_restore,
+                R.id.drawer_tips_guide,
                 R.id.drawer_privacy_policy,
                 R.id.drawer_advanced_tuning
             ),
@@ -142,13 +143,17 @@ class NavigationDrawerStateTest {
         assertEquals(R.drawable.ic_sports_combined, sportTypesItem.iconRes)
         assertEquals(R.string.sport_types, sportTypesItem.titleRes)
 
+        val tipsGuideItem = settingsGroup.items.first { it.id == R.id.drawer_tips_guide }
+        assertEquals(R.drawable.ic_tips_and_updates, tipsGuideItem.iconRes)
+        assertEquals(R.string.drawer_tips_guide, tipsGuideItem.titleRes)
+
         // Verify default visible destination items across non-collapsible groups = 9 (4 + 5) (REQ-UI-405.3, REQ-UI-422.5)
         val defaultVisibleCount = groups.filter { !it.collapsible }.sumOf { it.items.size }
         assertEquals("Default visible destination items when secondary groups are collapsed must be 9", 9, defaultVisibleCount)
 
         val allItems = groups.flatMap { it.items.map { item -> item.id } }
-        assertEquals("Navigation drawer must contain 22 total items across 5 groups", 22, allItems.size)
-        assertEquals("All 22 navigation items must have distinct IDs", 22, allItems.toSet().size)
+        assertEquals("Navigation drawer must contain 23 total items across 5 groups", 23, allItems.size)
+        assertEquals("All 23 navigation items must have distinct IDs", 23, allItems.toSet().size)
         org.junit.Assert.assertFalse(
             "drawer_search_settings must be removed from drawer destinations",
             allItems.contains(R.id.drawer_search_settings)
@@ -186,6 +191,7 @@ class NavigationDrawerStateTest {
         org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(onlineGroup, R.id.drawer_strava))
         org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(settingsGroup, R.id.drawer_advanced_tuning))
         org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(settingsGroup, R.id.drawer_backup_restore))
+        org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(settingsGroup, R.id.drawer_tips_guide))
 
         // Sport Types in Settings (REQ-UI-422.4)
         org.junit.Assert.assertTrue(isDrawerGroupInitiallyExpanded(settingsGroup, R.id.drawer_sport_types))
