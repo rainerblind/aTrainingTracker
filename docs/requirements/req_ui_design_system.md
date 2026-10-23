@@ -12414,25 +12414,26 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • `TipsGuideScreen` SHALL be hosted in Compose with a standard `Scaffold`, `TopAppBar` (title `R.string.tips_guide_title`), back navigation button (`onNavigateBack`), and scrollable `LazyColumn`.
 • The header block SHALL display an introductory title (`R.string.tips_guide_header_title`) and descriptive subtitle (`R.string.tips_guide_header_subtitle`).
 • Tips SHALL be rendered as expandable Material 3 cards (`ElevatedCard`, `RoundedCornerShape(12.dp)`), containing an icon/badge, title, subtitle, expandable descriptive body, and an action button for deep linking.
-4. *Seven Curated Feature Discovery Tips (`REQ-UI-432.4`)*:
+4. *Eight Curated Feature Discovery Tips (`REQ-UI-432.4`)*:
 • Tip 1 (Favorite Routes): Title `tip_routes_clustering_title`, subtitle `tip_routes_clustering_subtitle`, description `tip_routes_clustering_desc`, action button `tip_routes_clustering_action` ("View Favorite Routes") navigating to `NavRoutes.LOCATIONS`.
 • Tip 2 (Sensor Failover): Title `tip_sensors_failover_title`, subtitle `tip_sensors_failover_subtitle`, description `tip_sensors_failover_desc`, action button `tip_sensors_failover_action` ("Manage Sensors") navigating to `NavRoutes.SENSORS`.
-• Tip 3 (Cockpit Customization): Title `tip_cockpit_customization_title`, subtitle `tip_cockpit_customization_subtitle`, description `tip_cockpit_customization_desc`, action button `tip_cockpit_customization_action` ("Configure Displays") navigating to `NavRoutes.SPORT_TYPES`.
+• Tip 3 (Cockpit Customization): Title `tip_cockpit_customization_title`, subtitle `tip_cockpit_customization_subtitle`, description `tip_cockpit_customization_desc`, icon `R.drawable.ic_table_edit`, action button `tip_cockpit_customization_action` ("Configure Displays") navigating to `NavRoutes.TRACKING_LAYOUTS` (triggering `activity.navigateToDrawerItem(R.id.drawer_tracking_layouts)` to open `ActivityTypeSelectionDialog`).
 • Tip 4 (Strava Live Segments): Title `tip_live_segments_title`, subtitle `tip_live_segments_subtitle`, description `tip_live_segments_desc`, action button `tip_live_segments_action` ("Explore Segments") navigating to `NavRoutes.SEGMENTS`.
 • Tip 5 (Gear & Equipment): Title `tip_gear_tracking_title`, subtitle `tip_gear_tracking_subtitle`, description `tip_gear_tracking_desc`, action button `tip_gear_tracking_action` ("Manage Equipment") navigating to `NavRoutes.EQUIPMENT`.
 • Tip 6 (Physiology & Zones): Title `tip_training_zones_title`, subtitle `tip_training_zones_subtitle`, description `tip_training_zones_desc`, action button `tip_training_zones_action` ("Configure Zones") navigating to `NavRoutes.trainingZones()`.
 • Tip 7 (Data Sovereignty & Offline Backup): Title `tip_data_backup_title`, subtitle `tip_data_backup_subtitle`, description `tip_data_backup_desc`, action button `tip_data_backup_action` ("Backup & Restore") navigating to `NavRoutes.BACKUP_RESTORE`.
+• Tip 8 (Custom Sport Types): Title `tip_sport_types_title`, subtitle `tip_sport_types_subtitle`, description `tip_sport_types_desc`, icon `R.drawable.ic_sports_combined`, action button `tip_sport_types_action` ("Manage Sport Types") navigating to `NavRoutes.SPORT_TYPES`.
 5. *Non-Intrusive & Zero-Asset-Bloat Invariant (`REQ-UI-432.5`)*:
 • The Tips Guide SHALL be 100% opt-in: no automatic full-screen dialogs, blocking tutorial overlays, or modal walkthrough popups on app launch.
 • Visual graphics SHALL rely entirely on existing Android vector drawables and Material 3 theme-aware composable styling; no raster bitmaps (PNG/JPG) or animated GIF/Lottie files SHALL be packaged.
 6. *9-Language Localization Parity (`REQ-UI-432.6`)*:
-• All 32 string resources (`drawer_tips_guide`, `tips_guide_title`, `tips_guide_header_title`, `tips_guide_header_subtitle`, and the 7 tip titles, subtitles, descriptions, and action button labels) SHALL maintain 100% translation coverage across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+• All 36 string resources (`drawer_tips_guide`, `tips_guide_title`, `tips_guide_header_title`, `tips_guide_header_subtitle`, and the 8 tip titles, subtitles, descriptions, and action button labels) SHALL maintain 100% translation coverage across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Amends `REQ-UI-422.3` (*Drawer Item Count & Settings Consolidation*) and `REQ-UI-159` (*Single-Activity Navigation*); introduces `REQ-UI-432` (*In-App Feature Discovery & Tips Guide*).
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (commit `04b6b158`, ATT-3851, 5-group drawer), Sprint 2026-41.2 (commit `4623bb6f`, ATT-3928, collapsible groups), and Sprint 2026-42.1 (commit `30954b03`, ATT-4289, 22 destinations).
-3. *Root Reason for Existing Formulation*: `REQ-UI-422` capped destination count to 22 when Sport Types was relocated to Settings to avoid visual crowding and enforce the collapsible accordion pattern.
-4. *Preservation of Core Invariants*: The 5 category hubs, non-collapsible 9 visible rows (`drawer__training` [4] + `drawer__maps` [5] = 9), `drawer_advanced_tuning` terminal positioning, type-safe `NavRoutes` architecture, and 100% clean-room test pass rate are strictly preserved.
+1. *Original Requirement ID & Target*: Amends `REQ-UI-432.4` (*Curated Feature Discovery Tips*) and `REQ-UI-432.6` (*9-Language Localization Parity*), refining `REQ-UI-432`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-43.9 via commit `99f66b16e` (`ATT-2276`, "Implement In-App Feature Discovery and Tips Guide").
+3. *Root Reason for Existing Formulation*: Cockpit customization was initially wired to `NavRoutes.SPORT_TYPES` with `ic_display_settings` because cockpit layouts are partitioned by sport type, leaving custom sport types without its own tip card and incorrectly routing cockpit configuration to the sport types manager instead of the cockpit layouts dialog (`R.id.drawer_tracking_layouts`).
+4. *Preservation of Core Invariants*: Opt-in non-intrusive discovery (`REQ-UI-432.5`), zero raster asset bloat, non-collapsible drawer density of 9 visible items preserved, and 100% clean-room test pass rate.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete opening the navigation drawer and expanding the Settings group,
@@ -12443,13 +12444,16 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* the drawer closes and `TipsGuideScreen` is displayed at `NavRoutes.TIPS_GUIDE`.
 • *Given* an athlete viewing `TipsGuideScreen`,
 • *When* scrolling through the tip list,
-• *Then* 7 curated feature cards are displayed with titles, subtitles, expandable descriptions, and action buttons.
-• *Given* an athlete tapping an action button on a tip card (e.g., "View Favorite Routes" or "Manage Sensors"),
+• *Then* 8 curated feature cards are displayed with titles, subtitles, expandable descriptions, and action buttons.
+• *Given* an athlete tapping the action button on the Cockpit Customization tip card,
 • *When* clicked,
-• *Then* the app navigates directly to the corresponding destination (`NavRoutes.LOCATIONS`, `NavRoutes.SENSORS`, etc.).
+• *Then* the app triggers `activity.navigateToDrawerItem(R.id.drawer_tracking_layouts)`, opening the `ActivityTypeSelectionDialog`.
+• *Given* an athlete tapping the action button on the Sport Types tip card,
+• *When* clicked,
+• *Then* the app navigates directly to `NavRoutes.SPORT_TYPES`.
 • *Given* the 9 supported application locales,
 • *When* strings are audited via `TranslationParityTest`,
-• *Then* 100% parity is verified with zero missing entries and zero format specifier mismatches.
+• *Then* 100% parity is verified with zero missing entries and zero format specifier mismatches across all 36 tip guide string resources.
 
 **Invariants**: Zero auto-prompting popups, zero background service disruption, non-collapsible drawer density remains 9, and 100% clean-room test pass rate.
 

@@ -69,6 +69,7 @@ class SingleActivityNavigationTest {
         assertEquals("training_zones", NavRoutes.TRAINING_ZONES)
         assertEquals("backup_restore", NavRoutes.BACKUP_RESTORE)
         assertEquals("tips_guide", NavRoutes.TIPS_GUIDE)
+        assertEquals("tracking_layouts", NavRoutes.TRACKING_LAYOUTS)
     }
 
     @Test
@@ -119,6 +120,7 @@ class SingleActivityNavigationTest {
         assertEquals(R.id.drawer_backup_restore, NavRoutes.toDrawerItemId(NavRoutes.BACKUP_RESTORE))
         assertEquals(R.id.drawer_advanced_tuning, NavRoutes.toDrawerItemId(NavRoutes.ADVANCED_SETTINGS))
         assertEquals(R.id.drawer_tips_guide, NavRoutes.toDrawerItemId(NavRoutes.TIPS_GUIDE))
+        assertEquals(R.id.drawer_tracking_layouts, NavRoutes.toDrawerItemId(NavRoutes.TRACKING_LAYOUTS))
 
         // Unknown route falls back to start tracking
         assertEquals(R.id.drawer_start_tracking, NavRoutes.toDrawerItemId("unknown_route"))

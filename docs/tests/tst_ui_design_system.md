@@ -6762,10 +6762,10 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-UI-396.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate across the full project test suite.
 
-### TST-UI-397: **In-App Feature Discovery & Tips Guide, Navigation Drawer Integration & 9-Language Parity Verification Suite** [In-app feature discovery destination 'tips_guide' hosted in single-activity architecture, drawer integration under collapsible Settings group (23 total destinations, 9 non-collapsible default visible rows, advanced tuning terminal position preserved), 7 curated tips with deep-link navigation actions, zero raster asset bloat, 100% 9-language localization parity across all 32 string resources, and clean-room unit test pass rate.]
+### TST-UI-397: **In-App Feature Discovery & Tips Guide, Navigation Drawer Integration & 9-Language Parity Verification Suite** [In-app feature discovery destination 'tips_guide' hosted in single-activity architecture, drawer integration under collapsible Settings group (23 total destinations, 9 non-collapsible default visible rows, advanced tuning terminal position preserved), 8 curated tips with deep-link navigation actions, zero raster asset bloat, 100% 9-language localization parity across all 36 string resources, and clean-room unit test pass rate.]
 - **Requirement(s)**: `REQ-UI-432`
 - **Component**: **In-App Feature Discovery & Tips Guide Verification Suite**
-- **Jira**: ``ATT-2276``
+- **Jira**: ``ATT-2276``, ``ATT-4775``
 - **Test Description**:
   1. *NavRoutes Route and Drawer ID Bidirectional Mapping Unit Test (`TST-UI-397.1`, `SingleActivityNavigationTest.kt`)*:
   • Verify `NavRoutes.TIPS_GUIDE == "tips_guide"`.
@@ -6779,12 +6779,14 @@
   • Verify default visible count across non-collapsible groups strictly remains 9.
   • Verify `drawer_tips_guide` icon is `R.drawable.ic_tips_and_updates` and title is `R.string.drawer_tips_guide`.
   3. *TipsGuideScreen Model, Expandable State & Deep-Link Dispatch Unit/Contract Test (`TST-UI-397.3`, `TipsGuideScreenContractTest.kt`)*:
-  • Verify data model defines exactly 7 curated tips with respective title, subtitle, description, icon, and route targets.
-  • Verify all 7 deep-link action callbacks (`onNavigateToLocations`, `onNavigateToSensors`, `onNavigateToDisplays`, `onNavigateToSegments`, `onNavigateToEquipment`, `onNavigateToZones`, `onNavigateToBackup`) dispatch cleanly when triggered.
+  • Verify data model defines exactly 8 curated tips with respective title, subtitle, description, icon, and route targets.
+  • Verify `cockpit_customization` uses `R.drawable.ic_table_edit` and `NavRoutes.TRACKING_LAYOUTS`.
+  • Verify `sport_types` uses `R.drawable.ic_sports_combined` and `NavRoutes.SPORT_TYPES`.
+  • Verify all 8 deep-link action callbacks (`onNavigateToLocations`, `onNavigateToSensors`, `onNavigateToCockpitLayouts`, `onNavigateToSegments`, `onNavigateToEquipment`, `onNavigateToZones`, `onNavigateToBackup`, `onNavigateToSportTypes`) dispatch cleanly when triggered.
   4. *9-Language Localization & Format Specifier Parity Test (`TST-UI-397.4`, `TranslationParityTest.kt`)*:
-  • Verify all 32 string resources are defined across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  • Verify all 36 string resources are defined across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   • Verify 100% translation coverage, matching positional format specifiers, and literal `\n` linebreaks.
   5. *Clean-Room Full Suite Regression Execution (`TST-UI-397.5`)*:
-  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.localization.*"` and verify 100% pass rate.
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.localization.*" --tests "com.atrainingtracker.trainingtracker.ui.help.*"` and verify 100% pass rate.
 
 

@@ -573,6 +573,7 @@ fun ATrainingTrackerApp(
                                 NavRoutes.LOCATIONS -> activity.navigateToDrawerItem(R.id.drawer_my_locations)
                                 NavRoutes.SENSORS -> activity.navigateToDrawerItem(R.id.drawer_my_sensors)
                                 NavRoutes.SPORT_TYPES -> activity.navigateToDrawerItem(R.id.drawer_sport_types)
+                                NavRoutes.TRACKING_LAYOUTS -> activity.navigateToDrawerItem(R.id.drawer_tracking_layouts)
                                 NavRoutes.SEGMENTS -> activity.navigateToDrawerItem(R.id.drawer_segments)
                                 NavRoutes.EQUIPMENT -> activity.navigateToDrawerItem(R.id.drawer_equipment)
                                 NavRoutes.BACKUP_RESTORE -> activity.navigateToDrawerItem(R.id.drawer_backup_restore)
