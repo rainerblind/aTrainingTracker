@@ -326,4 +326,9 @@ object TTColor {
     val PmcFreshGreen = Color(0xFF2E7D32)
     val PmcOptimalBlue = Color(0xFF1565C0)
     val PmcCautionOrange = Color(0xFFEF6C00)
+
+    // Period Stacked Bar Sport Palette (REQ-PER-018.4, ATT-4478)
+    val BikeSportBarColor = Color(0xFF1E88E5)
+    val RunSportBarColor = Color(0xFFFF7043)
+    val OtherSportBarColor = Color(0xFF26A69A)
 }

@@ -85,6 +85,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Sub-Entity Coordinate Space Normalization (Local vs. Global Domain)**:
   * Whenever sub-entity segments, climbs, or intervals are displayed in an inspection chart (e.g. `ClimbDetailSheet`, `SegmentDetailSheet`), their distance domain coordinates MUST be normalized to the entity's local length ($[0, \text{length}]$) rather than inheriting the parent route's global coordinate space ($[0, \text{totalRouteDistance}]$).
   * Passing global route coordinates to sub-entity elevation profile charts squishes the entity into a tiny sliver at the far edge and leaves the chart mostly blank (ATT-3053 / ATT-3105).
+* **Stacked Multi-Chart Horizontal Plot Width Alignment Invariant (`Rule 64` — ATT-2145 / ATT-4774)**:
+  * Whenever multiple charts are stacked vertically in a shared inspection view (`MapDetailLayout`, `WorkoutSummary`) with a synchronized X-axis or scrubbing cursor (`ElevationProfile`, `SPEED/PACE`, `HEART_RATE`, `POWER`, `W_PRIME_BAL`), **all** stacked charts **MUST** share the exact same horizontal plot bounds (left `startPadding = 50.dp` AND right plot edge) in both Portrait and Landscape orientations.
+  * If a subset of charts (`HEART_RATE`, `POWER`) uses a `0.72f` / `0.28f` horizontal split in Landscape mode to dock `AlignedMarginalZoneDistribution` on the right, sibling charts (`ElevationProfile`, `SPEED/PACE`, `W_PRIME_BAL`) must align their right plot edge to the identical `0.72f` horizontal boundary so X-axis ticks and the vertical scrubbing cursor line up 1:1 across all stacked charts.
 
 ### 2.2 Touch, Pan & Gesture Interactions
 1. **Lifecycle Key Stability**:

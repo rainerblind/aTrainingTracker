@@ -83,11 +83,11 @@ enum class PeriodBarMetric {
 }
 
 /**
- * Sport color palette for stacked bar segments.
+ * Sport color palette for stacked bar segments (delegated to [com.atrainingtracker.trainingtracker.ui.theme.TTColor]).
  */
-val BikeSportBarColor = Color(0xFF1E88E5)
-val RunSportBarColor = Color(0xFFFF7043)
-val OtherSportBarColor = Color(0xFF26A69A)
+val BikeSportBarColor = com.atrainingtracker.trainingtracker.ui.theme.TTColor.BikeSportBarColor
+val RunSportBarColor = com.atrainingtracker.trainingtracker.ui.theme.TTColor.RunSportBarColor
+val OtherSportBarColor = com.atrainingtracker.trainingtracker.ui.theme.TTColor.OtherSportBarColor
 
 /**
  * Internal segment representing a sport type contribution to a period bar.
