@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `STP`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 79
+**Total Requirements**: 80
 
 ---
 
@@ -1894,8 +1894,19 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Right-pedal telemetry contract `REQ-UI-377.1`, zero SQLite schema migrations, and 100% clean-room test pass rate.
 
-### REQ-TRK-039: Tracking Subsystem Robustness, Resource Lifecycle & Rate-Limited Error Telemetry Hygiene [Eliminate zero-duration NaN lap speeds and empty sport list crashes, cache device and sport UI names, prevent notification resurrection after stop, rate-limit failure logging, and ensure leak-free lifecycle cleanup.]
-- **Tests**: isPaused()`) before mutating `mTrackingAndSearchingNotificationBuilder` or invoking `mNotificationManager.notify()`, preventing late background sampling ticks from resurrecting dismissed notifications after tracking has stopped.
+### REQ-TRK-039: Tracking Subsystem Robustness, Resource Lifecycle & Rate-Limited Error Telemetry Hygiene [Verified]
+- **Tests**: `TST-TRK-039`
+- **Implementation**: `BANALService.java`, `MyDevice.java`, `TrackerService.java`, `TrainingApplication.java`, `ClockDevice.java`, `DeviceManager.java`, `AltitudeFromPressureDevice.java`, `BatterySaverController.kt`
+- **Rationale**: The application tracking and sensor subsystem SHALL enforce robust defensive numerics, lifecycle-aware notification gating, rate-limited failure telemetry, cache-backed scheduler efficiency, and leak-free resource teardown across tracking engines (`BANALService`, `MyDevice`, `TrackerService`, `TrainingApplication`, `ClockDevice`, `DeviceManager`, `AltitudeFromPressureDevice`, `BatterySaverController`) (ATT-4032, extending `REQ-TRK-027` and `REQ-TRK-029`).
+- **Description**:
+1. *Defensive Numerics & List Boundary Hardening (`REQ-TRK-039.1`)*:
+• In `BANALService.newLap`, the system SHALL guard lap speed calculation against zero or negative duration (`lapTime_s > 0 ? (lapDistance / lapTime_s) : 0.0`), strictly preventing `Double.NaN` and `Double.POSITIVE_INFINITY`.
+• In `BANALService.getSportTypeId(avgSpd)`, the system SHALL verify `!sportTypeIds.isEmpty()` before accessing `sportTypeIds.get(0)`, returning a safe fallback default sport ID when the queried sport list is empty.
+2. *Scheduler Thread SQLite Overhead Elimination & Caching (`REQ-TRK-039.2`)*:
+• In `MyDevice.java`, the device name SHALL be cached in memory (`mCachedDeviceName`) upon resolution or mutation, eliminating repeated synchronous SQLite reads on the 1 Hz sensor sampling tick from `SensorData.getDeviceName()`.
+• In `TrackerService.java`, the active sport UI name SHALL be cached keyed by sport ID, eliminating synchronous SQLite queries to `SportTypeDatabaseManager.getUIName` on every 1 Hz tracking tick.
+3. *Notification Lifecycle Gating & Resurrection Prevention (`REQ-TRK-039.3`)*:
+• In `TrainingApplication.updateTimeAndDistanceToNotification`, the system SHALL verify that tracking is currently active or paused (`isTracking() || isPaused()`) before mutating `mTrackingAndSearchingNotificationBuilder` or invoking `mNotificationManager.notify()`, preventing late background sampling ticks from resurrecting dismissed notifications after tracking has stopped.
 4. *Rate-Limited Telemetry Logging & Clock Monotonicity (`REQ-TRK-039.4`)*:
 • In `TrackerService.tracker` and `ClockDevice.ClockTimeTask`, catch-all exception logging SHALL enforce rate-limiting using a burst-then-interval policy (burst up to 3 consecutive logs, then throttled to every 60th occurrence), preventing logcat flooding (~3600 logs/hour) during persistent errors while preserving exception isolation.
 • `ClockDevice` timer ticks SHALL be anchored to monotonic elapsed real time (`SystemClock.elapsedRealtime`) to prevent timer tick drift over extended sessions.
@@ -1933,12 +1944,50 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* the coroutine scope is cancelled.
 
 **Invariants**: Zero regression in tracking accuracy, database recording, and 100% clean-room test pass rate.
-- **Rationale**: The application tracking and sensor subsystem SHALL enforce robust defensive numerics, lifecycle-aware notification gating, rate-limited failure telemetry, cache-backed scheduler efficiency, and leak-free resource teardown across tracking engines (`BANALService`, `MyDevice`, `TrackerService`, `TrainingApplication`, `ClockDevice`, `DeviceManager`, `AltitudeFromPressureDevice`, `BatterySaverController`) (ATT-4032, extending `REQ-TRK-027` and `REQ-TRK-029`):
-1. *Defensive Numerics & List Boundary Hardening (`REQ-TRK-039.1`)*:
-• In `BANALService.newLap`, the system SHALL guard lap speed calculation against zero or negative duration (`lapTime_s > 0 ? (lapDistance / lapTime_s) : 0.0`), strictly preventing `Double.NaN` and `Double.POSITIVE_INFINITY`.
-• In `BANALService.getSportTypeId(avgSpd)`, the system SHALL verify `!sportTypeIds.isEmpty()` before accessing `sportTypeIds.get(0)`, returning a safe fallback default sport ID when the queried sport list is empty.
-2. *Scheduler Thread SQLite Overhead Elimination & Caching (`REQ-TRK-039.2`)*:
-• In `MyDevice.java`, the device name SHALL be cached in memory (`mCachedDeviceName`) upon resolution or mutation, eliminating repeated synchronous SQLite reads on the 1 Hz sensor sampling tick from `SensorData.getDeviceName()`.
-• In `TrackerService.java`, the active sport UI name SHALL be cached keyed by sport ID, eliminating synchronous SQLite queries to `SportTypeDatabaseManager.getUIName` on every 1 Hz tracking tick.
-3. *Notification Lifecycle Gating & Resurrection Prevention (`REQ-TRK-039.3`)*:
-• In `TrainingApplication.updateTimeAndDistanceToNotification`, the system SHALL verify that tracking is currently active or paused (`isTracking()
+
+### REQ-TRK-040: Landscape Cockpit Dual-Pane Layout, Widescreen Sensor Grid & Sub-Pane Overlay Docking [Verified]
+- **Tests**: `TST-TRK-040` | **Tickets**: `ATT-52`
+- **Implementation**: `SensorGridScreen.kt`, `SensorFieldView.kt`, `TrackingTabsScreen.kt`, `MainActivityWithNavigation.kt`
+- **Rationale**: The tracking cockpit SHALL support landscape device orientation with a responsive dual-pane layout when maps are active, a full-width widescreen grid when maps are disabled, sub-sheet docking within the map pane to prevent telemetry masking, and strict adherence to the athlete's portrait lock preference (ATT-52, ATT-2144):
+1. *Orientation Adaptation & Preference Gating (`REQ-TRK-040.1`)*:
+• The Cockpit SHALL adapt dynamically to `Configuration.ORIENTATION_LANDSCAPE` via `LocalConfiguration.current.orientation`.
+• When *"Hochformat erzwingen"* (`forcePortrait`) is enabled in Display Settings (`SettingsDataStore` / `TrainingApplication.forcePortrait()`), the screen SHALL remain locked in portrait mode (`ActivityInfo.SCREEN_ORIENTATION_PORTRAIT`), preventing automatic rotation.
+2. *Dual-Pane Map & Telemetry Split Layout (`REQ-TRK-040.2`)*:
+• When `showMap == true` in landscape mode, `SensorGridScreen` SHALL render a horizontal split layout (`Row(Modifier.fillMaxSize())`) allocating equal 50/50 flexible width (`weight(1f)`) between telemetry and map panes.
+• The left pane SHALL display configured sensor fields in their regular rows/columns, bounded within the viewport and scrolling vertically if exceeding available screen height.
+• The right pane SHALL host the interactive `TrackingMapContainer` and `ElevationProfile`.
+3. *Sub-Pane Sheet Docking (`REQ-TRK-040.3`)*:
+• When a Live Segment (`LiveSegmentSheet`) or ClimbPro (`LiveClimbSheet`) sheet is active in landscape mode with map enabled, the bottom sheet container SHALL dock exclusively within the right (map) pane.
+• Crucial Invariant: The left telemetry pane (Speed, HR, Power, Cadence, etc.) SHALL remain 100% visible, unoccluded, and interactive at all times.
+4. *Widescreen Sensor Grid (`REQ-TRK-040.4`)*:
+• When `showMap == false` in landscape mode, the sensor grid SHALL occupy the entire widescreen canvas (`fillMaxSize()`).
+• Grid cells SHALL expand horizontally with proportional padding, rendering scalable high-contrast numerals (`SensorFieldView` view sizes `XSMALL` through `XXXHUGE`) optimized for glanceability.
+5. *Configuration Mode Operability & Ambient Overlays (`REQ-TRK-040.5`)*:
+• In `ScreenMode.CONFIGURATION`, sensor field editing, row/col addition, deletion, and pick-and-place reordering SHALL remain fully functional in landscape orientation.
+• Ambient overlays (`TurnPromptBanner`, `ForkDecisionCard`, `ReturnNavigationHud`, `AutoPauseHudBanner`) SHALL remain centered and elevated above the active tracking viewport without displacing pane allocations.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-040` under Epic `ATT-2144` (*Landscape Mode*), complementing `REQ-UI-358` (*Cockpit Viewport Allocation*), `REQ-UI-359` (*Live Segment/Climb Bottom Sheet*), and `REQ-SET-052` (*Display Settings*). Targets `SensorGridScreen.kt`, `SensorFieldView.kt`, `TrackingTabsScreen.kt`, and `MainActivityWithNavigation.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-52`, Sprint `2026-43.9`. Extends previous portrait-only viewport bounds (`f48e24c7`, `ATT-3343`) and full-screen bottom sheet scaffold (`69e4f1a2`, `ATT-3341`).
+3. *Root Reason for Existing Formulation*: Cockpit layout was originally designed exclusively for vertical portrait viewports. Mounting smartphones on aero handlebars, out-front bike mounts, and indoor smart trainers requires a horizontal layout that avoids compressing sensor cells or occluding telemetry during climb and segment alerts.
+4. *Preservation of Core Invariants*: 100% byte-for-byte portrait layout fidelity, `forcePortrait` setting enforcement, zero callback suppression (Rule 34), and 100% test pass rate remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active cockpit with map enabled (`showMap == true`),
+• *When* the device is rotated to landscape orientation,
+• *Then* `SensorGridScreen` splits into a dual-pane horizontal row with sensor fields on the left (50%) and the map on the right (50%).
+• *Given* an active cockpit with map disabled (`showMap == false`),
+• *When* the device is rotated to landscape orientation,
+• *Then* the sensor grid spans the full screen width with scalable numerals.
+• *Given* an athlete riding in landscape mode with map active,
+• *When* approaching a Live Segment or ClimbPro hill,
+• *Then* the bottom sheet displays exclusively within the right pane, keeping left telemetry values permanently visible.
+• *Given* *"Hochformat erzwingen"* is toggled ON in Display Settings,
+• *When* the device is physically rotated to landscape,
+• *Then* the screen remains locked in portrait orientation.
+• *Given* `SensorGridScreen` in `ScreenMode.CONFIGURATION` in landscape orientation,
+• *When* interacting with sensor tiles,
+• *Then* field editing, row/col additions, and pick-and-place reordering work without error.
+
+**Invariants**: Zero regression in portrait mode layout, `forcePortrait` lock, gesture and callback contracts (Rule 34), and 100% clean-room test pass rate.
+

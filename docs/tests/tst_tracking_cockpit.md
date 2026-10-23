@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `STP`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 53
+**Total Tests**: 54
 
 ---
 
@@ -1130,3 +1130,21 @@
   • Verify `DeviceManager.createPairedRemoteDevices` safely closes cursors in try-with-resources.
   5. *Clean-Room Full Suite Regression Execution (`TST-TRK-039.5`)*:
   • Execute `./gradlew testDebugUnitTest` and `TranslationParityTest` asserting 100% pass rate.
+
+### TST-TRK-040: **Landscape Cockpit Dual-Pane Layout, Widescreen Sensor Grid & Sub-Pane Overlay Docking Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-040`
+- **Component**: `SensorGridLandscapeLayoutTest.kt`, `SensorGridScreen.kt`, `SensorFieldState.kt`, `TrackingTabsScreen.kt`
+- **Jira**: `ATT-52`
+- **Test Description**:
+  1. *Dual-Pane Split Layout Composition Verification (`TST-TRK-040.1`)*:
+  • Compose UI test verifying that when `orientation == Configuration.ORIENTATION_LANDSCAPE` and `showMap == true`, `SensorGridScreen` renders a horizontal `Row` containing a 50% left telemetry column and a 50% right map column (`TrackingMapContainer`).
+  2. *Widescreen Sensor Grid Verification (`TST-TRK-040.2`)*:
+  • Compose UI test verifying that when `orientation == Configuration.ORIENTATION_LANDSCAPE` and `showMap == false`, `SensorGridScreen` allocates the full screen width to sensor cells and renders scalable numerals via `SensorFieldView`.
+  3. *Right-Pane Bottom Sheet Docking Invariant (`TST-TRK-040.3`)*:
+  • Compose UI test verifying that when `LiveSegmentSheet` or `LiveClimbSheet` is displayed in landscape mode, the bottom sheet container is anchored exclusively within the right pane, and left sensor telemetry fields remain 100% visible and unmasked.
+  4. *Display Setting Force Portrait Enforcement (`TST-TRK-040.4`)*:
+  • Unit test verifying that when `forcePortrait` is enabled in `SettingsDataStore` / `TrainingApplication`, screen orientation requests lock to portrait and ignore configuration rotation.
+  5. *Configuration Mode Gesture & Action Preservation (`TST-TRK-040.5`, Rule 34)*:
+  • Gesture contract test verifying that in `ScreenMode.CONFIGURATION`, sensor field editing (`onEditField`), deletion (`onDeleteField`), add row/col, and pick-and-place reordering callbacks remain fully dispatched and interactive in landscape mode.
+  6. *Targeted & Full Regression Suite Execution (`TST-TRK-040.6`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.*"` and full clean-room suite verifying 100% pass rate.
