@@ -958,13 +958,14 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-MAP-055.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full project test suite.
 
-### TST-MAP-058: **Line-Density PolylineHeatmapTileProvider, Web Mercator Projection & Thermal Color LUT Verification Suite** [PolylineHeatmapTileProvider correctly projects geographic coordinates to Web Mercator tile pixels; culls disjoint paths in O(1) returning NO_TILE; accumulates line density with PorterDuff.Mode.ADD without point-spacing artifacts; maps intensity to 256-entry thermal Color LUT; renders thread-safely across concurrent tile requests; 100% clean-room test pass rate.]
+### TST-MAP-058: **Line-Density PolylineHeatmapTileProvider, Web Mercator Projection & Sequential Blue Color LUT Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MAP-056`
 - **Component**: **Map Tile Heatmap**
-- **Jira**: `ATT-4480`
+- **Jira**: `ATT-4480`, `ATT-4769`
 - **Test Description**:
   1. Verify in `PolylineHeatmapTileProviderTest` that requesting a tile disjoint from all input polylines returns `TileProvider.NO_TILE` immediately without allocating bitmaps.
   2. Verify that intersecting polylines produce a valid 256x256 PNG tile byte array.
-  3. Verify that multiple overlapping traversals produce increasing intensity values correctly mapped through the thermal Color LUT.
+  3. Verify in `PolylineHeatmapTileProviderTest` that `ThermalColorLut` maps index 0 to `0` (transparent), and interpolates through Light Cyan (`#00E5FF`) -> Pure Blue (`#0000FF`) -> Deep Indigo (`#311B92`) with decreasing green and dominating blue/indigo components across low, mid, and high intensities.
   4. Verify thread safety under concurrent `getTile(x, y, zoom)` invocations across multiple worker threads.
   5. Run targeted unit test suite `com.atrainingtracker.trainingtracker.ui.map.*` verifying 100% pass rate.
+

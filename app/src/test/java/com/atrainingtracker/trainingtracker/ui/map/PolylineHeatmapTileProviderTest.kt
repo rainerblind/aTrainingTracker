@@ -106,7 +106,7 @@ class PolylineHeatmapTileProviderTest {
     }
 
     @Test
-    fun testThermalColorLutProgression() {
+    fun testThermalColorLutProgression_TST_MAP_058_3() {
         val lut = ThermalColorLut(opacity = 1.0)
         assertEquals(0, lut.getColor(0)) // Index 0 is fully transparent
 
@@ -119,10 +119,39 @@ class PolylineHeatmapTileProviderTest {
         assertTrue(mid != 0)
         assertTrue(high != 0)
 
-        // Assert RGB progression: high intensity has higher red/green component than low (cool blue)
-        val lowRed = (low ushr 16) and 0xFF
+        // Extract ARGB components
+        val lowAlpha = (low ushr 24) and 0xFF
+        val lowGreen = (low ushr 8) and 0xFF
+        val lowBlue = low and 0xFF
+
+        val midAlpha = (mid ushr 24) and 0xFF
+        val midRed = (mid ushr 16) and 0xFF
+        val midGreen = (mid ushr 8) and 0xFF
+        val midBlue = mid and 0xFF
+
+        val highAlpha = (high ushr 24) and 0xFF
         val highRed = (high ushr 16) and 0xFF
-        assertTrue(highRed >= lowRed)
+        val highGreen = (high ushr 8) and 0xFF
+        val highBlue = high and 0xFF
+
+        // 1. Light Cyan at low intensity: prominent green and blue
+        assertTrue("Low intensity should have high green (cyan)", lowGreen > 200)
+        assertEquals("Low intensity blue component should be 255", 255, lowBlue)
+
+        // 2. Pure Blue at mid intensity: green decreases significantly, blue remains dominant
+        assertTrue("Green component should decrease from low to mid", lowGreen > midGreen)
+        assertEquals("Mid intensity red should be 0 (pure blue)", 0, midRed)
+        assertEquals("Mid intensity blue should be 255", 255, midBlue)
+
+        // 3. Deep Indigo at high intensity: R=49, G=27, B=146
+        assertEquals("High intensity red should match Deep Indigo (49)", 49, highRed)
+        assertEquals("High intensity green should match Deep Indigo (27)", 27, highGreen)
+        assertEquals("High intensity blue should match Deep Indigo (146)", 146, highBlue)
+
+        // 4. Alpha progression: base alpha scales from low (~51) to mid (~77) to high (180)
+        assertTrue("Alpha should increase from low to mid", lowAlpha < midAlpha)
+        assertTrue("Alpha should increase from mid to high", midAlpha < highAlpha)
+        assertEquals("High intensity alpha at opacity 1.0 should be 180", 180, highAlpha)
     }
 
     @Test
