@@ -376,7 +376,7 @@ class PeriodsRepository private constructor(private val application: Application
     suspend fun checkIntegrityAndSync(): Boolean = withContext(Dispatchers.IO) {
         val finishedWorkouts = workoutSummariesManager.getFinishedWorkoutCount()
         val periodWorkouts = dbManager.getTotalDayWorkoutsCount()
-        if (finishedWorkouts > periodWorkouts) {
+        if (finishedWorkouts != periodWorkouts) {
             Log.i(TAG, "Integrity discrepancy detected: $finishedWorkouts workouts in SQLite vs $periodWorkouts in PeriodSummaries.db. Triggering migration.")
             performHierarchicalMigration()
             true
@@ -1005,21 +1005,16 @@ class PeriodsRepository private constructor(private val application: Application
                 .associate { it.id to it.mapPolyline }
         } else summary.workoutIdToPolylineMap
 
-        // 3. Hydrate LongestWorkout metrics for each sport from in-memory workouts or fallback queries (ATT-536 / ATT-579)
+        // 3. Hydrate LongestWorkout metrics for each sport from in-memory workouts if available (ATT-536 / ATT-579 / ATT-4476)
         val enrichedSportStats = summary.sportStats.mapValues { (sport, stats) ->
             val targetId = stats.longestWorkout?.id ?: -1L
             val longestFromGroup = if (groupWorkouts.isNotEmpty()) {
                 groupWorkouts.filter { it.bSportType == sport }.maxByOrNull { it.activeTimeSec }
             } else null
 
-            var longestWorkoutData = longestFromGroup ?: (if (targetId != -1L) {
-                groupWorkouts.find { it.id == targetId }
+            val longestWorkoutData = longestFromGroup ?: (if (targetId != -1L) {
+                groupWorkouts.find { it.id == targetId } ?: workoutRepo.allWorkouts.value.find { it.id == targetId }
             } else null)
-
-            // Fallback 1: global in-memory workouts
-            if (longestWorkoutData == null && targetId != -1L) {
-                longestWorkoutData = workoutRepo.allWorkouts.value.find { it.id == targetId }
-            }
 
             if (longestWorkoutData != null) {
                 stats.copy(
@@ -1031,25 +1026,9 @@ class PeriodsRepository private constructor(private val application: Application
                         ascentMeters = longestWorkoutData.ascentMeters
                     )
                 )
-            } else if (targetId != -1L) {
-                // Fallback 2: SQLite WorkoutSummaries lookup
-                val hydrated = try {
-                    workoutSummariesManager.getWorkoutCursor(targetId).use { c ->
-                        if (c.moveToFirst()) {
-                            val name = c.getString(c.getColumnIndexOrThrow(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)) ?: ""
-                            val dur = c.getLong(c.getColumnIndexOrThrow(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s))
-                            val dist = c.getDouble(c.getColumnIndexOrThrow(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m))
-                            val asc = c.getLong(c.getColumnIndexOrThrow(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.ASCENDING))
-                            LongestWorkout(targetId, name, dur, dist, asc)
-                        } else null
-                    }
-                } catch (e: Exception) {
-                    null
-                }
-                if (hydrated != null) {
-                    stats.copy(longestWorkout = hydrated)
-                } else stats
-            } else stats
+            } else {
+                stats
+            }
         }
 
         return summary.copy(

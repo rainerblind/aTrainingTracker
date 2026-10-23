@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 19
+**Total Requirements**: 20
 
 ---
 
@@ -331,4 +331,47 @@
 • *Then* zero `PolyUtil.decode`, `PolyUtil.simplify`, or `SpatialRegionEngine` clustering executions occur on the Android main thread.
 
 **Invariants**: Zero database schema mutations, memory safety without OOMs, non-blocking UI thread, and 100% clean-room test pass rate.
+
+### REQ-PER-020: Self-Contained Period Persistence, Zero-N+1 Startup Loading & Bidirectional Sync Healing [Verified]
+- **Tests**: `TST-PER-026`
+- **Implementation**: `PeriodSummariesDatabaseManager.kt`, `PeriodData.kt`, `PeriodsRepository.kt`, `DatabaseSchemaRegistry.kt`
+- **Rationale**: The system SHALL eliminate N+1 startup queries in `getPeriodsByType()`, persist complete `LongestWorkout` metadata directly in `PeriodSummaries.db`, heal out-of-band workout deletions, and gate legacy file checks (ATT-4476, Parent Epic ATT-4474, refining `REQ-MIG-026` and `REQ-PER-011`):
+1. *Zero-N+1 In-Memory Batch Linking in `getPeriodsByType()` (`REQ-PER-020.1`)*:
+• In `PeriodSummariesDatabaseManager.getPeriodsByType()`, loading periods SHALL execute strictly 3 batch SQLite queries total: (1) `PeriodSummaries`, (2) `PeriodSportStats`, and (3) `PeriodDetailedStats`.
+• Overwriting `stats.longestWorkout` with a synthetic `sId` pointer SHALL be eliminated. Detailed stats SHALL be indexed in memory by `sport_stats_id` (`Map<Long, MutableMap<String, DetailedStats>>`) and joined to their parent `SportStats` without secondary per-row `SELECT` queries.
+2. *Self-Contained `LongestWorkout` Persistence in `PeriodSportStats` (`REQ-PER-020.2`)*:
+• `SportStatsContract` and `PeriodSportStats` table schema SHALL include `COLUMN_LONGEST_WORKOUT_NAME` (`TEXT NOT NULL DEFAULT ''`), `COLUMN_LONGEST_DISTANCE` (`REAL NOT NULL DEFAULT 0.0`), and `COLUMN_LONGEST_ASCENT` (`INTEGER NOT NULL DEFAULT 0`).
+• `PeriodSummariesDbHelper` SHALL increment `DB_VERSION` from 26 to 27 with 100% schema parity between `onCreate()` and `onUpgrade()`, registered in `DatabaseSchemaRegistry.kt` referencing the constant directly.
+• `savePeriod()` and `getPeriodsByType()` SHALL write and read complete `LongestWorkout` metadata directly to and from SQLite, rendering `PeriodSummary` fully self-contained upon startup without requiring `WorkoutRepository.allWorkouts` in RAM or fallback queries against `WorkoutSummaries.db`.
+3. *Bidirectional Deletion Healing in `checkIntegrityAndSync()` (`REQ-PER-020.3`)*:
+• In `PeriodsRepository.checkIntegrityAndSync()`, the integrity condition SHALL evaluate `if (finishedWorkouts != periodWorkouts)`. When workouts are deleted out-of-band (`finishedWorkouts < periodWorkouts`), the repository SHALL trigger resynchronization to purge orphaned periods.
+4. *Gated Legacy Experimental Database Cleanup (`REQ-PER-020.4`)*:
+• The 66 legacy file existence checks (`PeriodSummaries_v4.db` through `v25.db` plus `-shm`/`-wal`) in `PeriodSummariesDatabaseManager.init` SHALL execute strictly once per installation, guarded by a persistent `SharedPreferences` boolean flag (`legacy_period_dbs_cleaned`), eliminating redundant cold-start file I/O.
+5. *Preservation of System Invariants & Migration Parity (`REQ-PER-020.5`)*:
+• SQLite migration from v26 to v27 MUST preserve all existing period and sport statistics without data loss.
+• Automated migration contract test MUST prove schema identity between fresh `onCreate` and upgraded `onUpgrade` instances.
+• Clean-room full test suite pass rate under `./gradlew testDebugUnitTest` SHALL remain 100%.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-MIG-026` (*O(1) Self-Healing Period Synchronization*) and `REQ-PER-011` (*Longest Workout Metric Display*). Targets `PeriodSummariesDatabaseManager.kt`, `PeriodData.kt`, `PeriodsRepository.kt`, `DatabaseSchemaRegistry.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (ATT-346 / commit `7a192b0c` for `tempId` linkage) and Sprint 2026-41.2 (ATT-909 for `>` integrity check).
+3. *Root Reason for Existing Formulation*: `tempId` pointer was introduced as an expedient temporary hack when relational detailed stats were first split from sport stats; `>` was assumed because workouts were recorded incrementally and deletion was rare; incomplete sport stats schema avoided an earlier DB version bump.
+4. *Preservation of Core Invariants*: Normalized relational structure, sort key indexing (`REQ-MIG-026`), zero data loss, non-blocking startup performance, and 100% clean-room test pass rate remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete with hundreds of periods and sports in `PeriodSummaries.db`,
+• *When* `PeriodSummariesDatabaseManager.getPeriodsByType()` executes,
+• *Then* strictly 3 batch SQLite queries are executed, and zero per-row secondary queries are performed.
+• *Given* an existing v26 database upgraded to v27,
+• *When* `onUpgrade()` executes,
+• *Then* columns `longest_workout_name`, `longest_distance`, and `longest_ascent` are added with non-null defaults, existing data is preserved, and the schema matches fresh `onCreate()`.
+• *Given* out-of-band deletion of workouts resulting in `finishedWorkouts < periodWorkouts`,
+• *When* `checkIntegrityAndSync()` runs,
+• *Then* resynchronization is triggered and orphaned periods are pruned.
+• *Given* subsequent application cold starts after initial cleanup,
+• *When* `PeriodSummariesDatabaseManager.init` runs,
+• *Then* legacy experimental database file checks are skipped.
+
+**Invariants**: Zero data loss across migration; $O(1)$ query budget ($\le 3$ batch queries); bidirectional sync healing; 100% clean-room test pass rate.
+
 

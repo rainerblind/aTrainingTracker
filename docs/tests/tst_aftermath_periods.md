@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 26
+**Total Tests**: 27
 
 ---
 
@@ -270,4 +270,28 @@
   • Verify that malformed encoded strings are skipped safely without crashing the background worker.
   6. *Clean-Room Regression Suite Execution (`TST-PER-025.6`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
+
+### TST-PER-026: **Self-Contained Period Persistence, Zero-N+1 Batch Loading & Bidirectional Sync Healing Verification Suite** [getPeriodsByType executes strictly 3 batch queries without tempId loop; PeriodSportStats persists complete LongestWorkout metadata with DB_VERSION 27 and onCreate/onUpgrade parity; checkIntegrityAndSync heals out-of-band deletions (!=); legacy DB file checks execute strictly once; 100% clean-room unit test pass rate.]
+- **Requirement(s)**: `REQ-PER-020`, `REQ-MIG-026`, `REQ-PER-011`
+- **Component**: **Period Summaries Database & Repository Sync**
+- **Jira**: `ATT-4476`
+- **Test Description**:
+  1. *Zero-N+1 Batch Query Budget Tests (`TST-PER-026.1`, `PeriodSummariesDatabaseManagerTest.kt`)*:
+  • Given multiple periods with multiple sports and detailed stats, verify `getPeriodsByType()` executes strictly 3 batch queries total and populates complete `SportStats.longestWorkout` and `detailedStatsMap` without issuing per-row queries.
+  2. *Self-Contained LongestWorkout Persistence Tests (`TST-PER-026.2`, `PeriodSummariesDatabaseManagerTest.kt`)*:
+  • Save a period with complete `LongestWorkout` metadata (`name`, `duration`, `distanceMeters`, `ascentMeters`).
+  • Read the period back from SQLite and assert that `longestWorkout` is fully populated without requiring `WorkoutRepository` in RAM.
+  3. *SQLite v26 to v27 Migration Parity Contract Tests (`TST-PER-026.3`, `PeriodSummariesMigrationTest.kt`)*:
+  • Create a v26 database populated with sample periods and sport stats.
+  • Execute `onUpgrade` to v27; assert table schema (column names, types, default values) is 100% identical to fresh `onCreate` v27 database (Coding Standards §2.1, §2.2, §2.3, Rule 64).
+  • Assert pre-existing data in v26 remains intact with default values applied to new columns.
+  4. *Bidirectional Deletion Integrity Healing Tests (`TST-PER-026.4`, `PeriodsRepositorySyncTest.kt`)*:
+  • Given `finishedWorkouts < periodWorkouts` (simulating workout deletion), assert `checkIntegrityAndSync()` triggers resynchronization.
+  • Verify that when `finishedWorkouts == periodWorkouts`, no resynchronization is triggered.
+  5. *Gated Legacy File Cleanup Tests (`TST-PER-026.5`, `PeriodSummariesDatabaseManagerTest.kt`)*:
+  • Assert that when `legacy_period_dbs_cleaned` preference is false, legacy DB file check executes and sets preference to true.
+  • Assert that on subsequent initializations with preference true, file scans are bypassed.
+  6. *Clean-Room Regression Suite Execution (`TST-PER-026.6`)*:
+  • Execute targeted unit tests and `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
+
 
