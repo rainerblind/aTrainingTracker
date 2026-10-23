@@ -270,6 +270,11 @@
   • Verify that malformed encoded strings are skipped safely without crashing the background worker.
   6. *Clean-Room Regression Suite Execution (`TST-PER-025.6`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
+  7. *Adaptive Vector Polyline Suppression & Source Priority Tests (`TST-PER-025.7`, `PeriodCardMapStateTest.kt`)*:
+  • Given a summary with $> 30$ workouts and a non-null heatmap provider, verify that `PeriodCardMapState.renderVectorPolylines` evaluates to `false`.
+  • Given a summary with $\le 30$ workouts (e.g. 1, 5, 20, 30 workouts) and a non-null heatmap provider, verify that `PeriodCardMapState.renderVectorPolylines` evaluates to `true`.
+  • Given a Day summary (`PeriodType.DAY`) with any number of workouts (null heatmap provider), verify that `PeriodCardMapState.renderVectorPolylines` evaluates to `true`.
+  • Given a summary with both `summary.polylines` and `summary.workoutIdToPolylineMap` populated, verify that `prepareCardMapPreviewSync` prioritizes `summary.polylines`.
 
 ### TST-PER-026: **Self-Contained Period Persistence, Zero-N+1 Batch Loading & Bidirectional Sync Healing Verification Suite** [getPeriodsByType executes strictly 3 batch queries without tempId loop; PeriodSportStats persists complete LongestWorkout metadata with DB_VERSION 27 and onCreate/onUpgrade parity; checkIntegrityAndSync heals out-of-band deletions (!=); legacy DB file checks execute strictly once; 100% clean-room unit test pass rate.]
 - **Requirement(s)**: `REQ-PER-020`, `REQ-MIG-026`, `REQ-PER-011`

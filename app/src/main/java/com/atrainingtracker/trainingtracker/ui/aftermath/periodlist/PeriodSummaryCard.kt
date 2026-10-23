@@ -216,7 +216,8 @@ fun PeriodSummaryCard(
                             paths = mapState.primaryPaths,
                             onMapClick = { onMapClick(summary) },
                             bounds = mapState.bounds,
-                            precomputedVisuals = mapState.visuals
+                            precomputedVisuals = mapState.visuals,
+                            renderVectorPolylines = mapState.renderVectorPolylines
                         )
 
                         // Multi-region badge indicator when period spans multiple regions (ATT-1151)
@@ -473,7 +474,8 @@ private fun PeriodMultiWorkoutMap(
     paths: List<List<LatLng>> = emptyList(),
     onMapClick: () -> Unit,
     bounds: LatLngBounds? = null,
-    precomputedVisuals: PeriodMapVisuals? = null
+    precomputedVisuals: PeriodMapVisuals? = null,
+    renderVectorPolylines: Boolean = true
 ) {
     // --- TIER 1: INSTANT ANCHORS ---
     // Only render anchors in the summary card to prevent OOM when many maps exist in a list (ATT-440 Refinement)
@@ -548,15 +550,18 @@ private fun PeriodMultiWorkoutMap(
             ),
             onMapClick = { onMapClick() }
         ) {
-            allPaths.forEach { path ->
-                Polyline(
-                    points = path,
-                    color = TrackType.BEST.color.copy(alpha = visuals.polylineAlpha),
-                    width = visuals.polylineWidth,
-                    startCap = RoundCap(),
-                    endCap = RoundCap(),
-                    jointType = JointType.ROUND
-                )
+            val shouldRenderPolylines = renderVectorPolylines && (visuals.heatmapProvider == null || allPaths.size <= MAX_PERIOD_VECTOR_TRACKS)
+            if (shouldRenderPolylines) {
+                allPaths.forEach { path ->
+                    Polyline(
+                        points = path,
+                        color = TrackType.BEST.color.copy(alpha = visuals.polylineAlpha),
+                        width = visuals.polylineWidth,
+                        startCap = RoundCap(),
+                        endCap = RoundCap(),
+                        jointType = JointType.ROUND
+                    )
+                }
             }
 
             // Heatmap Layer (Drawn on top)

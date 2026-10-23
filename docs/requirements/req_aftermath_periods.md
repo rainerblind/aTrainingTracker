@@ -306,23 +306,33 @@
 3. *Background Region Clustering & Viewport Framing (`REQ-PER-019.3`)*:
 • When a period spans multiple distinct geographic regions ($> 75\text{ km}$ geodesic span), `SpatialRegionEngine.detectRegionsFromPaths` SHALL partition the simplified paths on `Dispatchers.Default` and select the primary region for initial camera framing (`bounds`).
 • The multi-region indicator badge (`REQ-PER-013`) SHALL display the count of distinct regions and primary region paths count when `regionCount > 1`.
-4. *Complete Regional Route Network Heatmap Integration (`REQ-PER-019.4`)*:
+4. *Complete Regional Route Network Heatmap Integration & Adaptive Vector Polyline Suppression (`REQ-PER-019.4`)*:
 • For `WEEK`, `MONTH`, and `YEAR` cards, `PeriodCardMapState` SHALL feed all simplified regional paths into `PolylineHeatmapTileProvider` (`REQ-PER-017`), rendering the full route density network. For `DAY` cards, `heatmapProvider` SHALL evaluate to `null` and render crisp vector polylines.
+• In `PeriodSummaryCard` (`PeriodMultiWorkoutMap`), when a period has $> 30$ workouts (`activePaths.size > MAX_PERIOD_VECTOR_TRACKS`) and an active heatmap (`visuals.heatmapProvider != null`), individual vector `Polyline` composables SHALL be suppressed in favor of the raster heatmap overlay to prevent JNI allocation overhead and visual gradient washout (ATT-4772).
+• For periods with $\le 30$ workouts or where `heatmapProvider == null`, individual vector `Polyline` composables SHALL be retained.
+• `PeriodCardMapState` SHALL expose `val renderVectorPolylines: Boolean = true`, evaluated as `visuals?.heatmapProvider == null || activePaths.size <= MAX_PERIOD_VECTOR_TRACKS`.
+• `prepareCardMapPreviewSync` SHALL prioritize `summary.polylines` over `summary.workoutIdToPolylineMap` when populating preview paths.
 5. *System Invariants & Graceful Degradation (`REQ-PER-019.5`)*:
 • When a period contains empty or invalid GPS data, the background pipeline SHALL emit a ready state with empty paths and null bounds, rendering the localized "No GPS data" fallback without throwing exceptions.
 • Zero mutations to `PeriodSummaries.db` schema.
 • 100% clean-room test pass rate under `./gradlew testDebugUnitTest`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-PER-012` (*Period Map Scalability, Memory Budget & Adaptive Layering Invariant*), targeting `PeriodSummaryCard.kt` and `PeriodsRepository.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-41.2 (commit `1c89f50e` / ATT-1151 / `MAX_SUMMARY_THUMBNAIL_TRACKS = 8`).
-3. *Root Reason for Existing Formulation*: Imposed an 8-track hard cap as a temporary mitigation against UI-thread ANRs and OOM crashes when Google Maps `MapView` and `HeatmapTileProvider` decoded and rendered unsimplified vector polylines synchronously inside Compose `remember` blocks during list scrolling.
-4. *Preservation of Core Invariants*: Memory safety without OOMs, multi-region indicator badge (`REQ-PER-013`), single-region camera framing, `DarkMapAntiFlashOverlay`, and non-blocking 60 fps `LazyColumn` scrolling remain 100% strictly preserved.
+1. *Original Requirement ID & Target*: Amends `REQ-PER-012` (*Period Map Scalability, Memory Budget & Adaptive Layering Invariant*) and `REQ-PER-019.4` (*Regional Route Network Heatmap Integration*). Targets `PeriodSummaryCard.kt`, `PeriodMapUtils.kt`, and `PeriodCardMapStateTest.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-41.2 (commit `1c89f50e` / ATT-1151 / `MAX_SUMMARY_THUMBNAIL_TRACKS = 8`), commit `7e2151ec` (ATT-1107, established `MAX_PERIOD_VECTOR_TRACKS = 30`), commit `da70647f` (ATT-4477, added `PeriodCardMapState`), and `ATT-4772`.
+3. *Root Reason for Existing Formulation*: ATT-4477 enabled full-period route ingestion and offloaded polyline decoding to background dispatchers, but `PeriodMultiWorkoutMap` retained unconditional `Polyline` composable drawing underneath `TileOverlay`, causing hundreds of redundant JNI objects on large periods and washing out the translucent heatmap.
+4. *Preservation of Core Invariants*: Memory safety without OOMs, multi-region indicator badge (`REQ-PER-013`), single-region camera framing, `DarkMapAntiFlashOverlay`, `DAY` card vector polyline crispness, and non-blocking 60 fps `LazyColumn` scrolling remain 100% strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a Month or Year period with 30+ workouts,
 • *When* `PeriodSummaryCard` is composed in `LazyColumn`,
 • *Then* all member workout polylines are decoded and Douglas-Peucker simplified on `Dispatchers.Default`, and all primary region paths are rendered in `PolylineHeatmapTileProvider` rather than truncating to 8 tracks.
+• *Given* a Month or Year period with $> 30$ workouts and an active heatmap,
+• *When* `PeriodSummaryCard` (`PeriodMultiWorkoutMap`) renders,
+• *Then* individual vector `Polyline` composables are suppressed (`renderVectorPolylines == false`) and only the `TileOverlay` heatmap is rendered.
+• *Given* a period with $\le 30$ workouts or a Day period (`heatmapProvider == null`),
+• *When* `PeriodSummaryCard` renders,
+• *Then* individual vector `Polyline` composables are retained (`renderVectorPolylines == true`).
 • *Given* a period with empty or malformed GPS polylines,
 • *When* `PeriodCardMapState` evaluates on `Dispatchers.Default`,
 • *Then* `isReady` is set to true with empty `primaryPaths` and null `bounds`, displaying the no-GPS fallback without throwing exceptions.

@@ -47,7 +47,8 @@ data class PeriodCardMapState(
     val visuals: PeriodMapVisuals? = null,
     val regionCount: Int = 0,
     val primaryRegionPathsCount: Int = 0,
-    val isReady: Boolean = false
+    val isReady: Boolean = false,
+    val renderVectorPolylines: Boolean = true
 )
 
 /**
@@ -219,6 +220,7 @@ fun prepareCardMapPreviewSync(summary: PeriodSummary): PeriodCardMapState {
         if (allPoints.isNotEmpty()) SpatialRegionEngine.buildNormalizedBounds(allPoints) else null
     }
     val visuals = getPeriodMapVisuals(summary.periodType, activePaths, isInteractive = false)
+    val renderVectorPolylines = visuals.heatmapProvider == null || activePaths.size <= MAX_PERIOD_VECTOR_TRACKS
 
     return PeriodCardMapState(
         primaryPaths = activePaths,
@@ -226,7 +228,8 @@ fun prepareCardMapPreviewSync(summary: PeriodSummary): PeriodCardMapState {
         visuals = visuals,
         regionCount = pathRegions.size,
         primaryRegionPathsCount = activePaths.size,
-        isReady = true
+        isReady = true,
+        renderVectorPolylines = renderVectorPolylines
     )
 }
 
