@@ -18,10 +18,13 @@
 
 ---
 
-## 2. Root Cause Analysis (Forensic Investigation)
+## 2. Root Cause Analysis & Independent Hypothesis Verification
 
 <!-- For bugs: Detailed technical explanation of failure mechanism, stacktraces, race conditions, or OS lifecycle quirks. -->
 <!-- For features/improvements: Architectural investigation of current state and gap analysis. -->
+<!-- Independent Peer Review & Verification (ATT-3534): If ticket provided a prior RCA/proposal, treat as hypothesis and independently verify against live code on sprint branch. -->
+* **Independent Peer Review & Verification**:
+  * [Verification of ticket hypothesis against live sprint codebase, checking cited files/lines and blind spots]
 
 ---
 

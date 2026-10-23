@@ -21,6 +21,8 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.res.Configuration
+import androidx.compose.ui.platform.LocalConfiguration
 import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
@@ -36,6 +38,7 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -161,6 +164,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyle
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
+import com.atrainingtracker.trainingtracker.ui.tracking.packVisibleRowsForLandscape
 import com.atrainingtracker.trainingtracker.ui.tracking.packVisibleRowsForTuning
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitTypography
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.LocalCockpitTypography
@@ -324,7 +328,231 @@ fun SensorGridScreen(
 
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
+    val isAvailable = screenMode != ScreenMode.CONFIGURATION
+    val haptic = LocalHapticFeedback.current
+    val doubleTapModifier = if (isAvailable && state.showBikeBell) {
+        Modifier.detectCockpitDoubleTap(enabled = true) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            tabToggleActions.onRingBikeBell()
+        }
+    } else {
+        Modifier
+    }
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isLandscapeWithMap = isLandscape && state.mapState.showMap && screenMode != ScreenMode.CONFIGURATION
+
+    val packedRows = remember(state.fields, tuningConfig, screenMode, isLandscape, state.mapState.showMap) {
+        if (isLandscape && !state.mapState.showMap && screenMode != ScreenMode.CONFIGURATION) {
+            packVisibleRowsForLandscape(
+                fields = state.fields,
+                tuningConfig = tuningConfig,
+                screenMode = screenMode,
+                isLandscape = isLandscape,
+                showMap = state.mapState.showMap
+            )
+        } else {
+            packVisibleRowsForTuning(state.fields, tuningConfig, screenMode)
+        }
+    }
+    val trackingDividerMap = remember(state.sectionDividers) {
+        state.sectionDividers.associateBy { it.rowNr }
+    }
+
+    val activeNavigatedRoute = state.mapRoutes.firstOrNull { it.isActiveNavigation }
+    var lastRouteSegmentIndex by remember(activeNavigatedRoute?.id) { mutableStateOf<Int?>(null) }
+    val resolvedProfile = remember(
+        activeNavigatedRoute,
+        state.pathPoints,
+        currentLocation,
+        state.elevationProfileScope,
+        state.elevationProfileLookahead
+    ) {
+        val res = TrackingElevationProfileResolver.resolve(
+            activeNavigatedRoute = activeNavigatedRoute,
+            recordedPathPoints = state.pathPoints,
+            currentLocation = currentLocation,
+            scope = state.elevationProfileScope,
+            lookaheadDistanceMeters = state.elevationProfileLookahead,
+            lastSegmentIndex = lastRouteSegmentIndex
+        )
+        lastRouteSegmentIndex = res.segmentIndex
+        res
+    }
+
+    val sheetContentLambda: @Composable ColumnScope.() -> Unit = {
+        val showSegment = shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveSegments && activeSegment != null
+        val showClimb = shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveClimbs && activeLiveClimb != null
+        if (showSegment || showClimb) {
+            // LiveTrackingSheetContainer encapsulates sheetContour(), surface styling, and click-to-expand (REQ-UI-366)
+            LiveTrackingSheetContainer(
+                isPartiallyExpanded = scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded,
+                onExpand = {
+                    coroutineScope.launch {
+                        scaffoldState.bottomSheetState.expand()
+                    }
+                }
+            ) {
+                if (showSegment) {
+                    LiveSegmentSheet(
+                        liveSegment = activeSegment
+                    )
+                } else if (showClimb) {
+                    LiveClimbSheet(
+                        liveClimb = activeLiveClimb!!
+                    )
+                }
+            }
+        }
+    }
+
     CompositionLocalProvider(LocalCockpitTypography provides cockpitTypography) {
+        if (isLandscapeWithMap) {
+            // Landscape Dual-Pane Layout: Left Pane Telemetry, Right Pane Map + Docked Bottom Sheet (REQ-TRK-040.2 / REQ-TRK-040.3)
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(doubleTapModifier)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Left Pane: Sensor Grid (50% width, scrollable, REQ-TRK-040.2)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    ) {
+                        SensorGridContent(
+                            packedRows = packedRows,
+                            trackingDividerMap = trackingDividerMap,
+                            screenMode = screenMode,
+                            effectiveShape = effectiveShape,
+                            effectiveElevation = effectiveElevation,
+                            effectiveBorder = effectiveBorder,
+                            effectiveSpacing = effectiveSpacing,
+                            gridActions = gridActions,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                        )
+                    }
+
+                    // Right Pane: Map + Elevation Profile + Docked BottomSheetScaffold (50% width, REQ-TRK-040.3)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    ) {
+                        BottomSheetScaffold(
+                            scaffoldState = scaffoldState,
+                            sheetShape = BottomSheetDesign.SheetShape,
+                            sheetContainerColor = MaterialTheme.colorScheme.surface,
+                            sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
+                            sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
+                            sheetDragHandle = null,
+                            sheetPeekHeight = if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
+                            sheetSwipeEnabled = (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING && isTabActive,
+                            sheetContent = sheetContentLambda
+                        ) {
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f, fill = true)
+                                ) {
+                                    TrackingMapContainer(
+                                        mapState = state.mapState,
+                                        currentLocationFlow = currentLocationFlow,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+
+                                if (state.showElevationProfile) {
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 8.dp)
+                                    ) {
+                                        ElevationProfile(
+                                            pathPoints = resolvedProfile.pathPoints,
+                                            currentDistance = resolvedProfile.markerDistance,
+                                            climbs = resolvedProfile.climbs,
+                                            showEmptyState = true,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Right pane tap/drag to expand sheet
+                        if (shouldShowBottomSheet && scaffoldState.bottomSheetState.currentValue != SheetValue.Expanded) {
+                            var totalDragY by remember { mutableFloatStateOf(0f) }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(BottomSheetDesign.PeekHeightLiveSegment + navBarHeight)
+                                    .align(Alignment.BottomCenter)
+                                    .pointerInput(shouldShowBottomSheet) {
+                                        detectVerticalDragGestures(
+                                            onDragStart = { totalDragY = 0f },
+                                            onDragEnd = { totalDragY = 0f },
+                                            onDragCancel = { totalDragY = 0f },
+                                            onVerticalDrag = { change, dragAmount ->
+                                                totalDragY += dragAmount
+                                                if (totalDragY < -30f) {
+                                                    change.consume()
+                                                    coroutineScope.launch {
+                                                        scaffoldState.bottomSheetState.expand()
+                                                    }
+                                                }
+                                            }
+                                        )
+                                    }
+                                    .clickable {
+                                        coroutineScope.launch {
+                                            scaffoldState.bottomSheetState.expand()
+                                        }
+                                    }
+                            )
+                        }
+                    }
+                }
+
+                // Ambient Navigation Overlays floating at top of tracking tab across all views (REQ-UI-348 / ATT-3170)
+                if (state.showNavigationHints) {
+                    NavigationHintsOverlay(
+                        state = state,
+                        tuningConfig = tuningConfig,
+                        navigationState = navState,
+                        returnNavigationState = returnNavState,
+                        forkDecisionState = forkDecisionState,
+                        onDismissReturnNav = { returnNavRepo.dismissHud() },
+                        onSelectForkRoute = { routeId -> forkNavRepo.selectRouteManually(routeId) },
+                        onDismissFork = { forkNavRepo.dismissPrompt() },
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
+                }
+
+                // Auto-Pause HUD Banner (REQ-TRK-018 / ATT-45)
+                if (isAutoPaused) {
+                    AutoPauseHudBanner(
+                        onManualResume = {
+                            val intent = Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED).apply {
+                                `package` = context.packageName
+                            }
+                            context.sendBroadcast(intent)
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = if (state.showNavigationHints) 64.dp else 8.dp)
+                    )
+                }
+            }
+        } else {
         BottomSheetScaffold(
             scaffoldState = scaffoldState,
             sheetShape = BottomSheetDesign.SheetShape,
@@ -334,31 +562,7 @@ fun SensorGridScreen(
             sheetDragHandle = null,
             sheetPeekHeight = if (shouldShowBottomSheet && screenMode == ScreenMode.TRACKING) BottomSheetDesign.PeekHeightLiveSegment + navBarHeight else 0.dp,
             sheetSwipeEnabled = (showLiveSegments || showLiveClimbs) && screenMode == ScreenMode.TRACKING && isTabActive,
-            sheetContent = {
-                val showSegment = shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveSegments && activeSegment != null
-                val showClimb = shouldShowBottomSheet && screenMode == ScreenMode.TRACKING && showLiveClimbs && activeLiveClimb != null
-                if (showSegment || showClimb) {
-                    // LiveTrackingSheetContainer encapsulates sheetContour(), surface styling, and click-to-expand (REQ-UI-366)
-                    LiveTrackingSheetContainer(
-                        isPartiallyExpanded = scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded,
-                        onExpand = {
-                            coroutineScope.launch {
-                                scaffoldState.bottomSheetState.expand()
-                            }
-                        }
-                    ) {
-                        if (showSegment) {
-                            LiveSegmentSheet(
-                                liveSegment = activeSegment
-                            )
-                        } else if (showClimb) {
-                            LiveClimbSheet(
-                                liveClimb = activeLiveClimb!!
-                            )
-                        }
-                    }
-                }
-            }
+            sheetContent = sheetContentLambda
         ) { paddingValues ->
         if (screenMode == ScreenMode.CONFIGURATION) {
             var editingDividerRow by remember { mutableStateOf<Int?>(null) }
@@ -654,17 +858,6 @@ fun SensorGridScreen(
             }
         } else {
             // TRACKING & PREVIEW MODES (Top-level spatial Box overlay, independent inner sensor scroll, weighted map)
-            val isAvailable = screenMode != ScreenMode.CONFIGURATION
-            val haptic = LocalHapticFeedback.current
-            val doubleTapModifier = if (isAvailable && state.showBikeBell) {
-                Modifier.detectCockpitDoubleTap(enabled = true) {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    tabToggleActions.onRingBikeBell()
-                }
-            } else {
-                Modifier
-            }
-
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
@@ -676,7 +869,7 @@ fun SensorGridScreen(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // 1. The Sensor Grid (Scrollable, capped at 50% available height when map visible, or unweighted when map hidden; REQ-UI-358 / REQ-UI-409.3)
+                    // 1. The Sensor Grid (Scrollable, capped at 50% available height when map visible, or unweighted when map hidden; REQ-UI-358 / REQ-UI-409.3 / REQ-TRK-040.4)
                     val sensorGridModifier = if (state.mapState.showMap) {
                         Modifier
                             .fillMaxWidth()
@@ -691,53 +884,17 @@ fun SensorGridScreen(
                             .weight(1f, fill = false)
                     }
 
-                    val packedRows = remember(state.fields, tuningConfig, screenMode) {
-                        packVisibleRowsForTuning(state.fields, tuningConfig, screenMode)
-                    }
-                    val trackingDividerMap = remember(state.sectionDividers) {
-                        state.sectionDividers.associateBy { it.rowNr }
-                    }
-
-                    Column(
-                        modifier = sensorGridModifier,
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
-                    ) {
-                        packedRows.forEach { fieldsInThisRow ->
-                            val firstField = fieldsInThisRow.firstOrNull()
-                            if (firstField != null && firstField.rowNr > 1) {
-                                val divider = trackingDividerMap[firstField.rowNr]
-                                if (divider != null) {
-                                    CockpitSectionDivider(
-                                        divider = divider,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.height(IntrinsicSize.Min),
-                                horizontalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Start
-                            ) {
-                                fieldsInThisRow.forEach { fieldState ->
-                                    Box(modifier = Modifier.weight(1f)) {
-                                        SensorFieldView(
-                                            fieldState = fieldState,
-                                            screenMode = screenMode,
-                                            isSelectedForMove = false,
-                                            shape = effectiveShape,
-                                            cardElevation = effectiveElevation,
-                                            border = effectiveBorder,
-                                            onStartMove = {},
-                                            onEdit = { gridActions.onEditField(fieldState) },
-                                            onDelete = {}
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    SensorGridContent(
+                        packedRows = packedRows,
+                        trackingDividerMap = trackingDividerMap,
+                        screenMode = screenMode,
+                        effectiveShape = effectiveShape,
+                        effectiveElevation = effectiveElevation,
+                        effectiveBorder = effectiveBorder,
+                        effectiveSpacing = effectiveSpacing,
+                        gridActions = gridActions,
+                        modifier = sensorGridModifier
+                    )
 
                     // 2. The Map (Expanded - Isolated Recomposition Barrier, REQ-UI-326 / ATT-2944 / REQ-UI-358 / ATT-3343)
                     if (state.mapState.showMap) {
@@ -755,28 +912,6 @@ fun SensorGridScreen(
                     }
 
                     // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199 / REQ-NAV-056)
-                    val activeNavigatedRoute = state.mapRoutes.firstOrNull { it.isActiveNavigation }
-                    var lastRouteSegmentIndex by remember(activeNavigatedRoute?.id) { mutableStateOf<Int?>(null) }
-                    val resolvedProfile = remember(
-                        activeNavigatedRoute,
-                        state.pathPoints,
-                        currentLocation,
-                        state.elevationProfileScope,
-                        state.elevationProfileLookahead
-                    ) {
-                        val res = TrackingElevationProfileResolver.resolve(
-                            activeNavigatedRoute = activeNavigatedRoute,
-                            recordedPathPoints = state.pathPoints,
-                            currentLocation = currentLocation,
-                            scope = state.elevationProfileScope,
-                            lookaheadDistanceMeters = state.elevationProfileLookahead,
-                            lastSegmentIndex = lastRouteSegmentIndex
-                        )
-                        lastRouteSegmentIndex = res.segmentIndex
-                        res
-                    }
-
-                    // 3. The Elevation Profile (Below the Map or anchored with canonical adaptive height when map is hidden, REQ-UI-346 / ATT-3173 / REQ-UI-355 / ATT-3199)
                     // NOTE (ATT-3311 Post-Review Revert / Fence): Do NOT apply scaffold bottom padding from paddingValues
                     // here! Material 3 BottomSheetScaffold passes static sheetPeekHeight (~174dp) in paddingValues even when
                     // the user swipes the Live Segment / Climb sheet down to SheetValue.Hidden (skipHiddenState = false),
@@ -862,7 +997,64 @@ fun SensorGridScreen(
             }
         }
     }
+    }
+}
+}
 
+/**
+ * Reusable sensor grid content renderer for portrait, landscape widescreen, and landscape dual-pane left pane.
+ */
+@Composable
+private fun SensorGridContent(
+    packedRows: List<List<SensorFieldState>>,
+    trackingDividerMap: Map<Int, SectionDividerInfo>,
+    screenMode: ScreenMode,
+    effectiveShape: Shape,
+    effectiveElevation: CardElevation,
+    effectiveBorder: BorderStroke?,
+    effectiveSpacing: Dp,
+    gridActions: GridActions,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Top
+    ) {
+        packedRows.forEach { fieldsInThisRow ->
+            val firstField = fieldsInThisRow.firstOrNull()
+            if (firstField != null && firstField.rowNr > 1) {
+                val divider = trackingDividerMap[firstField.rowNr]
+                if (divider != null) {
+                    CockpitSectionDivider(
+                        divider = divider,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.height(IntrinsicSize.Min),
+                horizontalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Start
+            ) {
+                fieldsInThisRow.forEach { fieldState ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        SensorFieldView(
+                            fieldState = fieldState,
+                            screenMode = screenMode,
+                            isSelectedForMove = false,
+                            shape = effectiveShape,
+                            cardElevation = effectiveElevation,
+                            border = effectiveBorder,
+                            onStartMove = {},
+                            onEdit = { gridActions.onEditField(fieldState) },
+                            onDelete = {}
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1407,6 +1599,121 @@ private fun SensorGridScreenTrackingPreview() {
         }
         SensorGridScreen(
             state = TrackingScreenState(fields = previewFields),
+            screenMode = ScreenMode.TRACKING,
+            gridActions = mockActions,
+            currentLocationFlow = dummyLocationFlow,
+            liveSegments = dummySegmentsFlow
+        )
+    }
+}
+
+// Previews for Landscape Dual-Pane and Landscape Widescreen (REQ-TRK-040)
+@Preview(showBackground = true, name = "Landscape Dual-Pane Light", widthDp = 840, heightDp = 390)
+@Composable
+private fun SensorGridScreenLandscapeDualPanePreview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        val previewFields = listOf(
+            SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.LARGE, label = "Speed", value = "28.4", units = "km/h", zoneColor = Color.Transparent, filterDescription = ""),
+            SensorFieldState(configHash = 2, sensorFieldId = 2, rowNr = 0, colNr = 1, viewSize = ViewSize.LARGE, label = "Heart Rate", value = "152", units = "bpm", zoneColor = TTColor.Zone3, filterDescription = ""),
+            SensorFieldState(configHash = 3, sensorFieldId = 3, rowNr = 1, colNr = 0, viewSize = ViewSize.LARGE, label = "Power", value = "245", units = "W", zoneColor = TTColor.Zone4, filterDescription = ""),
+            SensorFieldState(configHash = 4, sensorFieldId = 4, rowNr = 1, colNr = 1, viewSize = ViewSize.LARGE, label = "Cadence", value = "88", units = "rpm", zoneColor = Color.Transparent, filterDescription = "")
+        )
+        val mockActions = object : GridActions {
+            override fun onEditField(fieldState: SensorFieldState) {}
+            override fun onDeleteField(fieldState: SensorFieldState) {}
+            override fun onAddRow(beforeRow: Int) {}
+            override fun onAddCol(atRow: Int, beforeCol: Int) {}
+        }
+        SensorGridScreen(
+            state = TrackingScreenState(
+                fields = previewFields,
+                showMap = true,
+                mapState = TrackingMapState(showMap = true)
+            ),
+            screenMode = ScreenMode.TRACKING,
+            gridActions = mockActions,
+            currentLocationFlow = dummyLocationFlow,
+            liveSegments = dummySegmentsFlow
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Landscape Dual-Pane Dark", widthDp = 840, heightDp = 390)
+@Composable
+private fun SensorGridScreenLandscapeDualPaneDarkPreview() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        val previewFields = listOf(
+            SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.LARGE, label = "Speed", value = "28.4", units = "km/h", zoneColor = Color.Transparent, filterDescription = ""),
+            SensorFieldState(configHash = 2, sensorFieldId = 2, rowNr = 0, colNr = 1, viewSize = ViewSize.LARGE, label = "Heart Rate", value = "152", units = "bpm", zoneColor = TTColor.Zone3, filterDescription = "")
+        )
+        val mockActions = object : GridActions {
+            override fun onEditField(fieldState: SensorFieldState) {}
+            override fun onDeleteField(fieldState: SensorFieldState) {}
+            override fun onAddRow(beforeRow: Int) {}
+            override fun onAddCol(atRow: Int, beforeCol: Int) {}
+        }
+        SensorGridScreen(
+            state = TrackingScreenState(
+                fields = previewFields,
+                showMap = true,
+                mapState = TrackingMapState(showMap = true)
+            ),
+            screenMode = ScreenMode.TRACKING,
+            gridActions = mockActions,
+            currentLocationFlow = dummyLocationFlow,
+            liveSegments = dummySegmentsFlow
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Landscape Widescreen Light", widthDp = 840, heightDp = 390)
+@Composable
+private fun SensorGridScreenLandscapeWidescreenPreview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        val previewFields = listOf(
+            SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.LARGE, label = "Speed", value = "32.1", units = "km/h", zoneColor = Color.Transparent, filterDescription = ""),
+            SensorFieldState(configHash = 2, sensorFieldId = 2, rowNr = 1, colNr = 0, viewSize = ViewSize.LARGE, label = "Power", value = "280", units = "W", zoneColor = TTColor.Zone4, filterDescription = "")
+        )
+        val mockActions = object : GridActions {
+            override fun onEditField(fieldState: SensorFieldState) {}
+            override fun onDeleteField(fieldState: SensorFieldState) {}
+            override fun onAddRow(beforeRow: Int) {}
+            override fun onAddCol(atRow: Int, beforeCol: Int) {}
+        }
+        SensorGridScreen(
+            state = TrackingScreenState(
+                fields = previewFields,
+                showMap = false,
+                mapState = TrackingMapState(showMap = false)
+            ),
+            screenMode = ScreenMode.TRACKING,
+            gridActions = mockActions,
+            currentLocationFlow = dummyLocationFlow,
+            liveSegments = dummySegmentsFlow
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Landscape Widescreen Dark", widthDp = 840, heightDp = 390)
+@Composable
+private fun SensorGridScreenLandscapeWidescreenDarkPreview() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        val previewFields = listOf(
+            SensorFieldState(configHash = 1, sensorFieldId = 1, rowNr = 0, colNr = 0, viewSize = ViewSize.LARGE, label = "Speed", value = "32.1", units = "km/h", zoneColor = Color.Transparent, filterDescription = ""),
+            SensorFieldState(configHash = 2, sensorFieldId = 2, rowNr = 1, colNr = 0, viewSize = ViewSize.LARGE, label = "Power", value = "280", units = "W", zoneColor = TTColor.Zone4, filterDescription = "")
+        )
+        val mockActions = object : GridActions {
+            override fun onEditField(fieldState: SensorFieldState) {}
+            override fun onDeleteField(fieldState: SensorFieldState) {}
+            override fun onAddRow(beforeRow: Int) {}
+            override fun onAddCol(atRow: Int, beforeCol: Int) {}
+        }
+        SensorGridScreen(
+            state = TrackingScreenState(
+                fields = previewFields,
+                showMap = false,
+                mapState = TrackingMapState(showMap = false)
+            ),
             screenMode = ScreenMode.TRACKING,
             gridActions = mockActions,
             currentLocationFlow = dummyLocationFlow,

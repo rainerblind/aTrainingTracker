@@ -321,5 +321,21 @@ class AppNavigationDrawerTest {
             hasAdvancedTuning
         )
     }
+
+    @Test
+    fun testDrawerGroups_settingsContainsTipsGuide() {
+        val groups = createDrawerGroups(R.string.tab_start)
+        val settingsGroup = groups.firstOrNull { it.titleRes == R.string.drawer__settings }
+        assertTrue("Settings group must exist", settingsGroup != null)
+
+        val tipsGuideItem = settingsGroup!!.items.firstOrNull { it.id == R.id.drawer_tips_guide }
+        assertTrue("Settings group must contain drawer_tips_guide (REQ-UI-432)", tipsGuideItem != null)
+        assertEquals(R.drawable.ic_tips_and_updates, tipsGuideItem?.iconRes)
+        assertEquals(R.string.drawer_tips_guide, tipsGuideItem?.titleRes)
+
+        val tipsIndex = settingsGroup.items.indexOfFirst { it.id == R.id.drawer_tips_guide }
+        val privacyIndex = settingsGroup.items.indexOfFirst { it.id == R.id.drawer_privacy_policy }
+        assertTrue("Tips guide must be placed before privacy policy", tipsIndex < privacyIndex)
+    }
 }
 

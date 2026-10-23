@@ -110,6 +110,7 @@ import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsD
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveSettingsDialog
+import com.atrainingtracker.trainingtracker.ui.help.TipsGuideScreen
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialog
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreen
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialog
@@ -555,6 +556,29 @@ fun ATrainingTrackerApp(
                     AdvancedTuningScreen(
                         onNavigateBack = { navController.popBackStack() },
                         onSettingsChanged = { activity.applyDisplaySettings() }
+                    )
+                }
+
+                composable(NavRoutes.TIPS_GUIDE) {
+                    TipsGuideScreen(
+                        onNavigateBack = {
+                            if (navController.previousBackStackEntry != null) {
+                                navController.popBackStack()
+                            } else {
+                                activity.navigateToDrawerItem(R.id.drawer_start_tracking)
+                            }
+                        },
+                        onNavigateToRoute = { route ->
+                            when (route) {
+                                NavRoutes.LOCATIONS -> activity.navigateToDrawerItem(R.id.drawer_my_locations)
+                                NavRoutes.SENSORS -> activity.navigateToDrawerItem(R.id.drawer_my_sensors)
+                                NavRoutes.SPORT_TYPES -> activity.navigateToDrawerItem(R.id.drawer_sport_types)
+                                NavRoutes.SEGMENTS -> activity.navigateToDrawerItem(R.id.drawer_segments)
+                                NavRoutes.EQUIPMENT -> activity.navigateToDrawerItem(R.id.drawer_equipment)
+                                NavRoutes.BACKUP_RESTORE -> activity.navigateToDrawerItem(R.id.drawer_backup_restore)
+                                else -> navController.navigate(route)
+                            }
+                        }
                     )
                 }
             }

@@ -16,13 +16,17 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
 ## Key Responsibilities (`subagent_flash` as `agent1` — `flash`)
 1. **Two-Tier Unit Test Execution Strategy (Rule 60 — `ATT-4465`)**:
    - **Tier 1 — Per-Ticket Verification (Stage 4 & Stage 5, ~10–20s)**:
-     - Run targeted unit and contract tests covering all modified and directly adjacent packages/classes:
+     - Run targeted unit and contract tests covering all modified and directly adjacent packages/classes (plus `ThemeColorCentralizationAuditTest` whenever any UI/Compose file is modified, `Rule 64` — `ATT-4718`):
        ```bash
-       ./gradlew testDebugUnitTest --tests "com.atrainingtracker.<modified_package>.*"
+       ./gradlew testDebugUnitTest --tests "com.atrainingtracker.<modified_package>.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"
        ```
      - Run `TranslationParityTest` whenever any `strings.xml` resource file is modified (~3s):
        ```bash
        ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"
+       ```
+     - Run fast AAPT2 resource compilation verification to rapidly trap 9-language XML/AAPT2 resource errors without full APK build overhead (~5s, ATT-3534):
+       ```bash
+       ./gradlew processDebugResources
        ```
      - Run `python3 tools/verify_requirement_governance.py` when existing requirements are modified.
      - **Exception (High-Risk Core Infrastructure)**: Run the full `./gradlew testDebugUnitTest` suite per-ticket *only* for High-Risk cross-cutting changes touching core shared infrastructure (`TrainingApplication`, `TrackerService`, `BANALService`, or SQLite database schema migrations).
@@ -30,10 +34,10 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
      - The full clean-room regression suite (`./gradlew testDebugUnitTest` — 3,660+ tests) is executed once during the Sprint `Review & Retro` ticket before merging `sprint/<SPRINT_NAME>` into `develop`.
 2. **Conditional On-Device / Physical Verification (Rules 60 & 62 — `ATT-4465`, `ATT-4596`)**:
    - **UI / Compose / Resource / Navigation / Foreground Service Tickets**: Deploy debug APK to Pixel 10 (`./gradlew installDebug`), explicitly launch the **Debug** package (`adb shell am start -n com.atrainingtracker.debug/com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation` — never `com.atrainingtracker`, which opens the unpatched Release package), navigate on-device to **every single screen/route** whose `ViewModel`, `Fragment`, or composable was modified, and verify `adb logcat -b crash -d` is clean. Capture on-device screenshots (`adb exec-out screencap -p > docs/engineering/walkthroughs/img/<KEY>_<name>.png`) of the new/changed UI and reference screen, and compare against `docs/design_guidelines.md` Section 5.
-   - **Non-UI Backend / Algorithm / DB Query / Dead-Code Cleanup Tickets**: Skip physical APK deployment in Stage 5 and rely on targeted unit/contract tests + `./gradlew assembleDebug` compilation verification.
+   - **Non-UI Backend / Algorithm / DB Query / Dead-Code Cleanup Tickets**: Skip physical APK deployment in Stage 5 and rely on targeted unit/contract tests + `./gradlew processDebugResources` compilation verification.
 3. **Walkthrough Documentation & Automatic Living Documentation Synchronization (Concise Cap $\le 60\text{--}80$ Lines)**:
    - Author `docs/engineering/walkthroughs/<TICKET_KEY>_walkthrough.md` using `templates/walkthrough_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**.
-   - Note: `submit-stage <TICKET_KEY> 5` **automatically** flips `Planned` / `Status: Planned (<TICKET_KEY>)` rows in `docs/requirements.md` and `docs/tests.md` to `Verified`—no manual `replace_file_content` calls are needed just to flip the status column.
+    - Note: `submit-stage <TICKET_KEY> 5` **automatically** flips `Planned` / `Status: Planned (<TICKET_KEY>)` rows and headings across `docs/requirements/`, `docs/tests/`, `docs/requirements.md` and `docs/tests.md` to `Verified`—no manual `replace_file_content` calls are needed just to flip the status column.
 4. **Single-Turn Stage Submission (`submit-stage`)**:
    - Submit Stage 5 walkthrough in a single composite CLI call (auto-flips `Planned` $\rightarrow$ `Verified` in living docs, creates/updates `[Test]` sub-task, and moves it to `In Überprüfung`):
      ```bash
@@ -43,7 +47,7 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
 ## Gate 5 Independent Review Checklist (`subagent_pro` as `agent2` — `pro`)
 Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Stage 5 walkthrough and repository state against this checklist and record the verdict via `--as agent2 gate-verdict`:
 1. **Regression & Governance Verification**: Verify Tier 1 targeted/contract unit tests (or full suite for High-Risk tickets), `TranslationParityTest` (if strings changed), and `verify_requirement_governance.py` passed with 100% success (0 failures, 0 regressions).
-2. **Living Documentation Parity**: Confirm `docs/requirements.md` and `docs/tests.md` status fields are updated to `Verified`.
+2. **Living Documentation Parity**: Confirm living documentation in `docs/requirements/` and `docs/tests/` status fields are updated to `Verified`.
 3. **Mandatory Lösungsversion (Fix Version/s) Governance Audit**:
    - In accordance with Core Rule 8 ("FixVersion set only upon completion" and sub-tasks never having `fixVersions`), active in-sprint tickets legitimately have Parent `Lösungsversion` as `None` until final acceptance during Joint Review or release. Verify that the deliverable references the target release version (e.g. `V4.9.40`) and that sub-tasks have no fix version assigned.
 4. **Gate Verdict (`gate-verdict`) & Parent Handover (Core Rule 3)**:

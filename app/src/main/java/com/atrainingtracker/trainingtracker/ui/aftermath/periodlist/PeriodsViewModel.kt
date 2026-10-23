@@ -19,6 +19,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
@@ -39,6 +40,7 @@ import kotlinx.coroutines.withContext
 data class PeriodMapState(
     val tracks: List<MapTrack> = emptyList(),
     val workoutIdToHeatmapPathMap: Map<Long, List<LatLng>> = emptyMap(),
+    val workoutIdToSportMap: Map<Long, BSportType> = emptyMap(),
     val memberMarkers: List<PeriodPeakMarker> = emptyList(),
     val regions: List<SpatialRegion> = emptyList(),
     val selectedRegionId: String? = null,
@@ -183,6 +185,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                 _mapState.value = PeriodMapState(
                     tracks = tracks,
                     workoutIdToHeatmapPathMap = heatmapPathMap,
+                    workoutIdToSportMap = workouts.associate { it.id to it.bSportType },
                     memberMarkers = markers,
                     regions = detectedRegions,
                     selectedRegionId = primaryRegion?.id,

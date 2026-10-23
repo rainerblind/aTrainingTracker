@@ -18,8 +18,10 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
+import android.content.res.Configuration
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -850,12 +852,19 @@ fun TrackingTabsScreen(
             val shouldShowLapButton = currentViewInfo?.showLapButton == true && screenMode != ScreenMode.CONFIGURATION
             val shouldShowBikeBell = currentViewInfo?.showBikeBell == true && screenMode != ScreenMode.CONFIGURATION
             if (shouldShowLapButton || shouldShowBikeBell) {
+                val configuration = LocalConfiguration.current
+                val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                val isLandscapeWithMap = isLandscape && currentViewInfo?.showMap == true
+                val buttonAlignment = if (isLandscapeWithMap) Alignment.BottomStart else Alignment.BottomCenter
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .navigationBarsPadding() // Respect system nav bar
-                        .padding(bottom = 8.dp), // Space from bottom of screen
-                    contentAlignment = Alignment.BottomCenter
+                        .padding(
+                            start = if (isLandscapeWithMap) 16.dp else 0.dp,
+                            bottom = 8.dp
+                        ), // Space from bottom of screen
+                    contentAlignment = buttonAlignment
                 ) {
                     if (shouldShowLapButton && shouldShowBikeBell) {
                         Row(

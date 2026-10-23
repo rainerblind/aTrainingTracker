@@ -42,7 +42,9 @@ object DatabaseSchemaRegistry {
         "Pebble.db" to 3,
         "AthleteMetrics.db" to 1,
         "ActiveDevices.db" to 1,
-        "ExportStatus.db" to 1
+        "ExportStatus.db" to 1,
+        com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.DATABASE_NAME to
+                com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.DB_VERSION
     )
 
     @JvmStatic

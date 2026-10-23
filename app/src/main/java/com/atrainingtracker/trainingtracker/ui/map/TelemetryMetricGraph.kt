@@ -18,11 +18,15 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import android.content.res.Configuration
 import android.graphics.Paint
+import android.graphics.Typeface
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -30,8 +34,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -43,13 +50,17 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
+import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
@@ -60,6 +71,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThre
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneTimeEntry
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import java.util.Locale
 import kotlin.math.abs
@@ -246,17 +258,19 @@ fun TelemetryMetricGraph(
     val currentOnDistanceSelectedState by rememberUpdatedState(onDistanceSelected)
     val currentOnPointSelectedState by rememberUpdatedState(onPointSelected)
 
-    Box(modifier = modifier.fillMaxWidth()) {
-        val baseCanvasModifier = Modifier
-            .fillMaxWidth()
-            .height(110.dp)
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-        val canvasModifier = if (enableGestures) {
-            baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode) {
-                val startPaddingPx = 50.dp.toPx()
-                val endPaddingPx = 25.dp.toPx()
-                val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
-                val touchSlop = viewConfiguration.touchSlop
+    val baseCanvasModifier = Modifier
+        .fillMaxWidth()
+        .height(110.dp)
+
+    val canvasModifier = if (enableGestures) {
+        baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode) {
+            val startPaddingPx = 50.dp.toPx()
+            val endPaddingPx = 25.dp.toPx()
+            val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
+            val touchSlop = viewConfiguration.touchSlop
 
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -374,6 +388,7 @@ fun TelemetryMetricGraph(
             baseCanvasModifier
         }
 
+    val chartCanvas: @Composable () -> Unit = {
         Canvas(
             modifier = canvasModifier
         ) {
@@ -417,7 +432,7 @@ fun TelemetryMetricGraph(
                     )
 
                     // Draw right-hand secondary zone axis label (Z1-Z5) only if marginal bars are not rendered
-                    if (zoneDistribution == null) {
+                    if (zoneDistribution == null && !isLandscape) {
                         if (TelemetryZoneMath.shouldRenderZoneLabel(rectHeight, 12.dp.toPx())) {
                             val yCenter = rectTop + (rectHeight / 2f)
                             val textBaseline = yCenter - ((zoneLabelPaint.descent() + zoneLabelPaint.ascent()) / 2f)
@@ -429,7 +444,7 @@ fun TelemetryMetricGraph(
             }
 
             // 1b. Draw minimalist marginal zone bars / histogram (REQ-UI-251 / ATT-2147)
-            if (zoneDistribution != null) {
+            if (zoneDistribution != null && !isLandscape) {
                 val stripStartPx = startPaddingPx + chartWidthPx + 3.dp.toPx()
                 val stripWidthPx = (endPaddingPx - 5.dp.toPx()).coerceAtLeast(10.dp.toPx())
 
@@ -774,5 +789,272 @@ fun TelemetryMetricGraph(
                 }
             }
         }
+    }
+
+    if (isLandscape && zoneDistribution != null) {
+        Row(
+            modifier = modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.weight(0.72f)) {
+                chartCanvas()
+            }
+            AlignedMarginalZoneDistribution(
+                zoneDistribution = zoneDistribution,
+                zoneDisplayMode = zoneDisplayMode,
+                zoneBands = zoneBands,
+                dataMin = dataMin,
+                dataMax = dataMax,
+                metricType = metricType,
+                thresholdDashes = thresholdDashes,
+                modifier = Modifier.weight(0.28f).height(110.dp)
+            )
+        }
+    } else {
+        Box(modifier = modifier.fillMaxWidth()) {
+            chartCanvas()
+        }
+    }
+}
+
+/**
+ * Aligned marginal zone distribution pane for landscape mode telemetry graphs (REQ-UI-431 / ATT-2145).
+ *
+ * Renders horizontal zone bars (or fine histogram frequency bars) docked immediately to the right
+ * of the telemetry graph curve in a 72/28 dual-pane split, maintaining 1:1 vertical Y-axis alignment
+ * with the adjacent graph's zone thresholds, and displaying legible zone labels, percentage shares,
+ * and formatted durations.
+ */
+@Composable
+fun AlignedMarginalZoneDistribution(
+    zoneDistribution: ZoneDistributionData,
+    zoneDisplayMode: ZoneCardDisplayMode,
+    zoneBands: List<TelemetryZoneBand>,
+    dataMin: Double,
+    dataMax: Double,
+    metricType: TelemetryMetricType,
+    modifier: Modifier = Modifier,
+    thresholdDashes: List<Double> = emptyList(),
+    topPadding: Dp = 10.dp,
+    bottomPadding: Dp = 24.dp
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val timeFormatter = remember { TimeFormatter() }
+
+    val textPaint = remember(colorScheme) {
+        Paint().apply {
+            color = android.graphics.Color.WHITE
+            isAntiAlias = true
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            setShadowLayer(4f, 0f, 1f, android.graphics.Color.BLACK)
+        }
+    }
+
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(110.dp)
+    ) {
+        val topPaddingPx = topPadding.toPx()
+        val bottomPaddingPx = bottomPadding.toPx()
+        val chartHeightPx = (size.height - topPaddingPx - bottomPaddingPx).coerceAtLeast(1f)
+        val availableWidthPx = size.width
+        val valRange = (dataMax - dataMin).coerceAtLeast(1.0)
+
+        fun valueToY(v: Double): Float {
+            return if (metricType == TelemetryMetricType.PACE) {
+                val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
+                (topPaddingPx + ratio * chartHeightPx).toFloat()
+            } else {
+                val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
+                (topPaddingPx + (1.0 - ratio) * chartHeightPx).toFloat()
+            }
+        }
+
+        val nativeCanvas = drawContext.canvas.nativeCanvas
+
+        if (zoneDisplayMode == ZoneCardDisplayMode.FIVE_ZONES ||
+            zoneDisplayMode == ZoneCardDisplayMode.COLUMNS ||
+            zoneDisplayMode == ZoneCardDisplayMode.STACKED_BAR
+        ) {
+            for (entry in zoneDistribution.entries) {
+                val band = zoneBands.getOrNull(entry.zoneIndex - 1)
+                if (band != null) {
+                    val yTop = valueToY(band.maxVal)
+                    val yBottom = valueToY(band.minVal)
+                    val rectTop = minOf(yTop, yBottom)
+                    val rectHeight = abs(yTop - yBottom)
+
+                    if (rectHeight > 0f) {
+                        // 1. Background container track
+                        drawRoundRect(
+                            color = entry.color.copy(alpha = 0.18f),
+                            topLeft = Offset(0f, rectTop),
+                            size = Size(availableWidthPx, rectHeight),
+                            cornerRadius = CornerRadius(3.dp.toPx())
+                        )
+
+                        // 2. Weighted horizontal bar
+                        val barWidthPx = (entry.percentage / 100f).coerceIn(0f, 1f) * availableWidthPx
+                        if (barWidthPx > 0f) {
+                            drawRoundRect(
+                                color = entry.color.copy(alpha = 0.85f),
+                                topLeft = Offset(0f, rectTop),
+                                size = Size(barWidthPx, rectHeight),
+                                cornerRadius = CornerRadius(3.dp.toPx())
+                            )
+                        }
+
+                        // 3. Granular metrics text overlay (REQ-UI-431.3)
+                        if (rectHeight >= 12.dp.toPx()) {
+                            val zoneLabel = "Z${entry.zoneIndex}"
+                            val pctLabel = "${entry.percentage.toInt()}%"
+                            val durLabel = timeFormatter.format_with_units(entry.durationSec)
+                            val fullText = "$zoneLabel  $pctLabel  $durLabel"
+
+                            textPaint.textSize = (rectHeight * 0.55f).coerceIn(16f, 24f)
+                            val yCenter = rectTop + (rectHeight / 2f)
+                            val textBaseline = yCenter - ((textPaint.descent() + textPaint.ascent()) / 2f)
+
+                            val textToDraw = if (textPaint.measureText(fullText) <= availableWidthPx - 6.dp.toPx()) {
+                                fullText
+                            } else if (textPaint.measureText("$zoneLabel $pctLabel") <= availableWidthPx - 6.dp.toPx()) {
+                                "$zoneLabel $pctLabel"
+                            } else {
+                                zoneLabel
+                            }
+
+                            nativeCanvas.drawText(textToDraw, 4.dp.toPx(), textBaseline, textPaint)
+                        }
+                    }
+                }
+            }
+        } else if (zoneDisplayMode == ZoneCardDisplayMode.HISTOGRAM && zoneDistribution.histogram != null) {
+            val histogram = zoneDistribution.histogram
+            val maxBinPct = histogram.bins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
+
+            for (bin in histogram.bins) {
+                val yTop = valueToY(bin.rangeMax.toDouble())
+                val yBottom = valueToY(bin.rangeMin.toDouble())
+                val rectTop = minOf(yTop, yBottom)
+                val rectHeight = abs(yTop - yBottom).coerceAtLeast(1f)
+
+                // Background container track
+                drawRoundRect(
+                    color = bin.color.copy(alpha = 0.15f),
+                    topLeft = Offset(0f, rectTop),
+                    size = Size(availableWidthPx, rectHeight),
+                    cornerRadius = CornerRadius(2.dp.toPx())
+                )
+
+                // Weighted horizontal frequency bar
+                val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * availableWidthPx
+                if (barWidthPx > 0f) {
+                    drawRoundRect(
+                        color = bin.color.copy(alpha = 0.85f),
+                        topLeft = Offset(0f, rectTop),
+                        size = Size(barWidthPx, rectHeight),
+                        cornerRadius = CornerRadius(2.dp.toPx())
+                    )
+                }
+
+                // Text overlay for bins with sufficient height
+                if (rectHeight >= 12.dp.toPx() && bin.durationSec > 0L) {
+                    textPaint.textSize = (rectHeight * 0.50f).coerceIn(14f, 20f)
+                    val binText = "${bin.percentage.toInt()}%"
+                    val yCenter = rectTop + (rectHeight / 2f)
+                    val textBaseline = yCenter - ((textPaint.descent() + textPaint.ascent()) / 2f)
+                    nativeCanvas.drawText(binText, 4.dp.toPx(), textBaseline, textPaint)
+                }
+            }
+        }
+
+        // Draw horizontal boundary grid lines matching adjacent graph
+        drawLine(
+            color = colorScheme.outlineVariant.copy(alpha = 0.35f),
+            start = Offset(0f, topPaddingPx),
+            end = Offset(availableWidthPx, topPaddingPx),
+            strokeWidth = 1f
+        )
+        drawLine(
+            color = colorScheme.outlineVariant.copy(alpha = 0.35f),
+            start = Offset(0f, topPaddingPx + chartHeightPx),
+            end = Offset(availableWidthPx, topPaddingPx + chartHeightPx),
+            strokeWidth = 1f
+        )
+
+        // Draw threshold boundary dash guidelines matching adjacent graph
+        if (thresholdDashes.isNotEmpty()) {
+            val dashEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 6.dp.toPx()), 0f)
+            for (dashVal in thresholdDashes) {
+                val dashY = valueToY(dashVal)
+                drawLine(
+                    color = colorScheme.outlineVariant.copy(alpha = 0.35f),
+                    start = Offset(0f, dashY),
+                    end = Offset(availableWidthPx, dashY),
+                    strokeWidth = 1f,
+                    pathEffect = dashEffect
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "Aligned Marginal Zone Distribution - Light", widthDp = 220, heightDp = 120, showBackground = true)
+@Composable
+private fun AlignedMarginalZoneDistributionLightPreview() {
+    MaterialTheme {
+        val entries = listOf(
+            ZoneTimeEntry(1, 0, 120L, 10f, TTColor.Zone1),
+            ZoneTimeEntry(2, 0, 360L, 30f, TTColor.Zone2),
+            ZoneTimeEntry(3, 0, 480L, 40f, TTColor.Zone3),
+            ZoneTimeEntry(4, 0, 180L, 15f, TTColor.Zone4),
+            ZoneTimeEntry(5, 0, 60L, 5f, TTColor.Zone5)
+        )
+        val zoneBands = listOf(
+            TelemetryZoneBand(1, 100.0, 120.0, TTColor.Zone1, "Z1"),
+            TelemetryZoneBand(2, 120.0, 140.0, TTColor.Zone2, "Z2"),
+            TelemetryZoneBand(3, 140.0, 160.0, TTColor.Zone3, "Z3"),
+            TelemetryZoneBand(4, 160.0, 180.0, TTColor.Zone4, "Z4"),
+            TelemetryZoneBand(5, 180.0, 200.0, TTColor.Zone5, "Z5")
+        )
+        AlignedMarginalZoneDistribution(
+            zoneDistribution = ZoneDistributionData(1200L, entries),
+            zoneDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
+            zoneBands = zoneBands,
+            dataMin = 95.0,
+            dataMax = 205.0,
+            metricType = TelemetryMetricType.HEART_RATE
+        )
+    }
+}
+
+@Preview(name = "Aligned Marginal Zone Distribution - Dark", widthDp = 220, heightDp = 120, showBackground = true)
+@Composable
+private fun AlignedMarginalZoneDistributionDarkPreview() {
+    MaterialTheme(colorScheme = androidx.compose.material3.darkColorScheme()) {
+        val entries = listOf(
+            ZoneTimeEntry(1, 0, 120L, 10f, TTColor.Zone1),
+            ZoneTimeEntry(2, 0, 360L, 30f, TTColor.Zone2),
+            ZoneTimeEntry(3, 0, 480L, 40f, TTColor.Zone3),
+            ZoneTimeEntry(4, 0, 180L, 15f, TTColor.Zone4),
+            ZoneTimeEntry(5, 0, 60L, 5f, TTColor.Zone5)
+        )
+        val zoneBands = listOf(
+            TelemetryZoneBand(1, 100.0, 120.0, TTColor.Zone1, "Z1"),
+            TelemetryZoneBand(2, 120.0, 140.0, TTColor.Zone2, "Z2"),
+            TelemetryZoneBand(3, 140.0, 160.0, TTColor.Zone3, "Z3"),
+            TelemetryZoneBand(4, 160.0, 180.0, TTColor.Zone4, "Z4"),
+            TelemetryZoneBand(5, 180.0, 200.0, TTColor.Zone5, "Z5")
+        )
+        AlignedMarginalZoneDistribution(
+            zoneDistribution = ZoneDistributionData(1200L, entries),
+            zoneDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
+            zoneBands = zoneBands,
+            dataMin = 95.0,
+            dataMax = 205.0,
+            metricType = TelemetryMetricType.HEART_RATE
+        )
     }
 }

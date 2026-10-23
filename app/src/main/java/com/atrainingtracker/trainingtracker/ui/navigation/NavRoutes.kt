@@ -63,6 +63,7 @@ object NavRoutes {
     const val ATHLETE_PROFILE = "athlete_profile"
     const val BACKUP_RESTORE = "backup_restore"
     const val ADVANCED_SETTINGS = "advanced_settings"
+    const val TIPS_GUIDE = "tips_guide"
 
     /**
      * Builds a navigation route to Training Zones, optionally parameterized with an initial tab and onboarding prompt reason (REQ-UI-374.3).
@@ -109,6 +110,7 @@ object NavRoutes {
         R.id.drawer_athlete_profile -> ATHLETE_PROFILE
         R.id.drawer_backup_restore -> BACKUP_RESTORE
         R.id.drawer_advanced_tuning -> ADVANCED_SETTINGS
+        R.id.drawer_tips_guide -> TIPS_GUIDE
         else -> null
     }
 
@@ -133,6 +135,7 @@ object NavRoutes {
         ATHLETE_PROFILE -> R.id.drawer_athlete_profile
         BACKUP_RESTORE -> R.id.drawer_backup_restore
         ADVANCED_SETTINGS -> R.id.drawer_advanced_tuning
+        TIPS_GUIDE -> R.id.drawer_tips_guide
         else -> R.id.drawer_start_tracking
     }
 

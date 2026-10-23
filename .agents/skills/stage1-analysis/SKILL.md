@@ -17,16 +17,20 @@ At Ticket Start (`ATT-XXXX`), spawn two persistent `TypeName: "self"` subagents 
 1. **Forensic Root Cause Analysis (RCA)**:
    - For defects: Investigate stack traces, system logs, SQLite table constraints, thread concurrency, and Android framework lifecycles.
    - For features: Perform gap analysis against current architectural components.
-2. **Chesterton's Fence Archaeology (`REQ-PRO-022`)**:
+2. **Independent Hypothesis Verification (4-Augen-Prinzip — ATT-3534)**:
+   - When a Jira ticket already includes a detailed root-cause analysis or architectural proposal, treat it strictly as a hypothesis.
+   - Independently audit the hypothesis against the live `sprint/<SPRINT_NAME>` codebase: cross-check cited files, line ranges, and architectural assumptions to identify blind spots or potential regressions.
+   - Include an explicit **"Independent Peer Review & Verification"** subsection in the Stage 1 deliverable (`docs/engineering/analysis/<TICKET_KEY>_analysis.md`).
+3. **Chesterton's Fence Archaeology (`REQ-PRO-022`)**:
    - Inspect git history (`git log -S <REQ-ID> docs/requirements.md`) before proposing modifications to existing requirements.
    - If modifying an existing requirement, populate the 4 mandatory fields:
      - `Original Requirement ID & Target`
      - `Historical Origin & Commit Trace`
      - `Root Reason for Existing Formulation`
      - `Preservation of Core Invariants`
-3. **User Scope Grounding (`ATT-1250`)**:
+4. **User Scope Grounding (`ATT-1250`)**:
    - Explicitly delineate in-scope objectives from out-of-scope adjacent refactorings to prevent scope creep.
-4. **Single-Turn Stage Submission (`submit-stage`) & Concise Deliverable Cap (Rule 60)**:
+5. **Single-Turn Stage Submission (`submit-stage`) & Concise Deliverable Cap (Rule 60)**:
    - Author `docs/engineering/analysis/<TICKET_KEY>_analysis.md` using `templates/analysis_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**—do not repeat the ticket description verbatim or add narrative filler.
    - Submit Stage 1 in a single composite CLI call (creates/updates `[Analysis]` sub-task and moves it to `In Überprüfung`):
      ```bash
