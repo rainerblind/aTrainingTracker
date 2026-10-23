@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 367
+**Total Requirements**: 368
 
 ---
 
@@ -12347,3 +12347,53 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* all new keys exist across all 9 locales with 100% parity.
 
 **Invariants**: Zero breakage of OAuth PKCE redirect or Google Sign-In, `ComposeSafePainterContractTest.kt`, `DropboxSettingsDialogTest.kt`, and 100% clean-room test pass rate.
+
+### REQ-UI-431: Landscape Compact Aligned Marginal Zone Distribution Bars Right of Telemetry Graph [Verified]
+- **Tests**: `TST-UI-396`
+- **Implementation**: `TelemetryMetricGraph.kt`
+- **Rationale**: In landscape orientation, the system SHALL decouple the marginal zone distribution from the compressed 25dp inline strip into an aligned side-by-side marginal zone distribution pane docked immediately to the right of the continuous telemetry graph. This utilizes available horizontal viewport width (~640–900dp), establishes pixel-perfect vertical Y-axis alignment between horizontal zone bars and telemetry curve thresholds, displays legible zone labels, percentage shares, and formatted time durations, seamlessly synchronizes display mode transitions (`FIVE_ZONES` vs. `HISTOGRAM`), and preserves 100% byte-for-byte portrait layout fidelity (ATT-2145, Parent Epic ATT-2144, status: Verified, refining and extending `REQ-UI-251` and `REQ-UI-206`):
+1. *Landscape Proportional Dual-Pane Layout Composition (`REQ-UI-431.1`)*:
+• In landscape orientation (`Configuration.ORIENTATION_LANDSCAPE`), `TelemetryMetricGraph` SHALL arrange the continuous telemetry curve canvas and the marginal zone distribution pane side-by-side in a horizontal `Row`.
+• The left telemetry chart canvas SHALL receive proportional weight ~72% (`Modifier.weight(0.72f)`).
+• The right marginal zone distribution pane SHALL receive proportional weight ~28% (`Modifier.weight(0.28f)`).
+2. *Exact Vertical Y-Axis Coordinate Alignment (`REQ-UI-431.2`)*:
+• In landscape mode, the marginal zone distribution pane SHALL align all horizontal zone bars (in 5-zone modes) or frequency histogram bins (in histogram mode) 1:1 on the vertical axis with the corresponding metric threshold boundaries and plot area of the adjacent telemetry graph.
+• The top and bottom paddings of the marginal zone container SHALL strictly match the graph plot bounds, ensuring zone boundaries match the graph's horizontal dashed threshold guidelines.
+3. *Granular Metrics Text Legibility (`REQ-UI-431.3`)*:
+• In landscape mode, each horizontal zone bar SHALL render a filled weighted bar with overlaid text displaying Zone Label (e.g., `Z5`), Percentage share (e.g., `45%`), and Duration (e.g., `19:40 min` formatted via `TimeFormatter`).
+• Text typography, color contrast, and clipping prevention SHALL ensure legibility across dynamic themes and font scales.
+4. *Synchronous Display Mode Switching (`REQ-UI-431.4`)*:
+• The marginal zone distribution pane SHALL observe the hoisted `zoneDisplayMode: ZoneCardDisplayMode` state synchronously with the aftermath zone distribution cards.
+• In `FIVE_ZONES`, `COLUMNS`, or `STACKED_BAR` modes, the pane SHALL render 5 horizontal zone bars mapped to the respective metric zone thresholds.
+• In `HISTOGRAM` mode, the pane SHALL render frequency distribution bars mapped to the metric's histogram bins.
+5. *Preservation of Portrait Invariants (`REQ-UI-431.5`)*:
+• In portrait orientation (`Configuration.ORIENTATION_PORTRAIT`), `TelemetryMetricGraph` SHALL maintain the 25dp inline canvas strip per `REQ-UI-251` (`ATT-2147`) with 100% byte-for-byte visual and functional fidelity.
+• The start padding (`startPadding = 50.dp`) SHALL remain identical across both orientations, guaranteeing synchronized vertical scrubbing alignment across multi-chart stacks.
+6. *Preservation of System Invariants & Gestures (`REQ-UI-431.6`)*:
+• Touch gestures (scrub drag, tap point selection, pinch-to-zoom/pan), callback invocations (`onDistanceSelected`, `onPointSelected`, `onZoomChanged`), and zero callback suppression (Rule 34) MUST remain completely unimpaired.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-431` under Epic `ATT-2144` (*Landscape Mode*), refining and extending `REQ-UI-251` (*Marginal Zone Bars & Histogram in Portrait*) and `REQ-UI-206` (*Continuous Telemetry Graph Composable*).
+2. *Historical Origin & Commit Trace*: Commit `c8192a0e` (`ATT-2147`, `REQ-UI-251`, `TST-UI-210`, inline marginal zone strip within `endPaddingPx = 25.dp`).
+3. *Root Reason for Existing Formulation*: Portrait viewports (~360dp width) lack horizontal space for text labels and time metrics without severe graph compression. Landscape orientation provides abundant horizontal width (~640–900dp) allowing a dedicated 28% pane while maintaining exact vertical Y-axis alignment.
+4. *Preservation of Core Invariants*: 100% portrait layout fidelity (25dp inline strip), multi-chart scrubber vertical alignment (`startPadding = 50.dp`), touch gesture disambiguation, and 100% clean-room test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete inspects workout telemetry graphs in landscape orientation,
+• *When* `TelemetryMetricGraph` renders with a valid `zoneDistribution`,
+• *Then* the chart canvas and marginal zone distribution pane are displayed side-by-side in a 72/28 proportional `Row` layout.
+• *Given* the landscape marginal zone distribution pane,
+• *When* rendered alongside the telemetry curve,
+• *Then* the top and bottom boundaries of each zone bar align 1:1 on the vertical Y-axis with the graph's zone threshold Y-coordinates.
+• *Given* the landscape marginal zone bars,
+• *When* rendered with valid telemetry zone distribution data,
+• *Then* each bar renders an overlaid text summary showing Zone Label, Percentage, and formatted Duration.
+• *Given* an athlete toggles between `FIVE_ZONES` and `HISTOGRAM` display modes,
+• *When* the state updates,
+• *Then* the landscape marginal pane synchronously transitions between 5 horizontal zone bars and histogram frequency bars.
+• *Given* the device is in portrait orientation,
+• *When* `TelemetryMetricGraph` renders,
+• *Then* the existing 25dp inline canvas strip is rendered without regression and multi-chart scrubbing alignment is preserved.
+
+**Invariants**: Zero regression to portrait mode, zero regression to touch gestures or scrub synchronization, `startPadding = 50.dp` preserved, and 100% clean-room test pass rate.
+

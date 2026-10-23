@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 387
+**Total Tests**: 388
 
 ---
 
@@ -6739,3 +6739,26 @@
   • Verify `dropbox_connect_prompt`, `upload_workouts_to_dropbox_summary`, `upload_backup_to_dropbox_summary`, and `last_backup_never` exist across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with identical tokens.
   5. *Clean-Room Full Suite Regression Execution (`TST-UI-395.5`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate across the full project test suite.
+
+### TST-UI-396: **Landscape Compact Aligned Marginal Zone Distribution Bars Verification Suite** [Side-by-side 72/28 Row layout in landscape mode; 1:1 vertical Y-axis alignment with graph zone thresholds; granular text legibility for zone, percentage, duration; synchronous FIVE_ZONES and HISTOGRAM display mode switching; portrait 25dp inline strip regression preservation; 100% clean-room test pass rate.]
+- **Requirement(s)**: `REQ-UI-431`, `REQ-UI-251`, `REQ-UI-206`
+- **Component**: **Landscape Compact Aligned Marginal Zone Distribution Bars Verification Suite**
+- **Jira**: ``ATT-2145``
+- **Test Description**:
+  1. *Landscape Proportional Dual-Pane Layout Composition Contract Test (`TST-UI-396.1`, `TelemetryMetricGraphLandscapeContractTest.kt`)*:
+  • Verify that in landscape orientation (`Configuration.ORIENTATION_LANDSCAPE`), `TelemetryMetricGraph` branches into a side-by-side `Row` layout.
+  • Verify the chart canvas is allocated proportional weight ~72% (`0.72f`) and the marginal distribution pane is allocated ~28% (`0.28f`).
+  2. *Vertical Y-Axis Coordinate Alignment & Normalization Math Test (`TST-UI-396.2`, `TelemetryMetricGraphLandscapeContractTest.kt`)*:
+  • Verify the top and bottom vertical boundaries of each horizontal zone bar match the exact Y-normalization coordinates of the telemetry graph zone thresholds.
+  • Verify that top and bottom graph plot paddings are symmetrically respected by the marginal pane.
+  3. *Granular Metrics Legibility & Formatting Contract Test (`TST-UI-396.3`, `TelemetryMetricGraphLandscapeContractTest.kt`)*:
+  • Verify zone bars display legible text containing Zone Label (`Z1`–`Z5`), Percentage share, and formatted Duration (`TimeFormatter`).
+  • Verify text contrast and bounds clipping prevention logic.
+  4. *Synchronous Display Mode Switching Test (`TST-UI-396.4`, `TelemetryMetricGraphLandscapeContractTest.kt`)*:
+  • Verify synchronous rendering transitions between 5-Zone horizontal bars (`FIVE_ZONES`, `COLUMNS`, `STACKED_BAR`) and frequency distribution bars (`HISTOGRAM`).
+  5. *Portrait Invariant & Scrubber Alignment Regression Test (`TST-UI-396.5`, `TelemetryMetricGraphMarginalBarsContractTest.kt`)*:
+  • Verify that portrait mode retains the 25dp inline canvas strip per `REQ-UI-251` with 100% backward compatibility.
+  • Verify that `startPadding = 50.dp` is preserved across both orientations to guarantee multi-chart scrubber alignment.
+  6. *Clean-Room Full Suite Regression Execution (`TST-UI-396.6`)*:
+  • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate across the full project test suite.
+
