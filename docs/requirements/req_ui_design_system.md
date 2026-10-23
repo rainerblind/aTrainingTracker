@@ -12457,4 +12457,46 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero auto-prompting popups, zero background service disruption, non-collapsible drawer density remains 9, and 100% clean-room test pass rate.
 
+### REQ-UI-433: Vertical Space Reclamation in WorkoutDetailTabbedContent: Scroll-Away Collapsing Header, Single-Line Landscape Header, Inline Zoom Controls, and 72% X-Axis Plot Alignment [Verified]
+- **Tests**: `TST-UI-398`
+- **Implementation**: `WorkoutDetailTabbedContent.kt`, `WorkoutHeader.kt`, `MapDetailLayout.kt`, `TelemetryMetricGraph.kt`, `ElevationProfile.kt`
+- **Rationale**: In `WorkoutDetailTabbedContent` (especially in landscape orientation with ~411dp vertical height), pinned top chrome currently consumes ~55% of the entire viewport height. The system SHALL reclaim vertical screen real estate for charts, maps, and analytics cards by providing scroll-away collapsing headers, a single-line compact landscape header, inline/floating zoom controls, and pixel-perfect 72% horizontal plot alignment across all stacked charts (ATT-4774, Parent Epic ATT-2144, status: Planned, refining `REQ-UI-408`, `REQ-UI-431`, and `REQ-UI-225`):
+1. *Scroll-Away Collapsing Top Header (`REQ-UI-433.1`)*:
+• In `WorkoutDetailTabbedContent`, scrolling down inside any tab (Mode A cards or Mode B split lower section) SHALL smoothly collapse the top chrome off the top of the viewport via `CollapsingAppBarNestedScrollConnection` (collapsing `WorkoutHeader` in portrait, and both `WorkoutHeader` and `PrimaryScrollableTabRow` in landscape mode), expanding charts and content to nearly 100% of vertical height.
+• Scrolling upward SHALL immediately reveal the collapsed header chrome (quick return).
+2. *Single-Line Compact Landscape WorkoutHeader (`REQ-UI-433.2`)*:
+• In landscape orientation (`Configuration.ORIENTATION_LANDSCAPE`), `WorkoutHeader` SHALL collapse its 4 stacked vertical rows into a single compact horizontal row (`heightIn(max = 44.dp)`): `[Sport Icon] Title [Cluster Pill] • SportType • Date & Time [Actions]`.
+• In portrait orientation, `WorkoutHeader` SHALL preserve its multi-row vertical layout with 100% byte-for-byte fidelity.
+3. *Zero-Extra-Row Inline / Floating Zoom Controls (`REQ-UI-433.3`)*:
+• In `MapDetailLayout`, zoom and pan controls (`-`, `+`, `👆`) SHALL NOT reserve a dedicated full-width 36dp vertical row.
+• Controls SHALL be rendered as a compact floating overlay anchored to the top-right of the lower inspection viewport (or inlined within the first chart header row), reclaiming 36dp of vertical height for data visualization.
+4. *Stacked Multi-Chart 72% Plot Width & Scrubber Alignment in Landscape (`REQ-UI-433.4`)*:
+• In landscape orientation, all stacked charts (`ElevationProfile`, `Speed/Pace`, `Heart Rate`, `Power`, `W'bal`) SHALL share the identical horizontal plot width (~72% of viewport width from `startPadding = 50.dp` to plot right edge), ensuring X-axis ticks and vertical scrubbing cursors align 1:1 across all sister charts.
+• On the 72% curve pane of `TelemetryMetricGraph` when `AlignedMarginalZoneDistribution` is docked on the right, redundant double right padding (`endPaddingPx = 25.dp`) SHALL be eliminated (`endPaddingPx = 0.dp`).
+5. *Preservation of Portrait & Touch Invariants (`REQ-UI-433.5`)*:
+• Portrait layout, gesture isolation on chart/map canvases, scrubber synchronization, and human decision gate MUST remain completely intact without regressions.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines and amends `REQ-UI-408` (*Multi-Tab Workout Details Container*), `REQ-UI-431` (*Landscape Marginal Zone Distribution*), and `REQ-UI-225` (*Global Telemetry Zoom Toolbar*).
+2. *Historical Origin & Commit Trace*: Commit `ea5fa705` (`ATT-3920`), commit `dcb8f15f` (`ATT-2145`), and commit `1357ce0b` (`ATT-1876` / `ATT-3453`).
+3. *Root Reason for Existing Formulation*: Pinned chrome guaranteed visibility on portrait screens (~800dp height); `ATT-2145` docked marginal zone bars on HR/Power but left sibling charts at 100% width and zoom controls in a dedicated row, causing 55% vertical occlusion on landscape viewports (~411dp).
+4. *Preservation of Core Invariants*: 100% portrait fidelity, multi-chart scrubbing synchronization (`startPadding = 50.dp`), gesture isolation, and 100% clean-room test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete inspecting workout details in `WorkoutDetailTabbedContent`,
+• *When* scrolling down inside a tab's scrollable content,
+• *Then* the top header chrome smoothly collapses off-screen, maximizing the vertical viewing area for charts and cards.
+• *Given* the device is in landscape orientation,
+• *When* `WorkoutHeader` renders,
+• *Then* it displays sport icon, title, cluster pill, sport type, date/time, and action buttons in a single compact horizontal row.
+• *Given* `MapDetailLayout` displaying telemetry and elevation charts,
+• *When* rendered,
+• *Then* zoom controls consume zero dedicated row height, anchored as a compact floating overlay or inlined control.
+• *Given* stacked elevation and telemetry charts in landscape mode,
+• *When* rendered,
+• *Then* all charts align their right plot bounds to the 72% boundary and X-axis ticks / scrubbing cursor align 1:1 vertically across all charts.
+
+**Invariants**: Zero regression in portrait aftermath inspection, multi-chart scrub synchronization preserved, and human decision gate enforced.
+
+
 

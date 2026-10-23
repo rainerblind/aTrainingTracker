@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -32,11 +33,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
@@ -141,10 +148,28 @@ fun WorkoutDetailTabbedContent(
             )
         }
 
-        Column(
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+        val connection = remember { CollapsingAppBarNestedScrollConnection(0) }
+        var headerHeightPx by remember { mutableIntStateOf(0) }
+        var totalTopChromeHeightPx by remember { mutableIntStateOf(0) }
+
+        LaunchedEffect(isLandscape, totalTopChromeHeightPx, headerHeightPx) {
+            val maxCollapse = if (isLandscape) totalTopChromeHeightPx else headerHeightPx
+            if (maxCollapse > 0) {
+                connection.appBarMaxHeight = maxCollapse
+            }
+        }
+
+        val currentTopPaddingPx = (totalTopChromeHeightPx + connection.appBarOffset).coerceAtLeast(0)
+        val currentTopPaddingDp = with(density) { currentTopPaddingPx.toDp() }
+
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .then(if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier)
+                .nestedScroll(connection)
                 .pointerInput(density) {
                     awaitPointerEventScope {
                         while (true) {
@@ -157,78 +182,13 @@ fun WorkoutDetailTabbedContent(
                     }
                 }
         ) {
-            // 1. Persistent Workout Header with "Configure Tabs" Action
-            WorkoutHeader(
-                modifier = Modifier.fillMaxWidth(),
-                data = workoutData.headerData,
-                menuEnabled = false,
-                canDelete = false,
-                onClicked = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
-                onExport = {},
-                onSaveAsRoute = {},
-                onDeleteRequest = {},
-                onClusterClick = onClusterClick,
-                onEditWorkout = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
-                actions = {
-                    headerActions()
-                    IconButton(
-                        onClick = onOpenTabsConfig,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = stringResource(R.string.workout_detail_tabs_config_title),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            )
-
-            // 2. Material 3 Tab Bar (shown when > 1 visible tab)
-            if (visibleTabs.size > 1) {
-                PrimaryScrollableTabRow(
-                    selectedTabIndex = currentPageIndex,
-                    edgePadding = 12.dp,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    visibleTabs.forEachIndexed { index, tab ->
-                        val selected = index == currentPageIndex
-                        Tab(
-                            selected = selected,
-                            onClick = {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(index)
-                                }
-                            },
-                            text = {
-                                Text(
-                                    text = resolveWorkoutDetailTabTitle(tab),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        )
-                    }
-                }
-            } else {
-                HorizontalDivider(
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-            }
-
             // 3. HorizontalPager hosting Mode A / Mode B / Mode C per tab
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = !activeTabRequiresGestureIsolation,
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
+                    .fillMaxSize()
+                    .padding(top = currentTopPaddingDp)
             ) { pageIndex ->
                 val tab = visibleTabs[pageIndex]
                 val effectiveMode = tab.effectiveLayoutMode(availability, detailPreferences)
@@ -455,6 +415,101 @@ fun WorkoutDetailTabbedContent(
                             }
                         }
                     }
+                }
+            }
+
+            // Top Chrome (WorkoutHeader + Tab Row)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .zIndex(1f)
+                    .offset { IntOffset(0, connection.appBarOffset) }
+                    .background(MaterialTheme.colorScheme.surface)
+                    .onGloballyPositioned { coordinates ->
+                        val measured = coordinates.size.height
+                        if (measured != totalTopChromeHeightPx) {
+                            totalTopChromeHeightPx = measured
+                            val maxCollapse = if (isLandscape) measured else headerHeightPx
+                            if (maxCollapse > 0) {
+                                connection.appBarMaxHeight = maxCollapse
+                            }
+                        }
+                    }
+            ) {
+                // 1. Persistent Workout Header with "Configure Tabs" Action
+                WorkoutHeader(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned { coordinates ->
+                            val measured = coordinates.size.height
+                            if (measured != headerHeightPx) {
+                                headerHeightPx = measured
+                                val maxCollapse = if (isLandscape) totalTopChromeHeightPx else measured
+                                if (maxCollapse > 0) {
+                                    connection.appBarMaxHeight = maxCollapse
+                                }
+                            }
+                        },
+                    data = workoutData.headerData,
+                    menuEnabled = false,
+                    canDelete = false,
+                    onClicked = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
+                    onExport = {},
+                    onSaveAsRoute = {},
+                    onDeleteRequest = {},
+                    onClusterClick = onClusterClick,
+                    onEditWorkout = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
+                    actions = {
+                        headerActions()
+                        IconButton(
+                            onClick = onOpenTabsConfig,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = stringResource(R.string.workout_detail_tabs_config_title),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                )
+
+                // 2. Material 3 Tab Bar (shown when > 1 visible tab)
+                if (visibleTabs.size > 1) {
+                    PrimaryScrollableTabRow(
+                        selectedTabIndex = currentPageIndex,
+                        edgePadding = 12.dp,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        visibleTabs.forEachIndexed { index, tab ->
+                            val selected = index == currentPageIndex
+                            Tab(
+                                selected = selected,
+                                onClick = {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(index)
+                                    }
+                                },
+                                text = {
+                                    Text(
+                                        text = resolveWorkoutDetailTabTitle(tab),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    HorizontalDivider(
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
                 }
             }
         }

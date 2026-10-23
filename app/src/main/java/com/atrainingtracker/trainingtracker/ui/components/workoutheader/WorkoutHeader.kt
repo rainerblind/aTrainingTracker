@@ -105,243 +105,11 @@ fun WorkoutHeader(
         },
         color = Color.Transparent
     ) {
-        // Box allows us to place the Menu Button at the absolute top-right
-        Box(modifier = Modifier.fillMaxWidth()) {
+        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 12.dp, top = 8.dp, bottom = 4.dp, end = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                // 1. TOP ROW: Sport Icon and Workout Name
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Image(
-                        painter = painterResource(id = data.bSportType.iconResId),
-                        contentDescription = null,
-                        modifier = Modifier.size(32.dp),
-                        colorFilter = null // Original color
-                    )
-                    Text(
-                        text = data.workoutName,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    // Spacer for the Action / Menu Button area
-                    Spacer(modifier = Modifier.width(72.dp))
-                }
-
-                // --- Workout Cluster Info (ATT-388 / ATT-503): Positioned directly below the name ---
-                if (data.clusterId > 0 && !data.clusterName.isNullOrBlank()) {
-                    Button(
-                        onClick = { onClusterClick?.invoke(data.clusterId) },
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                        modifier = Modifier.height(30.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Faint),
-                            contentColor = MaterialTheme.colorScheme.primary
-                        ),
-                        elevation = null
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_favorite_route),
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = data.clusterName,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                } else {
-                    val clusterLabel = data.clusterName ?: stringResource(R.string.unclustered)
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_favorite_route),
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-                        )
-                        Text(
-                            text = clusterLabel,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
-                            fontWeight = FontWeight.Normal,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                // 2. BOTTOM CONTENT: Organized in horizontal rows
-                // Row A: Sport Specific Info (Sport Name, Equipment, Commute/Trainer)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = data.sportName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    data.equipmentName?.let { equipmentName ->
-                        Text(
-                            text = equipmentName,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Trainer / Commute Logic
-                    if (data.trainer || data.commute) {
-                        val label = when {
-                            data.commute -> stringResource(R.string.commute)
-                            else -> stringResource(data.bSportType.indoorEquipmentResId)
-                        }
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Race Badge (ATT-2005)
-                    if (data.race) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.tertiaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.EmojiEvents,
-                                    contentDescription = stringResource(R.string.race_badge),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = stringResource(R.string.race_badge),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-
-                    // Origin Source Badge (ATT-2186)
-                    if (data.source != WorkoutSource.TRACKED) {
-                        val sourceLabel = when (data.source) {
-                            WorkoutSource.TCX -> stringResource(R.string.workout_source_tcx)
-                            WorkoutSource.GPX -> stringResource(R.string.workout_source_gpx)
-                            WorkoutSource.FIT -> stringResource(R.string.workout_source_fit)
-                            WorkoutSource.TRACKED -> ""
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ) {
-                            Text(
-                                text = sourceLabel,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Row B: Date and Time
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    IconTextRow(
-                        iconRes = R.drawable.ic_date_start,
-                        text = data.formattedDate,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    IconTextRow(
-                        iconRes = R.drawable.ic_time_start,
-                        text = data.formattedTime,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                // Row C: Start & Destination Favorite Locations (ATT-1400 / REQ-UI-184)
-                val hasStartLocation = !data.startLocationName.isNullOrBlank()
-                val hasEndLocation = !data.endLocationName.isNullOrBlank()
-
-                if (hasStartLocation || hasEndLocation) {
-                    val startLoc = data.startLocationName
-                    val endLoc = data.endLocationName
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        if (startLoc != null && endLoc != null && startLoc == endLoc) {
-                            // Round-Trip / Loop
-                            IconTextRow(
-                                iconRes = R.drawable.my_locations,
-                                text = stringResource(R.string.workout_start_and_destination, startLoc),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
-                        } else {
-                            // Point-to-Point or Single Endpoint
-                            if (!startLoc.isNullOrBlank()) {
-                                IconTextRow(
-                                    iconRes = R.drawable.my_locations,
-                                    text = stringResource(R.string.workout_start_location, startLoc),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
-                            }
-                            if (!endLoc.isNullOrBlank()) {
-                                IconTextRow(
-                                    iconRes = R.drawable.my_locations,
-                                    text = stringResource(R.string.workout_destination_location, endLoc),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-
-            // 4. Action / Menu Button Area (Pinned to Top-End)
+        val actionButtonsContent: @Composable () -> Unit = {
             Row(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 4.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Custom actions provided by caller
@@ -437,6 +205,341 @@ fun WorkoutHeader(
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // Box allows us to place the Menu Button at the absolute top-right
+        Box(modifier = Modifier.fillMaxWidth()) {
+
+            if (isLandscape) {
+                // Landscape: Compact single horizontal row utilizing wide viewport (REQ-UI-433.2 / ATT-4774)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 44.dp)
+                        .padding(start = 12.dp, top = 4.dp, bottom = 4.dp, end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = data.bSportType.iconResId),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        colorFilter = null
+                    )
+
+                    Text(
+                        text = data.workoutName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+
+                    if (data.clusterId > 0 && !data.clusterName.isNullOrBlank()) {
+                        Button(
+                            onClick = { onClusterClick?.invoke(data.clusterId) },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.height(26.dp),
+                            shape = RoundedCornerShape(6.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Faint),
+                                contentColor = MaterialTheme.colorScheme.primary
+                            ),
+                            elevation = null
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_favorite_route),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = data.clusterName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                    )
+
+                    Text(
+                        text = data.sportName,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                    )
+
+                    Text(
+                        text = "${data.formattedDate} ${data.formattedTime}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    actionButtonsContent()
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 12.dp, top = 8.dp, bottom = 4.dp, end = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // 1. TOP ROW: Sport Icon and Workout Name
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = data.bSportType.iconResId),
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            colorFilter = null // Original color
+                        )
+                        Text(
+                            text = data.workoutName,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // Spacer for the Action / Menu Button area
+                        Spacer(modifier = Modifier.width(72.dp))
+                    }
+
+                    // --- Workout Cluster Info (ATT-388 / ATT-503): Positioned directly below the name ---
+                    if (data.clusterId > 0 && !data.clusterName.isNullOrBlank()) {
+                        Button(
+                            onClick = { onClusterClick?.invoke(data.clusterId) },
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                            modifier = Modifier.height(30.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Faint),
+                                contentColor = MaterialTheme.colorScheme.primary
+                            ),
+                            elevation = null
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_favorite_route),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = data.clusterName,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    } else {
+                        val clusterLabel = data.clusterName ?: stringResource(R.string.unclustered)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_favorite_route),
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                            )
+                            Text(
+                                text = clusterLabel,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
+                                fontWeight = FontWeight.Normal,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    // 2. BOTTOM CONTENT: Organized in horizontal rows
+                    // Row A: Sport Specific Info (Sport Name, Equipment, Commute/Trainer)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = data.sportName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        data.equipmentName?.let { equipmentName ->
+                            Text(
+                                text = equipmentName,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Trainer / Commute Logic
+                        if (data.trainer || data.commute) {
+                            val label = when {
+                                data.commute -> stringResource(R.string.commute)
+                                else -> stringResource(data.bSportType.indoorEquipmentResId)
+                            }
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Race Badge (ATT-2005)
+                        if (data.race) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.EmojiEvents,
+                                        contentDescription = stringResource(R.string.race_badge),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.race_badge),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+
+                        // Origin Source Badge (ATT-2186)
+                        if (data.source != WorkoutSource.TRACKED) {
+                            val sourceLabel = when (data.source) {
+                                WorkoutSource.TCX -> stringResource(R.string.workout_source_tcx)
+                                WorkoutSource.GPX -> stringResource(R.string.workout_source_gpx)
+                                WorkoutSource.FIT -> stringResource(R.string.workout_source_fit)
+                                WorkoutSource.TRACKED -> ""
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ) {
+                                Text(
+                                    text = sourceLabel,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Row B: Date and Time
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        IconTextRow(
+                            iconRes = R.drawable.ic_date_start,
+                            text = data.formattedDate,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        IconTextRow(
+                            iconRes = R.drawable.ic_time_start,
+                            text = data.formattedTime,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    // Row C: Start & Destination Favorite Locations (ATT-1400 / REQ-UI-184)
+                    val hasStartLocation = !data.startLocationName.isNullOrBlank()
+                    val hasEndLocation = !data.endLocationName.isNullOrBlank()
+
+                    if (hasStartLocation || hasEndLocation) {
+                        val startLoc = data.startLocationName
+                        val endLoc = data.endLocationName
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            if (startLoc != null && endLoc != null && startLoc == endLoc) {
+                                // Round-Trip / Loop
+                                IconTextRow(
+                                    iconRes = R.drawable.my_locations,
+                                    text = stringResource(R.string.workout_start_and_destination, startLoc),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                            } else {
+                                // Point-to-Point or Single Endpoint
+                                if (!startLoc.isNullOrBlank()) {
+                                    IconTextRow(
+                                        iconRes = R.drawable.my_locations,
+                                        text = stringResource(R.string.workout_start_location, startLoc),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
+                                }
+                                if (!endLoc.isNullOrBlank()) {
+                                    IconTextRow(
+                                        iconRes = R.drawable.my_locations,
+                                        text = stringResource(R.string.workout_destination_location, endLoc),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. Action / Menu Button Area (Pinned to Top-End)
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 4.dp, end = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    actionButtonsContent()
                 }
             }
 

@@ -27,6 +27,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -268,7 +269,7 @@ fun TelemetryMetricGraph(
     val canvasModifier = if (enableGestures) {
         baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode) {
             val startPaddingPx = 50.dp.toPx()
-            val endPaddingPx = 25.dp.toPx()
+            val endPaddingPx = if (isLandscape) 0.dp.toPx() else 25.dp.toPx()
             val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
             val touchSlop = viewConfiguration.touchSlop
 
@@ -393,7 +394,7 @@ fun TelemetryMetricGraph(
             modifier = canvasModifier
         ) {
             val startPaddingPx = 50.dp.toPx()
-            val endPaddingPx = 25.dp.toPx()
+            val endPaddingPx = if (isLandscape) 0.dp.toPx() else 25.dp.toPx()
             val bottomPaddingPx = 24.dp.toPx()
             val topPaddingPx = 10.dp.toPx()
 
@@ -791,7 +792,7 @@ fun TelemetryMetricGraph(
         }
     }
 
-    if (isLandscape && zoneDistribution != null) {
+    if (isLandscape) {
         Row(
             modifier = modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -800,16 +801,20 @@ fun TelemetryMetricGraph(
             Box(modifier = Modifier.weight(0.72f)) {
                 chartCanvas()
             }
-            AlignedMarginalZoneDistribution(
-                zoneDistribution = zoneDistribution,
-                zoneDisplayMode = zoneDisplayMode,
-                zoneBands = zoneBands,
-                dataMin = dataMin,
-                dataMax = dataMax,
-                metricType = metricType,
-                thresholdDashes = thresholdDashes,
-                modifier = Modifier.weight(0.28f).height(110.dp)
-            )
+            if (zoneDistribution != null) {
+                AlignedMarginalZoneDistribution(
+                    zoneDistribution = zoneDistribution,
+                    zoneDisplayMode = zoneDisplayMode,
+                    zoneBands = zoneBands,
+                    dataMin = dataMin,
+                    dataMax = dataMax,
+                    metricType = metricType,
+                    thresholdDashes = thresholdDashes,
+                    modifier = Modifier.weight(0.28f).height(110.dp)
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(0.28f))
+            }
         }
     } else {
         Box(modifier = modifier.fillMaxWidth()) {

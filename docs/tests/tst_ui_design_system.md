@@ -6789,4 +6789,28 @@
   5. *Clean-Room Full Suite Regression Execution (`TST-UI-397.5`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.localization.*" --tests "com.atrainingtracker.trainingtracker.ui.help.*"` and verify 100% pass rate.
 
+### TST-UI-398: **WorkoutDetailTabbedContent Vertical Space Reclamation, Collapsing Header, Single-Line Landscape Header, Inline Zoom Controls, and 72% Plot Alignment Verification Suite** [Collapsing NestedScrollConnection in WorkoutDetailTabbedContent; single-line compact WorkoutHeader in landscape; zero-row inline/floating zoom controls in MapDetailLayout; 72% horizontal plot alignment and double-padding elimination across stacked charts in landscape; portrait invariants preserved; 100% clean-room test pass rate.]
+- **Requirement(s)**: `REQ-UI-433`, `REQ-UI-408`, `REQ-UI-431`, `REQ-UI-225`
+- **Component**: **WorkoutDetailTabbedContent Vertical Space Reclamation Verification Suite**
+- **Jira**: ``ATT-4774``
+- **Test Description**:
+  1. *Collapsing Header NestedScroll Contract Test (`TST-UI-398.1`, `WorkoutDetailTabbedContentTest.kt`)*:
+  • Verify `WorkoutDetailTabbedContent` integrates `CollapsingAppBarNestedScrollConnection`.
+  • Verify that downward vertical scroll offsets translate the header container upwards up to `appBarMaxHeight`.
+  • Verify quick-return behavior on upward scroll and verify landscape collapses both header and tab row.
+  2. *Landscape Single-Line Compact WorkoutHeader Layout Test (`TST-UI-398.2`, `WorkoutHeaderLandscapeTest.kt`)*:
+  • Verify that under `Configuration.ORIENTATION_LANDSCAPE`, `WorkoutHeader` renders in a single horizontal `Row` of maximum 44dp height.
+  • Verify title, cluster pill, sport name, date/time, and action buttons are present in the single row without text truncation.
+  • Verify that under `Configuration.ORIENTATION_PORTRAIT`, `WorkoutHeader` maintains its multi-row vertical layout.
+  3. *Zero-Extra-Row Inline / Floating Zoom Controls Contract Test (`TST-UI-398.3`, `MapDetailLayoutZoomOverlayTest.kt`)*:
+  • Verify `MapDetailLayout` does not allocate a dedicated full-width 36dp vertical row for `GlobalTelemetryZoomToolbar`.
+  • Verify zoom controls are positioned as a compact overlay or inlined, leaving vertical space to charts.
+  4. *Landscape Stacked Charts 72% Plot Width & Double-Padding Elimination Contract Test (`TST-UI-398.4`, `TelemetryMetricGraphLandscapeAlignmentTest.kt`)*:
+  • Verify `ElevationProfile`, `Speed/Pace`, and `W_PRIME_BAL` charts in landscape mode align their right plot boundary to the 72% horizontal boundary when stacked with HR/Power graphs.
+  • Verify `TelemetryMetricGraph` with marginal zone distribution sets `endPaddingPx = 0.dp` within its 72% plot area, eliminating double padding.
+  • Verify vertical scrubbing cursor and X-axis ticks align 1:1 across all stacked charts.
+  5. *Clean-Room Full Suite Regression Execution (`TST-UI-398.5`)*:
+  • Execute targeted unit tests and verify 100% pass rate with zero regressions.
+
+
 

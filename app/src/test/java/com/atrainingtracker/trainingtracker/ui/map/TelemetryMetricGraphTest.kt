@@ -178,8 +178,9 @@ class TelemetryMetricGraphTest {
             content.contains("val startPaddingPx = 50.dp.toPx()")
         )
         assertTrue(
-            "TelemetryMetricGraph must set endPadding = 25.dp to match ElevationProfile exactly",
-            content.contains("val endPaddingPx = 25.dp.toPx()")
+            "TelemetryMetricGraph must set endPadding = 25.dp in portrait to match ElevationProfile exactly",
+            content.contains("val endPaddingPx = if (isLandscape) 0.dp.toPx() else 25.dp.toPx()") ||
+                content.contains("val endPaddingPx = 25.dp.toPx()")
         )
         assertTrue(
             "TelemetryMetricGraph must set bottomPadding = 24.dp to match ElevationProfile exactly",
