@@ -204,6 +204,94 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     // Observe summarized periods and migration status from Repository
     val groupedPeriods: StateFlow<List<List<PeriodSummary>>> = periodsRepo.groupedPeriods
     val migrationStatus: StateFlow<MigrationStatus?> = periodsRepo.migrationStatus
+
+    // Multi-Sport Filtering (ATT-4770 / REQ-PER-022)
+    private val _selectedSports = MutableStateFlow<Set<BSportType>>(setOf(BSportType.BIKE, BSportType.RUN))
+    val selectedSports: StateFlow<Set<BSportType>> = _selectedSports.asStateFlow()
+
+    /**
+     * Toggles inclusion of a sport in the Periods filter (ATT-4770, REQ-PER-022.2).
+     * Enforces non-empty guard: deselecting the final remaining active sport is ignored.
+     */
+    fun toggleSportFilter(sport: BSportType) {
+        _selectedSports.update { current ->
+            if (current.contains(sport)) {
+                if (current.size > 1) {
+                    current - sport
+                } else {
+                    current
+                }
+            } else {
+                current + sport
+            }
+        }
+    }
+
+    /**
+     * Filters a PeriodSummary to include only the specified sport types (ATT-4770, REQ-PER-022.3).
+     * Recalculates totalWorkouts, totalDurationSec, totalDistance, filters sportStats, polylines,
+     * workoutIdToPolylineMap, and extremaMarkers. Returns null if totalWorkouts == 0.
+     */
+    fun filterPeriodSummary(summary: PeriodSummary, sports: Set<BSportType>): PeriodSummary? {
+        val filteredStats = summary.sportStats.filterKeys { it in sports }
+        val totalWorkouts = filteredStats.values.sumOf { it.count }
+        if (totalWorkouts == 0) return null
+
+        val totalDurationSec = filteredStats.values.sumOf { it.totalDurationSec }
+        val totalDistance = filteredStats.values.sumOf { it.totalDistanceMeters }
+
+        // Determine polylines and map tracks for selected sports
+        val polylineSource = if (summary.workoutIdToAllPolylinesMap.isNotEmpty()) {
+            summary.workoutIdToAllPolylinesMap
+        } else {
+            summary.workoutIdToPolylineMap
+        }
+
+        val filteredPolylineMap = if (polylineSource.isNotEmpty() && summary.workoutIdToSportMap.isNotEmpty()) {
+            polylineSource.filterKeys { id -> summary.workoutIdToSportMap[id] in sports }
+        } else {
+            polylineSource
+        }
+
+        val filteredPolylines = if (summary.workoutIdToAllPolylinesMap.isNotEmpty() && summary.workoutIdToSportMap.isNotEmpty()) {
+            summary.workoutIdToAllPolylinesMap.filterKeys { id -> summary.workoutIdToSportMap[id] in sports }.values.toList()
+        } else if (summary.workoutIdToPolylineMap.isNotEmpty() && summary.workoutIdToSportMap.isNotEmpty()) {
+            summary.workoutIdToPolylineMap.filterKeys { id -> summary.workoutIdToSportMap[id] in sports }.values.toList()
+        } else {
+            if (summary.sportStats.keys.any { it in sports }) summary.polylines else emptyList()
+        }
+
+        val filteredMarkers = if (summary.workoutIdToSportMap.isNotEmpty()) {
+            summary.extremaMarkers.filter { marker ->
+                summary.workoutIdToSportMap[marker.workoutId] in sports
+            }
+        } else {
+            summary.extremaMarkers
+        }
+
+        return summary.copy(
+            totalWorkouts = totalWorkouts,
+            totalDurationSec = totalDurationSec,
+            totalDistance = totalDistance,
+            sportStats = filteredStats,
+            polylines = filteredPolylines,
+            workoutIdToPolylineMap = filteredPolylineMap,
+            extremaMarkers = filteredMarkers
+        )
+    }
+
+    val filteredGroupedPeriods: StateFlow<List<List<PeriodSummary>>> = combine(
+        groupedPeriods,
+        selectedSports
+    ) { groups, sports ->
+        groups.map { periodList ->
+            periodList.mapNotNull { filterPeriodSummary(it, sports) }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = emptyList()
+    )
     
     @Deprecated("Use migrationStatus instead", ReplaceWith("migrationStatus.value?.phases?.lastOrNull()?.progress"))
     val migrationProgress: StateFlow<Float?> = periodsRepo.migrationStatus

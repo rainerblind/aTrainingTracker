@@ -63,6 +63,8 @@ fun PeriodsScreen(
     }
 
     val groupedPeriods by viewModel.groupedPeriods.collectAsStateWithLifecycle()
+    val filteredGroupedPeriods by viewModel.filteredGroupedPeriods.collectAsStateWithLifecycle()
+    val selectedSports by viewModel.selectedSports.collectAsStateWithLifecycle()
     val migrationStatus by viewModel.migrationStatus.collectAsStateWithLifecycle()
     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
     val enabledMarkerTypes by viewModel.enabledMarkerTypes.collectAsStateWithLifecycle()
@@ -131,7 +133,7 @@ fun PeriodsScreen(
             )
         } else {
             PeriodsTabsScreen(
-                groupedPeriods = groupedPeriods,
+                groupedPeriods = filteredGroupedPeriods,
                 pagerState = pagerState,
                 listStates = listStates,
                 onHeaderClick = { summary -> handleStartWorkoutList(summary, null, null) },
@@ -142,7 +144,9 @@ fun PeriodsScreen(
                 },
                 isPlayServiceAvailable = isPlayAvailable,
                 tabs = groups,
-                migrationStatus = migrationStatus
+                migrationStatus = migrationStatus,
+                selectedSports = selectedSports,
+                onToggleSportFilter = { viewModel.toggleSportFilter(it) }
             )
         }
     }

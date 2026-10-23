@@ -1003,6 +1003,8 @@ class PeriodsRepository private constructor(private val application: Application
             groupWorkouts
                 .filter { it.mapPolyline.isNotEmpty() }
                 .associate { it.id to it.mapPolyline }
+        } else if (summary.workoutIdToAllPolylinesMap.isNotEmpty()) {
+            summary.workoutIdToAllPolylinesMap
         } else summary.workoutIdToPolylineMap
 
         // 3. Scope workoutIdToPolylineMap strictly to spatial anchors (<= 5 workouts) (REQ-PER-021.1)
@@ -1053,6 +1055,7 @@ class PeriodsRepository private constructor(private val application: Application
                 previewWorkouts.map { it.mapPolyline }.filter { it.isNotEmpty() }
             } else summary.polylines,
             workoutIdToPolylineMap = anchorPolylineMap,
+            workoutIdToAllPolylinesMap = allPolylineMap,
             workoutIdToPathMap = anchorPathMap,
             workoutIdToSportMap = if (groupWorkouts.isNotEmpty()) groupWorkouts.associate { it.id to it.bSportType } else summary.workoutIdToSportMap,
             extremaMarkers = anchorWorkouts.flatMap { workout ->

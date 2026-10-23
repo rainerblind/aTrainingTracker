@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 28
+**Total Tests**: 29
 
 ---
 
@@ -315,6 +315,34 @@
   • Given a map tap at coordinates near a workout path, verify spatial hit-testing (`PolyUtil.isLocationOnPath`) resolves the matching `workoutId` and triggers workout selection/peeking.
   5. *Clean-Room Regression Suite Execution (`TST-PER-027.5`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
+
+### TST-PER-028: **Periods Sport Type Header Filtering & Multi-Sport Projections Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-022`, `REQ-PER-018`, `REQ-PER-019`
+- **Component**: **Periods Header Sport Filter & ViewModel Projection**
+- **Jira**: `ATT-4770`
+- **Test Description**:
+  1. *Default Filter Set & Empty Guard Tests (`TST-PER-028.1`, `PeriodsViewModelTest.kt`)*:
+  • Assert initial `selectedSports` contains `setOf(BSportType.BIKE, BSportType.RUN)`.
+  • Toggle `BSportType.RUN`: verify `selectedSports` becomes `setOf(BSportType.BIKE)`.
+  • Toggle `BSportType.BIKE`: verify toggle is ignored and `selectedSports` remains `setOf(BSportType.BIKE)` (empty set prevention).
+  • Toggle `BSportType.UNKNOWN`: verify `selectedSports` becomes `setOf(BSportType.BIKE, BSportType.UNKNOWN)`.
+  2. *Reactive In-Memory Period Projection Tests (`TST-PER-028.2`, `PeriodsViewModelTest.kt`)*:
+  • Given a period with 2 Bike workouts (1h, 20km), 1 Run workout (30m, 5km), and 1 Other workout (45m, 0km).
+  • Under default `[Bike, Run]`: assert period has `totalWorkouts = 3`, `totalDurationSec = 5400L`, `totalDistance = 25000.0`, and `sportStats` contains only BIKE and RUN.
+  • Under `[Bike]`: assert period has `totalWorkouts = 2`, `totalDurationSec = 3600L`, `totalDistance = 20000.0`.
+  • Given a period with only "Other" workouts: assert it is omitted from `filteredGroupedPeriods` when `UNKNOWN` is deselected.
+  • Toggle `UNKNOWN` on: assert the period appears in `filteredGroupedPeriods`.
+  3. *Map Preview & Polylines Filtering Tests (`TST-PER-028.3`, `PeriodsViewModelTest.kt`)*:
+  • Given a period with `workoutIdToAllPolylinesMap` containing tracks for Bike (ID 1), Run (ID 2), and Other (ID 3).
+  • Under `[Bike]`: assert projected `polylines` and `workoutIdToPolylineMap` retain only ID 1.
+  • Assert projected `extremaMarkers` retain only markers matching selected sports.
+  4. *Header UI Layout & Canonical Sport Ordering Tests (`TST-PER-028.4`, `PeriodsTabsScreenTest.kt`)*:
+  • Verify 3 sport toggle buttons render in canonical order `[BSportType.BIKE, BSportType.RUN, BSportType.UNKNOWN]` (Rule 57: `Other` on far right).
+  • Verify selected buttons render in `onPrimaryContainer` and deselected buttons render in `onPrimaryContainer.copy(alpha = TTAlpha.Disabled)`.
+  • Verify content descriptions match localized sport strings (`R.string.sport_type_bike`, `R.string.sport_type_run`, `R.string.sport_type_other`).
+  5. *Clean-Room Regression Suite Execution (`TST-PER-028.5`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
+
 
 
 

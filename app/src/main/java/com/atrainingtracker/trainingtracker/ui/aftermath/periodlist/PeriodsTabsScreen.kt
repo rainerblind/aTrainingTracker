@@ -62,7 +62,9 @@ fun PeriodsTabsScreen(
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
-    migrationStatus: MigrationStatus? = null
+    migrationStatus: MigrationStatus? = null,
+    selectedSports: Set<BSportType> = setOf(BSportType.BIKE, BSportType.RUN),
+    onToggleSportFilter: (BSportType) -> Unit = {}
 ) {
 
     val scope = rememberCoroutineScope()
@@ -84,7 +86,7 @@ fun PeriodsTabsScreen(
                 userScrollEnabled = true,
                 verticalAlignment = Alignment.Top
             ) { pageIndex ->
-                val periods = groupedPeriods[pageIndex]
+                val periods = if (pageIndex < groupedPeriods.size) groupedPeriods[pageIndex] else emptyList()
                 val scrollState = listStates[pageIndex]
 
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -182,6 +184,31 @@ fun PeriodsTabsScreen(
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            val canonicalSports = listOf(BSportType.BIKE, BSportType.RUN, BSportType.UNKNOWN)
+                            canonicalSports.forEach { sport ->
+                                val isSelected = selectedSports.contains(sport)
+                                val tint = if (isSelected) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = TTAlpha.Disabled)
+                                }
+                                IconButton(
+                                    onClick = { onToggleSportFilter(sport) },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = sport.iconResId),
+                                        contentDescription = stringResource(id = sport.stringResId),
+                                        tint = tint,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,

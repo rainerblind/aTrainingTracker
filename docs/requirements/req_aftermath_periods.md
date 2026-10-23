@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 21
+**Total Requirements**: 22
 
 ---
 
@@ -423,6 +423,61 @@
 • *Then* `summary.workoutIdToPolylineMap` contains at most 5 spatial anchor polylines rather than the full period workout dataset.
 
 **Invariants**: Zero changes to `PeriodSummaries.db`, memory safety without OOMs, and 100% clean-room test pass rate.
+
+### REQ-PER-022: Periods Sport Type Header Filtering & Multi-Sport Projections [Verified]
+- **Tests**: `TST-PER-028`
+- **Implementation**: `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `PeriodData.kt`, `PeriodsRepository.kt`
+- **Rationale**: The system SHALL provide toggleable sport filter icon buttons in the Periods header row to allow athletes to isolate specific disciplines (`Bike`, `Run`, `Other`) across the entire Periods view (Day, Week, Month, Year), dynamically filtering `PeriodBarGraph`, `PeriodSummaryCard`, and map previews while preserving non-empty filter invariants and database integrity (ATT-4770, refining `REQ-PER-018` and `REQ-PER-019`):
+1. *Canonical Sport Type Icon Buttons & Placement (`REQ-PER-022.1`)*:
+• In `PeriodsTabsScreen.kt`, the `primaryContainer` header row SHALL display 3 compact toggleable sport icon buttons on the right side opposite the "Periods" title.
+• The buttons SHALL be rendered in canonical order `[BSportType.BIKE, BSportType.RUN, BSportType.UNKNOWN]` (Rule 57: `Other` always on the far right).
+• Icons SHALL use `bSportType.iconResId` (`ic_bike`, `ic_run`, `ic_other` via `BSportType`) with content descriptions from `bSportType.stringResId` (`R.string.sport_type_bike`, `R.string.sport_type_run`, `R.string.sport_type_other`).
+• Active/selected sport icons SHALL be rendered with full opacity (`MaterialTheme.colorScheme.onPrimaryContainer`); inactive/deselected icons SHALL be rendered dimmed (`MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = TTAlpha.Disabled)`).
+2. *Default Filter Set & Non-Empty Selection Guard (`REQ-PER-022.2`)*:
+• In `PeriodsViewModel`, `selectedSports` StateFlow SHALL be initialized by default to `setOf(BSportType.BIKE, BSportType.RUN)`.
+• Toggling a sport filter via `toggleSportFilter(sport: BSportType)` SHALL prevent deselecting the final remaining active sport, guaranteeing `selectedSports.isNotEmpty()` at all times to prevent blank/unusable UI states.
+3. *Reactive Multi-Sport In-Memory Projection (`REQ-PER-022.3`)*:
+• `PeriodSummary` in `PeriodData.kt` SHALL include `val workoutIdToAllPolylinesMap: Map<Long, String> = emptyMap()`, populated during `enrich()` in `PeriodsRepository.kt` from `allPolylineMap`.
+• `PeriodsViewModel` SHALL project `groupedPeriods` reactively into `filteredGroupedPeriods: StateFlow<Map<PeriodType, List<PeriodSummary>>>` based on `selectedSports`.
+• For each `PeriodSummary`:
+  - `sportStats` SHALL retain only entries matching `selectedSports`.
+  - Aggregated metrics (`totalWorkouts`, `totalDurationSec`, `totalDistance`) SHALL be recomputed strictly from the filtered `sportStats` values.
+  - Periods with 0 filtered workouts (`totalWorkouts == 0`) SHALL be excluded from the filtered list in `filteredGroupedPeriods`.
+  - Map preview paths (`polylines` and `workoutIdToPolylineMap`) SHALL be filtered using `summary.workoutIdToAllPolylinesMap.filterKeys { id -> summary.workoutIdToSportMap[id] in selectedSports }` (or fallback to retaining `summary.polylines` if `workoutIdToAllPolylinesMap` is empty).
+  - Spatial `extremaMarkers` SHALL retain only markers whose `workoutId` matches a workout of a selected sport type (`summary.workoutIdToSportMap[marker.workoutId] in selectedSports`).
+4. *Bar Graph, Summary Card, and Map Dynamic Synchronization (`REQ-PER-022.4`)*:
+• `PeriodsTabsScreen.kt` and its child composables (`PeriodBarGraph`, `PeriodList`, `PeriodSummaryCard`) SHALL observe and render `filteredGroupedPeriods`.
+• Bar heights, sport segment colors, summary cards, and map preview routes SHALL instantaneously update when sport filters are toggled without requiring database re-queries or screen re-navigation.
+5. *Preservation of System Invariants (`REQ-PER-022.5`)*:
+• Zero alterations or migrations to `PeriodSummaries.db` (schema remains on v27).
+• 60 fps `LazyColumn` scrolling smoothness and Douglas-Peucker simplification pipelines (`REQ-PER-019`) remain strictly preserved.
+• 9-language localization parity maintained for all sport strings.
+• 100% clean-room test suite pass rate under `./gradlew testDebugUnitTest`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-022` (*Periods Sport Type Header Filtering & Multi-Sport Projections*), refining `REQ-PER-018` (*Timeline Continuity & Bar Graph Visualization*) and `REQ-PER-019` (*Full-Period Asynchronous Mini-Map Preview*). Targets `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `PeriodData.kt`, `PeriodsRepository.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-43.9 Review (`ATT-4478`), Sprint 2026-43.2 (Rule 57, commit `d5a81e3a` / `ATT-4372`), and `PeriodMapScreen.kt:133-157` (`ATT-440`).
+3. *Root Reason for Existing Formulation*: Prior to ATT-4770, `PeriodsTabsScreen.kt` displayed all sports unconditionally; sport filtering was only available within the full-screen `PeriodMapScreen`. The Periods header had unused horizontal whitespace, while athletes requested a high-level toggle to isolate Bike and Run from other activities without clunky modal dialogs.
+4. *Preservation of Core Invariants*: In-memory StateFlow projection avoids SQLite v28 migrations, keeps `PeriodSummaries.db` read-only during filtering, preserves timeline bar graph gap interpolation (`REQ-PER-018`), and maintains 100% clean-room test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete opens `PeriodsTabsScreen`,
+• *When* the top header row renders,
+• *Then* 3 sport filter icon buttons `[Bike, Run, Other]` are displayed on the right side of the `primaryContainer` row in canonical order (Other on far right), with Bike and Run active (full opacity) and Other dimmed.
+• *Given* `selectedSports` contains `setOf(BSportType.BIKE, BSportType.RUN)`,
+• *When* the athlete taps the Run icon button,
+• *Then* `selectedSports` becomes `setOf(BSportType.BIKE)`, Run icon is dimmed, and all period cards, bar graphs, and map previews update to show Bike-only metrics.
+• *Given* `selectedSports` contains only `setOf(BSportType.BIKE)`,
+• *When* the athlete taps the Bike icon button,
+• *Then* the tap is ignored (non-empty guard), preserving `selectedSports = setOf(BSportType.BIKE)`.
+• *Given* a period containing only "Other" workouts,
+• *When* default filters (`Bike + Run`) are active,
+• *Then* that period has 0 filtered workouts and is omitted from `filteredGroupedPeriods`.
+• *When* the athlete toggles "Other" on,
+• *Then* the period dynamically appears in the list and bar graph.
+
+**Invariants**: Zero SQLite schema changes, non-blocking UI thread, crash prevention on empty/edge data, and 100% clean-room test pass rate.
+
 
 
 
