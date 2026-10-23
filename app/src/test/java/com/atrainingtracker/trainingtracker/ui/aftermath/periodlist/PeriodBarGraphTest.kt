@@ -19,6 +19,9 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.MyUnits
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -30,6 +33,11 @@ import java.util.Locale
 class PeriodBarGraphTest {
 
     private val utcZone = ZoneOffset.UTC
+
+    @After
+    fun tearDown() {
+        TrainingApplication.setUnitForTesting(null)
+    }
 
     private fun createSamplePeriod(
         label: String,
@@ -133,15 +141,68 @@ class PeriodBarGraphTest {
 
     @Test
     fun testDistanceAndAscentMetricFormatting() {
-        // Distance
-        assertEquals("850m", formatMetricValue(850.0, PeriodBarMetric.DISTANCE, PeriodType.DAY))
-        assertEquals("8.5k", formatMetricValue(8500.0, PeriodBarMetric.DISTANCE, PeriodType.DAY))
-        assertEquals("42k", formatMetricValue(42195.0, PeriodBarMetric.DISTANCE, PeriodType.DAY))
+        // Distance (Metric)
+        assertEquals("850m", formatMetricValue(850.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC))
+        assertEquals("8.5km", formatMetricValue(8500.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC))
+        assertEquals("42km", formatMetricValue(42195.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC))
 
-        // Ascent
-        assertEquals("350m", formatMetricValue(350.0, PeriodBarMetric.ASCENT, PeriodType.DAY))
-        assertEquals("1250m", formatMetricValue(1250.0, PeriodBarMetric.ASCENT, PeriodType.DAY))
-        assertEquals("", formatMetricValue(0.0, PeriodBarMetric.ASCENT, PeriodType.DAY))
+        // Ascent (Metric)
+        assertEquals("350m", formatMetricValue(350.0, PeriodBarMetric.ASCENT, PeriodType.DAY, MyUnits.METRIC))
+        assertEquals("1250m", formatMetricValue(1250.0, PeriodBarMetric.ASCENT, PeriodType.DAY, MyUnits.METRIC))
+        assertEquals("", formatMetricValue(0.0, PeriodBarMetric.ASCENT, PeriodType.DAY, MyUnits.METRIC))
+    }
+
+    @Test
+    fun testMetricDistanceFormattingBoundaries_TST_PER_029_1() {
+        // < 1000m -> "${m}m"
+        assertEquals("500m", formatMetricValue(500.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC))
+        assertEquals("999m", formatMetricValue(999.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC))
+
+        // 1000m <= value < 10000m -> "%.1fkm"
+        assertEquals("1.0km", formatMetricValue(1000.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC))
+        assertEquals("8.5km", formatMetricValue(8500.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC))
+        assertEquals("9.9km", formatMetricValue(9949.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC))
+
+        // >= 10000m -> "${km.roundToInt()}km"
+        assertEquals("10km", formatMetricValue(10000.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC))
+        assertEquals("42km", formatMetricValue(42195.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC))
+    }
+
+    @Test
+    fun testImperialDistanceFormattingBoundaries_TST_PER_029_2() {
+        // < 0.1mi (< 160.9344m) -> "<0.1mi"
+        assertEquals("<0.1mi", formatMetricValue(100.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.IMPERIAL))
+
+        // 0.1mi <= value < 10mi -> "%.1fmi"
+        assertEquals("1.0mi", formatMetricValue(1609.344, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.IMPERIAL))
+        assertEquals("5.3mi", formatMetricValue(8530.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.IMPERIAL))
+
+        // >= 10mi -> "${mi.roundToInt()}mi"
+        assertEquals("10mi", formatMetricValue(16093.44, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.IMPERIAL))
+        assertEquals("26mi", formatMetricValue(42195.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.IMPERIAL))
+    }
+
+    @Test
+    fun testAscentUnitParity_TST_PER_029_3() {
+        // Metric: "${m}m"
+        assertEquals("250m", formatMetricValue(250.0, PeriodBarMetric.ASCENT, PeriodType.DAY, MyUnits.METRIC))
+        assertEquals("", formatMetricValue(0.0, PeriodBarMetric.ASCENT, PeriodType.DAY, MyUnits.METRIC))
+
+        // Imperial: "${ft}ft" (250m / 0.3048 = 820.21ft -> 820ft)
+        assertEquals("820ft", formatMetricValue(250.0, PeriodBarMetric.ASCENT, PeriodType.DAY, MyUnits.IMPERIAL))
+        assertEquals("", formatMetricValue(0.0, PeriodBarMetric.ASCENT, PeriodType.DAY, MyUnits.IMPERIAL))
+    }
+
+    @Test
+    fun testApplicationPreferenceFallback_TST_PER_029_4() {
+        // Verify default unit without explicit parameter follows TrainingApplication.getUnit()
+        TrainingApplication.setUnitForTesting(MyUnits.METRIC)
+        assertEquals("8.5km", formatMetricValue(8500.0, PeriodBarMetric.DISTANCE, PeriodType.DAY))
+        assertEquals("250m", formatMetricValue(250.0, PeriodBarMetric.ASCENT, PeriodType.DAY))
+
+        TrainingApplication.setUnitForTesting(MyUnits.IMPERIAL)
+        assertEquals("5.3mi", formatMetricValue(8530.0, PeriodBarMetric.DISTANCE, PeriodType.DAY))
+        assertEquals("820ft", formatMetricValue(250.0, PeriodBarMetric.ASCENT, PeriodType.DAY))
     }
 
     @Test

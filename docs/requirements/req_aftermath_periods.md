@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 22
+**Total Requirements**: 23
 
 ---
 
@@ -478,6 +478,53 @@
 
 **Invariants**: Zero SQLite schema changes, non-blocking UI thread, crash prevention on empty/edge data, and 100% clean-room test pass rate.
 
+### REQ-PER-023: PeriodBarGraph Full Distance & Imperial Unit Parity [Verified]
+- **Tests**: `TST-PER-029`
+- **Implementation**: `PeriodBarGraph.kt`
+- **Rationale**: The system SHALL display standard SI distance units (`km`, `m`) and imperial distance/ascent units (`mi`, `ft`) in top value labels of `PeriodBarGraph` according to the athlete's configured unit system (`MyUnits`), replacing non-standard `"k"` shorthand while expanding bar and spacing geometry to prevent visual label collision (ATT-4771, refining `REQ-PER-018.2`):
+1. *Standard Metric Distance Formatting (`REQ-PER-023.1`)*:
+• When `unit == MyUnits.METRIC` (or default):
+  - Values $< 1000\text{ m}$ SHALL format as `"${m}m"` (e.g., `500m`).
+  - Values $< 10\text{ km}$ ($1000\text{ m} \le \text{value} < 10000\text{ m}$) SHALL format with 1 decimal place as `String.format(Locale.US, "%.1fkm", km)` (e.g., `8.5km`).
+  - Values $\ge 10\text{ km}$ ($\ge 10000\text{ m}$) SHALL format as `"${km.roundToInt()}km"` (e.g., `42km`, `125km`).
+2. *Imperial Distance Formatting (`REQ-PER-023.2`)*:
+• When `unit == MyUnits.IMPERIAL`:
+  - Values $< 0.1\text{ mi}$ ($< 160.9344\text{ m}$) SHALL format as `"<0.1mi"`.
+  - Values $< 10\text{ mi}$ ($0.1\text{ mi} \le \text{mi} < 10\text{ mi}$) SHALL format with 1 decimal place as `String.format(Locale.US, "%.1fmi", mi)` (e.g., `5.3mi`).
+  - Values $\ge 10\text{ mi}$ SHALL format as `"${mi.roundToInt()}mi"` (e.g., `26mi`, `100mi`).
+  - Miles conversion SHALL use `BANALService.METER_PER_MILE = 1609.344`.
+3. *Ascent Unit Parity (`REQ-PER-023.3`)*:
+• In `PeriodBarMetric.ASCENT` mode:
+  - Metric SHALL format as `"${m}m"`.
+  - Imperial SHALL format as `"${ft}ft"`, converting meters using `BANALService.METER_PER_FOOT = 0.3048`.
+4. *Geometry Adjustments for Non-Overlap Invariant (`REQ-PER-023.4`)*:
+• `barWidth` for `PeriodType.DAY` SHALL expand from `18.dp` to `24.dp`.
+• `barWidth` for `PeriodType.WEEK` SHALL expand from `28.dp` to `32.dp`.
+• `spacing` between bars in `LazyRow` SHALL increase from `4.dp` to `6.dp` (yielding $\ge 30\text{ dp}$ horizontal pitch for Day bars).
+• Labels SHALL remain centered above each bar, strictly preventing visual collision between adjacent bars.
+5. *Preservation of System Invariants (`REQ-PER-023.5`)*:
+• Duration formatting (`<1m`, `${m}m`, `${h}h`) in `REQ-PER-018.2` remains untouched.
+• Zero changes to `PeriodSummaries.db`.
+• 100% clean-room unit test pass rate under `./gradlew testDebugUnitTest`.
 
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-023` (*PeriodBarGraph Full Distance & Imperial Unit Parity*), refining `REQ-PER-018.2` (*Sub-Hour Duration & Value Formatting*). Targets `PeriodBarGraph.kt` and `PeriodBarGraphTest.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-43.9 Review (`ATT-4478`), where initial `PeriodBarGraph` was introduced with tight `18.dp` Day bars and shorthand `"k"` suffixes.
+3. *Root Reason for Existing Formulation*: `"k"` was used as a single-character shorthand to avoid label truncation on narrow `18.dp` Day bars, while Imperial unit conversion was omitted in the initial MVP commit.
+4. *Preservation of Core Invariants*: Expanding Day bars to `24.dp` and pitch to `30.dp` provides ample horizontal clearance for `"km"` and `"mi"` labels without collision, while maintaining unit system parity (Rule 36) and zero SQLite schema alterations.
 
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* metric unit system (`MyUnits.METRIC`),
+• *When* formatting distance values in `PeriodBarGraph`,
+• *Then* values $< 1000\text{m}$ render with `"m"`, $< 10\text{km}$ render with 1 decimal and `"km"`, and $\ge 10\text{km}$ render as integer `"km"`.
+• *Given* imperial unit system (`MyUnits.IMPERIAL`),
+• *When* formatting distance values in `PeriodBarGraph`,
+• *Then* values $< 0.1\text{mi}$ render as `"<0.1mi"`, $< 10\text{mi}$ render with 1 decimal and `"mi"`, and $\ge 10\text{mi}$ render as integer `"mi"`.
+• *Given* imperial unit system (`MyUnits.IMPERIAL`),
+• *When* formatting ascent values in `PeriodBarGraph`,
+• *Then* elevation renders as integer feet with `"ft"`.
+• *Given* Day period bar graph,
+• *When* rendering consecutive active days with `"42km"` or `"26.2mi"`,
+• *Then* adjacent labels do not overlap or truncate.
 
+**Invariants**: Zero changes to `PeriodSummaries.db`, memory safety, Rule 36 unit parity, and 100% clean-room test pass rate.

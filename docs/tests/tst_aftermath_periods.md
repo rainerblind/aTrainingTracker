@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 29
+**Total Tests**: 30
 
 ---
 
@@ -343,6 +343,35 @@
   5. *Clean-Room Regression Suite Execution (`TST-PER-028.5`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
 
-
-
-
+### TST-PER-029: **PeriodBarGraph Distance & Imperial Unit Parity Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-023`, `REQ-PER-018`
+- **Component**: **PeriodBarGraph Unit Parity & Formatting**
+- **Jira**: `ATT-4771`
+- **Test Description**:
+  1. *Metric Distance Formatting Unit Tests (`TST-PER-029.1`, `PeriodBarGraphTest.kt`)*:
+  • Given `unit = MyUnits.METRIC`:
+    - Value `500.0` (500m) formats as `"500m"`.
+    - Value `999.0` (999m) formats as `"999m"`.
+    - Value `1000.0` (1km) formats as `"1.0km"`.
+    - Value `8500.0` (8.5km) formats as `"8.5km"`.
+    - Value `9949.0` (9.9km) formats as `"9.9km"`.
+    - Value `10000.0` (10km) formats as `"10km"`.
+    - Value `42195.0` (42.195km) formats as `"42km"`.
+  2. *Imperial Distance Formatting Unit Tests (`TST-PER-029.2`, `PeriodBarGraphTest.kt`)*:
+  • Given `unit = MyUnits.IMPERIAL`:
+    - Value `100.0` (~0.062mi) formats as `"<0.1mi"`.
+    - Value `1609.344` (1.0mi) formats as `"1.0mi"`.
+    - Value `8530.0` (~5.3mi) formats as `"5.3mi"`.
+    - Value `16093.44` (10.0mi) formats as `"10mi"`.
+    - Value `42195.0` (~26.2mi) formats as `"26mi"`.
+  3. *Ascent Unit Parity Unit Tests (`TST-PER-029.3`, `PeriodBarGraphTest.kt`)*:
+  • For `PeriodBarMetric.ASCENT`:
+    - Given `unit = MyUnits.METRIC`: value `250.0` formats as `"250m"`.
+    - Given `unit = MyUnits.IMPERIAL`: value `250.0` (~820ft) formats as `"820ft"`.
+  4. *Application Preference Fallback Tests (`TST-PER-029.4`, `PeriodBarGraphTest.kt`)*:
+  • Verify that when `unit` parameter is defaulted, `formatMetricValue` queries `TrainingApplication.getUnit()`.
+  • Verify `TrainingApplication.setUnitForTesting(MyUnits.IMPERIAL)` switches output format without explicit parameter.
+  5. *Geometry & Bar Layout Integrity Tests (`TST-PER-029.5`, `PeriodBarGraphTest.kt`)*:
+  • Verify `barWidth` for `DAY` is `24.dp`, `WEEK` is `32.dp`, and spacing is `6.dp`.
+  6. *Clean-Room Full Suite Regression Execution (`TST-PER-029.6`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% test pass rate with zero regressions.

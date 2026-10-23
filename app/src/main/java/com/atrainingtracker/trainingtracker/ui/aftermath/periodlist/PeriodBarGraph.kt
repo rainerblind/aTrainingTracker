@@ -62,7 +62,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import java.time.Instant
@@ -241,9 +244,14 @@ fun calculateSportSegments(
 }
 
 /**
- * Formats metric values into compact top-bar labels with sub-hour precision (REQ-PER-018.2).
+ * Formats metric values into compact top-bar labels with sub-hour precision (REQ-PER-018.2, REQ-PER-023).
  */
-fun formatMetricValue(value: Double, metric: PeriodBarMetric, periodType: PeriodType): String {
+fun formatMetricValue(
+    value: Double,
+    metric: PeriodBarMetric,
+    periodType: PeriodType,
+    unit: MyUnits = TrainingApplication.getUnit()
+): String {
     if (value <= 0.0) return ""
     return when (metric) {
         PeriodBarMetric.DURATION -> {
@@ -267,15 +275,29 @@ fun formatMetricValue(value: Double, metric: PeriodBarMetric, periodType: Period
             }
         }
         PeriodBarMetric.DISTANCE -> {
-            val meters = value
-            when {
-                meters < 1000.0 -> "${meters.roundToInt()}m"
-                meters < 10000.0 -> String.format(Locale.US, "%.1fk", meters / 1000.0)
-                else -> "${(meters / 1000.0).roundToInt()}k"
+            if (unit == MyUnits.IMPERIAL) {
+                val miles = value / BANALService.METER_PER_MILE
+                when {
+                    miles < 0.1 -> "<0.1mi"
+                    miles < 10.0 -> String.format(Locale.US, "%.1fmi", miles)
+                    else -> "${miles.roundToInt()}mi"
+                }
+            } else {
+                val meters = value
+                when {
+                    meters < 1000.0 -> "${meters.roundToInt()}m"
+                    meters < 10000.0 -> String.format(Locale.US, "%.1fkm", meters / 1000.0)
+                    else -> "${(meters / 1000.0).roundToInt()}km"
+                }
             }
         }
         PeriodBarMetric.ASCENT -> {
-            "${value.roundToInt()}m"
+            if (unit == MyUnits.IMPERIAL) {
+                val feet = value / BANALService.METER_PER_FOOT
+                "${feet.roundToInt()}ft"
+            } else {
+                "${value.roundToInt()}m"
+            }
         }
     }
 }
@@ -315,13 +337,15 @@ fun PeriodBarGraph(
     val graphItems = remember(periods) { interpolateTimelineGaps(periods) }
     if (graphItems.isEmpty()) return
 
+    val userUnit = remember { TrainingApplication.getUnit() }
+
     val barWidth = remember(periods) {
         when (periods.firstOrNull()?.periodType) {
-            PeriodType.DAY -> 18.dp
-            PeriodType.WEEK -> 28.dp
+            PeriodType.DAY -> 24.dp
+            PeriodType.WEEK -> 32.dp
             PeriodType.MONTH -> 48.dp
             PeriodType.YEAR -> 80.dp
-            else -> 18.dp
+            else -> 24.dp
         }
     }
 
@@ -390,7 +414,7 @@ fun PeriodBarGraph(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(96.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.Bottom,
             contentPadding = PaddingValues(horizontal = 16.dp)
         ) {
@@ -402,7 +426,7 @@ fun PeriodBarGraph(
                     PeriodBarMetric.ASCENT -> item.ascentMeters.toDouble()
                 }
                 val heightFraction = (metricValue / maxMetricValue).toFloat().coerceIn(0.0f, 1.0f)
-                val valueString = formatMetricValue(metricValue, selectedMetric, item.periodType)
+                val valueString = formatMetricValue(metricValue, selectedMetric, item.periodType, userUnit)
                 val sportSegments = remember(item, selectedMetric) {
                     if (!item.isRest) calculateSportSegments(item.summary, selectedMetric) else emptyList()
                 }
