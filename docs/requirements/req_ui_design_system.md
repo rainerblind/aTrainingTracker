@@ -12498,5 +12498,39 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero regression in portrait aftermath inspection, multi-chart scrub synchronization preserved, and human decision gate enforced.
 
+### REQ-UI-434: Landscape Cockpit Vertical Space Optimization: Sensor Icons in Center Status Bar and Auto-Hiding Floating Tab Row [Verified]
+- **Tests**: `TST-UI-399`
+- **Implementation**: `TrackingTabsScreen.kt`, `SensorStatus.kt`
+- **Rationale**: In `TrackingTabsScreen` in landscape orientation (`Configuration.ORIENTATION_LANDSCAPE`) during `ScreenMode.TRACKING`, three stacked horizontal bars (`statusBarsPadding()`, `SensorStatus`, `PrimaryScrollableTabRow`) consume ~130–145dp of vertical space, occluding ~35% of the screen. In landscape mode, the center of the Android status bar between the left clock/notifications and right status icons is completely vacant. The system SHALL reclaim vertical space for live tracking by centering sensor availability icons inside the status bar strip and presenting the tab row as an auto-hiding floating overlay (ATT-4773, Parent Epic ATT-2144, status: Planned, refining `REQ-UI-163`, `REQ-UI-410`, and `REQ-UI-412`):
+1. *Sensor Availability Icons in Center Status Bar (`REQ-UI-434.1`)*:
+• In landscape orientation (`Configuration.ORIENTATION_LANDSCAPE`) during `ScreenMode.TRACKING`, `SensorStatus` availability icons SHALL be rendered centered in the top status bar strip, omitting separate `statusBarsPadding()` vertical stacking.
+• The drawer button (☰) SHALL be positioned without colliding with the top-left system clock (e.g., at the leading edge of the floating tab row or just left of the centered sensor icons).
+2. *Auto-Hiding Floating Tab Row Overlay (`REQ-UI-434.2`)*:
+• In landscape orientation during `ScreenMode.TRACKING`, `PrimaryScrollableTabRow` SHALL NOT occupy permanent vertical height in the layout hierarchy.
+• `PrimaryScrollableTabRow` SHALL be rendered as a floating top overlay (`zIndex(1f)`) over `HorizontalPager`, smoothly animated (fade/slide) into view whenever the user scrolls/swipes tabs (`pagerState.isScrollInProgress`), switches tabs, taps the top area, or is on Page 0 (`ControlTab`), and SHALL automatically fade/slide out after a 2.5–3.0 second timeout once scrolling ceases.
+3. *Screen Mode & Portrait Invariant Preservation (`REQ-UI-434.3`)*:
+• In portrait orientation (`Configuration.ORIENTATION_PORTRAIT`), `TrackingTabsScreen` SHALL retain 100% byte-for-byte fidelity with persistent `statusBarsPadding()`, persistent `SensorStatus`, and persistent `PrimaryScrollableTabRow`.
+• In `ScreenMode.CONFIGURATION` and `ScreenMode.PREVIEW`, top headers SHALL remain persistently visible across all orientations.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines and amends `REQ-UI-163` (*Tracking Tabs Screen Navigation*), `REQ-UI-410` (*Tracking Tabs Sensor Status Bar*), and `REQ-UI-412` (*Tracking Screen Mode Switching*).
+2. *Historical Origin & Commit Trace*: Commit `e253c312` (`ATT-1340`), commit `de1c2965` (`ATT-4000`), and commit `d63529d8` (`ATT-4097`).
+3. *Root Reason for Existing Formulation*: Static `Column` with `statusBarsPadding()` and persistent `PrimaryScrollableTabRow` guaranteed discoverability and prevented status bar clipping on tall portrait screens (~800dp). In landscape (~411dp), permanent ~130–145dp chrome wastes ~35% of the viewport.
+4. *Preservation of Core Invariants*: 100% portrait layout fidelity, tab switching/swipe responsiveness, bottom button clearance (`LapButton`, `BikeBellButton`), and 100% clean-room test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete tracking a workout in landscape orientation,
+• *When* `TrackingTabsScreen` is in `ScreenMode.TRACKING`,
+• *Then* sensor availability icons are rendered centered in the top status bar strip, and `PrimaryScrollableTabRow` floats as an auto-hiding overlay without permanently pushing down `HorizontalPager`.
+• *Given* the floating tab row is hidden in landscape mode,
+• *When* the athlete swipes between tabs or switches tabs,
+• *Then* the floating tab row smoothly animates into view and remains visible for 2.5–3.0 seconds after scrolling stops before fading out.
+• *Given* the device is in portrait orientation or in `ScreenMode.CONFIGURATION`/`PREVIEW`,
+• *When* rendered,
+• *Then* status bars padding and persistent headers remain fully visible with zero regression.
+
+**Invariants**: Zero regression in portrait mode, gesture slop and touch event routing preserved, and human decision gate enforced.
+
+
 
 

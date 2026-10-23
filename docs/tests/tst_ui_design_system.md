@@ -6812,5 +6812,23 @@
   5. *Clean-Room Full Suite Regression Execution (`TST-UI-398.5`)*:
   • Execute targeted unit tests and verify 100% pass rate with zero regressions.
 
+### TST-UI-399: **TrackingTabsScreen Landscape Vertical Space Optimization, Center Status Bar Sensor Icons, and Auto-Hiding Floating Tab Row Suite** [Center status bar sensor icons in landscape; auto-hiding floating PrimaryScrollableTabRow with 2.5-3s timer; portrait and configuration mode invariants preserved; 100% clean-room test pass rate.]
+- **Requirement(s)**: `REQ-UI-434`, `REQ-UI-163`, `REQ-UI-410`, `REQ-UI-412`
+- **Component**: **TrackingTabsScreen Landscape Vertical Space Optimization Suite**
+- **Jira**: ``ATT-4773``
+- **Test Description**:
+  1. *Landscape Center Status Bar Sensor Icons Contract Test (`TST-UI-399.1`, `TrackingTabsLandscapeLayoutTest.kt`)*:
+  • Verify that under `Configuration.ORIENTATION_LANDSCAPE` during `ScreenMode.TRACKING`, `SensorStatus` availability icons render centered within the status bar strip without redundant vertical `statusBarsPadding()`.
+  • Verify that the drawer button does not collide with system insets.
+  2. *Auto-Hiding Floating Tab Row Overlay Contract Test (`TST-UI-399.2`, `TrackingTabsLandscapeLayoutTest.kt`)*:
+  • Verify `PrimaryScrollableTabRow` is rendered as a floating overlay with `zIndex(1f)` over `HorizontalPager` without taking permanent layout height.
+  • Verify visibility is triggered by `pagerState.isScrollInProgress`, page change, or Page 0 (`ControlTab`), and auto-dismisses after a 2.5–3.0 second timer.
+  3. *Portrait & Configuration Mode Invariants Contract Test (`TST-UI-399.3`, `TrackingTabsLandscapeLayoutTest.kt`)*:
+  • Verify that in portrait orientation, `statusBarsPadding()`, `SensorStatus`, and `PrimaryScrollableTabRow` remain persistently stacked.
+  • Verify that in `ScreenMode.CONFIGURATION` and `ScreenMode.PREVIEW`, configuration and preview headers remain persistently visible.
+  4. *Clean-Room Full Suite Regression Execution (`TST-UI-399.4`)*:
+  • Execute targeted unit tests and verify 100% pass rate with zero regressions.
+
+
 
 

@@ -51,7 +51,8 @@ fun SensorStatus(
     allDevices: List<DeviceUiData> = emptyList(),
     onDeviceClick: (Long) -> Unit = {},
     onMenuClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isCompactLandscape: Boolean = false
 ) {
     var selectedSensor by remember { mutableStateOf<SensorType?>(null) }
 
@@ -69,52 +70,98 @@ fun SensorStatus(
         )
     }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (onMenuClick != null) {
-            IconButton(
-                onClick = onMenuClick,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface,
+    if (isCompactLandscape) {
+        // Landscape Mode: compact horizontal status bar row centering icons and menu button (REQ-UI-434.1 / ATT-4773)
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .heightIn(max = 28.dp)
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            if (onMenuClick != null) {
+                IconButton(
+                    onClick = onMenuClick,
                     modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+
+            sensorDefinitions.forEach { type ->
+                val isAvailable = activeSensors.contains(type)
+                val iconAlpha = if (isAvailable) 1f else INACTIVE_SENSOR_ALPHA
+
+                Icon(
+                    painter = safePainterResource(id = type.iconResId, fallback = Icons.Default.Sensors),
+                    contentDescription = type.name,
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp)
+                        .size(18.dp)
+                        .alpha(iconAlpha)
+                        .clickable {
+                            selectedSensor = type
+                        },
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
-        } else {
-            Spacer(modifier = Modifier.size(24.dp))
         }
-
-        Box(
-            modifier = Modifier.weight(1f),
-            contentAlignment = Alignment.Center
+    } else {
+        // Portrait Mode: preserved multi-row / full-width row with left-aligned menu button and centered sensor icons
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                sensorDefinitions.forEach { type ->
-                    val isAvailable = activeSensors.contains(type)
-                    val iconAlpha = if (isAvailable) 1f else INACTIVE_SENSOR_ALPHA
-
+            if (onMenuClick != null) {
+                IconButton(
+                    onClick = onMenuClick,
+                    modifier = Modifier.size(24.dp)
+                ) {
                     Icon(
-                        painter = safePainterResource(id = type.iconResId, fallback = Icons.Default.Sensors),
-                        contentDescription = type.name,
-                        modifier = Modifier
-                            .padding(horizontal = 6.dp)
-                            .size(22.dp)
-                            .alpha(iconAlpha)
-                            .clickable {
-                                selectedSensor = type
-                            },
-                        tint = MaterialTheme.colorScheme.onSurface
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(24.dp)
                     )
+                }
+            } else {
+                Spacer(modifier = Modifier.size(24.dp))
+            }
+
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    sensorDefinitions.forEach { type ->
+                        val isAvailable = activeSensors.contains(type)
+                        val iconAlpha = if (isAvailable) 1f else INACTIVE_SENSOR_ALPHA
+
+                        Icon(
+                            painter = safePainterResource(id = type.iconResId, fallback = Icons.Default.Sensors),
+                            contentDescription = type.name,
+                            modifier = Modifier
+                                .padding(horizontal = 6.dp)
+                                .size(22.dp)
+                                .alpha(iconAlpha)
+                                .clickable {
+                                    selectedSensor = type
+                                },
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
         }
